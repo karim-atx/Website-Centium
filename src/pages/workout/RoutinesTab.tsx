@@ -228,11 +228,12 @@ const RoutineRow: React.FC<{
         </button>
         <button
           onClick={onStart}
+          aria-label={`Start ${routine.name}`}
           className="tap w-9 h-9 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
         >
           <Play size={14} fill="white" />
         </button>
-        <button onClick={onDelete} className="tap text-charcoal-faint shrink-0">
+        <button onClick={onDelete} aria-label={`Delete ${routine.name}`} className="tap text-charcoal-faint shrink-0">
           <X size={16} />
         </button>
       </div>
