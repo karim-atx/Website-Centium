@@ -1,12 +1,18 @@
 import { useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
+import { EditableValue } from "../../components/ui/EditableValue";
 import { Sparkline } from "../../components/health/Sparkline";
+import { StepsPeriodCard } from "../../components/health/StepsPeriodCard";
+import { IntegrationsCard } from "../../components/health/IntegrationsCard";
+import { BiomarkerCaptureFlow } from "../../components/health/BiomarkerCaptureFlow";
+import { ShareBiomarkerSheet } from "../../components/health/ShareBiomarkerSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
-import { healthMetrics, bloodPanel } from "../../data/mockHealthData";
+import { healthMetrics } from "../../data/mockHealthData";
 import { useApp } from "../../context/AppContext";
-import { ArrowDown, ArrowUp, Plus, Droplet, Flame, ChevronDown } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Droplet, Flame, ChevronDown, Camera, Share2 } from "lucide-react";
 import clsx from "clsx";
+import type { BloodMarker } from "../../types";
 
 const statusColor: Record<string, string> = {
   low: "text-sky bg-sky-pale",
@@ -15,46 +21,16 @@ const statusColor: Record<string, string> = {
 };
 
 export default function Health() {
-  const { water } = useApp();
+  const { water, metricValues, updateMetricValue, bloodMarkers } = useApp();
   const [metricOpen, setMetricOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [shareMarker, setShareMarker] = useState<BloodMarker | null>(null);
 
-  const weight = healthMetrics.find((m) => m.type === "weight")!;
-  const bodyFat = healthMetrics.find((m) => m.type === "bodyFat")!;
-  const steps = healthMetrics.find((m) => m.type === "steps")!;
   const sleep = healthMetrics.find((m) => m.type === "sleep")!;
 
   const heightM = 1.78;
-  const bmi = (weight.current / (heightM * heightM)).toFixed(1);
-
-  const trendCard = (
-    label: string,
-    value: string,
-    trendLabel: string,
-    positive: boolean,
-    good: boolean,
-    history: number[],
-    color: string
-  ) => (
-    <Card className="animate-fade-slide-up">
-      <div className="flex items-start justify-between mb-2">
-        <div>
-          <p className="text-xs font-semibold text-charcoal-soft mb-1">{label}</p>
-          <p className="text-xl font-bold text-charcoal">{value}</p>
-        </div>
-        <Sparkline values={history} color={color} width={72} height={30} />
-      </div>
-      <span
-        className={clsx(
-          "inline-flex items-center gap-0.5 text-xs font-semibold rounded-full px-2 py-0.5",
-          good ? "text-sohati-dark bg-sohati-pale" : "text-ember-dark bg-ember-pale"
-        )}
-      >
-        {positive ? <ArrowUp size={10} /> : <ArrowDown size={10} />}
-        {trendLabel}
-      </span>
-    </Card>
-  );
+  const bmi = (metricValues.weight / (heightM * heightM)).toFixed(1);
 
   return (
     <div>
@@ -70,11 +46,37 @@ export default function Health() {
         }
       />
 
+      <div className="mb-6">
+        <IntegrationsCard />
+      </div>
+
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Body</p>
       <div className="grid grid-cols-2 gap-3 mb-6">
-        {trendCard("Weight", `${weight.current} kg`, `${Math.abs(weight.trend)} kg this week`, weight.trend >= 0, weight.trend < 0, weight.history.map((h) => h.value), "#1B6B52")}
-        {trendCard("Body Fat", `${bodyFat.current}%`, `${Math.abs(bodyFat.trend)}% this week`, bodyFat.trend >= 0, bodyFat.trend < 0, bodyFat.history.map((h) => h.value), "#9C4F7C")}
-        <Card className="col-span-2 animate-fade-slide-up flex items-center justify-between">
+        <Card>
+          <p className="text-xs font-semibold text-charcoal-soft mb-1">Weight</p>
+          <EditableValue
+            value={metricValues.weight}
+            unit="kg"
+            className="text-xl font-bold text-charcoal"
+            onSave={(v) => updateMetricValue("weight", v)}
+          />
+          <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5">
+            <ArrowDown size={10} /> 0.6 kg this week
+          </span>
+        </Card>
+        <Card>
+          <p className="text-xs font-semibold text-charcoal-soft mb-1">Body Fat</p>
+          <EditableValue
+            value={metricValues.bodyFat}
+            unit="%"
+            className="text-xl font-bold text-charcoal"
+            onSave={(v) => updateMetricValue("bodyFat", v)}
+          />
+          <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5">
+            <ArrowDown size={10} /> 0.4% this week
+          </span>
+        </Card>
+        <Card className="col-span-2 flex items-center justify-between">
           <div>
             <p className="text-xs font-semibold text-charcoal-soft mb-1">BMI</p>
             <p className="text-xl font-bold text-charcoal">{bmi}</p>
@@ -87,8 +89,8 @@ export default function Health() {
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Activity</p>
       <div className="grid grid-cols-2 gap-3 mb-6">
-        {trendCard("Steps", steps.current.toLocaleString(), `+${steps.trend} vs avg`, true, true, steps.history.map((h) => h.value), "#4C8FD1")}
-        <Card className="animate-fade-slide-up">
+        <StepsPeriodCard />
+        <Card>
           <p className="text-xs font-semibold text-charcoal-soft mb-1">Calories burned</p>
           <p className="text-xl font-bold text-charcoal mb-2">2,340</p>
           <span className="text-xs text-charcoal-faint">Estimated, incl. workouts</span>
@@ -97,34 +99,54 @@ export default function Health() {
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Recovery</p>
       <div className="grid grid-cols-2 gap-3 mb-6">
-        {trendCard("Sleep", `${sleep.current}h`, "+0.3h vs avg", true, true, sleep.history.map((h) => h.value), "#9C4F7C")}
-        <Card interactive className="animate-fade-slide-up flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-charcoal-soft mb-1">Water</p>
+        <Card>
+          <p className="text-xs font-semibold text-charcoal-soft mb-1">Sleep</p>
+          <p className="text-xl font-bold text-charcoal mb-2">{sleep.current}h</p>
+          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5">
+            <ArrowUp size={10} /> +0.3h vs avg
+          </span>
+        </Card>
+        <Card>
+          <p className="text-xs font-semibold text-charcoal-soft mb-1">Water</p>
+          <div className="flex items-center justify-between">
             <p className="text-xl font-bold text-charcoal">{(water / 1000).toFixed(1)}L</p>
+            <Droplet size={20} className="text-sky" />
           </div>
-          <Droplet size={20} className="text-sky" />
         </Card>
       </div>
 
       <div className="flex items-center justify-between mb-2.5">
         <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Biomarkers</p>
-        <span className="text-xs text-charcoal-faint">{bloodPanel.date}</span>
+        <button
+          onClick={() => setScanOpen(true)}
+          className="tap flex items-center gap-1.5 text-xs font-semibold text-sohati"
+        >
+          <Camera size={13} /> Scan result
+        </button>
       </div>
-      <Card padded={false} className="mb-3 divide-y divide-charcoal/[0.04] animate-fade-slide-up">
-        {bloodPanel.markers.map((m) => (
+      <Card padded={false} className="mb-3 divide-y divide-charcoal/[0.04]">
+        {bloodMarkers.map((m) => (
           <div key={m.id} className="flex items-center justify-between px-4 py-3.5">
             <div>
               <p className="text-sm font-semibold text-charcoal">{m.name}</p>
               <p className="text-[11px] text-charcoal-faint">Range: {m.range} {m.unit}</p>
             </div>
-            <div className="text-right">
-              <p className="text-sm font-bold text-charcoal">
-                {m.value} <span className="text-xs font-normal text-charcoal-faint">{m.unit}</span>
-              </p>
-              <span className={clsx("text-[10px] font-bold uppercase rounded-full px-2 py-0.5", statusColor[m.status])}>
-                {m.status}
-              </span>
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <p className="text-sm font-bold text-charcoal">
+                  {m.value} <span className="text-xs font-normal text-charcoal-faint">{m.unit}</span>
+                </p>
+                <span className={clsx("text-[10px] font-bold uppercase rounded-full px-2 py-0.5", statusColor[m.status])}>
+                  {m.status}
+                </span>
+              </div>
+              <button
+                onClick={() => setShareMarker(m)}
+                className="tap w-7 h-7 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-faint shrink-0"
+                aria-label={`Share ${m.name}`}
+              >
+                <Share2 size={12} />
+              </button>
             </div>
           </div>
         ))}
@@ -139,11 +161,17 @@ export default function Health() {
 
       {historyOpen && (
         <div className="grid grid-cols-2 gap-3 mb-6 animate-fade-slide-up">
-          {bloodPanel.markers.map((m) => (
+          {bloodMarkers.map((m) => (
             <Card key={m.id}>
               <p className="text-xs font-semibold text-charcoal-soft mb-1">{m.name}</p>
               <Sparkline values={m.history.map((h) => h.value)} color="#9C4F7C" width={100} height={32} />
-              <p className="text-[11px] text-charcoal-faint mt-1">Last 3 panels</p>
+              <div className="flex justify-between mt-1">
+                {m.history.map((h, i) => (
+                  <span key={i} className="text-[10px] text-charcoal-faint">
+                    {h.value}
+                  </span>
+                ))}
+              </div>
             </Card>
           ))}
         </div>
@@ -154,6 +182,8 @@ export default function Health() {
       </p>
 
       <AddMetricSheet open={metricOpen} onClose={() => setMetricOpen(false)} />
+      <BiomarkerCaptureFlow open={scanOpen} onClose={() => setScanOpen(false)} />
+      <ShareBiomarkerSheet open={!!shareMarker} onClose={() => setShareMarker(null)} marker={shareMarker} />
     </div>
   );
 }
