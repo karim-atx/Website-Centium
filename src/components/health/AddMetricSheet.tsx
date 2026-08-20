@@ -19,7 +19,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   open,
   onClose,
 }) => {
-  const { addWater } = useApp();
+  const { addWater, updateMetricValue } = useApp();
   const [type, setType] = useState<MetricType>("weight");
   const [value, setValue] = useState("");
   const [saved, setSaved] = useState(false);
@@ -36,7 +36,12 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   };
 
   const handleSave = () => {
-    if (type === "water" && value) addWater(Number(value));
+    const num = Number(value);
+    if (value) {
+      if (type === "water") addWater(num);
+      else if (type === "weight" || type === "bodyFat" || type === "steps") updateMetricValue(type, num);
+      // "sleep" has no persisted override yet in this prototype — visually confirmed only.
+    }
     setSaved(true);
     setTimeout(handleClose, 800);
   };

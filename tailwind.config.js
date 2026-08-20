@@ -1,5 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 export default {
+  darkMode: "class",
   content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
   theme: {
     extend: {
@@ -9,38 +10,38 @@ export default {
       },
       colors: {
         cream: {
-          DEFAULT: "#FBF6EE",
-          soft: "#F5EEE1",
-          card: "#FFFFFF",
+          DEFAULT: "rgb(var(--c-cream) / <alpha-value>)",
+          soft: "rgb(var(--c-cream-soft) / <alpha-value>)",
+          card: "rgb(var(--c-cream-card) / <alpha-value>)",
         },
         charcoal: {
-          DEFAULT: "#241F1B",
-          soft: "#5B5349",
-          faint: "#8C8378",
+          DEFAULT: "rgb(var(--c-charcoal) / <alpha-value>)",
+          soft: "rgb(var(--c-charcoal-soft) / <alpha-value>)",
+          faint: "rgb(var(--c-charcoal-faint) / <alpha-value>)",
         },
         sohati: {
-          DEFAULT: "#1B6B52",
-          light: "#2E9977",
-          pale: "#DCEFE5",
-          dark: "#134F3D",
+          DEFAULT: "rgb(var(--c-sohati) / <alpha-value>)",
+          light: "rgb(var(--c-sohati-light) / <alpha-value>)",
+          pale: "rgb(var(--c-sohati-pale) / <alpha-value>)",
+          dark: "rgb(var(--c-sohati-dark) / <alpha-value>)",
         },
         ember: {
-          DEFAULT: "#E97452",
-          light: "#F2A488",
-          pale: "#FCE6DD",
-          dark: "#C6532F",
+          DEFAULT: "rgb(var(--c-ember) / <alpha-value>)",
+          light: "rgb(var(--c-ember-light) / <alpha-value>)",
+          pale: "rgb(var(--c-ember-pale) / <alpha-value>)",
+          dark: "rgb(var(--c-ember-dark) / <alpha-value>)",
         },
         gold: {
-          DEFAULT: "#D9A441",
-          pale: "#F6E9C9",
+          DEFAULT: "rgb(var(--c-gold) / <alpha-value>)",
+          pale: "rgb(var(--c-gold-pale) / <alpha-value>)",
         },
         sky: {
-          DEFAULT: "#4C8FD1",
-          pale: "#DCEAF8",
+          DEFAULT: "rgb(var(--c-sky) / <alpha-value>)",
+          pale: "rgb(var(--c-sky-pale) / <alpha-value>)",
         },
         berry: {
-          DEFAULT: "#9C4F7C",
-          pale: "#F1E0EB",
+          DEFAULT: "rgb(var(--c-berry) / <alpha-value>)",
+          pale: "rgb(var(--c-berry-pale) / <alpha-value>)",
         },
       },
       borderRadius: {
@@ -48,9 +49,9 @@ export default {
         "5xl": "2.5rem",
       },
       boxShadow: {
-        soft: "0 2px 10px rgba(36, 31, 27, 0.06), 0 1px 2px rgba(36, 31, 27, 0.04)",
-        card: "0 8px 30px rgba(36, 31, 27, 0.08)",
-        lift: "0 16px 40px rgba(36, 31, 27, 0.14)",
+        soft: "0 2px 10px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04)",
+        card: "0 8px 30px rgb(0 0 0 / 0.10)",
+        lift: "0 16px 40px rgb(0 0 0 / 0.20)",
       },
       keyframes: {
         "fade-slide-up": {
@@ -73,6 +74,9 @@ export default {
         "pulse-ring": {
           "0%": { transform: "scale(0.9)", opacity: 0.8 },
           "100%": { transform: "scale(1.6)", opacity: 0 },
+        },
+        "fill-up": {
+          "0%": { height: "0%" },
         },
       },
       animation: {

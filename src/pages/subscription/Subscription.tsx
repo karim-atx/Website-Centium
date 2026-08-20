@@ -44,7 +44,7 @@ export default function Subscription() {
         <div className="w-16 h-16 rounded-3xl bg-charcoal flex items-center justify-center mx-auto mb-5">
           <Crown />
         </div>
-        <p className="font-display text-2xl font-semibold text-charcoal mb-1">SOHATI+</p>
+        <p className="font-display text-2xl font-semibold text-charcoal mb-1">SOHATI</p>
         <h1 className="font-display text-3xl font-semibold text-charcoal leading-tight mb-3">
           Your health, without the limits.
         </h1>

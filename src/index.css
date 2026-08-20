@@ -4,6 +4,66 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --c-cream: 251 246 238;
+  --c-cream-soft: 245 238 225;
+  --c-cream-card: 255 255 255;
+  --c-charcoal: 36 31 27;
+  --c-charcoal-soft: 91 83 73;
+  --c-charcoal-faint: 140 131 120;
+
+  --c-sohati: 27 107 82;
+  --c-sohati-light: 46 153 119;
+  --c-sohati-pale: 220 239 229;
+  --c-sohati-dark: 19 79 61;
+
+  --c-ember: 233 116 82;
+  --c-ember-light: 242 164 136;
+  --c-ember-pale: 252 230 221;
+  --c-ember-dark: 198 83 47;
+
+  --c-gold: 217 164 65;
+  --c-gold-pale: 246 233 201;
+
+  --c-sky: 76 143 209;
+  --c-sky-pale: 220 234 248;
+
+  --c-berry: 156 79 124;
+  --c-berry-pale: 241 224 235;
+
+  color-scheme: light;
+}
+
+.dark {
+  --c-cream: 22 20 18;
+  --c-cream-soft: 32 29 25;
+  --c-cream-card: 41 37 32;
+  --c-charcoal: 237 231 222;
+  --c-charcoal-soft: 178 169 156;
+  --c-charcoal-faint: 122 114 103;
+
+  --c-sohati: 63 173 137;
+  --c-sohati-light: 82 199 160;
+  --c-sohati-pale: 32 55 46;
+  --c-sohati-dark: 190 232 213;
+
+  --c-ember: 240 140 108;
+  --c-ember-light: 247 178 152;
+  --c-ember-pale: 57 37 30;
+  --c-ember-dark: 250 199 176;
+
+  --c-gold: 224 179 96;
+  --c-gold-pale: 51 43 26;
+
+  --c-sky: 116 175 227;
+  --c-sky-pale: 26 41 57;
+
+  --c-berry: 200 128 172;
+  --c-berry-pale: 46 30 40;
+
+  color-scheme: dark;
+}
+
 * {
   -webkit-tap-highlight-color: transparent;
 }
@@ -16,11 +76,12 @@ body,
 
 body {
   margin: 0;
-  background-color: #fbf6ee;
-  color: #241f1b;
+  background-color: rgb(var(--c-cream));
+  color: rgb(var(--c-charcoal));
   font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
 }
 
 ::-webkit-scrollbar {

@@ -1,11 +1,11 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Mic, Sparkles, Pencil } from "lucide-react";
+import { Mic, Sparkles, Pencil, MicOff } from "lucide-react";
 import { parseFoodInput, type ParsedFoodResult } from "../../services/ai/parseFoodInput";
 import { useApp } from "../../context/AppContext";
 
-type Stage = "idle" | "recording" | "processing" | "result";
+type Stage = "idle" | "requesting" | "denied" | "recording" | "processing" | "result";
 
 export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = ({
   open,
@@ -27,10 +27,25 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     onClose();
   };
 
-  const startRecording = () => {
+  const beginRecording = () => {
     setStage("recording");
     // Simulate a short recording window, then move to AI processing.
     setTimeout(() => setStage("processing"), 1800);
+  };
+
+  const requestMicAndStart = async () => {
+    setStage("requesting");
+    try {
+      if (navigator.mediaDevices?.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // We don't process real audio in this prototype — just needed the
+        // permission grant. Release the mic immediately.
+        stream.getTracks().forEach((t) => t.stop());
+      }
+      beginRecording();
+    } catch {
+      setStage("denied");
+    }
   };
 
   React.useEffect(() => {
@@ -63,7 +78,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
         {stage === "idle" && (
           <>
             <button
-              onClick={startRecording}
+              onClick={requestMicAndStart}
               className="tap relative w-24 h-24 rounded-full bg-ember flex items-center justify-center shadow-lift mb-6"
             >
               <Mic size={32} className="text-white" />
@@ -74,6 +89,36 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
             <p className="text-sm text-charcoal-soft max-w-xs">
               Tap the mic and describe your meal naturally — Sohati's AI will find the foods and estimate the nutrition for you to confirm.
             </p>
+          </>
+        )}
+
+        {stage === "requesting" && (
+          <>
+            <div className="w-24 h-24 rounded-full bg-ember/20 flex items-center justify-center mb-6 animate-pulse">
+              <Mic size={32} className="text-ember" />
+            </div>
+            <p className="font-display text-xl font-semibold text-charcoal mb-2">
+              Requesting microphone access…
+            </p>
+            <p className="text-sm text-charcoal-soft max-w-xs">
+              Sohati needs your mic to hear what you ate.
+            </p>
+          </>
+        )}
+
+        {stage === "denied" && (
+          <>
+            <div className="w-24 h-24 rounded-full bg-charcoal/10 flex items-center justify-center mb-6">
+              <MicOff size={32} className="text-charcoal-faint" />
+            </div>
+            <p className="font-display text-xl font-semibold text-charcoal mb-2">
+              Microphone access denied
+            </p>
+            <p className="text-sm text-charcoal-soft max-w-xs mb-6">
+              Enable microphone access in your browser/device settings to use voice logging. You
+              can still see how it works with a sample below.
+            </p>
+            <Button onClick={beginRecording}>Try a sample instead</Button>
           </>
         )}
 

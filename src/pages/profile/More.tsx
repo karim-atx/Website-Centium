@@ -14,7 +14,7 @@ export default function More() {
     { icon: Users, label: "Professionals", desc: "Trainers, dietitians & doctors", to: "/professionals", bg: "#DCEFE5", color: "#1B6B52" },
     { icon: Store, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/marketplace", bg: "#F6E9C9", color: "#D9A441" },
     { icon: UserIcon, label: "Profile", desc: "Your account & settings", to: "/profile", bg: "#FCE6DD", color: "#E97452" },
-    { icon: Crown, label: "Sohati+", desc: "Unlock premium features", to: "/subscription", bg: "#241F1B", color: "#FBF6EE" },
+    { icon: Crown, label: "Sohati", desc: "Unlock premium features", to: "/subscription", bg: "rgb(var(--c-charcoal))", color: "rgb(var(--c-cream))" },
   ];
 
   return (

@@ -1,17 +1,17 @@
 import { useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { sumNutrition } from "../../services/nutrition";
-import { healthMetrics, streaks } from "../../data/mockHealthData";
-import { todaysWorkout } from "../../data/mockWorkouts";
-import { NutritionCard } from "../../components/dashboard/NutritionCard";
-import { StatCard } from "../../components/dashboard/StatCard";
+import { healthMetrics } from "../../data/mockHealthData";
 import { QuickActions } from "../../components/dashboard/QuickActions";
+import { StreaksBar } from "../../components/dashboard/StreaksBar";
+import { DateSelector } from "../../components/dashboard/DateSelector";
+import { WidgetBoard } from "../../components/dashboard/WidgetBoard";
 import { Card } from "../../components/ui/Card";
 import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { AIVoiceLogger } from "../../components/food/AIVoiceLogger";
 import { LogWorkoutSheet } from "../../components/workout/LogWorkoutSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
-import { Footprints, Moon, Scale, Dumbbell, Droplet, Flame, ChevronRight, Sparkles } from "lucide-react";
+import { ChevronRight, Sparkles, Store } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 function getGreeting() {
@@ -31,10 +31,7 @@ export default function Home() {
 
   const totals = useMemo(() => sumNutrition(foodLog), [foodLog]);
 
-  const weight = healthMetrics.find((m) => m.type === "weight")!;
   const steps = healthMetrics.find((m) => m.type === "steps")!;
-  const sleep = healthMetrics.find((m) => m.type === "sleep")!;
-
   const todaysWorkoutLog = workoutLog[workoutLog.length - 1];
   const completedGoals = [
     totals.calories > 0,
@@ -43,16 +40,19 @@ export default function Home() {
     water >= 2000,
   ].filter(Boolean).length;
 
-  const topStreak = streaks[1];
+  const isPro = user.accountType === "professional";
+  const isBusiness = user.accountType === "business";
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-1 animate-fade-slide-up">
+      <div className="flex items-center justify-between mb-4 animate-fade-slide-up">
         <div>
           <h1 className="font-display text-2xl sm:text-3xl font-semibold text-charcoal">
             {getGreeting()}, {user.firstName} 👋
           </h1>
-          <p className="text-charcoal-soft text-sm mt-1">Wednesday, August 20</p>
+          <p className="text-charcoal-soft text-sm mt-1">
+            {isPro ? "Your professional dashboard" : isBusiness ? "Your business dashboard" : "Here's your day"}
+          </p>
         </div>
         <button
           onClick={() => navigate("/profile")}
@@ -62,18 +62,40 @@ export default function Home() {
         </button>
       </div>
 
-      <Card className="mt-5 mb-5 !bg-charcoal !border-0 text-cream animate-fade-slide-up">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-cream/60 text-xs font-semibold uppercase tracking-wide mb-1">Your health today</p>
-            <p className="font-display text-lg font-semibold">
-              {completedGoals >= 4 ? "You're having a great day 🎉" : `${completedGoals} of 4 daily goals complete`}
-            </p>
+      <StreaksBar />
+
+      <DateSelector />
+
+      {(isPro || isBusiness) && (
+        <Card
+          interactive
+          onClick={() => navigate(isPro ? "/professionals" : "/marketplace")}
+          className="mb-5 bg-gradient-to-br from-charcoal to-charcoal/90 !text-cream animate-fade-slide-up"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center">
+                {isPro ? <Sparkles size={18} /> : <Store size={18} />}
+              </div>
+              <div>
+                <p className="text-sm font-semibold">
+                  {isPro ? "Manage your clients" : `${user.businessName || "Your business"} on Sohati`}
+                </p>
+                <p className="text-xs text-cream/60">
+                  {isPro ? "View shared client data & requests" : "Business tools are an early preview"}
+                </p>
+              </div>
+            </div>
+            <ChevronRight size={18} className="text-cream/60" />
           </div>
-          <div className="flex items-center gap-1 bg-ember/20 text-ember-light rounded-full px-3 py-1.5 text-xs font-bold shrink-0">
-            <Flame size={13} /> {topStreak.days}d
-          </div>
-        </div>
+        </Card>
+      )}
+
+      <Card className="mb-5 !bg-charcoal !border-0 text-cream animate-fade-slide-up">
+        <p className="text-cream/60 text-xs font-semibold uppercase tracking-wide mb-1">Your health today</p>
+        <p className="font-display text-lg font-semibold">
+          {completedGoals >= 4 ? "You're having a great day 🎉" : `${completedGoals} of 4 daily goals complete`}
+        </p>
       </Card>
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">Quick actions</p>
@@ -86,74 +108,9 @@ export default function Home() {
         />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-        <NutritionCard totals={totals} />
-
-        <div className="grid grid-cols-2 gap-4">
-          <StatCard
-            icon={Footprints}
-            iconBg="#DCEAF8"
-            iconColor="#4C8FD1"
-            label="Steps today"
-            value={steps.current.toLocaleString()}
-            sub="Goal: 10,000"
-            onClick={() => navigate("/health")}
-          />
-          <StatCard
-            icon={Dumbbell}
-            iconBg="#241F1B"
-            iconColor="#FBF6EE"
-            label={todaysWorkout.name}
-            value={todaysWorkoutLog?.completed ? "Done ✓" : "Pending"}
-            sub="Upper Body"
-            onClick={() => navigate("/workout")}
-          />
-          <StatCard
-            icon={Scale}
-            iconBg="#DCEFE5"
-            iconColor="#1B6B52"
-            label="Weight"
-            value={`${weight.current} kg`}
-            trend={{ value: `${Math.abs(weight.trend)} kg`, positive: weight.trend >= 0, goodDirection: "down" }}
-            onClick={() => navigate("/health")}
-          />
-          <StatCard
-            icon={Moon}
-            iconBg="#F1E0EB"
-            iconColor="#9C4F7C"
-            label="Sleep"
-            value={`${Math.floor(sleep.current)}h ${Math.round((sleep.current % 1) * 60)}m`}
-            sub="Last night"
-            onClick={() => navigate("/health")}
-          />
-        </div>
+      <div className="mb-6">
+        <WidgetBoard />
       </div>
-
-      <Card interactive onClick={() => navigate("/mind")} className="mb-4 animate-fade-slide-up">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-sky-pale flex items-center justify-center">
-              <Droplet size={18} className="text-sky" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-charcoal">Water intake</p>
-              <p className="text-xs text-charcoal-soft">{(water / 1000).toFixed(1)}L / 2.5L</p>
-            </div>
-          </div>
-          <ChevronRight size={18} className="text-charcoal-faint" />
-        </div>
-      </Card>
-
-      <Card interactive onClick={() => navigate("/mind")} className="mb-4 animate-fade-slide-up">
-        <div className="flex items-center justify-between mb-1">
-          <div className="flex items-center gap-2">
-            <Flame size={16} className="text-ember" />
-            <p className="text-sm font-semibold text-charcoal">{topStreak.label}</p>
-          </div>
-          <span className="text-xs font-bold text-ember-dark">{topStreak.days} days 🔥</span>
-        </div>
-        <p className="text-xs text-charcoal-faint">Keep it alive to unlock rewards from Sohati partners</p>
-      </Card>
 
       <Card interactive onClick={() => navigate("/professionals")} className="mb-4 animate-fade-slide-up bg-gradient-to-br from-sohati to-sohati-dark !text-white">
         <div className="flex items-center justify-between">

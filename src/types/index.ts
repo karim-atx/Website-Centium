@@ -31,6 +31,13 @@ export type TrackPreference =
   | "habits"
   | "body_composition";
 
+// V2: who is signing up. The UI experience begins to branch on this without
+// requiring three separate applications yet — see the Home/Professionals
+// pages for where it's read.
+export type AccountType = "customer" | "professional" | "business";
+export type CustomerSubtype = "client" | "regular" | "athlete" | "general";
+export type ProfessionalSubtype = "trainer" | "dietitian" | "other";
+
 export interface UserProfile {
   id: string;
   firstName: string;
@@ -42,6 +49,10 @@ export interface UserProfile {
   activityLevel: ActivityLevel;
   tracking: TrackPreference[];
   onboarded: boolean;
+  accountType: AccountType;
+  customerSubtype?: CustomerSubtype;
+  professionalSubtype?: ProfessionalSubtype;
+  businessName?: string;
 }
 
 export type MealType = "breakfast" | "lunch" | "snack" | "dinner";
@@ -79,6 +90,9 @@ export interface FoodLogEntry {
   loggedVia?: "search" | "ai" | "scan" | "barcode" | "recent" | "quick";
 }
 
+// V2: editable per-exercise programming settings (Strong/Hevy-inspired).
+export type RepMaxUpdateMode = "no_update" | "prompt" | "prompt_with_estimate";
+
 export interface Exercise {
   id: string;
   name: string;
@@ -94,6 +108,17 @@ export interface Exercise {
     | "core"
     | "full_body"
     | "cardio";
+  // Optional V2 programming detail — falls back to sensible defaults in the UI.
+  minSets?: number;
+  maxSets?: number;
+  minReps?: number;
+  maxReps?: number;
+  intensityPct?: number;
+  repMaxKg?: number;
+  repMaxUpdateMode?: RepMaxUpdateMode;
+  restSeconds?: number;
+  rpe?: number;
+  tempo?: string;
 }
 
 export interface WorkoutTemplate {
@@ -114,6 +139,46 @@ export interface WorkoutLogEntry {
   durationMin: number;
   completed: boolean;
   exercises: Exercise[];
+}
+
+// V2: routine organization (folders) + logged sessions with a running timer.
+export interface RoutineFolder {
+  id: string;
+  name: string;
+}
+
+export interface Routine {
+  id: string;
+  folderId: string | null;
+  name: string;
+  color: string;
+  estimatedDurationMin: number;
+  exercises: Exercise[];
+}
+
+export interface LoggedSet {
+  setNumber: number;
+  reps: number;
+  weightKg: number;
+  completed: boolean;
+}
+
+export interface LoggedExercise {
+  exerciseId: string;
+  name: string;
+  sets: LoggedSet[];
+}
+
+export interface WorkoutSession {
+  id: string;
+  routineId: string | null;
+  routineName: string;
+  date: string;
+  startedAt: string;
+  endedAt?: string;
+  durationSec: number;
+  totalVolumeKg: number;
+  exercises: LoggedExercise[];
 }
 
 export interface HealthMetricPoint {
@@ -143,6 +208,14 @@ export interface BloodMarker {
 export interface BloodPanel {
   date: string;
   markers: BloodMarker[];
+}
+
+// V2: camera-captured biomarker extraction (mocked "AI" step).
+export interface ExtractedBiomarker {
+  name: string;
+  value: number;
+  unit: string;
+  selected: boolean;
 }
 
 export type ProfessionalType =
@@ -185,4 +258,63 @@ export interface Streak {
   emoji: string;
   days: number;
   goalDays: number;
+}
+
+// V2: Home page widget system (Apple-widget-inspired: small/large, reorderable).
+export type WidgetType =
+  | "steps"
+  | "weight"
+  | "water"
+  | "sleep"
+  | "nutrition"
+  | "workout"
+  | "bodyFat";
+export type WidgetSize = "small" | "large";
+
+export interface WidgetConfig {
+  id: string;
+  type: WidgetType;
+  size: WidgetSize;
+  visible: boolean;
+}
+
+// V2: Food page — TDEE-driven goals, editable macro split, meal prep.
+export type WeightGoalType = "lose" | "gain" | "maintain";
+export type PlanType = "custom" | "existing";
+
+export interface MacroSplit {
+  proteinPct: number;
+  carbsPct: number;
+  fatPct: number;
+}
+
+export interface NutritionGoal {
+  weightGoal: WeightGoalType;
+  weeklyRateKg: number;
+  planType: PlanType;
+  macroSplit: MacroSplit;
+  targetCalories: number;
+}
+
+export interface MealPrepItem {
+  id: string;
+  foodId: string;
+  food: Food;
+  quantity: number;
+}
+
+export type MealPrepPlan = Record<MealType, MealPrepItem[]>;
+
+// V2: Journal — organized into folders, entries retain their date.
+export interface JournalFolder {
+  id: string;
+  name: string;
+}
+
+export interface JournalEntry {
+  id: string;
+  folderId: string;
+  text: string;
+  date: string; // yyyy-mm-dd, auto-set at creation
+  createdAt: string; // ISO timestamp
 }
