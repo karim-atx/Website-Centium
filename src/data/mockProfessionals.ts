@@ -1,0 +1,88 @@
+import type { Professional, Gym } from "../types";
+
+export const mockProfessionals: Professional[] = [
+  {
+    id: "pr1",
+    name: "Maya Haddad",
+    type: "dietitian",
+    specialty: "Registered Dietitian · Weight Management",
+    location: "Achrafieh, Beirut",
+    rating: 4.9,
+    reviews: 128,
+    bio: "Helps clients build sustainable eating habits rooted in Lebanese cuisine — no extreme diets.",
+    avatarEmoji: "👩🏻‍⚕️",
+    connected: true,
+  },
+  {
+    id: "pr2",
+    name: "Karim Abou Zeid",
+    type: "trainer",
+    specialty: "Certified Personal Trainer · Strength",
+    location: "Hamra, Beirut",
+    rating: 4.8,
+    reviews: 94,
+    bio: "Strength & conditioning coach for recreational lifters and athletes alike.",
+    avatarEmoji: "🏋🏻",
+  },
+  {
+    id: "pr3",
+    name: "Dr. Rana Fakhoury",
+    type: "doctor",
+    specialty: "General Practitioner",
+    location: "Jal el Dib",
+    rating: 4.9,
+    reviews: 210,
+    bio: "Family medicine physician focused on preventive care and longevity.",
+    avatarEmoji: "🩺",
+  },
+  {
+    id: "pr4",
+    name: "Elie Sarkis",
+    type: "physiotherapist",
+    specialty: "Sports Physiotherapist",
+    location: "Jounieh",
+    rating: 4.7,
+    reviews: 61,
+    bio: "Injury recovery and mobility work for athletes and everyday movers.",
+    avatarEmoji: "🧑🏻‍⚕️",
+  },
+  {
+    id: "pr5",
+    name: "Layal Choueiri",
+    type: "trainer",
+    specialty: "Certified Personal Trainer · Mobility",
+    location: "Verdun, Beirut",
+    rating: 4.9,
+    reviews: 77,
+    bio: "Builds beginner-friendly programs that stick — form first, always.",
+    avatarEmoji: "🤸🏻‍♀️",
+  },
+  {
+    id: "pr6",
+    name: "Tony Khoury",
+    type: "dietitian",
+    specialty: "Sports Nutritionist",
+    location: "Zalka",
+    rating: 4.6,
+    reviews: 52,
+    bio: "Works with athletes and lifters on performance nutrition.",
+    avatarEmoji: "👨🏻‍⚕️",
+  },
+];
+
+export const mockGyms: Gym[] = [
+  { id: "g1", name: "Gold's Gym Beirut", location: "Downtown Beirut", perk: "10% off with Sohati", emoji: "🏋️" },
+  { id: "g2", name: "FitRepublik", location: "Dbayeh", perk: "Free trial class", emoji: "🤸" },
+  { id: "g3", name: "PowerHouse Gym", location: "Jounieh", perk: "15% off annual plan", emoji: "💪" },
+  { id: "g4", name: "Flow Yoga Studio", location: "Mar Mikhael", perk: "2 free classes", emoji: "🧘" },
+];
+
+export const marketplaceCategories = [
+  { id: "gyms", label: "Gyms", emoji: "🏋️" },
+  { id: "classes", label: "Classes", emoji: "🧘" },
+  { id: "stores", label: "Stores", emoji: "🛍️" },
+  { id: "clothing", label: "Clothing", emoji: "👕" },
+  { id: "equipment", label: "Equipment", emoji: "🏋️‍♀️" },
+  { id: "supplements", label: "Supplements", emoji: "💊" },
+  { id: "wellness", label: "Wellness Services", emoji: "🌿" },
+] as const;
