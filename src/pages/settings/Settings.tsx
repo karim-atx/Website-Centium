@@ -1,0 +1,130 @@
+import { useNavigate } from "react-router-dom";
+import { PageHeader } from "../../components/ui/PageHeader";
+import { Card } from "../../components/ui/Card";
+import { Toggle } from "../../components/ui/Toggle";
+import { useApp } from "../../context/AppContext";
+import { useState } from "react";
+import {
+  ChevronLeft,
+  Moon,
+  Sun,
+  Bell,
+  Globe,
+  Lock,
+  HelpCircle,
+  Mic,
+  Smartphone,
+} from "lucide-react";
+
+export default function Settings() {
+  const navigate = useNavigate();
+  const { theme, toggleTheme } = useApp();
+  const [notifications, setNotifications] = useState(true);
+  const [micAllowed, setMicAllowed] = useState<boolean | null>(null);
+
+  const requestMic = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((t) => t.stop());
+      setMicAllowed(true);
+    } catch {
+      setMicAllowed(false);
+    }
+  };
+
+  return (
+    <div>
+      <button
+        onClick={() => navigate(-1)}
+        className="tap w-9 h-9 -ml-2 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft mb-3"
+      >
+        <ChevronLeft size={20} />
+      </button>
+      <PageHeader title="Settings" />
+
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+        Appearance
+      </p>
+      <Card className="mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
+              {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-charcoal">Dark Mode</p>
+              <p className="text-[11px] text-charcoal-faint">
+                {theme === "dark" ? "Currently on" : "Currently off"} — applies throughout Sohati
+              </p>
+            </div>
+          </div>
+          <Toggle checked={theme === "dark"} onChange={toggleTheme} label="Dark mode" />
+        </div>
+      </Card>
+
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+        Permissions
+      </p>
+      <Card className="mb-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
+              <Mic size={16} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-charcoal">Microphone</p>
+              <p className="text-[11px] text-charcoal-faint">
+                {micAllowed === true ? "Granted" : micAllowed === false ? "Denied" : "Needed for AI voice logging"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={requestMic}
+            className="tap text-xs font-semibold text-sohati bg-sohati-pale rounded-full px-3 py-1.5"
+          >
+            {micAllowed === true ? "Re-check" : "Allow"}
+          </button>
+        </div>
+      </Card>
+
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+        General
+      </p>
+      <Card padded={false} className="divide-y divide-charcoal/[0.04]">
+        <div className="flex items-center justify-between px-4 py-3.5">
+          <div className="flex items-center gap-3">
+            <Bell size={16} className="text-charcoal-soft" />
+            <span className="text-sm font-medium text-charcoal">Notifications</span>
+          </div>
+          <Toggle checked={notifications} onChange={setNotifications} label="Notifications" />
+        </div>
+        <div className="flex items-center justify-between px-4 py-3.5">
+          <div className="flex items-center gap-3">
+            <Globe size={16} className="text-charcoal-soft" />
+            <span className="text-sm font-medium text-charcoal">Language</span>
+          </div>
+          <span className="text-xs text-charcoal-faint">English</span>
+        </div>
+        <div className="flex items-center justify-between px-4 py-3.5">
+          <div className="flex items-center gap-3">
+            <Lock size={16} className="text-charcoal-soft" />
+            <span className="text-sm font-medium text-charcoal">Privacy</span>
+          </div>
+        </div>
+        <div className="flex items-center justify-between px-4 py-3.5">
+          <div className="flex items-center gap-3">
+            <Smartphone size={16} className="text-charcoal-soft" />
+            <span className="text-sm font-medium text-charcoal">Connected devices</span>
+          </div>
+          <span className="text-xs text-charcoal-faint">Apple/Android Health</span>
+        </div>
+        <div className="flex items-center justify-between px-4 py-3.5">
+          <div className="flex items-center gap-3">
+            <HelpCircle size={16} className="text-charcoal-soft" />
+            <span className="text-sm font-medium text-charcoal">Help</span>
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}

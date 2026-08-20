@@ -1,15 +1,33 @@
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { mockGyms, marketplaceCategories } from "../../data/mockProfessionals";
-import { streaks } from "../../data/mockHealthData";
-import { Flame, Sparkles } from "lucide-react";
+import { useApp } from "../../context/AppContext";
+import { Flame, Sparkles, Store } from "lucide-react";
 
 export default function Marketplace() {
-  const streak = streaks[1];
+  const { streaks, user } = useApp();
+  const streak = streaks[1] ?? streaks[0];
+  const isBusiness = user.accountType === "business";
 
   return (
     <div>
       <PageHeader title="Explore" subtitle="The future Sohati ecosystem" />
+
+      {isBusiness && (
+        <Card className="mb-6 bg-gradient-to-br from-charcoal to-charcoal/90 !text-cream animate-fade-slide-up">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
+              <Store size={18} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">{user.businessName || "Your business"} listing</p>
+              <p className="text-xs text-cream/60">
+                B2B tools — manage your marketplace listing (early preview in this prototype)
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       <Card className="mb-6 bg-gradient-to-br from-ember to-ember-dark !text-white animate-fade-slide-up">
         <div className="flex items-center gap-2 mb-1.5">

@@ -1,6 +1,9 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
+import { EditableValue } from "../../components/ui/EditableValue";
+import { GoalsEditSheet } from "../../components/profile/GoalsEditSheet";
 import { useApp } from "../../context/AppContext";
 import {
   Target,
@@ -12,6 +15,7 @@ import {
   Globe,
   HelpCircle,
   ChevronRight,
+  Settings,
 } from "lucide-react";
 
 const goalLabels: Record<string, string> = {
@@ -25,26 +29,34 @@ const goalLabels: Record<string, string> = {
   live_healthier: "Live healthier",
 };
 
+const accountTypeLabel: Record<string, string> = {
+  customer: "Customer",
+  professional: "Professional",
+  business: "Business",
+};
+
 export default function Profile() {
-  const { user } = useApp();
+  const { user, updateProfile } = useApp();
   const navigate = useNavigate();
+  const [goalsOpen, setGoalsOpen] = useState(false);
 
   const sections = [
-    { icon: Target, label: "Goals", onClick: undefined },
+    { icon: Target, label: "Goals", onClick: () => setGoalsOpen(true) },
     { icon: Users, label: "Connected professionals", onClick: () => navigate("/professionals") },
     { icon: HeartPulse, label: "Health data", onClick: () => navigate("/health") },
-    { icon: Lock, label: "Privacy", onClick: undefined },
-    { icon: Bell, label: "Notifications", onClick: undefined },
+    { icon: Settings, label: "Settings", onClick: () => navigate("/settings") },
+    { icon: Lock, label: "Privacy", onClick: () => navigate("/settings") },
+    { icon: Bell, label: "Notifications", onClick: () => navigate("/settings") },
     { icon: Crown, label: "Subscription", onClick: () => navigate("/subscription") },
-    { icon: Globe, label: "Language", onClick: undefined },
-    { icon: HelpCircle, label: "Help", onClick: undefined },
+    { icon: Globe, label: "Language", onClick: () => navigate("/settings") },
+    { icon: HelpCircle, label: "Help", onClick: () => navigate("/settings") },
   ];
 
   return (
     <div>
       <PageHeader title="My Profile" />
 
-      <div className="flex items-center gap-4 mb-6 animate-fade-slide-up">
+      <div className="flex items-center gap-4 mb-2 animate-fade-slide-up">
         <div className="w-16 h-16 rounded-full bg-ember-pale flex items-center justify-center text-2xl font-bold text-ember-dark">
           {user.firstName.charAt(0)}
         </div>
@@ -53,20 +65,39 @@ export default function Profile() {
           <p className="text-sm text-sohati-dark font-medium">
             {user.goals.map((g) => goalLabels[g]).join(" · ")}
           </p>
+          <span className="inline-block text-[10px] font-bold text-charcoal-soft bg-cream-soft rounded-full px-2 py-0.5 mt-1">
+            {accountTypeLabel[user.accountType]}
+            {user.customerSubtype ? ` · ${user.customerSubtype}` : ""}
+            {user.professionalSubtype ? ` · ${user.professionalSubtype}` : ""}
+          </span>
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div className="grid grid-cols-3 gap-3 mb-6 mt-4">
         <Card className="text-center animate-fade-slide-up">
-          <p className="text-lg font-bold text-charcoal">{user.weightKg}</p>
+          <EditableValue
+            value={user.weightKg}
+            onSave={(v) => updateProfile({ weightKg: v })}
+            className="text-lg font-bold text-charcoal"
+          />
           <p className="text-[11px] text-charcoal-faint">kg</p>
         </Card>
         <Card className="text-center animate-fade-slide-up">
-          <p className="text-lg font-bold text-charcoal">{user.heightCm}</p>
+          <EditableValue
+            value={user.heightCm}
+            decimals={0}
+            onSave={(v) => updateProfile({ heightCm: v })}
+            className="text-lg font-bold text-charcoal"
+          />
           <p className="text-[11px] text-charcoal-faint">cm</p>
         </Card>
         <Card className="text-center animate-fade-slide-up">
-          <p className="text-lg font-bold text-charcoal">{user.age}</p>
+          <EditableValue
+            value={user.age}
+            decimals={0}
+            onSave={(v) => updateProfile({ age: v })}
+            className="text-lg font-bold text-charcoal"
+          />
           <p className="text-[11px] text-charcoal-faint">years</p>
         </Card>
       </div>
@@ -86,6 +117,8 @@ export default function Profile() {
           </button>
         ))}
       </Card>
+
+      <GoalsEditSheet open={goalsOpen} onClose={() => setGoalsOpen(false)} />
     </div>
   );
 }

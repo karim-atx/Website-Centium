@@ -5,8 +5,9 @@ import { Card } from "../../components/ui/Card";
 import { Chip } from "../../components/ui/Chip";
 import { Button } from "../../components/ui/Button";
 import { mockProfessionals } from "../../data/mockProfessionals";
+import { useApp } from "../../context/AppContext";
 import type { ProfessionalType } from "../../types";
-import { Star, ShieldCheck } from "lucide-react";
+import { Star, ShieldCheck, Briefcase } from "lucide-react";
 
 const typeLabels: Record<ProfessionalType, string> = {
   trainer: "Personal Trainers",
@@ -17,14 +18,32 @@ const typeLabels: Record<ProfessionalType, string> = {
 
 export default function Professionals() {
   const navigate = useNavigate();
+  const { user } = useApp();
   const [type, setType] = useState<ProfessionalType | null>(null);
 
   const connected = mockProfessionals.find((p) => p.connected);
   const filtered = type ? mockProfessionals.filter((p) => p.type === type) : mockProfessionals;
+  const isPro = user.accountType === "professional";
 
   return (
     <div>
       <PageHeader title="Professionals" subtitle="Trainers, dietitians, physiotherapists & doctors" />
+
+      {isPro && (
+        <Card className="mb-6 bg-gradient-to-br from-charcoal to-charcoal/90 !text-cream animate-fade-slide-up">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
+              <Briefcase size={18} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold">Your professional profile</p>
+              <p className="text-xs text-cream/60">
+                Client roster & B2B tools — early preview in this prototype
+              </p>
+            </div>
+          </div>
+        </Card>
+      )}
 
       {connected && (
         <Card

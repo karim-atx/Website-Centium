@@ -14,6 +14,7 @@ import Marketplace from "./pages/marketplace/Marketplace";
 import Profile from "./pages/profile/Profile";
 import Subscription from "./pages/subscription/Subscription";
 import More from "./pages/profile/More";
+import Settings from "./pages/settings/Settings";
 
 const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useApp();
@@ -43,6 +44,7 @@ function AppRoutes() {
         <Route path="/profile" element={<Profile />} />
         <Route path="/subscription" element={<Subscription />} />
         <Route path="/more" element={<More />} />
+        <Route path="/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
