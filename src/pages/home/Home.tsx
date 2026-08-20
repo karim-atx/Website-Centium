@@ -9,10 +9,11 @@ import { WidgetBoard } from "../../components/dashboard/WidgetBoard";
 import { Card } from "../../components/ui/Card";
 import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { AIVoiceLogger } from "../../components/food/AIVoiceLogger";
-import { LogWorkoutSheet } from "../../components/workout/LogWorkoutSheet";
+import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { ChevronRight, Sparkles, Store } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { todaysWorkout } from "../../data/mockWorkouts";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -129,7 +130,13 @@ export default function Home() {
 
       <AddFoodSheet open={addFoodOpen} onClose={() => setAddFoodOpen(false)} />
       <AIVoiceLogger open={voiceOpen} onClose={() => setVoiceOpen(false)} />
-      <LogWorkoutSheet open={workoutOpen} onClose={() => setWorkoutOpen(false)} />
+      <WorkoutSessionSheet
+        open={workoutOpen}
+        onClose={() => setWorkoutOpen(false)}
+        routineId={todaysWorkout.id}
+        routineName={todaysWorkout.name}
+        exercises={todaysWorkout.exercises}
+      />
       <AddMetricSheet open={metricOpen} onClose={() => setMetricOpen(false)} />
     </div>
   );

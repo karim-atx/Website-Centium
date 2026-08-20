@@ -4,32 +4,29 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Chip } from "../../components/ui/Chip";
 import { useApp } from "../../context/AppContext";
-import { todaysWorkout, workoutPrograms, previousWorkouts, workoutCategories } from "../../data/mockWorkouts";
-import { LogWorkoutSheet } from "../../components/workout/LogWorkoutSheet";
-import { Check, Clock, TrendingUp, ChevronRight } from "lucide-react";
+import { todaysWorkout } from "../../data/mockWorkouts";
+import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
+import RoutinesTab from "./RoutinesTab";
+import HistoryTab from "./HistoryTab";
+import { Check, Clock } from "lucide-react";
 
-type Tab = "today" | "previous" | "programs";
+type Tab = "today" | "routines" | "history";
 
 export default function Workout() {
   const { workoutLog } = useApp();
   const [tab, setTab] = useState<Tab>("today");
-  const [logOpen, setLogOpen] = useState(false);
-  const [category, setCategory] = useState<string | null>(null);
+  const [sessionOpen, setSessionOpen] = useState(false);
 
   const completedToday = workoutLog.some((w) => w.completed);
-
-  const filteredPrograms = category
-    ? workoutPrograms.filter((p) => p.category === category)
-    : workoutPrograms;
 
   return (
     <div>
       <PageHeader title="Workout" />
 
       <div className="flex gap-2 mb-5 animate-fade-slide-up">
-        {(["today", "previous", "programs"] as Tab[]).map((t) => (
+        {(["today", "routines", "history"] as Tab[]).map((t) => (
           <Chip key={t} active={tab === t} onClick={() => setTab(t)}>
-            {t === "today" ? "Today" : t === "previous" ? "Previous" : "Programs"}
+            {t === "today" ? "Today" : t === "routines" ? "Routines" : "History"}
           </Chip>
         ))}
       </div>
@@ -59,7 +56,7 @@ export default function Workout() {
             <p className="text-xs text-charcoal-faint mb-4">
               {todaysWorkout.exercises.length} exercises · ~{todaysWorkout.durationMin} min
             </p>
-            <Button fullWidth onClick={() => setLogOpen(true)}>
+            <Button fullWidth onClick={() => setSessionOpen(true)}>
               {completedToday ? "Log Again" : "Start Workout"}
             </Button>
           </Card>
@@ -86,57 +83,16 @@ export default function Workout() {
         </div>
       )}
 
-      {tab === "previous" && (
-        <div className="space-y-2.5 animate-fade-slide-up">
-          {previousWorkouts.map((w) => (
-            <Card key={w.id} interactive className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-charcoal">{w.name}</p>
-                <p className="text-xs text-charcoal-faint">{w.date} · {w.exerciseCount} exercises</p>
-              </div>
-              <div className="flex items-center gap-2 text-charcoal-faint">
-                <span className="text-xs font-medium flex items-center gap-1">
-                  <TrendingUp size={12} /> {w.durationMin}m
-                </span>
-                <ChevronRight size={16} />
-              </div>
-            </Card>
-          ))}
-        </div>
-      )}
+      {tab === "routines" && <RoutinesTab />}
+      {tab === "history" && <HistoryTab />}
 
-      {tab === "programs" && (
-        <div className="animate-fade-slide-up">
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-4">
-            <Chip active={category === null} onClick={() => setCategory(null)}>
-              All
-            </Chip>
-            {workoutCategories.map((c) => (
-              <Chip key={c.id} active={category === c.id} onClick={() => setCategory(c.id)}>
-                {c.emoji} {c.label}
-              </Chip>
-            ))}
-          </div>
-          <div className="space-y-2.5">
-            {filteredPrograms.map((p) => (
-              <Card key={p.id} interactive>
-                <div className="flex items-center justify-between mb-1.5">
-                  <h3 className="font-semibold text-charcoal text-sm">{p.name}</h3>
-                  <span className="text-[10px] font-bold uppercase tracking-wide bg-cream-soft text-charcoal-soft rounded-full px-2.5 py-1">
-                    {p.level}
-                  </span>
-                </div>
-                <p className="text-xs text-charcoal-soft mb-2">{p.description}</p>
-                <p className="text-[11px] text-charcoal-faint">
-                  {p.exercises.length}+ exercises · ~{p.durationMin} min
-                </p>
-              </Card>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <LogWorkoutSheet open={logOpen} onClose={() => setLogOpen(false)} />
+      <WorkoutSessionSheet
+        open={sessionOpen}
+        onClose={() => setSessionOpen(false)}
+        routineId={todaysWorkout.id}
+        routineName={todaysWorkout.name}
+        exercises={todaysWorkout.exercises}
+      />
     </div>
   );
 }
