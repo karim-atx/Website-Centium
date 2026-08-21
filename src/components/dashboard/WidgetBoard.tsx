@@ -14,6 +14,9 @@ const allWidgetTypes: { type: WidgetType; label: string; emoji: string }[] = [
   { type: "nutrition", label: "Nutrition", emoji: "🍽️" },
   { type: "workout", label: "Workout", emoji: "🏋️" },
   { type: "bodyFat", label: "Body Fat", emoji: "📏" },
+  { type: "habits", label: "Habits", emoji: "✅" },
+  { type: "journal", label: "Journal", emoji: "📓" },
+  { type: "meditation", label: "Meditation", emoji: "🧘" },
 ];
 
 export const WidgetBoard: React.FC = () => {

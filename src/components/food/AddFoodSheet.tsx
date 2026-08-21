@@ -2,7 +2,7 @@ import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
-import { Search, Mic, Camera, ScanLine, Clock, Star, Minus, Plus, Check } from "lucide-react";
+import { Search, Mic, Camera, ScanLine, Clock, Star, Minus, Plus, Check, UtensilsCrossed } from "lucide-react";
 import { mockFoods, foodCategories } from "../../data/mockFoods";
 import type { Food, MealType } from "../../types";
 import { mealLabels, mealOrder } from "../../services/nutrition";
@@ -16,7 +16,7 @@ export const AddFoodSheet: React.FC<{
   onClose: () => void;
   defaultMeal?: MealType;
 }> = ({ open, onClose, defaultMeal = "lunch" }) => {
-  const { addFoodEntry, foodLog } = useApp();
+  const { addFoodEntry, foodLog, customFoods, addCustomFood } = useApp();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
@@ -26,6 +26,15 @@ export const AddFoodSheet: React.FC<{
   const [scanMode, setScanMode] = useState<ScanMode>(null);
   const [scanResultFood, setScanResultFood] = useState<Food | null>(null);
   const [justAdded, setJustAdded] = useState(false);
+  const [customMode, setCustomMode] = useState(false);
+  const [customDraft, setCustomDraft] = useState({
+    name: "",
+    serving: "1 serving",
+    calories: "",
+    protein: "",
+    carbs: "",
+    fat: "",
+  });
 
   const recentFoods = useMemo(() => {
     const seen = new Set<string>();
@@ -40,13 +49,15 @@ export const AddFoodSheet: React.FC<{
     return items;
   }, [foodLog]);
 
+  const allFoods = useMemo(() => [...customFoods, ...mockFoods], [customFoods]);
+
   const filtered = useMemo(() => {
-    return mockFoods.filter((f) => {
+    return allFoods.filter((f) => {
       const matchesQuery = f.name.toLowerCase().includes(query.toLowerCase());
       const matchesCategory = category ? f.category === category : true;
       return matchesQuery && matchesCategory;
     });
-  }, [query, category]);
+  }, [allFoods, query, category]);
 
   const resetAndClose = () => {
     setQuery("");
@@ -56,7 +67,25 @@ export const AddFoodSheet: React.FC<{
     setScanMode(null);
     setScanResultFood(null);
     setJustAdded(false);
+    setCustomMode(false);
+    setCustomDraft({ name: "", serving: "1 serving", calories: "", protein: "", carbs: "", fat: "" });
     onClose();
+  };
+
+  const saveCustomFood = () => {
+    if (!customDraft.name.trim() || !customDraft.calories) return;
+    const food = addCustomFood({
+      name: customDraft.name.trim(),
+      category: "homemade",
+      serving: customDraft.serving || "1 serving",
+      calories: Number(customDraft.calories) || 0,
+      protein: Number(customDraft.protein) || 0,
+      carbs: Number(customDraft.carbs) || 0,
+      fat: Number(customDraft.fat) || 0,
+      emoji: "🍽️",
+    });
+    setCustomMode(false);
+    setSelectedFood(food);
   };
 
   const handleAdd = () => {
@@ -161,6 +190,58 @@ export const AddFoodSheet: React.FC<{
     );
   }
 
+  // Custom food creation
+  if (customMode) {
+    const field = (
+      label: string,
+      key: keyof typeof customDraft,
+      placeholder: string,
+      numeric = false
+    ) => (
+      <label className="block">
+        <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{label}</span>
+        <input
+          value={customDraft[key]}
+          onChange={(e) =>
+            setCustomDraft((d) => ({
+              ...d,
+              [key]: numeric ? e.target.value.replace(/[^\d.]/g, "") : e.target.value,
+            }))
+          }
+          placeholder={placeholder}
+          inputMode={numeric ? "decimal" : "text"}
+          className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+        />
+      </label>
+    );
+
+    return (
+      <BottomSheet open={open} onClose={resetAndClose} title="Create Custom Food">
+        <div className="space-y-4 animate-fade-slide-up">
+          {field("Food name", "name", "Mom's Kibbeh")}
+          {field("Serving size", "serving", "1 piece")}
+          <div className="grid grid-cols-2 gap-3">
+            {field("Calories", "calories", "0", true)}
+            {field("Protein (g)", "protein", "0", true)}
+            {field("Carbs (g)", "carbs", "0", true)}
+            {field("Fat (g)", "fat", "0", true)}
+          </div>
+          <Button
+            fullWidth
+            size="lg"
+            onClick={saveCustomFood}
+            disabled={!customDraft.name.trim() || !customDraft.calories}
+          >
+            Save custom food
+          </Button>
+          <p className="text-[11px] text-charcoal-faint text-center">
+            Saved foods appear in search next time, alongside the Lebanese database.
+          </p>
+        </div>
+      </BottomSheet>
+    );
+  }
+
   // Scan / barcode mock view
   if (scanMode) {
     return (
@@ -221,7 +302,7 @@ export const AddFoodSheet: React.FC<{
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-2.5 mb-5">
+          <div className="grid grid-cols-4 gap-2 mb-5">
             <button
               onClick={() => setVoiceOpen(true)}
               className="tap flex flex-col items-center gap-1.5 rounded-2xl py-3 bg-ember/10 text-ember-dark"
@@ -242,6 +323,13 @@ export const AddFoodSheet: React.FC<{
             >
               <ScanLine size={17} />
               <span className="text-[11px] font-semibold">Barcode</span>
+            </button>
+            <button
+              onClick={() => setCustomMode(true)}
+              className="tap flex flex-col items-center gap-1.5 rounded-2xl py-3 bg-gold-pale text-gold"
+            >
+              <UtensilsCrossed size={17} />
+              <span className="text-[11px] font-semibold">Custom</span>
             </button>
           </div>
 

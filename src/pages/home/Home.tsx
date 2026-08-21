@@ -1,7 +1,5 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useApp } from "../../context/AppContext";
-import { sumNutrition } from "../../services/nutrition";
-import { healthMetrics } from "../../data/mockHealthData";
 import { QuickActions } from "../../components/dashboard/QuickActions";
 import { StreaksBar } from "../../components/dashboard/StreaksBar";
 import { DateSelector } from "../../components/dashboard/DateSelector";
@@ -23,23 +21,12 @@ function getGreeting() {
 }
 
 export default function Home() {
-  const { user, foodLog, workoutLog, water } = useApp();
+  const { user } = useApp();
   const navigate = useNavigate();
   const [addFoodOpen, setAddFoodOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [workoutOpen, setWorkoutOpen] = useState(false);
   const [metricOpen, setMetricOpen] = useState(false);
-
-  const totals = useMemo(() => sumNutrition(foodLog), [foodLog]);
-
-  const steps = healthMetrics.find((m) => m.type === "steps")!;
-  const todaysWorkoutLog = workoutLog[workoutLog.length - 1];
-  const completedGoals = [
-    totals.calories > 0,
-    steps.current >= 5000,
-    !!todaysWorkoutLog?.completed,
-    water >= 2000,
-  ].filter(Boolean).length;
 
   const isPro = user.accountType === "professional";
   const isBusiness = user.accountType === "business";
@@ -63,9 +50,10 @@ export default function Home() {
         </button>
       </div>
 
-      <StreaksBar />
-
+      {/* Widget order per QA: Calendar (fixed, non-adjustable) > Streaks > Quick Actions > Your Health Today */}
       <DateSelector />
+
+      <StreaksBar />
 
       {(isPro || isBusiness) && (
         <Card
@@ -91,13 +79,6 @@ export default function Home() {
           </div>
         </Card>
       )}
-
-      <Card className="mb-5 !bg-charcoal !border-0 text-cream animate-fade-slide-up">
-        <p className="text-cream/60 text-xs font-semibold uppercase tracking-wide mb-1">Your health today</p>
-        <p className="font-display text-lg font-semibold">
-          {completedGoals >= 4 ? "You're having a great day 🎉" : `${completedGoals} of 4 daily goals complete`}
-        </p>
-      </Card>
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">Quick actions</p>
       <div className="mb-6">

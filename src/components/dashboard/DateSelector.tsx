@@ -1,6 +1,7 @@
-import React from "react";
+import { useState } from "react";
 import { useApp } from "../../context/AppContext";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
+import { CalendarPickerSheet } from "./CalendarPickerSheet";
 
 const dayLabel = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
@@ -8,8 +9,9 @@ const dayLabel = (iso: string) => {
 };
 
 export const DateSelector: React.FC = () => {
-  const { selectedDate, goToPrevDate, goToNextDate, goToToday, today } = useApp();
+  const { selectedDate, goToPrevDate, goToNextDate, goToToday, goToDate, today } = useApp();
   const isToday = selectedDate === today;
+  const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
     <div className="flex items-center justify-between bg-cream-card rounded-2xl px-3 py-2.5 mb-5 shadow-soft animate-fade-slide-up">
@@ -20,13 +22,20 @@ export const DateSelector: React.FC = () => {
       >
         <ChevronLeft size={16} />
       </button>
-      <button onClick={!isToday ? goToToday : undefined} className="tap flex items-center gap-2">
+      <button onClick={() => setPickerOpen(true)} className="tap flex items-center gap-1.5">
+        <CalendarDays size={14} className="text-charcoal-faint" />
         <span className="text-sm font-semibold text-charcoal">
           {isToday ? "Today" : dayLabel(selectedDate)}
           {isToday && <span className="text-charcoal-faint font-normal"> — {dayLabel(selectedDate)}</span>}
         </span>
         {!isToday && (
-          <span className="text-[10px] font-bold text-sohati bg-sohati-pale rounded-full px-2 py-0.5">
+          <span
+            onClick={(e) => {
+              e.stopPropagation();
+              goToToday();
+            }}
+            className="text-[10px] font-bold text-sohati bg-sohati-pale rounded-full px-2 py-0.5"
+          >
             Jump to today
           </span>
         )}
@@ -38,6 +47,14 @@ export const DateSelector: React.FC = () => {
       >
         <ChevronRight size={16} />
       </button>
+
+      <CalendarPickerSheet
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        selectedDate={selectedDate}
+        today={today}
+        onSelect={goToDate}
+      />
     </div>
   );
 };

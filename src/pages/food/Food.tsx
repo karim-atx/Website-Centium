@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
@@ -9,30 +9,62 @@ import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { DateSelector } from "../../components/dashboard/DateSelector";
 import { mealOrder, mealLabels, sumNutrition, targetsFromGoal } from "../../services/nutrition";
 import type { MealType } from "../../types";
-import { Plus, Star } from "lucide-react";
+import { Plus, Star, RefreshCw, Check } from "lucide-react";
 import GoalsPanel from "./GoalsPanel";
 import MealPrepPanel from "./MealPrepPanel";
 
 type Tab = "diary" | "goals" | "prep";
 
+const SWIPE_THRESHOLD = 60;
+
 export default function Food() {
-  const { foodLog, nutritionGoal } = useApp();
+  const { foodLog, nutritionGoal, selectedDate, copyYesterdayFood } = useApp();
   const [tab, setTab] = useState<Tab>("diary");
   const [addOpen, setAddOpen] = useState(false);
   const [addMeal, setAddMeal] = useState<MealType>("lunch");
+  const [copiedToast, setCopiedToast] = useState(false);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
-  const totals = useMemo(() => sumNutrition(foodLog), [foodLog]);
+  const todaysEntries = useMemo(
+    () => foodLog.filter((e) => e.date === selectedDate),
+    [foodLog, selectedDate]
+  );
+  const totals = useMemo(() => sumNutrition(todaysEntries), [todaysEntries]);
   const targets = targetsFromGoal(nutritionGoal);
 
   const grouped = useMemo(() => {
     const map: Record<MealType, typeof foodLog> = { breakfast: [], lunch: [], snack: [], dinner: [] };
-    foodLog.forEach((e) => map[e.meal].push(e));
+    todaysEntries.forEach((e) => map[e.meal].push(e));
     return map;
-  }, [foodLog]);
+  }, [todaysEntries]);
 
   const openAdd = (meal: MealType) => {
     setAddMeal(meal);
     setAddOpen(true);
+  };
+
+  const handleCopyYesterday = () => {
+    copyYesterdayFood();
+    setCopiedToast(true);
+    setTimeout(() => setCopiedToast(false), 1600);
+  };
+
+  // "Copy yesterday's food" via a simple swipe-right gesture on the diary
+  // list, MyNetDiary-style. A visible button covers the same action for
+  // discoverability/accessibility.
+  const onTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart.current) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    touchStart.current = null;
+    if (dx > SWIPE_THRESHOLD && Math.abs(dy) < 40) {
+      handleCopyYesterday();
+    }
   };
 
   const macroRow = (label: string, value: number, target: number, color: string) => (
@@ -64,7 +96,7 @@ export default function Food() {
       </div>
 
       {tab === "diary" && (
-        <div className="animate-fade-slide-up">
+        <div className="animate-fade-slide-up" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
           <DateSelector />
 
           <Card className="mb-6">
@@ -85,6 +117,21 @@ export default function Food() {
               {macroRow("Fat", totals.fat, targets.fat, "#E97452")}
             </div>
           </Card>
+
+          <button
+            onClick={handleCopyYesterday}
+            className="tap w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-sohati mb-4 -mt-2"
+          >
+            {copiedToast ? (
+              <>
+                <Check size={13} /> Copied yesterday's food
+              </>
+            ) : (
+              <>
+                <RefreshCw size={12} /> Swipe right, or tap, to copy yesterday's food
+              </>
+            )}
+          </button>
 
           <div className="space-y-5">
             {mealOrder.map((meal) => {

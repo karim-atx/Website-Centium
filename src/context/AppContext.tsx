@@ -50,14 +50,17 @@ const defaultUser: UserProfile = {
   customerSubtype: "general",
 };
 
+const YESTERDAY = "2026-08-19";
+
 function seedFoodLog(): FoodLogEntry[] {
   const byName = (name: string) => mockFoods.find((f) => f.name === name)!;
   const entry = (
     food: Food,
     quantity: number,
     meal: MealType,
-    id: string
-  ): FoodLogEntry => ({ id, foodId: food.id, food, quantity, meal, date: TODAY });
+    id: string,
+    date = TODAY
+  ): FoodLogEntry => ({ id, foodId: food.id, food, quantity, meal, date });
 
   return [
     entry(byName("Manoushe Zaatar"), 1, "breakfast", "seed1"),
@@ -65,6 +68,11 @@ function seedFoodLog(): FoodLogEntry[] {
     entry(byName("Coffee"), 1, "breakfast", "seed3"),
     entry(byName("Chicken Shawarma"), 1, "lunch", "seed4"),
     entry(byName("Banana"), 1, "snack", "seed5"),
+    // yesterday, so "copy yesterday's food" has something to demonstrate
+    entry(byName("Oatmeal"), 1, "breakfast", "seedY1", YESTERDAY),
+    entry(byName("Grilled Chicken Breast"), 1, "lunch", "seedY2", YESTERDAY),
+    entry(byName("Rice"), 1, "lunch", "seedY3", YESTERDAY),
+    entry(byName("Hummus"), 1, "dinner", "seedY4", YESTERDAY),
   ];
 }
 
@@ -201,6 +209,7 @@ interface AppState {
   goToPrevDate: () => void;
   goToNextDate: () => void;
   goToToday: () => void;
+  goToDate: (date: string) => void;
   copyYesterdayFood: () => void;
 
   today: string;
@@ -247,10 +256,16 @@ function usePersistentState<T>(key: string, initial: T) {
   return [state, setState] as const;
 }
 
+// Pure UTC-based date-string arithmetic — deliberately never touches the
+// browser's local timezone, so "yesterday"/"tomorrow" land on the correct
+// calendar day regardless of where the app is running (mixing a local-time
+// parse with a UTC serialization silently shifted dates by a day for any
+// UTC+ timezone, e.g. Beirut).
 function shiftDate(date: string, days: number): string {
-  const d = new Date(`${date}T00:00:00`);
-  d.setDate(d.getDate() + days);
-  return d.toISOString().slice(0, 10);
+  const [y, m, d] = date.split("-").map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  dt.setUTCDate(dt.getUTCDate() + days);
+  return dt.toISOString().slice(0, 10);
 }
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -349,7 +364,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addFoodEntry: AppState["addFoodEntry"] = (entry) => {
     setFoodLog((prev) => [
       ...prev,
-      { ...entry, id: `f${Date.now()}${Math.random().toString(16).slice(2)}`, date: TODAY },
+      { ...entry, id: `f${Date.now()}${Math.random().toString(16).slice(2)}`, date: selectedDate },
     ]);
   };
 
@@ -500,6 +515,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const goToPrevDate = () => setSelectedDate((d) => shiftDate(d, -1));
   const goToNextDate = () => setSelectedDate((d) => shiftDate(d, 1));
   const goToToday = () => setSelectedDate(TODAY);
+  const goToDate = (date: string) => setSelectedDate(date);
 
   const copyYesterdayFood = () => {
     const yesterday = shiftDate(selectedDate, -1);
@@ -658,6 +674,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       goToPrevDate,
       goToNextDate,
       goToToday,
+      goToDate,
       copyYesterdayFood,
       today: TODAY,
       colorTheme,

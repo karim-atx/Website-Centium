@@ -8,13 +8,13 @@ import { WaterFillContainer } from "./WaterFillContainer";
 import { healthMetrics } from "../../data/mockHealthData";
 import { todaysWorkout } from "../../data/mockWorkouts";
 import { sumNutrition, targetsFromGoal } from "../../services/nutrition";
-import { Footprints, Scale, Moon, Dumbbell, Percent, ArrowUp, ArrowDown, Droplet } from "lucide-react";
+import { Footprints, Scale, Moon, Dumbbell, Percent, ArrowUp, ArrowDown, Droplet, CheckSquare, BookOpen, Sparkles } from "lucide-react";
 
 const WATER_TARGET = 2500;
 
 export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
   const navigate = useNavigate();
-  const { metricValues, water, foodLog, nutritionGoal, workoutLog } = useApp();
+  const { metricValues, water, foodLog, nutritionGoal, workoutLog, habits, journalEntries } = useApp();
   const isLarge = widget.size === "large";
 
   const stepsMeta = healthMetrics.find((m) => m.type === "steps")!;
@@ -227,6 +227,78 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
           <p className="text-xs text-charcoal-faint mt-1.5">
             {todaysWorkout.exercises.length} exercises · ~{todaysWorkout.durationMin} min
           </p>
+        </div>
+      );
+    }
+
+    case "habits": {
+      const done = habits.filter((h) => h.done).length;
+      if (!isLarge) {
+        return (
+          <div>
+            {header("Habits", <CheckSquare size={15} className="text-sohati" />, () => navigate("/mind"))}
+            <p className="text-2xl font-bold text-charcoal leading-none">
+              {done}/{habits.length}
+            </p>
+          </div>
+        );
+      }
+      return (
+        <div>
+          {header("Habits", <CheckSquare size={15} className="text-sohati" />, () => navigate("/mind"))}
+          <p className="text-3xl font-bold text-charcoal leading-none mb-2">
+            {done}/{habits.length} <span className="text-sm font-normal text-charcoal-faint">done today</span>
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {habits.slice(0, 5).map((h) => (
+              <span key={h.id} className={`text-lg ${h.done ? "" : "opacity-30 grayscale"}`}>
+                {h.emoji}
+              </span>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    case "journal": {
+      const todaysEntry = journalEntries.some((e) => e.date === "2026-08-20");
+      if (!isLarge) {
+        return (
+          <div>
+            {header("Journal", <BookOpen size={15} className="text-charcoal" />, () => navigate("/mind"))}
+            <p className="text-lg font-bold text-charcoal leading-none">
+              {todaysEntry ? "Written ✓" : "Not yet"}
+            </p>
+          </div>
+        );
+      }
+      return (
+        <div>
+          {header("Journal", <BookOpen size={15} className="text-charcoal" />, () => navigate("/mind"))}
+          <p className="text-xl font-bold text-charcoal leading-none mb-1.5">
+            {todaysEntry ? "Today's entry written ✓" : "Reflect on your day"}
+          </p>
+          <p className="text-xs text-charcoal-faint">{journalEntries.length} entries total</p>
+        </div>
+      );
+    }
+
+    case "meditation": {
+      if (!isLarge) {
+        return (
+          <div>
+            {header("Meditation", <Sparkles size={15} className="text-berry" />, () => navigate("/mind"))}
+            <p className="text-lg font-bold text-charcoal leading-none">5 min</p>
+          </div>
+        );
+      }
+      return (
+        <div>
+          {header("Meditation", <Sparkles size={15} className="text-berry" />, () => navigate("/mind"))}
+          <p className="text-xl font-bold text-charcoal leading-none mb-1.5">5 min guided session</p>
+          <span className="inline-flex items-center text-xs font-semibold text-berry bg-berry-pale rounded-full px-2 py-0.5">
+            Coming soon
+          </span>
         </div>
       );
     }
