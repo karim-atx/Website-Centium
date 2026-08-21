@@ -15,6 +15,7 @@ import {
   ClipboardList,
   Check,
   X as XIcon,
+  UserMinus,
 } from "lucide-react";
 
 const activityTypeLabel: Record<string, string> = {
@@ -29,11 +30,22 @@ export const ClientDetailSheet: React.FC<{
   client: ProfessionalClient | null;
   professionalSubtype?: ProfessionalSubtype;
 }> = ({ open, onClose, client, professionalSubtype }) => {
-  const { assignProgramToClient, assignFoodTemplateToClient } = useApp();
+  const { assignProgramToClient, assignFoodTemplateToClient, removeProfessionalClient } = useApp();
   const [assigningProgram, setAssigningProgram] = useState(false);
   const [assigningTemplate, setAssigningTemplate] = useState(false);
+  const [confirmRemove, setConfirmRemove] = useState(false);
 
   if (!client) return null;
+
+  const handleRemove = () => {
+    if (!confirmRemove) {
+      setConfirmRemove(true);
+      setTimeout(() => setConfirmRemove(false), 3000);
+      return;
+    }
+    removeProfessionalClient(client.id);
+    onClose();
+  };
 
   const isDietitian = professionalSubtype === "dietitian";
 
@@ -196,9 +208,20 @@ export const ClientDetailSheet: React.FC<{
           </div>
         </div>
 
-        <Button variant="outline" fullWidth onClick={onClose}>
-          Close
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" fullWidth onClick={onClose}>
+            Close
+          </Button>
+          <Button
+            variant="outline"
+            fullWidth
+            onClick={handleRemove}
+            className="!border-ember/30 !text-ember-dark"
+          >
+            <UserMinus size={14} />
+            {confirmRemove ? "Tap again to confirm" : "Remove client"}
+          </Button>
+        </div>
       </div>
     </BottomSheet>
   );
