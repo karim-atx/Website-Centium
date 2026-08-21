@@ -90,6 +90,8 @@ export interface ProfessionalClient {
   lastWeightKg: number;
   weightTrend: number;
   lastCaloriesKcal: number;
+  assignedProgramName?: string;
+  assignedFoodTemplateName?: string;
 }
 
 export type MealType = "breakfast" | "lunch" | "snack" | "dinner";

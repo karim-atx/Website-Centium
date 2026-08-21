@@ -229,14 +229,19 @@ interface AppState {
   redeemClientCode: (code: string) => boolean;
 
   professionalClients: ProfessionalClient[];
-  addProfessionalClient: (name: string) => void;
+  addProfessionalClient: (name: string) => string;
   removeProfessionalClient: (id: string) => void;
   updateProfessionalClientAccess: (
     id: string,
     access: Partial<ProfessionalClient["access"]>
   ) => void;
+  assignProgramToClient: (clientId: string, programName: string) => void;
+  assignFoodTemplateToClient: (clientId: string, templateName: string) => void;
 
   signOut: () => void;
+
+  businessListing: { perk: string; active: boolean; membersReached: number };
+  updateBusinessListing: (patch: Partial<AppState["businessListing"]>) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -252,8 +257,23 @@ function loadPersisted<T>(key: string, fallback: T): T {
   }
 }
 
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
 function usePersistentState<T>(key: string, initial: T) {
-  const [state, setState] = useState<T>(() => loadPersisted(key, initial));
+  const [state, setState] = useState<T>(() => {
+    const loaded = loadPersisted(key, initial);
+    // Shallow-merge over the current default shape so a field added to an
+    // object-shaped piece of state after a user already saved a session
+    // (e.g. metricValues gaining sleepHours/caloriesBurned) fills in with a
+    // sane default instead of staying `undefined` and crashing consumers —
+    // rather than re-litigating this per persisted key.
+    if (isPlainObject(initial) && isPlainObject(loaded)) {
+      return { ...initial, ...loaded } as T;
+    }
+    return loaded;
+  });
   useEffect(() => {
     localStorage.setItem(`${STORAGE_KEY}:${key}`, JSON.stringify(state));
   }, [key, state]);
@@ -347,6 +367,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [customFoods, setCustomFoods] = usePersistentState<CustomFood[]>("customFoods", []);
 
   const [clientCodes, setClientCodes] = usePersistentState<ClientCode[]>("clientCodes", []);
+  const [businessListing, setBusinessListing] = usePersistentState("businessListing", {
+    perk: "10% off with Sohati",
+    active: true,
+    membersReached: 34,
+  });
   const [professionalClients, setProfessionalClients] = usePersistentState<ProfessionalClient[]>(
     "professionalClients",
     mockProfessionalClients
@@ -588,10 +613,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addProfessionalClient: AppState["addProfessionalClient"] = (name) => {
     const code = generateClientCode("me", "You");
+    const id = `pc${Date.now()}${Math.random().toString(16).slice(2)}`;
     setProfessionalClients((prev) => [
       ...prev,
       {
-        id: `pc${Date.now()}${Math.random().toString(16).slice(2)}`,
+        id,
         name,
         avatarEmoji: "🙋",
         code,
@@ -610,6 +636,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         lastCaloriesKcal: 0,
       },
     ]);
+    return code;
   };
   const removeProfessionalClient = (id: string) =>
     setProfessionalClients((prev) => prev.filter((c) => c.id !== id));
@@ -617,6 +644,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProfessionalClients((prev) =>
       prev.map((c) => (c.id === id ? { ...c, access: { ...c.access, ...access } } : c))
     );
+  const assignProgramToClient = (clientId: string, programName: string) =>
+    setProfessionalClients((prev) =>
+      prev.map((c) => (c.id === clientId ? { ...c, assignedProgramName: programName } : c))
+    );
+  const assignFoodTemplateToClient = (clientId: string, templateName: string) =>
+    setProfessionalClients((prev) =>
+      prev.map((c) => (c.id === clientId ? { ...c, assignedFoodTemplateName: templateName } : c))
+    );
+
+  const updateBusinessListing = (patch: Partial<AppState["businessListing"]>) =>
+    setBusinessListing((prev) => ({ ...prev, ...patch }));
 
   const signOut = () => {
     Object.keys(localStorage)
@@ -697,7 +735,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addProfessionalClient,
       removeProfessionalClient,
       updateProfessionalClientAccess,
+      assignProgramToClient,
+      assignFoodTemplateToClient,
       signOut,
+      businessListing,
+      updateBusinessListing,
     }),
     [
       user,
@@ -722,6 +764,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customFoods,
       clientCodes,
       professionalClients,
+      businessListing,
     ]
   );
 

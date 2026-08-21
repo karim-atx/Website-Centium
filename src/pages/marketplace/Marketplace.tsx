@@ -1,33 +1,39 @@
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { mockGyms, marketplaceCategories } from "../../data/mockProfessionals";
 import { useApp } from "../../context/AppContext";
-import { Flame, Sparkles, Store } from "lucide-react";
+import { getCurrentPosition, distanceKm, type Coords } from "../../services/geo";
+import { Flame, Sparkles, Star, MapPin } from "lucide-react";
+import BusinessDashboard from "./BusinessDashboard";
 
 export default function Marketplace() {
   const { streaks, user } = useApp();
   const streak = streaks[1] ?? streaks[0];
-  const isBusiness = user.accountType === "business";
+  const [position, setPosition] = useState<Coords | null>(null);
+
+  useEffect(() => {
+    getCurrentPosition().then(setPosition);
+  }, []);
+
+  const rankedGyms = useMemo(() => {
+    return [...mockGyms]
+      .map((g) => ({
+        ...g,
+        distanceKm: position ? distanceKm(position, { lat: g.lat, lng: g.lng }) : undefined,
+      }))
+      .sort((a, b) => b.rating - a.rating);
+  }, [position]);
+
+  // Businesses get a management dashboard here instead of the consumer
+  // browse experience — separate UI per QA, not just a banner.
+  if (user.accountType === "business") {
+    return <BusinessDashboard />;
+  }
 
   return (
     <div>
       <PageHeader title="Explore" subtitle="The future Sohati ecosystem" />
-
-      {isBusiness && (
-        <Card className="mb-6 bg-gradient-to-br from-charcoal to-charcoal/90 !text-cream animate-fade-slide-up">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center shrink-0">
-              <Store size={18} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">{user.businessName || "Your business"} listing</p>
-              <p className="text-xs text-cream/60">
-                B2B tools — manage your marketplace listing (early preview in this prototype)
-              </p>
-            </div>
-          </div>
-        </Card>
-      )}
 
       <Card className="mb-6 bg-gradient-to-br from-ember to-ember-dark !text-white animate-fade-slide-up">
         <div className="flex items-center gap-2 mb-1.5">
@@ -52,17 +58,30 @@ export default function Marketplace() {
         ))}
       </div>
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        Partner gyms near you
-      </p>
+      <div className="flex items-center justify-between mb-2.5">
+        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
+          Partner gyms near you
+        </p>
+        <span className="text-[10px] text-charcoal-faint">Ranked by rating</span>
+      </div>
       <div className="space-y-2.5 mb-6">
-        {mockGyms.map((g) => (
+        {rankedGyms.map((g) => (
           <Card key={g.id} className="flex items-center justify-between animate-fade-slide-up">
-            <div className="flex items-center gap-3">
-              <span className="text-2xl">{g.emoji}</span>
-              <div>
-                <p className="text-sm font-semibold text-charcoal">{g.name}</p>
-                <p className="text-xs text-charcoal-faint">{g.location}</p>
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-2xl shrink-0">{g.emoji}</span>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-charcoal truncate">{g.name}</p>
+                <div className="flex items-center gap-2 text-xs text-charcoal-faint">
+                  <span className="flex items-center gap-0.5 text-gold font-semibold">
+                    <Star size={11} className="fill-gold" /> {g.rating}
+                  </span>
+                  <span>{g.location}</span>
+                  {g.distanceKm !== undefined && (
+                    <span className="flex items-center gap-0.5">
+                      <MapPin size={10} /> {g.distanceKm.toFixed(1)} km
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
             <span className="text-xs font-bold text-sohati-dark bg-sohati-pale rounded-full px-2.5 py-1.5 text-right shrink-0 ml-2">
