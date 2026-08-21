@@ -53,6 +53,43 @@ export interface UserProfile {
   customerSubtype?: CustomerSubtype;
   professionalSubtype?: ProfessionalSubtype;
   businessName?: string;
+  // V3: client<->professional linking
+  linkedProfessionalCode?: string;
+  linkedProfessionalName?: string;
+}
+
+// V3: a professional generates one of these for a prospective client; the
+// client redeems it during onboarding (or later) to link accounts. Kept
+// simple — no real backend, just a shared, unique code in local state.
+export interface ClientCode {
+  code: string;
+  professionalId: string;
+  professionalName: string;
+  createdAt: string;
+  redeemed: boolean;
+}
+
+// V3: a professional's view of one client — mocked data standing in for
+// what a real client-sharing permission model would sync from that client's
+// own account.
+export interface ProfessionalClient {
+  id: string;
+  name: string;
+  avatarEmoji: string;
+  code: string;
+  joinedAt: string;
+  activityLevel: ActivityLevel;
+  activityType: "cardio" | "strength" | "both";
+  access: {
+    foodDiary: boolean;
+    workoutActivity: boolean;
+    weight: boolean;
+    progress: boolean;
+    healthMetrics: boolean;
+  };
+  lastWeightKg: number;
+  weightTrend: number;
+  lastCaloriesKcal: number;
 }
 
 export type MealType = "breakfast" | "lunch" | "snack" | "dinner";
@@ -156,11 +193,17 @@ export interface Routine {
   exercises: Exercise[];
 }
 
+// V3: per-set classification + notes + RPE, added via the "..." menu.
+export type SetType = "normal" | "warmup" | "failure" | "dropset";
+
 export interface LoggedSet {
   setNumber: number;
   reps: number;
   weightKg: number;
   completed: boolean;
+  setType?: SetType;
+  notes?: string;
+  rpe?: number;
 }
 
 export interface LoggedExercise {
@@ -179,6 +222,7 @@ export interface WorkoutSession {
   durationSec: number;
   totalVolumeKg: number;
   exercises: LoggedExercise[];
+  notes?: string;
 }
 
 export interface HealthMetricPoint {
@@ -243,6 +287,10 @@ export interface Gym {
   location: string;
   perk: string;
   emoji: string;
+  rating: number;
+  distanceKm?: number;
+  lat: number;
+  lng: number;
 }
 
 export interface HabitItem {
@@ -250,6 +298,7 @@ export interface HabitItem {
   label: string;
   emoji: string;
   done: boolean;
+  streakDays: number;
 }
 
 export interface Streak {
@@ -268,7 +317,10 @@ export type WidgetType =
   | "sleep"
   | "nutrition"
   | "workout"
-  | "bodyFat";
+  | "bodyFat"
+  | "habits"
+  | "journal"
+  | "meditation";
 export type WidgetSize = "small" | "large";
 
 export interface WidgetConfig {
@@ -317,4 +369,22 @@ export interface JournalEntry {
   text: string;
   date: string; // yyyy-mm-dd, auto-set at creation
   createdAt: string; // ISO timestamp
+}
+
+// V3: appearance — accent color theme, alongside light/dark.
+export type ColorTheme = "sohati" | "ocean" | "sunset" | "berry";
+
+// V3: custom (user-added) foods, kept separate from the curated mock database.
+export interface CustomFood extends Food {
+  isCustom: true;
+}
+
+// V3: expanded mock sleep-stage breakdown for the Health page detail view.
+export interface SleepDetail {
+  score: number;
+  remMin: number;
+  deepMin: number;
+  lightMin: number;
+  awakeMin: number;
+  summary: string;
 }

@@ -22,10 +22,15 @@ import type {
   JournalEntry,
   BloodMarker,
   ExtractedBiomarker,
+  ClientCode,
+  ProfessionalClient,
+  ColorTheme,
+  CustomFood,
 } from "../types";
 import { mockFoods } from "../data/mockFoods";
 import { defaultHabits, streaks as seedStreaks, bloodPanel } from "../data/mockHealthData";
 import { todaysWorkout, workoutPrograms } from "../data/mockWorkouts";
+import { mockProfessionalClients } from "../data/mockProfessionalClients";
 import { suggestNutritionGoal, normalizeMacroSplit } from "../services/nutrition";
 
 const TODAY = "2026-08-20";
@@ -196,13 +201,34 @@ interface AppState {
   goToPrevDate: () => void;
   goToNextDate: () => void;
   goToToday: () => void;
+  copyYesterdayFood: () => void;
 
   today: string;
+
+  colorTheme: ColorTheme;
+  setColorTheme: (theme: ColorTheme) => void;
+
+  customFoods: CustomFood[];
+  addCustomFood: (food: Omit<CustomFood, "id" | "isCustom">) => CustomFood;
+
+  clientCodes: ClientCode[];
+  generateClientCode: (professionalId: string, professionalName: string) => string;
+  redeemClientCode: (code: string) => boolean;
+
+  professionalClients: ProfessionalClient[];
+  addProfessionalClient: (name: string) => void;
+  removeProfessionalClient: (id: string) => void;
+  updateProfessionalClientAccess: (
+    id: string,
+    access: Partial<ProfessionalClient["access"]>
+  ) => void;
+
+  signOut: () => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
-const STORAGE_KEY = "sohati-v2-state";
+const STORAGE_KEY = "sohati-v3-state";
 
 function loadPersisted<T>(key: string, fallback: T): T {
   try {
@@ -292,6 +318,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [selectedDate, setSelectedDate] = usePersistentState<string>("selectedDate", TODAY);
 
+  const [colorTheme, setColorThemeState] = usePersistentState<ColorTheme>("colorTheme", "sohati");
+  useEffect(() => {
+    document.documentElement.setAttribute("data-accent", colorTheme);
+  }, [colorTheme]);
+
+  const [customFoods, setCustomFoods] = usePersistentState<CustomFood[]>("customFoods", []);
+
+  const [clientCodes, setClientCodes] = usePersistentState<ClientCode[]>("clientCodes", []);
+  const [professionalClients, setProfessionalClients] = usePersistentState<ProfessionalClient[]>(
+    "professionalClients",
+    mockProfessionalClients
+  );
+
   const completeOnboarding = (profile: Partial<UserProfile>) => {
     setUser((prev) => {
       const next = { ...prev, ...profile, onboarded: true };
@@ -349,9 +388,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addWater = (ml: number) => setWater((prev) => Math.max(0, Math.min(prev + ml, 5000)));
 
   const toggleHabit = (id: string) =>
-    setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, done: !h.done } : h)));
+    setHabits((prev) =>
+      prev.map((h) =>
+        h.id === id
+          ? {
+              ...h,
+              done: !h.done,
+              streakDays: !h.done ? h.streakDays + 1 : Math.max(0, h.streakDays - 1),
+            }
+          : h
+      )
+    );
   const addHabit = (label: string, emoji: string) =>
-    setHabits((prev) => [...prev, { id: `h${Date.now()}`, label, emoji, done: false }]);
+    setHabits((prev) => [...prev, { id: `h${Date.now()}`, label, emoji, done: false, streakDays: 0 }]);
   const removeHabit = (id: string) => setHabits((prev) => prev.filter((h) => h.id !== id));
   const renameHabit = (id: string, label: string) =>
     setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, label } : h)));
@@ -452,6 +501,106 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const goToNextDate = () => setSelectedDate((d) => shiftDate(d, 1));
   const goToToday = () => setSelectedDate(TODAY);
 
+  const copyYesterdayFood = () => {
+    const yesterday = shiftDate(selectedDate, -1);
+    const yesterdaysEntries = foodLog.filter((e) => e.date === yesterday);
+    if (yesterdaysEntries.length === 0) return;
+    setFoodLog((prev) => [
+      ...prev,
+      ...yesterdaysEntries.map((e) => ({
+        ...e,
+        id: `f${Date.now()}${Math.random().toString(16).slice(2)}`,
+        date: selectedDate,
+      })),
+    ]);
+  };
+
+  const setColorTheme = (t: ColorTheme) => setColorThemeState(t);
+
+  const addCustomFood: AppState["addCustomFood"] = (food) => {
+    const custom: CustomFood = {
+      ...food,
+      id: `custom${Date.now()}${Math.random().toString(16).slice(2)}`,
+      isCustom: true,
+    };
+    setCustomFoods((prev) => [...prev, custom]);
+    return custom;
+  };
+
+  const generateClientCode: AppState["generateClientCode"] = (professionalId, professionalName) => {
+    let code = "";
+    do {
+      code = `SOHA-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+    } while (clientCodes.some((c) => c.code === code));
+    setClientCodes((prev) => [
+      ...prev,
+      { code, professionalId, professionalName, createdAt: TODAY, redeemed: false },
+    ]);
+    return code;
+  };
+
+  const redeemClientCode: AppState["redeemClientCode"] = (code) => {
+    const trimmed = code.trim().toUpperCase();
+    if (!trimmed) return false;
+    const match = clientCodes.find((c) => c.code.toUpperCase() === trimmed);
+    if (match) {
+      setClientCodes((prev) =>
+        prev.map((c) => (c.code.toUpperCase() === trimmed ? { ...c, redeemed: true } : c))
+      );
+      setUser((prev) => ({
+        ...prev,
+        linkedProfessionalCode: match.code,
+        linkedProfessionalName: match.professionalName,
+      }));
+      return true;
+    }
+    // Prototype fallback: no matching code was ever generated in this
+    // session (there's no real second party to have generated one), so we
+    // still accept a non-empty code the user entered rather than blocking
+    // onboarding entirely.
+    setUser((prev) => ({ ...prev, linkedProfessionalCode: trimmed }));
+    return true;
+  };
+
+  const addProfessionalClient: AppState["addProfessionalClient"] = (name) => {
+    const code = generateClientCode("me", "You");
+    setProfessionalClients((prev) => [
+      ...prev,
+      {
+        id: `pc${Date.now()}${Math.random().toString(16).slice(2)}`,
+        name,
+        avatarEmoji: "🙋",
+        code,
+        joinedAt: TODAY,
+        activityLevel: "moderate",
+        activityType: "both",
+        access: {
+          foodDiary: true,
+          workoutActivity: true,
+          weight: true,
+          progress: true,
+          healthMetrics: false,
+        },
+        lastWeightKg: 0,
+        weightTrend: 0,
+        lastCaloriesKcal: 0,
+      },
+    ]);
+  };
+  const removeProfessionalClient = (id: string) =>
+    setProfessionalClients((prev) => prev.filter((c) => c.id !== id));
+  const updateProfessionalClientAccess = (id: string, access: Partial<ProfessionalClient["access"]>) =>
+    setProfessionalClients((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, access: { ...c.access, ...access } } : c))
+    );
+
+  const signOut = () => {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(STORAGE_KEY))
+      .forEach((k) => localStorage.removeItem(k));
+    setUser({ ...defaultUser });
+  };
+
   const value = useMemo<AppState>(
     () => ({
       user,
@@ -509,7 +658,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       goToPrevDate,
       goToNextDate,
       goToToday,
+      copyYesterdayFood,
       today: TODAY,
+      colorTheme,
+      setColorTheme,
+      customFoods,
+      addCustomFood,
+      clientCodes,
+      generateClientCode,
+      redeemClientCode,
+      professionalClients,
+      addProfessionalClient,
+      removeProfessionalClient,
+      updateProfessionalClientAccess,
+      signOut,
     }),
     [
       user,
@@ -530,6 +692,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       journalEntries,
       bloodMarkers,
       selectedDate,
+      colorTheme,
+      customFoods,
+      clientCodes,
+      professionalClients,
     ]
   );
 

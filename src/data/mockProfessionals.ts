@@ -70,11 +70,13 @@ export const mockProfessionals: Professional[] = [
   },
 ];
 
+// Approximate real-world coordinates for each location, used to compute a
+// mock "distance from you" in the Explore page.
 export const mockGyms: Gym[] = [
-  { id: "g1", name: "Gold's Gym Beirut", location: "Downtown Beirut", perk: "10% off with Sohati", emoji: "🏋️" },
-  { id: "g2", name: "FitRepublik", location: "Dbayeh", perk: "Free trial class", emoji: "🤸" },
-  { id: "g3", name: "PowerHouse Gym", location: "Jounieh", perk: "15% off annual plan", emoji: "💪" },
-  { id: "g4", name: "Flow Yoga Studio", location: "Mar Mikhael", perk: "2 free classes", emoji: "🧘" },
+  { id: "g1", name: "Gold's Gym Beirut", location: "Downtown Beirut", perk: "10% off with Sohati", emoji: "🏋️", rating: 4.6, lat: 33.8959, lng: 35.4844 },
+  { id: "g2", name: "FitRepublik", location: "Dbayeh", perk: "Free trial class", emoji: "🤸", rating: 4.8, lat: 33.9425, lng: 35.5919 },
+  { id: "g3", name: "PowerHouse Gym", location: "Jounieh", perk: "15% off annual plan", emoji: "💪", rating: 4.4, lat: 33.9808, lng: 35.6178 },
+  { id: "g4", name: "Flow Yoga Studio", location: "Mar Mikhael", perk: "2 free classes", emoji: "🧘", rating: 4.9, lat: 33.8959, lng: 35.5310 },
 ];
 
 export const marketplaceCategories = [

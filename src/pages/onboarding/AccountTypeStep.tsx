@@ -15,15 +15,14 @@ interface Props {
 
 const accountTypes: { value: AccountType; label: string; desc: string; icon: typeof User }[] = [
   { value: "customer", label: "Customer", desc: "I want to track my own health & fitness", icon: User },
-  { value: "professional", label: "Professional", desc: "I'm a trainer, dietitian or health pro", icon: Dumbbell },
+  { value: "professional", label: "Professional", desc: "I'm a trainer, dietitian, or physiotherapist.", icon: Dumbbell },
   { value: "business", label: "Business", desc: "Gym, studio or wellness business", icon: Building2 },
 ];
 
+// Sequential order per QA: General User first, then Client of Professional.
 const customerSubtypes: { value: CustomerSubtype; label: string }[] = [
-  { value: "client", label: "Client of a professional" },
-  { value: "regular", label: "Regular user" },
-  { value: "athlete", label: "Athlete" },
-  { value: "general", label: "General user" },
+  { value: "general", label: "General User" },
+  { value: "client", label: "Client of Professional" },
 ];
 
 const professionalSubtypes: { value: ProfessionalSubtype; label: string }[] = [
@@ -33,9 +32,11 @@ const professionalSubtypes: { value: ProfessionalSubtype; label: string }[] = [
 ];
 
 export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
+  const needsCode = draft.accountType === "customer" && draft.customerSubtype === "client";
+
   const canContinue =
     draft.accountType === "customer"
-      ? !!draft.customerSubtype
+      ? !!draft.customerSubtype && (!needsCode || draft.professionalUserIdCode.trim().length > 0)
       : draft.accountType === "professional"
       ? !!draft.professionalSubtype
       : draft.accountType === "business"
@@ -87,7 +88,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
             I am a…
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-2 mb-3">
             {customerSubtypes.map((s) => (
               <button
                 key={s.value}
@@ -103,6 +104,27 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
               </button>
             ))}
           </div>
+
+          {needsCode && (
+            <label className="block animate-fade-slide-up">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
+                Your professional's User ID
+              </span>
+              <input
+                value={draft.professionalUserIdCode}
+                onChange={(e) => setDraft((d) => ({ ...d, professionalUserIdCode: e.target.value }))}
+                placeholder="SOHA-XXXX"
+                className="w-full rounded-2xl bg-cream-card border-2 border-sohati/50 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              />
+              <p className="text-[11px] text-charcoal-faint mt-1.5">
+                Ask your trainer, dietitian or physiotherapist for the code they generated for you.
+              </p>
+            </label>
+          )}
+
+          <p className="text-xs text-charcoal-faint mt-3">
+            <em>This can be changed later in settings at anytime.</em>
+          </p>
         </div>
       )}
 

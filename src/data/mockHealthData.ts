@@ -130,9 +130,18 @@ export const streaks: Streak[] = [
 ];
 
 export const defaultHabits: HabitItem[] = [
-  { id: "h1", label: "Drink water", emoji: "💧", done: true },
-  { id: "h2", label: "10,000 steps", emoji: "👣", done: true },
-  { id: "h3", label: "Workout", emoji: "🏋️", done: true },
-  { id: "h4", label: "Journal", emoji: "📓", done: false },
-  { id: "h5", label: "Meditate", emoji: "🧘", done: false },
+  { id: "h1", label: "Drink water", emoji: "💧", done: true, streakDays: 12 },
+  { id: "h2", label: "10,000 steps", emoji: "👣", done: true, streakDays: 7 },
+  { id: "h3", label: "Workout", emoji: "🏋️", done: true, streakDays: 4 },
+  { id: "h4", label: "Journal", emoji: "📓", done: false, streakDays: 0 },
+  { id: "h5", label: "Meditate", emoji: "🧘", done: false, streakDays: 0 },
 ];
+
+export const sleepDetail = {
+  score: 82,
+  remMin: 96,
+  deepMin: 78,
+  lightMin: 210,
+  awakeMin: 18,
+  summary: "Solid night overall — deep sleep was a little below your weekly average.",
+};

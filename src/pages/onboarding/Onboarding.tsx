@@ -22,6 +22,7 @@ export interface OnboardingDraft {
   accountType: AccountType | null;
   customerSubtype: CustomerSubtype | null;
   professionalSubtype: ProfessionalSubtype | null;
+  professionalUserIdCode: string;
   businessName: string;
   firstName: string;
   age: string;
@@ -37,6 +38,7 @@ const initialDraft: OnboardingDraft = {
   accountType: null,
   customerSubtype: null,
   professionalSubtype: null,
+  professionalUserIdCode: "",
   businessName: "",
   firstName: "",
   age: "",
@@ -53,7 +55,7 @@ const TOTAL_STEPS = 7;
 export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<OnboardingDraft>(initialDraft);
-  const { completeOnboarding } = useApp();
+  const { completeOnboarding, redeemClientCode } = useApp();
   const navigate = useNavigate();
 
   const next = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
@@ -75,6 +77,9 @@ export default function Onboarding() {
       activityLevel: draft.activityLevel || "moderate",
       tracking: draft.tracking.length ? draft.tracking : ["nutrition", "workouts"],
     });
+    if (draft.customerSubtype === "client" && draft.professionalUserIdCode.trim()) {
+      redeemClientCode(draft.professionalUserIdCode);
+    }
     navigate("/");
   };
 
