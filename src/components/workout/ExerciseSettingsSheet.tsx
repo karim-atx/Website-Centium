@@ -36,8 +36,18 @@ export const ExerciseSettingsSheet: React.FC<{
   );
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={exercise.name}>
+    <BottomSheet open={open} onClose={onClose} title={draft.name || exercise.name}>
       <div className="space-y-5 animate-fade-slide-up">
+        <label className="block">
+          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Exercise name</span>
+          <input
+            value={draft.name ?? ""}
+            onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+            placeholder={exercise.name}
+            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+          />
+        </label>
+
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Min sets")}</span>
@@ -112,7 +122,7 @@ export const ExerciseSettingsSheet: React.FC<{
           fullWidth
           size="lg"
           onClick={() => {
-            onSave(draft);
+            onSave({ ...draft, name: draft.name?.trim() || exercise.name });
             onClose();
           }}
         >

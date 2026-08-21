@@ -115,3 +115,57 @@ export const workoutCategories = [
   { id: "full_body", label: "Full Body", emoji: "⚡" },
   { id: "cardio", label: "Cardio", emoji: "🏃" },
 ] as const;
+
+export type ExerciseCategory = (typeof workoutCategories)[number]["id"];
+
+// A searchable/browsable exercise library — the Create Routine flow's
+// "search for exercise" input and library popup both read from this.
+export const exerciseLibrary: { name: string; category: ExerciseCategory }[] = [
+  { name: "Bench Press", category: "chest" },
+  { name: "Incline Bench", category: "chest" },
+  { name: "Push Up", category: "chest" },
+  { name: "Dumbbell Fly", category: "chest" },
+  { name: "Cable Crossover", category: "chest" },
+  { name: "Dips", category: "chest" },
+
+  { name: "Deadlift", category: "back" },
+  { name: "Barbell Row", category: "back" },
+  { name: "Lat Pulldown", category: "back" },
+  { name: "Seated Row", category: "back" },
+  { name: "Cable Row", category: "back" },
+  { name: "Pull Up", category: "back" },
+
+  { name: "Overhead Press", category: "shoulders" },
+  { name: "Shoulder Press", category: "shoulders" },
+  { name: "Lateral Raise", category: "shoulders" },
+  { name: "Front Raise", category: "shoulders" },
+  { name: "Face Pull", category: "shoulders" },
+
+  { name: "Bicep Curl", category: "arms" },
+  { name: "Hammer Curl", category: "arms" },
+  { name: "Tricep Pushdown", category: "arms" },
+  { name: "Skull Crusher", category: "arms" },
+  { name: "Preacher Curl", category: "arms" },
+
+  { name: "Back Squat", category: "legs" },
+  { name: "Goblet Squat", category: "legs" },
+  { name: "Leg Press", category: "legs" },
+  { name: "Romanian Deadlift", category: "legs" },
+  { name: "Walking Lunge", category: "legs" },
+  { name: "Calf Raise", category: "legs" },
+
+  { name: "Plank", category: "core" },
+  { name: "Hanging Leg Raise", category: "core" },
+  { name: "Cable Woodchop", category: "core" },
+  { name: "Ab Wheel Rollout", category: "core" },
+
+  { name: "Kettlebell Swing", category: "full_body" },
+  { name: "Clean and Press", category: "full_body" },
+  { name: "Burpee", category: "full_body" },
+
+  { name: "Easy Run", category: "cardio" },
+  { name: "Interval Sprints", category: "cardio" },
+  { name: "Rowing Machine", category: "cardio" },
+  { name: "Stair Climber", category: "cardio" },
+  { name: "Cycling", category: "cardio" },
+];

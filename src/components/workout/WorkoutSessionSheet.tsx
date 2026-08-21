@@ -1,11 +1,19 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { X, Plus, Check, Calculator, Square } from "lucide-react";
+import { X, Plus, Check, Calculator, Square, MoreHorizontal } from "lucide-react";
 import type { Exercise, LoggedExercise, LoggedSet } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { Metronome } from "./Metronome";
 import { RPECalculator } from "./RPECalculator";
+import { SetOptionsSheet } from "./SetOptionsSheet";
 import { Button } from "../ui/Button";
 import { formatDuration, volumeForSession } from "../../services/workout";
+import clsx from "clsx";
+
+const setTypeBadge: Record<string, string> = {
+  warmup: "W",
+  failure: "F",
+  dropset: "D",
+};
 
 function initLoggedExercises(exercises: Exercise[]): LoggedExercise[] {
   return exercises.map((ex) => ({
@@ -33,6 +41,7 @@ export const WorkoutSessionSheet: React.FC<{
   const [logged, setLogged] = useState<LoggedExercise[]>(() => initLoggedExercises(exercises));
   const [rpeOpen, setRpeOpen] = useState(false);
   const [finished, setFinished] = useState(false);
+  const [setOptionsTarget, setSetOptionsTarget] = useState<{ exIdx: number; setIdx: number } | null>(null);
 
   useEffect(() => {
     if (!open || finished) return;
@@ -124,19 +133,27 @@ export const WorkoutSessionSheet: React.FC<{
         {logged.map((ex, exIdx) => (
           <div key={ex.exerciseId} className="mb-6">
             <p className="font-semibold text-charcoal mb-2">{ex.name}</p>
-            <div className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-center text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5 px-1">
+            <div className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-2 items-center text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5 px-1">
               <span>Set</span>
               <span>Weight (kg)</span>
               <span>Reps</span>
+              <span></span>
               <span></span>
             </div>
             <div className="space-y-1.5">
               {ex.sets.map((s, setIdx) => (
                 <div
                   key={setIdx}
-                  className="grid grid-cols-[auto_1fr_1fr_auto] gap-2 items-center bg-cream-card rounded-xl px-3 py-2 shadow-soft"
+                  className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-2 items-center bg-cream-card rounded-xl px-3 py-2 shadow-soft"
                 >
-                  <span className="text-sm font-bold text-charcoal-faint w-5">{s.setNumber}</span>
+                  <span className="text-sm font-bold text-charcoal-faint w-5 flex items-center gap-1">
+                    {s.setNumber}
+                    {s.setType && s.setType !== "normal" && (
+                      <span className="text-[9px] font-bold text-ember-dark bg-ember-pale rounded-full w-4 h-4 flex items-center justify-center">
+                        {setTypeBadge[s.setType]}
+                      </span>
+                    )}
+                  </span>
                   <input
                     value={s.weightKg}
                     onChange={(e) => updateSet(exIdx, setIdx, { weightKg: Number(e.target.value) || 0 })}
@@ -149,6 +166,16 @@ export const WorkoutSessionSheet: React.FC<{
                     inputMode="numeric"
                     className="w-full rounded-lg bg-cream-soft px-2 py-1.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
                   />
+                  <button
+                    onClick={() => setSetOptionsTarget({ exIdx, setIdx })}
+                    className={clsx(
+                      "tap w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-charcoal-faint",
+                      (s.notes || s.rpe) && "bg-sohati-pale text-sohati-dark"
+                    )}
+                    aria-label={`Set ${s.setNumber} options`}
+                  >
+                    <MoreHorizontal size={15} />
+                  </button>
                   <button
                     onClick={() => updateSet(exIdx, setIdx, { completed: !s.completed })}
                     className={`tap w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
@@ -195,6 +222,16 @@ export const WorkoutSessionSheet: React.FC<{
       </div>
 
       <RPECalculator open={rpeOpen} onClose={() => setRpeOpen(false)} />
+
+      <SetOptionsSheet
+        open={!!setOptionsTarget}
+        onClose={() => setSetOptionsTarget(null)}
+        set={setOptionsTarget ? logged[setOptionsTarget.exIdx].sets[setOptionsTarget.setIdx] : null}
+        onSave={(patch) => {
+          if (!setOptionsTarget) return;
+          updateSet(setOptionsTarget.exIdx, setOptionsTarget.setIdx, patch);
+        }}
+      />
     </div>
   );
 };

@@ -6,7 +6,7 @@ import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet"
 import { ExerciseSettingsSheet } from "../../components/workout/ExerciseSettingsSheet";
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import type { Exercise, Routine } from "../../types";
-import { Folder, FolderPlus, MoreVertical, Play, Settings2, Trash2, X } from "lucide-react";
+import { ChevronDown, ChevronRight, Folder, FolderPlus, MoreVertical, Play, Settings2, Trash2, X } from "lucide-react";
 
 export default function RoutinesTab() {
   const { routineFolders, routines, addRoutineFolder, renameRoutineFolder, deleteRoutineFolder, updateRoutine, deleteRoutine } =
@@ -19,6 +19,14 @@ export default function RoutinesTab() {
   const [renameDraft, setRenameDraft] = useState("");
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
   const [settingsExercise, setSettingsExercise] = useState<{ routineId: string; exercise: Exercise } | null>(null);
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+
+  const toggleFolderCollapsed = (id: string) =>
+    setCollapsedFolders((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
 
   const unfiled = routines.filter((r) => !r.folderId);
 
@@ -106,11 +114,19 @@ export default function RoutinesTab() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => toggleFolderCollapsed(folder.id)}
+                      className="tap flex items-center gap-2 flex-1 text-left"
+                    >
+                      {collapsedFolders.has(folder.id) ? (
+                        <ChevronRight size={15} className="text-charcoal-faint" />
+                      ) : (
+                        <ChevronDown size={15} className="text-charcoal-faint" />
+                      )}
                       <Folder size={15} className="text-charcoal-soft" />
                       <h3 className="font-display text-base font-semibold text-charcoal">{folder.name}</h3>
                       <span className="text-xs text-charcoal-faint">{folderRoutines.length}</span>
-                    </div>
+                    </button>
                     <button
                       onClick={() => {
                         setManagingFolder(folder.id);
@@ -124,26 +140,28 @@ export default function RoutinesTab() {
                 )}
               </div>
 
-              <div className="space-y-2">
-                {folderRoutines.map((r) => (
-                  <RoutineRow
-                    key={r.id}
-                    routine={r}
-                    onStart={() => startRoutine(r)}
-                    onDelete={() => deleteRoutine(r.id)}
-                    onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
-                  />
-                ))}
-                <button
-                  onClick={() => {
-                    setCreateFolder(folder.id);
-                    setCreateOpen(true);
-                  }}
-                  className="tap w-full text-xs font-semibold text-sohati border-2 border-dashed border-sohati/30 rounded-xl py-2.5"
-                >
-                  + Create routine in {folder.name}
-                </button>
-              </div>
+              {!collapsedFolders.has(folder.id) && (
+                <div className="space-y-2">
+                  {folderRoutines.map((r) => (
+                    <RoutineRow
+                      key={r.id}
+                      routine={r}
+                      onStart={() => startRoutine(r)}
+                      onDelete={() => deleteRoutine(r.id)}
+                      onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
+                    />
+                  ))}
+                  <button
+                    onClick={() => {
+                      setCreateFolder(folder.id);
+                      setCreateOpen(true);
+                    }}
+                    className="tap w-full text-xs font-semibold text-sohati border-2 border-dashed border-sohati/30 rounded-xl py-2.5"
+                  >
+                    + Create routine in {folder.name}
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}

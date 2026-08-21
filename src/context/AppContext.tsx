@@ -155,6 +155,7 @@ interface AppState {
 
   workoutSessions: WorkoutSession[];
   saveWorkoutSession: (session: Omit<WorkoutSession, "id">) => void;
+  updateWorkoutSessionNotes: (id: string, notes: string) => void;
 
   routineFolders: RoutineFolder[];
   addRoutineFolder: (name: string) => void;
@@ -381,6 +382,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       { ...session, id: `ws${Date.now()}${Math.random().toString(16).slice(2)}` },
     ]);
   };
+  const updateWorkoutSessionNotes = (id: string, notes: string) =>
+    setWorkoutSessions((prev) => prev.map((s) => (s.id === id ? { ...s, notes } : s)));
 
   const addRoutineFolder = (name: string) =>
     setRoutineFolders((prev) => [...prev, { id: `rf${Date.now()}`, name }]);
@@ -631,6 +634,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       logWorkout,
       workoutSessions,
       saveWorkoutSession,
+      updateWorkoutSessionNotes,
       routineFolders,
       addRoutineFolder,
       renameRoutineFolder,
