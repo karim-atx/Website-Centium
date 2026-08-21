@@ -180,8 +180,11 @@ interface AppState {
   addStreak: (label: string, emoji: string, goalDays: number) => void;
   removeStreak: (id: string) => void;
 
-  metricValues: { weight: number; bodyFat: number; steps: number };
-  updateMetricValue: (type: "weight" | "bodyFat" | "steps", value: number) => void;
+  metricValues: { weight: number; bodyFat: number; steps: number; sleepHours: number; caloriesBurned: number };
+  updateMetricValue: (
+    type: "weight" | "bodyFat" | "steps" | "sleepHours" | "caloriesBurned",
+    value: number
+  ) => void;
 
   widgets: WidgetConfig[];
   addWidget: (type: WidgetType, size?: WidgetSize) => void;
@@ -302,6 +305,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     weight: 106.4,
     bodyFat: 27.4,
     steps: 8421,
+    sleepHours: 7.7,
+    caloriesBurned: 2340,
   });
 
   const [widgets, setWidgets] = usePersistentState<WidgetConfig[]>("widgets", defaultWidgets);

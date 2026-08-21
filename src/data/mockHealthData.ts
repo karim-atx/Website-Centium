@@ -15,6 +15,7 @@ const weightHistory = [107.6, 107.3, 107.1, 106.9, 106.8, 106.6, 106.4];
 const stepsHistory = [7200, 9100, 6400, 10200, 8800, 9600, 8421];
 const sleepHistory = [6.8, 7.2, 7.5, 6.9, 7.8, 7.1, 7.7];
 const bodyFatHistory = [27.8, 27.7, 27.6, 27.6, 27.5, 27.4, 27.4];
+const caloriesHistory = [2180, 2410, 1990, 2560, 2290, 2470, 2340];
 
 export const healthMetrics: HealthMetric[] = [
   {
@@ -48,6 +49,14 @@ export const healthMetrics: HealthMetric[] = [
     current: 7.7,
     trend: 0.3,
     history: days(7).map((date, i) => ({ date, value: sleepHistory[i] })),
+  },
+  {
+    type: "caloriesBurned",
+    label: "Calories burned",
+    unit: "kcal",
+    current: 2340,
+    trend: -70,
+    history: days(7).map((date, i) => ({ date, value: caloriesHistory[i] })),
   },
 ];
 

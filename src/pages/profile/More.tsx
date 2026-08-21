@@ -6,11 +6,12 @@ import { Sparkles, Users, Store, User as UserIcon, Crown, ChevronRight, Settings
 export default function More() {
   const navigate = useNavigate();
 
+  // Profile shifted to the top per QA — first widget in the More list.
   const items = [
+    { icon: UserIcon, label: "Profile", desc: "Your account & settings", to: "/profile", bg: "#FCE6DD", color: "#E97452" },
     { icon: Sparkles, label: "Mind", desc: "Habits, journal & meditation", to: "/mind", bg: "#F1E0EB", color: "#9C4F7C" },
     { icon: Users, label: "Professionals", desc: "Trainers, dietitians & doctors", to: "/professionals", bg: "#DCEFE5", color: "#1B6B52" },
     { icon: Store, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/marketplace", bg: "#F6E9C9", color: "#D9A441" },
-    { icon: UserIcon, label: "Profile", desc: "Your account & settings", to: "/profile", bg: "#FCE6DD", color: "#E97452" },
     { icon: Settings, label: "Settings", desc: "Appearance, notifications & more", to: "/settings", bg: "#DCEAF8", color: "#4C8FD1" },
     { icon: Crown, label: "Sohati", desc: "Unlock premium features", to: "/subscription", bg: "rgb(var(--c-charcoal))", color: "rgb(var(--c-cream))" },
   ];

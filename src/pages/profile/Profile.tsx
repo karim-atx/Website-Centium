@@ -16,6 +16,7 @@ import {
   HelpCircle,
   ChevronRight,
   Settings,
+  LogOut,
 } from "lucide-react";
 
 const goalLabels: Record<string, string> = {
@@ -36,9 +37,20 @@ const accountTypeLabel: Record<string, string> = {
 };
 
 export default function Profile() {
-  const { user, updateProfile } = useApp();
+  const { user, updateProfile, signOut } = useApp();
   const navigate = useNavigate();
   const [goalsOpen, setGoalsOpen] = useState(false);
+  const [confirmSignOut, setConfirmSignOut] = useState(false);
+
+  const handleSignOut = () => {
+    if (!confirmSignOut) {
+      setConfirmSignOut(true);
+      setTimeout(() => setConfirmSignOut(false), 3000);
+      return;
+    }
+    signOut();
+    navigate("/onboarding");
+  };
 
   const sections = [
     { icon: Target, label: "Goals", onClick: () => setGoalsOpen(true) },
@@ -117,6 +129,14 @@ export default function Profile() {
           </button>
         ))}
       </Card>
+
+      <button
+        onClick={handleSignOut}
+        className="tap w-full flex items-center justify-center gap-2 rounded-2xl border border-ember/30 text-ember-dark text-sm font-semibold py-3.5 mt-5"
+      >
+        <LogOut size={15} />
+        {confirmSignOut ? "Tap again to confirm sign out" : "Sign Out"}
+      </button>
 
       <GoalsEditSheet open={goalsOpen} onClose={() => setGoalsOpen(false)} />
     </div>

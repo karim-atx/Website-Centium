@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { useApp } from "../../context/AppContext";
-import { Check, Pencil, Plus, Trash2, X } from "lucide-react";
+import { Check, Flame, Pencil, Plus, Trash2, X } from "lucide-react";
 import clsx from "clsx";
 
 const emojiOptions = ["✅", "💧", "👣", "🏋️", "📓", "🧘", "🥗", "😴"];
@@ -57,12 +57,17 @@ export default function HabitsTab() {
               <>
                 <button
                   onClick={() => toggleHabit(h.id)}
-                  className="tap flex items-center gap-3 flex-1 text-left"
+                  className="tap flex items-center gap-3 flex-1 text-left min-w-0"
                 >
-                  <span className="text-lg">{h.emoji}</span>
-                  <span className={clsx("text-sm font-medium", h.done ? "text-charcoal-faint line-through" : "text-charcoal")}>
+                  <span className="text-lg shrink-0">{h.emoji}</span>
+                  <span className={clsx("text-sm font-medium truncate", h.done ? "text-charcoal-faint line-through" : "text-charcoal")}>
                     {h.label}
                   </span>
+                  {h.streakDays > 0 && (
+                    <span className="flex items-center gap-0.5 text-[11px] font-bold text-ember-dark bg-ember-pale rounded-full px-1.5 py-0.5 shrink-0">
+                      <Flame size={10} /> {h.streakDays}
+                    </span>
+                  )}
                 </button>
                 <div className="flex items-center gap-2">
                   <button

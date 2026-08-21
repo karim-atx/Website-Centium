@@ -39,8 +39,8 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
     const num = Number(value);
     if (value) {
       if (type === "water") addWater(num);
-      else if (type === "weight" || type === "bodyFat" || type === "steps") updateMetricValue(type, num);
-      // "sleep" has no persisted override yet in this prototype — visually confirmed only.
+      else if (type === "sleep") updateMetricValue("sleepHours", num);
+      else updateMetricValue(type, num);
     }
     setSaved(true);
     setTimeout(handleClose, 800);
