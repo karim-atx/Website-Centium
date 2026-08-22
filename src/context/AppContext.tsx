@@ -246,7 +246,7 @@ interface AppState {
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
-const STORAGE_KEY = "sohati-v3-state";
+const STORAGE_KEY = "sohati-v4-state";
 
 function loadPersisted<T>(key: string, fallback: T): T {
   try {
