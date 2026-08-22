@@ -1,39 +1,53 @@
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/ui/Card";
-import { Sparkline } from "../../components/health/Sparkline";
 import { previousWorkouts } from "../../data/mockWorkouts";
 import { formatDuration } from "../../services/workout";
-import { TrendingUp, ChevronDown, ChevronUp, NotebookPen } from "lucide-react";
+import { WorkoutCalendarSheet } from "../../components/workout/WorkoutCalendarSheet";
+import { ChevronDown, ChevronUp, NotebookPen, Calendar, BarChart3, Clock } from "lucide-react";
 import type { WorkoutSession } from "../../types";
-
-// A few seed volume points so the chart reads meaningfully before the user
-// has logged real sessions in this prototype.
-const seedVolumes = [4200, 4550, 4100, 4820, 5010, 4700];
 
 export default function HistoryTab() {
   const { workoutSessions, updateWorkoutSessionNotes } = useApp();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [calendarOpen, setCalendarOpen] = useState(false);
 
-  const volumePoints = [...seedVolumes, ...workoutSessions.map((s) => s.totalVolumeKg)];
+  const totalVolume = workoutSessions.reduce((s, w) => s + w.totalVolumeKg, 0);
+  const totalSeconds = workoutSessions.reduce((s, w) => s + w.durationSec, 0);
 
   return (
     <div className="animate-fade-slide-up space-y-6">
-      <Card>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
-            Volume progression
-          </p>
-          <TrendingUp size={14} className="text-sohati" />
-        </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-2xl font-bold text-charcoal">
-              {volumePoints[volumePoints.length - 1].toLocaleString()} kg
-            </p>
-            <p className="text-xs text-charcoal-faint">Last logged session</p>
+      <div className="flex items-center justify-between">
+        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
+          Summary
+        </p>
+        <button
+          onClick={() => setCalendarOpen(true)}
+          aria-label="Workout calendar"
+          className="tap w-8 h-8 rounded-full bg-cream-card flex items-center justify-center text-charcoal-soft shadow-soft"
+        >
+          <Calendar size={15} />
+        </button>
+      </div>
+
+      <Card className="flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
+            <BarChart3 size={16} className="text-sohati" />
           </div>
-          <Sparkline values={volumePoints} color="#1B6B52" width={140} height={44} />
+          <div>
+            <p className="text-sm font-bold text-charcoal">{totalVolume.toLocaleString()} kg</p>
+            <p className="text-[11px] text-charcoal-faint">Total volume</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <div className="w-9 h-9 rounded-2xl bg-sky-pale flex items-center justify-center shrink-0">
+            <Clock size={16} className="text-sky" />
+          </div>
+          <div className="text-right">
+            <p className="text-sm font-bold text-charcoal">{formatDuration(totalSeconds)}</p>
+            <p className="text-[11px] text-charcoal-faint">Time taken</p>
+          </div>
         </div>
       </Card>
 
@@ -74,6 +88,8 @@ export default function HistoryTab() {
           ))}
         </div>
       </div>
+
+      <WorkoutCalendarSheet open={calendarOpen} onClose={() => setCalendarOpen(false)} />
     </div>
   );
 }

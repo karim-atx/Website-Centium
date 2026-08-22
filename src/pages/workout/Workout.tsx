@@ -3,8 +3,9 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Chip } from "../../components/ui/Chip";
 import RoutinesTab from "./RoutinesTab";
 import HistoryTab from "./HistoryTab";
+import MetricsTab from "./MetricsTab";
 
-type Tab = "routines" | "history";
+type Tab = "routines" | "history" | "metrics";
 
 export default function Workout() {
   const [tab, setTab] = useState<Tab>("routines");
@@ -14,15 +15,16 @@ export default function Workout() {
       <PageHeader title="Workout" />
 
       <div className="flex gap-2 mb-5 animate-fade-slide-up">
-        {(["routines", "history"] as Tab[]).map((t) => (
+        {(["routines", "history", "metrics"] as Tab[]).map((t) => (
           <Chip key={t} active={tab === t} onClick={() => setTab(t)}>
-            {t === "routines" ? "Routines" : "History"}
+            {t === "routines" ? "Routines" : t === "history" ? "History" : "Metrics"}
           </Chip>
         ))}
       </div>
 
       {tab === "routines" && <RoutinesTab />}
       {tab === "history" && <HistoryTab />}
+      {tab === "metrics" && <MetricsTab />}
     </div>
   );
 }

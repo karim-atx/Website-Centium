@@ -30,7 +30,9 @@ import type {
 } from "../types";
 import { mockFoods } from "../data/mockFoods";
 import { defaultHabits, streaks as seedStreaks, bloodPanel } from "../data/mockHealthData";
-import { todaysWorkout, workoutPrograms } from "../data/mockWorkouts";
+import { todaysWorkout, workoutPrograms, exerciseLibrary } from "../data/mockWorkouts";
+import { estimate1RM } from "../services/workout";
+import { ONE_RM_CLASSIFICATIONS } from "../types";
 import { mockProfessionalClients } from "../data/mockProfessionalClients";
 import { suggestNutritionGoal, normalizeMacroSplit } from "../services/nutrition";
 
@@ -161,8 +163,13 @@ interface AppState {
   saveWorkoutSession: (session: Omit<WorkoutSession, "id">) => void;
   updateWorkoutSessionNotes: (id: string, notes: string) => void;
 
+  // V4: estimated 1RM per exercise name (barbell/dumbbell/weighted-bodyweight
+  // only) — auto-updated from logged sets, editable from History/Metrics.
+  personalRecords: Record<string, number>;
+  setPersonalRecord: (exerciseName: string, kg: number) => void;
+
   routineFolders: RoutineFolder[];
-  addRoutineFolder: (name: string) => void;
+  addRoutineFolder: (name: string, parentId?: string | null) => void;
   renameRoutineFolder: (id: string, name: string) => void;
   deleteRoutineFolder: (id: string) => void;
   routines: Routine[];
@@ -325,6 +332,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "workoutSessions",
     []
   );
+  const [personalRecords, setPersonalRecords] = usePersistentState<Record<string, number>>(
+    "personalRecords",
+    {}
+  );
 
   const [routineFolders, setRoutineFolders] = usePersistentState<RoutineFolder[]>(
     "routineFolders",
@@ -429,16 +440,38 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...prev,
       { ...session, id: `ws${Date.now()}${Math.random().toString(16).slice(2)}` },
     ]);
+
+    // Auto-update estimated 1RMs for barbell/dumbbell/weighted-bodyweight
+    // exercises from this session's heaviest completed set.
+    setPersonalRecords((prev) => {
+      const next = { ...prev };
+      for (const ex of session.exercises) {
+        const libEntry = exerciseLibrary.find((l) => l.name === ex.name);
+        if (!libEntry || !ONE_RM_CLASSIFICATIONS.includes(libEntry.classification)) continue;
+        const best = ex.sets
+          .filter((s) => s.completed && s.weightKg > 0)
+          .reduce((max, s) => Math.max(max, estimate1RM(s.weightKg, s.reps)), 0);
+        if (best > 0 && best > (next[ex.name] ?? 0)) next[ex.name] = best;
+      }
+      return next;
+    });
   };
+  const setPersonalRecord = (exerciseName: string, kg: number) =>
+    setPersonalRecords((prev) => ({ ...prev, [exerciseName]: kg }));
   const updateWorkoutSessionNotes = (id: string, notes: string) =>
     setWorkoutSessions((prev) => prev.map((s) => (s.id === id ? { ...s, notes } : s)));
 
-  const addRoutineFolder = (name: string) =>
-    setRoutineFolders((prev) => [...prev, { id: `rf${Date.now()}`, name }]);
+  const addRoutineFolder = (name: string, parentId: string | null = null) =>
+    setRoutineFolders((prev) => [...prev, { id: `rf${Date.now()}`, name, parentId }]);
   const renameRoutineFolder = (id: string, name: string) =>
     setRoutineFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
   const deleteRoutineFolder = (id: string) => {
-    setRoutineFolders((prev) => prev.filter((f) => f.id !== id));
+    // Cascade: subfolders of a deleted folder become top-level, and any
+    // routines directly in it are unfiled — keeps things simple and never
+    // silently deletes a routine.
+    setRoutineFolders((prev) =>
+      prev.filter((f) => f.id !== id).map((f) => (f.parentId === id ? { ...f, parentId: null } : f))
+    );
     setRoutines((prev) => prev.map((r) => (r.folderId === id ? { ...r, folderId: null } : r)));
   };
 
@@ -746,6 +779,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       workoutSessions,
       saveWorkoutSession,
       updateWorkoutSessionNotes,
+      personalRecords,
+      setPersonalRecord,
       routineFolders,
       addRoutineFolder,
       renameRoutineFolder,
@@ -822,6 +857,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       foodLog,
       workoutLog,
       workoutSessions,
+      personalRecords,
       routineFolders,
       routines,
       water,

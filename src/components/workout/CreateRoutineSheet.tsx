@@ -4,20 +4,23 @@ import { Button } from "../ui/Button";
 import type { Exercise, Routine } from "../../types";
 import { exerciseLibrary } from "../../data/mockWorkouts";
 import { useApp } from "../../context/AppContext";
-import { ExerciseLibrarySheet } from "./ExerciseLibrarySheet";
+import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet";
 import { ExerciseSettingsSheet } from "./ExerciseSettingsSheet";
 import { GripVertical, Library, Search, Settings2, X } from "lucide-react";
 
 const colorOptions = ["#1B6B52", "#E97452", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
 
 let localId = 0;
-const blankExercise = (name: string): Exercise => ({
+const blankExercise = (pick: ExercisePick): Exercise => ({
   id: `custom-ex-${Date.now()}-${localId++}`,
-  name,
+  name: pick.name,
   sets: 3,
   reps: 10,
   weightKg: 20,
   category: "full_body",
+  muscleGroups: pick.muscleGroups,
+  classification: pick.classification,
+  isCustom: pick.isCustom,
 });
 
 export const CreateRoutineSheet: React.FC<{
@@ -43,9 +46,9 @@ export const CreateRoutineSheet: React.FC<{
     setSearchQuery("");
   };
 
-  const addExercise = (exName: string) => {
-    if (!exName.trim() || exercises.some((e) => e.name === exName.trim())) return;
-    setExercises((prev) => [...prev, blankExercise(exName.trim())]);
+  const addExercise = (pick: ExercisePick) => {
+    if (!pick.name.trim() || exercises.some((e) => e.name === pick.name.trim())) return;
+    setExercises((prev) => [...prev, blankExercise({ ...pick, name: pick.name.trim() })]);
     setSearchQuery("");
   };
 
@@ -173,7 +176,7 @@ export const CreateRoutineSheet: React.FC<{
                 {searchResults.map((r) => (
                   <button
                     key={r.name}
-                    onClick={() => addExercise(r.name)}
+                    onClick={() => addExercise({ name: r.name, classification: r.classification })}
                     className="tap w-full flex items-center justify-between rounded-xl px-3 py-2 bg-sohati-pale/60 hover:bg-sohati-pale text-left"
                   >
                     <span className="text-sm font-medium text-charcoal">{r.name}</span>
@@ -200,7 +203,7 @@ export const CreateRoutineSheet: React.FC<{
       <ExerciseLibrarySheet
         open={libraryOpen}
         onClose={() => setLibraryOpen(false)}
-        onPick={(exName) => addExercise(exName)}
+        onPick={(pick) => addExercise(pick)}
         alreadyAdded={exercises.map((e) => e.name)}
       />
 

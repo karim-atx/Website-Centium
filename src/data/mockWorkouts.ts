@@ -1,4 +1,4 @@
-import type { WorkoutTemplate, Exercise } from "../types";
+import type { WorkoutTemplate, Exercise, ExerciseClassification } from "../types";
 
 let exId = 0;
 const ex = (partial: Omit<Exercise, "id">): Exercise => ({
@@ -120,52 +120,54 @@ export type ExerciseCategory = (typeof workoutCategories)[number]["id"];
 
 // A searchable/browsable exercise library — the Create Routine flow's
 // "search for exercise" input and library popup both read from this.
-export const exerciseLibrary: { name: string; category: ExerciseCategory }[] = [
-  { name: "Bench Press", category: "chest" },
-  { name: "Incline Bench", category: "chest" },
-  { name: "Push Up", category: "chest" },
-  { name: "Dumbbell Fly", category: "chest" },
-  { name: "Cable Crossover", category: "chest" },
-  { name: "Dips", category: "chest" },
+// `classification` drives which exercises track an estimated 1RM (barbell/
+// dumbbell/weighted-bodyweight) per QA App 3.0.
+export const exerciseLibrary: { name: string; category: ExerciseCategory; classification: ExerciseClassification }[] = [
+  { name: "Bench Press", category: "chest", classification: "barbell" },
+  { name: "Incline Bench", category: "chest", classification: "barbell" },
+  { name: "Push Up", category: "chest", classification: "reps_only" },
+  { name: "Dumbbell Fly", category: "chest", classification: "dumbbell" },
+  { name: "Cable Crossover", category: "chest", classification: "machine_other" },
+  { name: "Dips", category: "chest", classification: "weighted_bodyweight" },
 
-  { name: "Deadlift", category: "back" },
-  { name: "Barbell Row", category: "back" },
-  { name: "Lat Pulldown", category: "back" },
-  { name: "Seated Row", category: "back" },
-  { name: "Cable Row", category: "back" },
-  { name: "Pull Up", category: "back" },
+  { name: "Deadlift", category: "back", classification: "barbell" },
+  { name: "Barbell Row", category: "back", classification: "barbell" },
+  { name: "Lat Pulldown", category: "back", classification: "machine_other" },
+  { name: "Seated Row", category: "back", classification: "machine_other" },
+  { name: "Cable Row", category: "back", classification: "machine_other" },
+  { name: "Pull Up", category: "back", classification: "weighted_bodyweight" },
 
-  { name: "Overhead Press", category: "shoulders" },
-  { name: "Shoulder Press", category: "shoulders" },
-  { name: "Lateral Raise", category: "shoulders" },
-  { name: "Front Raise", category: "shoulders" },
-  { name: "Face Pull", category: "shoulders" },
+  { name: "Overhead Press", category: "shoulders", classification: "barbell" },
+  { name: "Shoulder Press", category: "shoulders", classification: "dumbbell" },
+  { name: "Lateral Raise", category: "shoulders", classification: "dumbbell" },
+  { name: "Front Raise", category: "shoulders", classification: "dumbbell" },
+  { name: "Face Pull", category: "shoulders", classification: "machine_other" },
 
-  { name: "Bicep Curl", category: "arms" },
-  { name: "Hammer Curl", category: "arms" },
-  { name: "Tricep Pushdown", category: "arms" },
-  { name: "Skull Crusher", category: "arms" },
-  { name: "Preacher Curl", category: "arms" },
+  { name: "Bicep Curl", category: "arms", classification: "dumbbell" },
+  { name: "Hammer Curl", category: "arms", classification: "dumbbell" },
+  { name: "Tricep Pushdown", category: "arms", classification: "machine_other" },
+  { name: "Skull Crusher", category: "arms", classification: "barbell" },
+  { name: "Preacher Curl", category: "arms", classification: "barbell" },
 
-  { name: "Back Squat", category: "legs" },
-  { name: "Goblet Squat", category: "legs" },
-  { name: "Leg Press", category: "legs" },
-  { name: "Romanian Deadlift", category: "legs" },
-  { name: "Walking Lunge", category: "legs" },
-  { name: "Calf Raise", category: "legs" },
+  { name: "Back Squat", category: "legs", classification: "barbell" },
+  { name: "Goblet Squat", category: "legs", classification: "dumbbell" },
+  { name: "Leg Press", category: "legs", classification: "machine_other" },
+  { name: "Romanian Deadlift", category: "legs", classification: "barbell" },
+  { name: "Walking Lunge", category: "legs", classification: "dumbbell" },
+  { name: "Calf Raise", category: "legs", classification: "machine_other" },
 
-  { name: "Plank", category: "core" },
-  { name: "Hanging Leg Raise", category: "core" },
-  { name: "Cable Woodchop", category: "core" },
-  { name: "Ab Wheel Rollout", category: "core" },
+  { name: "Plank", category: "core", classification: "duration" },
+  { name: "Hanging Leg Raise", category: "core", classification: "reps_only" },
+  { name: "Cable Woodchop", category: "core", classification: "machine_other" },
+  { name: "Ab Wheel Rollout", category: "core", classification: "reps_only" },
 
-  { name: "Kettlebell Swing", category: "full_body" },
-  { name: "Clean and Press", category: "full_body" },
-  { name: "Burpee", category: "full_body" },
+  { name: "Kettlebell Swing", category: "full_body", classification: "dumbbell" },
+  { name: "Clean and Press", category: "full_body", classification: "barbell" },
+  { name: "Burpee", category: "full_body", classification: "reps_only" },
 
-  { name: "Easy Run", category: "cardio" },
-  { name: "Interval Sprints", category: "cardio" },
-  { name: "Rowing Machine", category: "cardio" },
-  { name: "Stair Climber", category: "cardio" },
-  { name: "Cycling", category: "cardio" },
+  { name: "Easy Run", category: "cardio", classification: "cardio" },
+  { name: "Interval Sprints", category: "cardio", classification: "cardio" },
+  { name: "Rowing Machine", category: "cardio", classification: "cardio" },
+  { name: "Stair Climber", category: "cardio", classification: "cardio" },
+  { name: "Cycling", category: "cardio", classification: "cardio" },
 ];

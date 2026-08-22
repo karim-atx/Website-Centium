@@ -1,13 +1,39 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import type { Exercise, RepMaxUpdateMode } from "../../types";
+import { useApp } from "../../context/AppContext";
+import type { Exercise, RepMaxUpdateMode, MuscleGroup, ExerciseClassification } from "../../types";
+import { ONE_RM_CLASSIFICATIONS } from "../../types";
 import clsx from "clsx";
 
 const repMaxModes: { value: RepMaxUpdateMode; label: string; desc: string }[] = [
   { value: "no_update", label: "Does not update", desc: "Rep Max stays unchanged" },
   { value: "prompt", label: "Prompt for update", desc: "Ask when an update looks likely" },
   { value: "prompt_with_estimate", label: "Prompt with estimate", desc: "Pre-fill the new estimated 1RM" },
+];
+
+const muscleGroupOptions: { value: MuscleGroup; label: string }[] = [
+  { value: "arms", label: "Arms" },
+  { value: "back", label: "Back" },
+  { value: "cardio", label: "Cardio" },
+  { value: "chest", label: "Chest" },
+  { value: "core", label: "Core" },
+  { value: "full_body", label: "Full Body" },
+  { value: "legs", label: "Legs" },
+  { value: "olympic", label: "Olympic" },
+  { value: "other", label: "Other" },
+  { value: "shoulders", label: "Shoulders" },
+];
+
+const classificationOptions: { value: ExerciseClassification; label: string }[] = [
+  { value: "barbell", label: "Barbell" },
+  { value: "dumbbell", label: "Dumbbell" },
+  { value: "machine_other", label: "Machine / Other" },
+  { value: "weighted_bodyweight", label: "Weighted Bodyweight" },
+  { value: "assisted_bodyweight", label: "Assisted Bodyweight" },
+  { value: "reps_only", label: "Reps Only" },
+  { value: "cardio", label: "Cardio" },
+  { value: "duration", label: "Duration" },
 ];
 
 const field = (label: string, unit?: string) => `${label}${unit ? ` (${unit})` : ""}`;
@@ -18,13 +44,29 @@ export const ExerciseSettingsSheet: React.FC<{
   exercise: Exercise | null;
   onSave: (patch: Partial<Exercise>) => void;
 }> = ({ open, onClose, exercise, onSave }) => {
+  const { personalRecords, setPersonalRecord } = useApp();
   const [draft, setDraft] = useState<Partial<Exercise>>({});
+  const [oneRmDraft, setOneRmDraft] = useState("");
 
   React.useEffect(() => {
-    if (exercise) setDraft(exercise);
+    if (exercise) {
+      setDraft(exercise);
+      setOneRmDraft(String(personalRecords[exercise.name] ?? ""));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise]);
 
   if (!exercise) return null;
+
+  const isOneRmEligible = draft.classification && ONE_RM_CLASSIFICATIONS.includes(draft.classification);
+  const toggleMuscleGroup = (mg: MuscleGroup) =>
+    setDraft((d) => {
+      const current = d.muscleGroups ?? [];
+      return {
+        ...d,
+        muscleGroups: current.includes(mg) ? current.filter((m) => m !== mg) : [...current, mg],
+      };
+    });
 
   const num = (key: keyof Exercise) => (
     <input
@@ -47,6 +89,58 @@ export const ExerciseSettingsSheet: React.FC<{
             className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
           />
         </label>
+
+        <div>
+          <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Muscle Group</span>
+          <div className="flex flex-wrap gap-2">
+            {muscleGroupOptions.map((mg) => (
+              <button
+                key={mg.value}
+                onClick={() => toggleMuscleGroup(mg.value)}
+                className={clsx(
+                  "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
+                  (draft.muscleGroups ?? []).includes(mg.value)
+                    ? "bg-sohati text-white border-sohati"
+                    : "bg-cream-soft border-transparent text-charcoal-soft"
+                )}
+              >
+                {mg.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Classification</span>
+          <div className="flex flex-wrap gap-2">
+            {classificationOptions.map((c) => (
+              <button
+                key={c.value}
+                onClick={() => setDraft((d) => ({ ...d, classification: c.value }))}
+                className={clsx(
+                  "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
+                  draft.classification === c.value
+                    ? "bg-sohati text-white border-sohati"
+                    : "bg-cream-soft border-transparent text-charcoal-soft"
+                )}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {isOneRmEligible && (
+          <label className="block">
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Estimated 1RM (kg)</span>
+            <input
+              value={oneRmDraft}
+              onChange={(e) => setOneRmDraft(e.target.value.replace(/[^\d.]/g, ""))}
+              inputMode="decimal"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            />
+          </label>
+        )}
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
@@ -122,7 +216,9 @@ export const ExerciseSettingsSheet: React.FC<{
           fullWidth
           size="lg"
           onClick={() => {
-            onSave({ ...draft, name: draft.name?.trim() || exercise.name });
+            const finalName = draft.name?.trim() || exercise.name;
+            onSave({ ...draft, name: finalName });
+            if (isOneRmEligible && oneRmDraft) setPersonalRecord(finalName, Number(oneRmDraft));
             onClose();
           }}
         >
