@@ -11,11 +11,9 @@ import { sumNutrition, targetsFromGoal } from "../../services/nutrition";
 import { Footprints, Scale, Moon, Dumbbell, ArrowUp, ArrowDown, Droplet, CheckSquare, BookOpen, Sparkles, Utensils } from "lucide-react";
 import { habitIcon } from "../../utils/icons";
 
-const WATER_TARGET = 2500;
-
 export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
   const navigate = useNavigate();
-  const { metricValues, water, foodLog, nutritionGoal, workoutLog, habits, journalEntries } = useApp();
+  const { metricValues, water, waterGoalMl, foodLog, nutritionGoal, workoutLog, habits, journalEntries } = useApp();
   const isLarge = widget.size === "large";
 
   const stepsMeta = healthMetrics.find((m) => m.type === "steps")!;
@@ -91,7 +89,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
     }
 
     case "water": {
-      const pct = water / WATER_TARGET;
+      const pct = water / waterGoalMl;
       if (!isLarge) {
         return (
           <div className="flex items-center gap-3">
@@ -108,7 +106,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
           {header("Water intake", <Droplet size={15} className="text-sky" />, () => navigate("/health"))}
           <p className="text-2xl font-bold text-charcoal leading-none mb-1">
             {(water / 1000).toFixed(2)}L{" "}
-            <span className="text-sm font-normal text-charcoal-faint">/ {(WATER_TARGET / 1000).toFixed(1)}L</span>
+            <span className="text-sm font-normal text-charcoal-faint">/ {(waterGoalMl / 1000).toFixed(1)}L</span>
           </p>
           <WaterFillContainer pct={pct} height={20} width="100%" orientation="horizontal" />
           <p className="text-xs text-charcoal-faint mt-1.5">{Math.round(pct * 100)}% of today's goal</p>

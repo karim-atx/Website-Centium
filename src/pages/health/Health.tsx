@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
-import { EditableValue } from "../../components/ui/EditableValue";
 import { Sparkline } from "../../components/health/Sparkline";
 import { StepsPeriodCard } from "../../components/health/StepsPeriodCard";
 import { BiomarkerCaptureFlow } from "../../components/health/BiomarkerCaptureFlow";
 import { ShareBiomarkerSheet } from "../../components/health/ShareBiomarkerSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { MetricDetailSheet } from "../../components/health/MetricDetailSheet";
+import { WaterDetailSheet } from "../../components/health/WaterDetailSheet";
 import { healthMetrics } from "../../data/mockHealthData";
 import { useApp } from "../../context/AppContext";
-import { ArrowDown, ArrowUp, Plus, Droplet, Flame, ChevronDown, Camera, Share2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Plus, Droplet, Flame, ChevronDown, Camera, Share2, Lock } from "lucide-react";
 import clsx from "clsx";
 import type { BloodMarker, HealthMetric } from "../../types";
 
@@ -21,8 +21,9 @@ const statusColor: Record<string, string> = {
 };
 
 export default function Health() {
-  const { water, metricValues, updateMetricValue, bloodMarkers } = useApp();
+  const { water, waterGoalMl, metricValues, bloodMarkers } = useApp();
   const [metricOpen, setMetricOpen] = useState(false);
+  const [waterOpen, setWaterOpen] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [shareMarker, setShareMarker] = useState<BloodMarker | null>(null);
@@ -59,14 +60,13 @@ export default function Health() {
           className="relative"
           onClick={() => openDetail(weightMeta, metricValues.weight)}
         >
-          <p className="text-xs font-semibold text-charcoal-soft mb-1">Weight</p>
-          <EditableValue
-            value={metricValues.weight}
-            unit="kg"
-            corner
-            className="text-xl font-bold text-charcoal"
-            onSave={(v) => updateMetricValue("weight", v)}
-          />
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs font-semibold text-charcoal-soft">Weight</p>
+            <Lock size={10} className="text-charcoal-faint" />
+          </div>
+          <p className="text-xl font-bold text-charcoal">
+            {metricValues.weight} <span className="text-sm font-normal text-charcoal-faint">kg</span>
+          </p>
           <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5">
             <ArrowDown size={10} /> 0.6 kg this week
           </span>
@@ -76,14 +76,13 @@ export default function Health() {
           className="relative"
           onClick={() => openDetail(bodyFatMeta, metricValues.bodyFat)}
         >
-          <p className="text-xs font-semibold text-charcoal-soft mb-1">Body Fat</p>
-          <EditableValue
-            value={metricValues.bodyFat}
-            unit="%"
-            corner
-            className="text-xl font-bold text-charcoal"
-            onSave={(v) => updateMetricValue("bodyFat", v)}
-          />
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs font-semibold text-charcoal-soft">Body Fat</p>
+            <Lock size={10} className="text-charcoal-faint" />
+          </div>
+          <p className="text-xl font-bold text-charcoal">
+            {metricValues.bodyFat} <span className="text-sm font-normal text-charcoal-faint">%</span>
+          </p>
           <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5">
             <ArrowDown size={10} /> 0.4% this week
           </span>
@@ -107,14 +106,11 @@ export default function Health() {
           className="relative"
           onClick={() => openDetail(caloriesMeta, metricValues.caloriesBurned)}
         >
-          <p className="text-xs font-semibold text-charcoal-soft mb-1">Calories burned</p>
-          <EditableValue
-            value={metricValues.caloriesBurned}
-            corner
-            decimals={0}
-            className="text-xl font-bold text-charcoal"
-            onSave={(v) => updateMetricValue("caloriesBurned", v)}
-          />
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs font-semibold text-charcoal-soft">Calories burned</p>
+            <Lock size={10} className="text-charcoal-faint" />
+          </div>
+          <p className="text-xl font-bold text-charcoal">{metricValues.caloriesBurned.toLocaleString()}</p>
           <p className="text-xs text-charcoal-faint mt-2">Estimated, incl. workouts</p>
         </Card>
       </div>
@@ -126,28 +122,24 @@ export default function Health() {
           className="relative"
           onClick={() => openDetail(sleepMeta, metricValues.sleepHours)}
         >
-          <p className="text-xs font-semibold text-charcoal-soft mb-1">Sleep</p>
-          <EditableValue
-            value={metricValues.sleepHours}
-            corner
-            className="text-xl font-bold text-charcoal"
-            onSave={(v) => updateMetricValue("sleepHours", v)}
-          />
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs font-semibold text-charcoal-soft">Sleep</p>
+            <Lock size={10} className="text-charcoal-faint" />
+          </div>
+          <p className="text-xl font-bold text-charcoal">
+            {Math.floor(metricValues.sleepHours)}h {Math.round((metricValues.sleepHours % 1) * 60)}m
+          </p>
           <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5">
             <ArrowUp size={10} /> +0.3h vs avg
           </span>
         </Card>
-        <Card interactive className="relative" onClick={() => setMetricOpen(true)}>
-          <p className="text-xs font-semibold text-charcoal-soft mb-1">Water</p>
-          <button
-            onClick={(e) => e.stopPropagation()}
-            aria-label="Edit water"
-            className="tap absolute top-3 right-3 w-6 h-6 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-faint hover:text-charcoal"
-          >
-            <Droplet size={11} />
-          </button>
+        <Card interactive className="relative" onClick={() => setWaterOpen(true)}>
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-xs font-semibold text-charcoal-soft">Water</p>
+            <Droplet size={11} className="text-sky" />
+          </div>
           <p className="text-xl font-bold text-charcoal">{(water / 1000).toFixed(1)}L</p>
-          <p className="text-xs text-charcoal-faint mt-2">of 2.5L goal</p>
+          <p className="text-xs text-charcoal-faint mt-2">of {(waterGoalMl / 1000).toFixed(1)}L goal</p>
         </Card>
       </div>
 
@@ -218,6 +210,7 @@ export default function Health() {
       </p>
 
       <AddMetricSheet open={metricOpen} onClose={() => setMetricOpen(false)} />
+      <WaterDetailSheet open={waterOpen} onClose={() => setWaterOpen(false)} />
       <BiomarkerCaptureFlow open={scanOpen} onClose={() => setScanOpen(false)} />
       <ShareBiomarkerSheet open={!!shareMarker} onClose={() => setShareMarker(null)} marker={shareMarker} />
       <MetricDetailSheet

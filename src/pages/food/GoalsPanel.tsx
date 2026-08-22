@@ -8,7 +8,7 @@ import { useApp } from "../../context/AppContext";
 import { calculateTDEE, targetsFromGoal } from "../../services/nutrition";
 import { healthMetrics } from "../../data/mockHealthData";
 import type { WeightGoalType, PlanType } from "../../types";
-import { Sparkles } from "lucide-react";
+import { Sparkles, Check } from "lucide-react";
 
 const goalOptions: { value: WeightGoalType; label: string }[] = [
   { value: "lose", label: "Lose weight" },
@@ -16,13 +16,64 @@ const goalOptions: { value: WeightGoalType; label: string }[] = [
   { value: "gain", label: "Gain weight" },
 ];
 
+// V4: "Existing plan" applies a dietitian-provided target — a plausible
+// stand-in preset, since the prototype doesn't wire real template content
+// from the professional side through yet.
+const existingPlanPreset = {
+  weightGoal: "lose" as WeightGoalType,
+  weeklyRateKg: 0.4,
+  calorieAdjust: -400,
+  macroSplit: { proteinPct: 35, carbsPct: 40, fatPct: 25 },
+};
+
 export default function GoalsPanel() {
   const { user, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal } = useApp();
   const [calorieDraft, setCalorieDraft] = useState(String(nutritionGoal.targetCalories));
+  const [desiredWeightDraft, setDesiredWeightDraft] = useState(
+    String(nutritionGoal.desiredWeightKg ?? user.weightKg)
+  );
 
   const tdee = calculateTDEE(user);
   const targets = targetsFromGoal(nutritionGoal);
   const weight = healthMetrics.find((m) => m.type === "weight")!;
+
+  const rate = nutritionGoal.weeklyRateKg || 0.5;
+  const desiredWeightKg = nutritionGoal.desiredWeightKg ?? user.weightKg;
+  const weeksToGoal =
+    nutritionGoal.weightGoal !== "maintain" && rate > 0
+      ? Math.abs(desiredWeightKg - weight.current) / rate
+      : 0;
+  const reachDate =
+    weeksToGoal > 0
+      ? new Date(Date.UTC(2026, 7, 20) + weeksToGoal * 7 * 86400000).toLocaleDateString("en-US", {
+          month: "short",
+          day: "numeric",
+          year: "numeric",
+        })
+      : null;
+
+  const confirmDesiredWeight = () => {
+    if (nutritionGoal.desiredWeightConfirmed) {
+      setNutritionGoal({ ...nutritionGoal, desiredWeightConfirmed: false });
+      return;
+    }
+    const kg = Number(desiredWeightDraft);
+    if (!kg) return;
+    setNutritionGoal({ ...nutritionGoal, desiredWeightKg: kg, desiredWeightConfirmed: true });
+  };
+
+  const applyExistingPlan = () => {
+    const suggested = calculateTDEE(user);
+    setNutritionGoal({
+      ...nutritionGoal,
+      planType: "existing",
+      weightGoal: existingPlanPreset.weightGoal,
+      weeklyRateKg: existingPlanPreset.weeklyRateKg,
+      targetCalories: Math.round(suggested + existingPlanPreset.calorieAdjust),
+      macroSplit: existingPlanPreset.macroSplit,
+    });
+    setCalorieDraft(String(Math.round(suggested + existingPlanPreset.calorieAdjust)));
+  };
 
   const applySuggested = () => {
     const suggested = calculateTDEE(user);
@@ -60,23 +111,51 @@ export default function GoalsPanel() {
         </div>
 
         {nutritionGoal.weightGoal !== "maintain" && (
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-              Desired weekly rate (kg/week)
-            </span>
-            <input
-              type="range"
-              min={0.1}
-              max={1}
-              step={0.1}
-              value={nutritionGoal.weeklyRateKg || 0.5}
-              onChange={(e) => setWeightGoal(nutritionGoal.weightGoal, Number(e.target.value))}
-              className="w-full"
-            />
-            <p className="text-xs text-charcoal-faint mt-1">
-              {(nutritionGoal.weeklyRateKg || 0.5).toFixed(1)} kg / week
-            </p>
-          </label>
+          <>
+            <label className="block mb-4">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Desired weight</span>
+              <div className="flex items-center gap-2">
+                <input
+                  value={desiredWeightDraft}
+                  onChange={(e) => setDesiredWeightDraft(e.target.value.replace(/[^\d.]/g, ""))}
+                  disabled={nutritionGoal.desiredWeightConfirmed}
+                  inputMode="decimal"
+                  className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm font-semibold text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20 disabled:opacity-60"
+                />
+                <span className="text-xs text-charcoal-faint">kg</span>
+                <button
+                  onClick={confirmDesiredWeight}
+                  aria-label={nutritionGoal.desiredWeightConfirmed ? "Edit desired weight" : "Confirm desired weight"}
+                  className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors ${
+                    nutritionGoal.desiredWeightConfirmed
+                      ? "bg-charcoal/10 border-transparent text-charcoal-faint"
+                      : "bg-sohati border-sohati text-white"
+                  }`}
+                >
+                  <Check size={16} strokeWidth={3} />
+                </button>
+              </div>
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
+                Desired weekly rate (kg/week)
+              </span>
+              <input
+                type="range"
+                min={0.1}
+                max={1}
+                step={0.1}
+                value={nutritionGoal.weeklyRateKg || 0.5}
+                onChange={(e) => setWeightGoal(nutritionGoal.weightGoal, Number(e.target.value))}
+                className="w-full"
+              />
+              <p className="text-xs text-charcoal-faint mt-1">
+                {nutritionGoal.weightGoal === "gain" ? "+" : "-"}
+                {(nutritionGoal.weeklyRateKg || 0.5).toFixed(1)} kg / week
+              </p>
+            </label>
+          </>
         )}
       </Card>
 
@@ -96,6 +175,11 @@ export default function GoalsPanel() {
           </div>
           <Sparkline values={weight.history.map((h) => h.value)} color="#1B6B52" width={120} height={40} />
         </div>
+        {reachDate && (
+          <p className="text-xs text-sohati-dark bg-sohati-pale rounded-full px-3 py-1.5 mt-3 inline-block">
+            At this rate, reach {desiredWeightKg}kg by {reachDate}
+          </p>
+        )}
       </Card>
 
       <Card>
@@ -162,7 +246,10 @@ export default function GoalsPanel() {
             <Chip
               key={p}
               active={nutritionGoal.planType === p}
-              onClick={() => setNutritionGoal({ ...nutritionGoal, planType: p })}
+              onClick={() => {
+                if (p === "existing") applyExistingPlan();
+                else setNutritionGoal({ ...nutritionGoal, planType: p });
+              }}
             >
               {p === "custom" ? "Custom plan" : "Existing plan"}
             </Chip>
@@ -170,7 +257,9 @@ export default function GoalsPanel() {
         </div>
         {nutritionGoal.planType === "existing" && (
           <p className="text-xs text-charcoal-faint mt-3">
-            Browse dietitian-built plans in Professionals — coming soon to this prototype.
+            {user.linkedProfessionalName
+              ? `Applied the plan ${user.linkedProfessionalName} set for you — weight goal, calorie target and macros updated.`
+              : "Applied a starter dietitian-style plan — connect with a professional in Professionals for one built for you."}
           </p>
         )}
       </Card>

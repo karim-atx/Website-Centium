@@ -172,6 +172,9 @@ interface AppState {
 
   water: number;
   addWater: (ml: number) => void;
+  setWaterAmount: (ml: number) => void;
+  waterGoalMl: number;
+  setWaterGoal: (ml: number) => void;
 
   habits: HabitItem[];
   toggleHabit: (id: string) => void;
@@ -330,6 +333,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [routines, setRoutines] = usePersistentState<Routine[]>("routines", seedRoutines());
 
   const [water, setWater] = usePersistentState<number>("water", 1800);
+  const [waterGoalMl, setWaterGoalState] = usePersistentState<number>("waterGoalMl", 2500);
   const [habits, setHabits] = usePersistentState<HabitItem[]>("habits", defaultHabits);
   const [streaks, setStreaks] = usePersistentState<Streak[]>("streaks", seedStreaks);
 
@@ -448,6 +452,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const deleteRoutine = (id: string) => setRoutines((prev) => prev.filter((r) => r.id !== id));
 
   const addWater = (ml: number) => setWater((prev) => Math.max(0, Math.min(prev + ml, 5000)));
+  const setWaterAmount = (ml: number) => setWater(Math.max(0, Math.min(ml, 5000)));
+  const setWaterGoal = (ml: number) => setWaterGoalState(Math.max(500, Math.min(ml, 6000)));
 
   const toggleHabit = (id: string) =>
     setHabits((prev) =>
@@ -750,6 +756,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deleteRoutine,
       water,
       addWater,
+      setWaterAmount,
+      waterGoalMl,
+      setWaterGoal,
       habits,
       toggleHabit,
       addHabit,
@@ -816,6 +825,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       routineFolders,
       routines,
       water,
+      waterGoalMl,
       habits,
       streaks,
       metricValues,
