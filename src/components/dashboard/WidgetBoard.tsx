@@ -3,20 +3,22 @@ import { useApp } from "../../context/AppContext";
 import { WidgetShell } from "./WidgetShell";
 import { HomeWidget } from "./HomeWidget";
 import type { WidgetType } from "../../types";
-import { Pencil, Check, Plus } from "lucide-react";
+import { Pencil, Check, Plus, Footprints, Scale, Droplet, Moon, Utensils, Dumbbell, CheckSquare, BookOpen, Sparkles } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 
-const allWidgetTypes: { type: WidgetType; label: string; emoji: string }[] = [
-  { type: "steps", label: "Steps", emoji: "👣" },
-  { type: "weight", label: "Weight", emoji: "⚖️" },
-  { type: "water", label: "Water", emoji: "💧" },
-  { type: "sleep", label: "Sleep", emoji: "😴" },
-  { type: "nutrition", label: "Nutrition", emoji: "🍽️" },
-  { type: "workout", label: "Workout", emoji: "🏋️" },
-  { type: "bodyFat", label: "Body Fat", emoji: "📏" },
-  { type: "habits", label: "Habits", emoji: "✅" },
-  { type: "journal", label: "Journal", emoji: "📓" },
-  { type: "meditation", label: "Meditation", emoji: "🧘" },
+// V4: Body Fat removed as a Home widget option per QA (repeated from the
+// V1 pass — it stays as a Health-page metric, just not offered here).
+const allWidgetTypes: { type: WidgetType; label: string; icon: LucideIcon }[] = [
+  { type: "steps", label: "Steps", icon: Footprints },
+  { type: "weight", label: "Weight", icon: Scale },
+  { type: "water", label: "Water", icon: Droplet },
+  { type: "sleep", label: "Sleep", icon: Moon },
+  { type: "nutrition", label: "Nutrition", icon: Utensils },
+  { type: "workout", label: "Workout", icon: Dumbbell },
+  { type: "habits", label: "Habits", icon: CheckSquare },
+  { type: "journal", label: "Journal", icon: BookOpen },
+  { type: "meditation", label: "Meditation", icon: Sparkles },
 ];
 
 export const WidgetBoard: React.FC = () => {
@@ -25,7 +27,9 @@ export const WidgetBoard: React.FC = () => {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
-  const visibleWidgets = widgets;
+  // Defensive: self-heals any old persisted board that still carries the
+  // now-removed "bodyFat" widget type.
+  const visibleWidgets = widgets.filter((w) => (w.type as string) !== "bodyFat");
   const availableToAdd = allWidgetTypes.filter(
     (t) => !widgets.some((w) => w.type === t.type)
   );
@@ -64,12 +68,8 @@ export const WidgetBoard: React.FC = () => {
             key={w.id}
             size={w.size}
             editMode={editMode}
-            canMoveUp={i > 0}
-            canMoveDown={i < visibleWidgets.length - 1}
             onRemove={() => removeWidget(w.id)}
             onResize={() => resizeWidget(w.id, w.size === "small" ? "large" : "small")}
-            onMoveUp={() => reorderWidgets(i, i - 1)}
-            onMoveDown={() => reorderWidgets(i, i + 1)}
             onDragStart={() => setDragIndex(i)}
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(i)}
@@ -101,7 +101,7 @@ export const WidgetBoard: React.FC = () => {
               }}
               className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
             >
-              <span className="text-xl">{t.emoji}</span>
+              <t.icon size={18} className="text-sohati" />
               <span className="text-sm font-semibold text-charcoal">{t.label}</span>
             </button>
           ))}

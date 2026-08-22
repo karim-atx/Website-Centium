@@ -106,14 +106,14 @@ export const previousWorkouts = [
 ];
 
 export const workoutCategories = [
-  { id: "chest", label: "Chest", emoji: "💪" },
-  { id: "back", label: "Back", emoji: "🔙" },
-  { id: "shoulders", label: "Shoulders", emoji: "🏔️" },
-  { id: "arms", label: "Arms", emoji: "💪" },
-  { id: "legs", label: "Legs", emoji: "🦵" },
-  { id: "core", label: "Core", emoji: "🎯" },
-  { id: "full_body", label: "Full Body", emoji: "⚡" },
-  { id: "cardio", label: "Cardio", emoji: "🏃" },
+  { id: "chest", label: "Chest" },
+  { id: "back", label: "Back" },
+  { id: "shoulders", label: "Shoulders" },
+  { id: "arms", label: "Arms" },
+  { id: "legs", label: "Legs" },
+  { id: "core", label: "Core" },
+  { id: "full_body", label: "Full Body" },
+  { id: "cardio", label: "Cardio" },
 ] as const;
 
 export type ExerciseCategory = (typeof workoutCategories)[number]["id"];

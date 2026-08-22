@@ -131,19 +131,21 @@ export const bloodPanel: BloodPanel = {
   ],
 };
 
+// V4: these four are auto-derived from real logging activity (see
+// recomputeAutoStreaks in AppContext) — no goal, not user-editable.
 export const streaks: Streak[] = [
-  { id: "s1", label: "Logging streak", emoji: "🔥", days: 7, goalDays: 30 },
-  { id: "s2", label: "Movement streak", emoji: "🔥", days: 12, goalDays: 30 },
-  { id: "s3", label: "Workout streak", emoji: "🔥", days: 4, goalDays: 8 },
-  { id: "s4", label: "Nutrition streak", emoji: "🔥", days: 21, goalDays: 30 },
+  { id: "s1", label: "Logging streak", days: 7, goalDays: 30, auto: true },
+  { id: "s2", label: "Movement streak", days: 12, goalDays: 30, auto: true },
+  { id: "s3", label: "Workout streak", days: 4, goalDays: 8, auto: true },
+  { id: "s4", label: "Nutrition streak", days: 21, goalDays: 30, auto: true },
 ];
 
 export const defaultHabits: HabitItem[] = [
-  { id: "h1", label: "Drink water", emoji: "💧", done: true, streakDays: 12 },
-  { id: "h2", label: "10,000 steps", emoji: "👣", done: true, streakDays: 7 },
-  { id: "h3", label: "Workout", emoji: "🏋️", done: true, streakDays: 4 },
-  { id: "h4", label: "Journal", emoji: "📓", done: false, streakDays: 0 },
-  { id: "h5", label: "Meditate", emoji: "🧘", done: false, streakDays: 0 },
+  { id: "h1", label: "Drink water", icon: "water", done: true, streakDays: 12 },
+  { id: "h2", label: "10,000 steps", icon: "steps", done: true, streakDays: 7 },
+  { id: "h3", label: "Workout", icon: "workout", done: true, streakDays: 4 },
+  { id: "h4", label: "Journal", icon: "journal", done: false, streakDays: 0 },
+  { id: "h5", label: "Meditate", icon: "meditation", done: false, streakDays: 0 },
 ];
 
 export const sleepDetail = {

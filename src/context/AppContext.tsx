@@ -13,8 +13,7 @@ import type {
   NutritionGoal,
   WeightGoalType,
   MacroSplit,
-  MealPrepPlan,
-  MealPrepItem,
+  CustomMeal,
   RoutineFolder,
   Routine,
   WorkoutSession,
@@ -26,6 +25,8 @@ import type {
   ProfessionalClient,
   ColorTheme,
   CustomFood,
+  HabitIconKey,
+  BusinessOffering,
 } from "../types";
 import { mockFoods } from "../data/mockFoods";
 import { defaultHabits, streaks as seedStreaks, bloodPanel } from "../data/mockHealthData";
@@ -149,6 +150,9 @@ interface AppState {
 
   foodLog: FoodLogEntry[];
   addFoodEntry: (entry: Omit<FoodLogEntry, "id" | "date">) => void;
+  // V4: logged foods are editable (quantity/unit) and removable.
+  updateFoodEntry: (id: string, patch: Partial<Pick<FoodLogEntry, "quantity" | "unit" | "meal">>) => void;
+  removeFoodEntry: (id: string) => void;
 
   workoutLog: WorkoutLogEntry[];
   logWorkout: (entry: Omit<WorkoutLogEntry, "id" | "date">) => void;
@@ -171,13 +175,13 @@ interface AppState {
 
   habits: HabitItem[];
   toggleHabit: (id: string) => void;
-  addHabit: (label: string, emoji: string) => void;
+  addHabit: (label: string, icon: HabitIconKey) => void;
   removeHabit: (id: string) => void;
   renameHabit: (id: string, label: string) => void;
 
   streaks: Streak[];
   updateStreak: (id: string, patch: Partial<Streak>) => void;
-  addStreak: (label: string, emoji: string, goalDays: number) => void;
+  addStreak: (label: string, goalDays: number) => void;
   removeStreak: (id: string) => void;
 
   metricValues: { weight: number; bodyFat: number; steps: number; sleepHours: number; caloriesBurned: number };
@@ -197,9 +201,12 @@ interface AppState {
   setWeightGoal: (weightGoal: WeightGoalType, weeklyRateKg: number) => void;
   setMacroSplit: (split: MacroSplit) => void;
 
-  mealPrepPlan: MealPrepPlan;
-  addMealPrepItem: (meal: MealType, food: Food, quantity: number) => void;
-  removeMealPrepItem: (meal: MealType, itemId: string) => void;
+  // V4: Meal Prep reworked into "Create Meal" — group existing foods under
+  // one title; logging the meal logs every item individually.
+  customMeals: CustomMeal[];
+  addCustomMeal: (title: string, items: CustomMeal["items"]) => void;
+  removeCustomMeal: (id: string) => void;
+  logCustomMeal: (mealId: string, meal: MealType, date: string) => void;
 
   journalFolders: JournalFolder[];
   journalEntries: JournalEntry[];
@@ -242,6 +249,11 @@ interface AppState {
 
   businessListing: { perk: string; active: boolean; membersReached: number };
   updateBusinessListing: (patch: Partial<AppState["businessListing"]>) => void;
+
+  // V4: businesses can list their own products/services in the marketplace.
+  businessOfferings: BusinessOffering[];
+  addBusinessOffering: (offering: Omit<BusinessOffering, "id">) => void;
+  removeBusinessOffering: (id: string) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -336,12 +348,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     suggestNutritionGoal(defaultUser, "maintain", 0)
   );
 
-  const [mealPrepPlan, setMealPrepPlan] = usePersistentState<MealPrepPlan>("mealPrepPlan", {
-    breakfast: [],
-    lunch: [],
-    snack: [],
-    dinner: [],
-  });
+  const [customMeals, setCustomMeals] = usePersistentState<CustomMeal[]>("customMeals", []);
 
   const [journalFolders, setJournalFolders] = usePersistentState<JournalFolder[]>(
     "journalFolders",
@@ -372,6 +379,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     active: true,
     membersReached: 34,
   });
+  const [businessOfferings, setBusinessOfferings] = usePersistentState<BusinessOffering[]>(
+    "businessOfferings",
+    []
+  );
   const [professionalClients, setProfessionalClients] = usePersistentState<ProfessionalClient[]>(
     "professionalClients",
     mockProfessionalClients
@@ -398,6 +409,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       { ...entry, id: `f${Date.now()}${Math.random().toString(16).slice(2)}`, date: selectedDate },
     ]);
   };
+  const updateFoodEntry: AppState["updateFoodEntry"] = (id, patch) =>
+    setFoodLog((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  const removeFoodEntry = (id: string) => setFoodLog((prev) => prev.filter((e) => e.id !== id));
 
   const logWorkout: AppState["logWorkout"] = (entry) => {
     setWorkoutLog((prev) => [
@@ -447,17 +461,50 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           : h
       )
     );
-  const addHabit = (label: string, emoji: string) =>
-    setHabits((prev) => [...prev, { id: `h${Date.now()}`, label, emoji, done: false, streakDays: 0 }]);
+  const addHabit = (label: string, icon: HabitIconKey) =>
+    setHabits((prev) => [...prev, { id: `h${Date.now()}`, label, icon, done: false, streakDays: 0 }]);
   const removeHabit = (id: string) => setHabits((prev) => prev.filter((h) => h.id !== id));
   const renameHabit = (id: string, label: string) =>
     setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, label } : h)));
 
   const updateStreak = (id: string, patch: Partial<Streak>) =>
-    setStreaks((prev) => prev.map((s) => (s.id === id ? { ...s, ...patch } : s)));
-  const addStreak = (label: string, emoji: string, goalDays: number) =>
-    setStreaks((prev) => [...prev, { id: `s${Date.now()}`, label, emoji, days: 0, goalDays }]);
+    setStreaks((prev) => prev.map((s) => (s.id === id && !s.auto ? { ...s, ...patch } : s)));
+  const addStreak = (label: string, goalDays: number) =>
+    setStreaks((prev) => [...prev, { id: `s${Date.now()}`, label, days: 0, goalDays }]);
   const removeStreak = (id: string) => setStreaks((prev) => prev.filter((s) => s.id !== id));
+
+  // V4: the four core streaks (logging/movement/workout/nutrition) are
+  // derived from real activity instead of being manually incremented —
+  // recomputed whenever the underlying logs change.
+  const countConsecutiveDays = (dates: Set<string>, anchor: string): number => {
+    let count = 0;
+    let cursor = anchor;
+    while (dates.has(cursor)) {
+      count++;
+      cursor = shiftDate(cursor, -1);
+    }
+    return count;
+  };
+  useEffect(() => {
+    const foodDates = new Set(foodLog.map((e) => e.date));
+    const workoutDates = new Set(workoutSessions.map((s) => s.date));
+    const anyDates = new Set([...foodDates, ...workoutDates]);
+    const loggingDays = countConsecutiveDays(anyDates, TODAY);
+    const nutritionDays = countConsecutiveDays(foodDates, TODAY);
+    const movementDays = countConsecutiveDays(workoutDates, TODAY);
+    const workoutTotal = workoutSessions.length;
+    setStreaks((prev) =>
+      prev.map((s) => {
+        if (!s.auto) return s;
+        if (s.id === "s1") return { ...s, days: loggingDays };
+        if (s.id === "s2") return { ...s, days: movementDays };
+        if (s.id === "s3") return { ...s, days: workoutTotal };
+        if (s.id === "s4") return { ...s, days: nutritionDays };
+        return s;
+      })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [foodLog, workoutSessions]);
 
   const updateMetricValue: AppState["updateMetricValue"] = (type, value) => {
     setMetricValues((prev) => ({ ...prev, [type]: value }));
@@ -489,17 +536,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setMacroSplit = (split: MacroSplit) =>
     setNutritionGoalState((prev) => ({ ...prev, macroSplit: normalizeMacroSplit(split) }));
 
-  const addMealPrepItem: AppState["addMealPrepItem"] = (meal, food, quantity) => {
-    const item: MealPrepItem = {
-      id: `mp${Date.now()}${Math.random().toString(16).slice(2)}`,
-      foodId: food.id,
-      food,
-      quantity,
-    };
-    setMealPrepPlan((prev) => ({ ...prev, [meal]: [...prev[meal], item] }));
+  const addCustomMeal: AppState["addCustomMeal"] = (title, items) =>
+    setCustomMeals((prev) => [...prev, { id: `cm${Date.now()}`, title: title.trim(), items }]);
+  const removeCustomMeal = (id: string) => setCustomMeals((prev) => prev.filter((m) => m.id !== id));
+  const logCustomMeal: AppState["logCustomMeal"] = (mealId, meal, date) => {
+    const custom = customMeals.find((m) => m.id === mealId);
+    if (!custom) return;
+    setFoodLog((prev) => [
+      ...prev,
+      ...custom.items.map((item, i) => ({
+        id: `f${Date.now()}${i}${Math.random().toString(16).slice(2)}`,
+        foodId: item.food.id,
+        food: item.food,
+        quantity: item.quantity,
+        unit: item.unit,
+        meal,
+        date,
+        loggedVia: "quick" as const,
+      })),
+    ]);
   };
-  const removeMealPrepItem = (meal: MealType, itemId: string) =>
-    setMealPrepPlan((prev) => ({ ...prev, [meal]: prev[meal].filter((i) => i.id !== itemId) }));
 
   const addJournalEntry = (folderId: string, text: string) => {
     const now = new Date();
@@ -619,7 +675,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       {
         id,
         name,
-        avatarEmoji: "🙋",
         code,
         joinedAt: TODAY,
         activityLevel: "moderate",
@@ -656,6 +711,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateBusinessListing = (patch: Partial<AppState["businessListing"]>) =>
     setBusinessListing((prev) => ({ ...prev, ...patch }));
 
+  const addBusinessOffering: AppState["addBusinessOffering"] = (offering) =>
+    setBusinessOfferings((prev) => [...prev, { ...offering, id: `bo${Date.now()}` }]);
+  const removeBusinessOffering = (id: string) =>
+    setBusinessOfferings((prev) => prev.filter((o) => o.id !== id));
+
   const signOut = () => {
     Object.keys(localStorage)
       .filter((k) => k.startsWith(STORAGE_KEY))
@@ -673,6 +733,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       toggleTheme,
       foodLog,
       addFoodEntry,
+      updateFoodEntry,
+      removeFoodEntry,
       workoutLog,
       logWorkout,
       workoutSessions,
@@ -708,9 +770,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setNutritionGoal,
       setWeightGoal,
       setMacroSplit,
-      mealPrepPlan,
-      addMealPrepItem,
-      removeMealPrepItem,
+      customMeals,
+      addCustomMeal,
+      removeCustomMeal,
+      logCustomMeal,
       journalFolders,
       journalEntries,
       addJournalEntry,
@@ -740,6 +803,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       signOut,
       businessListing,
       updateBusinessListing,
+      businessOfferings,
+      addBusinessOffering,
+      removeBusinessOffering,
     }),
     [
       user,
@@ -755,7 +821,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       metricValues,
       widgets,
       nutritionGoal,
-      mealPrepPlan,
+      customMeals,
       journalFolders,
       journalEntries,
       bloodMarkers,
@@ -765,6 +831,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clientCodes,
       professionalClients,
       businessListing,
+      businessOfferings,
     ]
   );
 

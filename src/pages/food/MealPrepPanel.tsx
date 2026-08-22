@@ -1,20 +1,17 @@
 import { useState } from "react";
 import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
 import { useApp } from "../../context/AppContext";
-import { mealOrder, mealLabels } from "../../services/nutrition";
-import { MealPrepPicker } from "../../components/food/MealPrepPicker";
-import type { MealType } from "../../types";
-import { Plus, X, ClipboardList } from "lucide-react";
+import { CreateMealSheet } from "../../components/food/CreateMealSheet";
+import { Plus, X, ClipboardList, UtensilsCrossed } from "lucide-react";
+import { foodCategoryIcon } from "../../utils/icons";
 
+// V4: Meal Prep reworked from a per-meal-type planner into "Create Meal" —
+// group existing food items under one title; searching that title from Add
+// Food logs every item individually. Inspired by MyNetDiary, not copied.
 export default function MealPrepPanel() {
-  const { mealPrepPlan, removeMealPrepItem } = useApp();
-  const [pickerMeal, setPickerMeal] = useState<MealType | null>(null);
-
-  const totalPlanned = mealOrder.reduce((sum, m) => sum + mealPrepPlan[m].length, 0);
-  const totalCalories = mealOrder.reduce(
-    (sum, m) => sum + mealPrepPlan[m].reduce((s, i) => s + i.food.calories * i.quantity, 0),
-    0
-  );
+  const { customMeals, removeCustomMeal } = useApp();
+  const [createOpen, setCreateOpen] = useState(false);
 
   return (
     <div className="space-y-5 animate-fade-slide-up">
@@ -23,68 +20,62 @@ export default function MealPrepPanel() {
           <ClipboardList size={18} className="text-sohati" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-charcoal">Meal Prep</p>
+          <p className="text-sm font-semibold text-charcoal">Custom Meals</p>
           <p className="text-xs text-charcoal-faint">
-            {totalPlanned} foods planned · {Math.round(totalCalories).toLocaleString()} kcal total
+            Group foods you eat together, then log the whole meal by name from Add Food.
           </p>
         </div>
       </Card>
 
-      {mealOrder.map((meal) => {
-        const items = mealPrepPlan[meal];
-        const cal = items.reduce((s, i) => s + i.food.calories * i.quantity, 0);
-        return (
-          <div key={meal}>
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="font-display text-base font-semibold text-charcoal">
-                {mealLabels[meal]}
-              </h3>
-              {items.length > 0 && <span className="text-xs text-charcoal-faint">{Math.round(cal)} kcal</span>}
-            </div>
-            <Card padded={false} className="divide-y divide-charcoal/[0.04]">
-              {items.map((item) => (
-                <div key={item.id} className="flex items-center justify-between px-4 py-3">
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl">{item.food.emoji}</span>
-                    <div>
-                      <p className="text-sm font-semibold text-charcoal">{item.food.name}</p>
-                      <p className="text-[11px] text-charcoal-faint">
-                        {item.quantity !== 1 ? `${item.quantity} × ` : ""}
-                        {item.food.serving}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-charcoal-soft">
-                      {Math.round(item.food.calories * item.quantity)} kcal
-                    </span>
-                    <button
-                      onClick={() => removeMealPrepItem(meal, item.id)}
-                      className="tap w-6 h-6 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-faint"
-                    >
-                      <X size={12} />
-                    </button>
-                  </div>
+      <div className="space-y-2.5">
+        {customMeals.map((m) => {
+          const totalCal = Math.round(m.items.reduce((s, i) => s + i.food.calories * i.quantity, 0));
+          return (
+            <Card key={m.id} padded={false}>
+              <div className="flex items-center justify-between px-4 py-3.5">
+                <div>
+                  <p className="text-sm font-semibold text-charcoal">{m.title}</p>
+                  <p className="text-[11px] text-charcoal-faint">
+                    {m.items.length} item{m.items.length !== 1 ? "s" : ""} · {totalCal} kcal total
+                  </p>
                 </div>
-              ))}
-              <button
-                onClick={() => setPickerMeal(meal)}
-                className="tap w-full flex items-center justify-center gap-1.5 px-4 py-3 text-xs font-semibold text-sohati hover:bg-sohati-pale/40"
-              >
-                <Plus size={13} /> Plan food for {mealLabels[meal].toLowerCase()}
-              </button>
+                <button
+                  onClick={() => removeCustomMeal(m.id)}
+                  className="tap w-7 h-7 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-faint shrink-0"
+                  aria-label={`Remove ${m.title}`}
+                >
+                  <X size={13} />
+                </button>
+              </div>
+              <div className="flex flex-wrap gap-1.5 px-4 pb-3.5">
+                {m.items.map((i) => {
+                  const Icon = foodCategoryIcon[i.food.category] ?? UtensilsCrossed;
+                  return (
+                    <span
+                      key={i.food.id}
+                      className="flex items-center gap-1 text-[11px] font-medium text-charcoal-soft bg-cream-soft rounded-full px-2 py-1"
+                    >
+                      <Icon size={11} /> {i.food.name}
+                    </span>
+                  );
+                })}
+              </div>
             </Card>
-          </div>
-        );
-      })}
+          );
+        })}
 
-      <p className="text-xs text-charcoal-faint text-center">
-        Planned meals don't log automatically — add them from your diary on the day you eat them.
-      </p>
+        {customMeals.length === 0 && (
+          <Card className="text-center py-8">
+            <p className="text-sm text-charcoal-faint">No custom meals yet — create your first one.</p>
+          </Card>
+        )}
+      </div>
 
-      {pickerMeal && (
-        <MealPrepPicker open={!!pickerMeal} onClose={() => setPickerMeal(null)} meal={pickerMeal} />
-      )}
+      <Button variant="outline" fullWidth onClick={() => setCreateOpen(true)}>
+        <Plus size={15} /> Create Meal
+      </Button>
+
+      <CreateMealSheet open={createOpen} onClose={() => setCreateOpen(false)} />
     </div>
   );
 }

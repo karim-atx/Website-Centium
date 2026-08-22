@@ -4,22 +4,22 @@ import { Button } from "../../components/ui/Button";
 import { useApp } from "../../context/AppContext";
 import { Check, Flame, Pencil, Plus, Trash2, X } from "lucide-react";
 import clsx from "clsx";
-
-const emojiOptions = ["✅", "💧", "👣", "🏋️", "📓", "🧘", "🥗", "😴"];
+import { habitIcon, habitIconOptions } from "../../utils/icons";
+import type { HabitIconKey } from "../../types";
 
 export default function HabitsTab() {
   const { habits, toggleHabit, addHabit, removeHabit, renameHabit } = useApp();
   const [adding, setAdding] = useState(false);
   const [newLabel, setNewLabel] = useState("");
-  const [newEmoji, setNewEmoji] = useState(emojiOptions[0]);
+  const [newIcon, setNewIcon] = useState<HabitIconKey>(habitIconOptions[0].key);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editDraft, setEditDraft] = useState("");
 
   const create = () => {
     if (!newLabel.trim()) return;
-    addHabit(newLabel.trim(), newEmoji);
+    addHabit(newLabel.trim(), newIcon);
     setNewLabel("");
-    setNewEmoji(emojiOptions[0]);
+    setNewIcon(habitIconOptions[0].key);
     setAdding(false);
   };
 
@@ -30,7 +30,10 @@ export default function HabitsTab() {
           <div key={h.id} className="flex items-center justify-between px-4 py-3.5">
             {editingId === h.id ? (
               <div className="flex items-center gap-2 flex-1">
-                <span>{h.emoji}</span>
+                {(() => {
+                  const Icon = habitIcon[h.icon];
+                  return <Icon size={16} className="text-sohati-dark shrink-0" />;
+                })()}
                 <input
                   autoFocus
                   value={editDraft}
@@ -59,7 +62,12 @@ export default function HabitsTab() {
                   onClick={() => toggleHabit(h.id)}
                   className="tap flex items-center gap-3 flex-1 text-left min-w-0"
                 >
-                  <span className="text-lg shrink-0">{h.emoji}</span>
+                  <span className="w-7 h-7 rounded-lg bg-sohati-pale flex items-center justify-center shrink-0">
+                    {(() => {
+                      const Icon = habitIcon[h.icon];
+                      return <Icon size={14} className="text-sohati-dark" />;
+                    })()}
+                  </span>
                   <span className={clsx("text-sm font-medium truncate", h.done ? "text-charcoal-faint line-through" : "text-charcoal")}>
                     {h.label}
                   </span>
@@ -104,18 +112,22 @@ export default function HabitsTab() {
       {adding ? (
         <Card>
           <div className="flex gap-2 flex-wrap mb-3">
-            {emojiOptions.map((e) => (
-              <button
-                key={e}
-                onClick={() => setNewEmoji(e)}
-                className={clsx(
-                  "tap w-9 h-9 rounded-xl text-base flex items-center justify-center",
-                  newEmoji === e ? "bg-sohati-pale ring-2 ring-sohati" : "bg-cream-soft"
-                )}
-              >
-                {e}
-              </button>
-            ))}
+            {habitIconOptions.map((opt) => {
+              const Icon = habitIcon[opt.key];
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => setNewIcon(opt.key)}
+                  aria-label={opt.label}
+                  className={clsx(
+                    "tap w-9 h-9 rounded-xl flex items-center justify-center",
+                    newIcon === opt.key ? "bg-sohati-pale ring-2 ring-sohati" : "bg-cream-soft"
+                  )}
+                >
+                  <Icon size={16} className="text-sohati-dark" />
+                </button>
+              );
+            })}
           </div>
           <div className="flex gap-2">
             <input

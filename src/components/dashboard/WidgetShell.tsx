@@ -1,32 +1,26 @@
 import React from "react";
 import clsx from "clsx";
-import { Minus, Maximize2, Minimize2, ChevronUp, ChevronDown, GripVertical } from "lucide-react";
+import { Minus, Maximize2, Minimize2, GripVertical } from "lucide-react";
 import type { WidgetSize } from "../../types";
 
 interface WidgetShellProps {
   size: WidgetSize;
   editMode: boolean;
-  canMoveUp: boolean;
-  canMoveDown: boolean;
   onRemove: () => void;
   onResize: () => void;
-  onMoveUp: () => void;
-  onMoveDown: () => void;
   onDragStart?: (e: React.DragEvent) => void;
   onDragOver?: (e: React.DragEvent) => void;
   onDrop?: (e: React.DragEvent) => void;
   children: React.ReactNode;
 }
 
+// V4: reordering is drag-only now — the up/down arrow buttons were removed
+// per QA ("done via dragging not via using the up and down arrows").
 export const WidgetShell: React.FC<WidgetShellProps> = ({
   size,
   editMode,
-  canMoveUp,
-  canMoveDown,
   onRemove,
   onResize,
-  onMoveUp,
-  onMoveDown,
   onDragStart,
   onDragOver,
   onDrop,
@@ -62,25 +56,7 @@ export const WidgetShell: React.FC<WidgetShellProps> = ({
               <Minus size={13} strokeWidth={3} />
             </button>
           </div>
-          <div className="absolute -top-2 -left-2 flex flex-col gap-1 z-10">
-            <button
-              onClick={onMoveUp}
-              disabled={!canMoveUp}
-              className="tap w-6 h-6 rounded-full bg-charcoal/80 text-cream flex items-center justify-center shadow-lift disabled:opacity-30"
-              aria-label="Move widget earlier"
-            >
-              <ChevronUp size={12} />
-            </button>
-            <button
-              onClick={onMoveDown}
-              disabled={!canMoveDown}
-              className="tap w-6 h-6 rounded-full bg-charcoal/80 text-cream flex items-center justify-center shadow-lift disabled:opacity-30"
-              aria-label="Move widget later"
-            >
-              <ChevronDown size={12} />
-            </button>
-          </div>
-          <div className="absolute top-1/2 -translate-y-1/2 right-1 text-charcoal-faint/40">
+          <div className="absolute -top-2 -left-2 text-charcoal-faint/60 bg-cream-card rounded-full p-1 shadow-soft z-10">
             <GripVertical size={14} />
           </div>
         </>

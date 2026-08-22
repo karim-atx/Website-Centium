@@ -9,6 +9,7 @@ import { useApp } from "../../context/AppContext";
 import type { ProfessionalType } from "../../types";
 import { Star, ShieldCheck } from "lucide-react";
 import ProfessionalDashboard from "./ProfessionalDashboard";
+import { professionalTypeIcon } from "../../utils/icons";
 
 const typeLabels: Record<ProfessionalType, string> = {
   trainer: "Personal Trainers",
@@ -33,7 +34,7 @@ export default function Professionals() {
 
   return (
     <div>
-      <PageHeader title="Professionals" subtitle="Trainers, dietitians, physiotherapists & doctors" />
+      <PageHeader title="Professionals" subtitle="Trainers, dietitians, physiotherapists & doctors" showBack />
 
       {connected && (
         <Card
@@ -42,7 +43,12 @@ export default function Professionals() {
           className="mb-6 bg-gradient-to-br from-sohati to-sohati-dark !text-white animate-fade-slide-up"
         >
           <div className="flex items-center gap-3 mb-3">
-            <span className="text-3xl">{connected.avatarEmoji}</span>
+            <span className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center shrink-0">
+              {(() => {
+                const Icon = professionalTypeIcon[connected.type];
+                return <Icon size={22} className="text-white" />;
+              })()}
+            </span>
             <div>
               <p className="text-xs text-white/70 font-semibold uppercase tracking-wide">My Dietitian</p>
               <p className="font-display font-semibold text-lg">{connected.name}</p>
@@ -69,7 +75,12 @@ export default function Professionals() {
         {filtered.map((p) => (
           <Card key={p.id} className="animate-fade-slide-up">
             <div className="flex items-start gap-3.5 mb-3">
-              <span className="text-3xl shrink-0">{p.avatarEmoji}</span>
+              <span className="w-11 h-11 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
+                {(() => {
+                  const Icon = professionalTypeIcon[p.type];
+                  return <Icon size={19} className="text-sohati-dark" />;
+                })()}
+              </span>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <p className="font-semibold text-charcoal text-sm">{p.name}</p>

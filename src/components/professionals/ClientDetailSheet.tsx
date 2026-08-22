@@ -17,6 +17,7 @@ import {
   X as XIcon,
   UserMinus,
 } from "lucide-react";
+import { PERSON_ICON } from "../../utils/icons";
 
 const activityTypeLabel: Record<string, string> = {
   cardio: "Cardio",
@@ -61,7 +62,9 @@ export const ClientDetailSheet: React.FC<{
     <BottomSheet open={open} onClose={onClose} title={client.name}>
       <div className="space-y-5 animate-fade-slide-up">
         <div className="flex items-center gap-3">
-          <span className="text-3xl">{client.avatarEmoji}</span>
+          <span className="w-11 h-11 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
+            <PERSON_ICON size={20} className="text-sohati-dark" />
+          </span>
           <div>
             <p className="font-semibold text-charcoal">{client.name}</p>
             <p className="text-xs text-charcoal-faint">Client since {client.joinedAt}</p>

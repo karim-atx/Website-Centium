@@ -36,7 +36,8 @@ export type TrackPreference =
 // pages for where it's read.
 export type AccountType = "customer" | "professional" | "business";
 export type CustomerSubtype = "client" | "regular" | "athlete" | "general";
-export type ProfessionalSubtype = "trainer" | "dietitian" | "other";
+// V4: Physiotherapist split out as its own specialty (was folded into "other").
+export type ProfessionalSubtype = "trainer" | "physiotherapist" | "dietitian" | "other";
 
 export interface UserProfile {
   id: string;
@@ -75,7 +76,6 @@ export interface ClientCode {
 export interface ProfessionalClient {
   id: string;
   name: string;
-  avatarEmoji: string;
   code: string;
   joinedAt: string;
   activityLevel: ActivityLevel;
@@ -116,14 +116,17 @@ export interface Food {
   carbs: number;
   fat: number;
   isLebanese?: boolean;
-  emoji: string;
 }
+
+// V4: preset serving units, offered as tap targets instead of free typing.
+export type ServingUnit = "serving" | "g" | "ml" | "cup" | "tbsp" | "tsp";
 
 export interface FoodLogEntry {
   id: string;
   foodId: string;
   food: Food;
   quantity: number;
+  unit?: ServingUnit;
   meal: MealType;
   date: string; // ISO date, yyyy-mm-dd
   loggedVia?: "search" | "ai" | "scan" | "barcode" | "recent" | "quick";
@@ -131,6 +134,37 @@ export interface FoodLogEntry {
 
 // V2: editable per-exercise programming settings (Strong/Hevy-inspired).
 export type RepMaxUpdateMode = "no_update" | "prompt" | "prompt_with_estimate";
+
+// V4: "Muscle Group" (renamed from Body Part, multi-select) and
+// "Classification" (renamed from Category) for the custom-exercise flow.
+export type MuscleGroup =
+  | "arms"
+  | "back"
+  | "cardio"
+  | "chest"
+  | "core"
+  | "full_body"
+  | "legs"
+  | "olympic"
+  | "other"
+  | "shoulders";
+
+export type ExerciseClassification =
+  | "barbell"
+  | "dumbbell"
+  | "machine_other"
+  | "weighted_bodyweight"
+  | "assisted_bodyweight"
+  | "reps_only"
+  | "cardio"
+  | "duration";
+
+// Classifications that track an estimated 1-rep-max, editable in History.
+export const ONE_RM_CLASSIFICATIONS: ExerciseClassification[] = [
+  "barbell",
+  "dumbbell",
+  "weighted_bodyweight",
+];
 
 export interface Exercise {
   id: string;
@@ -147,6 +181,11 @@ export interface Exercise {
     | "core"
     | "full_body"
     | "cardio";
+  // V4: multi-select muscle groups + a classification, alongside the
+  // original single `category` (kept for the exercise-library icon lookup).
+  muscleGroups?: MuscleGroup[];
+  classification?: ExerciseClassification;
+  isCustom?: boolean;
   // Optional V2 programming detail — falls back to sensible defaults in the UI.
   minSets?: number;
   maxSets?: number;
@@ -158,6 +197,9 @@ export interface Exercise {
   restSeconds?: number;
   rpe?: number;
   tempo?: string;
+  // V4: estimated one-rep-max, tracked for barbell/dumbbell/weighted-bodyweight
+  // exercises and editable from the History tab.
+  estimatedOneRepMaxKg?: number;
 }
 
 export interface WorkoutTemplate {
@@ -181,9 +223,11 @@ export interface WorkoutLogEntry {
 }
 
 // V2: routine organization (folders) + logged sessions with a running timer.
+// V4: folders can nest (parentId), matching heavy-set-app folder trees.
 export interface RoutineFolder {
   id: string;
   name: string;
+  parentId?: string | null;
 }
 
 export interface Routine {
@@ -279,7 +323,6 @@ export interface Professional {
   rating: number;
   reviews: number;
   bio: string;
-  avatarEmoji: string;
   connected?: boolean;
 }
 
@@ -288,17 +331,28 @@ export interface Gym {
   name: string;
   location: string;
   perk: string;
-  emoji: string;
   rating: number;
   distanceKm?: number;
   lat: number;
   lng: number;
 }
 
+// V4: a small curated set of minimalistic icon choices for habits, replacing
+// the free-form emoji picker. See utils/icons.tsx for the icon lookup.
+export type HabitIconKey =
+  | "water"
+  | "steps"
+  | "workout"
+  | "journal"
+  | "meditation"
+  | "sleep"
+  | "book"
+  | "custom";
+
 export interface HabitItem {
   id: string;
   label: string;
-  emoji: string;
+  icon: HabitIconKey;
   done: boolean;
   streakDays: number;
 }
@@ -306,9 +360,11 @@ export interface HabitItem {
 export interface Streak {
   id: string;
   label: string;
-  emoji: string;
   days: number;
   goalDays: number;
+  // V4: the four core streaks (logging/movement/workout/nutrition) are
+  // auto-derived from real activity and can't be edited or given a goal.
+  auto?: boolean;
 }
 
 // V2: Home page widget system (Apple-widget-inspired: small/large, reorderable).
@@ -348,16 +404,25 @@ export interface NutritionGoal {
   planType: PlanType;
   macroSplit: MacroSplit;
   targetCalories: number;
+  // V4: an explicit target weight, confirmed separately from the weekly rate,
+  // used to project a reach-by date on the weight trend graph.
+  desiredWeightKg?: number;
+  desiredWeightConfirmed?: boolean;
 }
 
-export interface MealPrepItem {
-  id: string;
-  foodId: string;
+// V4: Meal Prep reworked — a custom meal is just a named group of existing
+// food items; logging it logs each item individually (MyNetDiary-inspired).
+export interface CustomMealItem {
   food: Food;
   quantity: number;
+  unit?: ServingUnit;
 }
 
-export type MealPrepPlan = Record<MealType, MealPrepItem[]>;
+export interface CustomMeal {
+  id: string;
+  title: string;
+  items: CustomMealItem[];
+}
 
 // V2: Journal — organized into folders, entries retain their date.
 export interface JournalFolder {
@@ -389,4 +454,24 @@ export interface SleepDetail {
   lightMin: number;
   awakeMin: number;
   summary: string;
+}
+
+// V4: Explore/marketplace categories, used to route to a per-category
+// listing page instead of the old flat "browse everything" list.
+export type MarketplaceCategoryId =
+  | "gyms"
+  | "classes"
+  | "stores"
+  | "clothing"
+  | "equipment"
+  | "supplements"
+  | "wellness";
+
+// V4: a business's own product/service listing in the marketplace.
+export interface BusinessOffering {
+  id: string;
+  title: string;
+  category: MarketplaceCategoryId;
+  price?: string;
+  description: string;
 }

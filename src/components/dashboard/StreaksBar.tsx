@@ -1,7 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Flame } from "lucide-react";
 
 export const StreaksBar: React.FC = () => {
   const { streaks } = useApp();
@@ -20,8 +20,8 @@ export const StreaksBar: React.FC = () => {
       <div className="flex gap-4 overflow-x-auto no-scrollbar">
         {top.map((s) => (
           <div key={s.id} className="shrink-0 text-center">
-            <p className="text-2xl font-bold text-white leading-none mb-1">
-              {s.emoji} {s.days}
+            <p className="flex items-center justify-center gap-1 text-2xl font-bold text-white leading-none mb-1">
+              <Flame size={18} className="fill-white/25" /> {s.days}
             </p>
             <p className="text-[11px] text-white/80 font-medium whitespace-nowrap">{s.label}</p>
           </div>

@@ -16,6 +16,7 @@ import {
   Send,
 } from "lucide-react";
 import clsx from "clsx";
+import { professionalTypeIcon } from "../../utils/icons";
 
 const accessItems = [
   { icon: UtensilsCrossed, label: "Food diary" },
@@ -72,7 +73,12 @@ export default function ProfessionalDetail() {
       </button>
 
       <div className="flex items-center gap-4 mb-5 animate-fade-slide-up">
-        <span className="text-5xl">{professional.avatarEmoji}</span>
+        <span className="w-16 h-16 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
+          {(() => {
+            const Icon = professionalTypeIcon[professional.type];
+            return <Icon size={28} className="text-sohati-dark" />;
+          })()}
+        </span>
         <div>
           <h1 className="font-display text-2xl font-semibold text-charcoal">{professional.name}</h1>
           <p className="text-sm text-sohati-dark font-medium">{professional.specialty}</p>
@@ -145,7 +151,12 @@ export default function ProfessionalDetail() {
           <div className="absolute inset-0 bg-charcoal/40" onClick={() => setMessageOpen(false)} />
           <div className="relative w-full sm:max-w-md h-[70vh] sm:h-[60vh] bg-cream rounded-t-4xl sm:rounded-4xl shadow-lift flex flex-col animate-sheet-up">
             <div className="flex items-center gap-3 px-5 py-4 border-b border-charcoal/5">
-              <span className="text-2xl">{professional.avatarEmoji}</span>
+              <span className="w-9 h-9 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
+                {(() => {
+                  const Icon = professionalTypeIcon[professional.type];
+                  return <Icon size={16} className="text-sohati-dark" />;
+                })()}
+              </span>
               <p className="font-semibold text-charcoal">{professional.name}</p>
             </div>
             <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">

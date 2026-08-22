@@ -11,6 +11,7 @@ import Mind from "./pages/mind/Mind";
 import Professionals from "./pages/professionals/Professionals";
 import ProfessionalDetail from "./pages/professionals/ProfessionalDetail";
 import Marketplace from "./pages/marketplace/Marketplace";
+import MarketplaceCategoryPage from "./pages/marketplace/MarketplaceCategoryPage";
 import Profile from "./pages/profile/Profile";
 import Subscription from "./pages/subscription/Subscription";
 import More from "./pages/profile/More";
@@ -41,6 +42,7 @@ function AppRoutes() {
         <Route path="/professionals" element={<Professionals />} />
         <Route path="/professionals/:id" element={<ProfessionalDetail />} />
         <Route path="/marketplace" element={<Marketplace />} />
+        <Route path="/marketplace/:category" element={<MarketplaceCategoryPage />} />
         <Route path="/profile" element={<Profile />} />
         <Route path="/subscription" element={<Subscription />} />
         <Route path="/more" element={<More />} />

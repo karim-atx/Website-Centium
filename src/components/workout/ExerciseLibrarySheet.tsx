@@ -3,6 +3,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Chip } from "../ui/Chip";
 import { exerciseLibrary, workoutCategories } from "../../data/mockWorkouts";
 import { Search, Plus } from "lucide-react";
+import { exerciseCategoryIcon } from "../../utils/icons";
 
 export const ExerciseLibrarySheet: React.FC<{
   open: boolean;
@@ -62,11 +63,14 @@ export const ExerciseLibrarySheet: React.FC<{
           <Chip active={category === null} onClick={() => setCategory(null)}>
             All
           </Chip>
-          {workoutCategories.map((c) => (
-            <Chip key={c.id} active={category === c.id} onClick={() => setCategory(c.id)}>
-              {c.emoji} {c.label}
-            </Chip>
-          ))}
+          {workoutCategories.map((c) => {
+            const Icon = exerciseCategoryIcon[c.id];
+            return (
+              <Chip key={c.id} active={category === c.id} onClick={() => setCategory(c.id)}>
+                <Icon size={12} className="inline mr-1 -mt-0.5" /> {c.label}
+              </Chip>
+            );
+          })}
         </div>
 
         <div className="space-y-1.5 max-h-[340px] overflow-y-auto no-scrollbar mb-4">

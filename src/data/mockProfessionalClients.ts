@@ -6,7 +6,6 @@ export const mockProfessionalClients: ProfessionalClient[] = [
   {
     id: "pc1",
     name: "Nadine Khalil",
-    avatarEmoji: "🙋🏻‍♀️",
     code: "SOHA-4F2K",
     joinedAt: "2026-06-02",
     activityLevel: "moderate",
@@ -19,7 +18,6 @@ export const mockProfessionalClients: ProfessionalClient[] = [
   {
     id: "pc2",
     name: "Sami Rahal",
-    avatarEmoji: "🙋🏻‍♂️",
     code: "SOHA-8Q1Z",
     joinedAt: "2026-05-14",
     activityLevel: "very_active",
@@ -32,7 +30,6 @@ export const mockProfessionalClients: ProfessionalClient[] = [
   {
     id: "pc3",
     name: "Yara Bou Saab",
-    avatarEmoji: "🙋🏻‍♀️",
     code: "SOHA-2N9X",
     joinedAt: "2026-07-20",
     activityLevel: "light",

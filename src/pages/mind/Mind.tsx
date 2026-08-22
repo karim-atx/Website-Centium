@@ -7,7 +7,7 @@ import { StreakEditSheet } from "../../components/mind/StreakEditSheet";
 import { AddStreakSheet } from "../../components/mind/AddStreakSheet";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
-import { BookOpen, CheckSquare, Sparkles, Flame, Plus, Play, Settings2 } from "lucide-react";
+import { BookOpen, CheckSquare, Sparkles, Flame, Plus, Play, Lock } from "lucide-react";
 import type { Streak } from "../../types";
 
 type Tab = "overview" | "habits" | "journal";
@@ -20,7 +20,7 @@ export default function Mind() {
 
   return (
     <div>
-      <PageHeader title="Mind" subtitle="Habits, journaling & meditation" />
+      <PageHeader title="Mind" subtitle="Habits, journaling & meditation" showBack />
 
       <div className="flex gap-2 mb-5 animate-fade-slide-up">
         <Chip active={tab === "overview"} onClick={() => setTab("overview")}>
@@ -47,14 +47,19 @@ export default function Mind() {
           </div>
           <div className="grid grid-cols-2 gap-3 mb-6">
             {streaks.map((s) => (
-              <Card key={s.id} interactive onClick={() => setEditingStreak(s)}>
+              <Card
+                key={s.id}
+                interactive={!s.auto}
+                onClick={() => !s.auto && setEditingStreak(s)}
+                className={s.auto ? "!cursor-default" : undefined}
+              >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-1.5">
-                    <span className="text-lg">{s.emoji}</span>
+                    <Flame size={16} className="text-ember" />
                     <span className="text-lg font-bold text-charcoal">{s.days}</span>
                     <span className="text-xs text-charcoal-faint">days</span>
                   </div>
-                  <Settings2 size={13} className="text-charcoal-faint" />
+                  {s.auto && <Lock size={12} className="text-charcoal-faint" />}
                 </div>
                 <p className="text-xs text-charcoal-soft mb-2">{s.label}</p>
                 <div className="h-1.5 rounded-full bg-cream-soft overflow-hidden">
@@ -63,7 +68,9 @@ export default function Mind() {
                     style={{ width: `${Math.min((s.days / s.goalDays) * 100, 100)}%` }}
                   />
                 </div>
-                <p className="text-[10px] text-charcoal-faint mt-1">Goal: {s.goalDays} days</p>
+                <p className="text-[10px] text-charcoal-faint mt-1">
+                  {s.auto ? "Logged automatically" : `Goal: ${s.goalDays} days`}
+                </p>
               </Card>
             ))}
           </div>

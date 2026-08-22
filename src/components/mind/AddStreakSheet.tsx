@@ -2,24 +2,21 @@ import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
-
-const emojiOptions = ["🔥", "💪", "🥗", "🧘", "📓", "😴", "👣"];
+import { Flame } from "lucide-react";
 
 export const AddStreakSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const { addStreak } = useApp();
   const [label, setLabel] = useState("");
-  const [emoji, setEmoji] = useState(emojiOptions[0]);
   const [goalDays, setGoalDays] = useState("30");
 
   const reset = () => {
     setLabel("");
-    setEmoji(emojiOptions[0]);
     setGoalDays("30");
   };
 
   const save = () => {
     if (!label.trim()) return;
-    addStreak(label.trim(), emoji, Number(goalDays) || 30);
+    addStreak(label.trim(), Number(goalDays) || 30);
     reset();
     onClose();
   };
@@ -34,18 +31,9 @@ export const AddStreakSheet: React.FC<{ open: boolean; onClose: () => void }> = 
       title="New Streak"
     >
       <div className="space-y-5 animate-fade-slide-up">
-        <div className="flex gap-2 flex-wrap">
-          {emojiOptions.map((e) => (
-            <button
-              key={e}
-              onClick={() => setEmoji(e)}
-              className={`tap w-10 h-10 rounded-2xl text-lg flex items-center justify-center ${
-                emoji === e ? "bg-sohati-pale ring-2 ring-sohati" : "bg-cream-soft"
-              }`}
-            >
-              {e}
-            </button>
-          ))}
+        <div className="flex items-center gap-2 text-ember">
+          <Flame size={22} />
+          <span className="text-xs text-charcoal-faint">Every streak uses this icon</span>
         </div>
         <label className="block">
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Label</span>

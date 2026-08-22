@@ -2,14 +2,15 @@ import { useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
 import { ProgressBar } from "../../components/ui/ProgressBar";
 import { Chip } from "../../components/ui/Chip";
 import { AddFoodSheet } from "../../components/food/AddFoodSheet";
+import { EditFoodEntrySheet } from "../../components/food/EditFoodEntrySheet";
 import { DateSelector } from "../../components/dashboard/DateSelector";
 import { mealOrder, mealLabels, sumNutrition, targetsFromGoal } from "../../services/nutrition";
-import type { MealType } from "../../types";
-import { Plus, Star, RefreshCw, Check } from "lucide-react";
+import type { MealType, FoodLogEntry } from "../../types";
+import { Plus, Star, RefreshCw, Check, UtensilsCrossed } from "lucide-react";
+import { foodCategoryIcon } from "../../utils/icons";
 import GoalsPanel from "./GoalsPanel";
 import MealPrepPanel from "./MealPrepPanel";
 
@@ -23,6 +24,7 @@ export default function Food() {
   const [addOpen, setAddOpen] = useState(false);
   const [addMeal, setAddMeal] = useState<MealType>("lunch");
   const [copiedToast, setCopiedToast] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<FoodLogEntry | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const todaysEntries = useMemo(
@@ -157,26 +159,35 @@ export default function Food() {
                     </button>
                   ) : (
                     <Card padded={false} className="divide-y divide-charcoal/[0.04]">
-                      {entries.map((e) => (
-                        <div key={e.id} className="flex items-center justify-between px-4 py-3">
-                          <div className="flex items-center gap-3">
-                            <span className="text-xl">{e.food.emoji}</span>
-                            <div>
-                              <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
-                                {e.food.name}
-                                {e.food.isLebanese && <Star size={10} className="text-gold fill-gold" />}
-                              </p>
-                              <p className="text-[11px] text-charcoal-faint">
-                                {e.quantity !== 1 ? `${e.quantity} × ` : ""}
-                                {e.food.serving}
-                              </p>
+                      {entries.map((e) => {
+                        const Icon = foodCategoryIcon[e.food.category] ?? UtensilsCrossed;
+                        return (
+                          <button
+                            key={e.id}
+                            onClick={() => setEditingEntry(e)}
+                            className="tap w-full flex items-center justify-between px-4 py-3 text-left hover:bg-cream-soft"
+                          >
+                            <div className="flex items-center gap-3">
+                              <span className="w-9 h-9 rounded-xl bg-sohati-pale flex items-center justify-center shrink-0">
+                                <Icon size={16} className="text-sohati-dark" />
+                              </span>
+                              <div>
+                                <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
+                                  {e.food.name}
+                                  {e.food.isLebanese && <Star size={10} className="text-gold fill-gold" />}
+                                </p>
+                                <p className="text-[11px] text-charcoal-faint">
+                                  {e.quantity !== 1 ? `${e.quantity} × ` : ""}
+                                  {e.unit && e.unit !== "serving" ? e.unit : e.food.serving}
+                                </p>
+                              </div>
                             </div>
-                          </div>
-                          <span className="text-xs font-semibold text-charcoal-soft">
-                            {Math.round(e.food.calories * e.quantity)} kcal
-                          </span>
-                        </div>
-                      ))}
+                            <span className="text-xs font-semibold text-charcoal-soft">
+                              {Math.round(e.food.calories * e.quantity)} kcal
+                            </span>
+                          </button>
+                        );
+                      })}
                       <button
                         onClick={() => openAdd(meal)}
                         className="tap w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-sohati hover:bg-sohati-pale/40"
@@ -190,9 +201,15 @@ export default function Food() {
             })}
           </div>
 
-          <Button fullWidth size="lg" className="mt-6" onClick={() => openAdd("lunch")}>
-            <Plus size={16} /> Add Food
-          </Button>
+          {/* Fixed, small, circular — stays in place above the content as
+              the diary scrolls behind it, per QA. */}
+          <button
+            onClick={() => openAdd("lunch")}
+            aria-label="Add Food"
+            className="tap fixed bottom-24 right-5 z-30 w-14 h-14 rounded-full bg-sohati text-white shadow-lift flex items-center justify-center"
+          >
+            <Plus size={22} />
+          </button>
         </div>
       )}
 
@@ -200,6 +217,7 @@ export default function Food() {
       {tab === "prep" && <MealPrepPanel />}
 
       <AddFoodSheet open={addOpen} onClose={() => setAddOpen(false)} defaultMeal={addMeal} />
+      <EditFoodEntrySheet open={!!editingEntry} onClose={() => setEditingEntry(null)} entry={editingEntry} />
     </div>
   );
 }

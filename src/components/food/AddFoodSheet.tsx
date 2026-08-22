@@ -2,26 +2,49 @@ import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
-import { Search, Mic, Camera, ScanLine, Clock, Star, Minus, Plus, Check, UtensilsCrossed } from "lucide-react";
+import { Search, Mic, Camera, ScanLine, Clock, Star, Minus, Plus, Check, UtensilsCrossed, Sparkles } from "lucide-react";
 import { mockFoods, foodCategories } from "../../data/mockFoods";
-import type { Food, MealType } from "../../types";
+import type { Food, MealType, ServingUnit } from "../../types";
 import { mealLabels, mealOrder } from "../../services/nutrition";
 import { useApp } from "../../context/AppContext";
 import { AIVoiceLogger } from "./AIVoiceLogger";
+import { foodCategoryIcon } from "../../utils/icons";
 
 type ScanMode = "scan" | "barcode" | null;
+
+// V4: preset serving units offered as tap targets — only the quantity number
+// is typed. The relevant subset differs a little by food category (a plate
+// of rice logs in cups/g; a drink logs in ml).
+const servingUnitOptions: { value: ServingUnit; label: string }[] = [
+  { value: "serving", label: "serving" },
+  { value: "g", label: "g" },
+  { value: "ml", label: "ml" },
+  { value: "cup", label: "cup" },
+  { value: "tbsp", label: "tbsp" },
+  { value: "tsp", label: "tsp" },
+];
+
+const FoodIcon: React.FC<{ food: Food; size?: number; className?: string }> = ({
+  food,
+  size = 16,
+  className,
+}) => {
+  const Icon = foodCategoryIcon[food.category] ?? UtensilsCrossed;
+  return <Icon size={size} className={className} />;
+};
 
 export const AddFoodSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   defaultMeal?: MealType;
 }> = ({ open, onClose, defaultMeal = "lunch" }) => {
-  const { addFoodEntry, foodLog, customFoods, addCustomFood } = useApp();
+  const { addFoodEntry, foodLog, customFoods, addCustomFood, customMeals, logCustomMeal, selectedDate } = useApp();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
   const [meal, setMeal] = useState<MealType>(defaultMeal);
   const [quantity, setQuantity] = useState(1);
+  const [unit, setUnit] = useState<ServingUnit>("serving");
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [scanMode, setScanMode] = useState<ScanMode>(null);
   const [scanResultFood, setScanResultFood] = useState<Food | null>(null);
@@ -51,6 +74,17 @@ export const AddFoodSheet: React.FC<{
 
   const allFoods = useMemo(() => [...customFoods, ...mockFoods], [customFoods]);
 
+  const matchingMeals = useMemo(
+    () => (query.trim() ? customMeals.filter((m) => m.title.toLowerCase().includes(query.toLowerCase())) : []),
+    [customMeals, query]
+  );
+
+  const logMeal = (mealId: string) => {
+    logCustomMeal(mealId, meal, selectedDate);
+    setJustAdded(true);
+    setTimeout(resetAndClose, 700);
+  };
+
   const filtered = useMemo(() => {
     return allFoods.filter((f) => {
       const matchesQuery = f.name.toLowerCase().includes(query.toLowerCase());
@@ -64,6 +98,7 @@ export const AddFoodSheet: React.FC<{
     setCategory(null);
     setSelectedFood(null);
     setQuantity(1);
+    setUnit("serving");
     setScanMode(null);
     setScanResultFood(null);
     setJustAdded(false);
@@ -82,7 +117,6 @@ export const AddFoodSheet: React.FC<{
       protein: Number(customDraft.protein) || 0,
       carbs: Number(customDraft.carbs) || 0,
       fat: Number(customDraft.fat) || 0,
-      emoji: "🍽️",
     });
     setCustomMode(false);
     setSelectedFood(food);
@@ -94,6 +128,7 @@ export const AddFoodSheet: React.FC<{
       foodId: selectedFood.id,
       food: selectedFood,
       quantity,
+      unit,
       meal,
       loggedVia: "search",
     });
@@ -117,14 +152,16 @@ export const AddFoodSheet: React.FC<{
       <BottomSheet open={open} onClose={resetAndClose} title="Add Food">
         <div className="animate-fade-slide-up">
           <div className="flex items-center gap-3 mb-5">
-            <span className="text-3xl">{selectedFood.emoji}</span>
+            <span className="w-11 h-11 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
+              <FoodIcon food={selectedFood} size={19} className="text-sohati-dark" />
+            </span>
             <div>
               <p className="font-display font-semibold text-lg text-charcoal">{selectedFood.name}</p>
               <p className="text-xs text-charcoal-faint">{selectedFood.serving} · prototype estimate</p>
             </div>
           </div>
 
-          <div className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3 mb-5">
+          <div className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3 mb-3">
             <span className="text-sm font-semibold text-charcoal-soft">Quantity</span>
             <div className="flex items-center gap-3">
               <button
@@ -141,6 +178,21 @@ export const AddFoodSheet: React.FC<{
                 <Plus size={14} />
               </button>
             </div>
+          </div>
+
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Unit</p>
+          <div className="flex flex-wrap gap-2 mb-6">
+            {servingUnitOptions.map((u) => (
+              <button
+                key={u.value}
+                onClick={() => setUnit(u.value)}
+                className={`tap rounded-xl px-3.5 py-2 text-xs font-semibold border transition-colors ${
+                  unit === u.value ? "bg-sohati text-white border-sohati" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
+                }`}
+              >
+                {u.label}
+              </button>
+            ))}
           </div>
 
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Meal</p>
@@ -261,7 +313,9 @@ export const AddFoodSheet: React.FC<{
           {scanResultFood ? (
             <div className="w-full animate-fade-slide-up">
               <div className="flex items-center gap-3 bg-cream-soft rounded-2xl px-4 py-3 mb-4">
-                <span className="text-2xl">{scanResultFood.emoji}</span>
+                <span className="w-9 h-9 rounded-xl bg-sohati-pale flex items-center justify-center shrink-0">
+                  <FoodIcon food={scanResultFood} size={16} className="text-sohati-dark" />
+                </span>
                 <div className="text-left">
                   <p className="font-semibold text-charcoal text-sm">{scanResultFood.name}</p>
                   <p className="text-xs text-charcoal-faint">{scanResultFood.calories} kcal · {scanResultFood.serving}</p>
@@ -314,8 +368,8 @@ export const AddFoodSheet: React.FC<{
               onClick={() => runScan("scan")}
               className="tap flex flex-col items-center gap-1.5 rounded-2xl py-3 bg-sky-pale text-sky"
             >
-              <Camera size={17} />
-              <span className="text-[11px] font-semibold">Scan</span>
+              <Sparkles size={17} />
+              <span className="text-[11px] font-semibold">AI Scan</span>
             </button>
             <button
               onClick={() => runScan("barcode")}
@@ -345,8 +399,36 @@ export const AddFoodSheet: React.FC<{
                     onClick={() => setSelectedFood(f)}
                     className="tap shrink-0 flex items-center gap-2 bg-cream-soft rounded-2xl pl-2 pr-3.5 py-2"
                   >
-                    <span className="text-lg">{f.emoji}</span>
+                    <span className="w-7 h-7 rounded-lg bg-cream-card flex items-center justify-center shrink-0">
+                      <FoodIcon food={f} size={13} className="text-sohati-dark" />
+                    </span>
                     <span className="text-xs font-semibold text-charcoal whitespace-nowrap">{f.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {matchingMeals.length > 0 && (
+            <div className="mb-4">
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+                Custom meals
+              </p>
+              <div className="space-y-1.5">
+                {matchingMeals.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => logMeal(m.id)}
+                    disabled={justAdded}
+                    className="tap w-full flex items-center justify-between rounded-2xl px-3.5 py-3 bg-sohati-pale/60 hover:bg-sohati-pale text-left disabled:opacity-50"
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-charcoal">{m.title}</p>
+                      <p className="text-[11px] text-charcoal-faint">{m.items.length} items logged together</p>
+                    </div>
+                    <span className="text-xs font-semibold text-sohati">
+                      {justAdded ? "Added" : "Log all"}
+                    </span>
                   </button>
                 ))}
               </div>
@@ -372,7 +454,9 @@ export const AddFoodSheet: React.FC<{
                 className="tap w-full flex items-center justify-between rounded-2xl px-3 py-2.5 hover:bg-cream-soft text-left"
               >
                 <div className="flex items-center gap-3">
-                  <span className="text-xl">{f.emoji}</span>
+                  <span className="w-9 h-9 rounded-xl bg-sohati-pale flex items-center justify-center shrink-0">
+                    <FoodIcon food={f} size={16} className="text-sohati-dark" />
+                  </span>
                   <div>
                     <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
                       {f.name}

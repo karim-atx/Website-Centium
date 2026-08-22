@@ -1,9 +1,10 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Mic, Sparkles, Pencil, MicOff } from "lucide-react";
+import { Mic, Sparkles, Pencil, MicOff, UtensilsCrossed } from "lucide-react";
 import { parseFoodInput, type ParsedFoodResult } from "../../services/ai/parseFoodInput";
 import { useApp } from "../../context/AppContext";
+import { foodCategoryIcon } from "../../utils/icons";
 
 type Stage = "idle" | "requesting" | "denied" | "recording" | "processing" | "result";
 
@@ -164,7 +165,12 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                   className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="text-xl">{item.food.emoji}</span>
+                    <span className="w-8 h-8 rounded-lg bg-cream-card flex items-center justify-center shrink-0">
+                      {(() => {
+                        const Icon = foodCategoryIcon[item.food.category] ?? UtensilsCrossed;
+                        return <Icon size={15} className="text-sohati-dark" />;
+                      })()}
+                    </span>
                     <span className="text-sm font-semibold text-charcoal">{item.food.name}</span>
                   </div>
                   <span className="text-xs text-charcoal-soft">{item.quantityLabel}</span>

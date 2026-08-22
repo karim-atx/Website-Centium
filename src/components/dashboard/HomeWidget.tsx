@@ -8,7 +8,8 @@ import { WaterFillContainer } from "./WaterFillContainer";
 import { healthMetrics } from "../../data/mockHealthData";
 import { todaysWorkout } from "../../data/mockWorkouts";
 import { sumNutrition, targetsFromGoal } from "../../services/nutrition";
-import { Footprints, Scale, Moon, Dumbbell, Percent, ArrowUp, ArrowDown, Droplet, CheckSquare, BookOpen, Sparkles } from "lucide-react";
+import { Footprints, Scale, Moon, Dumbbell, ArrowUp, ArrowDown, Droplet, CheckSquare, BookOpen, Sparkles, Utensils } from "lucide-react";
+import { habitIcon } from "../../utils/icons";
 
 const WATER_TARGET = 2500;
 
@@ -89,50 +90,28 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
       );
     }
 
-    case "bodyFat": {
-      if (!isLarge) {
-        return (
-          <div>
-            {header("Body Fat", <Percent size={15} className="text-berry" />, () => navigate("/health"))}
-            <p className="text-2xl font-bold text-charcoal leading-none">{metricValues.bodyFat}%</p>
-          </div>
-        );
-      }
-      return (
-        <div>
-          {header("Body Fat", <Percent size={15} className="text-berry" />, () => navigate("/health"))}
-          <p className="text-3xl font-bold text-charcoal leading-none mb-1.5">{metricValues.bodyFat}%</p>
-          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5">
-            <ArrowDown size={10} /> 0.4% this week
-          </span>
-        </div>
-      );
-    }
-
     case "water": {
       const pct = water / WATER_TARGET;
       if (!isLarge) {
         return (
           <div className="flex items-center gap-3">
-            <WaterFillContainer pct={pct} height={48} width={30} />
+            <WaterFillContainer pct={pct} height={48} width={30} orientation="vertical" />
             <div>
-              {header("Water", <Droplet size={15} className="text-sky" />, () => navigate("/mind"))}
+              {header("Water", <Droplet size={15} className="text-sky" />, () => navigate("/health"))}
               <p className="text-lg font-bold text-charcoal leading-none">{(water / 1000).toFixed(1)}L</p>
             </div>
           </div>
         );
       }
       return (
-        <div className="flex items-center gap-4">
-          <WaterFillContainer pct={pct} height={80} width={44} />
-          <div className="flex-1">
-            {header("Water intake", <Droplet size={15} className="text-sky" />, () => navigate("/mind"))}
-            <p className="text-2xl font-bold text-charcoal leading-none mb-1">
-              {(water / 1000).toFixed(2)}L{" "}
-              <span className="text-sm font-normal text-charcoal-faint">/ {(WATER_TARGET / 1000).toFixed(1)}L</span>
-            </p>
-            <p className="text-xs text-charcoal-faint">{Math.round(pct * 100)}% of today's goal</p>
-          </div>
+        <div>
+          {header("Water intake", <Droplet size={15} className="text-sky" />, () => navigate("/health"))}
+          <p className="text-2xl font-bold text-charcoal leading-none mb-1">
+            {(water / 1000).toFixed(2)}L{" "}
+            <span className="text-sm font-normal text-charcoal-faint">/ {(WATER_TARGET / 1000).toFixed(1)}L</span>
+          </p>
+          <WaterFillContainer pct={pct} height={20} width="100%" orientation="horizontal" />
+          <p className="text-xs text-charcoal-faint mt-1.5">{Math.round(pct * 100)}% of today's goal</p>
         </div>
       );
     }
@@ -172,7 +151,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
               </span>
             </ProgressRing>
             <div>
-              {header("Nutrition", <span />, () => navigate("/food"))}
+              {header("Nutrition", <Utensils size={15} className="text-sohati" />, () => navigate("/food"))}
               <p className="text-lg font-bold text-charcoal leading-none">
                 {Math.round(totals.calories)} <span className="text-xs font-normal text-charcoal-faint">kcal</span>
               </p>
@@ -189,7 +168,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
             </div>
           </ProgressRing>
           <div className="flex-1 space-y-1.5">
-            {header("Nutrition", <span />, () => navigate("/food"))}
+            {header("Nutrition", <Utensils size={15} className="text-sohati" />, () => navigate("/food"))}
             <div className="flex justify-between text-xs">
               <span className="text-charcoal-soft">Protein</span>
               <span className="text-charcoal-faint">{Math.round(totals.protein)}/{targets.protein}g</span>
@@ -197,6 +176,10 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
             <div className="flex justify-between text-xs">
               <span className="text-charcoal-soft">Carbs</span>
               <span className="text-charcoal-faint">{Math.round(totals.carbs)}/{targets.carbs}g</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="text-charcoal-soft">Fat</span>
+              <span className="text-charcoal-faint">{Math.round(totals.fat)}/{targets.fat}g</span>
             </div>
           </div>
         </div>
@@ -251,8 +234,11 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
           </p>
           <div className="flex flex-wrap gap-1.5">
             {habits.slice(0, 5).map((h) => (
-              <span key={h.id} className={`text-lg ${h.done ? "" : "opacity-30 grayscale"}`}>
-                {h.emoji}
+              <span
+                key={h.id}
+                className={`w-7 h-7 rounded-full bg-sohati-pale flex items-center justify-center ${h.done ? "" : "opacity-30"}`}
+              >
+                {React.createElement(habitIcon[h.icon], { size: 13, className: "text-sohati-dark" })}
               </span>
             ))}
           </div>

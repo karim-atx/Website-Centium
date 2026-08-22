@@ -8,9 +8,11 @@ import { AddClientSheet } from "../../components/professionals/AddClientSheet";
 import { ClientDetailSheet } from "../../components/professionals/ClientDetailSheet";
 import type { ProfessionalClient } from "../../types";
 import { ChevronRight, LogOut, Plus, Users } from "lucide-react";
+import { PERSON_ICON } from "../../utils/icons";
 
 const specialtyLabel: Record<string, string> = {
   trainer: "Personal Trainer",
+  physiotherapist: "Physiotherapist",
   dietitian: "Dietitian",
   other: "Health Professional",
 };
@@ -63,7 +65,9 @@ export default function ProfessionalDashboard() {
         {professionalClients.map((c) => (
           <Card key={c.id} interactive onClick={() => setActiveClient(c)} className="flex items-center justify-between animate-fade-slide-up">
             <div className="flex items-center gap-3 min-w-0">
-              <span className="text-2xl shrink-0">{c.avatarEmoji}</span>
+              <span className="w-10 h-10 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
+                <PERSON_ICON size={17} className="text-sohati-dark" />
+              </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-charcoal truncate">{c.name}</p>
                 <p className="text-xs text-charcoal-faint">Client since {c.joinedAt}</p>
