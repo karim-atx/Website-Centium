@@ -25,8 +25,10 @@ const customerSubtypes: { value: CustomerSubtype; label: string }[] = [
   { value: "client", label: "Client of Professional" },
 ];
 
+// Physiotherapist listed directly under Personal Trainer per QA.
 const professionalSubtypes: { value: ProfessionalSubtype; label: string }[] = [
   { value: "trainer", label: "Personal Trainer" },
+  { value: "physiotherapist", label: "Physiotherapist" },
   { value: "dietitian", label: "Dietitian" },
   { value: "other", label: "Other health/fitness professional" },
 ];

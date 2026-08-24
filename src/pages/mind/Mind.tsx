@@ -7,7 +7,7 @@ import { StreakEditSheet } from "../../components/mind/StreakEditSheet";
 import { AddStreakSheet } from "../../components/mind/AddStreakSheet";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
-import { BookOpen, CheckSquare, Sparkles, Flame, Plus, Play, Lock } from "lucide-react";
+import { BookOpen, CheckSquare, Sparkles, Flame, Plus, Play } from "lucide-react";
 import type { Streak } from "../../types";
 
 type Tab = "overview" | "habits" | "journal";
@@ -53,13 +53,10 @@ export default function Mind() {
                 onClick={() => !s.auto && setEditingStreak(s)}
                 className={s.auto ? "!cursor-default" : undefined}
               >
-                <div className="flex items-center justify-between mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <Flame size={16} className="text-ember" />
-                    <span className="text-lg font-bold text-charcoal">{s.days}</span>
-                    <span className="text-xs text-charcoal-faint">days</span>
-                  </div>
-                  {s.auto && <Lock size={12} className="text-charcoal-faint" />}
+                <div className="flex items-center gap-1.5 mb-2">
+                  <Flame size={16} className="text-ember" />
+                  <span className="text-lg font-bold text-charcoal">{s.days}</span>
+                  <span className="text-xs text-charcoal-faint">days</span>
                 </div>
                 <p className="text-xs text-charcoal-soft mb-2">{s.label}</p>
                 <div className="h-1.5 rounded-full bg-cream-soft overflow-hidden">

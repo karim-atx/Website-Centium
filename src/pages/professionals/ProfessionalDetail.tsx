@@ -2,7 +2,9 @@ import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { BottomSheet } from "../../components/ui/BottomSheet";
 import { mockProfessionals } from "../../data/mockProfessionals";
+import { useApp } from "../../context/AppContext";
 import {
   ChevronLeft,
   Star,
@@ -14,6 +16,7 @@ import {
   TrendingUp,
   HeartPulse,
   Send,
+  Pencil,
 } from "lucide-react";
 import clsx from "clsx";
 import { professionalTypeIcon } from "../../utils/icons";
@@ -29,6 +32,7 @@ const accessItems = [
 export default function ProfessionalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { professionalReviews, submitProfessionalReview } = useApp();
   const professional = mockProfessionals.find((p) => p.id === id);
   const [access, setAccess] = useState<Record<string, boolean>>({
     "Food diary": true,
@@ -42,6 +46,10 @@ export default function ProfessionalDetail() {
   const [messages, setMessages] = useState<{ from: "me" | "them"; text: string }[]>([
     { from: "them", text: "Hi! How's the new meal plan working for you? 🥗" },
   ]);
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const myReview = professionalReviews.find((r) => r.professionalId === id);
+  const [reviewRating, setReviewRating] = useState(myReview?.rating ?? 5);
+  const [reviewText, setReviewText] = useState(myReview?.text ?? "");
 
   if (!professional) {
     return (
@@ -102,6 +110,26 @@ export default function ProfessionalDetail() {
         <p className="text-sm text-charcoal-soft leading-relaxed">{professional.bio}</p>
       </Card>
 
+      <Card className="mb-6 animate-fade-slide-up flex items-center justify-between">
+        <div>
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
+            Your rating
+          </p>
+          {myReview ? (
+            <div className="flex items-center gap-1">
+              {Array.from({ length: 5 }, (_, i) => (
+                <Star key={i} size={14} className={i < myReview.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-charcoal-faint">You haven't reviewed {professional.name.split(" ")[0]} yet</p>
+          )}
+        </div>
+        <Button size="sm" variant="outline" onClick={() => setReviewOpen(true)}>
+          <Pencil size={13} /> {myReview ? "Edit review" : "Rate & Review"}
+        </Button>
+      </Card>
+
       {professional.connected ? (
         <>
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
@@ -130,12 +158,9 @@ export default function ProfessionalDetail() {
             <Lock size={12} /> You control what your professional can access.
           </p>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="outline" onClick={() => setMessageOpen(true)}>
-              <MessageCircle size={15} /> Message
-            </Button>
-            <Button variant="secondary">Manage Access</Button>
-          </div>
+          <Button fullWidth variant="outline" onClick={() => setMessageOpen(true)}>
+            <MessageCircle size={15} /> Message
+          </Button>
         </>
       ) : (
         <div className="grid grid-cols-2 gap-3">
@@ -191,6 +216,47 @@ export default function ProfessionalDetail() {
           </div>
         </div>
       )}
+
+      <BottomSheet open={reviewOpen} onClose={() => setReviewOpen(false)} title={`Rate ${professional.name.split(" ")[0]}`}>
+        <div className="space-y-5 animate-fade-slide-up">
+          <div className="flex items-center justify-center gap-2">
+            {Array.from({ length: 5 }, (_, i) => {
+              const filled = i < reviewRating;
+              return (
+                <button
+                  key={i}
+                  onClick={() => setReviewRating(i + 1)}
+                  aria-label={`${i + 1} star${i === 0 ? "" : "s"}`}
+                  className="tap"
+                >
+                  <Star size={30} className={filled ? "fill-gold text-gold" : "text-charcoal/15"} />
+                </button>
+              );
+            })}
+          </div>
+          <label className="block">
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Your review</span>
+            <textarea
+              value={reviewText}
+              onChange={(e) => setReviewText(e.target.value)}
+              placeholder={`How has your experience with ${professional.name.split(" ")[0]} been?`}
+              rows={4}
+              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20 resize-none"
+            />
+          </label>
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => {
+              if (!id) return;
+              submitProfessionalReview(id, reviewRating, reviewText.trim());
+              setReviewOpen(false);
+            }}
+          >
+            Submit review
+          </Button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

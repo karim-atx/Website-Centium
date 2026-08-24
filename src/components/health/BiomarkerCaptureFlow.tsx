@@ -1,12 +1,13 @@
 import React, { useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Camera, Check, Sparkles } from "lucide-react";
+import { Camera, Check, FileText, Sparkles } from "lucide-react";
 import { parseBiomarkerImage } from "../../services/ai/parseBiomarkerImage";
 import type { ExtractedBiomarker } from "../../types";
 import { useApp } from "../../context/AppContext";
 
 type Stage = "capture" | "analyzing" | "results" | "done";
+type Source = "camera" | "pdf" | null;
 
 export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void }> = ({
   open,
@@ -14,12 +15,15 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
 }) => {
   const { recordBiomarkers } = useApp();
   const [stage, setStage] = useState<Stage>("capture");
+  const [source, setSource] = useState<Source>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [results, setResults] = useState<ExtractedBiomarker[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
     setStage("capture");
+    setSource(null);
     setPhoto(null);
     setResults([]);
   };
@@ -29,10 +33,13 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
     onClose();
   };
 
-  const handleFile = (file: File) => {
+  const handleFile = (file: File, via: Source) => {
+    setSource(via);
     const reader = new FileReader();
     reader.onload = () => {
-      setPhoto(reader.result as string);
+      // PDFs aren't rendered to a preview thumbnail here — the mock "AI"
+      // parse step reads it the same way either way (prototype-level).
+      if (via === "camera") setPhoto(reader.result as string);
       setStage("analyzing");
       parseBiomarkerImage(reader.result as string).then((res) => {
         setResults(res);
@@ -58,33 +65,56 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
         {stage === "capture" && (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
             <input
-              ref={fileInputRef}
+              ref={cameraInputRef}
               type="file"
               accept="image/*"
               capture="environment"
               className="hidden"
-              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0])}
+              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0], "camera")}
             />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="tap w-24 h-24 rounded-full bg-charcoal flex items-center justify-center shadow-lift mb-6"
-            >
-              <Camera size={30} className="text-cream" />
-            </button>
+            <input
+              ref={pdfInputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0], "pdf")}
+            />
+            <div className="flex items-center gap-4 mb-6">
+              <button
+                onClick={() => cameraInputRef.current?.click()}
+                className="tap w-24 h-24 rounded-full bg-charcoal flex items-center justify-center shadow-lift"
+                aria-label="Take a photo"
+              >
+                <Camera size={30} className="text-cream" />
+              </button>
+              <button
+                onClick={() => pdfInputRef.current?.click()}
+                className="tap w-24 h-24 rounded-full bg-sohati-pale flex items-center justify-center shadow-soft"
+                aria-label="Attach a PDF"
+              >
+                <FileText size={26} className="text-sohati-dark" />
+              </button>
+            </div>
             <p className="font-display text-xl font-semibold text-charcoal mb-2">
-              Take a picture of your results
+              Take a picture, or attach a PDF, of your results
             </p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Photograph a lab report — Sohati's AI will read the biomarkers so you can confirm
-              which ones to add.
+              Photograph a lab report or attach it as a PDF — Sohati's AI will read the biomarkers
+              so you can confirm which ones to add.
             </p>
           </div>
         )}
 
         {stage === "analyzing" && (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-            {photo && (
+            {photo ? (
               <img src={photo} alt="Captured lab report" className="w-32 h-32 object-cover rounded-2xl mb-5 opacity-70" />
+            ) : (
+              source === "pdf" && (
+                <div className="w-20 h-20 rounded-2xl bg-cream-soft flex items-center justify-center mb-5">
+                  <FileText size={28} className="text-charcoal-faint" />
+                </div>
+              )
             )}
             <div className="w-14 h-14 rounded-full bg-sohati-pale flex items-center justify-center mb-4 animate-pop">
               <Sparkles size={24} className="text-sohati animate-pulse" />

@@ -1,6 +1,6 @@
 import React from "react";
 import clsx from "clsx";
-import { Minus, Maximize2, Minimize2, GripVertical } from "lucide-react";
+import { X, Maximize2, Minimize2, GripVertical } from "lucide-react";
 import type { WidgetSize } from "../../types";
 
 interface WidgetShellProps {
@@ -53,7 +53,7 @@ export const WidgetShell: React.FC<WidgetShellProps> = ({
               className="tap w-7 h-7 rounded-full bg-ember text-white flex items-center justify-center shadow-lift"
               aria-label="Remove widget"
             >
-              <Minus size={13} strokeWidth={3} />
+              <X size={13} strokeWidth={3} />
             </button>
           </div>
           <div className="absolute -top-2 -left-2 text-charcoal-faint/60 bg-cream-card rounded-full p-1 shadow-soft z-10">

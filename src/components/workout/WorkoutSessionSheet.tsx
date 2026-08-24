@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { X, Plus, Check, Calculator, Square, MoreHorizontal } from "lucide-react";
 import type { Exercise, LoggedExercise, LoggedSet } from "../../types";
 import { useApp } from "../../context/AppContext";
@@ -62,6 +63,11 @@ export const WorkoutSessionSheet: React.FC<{
 
   if (!open) return null;
 
+  // Portaled to <body> — this can be opened from RoutinesTab, whose wrapper
+  // carries `animate-fade-slide-up` (a transform), which would otherwise
+  // clip this full-screen `fixed inset-0` sheet to that container instead
+  // of the viewport. See BottomSheet.tsx for the same fix + full rationale.
+
   const updateSet = (exIdx: number, setIdx: number, patch: Partial<LoggedSet>) => {
     setLogged((prev) => {
       const next = [...prev];
@@ -111,7 +117,7 @@ export const WorkoutSessionSheet: React.FC<{
     setTimeout(onClose, 900);
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 bg-cream flex flex-col animate-fade-in">
       <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-charcoal/5 shrink-0">
         <button
@@ -232,6 +238,7 @@ export const WorkoutSessionSheet: React.FC<{
           updateSet(setOptionsTarget.exIdx, setOptionsTarget.setIdx, patch);
         }}
       />
-    </div>
+    </div>,
+    document.body
   );
 };

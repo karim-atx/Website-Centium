@@ -81,6 +81,7 @@ export const marketplaceCategoryIcon: Record<MarketplaceCategoryId, LucideIcon> 
   equipment: Package,
   supplements: Pill,
   wellness: Leaf,
+  meal_prep: ChefHat,
 };
 
 export const habitIcon: Record<HabitIconKey, LucideIcon> = {

@@ -9,7 +9,6 @@ import BusinessDashboard from "./BusinessDashboard";
 
 export default function Marketplace() {
   const { streaks, user } = useApp();
-  const streak = streaks[1] ?? streaks[0];
   const navigate = useNavigate();
 
   // Businesses get a management dashboard here instead of the consumer
@@ -17,6 +16,12 @@ export default function Marketplace() {
   if (user.accountType === "business") {
     return <BusinessDashboard />;
   }
+
+  // Rewards are earned strictly off the 4 core (auto-derived, "locked")
+  // streaks — a user-added custom streak never counts toward unlocking one.
+  const lockedStreaks = streaks.filter((s) => s.auto);
+  const streak = [...lockedStreaks].sort((a, b) => b.days - a.days)[0] ?? lockedStreaks[0];
+  if (!streak) return null;
 
   return (
     <div>

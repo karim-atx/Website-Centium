@@ -27,6 +27,8 @@ import type {
   CustomFood,
   HabitIconKey,
   BusinessOffering,
+  CustomExerciseLibraryItem,
+  ProfessionalReview,
 } from "../types";
 import { mockFoods } from "../data/mockFoods";
 import { defaultHabits, streaks as seedStreaks, bloodPanel } from "../data/mockHealthData";
@@ -191,7 +193,9 @@ interface AppState {
 
   streaks: Streak[];
   updateStreak: (id: string, patch: Partial<Streak>) => void;
-  addStreak: (label: string, goalDays: number) => void;
+  // V4 (QA 4.0): a new streak is linked to an existing habit — its days
+  // count is kept in sync with that habit's own streakDays.
+  addStreak: (habitId: string, goalDays: number) => void;
   removeStreak: (id: string) => void;
 
   metricValues: { weight: number; bodyFat: number; steps: number; sleepHours: number; caloriesBurned: number };
@@ -242,6 +246,15 @@ interface AppState {
 
   customFoods: CustomFood[];
   addCustomFood: (food: Omit<CustomFood, "id" | "isCustom">) => CustomFood;
+
+  // V4 (QA 4.0): custom exercises are saved to a searchable library, not
+  // auto-added to whichever routine was open when they were created.
+  customExercises: CustomExerciseLibraryItem[];
+  addCustomExercise: (item: CustomExerciseLibraryItem) => void;
+
+  // V4 (QA 4.0): one review per professional, submitted from ProfessionalDetail.
+  professionalReviews: ProfessionalReview[];
+  submitProfessionalReview: (professionalId: string, rating: number, text: string) => void;
 
   clientCodes: ClientCode[];
   generateClientCode: (professionalId: string, professionalName: string) => string;
@@ -389,6 +402,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [colorTheme]);
 
   const [customFoods, setCustomFoods] = usePersistentState<CustomFood[]>("customFoods", []);
+  const [customExercises, setCustomExercises] = usePersistentState<CustomExerciseLibraryItem[]>(
+    "customExercises",
+    []
+  );
+  const [professionalReviews, setProfessionalReviews] = usePersistentState<ProfessionalReview[]>(
+    "professionalReviews",
+    []
+  );
 
   const [clientCodes, setClientCodes] = usePersistentState<ClientCode[]>("clientCodes", []);
   const [businessListing, setBusinessListing] = usePersistentState("businessListing", {
@@ -411,6 +432,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setWidgets(widgetsForGoals(next.goals));
       return next;
     });
+    // Health's Weight card reads metricValues.weight, not user.weightKg
+    // directly — seed it from what was actually entered at sign-up instead
+    // of leaving the hardcoded prototype default in place.
+    if (profile.weightKg !== undefined) {
+      setMetricValues((m) => ({ ...m, weight: profile.weightKg! }));
+    }
   };
 
   const updateProfile = (patch: Partial<UserProfile>) => {
@@ -510,9 +537,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const updateStreak = (id: string, patch: Partial<Streak>) =>
     setStreaks((prev) => prev.map((s) => (s.id === id && !s.auto ? { ...s, ...patch } : s)));
-  const addStreak = (label: string, goalDays: number) =>
-    setStreaks((prev) => [...prev, { id: `s${Date.now()}`, label, days: 0, goalDays }]);
+  const addStreak = (habitId: string, goalDays: number) => {
+    const habit = habits.find((h) => h.id === habitId);
+    if (!habit) return;
+    setStreaks((prev) => [
+      ...prev,
+      { id: `s${Date.now()}`, label: habit.label, days: habit.streakDays, goalDays, habitId },
+    ]);
+  };
   const removeStreak = (id: string) => setStreaks((prev) => prev.filter((s) => s.id !== id));
+
+  // V4 (QA 4.0): a streak linked to a habit tracks that habit's own
+  // streakDays automatically — including its label, if the habit gets
+  // renamed — instead of drifting out of sync as a separate counter.
+  useEffect(() => {
+    setStreaks((prev) =>
+      prev.map((s) => {
+        if (!s.habitId) return s;
+        const habit = habits.find((h) => h.id === s.habitId);
+        if (!habit) return s;
+        return { ...s, days: habit.streakDays, label: habit.label };
+      })
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [habits]);
 
   // V4: the four core streaks (logging/movement/workout/nutrition) are
   // derived from real activity instead of being manually incremented —
@@ -677,6 +725,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomFoods((prev) => [...prev, custom]);
     return custom;
   };
+
+  const addCustomExercise: AppState["addCustomExercise"] = (item) =>
+    setCustomExercises((prev) =>
+      prev.some((e) => e.name.toLowerCase() === item.name.toLowerCase()) ? prev : [...prev, item]
+    );
+
+  const submitProfessionalReview: AppState["submitProfessionalReview"] = (professionalId, rating, text) =>
+    setProfessionalReviews((prev) => {
+      const next = prev.filter((r) => r.professionalId !== professionalId);
+      return [...next, { professionalId, rating, text, date: TODAY }];
+    });
 
   const generateClientCode: AppState["generateClientCode"] = (professionalId, professionalName) => {
     let code = "";
@@ -844,6 +903,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setColorTheme,
       customFoods,
       addCustomFood,
+      customExercises,
+      addCustomExercise,
+      professionalReviews,
+      submitProfessionalReview,
       clientCodes,
       generateClientCode,
       redeemClientCode,
@@ -883,6 +946,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       selectedDate,
       colorTheme,
       customFoods,
+      customExercises,
+      professionalReviews,
       clientCodes,
       professionalClients,
       businessListing,

@@ -1,4 +1,3 @@
-import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Toggle } from "../../components/ui/Toggle";
@@ -8,7 +7,6 @@ import { ContactUsSheet } from "../../components/profile/ContactUsSheet";
 import { useApp } from "../../context/AppContext";
 import { useState } from "react";
 import {
-  ChevronLeft,
   Moon,
   Sun,
   Bell,
@@ -16,14 +14,15 @@ import {
   Lock,
   HelpCircle,
   Mic,
+  Camera,
   ChevronRight,
 } from "lucide-react";
 
 export default function Settings() {
-  const navigate = useNavigate();
   const { theme, toggleTheme } = useApp();
   const [notifications, setNotifications] = useState(true);
   const [micAllowed, setMicAllowed] = useState<boolean | null>(null);
+  const [cameraAllowed, setCameraAllowed] = useState<boolean | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
 
   const requestMic = async () => {
@@ -36,15 +35,19 @@ export default function Settings() {
     }
   };
 
+  const requestCamera = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      stream.getTracks().forEach((t) => t.stop());
+      setCameraAllowed(true);
+    } catch {
+      setCameraAllowed(false);
+    }
+  };
+
   return (
     <div>
-      <button
-        onClick={() => navigate(-1)}
-        className="tap w-9 h-9 -ml-2 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft mb-3"
-      >
-        <ChevronLeft size={20} />
-      </button>
-      <PageHeader title="Settings" />
+      <PageHeader title="Settings" showBack />
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         Appearance
@@ -73,7 +76,7 @@ export default function Settings() {
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         Permissions
       </p>
-      <Card className="mb-6">
+      <Card className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
@@ -91,6 +94,29 @@ export default function Settings() {
             className="tap text-xs font-semibold text-sohati bg-sohati-pale rounded-full px-3 py-1.5"
           >
             {micAllowed === true ? "Re-check" : "Allow"}
+          </button>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
+              <Camera size={16} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-charcoal">Camera</p>
+              <p className="text-[11px] text-charcoal-faint">
+                {cameraAllowed === true
+                  ? "Granted"
+                  : cameraAllowed === false
+                  ? "Denied"
+                  : "Needed for scanning biomarkers & photos"}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={requestCamera}
+            className="tap text-xs font-semibold text-sohati bg-sohati-pale rounded-full px-3 py-1.5"
+          >
+            {cameraAllowed === true ? "Re-check" : "Allow"}
           </button>
         </div>
       </Card>

@@ -181,6 +181,34 @@ export const ClientDetailSheet: React.FC<{
           </div>
         )}
 
+        {client.access.healthMetrics && (
+          <div className="bg-cream-soft rounded-2xl p-4">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
+              <HeartPulse size={13} /> Health Metrics
+            </p>
+            {client.healthSummary ? (
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-sm font-bold text-charcoal">{client.healthSummary.bodyFatPct}%</p>
+                  <p className="text-[10px] text-charcoal-faint">Body fat</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-charcoal">{client.healthSummary.sleepHours}h</p>
+                  <p className="text-[10px] text-charcoal-faint">Sleep avg</p>
+                </div>
+                <div>
+                  <p className="text-sm font-bold text-charcoal">
+                    {client.healthSummary.stepsAvg.toLocaleString()}
+                  </p>
+                  <p className="text-[10px] text-charcoal-faint">Steps avg</p>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-charcoal-faint">No health data shared yet.</p>
+            )}
+          </div>
+        )}
+
         <div>
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
             What you can see

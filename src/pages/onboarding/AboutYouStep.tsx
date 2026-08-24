@@ -21,10 +21,16 @@ const sexOptions: { value: Sex; label: string }[] = [
 export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
   const canContinue = draft.firstName.trim().length > 0;
 
+  const isProfessional = draft.accountType === "professional";
+
   return (
     <OnboardingShell
       title="About you"
-      subtitle="This helps us personalize your targets."
+      subtitle={
+        isProfessional
+          ? "Sets up your own Sohati profile — you'll add clients next."
+          : "This helps us personalize your targets."
+      }
       onBack={onBack}
       footer={
         <Button fullWidth size="lg" disabled={!canContinue} onClick={onNext}>

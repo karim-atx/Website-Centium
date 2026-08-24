@@ -3,7 +3,7 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Chip } from "../../components/ui/Chip";
 import { MacroSplitEditor } from "../../components/food/MacroSplitEditor";
-import { Sparkline } from "../../components/health/Sparkline";
+import { WeightTrendChart } from "../../components/health/WeightTrendChart";
 import { useApp } from "../../context/AppContext";
 import { calculateTDEE, targetsFromGoal } from "../../services/nutrition";
 import { healthMetrics } from "../../data/mockHealthData";
@@ -36,6 +36,12 @@ export default function GoalsPanel() {
   const tdee = calculateTDEE(user);
   const targets = targetsFromGoal(nutritionGoal);
   const weight = healthMetrics.find((m) => m.type === "weight")!;
+  // TDEE at the goal weight — adapts as the weight goal / desired weight
+  // change, since a lighter or heavier body has a different BMR.
+  const tdeeAtGoal =
+    nutritionGoal.weightGoal !== "maintain" && nutritionGoal.desiredWeightKg
+      ? calculateTDEE({ ...user, weightKg: nutritionGoal.desiredWeightKg })
+      : null;
 
   const rate = nutritionGoal.weeklyRateKg || 0.5;
   const desiredWeightKg = nutritionGoal.desiredWeightKg ?? user.weightKg;
@@ -43,14 +49,11 @@ export default function GoalsPanel() {
     nutritionGoal.weightGoal !== "maintain" && rate > 0
       ? Math.abs(desiredWeightKg - weight.current) / rate
       : 0;
-  const reachDate =
-    weeksToGoal > 0
-      ? new Date(Date.UTC(2026, 7, 20) + weeksToGoal * 7 * 86400000).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })
-      : null;
+  const reachDateObj = weeksToGoal > 0 ? new Date(Date.UTC(2026, 7, 20) + weeksToGoal * 7 * 86400000) : null;
+  const reachDateIso = reachDateObj ? reachDateObj.toISOString().slice(0, 10) : null;
+  const reachDate = reachDateObj
+    ? reachDateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+    : null;
 
   const confirmDesiredWeight = () => {
     if (nutritionGoal.desiredWeightConfirmed) {
@@ -164,16 +167,24 @@ export default function GoalsPanel() {
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
             Weight trend
           </p>
-          <span className="text-xs text-charcoal-faint">7 days</span>
+          <span className="text-xs text-charcoal-faint">
+            {reachDate ? "To goal" : "7 days"}
+          </span>
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-2xl font-bold text-charcoal">{weight.current} kg</p>
-            <p className="text-xs text-charcoal-faint">
-              {weight.trend < 0 ? "↓" : "↑"} {Math.abs(weight.trend)} kg this week
-            </p>
-          </div>
-          <Sparkline values={weight.history.map((h) => h.value)} color="#1B6B52" width={120} height={40} />
+        <div className="mb-1">
+          <p className="text-2xl font-bold text-charcoal">{weight.current} kg</p>
+          <p className="text-xs text-charcoal-faint">
+            {weight.trend < 0 ? "↓" : "↑"} {Math.abs(weight.trend)} kg this week
+          </p>
+        </div>
+        <div className="flex justify-center">
+          <WeightTrendChart
+            history={weight.history}
+            desiredWeightKg={reachDate ? desiredWeightKg : undefined}
+            reachDate={reachDateIso}
+            width={260}
+            height={110}
+          />
         </div>
         {reachDate && (
           <p className="text-xs text-sohati-dark bg-sohati-pale rounded-full px-3 py-1.5 mt-3 inline-block">
@@ -190,12 +201,20 @@ export default function GoalsPanel() {
           <Sparkles size={14} className="text-sohati" />
         </div>
         <p className="text-2xl font-bold text-charcoal mb-1">{tdee.toLocaleString()} kcal</p>
-        <p className="text-xs text-charcoal-faint mb-4">
-          Estimated maintenance calories (Mifflin-St Jeor) — a prototype estimate, adjust as needed.
+        <p className="text-xs text-charcoal-faint mb-2">
+          Estimated maintenance calories at your current weight (Mifflin-St Jeor) — a prototype
+          estimate, adjust as needed.
         </p>
-        <Button size="sm" variant="secondary" onClick={applySuggested}>
-          Use suggested target
-        </Button>
+        {tdeeAtGoal !== null && (
+          <p className="text-xs text-sohati-dark bg-sohati-pale rounded-full px-3 py-1.5 mb-3 inline-block">
+            ≈ {tdeeAtGoal.toLocaleString()} kcal once you reach {nutritionGoal.desiredWeightKg}kg
+          </p>
+        )}
+        <div className="mt-2">
+          <Button size="sm" variant="secondary" onClick={applySuggested}>
+            Use suggested target
+          </Button>
+        </div>
       </Card>
 
       <Card>

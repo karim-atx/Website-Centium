@@ -81,6 +81,7 @@ export const marketplaceCategories = [
   { id: "equipment", label: "Equipment" },
   { id: "supplements", label: "Supplements" },
   { id: "wellness", label: "Wellness Services" },
+  { id: "meal_prep", label: "Meal Prepping" },
 ] as const;
 
 // V4: tapping "Classes" shows the specific class service — which gym hosts
@@ -96,7 +97,7 @@ export const mockClasses = [
 // data yet — same shape (rating + location) so the category page can
 // render them uniformly.
 export const mockMarketplaceListings: Record<
-  "stores" | "clothing" | "equipment" | "supplements" | "wellness",
+  "stores" | "clothing" | "equipment" | "supplements" | "wellness" | "meal_prep",
   { id: string; name: string; location: string; rating: number; offer?: string }[]
 > = {
   stores: [
@@ -118,5 +119,10 @@ export const mockMarketplaceListings: Record<
   wellness: [
     { id: "we1", name: "Serenity Spa & Wellness", location: "Verdun, Beirut", rating: 4.9, offer: "1 free session" },
     { id: "we2", name: "Recharge Recovery Lounge", location: "Achrafieh", rating: 4.7 },
+  ],
+  meal_prep: [
+    { id: "mp1", name: "Healthy Bites Meal Prep", location: "Achrafieh, Beirut", rating: 4.8, offer: "10% off first order" },
+    { id: "mp2", name: "Lebanese MealBox", location: "Jounieh", rating: 4.6, offer: "Free delivery over $40" },
+    { id: "mp3", name: "MacroKitchen", location: "Dbayeh", rating: 4.7 },
   ],
 };

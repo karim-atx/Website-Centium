@@ -1,4 +1,5 @@
 import React, { useEffect } from "react";
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 
 interface BottomSheetProps {
@@ -22,7 +23,14 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ open, onClose, title, 
 
   if (!open) return null;
 
-  return (
+  // Portaled to <body>: several call sites render this inside a container
+  // carrying `animate-fade-slide-up` (a transform-based animation). Any
+  // transform on an ancestor turns it into the containing block for
+  // descendant `position: fixed` elements per the CSS spec, which clipped
+  // this sheet to that ancestor's box instead of the viewport — the
+  // "cut in half, blur misaligned" bug. Portaling sidesteps the ancestor
+  // chain entirely.
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center">
       <div
         className="absolute inset-0 bg-charcoal/40 backdrop-blur-[2px] animate-fade-in"
@@ -42,6 +50,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ open, onClose, title, 
         </div>
         <div className="p-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

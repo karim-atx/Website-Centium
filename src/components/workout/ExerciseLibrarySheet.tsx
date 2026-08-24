@@ -2,9 +2,11 @@ import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Chip } from "../ui/Chip";
 import { exerciseLibrary, workoutCategories } from "../../data/mockWorkouts";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Sparkles } from "lucide-react";
 import { exerciseCategoryIcon } from "../../utils/icons";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "./CreateCustomExerciseSheet";
+import { useApp } from "../../context/AppContext";
+import type { MuscleGroup } from "../../types";
 
 export interface ExercisePick {
   name: string;
@@ -19,6 +21,7 @@ export const ExerciseLibrarySheet: React.FC<{
   onPick: (pick: ExercisePick) => void;
   alreadyAdded: string[];
 }> = ({ open, onClose, onPick, alreadyAdded }) => {
+  const { customExercises, addCustomExercise } = useApp();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [customOpen, setCustomOpen] = useState(false);
@@ -30,6 +33,17 @@ export const ExerciseLibrarySheet: React.FC<{
       return matchesQuery && matchesCategory;
     });
   }, [query, category]);
+
+  // V4 (QA 4.0): a custom exercise is saved to this searchable library on
+  // creation — it's only added to the routine/session if explicitly tapped
+  // below, same as any built-in exercise.
+  const filteredCustom = useMemo(() => {
+    return customExercises.filter((e) => {
+      const matchesQuery = e.name.toLowerCase().includes(query.toLowerCase());
+      const matchesCategory = category ? (e.muscleGroups ?? []).includes(category as MuscleGroup) : true;
+      return matchesQuery && matchesCategory;
+    });
+  }, [customExercises, query, category]);
 
   return (
     <>
@@ -78,6 +92,22 @@ export const ExerciseLibrarySheet: React.FC<{
           </div>
 
           <div className="space-y-1.5 max-h-[340px] overflow-y-auto no-scrollbar mb-4">
+            {filteredCustom.map((e) => {
+              const added = alreadyAdded.includes(e.name);
+              return (
+                <button
+                  key={e.name}
+                  onClick={() => !added && onPick({ ...e, isCustom: true })}
+                  disabled={added}
+                  className="tap w-full flex items-center justify-between rounded-2xl px-3.5 py-3 hover:bg-cream-soft text-left disabled:opacity-40"
+                >
+                  <span className="text-sm font-medium text-charcoal flex items-center gap-1.5">
+                    <Sparkles size={12} className="text-gold shrink-0" /> {e.name}
+                  </span>
+                  <span className="text-xs font-semibold text-sohati">{added ? "Added" : "+ Add"}</span>
+                </button>
+              );
+            })}
             {filtered.map((e) => {
               const added = alreadyAdded.includes(e.name);
               return (
@@ -92,7 +122,7 @@ export const ExerciseLibrarySheet: React.FC<{
                 </button>
               );
             })}
-            {filtered.length === 0 && (
+            {filtered.length === 0 && filteredCustom.length === 0 && (
               <p className="text-center text-sm text-charcoal-faint py-8">
                 No matches — add it as a custom exercise below.
               </p>
@@ -111,7 +141,7 @@ export const ExerciseLibrarySheet: React.FC<{
       <CreateCustomExerciseSheet
         open={customOpen}
         onClose={() => setCustomOpen(false)}
-        onSave={(data) => onPick({ ...data, isCustom: true })}
+        onSave={(data) => addCustomExercise(data)}
       />
     </>
   );

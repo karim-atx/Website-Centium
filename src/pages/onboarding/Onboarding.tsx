@@ -50,7 +50,23 @@ const initialDraft: OnboardingDraft = {
   tracking: [],
 };
 
-const TOTAL_STEPS = 7;
+type StepKey = "welcome" | "accountType" | "aboutYou" | "goal" | "activity" | "tracking" | "ready";
+
+// V4 (QA 4.0): professionals are onboarding to add clients, not to be
+// tracked themselves — the goal/activity-level/tracking-preference steps
+// are customer-only questions, so professionals skip straight from About
+// You to the finish screen (coaching-app style onboarding, not a client
+// health-tracking wizard).
+function stepsFor(accountType: OnboardingDraft["accountType"]): StepKey[] {
+  const isProfessional = accountType === "professional";
+  return [
+    "welcome",
+    "accountType",
+    "aboutYou",
+    ...(isProfessional ? [] : (["goal", "activity", "tracking"] as StepKey[])),
+    "ready",
+  ];
+}
 
 export default function Onboarding() {
   const [step, setStep] = useState(0);
@@ -58,8 +74,13 @@ export default function Onboarding() {
   const { completeOnboarding, redeemClientCode } = useApp();
   const navigate = useNavigate();
 
-  const next = () => setStep((s) => Math.min(s + 1, TOTAL_STEPS - 1));
+  const steps = stepsFor(draft.accountType);
+  const stepKey = steps[Math.min(step, steps.length - 1)];
+
+  const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
   const back = () => setStep((s) => Math.max(s - 1, 0));
+
+  const isProfessional = draft.accountType === "professional";
 
   const finish = () => {
     completeOnboarding({
@@ -80,14 +101,16 @@ export default function Onboarding() {
     if (draft.customerSubtype === "client" && draft.professionalUserIdCode.trim()) {
       redeemClientCode(draft.professionalUserIdCode);
     }
-    navigate("/");
+    // Professionals land straight in their client dashboard — mirroring a
+    // coaching app's first-run flow — instead of the consumer Home page.
+    navigate(isProfessional ? "/professionals" : "/");
   };
 
   return (
     <div className="min-h-screen bg-cream flex flex-col">
       {step > 0 && (
         <div className="px-6 pt-6 flex items-center gap-2">
-          {Array.from({ length: TOTAL_STEPS - 1 }).map((_, i) => (
+          {Array.from({ length: steps.length - 1 }).map((_, i) => (
             <div
               key={i}
               className="h-1.5 flex-1 rounded-full transition-colors duration-300"
@@ -98,21 +121,21 @@ export default function Onboarding() {
       )}
 
       <div className="flex-1 flex flex-col px-6 pt-8 pb-10 max-w-md mx-auto w-full">
-        {step === 0 && <WelcomeStep onNext={next} />}
-        {step === 1 && (
+        {stepKey === "welcome" && <WelcomeStep onNext={next} />}
+        {stepKey === "accountType" && (
           <AccountTypeStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
         )}
-        {step === 2 && (
+        {stepKey === "aboutYou" && (
           <AboutYouStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
         )}
-        {step === 3 && <GoalStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />}
-        {step === 4 && (
+        {stepKey === "goal" && <GoalStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />}
+        {stepKey === "activity" && (
           <ActivityStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
         )}
-        {step === 5 && (
+        {stepKey === "tracking" && (
           <TrackingStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
         )}
-        {step === 6 && <ReadyStep draft={draft} onFinish={finish} />}
+        {stepKey === "ready" && <ReadyStep draft={draft} onFinish={finish} isProfessional={isProfessional} />}
       </div>
     </div>
   );

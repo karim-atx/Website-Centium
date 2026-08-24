@@ -57,6 +57,8 @@ export interface UserProfile {
   // V3: client<->professional linking
   linkedProfessionalCode?: string;
   linkedProfessionalName?: string;
+  // V4 (QA 4.0): user-uploaded profile photo, data URL — camera or gallery.
+  avatarUrl?: string;
 }
 
 // V3: a professional generates one of these for a prospective client; the
@@ -92,6 +94,20 @@ export interface ProfessionalClient {
   lastCaloriesKcal: number;
   assignedProgramName?: string;
   assignedFoodTemplateName?: string;
+  // V4 (QA 4.0): a small health-metrics summary the professional can see once
+  // the client grants `access.healthMetrics` — mocked, stands in for a real
+  // sync of the client's Health page data.
+  healthSummary?: { bodyFatPct: number; sleepHours: number; stepsAvg: number };
+}
+
+// V4 (QA 4.0): a professional's own rating + written review for a professional,
+// submitted from ProfessionalDetail. One per professional per user — kept in
+// local state, no real backend.
+export interface ProfessionalReview {
+  professionalId: string;
+  rating: number;
+  text: string;
+  date: string;
 }
 
 export type MealType = "breakfast" | "lunch" | "snack" | "dinner";
@@ -200,6 +216,15 @@ export interface Exercise {
   // V4: estimated one-rep-max, tracked for barbell/dumbbell/weighted-bodyweight
   // exercises and editable from the History tab.
   estimatedOneRepMaxKg?: number;
+}
+
+// V4 (QA 4.0): a custom exercise, saved to the searchable library on
+// creation — it's only added to a routine when a user explicitly taps it,
+// same as any built-in library exercise.
+export interface CustomExerciseLibraryItem {
+  name: string;
+  muscleGroups?: MuscleGroup[];
+  classification: ExerciseClassification;
 }
 
 export interface WorkoutTemplate {
@@ -365,6 +390,9 @@ export interface Streak {
   // V4: the four core streaks (logging/movement/workout/nutrition) are
   // auto-derived from real activity and can't be edited or given a goal.
   auto?: boolean;
+  // V4 (QA 4.0): a user-added streak is linked to one existing habit — its
+  // `days` count tracks that habit's own streakDays automatically.
+  habitId?: string;
 }
 
 // V2: Home page widget system (Apple-widget-inspired: small/large, reorderable).
@@ -468,7 +496,8 @@ export type MarketplaceCategoryId =
   | "clothing"
   | "equipment"
   | "supplements"
-  | "wellness";
+  | "wellness"
+  | "meal_prep";
 
 // V4: a business's own product/service listing in the marketplace.
 export interface BusinessOffering {

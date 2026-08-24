@@ -28,7 +28,7 @@ export const CreateRoutineSheet: React.FC<{
   onClose: () => void;
   folderId: string | null;
 }> = ({ open, onClose, folderId }) => {
-  const { addRoutine } = useApp();
+  const { addRoutine, customExercises } = useApp();
   const [name, setName] = useState("");
   const [duration, setDuration] = useState("45");
   const [color, setColor] = useState(colorOptions[0]);
@@ -67,10 +67,15 @@ export const CreateRoutineSheet: React.FC<{
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
-    return exerciseLibrary
-      .filter((e) => e.name.toLowerCase().includes(searchQuery.toLowerCase()))
-      .slice(0, 6);
-  }, [searchQuery]);
+    const q = searchQuery.toLowerCase();
+    const fromCustom = customExercises
+      .filter((e) => e.name.toLowerCase().includes(q))
+      .map((e) => ({ name: e.name, classification: e.classification, isCustom: true as const }));
+    const fromLibrary = exerciseLibrary
+      .filter((e) => e.name.toLowerCase().includes(q))
+      .map((e) => ({ name: e.name, classification: e.classification, isCustom: false as const }));
+    return [...fromCustom, ...fromLibrary].slice(0, 6);
+  }, [searchQuery, customExercises]);
 
   const save = () => {
     if (!name.trim() || exercises.length === 0) return;

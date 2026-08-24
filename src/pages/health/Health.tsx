@@ -189,19 +189,49 @@ export default function Health() {
 
       {historyOpen && (
         <div className="grid grid-cols-2 gap-3 mb-6 animate-fade-slide-up">
-          {bloodMarkers.map((m) => (
-            <Card key={m.id}>
-              <p className="text-xs font-semibold text-charcoal-soft mb-1">{m.name}</p>
-              <Sparkline values={m.history.map((h) => h.value)} color="#9C4F7C" width={100} height={32} />
-              <div className="flex justify-between mt-1">
-                {m.history.map((h, i) => (
-                  <span key={i} className="text-[10px] text-charcoal-faint">
-                    {h.value}
+          {bloodMarkers.map((m) => {
+            // Color-coded by direction relative to whether "up" is good for
+            // this marker: stable (flat) is neutral, movement toward normal
+            // is green, movement away from normal (or already abnormal and
+            // moving further) is red.
+            const last = m.history[m.history.length - 1]?.value ?? 0;
+            const prev = m.history[m.history.length - 2]?.value ?? last;
+            const delta = last - prev;
+            const trendColor =
+              delta === 0
+                ? "#8B8378"
+                : m.status === "high"
+                ? delta > 0
+                  ? "#E97452"
+                  : "#1B6B52"
+                : m.status === "low"
+                ? delta < 0
+                  ? "#E97452"
+                  : "#1B6B52"
+                : "#1B6B52";
+            const trendLabel = delta === 0 ? "Stable" : delta > 0 ? "↑ Increasing" : "↓ Decreasing";
+            return (
+              <Card key={m.id}>
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs font-semibold text-charcoal-soft">{m.name}</p>
+                  <span className="text-[10px] font-bold" style={{ color: trendColor }}>
+                    {trendLabel}
                   </span>
-                ))}
-              </div>
-            </Card>
-          ))}
+                </div>
+                <Sparkline values={m.history.map((h) => h.value)} color={trendColor} width={100} height={32} />
+                <div className="flex justify-between mt-1.5">
+                  {m.history.map((h, i) => (
+                    <span key={i} className="text-[9px] text-charcoal-faint text-center leading-tight">
+                      {h.value}
+                      {m.unit}
+                      <br />
+                      {h.date}
+                    </span>
+                  ))}
+                </div>
+              </Card>
+            );
+          })}
         </div>
       )}
 

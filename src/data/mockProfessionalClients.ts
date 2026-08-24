@@ -26,6 +26,7 @@ export const mockProfessionalClients: ProfessionalClient[] = [
     lastWeightKg: 81.6,
     weightTrend: 0.3,
     lastCaloriesKcal: 2650,
+    healthSummary: { bodyFatPct: 18.4, sleepHours: 7.2, stepsAvg: 9100 },
   },
   {
     id: "pc3",

@@ -1,23 +1,21 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { EditableValue } from "../../components/ui/EditableValue";
 import { GoalsEditSheet } from "../../components/profile/GoalsEditSheet";
+import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { mockProfessionals } from "../../data/mockProfessionals";
 import { professionalTypeIcon } from "../../utils/icons";
 import {
   Target,
-  HeartPulse,
-  Lock,
-  Bell,
-  Crown,
-  Globe,
   HelpCircle,
   ChevronRight,
-  Settings,
   LogOut,
+  Camera,
+  Image,
+  Pencil,
 } from "lucide-react";
 
 const accountTypeLabel: Record<string, string> = {
@@ -31,6 +29,18 @@ export default function Profile() {
   const navigate = useNavigate();
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
+
+  const handleAvatarFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateProfile({ avatarUrl: reader.result as string });
+      setAvatarSheetOpen(false);
+    };
+    reader.readAsDataURL(file);
+  };
 
   const handleSignOut = () => {
     if (!confirmSignOut) {
@@ -44,25 +54,34 @@ export default function Profile() {
 
   const connectedProfessionals = mockProfessionals.filter((p) => p.connected);
 
+  // V4 (QA 4.0): trimmed to just Goals + Help — Health data, Settings,
+  // Privacy, Notifications, Subscriptions and Language were redundant with
+  // the More page's own Settings/Sohati tiles (Settings itself already
+  // covers Privacy/Notifications/Language).
   const sections = [
     { icon: Target, label: "Goals", onClick: () => setGoalsOpen(true) },
-    { icon: HeartPulse, label: "Health data", onClick: () => navigate("/health") },
-    { icon: Settings, label: "Settings", onClick: () => navigate("/settings") },
-    { icon: Lock, label: "Privacy", onClick: () => navigate("/settings") },
-    { icon: Bell, label: "Notifications", onClick: () => navigate("/settings") },
-    { icon: Crown, label: "Subscription", onClick: () => navigate("/subscription") },
-    { icon: Globe, label: "Language", onClick: () => navigate("/settings") },
     { icon: HelpCircle, label: "Help", onClick: () => navigate("/settings") },
   ];
 
   return (
     <div>
-      <PageHeader title="My Profile" />
+      <PageHeader title="My Profile" showBack />
 
       <div className="flex items-center gap-4 mb-2 animate-fade-slide-up">
-        <div className="w-16 h-16 rounded-full bg-ember-pale flex items-center justify-center text-2xl font-bold text-ember-dark">
-          {user.firstName.charAt(0)}
-        </div>
+        <button
+          onClick={() => setAvatarSheetOpen(true)}
+          aria-label="Change profile picture"
+          className="tap relative w-16 h-16 rounded-full bg-ember-pale flex items-center justify-center text-2xl font-bold text-ember-dark overflow-hidden shrink-0"
+        >
+          {user.avatarUrl ? (
+            <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            user.firstName.charAt(0)
+          )}
+          <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-charcoal text-cream flex items-center justify-center border-2 border-cream">
+            <Pencil size={9} />
+          </span>
+        </button>
         <div>
           <h2 className="font-display text-xl font-semibold text-charcoal">{user.firstName}</h2>
           <span className="inline-block text-[10px] font-bold text-charcoal-soft bg-cream-soft rounded-full px-2 py-0.5 mt-1">
@@ -155,6 +174,40 @@ export default function Profile() {
       </button>
 
       <GoalsEditSheet open={goalsOpen} onClose={() => setGoalsOpen(false)} />
+
+      <input
+        ref={cameraInputRef}
+        type="file"
+        accept="image/*"
+        capture="user"
+        className="hidden"
+        onChange={(e) => e.target.files?.[0] && handleAvatarFile(e.target.files[0])}
+      />
+      <input
+        ref={galleryInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => e.target.files?.[0] && handleAvatarFile(e.target.files[0])}
+      />
+      <BottomSheet open={avatarSheetOpen} onClose={() => setAvatarSheetOpen(false)} title="Profile picture">
+        <div className="space-y-2.5 animate-fade-slide-up">
+          <button
+            onClick={() => cameraInputRef.current?.click()}
+            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
+          >
+            <Camera size={18} className="text-sohati" />
+            <span className="text-sm font-semibold text-charcoal">Take a photo</span>
+          </button>
+          <button
+            onClick={() => galleryInputRef.current?.click()}
+            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
+          >
+            <Image size={18} className="text-sohati" />
+            <span className="text-sm font-semibold text-charcoal">Choose from library</span>
+          </button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

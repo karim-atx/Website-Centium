@@ -2,9 +2,9 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import type { WidgetConfig } from "../../types";
 import { useApp } from "../../context/AppContext";
-import { ProgressRing } from "../ui/ProgressRing";
 import { ProgressBar } from "../ui/ProgressBar";
 import { WaterFillContainer } from "./WaterFillContainer";
+import { MacroRing } from "./MacroRing";
 import { healthMetrics } from "../../data/mockHealthData";
 import { todaysWorkout } from "../../data/mockWorkouts";
 import { sumNutrition, targetsFromGoal } from "../../services/nutrition";
@@ -143,11 +143,11 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
       if (!isLarge) {
         return (
           <div className="flex items-center gap-3">
-            <ProgressRing progress={kcalProgress} size={44} strokeWidth={5} color="#1B6B52">
+            <MacroRing progress={kcalProgress} protein={totals.protein} carbs={totals.carbs} fat={totals.fat} size={44} strokeWidth={5}>
               <span className="text-[10px] font-bold text-charcoal">
                 {Math.round((kcalProgress || 0) * 100)}%
               </span>
-            </ProgressRing>
+            </MacroRing>
             <div>
               {header("Nutrition", <Utensils size={15} className="text-sohati" />, () => navigate("/food"))}
               <p className="text-lg font-bold text-charcoal leading-none">
@@ -159,12 +159,12 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
       }
       return (
         <div className="flex items-center gap-4">
-          <ProgressRing progress={kcalProgress} size={72} strokeWidth={8} color="#1B6B52">
+          <MacroRing progress={kcalProgress} protein={totals.protein} carbs={totals.carbs} fat={totals.fat} size={72} strokeWidth={8}>
             <div className="text-center">
               <p className="text-base font-bold text-charcoal leading-none">{Math.round(totals.calories)}</p>
               <p className="text-[9px] text-charcoal-faint">of {targets.calories}</p>
             </div>
-          </ProgressRing>
+          </MacroRing>
           <div className="flex-1 space-y-1.5">
             {header("Nutrition", <Utensils size={15} className="text-sohati" />, () => navigate("/food"))}
             <div className="flex justify-between text-xs">
