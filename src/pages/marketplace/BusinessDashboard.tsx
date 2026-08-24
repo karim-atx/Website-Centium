@@ -25,7 +25,7 @@ export default function BusinessDashboard() {
 
   return (
     <div>
-      <PageHeader title="Business Dashboard" subtitle="Manage your Sohati marketplace listing" />
+      <PageHeader title="Business Dashboard" subtitle="Manage your Centium marketplace listing" />
 
       <Card className="mb-6 bg-gradient-to-br from-charcoal to-charcoal/90 !text-cream animate-fade-slide-up">
         <div className="flex items-center gap-3">
@@ -34,7 +34,7 @@ export default function BusinessDashboard() {
           </div>
           <div className="min-w-0">
             <p className="font-display font-semibold truncate">{user.businessName || "Your business"}</p>
-            <p className="text-xs text-cream/60">Listed on Sohati Explore</p>
+            <p className="text-xs text-cream/60">Listed on Centium Explore</p>
           </div>
         </div>
       </Card>
@@ -68,7 +68,7 @@ export default function BusinessDashboard() {
         </div>
         <label className="block">
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-            Streak reward / perk shown to Sohati users
+            Streak reward / perk shown to Centium users
           </span>
           {editingPerk ? (
             <div className="flex gap-2">
@@ -108,7 +108,7 @@ export default function BusinessDashboard() {
         </div>
         <div>
           <p className="text-lg font-bold text-charcoal">{businessListing.membersReached}</p>
-          <p className="text-xs text-charcoal-faint">members reached via Sohati streak rewards this month</p>
+          <p className="text-xs text-charcoal-faint">members reached via Centium streak rewards this month</p>
         </div>
       </Card>
 

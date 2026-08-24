@@ -130,7 +130,7 @@ function seedRoutines(): Routine[] {
     id: `routine-${p.id}`,
     folderId: i < 2 ? "rf-strength" : "rf-hypertrophy",
     name: p.name,
-    color: ["#1B6B52", "#E97452", "#4C8FD1", "#9C4F7C"][i % 4],
+    color: ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C"][i % 4],
     estimatedDurationMin: p.durationMin,
     exercises: p.exercises,
   }));
@@ -413,7 +413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [clientCodes, setClientCodes] = usePersistentState<ClientCode[]>("clientCodes", []);
   const [businessListing, setBusinessListing] = usePersistentState("businessListing", {
-    perk: "10% off with Sohati",
+    perk: "10% off with Centium",
     active: true,
     membersReached: 34,
   });

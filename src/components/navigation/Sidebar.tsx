@@ -1,26 +1,26 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import clsx from "clsx";
-import { sidebarNavItems } from "./navItems";
+import { sidebarNavItems, professionalSidebarNavItems } from "./navItems";
 import { useApp } from "../../context/AppContext";
+import { CentiumLogo } from "../ui/CentiumLogo";
 import { Flame } from "lucide-react";
 
 export const Sidebar: React.FC = () => {
   const { user } = useApp();
+  const items = user.accountType === "professional" ? professionalSidebarNavItems : sidebarNavItems;
 
   return (
     <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-charcoal/[0.06] bg-cream-card/60 px-4 py-6">
       <div className="flex items-center gap-2 px-2 mb-8">
-        <div className="w-9 h-9 rounded-2xl bg-sohati flex items-center justify-center text-white font-display font-bold text-lg">
-          S
-        </div>
+        <CentiumLogo size={30} />
         <span className="font-display text-xl font-semibold text-charcoal tracking-tight">
-          Sohati
+          Centium
         </span>
       </div>
 
       <nav className="flex flex-col gap-1 flex-1">
-        {sidebarNavItems.map((item) => {
+        {items.map((item) => {
           const Icon = item.icon;
           return (
             <NavLink

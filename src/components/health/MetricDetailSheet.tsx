@@ -130,7 +130,7 @@ export const MetricDetailSheet: React.FC<{
             return (
               <div className="mb-4">
                 <div className="flex justify-center mb-2">
-                  <Sparkline values={values} color="#1B6B52" width={240} height={70} />
+                  <Sparkline values={values} color="#7D6BB5" width={240} height={70} />
                 </div>
                 <div className="flex justify-center gap-4 text-xs">
                   <span className="text-ember-dark font-semibold">↑ High {high.toFixed(1)}kg</span>

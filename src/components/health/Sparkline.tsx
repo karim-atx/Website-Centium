@@ -5,7 +5,7 @@ export const Sparkline: React.FC<{
   color?: string;
   width?: number;
   height?: number;
-}> = ({ values, color = "#1B6B52", width = 100, height = 32 }) => {
+}> = ({ values, color = "#7D6BB5", width = 100, height = 32 }) => {
   if (values.length < 2) return null;
   const min = Math.min(...values);
   const max = Math.max(...values);

@@ -67,7 +67,7 @@ export const mockProfessionals: Professional[] = [
 // Approximate real-world coordinates for each location, used to compute a
 // mock "distance from you" in the Explore page.
 export const mockGyms: Gym[] = [
-  { id: "g1", name: "Gold's Gym Beirut", location: "Downtown Beirut", perk: "10% off with Sohati", rating: 4.6, lat: 33.8959, lng: 35.4844 },
+  { id: "g1", name: "Gold's Gym Beirut", location: "Downtown Beirut", perk: "10% off with Centium", rating: 4.6, lat: 33.8959, lng: 35.4844 },
   { id: "g2", name: "FitRepublik", location: "Dbayeh", perk: "Free trial class", rating: 4.8, lat: 33.9425, lng: 35.5919 },
   { id: "g3", name: "PowerHouse Gym", location: "Jounieh", perk: "15% off annual plan", rating: 4.4, lat: 33.9808, lng: 35.6178 },
   { id: "g4", name: "Flow Yoga Studio", location: "Mar Mikhael", perk: "2 free classes", rating: 4.9, lat: 33.8959, lng: 35.5310 },
@@ -89,7 +89,7 @@ export const marketplaceCategories = [
 export const mockClasses = [
   { id: "cl1", name: "Vinyasa Flow", gymName: "Flow Yoga Studio", location: "Mar Mikhael", rating: 4.9, offer: "2 free classes" },
   { id: "cl2", name: "HIIT Circuit", gymName: "FitRepublik", location: "Dbayeh", rating: 4.7, offer: "Free trial class" },
-  { id: "cl3", name: "Spin", gymName: "Gold's Gym Beirut", location: "Downtown Beirut", rating: 4.5, offer: "10% off with Sohati" },
+  { id: "cl3", name: "Spin", gymName: "Gold's Gym Beirut", location: "Downtown Beirut", rating: 4.5, offer: "10% off with Centium" },
   { id: "cl4", name: "Boxing Fundamentals", gymName: "PowerHouse Gym", location: "Jounieh", rating: 4.6, offer: "15% off annual plan" },
 ];
 
@@ -105,7 +105,7 @@ export const mockMarketplaceListings: Record<
     { id: "st2", name: "GreenGrocer Lebanon", location: "Jounieh", rating: 4.4 },
   ],
   clothing: [
-    { id: "cw1", name: "ActiveWear Beirut", location: "ABC Achrafieh", rating: 4.5, offer: "10% off with Sohati" },
+    { id: "cw1", name: "ActiveWear Beirut", location: "ABC Achrafieh", rating: 4.5, offer: "10% off with Centium" },
     { id: "cw2", name: "FitStyle", location: "Dbayeh", rating: 4.3 },
   ],
   equipment: [

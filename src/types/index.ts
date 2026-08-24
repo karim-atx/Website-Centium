@@ -59,6 +59,9 @@ export interface UserProfile {
   linkedProfessionalName?: string;
   // V4 (QA 4.0): user-uploaded profile photo, data URL — camera or gallery.
   avatarUrl?: string;
+  // V5 (QA 5.0): professional's uploaded certification, data URL — camera
+  // or file, captured during onboarding in place of age/height/sex.
+  certificationUrl?: string;
 }
 
 // V3: a professional generates one of these for a prospective client; the

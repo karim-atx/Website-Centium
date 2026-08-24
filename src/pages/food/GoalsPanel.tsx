@@ -35,7 +35,18 @@ export default function GoalsPanel() {
 
   const tdee = calculateTDEE(user);
   const targets = targetsFromGoal(nutritionGoal);
-  const weight = healthMetrics.find((m) => m.type === "weight")!;
+  // V5 (QA 5.0): the weight trend uses the weight provided in Profile
+  // (user.weightKg), not the static mock — the mock's 7-day shape is kept
+  // (this prototype has no daily weight-history log) but rescaled so it
+  // actually ends at the user's real current weight.
+  const weightMeta = healthMetrics.find((m) => m.type === "weight")!;
+  const historyScale = user.weightKg / weightMeta.history[weightMeta.history.length - 1].value;
+  const weightHistory = weightMeta.history.map((h) => ({ ...h, value: +(h.value * historyScale).toFixed(1) }));
+  const weight = {
+    current: user.weightKg,
+    trend: +(weightHistory[weightHistory.length - 1].value - weightHistory[0].value).toFixed(1),
+    history: weightHistory,
+  };
   // TDEE at the goal weight — adapts as the weight goal / desired weight
   // change, since a lighter or heavier body has a different BMR.
   const tdeeAtGoal =

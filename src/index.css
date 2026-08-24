@@ -1,26 +1,32 @@
-@import url("https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* V5 (QA 5.0): rebrand palette — white base, purple #aea1dc primary
+   (was sohati green), sage #a2c8c2 secondary (was ember orange). Light/dark
+   tints below are derived from those two exact given hues so buttons, pale
+   badges and dark-mode text all stay legible — gold/sky/berry stay as their
+   original hues, used only for a few small semantic accents (ratings,
+   water, journal) that don't read as "the app's colors". */
 :root {
-  --c-cream: 251 246 238;
-  --c-cream-soft: 245 238 225;
+  --c-cream: 255 255 255;
+  --c-cream-soft: 245 245 246;
   --c-cream-card: 255 255 255;
   --c-charcoal: 36 31 27;
   --c-charcoal-soft: 91 83 73;
   --c-charcoal-faint: 140 131 120;
 
-  --c-sohati: 27 107 82;
-  --c-sohati-light: 46 153 119;
-  --c-sohati-pale: 220 239 229;
-  --c-sohati-dark: 19 79 61;
+  --c-sohati: 174 161 220;
+  --c-sohati-light: 200 191 233;
+  --c-sohati-pale: 240 237 249;
+  --c-sohati-dark: 125 107 181;
 
-  --c-ember: 233 116 82;
-  --c-ember-light: 242 164 136;
-  --c-ember-pale: 252 230 221;
-  --c-ember-dark: 198 83 47;
+  --c-ember: 162 200 194;
+  --c-ember-light: 193 219 214;
+  --c-ember-pale: 234 244 242;
+  --c-ember-dark: 111 153 147;
 
   --c-gold: 217 164 65;
   --c-gold-pale: 246 233 201;
@@ -42,15 +48,15 @@
   --c-charcoal-soft: 178 169 156;
   --c-charcoal-faint: 122 114 103;
 
-  --c-sohati: 63 173 137;
-  --c-sohati-light: 82 199 160;
-  --c-sohati-pale: 32 55 46;
-  --c-sohati-dark: 190 232 213;
+  --c-sohati: 194 184 233;
+  --c-sohati-light: 213 205 240;
+  --c-sohati-pale: 51 45 71;
+  --c-sohati-dark: 225 219 244;
 
-  --c-ember: 240 140 108;
-  --c-ember-light: 247 178 152;
-  --c-ember-pale: 57 37 30;
-  --c-ember-dark: 250 199 176;
+  --c-ember: 178 212 207;
+  --c-ember-light: 201 227 223;
+  --c-ember-pale: 34 48 46;
+  --c-ember-dark: 217 233 230;
 
   --c-gold: 224 179 96;
   --c-gold-pale: 51 43 26;
@@ -120,7 +126,7 @@ body {
   margin: 0;
   background-color: rgb(var(--c-cream));
   color: rgb(var(--c-charcoal));
-  font-family: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  font-family: "Roboto", ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.25s ease, color 0.25s ease;

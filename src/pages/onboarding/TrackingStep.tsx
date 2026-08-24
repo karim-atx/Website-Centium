@@ -4,7 +4,8 @@ import { Button } from "../../components/ui/Button";
 import type { OnboardingDraft } from "./Onboarding";
 import type { TrackPreference } from "../../types";
 import clsx from "clsx";
-import { Check } from "lucide-react";
+import { Check, Utensils, Dumbbell, Scale, Footprints, Moon, TestTube, CheckSquare, Ruler } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface Props {
   draft: OnboardingDraft;
@@ -13,15 +14,17 @@ interface Props {
   onBack: () => void;
 }
 
-const options: { value: TrackPreference; label: string; emoji: string }[] = [
-  { value: "nutrition", label: "Nutrition", emoji: "🍽️" },
-  { value: "workouts", label: "Workouts", emoji: "🏋️" },
-  { value: "weight", label: "Weight", emoji: "⚖️" },
-  { value: "steps", label: "Steps", emoji: "👣" },
-  { value: "sleep", label: "Sleep", emoji: "😴" },
-  { value: "bloodwork", label: "Blood work", emoji: "🩸" },
-  { value: "habits", label: "Habits", emoji: "✅" },
-  { value: "body_composition", label: "Body composition", emoji: "📏" },
+// V5 (QA 5.0): minimalistic icons instead of emoji, matching the Client UI's
+// existing icon system (see utils/icons.tsx).
+const options: { value: TrackPreference; label: string; icon: LucideIcon }[] = [
+  { value: "nutrition", label: "Nutrition", icon: Utensils },
+  { value: "workouts", label: "Workouts", icon: Dumbbell },
+  { value: "weight", label: "Weight", icon: Scale },
+  { value: "steps", label: "Steps", icon: Footprints },
+  { value: "sleep", label: "Sleep", icon: Moon },
+  { value: "bloodwork", label: "Blood work", icon: TestTube },
+  { value: "habits", label: "Habits", icon: CheckSquare },
+  { value: "body_composition", label: "Body composition", icon: Ruler },
 ];
 
 export const TrackingStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
@@ -59,7 +62,7 @@ export const TrackingStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
                   <Check size={12} className="text-white" strokeWidth={3} />
                 </div>
               )}
-              <span className="text-2xl mb-2 block">{o.emoji}</span>
+              <o.icon size={22} className={clsx("mb-2", active ? "text-sohati-dark" : "text-charcoal-soft")} />
               <span className="text-sm font-semibold text-charcoal">{o.label}</span>
             </button>
           );

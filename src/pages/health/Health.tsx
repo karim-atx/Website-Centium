@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
-import { Sparkline } from "../../components/health/Sparkline";
+import { BiomarkerHistoryChart } from "../../components/health/BiomarkerHistoryChart";
 import { StepsPeriodCard } from "../../components/health/StepsPeriodCard";
 import { BiomarkerCaptureFlow } from "../../components/health/BiomarkerCaptureFlow";
 import { ShareBiomarkerSheet } from "../../components/health/ShareBiomarkerSheet";
@@ -14,10 +14,13 @@ import { ArrowDown, ArrowUp, Plus, Droplet, Flame, ChevronDown, Camera, Share2, 
 import clsx from "clsx";
 import type { BloodMarker, HealthMetric } from "../../types";
 
+// Kept as explicit warning/normal hues (independent of the brand
+// purple/sage tokens) so an out-of-range "HIGH" reading still reads as a
+// warning rather than blending into the rebrand's decorative palette.
 const statusColor: Record<string, string> = {
   low: "text-sky bg-sky-pale",
-  normal: "text-sohati-dark bg-sohati-pale",
-  high: "text-ember-dark bg-ember-pale",
+  normal: "text-[#3F9165] bg-[#E3F3E9]",
+  high: "text-[#C0392B] bg-[#FBE7E4]",
 };
 
 export default function Health() {
@@ -188,46 +191,42 @@ export default function Health() {
       </button>
 
       {historyOpen && (
-        <div className="grid grid-cols-2 gap-3 mb-6 animate-fade-slide-up">
+        <div className="space-y-3 mb-6 animate-fade-slide-up">
           {bloodMarkers.map((m) => {
             // Color-coded by direction relative to whether "up" is good for
             // this marker: stable (flat) is neutral, movement toward normal
             // is green, movement away from normal (or already abnormal and
-            // moving further) is red.
+            // moving further) is red. Uses explicit green/red, independent
+            // of the brand purple/sage tokens, so the meaning stays clear.
             const last = m.history[m.history.length - 1]?.value ?? 0;
             const prev = m.history[m.history.length - 2]?.value ?? last;
             const delta = last - prev;
+            const GOOD = "#3F9165";
+            const BAD = "#C0392B";
+            const NEUTRAL = "#8B8378";
             const trendColor =
               delta === 0
-                ? "#8B8378"
+                ? NEUTRAL
                 : m.status === "high"
                 ? delta > 0
-                  ? "#E97452"
-                  : "#1B6B52"
+                  ? BAD
+                  : GOOD
                 : m.status === "low"
                 ? delta < 0
-                  ? "#E97452"
-                  : "#1B6B52"
-                : "#1B6B52";
+                  ? BAD
+                  : GOOD
+                : GOOD;
             const trendLabel = delta === 0 ? "Stable" : delta > 0 ? "↑ Increasing" : "↓ Decreasing";
             return (
               <Card key={m.id}>
-                <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center justify-between mb-2">
                   <p className="text-xs font-semibold text-charcoal-soft">{m.name}</p>
                   <span className="text-[10px] font-bold" style={{ color: trendColor }}>
                     {trendLabel}
                   </span>
                 </div>
-                <Sparkline values={m.history.map((h) => h.value)} color={trendColor} width={100} height={32} />
-                <div className="flex justify-between mt-1.5">
-                  {m.history.map((h, i) => (
-                    <span key={i} className="text-[9px] text-charcoal-faint text-center leading-tight">
-                      {h.value}
-                      {m.unit}
-                      <br />
-                      {h.date}
-                    </span>
-                  ))}
+                <div className="overflow-x-auto no-scrollbar">
+                  <BiomarkerHistoryChart history={m.history} unit={m.unit} color={trendColor} />
                 </div>
               </Card>
             );

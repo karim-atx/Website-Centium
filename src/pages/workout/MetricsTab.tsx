@@ -33,7 +33,7 @@ export default function MetricsTab() {
             </p>
             <p className="text-xs text-charcoal-faint">Last logged session</p>
           </div>
-          <Sparkline values={volumePoints} color="#1B6B52" width={140} height={44} />
+          <Sparkline values={volumePoints} color="#7D6BB5" width={140} height={44} />
         </div>
       </Card>
 

@@ -41,7 +41,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         <span className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
           <Mic size={15} />
         </span>
-        <span className="text-sm font-semibold">Tell Sohati what you ate</span>
+        <span className="text-sm font-semibold">Tell Centium what you ate</span>
       </button>
     </div>
   );

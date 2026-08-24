@@ -7,7 +7,7 @@ export interface SleepStages {
   awakeMin: number;
 }
 
-const stageColor = { rem: "#9C4F7C", deep: "#1B6B52", light: "#4C8FD1", awake: "#E97452" };
+const stageColor = { rem: "#9C4F7C", deep: "#7D6BB5", light: "#4C8FD1", awake: "#6F9993" };
 
 // A single night's sleep as one stacked horizontal bar — all stages in one
 // track, Apple Health-inspired, not copied.

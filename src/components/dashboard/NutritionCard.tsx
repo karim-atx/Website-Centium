@@ -31,7 +31,7 @@ export const NutritionCard: React.FC<{ totals: NutritionTotals }> = ({ totals })
         <ChevronRight size={18} className="text-charcoal-faint" />
       </div>
       <div className="flex items-center gap-5">
-        <ProgressRing progress={kcalProgress} size={92} strokeWidth={9} color="#1B6B52">
+        <ProgressRing progress={kcalProgress} size={92} strokeWidth={9} color="#7D6BB5">
           <div className="text-center">
             <p className="text-lg font-bold text-charcoal leading-none">
               {Math.round(totals.calories).toLocaleString()}
@@ -40,9 +40,9 @@ export const NutritionCard: React.FC<{ totals: NutritionTotals }> = ({ totals })
           </div>
         </ProgressRing>
         <div className="flex-1 space-y-3">
-          {macro("Protein", totals.protein, dailyTargets.protein, "#1B6B52")}
+          {macro("Protein", totals.protein, dailyTargets.protein, "#7D6BB5")}
           {macro("Carbs", totals.carbs, dailyTargets.carbs, "#D9A441")}
-          {macro("Fat", totals.fat, dailyTargets.fat, "#E97452")}
+          {macro("Fat", totals.fat, dailyTargets.fat, "#6F9993")}
         </div>
       </div>
       <p className="text-xs text-charcoal-soft mt-4 bg-cream-soft rounded-xl px-3 py-2 inline-block">

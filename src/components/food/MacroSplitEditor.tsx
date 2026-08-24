@@ -2,9 +2,9 @@ import React from "react";
 import type { MacroSplit } from "../../types";
 
 const macroMeta = [
-  { key: "proteinPct" as const, label: "Protein", color: "#1B6B52", kcalPerG: 4 },
+  { key: "proteinPct" as const, label: "Protein", color: "#7D6BB5", kcalPerG: 4 },
   { key: "carbsPct" as const, label: "Carbs", color: "#D9A441", kcalPerG: 4 },
-  { key: "fatPct" as const, label: "Fat", color: "#E97452", kcalPerG: 9 },
+  { key: "fatPct" as const, label: "Fat", color: "#6F9993", kcalPerG: 9 },
 ];
 
 interface Props {

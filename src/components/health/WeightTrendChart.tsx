@@ -60,20 +60,20 @@ export const WeightTrendChart: React.FC<{
             x2={width - padding.right}
             y1={y(v)}
             y2={y(v)}
-            stroke="#EFE7D8"
+            stroke="#EDEDEF"
             strokeWidth={1}
           />
         </g>
       ))}
 
       {/* actual history — solid */}
-      <path d={pathFor(0, splitIndex)} fill="none" stroke="#1B6B52" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
+      <path d={pathFor(0, splitIndex)} fill="none" stroke="#7D6BB5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
       {/* projected trajectory to goal — dashed */}
       {points.length > actualPoints.length && (
         <path
           d={pathFor(splitIndex, points.length - 1)}
           fill="none"
-          stroke="#1B6B52"
+          stroke="#7D6BB5"
           strokeWidth={2}
           strokeDasharray="4 4"
           strokeLinecap="round"
@@ -86,8 +86,8 @@ export const WeightTrendChart: React.FC<{
           cx={x(i)}
           cy={y(p.value)}
           r={i === 0 || i === points.length - 1 ? 3.5 : 0}
-          fill={p.projected ? "#fff" : "#1B6B52"}
-          stroke="#1B6B52"
+          fill={p.projected ? "#fff" : "#7D6BB5"}
+          stroke="#7D6BB5"
           strokeWidth={p.projected ? 2 : 0}
         />
       ))}

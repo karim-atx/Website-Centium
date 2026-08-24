@@ -4,7 +4,8 @@ import { Button } from "../../components/ui/Button";
 import type { OnboardingDraft } from "./Onboarding";
 import type { Goal } from "../../types";
 import clsx from "clsx";
-import { Check } from "lucide-react";
+import { Check, Scale, Dumbbell, TrendingUp, Salad, Activity, HeartPulse, BarChart3, Leaf } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 interface Props {
   draft: OnboardingDraft;
@@ -13,15 +14,17 @@ interface Props {
   onBack: () => void;
 }
 
-const goals: { value: Goal; label: string; emoji: string }[] = [
-  { value: "lose_weight", label: "Lose weight", emoji: "⚖️" },
-  { value: "build_muscle", label: "Build muscle", emoji: "💪" },
-  { value: "get_stronger", label: "Get stronger", emoji: "🏋️" },
-  { value: "improve_nutrition", label: "Improve my nutrition", emoji: "🥗" },
-  { value: "improve_fitness", label: "Improve my fitness", emoji: "🏃" },
-  { value: "improve_health", label: "Improve my overall health", emoji: "❤️" },
-  { value: "track_health", label: "Track my health", emoji: "📊" },
-  { value: "live_healthier", label: "Live healthier", emoji: "🌿" },
+// V5 (QA 5.0): minimalistic icons instead of emoji, matching the Client UI's
+// existing icon system (see utils/icons.tsx).
+const goals: { value: Goal; label: string; icon: LucideIcon }[] = [
+  { value: "lose_weight", label: "Lose weight", icon: Scale },
+  { value: "build_muscle", label: "Build muscle", icon: Dumbbell },
+  { value: "get_stronger", label: "Get stronger", icon: TrendingUp },
+  { value: "improve_nutrition", label: "Improve my nutrition", icon: Salad },
+  { value: "improve_fitness", label: "Improve my fitness", icon: Activity },
+  { value: "improve_health", label: "Improve my overall health", icon: HeartPulse },
+  { value: "track_health", label: "Track my health", icon: BarChart3 },
+  { value: "live_healthier", label: "Live healthier", icon: Leaf },
 ];
 
 export const GoalStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
@@ -59,7 +62,7 @@ export const GoalStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) =
                   <Check size={12} className="text-white" strokeWidth={3} />
                 </div>
               )}
-              <span className="text-2xl mb-2 block">{g.emoji}</span>
+              <g.icon size={22} className={clsx("mb-2", active ? "text-sohati-dark" : "text-charcoal-soft")} />
               <span className="text-sm font-semibold text-charcoal leading-snug block">
                 {g.label}
               </span>

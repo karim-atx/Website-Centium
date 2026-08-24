@@ -12,6 +12,7 @@ import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { ChevronRight, Sparkles, Store } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { todaysWorkout } from "../../data/mockWorkouts";
+import ProfessionalDashboard from "../professionals/ProfessionalDashboard";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -28,8 +29,14 @@ export default function Home() {
   const [workoutOpen, setWorkoutOpen] = useState(false);
   const [metricOpen, setMetricOpen] = useState(false);
 
-  const isPro = user.accountType === "professional";
   const isBusiness = user.accountType === "business";
+
+  // V5 (QA 5.0): professionals no longer have a Home/Food/Workout/Health
+  // dashboard of their own — "My Clients" is their main page instead,
+  // same pattern already used by the Professionals/Explore routes.
+  if (user.accountType === "professional") {
+    return <ProfessionalDashboard />;
+  }
 
   return (
     <div>
@@ -39,7 +46,7 @@ export default function Home() {
             {getGreeting()}, {user.firstName} 👋
           </h1>
           <p className="text-charcoal-soft text-sm mt-1">
-            {isPro ? "Your professional dashboard" : isBusiness ? "Your business dashboard" : "Here's your day"}
+            {isBusiness ? "Your business dashboard" : "Here's your day"}
           </p>
         </div>
         <button
@@ -55,24 +62,20 @@ export default function Home() {
 
       <StreaksBar />
 
-      {(isPro || isBusiness) && (
+      {isBusiness && (
         <Card
           interactive
-          onClick={() => navigate(isPro ? "/professionals" : "/marketplace")}
+          onClick={() => navigate("/marketplace")}
           className="mb-5 bg-gradient-to-br from-charcoal to-charcoal/90 !text-cream animate-fade-slide-up"
         >
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center">
-                {isPro ? <Sparkles size={18} /> : <Store size={18} />}
+                <Store size={18} />
               </div>
               <div>
-                <p className="text-sm font-semibold">
-                  {isPro ? "Manage your clients" : `${user.businessName || "Your business"} on Sohati`}
-                </p>
-                <p className="text-xs text-cream/60">
-                  {isPro ? "View shared client data & requests" : "Business tools are an early preview"}
-                </p>
+                <p className="text-sm font-semibold">{user.businessName || "Your business"} on Centium</p>
+                <p className="text-xs text-cream/60">Business tools are an early preview</p>
               </div>
             </div>
             <ChevronRight size={18} className="text-cream/60" />

@@ -10,7 +10,6 @@ import { mockProfessionals } from "../../data/mockProfessionals";
 import { professionalTypeIcon } from "../../utils/icons";
 import {
   Target,
-  HelpCircle,
   ChevronRight,
   LogOut,
   Camera,
@@ -54,14 +53,9 @@ export default function Profile() {
 
   const connectedProfessionals = mockProfessionals.filter((p) => p.connected);
 
-  // V4 (QA 4.0): trimmed to just Goals + Help — Health data, Settings,
-  // Privacy, Notifications, Subscriptions and Language were redundant with
-  // the More page's own Settings/Sohati tiles (Settings itself already
-  // covers Privacy/Notifications/Language).
-  const sections = [
-    { icon: Target, label: "Goals", onClick: () => setGoalsOpen(true) },
-    { icon: HelpCircle, label: "Help", onClick: () => navigate("/settings") },
-  ];
+  // V4 (QA 4.0) trimmed to Goals + Help; V5 (QA 5.0) removes Help too —
+  // Settings (reachable from More) already covers everything it pointed to.
+  const sections = [{ icon: Target, label: "Goals", onClick: () => setGoalsOpen(true) }];
 
   return (
     <div>
@@ -78,7 +72,7 @@ export default function Profile() {
           ) : (
             user.firstName.charAt(0)
           )}
-          <span className="absolute bottom-0 right-0 w-5 h-5 rounded-full bg-charcoal text-cream flex items-center justify-center border-2 border-cream">
+          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-charcoal text-cream flex items-center justify-center border-2 border-cream">
             <Pencil size={9} />
           </span>
         </button>

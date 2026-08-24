@@ -13,8 +13,8 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   progress,
   size = 96,
   strokeWidth = 10,
-  color = "#1B6B52",
-  trackColor = "#EFE7D8",
+  color = "#7D6BB5",
+  trackColor = "#EDEDEF",
   children,
 }) => {
   const radius = (size - strokeWidth) / 2;

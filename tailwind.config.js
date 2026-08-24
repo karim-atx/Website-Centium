@@ -5,8 +5,11 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        display: ["Fraunces", "ui-serif", "Georgia", "serif"],
-        sans: ["'Plus Jakarta Sans'", "ui-sans-serif", "system-ui", "sans-serif"],
+        // V5 (QA 5.0): all fonts unified to Roboto — the separate serif
+        // "display" face (Fraunces) is retired, so `font-display` now just
+        // resolves to the same Roboto stack as `font-sans`.
+        display: ["Roboto", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["Roboto", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
         cream: {

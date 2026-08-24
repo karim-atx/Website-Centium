@@ -74,7 +74,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
   };
 
   return (
-    <BottomSheet open={open} onClose={handleClose} title="Tell Sohati what you ate">
+    <BottomSheet open={open} onClose={handleClose} title="Tell Centium what you ate">
       <div className="min-h-[280px] flex flex-col items-center justify-center text-center py-4">
         {stage === "idle" && (
           <>
@@ -88,7 +88,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               What did you eat?
             </p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Tap the mic and describe your meal naturally — Sohati's AI will find the foods and estimate the nutrition for you to confirm.
+              Tap the mic and describe your meal naturally — Centium's AI will find the foods and estimate the nutrition for you to confirm.
             </p>
           </>
         )}
@@ -102,7 +102,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               Requesting microphone access…
             </p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Sohati needs your mic to hear what you ate.
+              Centium needs your mic to hear what you ate.
             </p>
           </>
         )}
@@ -145,7 +145,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               <Sparkles size={26} className="text-sohati animate-pulse" />
             </div>
             <p className="font-display text-xl font-semibold text-charcoal mb-2">
-              Sohati is processing…
+              Centium is processing…
             </p>
             <p className="text-sm text-charcoal-soft max-w-xs">
               Matching what you said against the Lebanese food database.

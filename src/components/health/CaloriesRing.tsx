@@ -16,7 +16,7 @@ export const CaloriesRing: React.FC<{ progress: number; size?: number }> = ({ pr
       <svg width={size} height={size} className="-rotate-90">
         <defs>
           <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="100%">
-            <stop offset="0%" stopColor="#E97452" />
+            <stop offset="0%" stopColor="#6F9993" />
             <stop offset="100%" stopColor="#D9A441" />
           </linearGradient>
         </defs>

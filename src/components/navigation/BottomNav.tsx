@@ -1,20 +1,24 @@
 import React from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import clsx from "clsx";
-import { primaryNavItems } from "./navItems";
+import { primaryNavItems, professionalPrimaryNavItems } from "./navItems";
+import { useApp } from "../../context/AppContext";
 
 export const BottomNav: React.FC = () => {
   const location = useLocation();
+  const { user } = useApp();
+  const isProfessional = user.accountType === "professional";
+  const items = isProfessional ? professionalPrimaryNavItems : primaryNavItems;
   const isMoreActive =
     location.pathname === "/more" ||
-    ["/mind", "/professionals", "/marketplace", "/profile", "/subscription"].some((p) =>
-      location.pathname.startsWith(p)
+    ["/mind", "/marketplace", "/profile", "/subscription", ...(isProfessional ? [] : ["/professionals"])].some(
+      (p) => location.pathname.startsWith(p)
     );
 
   return (
     <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-cream-card/95 backdrop-blur-md border-t border-charcoal/[0.06] pb-[env(safe-area-inset-bottom)]">
-      <div className="grid grid-cols-5 max-w-xl mx-auto">
-        {primaryNavItems.map((item) => {
+      <div className={clsx("grid max-w-xl mx-auto", isProfessional ? "grid-cols-2" : "grid-cols-5")}>
+        {items.map((item) => {
           const Icon = item.icon;
           const active = item.to === "/more" ? isMoreActive : location.pathname === item.to;
           return (

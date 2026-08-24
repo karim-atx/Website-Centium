@@ -3,9 +3,9 @@ import React from "react";
 // V4 (QA 4.0): the nutrition ring's progress arc is split into
 // protein/carbs/fat segments, colored to match the Food page's macro bars
 // (protein green, carbs gold, fat ember), instead of one flat color.
-const PROTEIN_COLOR = "#1B6B52";
+const PROTEIN_COLOR = "#7D6BB5";
 const CARBS_COLOR = "#D9A441";
-const FAT_COLOR = "#E97452";
+const FAT_COLOR = "#6F9993";
 
 interface MacroRingProps {
   size?: number;
@@ -25,7 +25,7 @@ export const MacroRing: React.FC<MacroRingProps> = ({
   carbs,
   fat,
   progress,
-  trackColor = "#EFE7D8",
+  trackColor = "#EDEDEF",
   children,
 }) => {
   const radius = (size - strokeWidth) / 2;

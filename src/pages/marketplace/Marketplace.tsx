@@ -25,7 +25,7 @@ export default function Marketplace() {
 
   return (
     <div>
-      <PageHeader title="Explore" subtitle="The future Sohati ecosystem" showBack />
+      <PageHeader title="Explore" subtitle="The future Centium ecosystem" showBack />
 
       <Card className="mb-6 bg-gradient-to-br from-ember to-ember-dark !text-white animate-fade-slide-up">
         <div className="flex items-center gap-2 mb-1.5">
@@ -56,7 +56,7 @@ export default function Marketplace() {
 
       <Card className="text-center py-8 animate-fade-slide-up">
         <Sparkles size={22} className="text-berry mx-auto mb-3" />
-        <p className="font-display font-semibold text-charcoal mb-1.5">More coming to Sohati</p>
+        <p className="font-display font-semibold text-charcoal mb-1.5">More coming to Centium</p>
         <p className="text-xs text-charcoal-soft max-w-xs mx-auto leading-relaxed">
           Stores, classes, equipment, supplements and wellness services — a full health marketplace,
           built around your streaks and progress.

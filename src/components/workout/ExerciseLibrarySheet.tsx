@@ -124,17 +124,10 @@ export const ExerciseLibrarySheet: React.FC<{
             })}
             {filtered.length === 0 && filteredCustom.length === 0 && (
               <p className="text-center text-sm text-charcoal-faint py-8">
-                No matches — add it as a custom exercise below.
+                No matches — use the + button above to add a custom exercise.
               </p>
             )}
           </div>
-
-          <button
-            onClick={() => setCustomOpen(true)}
-            className="tap w-full text-center text-xs font-semibold text-sohati border-t border-charcoal/[0.06] pt-4"
-          >
-            Can't find it? + Add a custom exercise…
-          </button>
         </div>
       </BottomSheet>
 

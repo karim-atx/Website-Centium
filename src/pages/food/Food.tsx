@@ -18,6 +18,17 @@ type Tab = "diary" | "goals" | "prep";
 
 const SWIPE_THRESHOLD = 60;
 
+// V5 (QA 5.0): the global floating "+" has no specific meal section to
+// anchor to, so it defaults to whichever meal makes sense for the current
+// time of day, rather than being hardcoded to lunch.
+function mealForCurrentTime(): MealType {
+  const hour = new Date().getHours();
+  if (hour < 11) return "breakfast";
+  if (hour < 15) return "lunch";
+  if (hour < 18) return "snack";
+  return "dinner";
+}
+
 export default function Food() {
   const { foodLog, nutritionGoal, selectedDate, copyYesterdayFood } = useApp();
   const [tab, setTab] = useState<Tab>("diary");
@@ -114,9 +125,9 @@ export default function Food() {
               </span>
             </div>
             <div className="space-y-3">
-              {macroRow("Protein", totals.protein, targets.protein, "#1B6B52")}
+              {macroRow("Protein", totals.protein, targets.protein, "#7D6BB5")}
               {macroRow("Carbs", totals.carbs, targets.carbs, "#D9A441")}
-              {macroRow("Fat", totals.fat, targets.fat, "#E97452")}
+              {macroRow("Fat", totals.fat, targets.fat, "#6F9993")}
             </div>
           </Card>
 
@@ -139,6 +150,9 @@ export default function Food() {
             {mealOrder.map((meal) => {
               const entries = grouped[meal];
               const mealCal = entries.reduce((s, e) => s + e.food.calories * e.quantity, 0);
+              const mealProtein = entries.reduce((s, e) => s + e.food.protein * e.quantity, 0);
+              const mealCarbs = entries.reduce((s, e) => s + e.food.carbs * e.quantity, 0);
+              const mealFat = entries.reduce((s, e) => s + e.food.fat * e.quantity, 0);
               return (
                 <div key={meal}>
                   <div className="flex items-center justify-between mb-2.5">
@@ -196,6 +210,13 @@ export default function Food() {
                       </button>
                     </Card>
                   )}
+                  {entries.length > 0 && (
+                    <div className="flex items-center gap-3 mt-2 px-1 text-[11px] text-charcoal-faint">
+                      <span>P {Math.round(mealProtein)}g</span>
+                      <span>C {Math.round(mealCarbs)}g</span>
+                      <span>F {Math.round(mealFat)}g</span>
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -204,7 +225,7 @@ export default function Food() {
           {/* Fixed, small, circular — stays in place above the content as
               the diary scrolls behind it, per QA. */}
           <button
-            onClick={() => openAdd("lunch")}
+            onClick={() => openAdd(mealForCurrentTime())}
             aria-label="Add Food"
             className="tap fixed bottom-24 right-5 z-30 w-14 h-14 rounded-full bg-sohati text-white shadow-lift flex items-center justify-center"
           >

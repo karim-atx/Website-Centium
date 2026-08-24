@@ -61,7 +61,7 @@ export default function Settings() {
             <div>
               <p className="text-sm font-semibold text-charcoal">Dark Mode</p>
               <p className="text-[11px] text-charcoal-faint">
-                {theme === "dark" ? "Currently on" : "Currently off"} — applies throughout Sohati
+                {theme === "dark" ? "Currently on" : "Currently off"} — applies throughout Centium
               </p>
             </div>
           </div>

@@ -8,7 +8,7 @@ import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet"
 import { ExerciseSettingsSheet } from "./ExerciseSettingsSheet";
 import { GripVertical, Library, Search, Settings2, X } from "lucide-react";
 
-const colorOptions = ["#1B6B52", "#E97452", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
+const colorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
 
 let localId = 0;
 const blankExercise = (pick: ExercisePick): Exercise => ({

@@ -333,7 +333,7 @@ export const AddFoodSheet: React.FC<{
             </div>
           ) : (
             <p className="text-xs text-charcoal-faint max-w-xs">
-              Prototype demo — production Sohati will use on-device image recognition to identify food automatically.
+              Prototype demo — production Centium will use on-device image recognition to identify food automatically.
             </p>
           )}
         </div>

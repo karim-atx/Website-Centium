@@ -110,25 +110,51 @@ export default function ProfessionalDetail() {
         <p className="text-sm text-charcoal-soft leading-relaxed">{professional.bio}</p>
       </Card>
 
-      <Card className="mb-6 animate-fade-slide-up flex items-center justify-between">
-        <div>
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
-            Your rating
-          </p>
-          {myReview ? (
-            <div className="flex items-center gap-1">
-              {Array.from({ length: 5 }, (_, i) => (
-                <Star key={i} size={14} className={i < myReview.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
-              ))}
+      {/* V5 (QA 5.0): rating/reviewing is restricted to professionals you've
+          actually hired — for anyone else, this section (and its reviews
+          list) simply doesn't appear. */}
+      {professional.connected && (
+        <>
+          <Card className="mb-3 animate-fade-slide-up flex items-center justify-between">
+            <div>
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
+                Your rating
+              </p>
+              {myReview ? (
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star key={i} size={14} className={i < myReview.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-charcoal-faint">You haven't reviewed {professional.name.split(" ")[0]} yet</p>
+              )}
             </div>
-          ) : (
-            <p className="text-sm text-charcoal-faint">You haven't reviewed {professional.name.split(" ")[0]} yet</p>
+            <Button size="sm" variant="outline" onClick={() => setReviewOpen(true)}>
+              <Pencil size={13} /> {myReview ? "Edit review" : "Rate & Review"}
+            </Button>
+          </Card>
+
+          {myReview && (
+            <div className="mb-6 animate-fade-slide-up">
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+                Reviews
+              </p>
+              <Card>
+                <div className="flex items-center justify-between mb-1.5">
+                  <p className="text-sm font-semibold text-charcoal">You</p>
+                  <div className="flex items-center gap-0.5">
+                    {Array.from({ length: 5 }, (_, i) => (
+                      <Star key={i} size={11} className={i < myReview.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
+                    ))}
+                  </div>
+                </div>
+                {myReview.text && <p className="text-sm text-charcoal-soft leading-relaxed">{myReview.text}</p>}
+              </Card>
+            </div>
           )}
-        </div>
-        <Button size="sm" variant="outline" onClick={() => setReviewOpen(true)}>
-          <Pencil size={13} /> {myReview ? "Edit review" : "Rate & Review"}
-        </Button>
-      </Card>
+        </>
+      )}
 
       {professional.connected ? (
         <>

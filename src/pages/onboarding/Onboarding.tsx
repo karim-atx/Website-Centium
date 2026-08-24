@@ -32,6 +32,8 @@ export interface OnboardingDraft {
   goals: Goal[];
   activityLevel: ActivityLevel | null;
   tracking: TrackPreference[];
+  // V5 (QA 5.0): professional's certification upload (camera or file), data URL.
+  certificationFile: string | null;
 }
 
 const initialDraft: OnboardingDraft = {
@@ -48,6 +50,7 @@ const initialDraft: OnboardingDraft = {
   goals: [],
   activityLevel: null,
   tracking: [],
+  certificationFile: null,
 };
 
 type StepKey = "welcome" | "accountType" | "aboutYou" | "goal" | "activity" | "tracking" | "ready";
@@ -97,6 +100,7 @@ export default function Onboarding() {
       goals: draft.goals.length ? draft.goals : ["improve_health"],
       activityLevel: draft.activityLevel || "moderate",
       tracking: draft.tracking.length ? draft.tracking : ["nutrition", "workouts"],
+      certificationUrl: draft.certificationFile ?? undefined,
     });
     if (draft.customerSubtype === "client" && draft.professionalUserIdCode.trim()) {
       redeemClientCode(draft.professionalUserIdCode);

@@ -15,8 +15,8 @@ function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
 
   // background
   const grad = ctx.createLinearGradient(0, 0, 0, CARD_H);
-  grad.addColorStop(0, "#1B6B52");
-  grad.addColorStop(1, "#134F3D");
+  grad.addColorStop(0, "#7D6BB5");
+  grad.addColorStop(1, "#7D6BB5");
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, CARD_W, CARD_H);
 
@@ -115,7 +115,7 @@ export const ShareBiomarkerSheet: React.FC<{
       const file = new File([blob], `sohati-${marker.name}.png`, { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], title: `${marker.name} — Sohati` });
+          await navigator.share({ files: [file], title: `${marker.name} — Centium` });
           return;
         } catch {
           // fall through to download

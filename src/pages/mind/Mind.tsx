@@ -78,7 +78,7 @@ export default function Mind() {
               <p className="text-sm font-semibold text-charcoal">Rewards coming soon</p>
             </div>
             <p className="text-xs text-charcoal-soft">
-              Keep your streaks alive and unlock rewards from Sohati partners — gyms, meals, classes & more.
+              Keep your streaks alive and unlock rewards from Centium partners — gyms, meals, classes & more.
             </p>
           </Card>
 

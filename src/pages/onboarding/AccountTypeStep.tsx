@@ -47,7 +47,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
 
   return (
     <OnboardingShell
-      title="What brings you to Sohati?"
+      title="What brings you to Centium?"
       subtitle="This shapes your experience — you can adjust it later."
       onBack={onBack}
       footer={

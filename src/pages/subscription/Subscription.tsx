@@ -49,7 +49,7 @@ export default function Subscription() {
           Your health, without the limits.
         </h1>
         <p className="text-charcoal-soft text-sm max-w-xs mx-auto">
-          Unlock the full Sohati experience with AI-powered logging and deeper insights.
+          Unlock the full Centium experience with AI-powered logging and deeper insights.
         </p>
       </div>
 

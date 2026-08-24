@@ -99,7 +99,7 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
               Take a picture, or attach a PDF, of your results
             </p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Photograph a lab report or attach it as a PDF — Sohati's AI will read the biomarkers
+              Photograph a lab report or attach it as a PDF — Centium's AI will read the biomarkers
               so you can confirm which ones to add.
             </p>
           </div>
