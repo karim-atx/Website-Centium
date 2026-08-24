@@ -33,6 +33,11 @@ export default function GoalsPanel() {
     String(nutritionGoal.desiredWeightKg ?? user.weightKg)
   );
 
+  // V6 (QA 6.0): "Existing plan" is a dietitian-provided plan — the client
+  // can view it but only the dietitian edits it (from the professional UI),
+  // so every editable control here locks while it's selected.
+  const locked = nutritionGoal.planType === "existing";
+
   const tdee = calculateTDEE(user);
   const targets = targetsFromGoal(nutritionGoal);
   // V5 (QA 5.0): the weight trend uses the weight provided in Profile
@@ -113,7 +118,8 @@ export default function GoalsPanel() {
             <button
               key={g.value}
               onClick={() => setWeightGoal(g.value, nutritionGoal.weeklyRateKg || 0.5)}
-              className={`tap rounded-xl py-2.5 text-xs font-semibold border transition-colors ${
+              disabled={locked}
+              className={`tap rounded-xl py-2.5 text-xs font-semibold border transition-colors disabled:opacity-50 ${
                 nutritionGoal.weightGoal === g.value
                   ? "bg-sohati text-white border-sohati"
                   : "bg-cream-soft border-transparent text-charcoal-soft"
@@ -132,15 +138,16 @@ export default function GoalsPanel() {
                 <input
                   value={desiredWeightDraft}
                   onChange={(e) => setDesiredWeightDraft(e.target.value.replace(/[^\d.]/g, ""))}
-                  disabled={nutritionGoal.desiredWeightConfirmed}
+                  disabled={nutritionGoal.desiredWeightConfirmed || locked}
                   inputMode="decimal"
                   className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm font-semibold text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20 disabled:opacity-60"
                 />
                 <span className="text-xs text-charcoal-faint">kg</span>
                 <button
                   onClick={confirmDesiredWeight}
+                  disabled={locked}
                   aria-label={nutritionGoal.desiredWeightConfirmed ? "Edit desired weight" : "Confirm desired weight"}
-                  className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors ${
+                  className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors disabled:opacity-50 ${
                     nutritionGoal.desiredWeightConfirmed
                       ? "bg-charcoal/10 border-transparent text-charcoal-faint"
                       : "bg-sohati border-sohati text-white"
@@ -162,7 +169,9 @@ export default function GoalsPanel() {
                 step={0.1}
                 value={nutritionGoal.weeklyRateKg || 0.5}
                 onChange={(e) => setWeightGoal(nutritionGoal.weightGoal, Number(e.target.value))}
-                className="w-full"
+                disabled={locked}
+                className="w-full disabled:opacity-50"
+                style={{ accentColor: nutritionGoal.weightGoal === "gain" ? "#3F9165" : "#C0392B" }}
               />
               <p className="text-xs text-charcoal-faint mt-1">
                 {nutritionGoal.weightGoal === "gain" ? "+" : "-"}
@@ -170,6 +179,12 @@ export default function GoalsPanel() {
               </p>
             </label>
           </>
+        )}
+
+        {locked && (
+          <p className="text-xs text-charcoal-faint mt-4">
+            Locked — only your dietitian can edit this plan.
+          </p>
         )}
       </Card>
 
@@ -222,7 +237,7 @@ export default function GoalsPanel() {
           </p>
         )}
         <div className="mt-2">
-          <Button size="sm" variant="secondary" onClick={applySuggested}>
+          <Button size="sm" variant="secondary" onClick={applySuggested} disabled={locked}>
             Use suggested target
           </Button>
         </div>
@@ -238,7 +253,8 @@ export default function GoalsPanel() {
             onChange={(e) => setCalorieDraft(e.target.value.replace(/\D/g, ""))}
             onBlur={() => setNutritionGoal({ ...nutritionGoal, targetCalories: Number(calorieDraft) || nutritionGoal.targetCalories })}
             inputMode="numeric"
-            className="w-32 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-lg font-bold text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            disabled={locked}
+            className="w-32 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-lg font-bold text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20 disabled:opacity-60"
           />
           <span className="text-sm text-charcoal-faint">kcal / day</span>
         </div>
@@ -252,6 +268,7 @@ export default function GoalsPanel() {
           split={nutritionGoal.macroSplit}
           calories={nutritionGoal.targetCalories}
           onChange={setMacroSplit}
+          disabled={locked}
         />
         <div className="grid grid-cols-3 gap-2 mt-4">
           <div className="text-center bg-sohati-pale rounded-xl py-2">

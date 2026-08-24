@@ -239,20 +239,15 @@ export const ClientDetailSheet: React.FC<{
           </div>
         </div>
 
-        <div className="flex gap-2">
-          <Button variant="outline" fullWidth onClick={onClose}>
-            Close
-          </Button>
-          <Button
-            variant="outline"
-            fullWidth
-            onClick={handleRemove}
-            className="!border-ember/30 !text-ember-dark"
-          >
-            <UserMinus size={14} />
-            {confirmRemove ? "Tap again to confirm" : "Remove client"}
-          </Button>
-        </div>
+        <Button
+          variant="outline"
+          fullWidth
+          onClick={handleRemove}
+          className="!border-ember/30 !text-ember-dark"
+        >
+          <UserMinus size={14} />
+          {confirmRemove ? "Tap again to confirm" : "Remove client"}
+        </Button>
       </div>
     </BottomSheet>
   );

@@ -100,7 +100,7 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
               </p>
             )}
             <p className="text-[11px] text-charcoal-faint mt-2">
-              Required to verify your professional credentials.
+              Helps increase your professional credentials.
             </p>
           </div>
         ) : (

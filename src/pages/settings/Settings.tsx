@@ -1,6 +1,7 @@
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Toggle } from "../../components/ui/Toggle";
+import { BottomSheet } from "../../components/ui/BottomSheet";
 import { IntegrationsCard } from "../../components/health/IntegrationsCard";
 import { ColorThemePicker } from "../../components/profile/ColorThemePicker";
 import { ContactUsSheet } from "../../components/profile/ContactUsSheet";
@@ -16,14 +17,16 @@ import {
   Mic,
   Camera,
   ChevronRight,
+  Check,
 } from "lucide-react";
 
 export default function Settings() {
-  const { theme, toggleTheme } = useApp();
+  const { theme, toggleTheme, language, setLanguage, t } = useApp();
   const [notifications, setNotifications] = useState(true);
   const [micAllowed, setMicAllowed] = useState<boolean | null>(null);
   const [cameraAllowed, setCameraAllowed] = useState<boolean | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
+  const [languageOpen, setLanguageOpen] = useState(false);
 
   const requestMic = async () => {
     try {
@@ -47,10 +50,10 @@ export default function Settings() {
 
   return (
     <div>
-      <PageHeader title="Settings" showBack />
+      <PageHeader title={t("Settings")} showBack />
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        Appearance
+        {t("Appearance")}
       </p>
       <Card className="mb-6">
         <div className="flex items-center justify-between mb-5">
@@ -59,22 +62,22 @@ export default function Settings() {
               {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
             </div>
             <div>
-              <p className="text-sm font-semibold text-charcoal">Dark Mode</p>
+              <p className="text-sm font-semibold text-charcoal">{t("Dark Mode")}</p>
               <p className="text-[11px] text-charcoal-faint">
-                {theme === "dark" ? "Currently on" : "Currently off"} — applies throughout Centium
+                {theme === "dark" ? t("Currently on") : t("Currently off")} — {t("applies throughout Centium")}
               </p>
             </div>
           </div>
           <Toggle checked={theme === "dark"} onChange={toggleTheme} label="Dark mode" />
         </div>
         <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-          Color theme
+          {t("Color theme")}
         </p>
         <ColorThemePicker />
       </Card>
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        Permissions
+        {t("Permissions")}
       </p>
       <Card className="mb-6 space-y-4">
         <div className="flex items-center justify-between">
@@ -83,9 +86,9 @@ export default function Settings() {
               <Mic size={16} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-charcoal">Microphone</p>
+              <p className="text-sm font-semibold text-charcoal">{t("Microphone")}</p>
               <p className="text-[11px] text-charcoal-faint">
-                {micAllowed === true ? "Granted" : micAllowed === false ? "Denied" : "Needed for AI voice logging"}
+                {t(micAllowed === true ? "Granted" : micAllowed === false ? "Denied" : "Needed for AI voice logging")}
               </p>
             </div>
           </div>
@@ -93,7 +96,7 @@ export default function Settings() {
             onClick={requestMic}
             className="tap text-xs font-semibold text-sohati bg-sohati-pale rounded-full px-3 py-1.5"
           >
-            {micAllowed === true ? "Re-check" : "Allow"}
+            {t(micAllowed === true ? "Re-check" : "Allow")}
           </button>
         </div>
         <div className="flex items-center justify-between">
@@ -102,13 +105,15 @@ export default function Settings() {
               <Camera size={16} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-charcoal">Camera</p>
+              <p className="text-sm font-semibold text-charcoal">{t("Camera")}</p>
               <p className="text-[11px] text-charcoal-faint">
-                {cameraAllowed === true
-                  ? "Granted"
-                  : cameraAllowed === false
-                  ? "Denied"
-                  : "Needed for scanning biomarkers & photos"}
+                {t(
+                  cameraAllowed === true
+                    ? "Granted"
+                    : cameraAllowed === false
+                    ? "Denied"
+                    : "Needed for scanning biomarkers & photos"
+                )}
               </p>
             </div>
           </div>
@@ -116,40 +121,46 @@ export default function Settings() {
             onClick={requestCamera}
             className="tap text-xs font-semibold text-sohati bg-sohati-pale rounded-full px-3 py-1.5"
           >
-            {cameraAllowed === true ? "Re-check" : "Allow"}
+            {t(cameraAllowed === true ? "Re-check" : "Allow")}
           </button>
         </div>
       </Card>
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        Connected devices
+        {t("Connected devices")}
       </p>
       <div className="mb-6">
         <IntegrationsCard />
       </div>
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        General
+        {t("General")}
       </p>
       <Card padded={false} className="divide-y divide-charcoal/[0.04]">
         <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-3">
             <Bell size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">Notifications</span>
+            <span className="text-sm font-medium text-charcoal">{t("Notifications")}</span>
           </div>
           <Toggle checked={notifications} onChange={setNotifications} label="Notifications" />
         </div>
-        <div className="flex items-center justify-between px-4 py-3.5">
+        <button
+          onClick={() => setLanguageOpen(true)}
+          className="tap w-full flex items-center justify-between px-4 py-3.5"
+        >
           <div className="flex items-center gap-3">
             <Globe size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">Language</span>
+            <span className="text-sm font-medium text-charcoal">{t("Language")}</span>
           </div>
-          <span className="text-xs text-charcoal-faint">English</span>
-        </div>
+          <span className="flex items-center gap-1 text-xs text-charcoal-faint">
+            {language === "ar" ? t("Arabic") : t("English")}
+            <ChevronRight size={15} />
+          </span>
+        </button>
         <div className="flex items-center justify-between px-4 py-3.5">
           <div className="flex items-center gap-3">
             <Lock size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">Privacy</span>
+            <span className="text-sm font-medium text-charcoal">{t("Privacy")}</span>
           </div>
         </div>
         <button
@@ -158,13 +169,33 @@ export default function Settings() {
         >
           <div className="flex items-center gap-3">
             <HelpCircle size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">Contact us</span>
+            <span className="text-sm font-medium text-charcoal">{t("Contact us")}</span>
           </div>
           <ChevronRight size={15} className="text-charcoal-faint" />
         </button>
       </Card>
 
       <ContactUsSheet open={contactOpen} onClose={() => setContactOpen(false)} />
+
+      <BottomSheet open={languageOpen} onClose={() => setLanguageOpen(false)} title={t("Language")}>
+        <div className="space-y-2.5 animate-fade-slide-up">
+          {(["en", "ar"] as const).map((lng) => (
+            <button
+              key={lng}
+              onClick={() => {
+                setLanguage(lng);
+                setLanguageOpen(false);
+              }}
+              className="tap w-full flex items-center justify-between rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
+            >
+              <span className="text-sm font-semibold text-charcoal">
+                {lng === "ar" ? t("Arabic") : t("English")}
+              </span>
+              {language === lng && <Check size={16} className="text-sohati" />}
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
     </div>
   );
 }

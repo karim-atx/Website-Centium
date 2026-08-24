@@ -13,6 +13,7 @@ import { ChevronRight, Sparkles, Store } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { todaysWorkout } from "../../data/mockWorkouts";
 import ProfessionalDashboard from "../professionals/ProfessionalDashboard";
+import BusinessDashboard from "../marketplace/BusinessDashboard";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -22,7 +23,7 @@ function getGreeting() {
 }
 
 export default function Home() {
-  const { user } = useApp();
+  const { user, t } = useApp();
   const navigate = useNavigate();
   const [addFoodOpen, setAddFoodOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
@@ -37,17 +38,22 @@ export default function Home() {
   if (user.accountType === "professional") {
     return <ProfessionalDashboard />;
   }
+  // V6 (QA 6.0): "remove everything that does not pertain to the business
+  // owner related UI" — same treatment as professionals, a business account
+  // lands on its own management dashboard instead of the personal
+  // nutrition/workout/health tracking UI.
+  if (isBusiness) {
+    return <BusinessDashboard />;
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-4 animate-fade-slide-up">
         <div>
           <h1 className="font-display text-2xl sm:text-3xl font-semibold text-charcoal">
-            {getGreeting()}, {user.firstName} 👋
+            {t(getGreeting())}, {user.firstName} 👋
           </h1>
-          <p className="text-charcoal-soft text-sm mt-1">
-            {isBusiness ? "Your business dashboard" : "Here's your day"}
-          </p>
+          <p className="text-charcoal-soft text-sm mt-1">{t("Here's your day")}</p>
         </div>
         <button
           onClick={() => navigate("/profile")}

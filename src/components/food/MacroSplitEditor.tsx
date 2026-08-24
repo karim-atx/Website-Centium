@@ -11,11 +11,12 @@ interface Props {
   split: MacroSplit;
   calories: number;
   onChange: (split: MacroSplit) => void;
+  disabled?: boolean;
 }
 
 /** Editing one slider proportionally rescales the other two so the three
  * always sum to 100% — mirrors how MyFitnessPal-style macro editors behave. */
-export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange }) => {
+export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, disabled }) => {
   const handleSlide = (key: keyof MacroSplit, value: number) => {
     const others = macroMeta.map((m) => m.key).filter((k) => k !== key) as (keyof MacroSplit)[];
     const remaining = 100 - value;
@@ -32,7 +33,7 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange })
   };
 
   return (
-    <div className="space-y-5">
+    <div className={disabled ? "space-y-5 opacity-50 pointer-events-none" : "space-y-5"}>
       {macroMeta.map((m) => {
         const pct = split[m.key];
         const grams = Math.round((calories * (pct / 100)) / m.kcalPerG);
@@ -50,6 +51,7 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange })
               max={70}
               value={pct}
               onChange={(e) => handleSlide(m.key, Number(e.target.value))}
+              disabled={disabled}
               className="w-full accent-sohati h-2"
               style={{ accentColor: m.color }}
             />

@@ -5,6 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { CreateMealSheet } from "../../components/food/CreateMealSheet";
 import { Plus, X, ClipboardList, UtensilsCrossed } from "lucide-react";
 import { foodCategoryIcon } from "../../utils/icons";
+import { entryMultiplier } from "../../services/nutrition";
 
 // V4: Meal Prep reworked from a per-meal-type planner into "Create Meal" —
 // group existing food items under one title; searching that title from Add
@@ -29,7 +30,7 @@ export default function MealPrepPanel() {
 
       <div className="space-y-2.5">
         {customMeals.map((m) => {
-          const totalCal = Math.round(m.items.reduce((s, i) => s + i.food.calories * i.quantity, 0));
+          const totalCal = Math.round(m.items.reduce((s, i) => s + i.food.calories * entryMultiplier(i), 0));
           return (
             <Card key={m.id} padded={false}>
               <div className="flex items-center justify-between px-4 py-3.5">

@@ -5,16 +5,18 @@ import type { MuscleGroup, ExerciseClassification } from "../../types";
 import clsx from "clsx";
 
 const muscleGroupOptions: { value: MuscleGroup; label: string }[] = [
-  { value: "arms", label: "Arms" },
   { value: "back", label: "Back" },
+  { value: "bicep", label: "Bicep" },
   { value: "cardio", label: "Cardio" },
   { value: "chest", label: "Chest" },
   { value: "core", label: "Core" },
   { value: "full_body", label: "Full Body" },
-  { value: "legs", label: "Legs" },
+  { value: "hamstrings", label: "Hamstrings" },
   { value: "olympic", label: "Olympic" },
   { value: "other", label: "Other" },
+  { value: "quads", label: "Quads" },
   { value: "shoulders", label: "Shoulders" },
+  { value: "tricep", label: "Tricep" },
 ];
 
 const classificationOptions: { value: ExerciseClassification; label: string }[] = [

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
+import { CentiumLogo } from "../../components/ui/CentiumLogo";
 import {
   ChevronLeft,
   Mic,
@@ -41,10 +42,10 @@ export default function Subscription() {
       </button>
 
       <div className="text-center mb-8 animate-fade-slide-up">
-        <div className="w-16 h-16 rounded-3xl bg-charcoal flex items-center justify-center mx-auto mb-5">
-          <Crown />
+        <div className="w-16 h-16 rounded-3xl bg-white shadow-lift flex items-center justify-center mx-auto mb-5">
+          <CentiumLogo size={36} />
         </div>
-        <p className="font-display text-2xl font-semibold text-charcoal mb-1">SOHATI</p>
+        <p className="font-display text-2xl font-semibold text-charcoal mb-1">CENTIUM</p>
         <h1 className="font-display text-3xl font-semibold text-charcoal leading-tight mb-3">
           Your health, without the limits.
         </h1>
@@ -113,8 +114,4 @@ export default function Subscription() {
       </p>
     </div>
   );
-}
-
-function Crown() {
-  return <Sparkles size={26} className="text-cream" />;
 }

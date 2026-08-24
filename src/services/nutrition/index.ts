@@ -1,4 +1,12 @@
-import type { FoodLogEntry, MealType, MacroSplit, NutritionGoal, UserProfile, WeightGoalType } from "../../types";
+import type {
+  FoodLogEntry,
+  MealType,
+  MacroSplit,
+  NutritionGoal,
+  ServingUnit,
+  UserProfile,
+  WeightGoalType,
+} from "../../types";
 
 export interface NutritionTotals {
   calories: number;
@@ -7,13 +15,31 @@ export interface NutritionTotals {
   fat: number;
 }
 
+// V6 (QA 6.0): calories/macros previously ignored the selected serving unit
+// entirely — "3 tbsp" computed the same total as "3 servings". These are
+// standard, food-independent kitchen-measurement ratios (not specific to
+// any one food) anchoring 1 serving/cup to ~240g or ~240ml.
+export const unitScale: Record<ServingUnit, number> = {
+  serving: 1,
+  cup: 1,
+  g: 1 / 240,
+  ml: 1 / 240,
+  tbsp: 1 / 16,
+  tsp: 1 / 48,
+};
+
+export function entryMultiplier(entry: { quantity: number; unit?: ServingUnit }): number {
+  return entry.quantity * unitScale[entry.unit ?? "serving"];
+}
+
 export function sumNutrition(entries: FoodLogEntry[]): NutritionTotals {
   return entries.reduce<NutritionTotals>(
     (acc, e) => {
-      acc.calories += e.food.calories * e.quantity;
-      acc.protein += e.food.protein * e.quantity;
-      acc.carbs += e.food.carbs * e.quantity;
-      acc.fat += e.food.fat * e.quantity;
+      const m = entryMultiplier(e);
+      acc.calories += e.food.calories * m;
+      acc.protein += e.food.protein * m;
+      acc.carbs += e.food.carbs * m;
+      acc.fat += e.food.fat * m;
       return acc;
     },
     { calories: 0, protein: 0, carbs: 0, fat: 0 }

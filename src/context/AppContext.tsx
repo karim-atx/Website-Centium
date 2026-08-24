@@ -17,6 +17,7 @@ import type {
   RoutineFolder,
   Routine,
   WorkoutSession,
+  PausedWorkoutSession,
   JournalFolder,
   JournalEntry,
   BloodMarker,
@@ -29,6 +30,10 @@ import type {
   BusinessOffering,
   CustomExerciseLibraryItem,
   ProfessionalReview,
+  CalendarEvent,
+  WorkoutTemplateAssignment,
+  ClientHealthNote,
+  ProfessionalMessage,
 } from "../types";
 import { mockFoods } from "../data/mockFoods";
 import { defaultHabits, streaks as seedStreaks, bloodPanel } from "../data/mockHealthData";
@@ -37,6 +42,7 @@ import { estimate1RM } from "../services/workout";
 import { ONE_RM_CLASSIFICATIONS } from "../types";
 import { mockProfessionalClients } from "../data/mockProfessionalClients";
 import { suggestNutritionGoal, normalizeMacroSplit } from "../services/nutrition";
+import { translations, type Language } from "../i18n/translations";
 
 const TODAY = "2026-08-20";
 
@@ -152,6 +158,10 @@ interface AppState {
   theme: "light" | "dark";
   toggleTheme: () => void;
 
+  language: Language;
+  setLanguage: (language: Language) => void;
+  t: (key: string) => string;
+
   foodLog: FoodLogEntry[];
   addFoodEntry: (entry: Omit<FoodLogEntry, "id" | "date">) => void;
   // V4: logged foods are editable (quantity/unit) and removable.
@@ -164,6 +174,13 @@ interface AppState {
   workoutSessions: WorkoutSession[];
   saveWorkoutSession: (session: Omit<WorkoutSession, "id">) => void;
   updateWorkoutSessionNotes: (id: string, notes: string) => void;
+
+  // V6 (QA 6.0): quitting a started routine (instead of finishing it)
+  // preserves logged sets + elapsed time, keyed by routine, so reopening it
+  // resumes exactly where the user left off.
+  pausedSessions: Record<string, PausedWorkoutSession>;
+  savePausedSession: (routineId: string, session: PausedWorkoutSession) => void;
+  clearPausedSession: (routineId: string) => void;
 
   // V4: estimated 1RM per exercise name (barbell/dumbbell/weighted-bodyweight
   // only) — auto-updated from logged sets, editable from History/Metrics.
@@ -270,6 +287,22 @@ interface AppState {
   assignProgramToClient: (clientId: string, programName: string) => void;
   assignFoodTemplateToClient: (clientId: string, templateName: string) => void;
 
+  // V6 (QA 6.0): Professional UI — Calendar, Workout Template Builder,
+  // per-client health notes, and a messaging board.
+  calendarEvents: CalendarEvent[];
+  addCalendarEvent: (event: Omit<CalendarEvent, "id">) => void;
+  removeCalendarEvent: (id: string) => void;
+
+  workoutTemplates: WorkoutTemplateAssignment[];
+  addWorkoutTemplate: (t: Omit<WorkoutTemplateAssignment, "id" | "createdAt">) => void;
+  removeWorkoutTemplate: (id: string) => void;
+
+  clientHealthNotes: Record<string, ClientHealthNote>;
+  updateClientHealthNote: (clientId: string, patch: Partial<ClientHealthNote>) => void;
+
+  professionalMessages: ProfessionalMessage[];
+  sendProfessionalMessage: (clientId: string, from: "professional" | "client", text: string) => void;
+
   signOut: () => void;
 
   businessListing: { perk: string; active: boolean; membersReached: number };
@@ -336,6 +369,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
+
+  const [language, setLanguage] = usePersistentState<Language>("language", "en");
+  useEffect(() => {
+    document.documentElement.dir = language === "ar" ? "rtl" : "ltr";
+    document.documentElement.lang = language;
+  }, [language]);
+  const t = (key: string) => translations[language][key] ?? key;
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
   const [foodLog, setFoodLog] = usePersistentState<FoodLogEntry[]>("foodLog", seedFoodLog());
@@ -351,6 +391,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "personalRecords",
     {}
   );
+
+  const [pausedSessions, setPausedSessions] = usePersistentState<Record<string, PausedWorkoutSession>>(
+    "pausedSessions",
+    {}
+  );
+  const savePausedSession: AppState["savePausedSession"] = (routineId, session) =>
+    setPausedSessions((prev) => ({ ...prev, [routineId]: session }));
+  const clearPausedSession: AppState["clearPausedSession"] = (routineId) =>
+    setPausedSessions((prev) => {
+      if (!(routineId in prev)) return prev;
+      const next = { ...prev };
+      delete next[routineId];
+      return next;
+    });
 
   const [routineFolders, setRoutineFolders] = usePersistentState<RoutineFolder[]>(
     "routineFolders",
@@ -411,7 +465,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     []
   );
 
-  const [clientCodes, setClientCodes] = usePersistentState<ClientCode[]>("clientCodes", []);
+  // V6 (QA 6.0): client signup now strictly requires a real, matching code —
+  // seed one demo code so a fresh install is still testable without first
+  // creating a professional account to generate one.
+  const [clientCodes, setClientCodes] = usePersistentState<ClientCode[]>("clientCodes", [
+    { code: "SOHA-DEMO", professionalId: "demo", professionalName: "Maya Haddad", createdAt: TODAY, redeemed: false },
+  ]);
   const [businessListing, setBusinessListing] = usePersistentState("businessListing", {
     perk: "10% off with Centium",
     active: true,
@@ -425,6 +484,41 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "professionalClients",
     mockProfessionalClients
   );
+
+  const [calendarEvents, setCalendarEvents] = usePersistentState<CalendarEvent[]>("calendarEvents", []);
+  const addCalendarEvent: AppState["addCalendarEvent"] = (event) =>
+    setCalendarEvents((prev) => [...prev, { ...event, id: `cal-${Date.now()}-${prev.length}` }]);
+  const removeCalendarEvent: AppState["removeCalendarEvent"] = (id) =>
+    setCalendarEvents((prev) => prev.filter((e) => e.id !== id));
+
+  const [workoutTemplates, setWorkoutTemplates] = usePersistentState<WorkoutTemplateAssignment[]>(
+    "workoutTemplates",
+    []
+  );
+  const addWorkoutTemplate: AppState["addWorkoutTemplate"] = (t) =>
+    setWorkoutTemplates((prev) => [
+      ...prev,
+      { ...t, id: `wt-${Date.now()}-${prev.length}`, createdAt: TODAY },
+    ]);
+  const removeWorkoutTemplate: AppState["removeWorkoutTemplate"] = (id) =>
+    setWorkoutTemplates((prev) => prev.filter((t) => t.id !== id));
+
+  const [clientHealthNotes, setClientHealthNotes] = usePersistentState<Record<string, ClientHealthNote>>(
+    "clientHealthNotes",
+    {}
+  );
+  const updateClientHealthNote: AppState["updateClientHealthNote"] = (clientId, patch) =>
+    setClientHealthNotes((prev) => ({ ...prev, [clientId]: { ...prev[clientId], ...patch } }));
+
+  const [professionalMessages, setProfessionalMessages] = usePersistentState<ProfessionalMessage[]>(
+    "professionalMessages",
+    []
+  );
+  const sendProfessionalMessage: AppState["sendProfessionalMessage"] = (clientId, from, text) =>
+    setProfessionalMessages((prev) => [
+      ...prev,
+      { id: `msg-${Date.now()}-${prev.length}`, clientId, from, text, at: new Date().toISOString() },
+    ]);
 
   const completeOnboarding = (profile: Partial<UserProfile>) => {
     setUser((prev) => {
@@ -750,25 +844,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const redeemClientCode: AppState["redeemClientCode"] = (code) => {
+    // V6 (QA 6.0): onboarding can no longer continue on an unmatched code —
+    // this must find a real match, not fall back to accepting anything typed.
     const trimmed = code.trim().toUpperCase();
     if (!trimmed) return false;
     const match = clientCodes.find((c) => c.code.toUpperCase() === trimmed);
-    if (match) {
-      setClientCodes((prev) =>
-        prev.map((c) => (c.code.toUpperCase() === trimmed ? { ...c, redeemed: true } : c))
-      );
-      setUser((prev) => ({
-        ...prev,
-        linkedProfessionalCode: match.code,
-        linkedProfessionalName: match.professionalName,
-      }));
-      return true;
-    }
-    // Prototype fallback: no matching code was ever generated in this
-    // session (there's no real second party to have generated one), so we
-    // still accept a non-empty code the user entered rather than blocking
-    // onboarding entirely.
-    setUser((prev) => ({ ...prev, linkedProfessionalCode: trimmed }));
+    if (!match) return false;
+    setClientCodes((prev) =>
+      prev.map((c) => (c.code.toUpperCase() === trimmed ? { ...c, redeemed: true } : c))
+    );
+    setUser((prev) => ({
+      ...prev,
+      linkedProfessionalCode: match.code,
+      linkedProfessionalName: match.professionalName,
+    }));
     return true;
   };
 
@@ -804,14 +893,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setProfessionalClients((prev) =>
       prev.map((c) => (c.id === id ? { ...c, access: { ...c.access, ...access } } : c))
     );
-  const assignProgramToClient = (clientId: string, programName: string) =>
+  // V6 (QA 6.0): "The calendar app should update automatically when the
+  // professional assigns a workout and/or food template for the client on
+  // a specific day" — both assign actions also drop a same-day calendar
+  // event.
+  const assignProgramToClient = (clientId: string, programName: string) => {
     setProfessionalClients((prev) =>
       prev.map((c) => (c.id === clientId ? { ...c, assignedProgramName: programName } : c))
     );
-  const assignFoodTemplateToClient = (clientId: string, templateName: string) =>
+    const client = professionalClients.find((c) => c.id === clientId);
+    addCalendarEvent({
+      title: `Assigned "${programName}" to ${client?.name ?? "client"}`,
+      date: TODAY,
+      allDay: true,
+      repeat: "none",
+      invitees: client ? [client.name] : undefined,
+    });
+  };
+  const assignFoodTemplateToClient = (clientId: string, templateName: string) => {
     setProfessionalClients((prev) =>
       prev.map((c) => (c.id === clientId ? { ...c, assignedFoodTemplateName: templateName } : c))
     );
+    const client = professionalClients.find((c) => c.id === clientId);
+    addCalendarEvent({
+      title: `Assigned "${templateName}" to ${client?.name ?? "client"}`,
+      date: TODAY,
+      allDay: true,
+      repeat: "none",
+      invitees: client ? [client.name] : undefined,
+    });
+  };
 
   const updateBusinessListing = (patch: Partial<AppState["businessListing"]>) =>
     setBusinessListing((prev) => ({ ...prev, ...patch }));
@@ -836,6 +947,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateProfile,
       theme,
       toggleTheme,
+      language,
+      setLanguage,
+      t,
       foodLog,
       addFoodEntry,
       updateFoodEntry,
@@ -845,6 +959,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       workoutSessions,
       saveWorkoutSession,
       updateWorkoutSessionNotes,
+      pausedSessions,
+      savePausedSession,
+      clearPausedSession,
       personalRecords,
       setPersonalRecord,
       routineFolders,
@@ -916,6 +1033,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateProfessionalClientAccess,
       assignProgramToClient,
       assignFoodTemplateToClient,
+      calendarEvents,
+      addCalendarEvent,
+      removeCalendarEvent,
+      workoutTemplates,
+      addWorkoutTemplate,
+      removeWorkoutTemplate,
+      clientHealthNotes,
+      updateClientHealthNote,
+      professionalMessages,
+      sendProfessionalMessage,
       signOut,
       businessListing,
       updateBusinessListing,
@@ -926,10 +1053,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     [
       user,
       theme,
+      language,
       foodLog,
       workoutLog,
       workoutSessions,
       personalRecords,
+      pausedSessions,
       routineFolders,
       routines,
       water,
@@ -950,6 +1079,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       professionalReviews,
       clientCodes,
       professionalClients,
+      calendarEvents,
+      workoutTemplates,
+      clientHealthNotes,
+      professionalMessages,
       businessListing,
       businessOfferings,
     ]

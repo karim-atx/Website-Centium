@@ -26,6 +26,15 @@ const AUTO_SOURCED_TYPES = new Set(["weight", "bodyFat", "steps", "sleep", "calo
 // synthesis already used in StepsPeriodCard.
 const wobble = (i: number, spread = 0.08) => 1 + Math.sin(i * 1.7) * spread;
 
+// V6 (QA 6.0): period breakdowns use real calendar labels — the four weeks
+// of the current month, the months of the current year, and the actual
+// current year — instead of synthetic "W1"/"M1"/"Y1" placeholders.
+const now = new Date();
+const monthNames = Array.from({ length: 12 }, (_, i) =>
+  new Date(2000, i, 1).toLocaleDateString("en-US", { month: "short" })
+);
+const currentYear = now.getFullYear();
+
 export const MetricDetailSheet: React.FC<{
   open: boolean;
   onClose: () => void;
@@ -95,14 +104,14 @@ export const MetricDetailSheet: React.FC<{
         {isSteps &&
           (() => {
             const weeklyAvg = Math.round(dailyHistory.reduce((s, v) => s + v, 0) / dailyHistory.length);
-            const weeklyTotals = Array.from({ length: 6 }, (_, i) => Math.round(weeklyAvg * 7 * wobble(i)));
-            const monthlyTotals = Array.from({ length: 6 }, (_, i) => Math.round(weeklyAvg * 30 * wobble(i, 0.12)));
-            const yearlyTotals = Array.from({ length: 4 }, (_, i) => Math.round(weeklyAvg * 365 * wobble(i, 0.06)));
+            const weeklyTotals = Array.from({ length: 4 }, (_, i) => Math.round(weeklyAvg * 7 * wobble(i)));
+            const monthlyTotals = Array.from({ length: 12 }, (_, i) => Math.round(weeklyAvg * 30 * wobble(i, 0.12)));
+            const yearlyTotal = Math.round(weeklyAvg * 365);
             const view = {
               daily: { values: dailyHistory, labels: dailyLabels },
-              weekly: { values: weeklyTotals, labels: weeklyTotals.map((_, i) => `W${i + 1}`) },
-              monthly: { values: monthlyTotals, labels: monthlyTotals.map((_, i) => `M${i + 1}`) },
-              yearly: { values: yearlyTotals, labels: yearlyTotals.map((_, i) => `Y${i + 1}`) },
+              weekly: { values: weeklyTotals, labels: weeklyTotals.map((_, i) => `Week ${i + 1}`) },
+              monthly: { values: monthlyTotals, labels: monthNames },
+              yearly: { values: [yearlyTotal], labels: [String(currentYear)] },
             }[period];
             return (
               <div className="mb-4">
@@ -174,7 +183,7 @@ export const MetricDetailSheet: React.FC<{
               <StackedSleepBar stages={sleepDetail} />
             ) : (
               (() => {
-                const counts = { weekly: 7, monthly: 6, yearly: 12 }[period] ?? 7;
+                const counts = { weekly: 4, monthly: 12, yearly: 1 }[period] ?? 4;
                 const items = Array.from({ length: counts }, (_, i) => {
                   const f = wobble(i, 0.15);
                   const stages: SleepStages = {
@@ -184,7 +193,11 @@ export const MetricDetailSheet: React.FC<{
                     awakeMin: Math.round(sleepDetail.awakeMin * (2 - f)),
                   };
                   const label =
-                    period === "weekly" ? "SMTWTFS"[i] : period === "monthly" ? `W${i + 1}` : `${i + 1}`;
+                    period === "weekly"
+                      ? `Week ${i + 1}`
+                      : period === "monthly"
+                      ? monthNames[i]
+                      : String(currentYear);
                   return { stages, label };
                 });
                 return <StackedSleepColumns items={items} />;

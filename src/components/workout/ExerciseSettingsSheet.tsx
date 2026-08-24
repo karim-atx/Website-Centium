@@ -4,6 +4,8 @@ import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import type { Exercise, RepMaxUpdateMode, MuscleGroup, ExerciseClassification } from "../../types";
 import { ONE_RM_CLASSIFICATIONS } from "../../types";
+import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet";
+import { X, ChevronRight } from "lucide-react";
 import clsx from "clsx";
 
 const repMaxModes: { value: RepMaxUpdateMode; label: string; desc: string }[] = [
@@ -12,41 +14,54 @@ const repMaxModes: { value: RepMaxUpdateMode; label: string; desc: string }[] = 
   { value: "prompt_with_estimate", label: "Prompt with estimate", desc: "Pre-fill the new estimated 1RM" },
 ];
 
-const muscleGroupOptions: { value: MuscleGroup; label: string }[] = [
-  { value: "arms", label: "Arms" },
-  { value: "back", label: "Back" },
-  { value: "cardio", label: "Cardio" },
-  { value: "chest", label: "Chest" },
-  { value: "core", label: "Core" },
-  { value: "full_body", label: "Full Body" },
-  { value: "legs", label: "Legs" },
-  { value: "olympic", label: "Olympic" },
-  { value: "other", label: "Other" },
-  { value: "shoulders", label: "Shoulders" },
-];
+const muscleGroupLabel: Record<MuscleGroup, string> = {
+  back: "Back",
+  bicep: "Bicep",
+  cardio: "Cardio",
+  chest: "Chest",
+  core: "Core",
+  full_body: "Full Body",
+  hamstrings: "Hamstrings",
+  olympic: "Olympic",
+  other: "Other",
+  quads: "Quads",
+  shoulders: "Shoulders",
+  tricep: "Tricep",
+};
 
-const classificationOptions: { value: ExerciseClassification; label: string }[] = [
-  { value: "barbell", label: "Barbell" },
-  { value: "dumbbell", label: "Dumbbell" },
-  { value: "machine_other", label: "Machine / Other" },
-  { value: "weighted_bodyweight", label: "Weighted Bodyweight" },
-  { value: "assisted_bodyweight", label: "Assisted Bodyweight" },
-  { value: "reps_only", label: "Reps Only" },
-  { value: "cardio", label: "Cardio" },
-  { value: "duration", label: "Duration" },
-];
+const classificationLabel: Record<ExerciseClassification, string> = {
+  barbell: "Barbell",
+  dumbbell: "Dumbbell",
+  machine_other: "Machine / Other",
+  weighted_bodyweight: "Weighted Bodyweight",
+  assisted_bodyweight: "Assisted Bodyweight",
+  reps_only: "Reps Only",
+  cardio: "Cardio",
+  duration: "Duration",
+};
 
 const field = (label: string, unit?: string) => `${label}${unit ? ` (${unit})` : ""}`;
 
+// V6 (QA 6.0): full rewrite per QA —
+// - name + close button are the first SCROLLABLE element (BottomSheet's
+//   sticky title bar is suppressed via hideHeader) instead of a separate
+//   sticky title duplicating the exercise name below it.
+// - tapping the name opens the exercise database to REPLACE the exercise
+//   (new exercises are created from the database alone, not by renaming
+//   here).
+// - classification/muscle group are read-only info chips showing only this
+//   exercise's own values, not the full editable option grid.
 export const ExerciseSettingsSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   exercise: Exercise | null;
+  routineId?: string | null;
   onSave: (patch: Partial<Exercise>) => void;
-}> = ({ open, onClose, exercise, onSave }) => {
-  const { personalRecords, setPersonalRecord } = useApp();
+}> = ({ open, onClose, exercise, routineId, onSave }) => {
+  const { personalRecords, setPersonalRecord, pausedSessions, savePausedSession } = useApp();
   const [draft, setDraft] = useState<Partial<Exercise>>({});
   const [oneRmDraft, setOneRmDraft] = useState("");
+  const [replaceOpen, setReplaceOpen] = useState(false);
 
   React.useEffect(() => {
     if (exercise) {
@@ -59,14 +74,6 @@ export const ExerciseSettingsSheet: React.FC<{
   if (!exercise) return null;
 
   const isOneRmEligible = draft.classification && ONE_RM_CLASSIFICATIONS.includes(draft.classification);
-  const toggleMuscleGroup = (mg: MuscleGroup) =>
-    setDraft((d) => {
-      const current = d.muscleGroups ?? [];
-      return {
-        ...d,
-        muscleGroups: current.includes(mg) ? current.filter((m) => m !== mg) : [...current, mg],
-      };
-    });
 
   const num = (key: keyof Exercise) => (
     <input
@@ -77,154 +84,193 @@ export const ExerciseSettingsSheet: React.FC<{
     />
   );
 
+  const handleReplace = (pick: ExercisePick) => {
+    onSave({
+      name: pick.name,
+      muscleGroups: pick.muscleGroups,
+      classification: pick.classification,
+      isCustom: pick.isCustom,
+    });
+    setReplaceOpen(false);
+    onClose();
+  };
+
+  const save = () => {
+    const finalName = exercise.name;
+    onSave(draft);
+    if (isOneRmEligible && oneRmDraft) setPersonalRecord(finalName, Number(oneRmDraft));
+
+    // V6 (QA 6.0): editing Min/Max sets should change an already-started
+    // routine — resize the live/paused session's logged sets for this
+    // exercise to match the new max, keeping already-entered values.
+    if (routineId && draft.maxSets && pausedSessions[routineId]) {
+      const paused = pausedSessions[routineId];
+      const exIdx = paused.logged.findIndex((e) => e.exerciseId === exercise.id);
+      if (exIdx !== -1) {
+        const current = paused.logged[exIdx].sets;
+        const target = draft.maxSets;
+        let nextSets = current;
+        if (target > current.length) {
+          const last = current[current.length - 1];
+          nextSets = [
+            ...current,
+            ...Array.from({ length: target - current.length }, (_, i) => ({
+              setNumber: current.length + i + 1,
+              reps: last?.reps ?? exercise.reps,
+              weightKg: last?.weightKg ?? exercise.weightKg,
+              completed: false,
+            })),
+          ];
+        } else if (target < current.length) {
+          nextSets = current.slice(0, target);
+        }
+        if (nextSets !== current) {
+          const nextLogged = [...paused.logged];
+          nextLogged[exIdx] = { ...nextLogged[exIdx], sets: nextSets };
+          savePausedSession(routineId, { ...paused, logged: nextLogged });
+        }
+      }
+    }
+
+    onClose();
+  };
+
   return (
-    <BottomSheet open={open} onClose={onClose} title={draft.name || exercise.name}>
-      <div className="space-y-5 animate-fade-slide-up">
-        <label className="block">
-          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Exercise name</span>
-          <input
-            value={draft.name ?? ""}
-            onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
-            placeholder={exercise.name}
-            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
-          />
-        </label>
-
-        <div>
-          <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Muscle Group</span>
-          <div className="flex flex-wrap gap-2">
-            {muscleGroupOptions.map((mg) => (
-              <button
-                key={mg.value}
-                onClick={() => toggleMuscleGroup(mg.value)}
-                className={clsx(
-                  "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
-                  (draft.muscleGroups ?? []).includes(mg.value)
-                    ? "bg-sohati text-white border-sohati"
-                    : "bg-cream-soft border-transparent text-charcoal-soft"
-                )}
-              >
-                {mg.label}
-              </button>
-            ))}
+    <>
+      <BottomSheet open={open} onClose={onClose} hideHeader>
+        <div className="space-y-5 animate-fade-slide-up">
+          <div className="flex items-center justify-between gap-3">
+            <button
+              onClick={() => setReplaceOpen(true)}
+              className="tap flex-1 flex items-center justify-between gap-2 rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-3 text-left min-w-0"
+            >
+              <span className="font-display font-semibold text-charcoal truncate">{exercise.name}</span>
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
+            </button>
+            <button
+              onClick={onClose}
+              aria-label="Close"
+              className="tap w-9 h-9 rounded-full bg-charcoal/5 flex items-center justify-center text-charcoal-soft hover:bg-charcoal/10 shrink-0"
+            >
+              <X size={16} />
+            </button>
           </div>
-        </div>
+          <p className="text-[11px] text-charcoal-faint -mt-3">
+            Tap the exercise name to replace it from the exercise database.
+          </p>
 
-        <div>
-          <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Classification</span>
-          <div className="flex flex-wrap gap-2">
-            {classificationOptions.map((c) => (
-              <button
-                key={c.value}
-                onClick={() => setDraft((d) => ({ ...d, classification: c.value }))}
-                className={clsx(
-                  "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
-                  draft.classification === c.value
-                    ? "bg-sohati text-white border-sohati"
-                    : "bg-cream-soft border-transparent text-charcoal-soft"
-                )}
-              >
-                {c.label}
-              </button>
-            ))}
+          {(exercise.muscleGroups?.length || exercise.classification) && (
+            <div className="flex flex-wrap gap-1.5">
+              {exercise.muscleGroups?.map((mg) => (
+                <span
+                  key={mg}
+                  className="rounded-full bg-sohati-pale text-sohati-dark text-[11px] font-semibold px-2.5 py-1"
+                >
+                  {muscleGroupLabel[mg]}
+                </span>
+              ))}
+              {exercise.classification && (
+                <span className="rounded-full bg-cream-soft text-charcoal-soft text-[11px] font-semibold px-2.5 py-1">
+                  {classificationLabel[exercise.classification]}
+                </span>
+              )}
+            </div>
+          )}
+
+          {isOneRmEligible && (
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Estimated 1RM (kg)</span>
+              <input
+                value={oneRmDraft}
+                onChange={(e) => setOneRmDraft(e.target.value.replace(/[^\d.]/g, ""))}
+                inputMode="decimal"
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              />
+            </label>
+          )}
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Min sets")}</span>
+              {num("minSets")}
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Max sets")}</span>
+              {num("maxSets")}
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Min reps")}</span>
+              {num("minReps")}
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Max reps")}</span>
+              {num("maxReps")}
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Intensity", "%")}</span>
+              {num("intensityPct")}
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rep Max", "kg")}</span>
+              {num("repMaxKg")}
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rest", "sec")}</span>
+              {num("restSeconds")}
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">RPE</span>
+              {num("rpe")}
+            </label>
           </div>
-        </div>
 
-        {isOneRmEligible && (
           <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Estimated 1RM (kg)</span>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
+              Tempo (ecc-pause-con-pause)
+            </span>
             <input
-              value={oneRmDraft}
-              onChange={(e) => setOneRmDraft(e.target.value.replace(/[^\d.]/g, ""))}
-              inputMode="decimal"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              value={draft.tempo ?? ""}
+              onChange={(e) => setDraft((d) => ({ ...d, tempo: e.target.value }))}
+              placeholder="3-1-1-0"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
             />
           </label>
-        )}
 
-        <div className="grid grid-cols-2 gap-3">
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Min sets")}</span>
-            {num("minSets")}
-          </label>
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Max sets")}</span>
-            {num("maxSets")}
-          </label>
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Min reps")}</span>
-            {num("minReps")}
-          </label>
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Max reps")}</span>
-            {num("maxReps")}
-          </label>
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Intensity", "%")}</span>
-            {num("intensityPct")}
-          </label>
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rep Max", "kg")}</span>
-            {num("repMaxKg")}
-          </label>
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rest", "sec")}</span>
-            {num("restSeconds")}
-          </label>
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">RPE</span>
-            {num("rpe")}
-          </label>
-        </div>
-
-        <label className="block">
-          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-            Tempo (ecc-pause-con-pause)
-          </span>
-          <input
-            value={draft.tempo ?? ""}
-            onChange={(e) => setDraft((d) => ({ ...d, tempo: e.target.value }))}
-            placeholder="3-1-1-0"
-            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
-          />
-        </label>
-
-        <div>
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-            Rep Max update mode
-          </p>
-          <div className="space-y-2">
-            {repMaxModes.map((m) => (
-              <button
-                key={m.value}
-                onClick={() => setDraft((d) => ({ ...d, repMaxUpdateMode: m.value }))}
-                className={clsx(
-                  "tap w-full text-left rounded-xl px-3.5 py-2.5 border transition-colors",
-                  draft.repMaxUpdateMode === m.value
-                    ? "bg-sohati-pale border-sohati"
-                    : "bg-cream-soft border-transparent"
-                )}
-              >
-                <p className="text-sm font-semibold text-charcoal">{m.label}</p>
-                <p className="text-xs text-charcoal-faint">{m.desc}</p>
-              </button>
-            ))}
+          <div>
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+              Rep Max update mode
+            </p>
+            <div className="space-y-2">
+              {repMaxModes.map((m) => (
+                <button
+                  key={m.value}
+                  onClick={() => setDraft((d) => ({ ...d, repMaxUpdateMode: m.value }))}
+                  className={clsx(
+                    "tap w-full text-left rounded-xl px-3.5 py-2.5 border transition-colors",
+                    draft.repMaxUpdateMode === m.value
+                      ? "bg-sohati-pale border-sohati"
+                      : "bg-cream-soft border-transparent"
+                  )}
+                >
+                  <p className="text-sm font-semibold text-charcoal">{m.label}</p>
+                  <p className="text-xs text-charcoal-faint">{m.desc}</p>
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
 
-        <Button
-          fullWidth
-          size="lg"
-          onClick={() => {
-            const finalName = draft.name?.trim() || exercise.name;
-            onSave({ ...draft, name: finalName });
-            if (isOneRmEligible && oneRmDraft) setPersonalRecord(finalName, Number(oneRmDraft));
-            onClose();
-          }}
-        >
-          Save settings
-        </Button>
-      </div>
-    </BottomSheet>
+          <Button fullWidth size="lg" onClick={save}>
+            Save settings
+          </Button>
+        </div>
+      </BottomSheet>
+
+      <ExerciseLibrarySheet
+        open={replaceOpen}
+        onClose={() => setReplaceOpen(false)}
+        onPick={handleReplace}
+        alreadyAdded={[]}
+      />
+    </>
   );
 };

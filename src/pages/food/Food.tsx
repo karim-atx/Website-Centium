@@ -7,9 +7,9 @@ import { Chip } from "../../components/ui/Chip";
 import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { EditFoodEntrySheet } from "../../components/food/EditFoodEntrySheet";
 import { DateSelector } from "../../components/dashboard/DateSelector";
-import { mealOrder, mealLabels, sumNutrition, targetsFromGoal } from "../../services/nutrition";
+import { mealOrder, mealLabels, sumNutrition, targetsFromGoal, entryMultiplier } from "../../services/nutrition";
 import type { MealType, FoodLogEntry } from "../../types";
-import { Plus, Star, RefreshCw, Check, UtensilsCrossed } from "lucide-react";
+import { Plus, Star, RefreshCw, Check, UtensilsCrossed, Trash2 } from "lucide-react";
 import { foodCategoryIcon } from "../../utils/icons";
 import GoalsPanel from "./GoalsPanel";
 import MealPrepPanel from "./MealPrepPanel";
@@ -30,13 +30,15 @@ function mealForCurrentTime(): MealType {
 }
 
 export default function Food() {
-  const { foodLog, nutritionGoal, selectedDate, copyYesterdayFood } = useApp();
+  const { foodLog, nutritionGoal, selectedDate, copyYesterdayFood, removeFoodEntry } = useApp();
   const [tab, setTab] = useState<Tab>("diary");
   const [addOpen, setAddOpen] = useState(false);
   const [addMeal, setAddMeal] = useState<MealType>("lunch");
   const [copiedToast, setCopiedToast] = useState(false);
   const [editingEntry, setEditingEntry] = useState<FoodLogEntry | null>(null);
+  const [revealedId, setRevealedId] = useState<string | null>(null);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+  const rowTouchStart = useRef<{ x: number; y: number } | null>(null);
 
   const todaysEntries = useMemo(
     () => foodLog.filter((e) => e.date === selectedDate),
@@ -77,6 +79,25 @@ export default function Food() {
     touchStart.current = null;
     if (dx > SWIPE_THRESHOLD && Math.abs(dy) < 40) {
       handleCopyYesterday();
+    }
+  };
+
+  // Swipe-left on a logged food item reveals a Delete pill, Apple-UI style.
+  const onRowTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    rowTouchStart.current = { x: t.clientX, y: t.clientY };
+  };
+  const onRowTouchEnd = (e: React.TouchEvent, entryId: string) => {
+    if (!rowTouchStart.current) return;
+    e.stopPropagation();
+    const t = e.changedTouches[0];
+    const dx = t.clientX - rowTouchStart.current.x;
+    const dy = t.clientY - rowTouchStart.current.y;
+    rowTouchStart.current = null;
+    if (dx < -SWIPE_THRESHOLD && Math.abs(dy) < 40) {
+      setRevealedId(entryId);
+    } else if (dx > SWIPE_THRESHOLD) {
+      setRevealedId(null);
     }
   };
 
@@ -121,7 +142,7 @@ export default function Food() {
                 <p className="text-xs text-charcoal-faint mt-1">of {targets.calories.toLocaleString()} kcal</p>
               </div>
               <span className="text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-3 py-1.5">
-                {Math.max(targets.calories - Math.round(totals.calories), 0)} kcal left
+                {targets.calories - Math.round(totals.calories)} kcal remaining
               </span>
             </div>
             <div className="space-y-3">
@@ -149,10 +170,10 @@ export default function Food() {
           <div className="space-y-5">
             {mealOrder.map((meal) => {
               const entries = grouped[meal];
-              const mealCal = entries.reduce((s, e) => s + e.food.calories * e.quantity, 0);
-              const mealProtein = entries.reduce((s, e) => s + e.food.protein * e.quantity, 0);
-              const mealCarbs = entries.reduce((s, e) => s + e.food.carbs * e.quantity, 0);
-              const mealFat = entries.reduce((s, e) => s + e.food.fat * e.quantity, 0);
+              const mealCal = entries.reduce((s, e) => s + e.food.calories * entryMultiplier(e), 0);
+              const mealProtein = entries.reduce((s, e) => s + e.food.protein * entryMultiplier(e), 0);
+              const mealCarbs = entries.reduce((s, e) => s + e.food.carbs * entryMultiplier(e), 0);
+              const mealFat = entries.reduce((s, e) => s + e.food.fat * entryMultiplier(e), 0);
               return (
                 <div key={meal}>
                   <div className="flex items-center justify-between mb-2.5">
@@ -175,31 +196,49 @@ export default function Food() {
                     <Card padded={false} className="divide-y divide-charcoal/[0.04]">
                       {entries.map((e) => {
                         const Icon = foodCategoryIcon[e.food.category] ?? UtensilsCrossed;
+                        const revealed = revealedId === e.id;
                         return (
-                          <button
-                            key={e.id}
-                            onClick={() => setEditingEntry(e)}
-                            className="tap w-full flex items-center justify-between px-4 py-3 text-left hover:bg-cream-soft"
-                          >
-                            <div className="flex items-center gap-3">
-                              <span className="w-9 h-9 rounded-xl bg-sohati-pale flex items-center justify-center shrink-0">
-                                <Icon size={16} className="text-sohati-dark" />
-                              </span>
-                              <div>
-                                <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
-                                  {e.food.name}
-                                  {e.food.isLebanese && <Star size={10} className="text-gold fill-gold" />}
-                                </p>
-                                <p className="text-[11px] text-charcoal-faint">
-                                  {e.quantity !== 1 ? `${e.quantity} × ` : ""}
-                                  {e.unit && e.unit !== "serving" ? e.unit : e.food.serving}
-                                </p>
+                          <div key={e.id} className="relative overflow-hidden">
+                            {revealed && (
+                              <button
+                                onClick={() => {
+                                  removeFoodEntry(e.id);
+                                  setRevealedId(null);
+                                }}
+                                aria-label={`Delete ${e.food.name}`}
+                                className="tap absolute inset-y-0 right-0 w-20 flex flex-col items-center justify-center gap-0.5 bg-[#C0392B] text-white text-[10px] font-semibold z-0"
+                              >
+                                <Trash2 size={14} />
+                                Delete
+                              </button>
+                            )}
+                            <button
+                              onClick={() => (revealed ? setRevealedId(null) : setEditingEntry(e))}
+                              onTouchStart={onRowTouchStart}
+                              onTouchEnd={(ev) => onRowTouchEnd(ev, e.id)}
+                              className="tap relative z-10 w-full flex items-center justify-between px-4 py-3 text-left bg-cream-card hover:bg-cream-soft transition-transform duration-200"
+                              style={{ transform: revealed ? "translateX(-80px)" : "translateX(0)" }}
+                            >
+                              <div className="flex items-center gap-3">
+                                <span className="w-9 h-9 rounded-xl bg-sohati-pale flex items-center justify-center shrink-0">
+                                  <Icon size={16} className="text-sohati-dark" />
+                                </span>
+                                <div>
+                                  <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
+                                    {e.food.name}
+                                    {e.food.isLebanese && <Star size={10} className="text-gold fill-gold" />}
+                                  </p>
+                                  <p className="text-[11px] text-charcoal-faint">
+                                    {e.quantity !== 1 ? `${e.quantity} × ` : ""}
+                                    {e.unit && e.unit !== "serving" ? e.unit : e.food.serving}
+                                  </p>
+                                </div>
                               </div>
-                            </div>
-                            <span className="text-xs font-semibold text-charcoal-soft">
-                              {Math.round(e.food.calories * e.quantity)} kcal
-                            </span>
-                          </button>
+                              <span className="text-xs font-semibold text-charcoal-soft">
+                                {Math.round(e.food.calories * entryMultiplier(e))} kcal
+                              </span>
+                            </button>
+                          </div>
                         );
                       })}
                       <button
@@ -211,31 +250,37 @@ export default function Food() {
                     </Card>
                   )}
                   {entries.length > 0 && (
-                    <div className="flex items-center gap-3 mt-2 px-1 text-[11px] text-charcoal-faint">
-                      <span>P {Math.round(mealProtein)}g</span>
-                      <span>C {Math.round(mealCarbs)}g</span>
-                      <span>F {Math.round(mealFat)}g</span>
+                    <div className="flex items-center justify-center gap-3 mt-1.5 text-[10px] font-semibold">
+                      <span style={{ color: "#7D6BB5" }}>P {Math.round(mealProtein)}g</span>
+                      <span style={{ color: "#D9A441" }}>C {Math.round(mealCarbs)}g</span>
+                      <span style={{ color: "#6F9993" }}>F {Math.round(mealFat)}g</span>
                     </div>
                   )}
                 </div>
               );
             })}
           </div>
-
-          {/* Fixed, small, circular — stays in place above the content as
-              the diary scrolls behind it, per QA. */}
-          <button
-            onClick={() => openAdd(mealForCurrentTime())}
-            aria-label="Add Food"
-            className="tap fixed bottom-24 right-5 z-30 w-14 h-14 rounded-full bg-sohati text-white shadow-lift flex items-center justify-center"
-          >
-            <Plus size={22} />
-          </button>
         </div>
       )}
 
       {tab === "goals" && <GoalsPanel />}
       {tab === "prep" && <MealPrepPanel />}
+
+      {tab === "diary" && (
+        // V6 (QA 6.0): rendered outside the animate-fade-slide-up diary
+        // wrapper — that wrapper's transform (persisted by fill-mode: both)
+        // was turning it into the containing block for this fixed button,
+        // so it scrolled along with the content instead of staying pinned
+        // above it, reading as "attached" to whatever section landed under
+        // it. Same root cause already fixed for BottomSheet via portaling.
+        <button
+          onClick={() => openAdd(mealForCurrentTime())}
+          aria-label="Add Food"
+          className="tap fixed bottom-24 right-5 z-30 w-14 h-14 rounded-full bg-sohati text-white shadow-lift flex items-center justify-center"
+        >
+          <Plus size={22} />
+        </button>
+      )}
 
       <AddFoodSheet open={addOpen} onClose={() => setAddOpen(false)} defaultMeal={addMeal} />
       <EditFoodEntrySheet open={!!editingEntry} onClose={() => setEditingEntry(null)} entry={editingEntry} />

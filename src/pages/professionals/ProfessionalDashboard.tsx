@@ -1,44 +1,23 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
 import { useApp } from "../../context/AppContext";
 import { AddClientSheet } from "../../components/professionals/AddClientSheet";
 import { ClientDetailSheet } from "../../components/professionals/ClientDetailSheet";
 import type { ProfessionalClient } from "../../types";
-import { ChevronRight, LogOut, Plus, Users } from "lucide-react";
+import { ChevronRight, Plus, Users } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
 
-const specialtyLabel: Record<string, string> = {
-  trainer: "Personal Trainer",
-  physiotherapist: "Physiotherapist",
-  dietitian: "Dietitian",
-  other: "Health Professional",
-};
-
 export default function ProfessionalDashboard() {
-  const { user, professionalClients, signOut } = useApp();
-  const navigate = useNavigate();
+  const { user, professionalClients } = useApp();
   const [addOpen, setAddOpen] = useState(false);
   const [activeClient, setActiveClient] = useState<ProfessionalClient | null>(null);
-  const [confirmSignOut, setConfirmSignOut] = useState(false);
-
-  const handleSignOut = () => {
-    if (!confirmSignOut) {
-      setConfirmSignOut(true);
-      setTimeout(() => setConfirmSignOut(false), 3000);
-      return;
-    }
-    signOut();
-    navigate("/onboarding");
-  };
 
   return (
     <div>
       <PageHeader
         title="My Clients"
-        subtitle={`${specialtyLabel[user.professionalSubtype ?? "other"]} dashboard`}
+        subtitle={user.firstName}
         right={
           <button
             onClick={() => setAddOpen(true)}
@@ -82,18 +61,6 @@ export default function ProfessionalDashboard() {
           </Card>
         )}
       </div>
-
-      <Button variant="outline" fullWidth onClick={() => setAddOpen(true)} className="mb-6">
-        <Plus size={15} /> Add Client
-      </Button>
-
-      <button
-        onClick={handleSignOut}
-        className="tap w-full flex items-center justify-center gap-2 rounded-2xl border border-ember/30 text-ember-dark text-sm font-semibold py-3.5"
-      >
-        <LogOut size={15} />
-        {confirmSignOut ? "Tap again to confirm sign out" : "Sign Out"}
-      </button>
 
       <AddClientSheet open={addOpen} onClose={() => setAddOpen(false)} />
       <ClientDetailSheet

@@ -1,6 +1,7 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useApp } from "../../context/AppContext";
 
 interface PageHeaderProps {
   title: string;
@@ -13,6 +14,8 @@ interface PageHeaderProps {
 
 export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, right, showBack }) => {
   const navigate = useNavigate();
+  const { language, t } = useApp();
+  const BackIcon = language === "ar" ? ChevronRight : ChevronLeft;
   return (
     <div className="flex items-start justify-between mb-5 animate-fade-slide-up">
       <div className="flex items-start gap-2.5">
@@ -22,10 +25,10 @@ export const PageHeader: React.FC<PageHeaderProps> = ({ title, subtitle, right, 
           // hover-only back buttons already used on Settings/Subscription.
           <button
             onClick={() => navigate(-1)}
-            aria-label="Back"
+            aria-label={t("Back")}
             className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 mt-0.5 transition-colors"
           >
-            <ChevronLeft size={18} />
+            <BackIcon size={18} />
           </button>
         )}
         <div>

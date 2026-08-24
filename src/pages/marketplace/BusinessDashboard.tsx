@@ -1,27 +1,14 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Toggle } from "../../components/ui/Toggle";
 import { useApp } from "../../context/AppContext";
-import { LogOut, Store, Users, Tag } from "lucide-react";
+import { Store, Users, Tag } from "lucide-react";
 
 export default function BusinessDashboard() {
-  const { user, updateProfile, businessListing, updateBusinessListing, signOut } = useApp();
-  const navigate = useNavigate();
-  const [confirmSignOut, setConfirmSignOut] = useState(false);
+  const { user, updateProfile, businessListing, updateBusinessListing } = useApp();
   const [editingPerk, setEditingPerk] = useState(false);
   const [perkDraft, setPerkDraft] = useState(businessListing.perk);
-
-  const handleSignOut = () => {
-    if (!confirmSignOut) {
-      setConfirmSignOut(true);
-      setTimeout(() => setConfirmSignOut(false), 3000);
-      return;
-    }
-    signOut();
-    navigate("/onboarding");
-  };
 
   return (
     <div>
@@ -111,14 +98,6 @@ export default function BusinessDashboard() {
           <p className="text-xs text-charcoal-faint">members reached via Centium streak rewards this month</p>
         </div>
       </Card>
-
-      <button
-        onClick={handleSignOut}
-        className="tap w-full flex items-center justify-center gap-2 rounded-2xl border border-ember/30 text-ember-dark text-sm font-semibold py-3.5"
-      >
-        <LogOut size={15} />
-        {confirmSignOut ? "Tap again to confirm sign out" : "Sign Out"}
-      </button>
     </div>
   );
 }

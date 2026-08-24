@@ -14,6 +14,7 @@ export const WaterDetailSheet: React.FC<{ open: boolean; onClose: () => void }> 
   const [amountDraft, setAmountDraft] = useState(water);
 
   const pct = amountDraft / goalDraft;
+  const exceeded = pct > 1;
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Water">
@@ -25,9 +26,17 @@ export const WaterDetailSheet: React.FC<{ open: boolean; onClose: () => void }> 
               {(amountDraft / 1000).toFixed(2)}L
             </p>
             <p className="text-xs text-charcoal-faint">of {(goalDraft / 1000).toFixed(1)}L goal</p>
-            <p className="text-xs text-sky font-semibold mt-1">{Math.round(pct * 100)}% today</p>
+            <p className={`text-xs font-semibold mt-1 ${exceeded ? "text-gold" : "text-sky"}`}>
+              {Math.round(pct * 100)}% today
+            </p>
           </div>
         </div>
+
+        {exceeded && (
+          <p className="flex items-center gap-1.5 text-xs font-semibold text-gold bg-gold-pale rounded-full px-3 py-1.5 w-fit mb-5 animate-fade-slide-up">
+            🎉 Goal exceeded — great hydration today!
+          </p>
+        )}
 
         <label className="block mb-5">
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 flex items-center gap-1.5">

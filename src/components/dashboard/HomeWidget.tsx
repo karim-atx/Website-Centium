@@ -5,11 +5,13 @@ import { useApp } from "../../context/AppContext";
 import { ProgressBar } from "../ui/ProgressBar";
 import { WaterFillContainer } from "./WaterFillContainer";
 import { MacroRing } from "./MacroRing";
-import { healthMetrics } from "../../data/mockHealthData";
+import { SleepStageWheel } from "../health/SleepStageWheel";
+import { healthMetrics, sleepDetail } from "../../data/mockHealthData";
 import { todaysWorkout } from "../../data/mockWorkouts";
 import { sumNutrition, targetsFromGoal } from "../../services/nutrition";
-import { Footprints, Scale, Moon, Dumbbell, ArrowUp, ArrowDown, Droplet, CheckSquare, BookOpen, Sparkles, Utensils } from "lucide-react";
+import { Footprints, Scale, Moon, Dumbbell, ArrowUp, ArrowDown, Droplet, CheckSquare, BookOpen, Utensils } from "lucide-react";
 import { habitIcon } from "../../utils/icons";
+import { YogaFigureIcon } from "../mind/YogaFigureIcon";
 
 export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
   const navigate = useNavigate();
@@ -126,14 +128,17 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
         );
       }
       return (
-        <div>
-          {header("Sleep", <Moon size={15} className="text-berry" />, () => navigate("/health"))}
-          <p className="text-3xl font-bold text-charcoal leading-none mb-1.5">
-            {Math.floor(sleepMeta.current)}h {Math.round((sleepMeta.current % 1) * 60)}m
-          </p>
-          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5">
-            <ArrowUp size={10} /> +0.3h vs weekly avg
-          </span>
+        <div className="flex items-center gap-3">
+          <SleepStageWheel stages={sleepDetail} />
+          <div>
+            {header("Sleep", <Moon size={15} className="text-berry" />, () => navigate("/health"))}
+            <p className="text-2xl font-bold text-charcoal leading-none mb-1.5">
+              {Math.floor(sleepMeta.current)}h {Math.round((sleepMeta.current % 1) * 60)}m
+            </p>
+            <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5">
+              <ArrowUp size={10} /> +0.3h vs weekly avg
+            </span>
+          </div>
         </div>
       );
     }
@@ -271,17 +276,17 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig }> = ({ widget }) => {
       if (!isLarge) {
         return (
           <div>
-            {header("Meditation", <Sparkles size={15} className="text-berry" />, () => navigate("/mind"))}
+            {header("Meditation", <YogaFigureIcon size={15} className="text-berry" />, () => navigate("/mind"))}
             <p className="text-lg font-bold text-charcoal leading-none">5 min</p>
           </div>
         );
       }
       return (
         <div>
-          {header("Meditation", <Sparkles size={15} className="text-berry" />, () => navigate("/mind"))}
-          <p className="text-xl font-bold text-charcoal leading-none mb-1.5">5 min guided session</p>
+          {header("Meditation", <YogaFigureIcon size={15} className="text-berry" />, () => navigate("/mind"))}
+          <p className="text-xl font-bold text-charcoal leading-none mb-1.5">Breathing, stretching & yoga</p>
           <span className="inline-flex items-center text-xs font-semibold text-berry bg-berry-pale rounded-full px-2 py-0.5">
-            Coming soon
+            Open library
           </span>
         </div>
       );

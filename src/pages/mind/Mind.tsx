@@ -5,9 +5,11 @@ import { Chip } from "../../components/ui/Chip";
 import { useApp } from "../../context/AppContext";
 import { StreakEditSheet } from "../../components/mind/StreakEditSheet";
 import { AddStreakSheet } from "../../components/mind/AddStreakSheet";
+import { MeditationSheet } from "../../components/mind/MeditationSheet";
+import { YogaFigureIcon } from "../../components/mind/YogaFigureIcon";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
-import { BookOpen, CheckSquare, Sparkles, Flame, Plus, Play } from "lucide-react";
+import { Flame, Plus } from "lucide-react";
 import type { Streak } from "../../types";
 
 type Tab = "overview" | "habits" | "journal";
@@ -17,6 +19,7 @@ export default function Mind() {
   const [tab, setTab] = useState<Tab>("overview");
   const [editingStreak, setEditingStreak] = useState<Streak | null>(null);
   const [addStreakOpen, setAddStreakOpen] = useState(false);
+  const [meditationOpen, setMeditationOpen] = useState(false);
 
   return (
     <div>
@@ -65,9 +68,7 @@ export default function Mind() {
                     style={{ width: `${Math.min((s.days / s.goalDays) * 100, 100)}%` }}
                   />
                 </div>
-                <p className="text-[10px] text-charcoal-faint mt-1">
-                  {s.auto ? "Logged automatically" : `Goal: ${s.goalDays} days`}
-                </p>
+                {!s.auto && <p className="text-[10px] text-charcoal-faint mt-1">Goal: {s.goalDays} days</p>}
               </Card>
             ))}
           </div>
@@ -82,26 +83,12 @@ export default function Mind() {
             </p>
           </Card>
 
-          <div className="grid grid-cols-2 gap-3">
-            <Card interactive onClick={() => setTab("habits")}>
-              <CheckSquare size={20} className="text-sohati mb-3" />
-              <p className="text-sm font-semibold text-charcoal mb-1">Habits</p>
-              <p className="text-xs text-charcoal-faint">Track your daily rituals</p>
-            </Card>
-            <Card interactive onClick={() => setTab("journal")}>
-              <BookOpen size={20} className="text-charcoal mb-3" />
-              <p className="text-sm font-semibold text-charcoal mb-1">Journal</p>
-              <p className="text-xs text-charcoal-faint">Reflect on your day</p>
-            </Card>
-            <Card interactive className="col-span-2">
-              <Sparkles size={20} className="text-berry mb-3" />
-              <p className="text-sm font-semibold text-charcoal mb-1">Meditation</p>
-              <p className="text-xs text-charcoal-faint mb-2">5 min guided sessions</p>
-              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-berry bg-berry-pale rounded-full px-2 py-0.5">
-                <Play size={9} /> Coming soon
-              </span>
-            </Card>
-          </div>
+          {/* Habits/Journal cards removed — redundant with the tabs above. */}
+          <Card interactive onClick={() => setMeditationOpen(true)}>
+            <YogaFigureIcon size={22} className="text-berry mb-3" />
+            <p className="text-sm font-semibold text-charcoal mb-1">Meditation</p>
+            <p className="text-xs text-charcoal-faint">Breathing, stretching & yoga</p>
+          </Card>
         </div>
       )}
 
@@ -110,6 +97,7 @@ export default function Mind() {
 
       <StreakEditSheet open={!!editingStreak} onClose={() => setEditingStreak(null)} streak={editingStreak} />
       <AddStreakSheet open={addStreakOpen} onClose={() => setAddStreakOpen(false)} />
+      <MeditationSheet open={meditationOpen} onClose={() => setMeditationOpen(false)} />
     </div>
   );
 }

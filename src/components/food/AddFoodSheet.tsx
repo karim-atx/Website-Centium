@@ -5,7 +5,7 @@ import { Chip } from "../ui/Chip";
 import { Search, Mic, Camera, ScanLine, Clock, Star, Minus, Plus, Check, UtensilsCrossed, Sparkles } from "lucide-react";
 import { mockFoods, foodCategories } from "../../data/mockFoods";
 import type { Food, MealType, ServingUnit } from "../../types";
-import { mealLabels, mealOrder } from "../../services/nutrition";
+import { mealLabels, mealOrder, entryMultiplier } from "../../services/nutrition";
 import { useApp } from "../../context/AppContext";
 import { AIVoiceLogger } from "./AIVoiceLogger";
 import { foodCategoryIcon } from "../../utils/icons";
@@ -147,7 +147,8 @@ export const AddFoodSheet: React.FC<{
 
   // Detail / quantity view
   if (selectedFood) {
-    const foodTotalCal = Math.round(selectedFood.calories * quantity);
+    const multiplier = entryMultiplier({ quantity, unit });
+    const foodTotalCal = Math.round(selectedFood.calories * multiplier);
     return (
       <BottomSheet open={open} onClose={resetAndClose} title="Add Food">
         <div className="animate-fade-slide-up">
@@ -216,15 +217,15 @@ export const AddFoodSheet: React.FC<{
               <p className="text-[10px] text-charcoal-faint">kcal</p>
             </div>
             <div>
-              <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.protein * quantity)}g</p>
+              <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.protein * multiplier)}g</p>
               <p className="text-[10px] text-charcoal-faint">protein</p>
             </div>
             <div>
-              <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.carbs * quantity)}g</p>
+              <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.carbs * multiplier)}g</p>
               <p className="text-[10px] text-charcoal-faint">carbs</p>
             </div>
             <div>
-              <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.fat * quantity)}g</p>
+              <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.fat * multiplier)}g</p>
               <p className="text-[10px] text-charcoal-faint">fat</p>
             </div>
           </div>

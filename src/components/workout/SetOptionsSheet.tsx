@@ -21,12 +21,14 @@ export const SetOptionsSheet: React.FC<{
   const [setType, setSetType] = useState<SetType>("normal");
   const [notes, setNotes] = useState("");
   const [rpe, setRpe] = useState<number | undefined>(undefined);
+  const [mood, setMood] = useState(5);
 
   useEffect(() => {
     if (set) {
       setSetType(set.setType ?? "normal");
       setNotes(set.notes ?? "");
       setRpe(set.rpe);
+      setMood(set.mood ?? 5);
     }
   }, [set]);
 
@@ -75,6 +77,26 @@ export const SetOptionsSheet: React.FC<{
           </div>
         </div>
 
+        <div>
+          <div className="flex items-baseline justify-between mb-2">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Mood</p>
+            <span className="text-xs text-charcoal-faint">{mood} / 10</span>
+          </div>
+          <input
+            type="range"
+            min={1}
+            max={10}
+            step={1}
+            value={mood}
+            onChange={(e) => setMood(Number(e.target.value))}
+            className="w-full"
+          />
+          <div className="flex items-center justify-between text-[10px] text-charcoal-faint mt-1">
+            <span>Bad mood</span>
+            <span>Very good</span>
+          </div>
+        </div>
+
         <label className="block">
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Notes</span>
           <input
@@ -89,7 +111,7 @@ export const SetOptionsSheet: React.FC<{
           fullWidth
           size="lg"
           onClick={() => {
-            onSave({ setType, notes: notes.trim() || undefined, rpe });
+            onSave({ setType, notes: notes.trim() || undefined, rpe, mood });
             onClose();
           }}
         >

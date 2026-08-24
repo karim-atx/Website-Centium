@@ -1,20 +1,30 @@
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { PageHeader } from "../../components/ui/PageHeader";
-import { Sparkles, Users, Store, User as UserIcon, Crown, ChevronRight, Settings } from "lucide-react";
+import { useApp } from "../../context/AppContext";
+import { Sparkles, Users, Store, User as UserIcon, Crown, ChevronRight, Settings, UtensilsCrossed, HeartPulse } from "lucide-react";
 
 export default function More() {
   const navigate = useNavigate();
+  const { user } = useApp();
+  const isProfessional = user.accountType === "professional";
+  const isBusiness = user.accountType === "business";
 
   // Profile shifted to the top per QA — first widget in the More list.
+  // V6 (QA 6.0): Mind and the client-facing "browse professionals" directory
+  // don't apply to a professional or business account, so they're removed
+  // for those account types; Meal Plans and Health Metrics (their
+  // bottom-nav doesn't have room for every tab) are added for professionals.
   const items = [
     { icon: UserIcon, label: "Profile", desc: "Your account & settings", to: "/profile", bg: "#EAF4F2", color: "#6F9993" },
-    { icon: Sparkles, label: "Mind", desc: "Habits, journal & meditation", to: "/mind", bg: "#F1E0EB", color: "#9C4F7C" },
-    { icon: Users, label: "Professionals", desc: "Trainers, dietitians & doctors", to: "/professionals", bg: "#F0EDF9", color: "#7D6BB5" },
+    !isProfessional && !isBusiness && { icon: Sparkles, label: "Mind", desc: "Habits, journal & meditation", to: "/mind", bg: "#F1E0EB", color: "#9C4F7C" },
+    !isProfessional && !isBusiness && { icon: Users, label: "Professionals", desc: "Trainers, dietitians & doctors", to: "/professionals", bg: "#F0EDF9", color: "#7D6BB5" },
+    isProfessional && { icon: UtensilsCrossed, label: "Meal Plans", desc: "Edit client goals & build meal plans", to: "/professionals/meal-plans", bg: "#F0EDF9", color: "#7D6BB5" },
+    isProfessional && { icon: HeartPulse, label: "Health Metrics", desc: "Client health data & clinical notes", to: "/professionals/health-metrics", bg: "#F1E0EB", color: "#9C4F7C" },
     { icon: Store, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/marketplace", bg: "#F6E9C9", color: "#D9A441" },
     { icon: Settings, label: "Settings", desc: "Appearance, notifications & more", to: "/settings", bg: "#DCEAF8", color: "#4C8FD1" },
     { icon: Crown, label: "Centium", desc: "Unlock premium features", to: "/subscription", bg: "rgb(var(--c-charcoal))", color: "rgb(var(--c-cream))" },
-  ];
+  ].filter(Boolean) as { icon: typeof Sparkles; label: string; desc: string; to: string; bg: string; color: string }[];
 
   return (
     <div>

@@ -1,4 +1,4 @@
-import type { WorkoutTemplate, Exercise, ExerciseClassification } from "../types";
+import type { WorkoutTemplate, Exercise, ExerciseClassification, MuscleGroup } from "../types";
 
 let exId = 0;
 const ex = (partial: Omit<Exercise, "id">): Exercise => ({
@@ -122,52 +122,61 @@ export type ExerciseCategory = (typeof workoutCategories)[number]["id"];
 // "search for exercise" input and library popup both read from this.
 // `classification` drives which exercises track an estimated 1RM (barbell/
 // dumbbell/weighted-bodyweight) per QA App 3.0.
-export const exerciseLibrary: { name: string; category: ExerciseCategory; classification: ExerciseClassification }[] = [
-  { name: "Bench Press", category: "chest", classification: "barbell" },
-  { name: "Incline Bench", category: "chest", classification: "barbell" },
-  { name: "Push Up", category: "chest", classification: "reps_only" },
-  { name: "Dumbbell Fly", category: "chest", classification: "dumbbell" },
-  { name: "Cable Crossover", category: "chest", classification: "machine_other" },
-  { name: "Dips", category: "chest", classification: "weighted_bodyweight" },
+// V6 (QA 6.0): `muscleGroups` added alongside the older `category` (kept
+// for the exercise-library icon lookup, untouched) so the new Exercise
+// Database tab can filter/highlight by the split bicep/tricep/quads/
+// hamstrings taxonomy — arms/legs exercises reclassified per-movement.
+export const exerciseLibrary: {
+  name: string;
+  category: ExerciseCategory;
+  classification: ExerciseClassification;
+  muscleGroups: MuscleGroup[];
+}[] = [
+  { name: "Bench Press", category: "chest", classification: "barbell", muscleGroups: ["chest"] },
+  { name: "Incline Bench", category: "chest", classification: "barbell", muscleGroups: ["chest"] },
+  { name: "Push Up", category: "chest", classification: "reps_only", muscleGroups: ["chest"] },
+  { name: "Dumbbell Fly", category: "chest", classification: "dumbbell", muscleGroups: ["chest"] },
+  { name: "Cable Crossover", category: "chest", classification: "machine_other", muscleGroups: ["chest"] },
+  { name: "Dips", category: "chest", classification: "weighted_bodyweight", muscleGroups: ["chest"] },
 
-  { name: "Deadlift", category: "back", classification: "barbell" },
-  { name: "Barbell Row", category: "back", classification: "barbell" },
-  { name: "Lat Pulldown", category: "back", classification: "machine_other" },
-  { name: "Seated Row", category: "back", classification: "machine_other" },
-  { name: "Cable Row", category: "back", classification: "machine_other" },
-  { name: "Pull Up", category: "back", classification: "weighted_bodyweight" },
+  { name: "Deadlift", category: "back", classification: "barbell", muscleGroups: ["back"] },
+  { name: "Barbell Row", category: "back", classification: "barbell", muscleGroups: ["back"] },
+  { name: "Lat Pulldown", category: "back", classification: "machine_other", muscleGroups: ["back"] },
+  { name: "Seated Row", category: "back", classification: "machine_other", muscleGroups: ["back"] },
+  { name: "Cable Row", category: "back", classification: "machine_other", muscleGroups: ["back"] },
+  { name: "Pull Up", category: "back", classification: "weighted_bodyweight", muscleGroups: ["back"] },
 
-  { name: "Overhead Press", category: "shoulders", classification: "barbell" },
-  { name: "Shoulder Press", category: "shoulders", classification: "dumbbell" },
-  { name: "Lateral Raise", category: "shoulders", classification: "dumbbell" },
-  { name: "Front Raise", category: "shoulders", classification: "dumbbell" },
-  { name: "Face Pull", category: "shoulders", classification: "machine_other" },
+  { name: "Overhead Press", category: "shoulders", classification: "barbell", muscleGroups: ["shoulders"] },
+  { name: "Shoulder Press", category: "shoulders", classification: "dumbbell", muscleGroups: ["shoulders"] },
+  { name: "Lateral Raise", category: "shoulders", classification: "dumbbell", muscleGroups: ["shoulders"] },
+  { name: "Front Raise", category: "shoulders", classification: "dumbbell", muscleGroups: ["shoulders"] },
+  { name: "Face Pull", category: "shoulders", classification: "machine_other", muscleGroups: ["shoulders"] },
 
-  { name: "Bicep Curl", category: "arms", classification: "dumbbell" },
-  { name: "Hammer Curl", category: "arms", classification: "dumbbell" },
-  { name: "Tricep Pushdown", category: "arms", classification: "machine_other" },
-  { name: "Skull Crusher", category: "arms", classification: "barbell" },
-  { name: "Preacher Curl", category: "arms", classification: "barbell" },
+  { name: "Bicep Curl", category: "arms", classification: "dumbbell", muscleGroups: ["bicep"] },
+  { name: "Hammer Curl", category: "arms", classification: "dumbbell", muscleGroups: ["bicep"] },
+  { name: "Tricep Pushdown", category: "arms", classification: "machine_other", muscleGroups: ["tricep"] },
+  { name: "Skull Crusher", category: "arms", classification: "barbell", muscleGroups: ["tricep"] },
+  { name: "Preacher Curl", category: "arms", classification: "barbell", muscleGroups: ["bicep"] },
 
-  { name: "Back Squat", category: "legs", classification: "barbell" },
-  { name: "Goblet Squat", category: "legs", classification: "dumbbell" },
-  { name: "Leg Press", category: "legs", classification: "machine_other" },
-  { name: "Romanian Deadlift", category: "legs", classification: "barbell" },
-  { name: "Walking Lunge", category: "legs", classification: "dumbbell" },
-  { name: "Calf Raise", category: "legs", classification: "machine_other" },
+  { name: "Back Squat", category: "legs", classification: "barbell", muscleGroups: ["quads"] },
+  { name: "Goblet Squat", category: "legs", classification: "dumbbell", muscleGroups: ["quads"] },
+  { name: "Leg Press", category: "legs", classification: "machine_other", muscleGroups: ["quads"] },
+  { name: "Romanian Deadlift", category: "legs", classification: "barbell", muscleGroups: ["hamstrings"] },
+  { name: "Walking Lunge", category: "legs", classification: "dumbbell", muscleGroups: ["quads"] },
+  { name: "Calf Raise", category: "legs", classification: "machine_other", muscleGroups: ["quads"] },
 
-  { name: "Plank", category: "core", classification: "duration" },
-  { name: "Hanging Leg Raise", category: "core", classification: "reps_only" },
-  { name: "Cable Woodchop", category: "core", classification: "machine_other" },
-  { name: "Ab Wheel Rollout", category: "core", classification: "reps_only" },
+  { name: "Plank", category: "core", classification: "duration", muscleGroups: ["core"] },
+  { name: "Hanging Leg Raise", category: "core", classification: "reps_only", muscleGroups: ["core"] },
+  { name: "Cable Woodchop", category: "core", classification: "machine_other", muscleGroups: ["core"] },
+  { name: "Ab Wheel Rollout", category: "core", classification: "reps_only", muscleGroups: ["core"] },
 
-  { name: "Kettlebell Swing", category: "full_body", classification: "dumbbell" },
-  { name: "Clean and Press", category: "full_body", classification: "barbell" },
-  { name: "Burpee", category: "full_body", classification: "reps_only" },
+  { name: "Kettlebell Swing", category: "full_body", classification: "dumbbell", muscleGroups: ["full_body"] },
+  { name: "Clean and Press", category: "full_body", classification: "barbell", muscleGroups: ["full_body"] },
+  { name: "Burpee", category: "full_body", classification: "reps_only", muscleGroups: ["full_body"] },
 
-  { name: "Easy Run", category: "cardio", classification: "cardio" },
-  { name: "Interval Sprints", category: "cardio", classification: "cardio" },
-  { name: "Rowing Machine", category: "cardio", classification: "cardio" },
-  { name: "Stair Climber", category: "cardio", classification: "cardio" },
-  { name: "Cycling", category: "cardio", classification: "cardio" },
+  { name: "Easy Run", category: "cardio", classification: "cardio", muscleGroups: ["cardio"] },
+  { name: "Interval Sprints", category: "cardio", classification: "cardio", muscleGroups: ["cardio"] },
+  { name: "Rowing Machine", category: "cardio", classification: "cardio", muscleGroups: ["cardio"] },
+  { name: "Stair Climber", category: "cardio", classification: "cardio", muscleGroups: ["cardio"] },
+  { name: "Cycling", category: "cardio", classification: "cardio", muscleGroups: ["cardio"] },
 ];

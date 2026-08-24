@@ -1,10 +1,11 @@
 import React from "react";
 import { OnboardingShell } from "./OnboardingShell";
 import { Button } from "../../components/ui/Button";
+import { useApp } from "../../context/AppContext";
 import type { OnboardingDraft } from "./Onboarding";
 import type { AccountType, CustomerSubtype, ProfessionalSubtype } from "../../types";
 import clsx from "clsx";
-import { User, Dumbbell, Building2 } from "lucide-react";
+import { User, Dumbbell, Building2, AlertCircle } from "lucide-react";
 
 interface Props {
   draft: OnboardingDraft;
@@ -34,11 +35,16 @@ const professionalSubtypes: { value: ProfessionalSubtype; label: string }[] = [
 ];
 
 export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
+  const { clientCodes } = useApp();
   const needsCode = draft.accountType === "customer" && draft.customerSubtype === "client";
+  // V6 (QA 6.0): the code must actually match one a professional generated —
+  // no longer enough to just type something non-empty.
+  const enteredCode = draft.professionalUserIdCode.trim().toUpperCase();
+  const codeIsValid = enteredCode.length > 0 && clientCodes.some((c) => c.code.toUpperCase() === enteredCode);
 
   const canContinue =
     draft.accountType === "customer"
-      ? !!draft.customerSubtype && (!needsCode || draft.professionalUserIdCode.trim().length > 0)
+      ? !!draft.customerSubtype && (!needsCode || codeIsValid)
       : draft.accountType === "professional"
       ? !!draft.professionalSubtype
       : draft.accountType === "business"
@@ -116,11 +122,20 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                 value={draft.professionalUserIdCode}
                 onChange={(e) => setDraft((d) => ({ ...d, professionalUserIdCode: e.target.value }))}
                 placeholder="SOHA-XXXX"
-                className="w-full rounded-2xl bg-cream-card border-2 border-sohati/50 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className={clsx(
+                  "w-full rounded-2xl bg-cream-card border-2 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20",
+                  enteredCode.length > 0 && !codeIsValid ? "border-[#C0392B]/50" : "border-sohati/50"
+                )}
               />
-              <p className="text-[11px] text-charcoal-faint mt-1.5">
-                Ask your trainer, dietitian or physiotherapist for the code they generated for you.
-              </p>
+              {enteredCode.length > 0 && !codeIsValid ? (
+                <p className="flex items-center gap-1.5 text-[11px] text-[#C0392B] mt-1.5">
+                  <AlertCircle size={12} /> That code doesn't match a professional's — check it and try again.
+                </p>
+              ) : (
+                <p className="text-[11px] text-charcoal-faint mt-1.5">
+                  Ask your trainer, dietitian or physiotherapist for the code they generated for you.
+                </p>
+              )}
             </label>
           )}
 

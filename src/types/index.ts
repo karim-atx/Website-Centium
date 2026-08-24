@@ -113,6 +113,52 @@ export interface ProfessionalReview {
   date: string;
 }
 
+// V6 (QA 6.0): Professional UI — Calendar tab, Apple-Calendar-inspired.
+export interface CalendarEvent {
+  id: string;
+  title: string;
+  date: string; // yyyy-mm-dd
+  allDay: boolean;
+  startTime?: string; // HH:mm
+  endTime?: string;
+  location?: string;
+  repeat: "none" | "daily" | "weekly" | "monthly";
+  invitees?: string[];
+  url?: string;
+  notes?: string;
+}
+
+// V6 (QA 6.0): a professional-built workout template — same routine-builder
+// UI as the client's Workout tab, but assignable to one or more clients
+// instead of run by the professional themselves.
+export interface WorkoutTemplateAssignment {
+  id: string;
+  name: string;
+  exercises: Exercise[];
+  assignedClientIds: string[];
+  createdAt: string;
+}
+
+// V6 (QA 6.0): manual health-record fields a professional can add on top of
+// the client's auto-synced health data.
+export interface ClientHealthNote {
+  comorbidities?: string;
+  previousSurgeries?: string;
+  medications?: string;
+  currentInjuries?: string;
+  personalityType?: string;
+}
+
+// V6 (QA 6.0): a professional<->client messaging board, separate from the
+// one-off message sheet already on ProfessionalDetail.
+export interface ProfessionalMessage {
+  id: string;
+  clientId: string;
+  from: "professional" | "client";
+  text: string;
+  at: string; // ISO
+}
+
 export type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 
 export interface Food {
@@ -156,17 +202,21 @@ export type RepMaxUpdateMode = "no_update" | "prompt" | "prompt_with_estimate";
 
 // V4: "Muscle Group" (renamed from Body Part, multi-select) and
 // "Classification" (renamed from Category) for the custom-exercise flow.
+// V6 (QA 6.0): "arms" split into bicep/tricep, "legs" split into
+// quads/hamstrings, per QA — more precise muscle-group targeting.
 export type MuscleGroup =
-  | "arms"
   | "back"
+  | "bicep"
   | "cardio"
   | "chest"
   | "core"
   | "full_body"
-  | "legs"
+  | "hamstrings"
   | "olympic"
   | "other"
-  | "shoulders";
+  | "quads"
+  | "shoulders"
+  | "tricep";
 
 export type ExerciseClassification =
   | "barbell"
@@ -278,12 +328,23 @@ export interface LoggedSet {
   setType?: SetType;
   notes?: string;
   rpe?: number;
+  // V6 (QA 6.0): 1 (bad mood) to 10 (very good mood), set alongside RPE.
+  mood?: number;
 }
 
 export interface LoggedExercise {
   exerciseId: string;
   name: string;
   sets: LoggedSet[];
+}
+
+// V6 (QA 6.0): the in-progress state of a routine that was quit (not
+// finished) — enough to restore WorkoutSessionSheet exactly as it was.
+export interface PausedWorkoutSession {
+  logged: LoggedExercise[];
+  elapsedSec: number;
+  startedAt: string;
+  started: boolean;
 }
 
 export interface WorkoutSession {

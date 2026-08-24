@@ -14,7 +14,6 @@ import {
   LogOut,
   Camera,
   Image,
-  Pencil,
 } from "lucide-react";
 
 const accountTypeLabel: Record<string, string> = {
@@ -51,11 +50,15 @@ export default function Profile() {
     navigate("/onboarding");
   };
 
-  const connectedProfessionals = mockProfessionals.filter((p) => p.connected);
+  // V6 (QA 6.0): weight/height/age, connected professionals and Goals are
+  // client-only concepts — hidden for both professional and business
+  // accounts, whose own profile has nothing to do with personal tracking.
+  const hidesClientFields = user.accountType === "professional" || user.accountType === "business";
+  const connectedProfessionals = hidesClientFields ? [] : mockProfessionals.filter((p) => p.connected);
 
   // V4 (QA 4.0) trimmed to Goals + Help; V5 (QA 5.0) removes Help too —
   // Settings (reachable from More) already covers everything it pointed to.
-  const sections = [{ icon: Target, label: "Goals", onClick: () => setGoalsOpen(true) }];
+  const sections = hidesClientFields ? [] : [{ icon: Target, label: "Goals", onClick: () => setGoalsOpen(true) }];
 
   return (
     <div>
@@ -72,9 +75,6 @@ export default function Profile() {
           ) : (
             user.firstName.charAt(0)
           )}
-          <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full bg-charcoal text-cream flex items-center justify-center border-2 border-cream">
-            <Pencil size={9} />
-          </span>
         </button>
         <div>
           <h2 className="font-display text-xl font-semibold text-charcoal">{user.firstName}</h2>
@@ -86,34 +86,36 @@ export default function Profile() {
         </div>
       </div>
 
-      <div className="grid grid-cols-3 gap-3 mb-6 mt-4">
-        <Card className="text-center animate-fade-slide-up">
-          <EditableValue
-            value={user.weightKg}
-            onSave={(v) => updateProfile({ weightKg: v })}
-            className="text-lg font-bold text-charcoal"
-          />
-          <p className="text-[11px] text-charcoal-faint">kg</p>
-        </Card>
-        <Card className="text-center animate-fade-slide-up">
-          <EditableValue
-            value={user.heightCm}
-            decimals={0}
-            onSave={(v) => updateProfile({ heightCm: v })}
-            className="text-lg font-bold text-charcoal"
-          />
-          <p className="text-[11px] text-charcoal-faint">cm</p>
-        </Card>
-        <Card className="text-center animate-fade-slide-up">
-          <EditableValue
-            value={user.age}
-            decimals={0}
-            onSave={(v) => updateProfile({ age: v })}
-            className="text-lg font-bold text-charcoal"
-          />
-          <p className="text-[11px] text-charcoal-faint">years</p>
-        </Card>
-      </div>
+      {!hidesClientFields && (
+        <div className="grid grid-cols-3 gap-3 mb-6 mt-4">
+          <Card className="text-center animate-fade-slide-up">
+            <EditableValue
+              value={user.weightKg}
+              onSave={(v) => updateProfile({ weightKg: v })}
+              className="text-lg font-bold text-charcoal"
+            />
+            <p className="text-[11px] text-charcoal-faint">kg</p>
+          </Card>
+          <Card className="text-center animate-fade-slide-up">
+            <EditableValue
+              value={user.heightCm}
+              decimals={0}
+              onSave={(v) => updateProfile({ heightCm: v })}
+              className="text-lg font-bold text-charcoal"
+            />
+            <p className="text-[11px] text-charcoal-faint">cm</p>
+          </Card>
+          <Card className="text-center animate-fade-slide-up">
+            <EditableValue
+              value={user.age}
+              decimals={0}
+              onSave={(v) => updateProfile({ age: v })}
+              className="text-lg font-bold text-charcoal"
+            />
+            <p className="text-[11px] text-charcoal-faint">years</p>
+          </Card>
+        </div>
+      )}
 
       {connectedProfessionals.length > 0 && (
         <div className="mb-6 animate-fade-slide-up">
@@ -143,6 +145,7 @@ export default function Profile() {
         </div>
       )}
 
+      {sections.length > 0 && (
       <Card padded={false} className="divide-y divide-charcoal/[0.04] animate-fade-slide-up">
         {sections.map((s) => (
           <button
@@ -158,6 +161,7 @@ export default function Profile() {
           </button>
         ))}
       </Card>
+      )}
 
       <button
         onClick={handleSignOut}
@@ -184,7 +188,7 @@ export default function Profile() {
         className="hidden"
         onChange={(e) => e.target.files?.[0] && handleAvatarFile(e.target.files[0])}
       />
-      <BottomSheet open={avatarSheetOpen} onClose={() => setAvatarSheetOpen(false)} title="Profile picture">
+      <BottomSheet open={avatarSheetOpen} onClose={() => setAvatarSheetOpen(false)}>
         <div className="space-y-2.5 animate-fade-slide-up">
           <button
             onClick={() => cameraInputRef.current?.click()}

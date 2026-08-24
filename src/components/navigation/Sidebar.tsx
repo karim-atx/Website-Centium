@@ -1,14 +1,20 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import clsx from "clsx";
-import { sidebarNavItems, professionalSidebarNavItems } from "./navItems";
+import { sidebarNavItems, professionalSidebarNavItems, businessSidebarNavItems } from "./navItems";
 import { useApp } from "../../context/AppContext";
 import { CentiumLogo } from "../ui/CentiumLogo";
 import { Flame } from "lucide-react";
 
 export const Sidebar: React.FC = () => {
-  const { user } = useApp();
-  const items = user.accountType === "professional" ? professionalSidebarNavItems : sidebarNavItems;
+  const { user, t } = useApp();
+  const isBusiness = user.accountType === "business";
+  const items =
+    user.accountType === "professional"
+      ? professionalSidebarNavItems
+      : isBusiness
+      ? businessSidebarNavItems
+      : sidebarNavItems;
 
   return (
     <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-charcoal/[0.06] bg-cream-card/60 px-4 py-6">
@@ -36,19 +42,21 @@ export const Sidebar: React.FC = () => {
               }
             >
               <Icon size={19} />
-              {item.label}
+              {t(item.label)}
             </NavLink>
           );
         })}
       </nav>
 
-      <div className="rounded-3xl bg-sohati-pale p-4 mt-4">
-        <div className="flex items-center gap-2 text-sohati-dark font-semibold text-sm mb-1">
-          <Flame size={16} className="text-ember" />
-          7 day streak
+      {!isBusiness && (
+        <div className="rounded-3xl bg-sohati-pale p-4 mt-4">
+          <div className="flex items-center gap-2 text-sohati-dark font-semibold text-sm mb-1">
+            <Flame size={16} className="text-ember" />
+            7 day streak
+          </div>
+          <p className="text-xs text-sohati-dark/70">Keep logging to unlock rewards 🎁</p>
         </div>
-        <p className="text-xs text-sohati-dark/70">Keep logging to unlock rewards 🎁</p>
-      </div>
+      )}
 
       <div className="flex items-center gap-2.5 mt-4 px-2">
         <div className="w-9 h-9 rounded-full bg-ember-pale flex items-center justify-center text-sm font-bold text-ember-dark">

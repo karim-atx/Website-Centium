@@ -10,6 +10,11 @@ import Health from "./pages/health/Health";
 import Mind from "./pages/mind/Mind";
 import Professionals from "./pages/professionals/Professionals";
 import ProfessionalDetail from "./pages/professionals/ProfessionalDetail";
+import CalendarTab from "./pages/professionals/CalendarTab";
+import WorkoutTemplateBuilderTab from "./pages/professionals/WorkoutTemplateBuilderTab";
+import MealPlanBuilderTab from "./pages/professionals/MealPlanBuilderTab";
+import MessagesTab from "./pages/professionals/MessagesTab";
+import HealthMetricsTab from "./pages/professionals/HealthMetricsTab";
 import Marketplace from "./pages/marketplace/Marketplace";
 import MarketplaceCategoryPage from "./pages/marketplace/MarketplaceCategoryPage";
 import Profile from "./pages/profile/Profile";
@@ -40,6 +45,11 @@ function AppRoutes() {
         <Route path="/health" element={<Health />} />
         <Route path="/mind" element={<Mind />} />
         <Route path="/professionals" element={<Professionals />} />
+        <Route path="/professionals/calendar" element={<CalendarTab />} />
+        <Route path="/professionals/templates" element={<WorkoutTemplateBuilderTab />} />
+        <Route path="/professionals/meal-plans" element={<MealPlanBuilderTab />} />
+        <Route path="/professionals/messages" element={<MessagesTab />} />
+        <Route path="/professionals/health-metrics" element={<HealthMetricsTab />} />
         <Route path="/professionals/:id" element={<ProfessionalDetail />} />
         <Route path="/marketplace" element={<Marketplace />} />
         <Route path="/marketplace/:category" element={<MarketplaceCategoryPage />} />

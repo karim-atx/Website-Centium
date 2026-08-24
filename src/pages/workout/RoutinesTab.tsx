@@ -1,9 +1,10 @@
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
 import { ExerciseSettingsSheet } from "../../components/workout/ExerciseSettingsSheet";
+import { ExerciseLibrarySheet, type ExercisePick } from "../../components/workout/ExerciseLibrarySheet";
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import type { Exercise, Routine, RoutineFolder } from "../../types";
 import {
@@ -19,7 +20,10 @@ import {
   Pencil,
   FolderTree,
   Plus,
+  Repeat,
 } from "lucide-react";
+
+const SWIPE_THRESHOLD = 50;
 
 export default function RoutinesTab() {
   const { routineFolders, routines, addRoutineFolder, renameRoutineFolder, deleteRoutineFolder, updateRoutine, deleteRoutine } =
@@ -164,6 +168,18 @@ export default function RoutinesTab() {
                 onStart={() => startRoutine(r)}
                 onDelete={() => deleteRoutine(r.id)}
                 onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
+                onDeleteExercise={(exId) =>
+                  updateRoutine(r.id, { exercises: r.exercises.filter((e) => e.id !== exId) })
+                }
+                onReplaceExercise={(exId, pick) =>
+                  updateRoutine(r.id, {
+                    exercises: r.exercises.map((e) =>
+                      e.id === exId
+                        ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, classification: pick.classification, isCustom: pick.isCustom }
+                        : e
+                    ),
+                  })
+                }
               />
             ))}
 
@@ -260,6 +276,18 @@ export default function RoutinesTab() {
                   onStart={() => startRoutine(r)}
                   onDelete={() => deleteRoutine(r.id)}
                   onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
+                  onDeleteExercise={(exId) =>
+                    updateRoutine(r.id, { exercises: r.exercises.filter((e) => e.id !== exId) })
+                  }
+                  onReplaceExercise={(exId, pick) =>
+                    updateRoutine(r.id, {
+                      exercises: r.exercises.map((e) =>
+                        e.id === exId
+                          ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, classification: pick.classification, isCustom: pick.isCustom }
+                          : e
+                      ),
+                    })
+                  }
                 />
               ))}
             </div>
@@ -284,6 +312,7 @@ export default function RoutinesTab() {
         open={!!settingsExercise}
         onClose={() => setSettingsExercise(null)}
         exercise={settingsExercise?.exercise ?? null}
+        routineId={settingsExercise?.routineId ?? null}
         onSave={(patch) => {
           if (!settingsExercise) return;
           const routine = routines.find((r) => r.id === settingsExercise.routineId);
@@ -314,8 +343,33 @@ const RoutineRow: React.FC<{
   onStart: () => void;
   onDelete: () => void;
   onSettings: (ex: Exercise) => void;
-}> = ({ routine, onStart, onDelete, onSettings }) => {
+  onDeleteExercise: (exerciseId: string) => void;
+  onReplaceExercise: (exerciseId: string, pick: ExercisePick) => void;
+}> = ({ routine, onStart, onDelete, onSettings, onDeleteExercise, onReplaceExercise }) => {
   const [expanded, setExpanded] = useState(false);
+  const [revealedId, setRevealedId] = useState<string | null>(null);
+  const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  // Swipe-left on an exercise row reveals Replace/Delete, Apple-UI style —
+  // same pattern as the Food diary's swipe-to-delete.
+  const onRowTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    touchStart.current = { x: t.clientX, y: t.clientY };
+  };
+  const onRowTouchEnd = (e: React.TouchEvent, exId: string) => {
+    if (!touchStart.current) return;
+    e.stopPropagation();
+    const t = e.changedTouches[0];
+    const dx = t.clientX - touchStart.current.x;
+    const dy = t.clientY - touchStart.current.y;
+    touchStart.current = null;
+    if (dx < -SWIPE_THRESHOLD && Math.abs(dy) < 40) {
+      setRevealedId(exId);
+    } else if (dx > SWIPE_THRESHOLD) {
+      setRevealedId(null);
+    }
+  };
 
   return (
     <Card padded={false} className="overflow-hidden">
@@ -340,21 +394,66 @@ const RoutineRow: React.FC<{
       </div>
       {expanded && (
         <div className="border-t border-charcoal/[0.06] divide-y divide-charcoal/[0.04]">
-          {routine.exercises.map((ex) => (
-            <div key={ex.id} className="flex items-center justify-between px-4 py-2.5">
-              <div>
-                <p className="text-sm text-charcoal">{ex.name}</p>
-                <p className="text-[11px] text-charcoal-faint">
-                  {ex.sets} × {ex.reps} · {ex.weightKg}kg
-                </p>
+          {routine.exercises.map((ex) => {
+            const revealed = revealedId === ex.id;
+            return (
+              <div key={ex.id} className="relative overflow-hidden">
+                {revealed && (
+                  <div className="absolute inset-y-0 right-0 flex items-stretch z-0">
+                    <button
+                      onClick={() => setReplaceTarget(ex.id)}
+                      aria-label={`Replace ${ex.name}`}
+                      className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-sohati text-white text-[10px] font-semibold"
+                    >
+                      <Repeat size={14} />
+                      Replace
+                    </button>
+                    <button
+                      onClick={() => {
+                        onDeleteExercise(ex.id);
+                        setRevealedId(null);
+                      }}
+                      aria-label={`Delete ${ex.name}`}
+                      className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-[#C0392B] text-white text-[10px] font-semibold"
+                    >
+                      <Trash2 size={14} />
+                      Delete
+                    </button>
+                  </div>
+                )}
+                <div
+                  onTouchStart={onRowTouchStart}
+                  onTouchEnd={(ev) => onRowTouchEnd(ev, ex.id)}
+                  onClick={() => revealed && setRevealedId(null)}
+                  className="relative z-10 flex items-center justify-between px-4 py-2.5 bg-cream-card transition-transform duration-200"
+                  style={{ transform: revealed ? "translateX(-128px)" : "translateX(0)" }}
+                >
+                  <div>
+                    <p className="text-sm text-charcoal">{ex.name}</p>
+                    <p className="text-[11px] text-charcoal-faint">
+                      {ex.sets} × {ex.reps} · {ex.weightKg}kg
+                    </p>
+                  </div>
+                  <button onClick={() => onSettings(ex)} className="tap text-charcoal-faint">
+                    <Settings2 size={14} />
+                  </button>
+                </div>
               </div>
-              <button onClick={() => onSettings(ex)} className="tap text-charcoal-faint">
-                <Settings2 size={14} />
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
+
+      <ExerciseLibrarySheet
+        open={!!replaceTarget}
+        onClose={() => setReplaceTarget(null)}
+        onPick={(pick) => {
+          if (replaceTarget) onReplaceExercise(replaceTarget, pick);
+          setReplaceTarget(null);
+          setRevealedId(null);
+        }}
+        alreadyAdded={[]}
+      />
     </Card>
   );
 };
