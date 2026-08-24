@@ -433,6 +433,9 @@ export interface JournalFolder {
 export interface JournalEntry {
   id: string;
   folderId: string;
+  // V4: entries show only their title in the list; tapping opens the full
+  // text.
+  title: string;
   text: string;
   date: string; // yyyy-mm-dd, auto-set at creation
   createdAt: string; // ISO timestamp

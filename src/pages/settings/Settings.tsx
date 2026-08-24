@@ -132,7 +132,7 @@ export default function Settings() {
         >
           <div className="flex items-center gap-3">
             <HelpCircle size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">Help → Contact us</span>
+            <span className="text-sm font-medium text-charcoal">Contact us</span>
           </div>
           <ChevronRight size={15} className="text-charcoal-faint" />
         </button>

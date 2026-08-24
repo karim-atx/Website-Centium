@@ -5,9 +5,10 @@ import { Card } from "../../components/ui/Card";
 import { EditableValue } from "../../components/ui/EditableValue";
 import { GoalsEditSheet } from "../../components/profile/GoalsEditSheet";
 import { useApp } from "../../context/AppContext";
+import { mockProfessionals } from "../../data/mockProfessionals";
+import { professionalTypeIcon } from "../../utils/icons";
 import {
   Target,
-  Users,
   HeartPulse,
   Lock,
   Bell,
@@ -18,17 +19,6 @@ import {
   Settings,
   LogOut,
 } from "lucide-react";
-
-const goalLabels: Record<string, string> = {
-  lose_weight: "Lose weight",
-  build_muscle: "Build muscle",
-  get_stronger: "Get stronger",
-  improve_nutrition: "Improve nutrition",
-  improve_fitness: "Improve fitness",
-  improve_health: "Improve overall health",
-  track_health: "Track my health",
-  live_healthier: "Live healthier",
-};
 
 const accountTypeLabel: Record<string, string> = {
   customer: "Customer",
@@ -52,9 +42,10 @@ export default function Profile() {
     navigate("/onboarding");
   };
 
+  const connectedProfessionals = mockProfessionals.filter((p) => p.connected);
+
   const sections = [
     { icon: Target, label: "Goals", onClick: () => setGoalsOpen(true) },
-    { icon: Users, label: "Connected professionals", onClick: () => navigate("/professionals") },
     { icon: HeartPulse, label: "Health data", onClick: () => navigate("/health") },
     { icon: Settings, label: "Settings", onClick: () => navigate("/settings") },
     { icon: Lock, label: "Privacy", onClick: () => navigate("/settings") },
@@ -74,9 +65,6 @@ export default function Profile() {
         </div>
         <div>
           <h2 className="font-display text-xl font-semibold text-charcoal">{user.firstName}</h2>
-          <p className="text-sm text-sohati-dark font-medium">
-            {user.goals.map((g) => goalLabels[g]).join(" · ")}
-          </p>
           <span className="inline-block text-[10px] font-bold text-charcoal-soft bg-cream-soft rounded-full px-2 py-0.5 mt-1">
             {accountTypeLabel[user.accountType]}
             {user.customerSubtype ? ` · ${user.customerSubtype}` : ""}
@@ -113,6 +101,34 @@ export default function Profile() {
           <p className="text-[11px] text-charcoal-faint">years</p>
         </Card>
       </div>
+
+      {connectedProfessionals.length > 0 && (
+        <div className="mb-6 animate-fade-slide-up">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+            Connected professionals
+          </p>
+          <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
+            {connectedProfessionals.map((p) => {
+              const Icon = professionalTypeIcon[p.type];
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => navigate(`/professionals/${p.id}`)}
+                  className="tap shrink-0 flex items-center gap-2.5 bg-cream-card rounded-2xl pl-2.5 pr-4 py-2.5 shadow-soft"
+                >
+                  <span className="w-9 h-9 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
+                    <Icon size={16} className="text-sohati-dark" />
+                  </span>
+                  <div className="text-left">
+                    <p className="text-xs font-semibold text-charcoal whitespace-nowrap">{p.name}</p>
+                    <p className="text-[10px] text-charcoal-faint whitespace-nowrap">{p.specialty}</p>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <Card padded={false} className="divide-y divide-charcoal/[0.04] animate-fade-slide-up">
         {sections.map((s) => (

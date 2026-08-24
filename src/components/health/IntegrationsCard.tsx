@@ -3,43 +3,40 @@ import { Card } from "../ui/Card";
 import { Toggle } from "../ui/Toggle";
 import { Apple, Smartphone } from "lucide-react";
 
-/** Mock Apple Health / Android Health integration — no real API in this
- * prototype, but the toggle + synced-data list model the eventual UI. */
-export const IntegrationsCard: React.FC = () => {
-  const [apple, setApple] = useState(false);
-  const [android, setAndroid] = useState(false);
+// V4: "Integration should be based on the device whether iOS or Android, do
+// not include both" — detect the platform and show only the matching
+// integration instead of offering both toggles side by side.
+function detectPlatform(): "ios" | "android" {
+  if (typeof navigator === "undefined") return "ios";
+  return /android/i.test(navigator.userAgent) ? "android" : "ios";
+}
 
-  const row = (
-    icon: React.ReactNode,
-    label: string,
-    desc: string,
-    on: boolean,
-    setOn: (v: boolean) => void
-  ) => (
-    <div className="flex items-center justify-between py-3">
-      <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
-          {icon}
-        </div>
-        <div>
-          <p className="text-sm font-semibold text-charcoal">{label}</p>
-          <p className="text-[11px] text-charcoal-faint">{desc}</p>
-        </div>
-      </div>
-      <Toggle checked={on} onChange={setOn} label={label} />
-    </div>
-  );
+export const IntegrationsCard: React.FC = () => {
+  const platform = detectPlatform();
+  const [connected, setConnected] = useState(false);
+
+  const isIos = platform === "ios";
 
   return (
     <Card>
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
-        Integrations
+        Integration
       </p>
-      <div className="divide-y divide-charcoal/[0.05]">
-        {row(<Apple size={16} />, "Apple Health", "Syncs steps, sleep, calories, BMI", apple, setApple)}
-        {row(<Smartphone size={16} />, "Android Health", "Syncs steps, body fat, calories", android, setAndroid)}
+      <div className="flex items-center justify-between py-3">
+        <div className="flex items-center gap-3">
+          <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
+            {isIos ? <Apple size={16} /> : <Smartphone size={16} />}
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-charcoal">{isIos ? "Apple Health" : "Android Health"}</p>
+            <p className="text-[11px] text-charcoal-faint">
+              Syncs steps, sleep, calories burned, body fat and BMI
+            </p>
+          </div>
+        </div>
+        <Toggle checked={connected} onChange={setConnected} label={isIos ? "Apple Health" : "Android Health"} />
       </div>
-      {(apple || android) && (
+      {connected && (
         <p className="text-[11px] text-sohati-dark bg-sohati-pale rounded-xl px-3 py-2 mt-2">
           Connected (mock) — real syncing arrives in a future version.
         </p>

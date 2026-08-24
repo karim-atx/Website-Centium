@@ -39,8 +39,12 @@ export const EditableValue: React.FC<EditableValueProps> = ({
   };
 
   if (editing) {
+    // Stacked (input above, checkmark below) and narrower than the old
+    // side-by-side layout so the confirm button always stays inside a
+    // dedicated box, even a narrow one like Profile's 3-across grid —
+    // side-by-side previously overflowed those cards.
     return (
-      <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+      <div className="flex flex-col items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
         <input
           autoFocus
           value={draft}
@@ -51,10 +55,11 @@ export const EditableValue: React.FC<EditableValueProps> = ({
           }}
           inputMode="decimal"
           step={step}
-          className={`w-20 rounded-lg border border-sohati/40 bg-cream-card px-2 py-1 text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20 ${className ?? ""}`}
+          className={`w-16 text-center rounded-lg border border-sohati/40 bg-cream-card px-2 py-1 text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20 ${className ?? ""}`}
         />
         <button
           onClick={commit}
+          aria-label="Confirm"
           className="tap w-7 h-7 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
         >
           <Check size={13} strokeWidth={3} />

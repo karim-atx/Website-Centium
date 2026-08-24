@@ -220,7 +220,9 @@ interface AppState {
 
   journalFolders: JournalFolder[];
   journalEntries: JournalEntry[];
-  addJournalEntry: (folderId: string, text: string) => void;
+  addJournalEntry: (folderId: string, title: string, text: string) => void;
+  updateJournalEntry: (id: string, patch: Partial<Pick<JournalEntry, "title" | "text">>) => void;
+  removeJournalEntry: (id: string) => void;
   addJournalFolder: (name: string) => void;
 
   bloodMarkers: BloodMarker[];
@@ -596,19 +598,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
   };
 
-  const addJournalEntry = (folderId: string, text: string) => {
+  const addJournalEntry = (folderId: string, title: string, text: string) => {
     const now = new Date();
     setJournalEntries((prev) => [
       ...prev,
       {
         id: `j${Date.now()}${Math.random().toString(16).slice(2)}`,
         folderId,
+        title,
         text,
         date: TODAY,
         createdAt: now.toISOString(),
       },
     ]);
   };
+  const updateJournalEntry = (id: string, patch: Partial<Pick<JournalEntry, "title" | "text">>) =>
+    setJournalEntries((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  const removeJournalEntry = (id: string) =>
+    setJournalEntries((prev) => prev.filter((e) => e.id !== id));
   const addJournalFolder = (name: string) =>
     setJournalFolders((prev) => [...prev, { id: `jf${Date.now()}`, name }]);
 
@@ -821,6 +828,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       journalFolders,
       journalEntries,
       addJournalEntry,
+      updateJournalEntry,
+      removeJournalEntry,
       addJournalFolder,
       bloodMarkers,
       recordBiomarkers,
