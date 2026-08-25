@@ -98,11 +98,41 @@ export const workoutPrograms: WorkoutTemplate[] = [
   },
 ];
 
+// V8 (QA 8.0): "Have Previous workouts expandable/collapsible" — each entry
+// now carries its exercise names so expanding actually reveals something.
 export const previousWorkouts = [
-  { id: "pw1", name: "Leg Day", date: "Aug 18", durationMin: 48, exerciseCount: 5 },
-  { id: "pw2", name: "Push Day", date: "Aug 16", durationMin: 55, exerciseCount: 4 },
-  { id: "pw3", name: "Pull Day", date: "Aug 14", durationMin: 50, exerciseCount: 5 },
-  { id: "pw4", name: "Full Body", date: "Aug 12", durationMin: 40, exerciseCount: 6 },
+  {
+    id: "pw1",
+    name: "Leg Day",
+    date: "Aug 18",
+    durationMin: 48,
+    exerciseCount: 5,
+    exercises: ["Back Squat", "Romanian Deadlift", "Leg Press", "Walking Lunges", "Calf Raise"],
+  },
+  {
+    id: "pw2",
+    name: "Push Day",
+    date: "Aug 16",
+    durationMin: 55,
+    exerciseCount: 4,
+    exercises: ["Bench Press", "Overhead Press", "Incline Dumbbell Press", "Tricep Pushdown"],
+  },
+  {
+    id: "pw3",
+    name: "Pull Day",
+    date: "Aug 14",
+    durationMin: 50,
+    exerciseCount: 5,
+    exercises: ["Deadlift", "Pull-Up", "Barbell Row", "Face Pull", "Barbell Curl"],
+  },
+  {
+    id: "pw4",
+    name: "Full Body",
+    date: "Aug 12",
+    durationMin: 40,
+    exerciseCount: 6,
+    exercises: ["Goblet Squat", "Push-Up", "Dumbbell Row", "Plank", "Lunges", "Shoulder Press"],
+  },
 ];
 
 export const workoutCategories = [

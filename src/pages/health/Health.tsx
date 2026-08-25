@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
-import { BiomarkerHistoryChart } from "../../components/health/BiomarkerHistoryChart";
 import { StepsPeriodCard } from "../../components/health/StepsPeriodCard";
 import { BiomarkerCaptureFlow } from "../../components/health/BiomarkerCaptureFlow";
 import { ShareBiomarkerSheet } from "../../components/health/ShareBiomarkerSheet";
+import { BiomarkerDetailSheet } from "../../components/health/BiomarkerDetailSheet";
 import { MetricDetailSheet } from "../../components/health/MetricDetailSheet";
 import { WaterDetailSheet } from "../../components/health/WaterDetailSheet";
 import { healthMetrics } from "../../data/mockHealthData";
 import { useApp } from "../../context/AppContext";
-import { ArrowDown, ArrowUp, Droplet, Flame, ChevronDown, Camera, Share2, Lock } from "lucide-react";
+import { ArrowDown, ArrowUp, Droplet, Flame, Camera, Share2, Lock } from "lucide-react";
 import clsx from "clsx";
 import type { BloodMarker, HealthMetric } from "../../types";
 
@@ -23,11 +24,11 @@ const statusColor: Record<string, string> = {
 };
 
 export default function Health() {
-  const { water, waterGoalMl, metricValues, bloodMarkers, updateMetricValue } = useApp();
+  const { water, waterGoalMl, metricValues, bloodMarkers, stepsGoal, setStepsGoal } = useApp();
   const [waterOpen, setWaterOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [shareMarker, setShareMarker] = useState<BloodMarker | null>(null);
+  const [detailMarker, setDetailMarker] = useState<BloodMarker | null>(null);
   const [shareAllOpen, setShareAllOpen] = useState(false);
   const [detailMetric, setDetailMetric] = useState<{ metric: HealthMetric; current: number } | null>(null);
 
@@ -51,6 +52,27 @@ export default function Health() {
       : { label: "Obese", color: "#C0392B" };
 
   const openDetail = (metric: HealthMetric, current: number) => setDetailMetric({ metric, current });
+
+  // V8 (QA 8.0): "the widget directory for weight, steps and sleep should
+  // redirect you to the detailed version" — Home links here with the
+  // target metric in nav state so it opens straight into that sheet.
+  const location = useLocation();
+  const navigate = useNavigate();
+  useEffect(() => {
+    const openMetric = (location.state as { openMetric?: string } | null)?.openMetric;
+    if (!openMetric) return;
+    const currentByType: Record<string, number> = {
+      weight: metricValues.weight,
+      steps: metricValues.steps,
+      sleep: metricValues.sleepHours,
+    };
+    const meta = healthMetrics.find((m) => m.type === openMetric);
+    if (meta && currentByType[openMetric] !== undefined) {
+      openDetail(meta, currentByType[openMetric]);
+    }
+    navigate(".", { replace: true, state: null });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.state]);
 
   return (
     <div>
@@ -92,22 +114,22 @@ export default function Health() {
             <ArrowDown size={10} /> 0.4% this week
           </span>
         </Card>
-        <Card className="col-span-2 flex items-center justify-between">
-          <div>
-            <p className="text-xs font-semibold text-charcoal-soft mb-1">BMI</p>
-            <div className="flex items-center gap-2">
-              <p className="text-xl font-bold text-charcoal">{bmi}</p>
-              <span
-                className="text-[10px] font-bold uppercase rounded-full px-2 py-0.5"
-                style={{ color: bmiCategory.color, background: `${bmiCategory.color}20` }}
-              >
-                {bmiCategory.label}
-              </span>
-            </div>
-          </div>
-          <span className="text-xs text-charcoal-faint max-w-[45%] text-right">
-            Body Mass Index — a general prototype estimate, not a diagnosis.
+        {/* V8 (QA 8.0): "Have the result of the BMI be more central and
+            slightly bigger" — the number is now the centered focal point
+            of the card instead of sharing a left/right split with the
+            disclaimer text. */}
+        <Card className="col-span-2 text-center">
+          <p className="text-xs font-semibold text-charcoal-soft mb-2">BMI</p>
+          <p className="text-3xl font-bold text-charcoal leading-none mb-2">{bmi}</p>
+          <span
+            className="inline-block text-[10px] font-bold uppercase rounded-full px-2.5 py-1 mb-3"
+            style={{ color: bmiCategory.color, background: `${bmiCategory.color}20` }}
+          >
+            {bmiCategory.label}
           </span>
+          <p className="text-xs text-charcoal-faint">
+            Body Mass Index — a general prototype estimate, not a diagnosis.
+          </p>
         </Card>
       </div>
 
@@ -173,9 +195,17 @@ export default function Health() {
           </button>
         </div>
       </div>
-      <Card padded={false} className="mb-3 divide-y divide-charcoal/[0.04]">
+      {/* V8 (QA 8.0): "instead having a list of all the saved biomarkers so
+          far. When pressing on the selected biomarker, it shows you a
+          graph of the history" — replaces the old "View History" toggle
+          that expanded every marker's chart at once. */}
+      <Card padded={false} className="mb-6 divide-y divide-charcoal/[0.04]">
         {bloodMarkers.map((m) => (
-          <div key={m.id} className="flex items-center justify-between px-4 py-3.5">
+          <button
+            key={m.id}
+            onClick={() => setDetailMarker(m)}
+            className="tap w-full flex items-center justify-between px-4 py-3.5 text-left"
+          >
             <div>
               <p className="text-sm font-semibold text-charcoal">{m.name}</p>
               <p className="text-[11px] text-charcoal-faint">Range: {m.range} {m.unit}</p>
@@ -190,67 +220,19 @@ export default function Health() {
                 </span>
               </div>
               <button
-                onClick={() => setShareMarker(m)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShareMarker(m);
+                }}
                 className="tap w-7 h-7 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-faint shrink-0"
                 aria-label={`Share ${m.name}`}
               >
                 <Share2 size={12} />
               </button>
             </div>
-          </div>
+          </button>
         ))}
       </Card>
-
-      <button
-        onClick={() => setHistoryOpen((v) => !v)}
-        className="tap w-full flex items-center justify-center gap-1.5 text-sm font-semibold text-sohati py-2 mb-6"
-      >
-        View History <ChevronDown size={15} className={clsx("transition-transform", historyOpen && "rotate-180")} />
-      </button>
-
-      {historyOpen && (
-        <div className="space-y-3 mb-6 animate-fade-slide-up">
-          {bloodMarkers.map((m) => {
-            // Color-coded by direction relative to whether "up" is good for
-            // this marker: stable (flat) is neutral, movement toward normal
-            // is green, movement away from normal (or already abnormal and
-            // moving further) is red. Uses explicit green/red, independent
-            // of the brand purple/sage tokens, so the meaning stays clear.
-            const last = m.history[m.history.length - 1]?.value ?? 0;
-            const prev = m.history[m.history.length - 2]?.value ?? last;
-            const delta = last - prev;
-            const GOOD = "#3F9165";
-            const BAD = "#C0392B";
-            const NEUTRAL = "#8B8378";
-            const trendColor =
-              delta === 0
-                ? NEUTRAL
-                : m.status === "high"
-                ? delta > 0
-                  ? BAD
-                  : GOOD
-                : m.status === "low"
-                ? delta < 0
-                  ? BAD
-                  : GOOD
-                : GOOD;
-            const trendLabel = delta === 0 ? "Stable" : delta > 0 ? "↑ Increasing" : "↓ Decreasing";
-            return (
-              <Card key={m.id}>
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-semibold text-charcoal-soft">{m.name}</p>
-                  <span className="text-[10px] font-bold" style={{ color: trendColor }}>
-                    {trendLabel}
-                  </span>
-                </div>
-                <div className="overflow-x-auto no-scrollbar">
-                  <BiomarkerHistoryChart history={m.history} unit={m.unit} color={trendColor} />
-                </div>
-              </Card>
-            );
-          })}
-        </div>
-      )}
 
       <p className="text-[11px] text-charcoal-faint text-center mb-4 flex items-center justify-center gap-1">
         <Flame size={11} /> This is health-data tracking, not a diagnosis. Always consult a professional.
@@ -270,8 +252,10 @@ export default function Health() {
         onClose={() => setDetailMetric(null)}
         metric={detailMetric?.metric ?? null}
         current={detailMetric?.current ?? 0}
-        onEditSteps={(v) => updateMetricValue("steps", v)}
+        stepsGoal={stepsGoal}
+        onEditStepsGoal={setStepsGoal}
       />
+      <BiomarkerDetailSheet open={!!detailMarker} onClose={() => setDetailMarker(null)} marker={detailMarker} />
     </div>
   );
 }

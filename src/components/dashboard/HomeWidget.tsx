@@ -18,7 +18,8 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
   onWaterClick,
 }) => {
   const navigate = useNavigate();
-  const { metricValues, water, waterGoalMl, foodLog, nutritionGoal, workoutLog, habits, journalEntries } = useApp();
+  const { metricValues, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries } =
+    useApp();
   const isLarge = widget.size === "large";
 
   const stepsMeta = healthMetrics.find((m) => m.type === "steps")!;
@@ -54,7 +55,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
 
   switch (widget.type) {
     case "steps": {
-      const onClick = () => navigate("/health");
+      const onClick = () => navigate("/health", { state: { openMetric: "steps" } });
       if (!isLarge) {
         return wrap(
           onClick,
@@ -72,9 +73,9 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
           {header("Steps", <Footprints size={15} className="text-sky" />)}
           <p className="text-3xl font-bold text-charcoal leading-none mb-1">
             {metricValues.steps.toLocaleString()}{" "}
-            <span className="text-sm font-normal text-charcoal-faint">/ 10,000</span>
+            <span className="text-sm font-normal text-charcoal-faint">/ {stepsGoal.toLocaleString()}</span>
           </p>
-          <ProgressBar progress={metricValues.steps / 10000} color="#4C8FD1" height={6} />
+          <ProgressBar progress={metricValues.steps / stepsGoal} color="#4C8FD1" height={6} />
           <div className="flex justify-between mt-2.5 text-xs text-charcoal-faint">
             <span>Weekly avg: {weeklyStepsAvg.toLocaleString()}</span>
             <span className="text-sohati-dark font-semibold">↑ 6%</span>
@@ -84,7 +85,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
     }
 
     case "weight": {
-      const onClick = () => navigate("/health");
+      const onClick = () => navigate("/health", { state: { openMetric: "weight" } });
       if (!isLarge) {
         return wrap(
           onClick,
@@ -94,15 +95,41 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
           </div>
         );
       }
+      // V8 (QA 8.0): "should show on the right side the desired weight, the
+      // desired weekly rate, and the date of achieving this weight if
+      // chosen — if not chosen leave empty for now."
+      const hasGoal = nutritionGoal.weightGoal !== "maintain" && nutritionGoal.desiredWeightConfirmed && nutritionGoal.desiredWeightKg;
+      let reachDate: string | null = null;
+      if (hasGoal) {
+        const rate = nutritionGoal.weeklyRateKg || 0.5;
+        const weeksToGoal = rate > 0 ? Math.abs(nutritionGoal.desiredWeightKg! - metricValues.weight) / rate : 0;
+        if (weeksToGoal > 0) {
+          const reachDateObj = new Date(Date.UTC(2026, 7, 20) + weeksToGoal * 7 * 86400000);
+          reachDate = reachDateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+        }
+      }
       return wrap(
         onClick,
-        <div>
-          {header("Weight", <Scale size={15} className="text-sohati" />)}
-          <p className="text-3xl font-bold text-charcoal leading-none mb-1.5">{metricValues.weight} kg</p>
-          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5 mb-2">
-            <ArrowDown size={10} /> 0.6 kg this week
-          </span>
-          <p className="text-xs text-charcoal-faint">Weekly trend: {weeklyTrendPct}%</p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            {header("Weight", <Scale size={15} className="text-sohati" />)}
+            <p className="text-3xl font-bold text-charcoal leading-none mb-1.5">{metricValues.weight} kg</p>
+            <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5 mb-2">
+              <ArrowDown size={10} /> 0.6 kg this week
+            </span>
+            <p className="text-xs text-charcoal-faint">Weekly trend: {weeklyTrendPct}%</p>
+          </div>
+          {hasGoal && (
+            <div className="text-right shrink-0">
+              <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">Goal</p>
+              <p className="text-sm font-bold text-charcoal">{nutritionGoal.desiredWeightKg} kg</p>
+              <p className="text-[11px] text-charcoal-faint">
+                {nutritionGoal.weightGoal === "gain" ? "+" : "-"}
+                {(nutritionGoal.weeklyRateKg || 0.5).toFixed(1)} kg/wk
+              </p>
+              {reachDate && <p className="text-[11px] text-charcoal-faint mt-0.5">by {reachDate}</p>}
+            </div>
+          )}
         </div>
       );
     }
@@ -141,7 +168,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
     }
 
     case "sleep": {
-      const onClick = () => navigate("/health");
+      const onClick = () => navigate("/health", { state: { openMetric: "sleep" } });
       if (!isLarge) {
         return wrap(
           onClick,
@@ -191,35 +218,40 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
           </div>
         );
       }
+      // V8 (QA 8.0): horizontal bars per macro, color-coordinated with the
+      // ring's own segments, showing grams left (target minus consumed).
+      const macroRows: { label: string; color: string; consumed: number; target: number }[] = [
+        { label: "Protein", color: "#7D6BB5", consumed: totals.protein, target: targets.protein },
+        { label: "Carbs", color: "#D9A441", consumed: totals.carbs, target: targets.carbs },
+        { label: "Fat", color: "#6F9993", consumed: totals.fat, target: targets.fat },
+      ];
       return wrap(
         onClick,
-        <div className="flex items-center gap-4">
-          <MacroRing progress={kcalProgress} protein={totals.protein} carbs={totals.carbs} fat={totals.fat} size={72} strokeWidth={8}>
-            <div className="text-center">
-              <p className="text-base font-bold text-charcoal leading-none">{Math.round(totals.calories)}</p>
-              <p className="text-[9px] text-charcoal-faint">of {targets.calories}</p>
-            </div>
-          </MacroRing>
-          <div className="flex-1 space-y-1.5">
-            {header("Nutrition", <Utensils size={15} className="text-sohati" />)}
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className="text-charcoal-soft">Protein</span>
-              <span className="font-semibold" style={{ color: "#7D6BB5" }}>
-                {Math.round(totals.protein)}/{targets.protein}g
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className="text-charcoal-soft">Carbs</span>
-              <span className="font-semibold" style={{ color: "#D9A441" }}>
-                {Math.round(totals.carbs)}/{targets.carbs}g
-              </span>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs">
-              <span className="text-charcoal-soft">Fat</span>
-              <span className="font-semibold" style={{ color: "#6F9993" }}>
-                {Math.round(totals.fat)}/{targets.fat}g
-              </span>
-            </div>
+        <div>
+          <div className="flex items-center gap-4 mb-3">
+            <MacroRing progress={kcalProgress} protein={totals.protein} carbs={totals.carbs} fat={totals.fat} size={72} strokeWidth={8}>
+              <div className="text-center">
+                <p className="text-base font-bold text-charcoal leading-none">{Math.round(totals.calories)}</p>
+                <p className="text-[9px] text-charcoal-faint">of {targets.calories}</p>
+              </div>
+            </MacroRing>
+            <div className="flex-1">{header("Nutrition", <Utensils size={15} className="text-sohati" />)}</div>
+          </div>
+          <div className="space-y-2">
+            {macroRows.map((m) => {
+              const left = Math.max(0, Math.round(m.target - m.consumed));
+              return (
+                <div key={m.label}>
+                  <div className="flex items-center justify-between text-xs mb-1">
+                    <span className="text-charcoal-soft">{m.label}</span>
+                    <span className="font-semibold" style={{ color: m.color }}>
+                      {left}g left
+                    </span>
+                  </div>
+                  <ProgressBar progress={m.consumed / (m.target || 1)} color={m.color} height={6} />
+                </div>
+              );
+            })}
           </div>
         </div>
       );

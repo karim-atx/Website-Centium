@@ -1,4 +1,4 @@
-import { Home, UtensilsCrossed, Dumbbell, HeartPulse, MoreHorizontal, Sparkles, Users, Store, User as UserIcon, CalendarDays, ClipboardList, MessageCircle, BarChart3, Tag } from "lucide-react";
+import { Home, UtensilsCrossed, Dumbbell, HeartPulse, MoreHorizontal, Sparkles, Users, Store, User as UserIcon, CalendarDays, ClipboardList, MessageCircle, BarChart3, Tag, Building2 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface NavItem {
@@ -77,5 +77,6 @@ export const businessSidebarNavItems: NavItem[] = [
   { to: "/business/messages", label: "Messages", icon: MessageCircle },
   { to: "/business/employees", label: "Employees", icon: Users },
   { to: "/business/classes", label: "Classes", icon: CalendarDays },
+  { to: "/business/profile", label: "Business Profile", icon: Building2 },
   { to: "/profile", label: "Profile", icon: UserIcon },
 ];

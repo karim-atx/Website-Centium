@@ -6,6 +6,7 @@ import { exerciseLibrary } from "../../data/mockWorkouts";
 import type { MuscleGroup, ExerciseClassification } from "../../types";
 import { List, User, Search, RotateCw } from "lucide-react";
 import clsx from "clsx";
+import { CreateCustomExerciseSheet, type CustomExerciseData } from "../../components/workout/CreateCustomExerciseSheet";
 
 type ViewMode = "list" | "body";
 type SortMode = "alphabetical" | "muscleGroup" | "classification";
@@ -50,36 +51,34 @@ const classificationLabel: Record<ExerciseClassification, string> = {
 const frontZones: MuscleGroup[] = ["shoulders", "chest", "bicep", "core", "quads"];
 const backZones: MuscleGroup[] = ["shoulders", "back", "tricep", "hamstrings"];
 
-interface BodyZoneRect {
-  group: MuscleGroup;
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  rx: number;
-}
+// V8 (QA 8.0): "replace the stick figure with a more detailed anatomical
+// model" — tap zones are now body-shaped paths (tapered limbs, a rounded
+// torso) layered over a matching silhouette, instead of plain rectangles.
+type BodyZone =
+  | { group: MuscleGroup; shape: "rect"; x: number; y: number; w: number; h: number; rx: number }
+  | { group: MuscleGroup; shape: "path"; d: string };
 
-const frontZoneRects: BodyZoneRect[] = [
-  { group: "shoulders", x: 35, y: 62, w: 90, h: 18, rx: 9 },
-  { group: "chest", x: 52, y: 78, w: 56, h: 38, rx: 10 },
-  { group: "core", x: 58, y: 118, w: 44, h: 46, rx: 8 },
-  { group: "bicep", x: 18, y: 82, w: 16, h: 50, rx: 8 },
-  { group: "bicep", x: 126, y: 82, w: 16, h: 50, rx: 8 },
-  { group: "quads", x: 55, y: 168, w: 22, h: 80, rx: 10 },
-  { group: "quads", x: 83, y: 168, w: 22, h: 80, rx: 10 },
+const frontZoneRects: BodyZone[] = [
+  { group: "shoulders", shape: "rect", x: 35, y: 62, w: 90, h: 18, rx: 9 },
+  { group: "chest", shape: "path", d: "M52 78 Q80 70 108 78 L106 112 Q80 122 54 112 Z" },
+  { group: "core", shape: "path", d: "M58 116 Q80 122 102 116 L98 160 Q80 168 62 160 Z" },
+  { group: "bicep", shape: "path", d: "M18 82 Q16 100 18 118 Q22 130 30 132 L34 84 Z" },
+  { group: "bicep", shape: "path", d: "M142 82 Q144 100 142 118 Q138 130 130 132 L126 84 Z" },
+  { group: "quads", shape: "path", d: "M56 166 Q66 172 76 166 L74 246 L58 246 Z" },
+  { group: "quads", shape: "path", d: "M104 166 Q94 172 84 166 L86 246 L102 246 Z" },
 ];
 
-const backZoneRects: BodyZoneRect[] = [
-  { group: "shoulders", x: 35, y: 62, w: 90, h: 18, rx: 9 },
-  { group: "back", x: 52, y: 78, w: 56, h: 86, rx: 10 },
-  { group: "tricep", x: 18, y: 82, w: 16, h: 50, rx: 8 },
-  { group: "tricep", x: 126, y: 82, w: 16, h: 50, rx: 8 },
-  { group: "hamstrings", x: 55, y: 168, w: 22, h: 80, rx: 10 },
-  { group: "hamstrings", x: 83, y: 168, w: 22, h: 80, rx: 10 },
+const backZoneRects: BodyZone[] = [
+  { group: "shoulders", shape: "rect", x: 35, y: 62, w: 90, h: 18, rx: 9 },
+  { group: "back", shape: "path", d: "M52 78 Q80 70 108 78 L106 112 L102 160 Q80 168 58 160 L54 112 Z" },
+  { group: "tricep", shape: "path", d: "M18 82 Q16 100 18 118 Q22 130 30 132 L34 84 Z" },
+  { group: "tricep", shape: "path", d: "M142 82 Q144 100 142 118 Q138 130 130 132 L126 84 Z" },
+  { group: "hamstrings", shape: "path", d: "M56 166 Q66 172 76 166 L74 246 L58 246 Z" },
+  { group: "hamstrings", shape: "path", d: "M104 166 Q94 172 84 166 L86 246 L102 246 Z" },
 ];
 
 export default function ExerciseDatabaseTab() {
-  const { customExercises } = useApp();
+  const { customExercises, addCustomExercise, updateCustomExercise } = useApp();
   const [view, setView] = useState<ViewMode>("list");
   const [sort, setSort] = useState<SortMode>("alphabetical");
   const [query, setQuery] = useState("");
@@ -87,6 +86,10 @@ export default function ExerciseDatabaseTab() {
   const [hoveredGroup, setHoveredGroup] = useState<MuscleGroup | null>(null);
   const [bodySide, setBodySide] = useState<"front" | "back">("front");
   const bodyZones = bodySide === "front" ? frontZones : backZones;
+  // V8 (QA 8.0): "ability to edit each exercise if pressed on in the
+  // library" — a custom exercise is edited in place; a stock library
+  // exercise is saved as a new custom one instead of mutating shared data.
+  const [editingExercise, setEditingExercise] = useState<DbExercise | null>(null);
 
   const all: DbExercise[] = useMemo(() => {
     const library = exerciseLibrary.map((e) => ({
@@ -203,15 +206,14 @@ export default function ExerciseDatabaseTab() {
                 )}
                 <Card padded={false} className="divide-y divide-charcoal/[0.04]">
                   {g.items.map((e) => (
-                    <div key={e.name} className="flex items-center justify-between px-4 py-3">
+                    <button
+                      key={e.name}
+                      onClick={() => setEditingExercise(e)}
+                      className="tap w-full flex items-center justify-between px-4 py-3 text-left"
+                    >
                       <span className="text-sm font-medium text-charcoal">{e.name}</span>
-                      <span className="text-[10px] font-semibold text-charcoal-faint">
-                        {e.muscleGroups
-                          .filter((mg) => mg !== "other")
-                          .map((mg) => muscleGroupLabel[mg])
-                          .join(", ")}
-                      </span>
-                    </div>
+                      {e.isCustom && <span className="text-[10px] font-semibold text-gold shrink-0">Custom</span>}
+                    </button>
                   ))}
                 </Card>
               </div>
@@ -230,26 +232,42 @@ export default function ExerciseDatabaseTab() {
           </p>
           <div className="flex justify-center mb-3">
             <svg viewBox="0 0 160 320" width={180} height={360}>
-              <circle cx="80" cy="28" r="20" fill="#E4DEF5" />
-              <rect x="60" y="50" width="40" height="14" rx="6" fill="#E4DEF5" />
-              {(bodySide === "front" ? frontZoneRects : backZoneRects).map((z, i) => (
-                <rect
-                  key={`${z.group}-${i}`}
-                  x={z.x}
-                  y={z.y}
-                  width={z.w}
-                  height={z.h}
-                  rx={z.rx}
-                  fill={zoneFill(z.group)}
-                  className="cursor-pointer"
-                  onMouseEnter={() => setHoveredGroup(z.group)}
-                  onMouseLeave={() => setHoveredGroup(null)}
-                  onClick={() => setSelectedGroup(selectedGroup === z.group ? null : z.group)}
-                />
-              ))}
-              {/* lower legs, decorative only */}
-              <rect x="57" y="250" width="18" height="60" rx="8" fill="#EDEAF7" />
-              <rect x="85" y="250" width="18" height="60" rx="8" fill="#EDEAF7" />
+              {/* decorative silhouette base, same for both sides */}
+              <circle cx="80" cy="26" r="18" fill="#EDEAF7" />
+              <rect x="72" y="41" width="16" height="14" rx="5" fill="#EDEAF7" />
+              <path d="M40 66 Q80 52 120 66 L124 108 Q80 120 36 108 Z" fill="#EDEAF7" />
+              <path d="M56 104 Q80 112 104 104 L100 152 Q80 160 60 152 Z" fill="#EDEAF7" />
+              <path d="M22 70 Q16 100 20 132 L34 130 Q32 98 36 72 Z" fill="#EDEAF7" />
+              <path d="M138 70 Q144 100 140 132 L126 130 Q128 98 124 72 Z" fill="#EDEAF7" />
+              <path d="M58 150 Q80 158 102 150 L98 250 L84 250 L80 180 L76 250 L62 250 Z" fill="#EDEAF7" />
+
+              {(bodySide === "front" ? frontZoneRects : backZoneRects).map((z, i) =>
+                z.shape === "rect" ? (
+                  <rect
+                    key={`${z.group}-${i}`}
+                    x={z.x}
+                    y={z.y}
+                    width={z.w}
+                    height={z.h}
+                    rx={z.rx}
+                    fill={zoneFill(z.group)}
+                    className="cursor-pointer"
+                    onMouseEnter={() => setHoveredGroup(z.group)}
+                    onMouseLeave={() => setHoveredGroup(null)}
+                    onClick={() => setSelectedGroup(selectedGroup === z.group ? null : z.group)}
+                  />
+                ) : (
+                  <path
+                    key={`${z.group}-${i}`}
+                    d={z.d}
+                    fill={zoneFill(z.group)}
+                    className="cursor-pointer"
+                    onMouseEnter={() => setHoveredGroup(z.group)}
+                    onMouseLeave={() => setHoveredGroup(null)}
+                    onClick={() => setSelectedGroup(selectedGroup === z.group ? null : z.group)}
+                  />
+                )
+              )}
             </svg>
           </div>
 
@@ -296,10 +314,14 @@ export default function ExerciseDatabaseTab() {
                   <p className="text-sm text-charcoal-faint text-center py-6">No exercises for this group.</p>
                 ) : (
                   filteredByGroup.map((e) => (
-                    <div key={e.name} className="flex items-center justify-between px-4 py-3">
+                    <button
+                      key={e.name}
+                      onClick={() => setEditingExercise(e)}
+                      className="tap w-full flex items-center justify-between px-4 py-3 text-left"
+                    >
                       <span className="text-sm font-medium text-charcoal">{e.name}</span>
                       {e.isCustom && <span className="text-[10px] font-semibold text-gold">Custom</span>}
-                    </div>
+                    </button>
                   ))
                 )}
               </Card>
@@ -307,6 +329,21 @@ export default function ExerciseDatabaseTab() {
           )}
         </>
       )}
+
+      <CreateCustomExerciseSheet
+        open={!!editingExercise}
+        onClose={() => setEditingExercise(null)}
+        initial={editingExercise ?? undefined}
+        duplicateFromStock={!!editingExercise && !editingExercise.isCustom}
+        onSave={(data: CustomExerciseData) => {
+          if (!editingExercise) return;
+          if (editingExercise.isCustom) {
+            updateCustomExercise(editingExercise.name, data);
+          } else {
+            addCustomExercise(data);
+          }
+        }}
+      />
     </div>
   );
 }

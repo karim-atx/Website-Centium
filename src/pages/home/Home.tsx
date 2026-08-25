@@ -9,7 +9,7 @@ import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { AIVoiceLogger } from "../../components/food/AIVoiceLogger";
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
-import { ChevronRight, Sparkles, Store } from "lucide-react";
+import { ChevronRight, Sparkles, Store, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { todaysWorkout } from "../../data/mockWorkouts";
 import ProfessionalDashboard from "../professionals/ProfessionalDashboard";
@@ -23,7 +23,7 @@ function getGreeting() {
 }
 
 export default function Home() {
-  const { user, t } = useApp();
+  const { user, t, premiumPlan } = useApp();
   const navigate = useNavigate();
   const [addFoodOpen, setAddFoodOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
@@ -50,8 +50,9 @@ export default function Home() {
     <div>
       <div className="flex items-center justify-between mb-4 animate-fade-slide-up">
         <div>
-          <h1 className="font-display text-2xl sm:text-3xl font-semibold text-charcoal">
+          <h1 className="font-display text-2xl sm:text-3xl font-semibold text-charcoal flex items-center gap-1.5">
             {t(getGreeting())}, {user.firstName}
+            {premiumPlan && <Crown size={16} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
           </h1>
           <p className="text-charcoal-soft text-sm mt-1">{t("Here's your day")}</p>
         </div>

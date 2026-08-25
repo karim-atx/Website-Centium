@@ -140,6 +140,15 @@ body {
   transition-duration: 0.001ms !important;
 }
 
+/* V8 (QA 8.0): "the button should have larger text and icons as well" —
+   Larger text already scales the root font-size; icons are lucide-react
+   SVGs sized in raw px, which font-size scaling doesn't reach, so scale
+   them visually in step. transform leaves layout boxes untouched, which
+   is an acceptable trade-off for this accessibility toggle. */
+.larger-icons svg {
+  transform: scale(1.15);
+}
+
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;

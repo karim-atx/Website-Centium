@@ -4,17 +4,21 @@ import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import type { Goal } from "../../types";
 import clsx from "clsx";
-import { Check } from "lucide-react";
+import { Check, Scale, Dumbbell, TrendingUp, Salad, Activity, HeartPulse, BarChart3, Leaf } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const goals: { value: Goal; label: string; emoji: string }[] = [
-  { value: "lose_weight", label: "Lose weight", emoji: "⚖️" },
-  { value: "build_muscle", label: "Build muscle", emoji: "💪" },
-  { value: "get_stronger", label: "Get stronger", emoji: "🏋️" },
-  { value: "improve_nutrition", label: "Improve my nutrition", emoji: "🥗" },
-  { value: "improve_fitness", label: "Improve my fitness", emoji: "🏃" },
-  { value: "improve_health", label: "Improve my overall health", emoji: "❤️" },
-  { value: "track_health", label: "Track my health", emoji: "📊" },
-  { value: "live_healthier", label: "Live healthier", emoji: "🌿" },
+// V8 (QA 8.0): "Replace the goals emoji with that of the 'what are you
+// working towards?' logos found in the Client UI onboarding" — same icon
+// set as GoalStep.tsx's own list, one-to-one by goal value.
+const goals: { value: Goal; label: string; icon: LucideIcon }[] = [
+  { value: "lose_weight", label: "Lose weight", icon: Scale },
+  { value: "build_muscle", label: "Build muscle", icon: Dumbbell },
+  { value: "get_stronger", label: "Get stronger", icon: TrendingUp },
+  { value: "improve_nutrition", label: "Improve my nutrition", icon: Salad },
+  { value: "improve_fitness", label: "Improve my fitness", icon: Activity },
+  { value: "improve_health", label: "Improve my overall health", icon: HeartPulse },
+  { value: "track_health", label: "Track my health", icon: BarChart3 },
+  { value: "live_healthier", label: "Live healthier", icon: Leaf },
 ];
 
 export const GoalsEditSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
@@ -52,7 +56,7 @@ export const GoalsEditSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                   <Check size={12} className="text-white" strokeWidth={3} />
                 </div>
               )}
-              <span className="text-xl mb-1.5 block">{g.emoji}</span>
+              <g.icon size={22} className={clsx("mb-2", active ? "text-sohati-dark" : "text-charcoal-soft")} />
               <span className="text-xs font-semibold text-charcoal leading-snug block">{g.label}</span>
             </button>
           );

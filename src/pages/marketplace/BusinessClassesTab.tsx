@@ -16,6 +16,7 @@ const blankDraft = (date: string) => ({
   endTime: "10:00",
   maxCapacity: "10",
   professionalId: "",
+  notes: "",
 });
 
 // V7 (QA 7.0): "Classes tab (a professionals-style calendar for creating
@@ -38,6 +39,7 @@ export default function BusinessClassesTab() {
       endTime: draft.endTime,
       maxCapacity: Number(draft.maxCapacity) || 10,
       professionalId: draft.professionalId || undefined,
+      notes: draft.notes.trim() || undefined,
     });
     setDraft(blankDraft(today));
     setComposeOpen(false);
@@ -50,6 +52,7 @@ export default function BusinessClassesTab() {
       <PageHeader
         title="Classes"
         subtitle="Schedule classes run by your affiliated professionals"
+        showBack
         right={
           <button
             onClick={() => setComposeOpen(true)}
@@ -76,6 +79,7 @@ export default function BusinessClassesTab() {
                   <Users size={11} /> Max {c.maxCapacity}
                   {professional ? ` · ${professional.professionalName}` : ""}
                 </p>
+                {c.notes && <p className="text-xs text-charcoal-faint mt-1 italic">{c.notes}</p>}
               </div>
               <button
                 onClick={() => removeBusinessClass(c.id)}
@@ -106,22 +110,21 @@ export default function BusinessClassesTab() {
             />
           </label>
 
-          <div>
-            <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Class type</span>
-            <div className="flex flex-wrap gap-2">
+          <label className="block">
+            {/* V8 (QA 8.0): "class type must be an actual dropdown, not buttons" */}
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Class type</span>
+            <select
+              value={draft.classType}
+              onChange={(e) => setDraft((d) => ({ ...d, classType: e.target.value }))}
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            >
               {classTypeOptions.map((t) => (
-                <button
-                  key={t}
-                  onClick={() => setDraft((d) => ({ ...d, classType: t }))}
-                  className={`tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors ${
-                    draft.classType === t ? "bg-sohati text-white border-sohati" : "bg-cream-soft border-transparent text-charcoal-soft"
-                  }`}
-                >
+                <option key={t} value={t}>
                   {t}
-                </button>
+                </option>
               ))}
-            </div>
-          </div>
+            </select>
+          </label>
 
           <label className="block">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Date</span>
@@ -184,6 +187,17 @@ export default function BusinessClassesTab() {
               </div>
             </div>
           )}
+
+          <label className="block">
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Description / notes</span>
+            <textarea
+              value={draft.notes}
+              onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
+              rows={3}
+              placeholder="Anything the assigned professional should know…"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20 resize-none"
+            />
+          </label>
 
           <Button fullWidth size="lg" onClick={save} disabled={!draft.title.trim()}>
             Save class

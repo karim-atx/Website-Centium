@@ -5,7 +5,7 @@ import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import type { CalendarEvent } from "../../types";
-import { ChevronLeft, ChevronRight, Plus, MapPin, Link2, FileText, Trash2, Repeat, Pencil } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, MapPin, Link2, FileText, Trash2, Repeat, Pencil, Store } from "lucide-react";
 import clsx from "clsx";
 
 // V7 (QA 7.0): Year → Month → Day, Month selected by default.
@@ -62,7 +62,7 @@ const blankDraft = (date: string) => ({
 const HOUR_PX = 56;
 
 export default function CalendarTab() {
-  const { calendarEvents, addCalendarEvent, updateCalendarEvent, removeCalendarEvent, professionalClients } = useApp();
+  const { calendarEvents, addCalendarEvent, updateCalendarEvent, removeCalendarEvent, professionalClients, businessClasses, businessDirectory, user } = useApp();
   const today = new Date();
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
@@ -70,14 +70,39 @@ export default function CalendarTab() {
   const [composeOpen, setComposeOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState(blankDraft(selectedDate));
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  // V8 (QA 8.0): "business-scheduled events involving an affiliated
+  // professional show on BOTH the business's and the professional's
+  // calendars" — classes a business assigned to this professional (via the
+  // "me" stand-in id already used across the affiliation system) are folded
+  // into the same calendar, read-only. The "bc" id prefix (set in
+  // addBusinessClass) is how the rest of this file tells them apart from
+  // events the professional created themselves.
+  const businessCalendarEvents = useMemo<CalendarEvent[]>(() => {
+    const businessName = businessDirectory.find((b) => b.id === user.affiliatedBusinessId)?.businessName;
+    return businessClasses
+      .filter((c) => c.professionalId === "me")
+      .map((c) => ({
+        id: c.id,
+        title: c.title,
+        date: c.date,
+        allDay: false,
+        startTime: c.startTime,
+        endTime: c.endTime,
+        repeat: "none" as const,
+        notes: `Scheduled by ${businessName ?? "your affiliated business"}${c.notes ? ` — ${c.notes}` : ""}`,
+        color: "#D9A441",
+      }));
+  }, [businessClasses, businessDirectory, user.affiliatedBusinessId]);
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
-    calendarEvents.forEach((e) => {
+    [...calendarEvents, ...businessCalendarEvents].forEach((e) => {
       (map[e.date] ??= []).push(e);
     });
     return map;
-  }, [calendarEvents]);
+  }, [calendarEvents, businessCalendarEvents]);
 
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
   const firstWeekday = new Date(cursor.year, cursor.month, 1).getDay();
@@ -102,11 +127,13 @@ export default function CalendarTab() {
   const openCompose = () => {
     setEditingId(null);
     setDraft(blankDraft(selectedDate));
+    setConfirmDelete(false);
     setComposeOpen(true);
   };
 
   const openEdit = (e: CalendarEvent) => {
     setEditingId(e.id);
+    setConfirmDelete(false);
     setDraft({
       title: e.title,
       date: e.date,
@@ -123,12 +150,6 @@ export default function CalendarTab() {
     });
     setComposeOpen(true);
   };
-
-  const toggleInvitee = (id: string) =>
-    setDraft((d) => ({
-      ...d,
-      inviteeIds: d.inviteeIds.includes(id) ? d.inviteeIds.filter((i) => i !== id) : [...d.inviteeIds, id],
-    }));
 
   const saveEvent = () => {
     if (!draft.title.trim()) return;
@@ -179,43 +200,60 @@ export default function CalendarTab() {
   const timedEvents = selectedEvents.filter((e) => !e.allDay);
   const allDayEvents = selectedEvents.filter((e) => e.allDay);
 
-  const eventCard = (e: CalendarEvent) => (
-    <Card key={e.id} className="flex items-start justify-between gap-3" style={{ borderLeft: `4px solid ${e.color ?? "#7D6BB5"}` }}>
-      <button className="min-w-0 text-left flex-1" onClick={() => openEdit(e)}>
-        <p className="text-sm font-semibold text-charcoal">{e.title}</p>
-        <p className="text-xs text-charcoal-faint">
-          {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
-          {e.repeat !== "none" && ` · repeats ${e.repeat}`}
-        </p>
-        {e.location && (
-          <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
-            <MapPin size={11} /> {e.location}
+  // V8 (QA 8.0): business-scheduled classes ride along in the same calendar
+  // (see businessCalendarEvents above) but aren't this professional's to
+  // edit or delete — the "bc" id prefix set in addBusinessClass is how they're
+  // told apart from events the professional created themselves.
+  const isFromBusiness = (e: CalendarEvent) => e.id.startsWith("bc");
+
+  const eventCard = (e: CalendarEvent) => {
+    const readOnly = isFromBusiness(e);
+    return (
+      <Card key={e.id} className="flex items-start justify-between gap-3" style={{ borderLeft: `4px solid ${e.color ?? "#7D6BB5"}` }}>
+        <button className="min-w-0 text-left flex-1" onClick={() => !readOnly && openEdit(e)} disabled={readOnly}>
+          <p className="text-sm font-semibold text-charcoal">{e.title}</p>
+          <p className="text-xs text-charcoal-faint">
+            {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
+            {e.repeat !== "none" && ` · repeats ${e.repeat}`}
           </p>
-        )}
-        {e.invitees && e.invitees.length > 0 && (
-          <p className="text-xs text-charcoal-faint mt-1">With {e.invitees.join(", ")}</p>
-        )}
-        {e.url && (
-          <p className="flex items-center gap-1 text-xs text-sohati mt-1 truncate">
-            <Link2 size={11} /> {e.url}
-          </p>
-        )}
-        {e.notes && (
-          <p className="flex items-start gap-1 text-xs text-charcoal-faint mt-1">
-            <FileText size={11} className="mt-0.5 shrink-0" /> {e.notes}
-          </p>
-        )}
-      </button>
-      <div className="flex items-center gap-2 shrink-0">
-        <button onClick={() => openEdit(e)} aria-label={`Edit ${e.title}`} className="tap text-charcoal-faint">
-          <Pencil size={14} />
+          {e.location && (
+            <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
+              <MapPin size={11} /> {e.location}
+            </p>
+          )}
+          {e.invitees && e.invitees.length > 0 && (
+            <p className="text-xs text-charcoal-faint mt-1">With {e.invitees.join(", ")}</p>
+          )}
+          {e.url && (
+            <p className="flex items-center gap-1 text-xs text-sohati mt-1 truncate">
+              <Link2 size={11} /> {e.url}
+            </p>
+          )}
+          {e.notes && (
+            <p className="flex items-start gap-1 text-xs text-charcoal-faint mt-1">
+              <FileText size={11} className="mt-0.5 shrink-0" /> {e.notes}
+            </p>
+          )}
         </button>
-        <button onClick={() => removeCalendarEvent(e.id)} aria-label={`Delete ${e.title}`} className="tap text-charcoal-faint">
-          <Trash2 size={14} />
-        </button>
-      </div>
-    </Card>
-  );
+        <div className="flex items-center gap-2 shrink-0">
+          {readOnly ? (
+            <span className="flex items-center gap-1 text-[10px] font-semibold text-charcoal-faint" aria-label="From your affiliated business">
+              <Store size={12} />
+            </span>
+          ) : (
+            <>
+              <button onClick={() => openEdit(e)} aria-label={`Edit ${e.title}`} className="tap text-charcoal-faint">
+                <Pencil size={14} />
+              </button>
+              <button onClick={() => removeCalendarEvent(e.id)} aria-label={`Delete ${e.title}`} className="tap text-charcoal-faint">
+                <Trash2 size={14} />
+              </button>
+            </>
+          )}
+        </div>
+      </Card>
+    );
+  };
 
   return (
     <div>
@@ -347,54 +385,49 @@ export default function CalendarTab() {
             </div>
           )}
 
-          {timedEvents.length === 0 ? (
-            <Card className="text-center py-6">
-              <p className="text-sm text-charcoal-faint">No timed events this day.</p>
-            </Card>
-          ) : (
-            <div className="relative" style={{ height: HOUR_PX * 24 }}>
-              {Array.from({ length: 24 }, (_, h) => (
-                <div
-                  key={h}
-                  className="absolute left-0 right-0 border-t border-charcoal/[0.06] flex items-start"
-                  style={{ top: h * HOUR_PX }}
-                >
-                  <span className="text-[9px] text-charcoal-faint -mt-1.5 pr-1.5 w-9 text-right shrink-0">
-                    {h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`}
-                  </span>
-                </div>
-              ))}
-              <div className="absolute left-10 right-0 top-0 bottom-0">
-                {timedEvents.map((e) => {
-                  const start = minutesOf(e.startTime);
-                  const end = Math.max(minutesOf(e.endTime), start + 20);
-                  const top = (start / 60) * HOUR_PX;
-                  const height = Math.max(((end - start) / 60) * HOUR_PX, 26);
-                  return (
-                    <button
-                      key={e.id}
-                      onClick={() => openEdit(e)}
-                      className="tap absolute left-0 right-1 rounded-xl px-2.5 py-1.5 text-left overflow-hidden shadow-soft"
-                      style={{ top, height, background: `${e.color ?? "#7D6BB5"}22`, borderLeft: `3px solid ${e.color ?? "#7D6BB5"}` }}
-                    >
-                      <p className="text-xs font-semibold text-charcoal truncate">{e.title}</p>
-                      <p className="text-[10px] text-charcoal-faint truncate">
-                        {e.startTime} – {e.endTime}
-                        {e.location ? ` · ${e.location}` : ""}
-                      </p>
-                    </button>
-                  );
-                })}
+          {/* V8 (QA 8.0): "the 12am-11pm hour-row list in Day view always
+              renders regardless of whether any events exist that day" —
+              the hour grid is no longer hidden behind an events-only check. */}
+          <div className="relative" style={{ height: HOUR_PX * 24 }}>
+            {Array.from({ length: 24 }, (_, h) => (
+              <div
+                key={h}
+                className="absolute left-0 right-0 border-t border-charcoal/[0.06] flex items-start"
+                style={{ top: h * HOUR_PX }}
+              >
+                <span className="text-[9px] text-charcoal-faint -mt-1.5 pr-1.5 w-9 text-right shrink-0">
+                  {h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`}
+                </span>
               </div>
+            ))}
+            <div className="absolute left-10 right-0 top-0 bottom-0">
+              {timedEvents.map((e) => {
+                const start = minutesOf(e.startTime);
+                const end = Math.max(minutesOf(e.endTime), start + 20);
+                const top = (start / 60) * HOUR_PX;
+                const height = Math.max(((end - start) / 60) * HOUR_PX, 26);
+                const readOnly = isFromBusiness(e);
+                return (
+                  <button
+                    key={e.id}
+                    onClick={() => !readOnly && openEdit(e)}
+                    disabled={readOnly}
+                    className="tap absolute left-0 right-1 rounded-xl px-2.5 py-1.5 text-left overflow-hidden shadow-soft"
+                    style={{ top, height, background: `${e.color ?? "#7D6BB5"}22`, borderLeft: `3px solid ${e.color ?? "#7D6BB5"}` }}
+                  >
+                    <p className="text-xs font-semibold text-charcoal truncate flex items-center gap-1">
+                      {e.title}
+                      {readOnly && <Store size={10} className="shrink-0" />}
+                    </p>
+                    <p className="text-[10px] text-charcoal-faint truncate">
+                      {e.startTime} – {e.endTime}
+                      {e.location ? ` · ${e.location}` : ""}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
-          )}
-
-          {timedEvents.length > 0 && (
-            <div className="space-y-2 mt-5">
-              <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">Manage events</p>
-              {timedEvents.map(eventCard)}
-            </div>
-          )}
+          </div>
         </>
       )}
 
@@ -514,25 +547,32 @@ export default function CalendarTab() {
           )}
 
           {professionalClients.length > 0 && (
-            <div>
-              <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Invitees</span>
-              <div className="flex flex-wrap gap-2">
+            <label className="block">
+              {/* V8 (QA 8.0): "Change the invitees UI from toggle-Chip-buttons
+                  to an actual dropdown." Native multi-select — cmd/ctrl+click
+                  to pick more than one, same as any standard form control. */}
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Invitees</span>
+              <select
+                multiple
+                value={draft.inviteeIds}
+                onChange={(e) =>
+                  setDraft((d) => ({
+                    ...d,
+                    inviteeIds: Array.from(e.target.selectedOptions, (o) => o.value),
+                  }))
+                }
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                size={Math.min(4, professionalClients.length)}
+              >
                 {professionalClients.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => toggleInvitee(c.id)}
-                    className={clsx(
-                      "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
-                      draft.inviteeIds.includes(c.id)
-                        ? "bg-sohati text-white border-sohati"
-                        : "bg-cream-soft border-transparent text-charcoal-soft"
-                    )}
-                  >
+                  <option key={c.id} value={c.id}>
+                    {c.prefix ? `${c.prefix} ` : ""}
                     {c.name}
-                  </button>
+                  </option>
                 ))}
-              </div>
-            </div>
+              </select>
+              <p className="text-[11px] text-charcoal-faint mt-1.5">Hold Ctrl/Cmd to select more than one.</p>
+            </label>
           )}
 
           <label className="block">
@@ -568,6 +608,25 @@ export default function CalendarTab() {
           <Button fullWidth size="lg" onClick={saveEvent} disabled={!draft.title.trim()}>
             {editingId ? "Save changes" : "Save event"}
           </Button>
+
+          {editingId && (
+            <Button
+              fullWidth
+              variant="outline"
+              className="!border-ember/30 !text-ember-dark"
+              onClick={() => {
+                if (!confirmDelete) {
+                  setConfirmDelete(true);
+                  setTimeout(() => setConfirmDelete(false), 3000);
+                  return;
+                }
+                removeCalendarEvent(editingId);
+                setComposeOpen(false);
+              }}
+            >
+              <Trash2 size={15} /> {confirmDelete ? "Tap again to confirm" : "Delete event"}
+            </Button>
+          )}
         </div>
       </BottomSheet>
     </div>

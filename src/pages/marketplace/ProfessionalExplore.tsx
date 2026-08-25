@@ -23,6 +23,13 @@ function hash(input: string) {
   return h;
 }
 
+const TODAY = "2026-08-20";
+const deadlineFor = (h: number) => {
+  const d = new Date(`${TODAY}T00:00:00`);
+  d.setDate(d.getDate() + (7 + (h % 21)));
+  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+};
+
 export default function ProfessionalExplore() {
   const { user, affiliateWithBusiness, removeAffiliation, businessDirectory } = useApp();
   const [category, setCategory] = useState<(typeof jobCategories)[number]["id"]>("gyms");
@@ -102,6 +109,10 @@ export default function ProfessionalExplore() {
             {error && <p className="text-xs font-semibold text-[#C0392B] mt-2">{error}</p>}
           </Card>
 
+          {/* V8 (QA 8.0): "add a 'for job hiring' title above the filters" */}
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+            For job hiring
+          </p>
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-5">
             {jobCategories.map((c) => (
               <button
@@ -120,20 +131,33 @@ export default function ProfessionalExplore() {
             {postingsFor(category).map((p) => {
               const h = hash(p.id + category);
               const type = h % 2 === 0 ? "Part-time" : "Full-time";
+              // V8 (QA 8.0): "show establishment name + green 'hiring'/red
+              // 'not hiring' text above the part-time/full-time badge + a
+              // job-listing deadline line under location."
+              const hiring = h % 3 !== 0;
               return (
                 <Card key={p.id} className="flex items-start gap-3 animate-fade-slide-up">
                   <span className="w-11 h-11 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
                     <Briefcase size={18} className="text-sohati-dark" />
                   </span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-charcoal truncate">{p.name} is hiring</p>
+                    <p className="text-sm font-semibold text-charcoal truncate">{p.name}</p>
                     <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
                       <MapPin size={11} /> {p.location}
                     </p>
+                    <p className="text-[11px] text-charcoal-faint mt-0.5">Apply by {deadlineFor(h)}</p>
                   </div>
-                  <span className="text-xs font-bold text-sohati-dark bg-sohati-pale rounded-full px-2.5 py-1.5 shrink-0">
-                    {type}
-                  </span>
+                  <div className="flex flex-col items-end gap-1 shrink-0">
+                    <span
+                      className="text-[10px] font-bold"
+                      style={{ color: hiring ? "#3F9165" : "#C0392B" }}
+                    >
+                      {hiring ? "Hiring" : "Not hiring"}
+                    </span>
+                    <span className="text-xs font-bold text-sohati-dark bg-sohati-pale rounded-full px-2.5 py-1.5">
+                      {type}
+                    </span>
+                  </div>
                 </Card>
               );
             })}

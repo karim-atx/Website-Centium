@@ -48,7 +48,10 @@ export default function ProfessionalDashboard() {
                 <PERSON_ICON size={17} className="text-sohati-dark" />
               </span>
               <div className="min-w-0">
-                <p className="text-sm font-semibold text-charcoal truncate">{c.name}</p>
+                <p className="text-sm font-semibold text-charcoal truncate">
+                  {c.prefix ? `${c.prefix} ` : ""}
+                  {c.name}
+                </p>
                 <p className="text-xs text-charcoal-faint">Client since {c.joinedAt}</p>
               </div>
             </div>

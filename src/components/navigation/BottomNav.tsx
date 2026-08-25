@@ -32,7 +32,7 @@ export const BottomNav: React.FC = () => {
           "/professionals/health-metrics",
         ]
       : isBusiness
-      ? ["/profile", "/subscription", "/settings", "/business/employees", "/business/classes"]
+      ? ["/profile", "/subscription", "/settings", "/business/employees", "/business/classes", "/business/profile"]
       : ["/mind", "/marketplace", "/profile", "/subscription", "/professionals"]
     ).some((p) => location.pathname.startsWith(p));
 

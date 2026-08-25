@@ -24,7 +24,7 @@ export default function BusinessEmployeesTab() {
 
   return (
     <div>
-      <PageHeader title="Employees" subtitle="Affiliate professionals with your business" />
+      <PageHeader title="Employees" subtitle="Affiliate professionals with your business" showBack />
 
       <Card className="mb-6">
         <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">

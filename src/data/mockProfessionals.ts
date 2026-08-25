@@ -150,36 +150,170 @@ export const mockClasses = [
   { id: "cl4", name: "Boxing Fundamentals", gymName: "PowerHouse Gym", location: "Jounieh", rating: 4.6, offer: "15% off annual plan" },
 ];
 
+// V8 (QA 8.0): each store now carries actual sellable items (name, price,
+// description) so tapping a store can open a real store page instead of
+// just showing the business card's own rating/location.
+export interface StoreItem {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+}
+
 // V4: generic marketplace listings for categories without dedicated mock
 // data yet — same shape (rating + location) so the category page can
 // render them uniformly.
 export const mockMarketplaceListings: Record<
   "stores" | "clothing" | "equipment" | "supplements" | "wellness" | "meal_prep",
-  { id: string; name: string; location: string; rating: number; offer?: string }[]
+  { id: string; name: string; location: string; rating: number; offer?: string; items: StoreItem[] }[]
 > = {
   stores: [
-    { id: "st1", name: "Healthy Basket", location: "Achrafieh, Beirut", rating: 4.6, offer: "Free delivery over $30" },
-    { id: "st2", name: "GreenGrocer Lebanon", location: "Jounieh", rating: 4.4 },
+    {
+      id: "st1",
+      name: "Healthy Basket",
+      location: "Achrafieh, Beirut",
+      rating: 4.6,
+      offer: "Free delivery over $30",
+      items: [
+        { id: "st1-i1", name: "Organic Quinoa (1kg)", price: 12, description: "Locally-packed organic white quinoa." },
+        { id: "st1-i2", name: "Cold-Pressed Olive Oil (500ml)", price: 15, description: "Extra virgin, Lebanese mountain-grown." },
+      ],
+    },
+    {
+      id: "st2",
+      name: "GreenGrocer Lebanon",
+      location: "Jounieh",
+      rating: 4.4,
+      items: [
+        { id: "st2-i1", name: "Weekly Veggie Box", price: 25, description: "A curated mix of seasonal local produce." },
+        { id: "st2-i2", name: "Fresh Herb Bundle", price: 6, description: "Mint, parsley and thyme, picked same-day." },
+      ],
+    },
   ],
   clothing: [
-    { id: "cw1", name: "ActiveWear Beirut", location: "ABC Achrafieh", rating: 4.5, offer: "10% off with Centium" },
-    { id: "cw2", name: "FitStyle", location: "Dbayeh", rating: 4.3 },
+    {
+      id: "cw1",
+      name: "ActiveWear Beirut",
+      location: "ABC Achrafieh",
+      rating: 4.5,
+      offer: "10% off with Centium",
+      items: [
+        { id: "cw1-i1", name: "Performance Leggings", price: 38, description: "Sweat-wicking, squat-proof compression fit." },
+        { id: "cw1-i2", name: "Training Tank Top", price: 22, description: "Breathable mesh-back tank for high-intensity sessions." },
+      ],
+    },
+    {
+      id: "cw2",
+      name: "FitStyle",
+      location: "Dbayeh",
+      rating: 4.3,
+      items: [
+        { id: "cw2-i1", name: "Running Shorts", price: 28, description: "Lightweight shorts with a zip pocket." },
+        { id: "cw2-i2", name: "Compression Socks (pair)", price: 14, description: "Graduated compression for recovery." },
+      ],
+    },
   ],
   equipment: [
-    { id: "eq1", name: "IronWorks Equipment", location: "Sin El Fil", rating: 4.7, offer: "Free shipping" },
-    { id: "eq2", name: "HomeGym Lebanon", location: "Zalka", rating: 4.5 },
+    {
+      id: "eq1",
+      name: "IronWorks Equipment",
+      location: "Sin El Fil",
+      rating: 4.7,
+      offer: "Free shipping",
+      items: [
+        { id: "eq1-i1", name: "Adjustable Dumbbell Set", price: 180, description: "5–25kg per side, quick-lock adjustment." },
+        { id: "eq1-i2", name: "Olympic Barbell (20kg)", price: 150, description: "Knurled grip, 700kg tensile strength." },
+      ],
+    },
+    {
+      id: "eq2",
+      name: "HomeGym Lebanon",
+      location: "Zalka",
+      rating: 4.5,
+      items: [
+        { id: "eq2-i1", name: "Resistance Band Set", price: 25, description: "5 bands, light to heavy resistance." },
+        { id: "eq2-i2", name: "Foldable Yoga Mat", price: 20, description: "6mm thick, non-slip, carry strap included." },
+      ],
+    },
   ],
   supplements: [
-    { id: "su1", name: "PureFuel Nutrition", location: "Hamra, Beirut", rating: 4.6, offer: "15% off first order" },
-    { id: "su2", name: "ProteinHouse", location: "Jal el Dib", rating: 4.4 },
+    {
+      id: "su1",
+      name: "PureFuel Nutrition",
+      location: "Hamra, Beirut",
+      rating: 4.6,
+      offer: "15% off first order",
+      items: [
+        { id: "su1-i1", name: "Whey Protein (1kg)", price: 45, description: "24g protein per scoop, chocolate flavor." },
+        { id: "su1-i2", name: "Creatine Monohydrate (300g)", price: 20, description: "Micronized, unflavored, 60 servings." },
+      ],
+    },
+    {
+      id: "su2",
+      name: "ProteinHouse",
+      location: "Jal el Dib",
+      rating: 4.4,
+      items: [
+        { id: "su2-i1", name: "Mass Gainer (2kg)", price: 38, description: "High-calorie blend for lean bulking." },
+        { id: "su2-i2", name: "BCAA Powder (250g)", price: 22, description: "2:1:1 ratio, watermelon flavor." },
+      ],
+    },
   ],
   wellness: [
-    { id: "we1", name: "Serenity Spa & Wellness", location: "Verdun, Beirut", rating: 4.9, offer: "1 free session" },
-    { id: "we2", name: "Recharge Recovery Lounge", location: "Achrafieh", rating: 4.7 },
+    {
+      id: "we1",
+      name: "Serenity Spa & Wellness",
+      location: "Verdun, Beirut",
+      rating: 4.9,
+      offer: "1 free session",
+      items: [
+        { id: "we1-i1", name: "60-Minute Massage", price: 55, description: "Full-body deep tissue or relaxation massage." },
+        { id: "we1-i2", name: "Sauna Session Pass", price: 20, description: "45 minutes, towel included." },
+      ],
+    },
+    {
+      id: "we2",
+      name: "Recharge Recovery Lounge",
+      location: "Achrafieh",
+      rating: 4.7,
+      items: [
+        { id: "we2-i1", name: "Cryotherapy Session", price: 40, description: "3-minute whole-body cold therapy." },
+        { id: "we2-i2", name: "Compression Boot Session", price: 25, description: "30-minute guided recovery session." },
+      ],
+    },
   ],
   meal_prep: [
-    { id: "mp1", name: "Healthy Bites Meal Prep", location: "Achrafieh, Beirut", rating: 4.8, offer: "10% off first order" },
-    { id: "mp2", name: "Lebanese MealBox", location: "Jounieh", rating: 4.6, offer: "Free delivery over $40" },
-    { id: "mp3", name: "MacroKitchen", location: "Dbayeh", rating: 4.7 },
+    {
+      id: "mp1",
+      name: "Healthy Bites Meal Prep",
+      location: "Achrafieh, Beirut",
+      rating: 4.8,
+      offer: "10% off first order",
+      items: [
+        { id: "mp1-i1", name: "5-Day Meal Plan", price: 65, description: "Balanced macros, delivered daily." },
+        { id: "mp1-i2", name: "High-Protein Bowl (single)", price: 12, description: "Grilled chicken, rice, roasted veg." },
+      ],
+    },
+    {
+      id: "mp2",
+      name: "Lebanese MealBox",
+      location: "Jounieh",
+      rating: 4.6,
+      offer: "Free delivery over $40",
+      items: [
+        { id: "mp2-i1", name: "Family Meal Box (4 servings)", price: 48, description: "Home-style Lebanese dishes, ready to heat." },
+        { id: "mp2-i2", name: "Vegetarian Mezze Box", price: 22, description: "Hummus, tabbouleh, moutabal and warak enab." },
+      ],
+    },
+    {
+      id: "mp3",
+      name: "MacroKitchen",
+      location: "Dbayeh",
+      rating: 4.7,
+      items: [
+        { id: "mp3-i1", name: "Cutting Plan (5 days)", price: 60, description: "Lower-calorie, high-protein prepared meals." },
+        { id: "mp3-i2", name: "Single Protein Meal", price: 11, description: "Choice of chicken, beef or fish with sides." },
+      ],
+    },
   ],
 };

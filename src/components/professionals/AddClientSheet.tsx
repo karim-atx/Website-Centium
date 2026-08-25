@@ -14,12 +14,16 @@ const sexOptions: { value: Sex; label: string; icon: typeof Venus }[] = [
   { value: "other", label: "Other", icon: VenusAndMars },
 ];
 
+// V8 (QA 8.0): "Add prefix above first name like Mr, Ms, Dr, etc.."
+const prefixOptions = ["", "Mr", "Ms", "Mrs", "Dr", "Mx"];
+
 export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const { addProfessionalClient, professionalClients, professionalTier } = useApp();
   const navigate = useNavigate();
   const tier = professionalTiers.find((t) => t.id === professionalTier) ?? professionalTiers[0];
   const atCap = tier.maxClients !== null && professionalClients.length >= tier.maxClients;
   const [name, setName] = useState("");
+  const [prefix, setPrefix] = useState("");
   const [age, setAge] = useState("");
   const [sex, setSex] = useState<Sex | null>(null);
   const [heightCm, setHeightCm] = useState("");
@@ -29,6 +33,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
 
   const reset = () => {
     setName("");
+    setPrefix("");
     setAge("");
     setSex(null);
     setHeightCm("");
@@ -40,6 +45,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   const create = () => {
     if (!name.trim()) return;
     const code = addProfessionalClient(name.trim(), {
+      prefix: prefix || undefined,
       age: age ? Number(age) : undefined,
       sex: sex ?? undefined,
       heightCm: heightCm ? Number(heightCm) : undefined,
@@ -83,16 +89,32 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
         </div>
       ) : !generatedCode ? (
         <div className="space-y-5 animate-fade-slide-up">
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Client name</span>
-            <input
-              autoFocus
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              placeholder="Full name"
-              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
-            />
-          </label>
+          <div className="grid grid-cols-[88px_1fr] gap-3">
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Prefix</span>
+              <select
+                value={prefix}
+                onChange={(e) => setPrefix(e.target.value)}
+                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              >
+                {prefixOptions.map((p) => (
+                  <option key={p} value={p}>
+                    {p || "—"}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Client name</span>
+              <input
+                autoFocus
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Full name"
+                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              />
+            </label>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             <label className="block">

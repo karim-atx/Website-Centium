@@ -11,6 +11,7 @@ import type {
   WidgetConfig,
   WidgetType,
   WidgetSize,
+  TrackPreference,
   NutritionGoal,
   WeightGoalType,
   MacroSplit,
@@ -41,6 +42,8 @@ import type {
   BusinessEmployee,
   BusinessClass,
   BusinessMessage,
+  GymPurchase,
+  CartItem,
 } from "../types";
 import { mockFoods } from "../data/mockFoods";
 import { defaultHabits, streaks as seedStreaks, bloodPanel } from "../data/mockHealthData";
@@ -109,6 +112,8 @@ function seedWorkoutLog(): WorkoutLogEntry[] {
   ];
 }
 
+// Pre-onboarding fallback shape for the persisted "widgets" state — real
+// seeding happens in widgetsForGoals once the user's tracking prefs exist.
 const defaultWidgets: WidgetConfig[] = [
   { id: "w-steps", type: "steps", size: "small", visible: true },
   { id: "w-weight", type: "weight", size: "small", visible: true },
@@ -118,11 +123,27 @@ const defaultWidgets: WidgetConfig[] = [
   { id: "w-workout", type: "workout", size: "small", visible: true },
 ];
 
-/** Light goal-based reordering: nudge the widgets most relevant to the
- * user's selected goals toward the top of the board. Still fully editable
- * afterward — this only sets a sensible starting layout. */
-function widgetsForGoals(goals: UserProfile["goals"]): WidgetConfig[] {
-  const board = defaultWidgets.map((w) => ({ ...w }));
+// V8 (QA 8.0): every trackable widget maps to a "What do you want to
+// track?" onboarding preference, except Water — that one has no tracking
+// equivalent and always stays on the board.
+const trackableWidgets: { type: WidgetType; size: WidgetSize; trackKey?: TrackPreference }[] = [
+  { type: "steps", size: "small", trackKey: "steps" },
+  { type: "weight", size: "small", trackKey: "weight" },
+  { type: "water", size: "large" },
+  { type: "sleep", size: "small", trackKey: "sleep" },
+  { type: "nutrition", size: "large", trackKey: "nutrition" },
+  { type: "workout", size: "small", trackKey: "workouts" },
+  { type: "habits", size: "small", trackKey: "habits" },
+];
+
+/** Seeds the board from the user's "What do you want to track?" selections
+ * (a widget with no matching preference is simply left off), then does a
+ * light goal-based reordering to nudge the most relevant ones toward the
+ * top. Still fully editable afterward — this only sets a starting layout. */
+function widgetsForGoals(goals: UserProfile["goals"], tracking: TrackPreference[]): WidgetConfig[] {
+  const board = trackableWidgets
+    .filter((w) => !w.trackKey || tracking.includes(w.trackKey))
+    .map((w) => ({ id: `w-${w.type}`, type: w.type, size: w.size, visible: true }));
   const priority = (type: WidgetType): number => {
     if (goals.includes("lose_weight") && type === "weight") return -3;
     if (goals.includes("build_muscle") && type === "workout") return -3;
@@ -192,7 +213,6 @@ interface AppState {
 
   workoutSessions: WorkoutSession[];
   saveWorkoutSession: (session: Omit<WorkoutSession, "id">) => void;
-  updateWorkoutSessionNotes: (id: string, notes: string) => void;
 
   // V6 (QA 6.0): quitting a started routine (instead of finishing it)
   // preserves logged sets + elapsed time, keyed by routine, so reopening it
@@ -239,6 +259,16 @@ interface AppState {
     type: "weight" | "bodyFat" | "steps" | "sleepHours" | "caloriesBurned",
     value: number
   ) => void;
+  // V8 (QA 8.0): "Add metric" can log today's weight, not just water — this
+  // tracks whether it's already been logged today so the input resets once
+  // a new day starts instead of staying pre-filled forever.
+  weightLoggedDate: string | null;
+  logWeightForToday: (value: number) => void;
+  // V8 (QA 8.0): "Pressing the edit feature only prompts you to edit daily
+  // step count goal" — the goal is user-configurable; the count itself
+  // stays auto-synced.
+  stepsGoal: number;
+  setStepsGoal: (goal: number) => void;
 
   widgets: WidgetConfig[];
   addWidget: (type: WidgetType, size?: WidgetSize) => void;
@@ -293,6 +323,10 @@ interface AppState {
   // auto-added to whichever routine was open when they were created.
   customExercises: CustomExerciseLibraryItem[];
   addCustomExercise: (item: CustomExerciseLibraryItem) => void;
+  // V8 (QA 8.0): "ability to edit each exercise if pressed on in the
+  // library" — for a custom exercise, matched and replaced by its current
+  // name (allows renaming too).
+  updateCustomExercise: (originalName: string, item: CustomExerciseLibraryItem) => void;
 
   // V4 (QA 4.0): one review per professional, submitted from ProfessionalDetail.
   professionalReviews: ProfessionalReview[];
@@ -316,19 +350,46 @@ interface AppState {
   professionalTier: string;
   setProfessionalTier: (tier: string) => void;
 
+  // V8 (QA 8.0): "as a place holder add a plus sign logo that increases the
+  // tier by 1000 points" — added on top of the streak-derived total.
+  bonusPoints: number;
+  addBonusPoints: (amount: number) => void;
+
+  // V8 (QA 8.0): gym membership purchases — day passes expire after 24h and
+  // stack with an active monthly/annual plan, which stays active until
+  // explicitly cancelled.
+  gymPurchases: Record<string, GymPurchase[]>;
+  purchaseGymPlan: (gymId: string, plan: string, oneTime: boolean) => void;
+  cancelGymPlan: (gymId: string, plan: string) => void;
+
+  // V8 (QA 8.0): "If I choose a subscription plan, it gets saved and a
+  // small minimalistic logo appears next to my name" — client-only
+  // Centium Premium status, persisted so the badge survives a reload.
+  premiumPlan: "monthly" | "yearly" | null;
+  setPremiumPlan: (plan: "monthly" | "yearly" | null) => void;
+
+  // V8 (QA 8.0): "When bought it goes to a cart that adopts the same
+  // features of checkout most store pages have."
+  cart: CartItem[];
+  addToCart: (item: Omit<CartItem, "quantity">, quantity: number) => void;
+  updateCartQuantity: (itemId: string, quantity: number) => void;
+  removeFromCart: (itemId: string) => void;
+  clearCart: () => void;
+
   clientCodes: ClientCode[];
   generateClientCode: (
     professionalId: string,
     professionalName: string,
     profile?: { clientName?: string; age?: number; sex?: Sex; heightCm?: number; weightKg?: number },
-    professionalSubtype?: ProfessionalSubtype
+    professionalSubtype?: ProfessionalSubtype,
+    professionalCertificationUrl?: string
   ) => string;
   redeemClientCode: (code: string) => boolean;
 
   professionalClients: ProfessionalClient[];
   addProfessionalClient: (
     name: string,
-    profile?: { age?: number; sex?: Sex; heightCm?: number; weightKg?: number }
+    profile?: { age?: number; sex?: Sex; heightCm?: number; weightKg?: number; prefix?: string }
   ) => string;
   removeProfessionalClient: (id: string) => void;
   updateProfessionalClientAccess: (
@@ -468,6 +529,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setAccessibility((prev) => ({ ...prev, ...patch }));
   useEffect(() => {
     document.documentElement.style.fontSize = accessibility.largerText ? "112.5%" : "";
+    document.documentElement.classList.toggle("larger-icons", accessibility.largerText);
     document.documentElement.classList.toggle("reduce-motion", accessibility.reduceMotion);
   }, [accessibility]);
 
@@ -618,6 +680,43 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const [professionalTier, setProfessionalTier] = usePersistentState<string>("professionalTier", "starter");
+
+  const [bonusPoints, setBonusPoints] = usePersistentState<number>("bonusPoints", 0);
+  const addBonusPoints: AppState["addBonusPoints"] = (amount) => setBonusPoints((prev) => prev + amount);
+
+  const [premiumPlan, setPremiumPlan] = usePersistentState<"monthly" | "yearly" | null>("premiumPlan", null);
+
+  const [gymPurchases, setGymPurchases] = usePersistentState<Record<string, GymPurchase[]>>(
+    "gymPurchases",
+    {}
+  );
+  const purchaseGymPlan: AppState["purchaseGymPlan"] = (gymId, plan, oneTime) =>
+    setGymPurchases((prev) => {
+      const existing = (prev[gymId] ?? []).filter((p) => p.plan !== plan);
+      return { ...prev, [gymId]: [...existing, { plan, purchasedAt: Date.now(), oneTime }] };
+    });
+  const cancelGymPlan: AppState["cancelGymPlan"] = (gymId, plan) =>
+    setGymPurchases((prev) => ({
+      ...prev,
+      [gymId]: (prev[gymId] ?? []).filter((p) => p.plan !== plan),
+    }));
+
+  const [cart, setCart] = usePersistentState<CartItem[]>("cart", []);
+  const addToCart: AppState["addToCart"] = (item, quantity) =>
+    setCart((prev) => {
+      const existing = prev.find((c) => c.itemId === item.itemId);
+      if (existing) {
+        return prev.map((c) => (c.itemId === item.itemId ? { ...c, quantity: c.quantity + quantity } : c));
+      }
+      return [...prev, { ...item, quantity }];
+    });
+  const updateCartQuantity: AppState["updateCartQuantity"] = (itemId, quantity) =>
+    setCart((prev) =>
+      quantity <= 0 ? prev.filter((c) => c.itemId !== itemId) : prev.map((c) => (c.itemId === itemId ? { ...c, quantity } : c))
+    );
+  const removeFromCart: AppState["removeFromCart"] = (itemId) =>
+    setCart((prev) => prev.filter((c) => c.itemId !== itemId));
+  const clearCart: AppState["clearCart"] = () => setCart([]);
   const [businessListing, setBusinessListing] = usePersistentState("businessListing", {
     perk: "10% off with Centium",
     active: true,
@@ -701,7 +800,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     setUser((prev) => {
       const next = { ...prev, ...profile, businessId, onboarded: true };
-      setWidgets(widgetsForGoals(next.goals));
+      setWidgets(widgetsForGoals(next.goals, next.tracking));
       return next;
     });
     // Health's Weight card reads metricValues.weight, not user.weightKg
@@ -759,8 +858,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const setPersonalRecord = (exerciseName: string, kg: number) =>
     setPersonalRecords((prev) => ({ ...prev, [exerciseName]: kg }));
-  const updateWorkoutSessionNotes = (id: string, notes: string) =>
-    setWorkoutSessions((prev) => prev.map((s) => (s.id === id ? { ...s, notes } : s)));
 
   const addRoutineFolder = (name: string, parentId: string | null = null, color?: string) =>
     setRoutineFolders((prev) => [...prev, { id: `rf${Date.now()}`, name, parentId, color }]);
@@ -871,6 +968,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMetricValues((prev) => ({ ...prev, [type]: value }));
     if (type === "weight") setUser((prev) => ({ ...prev, weightKg: value }));
   };
+
+  const [weightLoggedDate, setWeightLoggedDate] = usePersistentState<string | null>(
+    "weightLoggedDate",
+    null
+  );
+  const logWeightForToday: AppState["logWeightForToday"] = (value) => {
+    updateMetricValue("weight", value);
+    setWeightLoggedDate(TODAY);
+  };
+
+  const [stepsGoal, setStepsGoal] = usePersistentState<number>("stepsGoal", 10000);
 
   const addWidget: AppState["addWidget"] = (type, size = "small") =>
     setWidgets((prev) => [
@@ -1027,6 +1135,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomExercises((prev) =>
       prev.some((e) => e.name.toLowerCase() === item.name.toLowerCase()) ? prev : [...prev, item]
     );
+  const updateCustomExercise: AppState["updateCustomExercise"] = (originalName, item) =>
+    setCustomExercises((prev) =>
+      prev.map((e) => (e.name.toLowerCase() === originalName.toLowerCase() ? item : e))
+    );
 
   const submitProfessionalReview: AppState["submitProfessionalReview"] = (professionalId, rating, text) =>
     setProfessionalReviews((prev) => {
@@ -1038,7 +1150,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     professionalId,
     professionalName,
     profile,
-    professionalSubtype
+    professionalSubtype,
+    professionalCertificationUrl
   ) => {
     let code = "";
     do {
@@ -1051,6 +1164,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         professionalId,
         professionalName,
         professionalSubtype,
+        professionalCertificationUrl,
         createdAt: TODAY,
         redeemed: false,
         clientName: profile?.clientName,
@@ -1078,6 +1192,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       linkedProfessionalCode: match.code,
       linkedProfessionalName: match.professionalName,
       linkedProfessionalSubtype: match.professionalSubtype,
+      linkedProfessionalCertificationUrl: match.professionalCertificationUrl,
     }));
     return true;
   };
@@ -1089,7 +1204,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       "me",
       user.firstName || "Your professional",
       { ...profile, clientName: name },
-      user.professionalSubtype
+      user.professionalSubtype,
+      user.certificationUrl
     );
     const id = `pc${Date.now()}${Math.random().toString(16).slice(2)}`;
     setProfessionalClients((prev) => [
@@ -1097,6 +1213,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       {
         id,
         name,
+        prefix: profile?.prefix,
         code,
         joinedAt: TODAY,
         activityLevel: "moderate",
@@ -1222,7 +1339,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       logWorkout,
       workoutSessions,
       saveWorkoutSession,
-      updateWorkoutSessionNotes,
       pausedSessions,
       savePausedSession,
       clearPausedSession,
@@ -1252,6 +1368,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       removeStreak,
       metricValues,
       updateMetricValue,
+      weightLoggedDate,
+      logWeightForToday,
+      stepsGoal,
+      setStepsGoal,
       widgets,
       addWidget,
       removeWidget,
@@ -1288,6 +1408,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addClientCustomFood,
       customExercises,
       addCustomExercise,
+      updateCustomExercise,
       professionalReviews,
       submitProfessionalReview,
       connectedProfessionalIds,
@@ -1298,6 +1419,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateMyBusinessTier,
       professionalTier,
       setProfessionalTier,
+      bonusPoints,
+      addBonusPoints,
+      premiumPlan,
+      setPremiumPlan,
+      gymPurchases,
+      purchaseGymPlan,
+      cancelGymPlan,
+      cart,
+      addToCart,
+      updateCartQuantity,
+      removeFromCart,
+      clearCart,
       clientCodes,
       generateClientCode,
       redeemClientCode,
@@ -1354,6 +1487,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       habits,
       streaks,
       metricValues,
+      weightLoggedDate,
+      stepsGoal,
       widgets,
       nutritionGoal,
       customMeals,
@@ -1369,6 +1504,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       connectedProfessionalIds,
       businessDirectory,
       professionalTier,
+      bonusPoints,
+      premiumPlan,
+      gymPurchases,
+      cart,
       clientCodes,
       professionalClients,
       calendarEvents,

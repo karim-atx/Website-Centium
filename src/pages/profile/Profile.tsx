@@ -4,7 +4,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { GoalsEditSheet } from "../../components/profile/GoalsEditSheet";
 import { ActivityLevelSheet } from "../../components/profile/ActivityLevelSheet";
-import { EditBodyStatsSheet } from "../../components/profile/EditBodyStatsSheet";
+import { CertificationSheet } from "../../components/profile/CertificationSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { mockProfessionals } from "../../data/mockProfessionals";
@@ -18,8 +18,9 @@ import {
   Image,
   Trash2,
   Activity,
-  Pencil,
   Star,
+  Crown,
+  BadgeCheck,
 } from "lucide-react";
 
 const accountTypeLabel: Record<string, string> = {
@@ -29,12 +30,18 @@ const accountTypeLabel: Record<string, string> = {
 };
 
 export default function Profile() {
-  const { user, updateProfile, signOut, connectedProfessionalIds, professionalReviews } = useApp();
+  const { user, updateProfile, signOut, connectedProfessionalIds, professionalReviews, premiumPlan } = useApp();
   const navigate = useNavigate();
   const [goalsOpen, setGoalsOpen] = useState(false);
   const [activityLevelOpen, setActivityLevelOpen] = useState(false);
-  const [bodyStatsOpen, setBodyStatsOpen] = useState(false);
+  const [certOpen, setCertOpen] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
+  // V8 (QA 8.0): "Remove the pencil edit logo. Instead each of the age,
+  // height and weight is editable if pressed on separately. When you click
+  // away from the edited box, the new value gets set. Do not include a
+  // checkmark logo." — replaces the single shared edit-sheet affordance.
+  const [editingField, setEditingField] = useState<"weightKg" | "heightCm" | "age" | null>(null);
+  const [fieldDraft, setFieldDraft] = useState("");
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
@@ -46,6 +53,18 @@ export default function Profile() {
       setAvatarSheetOpen(false);
     };
     reader.readAsDataURL(file);
+  };
+
+  const startEditing = (field: "weightKg" | "heightCm" | "age") => {
+    setEditingField(field);
+    setFieldDraft(String(user[field]));
+  };
+
+  const commitEditing = () => {
+    if (!editingField) return;
+    const n = Number(fieldDraft);
+    if (n > 0) updateProfile({ [editingField]: n });
+    setEditingField(null);
   };
 
   const handleSignOut = () => {
@@ -92,7 +111,10 @@ export default function Profile() {
           )}
         </button>
         <div>
-          <h2 className="font-display text-xl font-semibold text-charcoal">{user.firstName}</h2>
+          <h2 className="font-display text-xl font-semibold text-charcoal flex items-center gap-1.5">
+            {user.firstName}
+            {premiumPlan && <Crown size={15} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
+          </h2>
           <span className="inline-block text-[10px] font-bold text-charcoal-soft bg-cream-soft rounded-full px-2 py-0.5 mt-1">
             {accountTypeLabel[user.accountType]}
             {user.customerSubtype ? ` · ${user.customerSubtype}` : ""}
@@ -128,31 +150,54 @@ export default function Profile() {
         </Card>
       )}
 
-      {!hidesClientFields && (
-        <div className="relative mb-6 mt-4">
-          <div className="grid grid-cols-3 gap-3">
-            <Card className="text-center animate-fade-slide-up">
-              <p className="text-lg font-bold text-charcoal">{user.weightKg}</p>
-              <p className="text-[11px] text-charcoal-faint">kg</p>
-            </Card>
-            <Card className="text-center animate-fade-slide-up">
-              <p className="text-lg font-bold text-charcoal">{user.heightCm}</p>
-              <p className="text-[11px] text-charcoal-faint">cm</p>
-            </Card>
-            <Card className="text-center animate-fade-slide-up">
-              <p className="text-lg font-bold text-charcoal">{user.age}</p>
-              <p className="text-[11px] text-charcoal-faint">years</p>
-            </Card>
-          </div>
-          {/* V7 (QA 7.0): one shared edit mark for weight/height/age instead
-              of a separate edit affordance per box. */}
+      {/* V8 (QA 8.0): "move the certification button from More into My
+          Profile tab instead" — was previously reachable only from More. */}
+      {user.accountType === "professional" && (
+        <Card padded={false} className="mb-6 animate-fade-slide-up">
           <button
-            onClick={() => setBodyStatsOpen(true)}
-            aria-label="Edit weight, height and age"
-            className="tap absolute -top-2 -right-2 w-7 h-7 rounded-full bg-charcoal text-cream flex items-center justify-center shadow-soft"
+            onClick={() => setCertOpen(true)}
+            className="tap w-full flex items-center justify-between px-4 py-3.5"
           >
-            <Pencil size={12} />
+            <div className="flex items-center gap-3">
+              <BadgeCheck size={17} className="text-charcoal-soft" />
+              <span className="text-sm font-medium text-charcoal">Certification</span>
+            </div>
+            <ChevronRight size={16} className="text-charcoal-faint" />
           </button>
+        </Card>
+      )}
+
+      {!hidesClientFields && (
+        <div className="grid grid-cols-3 gap-3 mb-6 mt-4">
+          {(
+            [
+              { field: "weightKg" as const, value: user.weightKg, unit: "kg" },
+              { field: "heightCm" as const, value: user.heightCm, unit: "cm" },
+              { field: "age" as const, value: user.age, unit: "years" },
+            ]
+          ).map((f) => (
+            <Card
+              key={f.field}
+              interactive={editingField !== f.field}
+              onClick={() => editingField !== f.field && startEditing(f.field)}
+              className="text-center animate-fade-slide-up"
+            >
+              {editingField === f.field ? (
+                <input
+                  autoFocus
+                  value={fieldDraft}
+                  onChange={(e) => setFieldDraft(e.target.value.replace(/[^\d.]/g, ""))}
+                  onBlur={commitEditing}
+                  onKeyDown={(e) => e.key === "Enter" && commitEditing()}
+                  inputMode="decimal"
+                  className="w-full text-lg font-bold text-charcoal text-center bg-transparent focus:outline-none"
+                />
+              ) : (
+                <p className="text-lg font-bold text-charcoal">{f.value}</p>
+              )}
+              <p className="text-[11px] text-charcoal-faint">{f.unit}</p>
+            </Card>
+          ))}
         </div>
       )}
 
@@ -185,6 +230,11 @@ export default function Profile() {
       )}
 
       {sections.length > 0 && (
+      <>
+      {/* V8 (QA 8.0): "Have a common title fir Goals and Activity level" */}
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+        Goals & Activity
+      </p>
       <Card padded={false} className="divide-y divide-charcoal/[0.04] animate-fade-slide-up">
         {sections.map((s) => (
           <button
@@ -200,6 +250,7 @@ export default function Profile() {
           </button>
         ))}
       </Card>
+      </>
       )}
 
       <button
@@ -212,7 +263,9 @@ export default function Profile() {
 
       <GoalsEditSheet open={goalsOpen} onClose={() => setGoalsOpen(false)} />
       <ActivityLevelSheet open={activityLevelOpen} onClose={() => setActivityLevelOpen(false)} />
-      <EditBodyStatsSheet open={bodyStatsOpen} onClose={() => setBodyStatsOpen(false)} />
+      {user.accountType === "professional" && (
+        <CertificationSheet open={certOpen} onClose={() => setCertOpen(false)} />
+      )}
 
       <input
         ref={cameraInputRef}

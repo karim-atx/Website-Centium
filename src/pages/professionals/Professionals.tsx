@@ -8,7 +8,7 @@ import { mockProfessionals } from "../../data/mockProfessionals";
 import { useApp } from "../../context/AppContext";
 import type { ProfessionalType } from "../../types";
 import { BottomSheet } from "../../components/ui/BottomSheet";
-import { Star, ShieldCheck, UserCheck, Pencil } from "lucide-react";
+import { Star, ShieldCheck, UserCheck, Pencil, BadgeCheck } from "lucide-react";
 import ProfessionalDashboard from "./ProfessionalDashboard";
 import { professionalTypeIcon } from "../../utils/icons";
 
@@ -34,6 +34,7 @@ export default function Professionals() {
   const { user, connectedProfessionalIds, professionalReviews, submitProfessionalReview } = useApp();
   const [type, setType] = useState<ProfessionalType | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [linkedProfileOpen, setLinkedProfileOpen] = useState(false);
   const myLinkedReview = professionalReviews.find((r) => r.professionalId === LINKED_PROFESSIONAL_REVIEW_ID);
   const [reviewRating, setReviewRating] = useState(myLinkedReview?.rating ?? 5);
   const [reviewText, setReviewText] = useState(myLinkedReview?.text ?? "");
@@ -57,7 +58,11 @@ export default function Professionals() {
           shows up here automatically — a separate identity from the static
           browse directory below, since it's not one of those listings. */}
       {user.linkedProfessionalCode && (
-        <Card className="mb-6 bg-gradient-to-br from-sohati to-sohati-dark !text-white animate-fade-slide-up">
+        <Card
+          interactive
+          onClick={() => setLinkedProfileOpen(true)}
+          className="mb-6 bg-gradient-to-br from-sohati to-sohati-dark !text-white animate-fade-slide-up"
+        >
           <div className="flex items-center gap-3 mb-3">
             <span className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center shrink-0">
               {(() => {
@@ -75,7 +80,10 @@ export default function Professionals() {
               <ShieldCheck size={13} /> Linked to your account
             </div>
             <button
-              onClick={() => setReviewOpen(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setReviewOpen(true);
+              }}
               className="tap flex items-center gap-1 text-xs font-semibold text-white bg-white/15 rounded-full px-2.5 py-1"
             >
               <Pencil size={11} /> {myLinkedReview ? "Edit review" : "Rate & Review"}
@@ -196,6 +204,51 @@ export default function Professionals() {
           >
             Submit review
           </Button>
+        </div>
+      </BottomSheet>
+
+      {/* V8 (QA 8.0): "it should show on the professionals tab in the more
+          tab within the Client UI as well when viewing their profile" —
+          the certification the professional attached in their own UI. */}
+      <BottomSheet open={linkedProfileOpen} onClose={() => setLinkedProfileOpen(false)} title={user.linkedProfessionalName}>
+        <div className="space-y-4 animate-fade-slide-up">
+          <div className="flex items-center gap-3">
+            <span className="w-12 h-12 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
+              {(() => {
+                const Icon = linkedIcon(user.linkedProfessionalSubtype);
+                return <Icon size={22} className="text-sohati-dark" />;
+              })()}
+            </span>
+            <div>
+              <p className="font-display font-semibold text-lg text-charcoal">{user.linkedProfessionalName}</p>
+              {user.linkedProfessionalSubtype && (
+                <p className="text-xs text-charcoal-faint capitalize">{user.linkedProfessionalSubtype}</p>
+              )}
+            </div>
+          </div>
+
+          <div>
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2 flex items-center gap-1.5">
+              <BadgeCheck size={13} /> Certification
+            </p>
+            {user.linkedProfessionalCertificationUrl ? (
+              user.linkedProfessionalCertificationUrl.startsWith("data:application/pdf") ? (
+                <iframe
+                  title="Certification"
+                  src={user.linkedProfessionalCertificationUrl}
+                  className="w-full h-64 rounded-2xl border border-charcoal/10"
+                />
+              ) : (
+                <img
+                  src={user.linkedProfessionalCertificationUrl}
+                  alt="Certification"
+                  className="w-full max-h-64 object-contain rounded-2xl border border-charcoal/10 bg-cream-soft"
+                />
+              )
+            ) : (
+              <p className="text-sm text-charcoal-faint">No certification uploaded yet.</p>
+            )}
+          </div>
         </div>
       </BottomSheet>
     </div>

@@ -21,6 +21,38 @@ import {
 import clsx from "clsx";
 import { professionalTypeIcon } from "../../utils/icons";
 
+// V8 (QA 8.0): "pressing on the grey review text would open to all the
+// reviews written by the clients" — this app only ever stores the current
+// user's own review per professional, so a deterministic (id-seeded) set of
+// plausible reviewer names/ratings/comments fills out the rest of the list,
+// same spirit as this prototype's other seeded-but-fake demo data.
+const reviewerNames = [
+  "Nadine K.", "Sami R.", "Yara B.", "Elie S.", "Rana F.", "Tony K.", "Layal C.", "Karim A.",
+];
+const reviewComments = [
+  "Really helped me stay consistent with my plan.",
+  "Professional, punctual, and knows their stuff.",
+  "Great communication between sessions.",
+  "Made a noticeable difference in a few weeks.",
+  "Would recommend to anyone starting out.",
+  "Explains things clearly and adjusts the plan when needed.",
+];
+function hashSeed(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+function mockReviewsFor(professionalId: string, count: number) {
+  return Array.from({ length: count }, (_, i) => {
+    const h = hashSeed(`${professionalId}-review-${i}`);
+    return {
+      name: reviewerNames[h % reviewerNames.length],
+      rating: 3 + (h % 3),
+      text: reviewComments[h % reviewComments.length],
+    };
+  });
+}
+
 const accessItems = [
   { icon: UtensilsCrossed, label: "Food diary" },
   { icon: Dumbbell, label: "Workout activity" },
@@ -48,6 +80,7 @@ export default function ProfessionalDetail() {
     { from: "them", text: "Hi! How's the new meal plan working for you? 🥗" },
   ]);
   const [reviewOpen, setReviewOpen] = useState(false);
+  const [allReviewsOpen, setAllReviewsOpen] = useState(false);
   const myReview = professionalReviews.find((r) => r.professionalId === id);
   const [reviewRating, setReviewRating] = useState(myReview?.rating ?? 5);
   const [reviewText, setReviewText] = useState(myReview?.text ?? "");
@@ -109,7 +142,9 @@ export default function ProfessionalDetail() {
         <span className="flex items-center gap-1 text-sm font-bold text-gold">
           <Star size={14} className="fill-gold" /> {displayRating}
         </span>
-        <span className="text-xs text-charcoal-faint">{totalReviews} reviews</span>
+        <button onClick={() => setAllReviewsOpen(true)} className="tap text-xs text-charcoal-faint underline">
+          {totalReviews} reviews
+        </button>
         {isConnected && (
           <span className="text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2.5 py-1">
             Client since August 2026
@@ -274,6 +309,37 @@ export default function ProfessionalDetail() {
           >
             Submit review
           </Button>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet open={allReviewsOpen} onClose={() => setAllReviewsOpen(false)} title={`${totalReviews} Reviews`}>
+        <div className="space-y-3 animate-fade-slide-up">
+          {myReview && (
+            <Card className="!bg-sohati-pale">
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-sm font-semibold text-charcoal">You</p>
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star key={i} size={12} className={i < myReview.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
+                  ))}
+                </div>
+              </div>
+              {myReview.text && <p className="text-sm text-charcoal-soft leading-relaxed">{myReview.text}</p>}
+            </Card>
+          )}
+          {mockReviewsFor(professional.id, Math.min(professional.reviews, 8)).map((r, i) => (
+            <Card key={i}>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-sm font-semibold text-charcoal">{r.name}</p>
+                <div className="flex items-center gap-0.5">
+                  {Array.from({ length: 5 }, (_, j) => (
+                    <Star key={j} size={12} className={j < r.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
+                  ))}
+                </div>
+              </div>
+              <p className="text-sm text-charcoal-soft leading-relaxed">{r.text}</p>
+            </Card>
+          ))}
         </div>
       </BottomSheet>
     </div>

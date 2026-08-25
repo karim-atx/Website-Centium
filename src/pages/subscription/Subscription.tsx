@@ -184,9 +184,9 @@ function BusinessSubscription() {
 
 export default function Subscription() {
   const navigate = useNavigate();
-  const { user } = useApp();
-  const [plan, setPlan] = useState<"monthly" | "yearly">("yearly");
-  const [confirmed, setConfirmed] = useState(false);
+  const { user, premiumPlan, setPremiumPlan } = useApp();
+  const [plan, setPlan] = useState<"monthly" | "yearly">(premiumPlan ?? "yearly");
+  const confirmed = premiumPlan === plan;
 
   if (user.accountType === "professional") {
     return <ProfessionalSubscription />;
@@ -269,7 +269,7 @@ export default function Subscription() {
         </button>
       </div>
 
-      <Button fullWidth size="lg" onClick={() => setConfirmed(true)} disabled={confirmed}>
+      <Button fullWidth size="lg" onClick={() => setPremiumPlan(plan)} disabled={confirmed}>
         {confirmed ? "You're on the list ✓" : "Continue"}
       </Button>
       <p className="text-[11px] text-charcoal-faint text-center mt-4">

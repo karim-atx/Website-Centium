@@ -169,13 +169,19 @@ export default function MealPlanBuilderTab() {
                     step={0.1}
                     value={nutritionGoal.weeklyRateKg || 0.5}
                     onChange={(e) => setWeightGoal(nutritionGoal.weightGoal, Number(e.target.value))}
-                    className="w-full"
+                    disabled={!nutritionGoal.desiredWeightConfirmed}
+                    className="w-full disabled:opacity-50"
                     style={{ accentColor: nutritionGoal.weightGoal === "gain" ? "#3F9165" : "#C0392B" }}
                   />
                   <p className="text-xs text-charcoal-faint mt-1">
                     {nutritionGoal.weightGoal === "gain" ? "+" : "-"}
                     {(nutritionGoal.weeklyRateKg || 0.5).toFixed(1)} kg / week
                   </p>
+                  {!nutritionGoal.desiredWeightConfirmed && (
+                    <p className="text-[11px] text-charcoal-faint mt-1">
+                      Add and confirm a desired weight above to set the weekly rate.
+                    </p>
+                  )}
                 </label>
               </>
             )}

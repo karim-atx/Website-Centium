@@ -19,6 +19,7 @@ import Marketplace from "./pages/marketplace/Marketplace";
 import MarketplaceCategoryPage from "./pages/marketplace/MarketplaceCategoryPage";
 import BusinessAnalyticsTab from "./pages/marketplace/BusinessAnalyticsTab";
 import BusinessMarketplaceTab from "./pages/marketplace/BusinessMarketplaceTab";
+import BusinessProfileTab from "./pages/marketplace/BusinessProfileTab";
 import BusinessMessagesTab from "./pages/marketplace/BusinessMessagesTab";
 import BusinessEmployeesTab from "./pages/marketplace/BusinessEmployeesTab";
 import BusinessClassesTab from "./pages/marketplace/BusinessClassesTab";
@@ -60,6 +61,7 @@ function AppRoutes() {
         <Route path="/marketplace/:category" element={<MarketplaceCategoryPage />} />
         <Route path="/business/analytics" element={<BusinessAnalyticsTab />} />
         <Route path="/business/marketplace" element={<BusinessMarketplaceTab />} />
+        <Route path="/business/profile" element={<BusinessProfileTab />} />
         <Route path="/business/messages" element={<BusinessMessagesTab />} />
         <Route path="/business/employees" element={<BusinessEmployeesTab />} />
         <Route path="/business/classes" element={<BusinessClassesTab />} />

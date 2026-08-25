@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 export default function Settings() {
-  const { theme, toggleTheme, language, setLanguage, t } = useApp();
+  const { theme, toggleTheme, language, setLanguage, t, user } = useApp();
   const [micAllowed, setMicAllowed] = useState<boolean | null>(null);
   const [cameraAllowed, setCameraAllowed] = useState<boolean | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
@@ -132,12 +132,19 @@ export default function Settings() {
         </div>
       </Card>
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        {t("Connected devices")}
-      </p>
-      <div className="mb-6">
-        <IntegrationsCard />
-      </div>
+      {/* V8 (QA 8.0): "remove the connected device row/section" — auto-sync
+          integrations are a personal health-tracking concept, not something
+          a professional or business account has any use for. */}
+      {user.accountType === "customer" && (
+        <>
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+            {t("Connected devices")}
+          </p>
+          <div className="mb-6">
+            <IntegrationsCard />
+          </div>
+        </>
+      )}
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         {t("General")}

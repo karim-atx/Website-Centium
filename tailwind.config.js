@@ -81,6 +81,23 @@ export default {
           "0%": { transform: "scale(0.9)", opacity: 0.8 },
           "100%": { transform: "scale(1.6)", opacity: 0 },
         },
+        // V8 (QA 8.0): "an animation that involves the logo when pressing
+        // get started" — the logo punches forward while a ring pulses out
+        // from behind it, then the rest of the screen fades to make room
+        // for the next onboarding step.
+        "logo-launch": {
+          "0%": { transform: "scale(1)" },
+          "45%": { transform: "scale(1.18)" },
+          "100%": { transform: "scale(1.35)", opacity: 0 },
+        },
+        "logo-launch-ring": {
+          "0%": { transform: "scale(1)", opacity: 0.7 },
+          "100%": { transform: "scale(2.4)", opacity: 0 },
+        },
+        "welcome-fade-out": {
+          "0%": { opacity: 1 },
+          "100%": { opacity: 0 },
+        },
         "fill-up": {
           "0%": { height: "0%" },
         },
@@ -92,6 +109,9 @@ export default {
         "sheet-up": "sheet-up 0.35s cubic-bezier(0.22,1,0.36,1) both",
         "drop-down": "drop-down 0.28s cubic-bezier(0.22,1,0.36,1) both",
         "pulse-ring": "pulse-ring 1.6s cubic-bezier(0,0,0.2,1) infinite",
+        "logo-launch": "logo-launch 0.55s cubic-bezier(0.4,0,0.2,1) both",
+        "logo-launch-ring": "logo-launch-ring 0.6s cubic-bezier(0,0,0.2,1) both",
+        "welcome-fade-out": "welcome-fade-out 0.4s ease both",
       },
     },
   },

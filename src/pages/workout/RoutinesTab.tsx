@@ -413,6 +413,14 @@ export default function RoutinesTab() {
             ),
           });
         }}
+        onDelete={() => {
+          if (!settingsExercise) return;
+          const routine = routines.find((r) => r.id === settingsExercise.routineId);
+          if (!routine) return;
+          updateRoutine(routine.id, {
+            exercises: routine.exercises.filter((e) => e.id !== settingsExercise.exercise.id),
+          });
+        }}
       />
 
       {activeRoutine && (

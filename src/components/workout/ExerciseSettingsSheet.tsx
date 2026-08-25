@@ -5,7 +5,7 @@ import { useApp } from "../../context/AppContext";
 import type { Exercise, RepMaxUpdateMode, MuscleGroup, ExerciseClassification } from "../../types";
 import { ONE_RM_CLASSIFICATIONS } from "../../types";
 import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet";
-import { X, ChevronRight } from "lucide-react";
+import { X, ChevronRight, Trash2 } from "lucide-react";
 import clsx from "clsx";
 
 const repMaxModes: { value: RepMaxUpdateMode; label: string; desc: string }[] = [
@@ -57,16 +57,20 @@ export const ExerciseSettingsSheet: React.FC<{
   exercise: Exercise | null;
   routineId?: string | null;
   onSave: (patch: Partial<Exercise>) => void;
-}> = ({ open, onClose, exercise, routineId, onSave }) => {
+  // V8 (QA 8.0): "I want a delete exercise under the save settings button."
+  onDelete?: () => void;
+}> = ({ open, onClose, exercise, routineId, onSave, onDelete }) => {
   const { personalRecords, setPersonalRecord, pausedSessions, savePausedSession } = useApp();
   const [draft, setDraft] = useState<Partial<Exercise>>({});
   const [oneRmDraft, setOneRmDraft] = useState("");
   const [replaceOpen, setReplaceOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   React.useEffect(() => {
     if (exercise) {
       setDraft(exercise);
       setOneRmDraft(String(personalRecords[exercise.name] ?? ""));
+      setConfirmDelete(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise]);
@@ -262,6 +266,25 @@ export const ExerciseSettingsSheet: React.FC<{
           <Button fullWidth size="lg" onClick={save}>
             Save settings
           </Button>
+          {onDelete && (
+            <Button
+              fullWidth
+              variant="outline"
+              className="!border-ember/30 !text-ember-dark"
+              onClick={() => {
+                if (!confirmDelete) {
+                  setConfirmDelete(true);
+                  setTimeout(() => setConfirmDelete(false), 3000);
+                  return;
+                }
+                onDelete();
+                onClose();
+              }}
+            >
+              <Trash2 size={14} />
+              {confirmDelete ? "Tap again to confirm" : "Delete exercise"}
+            </Button>
+          )}
         </div>
       </BottomSheet>
 

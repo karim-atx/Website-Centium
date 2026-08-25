@@ -45,27 +45,23 @@ export const MetricDetailSheet: React.FC<{
   onClose: () => void;
   metric: HealthMetric | null;
   current: number;
-  onEditSteps?: (value: number) => void;
-}> = ({ open, onClose, metric, current, onEditSteps }) => {
+  stepsGoal?: number;
+  onEditStepsGoal?: (goal: number) => void;
+}> = ({ open, onClose, metric, current, stepsGoal, onEditStepsGoal }) => {
   const [period, setPeriod] = useState<Period>("daily");
   const [lastType, setLastType] = useState<string | null>(null);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const [selectedSleepIdx, setSelectedSleepIdx] = useState<number | null>(null);
-  const [editingSteps, setEditingSteps] = useState(false);
-  const [stepsDraft, setStepsDraft] = useState("");
-  const [localSteps, setLocalSteps] = useState<number | null>(null);
+  const [editingStepsGoal, setEditingStepsGoal] = useState(false);
+  const [stepsGoalDraft, setStepsGoalDraft] = useState("");
   if (metric && metric.type !== lastType) {
     setLastType(metric.type);
     if (period !== "daily") setPeriod("daily");
-    setLocalSteps(null);
   }
   if (!metric) return null;
 
   const isSleep = metric.type === "sleep";
   const isSteps = metric.type === "steps";
-  // `current` is a snapshot taken when the sheet was opened — this override
-  // keeps an edit visible without needing to close and reopen the sheet.
-  if (isSteps && localSteps !== null) current = localSteps;
   const isWeight = metric.type === "weight";
   const isBodyFat = metric.type === "bodyFat";
   const isTrend = isWeight || isBodyFat;
@@ -73,16 +69,8 @@ export const MetricDetailSheet: React.FC<{
   const isAuto = AUTO_SOURCED_TYPES.has(metric.type);
 
   const dailyHistory = metric.history.map((h) => h.value);
-  // The mock history's last entry and the live `current` value can disagree
-  // (e.g. right after editing, or simply because they're separate mock
-  // sources) — always show today's real current value in the chart too.
-  if (isSteps) dailyHistory[dailyHistory.length - 1] = current;
   const weekdayLabels = metric.history.map((h) =>
     new Date(`${h.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" })
-  );
-  const todayLabel = new Date(`${metric.history[metric.history.length - 1].date}T00:00:00`).toLocaleDateString(
-    "en-US",
-    { month: "short", day: "numeric" }
   );
 
   // Deterministic mock value for an arbitrary picked date, in the same
@@ -110,13 +98,13 @@ export const MetricDetailSheet: React.FC<{
               {metric.trend >= 0 ? "↑" : "↓"} {Math.abs(metric.trend)} {metric.unit} vs last week
             </p>
           </div>
-          {isSteps && onEditSteps ? (
+          {isSteps && onEditStepsGoal ? (
             <button
               onClick={() => {
-                setStepsDraft(String(current));
-                setEditingSteps(true);
+                setStepsGoalDraft(String(stepsGoal ?? 10000));
+                setEditingStepsGoal(true);
               }}
-              aria-label="Edit today's steps"
+              aria-label="Edit daily step count goal"
               className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0"
             >
               <Pencil size={13} />
@@ -130,29 +118,32 @@ export const MetricDetailSheet: React.FC<{
           )}
         </div>
 
-        {isSteps && editingSteps && (
-          <div className="flex items-center gap-2 bg-cream-soft rounded-2xl px-4 py-3 mb-4">
-            <input
-              autoFocus
-              value={stepsDraft}
-              onChange={(e) => setStepsDraft(e.target.value.replace(/\D/g, ""))}
-              inputMode="numeric"
-              className="flex-1 bg-transparent text-lg font-bold text-charcoal focus:outline-none"
-            />
-            <button
-              onClick={() => {
-                const n = Number(stepsDraft);
-                if (n >= 0) {
-                  onEditSteps?.(n);
-                  setLocalSteps(n);
-                }
-                setEditingSteps(false);
-              }}
-              className="tap w-9 h-9 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
-              aria-label="Save steps"
-            >
-              <Check size={16} strokeWidth={3} />
-            </button>
+        {/* V8 (QA 8.0): "Pressing the edit feature only prompts you to edit
+            daily step count goal" — the count stays auto-synced; only the
+            target is user-configurable. */}
+        {isSteps && editingStepsGoal && (
+          <div className="mb-4">
+            <p className="text-xs font-semibold text-charcoal-soft mb-1.5">Daily step goal</p>
+            <div className="flex items-center gap-2 bg-cream-soft rounded-2xl px-4 py-3">
+              <input
+                autoFocus
+                value={stepsGoalDraft}
+                onChange={(e) => setStepsGoalDraft(e.target.value.replace(/\D/g, ""))}
+                inputMode="numeric"
+                className="flex-1 bg-transparent text-lg font-bold text-charcoal focus:outline-none"
+              />
+              <button
+                onClick={() => {
+                  const n = Number(stepsGoalDraft);
+                  if (n > 0) onEditStepsGoal?.(n);
+                  setEditingStepsGoal(false);
+                }}
+                className="tap w-9 h-9 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
+                aria-label="Save step goal"
+              >
+                <Check size={16} strokeWidth={3} />
+              </button>
+            </div>
           </div>
         )}
 
@@ -179,7 +170,15 @@ export const MetricDetailSheet: React.FC<{
               <CalendarDays size={13} />
               <input
                 type="date"
-                onChange={(e) => e.target.value && setPickedDate(e.target.value)}
+                // V8 (QA 8.0): "pressing the calendar a set date would
+                // redirect you to the day alone, and does not affect week
+                // or month" — picking a date always jumps to Day view.
+                onChange={(e) => {
+                  if (!e.target.value) return;
+                  setPickedDate(e.target.value);
+                  setPeriod("daily");
+                  setSelectedSleepIdx(null);
+                }}
                 className="absolute inset-0 opacity-0 cursor-pointer"
                 aria-label="Pick a specific date"
               />
@@ -205,25 +204,25 @@ export const MetricDetailSheet: React.FC<{
           </div>
         )}
 
-        {/* Steps: bar chart per period (moved here from the compact widget per QA) */}
+        {/* Steps: bar chart per period (moved here from the compact widget
+            per QA). V8 (QA 8.0): week/month/year bars are the average daily
+            steps for that unit (not a redundant total on top of the day
+            count) — the day view drops the chart entirely, same treatment
+            as the weight/body fat trend's daily case just below. */}
         {isSteps &&
+          period !== "daily" &&
           (() => {
             const weeklyAvg = Math.round(dailyHistory.reduce((s, v) => s + v, 0) / dailyHistory.length);
-            const weekOfMonthTotals = Array.from({ length: 4 }, (_, i) => Math.round(weeklyAvg * 7 * wobble(i)));
-            const monthOfYearTotals = Array.from({ length: 12 }, (_, i) => Math.round(weeklyAvg * 30 * wobble(i, 0.12)));
+            const weekOfMonthAvgs = Array.from({ length: 4 }, (_, i) => Math.round(weeklyAvg * wobble(i)));
+            const monthOfYearAvgs = Array.from({ length: 12 }, (_, i) => Math.round(weeklyAvg * wobble(i, 0.12)));
             const view = {
-              daily: { values: [dailyHistory[dailyHistory.length - 1]], labels: [todayLabel] },
               weekly: { values: dailyHistory, labels: weekdayLabels },
-              monthly: { values: weekOfMonthTotals, labels: weekOfMonthTotals.map((_, i) => `Week ${i + 1}`) },
-              yearly: { values: monthOfYearTotals, labels: monthNames },
+              monthly: { values: weekOfMonthAvgs, labels: weekOfMonthAvgs.map((_, i) => `Week ${i + 1}`) },
+              yearly: { values: monthOfYearAvgs, labels: monthNames },
             }[period];
             return (
               <div className="mb-4">
                 <PeriodBarChart values={view.values} labels={view.labels} color="#4C8FD1" />
-                <p className="text-xs text-charcoal-faint mt-2">
-                  {period === "daily" ? "Today" : "Avg"}:{" "}
-                  {Math.round(view.values.reduce((a, b) => a + b, 0) / view.values.length).toLocaleString()}
-                </p>
               </div>
             );
           })()}
@@ -394,7 +393,7 @@ export const MetricDetailSheet: React.FC<{
         )}
         {isSteps && (
           <p className="text-[11px] text-charcoal-faint mt-2">
-            Synced automatically from Apple/Android Health — tap the pencil to correct today's count.
+            Synced automatically from Apple/Android Health — tap the pencil to set your daily goal.
           </p>
         )}
       </div>

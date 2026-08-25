@@ -46,7 +46,11 @@ export const CreateCustomExerciseSheet: React.FC<{
   onClose: () => void;
   onSave: (data: CustomExerciseData) => void;
   initial?: Partial<CustomExerciseData>;
-}> = ({ open, onClose, onSave, initial }) => {
+  // V8 (QA 8.0): editing a stock library exercise can't mutate the shared
+  // built-in data, so it saves as a new custom exercise instead — this
+  // makes that distinction clear instead of implying an in-place edit.
+  duplicateFromStock?: boolean;
+}> = ({ open, onClose, onSave, initial, duplicateFromStock }) => {
   const [name, setName] = useState("");
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([]);
   const [classification, setClassification] = useState<ExerciseClassification>("machine_other");
@@ -71,8 +75,18 @@ export const CreateCustomExerciseSheet: React.FC<{
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={initial?.name ? "Edit Custom Exercise" : "Create New Exercise"}>
+    <BottomSheet
+      open={open}
+      onClose={onClose}
+      title={duplicateFromStock ? "Save as Custom Exercise" : initial?.name ? "Edit Custom Exercise" : "Create New Exercise"}
+    >
       <div className="space-y-5 animate-fade-slide-up">
+        {duplicateFromStock && (
+          <p className="text-[11px] text-charcoal-faint -mt-2">
+            This is a built-in exercise — saving will add your changes as a new custom exercise instead of
+            changing the original.
+          </p>
+        )}
         <label className="block">
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Name</span>
           <input

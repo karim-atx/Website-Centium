@@ -22,7 +22,7 @@ export default function HealthMetricsTab() {
 
   return (
     <div>
-      <PageHeader title="Health Metrics" subtitle="Auto-synced data plus your own clinical notes" />
+      <PageHeader title="Health Metrics" subtitle="Auto-synced data plus your own clinical notes" showBack />
 
       <div className="space-y-2.5">
         {professionalClients.map((c) => {

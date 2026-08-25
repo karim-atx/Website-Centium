@@ -11,10 +11,13 @@ import {
 } from "../../data/mockProfessionals";
 import { useApp } from "../../context/AppContext";
 import { getCurrentPosition, distanceKm, type Coords } from "../../services/geo";
-import { Star, MapPin, Building2 } from "lucide-react";
+import { Star, MapPin, Building2, ShoppingBag } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import type { MarketplaceCategoryId, Gym } from "../../types";
+import type { StoreItem } from "../../data/mockProfessionals";
 import { GymDetailSheet } from "../../components/marketplace/GymDetailSheet";
+import { StoreDetailSheet } from "../../components/marketplace/StoreDetailSheet";
+import { CartSheet } from "../../components/marketplace/CartSheet";
 
 type FilterMode = "rating" | "proximity" | "discount";
 const filterOptions: { value: FilterMode; label: string }[] = [
@@ -28,13 +31,19 @@ const filterOptions: { value: FilterMode; label: string }[] = [
 // unfiltered "browse everything" list.
 export default function MarketplaceCategoryPage() {
   const { category } = useParams<{ category: string }>();
-  const { businessOfferings, businessListing } = useApp();
+  const { businessOfferings, businessListing, cart } = useApp();
   const id = (category ?? "gyms") as MarketplaceCategoryId;
   const meta = marketplaceCategories.find((c) => c.id === id);
   const Icon = marketplaceCategoryIcon[id] ?? marketplaceCategoryIcon.gyms;
   const [position, setPosition] = useState<Coords | null>(null);
   const [filter, setFilter] = useState<FilterMode>("rating");
   const [activeGym, setActiveGym] = useState<Gym | null>(null);
+  const [activeStore, setActiveStore] = useState<
+    { id: string; name: string; location: string; rating: number; offer?: string; items: StoreItem[] } | null
+  >(null);
+  const [cartOpen, setCartOpen] = useState(false);
+  const cartCount = cart.reduce((sum, c) => sum + c.quantity, 0);
+  const isStoreCategory = id !== "gyms" && id !== "classes";
 
   useEffect(() => {
     getCurrentPosition().then(setPosition);
@@ -76,7 +85,27 @@ export default function MarketplaceCategoryPage() {
 
   return (
     <div>
-      <PageHeader title={meta?.label ?? "Explore"} subtitle="Ranked by rating" showBack />
+      <PageHeader
+        title={meta?.label ?? "Explore"}
+        subtitle="Ranked by rating"
+        showBack
+        right={
+          isStoreCategory && (
+            <button
+              onClick={() => setCartOpen(true)}
+              aria-label="Cart"
+              className="tap relative w-10 h-10 rounded-full bg-cream-card flex items-center justify-center text-charcoal-soft shadow-soft"
+            >
+              <ShoppingBag size={17} />
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 min-w-[18px] rounded-full bg-ember text-white text-[10px] font-bold flex items-center justify-center px-1">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+          )
+        }
+      />
 
       <div className="flex gap-2 mb-4">
         {filterOptions.map((f) => (
@@ -136,10 +165,9 @@ export default function MarketplaceCategoryPage() {
             </Card>
           ))}
 
-        {id !== "gyms" &&
-          id !== "classes" &&
+        {isStoreCategory &&
           rankedListings.map((item) => (
-            <Card key={item.id} className="animate-fade-slide-up">
+            <Card key={item.id} interactive onClick={() => setActiveStore(item)} className="animate-fade-slide-up">
               <div className="flex items-start gap-3">
                 <span className="w-11 h-11 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
                   <Icon size={18} className="text-sohati-dark" />
@@ -201,6 +229,8 @@ export default function MarketplaceCategoryPage() {
       </div>
 
       <GymDetailSheet open={!!activeGym} onClose={() => setActiveGym(null)} gym={activeGym} />
+      <StoreDetailSheet open={!!activeStore} onClose={() => setActiveStore(null)} store={activeStore} />
+      <CartSheet open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   );
 }

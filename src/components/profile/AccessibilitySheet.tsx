@@ -16,7 +16,7 @@ export const AccessibilitySheet: React.FC<{ open: boolean; onClose: () => void }
         <div className="flex items-center justify-between gap-3">
           <div>
             <p className="text-sm font-semibold text-charcoal">Larger text</p>
-            <p className="text-[11px] text-charcoal-faint">Increases text size throughout Centium</p>
+            <p className="text-[11px] text-charcoal-faint">Increases text and icon size throughout Centium</p>
           </div>
           <Toggle
             checked={accessibility.largerText}

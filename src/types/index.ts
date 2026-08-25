@@ -70,6 +70,7 @@ export interface UserProfile {
   linkedProfessionalCode?: string;
   linkedProfessionalName?: string;
   linkedProfessionalSubtype?: ProfessionalSubtype;
+  linkedProfessionalCertificationUrl?: string;
   // V7 (QA 7.0): a business account's own unique ID (shown to professionals
   // who want to affiliate) and, for a professional account, which business
   // they've affiliated with by entering one.
@@ -105,6 +106,11 @@ export interface ClientCode {
   // V7 (QA 7.0): lets the client's Professionals tab pick a matching icon
   // for the professional they just linked to.
   professionalSubtype?: ProfessionalSubtype;
+  // V8 (QA 8.0): "If the professional attaches a certificate... it should
+  // show on the professionals tab in the more tab within the Client UI as
+  // well when viewing their profile" — snapshotted here at code-generation
+  // time, the only channel this prototype has between the two accounts.
+  professionalCertificationUrl?: string;
   createdAt: string;
   redeemed: boolean;
   // V7 (QA 7.0): profile info the professional entered for this client when
@@ -123,6 +129,8 @@ export interface ClientCode {
 export interface ProfessionalClient {
   id: string;
   name: string;
+  // V8 (QA 8.0): "Add prefix above first name like Mr, Ms, Dr, etc.."
+  prefix?: string;
   code: string;
   joinedAt: string;
   activityLevel: ActivityLevel;
@@ -495,6 +503,25 @@ export interface Gym {
   pricing: { plan: string; price: string }[];
 }
 
+// V8 (QA 8.0): a purchased gym plan — a day pass expires 24h after
+// purchase and stacks alongside an active monthly/annual membership,
+// which instead stays active until explicitly cancelled.
+export interface GymPurchase {
+  plan: string;
+  purchasedAt: number;
+  oneTime: boolean;
+}
+
+// V8 (QA 8.0): a marketplace store-item in the cart, ready for checkout.
+export interface CartItem {
+  itemId: string;
+  itemName: string;
+  storeId: string;
+  storeName: string;
+  price: number;
+  quantity: number;
+}
+
 // V4: a small curated set of minimalistic icon choices for habits, replacing
 // the free-form emoji picker. See utils/icons.tsx for the icon lookup.
 export type HabitIconKey =
@@ -660,6 +687,8 @@ export interface BusinessClass {
   endTime: string;
   maxCapacity: number;
   professionalId?: string;
+  // V8 (QA 8.0): a free-text note for the assigned professional.
+  notes?: string;
 }
 
 export interface BusinessMessage {

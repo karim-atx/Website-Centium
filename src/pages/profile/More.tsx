@@ -1,10 +1,8 @@
-import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { useApp } from "../../context/AppContext";
-import { CertificationSheet } from "../../components/profile/CertificationSheet";
-import { Sparkles, Users, Store, User as UserIcon, Crown, ChevronRight, Settings, UtensilsCrossed, HeartPulse, BadgeCheck, MessageCircle, CalendarDays } from "lucide-react";
+import { Sparkles, Users, Store, User as UserIcon, Crown, ChevronRight, Settings, HeartPulse, MessageCircle, CalendarDays, Building2 } from "lucide-react";
 
 export default function More() {
   const navigate = useNavigate();
@@ -12,21 +10,21 @@ export default function More() {
   const isProfessional = user.accountType === "professional";
   const isBusiness = user.accountType === "business";
   const isGymBusiness = isBusiness && user.businessType === "gym";
-  const [certOpen, setCertOpen] = useState(false);
 
   // Profile shifted to the top per QA — first widget in the More list.
   // V6 (QA 6.0): Mind and the client-facing "browse professionals" directory
   // don't apply to a professional or business account, so they're removed
   // for those account types; Meal Plans and Health Metrics (their
   // bottom-nav doesn't have room for every tab) are added for professionals.
+  // V8 (QA 8.0): Certification moved into My Profile — professionals already
+  // reach it from there now, so it's no longer duplicated here.
   const items = [
     { icon: UserIcon, label: "Profile", desc: "Your account & settings", to: "/profile", bg: "#EAF4F2", color: "#6F9993" },
     !isProfessional && !isBusiness && { icon: Sparkles, label: "Mind", desc: "Habits, journal & meditation", to: "/mind", bg: "#F1E0EB", color: "#9C4F7C" },
     !isProfessional && !isBusiness && { icon: Users, label: "Professionals", desc: "Trainers, dietitians & doctors", to: "/professionals", bg: "#F0EDF9", color: "#7D6BB5" },
-    isProfessional && { icon: UtensilsCrossed, label: "Meal Plans", desc: "Edit client goals & build meal plans", to: "/professionals/meal-plans", bg: "#F0EDF9", color: "#7D6BB5" },
     isProfessional && { icon: MessageCircle, label: "Messages", desc: "Chat with your clients", to: "/professionals/messages", bg: "#EAF4F2", color: "#6F9993" },
     isProfessional && { icon: HeartPulse, label: "Health Metrics", desc: "Client health data & clinical notes", to: "/professionals/health-metrics", bg: "#F1E0EB", color: "#9C4F7C" },
-    isProfessional && { icon: BadgeCheck, label: "Certification", desc: "View or replace your uploaded credential", to: "__certification", bg: "#DCEAF8", color: "#4C8FD1" },
+    isBusiness && { icon: Building2, label: "Business Profile", desc: "Name, bio, location & reviews", to: "/business/profile", bg: "#DCEAF8", color: "#4C8FD1" },
     isGymBusiness && { icon: Users, label: "Employees", desc: "Affiliate professionals via your business ID", to: "/business/employees", bg: "#F0EDF9", color: "#7D6BB5" },
     isGymBusiness && { icon: CalendarDays, label: "Classes", desc: "Schedule classes for affiliated professionals", to: "/business/classes", bg: "#F1E0EB", color: "#9C4F7C" },
     { icon: Store, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/marketplace", bg: "#F6E9C9", color: "#D9A441" },
@@ -43,7 +41,7 @@ export default function More() {
           <Card
             key={item.label}
             interactive
-            onClick={() => (item.to === "__certification" ? setCertOpen(true) : navigate(item.to))}
+            onClick={() => navigate(item.to)}
             className="flex items-center justify-between animate-fade-slide-up"
           >
             <div className="flex items-center gap-3.5">
@@ -59,8 +57,6 @@ export default function More() {
           </Card>
         ))}
       </div>
-
-      {isProfessional && <CertificationSheet open={certOpen} onClose={() => setCertOpen(false)} />}
     </div>
   );
 }

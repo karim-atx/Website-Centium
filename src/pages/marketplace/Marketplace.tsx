@@ -1,9 +1,11 @@
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
+import { BottomSheet } from "../../components/ui/BottomSheet";
 import { marketplaceCategories } from "../../data/mockProfessionals";
 import { useApp } from "../../context/AppContext";
-import { Flame, Sparkles, Gem } from "lucide-react";
+import { Flame, Sparkles, Gem, Plus, SlidersHorizontal } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import BusinessDashboard from "./BusinessDashboard";
 import ProfessionalExplore from "./ProfessionalExplore";
@@ -20,8 +22,9 @@ const rewardTiers = [
 ];
 
 export default function Marketplace() {
-  const { streaks, user } = useApp();
+  const { streaks, user, bonusPoints, addBonusPoints } = useApp();
   const navigate = useNavigate();
+  const [categoryPickerOpen, setCategoryPickerOpen] = useState(false);
 
   // Businesses get a management dashboard here instead of the consumer
   // browse experience — separate UI per QA, not just a banner.
@@ -42,7 +45,8 @@ export default function Marketplace() {
 
   // Points are derived from total logged streak days across the core
   // streaks — a simple, transparent stand-in for a real points ledger.
-  const points = lockedStreaks.reduce((sum, s) => sum + s.days, 0) * 100;
+  // V8 (QA 8.0): plus a placeholder bonus, added via the "+" button below.
+  const points = lockedStreaks.reduce((sum, s) => sum + s.days, 0) * 100 + bonusPoints;
   const tierIdx = [...rewardTiers].reverse().findIndex((t) => points >= t.threshold);
   const tier = rewardTiers[rewardTiers.length - 1 - tierIdx];
   const nextTier = rewardTiers[rewardTiers.length - tierIdx];
@@ -60,7 +64,18 @@ export default function Marketplace() {
             <Gem size={16} />
             <p className="text-sm font-bold">{tier.name} tier</p>
           </div>
-          <p className="text-sm font-bold">{points.toLocaleString()} pts</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-bold">{points.toLocaleString()} pts</p>
+            {/* V8 (QA 8.0): "as a place holder add a plus sign logo that
+                increases the tier by 1000 points" */}
+            <button
+              onClick={() => addBonusPoints(1000)}
+              aria-label="Add 1000 points (placeholder)"
+              className="tap w-6 h-6 rounded-full bg-white/20 flex items-center justify-center"
+            >
+              <Plus size={13} />
+            </button>
+          </div>
         </div>
         <div className="h-1.5 rounded-full bg-white/25 overflow-hidden mb-2">
           <div className="h-full rounded-full bg-white transition-all duration-700" style={{ width: `${progressPct}%` }} />
@@ -80,24 +95,19 @@ export default function Marketplace() {
         <p className="text-sm text-white/85">10% off your next gym membership at partner gyms</p>
       </Card>
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Categories</p>
-      <div className="grid grid-cols-4 gap-2.5 mb-6">
-        {marketplaceCategories.map((c) => {
-          const Icon = marketplaceCategoryIcon[c.id];
-          return (
-            <button
-              key={c.id}
-              onClick={() => navigate(`/marketplace/${c.id}`)}
-              className="tap flex flex-col items-center gap-1.5 bg-cream-card rounded-2xl py-4 shadow-soft animate-fade-slide-up"
-            >
-              <Icon size={20} className="text-sohati" />
-              <span className="text-[10px] font-semibold text-charcoal-soft text-center leading-tight px-1">
-                {c.label}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      {/* V8 (QA 8.0): "the filter should be a minimalistic logo that
+          prompts you to choose what category rather than each one having
+          their separate tab" — one filter button opens a picker instead of
+          a permanent grid of category buttons. */}
+      <button
+        onClick={() => setCategoryPickerOpen(true)}
+        className="tap w-full flex items-center justify-between bg-cream-card rounded-2xl px-4 py-3.5 shadow-soft mb-6 animate-fade-slide-up"
+      >
+        <span className="flex items-center gap-2.5 text-sm font-semibold text-charcoal">
+          <SlidersHorizontal size={16} className="text-sohati" /> Browse a category
+        </span>
+        <span className="text-xs text-charcoal-faint">{marketplaceCategories.length} available</span>
+      </button>
 
       <Card className="text-center py-8 animate-fade-slide-up">
         <Sparkles size={22} className="text-berry mx-auto mb-3" />
@@ -107,6 +117,29 @@ export default function Marketplace() {
           built around your streaks and progress.
         </p>
       </Card>
+
+      <BottomSheet open={categoryPickerOpen} onClose={() => setCategoryPickerOpen(false)} title="Choose a category">
+        <div className="grid grid-cols-2 gap-2.5 animate-fade-slide-up">
+          {marketplaceCategories.map((c) => {
+            const Icon = marketplaceCategoryIcon[c.id];
+            return (
+              <button
+                key={c.id}
+                onClick={() => {
+                  setCategoryPickerOpen(false);
+                  navigate(`/marketplace/${c.id}`);
+                }}
+                className="tap flex flex-col items-center gap-1.5 bg-cream-soft rounded-2xl py-4"
+              >
+                <Icon size={20} className="text-sohati" />
+                <span className="text-[11px] font-semibold text-charcoal-soft text-center leading-tight px-1">
+                  {c.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </BottomSheet>
     </div>
   );
 }
