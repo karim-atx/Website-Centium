@@ -51,15 +51,19 @@ export default function Home() {
       <div className="flex items-center justify-between mb-4 animate-fade-slide-up">
         <div>
           <h1 className="font-display text-2xl sm:text-3xl font-semibold text-charcoal">
-            {t(getGreeting())}, {user.firstName} 👋
+            {t(getGreeting())}, {user.firstName}
           </h1>
           <p className="text-charcoal-soft text-sm mt-1">{t("Here's your day")}</p>
         </div>
         <button
           onClick={() => navigate("/profile")}
-          className="tap w-11 h-11 rounded-full bg-ember-pale flex items-center justify-center text-ember-dark font-bold shrink-0"
+          className="tap w-11 h-11 rounded-full bg-ember-pale flex items-center justify-center text-ember-dark font-bold shrink-0 overflow-hidden"
         >
-          {user.firstName.charAt(0)}
+          {user.avatarUrl ? (
+            <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
+          ) : (
+            user.firstName.charAt(0)
+          )}
         </button>
       </div>
 
@@ -100,7 +104,7 @@ export default function Home() {
       </div>
 
       <div className="mb-6">
-        <WidgetBoard />
+        <WidgetBoard onWaterClick={() => setMetricOpen(true)} />
       </div>
 
       <Card interactive onClick={() => navigate("/professionals")} className="mb-4 animate-fade-slide-up bg-gradient-to-br from-sohati to-sohati-dark !text-white">

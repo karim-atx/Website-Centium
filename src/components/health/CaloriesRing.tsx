@@ -34,7 +34,16 @@ export const CaloriesRing: React.FC<{ progress: number; size?: number }> = ({ pr
           className="transition-[stroke-dashoffset] duration-700 ease-out"
         />
       </svg>
-      <Flame size={size * 0.32} className="absolute text-ember" fill="currentColor" fillOpacity={0.15} />
+      {/* V7 (QA 7.0): "the flame logo should have a similar color to the
+          wheel" — was text-ember, which the QA5 rebrand remapped to sage,
+          no longer resembling the flame gradient around it. */}
+      <Flame
+        size={size * 0.32}
+        className="absolute"
+        style={{ color: "#E8883C" }}
+        fill="currentColor"
+        fillOpacity={0.15}
+      />
     </div>
   );
 };

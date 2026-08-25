@@ -40,8 +40,8 @@ export const GoalStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) =
       subtitle="Pick as many as you like."
       onBack={onBack}
       footer={
-        <Button fullWidth size="lg" disabled={draft.goals.length === 0} onClick={onNext}>
-          Continue
+        <Button fullWidth size="lg" onClick={onNext}>
+          {draft.goals.length === 0 ? "Skip" : "Continue"}
         </Button>
       }
     >

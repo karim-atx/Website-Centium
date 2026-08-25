@@ -3,9 +3,21 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { marketplaceCategories } from "../../data/mockProfessionals";
 import { useApp } from "../../context/AppContext";
-import { Flame, Sparkles } from "lucide-react";
+import { Flame, Sparkles, Gem } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import BusinessDashboard from "./BusinessDashboard";
+import ProfessionalExplore from "./ProfessionalExplore";
+
+// V7 (QA 7.0): "The reward counter should be a series of points that goes
+// from bronze to silver to gold to platinum to diamond. With each stage
+// start with 5000 and increase increments of 5000."
+const rewardTiers = [
+  { name: "Bronze", threshold: 0, color: "#B08D57" },
+  { name: "Silver", threshold: 5000, color: "#A8A9AD" },
+  { name: "Gold", threshold: 10000, color: "#D9A441" },
+  { name: "Platinum", threshold: 15000, color: "#8FA6A3" },
+  { name: "Diamond", threshold: 20000, color: "#6FA8DC" },
+];
 
 export default function Marketplace() {
   const { streaks, user } = useApp();
@@ -16,6 +28,11 @@ export default function Marketplace() {
   if (user.accountType === "business") {
     return <BusinessDashboard />;
   }
+  // V7 (QA 7.0): a professional's Explore is job postings + affiliation,
+  // not the consumer rewards/marketplace browse experience.
+  if (user.accountType === "professional") {
+    return <ProfessionalExplore />;
+  }
 
   // Rewards are earned strictly off the 4 core (auto-derived, "locked")
   // streaks — a user-added custom streak never counts toward unlocking one.
@@ -23,9 +40,37 @@ export default function Marketplace() {
   const streak = [...lockedStreaks].sort((a, b) => b.days - a.days)[0] ?? lockedStreaks[0];
   if (!streak) return null;
 
+  // Points are derived from total logged streak days across the core
+  // streaks — a simple, transparent stand-in for a real points ledger.
+  const points = lockedStreaks.reduce((sum, s) => sum + s.days, 0) * 100;
+  const tierIdx = [...rewardTiers].reverse().findIndex((t) => points >= t.threshold);
+  const tier = rewardTiers[rewardTiers.length - 1 - tierIdx];
+  const nextTier = rewardTiers[rewardTiers.length - tierIdx];
+  const progressPct = nextTier
+    ? Math.min(100, ((points - tier.threshold) / (nextTier.threshold - tier.threshold)) * 100)
+    : 100;
+
   return (
     <div>
       <PageHeader title="Explore" subtitle="The future Centium ecosystem" showBack />
+
+      <Card className="mb-6 bg-gradient-to-br from-ember to-ember-dark !text-white animate-fade-slide-up">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Gem size={16} />
+            <p className="text-sm font-bold">{tier.name} tier</p>
+          </div>
+          <p className="text-sm font-bold">{points.toLocaleString()} pts</p>
+        </div>
+        <div className="h-1.5 rounded-full bg-white/25 overflow-hidden mb-2">
+          <div className="h-full rounded-full bg-white transition-all duration-700" style={{ width: `${progressPct}%` }} />
+        </div>
+        <p className="text-xs text-white/85">
+          {nextTier
+            ? `${(nextTier.threshold - points).toLocaleString()} pts to ${nextTier.name}`
+            : "Highest tier reached — Diamond"}
+        </p>
+      </Card>
 
       <Card className="mb-6 bg-gradient-to-br from-ember to-ember-dark !text-white animate-fade-slide-up">
         <div className="flex items-center gap-2 mb-1.5">

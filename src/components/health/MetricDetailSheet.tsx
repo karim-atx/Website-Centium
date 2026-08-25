@@ -6,7 +6,7 @@ import { StackedSleepBar, StackedSleepColumns, sleepStageLegend, type SleepStage
 import { CaloriesRing } from "./CaloriesRing";
 import { sleepDetail } from "../../data/mockHealthData";
 import type { HealthMetric } from "../../types";
-import { Lock } from "lucide-react";
+import { Lock, CalendarDays, Pencil, Check } from "lucide-react";
 
 type Period = "daily" | "weekly" | "monthly" | "yearly";
 const periodTabs: { value: Period; label: string }[] = [
@@ -26,39 +26,72 @@ const AUTO_SOURCED_TYPES = new Set(["weight", "bodyFat", "steps", "sleep", "calo
 // synthesis already used in StepsPeriodCard.
 const wobble = (i: number, spread = 0.08) => 1 + Math.sin(i * 1.7) * spread;
 
-// V6 (QA 6.0): period breakdowns use real calendar labels — the four weeks
-// of the current month, the months of the current year, and the actual
-// current year — instead of synthetic "W1"/"M1"/"Y1" placeholders.
-const now = new Date();
+function hashString(s: string) {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+// V7 (QA 7.0): "Day" is that specific day, "Week" is Monday-Sunday, "Month"
+// is the 4 weeks of that month, "Year" is January-December — real calendar
+// granularity at every level, instead of the previous D/W/M/Y tabs each
+// jumping straight to a different aggregation than their name implied.
 const monthNames = Array.from({ length: 12 }, (_, i) =>
   new Date(2000, i, 1).toLocaleDateString("en-US", { month: "short" })
 );
-const currentYear = now.getFullYear();
 
 export const MetricDetailSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   metric: HealthMetric | null;
   current: number;
-}> = ({ open, onClose, metric, current }) => {
+  onEditSteps?: (value: number) => void;
+}> = ({ open, onClose, metric, current, onEditSteps }) => {
   const [period, setPeriod] = useState<Period>("daily");
   const [lastType, setLastType] = useState<string | null>(null);
+  const [pickedDate, setPickedDate] = useState<string | null>(null);
+  const [selectedSleepIdx, setSelectedSleepIdx] = useState<number | null>(null);
+  const [editingSteps, setEditingSteps] = useState(false);
+  const [stepsDraft, setStepsDraft] = useState("");
+  const [localSteps, setLocalSteps] = useState<number | null>(null);
   if (metric && metric.type !== lastType) {
     setLastType(metric.type);
     if (period !== "daily") setPeriod("daily");
+    setLocalSteps(null);
   }
   if (!metric) return null;
 
   const isSleep = metric.type === "sleep";
   const isSteps = metric.type === "steps";
+  // `current` is a snapshot taken when the sheet was opened — this override
+  // keeps an edit visible without needing to close and reopen the sheet.
+  if (isSteps && localSteps !== null) current = localSteps;
   const isWeight = metric.type === "weight";
+  const isBodyFat = metric.type === "bodyFat";
+  const isTrend = isWeight || isBodyFat;
   const isCalories = metric.type === "caloriesBurned";
   const isAuto = AUTO_SOURCED_TYPES.has(metric.type);
 
   const dailyHistory = metric.history.map((h) => h.value);
-  const dailyLabels = metric.history.map((h) =>
-    new Date(`${h.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "narrow" })
+  // The mock history's last entry and the live `current` value can disagree
+  // (e.g. right after editing, or simply because they're separate mock
+  // sources) — always show today's real current value in the chart too.
+  if (isSteps) dailyHistory[dailyHistory.length - 1] = current;
+  const weekdayLabels = metric.history.map((h) =>
+    new Date(`${h.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" })
   );
+  const todayLabel = new Date(`${metric.history[metric.history.length - 1].date}T00:00:00`).toLocaleDateString(
+    "en-US",
+    { month: "short", day: "numeric" }
+  );
+
+  // Deterministic mock value for an arbitrary picked date, in the same
+  // spirit as the rest of this prototype's synthesized longer-range data.
+  const valueForDate = (iso: string) => {
+    const seed = hashString(`${metric.type}-${iso}`);
+    const f = wobble(seed % 20, 0.15);
+    return isTrend ? +(current * f).toFixed(1) : Math.round(current * f);
+  };
 
   return (
     <BottomSheet open={open} onClose={onClose} title={metric.label}>
@@ -77,26 +110,98 @@ export const MetricDetailSheet: React.FC<{
               {metric.trend >= 0 ? "↑" : "↓"} {Math.abs(metric.trend)} {metric.unit} vs last week
             </p>
           </div>
-          {isAuto && (
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-charcoal-faint bg-cream-soft rounded-full px-2.5 py-1">
-              <Lock size={10} /> Auto-synced
-            </span>
+          {isSteps && onEditSteps ? (
+            <button
+              onClick={() => {
+                setStepsDraft(String(current));
+                setEditingSteps(true);
+              }}
+              aria-label="Edit today's steps"
+              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0"
+            >
+              <Pencil size={13} />
+            </button>
+          ) : (
+            isAuto && (
+              <span className="flex items-center gap-1 text-[10px] font-semibold text-charcoal-faint bg-cream-soft rounded-full px-2.5 py-1">
+                <Lock size={10} /> Auto-synced
+              </span>
+            )
           )}
         </div>
 
+        {isSteps && editingSteps && (
+          <div className="flex items-center gap-2 bg-cream-soft rounded-2xl px-4 py-3 mb-4">
+            <input
+              autoFocus
+              value={stepsDraft}
+              onChange={(e) => setStepsDraft(e.target.value.replace(/\D/g, ""))}
+              inputMode="numeric"
+              className="flex-1 bg-transparent text-lg font-bold text-charcoal focus:outline-none"
+            />
+            <button
+              onClick={() => {
+                const n = Number(stepsDraft);
+                if (n >= 0) {
+                  onEditSteps?.(n);
+                  setLocalSteps(n);
+                }
+                setEditingSteps(false);
+              }}
+              className="tap w-9 h-9 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
+              aria-label="Save steps"
+            >
+              <Check size={16} strokeWidth={3} />
+            </button>
+          </div>
+        )}
+
         {!isCalories && (
-          <div className="flex items-center gap-1 bg-cream-soft rounded-full p-0.5 w-fit mb-4">
-            {periodTabs.map((p) => (
-              <button
-                key={p.value}
-                onClick={() => setPeriod(p.value)}
-                className={`tap w-8 h-7 text-[11px] font-bold rounded-full leading-none ${
-                  period === p.value ? "bg-sohati text-white" : "text-charcoal-faint"
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
+          <div className="flex items-center gap-2 mb-4">
+            <div className="flex items-center gap-1 bg-cream-soft rounded-full p-0.5 w-fit">
+              {periodTabs.map((p) => (
+                <button
+                  key={p.value}
+                  onClick={() => {
+                    setPeriod(p.value);
+                    setPickedDate(null);
+                    setSelectedSleepIdx(null);
+                  }}
+                  className={`tap w-8 h-7 text-[11px] font-bold rounded-full leading-none ${
+                    period === p.value ? "bg-sohati text-white" : "text-charcoal-faint"
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+            <label className="tap w-7 h-7 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-faint cursor-pointer relative">
+              <CalendarDays size={13} />
+              <input
+                type="date"
+                onChange={(e) => e.target.value && setPickedDate(e.target.value)}
+                className="absolute inset-0 opacity-0 cursor-pointer"
+                aria-label="Pick a specific date"
+              />
+            </label>
+          </div>
+        )}
+
+        {pickedDate && (
+          <div className="bg-sohati-pale rounded-2xl px-4 py-3 mb-4 text-center">
+            <p className="text-xs font-semibold text-sohati-dark/70 mb-1">
+              {new Date(`${pickedDate}T00:00:00`).toLocaleDateString("en-US", {
+                weekday: "long",
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </p>
+            <p className="text-2xl font-bold text-sohati-dark">
+              {metric.type === "sleep"
+                ? `${Math.floor(valueForDate(pickedDate))}h ${Math.round((valueForDate(pickedDate) % 1) * 60)}m`
+                : `${valueForDate(pickedDate).toLocaleString()} ${metric.unit}`}
+            </p>
           </div>
         )}
 
@@ -104,36 +209,42 @@ export const MetricDetailSheet: React.FC<{
         {isSteps &&
           (() => {
             const weeklyAvg = Math.round(dailyHistory.reduce((s, v) => s + v, 0) / dailyHistory.length);
-            const weeklyTotals = Array.from({ length: 4 }, (_, i) => Math.round(weeklyAvg * 7 * wobble(i)));
-            const monthlyTotals = Array.from({ length: 12 }, (_, i) => Math.round(weeklyAvg * 30 * wobble(i, 0.12)));
-            const yearlyTotal = Math.round(weeklyAvg * 365);
+            const weekOfMonthTotals = Array.from({ length: 4 }, (_, i) => Math.round(weeklyAvg * 7 * wobble(i)));
+            const monthOfYearTotals = Array.from({ length: 12 }, (_, i) => Math.round(weeklyAvg * 30 * wobble(i, 0.12)));
             const view = {
-              daily: { values: dailyHistory, labels: dailyLabels },
-              weekly: { values: weeklyTotals, labels: weeklyTotals.map((_, i) => `Week ${i + 1}`) },
-              monthly: { values: monthlyTotals, labels: monthNames },
-              yearly: { values: [yearlyTotal], labels: [String(currentYear)] },
+              daily: { values: [dailyHistory[dailyHistory.length - 1]], labels: [todayLabel] },
+              weekly: { values: dailyHistory, labels: weekdayLabels },
+              monthly: { values: weekOfMonthTotals, labels: weekOfMonthTotals.map((_, i) => `Week ${i + 1}`) },
+              yearly: { values: monthOfYearTotals, labels: monthNames },
             }[period];
             return (
               <div className="mb-4">
                 <PeriodBarChart values={view.values} labels={view.labels} color="#4C8FD1" />
                 <p className="text-xs text-charcoal-faint mt-2">
-                  Avg: {Math.round(view.values.reduce((a, b) => a + b, 0) / view.values.length).toLocaleString()}
+                  {period === "daily" ? "Today" : "Avg"}:{" "}
+                  {Math.round(view.values.reduce((a, b) => a + b, 0) / view.values.length).toLocaleString()}
                 </p>
               </div>
             );
           })()}
 
-        {/* Weight: trend line + highest/lowest per period */}
-        {isWeight &&
+        {/* Weight / Body Fat: trend line, real Day/Week/Month/Year granularity */}
+        {isTrend &&
           (() => {
             const base = dailyHistory[dailyHistory.length - 1];
-            const weeklyVals = dailyHistory;
-            const monthlyVals = Array.from({ length: 8 }, (_, i) => +(base * wobble(i, 0.03)).toFixed(1));
-            const yearlyVals = Array.from({ length: 12 }, (_, i) => +(base * wobble(i, 0.05)).toFixed(1));
-            const allVals = Array.from({ length: 16 }, (_, i) => +(base * wobble(i, 0.06)).toFixed(1));
-            const values = { daily: weeklyVals, weekly: weeklyVals, monthly: monthlyVals, yearly: yearlyVals }[
-              period === "daily" ? "weekly" : period
-            ] ?? allVals;
+            const dayVal = [base];
+            const weekVals = dailyHistory; // Mon-Sun, real 7-day history
+            const monthVals = Array.from({ length: 4 }, (_, i) => +(base * wobble(i, 0.03)).toFixed(1));
+            const yearVals = Array.from({ length: 12 }, (_, i) => +(base * wobble(i, 0.05)).toFixed(1));
+            const values = { daily: dayVal, weekly: weekVals, monthly: monthVals, yearly: yearVals }[period];
+            const unit = isWeight ? "kg" : "%";
+            if (period === "daily") {
+              return (
+                <div className="mb-4 text-center">
+                  <p className="text-xs text-charcoal-faint">Today's reading — see the number above.</p>
+                </div>
+              );
+            }
             const high = Math.max(...values);
             const low = Math.min(...values);
             return (
@@ -142,8 +253,12 @@ export const MetricDetailSheet: React.FC<{
                   <Sparkline values={values} color="#7D6BB5" width={240} height={70} />
                 </div>
                 <div className="flex justify-center gap-4 text-xs">
-                  <span className="text-ember-dark font-semibold">↑ High {high.toFixed(1)}kg</span>
-                  <span className="text-sky font-semibold">↓ Low {low.toFixed(1)}kg</span>
+                  <span className="text-ember-dark font-semibold">
+                    ↑ High {high.toFixed(1)}{unit}
+                  </span>
+                  <span className="text-sky font-semibold">
+                    ↓ Low {low.toFixed(1)}{unit}
+                  </span>
                 </div>
               </div>
             );
@@ -157,11 +272,11 @@ export const MetricDetailSheet: React.FC<{
           </div>
         )}
 
-        {!isSleep && !isSteps && !isWeight && !isCalories && (
+        {!isSleep && !isSteps && !isTrend && !isCalories && (
           <div className="grid grid-cols-7 gap-1.5 mb-4">
             {metric.history.map((h, i) => (
               <div key={i} className="text-center">
-                <p className="text-[10px] text-charcoal-faint mb-1">{dailyLabels[i]}</p>
+                <p className="text-[10px] text-charcoal-faint mb-1">{weekdayLabels[i]}</p>
                 <p className="text-xs font-semibold text-charcoal">{Math.round(h.value)}</p>
               </div>
             ))}
@@ -176,6 +291,25 @@ export const MetricDetailSheet: React.FC<{
             </div>
 
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+              Total time asleep by stage
+            </p>
+            <div className="grid grid-cols-4 gap-2 mb-4">
+              {sleepStageLegend.map((s) => {
+                const minutes = { rem: sleepDetail.remMin, deep: sleepDetail.deepMin, light: sleepDetail.lightMin, awake: sleepDetail.awakeMin }[
+                  s.key as "rem" | "deep" | "light" | "awake"
+                ];
+                return (
+                  <div key={s.key} className="text-center bg-cream-soft rounded-xl py-2">
+                    <p className="text-sm font-bold text-charcoal">
+                      {Math.floor(minutes / 60)}h{minutes % 60}m
+                    </p>
+                    <p className="text-[10px] text-charcoal-faint">{s.label}</p>
+                  </div>
+                );
+              })}
+            </div>
+
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
               Sleep stages
             </p>
 
@@ -183,7 +317,7 @@ export const MetricDetailSheet: React.FC<{
               <StackedSleepBar stages={sleepDetail} />
             ) : (
               (() => {
-                const counts = { weekly: 4, monthly: 12, yearly: 1 }[period] ?? 4;
+                const counts = { weekly: 7, monthly: 4, yearly: 12 }[period] ?? 7;
                 const items = Array.from({ length: counts }, (_, i) => {
                   const f = wobble(i, 0.15);
                   const stages: SleepStages = {
@@ -194,13 +328,45 @@ export const MetricDetailSheet: React.FC<{
                   };
                   const label =
                     period === "weekly"
-                      ? `Week ${i + 1}`
+                      ? weekdayLabels[i] ?? `Day ${i + 1}`
                       : period === "monthly"
-                      ? monthNames[i]
-                      : String(currentYear);
+                      ? `Week ${i + 1}`
+                      : monthNames[i];
                   return { stages, label };
                 });
-                return <StackedSleepColumns items={items} />;
+                const selected = selectedSleepIdx !== null ? items[selectedSleepIdx] : null;
+                return (
+                  <>
+                    <StackedSleepColumns items={items} selectedIndex={selectedSleepIdx} onSelect={setSelectedSleepIdx} />
+                    <p className="text-[11px] text-charcoal-faint text-center mt-2">
+                      {selected ? `Comparing ${selected.label} against the rest` : "Tap a bar to compare that sleep cycle"}
+                    </p>
+                    {selected && (
+                      <div className="bg-cream-soft rounded-2xl p-3.5 mt-2">
+                        <p className="text-xs font-semibold text-charcoal mb-2">{selected.label}</p>
+                        <StackedSleepBar stages={selected.stages} />
+                        <div className="grid grid-cols-4 gap-2 mt-3">
+                          {sleepStageLegend.map((s) => {
+                            const minutes = {
+                              rem: selected.stages.remMin,
+                              deep: selected.stages.deepMin,
+                              light: selected.stages.lightMin,
+                              awake: selected.stages.awakeMin,
+                            }[s.key as "rem" | "deep" | "light" | "awake"];
+                            return (
+                              <div key={s.key} className="text-center">
+                                <p className="text-xs font-bold text-charcoal">
+                                  {Math.floor(minutes / 60)}h{minutes % 60}m
+                                </p>
+                                <p className="text-[9px] text-charcoal-faint">{s.label}</p>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
               })()
             )}
 
@@ -221,9 +387,14 @@ export const MetricDetailSheet: React.FC<{
           </div>
         )}
 
-        {isAuto && !isSleep && (
+        {isAuto && !isSleep && !isSteps && (
           <p className="text-[11px] text-charcoal-faint mt-2">
             Synced automatically from Apple/Android Health — not manually editable.
+          </p>
+        )}
+        {isSteps && (
+          <p className="text-[11px] text-charcoal-faint mt-2">
+            Synced automatically from Apple/Android Health — tap the pencil to correct today's count.
           </p>
         )}
       </div>

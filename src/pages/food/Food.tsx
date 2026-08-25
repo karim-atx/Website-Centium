@@ -101,17 +101,21 @@ export default function Food() {
     }
   };
 
-  const macroRow = (label: string, value: number, target: number, color: string) => (
-    <div>
-      <div className="flex items-baseline justify-between mb-1">
-        <span className="text-xs font-semibold text-charcoal-soft">{label}</span>
-        <span className="text-xs text-charcoal-faint">
-          {Math.round(value)} / {target}g
-        </span>
+  const macroRow = (label: string, value: number, target: number, color: string) => {
+    const over = Math.round(value) - target;
+    return (
+      <div>
+        <div className="flex items-baseline justify-between mb-1">
+          <span className="text-xs font-semibold text-charcoal-soft">{label}</span>
+          <span className="text-xs text-charcoal-faint">
+            {Math.round(value)} / {target}g
+            {over > 0 && <span className="text-[#C0392B] font-semibold"> (+{over}g)</span>}
+          </span>
+        </div>
+        <ProgressBar progress={value / target} color={over > 0 ? "#C0392B" : color} height={7} />
       </div>
-      <ProgressBar progress={value / target} color={color} height={7} />
-    </div>
-  );
+    );
+  };
 
   return (
     <div>

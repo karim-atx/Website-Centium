@@ -29,9 +29,11 @@ const existingPlanPreset = {
 export default function GoalsPanel() {
   const { user, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal } = useApp();
   const [calorieDraft, setCalorieDraft] = useState(String(nutritionGoal.targetCalories));
+  const [calorieConfirmed, setCalorieConfirmed] = useState(true);
   const [desiredWeightDraft, setDesiredWeightDraft] = useState(
     String(nutritionGoal.desiredWeightKg ?? user.weightKg)
   );
+  const [weightGoalError, setWeightGoalError] = useState<string | null>(null);
 
   // V6 (QA 6.0): "Existing plan" is a dietitian-provided plan — the client
   // can view it but only the dietitian edits it (from the professional UI),
@@ -71,14 +73,36 @@ export default function GoalsPanel() {
     ? reachDateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
     : null;
 
+  // V7 (QA 7.0): a desired weight that contradicts the chosen direction
+  // (e.g. wanting to "lose" but entering a heavier target) is rejected with
+  // an explanation instead of silently accepted.
   const confirmDesiredWeight = () => {
     if (nutritionGoal.desiredWeightConfirmed) {
       setNutritionGoal({ ...nutritionGoal, desiredWeightConfirmed: false });
+      setWeightGoalError(null);
       return;
     }
     const kg = Number(desiredWeightDraft);
     if (!kg) return;
+    if (nutritionGoal.weightGoal === "lose" && kg >= user.weightKg) {
+      setWeightGoalError(`Desired weight must be lower than your current weight (${user.weightKg}kg) to lose weight.`);
+      return;
+    }
+    if (nutritionGoal.weightGoal === "gain" && kg <= user.weightKg) {
+      setWeightGoalError(`Desired weight must be higher than your current weight (${user.weightKg}kg) to gain weight.`);
+      return;
+    }
+    setWeightGoalError(null);
     setNutritionGoal({ ...nutritionGoal, desiredWeightKg: kg, desiredWeightConfirmed: true });
+  };
+
+  // Switching goal direction invalidates whatever desired weight was
+  // typed/confirmed for the previous direction (setWeightGoal itself clears
+  // the stored value; this just resets the on-screen draft to match).
+  const changeWeightGoal = (g: WeightGoalType) => {
+    setWeightGoal(g, nutritionGoal.weeklyRateKg || 0.5);
+    setDesiredWeightDraft("");
+    setWeightGoalError(null);
   };
 
   const applyExistingPlan = () => {
@@ -117,7 +141,7 @@ export default function GoalsPanel() {
           {goalOptions.map((g) => (
             <button
               key={g.value}
-              onClick={() => setWeightGoal(g.value, nutritionGoal.weeklyRateKg || 0.5)}
+              onClick={() => changeWeightGoal(g.value)}
               disabled={locked}
               className={`tap rounded-xl py-2.5 text-xs font-semibold border transition-colors disabled:opacity-50 ${
                 nutritionGoal.weightGoal === g.value
@@ -156,6 +180,9 @@ export default function GoalsPanel() {
                   <Check size={16} strokeWidth={3} />
                 </button>
               </div>
+              {weightGoalError && (
+                <p className="text-xs font-semibold text-[#C0392B] mt-1.5">{weightGoalError}</p>
+              )}
             </label>
 
             <label className="block">
@@ -250,13 +277,38 @@ export default function GoalsPanel() {
         <div className="flex items-center gap-2 mb-1">
           <input
             value={calorieDraft}
-            onChange={(e) => setCalorieDraft(e.target.value.replace(/\D/g, ""))}
-            onBlur={() => setNutritionGoal({ ...nutritionGoal, targetCalories: Number(calorieDraft) || nutritionGoal.targetCalories })}
+            onChange={(e) => {
+              setCalorieDraft(e.target.value.replace(/\D/g, ""));
+              setCalorieConfirmed(false);
+            }}
             inputMode="numeric"
-            disabled={locked}
+            disabled={locked || calorieConfirmed}
             className="w-32 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-lg font-bold text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20 disabled:opacity-60"
           />
           <span className="text-sm text-charcoal-faint">kcal / day</span>
+          <button
+            onClick={() => {
+              if (calorieConfirmed) {
+                setCalorieConfirmed(false);
+                return;
+              }
+              const kcal = Number(calorieDraft);
+              if (!kcal) return;
+              // Macro distribution recomputes automatically — `targets`
+              // below derives from targetCalories + the existing split.
+              setNutritionGoal({ ...nutritionGoal, targetCalories: kcal });
+              setCalorieConfirmed(true);
+            }}
+            disabled={locked}
+            aria-label={calorieConfirmed ? "Edit calorie target" : "Confirm calorie target"}
+            className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors disabled:opacity-50 ${
+              calorieConfirmed
+                ? "bg-charcoal/10 border-transparent text-charcoal-faint"
+                : "bg-sohati border-sohati text-white"
+            }`}
+          >
+            <Check size={16} strokeWidth={3} />
+          </button>
         </div>
       </Card>
 

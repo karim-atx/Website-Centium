@@ -36,10 +36,14 @@ export const StackedSleepBar: React.FC<{ stages: SleepStages; label?: string }> 
 
 // Compact vertical-bar variant for a row of periods (a week's worth of
 // nights, or a month's worth of weeks) — each bar is itself stacked.
-export const StackedSleepColumns: React.FC<{ items: { stages: SleepStages; label: string }[]; height?: number }> = ({
-  items,
-  height = 90,
-}) => {
+// V7 (QA 7.0): tappable — selecting a column is how you "specifically
+// select a set sleep cycle to compare" against the rest.
+export const StackedSleepColumns: React.FC<{
+  items: { stages: SleepStages; label: string }[];
+  height?: number;
+  selectedIndex?: number | null;
+  onSelect?: (index: number) => void;
+}> = ({ items, height = 90, selectedIndex = null, onSelect }) => {
   return (
     <div className="flex items-end gap-1.5" style={{ height }}>
       {items.map((it, i) => {
@@ -50,15 +54,27 @@ export const StackedSleepColumns: React.FC<{ items: { stages: SleepStages; label
           { key: "light", min: it.stages.lightMin },
           { key: "deep", min: it.stages.deepMin },
         ];
+        const selected = selectedIndex === i;
         return (
-          <div key={i} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-            <div className="w-full flex-1 rounded-md overflow-hidden flex flex-col-reverse">
+          <button
+            key={i}
+            onClick={() => onSelect?.(i)}
+            className="tap flex-1 flex flex-col items-center gap-1 h-full justify-end"
+          >
+            <div
+              className="w-full flex-1 rounded-md overflow-hidden flex flex-col-reverse"
+              style={{ opacity: selectedIndex === null || selected ? 1 : 0.35 }}
+            >
               {segments.map((s) => (
                 <div key={s.key} style={{ height: `${(s.min / total) * 100}%`, background: stageColor[s.key] }} />
               ))}
             </div>
-            <span className="text-[9px] text-charcoal-faint whitespace-nowrap">{it.label}</span>
-          </div>
+            <span
+              className={`text-[9px] whitespace-nowrap ${selected ? "font-bold text-sohati-dark" : "text-charcoal-faint"}`}
+            >
+              {it.label}
+            </span>
+          </button>
         );
       })}
     </div>

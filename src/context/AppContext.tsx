@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type {
   UserProfile,
+  Sex,
   FoodLogEntry,
   WorkoutLogEntry,
   Food,
@@ -23,6 +24,9 @@ import type {
   BloodMarker,
   ExtractedBiomarker,
   ClientCode,
+  ProfessionalSubtype,
+  WorkoutTemplateFolder,
+  BusinessDirectoryEntry,
   ProfessionalClient,
   ColorTheme,
   CustomFood,
@@ -34,6 +38,9 @@ import type {
   WorkoutTemplateAssignment,
   ClientHealthNote,
   ProfessionalMessage,
+  BusinessEmployee,
+  BusinessClass,
+  BusinessMessage,
 } from "../types";
 import { mockFoods } from "../data/mockFoods";
 import { defaultHabits, streaks as seedStreaks, bloodPanel } from "../data/mockHealthData";
@@ -42,6 +49,7 @@ import { estimate1RM } from "../services/workout";
 import { ONE_RM_CLASSIFICATIONS } from "../types";
 import { mockProfessionalClients } from "../data/mockProfessionalClients";
 import { suggestNutritionGoal, normalizeMacroSplit } from "../services/nutrition";
+import { businessTiers } from "../data/businessTiers";
 import { translations, type Language } from "../i18n/translations";
 
 const TODAY = "2026-08-20";
@@ -162,6 +170,17 @@ interface AppState {
   setLanguage: (language: Language) => void;
   t: (key: string) => string;
 
+  // V7 (QA 7.0): granular per-category notification toggles (was one
+  // all-or-nothing switch), and a couple of real accessibility settings.
+  notificationPrefs: Record<
+    "mealReminders" | "workoutReminders" | "streakAlerts" | "professionalMessages" | "weeklySummary",
+    boolean
+  >;
+  updateNotificationPrefs: (patch: Partial<AppState["notificationPrefs"]>) => void;
+
+  accessibility: { largerText: boolean; reduceMotion: boolean };
+  updateAccessibility: (patch: Partial<AppState["accessibility"]>) => void;
+
   foodLog: FoodLogEntry[];
   addFoodEntry: (entry: Omit<FoodLogEntry, "id" | "date">) => void;
   // V4: logged foods are editable (quantity/unit) and removable.
@@ -188,7 +207,7 @@ interface AppState {
   setPersonalRecord: (exerciseName: string, kg: number) => void;
 
   routineFolders: RoutineFolder[];
-  addRoutineFolder: (name: string, parentId?: string | null) => void;
+  addRoutineFolder: (name: string, parentId?: string | null, color?: string) => void;
   renameRoutineFolder: (id: string, name: string) => void;
   deleteRoutineFolder: (id: string) => void;
   routines: Routine[];
@@ -235,7 +254,7 @@ interface AppState {
   // V4: Meal Prep reworked into "Create Meal" — group existing foods under
   // one title; logging the meal logs every item individually.
   customMeals: CustomMeal[];
-  addCustomMeal: (title: string, items: CustomMeal["items"]) => void;
+  addCustomMeal: (title: string, items: CustomMeal["items"], mealType?: MealType) => void;
   removeCustomMeal: (id: string) => void;
   logCustomMeal: (mealId: string, meal: MealType, date: string) => void;
 
@@ -264,6 +283,12 @@ interface AppState {
   customFoods: CustomFood[];
   addCustomFood: (food: Omit<CustomFood, "id" | "isCustom">) => CustomFood;
 
+  // V7 (QA 7.0): a food a professional creates while building a specific
+  // client's meal plan goes only into that client's own food database, not
+  // the professional's personal custom foods or any other client's.
+  clientCustomFoods: Record<string, CustomFood[]>;
+  addClientCustomFood: (clientId: string, food: Omit<CustomFood, "id" | "isCustom">) => CustomFood;
+
   // V4 (QA 4.0): custom exercises are saved to a searchable library, not
   // auto-added to whichever routine was open when they were created.
   customExercises: CustomExerciseLibraryItem[];
@@ -273,12 +298,38 @@ interface AppState {
   professionalReviews: ProfessionalReview[];
   submitProfessionalReview: (professionalId: string, rating: number, text: string) => void;
 
+  // V7 (QA 7.0): "When pressing connect on a professional, it becomes part
+  // of the connected professionals with the same privileges" — mock
+  // professionals are static seed data, so which ones the user has
+  // connected to lives here instead.
+  connectedProfessionalIds: string[];
+  connectProfessional: (id: string) => void;
+
+  // V7 (QA 7.0): Professional UI — Explore reframes categories as job
+  // postings for hiring the professional, gated by a unique-ID affiliation
+  // with a business (mirrors the client<->professional code system).
+  businessDirectory: BusinessDirectoryEntry[];
+  affiliateWithBusiness: (id: string) => boolean;
+  removeAffiliation: () => void;
+  updateMyBusinessTier: (tier: string) => void;
+
+  professionalTier: string;
+  setProfessionalTier: (tier: string) => void;
+
   clientCodes: ClientCode[];
-  generateClientCode: (professionalId: string, professionalName: string) => string;
+  generateClientCode: (
+    professionalId: string,
+    professionalName: string,
+    profile?: { clientName?: string; age?: number; sex?: Sex; heightCm?: number; weightKg?: number },
+    professionalSubtype?: ProfessionalSubtype
+  ) => string;
   redeemClientCode: (code: string) => boolean;
 
   professionalClients: ProfessionalClient[];
-  addProfessionalClient: (name: string) => string;
+  addProfessionalClient: (
+    name: string,
+    profile?: { age?: number; sex?: Sex; heightCm?: number; weightKg?: number }
+  ) => string;
   removeProfessionalClient: (id: string) => void;
   updateProfessionalClientAccess: (
     id: string,
@@ -291,11 +342,17 @@ interface AppState {
   // per-client health notes, and a messaging board.
   calendarEvents: CalendarEvent[];
   addCalendarEvent: (event: Omit<CalendarEvent, "id">) => void;
+  updateCalendarEvent: (id: string, patch: Partial<CalendarEvent>) => void;
   removeCalendarEvent: (id: string) => void;
 
   workoutTemplates: WorkoutTemplateAssignment[];
   addWorkoutTemplate: (t: Omit<WorkoutTemplateAssignment, "id" | "createdAt">) => void;
   removeWorkoutTemplate: (id: string) => void;
+
+  workoutTemplateFolders: WorkoutTemplateFolder[];
+  addWorkoutTemplateFolder: (name: string, parentId?: string | null, color?: string) => void;
+  renameWorkoutTemplateFolder: (id: string, name: string) => void;
+  deleteWorkoutTemplateFolder: (id: string) => void;
 
   clientHealthNotes: Record<string, ClientHealthNote>;
   updateClientHealthNote: (clientId: string, patch: Partial<ClientHealthNote>) => void;
@@ -305,13 +362,25 @@ interface AppState {
 
   signOut: () => void;
 
-  businessListing: { perk: string; active: boolean; membersReached: number };
+  businessListing: { perk: string; active: boolean; membersReached: number; bio: string; location: string };
   updateBusinessListing: (patch: Partial<AppState["businessListing"]>) => void;
 
   // V4: businesses can list their own products/services in the marketplace.
   businessOfferings: BusinessOffering[];
   addBusinessOffering: (offering: Omit<BusinessOffering, "id">) => void;
   removeBusinessOffering: (id: string) => void;
+
+  // V7 (QA 7.0): Business UI — Employees (affiliated professionals),
+  // Classes (gym-type businesses) and a customer messaging board.
+  businessEmployees: Record<string, BusinessEmployee[]>;
+  removeBusinessEmployee: (businessId: string, professionalId: string) => void;
+
+  businessClasses: BusinessClass[];
+  addBusinessClass: (c: Omit<BusinessClass, "id">) => void;
+  removeBusinessClass: (id: string) => void;
+
+  businessMessages: BusinessMessage[];
+  sendBusinessMessage: (customerId: string, from: "business" | "customer", text: string) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -377,6 +446,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [language]);
   const t = (key: string) => translations[language][key] ?? key;
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
+
+  const [notificationPrefs, setNotificationPrefs] = usePersistentState<AppState["notificationPrefs"]>(
+    "notificationPrefs",
+    {
+      mealReminders: true,
+      workoutReminders: true,
+      streakAlerts: true,
+      professionalMessages: true,
+      weeklySummary: true,
+    }
+  );
+  const updateNotificationPrefs: AppState["updateNotificationPrefs"] = (patch) =>
+    setNotificationPrefs((prev) => ({ ...prev, ...patch }));
+
+  const [accessibility, setAccessibility] = usePersistentState<AppState["accessibility"]>("accessibility", {
+    largerText: false,
+    reduceMotion: false,
+  });
+  const updateAccessibility: AppState["updateAccessibility"] = (patch) =>
+    setAccessibility((prev) => ({ ...prev, ...patch }));
+  useEffect(() => {
+    document.documentElement.style.fontSize = accessibility.largerText ? "112.5%" : "";
+    document.documentElement.classList.toggle("reduce-motion", accessibility.reduceMotion);
+  }, [accessibility]);
 
   const [foodLog, setFoodLog] = usePersistentState<FoodLogEntry[]>("foodLog", seedFoodLog());
   const [workoutLog, setWorkoutLog] = usePersistentState<WorkoutLogEntry[]>(
@@ -471,10 +564,66 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [clientCodes, setClientCodes] = usePersistentState<ClientCode[]>("clientCodes", [
     { code: "SOHA-DEMO", professionalId: "demo", professionalName: "Maya Haddad", createdAt: TODAY, redeemed: false },
   ]);
+
+  const [connectedProfessionalIds, setConnectedProfessionalIds] = usePersistentState<string[]>(
+    "connectedProfessionalIds",
+    []
+  );
+  const connectProfessional: AppState["connectProfessional"] = (id) =>
+    setConnectedProfessionalIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+
+  const [businessDirectory, setBusinessDirectory] = usePersistentState<BusinessDirectoryEntry[]>(
+    "businessDirectory",
+    []
+  );
+  const affiliateWithBusiness: AppState["affiliateWithBusiness"] = (id) => {
+    const trimmed = id.trim().toUpperCase();
+    const match = businessDirectory.find((b) => b.id.toUpperCase() === trimmed);
+    if (!match) return false;
+    // V7 (QA 7.0): a business's own tier caps how many professionals can
+    // affiliate with it — same client-count-cap concept as the professional
+    // tiers, just from the business's side.
+    const tier = businessTiers.find((t) => t.id === match.tier) ?? businessTiers[0];
+    const currentCount = businessEmployees[match.id]?.length ?? 0;
+    if (tier.maxEmployees !== null && currentCount >= tier.maxEmployees && !businessEmployees[match.id]?.some((e) => e.professionalId === "me")) {
+      return false;
+    }
+    setUser((prev) => ({ ...prev, affiliatedBusinessId: match.id, affiliatedBusinessName: match.businessName }));
+    setBusinessEmployees((prev) => {
+      const existing = prev[match.id] ?? [];
+      if (existing.some((e) => e.professionalId === "me")) return prev;
+      return {
+        ...prev,
+        [match.id]: [
+          ...existing,
+          { professionalId: "me", professionalName: user.firstName, professionalSubtype: user.professionalSubtype },
+        ],
+      };
+    });
+    return true;
+  };
+  const removeAffiliation: AppState["removeAffiliation"] = () => {
+    if (user.affiliatedBusinessId) {
+      const businessId = user.affiliatedBusinessId;
+      setBusinessEmployees((prev) => ({
+        ...prev,
+        [businessId]: (prev[businessId] ?? []).filter((e) => e.professionalId !== "me"),
+      }));
+    }
+    setUser((prev) => ({ ...prev, affiliatedBusinessId: undefined, affiliatedBusinessName: undefined }));
+  };
+  const updateMyBusinessTier: AppState["updateMyBusinessTier"] = (tier) => {
+    if (!user.businessId) return;
+    setBusinessDirectory((prev) => prev.map((b) => (b.id === user.businessId ? { ...b, tier } : b)));
+  };
+
+  const [professionalTier, setProfessionalTier] = usePersistentState<string>("professionalTier", "starter");
   const [businessListing, setBusinessListing] = usePersistentState("businessListing", {
     perk: "10% off with Centium",
     active: true,
     membersReached: 34,
+    bio: "",
+    location: "",
   });
   const [businessOfferings, setBusinessOfferings] = usePersistentState<BusinessOffering[]>(
     "businessOfferings",
@@ -488,6 +637,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [calendarEvents, setCalendarEvents] = usePersistentState<CalendarEvent[]>("calendarEvents", []);
   const addCalendarEvent: AppState["addCalendarEvent"] = (event) =>
     setCalendarEvents((prev) => [...prev, { ...event, id: `cal-${Date.now()}-${prev.length}` }]);
+  const updateCalendarEvent: AppState["updateCalendarEvent"] = (id, patch) =>
+    setCalendarEvents((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
   const removeCalendarEvent: AppState["removeCalendarEvent"] = (id) =>
     setCalendarEvents((prev) => prev.filter((e) => e.id !== id));
 
@@ -502,6 +653,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
   const removeWorkoutTemplate: AppState["removeWorkoutTemplate"] = (id) =>
     setWorkoutTemplates((prev) => prev.filter((t) => t.id !== id));
+
+  const [workoutTemplateFolders, setWorkoutTemplateFolders] = usePersistentState<WorkoutTemplateFolder[]>(
+    "workoutTemplateFolders",
+    []
+  );
+  const addWorkoutTemplateFolder: AppState["addWorkoutTemplateFolder"] = (name, parentId = null, color) =>
+    setWorkoutTemplateFolders((prev) => [...prev, { id: `wtf${Date.now()}`, name, parentId, color }]);
+  const renameWorkoutTemplateFolder: AppState["renameWorkoutTemplateFolder"] = (id, name) =>
+    setWorkoutTemplateFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
+  const deleteWorkoutTemplateFolder: AppState["deleteWorkoutTemplateFolder"] = (id) => {
+    setWorkoutTemplateFolders((prev) =>
+      prev.filter((f) => f.id !== id).map((f) => (f.parentId === id ? { ...f, parentId: null } : f))
+    );
+    setWorkoutTemplates((prev) => prev.map((t) => (t.folderId === id ? { ...t, folderId: null } : t)));
+  };
 
   const [clientHealthNotes, setClientHealthNotes] = usePersistentState<Record<string, ClientHealthNote>>(
     "clientHealthNotes",
@@ -521,8 +687,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
 
   const completeOnboarding = (profile: Partial<UserProfile>) => {
+    // V7 (QA 7.0): a business account gets its own unique ID at signup, so
+    // a professional can later affiliate with it from their Explore tab.
+    let businessId: string | undefined;
+    if (profile.accountType === "business") {
+      do {
+        businessId = `BIZ-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
+      } while (businessDirectory.some((b) => b.id === businessId));
+      setBusinessDirectory((prev) => [
+        ...prev,
+        { id: businessId!, businessName: profile.businessName || "Business", tier: "starter" },
+      ]);
+    }
     setUser((prev) => {
-      const next = { ...prev, ...profile, onboarded: true };
+      const next = { ...prev, ...profile, businessId, onboarded: true };
       setWidgets(widgetsForGoals(next.goals));
       return next;
     });
@@ -584,8 +762,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateWorkoutSessionNotes = (id: string, notes: string) =>
     setWorkoutSessions((prev) => prev.map((s) => (s.id === id ? { ...s, notes } : s)));
 
-  const addRoutineFolder = (name: string, parentId: string | null = null) =>
-    setRoutineFolders((prev) => [...prev, { id: `rf${Date.now()}`, name, parentId }]);
+  const addRoutineFolder = (name: string, parentId: string | null = null, color?: string) =>
+    setRoutineFolders((prev) => [...prev, { id: `rf${Date.now()}`, name, parentId, color }]);
   const renameRoutineFolder = (id: string, name: string) =>
     setRoutineFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
   const deleteRoutineFolder = (id: string) => {
@@ -714,13 +892,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setWeightGoal = (weightGoal: WeightGoalType, weeklyRateKg: number) =>
     setNutritionGoalState((prev) => {
       const suggested = suggestNutritionGoal(user, weightGoal, weeklyRateKg);
-      return { ...prev, weightGoal, weeklyRateKg, targetCalories: suggested.targetCalories };
+      // V7 (QA 7.0): "Switching Weight goal resets the desired weight box
+      // and would need to reinput the value" — a desired weight picked for
+      // one direction (e.g. losing) isn't valid for the other.
+      const directionChanged = prev.weightGoal !== weightGoal;
+      return {
+        ...prev,
+        weightGoal,
+        weeklyRateKg,
+        targetCalories: suggested.targetCalories,
+        desiredWeightKg: directionChanged ? undefined : prev.desiredWeightKg,
+        desiredWeightConfirmed: directionChanged ? false : prev.desiredWeightConfirmed,
+      };
     });
   const setMacroSplit = (split: MacroSplit) =>
     setNutritionGoalState((prev) => ({ ...prev, macroSplit: normalizeMacroSplit(split) }));
 
-  const addCustomMeal: AppState["addCustomMeal"] = (title, items) =>
-    setCustomMeals((prev) => [...prev, { id: `cm${Date.now()}`, title: title.trim(), items }]);
+  const addCustomMeal: AppState["addCustomMeal"] = (title, items, mealType) =>
+    setCustomMeals((prev) => [...prev, { id: `cm${Date.now()}`, title: title.trim(), items, mealType }]);
   const removeCustomMeal = (id: string) => setCustomMeals((prev) => prev.filter((m) => m.id !== id));
   const logCustomMeal: AppState["logCustomMeal"] = (mealId, meal, date) => {
     const custom = customMeals.find((m) => m.id === mealId);
@@ -820,6 +1009,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return custom;
   };
 
+  const [clientCustomFoods, setClientCustomFoods] = usePersistentState<Record<string, CustomFood[]>>(
+    "clientCustomFoods",
+    {}
+  );
+  const addClientCustomFood: AppState["addClientCustomFood"] = (clientId, food) => {
+    const custom: CustomFood = {
+      ...food,
+      id: `custom${Date.now()}${Math.random().toString(16).slice(2)}`,
+      isCustom: true,
+    };
+    setClientCustomFoods((prev) => ({ ...prev, [clientId]: [...(prev[clientId] ?? []), custom] }));
+    return custom;
+  };
+
   const addCustomExercise: AppState["addCustomExercise"] = (item) =>
     setCustomExercises((prev) =>
       prev.some((e) => e.name.toLowerCase() === item.name.toLowerCase()) ? prev : [...prev, item]
@@ -831,14 +1034,31 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return [...next, { professionalId, rating, text, date: TODAY }];
     });
 
-  const generateClientCode: AppState["generateClientCode"] = (professionalId, professionalName) => {
+  const generateClientCode: AppState["generateClientCode"] = (
+    professionalId,
+    professionalName,
+    profile,
+    professionalSubtype
+  ) => {
     let code = "";
     do {
       code = `SOHA-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
     } while (clientCodes.some((c) => c.code === code));
     setClientCodes((prev) => [
       ...prev,
-      { code, professionalId, professionalName, createdAt: TODAY, redeemed: false },
+      {
+        code,
+        professionalId,
+        professionalName,
+        professionalSubtype,
+        createdAt: TODAY,
+        redeemed: false,
+        clientName: profile?.clientName,
+        clientAge: profile?.age,
+        clientSex: profile?.sex,
+        clientHeightCm: profile?.heightCm,
+        clientWeightKg: profile?.weightKg,
+      },
     ]);
     return code;
   };
@@ -857,12 +1077,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...prev,
       linkedProfessionalCode: match.code,
       linkedProfessionalName: match.professionalName,
+      linkedProfessionalSubtype: match.professionalSubtype,
     }));
     return true;
   };
 
-  const addProfessionalClient: AppState["addProfessionalClient"] = (name) => {
-    const code = generateClientCode("me", "You");
+  const addProfessionalClient: AppState["addProfessionalClient"] = (name, profile) => {
+    // V7 (QA 7.0): use the professional's real name/subtype so the client's
+    // Professionals tab can show who they're actually linked to.
+    const code = generateClientCode(
+      "me",
+      user.firstName || "Your professional",
+      { ...profile, clientName: name },
+      user.professionalSubtype
+    );
     const id = `pc${Date.now()}${Math.random().toString(16).slice(2)}`;
     setProfessionalClients((prev) => [
       ...prev,
@@ -873,6 +1101,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         joinedAt: TODAY,
         activityLevel: "moderate",
         activityType: "both",
+        age: profile?.age,
+        sex: profile?.sex,
+        heightCm: profile?.heightCm,
+        weightKg: profile?.weightKg,
         access: {
           foodDiary: true,
           workoutActivity: true,
@@ -932,6 +1164,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeBusinessOffering = (id: string) =>
     setBusinessOfferings((prev) => prev.filter((o) => o.id !== id));
 
+  const [businessEmployees, setBusinessEmployees] = usePersistentState<Record<string, BusinessEmployee[]>>(
+    "businessEmployees",
+    {}
+  );
+  const removeBusinessEmployee: AppState["removeBusinessEmployee"] = (businessId, professionalId) => {
+    setBusinessEmployees((prev) => ({
+      ...prev,
+      [businessId]: (prev[businessId] ?? []).filter((e) => e.professionalId !== professionalId),
+    }));
+    // Same-session convenience: if the professional being removed is this
+    // very session's own account, also clear its affiliation immediately.
+    if (professionalId === "me" && user.affiliatedBusinessId === businessId) {
+      setUser((prev) => ({ ...prev, affiliatedBusinessId: undefined, affiliatedBusinessName: undefined }));
+    }
+  };
+
+  const [businessClasses, setBusinessClasses] = usePersistentState<BusinessClass[]>("businessClasses", []);
+  const addBusinessClass: AppState["addBusinessClass"] = (c) =>
+    setBusinessClasses((prev) => [...prev, { ...c, id: `bc${Date.now()}` }]);
+  const removeBusinessClass = (id: string) => setBusinessClasses((prev) => prev.filter((c) => c.id !== id));
+
+  const [businessMessages, setBusinessMessages] = usePersistentState<BusinessMessage[]>("businessMessages", []);
+  const sendBusinessMessage: AppState["sendBusinessMessage"] = (customerId, from, text) =>
+    setBusinessMessages((prev) => [
+      ...prev,
+      { id: `bmsg-${Date.now()}-${prev.length}`, customerId, from, text, at: new Date().toISOString() },
+    ]);
+
   const signOut = () => {
     Object.keys(localStorage)
       .filter((k) => k.startsWith(STORAGE_KEY))
@@ -950,6 +1210,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       language,
       setLanguage,
       t,
+      notificationPrefs,
+      updateNotificationPrefs,
+      accessibility,
+      updateAccessibility,
       foodLog,
       addFoodEntry,
       updateFoodEntry,
@@ -1020,10 +1284,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setColorTheme,
       customFoods,
       addCustomFood,
+      clientCustomFoods,
+      addClientCustomFood,
       customExercises,
       addCustomExercise,
       professionalReviews,
       submitProfessionalReview,
+      connectedProfessionalIds,
+      connectProfessional,
+      businessDirectory,
+      affiliateWithBusiness,
+      removeAffiliation,
+      updateMyBusinessTier,
+      professionalTier,
+      setProfessionalTier,
       clientCodes,
       generateClientCode,
       redeemClientCode,
@@ -1035,10 +1309,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       assignFoodTemplateToClient,
       calendarEvents,
       addCalendarEvent,
+      updateCalendarEvent,
       removeCalendarEvent,
       workoutTemplates,
       addWorkoutTemplate,
       removeWorkoutTemplate,
+      workoutTemplateFolders,
+      addWorkoutTemplateFolder,
+      renameWorkoutTemplateFolder,
+      deleteWorkoutTemplateFolder,
       clientHealthNotes,
       updateClientHealthNote,
       professionalMessages,
@@ -1049,11 +1328,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       businessOfferings,
       addBusinessOffering,
       removeBusinessOffering,
+      businessEmployees,
+      removeBusinessEmployee,
+      businessClasses,
+      addBusinessClass,
+      removeBusinessClass,
+      businessMessages,
+      sendBusinessMessage,
     }),
     [
       user,
       theme,
       language,
+      notificationPrefs,
+      accessibility,
       foodLog,
       workoutLog,
       workoutSessions,
@@ -1075,16 +1363,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       selectedDate,
       colorTheme,
       customFoods,
+      clientCustomFoods,
       customExercises,
       professionalReviews,
+      connectedProfessionalIds,
+      businessDirectory,
+      professionalTier,
       clientCodes,
       professionalClients,
       calendarEvents,
       workoutTemplates,
+      workoutTemplateFolders,
       clientHealthNotes,
       professionalMessages,
       businessListing,
       businessOfferings,
+      businessEmployees,
+      businessClasses,
+      businessMessages,
     ]
   );
 

@@ -26,11 +26,12 @@ const blankExercise = (pick: ExercisePick): Exercise => ({
 // routine-building UI as the client's Workout tab (CreateRoutineSheet), but
 // produces a template assignable to one or more clients instead of a
 // personal routine.
-export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () => void }> = ({
+export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () => void; defaultFolderId?: string | null }> = ({
   open,
   onClose,
+  defaultFolderId = null,
 }) => {
-  const { addWorkoutTemplate, customExercises, professionalClients } = useApp();
+  const { addWorkoutTemplate, customExercises, professionalClients, workoutTemplateFolders } = useApp();
   const [name, setName] = useState("");
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [assignedClientIds, setAssignedClientIds] = useState<string[]>([]);
@@ -38,12 +39,14 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [settingsIndex, setSettingsIndex] = useState<number | null>(null);
+  const [folderId, setFolderId] = useState<string | null>(defaultFolderId);
 
   const reset = () => {
     setName("");
     setExercises([]);
     setAssignedClientIds([]);
     setSearchQuery("");
+    setFolderId(defaultFolderId);
   };
 
   const addExercise = (pick: ExercisePick) => {
@@ -82,7 +85,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
 
   const save = () => {
     if (!name.trim() || exercises.length === 0) return;
-    addWorkoutTemplate({ name: name.trim(), exercises, assignedClientIds });
+    addWorkoutTemplate({ name: name.trim(), exercises, assignedClientIds, folderId });
     reset();
     onClose();
   };
@@ -168,6 +171,40 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
               <Library size={14} /> Browse exercise database
             </button>
           </div>
+
+          {workoutTemplateFolders.length > 0 && (
+            <div>
+              <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Folder</span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setFolderId(null)}
+                  className={clsx(
+                    "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
+                    folderId === null
+                      ? "bg-sohati text-white border-sohati"
+                      : "bg-cream-soft border-transparent text-charcoal-soft"
+                  )}
+                >
+                  Unfiled
+                </button>
+                {workoutTemplateFolders.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => setFolderId(f.id)}
+                    className={clsx(
+                      "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
+                      folderId === f.id
+                        ? "bg-sohati text-white border-sohati"
+                        : "bg-cream-soft border-transparent text-charcoal-soft"
+                    )}
+                  >
+                    {f.parentId ? "↳ " : ""}
+                    {f.name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {professionalClients.length > 0 && (
             <div>

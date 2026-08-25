@@ -9,11 +9,15 @@ import { Flame } from "lucide-react";
 export const Sidebar: React.FC = () => {
   const { user, t } = useApp();
   const isBusiness = user.accountType === "business";
+  // V7 (QA 7.0): Employees/Classes only apply to gym-type businesses.
   const items =
     user.accountType === "professional"
       ? professionalSidebarNavItems
       : isBusiness
-      ? businessSidebarNavItems
+      ? businessSidebarNavItems.filter(
+          (item) =>
+            user.businessType === "gym" || (item.to !== "/business/employees" && item.to !== "/business/classes")
+        )
       : sidebarNavItems;
 
   return (

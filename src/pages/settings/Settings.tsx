@@ -5,6 +5,9 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { IntegrationsCard } from "../../components/health/IntegrationsCard";
 import { ColorThemePicker } from "../../components/profile/ColorThemePicker";
 import { ContactUsSheet } from "../../components/profile/ContactUsSheet";
+import { NotificationsSheet } from "../../components/profile/NotificationsSheet";
+import { AccessibilitySheet } from "../../components/profile/AccessibilitySheet";
+import { PrivacySheet } from "../../components/profile/PrivacySheet";
 import { useApp } from "../../context/AppContext";
 import { useState } from "react";
 import {
@@ -18,15 +21,18 @@ import {
   Camera,
   ChevronRight,
   Check,
+  Accessibility,
 } from "lucide-react";
 
 export default function Settings() {
   const { theme, toggleTheme, language, setLanguage, t } = useApp();
-  const [notifications, setNotifications] = useState(true);
   const [micAllowed, setMicAllowed] = useState<boolean | null>(null);
   const [cameraAllowed, setCameraAllowed] = useState<boolean | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [accessibilityOpen, setAccessibilityOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
   const requestMic = async () => {
     try {
@@ -137,13 +143,16 @@ export default function Settings() {
         {t("General")}
       </p>
       <Card padded={false} className="divide-y divide-charcoal/[0.04]">
-        <div className="flex items-center justify-between px-4 py-3.5">
+        <button
+          onClick={() => setNotificationsOpen(true)}
+          className="tap w-full flex items-center justify-between px-4 py-3.5"
+        >
           <div className="flex items-center gap-3">
             <Bell size={16} className="text-charcoal-soft" />
             <span className="text-sm font-medium text-charcoal">{t("Notifications")}</span>
           </div>
-          <Toggle checked={notifications} onChange={setNotifications} label="Notifications" />
-        </div>
+          <ChevronRight size={15} className="text-charcoal-faint" />
+        </button>
         <button
           onClick={() => setLanguageOpen(true)}
           className="tap w-full flex items-center justify-between px-4 py-3.5"
@@ -157,12 +166,26 @@ export default function Settings() {
             <ChevronRight size={15} />
           </span>
         </button>
-        <div className="flex items-center justify-between px-4 py-3.5">
+        <button
+          onClick={() => setAccessibilityOpen(true)}
+          className="tap w-full flex items-center justify-between px-4 py-3.5"
+        >
+          <div className="flex items-center gap-3">
+            <Accessibility size={16} className="text-charcoal-soft" />
+            <span className="text-sm font-medium text-charcoal">Accessibility</span>
+          </div>
+          <ChevronRight size={15} className="text-charcoal-faint" />
+        </button>
+        <button
+          onClick={() => setPrivacyOpen(true)}
+          className="tap w-full flex items-center justify-between px-4 py-3.5"
+        >
           <div className="flex items-center gap-3">
             <Lock size={16} className="text-charcoal-soft" />
             <span className="text-sm font-medium text-charcoal">{t("Privacy")}</span>
           </div>
-        </div>
+          <ChevronRight size={15} className="text-charcoal-faint" />
+        </button>
         <button
           onClick={() => setContactOpen(true)}
           className="tap w-full flex items-center justify-between px-4 py-3.5"
@@ -176,6 +199,9 @@ export default function Settings() {
       </Card>
 
       <ContactUsSheet open={contactOpen} onClose={() => setContactOpen(false)} />
+      <NotificationsSheet open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
+      <AccessibilitySheet open={accessibilityOpen} onClose={() => setAccessibilityOpen(false)} />
+      <PrivacySheet open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
 
       <BottomSheet open={languageOpen} onClose={() => setLanguageOpen(false)} title={t("Language")}>
         <div className="space-y-2.5 animate-fade-slide-up">

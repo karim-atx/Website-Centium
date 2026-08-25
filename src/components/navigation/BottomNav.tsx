@@ -23,9 +23,16 @@ export const BottomNav: React.FC = () => {
   const isMoreActive =
     location.pathname === "/more" ||
     (isProfessional
-      ? ["/marketplace", "/profile", "/subscription", "/settings", "/professionals/meal-plans", "/professionals/health-metrics"]
+      ? [
+          "/marketplace",
+          "/profile",
+          "/subscription",
+          "/settings",
+          "/professionals/messages",
+          "/professionals/health-metrics",
+        ]
       : isBusiness
-      ? ["/profile", "/subscription", "/settings"]
+      ? ["/profile", "/subscription", "/settings", "/business/employees", "/business/classes"]
       : ["/mind", "/marketplace", "/profile", "/subscription", "/professionals"]
     ).some((p) => location.pathname.startsWith(p));
 

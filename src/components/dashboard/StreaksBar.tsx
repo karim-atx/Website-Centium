@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { ChevronRight, Flame } from "lucide-react";
+import { flameColor } from "../../utils/flameColor";
 
 export const StreaksBar: React.FC = () => {
   const { streaks } = useApp();
@@ -21,7 +22,7 @@ export const StreaksBar: React.FC = () => {
         {top.map((s) => (
           <div key={s.id} className="shrink-0 text-center">
             <p className="flex items-center justify-center gap-1 text-2xl font-bold text-white leading-none mb-1">
-              <Flame size={18} className="fill-white/25" /> {s.days}
+              <Flame size={18} style={{ color: flameColor(s.days / s.goalDays) }} fill="currentColor" fillOpacity={0.3} /> {s.days}
             </p>
             <p className="text-[11px] text-white/80 font-medium whitespace-nowrap">{s.label}</p>
           </div>

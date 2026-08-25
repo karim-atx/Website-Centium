@@ -14,6 +14,7 @@ export const mockProfessionalClients: ProfessionalClient[] = [
     lastWeightKg: 64.2,
     weightTrend: -0.8,
     lastCaloriesKcal: 1840,
+    workoutLoggedToday: true,
   },
   {
     id: "pc2",
@@ -27,6 +28,7 @@ export const mockProfessionalClients: ProfessionalClient[] = [
     weightTrend: 0.3,
     lastCaloriesKcal: 2650,
     healthSummary: { bodyFatPct: 18.4, sleepHours: 7.2, stepsAvg: 9100 },
+    workoutLoggedToday: true,
   },
   {
     id: "pc3",
@@ -39,5 +41,6 @@ export const mockProfessionalClients: ProfessionalClient[] = [
     lastWeightKg: 58.9,
     weightTrend: -0.2,
     lastCaloriesKcal: 1620,
+    workoutLoggedToday: false,
   },
 ];

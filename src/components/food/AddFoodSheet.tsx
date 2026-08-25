@@ -43,7 +43,18 @@ export const AddFoodSheet: React.FC<{
   const [category, setCategory] = useState<string | null>(null);
   const [selectedFood, setSelectedFood] = useState<Food | null>(null);
   const [meal, setMeal] = useState<MealType>(defaultMeal);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantityRaw] = useState(1);
+  const [quantityDraft, setQuantityDraft] = useState("1");
+  // V7 (QA 7.0): quantity can now be typed directly (with decimals), not
+  // just stepped — keep the draft text in sync whenever it changes
+  // programmatically (the +/- buttons, or resetting the form).
+  const setQuantity = (updater: number | ((q: number) => number)) => {
+    setQuantityRaw((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      setQuantityDraft(String(next));
+      return next;
+    });
+  };
   const [unit, setUnit] = useState<ServingUnit>("serving");
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [scanMode, setScanMode] = useState<ScanMode>(null);
@@ -57,6 +68,7 @@ export const AddFoodSheet: React.FC<{
     protein: "",
     carbs: "",
     fat: "",
+    category: "homemade" as Food["category"],
   });
 
   const recentFoods = useMemo(() => {
@@ -98,12 +110,13 @@ export const AddFoodSheet: React.FC<{
     setCategory(null);
     setSelectedFood(null);
     setQuantity(1);
+    setQuantityDraft("1");
     setUnit("serving");
     setScanMode(null);
     setScanResultFood(null);
     setJustAdded(false);
     setCustomMode(false);
-    setCustomDraft({ name: "", serving: "1 serving", calories: "", protein: "", carbs: "", fat: "" });
+    setCustomDraft({ name: "", serving: "1 serving", calories: "", protein: "", carbs: "", fat: "", category: "homemade" });
     onClose();
   };
 
@@ -111,7 +124,7 @@ export const AddFoodSheet: React.FC<{
     if (!customDraft.name.trim() || !customDraft.calories) return;
     const food = addCustomFood({
       name: customDraft.name.trim(),
-      category: "homemade",
+      category: customDraft.category,
       serving: customDraft.serving || "1 serving",
       calories: Number(customDraft.calories) || 0,
       protein: Number(customDraft.protein) || 0,
@@ -166,12 +179,23 @@ export const AddFoodSheet: React.FC<{
             <span className="text-sm font-semibold text-charcoal-soft">Quantity</span>
             <div className="flex items-center gap-3">
               <button
-                onClick={() => setQuantity((q) => Math.max(1, +(q - 1).toFixed(1)))}
+                onClick={() => setQuantity((q) => Math.max(0.1, +(q - 1).toFixed(1)))}
                 className="tap w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
               >
                 <Minus size={14} />
               </button>
-              <span className="w-6 text-center font-semibold text-charcoal">{quantity}</span>
+              <input
+                value={quantityDraft}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[^\d.]/g, "");
+                  setQuantityDraft(v);
+                  const n = Number(v);
+                  if (v && !Number.isNaN(n) && n > 0) setQuantityRaw(n);
+                }}
+                onBlur={() => setQuantityDraft(String(quantity))}
+                inputMode="decimal"
+                className="w-14 text-center font-semibold text-charcoal bg-transparent focus:outline-none"
+              />
               <button
                 onClick={() => setQuantity((q) => +(q + 1).toFixed(1))}
                 className="tap w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
@@ -273,6 +297,30 @@ export const AddFoodSheet: React.FC<{
         <div className="space-y-4 animate-fade-slide-up">
           {field("Food name", "name", "Mom's Kibbeh")}
           {field("Serving size", "serving", "1 piece")}
+
+          <div>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Logo</span>
+            <div className="flex flex-wrap gap-2">
+              {foodCategories.map((c) => {
+                const Icon = foodCategoryIcon[c.id] ?? UtensilsCrossed;
+                const active = customDraft.category === c.id;
+                return (
+                  <button
+                    key={c.id}
+                    onClick={() => setCustomDraft((d) => ({ ...d, category: c.id }))}
+                    aria-label={c.label}
+                    title={c.label}
+                    className={`tap w-11 h-11 rounded-2xl flex items-center justify-center border transition-colors ${
+                      active ? "bg-sohati text-white border-sohati" : "bg-cream-soft text-charcoal-soft border-transparent"
+                    }`}
+                  >
+                    <Icon size={18} />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             {field("Calories", "calories", "0", true)}
             {field("Protein (g)", "protein", "0", true)}

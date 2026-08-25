@@ -1,10 +1,10 @@
-import React, { useRef } from "react";
+import React, { useRef, useState } from "react";
 import { OnboardingShell } from "./OnboardingShell";
 import { Button } from "../../components/ui/Button";
 import type { OnboardingDraft } from "./Onboarding";
 import type { Sex } from "../../types";
 import clsx from "clsx";
-import { Camera, FileText, Check } from "lucide-react";
+import { Camera, FileText, Check, Venus, Mars, VenusAndMars } from "lucide-react";
 
 interface Props {
   draft: OnboardingDraft;
@@ -13,15 +13,23 @@ interface Props {
   onBack: () => void;
 }
 
-const sexOptions: { value: Sex; label: string }[] = [
-  { value: "female", label: "Female" },
-  { value: "male", label: "Male" },
-  { value: "other", label: "Other" },
+const sexOptions: { value: Sex; label: string; icon: typeof Venus }[] = [
+  { value: "female", label: "Female", icon: Venus },
+  { value: "male", label: "Male", icon: Mars },
+  { value: "other", label: "Other", icon: VenusAndMars },
 ];
+
+// V7 (QA 7.0): reject exaggerated age/height/weight instead of silently
+// accepting them — wide enough to allow any real person, narrow enough to
+// catch fat-fingered or joke values.
+const AGE_RANGE = [10, 100] as const;
+const HEIGHT_RANGE = [100, 250] as const;
+const WEIGHT_RANGE = [25, 300] as const;
 
 export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
   const isProfessional = draft.accountType === "professional";
   const canContinue = draft.firstName.trim().length > 0;
+  const [error, setError] = useState<string | null>(null);
 
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -30,6 +38,28 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
     const reader = new FileReader();
     reader.onload = () => setDraft((d) => ({ ...d, certificationFile: reader.result as string }));
     reader.readAsDataURL(file);
+  };
+
+  const handleContinue = () => {
+    if (!isProfessional) {
+      const age = Number(draft.age);
+      const height = Number(draft.heightCm);
+      const weight = Number(draft.weightKg);
+      if (draft.age && (age < AGE_RANGE[0] || age > AGE_RANGE[1])) {
+        setError(`Age should be between ${AGE_RANGE[0]} and ${AGE_RANGE[1]}.`);
+        return;
+      }
+      if (draft.heightCm && (height < HEIGHT_RANGE[0] || height > HEIGHT_RANGE[1])) {
+        setError(`Height should be between ${HEIGHT_RANGE[0]} and ${HEIGHT_RANGE[1]}cm.`);
+        return;
+      }
+      if (draft.weightKg && (weight < WEIGHT_RANGE[0] || weight > WEIGHT_RANGE[1])) {
+        setError(`Weight should be between ${WEIGHT_RANGE[0]} and ${WEIGHT_RANGE[1]}kg.`);
+        return;
+      }
+    }
+    setError(null);
+    onNext();
   };
 
   return (
@@ -42,9 +72,12 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
       }
       onBack={onBack}
       footer={
-        <Button fullWidth size="lg" disabled={!canContinue} onClick={onNext}>
-          Continue
-        </Button>
+        <div>
+          {error && <p className="text-xs font-semibold text-[#C0392B] mb-3 text-center">{error}</p>}
+          <Button fullWidth size="lg" disabled={!canContinue} onClick={handleContinue}>
+            Continue
+          </Button>
+        </div>
       }
     >
       <div className="space-y-4">
@@ -148,14 +181,16 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
                   <button
                     key={opt.value}
                     onClick={() => setDraft((d) => ({ ...d, sex: opt.value }))}
+                    aria-label={opt.label}
+                    title={opt.label}
                     className={clsx(
-                      "tap rounded-2xl py-3 text-sm font-semibold border transition-colors",
+                      "tap flex flex-col items-center justify-center gap-1.5 rounded-2xl py-3 border transition-colors",
                       draft.sex === opt.value
                         ? "bg-sohati text-white border-sohati"
                         : "bg-cream-card text-charcoal-soft border-charcoal/10"
                     )}
                   >
-                    {opt.label}
+                    <opt.icon size={20} />
                   </button>
                 ))}
               </div>

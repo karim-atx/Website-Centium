@@ -32,8 +32,9 @@ const accessItems = [
 export default function ProfessionalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { professionalReviews, submitProfessionalReview } = useApp();
+  const { professionalReviews, submitProfessionalReview, connectedProfessionalIds, connectProfessional } = useApp();
   const professional = mockProfessionals.find((p) => p.id === id);
+  const isConnected = !!professional && (professional.connected || connectedProfessionalIds.includes(professional.id));
   const [access, setAccess] = useState<Record<string, boolean>>({
     "Food diary": true,
     "Workout activity": true,
@@ -50,6 +51,16 @@ export default function ProfessionalDetail() {
   const myReview = professionalReviews.find((r) => r.professionalId === id);
   const [reviewRating, setReviewRating] = useState(myReview?.rating ?? 5);
   const [reviewText, setReviewText] = useState(myReview?.text ?? "");
+
+  // V7 (QA 7.0): "Your rating should influence the professional's overall
+  // rating based on the total rating by all people" — blend the user's own
+  // submitted rating into the mock aggregate instead of showing it
+  // separately with no effect on the headline number.
+  const totalReviews = (professional?.reviews ?? 0) + (myReview ? 1 : 0);
+  const displayRating =
+    professional && totalReviews > 0
+      ? ((professional.rating * professional.reviews + (myReview?.rating ?? 0)) / totalReviews).toFixed(1)
+      : professional?.rating.toFixed(1);
 
   if (!professional) {
     return (
@@ -96,10 +107,10 @@ export default function ProfessionalDetail() {
 
       <div className="flex items-center gap-4 mb-6 animate-fade-slide-up">
         <span className="flex items-center gap-1 text-sm font-bold text-gold">
-          <Star size={14} className="fill-gold" /> {professional.rating}
+          <Star size={14} className="fill-gold" /> {displayRating}
         </span>
-        <span className="text-xs text-charcoal-faint">{professional.reviews} reviews</span>
-        {professional.connected && (
+        <span className="text-xs text-charcoal-faint">{totalReviews} reviews</span>
+        {isConnected && (
           <span className="text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2.5 py-1">
             Client since August 2026
           </span>
@@ -115,7 +126,7 @@ export default function ProfessionalDetail() {
           V6 (QA 6.0): merged into a single box — the same card displays
           "My Review" and swaps its content between the empty prompt and
           the submitted review, instead of a separate rate-box + reviews list. */}
-      {professional.connected && (
+      {isConnected && (
         <Card className="mb-6 animate-fade-slide-up">
           <div className="flex items-center justify-between mb-1.5">
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">My Review</p>
@@ -138,7 +149,7 @@ export default function ProfessionalDetail() {
         </Card>
       )}
 
-      {professional.connected ? (
+      {isConnected ? (
         <>
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
             What {professional.name.split(" ")[0]} can see
@@ -175,7 +186,7 @@ export default function ProfessionalDetail() {
           <Button variant="outline" onClick={() => setMessageOpen(true)}>
             <MessageCircle size={15} /> Message
           </Button>
-          <Button>Connect</Button>
+          <Button onClick={() => connectProfessional(professional.id)}>Connect</Button>
         </div>
       )}
 

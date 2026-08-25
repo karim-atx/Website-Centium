@@ -25,13 +25,27 @@ const activityTypeLabel: Record<string, string> = {
   both: "Cardio + Strength",
 };
 
+// V7 (QA 7.0): clinical notes are "highlighted and colored based on the
+// category written" in the client dashboard's Health Metrics section.
+const noteFields: {
+  key: "comorbidities" | "previousSurgeries" | "medications" | "currentInjuries" | "personalityType";
+  label: string;
+  className: string;
+}[] = [
+  { key: "comorbidities", label: "Comorbidities", className: "bg-ember-pale text-ember-dark" },
+  { key: "previousSurgeries", label: "Previous surgeries", className: "bg-berry/10 text-berry" },
+  { key: "medications", label: "Medications", className: "bg-sohati-pale text-sohati-dark" },
+  { key: "currentInjuries", label: "Current injuries", className: "bg-gold-pale text-charcoal" },
+  { key: "personalityType", label: "Personality type", className: "bg-charcoal/[0.06] text-charcoal-soft" },
+];
+
 export const ClientDetailSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   client: ProfessionalClient | null;
   professionalSubtype?: ProfessionalSubtype;
 }> = ({ open, onClose, client, professionalSubtype }) => {
-  const { assignProgramToClient, assignFoodTemplateToClient, removeProfessionalClient } = useApp();
+  const { assignProgramToClient, assignFoodTemplateToClient, removeProfessionalClient, clientHealthNotes } = useApp();
   const [assigningProgram, setAssigningProgram] = useState(false);
   const [assigningTemplate, setAssigningTemplate] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -58,8 +72,11 @@ export const ClientDetailSheet: React.FC<{
     { key: "healthMetrics", label: "Health Metrics", icon: HeartPulse },
   ];
 
+  const note = clientHealthNotes[client.id] ?? {};
+  const activeNotes = noteFields.filter((f) => note[f.key]?.trim());
+
   return (
-    <BottomSheet open={open} onClose={onClose} title={client.name}>
+    <BottomSheet open={open} onClose={onClose} hideHeader>
       <div className="space-y-5 animate-fade-slide-up">
         <div className="flex items-center gap-3">
           <span className="w-11 h-11 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
@@ -68,6 +85,48 @@ export const ClientDetailSheet: React.FC<{
           <div>
             <p className="font-semibold text-charcoal">{client.name}</p>
             <p className="text-xs text-charcoal-faint">Client since {client.joinedAt}</p>
+          </div>
+        </div>
+
+        {/* V7 (QA 7.0): performance summary — metrics important to the
+            professional at a glance, before the per-section detail below. */}
+        <div className="grid grid-cols-2 gap-2.5">
+          <div className="bg-cream-soft rounded-2xl p-3.5">
+            <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
+              Calories consumed
+            </p>
+            <p className="text-lg font-bold text-charcoal">
+              {client.access.foodDiary ? `${client.lastCaloriesKcal.toLocaleString()} kcal` : "—"}
+            </p>
+          </div>
+          <div className="bg-cream-soft rounded-2xl p-3.5">
+            <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
+              Workout logged
+            </p>
+            <p
+              className={`text-lg font-bold flex items-center gap-1 ${
+                client.workoutLoggedToday ? "text-sohati-dark" : "text-charcoal-faint"
+              }`}
+            >
+              {client.workoutLoggedToday ? <Check size={16} /> : <XIcon size={16} />}
+              {client.workoutLoggedToday ? "Today" : "Not yet"}
+            </p>
+          </div>
+          <div className="bg-cream-soft rounded-2xl p-3.5">
+            <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
+              Current weight
+            </p>
+            <p className="text-lg font-bold text-charcoal">
+              {client.access.weight ? `${client.lastWeightKg} kg` : "—"}
+            </p>
+          </div>
+          <div className="bg-cream-soft rounded-2xl p-3.5">
+            <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
+              Health metrics
+            </p>
+            <p className="text-lg font-bold text-charcoal">
+              {client.access.healthMetrics && client.healthSummary ? "Shared" : "Not shared"}
+            </p>
           </div>
         </div>
 
@@ -205,6 +264,20 @@ export const ClientDetailSheet: React.FC<{
               </div>
             ) : (
               <p className="text-xs text-charcoal-faint">No health data shared yet.</p>
+            )}
+
+            {activeNotes.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-charcoal/[0.06] space-y-2">
+                <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">
+                  Clinical notes
+                </p>
+                {activeNotes.map((f) => (
+                  <div key={f.key} className={`rounded-xl px-3 py-2 ${f.className}`}>
+                    <p className="text-[10px] font-semibold uppercase tracking-wide opacity-80">{f.label}</p>
+                    <p className="text-sm font-medium">{note[f.key]}</p>
+                  </div>
+                ))}
+              </div>
             )}
           </div>
         )}

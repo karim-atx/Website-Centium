@@ -2,23 +2,49 @@ import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
-import { Check, Copy } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import type { Sex } from "../../types";
+import { professionalTiers } from "../../data/professionalTiers";
+import { Check, Copy, Venus, Mars, VenusAndMars } from "lucide-react";
+import clsx from "clsx";
+
+const sexOptions: { value: Sex; label: string; icon: typeof Venus }[] = [
+  { value: "female", label: "Female", icon: Venus },
+  { value: "male", label: "Male", icon: Mars },
+  { value: "other", label: "Other", icon: VenusAndMars },
+];
 
 export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { addProfessionalClient } = useApp();
+  const { addProfessionalClient, professionalClients, professionalTier } = useApp();
+  const navigate = useNavigate();
+  const tier = professionalTiers.find((t) => t.id === professionalTier) ?? professionalTiers[0];
+  const atCap = tier.maxClients !== null && professionalClients.length >= tier.maxClients;
   const [name, setName] = useState("");
+  const [age, setAge] = useState("");
+  const [sex, setSex] = useState<Sex | null>(null);
+  const [heightCm, setHeightCm] = useState("");
+  const [weightKg, setWeightKg] = useState("");
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
   const reset = () => {
     setName("");
+    setAge("");
+    setSex(null);
+    setHeightCm("");
+    setWeightKg("");
     setGeneratedCode(null);
     setCopied(false);
   };
 
   const create = () => {
     if (!name.trim()) return;
-    const code = addProfessionalClient(name.trim());
+    const code = addProfessionalClient(name.trim(), {
+      age: age ? Number(age) : undefined,
+      sex: sex ?? undefined,
+      heightCm: heightCm ? Number(heightCm) : undefined,
+      weightKg: weightKg ? Number(weightKg) : undefined,
+    });
     setGeneratedCode(code);
   };
 
@@ -38,7 +64,24 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
       }}
       title="Add Client"
     >
-      {!generatedCode ? (
+      {atCap ? (
+        <div className="text-center animate-fade-slide-up py-4">
+          <p className="text-sm text-charcoal-soft mb-4">
+            Your {tier.name} tier allows up to {tier.maxClients} clients, and you're already there.
+            Upgrade to add more.
+          </p>
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => {
+              onClose();
+              navigate("/subscription");
+            }}
+          >
+            View subscription tiers
+          </Button>
+        </div>
+      ) : !generatedCode ? (
         <div className="space-y-5 animate-fade-slide-up">
           <label className="block">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Client name</span>
@@ -50,6 +93,63 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
             />
           </label>
+
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Age</span>
+              <input
+                value={age}
+                onChange={(e) => setAge(e.target.value.replace(/\D/g, ""))}
+                inputMode="numeric"
+                placeholder="29"
+                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              />
+            </label>
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Height (cm)</span>
+              <input
+                value={heightCm}
+                onChange={(e) => setHeightCm(e.target.value.replace(/\D/g, ""))}
+                inputMode="numeric"
+                placeholder="178"
+                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              />
+            </label>
+          </div>
+
+          <label className="block">
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Weight (kg)</span>
+            <input
+              value={weightKg}
+              onChange={(e) => setWeightKg(e.target.value.replace(/[^\d.]/g, ""))}
+              inputMode="decimal"
+              placeholder="70"
+              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            />
+          </label>
+
+          <div>
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Sex</span>
+            <div className="grid grid-cols-3 gap-2">
+              {sexOptions.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => setSex(opt.value)}
+                  aria-label={opt.label}
+                  title={opt.label}
+                  className={clsx(
+                    "tap flex items-center justify-center rounded-2xl py-3 border transition-colors",
+                    sex === opt.value
+                      ? "bg-sohati text-white border-sohati"
+                      : "bg-cream-soft text-charcoal-soft border-transparent"
+                  )}
+                >
+                  <opt.icon size={20} />
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Button fullWidth size="lg" onClick={create} disabled={!name.trim()}>
             Generate unique client code
           </Button>

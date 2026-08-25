@@ -39,6 +39,17 @@ export type CustomerSubtype = "client" | "regular" | "athlete" | "general";
 // V4: Physiotherapist split out as its own specialty (was folded into "other").
 export type ProfessionalSubtype = "trainer" | "physiotherapist" | "dietitian" | "other";
 
+// V7 (QA 7.0): a business account picks one of these during onboarding —
+// drives which extra tabs (Employees/Classes) it gets in the Business UI.
+export type BusinessType =
+  | "gym"
+  | "store"
+  | "supplement_store"
+  | "equipment_seller"
+  | "wellness_service"
+  | "clothing_store"
+  | "meal_prep_service";
+
 export interface UserProfile {
   id: string;
   firstName: string;
@@ -54,9 +65,17 @@ export interface UserProfile {
   customerSubtype?: CustomerSubtype;
   professionalSubtype?: ProfessionalSubtype;
   businessName?: string;
+  businessType?: BusinessType;
   // V3: client<->professional linking
   linkedProfessionalCode?: string;
   linkedProfessionalName?: string;
+  linkedProfessionalSubtype?: ProfessionalSubtype;
+  // V7 (QA 7.0): a business account's own unique ID (shown to professionals
+  // who want to affiliate) and, for a professional account, which business
+  // they've affiliated with by entering one.
+  businessId?: string;
+  affiliatedBusinessId?: string;
+  affiliatedBusinessName?: string;
   // V4 (QA 4.0): user-uploaded profile photo, data URL — camera or gallery.
   avatarUrl?: string;
   // V5 (QA 5.0): professional's uploaded certification, data URL — camera
@@ -67,12 +86,35 @@ export interface UserProfile {
 // V3: a professional generates one of these for a prospective client; the
 // client redeems it during onboarding (or later) to link accounts. Kept
 // simple — no real backend, just a shared, unique code in local state.
+// V7 (QA 7.0): a business's unique ID, generated once at onboarding — a
+// professional affiliates by entering it (same shared-directory approach as
+// ClientCode, since this prototype has no real multi-account backend).
+export interface BusinessDirectoryEntry {
+  id: string;
+  businessName: string;
+  // V7 (QA 7.0): a business's own subscription tier caps how many
+  // professionals can affiliate with it, same concept as the professional's
+  // own client-count-capped tiers.
+  tier: string;
+}
+
 export interface ClientCode {
   code: string;
   professionalId: string;
   professionalName: string;
+  // V7 (QA 7.0): lets the client's Professionals tab pick a matching icon
+  // for the professional they just linked to.
+  professionalSubtype?: ProfessionalSubtype;
   createdAt: string;
   redeemed: boolean;
+  // V7 (QA 7.0): profile info the professional entered for this client when
+  // generating the code — pulled directly into the client's own onboarding
+  // ("About you" is bypassed) instead of asking them to re-enter it.
+  clientName?: string;
+  clientAge?: number;
+  clientSex?: Sex;
+  clientHeightCm?: number;
+  clientWeightKg?: number;
 }
 
 // V3: a professional's view of one client — mocked data standing in for
@@ -85,6 +127,13 @@ export interface ProfessionalClient {
   joinedAt: string;
   activityLevel: ActivityLevel;
   activityType: "cardio" | "strength" | "both";
+  // V7 (QA 7.0): captured when the professional adds the client.
+  age?: number;
+  sex?: Sex;
+  heightCm?: number;
+  weightKg?: number;
+  // V7 (QA 7.0): shown in the client dashboard's performance summary.
+  workoutLoggedToday?: boolean;
   access: {
     foodDiary: boolean;
     workoutActivity: boolean;
@@ -126,6 +175,8 @@ export interface CalendarEvent {
   invitees?: string[];
   url?: string;
   notes?: string;
+  // V7 (QA 7.0): per-event background color, shown on the Day timeline.
+  color?: string;
 }
 
 // V6 (QA 6.0): a professional-built workout template — same routine-builder
@@ -137,6 +188,18 @@ export interface WorkoutTemplateAssignment {
   exercises: Exercise[];
   assignedClientIds: string[];
   createdAt: string;
+  // V7 (QA 7.0): organize templates into folders/subfolders, mirroring the
+  // client UI's routine-folder system.
+  folderId?: string | null;
+}
+
+// V7 (QA 7.0): same shape as RoutineFolder, kept as its own store since
+// template folders belong to the professional's UI, not the client's.
+export interface WorkoutTemplateFolder {
+  id: string;
+  name: string;
+  parentId?: string | null;
+  color?: string;
 }
 
 // V6 (QA 6.0): manual health-record fields a professional can add on top of
@@ -306,6 +369,8 @@ export interface RoutineFolder {
   id: string;
   name: string;
   parentId?: string | null;
+  // V7 (QA 7.0): chosen when creating the folder/subfolder.
+  color?: string;
 }
 
 export interface Routine {
@@ -424,6 +489,10 @@ export interface Gym {
   distanceKm?: number;
   lat: number;
   lng: number;
+  // V7 (QA 7.0): shown in the gym detail sheet.
+  bio: string;
+  reviewCount: number;
+  pricing: { plan: string; price: string }[];
 }
 
 // V4: a small curated set of minimalistic icon choices for habits, replacing
@@ -514,6 +583,8 @@ export interface CustomMeal {
   id: string;
   title: string;
   items: CustomMealItem[];
+  // V7 (QA 7.0): which meal slot this plan is intended for.
+  mealType?: MealType;
 }
 
 // V2: Journal — organized into folders, entries retain their date.
@@ -570,4 +641,31 @@ export interface BusinessOffering {
   category: MarketplaceCategoryId;
   price?: string;
   description: string;
+}
+
+// V7 (QA 7.0): Business UI additions — Employees (affiliated professionals),
+// Classes (gym-type businesses only) and a customer messaging board.
+export interface BusinessEmployee {
+  professionalId: string;
+  professionalName: string;
+  professionalSubtype?: ProfessionalSubtype;
+}
+
+export interface BusinessClass {
+  id: string;
+  title: string;
+  classType: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  maxCapacity: number;
+  professionalId?: string;
+}
+
+export interface BusinessMessage {
+  id: string;
+  customerId: string;
+  from: "business" | "customer";
+  text: string;
+  at: string;
 }

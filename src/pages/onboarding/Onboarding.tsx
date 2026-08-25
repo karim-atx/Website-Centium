@@ -4,6 +4,7 @@ import { useApp } from "../../context/AppContext";
 import type {
   AccountType,
   ActivityLevel,
+  BusinessType,
   CustomerSubtype,
   Goal,
   ProfessionalSubtype,
@@ -24,6 +25,7 @@ export interface OnboardingDraft {
   professionalSubtype: ProfessionalSubtype | null;
   professionalUserIdCode: string;
   businessName: string;
+  businessType: BusinessType | null;
   firstName: string;
   age: string;
   sex: Sex;
@@ -42,6 +44,7 @@ const initialDraft: OnboardingDraft = {
   professionalSubtype: null,
   professionalUserIdCode: "",
   businessName: "",
+  businessType: null,
   firstName: "",
   age: "",
   sex: "female",
@@ -60,13 +63,21 @@ type StepKey = "welcome" | "accountType" | "aboutYou" | "goal" | "activity" | "t
 // are customer-only questions, so professionals skip straight from About
 // You to the finish screen (coaching-app style onboarding, not a client
 // health-tracking wizard).
-function stepsFor(accountType: OnboardingDraft["accountType"]): StepKey[] {
+// V7 (QA 7.0): a "Client of Professional" with a valid code skips About You
+// entirely — their name/age/height/sex/weight come from what the
+// professional already entered when generating that code.
+function stepsFor(accountType: OnboardingDraft["accountType"], skipAboutYou: boolean): StepKey[] {
   const isProfessional = accountType === "professional";
+  // V7 (QA 7.0): a business isn't a person to profile/track either — same
+  // "land straight past the personal-tracking questions" treatment as a
+  // professional, since business-type selection (on AccountTypeStep) is
+  // its own equivalent of the professional's specialty picker.
+  const isBusiness = accountType === "business";
   return [
     "welcome",
     "accountType",
-    "aboutYou",
-    ...(isProfessional ? [] : (["goal", "activity", "tracking"] as StepKey[])),
+    ...(skipAboutYou || isBusiness ? [] : (["aboutYou"] as StepKey[])),
+    ...(isProfessional || isBusiness ? [] : (["goal", "activity", "tracking"] as StepKey[])),
     "ready",
   ];
 }
@@ -74,10 +85,15 @@ function stepsFor(accountType: OnboardingDraft["accountType"]): StepKey[] {
 export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<OnboardingDraft>(initialDraft);
-  const { completeOnboarding, redeemClientCode } = useApp();
+  const { completeOnboarding, redeemClientCode, clientCodes } = useApp();
   const navigate = useNavigate();
 
-  const steps = stepsFor(draft.accountType);
+  const matchedClientCode = clientCodes.find(
+    (c) => c.code.toUpperCase() === draft.professionalUserIdCode.trim().toUpperCase()
+  );
+  const skipAboutYou = draft.customerSubtype === "client" && !!matchedClientCode;
+
+  const steps = stepsFor(draft.accountType, skipAboutYou);
   const stepKey = steps[Math.min(step, steps.length - 1)];
 
   const next = () => setStep((s) => Math.min(s + 1, steps.length - 1));
@@ -92,11 +108,12 @@ export default function Onboarding() {
       professionalSubtype:
         draft.accountType === "professional" ? draft.professionalSubtype || "other" : undefined,
       businessName: draft.accountType === "business" ? draft.businessName : undefined,
-      firstName: draft.firstName || "Friend",
-      age: Number(draft.age) || 28,
-      sex: draft.sex,
-      heightCm: Number(draft.heightCm) || 170,
-      weightKg: Number(draft.weightKg) || 70,
+      businessType: draft.accountType === "business" ? draft.businessType || "gym" : undefined,
+      firstName: matchedClientCode?.clientName || draft.firstName || "Friend",
+      age: matchedClientCode?.clientAge ?? (Number(draft.age) || 28),
+      sex: matchedClientCode?.clientSex ?? draft.sex,
+      heightCm: matchedClientCode?.clientHeightCm ?? (Number(draft.heightCm) || 170),
+      weightKg: matchedClientCode?.clientWeightKg ?? (Number(draft.weightKg) || 70),
       goals: draft.goals.length ? draft.goals : ["improve_health"],
       activityLevel: draft.activityLevel || "moderate",
       tracking: draft.tracking.length ? draft.tracking : ["nutrition", "workouts"],

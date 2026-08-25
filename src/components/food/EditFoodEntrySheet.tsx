@@ -24,7 +24,15 @@ export const EditFoodEntrySheet: React.FC<{
   entry: FoodLogEntry | null;
 }> = ({ open, onClose, entry }) => {
   const { updateFoodEntry, removeFoodEntry } = useApp();
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantityRaw] = useState(1);
+  const [quantityDraft, setQuantityDraft] = useState("1");
+  const setQuantity = (updater: number | ((q: number) => number)) => {
+    setQuantityRaw((prev) => {
+      const next = typeof updater === "function" ? updater(prev) : updater;
+      setQuantityDraft(String(next));
+      return next;
+    });
+  };
   const [unit, setUnit] = useState<ServingUnit>("serving");
 
   useEffect(() => {
@@ -32,6 +40,7 @@ export const EditFoodEntrySheet: React.FC<{
       setQuantity(entry.quantity);
       setUnit(entry.unit ?? "serving");
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [entry]);
 
   if (!entry) return null;
@@ -54,12 +63,23 @@ export const EditFoodEntrySheet: React.FC<{
           <span className="text-sm font-semibold text-charcoal-soft">Quantity</span>
           <div className="flex items-center gap-3">
             <button
-              onClick={() => setQuantity((q) => Math.max(1, +(q - 1).toFixed(1)))}
+              onClick={() => setQuantity((q) => Math.max(0.1, +(q - 1).toFixed(1)))}
               className="tap w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
             >
               <Minus size={14} />
             </button>
-            <span className="w-6 text-center font-semibold text-charcoal">{quantity}</span>
+            <input
+              value={quantityDraft}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^\d.]/g, "");
+                setQuantityDraft(v);
+                const n = Number(v);
+                if (v && !Number.isNaN(n) && n > 0) setQuantityRaw(n);
+              }}
+              onBlur={() => setQuantityDraft(String(quantity))}
+              inputMode="decimal"
+              className="w-14 text-center font-semibold text-charcoal bg-transparent focus:outline-none"
+            />
             <button
               onClick={() => setQuantity((q) => +(q + 1).toFixed(1))}
               className="tap w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"

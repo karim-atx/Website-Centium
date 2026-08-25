@@ -3,12 +3,18 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Toggle } from "../../components/ui/Toggle";
 import { useApp } from "../../context/AppContext";
-import { Store, Users, Tag } from "lucide-react";
+import { Store, Users, Tag, Star, MapPin } from "lucide-react";
 
 export default function BusinessDashboard() {
-  const { user, updateProfile, businessListing, updateBusinessListing } = useApp();
+  const { user, updateProfile, businessListing, updateBusinessListing, professionalReviews } = useApp();
   const [editingPerk, setEditingPerk] = useState(false);
   const [perkDraft, setPerkDraft] = useState(businessListing.perk);
+  // V7 (QA 7.0): a client rating a business has no natural entry point yet
+  // in this prototype (unlike a professional, a business isn't looked up
+  // via a code/id from the client side) — this reads the same review store
+  // under a business-specific sentinel so the display is ready once that
+  // entry point exists.
+  const myBusinessReview = professionalReviews.find((r) => r.professionalId === "my-business");
 
   return (
     <div>
@@ -28,7 +34,7 @@ export default function BusinessDashboard() {
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Profile</p>
       <Card className="mb-6">
-        <label className="block">
+        <label className="block mb-3">
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Business name</span>
           <input
             value={user.businessName ?? ""}
@@ -36,7 +42,62 @@ export default function BusinessDashboard() {
             className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
           />
         </label>
+        <label className="block mb-3">
+          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
+            Bio — shown to clients on Explore
+          </span>
+          <textarea
+            value={businessListing.bio}
+            onChange={(e) => updateBusinessListing({ bio: e.target.value })}
+            rows={3}
+            placeholder="Tell clients what makes your business worth a visit…"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20 resize-none"
+          />
+        </label>
+        <label className="block">
+          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
+            Location — shown to clients on Explore
+          </span>
+          <input
+            value={businessListing.location}
+            onChange={(e) => updateBusinessListing({ location: e.target.value })}
+            placeholder="Achrafieh, Beirut"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+          />
+        </label>
       </Card>
+
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+        Ratings & Reviews
+      </p>
+      <Card className="mb-6">
+        {myBusinessReview ? (
+          <>
+            <div className="flex items-center gap-1 mb-2">
+              {Array.from({ length: 5 }, (_, i) => (
+                <Star key={i} size={15} className={i < myBusinessReview.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
+              ))}
+            </div>
+            {myBusinessReview.text && <p className="text-sm text-charcoal-soft leading-relaxed">{myBusinessReview.text}</p>}
+          </>
+        ) : (
+          <p className="text-sm text-charcoal-faint">No client reviews yet.</p>
+        )}
+      </Card>
+
+      {(businessListing.bio || businessListing.location) && (
+        <Card className="mb-6 bg-cream-soft">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+            Preview — what clients see on Explore
+          </p>
+          {businessListing.location && (
+            <p className="flex items-center gap-1.5 text-xs text-charcoal-faint mb-1.5">
+              <MapPin size={11} /> {businessListing.location}
+            </p>
+          )}
+          {businessListing.bio && <p className="text-sm text-charcoal-soft leading-relaxed">{businessListing.bio}</p>}
+        </Card>
+      )}
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         Your listing

@@ -5,10 +5,11 @@ import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import type { CalendarEvent } from "../../types";
-import { ChevronLeft, ChevronRight, Plus, MapPin, Link2, FileText, Trash2, Repeat } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, MapPin, Link2, FileText, Trash2, Repeat, Pencil } from "lucide-react";
 import clsx from "clsx";
 
-type View = "month" | "year";
+// V7 (QA 7.0): Year → Month → Day, Month selected by default.
+type View = "year" | "month" | "day";
 
 const repeatOptions: { value: CalendarEvent["repeat"]; label: string }[] = [
   { value: "none", label: "Never" },
@@ -17,17 +18,36 @@ const repeatOptions: { value: CalendarEvent["repeat"]; label: string }[] = [
   { value: "monthly", label: "Monthly" },
 ];
 
+const eventColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
+
 const monthNames = Array.from({ length: 12 }, (_, i) =>
   new Date(2000, i, 1).toLocaleDateString("en-US", { month: "long" })
 );
 
 const pad = (n: number) => String(n).padStart(2, "0");
 const toISO = (y: number, m: number, d: number) => `${y}-${pad(m + 1)}-${pad(d)}`;
+const addDaysISO = (iso: string, days: number) => {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setDate(d.getDate() + days);
+  return toISO(d.getFullYear(), d.getMonth(), d.getDate());
+};
+const addMonthsISO = (iso: string, months: number) => {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setMonth(d.getMonth() + months);
+  return toISO(d.getFullYear(), d.getMonth(), d.getDate());
+};
+const minutesOf = (hhmm?: string) => {
+  if (!hhmm) return 0;
+  const [h, m] = hhmm.split(":").map(Number);
+  return h * 60 + m;
+};
 
 const blankDraft = (date: string) => ({
   title: "",
   date,
-  allDay: true,
+  // V7 (QA 7.0): all-day now defaults off — most events are scheduled at a
+  // specific time, not blocking the whole day.
+  allDay: false,
   startTime: "09:00",
   endTime: "10:00",
   location: "",
@@ -36,15 +56,19 @@ const blankDraft = (date: string) => ({
   url: "",
   notes: "",
   attachmentName: "",
+  color: eventColorOptions[0],
 });
 
+const HOUR_PX = 56;
+
 export default function CalendarTab() {
-  const { calendarEvents, addCalendarEvent, removeCalendarEvent, professionalClients } = useApp();
+  const { calendarEvents, addCalendarEvent, updateCalendarEvent, removeCalendarEvent, professionalClients } = useApp();
   const today = new Date();
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
   const [selectedDate, setSelectedDate] = useState(toISO(today.getFullYear(), today.getMonth(), today.getDate()));
   const [composeOpen, setComposeOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState(blankDraft(selectedDate));
 
   const eventsByDate = useMemo(() => {
@@ -76,7 +100,27 @@ export default function CalendarTab() {
   };
 
   const openCompose = () => {
+    setEditingId(null);
     setDraft(blankDraft(selectedDate));
+    setComposeOpen(true);
+  };
+
+  const openEdit = (e: CalendarEvent) => {
+    setEditingId(e.id);
+    setDraft({
+      title: e.title,
+      date: e.date,
+      allDay: e.allDay,
+      startTime: e.startTime ?? "09:00",
+      endTime: e.endTime ?? "10:00",
+      location: e.location ?? "",
+      repeat: e.repeat,
+      inviteeIds: professionalClients.filter((c) => e.invitees?.includes(c.name)).map((c) => c.id),
+      url: e.url ?? "",
+      notes: e.notes ?? "",
+      attachmentName: "",
+      color: e.color ?? eventColorOptions[0],
+    });
     setComposeOpen(true);
   };
 
@@ -88,7 +132,7 @@ export default function CalendarTab() {
 
   const saveEvent = () => {
     if (!draft.title.trim()) return;
-    addCalendarEvent({
+    const base: Omit<CalendarEvent, "id"> = {
       title: draft.title.trim(),
       date: draft.date,
       allDay: draft.allDay,
@@ -101,7 +145,28 @@ export default function CalendarTab() {
         .filter((n): n is string => !!n),
       url: draft.url.trim() || undefined,
       notes: draft.notes.trim() || (draft.attachmentName ? `Attachment: ${draft.attachmentName}` : undefined),
-    });
+      color: draft.color,
+    };
+
+    if (editingId) {
+      updateCalendarEvent(editingId, base);
+    } else {
+      addCalendarEvent(base);
+      // V7 (QA 7.0): a repeat selection now actually generates the
+      // recurring occurrences, each its own editable/deletable event.
+      if (draft.repeat !== "none") {
+        const horizon = draft.repeat === "daily" ? 30 : draft.repeat === "weekly" ? 12 : 12;
+        for (let i = 1; i <= horizon; i++) {
+          const occurrenceDate =
+            draft.repeat === "daily"
+              ? addDaysISO(draft.date, i)
+              : draft.repeat === "weekly"
+              ? addDaysISO(draft.date, i * 7)
+              : addMonthsISO(draft.date, i);
+          addCalendarEvent({ ...base, date: occurrenceDate });
+        }
+      }
+    }
     setComposeOpen(false);
   };
 
@@ -111,6 +176,46 @@ export default function CalendarTab() {
     month: "long",
     day: "numeric",
   });
+  const timedEvents = selectedEvents.filter((e) => !e.allDay);
+  const allDayEvents = selectedEvents.filter((e) => e.allDay);
+
+  const eventCard = (e: CalendarEvent) => (
+    <Card key={e.id} className="flex items-start justify-between gap-3" style={{ borderLeft: `4px solid ${e.color ?? "#7D6BB5"}` }}>
+      <button className="min-w-0 text-left flex-1" onClick={() => openEdit(e)}>
+        <p className="text-sm font-semibold text-charcoal">{e.title}</p>
+        <p className="text-xs text-charcoal-faint">
+          {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
+          {e.repeat !== "none" && ` · repeats ${e.repeat}`}
+        </p>
+        {e.location && (
+          <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
+            <MapPin size={11} /> {e.location}
+          </p>
+        )}
+        {e.invitees && e.invitees.length > 0 && (
+          <p className="text-xs text-charcoal-faint mt-1">With {e.invitees.join(", ")}</p>
+        )}
+        {e.url && (
+          <p className="flex items-center gap-1 text-xs text-sohati mt-1 truncate">
+            <Link2 size={11} /> {e.url}
+          </p>
+        )}
+        {e.notes && (
+          <p className="flex items-start gap-1 text-xs text-charcoal-faint mt-1">
+            <FileText size={11} className="mt-0.5 shrink-0" /> {e.notes}
+          </p>
+        )}
+      </button>
+      <div className="flex items-center gap-2 shrink-0">
+        <button onClick={() => openEdit(e)} aria-label={`Edit ${e.title}`} className="tap text-charcoal-faint">
+          <Pencil size={14} />
+        </button>
+        <button onClick={() => removeCalendarEvent(e.id)} aria-label={`Delete ${e.title}`} className="tap text-charcoal-faint">
+          <Trash2 size={14} />
+        </button>
+      </div>
+    </Card>
+  );
 
   return (
     <div>
@@ -128,7 +233,7 @@ export default function CalendarTab() {
       />
 
       <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit mb-4">
-        {(["month", "year"] as View[]).map((v) => (
+        {(["year", "month", "day"] as View[]).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
@@ -163,7 +268,7 @@ export default function CalendarTab() {
               </div>
             ))}
           </div>
-          <div className="grid grid-cols-7 gap-1 mb-6">
+          <div className="grid grid-cols-7 gap-1">
             {cells.map((day, i) => {
               if (day === null) return <div key={i} />;
               const iso = toISO(cursor.year, cursor.month, day);
@@ -173,7 +278,10 @@ export default function CalendarTab() {
               return (
                 <button
                   key={i}
-                  onClick={() => setSelectedDate(iso)}
+                  onClick={() => {
+                    setSelectedDate(iso);
+                    setView("day");
+                  }}
                   className={clsx(
                     "tap aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 text-sm",
                     isSelected
@@ -190,54 +298,6 @@ export default function CalendarTab() {
                 </button>
               );
             })}
-          </div>
-
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-            {selectedDateLabel}
-          </p>
-          <div className="space-y-2">
-            {selectedEvents.length === 0 ? (
-              <Card className="text-center py-6">
-                <p className="text-sm text-charcoal-faint">No events this day.</p>
-              </Card>
-            ) : (
-              selectedEvents.map((e) => (
-                <Card key={e.id} className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-charcoal">{e.title}</p>
-                    <p className="text-xs text-charcoal-faint">
-                      {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
-                      {e.repeat !== "none" && ` · repeats ${e.repeat}`}
-                    </p>
-                    {e.location && (
-                      <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
-                        <MapPin size={11} /> {e.location}
-                      </p>
-                    )}
-                    {e.invitees && e.invitees.length > 0 && (
-                      <p className="text-xs text-charcoal-faint mt-1">With {e.invitees.join(", ")}</p>
-                    )}
-                    {e.url && (
-                      <p className="flex items-center gap-1 text-xs text-sohati mt-1 truncate">
-                        <Link2 size={11} /> {e.url}
-                      </p>
-                    )}
-                    {e.notes && (
-                      <p className="flex items-start gap-1 text-xs text-charcoal-faint mt-1">
-                        <FileText size={11} className="mt-0.5 shrink-0" /> {e.notes}
-                      </p>
-                    )}
-                  </div>
-                  <button
-                    onClick={() => removeCalendarEvent(e.id)}
-                    aria-label={`Delete ${e.title}`}
-                    className="tap text-charcoal-faint shrink-0"
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </Card>
-              ))
-            )}
           </div>
         </>
       )}
@@ -262,7 +322,83 @@ export default function CalendarTab() {
         </div>
       )}
 
-      <BottomSheet open={composeOpen} onClose={() => setComposeOpen(false)} title="New Event">
+      {view === "day" && (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <button
+              onClick={() => setSelectedDate(addDaysISO(selectedDate, -1))}
+              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft"
+            >
+              <ChevronLeft size={16} />
+            </button>
+            <p className="font-display font-semibold text-charcoal">{selectedDateLabel}</p>
+            <button
+              onClick={() => setSelectedDate(addDaysISO(selectedDate, 1))}
+              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft"
+            >
+              <ChevronRight size={16} />
+            </button>
+          </div>
+
+          {allDayEvents.length > 0 && (
+            <div className="space-y-2 mb-4">
+              <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">All day</p>
+              {allDayEvents.map(eventCard)}
+            </div>
+          )}
+
+          {timedEvents.length === 0 ? (
+            <Card className="text-center py-6">
+              <p className="text-sm text-charcoal-faint">No timed events this day.</p>
+            </Card>
+          ) : (
+            <div className="relative" style={{ height: HOUR_PX * 24 }}>
+              {Array.from({ length: 24 }, (_, h) => (
+                <div
+                  key={h}
+                  className="absolute left-0 right-0 border-t border-charcoal/[0.06] flex items-start"
+                  style={{ top: h * HOUR_PX }}
+                >
+                  <span className="text-[9px] text-charcoal-faint -mt-1.5 pr-1.5 w-9 text-right shrink-0">
+                    {h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`}
+                  </span>
+                </div>
+              ))}
+              <div className="absolute left-10 right-0 top-0 bottom-0">
+                {timedEvents.map((e) => {
+                  const start = minutesOf(e.startTime);
+                  const end = Math.max(minutesOf(e.endTime), start + 20);
+                  const top = (start / 60) * HOUR_PX;
+                  const height = Math.max(((end - start) / 60) * HOUR_PX, 26);
+                  return (
+                    <button
+                      key={e.id}
+                      onClick={() => openEdit(e)}
+                      className="tap absolute left-0 right-1 rounded-xl px-2.5 py-1.5 text-left overflow-hidden shadow-soft"
+                      style={{ top, height, background: `${e.color ?? "#7D6BB5"}22`, borderLeft: `3px solid ${e.color ?? "#7D6BB5"}` }}
+                    >
+                      <p className="text-xs font-semibold text-charcoal truncate">{e.title}</p>
+                      <p className="text-[10px] text-charcoal-faint truncate">
+                        {e.startTime} – {e.endTime}
+                        {e.location ? ` · ${e.location}` : ""}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {timedEvents.length > 0 && (
+            <div className="space-y-2 mt-5">
+              <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">Manage events</p>
+              {timedEvents.map(eventCard)}
+            </div>
+          )}
+        </>
+      )}
+
+      <BottomSheet open={composeOpen} onClose={() => setComposeOpen(false)} title={editingId ? "Edit Event" : "New Event"}>
         <div className="space-y-4 animate-fade-slide-up">
           <label className="block">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Title</span>
@@ -331,26 +467,51 @@ export default function CalendarTab() {
           </label>
 
           <div>
-            <span className="text-xs font-semibold text-charcoal-soft mb-2 flex items-center gap-1.5">
-              <Repeat size={12} /> Repeat
-            </span>
-            <div className="flex flex-wrap gap-2">
-              {repeatOptions.map((r) => (
+            <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Color</span>
+            <div className="flex gap-2">
+              {eventColorOptions.map((c) => (
                 <button
-                  key={r.value}
-                  onClick={() => setDraft((d) => ({ ...d, repeat: r.value }))}
-                  className={clsx(
-                    "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
-                    draft.repeat === r.value
-                      ? "bg-sohati text-white border-sohati"
-                      : "bg-cream-soft border-transparent text-charcoal-soft"
-                  )}
-                >
-                  {r.label}
-                </button>
+                  key={c}
+                  onClick={() => setDraft((d) => ({ ...d, color: c }))}
+                  aria-label={`Color ${c}`}
+                  className="tap w-7 h-7 rounded-full"
+                  style={{
+                    background: c,
+                    boxShadow: draft.color === c ? "0 0 0 2px rgb(var(--c-cream)), 0 0 0 4px " + c : undefined,
+                  }}
+                />
               ))}
             </div>
           </div>
+
+          {!editingId && (
+            <div>
+              <span className="text-xs font-semibold text-charcoal-soft mb-2 flex items-center gap-1.5">
+                <Repeat size={12} /> Repeat
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {repeatOptions.map((r) => (
+                  <button
+                    key={r.value}
+                    onClick={() => setDraft((d) => ({ ...d, repeat: r.value }))}
+                    className={clsx(
+                      "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
+                      draft.repeat === r.value
+                        ? "bg-sohati text-white border-sohati"
+                        : "bg-cream-soft border-transparent text-charcoal-soft"
+                    )}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+              {draft.repeat !== "none" && (
+                <p className="text-[11px] text-charcoal-faint mt-2">
+                  This will create separate {draft.repeat} events you can each edit or delete individually.
+                </p>
+              )}
+            </div>
+          )}
 
           {professionalClients.length > 0 && (
             <div>
@@ -405,7 +566,7 @@ export default function CalendarTab() {
           </label>
 
           <Button fullWidth size="lg" onClick={saveEvent} disabled={!draft.title.trim()}>
-            Save event
+            {editingId ? "Save changes" : "Save event"}
           </Button>
         </div>
       </BottomSheet>

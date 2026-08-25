@@ -10,7 +10,7 @@ type Tab = "routines" | "database" | "history" | "metrics";
 
 const tabLabels: Record<Tab, string> = {
   routines: "Routines",
-  database: "Database",
+  database: "Library",
   history: "History",
   metrics: "Metrics",
 };

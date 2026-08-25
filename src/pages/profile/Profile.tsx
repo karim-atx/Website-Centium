@@ -2,18 +2,24 @@ import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
-import { EditableValue } from "../../components/ui/EditableValue";
 import { GoalsEditSheet } from "../../components/profile/GoalsEditSheet";
+import { ActivityLevelSheet } from "../../components/profile/ActivityLevelSheet";
+import { EditBodyStatsSheet } from "../../components/profile/EditBodyStatsSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { mockProfessionals } from "../../data/mockProfessionals";
 import { professionalTypeIcon } from "../../utils/icons";
+import { LINKED_PROFESSIONAL_REVIEW_ID } from "../professionals/Professionals";
 import {
   Target,
   ChevronRight,
   LogOut,
   Camera,
   Image,
+  Trash2,
+  Activity,
+  Pencil,
+  Star,
 } from "lucide-react";
 
 const accountTypeLabel: Record<string, string> = {
@@ -23,9 +29,11 @@ const accountTypeLabel: Record<string, string> = {
 };
 
 export default function Profile() {
-  const { user, updateProfile, signOut } = useApp();
+  const { user, updateProfile, signOut, connectedProfessionalIds, professionalReviews } = useApp();
   const navigate = useNavigate();
   const [goalsOpen, setGoalsOpen] = useState(false);
+  const [activityLevelOpen, setActivityLevelOpen] = useState(false);
+  const [bodyStatsOpen, setBodyStatsOpen] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -54,11 +62,18 @@ export default function Profile() {
   // client-only concepts — hidden for both professional and business
   // accounts, whose own profile has nothing to do with personal tracking.
   const hidesClientFields = user.accountType === "professional" || user.accountType === "business";
-  const connectedProfessionals = hidesClientFields ? [] : mockProfessionals.filter((p) => p.connected);
+  const connectedProfessionals = hidesClientFields
+    ? []
+    : mockProfessionals.filter((p) => p.connected || connectedProfessionalIds.includes(p.id));
 
   // V4 (QA 4.0) trimmed to Goals + Help; V5 (QA 5.0) removes Help too —
   // Settings (reachable from More) already covers everything it pointed to.
-  const sections = hidesClientFields ? [] : [{ icon: Target, label: "Goals", onClick: () => setGoalsOpen(true) }];
+  const sections = hidesClientFields
+    ? []
+    : [
+        { icon: Target, label: "Goals", onClick: () => setGoalsOpen(true) },
+        { icon: Activity, label: "Activity Level", onClick: () => setActivityLevelOpen(true) },
+      ];
 
   return (
     <div>
@@ -86,34 +101,58 @@ export default function Profile() {
         </div>
       </div>
 
+      {/* V7 (QA 7.0): surfaces ratings/reviews clients have left for this
+          professional — the same review a client submits from the "Your
+          professional" card on their own Professionals tab. */}
+      {user.accountType === "professional" && (
+        <Card className="mb-6 mt-4 animate-fade-slide-up">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+            Ratings & Reviews
+          </p>
+          {(() => {
+            const review = professionalReviews.find((r) => r.professionalId === LINKED_PROFESSIONAL_REVIEW_ID);
+            if (!review) {
+              return <p className="text-sm text-charcoal-faint">No reviews from clients yet.</p>;
+            }
+            return (
+              <>
+                <div className="flex items-center gap-1 mb-2">
+                  {Array.from({ length: 5 }, (_, i) => (
+                    <Star key={i} size={15} className={i < review.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
+                  ))}
+                </div>
+                {review.text && <p className="text-sm text-charcoal-soft leading-relaxed">{review.text}</p>}
+              </>
+            );
+          })()}
+        </Card>
+      )}
+
       {!hidesClientFields && (
-        <div className="grid grid-cols-3 gap-3 mb-6 mt-4">
-          <Card className="text-center animate-fade-slide-up">
-            <EditableValue
-              value={user.weightKg}
-              onSave={(v) => updateProfile({ weightKg: v })}
-              className="text-lg font-bold text-charcoal"
-            />
-            <p className="text-[11px] text-charcoal-faint">kg</p>
-          </Card>
-          <Card className="text-center animate-fade-slide-up">
-            <EditableValue
-              value={user.heightCm}
-              decimals={0}
-              onSave={(v) => updateProfile({ heightCm: v })}
-              className="text-lg font-bold text-charcoal"
-            />
-            <p className="text-[11px] text-charcoal-faint">cm</p>
-          </Card>
-          <Card className="text-center animate-fade-slide-up">
-            <EditableValue
-              value={user.age}
-              decimals={0}
-              onSave={(v) => updateProfile({ age: v })}
-              className="text-lg font-bold text-charcoal"
-            />
-            <p className="text-[11px] text-charcoal-faint">years</p>
-          </Card>
+        <div className="relative mb-6 mt-4">
+          <div className="grid grid-cols-3 gap-3">
+            <Card className="text-center animate-fade-slide-up">
+              <p className="text-lg font-bold text-charcoal">{user.weightKg}</p>
+              <p className="text-[11px] text-charcoal-faint">kg</p>
+            </Card>
+            <Card className="text-center animate-fade-slide-up">
+              <p className="text-lg font-bold text-charcoal">{user.heightCm}</p>
+              <p className="text-[11px] text-charcoal-faint">cm</p>
+            </Card>
+            <Card className="text-center animate-fade-slide-up">
+              <p className="text-lg font-bold text-charcoal">{user.age}</p>
+              <p className="text-[11px] text-charcoal-faint">years</p>
+            </Card>
+          </div>
+          {/* V7 (QA 7.0): one shared edit mark for weight/height/age instead
+              of a separate edit affordance per box. */}
+          <button
+            onClick={() => setBodyStatsOpen(true)}
+            aria-label="Edit weight, height and age"
+            className="tap absolute -top-2 -right-2 w-7 h-7 rounded-full bg-charcoal text-cream flex items-center justify-center shadow-soft"
+          >
+            <Pencil size={12} />
+          </button>
         </div>
       )}
 
@@ -172,6 +211,8 @@ export default function Profile() {
       </button>
 
       <GoalsEditSheet open={goalsOpen} onClose={() => setGoalsOpen(false)} />
+      <ActivityLevelSheet open={activityLevelOpen} onClose={() => setActivityLevelOpen(false)} />
+      <EditBodyStatsSheet open={bodyStatsOpen} onClose={() => setBodyStatsOpen(false)} />
 
       <input
         ref={cameraInputRef}
@@ -188,7 +229,7 @@ export default function Profile() {
         className="hidden"
         onChange={(e) => e.target.files?.[0] && handleAvatarFile(e.target.files[0])}
       />
-      <BottomSheet open={avatarSheetOpen} onClose={() => setAvatarSheetOpen(false)}>
+      <BottomSheet open={avatarSheetOpen} onClose={() => setAvatarSheetOpen(false)} hideHeader>
         <div className="space-y-2.5 animate-fade-slide-up">
           <button
             onClick={() => cameraInputRef.current?.click()}
@@ -203,6 +244,17 @@ export default function Profile() {
           >
             <Image size={18} className="text-sohati" />
             <span className="text-sm font-semibold text-charcoal">Choose from library</span>
+          </button>
+          <button
+            onClick={() => {
+              updateProfile({ avatarUrl: undefined });
+              setAvatarSheetOpen(false);
+            }}
+            disabled={!user.avatarUrl}
+            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left disabled:opacity-40"
+          >
+            <Trash2 size={18} className="text-[#C0392B]" />
+            <span className="text-sm font-semibold text-charcoal">Remove photo</span>
           </button>
         </div>
       </BottomSheet>

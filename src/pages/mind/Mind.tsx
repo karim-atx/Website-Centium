@@ -9,8 +9,9 @@ import { MeditationSheet } from "../../components/mind/MeditationSheet";
 import { YogaFigureIcon } from "../../components/mind/YogaFigureIcon";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
-import { Flame, Plus } from "lucide-react";
+import { Flame, Plus, CheckSquare, BookOpen } from "lucide-react";
 import type { Streak } from "../../types";
+import { flameColor } from "../../utils/flameColor";
 
 type Tab = "overview" | "habits" | "journal";
 
@@ -57,15 +58,18 @@ export default function Mind() {
                 className={s.auto ? "!cursor-default" : undefined}
               >
                 <div className="flex items-center gap-1.5 mb-2">
-                  <Flame size={16} className="text-ember" />
+                  <Flame size={16} style={{ color: flameColor(s.days / s.goalDays) }} />
                   <span className="text-lg font-bold text-charcoal">{s.days}</span>
                   <span className="text-xs text-charcoal-faint">days</span>
                 </div>
                 <p className="text-xs text-charcoal-soft mb-2">{s.label}</p>
                 <div className="h-1.5 rounded-full bg-cream-soft overflow-hidden">
                   <div
-                    className="h-full rounded-full bg-ember transition-all duration-700"
-                    style={{ width: `${Math.min((s.days / s.goalDays) * 100, 100)}%` }}
+                    className="h-full rounded-full transition-all duration-700"
+                    style={{
+                      width: `${Math.min((s.days / s.goalDays) * 100, 100)}%`,
+                      background: flameColor(s.days / s.goalDays),
+                    }}
                   />
                 </div>
                 {!s.auto && <p className="text-[10px] text-charcoal-faint mt-1">Goal: {s.goalDays} days</p>}
@@ -83,12 +87,25 @@ export default function Mind() {
             </p>
           </Card>
 
-          {/* Habits/Journal cards removed — redundant with the tabs above. */}
-          <Card interactive onClick={() => setMeditationOpen(true)}>
-            <YogaFigureIcon size={22} className="text-berry mb-3" />
-            <p className="text-sm font-semibold text-charcoal mb-1">Meditation</p>
-            <p className="text-xs text-charcoal-faint">Breathing, stretching & yoga</p>
-          </Card>
+          {/* V7 (QA 7.0): Habits/Journal restored as their own buttons,
+              matching Meditation — QA6 had merged them into the tabs above. */}
+          <div className="grid grid-cols-3 gap-3">
+            <Card interactive onClick={() => setTab("habits")}>
+              <CheckSquare size={22} className="text-sohati mb-3" />
+              <p className="text-sm font-semibold text-charcoal mb-1">Habits</p>
+              <p className="text-xs text-charcoal-faint">Track daily habits</p>
+            </Card>
+            <Card interactive onClick={() => setTab("journal")}>
+              <BookOpen size={22} className="text-charcoal mb-3" />
+              <p className="text-sm font-semibold text-charcoal mb-1">Journal</p>
+              <p className="text-xs text-charcoal-faint">Write your thoughts</p>
+            </Card>
+            <Card interactive onClick={() => setMeditationOpen(true)}>
+              <YogaFigureIcon size={22} className="text-berry mb-3" />
+              <p className="text-sm font-semibold text-charcoal mb-1">Meditation</p>
+              <p className="text-xs text-charcoal-faint">Breathing, stretching & yoga</p>
+            </Card>
+          </div>
         </div>
       )}
 

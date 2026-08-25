@@ -3,7 +3,7 @@ import { OnboardingShell } from "./OnboardingShell";
 import { Button } from "../../components/ui/Button";
 import { useApp } from "../../context/AppContext";
 import type { OnboardingDraft } from "./Onboarding";
-import type { AccountType, CustomerSubtype, ProfessionalSubtype } from "../../types";
+import type { AccountType, BusinessType, CustomerSubtype, ProfessionalSubtype } from "../../types";
 import clsx from "clsx";
 import { User, Dumbbell, Building2, AlertCircle } from "lucide-react";
 
@@ -34,6 +34,16 @@ const professionalSubtypes: { value: ProfessionalSubtype; label: string }[] = [
   { value: "other", label: "Other health/fitness professional" },
 ];
 
+const businessTypes: { value: BusinessType; label: string }[] = [
+  { value: "gym", label: "Gym" },
+  { value: "store", label: "Store" },
+  { value: "supplement_store", label: "Supplement Store" },
+  { value: "equipment_seller", label: "Equipment Seller" },
+  { value: "wellness_service", label: "Wellness Service" },
+  { value: "clothing_store", label: "Clothing Store" },
+  { value: "meal_prep_service", label: "Meal-Prepping Service" },
+];
+
 export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
   const { clientCodes } = useApp();
   const needsCode = draft.accountType === "customer" && draft.customerSubtype === "client";
@@ -48,7 +58,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
       : draft.accountType === "professional"
       ? !!draft.professionalSubtype
       : draft.accountType === "business"
-      ? draft.businessName.trim().length > 0
+      ? draft.businessName.trim().length > 0 && !!draft.businessType
       : false;
 
   return (
@@ -182,7 +192,26 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
               className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-sohati/50 focus:ring-2 focus:ring-sohati/10"
             />
           </label>
-          <p className="text-xs text-charcoal-faint mt-2">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mt-4 mb-2">
+            Business type
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {businessTypes.map((b) => (
+              <button
+                key={b.value}
+                onClick={() => setDraft((d) => ({ ...d, businessType: b.value }))}
+                className={clsx(
+                  "tap rounded-xl py-2.5 px-3 text-xs font-semibold border transition-colors text-left",
+                  draft.businessType === b.value
+                    ? "bg-sohati text-white border-sohati"
+                    : "bg-cream-card border-charcoal/10 text-charcoal-soft"
+                )}
+              >
+                {b.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-charcoal-faint mt-3">
             Business/marketplace tools are an early preview in this prototype.
           </p>
         </div>

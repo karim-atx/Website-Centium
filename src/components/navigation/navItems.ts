@@ -1,4 +1,4 @@
-import { Home, UtensilsCrossed, Dumbbell, HeartPulse, MoreHorizontal, Sparkles, Users, Store, User as UserIcon, CalendarDays, ClipboardList, MessageCircle } from "lucide-react";
+import { Home, UtensilsCrossed, Dumbbell, HeartPulse, MoreHorizontal, Sparkles, Users, Store, User as UserIcon, CalendarDays, ClipboardList, MessageCircle, BarChart3, Tag } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface NavItem {
@@ -22,11 +22,13 @@ export const primaryNavItems: NavItem[] = [
 // V6 (QA 6.0): Calendar, Templates (Workout Template Builder) and Messages
 // replace the Home/Food/Workout/Health tabs the professional doesn't use —
 // Meal Plans and Health Metrics live in More alongside the rest.
+// V7 (QA 7.0): Meal Plans now takes the bottom-nav slot Messages used to
+// hold — Messages moved into More instead.
 export const professionalPrimaryNavItems: NavItem[] = [
   { to: "/professionals", label: "Clients", icon: Users },
   { to: "/professionals/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/professionals/templates", label: "Templates", icon: ClipboardList },
-  { to: "/professionals/messages", label: "Messages", icon: MessageCircle },
+  { to: "/professionals/meal-plans", label: "Meal Plans", icon: UtensilsCrossed },
   { to: "/more", label: "More", icon: MoreHorizontal },
 ];
 
@@ -34,8 +36,14 @@ export const professionalPrimaryNavItems: NavItem[] = [
 // owner related UI" — same trim as professionals. A business account's
 // main page ("/") already renders BusinessDashboard, so there's no separate
 // personal Home/Food/Workout/Health tracking to navigate to.
+// V7 (QA 7.0): Analytics, Marketplace (listing creation) and Messages are
+// now real tabs — Employees/Classes (gym-type only) live in More instead,
+// since the bottom nav only has 5 slots.
 export const businessPrimaryNavItems: NavItem[] = [
   { to: "/", label: "Dashboard", icon: Store },
+  { to: "/business/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/business/marketplace", label: "Marketplace", icon: Tag },
+  { to: "/business/messages", label: "Messages", icon: MessageCircle },
   { to: "/more", label: "More", icon: MoreHorizontal },
 ];
 
@@ -64,5 +72,10 @@ export const professionalSidebarNavItems: NavItem[] = [
 
 export const businessSidebarNavItems: NavItem[] = [
   { to: "/", label: "Dashboard", icon: Store },
+  { to: "/business/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/business/marketplace", label: "Marketplace", icon: Tag },
+  { to: "/business/messages", label: "Messages", icon: MessageCircle },
+  { to: "/business/employees", label: "Employees", icon: Users },
+  { to: "/business/classes", label: "Classes", icon: CalendarDays },
   { to: "/profile", label: "Profile", icon: UserIcon },
 ];

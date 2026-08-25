@@ -1,4 +1,4 @@
-@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;600;700;800&display=swap");
+@import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -126,10 +126,18 @@ body {
   margin: 0;
   background-color: rgb(var(--c-cream));
   color: rgb(var(--c-charcoal));
-  font-family: "Roboto", ui-sans-serif, system-ui, sans-serif;
+  font-family: "Manrope", ui-sans-serif, system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+/* V7 (QA 7.0): Settings > Accessibility > Reduce motion — turns off the
+   app's animations for users sensitive to motion. */
+.reduce-motion * {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
 }
 
 ::-webkit-scrollbar {

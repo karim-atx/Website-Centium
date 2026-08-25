@@ -4,7 +4,7 @@ import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import { exerciseLibrary } from "../../data/mockWorkouts";
 import type { MuscleGroup, ExerciseClassification } from "../../types";
-import { List, User, Search } from "lucide-react";
+import { List, User, Search, RotateCw } from "lucide-react";
 import clsx from "clsx";
 
 type ViewMode = "list" | "body";
@@ -35,7 +35,7 @@ const muscleGroupLabel: Record<MuscleGroup, string> = {
 const classificationLabel: Record<ExerciseClassification, string> = {
   barbell: "Barbell",
   dumbbell: "Dumbbell",
-  machine_other: "Machine / Other",
+  machine_other: "Machine",
   weighted_bodyweight: "Weighted Bodyweight",
   assisted_bodyweight: "Assisted Bodyweight",
   reps_only: "Reps Only",
@@ -43,10 +43,40 @@ const classificationLabel: Record<ExerciseClassification, string> = {
   duration: "Duration",
 };
 
-// Muscle groups that have a tappable zone on the front-facing body diagram —
-// back/cardio/full_body/olympic/other aren't visible from the front, so
-// they stay reachable only via List mode.
-const bodyZones: MuscleGroup[] = ["shoulders", "chest", "bicep", "tricep", "core", "quads", "hamstrings"];
+// V7 (QA 7.0): two pictures (front/back) instead of one stick figure — a
+// rotating arrow swaps between them, each highlighting the muscle groups
+// actually visible from that side. cardio/full_body/olympic stay list-only
+// (no single body zone represents them).
+const frontZones: MuscleGroup[] = ["shoulders", "chest", "bicep", "core", "quads"];
+const backZones: MuscleGroup[] = ["shoulders", "back", "tricep", "hamstrings"];
+
+interface BodyZoneRect {
+  group: MuscleGroup;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
+  rx: number;
+}
+
+const frontZoneRects: BodyZoneRect[] = [
+  { group: "shoulders", x: 35, y: 62, w: 90, h: 18, rx: 9 },
+  { group: "chest", x: 52, y: 78, w: 56, h: 38, rx: 10 },
+  { group: "core", x: 58, y: 118, w: 44, h: 46, rx: 8 },
+  { group: "bicep", x: 18, y: 82, w: 16, h: 50, rx: 8 },
+  { group: "bicep", x: 126, y: 82, w: 16, h: 50, rx: 8 },
+  { group: "quads", x: 55, y: 168, w: 22, h: 80, rx: 10 },
+  { group: "quads", x: 83, y: 168, w: 22, h: 80, rx: 10 },
+];
+
+const backZoneRects: BodyZoneRect[] = [
+  { group: "shoulders", x: 35, y: 62, w: 90, h: 18, rx: 9 },
+  { group: "back", x: 52, y: 78, w: 56, h: 86, rx: 10 },
+  { group: "tricep", x: 18, y: 82, w: 16, h: 50, rx: 8 },
+  { group: "tricep", x: 126, y: 82, w: 16, h: 50, rx: 8 },
+  { group: "hamstrings", x: 55, y: 168, w: 22, h: 80, rx: 10 },
+  { group: "hamstrings", x: 83, y: 168, w: 22, h: 80, rx: 10 },
+];
 
 export default function ExerciseDatabaseTab() {
   const { customExercises } = useApp();
@@ -55,6 +85,8 @@ export default function ExerciseDatabaseTab() {
   const [query, setQuery] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null);
   const [hoveredGroup, setHoveredGroup] = useState<MuscleGroup | null>(null);
+  const [bodySide, setBodySide] = useState<"front" | "back">("front");
+  const bodyZones = bodySide === "front" ? frontZones : backZones;
 
   const all: DbExercise[] = useMemo(() => {
     const library = exerciseLibrary.map((e) => ({
@@ -100,14 +132,17 @@ export default function ExerciseDatabaseTab() {
           items: items.sort((a, b) => a.name.localeCompare(b.name)),
         }));
     }
-    // muscleGroup
+    // muscleGroup — the generic "Other" catch-all is excluded from this
+    // grouping per QA.
     const byGroup = new Map<MuscleGroup, DbExercise[]>();
     filteredByGroup.forEach((e) => {
-      (e.muscleGroups.length ? e.muscleGroups : (["other"] as MuscleGroup[])).forEach((mg) => {
-        const list = byGroup.get(mg) ?? [];
-        list.push(e);
-        byGroup.set(mg, list);
-      });
+      e.muscleGroups
+        .filter((mg) => mg !== "other")
+        .forEach((mg) => {
+          const list = byGroup.get(mg) ?? [];
+          list.push(e);
+          byGroup.set(mg, list);
+        });
     });
     return Array.from(byGroup.entries())
       .sort((a, b) => muscleGroupLabel[a[0]].localeCompare(muscleGroupLabel[b[0]]))
@@ -171,7 +206,10 @@ export default function ExerciseDatabaseTab() {
                     <div key={e.name} className="flex items-center justify-between px-4 py-3">
                       <span className="text-sm font-medium text-charcoal">{e.name}</span>
                       <span className="text-[10px] font-semibold text-charcoal-faint">
-                        {e.muscleGroups.map((mg) => muscleGroupLabel[mg]).join(", ")}
+                        {e.muscleGroups
+                          .filter((mg) => mg !== "other")
+                          .map((mg) => muscleGroupLabel[mg])
+                          .join(", ")}
                       </span>
                     </div>
                   ))}
@@ -188,159 +226,43 @@ export default function ExerciseDatabaseTab() {
       {view === "body" && (
         <>
           <p className="text-xs text-charcoal-faint mb-3 text-center">
-            Tap a muscle group to see its exercises.
+            Tap a muscle group to see its exercises — {bodySide === "front" ? "front" : "back"} view.
           </p>
-          <div className="flex justify-center mb-5">
+          <div className="flex justify-center mb-3">
             <svg viewBox="0 0 160 320" width={180} height={360}>
               <circle cx="80" cy="28" r="20" fill="#E4DEF5" />
               <rect x="60" y="50" width="40" height="14" rx="6" fill="#E4DEF5" />
-              {/* shoulders */}
-              <rect
-                x="35"
-                y="62"
-                width="90"
-                height="18"
-                rx="9"
-                fill={zoneFill("shoulders")}
-                className="cursor-pointer"
-                onMouseEnter={() => setHoveredGroup("shoulders")}
-                onMouseLeave={() => setHoveredGroup(null)}
-                onClick={() => setSelectedGroup(selectedGroup === "shoulders" ? null : "shoulders")}
-              />
-              {/* chest */}
-              <rect
-                x="52"
-                y="78"
-                width="56"
-                height="38"
-                rx="10"
-                fill={zoneFill("chest")}
-                className="cursor-pointer"
-                onMouseEnter={() => setHoveredGroup("chest")}
-                onMouseLeave={() => setHoveredGroup(null)}
-                onClick={() => setSelectedGroup(selectedGroup === "chest" ? null : "chest")}
-              />
-              {/* core */}
-              <rect
-                x="58"
-                y="118"
-                width="44"
-                height="46"
-                rx="8"
-                fill={zoneFill("core")}
-                className="cursor-pointer"
-                onMouseEnter={() => setHoveredGroup("core")}
-                onMouseLeave={() => setHoveredGroup(null)}
-                onClick={() => setSelectedGroup(selectedGroup === "core" ? null : "core")}
-              />
-              {/* left bicep */}
-              <rect
-                x="18"
-                y="82"
-                width="16"
-                height="50"
-                rx="8"
-                fill={zoneFill("bicep")}
-                className="cursor-pointer"
-                onMouseEnter={() => setHoveredGroup("bicep")}
-                onMouseLeave={() => setHoveredGroup(null)}
-                onClick={() => setSelectedGroup(selectedGroup === "bicep" ? null : "bicep")}
-              />
-              {/* right bicep */}
-              <rect
-                x="126"
-                y="82"
-                width="16"
-                height="50"
-                rx="8"
-                fill={zoneFill("bicep")}
-                className="cursor-pointer"
-                onMouseEnter={() => setHoveredGroup("bicep")}
-                onMouseLeave={() => setHoveredGroup(null)}
-                onClick={() => setSelectedGroup(selectedGroup === "bicep" ? null : "bicep")}
-              />
-              {/* left tricep (outer edge sliver) */}
-              <rect
-                x="10"
-                y="82"
-                width="7"
-                height="50"
-                rx="3"
-                fill={zoneFill("tricep")}
-                className="cursor-pointer"
-                onMouseEnter={() => setHoveredGroup("tricep")}
-                onMouseLeave={() => setHoveredGroup(null)}
-                onClick={() => setSelectedGroup(selectedGroup === "tricep" ? null : "tricep")}
-              />
-              {/* right tricep */}
-              <rect
-                x="143"
-                y="82"
-                width="7"
-                height="50"
-                rx="3"
-                fill={zoneFill("tricep")}
-                className="cursor-pointer"
-                onMouseEnter={() => setHoveredGroup("tricep")}
-                onMouseLeave={() => setHoveredGroup(null)}
-                onClick={() => setSelectedGroup(selectedGroup === "tricep" ? null : "tricep")}
-              />
-              {/* left quad */}
-              <rect
-                x="55"
-                y="168"
-                width="22"
-                height="80"
-                rx="10"
-                fill={zoneFill("quads")}
-                className="cursor-pointer"
-                onMouseEnter={() => setHoveredGroup("quads")}
-                onMouseLeave={() => setHoveredGroup(null)}
-                onClick={() => setSelectedGroup(selectedGroup === "quads" ? null : "quads")}
-              />
-              {/* right quad */}
-              <rect
-                x="83"
-                y="168"
-                width="22"
-                height="80"
-                rx="10"
-                fill={zoneFill("quads")}
-                className="cursor-pointer"
-                onMouseEnter={() => setHoveredGroup("quads")}
-                onMouseLeave={() => setHoveredGroup(null)}
-                onClick={() => setSelectedGroup(selectedGroup === "quads" ? null : "quads")}
-              />
-              {/* left hamstring (inner edge sliver) */}
-              <rect
-                x="48"
-                y="168"
-                width="7"
-                height="80"
-                rx="3"
-                fill={zoneFill("hamstrings")}
-                className="cursor-pointer"
-                onMouseEnter={() => setHoveredGroup("hamstrings")}
-                onMouseLeave={() => setHoveredGroup(null)}
-                onClick={() => setSelectedGroup(selectedGroup === "hamstrings" ? null : "hamstrings")}
-              />
-              {/* right hamstring */}
-              <rect
-                x="105"
-                y="168"
-                width="7"
-                height="80"
-                rx="3"
-                fill={zoneFill("hamstrings")}
-                className="cursor-pointer"
-                onMouseEnter={() => setHoveredGroup("hamstrings")}
-                onMouseLeave={() => setHoveredGroup(null)}
-                onClick={() => setSelectedGroup(selectedGroup === "hamstrings" ? null : "hamstrings")}
-              />
+              {(bodySide === "front" ? frontZoneRects : backZoneRects).map((z, i) => (
+                <rect
+                  key={`${z.group}-${i}`}
+                  x={z.x}
+                  y={z.y}
+                  width={z.w}
+                  height={z.h}
+                  rx={z.rx}
+                  fill={zoneFill(z.group)}
+                  className="cursor-pointer"
+                  onMouseEnter={() => setHoveredGroup(z.group)}
+                  onMouseLeave={() => setHoveredGroup(null)}
+                  onClick={() => setSelectedGroup(selectedGroup === z.group ? null : z.group)}
+                />
+              ))}
               {/* lower legs, decorative only */}
               <rect x="57" y="250" width="18" height="60" rx="8" fill="#EDEAF7" />
               <rect x="85" y="250" width="18" height="60" rx="8" fill="#EDEAF7" />
             </svg>
+          </div>
+
+          <div className="flex justify-center mb-5">
+            <button
+              onClick={() => {
+                setBodySide((s) => (s === "front" ? "back" : "front"));
+                setHoveredGroup(null);
+              }}
+              className="tap flex items-center gap-1.5 text-xs font-semibold text-sohati bg-sohati-pale rounded-full px-3.5 py-1.5"
+            >
+              <RotateCw size={13} /> Switch to {bodySide === "front" ? "back" : "front"} view
+            </button>
           </div>
 
           <div className="flex flex-wrap justify-center gap-1.5 mb-5">
@@ -361,7 +283,7 @@ export default function ExerciseDatabaseTab() {
           </div>
 
           <p className="text-[11px] text-charcoal-faint text-center mb-4">
-            Not visible from the front — find these in List mode: Back, Cardio, Full Body, Olympic, Other.
+            Not shown on either picture — find these in List mode: Cardio, Full Body, Olympic.
           </p>
 
           {selectedGroup && (

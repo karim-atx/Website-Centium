@@ -5,11 +5,10 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        // V5 (QA 5.0): all fonts unified to Roboto — the separate serif
-        // "display" face (Fraunces) is retired, so `font-display` now just
-        // resolves to the same Roboto stack as `font-sans`.
-        display: ["Roboto", "ui-sans-serif", "system-ui", "sans-serif"],
-        sans: ["Roboto", "ui-sans-serif", "system-ui", "sans-serif"],
+        // V5 (QA 5.0): all fonts unified to one face (was Roboto).
+        // V7 (QA 7.0): switched that shared face to Manrope.
+        display: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
+        sans: ["Manrope", "ui-sans-serif", "system-ui", "sans-serif"],
       },
       colors: {
         cream: {

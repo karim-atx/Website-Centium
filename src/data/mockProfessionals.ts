@@ -67,10 +67,67 @@ export const mockProfessionals: Professional[] = [
 // Approximate real-world coordinates for each location, used to compute a
 // mock "distance from you" in the Explore page.
 export const mockGyms: Gym[] = [
-  { id: "g1", name: "Gold's Gym Beirut", location: "Downtown Beirut", perk: "10% off with Centium", rating: 4.6, lat: 33.8959, lng: 35.4844 },
-  { id: "g2", name: "FitRepublik", location: "Dbayeh", perk: "Free trial class", rating: 4.8, lat: 33.9425, lng: 35.5919 },
-  { id: "g3", name: "PowerHouse Gym", location: "Jounieh", perk: "15% off annual plan", rating: 4.4, lat: 33.9808, lng: 35.6178 },
-  { id: "g4", name: "Flow Yoga Studio", location: "Mar Mikhael", perk: "2 free classes", rating: 4.9, lat: 33.8959, lng: 35.5310 },
+  {
+    id: "g1",
+    name: "Gold's Gym Beirut",
+    location: "Downtown Beirut",
+    perk: "10% off with Centium",
+    rating: 4.6,
+    lat: 33.8959,
+    lng: 35.4844,
+    bio: "A full-size gym floor with free weights, machines and a dedicated CrossFit box.",
+    reviewCount: 214,
+    pricing: [
+      { plan: "Day pass", price: "$10" },
+      { plan: "Monthly", price: "$65" },
+      { plan: "Annual", price: "$600" },
+    ],
+  },
+  {
+    id: "g2",
+    name: "FitRepublik",
+    location: "Dbayeh",
+    perk: "Free trial class",
+    rating: 4.8,
+    lat: 33.9425,
+    lng: 35.5919,
+    bio: "Boutique studio focused on HIIT, spin and small-group personal training.",
+    reviewCount: 168,
+    pricing: [
+      { plan: "Class pack (5)", price: "$45" },
+      { plan: "Monthly unlimited", price: "$80" },
+    ],
+  },
+  {
+    id: "g3",
+    name: "PowerHouse Gym",
+    location: "Jounieh",
+    perk: "15% off annual plan",
+    rating: 4.4,
+    lat: 33.9808,
+    lng: 35.6178,
+    bio: "Classic powerlifting and bodybuilding gym with a full plate-loaded section.",
+    reviewCount: 132,
+    pricing: [
+      { plan: "Monthly", price: "$55" },
+      { plan: "Annual", price: "$500" },
+    ],
+  },
+  {
+    id: "g4",
+    name: "Flow Yoga Studio",
+    location: "Mar Mikhael",
+    perk: "2 free classes",
+    rating: 4.9,
+    lat: 33.8959,
+    lng: 35.5310,
+    bio: "A calm, plant-filled studio offering Vinyasa, Yin and breathwork sessions.",
+    reviewCount: 96,
+    pricing: [
+      { plan: "Drop-in", price: "$18" },
+      { plan: "Monthly unlimited", price: "$70" },
+    ],
+  },
 ];
 
 export const marketplaceCategories = [

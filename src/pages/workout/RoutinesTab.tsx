@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import clsx from "clsx";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -21,23 +22,51 @@ import {
   FolderTree,
   Plus,
   Repeat,
+  Pause,
 } from "lucide-react";
 
 const SWIPE_THRESHOLD = 50;
 
+let addedExId = 0;
+const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
+  id: `added-ex-${Date.now()}-${addedExId++}`,
+  name: pick.name,
+  sets: 3,
+  reps: 10,
+  weightKg: 20,
+  category: "full_body",
+  muscleGroups: pick.muscleGroups,
+  classification: pick.classification,
+  isCustom: pick.isCustom,
+});
+
+const folderColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
+
 export default function RoutinesTab() {
-  const { routineFolders, routines, addRoutineFolder, renameRoutineFolder, deleteRoutineFolder, updateRoutine, deleteRoutine } =
-    useApp();
+  const {
+    routineFolders,
+    routines,
+    addRoutineFolder,
+    renameRoutineFolder,
+    deleteRoutineFolder,
+    updateRoutine,
+    deleteRoutine,
+    pausedSessions,
+    clearPausedSession,
+  } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
   const [createFolder, setCreateFolder] = useState<string | null>(null);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
+  const [newFolderColor, setNewFolderColor] = useState(folderColorOptions[0]);
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [menuFolderId, setMenuFolderId] = useState<string | null>(null);
   const [addingSubfolderTo, setAddingSubfolderTo] = useState<string | null>(null);
   const [subfolderName, setSubfolderName] = useState("");
+  const [subfolderColor, setSubfolderColor] = useState(folderColorOptions[0]);
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
+  const [pendingRoutine, setPendingRoutine] = useState<Routine | null>(null);
   const [settingsExercise, setSettingsExercise] = useState<{ routineId: string; exercise: Exercise } | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
 
@@ -52,7 +81,26 @@ export default function RoutinesTab() {
   const topLevelFolders = routineFolders.filter((f) => !f.parentId);
   const childrenOf = (parentId: string) => routineFolders.filter((f) => f.parentId === parentId);
 
-  const startRoutine = (r: Routine) => setActiveRoutine(r);
+  // V7 (QA 7.0): "No two routines can be played simultaneously" — starting
+  // a routine while a different one has an ongoing (paused) session warns
+  // that the old one will be cancelled entirely.
+  const startRoutine = (r: Routine) => {
+    const otherOngoingId = Object.keys(pausedSessions).find((id) => id !== r.id);
+    if (otherOngoingId) {
+      setPendingRoutine(r);
+    } else {
+      setActiveRoutine(r);
+    }
+  };
+
+  const confirmSwitchRoutine = () => {
+    if (!pendingRoutine) return;
+    Object.keys(pausedSessions).forEach((id) => {
+      if (id !== pendingRoutine.id) clearPausedSession(id);
+    });
+    setActiveRoutine(pendingRoutine);
+    setPendingRoutine(null);
+  };
 
   const closeMenu = () => setMenuFolderId(null);
 
@@ -99,7 +147,7 @@ export default function RoutinesTab() {
                 ) : (
                   <ChevronDown size={15} className="text-charcoal-faint shrink-0" />
                 )}
-                <Folder size={15} className="text-charcoal-soft shrink-0" />
+                <Folder size={15} className="shrink-0" style={{ color: folder.color ?? "rgb(var(--c-charcoal-soft))" }} />
                 <h3 className="font-display text-base font-semibold text-charcoal truncate">{folder.name}</h3>
                 <span className="text-xs text-charcoal-faint shrink-0">{folderRoutines.length}</span>
               </button>
@@ -166,6 +214,7 @@ export default function RoutinesTab() {
                 key={r.id}
                 routine={r}
                 onStart={() => startRoutine(r)}
+                isOngoing={!!pausedSessions[r.id]}
                 onDelete={() => deleteRoutine(r.id)}
                 onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
                 onDeleteExercise={(exId) =>
@@ -180,33 +229,53 @@ export default function RoutinesTab() {
                     ),
                   })
                 }
+                onAddExercise={(pick) =>
+                  updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] })
+                }
               />
             ))}
 
             {addingSubfolderTo === folder.id && (
-              <div className="flex gap-2 mb-2" style={{ marginLeft: 16 }}>
-                <input
-                  autoFocus
-                  value={subfolderName}
-                  onChange={(e) => setSubfolderName(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" && subfolderName.trim()) {
-                      addRoutineFolder(subfolderName.trim(), folder.id);
+              <div className="mb-2" style={{ marginLeft: 16 }}>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    autoFocus
+                    value={subfolderName}
+                    onChange={(e) => setSubfolderName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && subfolderName.trim()) {
+                        addRoutineFolder(subfolderName.trim(), folder.id, subfolderColor);
+                        setAddingSubfolderTo(null);
+                      }
+                    }}
+                    placeholder="Subfolder name…"
+                    className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                  />
+                  <button
+                    onClick={() => {
+                      if (subfolderName.trim()) addRoutineFolder(subfolderName.trim(), folder.id, subfolderColor);
                       setAddingSubfolderTo(null);
-                    }
-                  }}
-                  placeholder="Subfolder name…"
-                  className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sohati/20"
-                />
-                <button
-                  onClick={() => {
-                    if (subfolderName.trim()) addRoutineFolder(subfolderName.trim(), folder.id);
-                    setAddingSubfolderTo(null);
-                  }}
-                  className="tap px-3 rounded-xl bg-sohati text-white text-sm font-semibold"
-                >
-                  Add
-                </button>
+                    }}
+                    className="tap px-3 rounded-xl bg-sohati text-white text-sm font-semibold"
+                  >
+                    Add
+                  </button>
+                </div>
+                <div className="flex gap-2">
+                  {folderColorOptions.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => setSubfolderColor(c)}
+                      aria-label={`Color ${c}`}
+                      className="tap w-6 h-6 rounded-full"
+                      style={{
+                        background: c,
+                        outline: subfolderColor === c ? "2px solid rgb(var(--c-charcoal))" : "none",
+                        outlineOffset: 2,
+                      }}
+                    />
+                  ))}
+                </div>
               </div>
             )}
 
@@ -232,31 +301,48 @@ export default function RoutinesTab() {
       </div>
 
       {newFolderOpen && (
-        <div className="flex gap-2 mb-4">
-          <input
-            autoFocus
-            value={newFolderName}
-            onChange={(e) => setNewFolderName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && newFolderName.trim()) {
-                addRoutineFolder(newFolderName.trim());
+        <div className="mb-4">
+          <div className="flex gap-2 mb-2">
+            <input
+              autoFocus
+              value={newFolderName}
+              onChange={(e) => setNewFolderName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && newFolderName.trim()) {
+                  addRoutineFolder(newFolderName.trim(), null, newFolderColor);
+                  setNewFolderName("");
+                  setNewFolderOpen(false);
+                }
+              }}
+              placeholder="Folder name…"
+              className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            />
+            <button
+              onClick={() => {
+                if (newFolderName.trim()) addRoutineFolder(newFolderName.trim(), null, newFolderColor);
                 setNewFolderName("");
                 setNewFolderOpen(false);
-              }
-            }}
-            placeholder="Folder name…"
-            className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sohati/20"
-          />
-          <button
-            onClick={() => {
-              if (newFolderName.trim()) addRoutineFolder(newFolderName.trim());
-              setNewFolderName("");
-              setNewFolderOpen(false);
-            }}
-            className="tap px-3 rounded-xl bg-sohati text-white text-sm font-semibold"
-          >
-            Add
-          </button>
+              }}
+              className="tap px-3 rounded-xl bg-sohati text-white text-sm font-semibold"
+            >
+              Add
+            </button>
+          </div>
+          <div className="flex gap-2">
+            {folderColorOptions.map((c) => (
+              <button
+                key={c}
+                onClick={() => setNewFolderColor(c)}
+                aria-label={`Color ${c}`}
+                className="tap w-6 h-6 rounded-full"
+                style={{
+                  background: c,
+                  outline: newFolderColor === c ? "2px solid rgb(var(--c-charcoal))" : "none",
+                  outlineOffset: 2,
+                }}
+              />
+            ))}
+          </div>
         </div>
       )}
 
@@ -274,6 +360,7 @@ export default function RoutinesTab() {
                   key={r.id}
                   routine={r}
                   onStart={() => startRoutine(r)}
+                isOngoing={!!pausedSessions[r.id]}
                   onDelete={() => deleteRoutine(r.id)}
                   onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
                   onDeleteExercise={(exId) =>
@@ -287,6 +374,9 @@ export default function RoutinesTab() {
                           : e
                       ),
                     })
+                  }
+                  onAddExercise={(pick) =>
+                    updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] })
                   }
                 />
               ))}
@@ -334,6 +424,27 @@ export default function RoutinesTab() {
           exercises={activeRoutine.exercises}
         />
       )}
+
+      {pendingRoutine && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-charcoal/40" onClick={() => setPendingRoutine(null)} />
+          <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
+            <p className="font-display font-semibold text-lg text-charcoal mb-1.5">Cancel ongoing routine?</p>
+            <p className="text-sm text-charcoal-soft mb-5">
+              Starting "{pendingRoutine.name}" will cancel your other ongoing routine entirely — its
+              progress won't be saved.
+            </p>
+            <div className="flex gap-2.5">
+              <Button variant="outline" fullWidth onClick={() => setPendingRoutine(null)}>
+                Keep going
+              </Button>
+              <Button fullWidth variant="ember" onClick={confirmSwitchRoutine}>
+                Start anyway
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -345,10 +456,13 @@ const RoutineRow: React.FC<{
   onSettings: (ex: Exercise) => void;
   onDeleteExercise: (exerciseId: string) => void;
   onReplaceExercise: (exerciseId: string, pick: ExercisePick) => void;
-}> = ({ routine, onStart, onDelete, onSettings, onDeleteExercise, onReplaceExercise }) => {
+  onAddExercise: (pick: ExercisePick) => void;
+  isOngoing?: boolean;
+}> = ({ routine, onStart, onDelete, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, isOngoing }) => {
   const [expanded, setExpanded] = useState(false);
   const [revealedId, setRevealedId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
+  const [addExerciseOpen, setAddExerciseOpen] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   // Swipe-left on an exercise row reveals Replace/Delete, Apple-UI style —
@@ -374,19 +488,32 @@ const RoutineRow: React.FC<{
   return (
     <Card padded={false} className="overflow-hidden">
       <div className="flex items-center gap-3 p-4">
-        <div className="w-2.5 h-10 rounded-full shrink-0" style={{ background: routine.color }} />
-        <button onClick={() => setExpanded((v) => !v)} className="flex-1 text-left">
-          <p className="text-sm font-semibold text-charcoal">{routine.name}</p>
+        <div
+          className={clsx("w-2.5 h-10 rounded-full shrink-0", isOngoing && "animate-pulse")}
+          style={{ background: isOngoing ? "#E9736A" : routine.color }}
+        />
+        <button onClick={() => setExpanded((v) => !v)} className="flex-1 text-left min-w-0">
+          <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
+            {routine.name}
+            {isOngoing && (
+              <span className="text-[10px] font-bold uppercase text-[#E9736A] flex items-center gap-1">
+                <Pause size={10} fill="currentColor" /> Ongoing
+              </span>
+            )}
+          </p>
           <p className="text-xs text-charcoal-faint">
             {routine.exercises.length} exercises · ~{routine.estimatedDurationMin} min
           </p>
         </button>
         <button
           onClick={onStart}
-          aria-label={`Start ${routine.name}`}
-          className="tap w-9 h-9 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
+          aria-label={isOngoing ? `Resume ${routine.name}` : `Start ${routine.name}`}
+          className={clsx(
+            "tap w-9 h-9 rounded-full text-white flex items-center justify-center shrink-0",
+            isOngoing ? "bg-[#E9736A]" : "bg-sohati"
+          )}
         >
-          <Play size={14} fill="white" />
+          {isOngoing ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" />}
         </button>
         <button onClick={onDelete} aria-label={`Delete ${routine.name}`} className="tap text-charcoal-faint shrink-0">
           <X size={16} />
@@ -441,6 +568,12 @@ const RoutineRow: React.FC<{
               </div>
             );
           })}
+          <button
+            onClick={() => setAddExerciseOpen(true)}
+            className="tap w-full flex items-center justify-center gap-1.5 px-4 py-3 text-xs font-semibold text-sohati bg-cream-card hover:bg-sohati-pale/40"
+          >
+            <Plus size={13} /> Add exercise
+          </button>
         </div>
       )}
 
@@ -453,6 +586,16 @@ const RoutineRow: React.FC<{
           setRevealedId(null);
         }}
         alreadyAdded={[]}
+      />
+
+      <ExerciseLibrarySheet
+        open={addExerciseOpen}
+        onClose={() => setAddExerciseOpen(false)}
+        onPick={(pick) => {
+          onAddExercise(pick);
+          setAddExerciseOpen(false);
+        }}
+        alreadyAdded={routine.exercises.map((e) => e.name)}
       />
     </Card>
   );

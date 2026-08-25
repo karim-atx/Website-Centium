@@ -21,7 +21,7 @@ const allWidgetTypes: { type: WidgetType; label: string; icon: LucideIcon }[] = 
   { type: "meditation", label: "Meditation", icon: Sparkles },
 ];
 
-export const WidgetBoard: React.FC = () => {
+export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({ onWaterClick }) => {
   const { widgets, removeWidget, reorderWidgets, resizeWidget, addWidget } = useApp();
   const [editMode, setEditMode] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -74,7 +74,7 @@ export const WidgetBoard: React.FC = () => {
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(i)}
           >
-            <HomeWidget widget={w} />
+            <HomeWidget widget={w} onWaterClick={w.type === "water" ? onWaterClick : undefined} />
           </WidgetShell>
         ))}
 

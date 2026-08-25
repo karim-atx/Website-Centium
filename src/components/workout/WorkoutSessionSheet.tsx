@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Plus, Check, Calculator, Square, MoreHorizontal, Play, Weight } from "lucide-react";
+import { X, Plus, Check, Calculator, Square, MoreHorizontal, Play, Pause, Weight } from "lucide-react";
 import type { Exercise, LoggedExercise, LoggedSet } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { Metronome } from "./Metronome";
@@ -179,22 +179,22 @@ export const WorkoutSessionSheet: React.FC<{
           <p className="text-xs text-charcoal-faint">
             {started
               ? `Started ${startedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${formatDuration(elapsed)} elapsed`
+              : elapsed > 0
+              ? `Paused · ${formatDuration(elapsed)} elapsed`
               : "Not started"}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {!started && (
-            <button
-              onClick={() => {
-                setStartedAt(new Date());
-                setStarted(true);
-              }}
-              aria-label="Start elapsed time"
-              className="tap w-9 h-9 rounded-full bg-sohati text-white flex items-center justify-center shadow-soft"
-            >
-              <Play size={14} fill="white" />
-            </button>
-          )}
+          <button
+            onClick={() => {
+              if (!started && elapsed === 0) setStartedAt(new Date());
+              setStarted((v) => !v);
+            }}
+            aria-label={started ? "Pause elapsed time" : "Start elapsed time"}
+            className="tap w-9 h-9 rounded-full bg-sohati text-white flex items-center justify-center shadow-soft"
+          >
+            {started ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" />}
+          </button>
           <Metronome />
         </div>
       </div>
