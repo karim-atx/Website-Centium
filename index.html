@@ -2,6 +2,20 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Built with relative asset paths (see vite.config.ts) so this same
+      // build works both raw on GitHub Pages (/Website-Centium/) and
+      // proxied at atraxia.org/centium/ — this picks the right one to
+      // resolve everything else in the document against, before anything
+      // else here gets fetched.
+      (function () {
+        var seg = location.pathname.split('/').filter(Boolean)[0];
+        var base = seg === 'centium' || seg === 'Website-Centium' ? '/' + seg + '/' : '/';
+        var el = document.createElement('base');
+        el.href = base;
+        document.head.appendChild(el);
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#AEA1DC" media="(prefers-color-scheme: light)" />
