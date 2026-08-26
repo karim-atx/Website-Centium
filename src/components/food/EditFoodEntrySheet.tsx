@@ -50,8 +50,8 @@ export const EditFoodEntrySheet: React.FC<{
     <BottomSheet open={open} onClose={onClose} title="Edit Logged Food">
       <div className="animate-fade-slide-up">
         <div className="flex items-center gap-3 mb-5">
-          <span className="w-11 h-11 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
-            <Icon size={19} className="text-sohati-dark" />
+          <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
+            <Icon size={19} className="text-primary-dark" />
           </span>
           <div>
             <p className="font-display font-semibold text-lg text-charcoal">{entry.food.name}</p>
@@ -96,7 +96,7 @@ export const EditFoodEntrySheet: React.FC<{
               key={u.value}
               onClick={() => setUnit(u.value)}
               className={`tap rounded-xl px-3.5 py-2 text-xs font-semibold border transition-colors ${
-                unit === u.value ? "bg-sohati text-white border-sohati" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
+                unit === u.value ? "bg-primary text-white border-primary" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
               }`}
             >
               {u.label}
@@ -111,7 +111,7 @@ export const EditFoodEntrySheet: React.FC<{
               removeFoodEntry(entry.id);
               onClose();
             }}
-            className="!border-ember/30 !text-ember-dark"
+            className="!border-teal/30 !text-teal-dark"
           >
             <Trash2 size={15} />
           </Button>

@@ -107,7 +107,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="12-Week Strength Block"
-              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -146,7 +146,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search for exercise…"
-                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 pl-9 pr-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 pl-9 pr-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             {searchResults.length > 0 && (
@@ -155,10 +155,10 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
                   <button
                     key={r.name}
                     onClick={() => addExercise({ name: r.name, classification: r.classification })}
-                    className="tap w-full flex items-center justify-between rounded-xl px-3 py-2 bg-sohati-pale/60 hover:bg-sohati-pale text-left"
+                    className="tap w-full flex items-center justify-between rounded-xl px-3 py-2 bg-primary-pale/60 hover:bg-primary-pale text-left"
                   >
                     <span className="text-sm font-medium text-charcoal">{r.name}</span>
-                    <span className="text-xs font-semibold text-sohati">+ Add</span>
+                    <span className="text-xs font-semibold text-primary">+ Add</span>
                   </button>
                 ))}
               </div>
@@ -181,7 +181,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
                   className={clsx(
                     "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
                     folderId === null
-                      ? "bg-sohati text-white border-sohati"
+                      ? "bg-primary text-white border-primary"
                       : "bg-cream-soft border-transparent text-charcoal-soft"
                   )}
                 >
@@ -194,7 +194,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
                     className={clsx(
                       "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
                       folderId === f.id
-                        ? "bg-sohati text-white border-sohati"
+                        ? "bg-primary text-white border-primary"
                         : "bg-cream-soft border-transparent text-charcoal-soft"
                     )}
                   >
@@ -217,7 +217,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
                     className={clsx(
                       "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
                       assignedClientIds.includes(c.id)
-                        ? "bg-sohati text-white border-sohati"
+                        ? "bg-primary text-white border-primary"
                         : "bg-cream-soft border-transparent text-charcoal-soft"
                     )}
                   >

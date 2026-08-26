@@ -4,7 +4,7 @@ import { MessageCircle, Phone, Mail } from "lucide-react";
 
 export const ContactUsSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const options = [
-    { icon: MessageCircle, label: "Live Chat", desc: "Typically replies in a few minutes", color: "text-sohati", bg: "bg-sohati-pale" },
+    { icon: MessageCircle, label: "Live Chat", desc: "Typically replies in a few minutes", color: "text-primary", bg: "bg-primary-pale" },
     { icon: Phone, label: "Call us", desc: "+961 1 234 567", color: "text-sky", bg: "bg-sky-pale" },
     { icon: Mail, label: "Email", desc: "support@centium.app", color: "text-berry", bg: "bg-berry-pale" },
   ];

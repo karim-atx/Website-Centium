@@ -51,12 +51,12 @@ const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ pattern }) =
   return (
     <div className="flex flex-col items-center py-4">
       <div
-        className="w-36 h-36 rounded-full bg-sohati-pale border-2 border-sohati flex items-center justify-center mb-5 transition-transform duration-[1000ms] ease-in-out"
+        className="w-36 h-36 rounded-full bg-primary-pale border-2 border-primary flex items-center justify-center mb-5 transition-transform duration-[1000ms] ease-in-out"
         style={{ transform: `scale(${isInhale ? 1.15 : isExhale ? 0.85 : 1})` }}
       >
         <div className="text-center">
-          <p className="text-sm font-semibold text-sohati-dark">{running ? phase.label : "Ready?"}</p>
-          {running && <p className="text-3xl font-bold text-sohati-dark">{secondsLeft}</p>}
+          <p className="text-sm font-semibold text-primary-dark">{running ? phase.label : "Ready?"}</p>
+          {running && <p className="text-3xl font-bold text-primary-dark">{secondsLeft}</p>}
         </div>
       </div>
       <Button onClick={() => setRunning((r) => !r)} variant={running ? "outline" : "primary"}>

@@ -2,3 +2,17 @@ node_modules
 dist
 *.tsbuildinfo
 .DS_Store
+
+# environment variables — never commit real values
+.env
+.env.local
+.env.*.local
+
+# editor/OS cruft
+.vscode/*
+!.vscode/extensions.json
+.idea
+Thumbs.db
+
+# local Claude Code tooling config — hardcodes this machine's paths
+.claude/

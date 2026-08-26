@@ -58,7 +58,7 @@ export default function Marketplace() {
     <div>
       <PageHeader title="Explore" subtitle="The future Centium ecosystem" showBack />
 
-      <Card className="mb-6 bg-gradient-to-br from-ember to-ember-dark !text-white animate-fade-slide-up">
+      <Card className="mb-6 bg-gradient-to-br from-teal to-teal-dark !text-white animate-fade-slide-up">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
             <Gem size={16} />
@@ -87,7 +87,7 @@ export default function Marketplace() {
         </p>
       </Card>
 
-      <Card className="mb-6 bg-gradient-to-br from-ember to-ember-dark !text-white animate-fade-slide-up">
+      <Card className="mb-6 bg-gradient-to-br from-teal to-teal-dark !text-white animate-fade-slide-up">
         <div className="flex items-center gap-2 mb-1.5">
           <Flame size={16} />
           <p className="text-sm font-bold">Your {streak.days}-day streak unlocked a reward</p>
@@ -104,7 +104,7 @@ export default function Marketplace() {
         className="tap w-full flex items-center justify-between bg-cream-card rounded-2xl px-4 py-3.5 shadow-soft mb-6 animate-fade-slide-up"
       >
         <span className="flex items-center gap-2.5 text-sm font-semibold text-charcoal">
-          <SlidersHorizontal size={16} className="text-sohati" /> Browse a category
+          <SlidersHorizontal size={16} className="text-primary" /> Browse a category
         </span>
         <span className="text-xs text-charcoal-faint">{marketplaceCategories.length} available</span>
       </button>
@@ -131,7 +131,7 @@ export default function Marketplace() {
                 }}
                 className="tap flex flex-col items-center gap-1.5 bg-cream-soft rounded-2xl py-4"
               >
-                <Icon size={20} className="text-sohati" />
+                <Icon size={20} className="text-primary" />
                 <span className="text-[11px] font-semibold text-charcoal-soft text-center leading-tight px-1">
                   {c.label}
                 </span>

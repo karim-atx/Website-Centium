@@ -166,8 +166,8 @@ export const AddFoodSheet: React.FC<{
       <BottomSheet open={open} onClose={resetAndClose} title="Add Food">
         <div className="animate-fade-slide-up">
           <div className="flex items-center gap-3 mb-5">
-            <span className="w-11 h-11 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
-              <FoodIcon food={selectedFood} size={19} className="text-sohati-dark" />
+            <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
+              <FoodIcon food={selectedFood} size={19} className="text-primary-dark" />
             </span>
             <div>
               <p className="font-display font-semibold text-lg text-charcoal">{selectedFood.name}</p>
@@ -212,7 +212,7 @@ export const AddFoodSheet: React.FC<{
                 key={u.value}
                 onClick={() => setUnit(u.value)}
                 className={`tap rounded-xl px-3.5 py-2 text-xs font-semibold border transition-colors ${
-                  unit === u.value ? "bg-sohati text-white border-sohati" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
+                  unit === u.value ? "bg-primary text-white border-primary" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
                 }`}
               >
                 {u.label}
@@ -227,7 +227,7 @@ export const AddFoodSheet: React.FC<{
                 key={m}
                 onClick={() => setMeal(m)}
                 className={`tap rounded-xl py-2.5 text-xs font-semibold border transition-colors ${
-                  meal === m ? "bg-sohati text-white border-sohati" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
+                  meal === m ? "bg-primary text-white border-primary" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
                 }`}
               >
                 {mealLabels[m]}
@@ -287,7 +287,7 @@ export const AddFoodSheet: React.FC<{
           }
           placeholder={placeholder}
           inputMode={numeric ? "decimal" : "text"}
-          className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+          className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </label>
     );
@@ -311,7 +311,7 @@ export const AddFoodSheet: React.FC<{
                     aria-label={c.label}
                     title={c.label}
                     className={`tap w-11 h-11 rounded-2xl flex items-center justify-center border transition-colors ${
-                      active ? "bg-sohati text-white border-sohati" : "bg-cream-soft text-charcoal-soft border-transparent"
+                      active ? "bg-primary text-white border-primary" : "bg-cream-soft text-charcoal-soft border-transparent"
                     }`}
                   >
                     <Icon size={18} />
@@ -336,7 +336,7 @@ export const AddFoodSheet: React.FC<{
             Save custom food
           </Button>
           <p className="text-[11px] text-charcoal-faint text-center">
-            Saved foods appear in search next time, alongside the Lebanese database.
+            Saved foods appear in search next time, alongside the food database.
           </p>
         </div>
       </BottomSheet>
@@ -362,8 +362,8 @@ export const AddFoodSheet: React.FC<{
           {scanResultFood ? (
             <div className="w-full animate-fade-slide-up">
               <div className="flex items-center gap-3 bg-cream-soft rounded-2xl px-4 py-3 mb-4">
-                <span className="w-9 h-9 rounded-xl bg-sohati-pale flex items-center justify-center shrink-0">
-                  <FoodIcon food={scanResultFood} size={16} className="text-sohati-dark" />
+                <span className="w-9 h-9 rounded-xl bg-primary-pale flex items-center justify-center shrink-0">
+                  <FoodIcon food={scanResultFood} size={16} className="text-primary-dark" />
                 </span>
                 <div className="text-left">
                   <p className="font-semibold text-charcoal text-sm">{scanResultFood.name}</p>
@@ -400,15 +400,15 @@ export const AddFoodSheet: React.FC<{
             <input
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search Lebanese food, meals or ingredients…"
-              className="w-full rounded-2xl bg-cream-soft pl-10 pr-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              placeholder="Search food, meals or ingredients…"
+              className="w-full rounded-2xl bg-cream-soft pl-10 pr-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </div>
 
           <div className="grid grid-cols-4 gap-2 mb-5">
             <button
               onClick={() => setVoiceOpen(true)}
-              className="tap flex flex-col items-center gap-1.5 rounded-2xl py-3 bg-ember/10 text-ember-dark"
+              className="tap flex flex-col items-center gap-1.5 rounded-2xl py-3 bg-teal/10 text-teal-dark"
             >
               <Mic size={17} />
               <span className="text-[11px] font-semibold">AI Voice</span>
@@ -449,7 +449,7 @@ export const AddFoodSheet: React.FC<{
                     className="tap shrink-0 flex items-center gap-2 bg-cream-soft rounded-2xl pl-2 pr-3.5 py-2"
                   >
                     <span className="w-7 h-7 rounded-lg bg-cream-card flex items-center justify-center shrink-0">
-                      <FoodIcon food={f} size={13} className="text-sohati-dark" />
+                      <FoodIcon food={f} size={13} className="text-primary-dark" />
                     </span>
                     <span className="text-xs font-semibold text-charcoal whitespace-nowrap">{f.name}</span>
                   </button>
@@ -469,13 +469,13 @@ export const AddFoodSheet: React.FC<{
                     key={m.id}
                     onClick={() => logMeal(m.id)}
                     disabled={justAdded}
-                    className="tap w-full flex items-center justify-between rounded-2xl px-3.5 py-3 bg-sohati-pale/60 hover:bg-sohati-pale text-left disabled:opacity-50"
+                    className="tap w-full flex items-center justify-between rounded-2xl px-3.5 py-3 bg-primary-pale/60 hover:bg-primary-pale text-left disabled:opacity-50"
                   >
                     <div>
                       <p className="text-sm font-semibold text-charcoal">{m.title}</p>
                       <p className="text-[11px] text-charcoal-faint">{m.items.length} items logged together</p>
                     </div>
-                    <span className="text-xs font-semibold text-sohati">
+                    <span className="text-xs font-semibold text-primary">
                       {justAdded ? "Added" : "Log all"}
                     </span>
                   </button>
@@ -503,8 +503,8 @@ export const AddFoodSheet: React.FC<{
                 className="tap w-full flex items-center justify-between rounded-2xl px-3 py-2.5 hover:bg-cream-soft text-left"
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-9 h-9 rounded-xl bg-sohati-pale flex items-center justify-center shrink-0">
-                    <FoodIcon food={f} size={16} className="text-sohati-dark" />
+                  <span className="w-9 h-9 rounded-xl bg-primary-pale flex items-center justify-center shrink-0">
+                    <FoodIcon food={f} size={16} className="text-primary-dark" />
                   </span>
                   <div>
                     <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">

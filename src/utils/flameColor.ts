@@ -1,6 +1,6 @@
 // V7 (QA 7.0): streak flame icons shift from a cool gold to a hot
 // red-orange as the streak gets closer to its goal — kept as explicit hex
-// stops (not the "ember" brand token, which the QA5 rebrand remapped to
+// stops (not the "teal" brand token, which the QA5 rebrand remapped to
 // sage) so it still actually reads as a flame.
 const GOLD: [number, number, number] = [242, 197, 114];
 const HOT: [number, number, number] = [226, 74, 58];

@@ -32,7 +32,7 @@ export default function HabitsTab() {
               <div className="flex items-center gap-2 flex-1">
                 {(() => {
                   const Icon = habitIcon[h.icon];
-                  return <Icon size={16} className="text-sohati-dark shrink-0" />;
+                  return <Icon size={16} className="text-primary-dark shrink-0" />;
                 })()}
                 <input
                   autoFocus
@@ -51,7 +51,7 @@ export default function HabitsTab() {
                     if (editDraft.trim()) renameHabit(h.id, editDraft.trim());
                     setEditingId(null);
                   }}
-                  className="text-xs font-semibold text-sohati"
+                  className="text-xs font-semibold text-primary"
                 >
                   Save
                 </button>
@@ -62,17 +62,17 @@ export default function HabitsTab() {
                   onClick={() => toggleHabit(h.id)}
                   className="tap flex items-center gap-3 flex-1 text-left min-w-0"
                 >
-                  <span className="w-7 h-7 rounded-lg bg-sohati-pale flex items-center justify-center shrink-0">
+                  <span className="w-7 h-7 rounded-lg bg-primary-pale flex items-center justify-center shrink-0">
                     {(() => {
                       const Icon = habitIcon[h.icon];
-                      return <Icon size={14} className="text-sohati-dark" />;
+                      return <Icon size={14} className="text-primary-dark" />;
                     })()}
                   </span>
                   <span className={clsx("text-sm font-medium truncate", h.done ? "text-charcoal-faint line-through" : "text-charcoal")}>
                     {h.label}
                   </span>
                   {h.streakDays > 0 && (
-                    <span className="flex items-center gap-0.5 text-[11px] font-bold text-ember-dark bg-ember-pale rounded-full px-1.5 py-0.5 shrink-0">
+                    <span className="flex items-center gap-0.5 text-[11px] font-bold text-teal-dark bg-teal-pale rounded-full px-1.5 py-0.5 shrink-0">
                       <Flame size={10} /> {h.streakDays}
                     </span>
                   )}
@@ -94,7 +94,7 @@ export default function HabitsTab() {
                     onClick={() => toggleHabit(h.id)}
                     className={clsx(
                       "tap w-6 h-6 rounded-full flex items-center justify-center border-2 cursor-pointer",
-                      h.done ? "bg-sohati border-sohati" : "border-charcoal/15"
+                      h.done ? "bg-primary border-primary" : "border-charcoal/15"
                     )}
                   >
                     {h.done && <Check size={13} className="text-white" strokeWidth={3} />}
@@ -121,10 +121,10 @@ export default function HabitsTab() {
                   aria-label={opt.label}
                   className={clsx(
                     "tap w-9 h-9 rounded-xl flex items-center justify-center",
-                    newIcon === opt.key ? "bg-sohati-pale ring-2 ring-sohati" : "bg-cream-soft"
+                    newIcon === opt.key ? "bg-primary-pale ring-2 ring-primary" : "bg-cream-soft"
                   )}
                 >
-                  <Icon size={16} className="text-sohati-dark" />
+                  <Icon size={16} className="text-primary-dark" />
                 </button>
               );
             })}
@@ -136,9 +136,9 @@ export default function HabitsTab() {
               onChange={(e) => setNewLabel(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && create()}
               placeholder="New habit…"
-              className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
-            <button onClick={create} className="tap w-9 h-9 rounded-xl bg-sohati text-white flex items-center justify-center shrink-0">
+            <button onClick={create} className="tap w-9 h-9 rounded-xl bg-primary text-white flex items-center justify-center shrink-0">
               <Check size={15} />
             </button>
             <button onClick={() => setAdding(false)} className="tap w-9 h-9 rounded-xl bg-cream-soft text-charcoal-faint flex items-center justify-center shrink-0">

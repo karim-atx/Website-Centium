@@ -54,15 +54,15 @@ export const TrackingStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
               onClick={() => toggle(o.value)}
               className={clsx(
                 "tap relative text-left rounded-2xl p-4 border transition-colors",
-                active ? "bg-sohati-pale border-sohati" : "bg-cream-card border-charcoal/10"
+                active ? "bg-primary-pale border-primary" : "bg-cream-card border-charcoal/10"
               )}
             >
               {active && (
-                <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-sohati flex items-center justify-center">
+                <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
                   <Check size={12} className="text-white" strokeWidth={3} />
                 </div>
               )}
-              <o.icon size={22} className={clsx("mb-2", active ? "text-sohati-dark" : "text-charcoal-soft")} />
+              <o.icon size={22} className={clsx("mb-2", active ? "text-primary-dark" : "text-charcoal-soft")} />
               <span className="text-sm font-semibold text-charcoal">{o.label}</span>
             </button>
           );

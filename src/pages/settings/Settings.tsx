@@ -100,7 +100,7 @@ export default function Settings() {
           </div>
           <button
             onClick={requestMic}
-            className="tap text-xs font-semibold text-sohati bg-sohati-pale rounded-full px-3 py-1.5"
+            className="tap text-xs font-semibold text-primary bg-primary-pale rounded-full px-3 py-1.5"
           >
             {t(micAllowed === true ? "Re-check" : "Allow")}
           </button>
@@ -125,7 +125,7 @@ export default function Settings() {
           </div>
           <button
             onClick={requestCamera}
-            className="tap text-xs font-semibold text-sohati bg-sohati-pale rounded-full px-3 py-1.5"
+            className="tap text-xs font-semibold text-primary bg-primary-pale rounded-full px-3 py-1.5"
           >
             {t(cameraAllowed === true ? "Re-check" : "Allow")}
           </button>
@@ -224,7 +224,7 @@ export default function Settings() {
               <span className="text-sm font-semibold text-charcoal">
                 {lng === "ar" ? t("Arabic") : t("English")}
               </span>
-              {language === lng && <Check size={16} className="text-sohati" />}
+              {language === lng && <Check size={16} className="text-primary" />}
             </button>
           ))}
         </div>

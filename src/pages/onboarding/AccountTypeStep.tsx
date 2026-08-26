@@ -81,13 +81,13 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
               onClick={() => setDraft((d) => ({ ...d, accountType: t.value }))}
               className={clsx(
                 "tap w-full flex items-center gap-3.5 text-left rounded-2xl p-4 border transition-colors",
-                active ? "bg-sohati-pale border-sohati" : "bg-cream-card border-charcoal/10"
+                active ? "bg-primary-pale border-primary" : "bg-cream-card border-charcoal/10"
               )}
             >
               <div
                 className={clsx(
                   "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0",
-                  active ? "bg-sohati text-white" : "bg-cream-soft text-charcoal-soft"
+                  active ? "bg-primary text-white" : "bg-cream-soft text-charcoal-soft"
                 )}
               >
                 <t.icon size={18} />
@@ -114,7 +114,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                 className={clsx(
                   "tap rounded-xl py-2.5 px-3 text-xs font-semibold border transition-colors text-left",
                   draft.customerSubtype === s.value
-                    ? "bg-sohati text-white border-sohati"
+                    ? "bg-primary text-white border-primary"
                     : "bg-cream-card border-charcoal/10 text-charcoal-soft"
                 )}
               >
@@ -133,8 +133,8 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                 onChange={(e) => setDraft((d) => ({ ...d, professionalUserIdCode: e.target.value }))}
                 placeholder="SOHA-XXXX"
                 className={clsx(
-                  "w-full rounded-2xl bg-cream-card border-2 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20",
-                  enteredCode.length > 0 && !codeIsValid ? "border-[#C0392B]/50" : "border-sohati/50"
+                  "w-full rounded-2xl bg-cream-card border-2 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20",
+                  enteredCode.length > 0 && !codeIsValid ? "border-[#C0392B]/50" : "border-primary/50"
                 )}
               />
               {enteredCode.length > 0 && !codeIsValid ? (
@@ -168,7 +168,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                 className={clsx(
                   "tap w-full rounded-xl py-2.5 px-3 text-sm font-semibold border transition-colors text-left",
                   draft.professionalSubtype === s.value
-                    ? "bg-sohati text-white border-sohati"
+                    ? "bg-primary text-white border-primary"
                     : "bg-cream-card border-charcoal/10 text-charcoal-soft"
                 )}
               >
@@ -188,8 +188,8 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
             <input
               value={draft.businessName}
               onChange={(e) => setDraft((d) => ({ ...d, businessName: e.target.value }))}
-              placeholder="Gold's Gym Beirut"
-              className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-sohati/50 focus:ring-2 focus:ring-sohati/10"
+              placeholder="Iron Peak Gym"
+              className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
             />
           </label>
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mt-4 mb-2">
@@ -203,7 +203,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                 className={clsx(
                   "tap rounded-xl py-2.5 px-3 text-xs font-semibold border transition-colors text-left",
                   draft.businessType === b.value
-                    ? "bg-sohati text-white border-sohati"
+                    ? "bg-primary text-white border-primary"
                     : "bg-cream-card border-charcoal/10 text-charcoal-soft"
                 )}
               >

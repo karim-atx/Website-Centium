@@ -21,7 +21,7 @@ export const WelcomeStep: React.FC<{ onNext: () => void }> = ({ onNext }) => {
     <div className="flex-1 flex flex-col items-center justify-center text-center animate-fade-slide-up">
       <div className="relative w-20 h-20 mb-8">
         {launching && (
-          <span className="absolute inset-0 rounded-[1.75rem] bg-sohati/40 animate-logo-launch-ring" />
+          <span className="absolute inset-0 rounded-[1.75rem] bg-primary/40 animate-logo-launch-ring" />
         )}
         <div
           className={`relative w-20 h-20 rounded-[1.75rem] bg-white shadow-lift flex items-center justify-center ${
@@ -44,7 +44,7 @@ export const WelcomeStep: React.FC<{ onNext: () => void }> = ({ onNext }) => {
           Get Started
         </Button>
         <p className="text-charcoal-faint text-xs mt-6">
-          CENTIUM · a prototype for the Lebanese market
+          CENTIUM · a product prototype
         </p>
       </div>
     </div>

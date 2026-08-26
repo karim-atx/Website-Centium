@@ -49,7 +49,7 @@ export const CertificationSheet: React.FC<{ open: boolean; onClose: () => void }
                 className="w-full max-h-64 object-contain rounded-2xl border border-charcoal/10 bg-cream-soft"
               />
             )}
-            <p className="flex items-center gap-1.5 text-xs text-sohati-dark mt-2.5">
+            <p className="flex items-center gap-1.5 text-xs text-primary-dark mt-2.5">
               <Check size={13} /> Certification on file
             </p>
           </div>
@@ -62,14 +62,14 @@ export const CertificationSheet: React.FC<{ open: boolean; onClose: () => void }
             onClick={() => cameraInputRef.current?.click()}
             className="tap flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-charcoal/10 bg-cream-card py-5"
           >
-            <Camera size={20} className="text-sohati" />
+            <Camera size={20} className="text-primary" />
             <span className="text-xs font-semibold text-charcoal-soft">Use camera</span>
           </button>
           <button
             onClick={() => fileInputRef.current?.click()}
             className="tap flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-charcoal/10 bg-cream-card py-5"
           >
-            <FileText size={20} className="text-sohati" />
+            <FileText size={20} className="text-primary" />
             <span className="text-xs font-semibold text-charcoal-soft">
               {user.certificationUrl ? "Replace file" : "Upload file"}
             </span>
@@ -81,7 +81,7 @@ export const CertificationSheet: React.FC<{ open: boolean; onClose: () => void }
             variant="outline"
             fullWidth
             onClick={() => updateProfile({ certificationUrl: undefined })}
-            className="!border-ember/30 !text-ember-dark"
+            className="!border-teal/30 !text-teal-dark"
           >
             <Trash2 size={14} /> Remove certification
           </Button>

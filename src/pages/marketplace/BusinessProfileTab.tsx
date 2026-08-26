@@ -22,7 +22,7 @@ export default function BusinessProfileTab() {
           <input
             value={user.businessName ?? ""}
             onChange={(e) => updateProfile({ businessName: e.target.value })}
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
         <label className="block mb-3">
@@ -34,7 +34,7 @@ export default function BusinessProfileTab() {
             onChange={(e) => updateBusinessListing({ bio: e.target.value })}
             rows={3}
             placeholder="Tell clients what makes your business worth a visit…"
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20 resize-none"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
           />
         </label>
         <label className="block">
@@ -44,8 +44,8 @@ export default function BusinessProfileTab() {
           <input
             value={businessListing.location}
             onChange={(e) => updateBusinessListing({ location: e.target.value })}
-            placeholder="Achrafieh, Beirut"
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            placeholder="Midtown"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
       </Card>

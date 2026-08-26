@@ -21,14 +21,14 @@ export default function ProfessionalDashboard() {
         right={
           <button
             onClick={() => setAddOpen(true)}
-            className="tap w-10 h-10 rounded-full bg-sohati text-white flex items-center justify-center shadow-soft"
+            className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft"
           >
             <Plus size={18} />
           </button>
         }
       />
 
-      <Card className="mb-6 bg-gradient-to-br from-sohati to-sohati-dark !text-white animate-fade-slide-up">
+      <Card className="mb-6 bg-gradient-to-br from-primary to-primary-dark !text-white animate-fade-slide-up">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center shrink-0">
             <Users size={18} />
@@ -44,8 +44,8 @@ export default function ProfessionalDashboard() {
         {professionalClients.map((c) => (
           <Card key={c.id} interactive onClick={() => setActiveClient(c)} className="flex items-center justify-between animate-fade-slide-up">
             <div className="flex items-center gap-3 min-w-0">
-              <span className="w-10 h-10 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
-                <PERSON_ICON size={17} className="text-sohati-dark" />
+              <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+                <PERSON_ICON size={17} className="text-primary-dark" />
               </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-charcoal truncate">

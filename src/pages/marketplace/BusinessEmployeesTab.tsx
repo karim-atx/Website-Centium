@@ -34,8 +34,8 @@ export default function BusinessEmployeesTab() {
           Share this with a professional — they enter it from their own Explore tab to affiliate.
         </p>
         <div className="flex items-center gap-2">
-          <div className="flex-1 bg-sohati-pale rounded-2xl py-3 text-center">
-            <p className="text-lg font-bold tracking-widest text-sohati-dark">{user.businessId ?? "—"}</p>
+          <div className="flex-1 bg-primary-pale rounded-2xl py-3 text-center">
+            <p className="text-lg font-bold tracking-widest text-primary-dark">{user.businessId ?? "—"}</p>
           </div>
           <button
             onClick={copyId}
@@ -58,8 +58,8 @@ export default function BusinessEmployeesTab() {
               : UserCheck;
           return (
             <Card key={e.professionalId} className="flex items-center gap-3 animate-fade-slide-up">
-              <span className="w-11 h-11 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
-                <Icon size={18} className="text-sohati-dark" />
+              <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+                <Icon size={18} className="text-primary-dark" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-charcoal truncate">{e.professionalName}</p>

@@ -2,6 +2,15 @@ import React from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useApp } from "./context/AppContext";
 import { Layout } from "./components/navigation/Layout";
+import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
+import { Home as MarketingHome } from "./marketing/pages/Home";
+import { Product as MarketingProduct } from "./marketing/pages/Product";
+import { Pricing as MarketingPricing } from "./marketing/pages/Pricing";
+import { Business as MarketingBusiness } from "./marketing/pages/Business";
+import { About as MarketingAbout } from "./marketing/pages/About";
+import { Contact as MarketingContact } from "./marketing/pages/Contact";
+import { Privacy as MarketingPrivacy } from "./marketing/pages/legal/Privacy";
+import { Terms as MarketingTerms } from "./marketing/pages/legal/Terms";
 import Onboarding from "./pages/onboarding/Onboarding";
 import Home from "./pages/home/Home";
 import Food from "./pages/food/Food";
@@ -30,14 +39,27 @@ import Settings from "./pages/settings/Settings";
 
 const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useApp();
-  if (!user.onboarded) return <Navigate to="/onboarding" replace />;
+  if (!user.onboarded) return <Navigate to="/app/onboarding" replace />;
   return <>{children}</>;
 };
 
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/onboarding" element={<Onboarding />} />
+      {/* Public marketing site */}
+      <Route element={<MarketingLayout />}>
+        <Route path="/" element={<MarketingHome />} />
+        <Route path="/product" element={<MarketingProduct />} />
+        <Route path="/pricing" element={<MarketingPricing />} />
+        <Route path="/business" element={<MarketingBusiness />} />
+        <Route path="/about" element={<MarketingAbout />} />
+        <Route path="/contact" element={<MarketingContact />} />
+        <Route path="/legal/privacy" element={<MarketingPrivacy />} />
+        <Route path="/legal/terms" element={<MarketingTerms />} />
+      </Route>
+
+      {/* Customer portal (authenticated app shell) */}
+      <Route path="/app/onboarding" element={<Onboarding />} />
       <Route
         element={
           <RequireOnboarded>
@@ -45,30 +67,30 @@ function AppRoutes() {
           </RequireOnboarded>
         }
       >
-        <Route path="/" element={<Home />} />
-        <Route path="/food" element={<Food />} />
-        <Route path="/workout" element={<Workout />} />
-        <Route path="/health" element={<Health />} />
-        <Route path="/mind" element={<Mind />} />
-        <Route path="/professionals" element={<Professionals />} />
-        <Route path="/professionals/calendar" element={<CalendarTab />} />
-        <Route path="/professionals/templates" element={<WorkoutTemplateBuilderTab />} />
-        <Route path="/professionals/meal-plans" element={<MealPlanBuilderTab />} />
-        <Route path="/professionals/messages" element={<MessagesTab />} />
-        <Route path="/professionals/health-metrics" element={<HealthMetricsTab />} />
-        <Route path="/professionals/:id" element={<ProfessionalDetail />} />
-        <Route path="/marketplace" element={<Marketplace />} />
-        <Route path="/marketplace/:category" element={<MarketplaceCategoryPage />} />
-        <Route path="/business/analytics" element={<BusinessAnalyticsTab />} />
-        <Route path="/business/marketplace" element={<BusinessMarketplaceTab />} />
-        <Route path="/business/profile" element={<BusinessProfileTab />} />
-        <Route path="/business/messages" element={<BusinessMessagesTab />} />
-        <Route path="/business/employees" element={<BusinessEmployeesTab />} />
-        <Route path="/business/classes" element={<BusinessClassesTab />} />
-        <Route path="/profile" element={<Profile />} />
-        <Route path="/subscription" element={<Subscription />} />
-        <Route path="/more" element={<More />} />
-        <Route path="/settings" element={<Settings />} />
+        <Route path="/app" element={<Home />} />
+        <Route path="/app/food" element={<Food />} />
+        <Route path="/app/workout" element={<Workout />} />
+        <Route path="/app/health" element={<Health />} />
+        <Route path="/app/mind" element={<Mind />} />
+        <Route path="/app/professionals" element={<Professionals />} />
+        <Route path="/app/professionals/calendar" element={<CalendarTab />} />
+        <Route path="/app/professionals/templates" element={<WorkoutTemplateBuilderTab />} />
+        <Route path="/app/professionals/meal-plans" element={<MealPlanBuilderTab />} />
+        <Route path="/app/professionals/messages" element={<MessagesTab />} />
+        <Route path="/app/professionals/health-metrics" element={<HealthMetricsTab />} />
+        <Route path="/app/professionals/:id" element={<ProfessionalDetail />} />
+        <Route path="/app/marketplace" element={<Marketplace />} />
+        <Route path="/app/marketplace/:category" element={<MarketplaceCategoryPage />} />
+        <Route path="/app/business/analytics" element={<BusinessAnalyticsTab />} />
+        <Route path="/app/business/marketplace" element={<BusinessMarketplaceTab />} />
+        <Route path="/app/business/profile" element={<BusinessProfileTab />} />
+        <Route path="/app/business/messages" element={<BusinessMessagesTab />} />
+        <Route path="/app/business/employees" element={<BusinessEmployeesTab />} />
+        <Route path="/app/business/classes" element={<BusinessClassesTab />} />
+        <Route path="/app/profile" element={<Profile />} />
+        <Route path="/app/subscription" element={<Subscription />} />
+        <Route path="/app/more" element={<More />} />
+        <Route path="/app/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
@@ -78,7 +100,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <AppProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, "") || "/"}>
         <AppRoutes />
       </BrowserRouter>
     </AppProvider>

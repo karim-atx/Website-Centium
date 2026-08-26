@@ -80,7 +80,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
           <>
             <button
               onClick={requestMicAndStart}
-              className="tap relative w-24 h-24 rounded-full bg-ember flex items-center justify-center shadow-lift mb-6"
+              className="tap relative w-24 h-24 rounded-full bg-teal flex items-center justify-center shadow-lift mb-6"
             >
               <Mic size={32} className="text-white" />
             </button>
@@ -95,8 +95,8 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
         {stage === "requesting" && (
           <>
-            <div className="w-24 h-24 rounded-full bg-ember/20 flex items-center justify-center mb-6 animate-pulse">
-              <Mic size={32} className="text-ember" />
+            <div className="w-24 h-24 rounded-full bg-teal/20 flex items-center justify-center mb-6 animate-pulse">
+              <Mic size={32} className="text-teal" />
             </div>
             <p className="font-display text-xl font-semibold text-charcoal mb-2">
               Requesting microphone access…
@@ -126,9 +126,9 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
         {stage === "recording" && (
           <>
             <div className="relative w-24 h-24 mb-6">
-              <span className="absolute inset-0 rounded-full bg-ember/40 animate-pulse-ring" />
-              <span className="absolute inset-0 rounded-full bg-ember/40 animate-pulse-ring [animation-delay:0.4s]" />
-              <div className="relative w-24 h-24 rounded-full bg-ember flex items-center justify-center shadow-lift">
+              <span className="absolute inset-0 rounded-full bg-teal/40 animate-pulse-ring" />
+              <span className="absolute inset-0 rounded-full bg-teal/40 animate-pulse-ring [animation-delay:0.4s]" />
+              <div className="relative w-24 h-24 rounded-full bg-teal flex items-center justify-center shadow-lift">
                 <Mic size={32} className="text-white" />
               </div>
             </div>
@@ -141,14 +141,14 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
         {stage === "processing" && (
           <>
-            <div className="w-16 h-16 rounded-full bg-sohati-pale flex items-center justify-center mb-6 animate-pop">
-              <Sparkles size={26} className="text-sohati animate-pulse" />
+            <div className="w-16 h-16 rounded-full bg-primary-pale flex items-center justify-center mb-6 animate-pop">
+              <Sparkles size={26} className="text-primary animate-pulse" />
             </div>
             <p className="font-display text-xl font-semibold text-charcoal mb-2">
               Centium is processing…
             </p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Matching what you said against the Lebanese food database.
+              Matching what you said against the food database.
             </p>
           </>
         )}
@@ -168,7 +168,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                     <span className="w-8 h-8 rounded-lg bg-cream-card flex items-center justify-center shrink-0">
                       {(() => {
                         const Icon = foodCategoryIcon[item.food.category] ?? UtensilsCrossed;
-                        return <Icon size={15} className="text-sohati-dark" />;
+                        return <Icon size={15} className="text-primary-dark" />;
                       })()}
                     </span>
                     <span className="text-sm font-semibold text-charcoal">{item.food.name}</span>
@@ -178,17 +178,17 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               ))}
             </div>
 
-            <div className="bg-sohati-pale rounded-2xl p-4 mb-5">
-              <p className="text-xs font-semibold text-sohati-dark uppercase tracking-wide mb-2">
+            <div className="bg-primary-pale rounded-2xl p-4 mb-5">
+              <p className="text-xs font-semibold text-primary-dark uppercase tracking-wide mb-2">
                 Estimated nutrition
               </p>
               <div className="flex items-baseline gap-1.5 mb-2">
-                <span className="text-2xl font-bold text-sohati-dark">
+                <span className="text-2xl font-bold text-primary-dark">
                   {result.totals.calories.toLocaleString()}
                 </span>
-                <span className="text-sm text-sohati-dark/70">kcal</span>
+                <span className="text-sm text-primary-dark/70">kcal</span>
               </div>
-              <div className="flex gap-4 text-xs text-sohati-dark/80 font-medium">
+              <div className="flex gap-4 text-xs text-primary-dark/80 font-medium">
                 <span>Protein: {result.totals.protein}g</span>
                 <span>Carbs: {result.totals.carbs}g</span>
                 <span>Fat: {result.totals.fat}g</span>

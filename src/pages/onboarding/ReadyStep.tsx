@@ -10,8 +10,8 @@ export const ReadyStep: React.FC<{
 }> = ({ draft, onFinish, isProfessional }) => {
   return (
     <div className="flex-1 flex flex-col items-center justify-center text-center animate-fade-slide-up">
-      <div className="w-20 h-20 rounded-full bg-ember-pale flex items-center justify-center mb-8 animate-pop">
-        <PartyPopper size={34} className="text-ember" />
+      <div className="w-20 h-20 rounded-full bg-teal-pale flex items-center justify-center mb-8 animate-pop">
+        <PartyPopper size={34} className="text-teal" />
       </div>
       <h1 className="font-display text-3xl font-semibold text-charcoal mb-3">
         You're all set, {draft.firstName || "friend"}!
@@ -31,7 +31,7 @@ export const ReadyStep: React.FC<{
             {draft.goals.slice(0, 3).map((g) => (
               <span
                 key={g}
-                className="text-xs font-semibold bg-sohati-pale text-sohati-dark rounded-full px-3 py-1.5"
+                className="text-xs font-semibold bg-primary-pale text-primary-dark rounded-full px-3 py-1.5"
               >
                 {g.replace(/_/g, " ")}
               </span>

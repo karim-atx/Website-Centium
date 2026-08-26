@@ -64,7 +64,7 @@ export const ExerciseLibrarySheet: React.FC<{
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search exercises…"
-                className="w-full rounded-2xl bg-cream-soft pl-9 pr-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-2xl bg-cream-soft pl-9 pr-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <button
@@ -104,7 +104,7 @@ export const ExerciseLibrarySheet: React.FC<{
                   <span className="text-sm font-medium text-charcoal flex items-center gap-1.5">
                     <Sparkles size={12} className="text-gold shrink-0" /> {e.name}
                   </span>
-                  <span className="text-xs font-semibold text-sohati">{added ? "Added" : "+ Add"}</span>
+                  <span className="text-xs font-semibold text-primary">{added ? "Added" : "+ Add"}</span>
                 </button>
               );
             })}
@@ -118,7 +118,7 @@ export const ExerciseLibrarySheet: React.FC<{
                   className="tap w-full flex items-center justify-between rounded-2xl px-3.5 py-3 hover:bg-cream-soft text-left disabled:opacity-40"
                 >
                   <span className="text-sm font-medium text-charcoal">{e.name}</span>
-                  <span className="text-xs font-semibold text-sohati">{added ? "Added" : "+ Add"}</span>
+                  <span className="text-xs font-semibold text-primary">{added ? "Added" : "+ Add"}</span>
                 </button>
               );
             })}

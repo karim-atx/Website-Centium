@@ -1,7 +1,7 @@
 import React from "react";
 import clsx from "clsx";
 
-type Variant = "primary" | "secondary" | "ghost" | "ember" | "outline";
+type Variant = "primary" | "secondary" | "ghost" | "teal" | "outline";
 type Size = "sm" | "md" | "lg";
 
 interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -11,11 +11,11 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<Variant, string> = {
-  primary: "bg-sohati text-white hover:bg-sohati-dark shadow-soft",
-  secondary: "bg-cream-soft text-charcoal hover:bg-sohati-pale",
+  primary: "bg-primary text-white hover:bg-primary-dark shadow-soft",
+  secondary: "bg-cream-soft text-charcoal hover:bg-primary-pale",
   ghost: "bg-transparent text-charcoal hover:bg-cream-soft",
-  ember: "bg-ember text-white hover:bg-ember-dark shadow-soft",
-  outline: "bg-transparent border-2 border-charcoal/10 text-charcoal hover:border-sohati/40",
+  teal: "bg-teal text-white hover:bg-teal-dark shadow-soft",
+  outline: "bg-transparent border-2 border-charcoal/10 text-charcoal hover:border-primary/40",
 };
 
 const sizeClasses: Record<Size, string> = {

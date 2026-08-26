@@ -229,7 +229,7 @@ export default function WorkoutTemplateBuilderTab() {
             </button>
             <button
               onClick={() => openCreateIn(null)}
-              className="tap w-10 h-10 rounded-full bg-sohati text-white flex items-center justify-center shadow-soft"
+              className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft"
               aria-label="New template"
             >
               <Plus size={18} />
@@ -263,7 +263,7 @@ export default function WorkoutTemplateBuilderTab() {
               value={newFolderName}
               onChange={(e) => setNewFolderName(e.target.value)}
               placeholder="Strength blocks"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -276,7 +276,7 @@ export default function WorkoutTemplateBuilderTab() {
                   className={clsx(
                     "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
                     newFolderParentId === null
-                      ? "bg-sohati text-white border-sohati"
+                      ? "bg-primary text-white border-primary"
                       : "bg-cream-soft border-transparent text-charcoal-soft"
                   )}
                 >
@@ -289,7 +289,7 @@ export default function WorkoutTemplateBuilderTab() {
                     className={clsx(
                       "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
                       newFolderParentId === f.id
-                        ? "bg-sohati text-white border-sohati"
+                        ? "bg-primary text-white border-primary"
                         : "bg-cream-soft border-transparent text-charcoal-soft"
                     )}
                   >

@@ -1,57 +1,108 @@
-# Sohati — Prototype (V1, V2 & V3)
+# Centium
 
-A high-fidelity, clickable prototype of **Sohati**, an all-in-one health & wellness app for
-the Lebanese market. Built with React + TypeScript + Vite + Tailwind CSS. All data is mock
-data held in local state (persisted to `localStorage`) — there is no backend, no real AI, and
-no payment processing, by design.
+A public marketing site and a customer portal prototype for **Centium**, a
+health & wellness platform: one place for nutrition tracking, workout
+logging, health tracking, AI-powered guidance, community, and a
+marketplace connecting people with professionals and businesses.
 
-## Versions
+Built with React + TypeScript + Vite + Tailwind CSS. The portal's data is
+mock data held in local state (persisted to `localStorage`) — there is no
+backend, no real AI, and no payment processing, by design. See
+[SECURITY.md](SECURITY.md) for what that means for this being a public repo.
 
-This repo is a git repository with three preserved versions:
+## Project structure
 
-| Version | Branch | Location | What it is |
-|---|---|---|---|
-| **V1** | `main` (tag `v1`) | `sohati-v1/` (a git worktree) | The original prototype, exactly as first built. Untouched. |
-| **V2** | `sohati-v2` (tag `v2`) | `sohati-v2/` (a git worktree) | QA revision on top of V1 — see "What's new in V2" below. Untouched. |
-| **V3** | `sohati-v3` (current) | `sohati/` (this folder) | QA App 2.0 revision on top of V2 — see "What's new in V3" below. |
+```
+src/
+  marketing/        public site — home, product, pricing, business, about,
+                     contact, legal (privacy/terms), and the shared nav/
+                     footer/illustrations it uses
+  components/        reusable portal UI (navigation, dashboard, food,
+                     workout, health, mind, profile, ui/*)
+  pages/             one folder per portal route
+  data/              mock food, workout, health metric, professional and
+                     gym data
+  services/          ai/ (mock voice + biomarker-image parsers), nutrition/
+                     (TDEE & macros), workout/ (1RM, volume, RPE table),
+                     geo/ (mock distance ranking)
+  context/           AppContext — user profile, theme, food/workout logs,
+                     routines, widgets, nutrition goals, journal,
+                     biomarkers, water, habits, streaks
+  types/             shared TypeScript types for the whole data model
+```
 
-V1 and V2 are both fully recoverable at any time: open their separate worktree directories
-(`sohati-v1/`, `sohati-v2/`), which run independently on their own ports, or `git checkout main`
-/ `git checkout sohati-v2` in this folder.
+The marketing site lives at `/` and the portal lives at `/app` — both are
+part of the same single-page app (one `AppProvider` wraps both, so theme
+and other shared state stay in sync across the two).
 
 ## Running it
 
-Node.js wasn't installed on the machine this was built on, so a portable copy was downloaded
-into `../.tools/node-v22.14.0-darwin-arm64` (a sibling of this folder). If that's still there:
-
 ```bash
-export PATH="$(cd .. && pwd)/.tools/node-v22.14.0-darwin-arm64/bin:$PATH"
+npm install
 npm run dev
 ```
 
-Open the printed URL (typically http://localhost:5173). To also run V1/V2 side-by-side:
+Open the printed URL (typically http://localhost:5173). To reset the
+portal's demo data, open its browser console and run `localStorage.clear()`,
+then refresh.
+
+## Building
 
 ```bash
-cd ../sohati-v1
-export PATH="$(cd ../.. && pwd)/.tools/node-v22.14.0-darwin-arm64/bin:$PATH"
-npm run dev -- --port 5180
-
-cd ../sohati-v2
-export PATH="$(cd ../.. && pwd)/.tools/node-v22.14.0-darwin-arm64/bin:$PATH"
-npm run dev -- --port 5181
+npm run build
 ```
 
-If you have your own Node.js 20.19+/22+ installed, ignore the portable copy and just run
-`npm install && npm run dev` in either folder. The `.claude/launch.json` in the parent folder
-also has all three pre-wired (`sohati` → 5173, `sohati-v1` → 5180, `sohati-v2` → 5181).
+Type-checks with `tsc -b`, then builds a static bundle to `dist/` via Vite.
+The build is configured with `base: '/centium/'` (see `vite.config.ts`) —
+the site is meant to be reachable at `atraxia.org/centium/`, not at a
+domain root. The dev server stays at `/` so local URLs don't need that
+prefix.
 
-To reset a version's demo data, open its browser console and run `localStorage.clear()`, then
-refresh. V1, V2, and V3 use different storage key prefixes (`sohati-prototype-state-v1`,
-`sohati-v2-state`, `sohati-v3-state`) so they never collide even on the same port history.
+## Deployment
 
-## What's new in V2
+This repo deploys to **GitHub Pages** via
+[`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), which
+builds and publishes `dist/` on every push to `main`. In the repo's GitHub
+settings, **Settings → Pages → Source** needs to be set to **GitHub
+Actions** for this to take effect.
 
-Implemented against a QA pass over V1. Highlights:
+That gives the site a GitHub Pages URL
+(`https://karim-atx.github.io/Website-Centium/`). To make it reachable at
+**`atraxia.org/centium`** instead, `atraxia.org` is behind Cloudflare, so a
+Cloudflare Worker reverse-proxies that subpath to the GitHub Pages origin
+— see [`deploy/cloudflare-worker.js`](deploy/cloudflare-worker.js) for the
+script and exact setup steps. This repo has no Cloudflare credentials
+configured, so someone with access to the `atraxia.org` Cloudflare account
+needs to set that part up manually; no DNS record changes are needed for
+it (Workers routes run in front of whatever already serves the domain).
+
+There's no `CNAME` file in this repo — that's intentional. A `CNAME` tells
+GitHub Pages to expect a custom domain pointed directly at it, which isn't
+this setup (GitHub Pages stays reachable only at its own `github.io` URL;
+the Cloudflare Worker is what stitches the subpath together).
+
+## Environment variables
+
+None are required yet — the app has no real backend. `.env.example`
+documents the pattern for when real auth/backend integration is added (see
+[SECURITY.md](SECURITY.md) for why only publishable/anon keys ever belong
+in a `VITE_`-prefixed variable in a statically-deployed app like this one).
+
+## Version history
+
+This repo carries forward a prototype originally built under the working
+name **Sohati**, through four iterative versions and several rounds of QA
+feedback, before the product rebranded to Centium. That existing app —
+health tracking, nutrition/workout logging, professional & business
+dashboards, marketplace, onboarding — is what now lives under `/app`
+(rebranded to the Centium palette/name; Lebanon-specific placeholder
+content genericized). The version notes below predate the marketing site
+and the Centium rebrand.
+
+<details>
+<summary>V1–V4 change notes (portal, pre-Centium-rebrand)</summary>
+
+### V2
 
 - **Branding**: "Sohati+" → "Sohati" throughout.
 - **Onboarding**: new account-type step — Customer (client/regular/athlete/general),
@@ -82,7 +133,7 @@ Implemented against a QA pass over V1. Highlights:
 - **B2B/B2C**: professional/business accounts see a tailored Home banner and relevant CTAs on
   Professionals/Explore — light architectural groundwork, not a full B2B backend.
 
-## What's new in V3
+### V3
 
 Implemented against "QA - App 2.0", a second QA pass over V2. Highlights:
 
@@ -107,9 +158,8 @@ Implemented against "QA - App 2.0", a second QA pass over V2. Highlights:
   in the card's corner instead of a separate "+".
 - **More/Settings**: Profile moved to the first position; Apple/Android Health integration
   moved out of Health and into Settings; a Help → Contact Us sheet (chat/phone/email); color
-  themes (Sohati/Ocean/Sunset/Berry) under Appearance; a two-tap-confirm Sign Out on Profile.
-- **Explore/Marketplace**: gyms ranked by rating with live distance via geolocation (haversine,
-  Beirut-center fallback when permission is denied).
+  themes (Centium/Ocean/Sunset/Berry) under Appearance; a two-tap-confirm Sign Out on Profile.
+- **Explore/Marketplace**: gyms ranked by rating with live distance via geolocation (haversine).
 - **Professional & Business UI**: `/professionals` and `/marketplace` now branch by account
   type into dedicated dashboards instead of a banner. Professionals get a client roster
   (add via generated code, view a read-only per-client detail sheet, remove), with
@@ -117,27 +167,22 @@ Implemented against "QA - App 2.0", a second QA pass over V2. Highlights:
   food-template assignment — all scoped to what the client has toggled shareable (Food Diary,
   Workout Activity, Weight, Progress, Health Metrics). Businesses get a listing-management
   dashboard (active toggle, perk text, members-reached stat) and their own sign out.
-- **Fixed**: a timezone bug where date-arithmetic (`shiftDate`, the calendar picker's date
-  formatting) mixed local-time parsing with UTC serialization, breaking day navigation and
-  "copy yesterday" in any UTC+ timezone including Lebanon's; and a `localStorage`
-  schema-migration gap where a field added to an already-persisted object (e.g. `metricValues`
-  gaining `sleepHours`/`caloriesBurned`) stayed `undefined` for existing sessions — persisted
-  object state now shallow-merges under current defaults on load.
-- **Deferred**: "customized icons instead of emojis" (asked for in two places in the QA) was
-  intentionally left unimplemented — swapping the app's emoji usage (Lebanese food emojis,
-  streak/habit icons, etc.) for a custom icon set is a larger visual-identity decision better
-  made deliberately than as a blanket pass; flagged for a follow-up scoping conversation instead.
+- **Fixed**: a timezone bug where date-arithmetic mixed local-time parsing with UTC
+  serialization, breaking day navigation in any UTC+ timezone; and a `localStorage`
+  schema-migration gap where a field added to an already-persisted object stayed `undefined`
+  for existing sessions — persisted object state now shallow-merges under current defaults on
+  load.
 
-## Project structure
+### V4 and QA App 4.0–8.0
 
-```
-src/
-  components/   reusable UI (navigation, dashboard, food, workout, health, mind, profile, ui/*)
-  pages/        one folder per top-level route
-  data/         mock Lebanese foods, workouts, health metrics, blood panel, professionals, gyms
-  services/     ai/ (mock voice + biomarker-image parsers), nutrition/ (TDEE & macros),
-                workout/ (1RM, volume, RPE table)
-  context/      AppContext — user profile, theme, food/workout logs, routines, widgets,
-                nutrition goals, journal, biomarkers, water, habits, streaks
-  types/        shared TypeScript types for the whole data model
-```
+Icon system overhaul, onboarding physiotherapist step, Home widget fixes, Food diary rework,
+Workout page overhaul (subfolders, custom exercise flow, 1RM tracking, History/Metrics rework),
+Health page rework (auto-synced metrics, sleep/steps/weight/calories detail views),
+Profile/Settings/Journal polish, and several rounds of QA-driven refinement.
+
+</details>
+
+## Security
+
+This repo is public. Read [SECURITY.md](SECURITY.md) before adding
+anything that touches real data, credentials, or a backend.

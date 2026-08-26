@@ -56,7 +56,7 @@ export default function BusinessClassesTab() {
         right={
           <button
             onClick={() => setComposeOpen(true)}
-            className="tap w-10 h-10 rounded-full bg-sohati text-white flex items-center justify-center shadow-soft"
+            className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft"
             aria-label="New class"
           >
             <Plus size={18} />
@@ -71,7 +71,7 @@ export default function BusinessClassesTab() {
             <Card key={c.id} className="flex items-start justify-between gap-3 animate-fade-slide-up">
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-charcoal">{c.title}</p>
-                <p className="text-xs text-sohati-dark font-medium">{c.classType}</p>
+                <p className="text-xs text-primary-dark font-medium">{c.classType}</p>
                 <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
                   <Clock size={11} /> {c.date} · {c.startTime}–{c.endTime}
                 </p>
@@ -106,7 +106,7 @@ export default function BusinessClassesTab() {
               value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
               placeholder="Morning HIIT"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -116,7 +116,7 @@ export default function BusinessClassesTab() {
             <select
               value={draft.classType}
               onChange={(e) => setDraft((d) => ({ ...d, classType: e.target.value }))}
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
             >
               {classTypeOptions.map((t) => (
                 <option key={t} value={t}>
@@ -132,7 +132,7 @@ export default function BusinessClassesTab() {
               type="date"
               value={draft.date}
               onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))}
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -143,7 +143,7 @@ export default function BusinessClassesTab() {
                 type="time"
                 value={draft.startTime}
                 onChange={(e) => setDraft((d) => ({ ...d, startTime: e.target.value }))}
-                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </label>
             <label className="block">
@@ -152,7 +152,7 @@ export default function BusinessClassesTab() {
                 type="time"
                 value={draft.endTime}
                 onChange={(e) => setDraft((d) => ({ ...d, endTime: e.target.value }))}
-                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </label>
           </div>
@@ -163,7 +163,7 @@ export default function BusinessClassesTab() {
               value={draft.maxCapacity}
               onChange={(e) => setDraft((d) => ({ ...d, maxCapacity: e.target.value.replace(/\D/g, "") }))}
               inputMode="numeric"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -177,7 +177,7 @@ export default function BusinessClassesTab() {
                     onClick={() => setDraft((d) => ({ ...d, professionalId: d.professionalId === e.professionalId ? "" : e.professionalId }))}
                     className={`tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors ${
                       draft.professionalId === e.professionalId
-                        ? "bg-sohati text-white border-sohati"
+                        ? "bg-primary text-white border-primary"
                         : "bg-cream-soft border-transparent text-charcoal-soft"
                     }`}
                   >
@@ -195,7 +195,7 @@ export default function BusinessClassesTab() {
               onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
               rows={3}
               placeholder="Anything the assigned professional should know…"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20 resize-none"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
           </label>
 

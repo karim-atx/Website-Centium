@@ -49,7 +49,7 @@ export const SetOptionsSheet: React.FC<{
                 className={clsx(
                   "tap rounded-xl py-2.5 text-xs font-semibold border transition-colors",
                   setType === t.value
-                    ? "bg-sohati text-white border-sohati"
+                    ? "bg-primary text-white border-primary"
                     : "bg-cream-soft border-transparent text-charcoal-soft"
                 )}
               >
@@ -68,7 +68,7 @@ export const SetOptionsSheet: React.FC<{
                 onClick={() => setRpe(rpe === r ? undefined : r)}
                 className={clsx(
                   "tap px-3 py-1.5 rounded-full text-xs font-semibold border",
-                  rpe === r ? "bg-sohati text-white border-sohati" : "bg-cream-soft border-transparent text-charcoal-soft"
+                  rpe === r ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
                 )}
               >
                 {r}
@@ -103,7 +103,7 @@ export const SetOptionsSheet: React.FC<{
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g. felt heavy, elbow twinge…"
-            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
 

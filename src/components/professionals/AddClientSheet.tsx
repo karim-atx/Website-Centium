@@ -95,7 +95,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               <select
                 value={prefix}
                 onChange={(e) => setPrefix(e.target.value)}
-                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
               >
                 {prefixOptions.map((p) => (
                   <option key={p} value={p}>
@@ -111,7 +111,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Full name"
-                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </label>
           </div>
@@ -124,7 +124,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                 onChange={(e) => setAge(e.target.value.replace(/\D/g, ""))}
                 inputMode="numeric"
                 placeholder="29"
-                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </label>
             <label className="block">
@@ -134,7 +134,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                 onChange={(e) => setHeightCm(e.target.value.replace(/\D/g, ""))}
                 inputMode="numeric"
                 placeholder="178"
-                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </label>
           </div>
@@ -146,7 +146,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               onChange={(e) => setWeightKg(e.target.value.replace(/[^\d.]/g, ""))}
               inputMode="decimal"
               placeholder="70"
-              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -162,7 +162,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                   className={clsx(
                     "tap flex items-center justify-center rounded-2xl py-3 border transition-colors",
                     sex === opt.value
-                      ? "bg-sohati text-white border-sohati"
+                      ? "bg-primary text-white border-primary"
                       : "bg-cream-soft text-charcoal-soft border-transparent"
                   )}
                 >
@@ -182,8 +182,8 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             Share this code with <strong>{name}</strong> — they'll enter it when they sign up as a
             Client of Professional to link accounts.
           </p>
-          <div className="bg-sohati-pale rounded-2xl py-5 mb-4">
-            <p className="text-2xl font-bold tracking-widest text-sohati-dark">{generatedCode}</p>
+          <div className="bg-primary-pale rounded-2xl py-5 mb-4">
+            <p className="text-2xl font-bold tracking-widest text-primary-dark">{generatedCode}</p>
           </div>
           <Button fullWidth onClick={copyCode} variant="outline">
             {copied ? <><Check size={15} /> Copied</> : <><Copy size={15} /> Copy code</>}

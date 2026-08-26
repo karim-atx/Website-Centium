@@ -34,7 +34,7 @@ export const DateSelector: React.FC = () => {
               e.stopPropagation();
               goToToday();
             }}
-            className="text-[10px] font-bold text-sohati bg-sohati-pale rounded-full px-2 py-0.5"
+            className="text-[10px] font-bold text-primary bg-primary-pale rounded-full px-2 py-0.5"
           >
             Jump to today
           </span>

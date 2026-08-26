@@ -55,12 +55,12 @@ export const EditableValue: React.FC<EditableValueProps> = ({
           }}
           inputMode="decimal"
           step={step}
-          className={`w-16 text-center rounded-lg border border-sohati/40 bg-cream-card px-2 py-1 text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20 ${className ?? ""}`}
+          className={`w-16 text-center rounded-lg border border-primary/40 bg-cream-card px-2 py-1 text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 ${className ?? ""}`}
         />
         <button
           onClick={commit}
           aria-label="Confirm"
-          className="tap w-7 h-7 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
+          className="tap w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center shrink-0"
         >
           <Check size={13} strokeWidth={3} />
         </button>

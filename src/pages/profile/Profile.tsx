@@ -102,7 +102,7 @@ export default function Profile() {
         <button
           onClick={() => setAvatarSheetOpen(true)}
           aria-label="Change profile picture"
-          className="tap relative w-16 h-16 rounded-full bg-ember-pale flex items-center justify-center text-2xl font-bold text-ember-dark overflow-hidden shrink-0"
+          className="tap relative w-16 h-16 rounded-full bg-teal-pale flex items-center justify-center text-2xl font-bold text-teal-dark overflow-hidden shrink-0"
         >
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -215,8 +215,8 @@ export default function Profile() {
                   onClick={() => navigate(`/professionals/${p.id}`)}
                   className="tap shrink-0 flex items-center gap-2.5 bg-cream-card rounded-2xl pl-2.5 pr-4 py-2.5 shadow-soft"
                 >
-                  <span className="w-9 h-9 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
-                    <Icon size={16} className="text-sohati-dark" />
+                  <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+                    <Icon size={16} className="text-primary-dark" />
                   </span>
                   <div className="text-left">
                     <p className="text-xs font-semibold text-charcoal whitespace-nowrap">{p.name}</p>
@@ -255,7 +255,7 @@ export default function Profile() {
 
       <button
         onClick={handleSignOut}
-        className="tap w-full flex items-center justify-center gap-2 rounded-2xl border border-ember/30 text-ember-dark text-sm font-semibold py-3.5 mt-5"
+        className="tap w-full flex items-center justify-center gap-2 rounded-2xl border border-teal/30 text-teal-dark text-sm font-semibold py-3.5 mt-5"
       >
         <LogOut size={15} />
         {confirmSignOut ? "Tap again to confirm sign out" : "Sign Out"}
@@ -288,14 +288,14 @@ export default function Profile() {
             onClick={() => cameraInputRef.current?.click()}
             className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
           >
-            <Camera size={18} className="text-sohati" />
+            <Camera size={18} className="text-primary" />
             <span className="text-sm font-semibold text-charcoal">Take a photo</span>
           </button>
           <button
             onClick={() => galleryInputRef.current?.click()}
             className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
           >
-            <Image size={18} className="text-sohati" />
+            <Image size={18} className="text-primary" />
             <span className="text-sm font-semibold text-charcoal">Choose from library</span>
           </button>
           <button

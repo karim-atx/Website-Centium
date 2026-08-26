@@ -70,7 +70,7 @@ export const StackedSleepColumns: React.FC<{
               ))}
             </div>
             <span
-              className={`text-[9px] whitespace-nowrap ${selected ? "font-bold text-sohati-dark" : "text-charcoal-faint"}`}
+              className={`text-[9px] whitespace-nowrap ${selected ? "font-bold text-primary-dark" : "text-charcoal-faint"}`}
             >
               {it.label}
             </span>

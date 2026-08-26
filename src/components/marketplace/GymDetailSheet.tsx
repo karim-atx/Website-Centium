@@ -82,7 +82,7 @@ export const GymDetailSheet: React.FC<{ open: boolean; onClose: () => void; gym:
 
         <p className="text-sm text-charcoal-soft leading-relaxed">{gym.bio}</p>
 
-        <span className="inline-block text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-3 py-1.5">
+        <span className="inline-block text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-3 py-1.5">
           {gym.perk}
         </span>
 
@@ -100,13 +100,13 @@ export const GymDetailSheet: React.FC<{ open: boolean; onClose: () => void; gym:
                         <Clock size={11} /> Expires in {formatRemaining(p.purchasedAt + DAY_MS - now)}
                       </p>
                     ) : (
-                      <p className="text-xs text-sohati-dark font-semibold mt-0.5">Active membership</p>
+                      <p className="text-xs text-primary-dark font-semibold mt-0.5">Active membership</p>
                     )}
                     <p className="text-[10px] text-charcoal-faint mt-1">Not a real entry code — prototype only.</p>
                     {!p.oneTime &&
                       (confirmCancel === p.plan ? (
-                        <div className="mt-2 bg-ember-pale rounded-xl p-2.5">
-                          <p className="flex items-center gap-1 text-[11px] font-semibold text-ember-dark mb-1.5">
+                        <div className="mt-2 bg-teal-pale rounded-xl p-2.5">
+                          <p className="flex items-center gap-1 text-[11px] font-semibold text-teal-dark mb-1.5">
                             <AlertTriangle size={11} /> Cancel {p.plan.toLowerCase()}? This can't be undone.
                           </p>
                           <div className="flex gap-2">
@@ -121,7 +121,7 @@ export const GymDetailSheet: React.FC<{ open: boolean; onClose: () => void; gym:
                                 cancelGymPlan(gym.id, p.plan);
                                 setConfirmCancel(null);
                               }}
-                              className="tap text-[11px] font-semibold text-white bg-ember-dark rounded-full px-2.5 py-1"
+                              className="tap text-[11px] font-semibold text-white bg-teal-dark rounded-full px-2.5 py-1"
                             >
                               Yes, cancel
                             </button>
@@ -130,7 +130,7 @@ export const GymDetailSheet: React.FC<{ open: boolean; onClose: () => void; gym:
                       ) : (
                         <button
                           onClick={() => setConfirmCancel(p.plan)}
-                          className="tap flex items-center gap-1 text-[11px] font-semibold text-ember-dark mt-1.5"
+                          className="tap flex items-center gap-1 text-[11px] font-semibold text-teal-dark mt-1.5"
                         >
                           <XCircle size={11} /> Cancel membership
                         </button>
@@ -161,7 +161,7 @@ export const GymDetailSheet: React.FC<{ open: boolean; onClose: () => void; gym:
                     </p>
                   </div>
                   {active ? (
-                    <span className="flex items-center gap-1 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-3 py-1.5">
+                    <span className="flex items-center gap-1 text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-3 py-1.5">
                       <Check size={13} /> Active
                     </span>
                   ) : (

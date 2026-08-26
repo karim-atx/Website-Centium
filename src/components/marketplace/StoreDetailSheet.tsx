@@ -41,13 +41,13 @@ export const StoreDetailSheet: React.FC<{
         <div className="animate-fade-slide-up">
           <button
             onClick={() => setSelectedItem(null)}
-            className="tap flex items-center gap-1.5 text-sm font-semibold text-sohati mb-4"
+            className="tap flex items-center gap-1.5 text-sm font-semibold text-primary mb-4"
           >
             <ChevronLeft size={16} /> {store.name}
           </button>
 
           <p className="font-display text-xl font-semibold text-charcoal mb-1">{selectedItem.name}</p>
-          <p className="text-lg font-bold text-sohati-dark mb-3">${selectedItem.price}</p>
+          <p className="text-lg font-bold text-primary-dark mb-3">${selectedItem.price}</p>
           <p className="text-sm text-charcoal-soft leading-relaxed mb-5">{selectedItem.description}</p>
 
           <div className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3 mb-5">
@@ -119,7 +119,7 @@ export const StoreDetailSheet: React.FC<{
         </div>
 
         {store.offer && (
-          <span className="inline-block text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-3 py-1.5">
+          <span className="inline-block text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-3 py-1.5">
             {store.offer}
           </span>
         )}
@@ -137,7 +137,7 @@ export const StoreDetailSheet: React.FC<{
                   <p className="text-sm font-semibold text-charcoal truncate">{item.name}</p>
                   <p className="text-xs text-charcoal-faint truncate">{item.description}</p>
                 </div>
-                <span className="text-sm font-bold text-sohati-dark shrink-0">${item.price}</span>
+                <span className="text-sm font-bold text-primary-dark shrink-0">${item.price}</span>
               </button>
             ))}
           </div>

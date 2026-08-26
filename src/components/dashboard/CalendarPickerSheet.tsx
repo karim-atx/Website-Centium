@@ -106,9 +106,9 @@ export const CalendarPickerSheet: React.FC<{
                   className={clsx(
                     "tap aspect-square rounded-xl text-sm font-medium flex items-center justify-center",
                     isSelected
-                      ? "bg-sohati text-white font-bold"
+                      ? "bg-primary text-white font-bold"
                       : isToday
-                      ? "bg-sohati-pale text-sohati-dark font-bold"
+                      ? "bg-primary-pale text-primary-dark font-bold"
                       : "text-charcoal hover:bg-cream-soft"
                   )}
                 >

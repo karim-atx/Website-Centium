@@ -61,7 +61,7 @@ export default function ProfessionalExplore() {
       <PageHeader title="Explore" subtitle={affiliated ? "Your affiliation" : "Job postings hiring professionals"} showBack />
 
       {affiliated ? (
-        <Card className="bg-gradient-to-br from-sohati to-sohati-dark !text-white animate-fade-slide-up">
+        <Card className="bg-gradient-to-br from-primary to-primary-dark !text-white animate-fade-slide-up">
           <div className="flex items-center gap-3 mb-3">
             <span className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center shrink-0">
               <Building2 size={22} className="text-white" />
@@ -96,12 +96,12 @@ export default function ProfessionalExplore() {
                   setError(null);
                 }}
                 placeholder="BIZ-XXXX"
-                className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <button
                 onClick={submitId}
                 aria-label="Confirm affiliation ID"
-                className="tap w-10 h-10 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
+                className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shrink-0"
               >
                 <Check size={16} strokeWidth={3} />
               </button>
@@ -119,7 +119,7 @@ export default function ProfessionalExplore() {
                 key={c.id}
                 onClick={() => setCategory(c.id)}
                 className={`tap shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-colors ${
-                  category === c.id ? "bg-sohati text-white" : "bg-cream-soft text-charcoal-faint"
+                  category === c.id ? "bg-primary text-white" : "bg-cream-soft text-charcoal-faint"
                 }`}
               >
                 {c.label}
@@ -137,8 +137,8 @@ export default function ProfessionalExplore() {
               const hiring = h % 3 !== 0;
               return (
                 <Card key={p.id} className="flex items-start gap-3 animate-fade-slide-up">
-                  <span className="w-11 h-11 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
-                    <Briefcase size={18} className="text-sohati-dark" />
+                  <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
+                    <Briefcase size={18} className="text-primary-dark" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-charcoal truncate">{p.name}</p>
@@ -154,7 +154,7 @@ export default function ProfessionalExplore() {
                     >
                       {hiring ? "Hiring" : "Not hiring"}
                     </span>
-                    <span className="text-xs font-bold text-sohati-dark bg-sohati-pale rounded-full px-2.5 py-1.5">
+                    <span className="text-xs font-bold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1.5">
                       {type}
                     </span>
                   </div>

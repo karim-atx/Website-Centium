@@ -1,4 +1,4 @@
-// Core data model for the Sohati prototype.
+// Core data model for the Centium prototype.
 // Deliberately simple — a real backend can replace these shapes later
 // without changing how the UI consumes them.
 
@@ -237,7 +237,7 @@ export interface Food {
   name: string;
   nameAr?: string;
   category:
-    | "lebanese"
+    | "traditional"
     | "breakfast"
     | "lunch"
     | "dinner"
@@ -632,7 +632,7 @@ export interface JournalEntry {
 }
 
 // V3: appearance — accent color theme, alongside light/dark.
-export type ColorTheme = "sohati" | "ocean" | "sunset" | "berry";
+export type ColorTheme = "centium" | "ocean" | "sunset" | "berry";
 
 // V3: custom (user-added) foods, kept separate from the curated mock database.
 export interface CustomFood extends Food {

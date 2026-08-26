@@ -191,7 +191,7 @@ export const WorkoutSessionSheet: React.FC<{
               setStarted((v) => !v);
             }}
             aria-label={started ? "Pause elapsed time" : "Start elapsed time"}
-            className="tap w-9 h-9 rounded-full bg-sohati text-white flex items-center justify-center shadow-soft"
+            className="tap w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shadow-soft"
           >
             {started ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" />}
           </button>
@@ -232,7 +232,7 @@ export const WorkoutSessionSheet: React.FC<{
                   <span className="text-sm font-bold text-charcoal-faint w-5 flex items-center gap-1">
                     {s.setNumber}
                     {s.setType && s.setType !== "normal" && (
-                      <span className="text-[9px] font-bold text-ember-dark bg-ember-pale rounded-full w-4 h-4 flex items-center justify-center">
+                      <span className="text-[9px] font-bold text-teal-dark bg-teal-pale rounded-full w-4 h-4 flex items-center justify-center">
                         {setTypeBadge[s.setType]}
                       </span>
                     )}
@@ -241,19 +241,19 @@ export const WorkoutSessionSheet: React.FC<{
                     value={s.weightKg}
                     onChange={(e) => updateSet(exIdx, setIdx, { weightKg: Number(e.target.value) || 0 })}
                     inputMode="decimal"
-                    className="w-full rounded-lg bg-cream-soft px-2 py-1.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                    className="w-full rounded-lg bg-cream-soft px-2 py-1.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <input
                     value={s.reps}
                     onChange={(e) => updateSet(exIdx, setIdx, { reps: Number(e.target.value) || 0 })}
                     inputMode="numeric"
-                    className="w-full rounded-lg bg-cream-soft px-2 py-1.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                    className="w-full rounded-lg bg-cream-soft px-2 py-1.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <button
                     onClick={() => setSetOptionsTarget({ exIdx, setIdx })}
                     className={clsx(
                       "tap w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-charcoal-faint",
-                      (s.notes || s.rpe) && "bg-sohati-pale text-sohati-dark"
+                      (s.notes || s.rpe) && "bg-primary-pale text-primary-dark"
                     )}
                     aria-label={`Set ${s.setNumber} options`}
                   >
@@ -262,7 +262,7 @@ export const WorkoutSessionSheet: React.FC<{
                   <button
                     onClick={() => updateSet(exIdx, setIdx, { completed: !s.completed })}
                     className={`tap w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                      s.completed ? "bg-sohati text-white" : "bg-cream-soft text-charcoal-faint"
+                      s.completed ? "bg-primary text-white" : "bg-cream-soft text-charcoal-faint"
                     }`}
                   >
                     <Check size={13} strokeWidth={3} />
@@ -272,7 +272,7 @@ export const WorkoutSessionSheet: React.FC<{
             </div>
             <button
               onClick={() => addSet(exIdx)}
-              className="tap flex items-center gap-1.5 text-xs font-semibold text-sohati mt-2"
+              className="tap flex items-center gap-1.5 text-xs font-semibold text-primary mt-2"
             >
               <Plus size={12} /> Add set
             </button>
@@ -339,7 +339,7 @@ export const WorkoutSessionSheet: React.FC<{
               <Button variant="outline" fullWidth onClick={() => setQuitConfirmOpen(false)}>
                 Keep going
               </Button>
-              <Button fullWidth variant="ember" onClick={confirmQuit}>
+              <Button fullWidth variant="teal" onClick={confirmQuit}>
                 Quit
               </Button>
             </div>

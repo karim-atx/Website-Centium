@@ -27,8 +27,8 @@ export const CartSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ op
     <BottomSheet open={open} onClose={onClose} title="Cart">
       {placed ? (
         <div className="text-center py-8 animate-fade-slide-up">
-          <div className="w-14 h-14 rounded-full bg-sohati-pale flex items-center justify-center mx-auto mb-4">
-            <Check size={24} className="text-sohati-dark" />
+          <div className="w-14 h-14 rounded-full bg-primary-pale flex items-center justify-center mx-auto mb-4">
+            <Check size={24} className="text-primary-dark" />
           </div>
           <p className="font-display font-semibold text-charcoal mb-1.5">Order placed</p>
           <p className="text-xs text-charcoal-faint">Prototype checkout — no real payment was processed.</p>
@@ -46,7 +46,7 @@ export const CartSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ op
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-charcoal truncate">{c.itemName}</p>
                   <p className="text-[11px] text-charcoal-faint truncate">{c.storeName}</p>
-                  <p className="text-xs font-semibold text-sohati-dark mt-0.5">${c.price} each</p>
+                  <p className="text-xs font-semibold text-primary-dark mt-0.5">${c.price} each</p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
                   <button

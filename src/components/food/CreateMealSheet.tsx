@@ -94,7 +94,7 @@ export const CreateMealSheet: React.FC<{ open: boolean; onClose: () => void; cli
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Omelette Breakfast"
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
 
@@ -106,7 +106,7 @@ export const CreateMealSheet: React.FC<{ open: boolean; onClose: () => void; cli
                 key={m}
                 onClick={() => setMealType((prev) => (prev === m ? null : m))}
                 className={`tap rounded-xl py-2 text-xs font-semibold border transition-colors ${
-                  mealType === m ? "bg-sohati text-white border-sohati" : "bg-cream-soft border-transparent text-charcoal-soft"
+                  mealType === m ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
                 }`}
               >
                 {mealLabels[m]}
@@ -126,7 +126,7 @@ export const CreateMealSheet: React.FC<{ open: boolean; onClose: () => void; cli
                 return (
                   <div key={i.food.id} className="flex items-center justify-between bg-cream-soft rounded-xl px-3 py-2">
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Icon size={15} className="text-sohati-dark shrink-0" />
+                      <Icon size={15} className="text-primary-dark shrink-0" />
                       <span className="text-sm font-medium text-charcoal truncate">{i.food.name}</span>
                     </div>
                     <button onClick={() => removeItem(i.food.id)} className="tap text-charcoal-faint shrink-0">
@@ -148,7 +148,7 @@ export const CreateMealSheet: React.FC<{ open: boolean; onClose: () => void; cli
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search for a food to add…"
-                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 pl-9 pr-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 pl-9 pr-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
             <button
@@ -156,7 +156,7 @@ export const CreateMealSheet: React.FC<{ open: boolean; onClose: () => void; cli
               aria-label={clientId ? "Create a new food for this client" : "Create a new food"}
               title={clientId ? "Create a new food for this client" : "Create a new food"}
               className={`tap w-10 h-10 rounded-xl flex items-center justify-center shrink-0 border transition-colors ${
-                creatingFood ? "bg-sohati text-white border-sohati" : "bg-cream-soft border-charcoal/10 text-charcoal-soft"
+                creatingFood ? "bg-primary text-white border-primary" : "bg-cream-soft border-charcoal/10 text-charcoal-soft"
               }`}
             >
               <Plus size={16} />
@@ -174,13 +174,13 @@ export const CreateMealSheet: React.FC<{ open: boolean; onClose: () => void; cli
                 value={foodDraft.name}
                 onChange={(e) => setFoodDraft((d) => ({ ...d, name: e.target.value }))}
                 placeholder="Food name"
-                className="w-full rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <input
                 value={foodDraft.serving}
                 onChange={(e) => setFoodDraft((d) => ({ ...d, serving: e.target.value }))}
                 placeholder="Serving size"
-                className="w-full rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <div className="grid grid-cols-4 gap-1.5">
                 {(["calories", "protein", "carbs", "fat"] as const).map((k) => (
@@ -190,7 +190,7 @@ export const CreateMealSheet: React.FC<{ open: boolean; onClose: () => void; cli
                     onChange={(e) => setFoodDraft((d) => ({ ...d, [k]: e.target.value.replace(/[^\d.]/g, "") }))}
                     placeholder={k === "calories" ? "kcal" : k}
                     inputMode="decimal"
-                    className="w-full rounded-xl bg-cream-card border border-charcoal/10 px-2 py-2 text-xs text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                    className="w-full rounded-xl bg-cream-card border border-charcoal/10 px-2 py-2 text-xs text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                 ))}
               </div>
@@ -212,10 +212,10 @@ export const CreateMealSheet: React.FC<{ open: boolean; onClose: () => void; cli
                   key={f.id}
                   onClick={() => addItem(f)}
                   disabled={items.some((i) => i.food.id === f.id)}
-                  className="tap w-full flex items-center justify-between rounded-xl px-3 py-2 bg-sohati-pale/60 hover:bg-sohati-pale text-left disabled:opacity-40"
+                  className="tap w-full flex items-center justify-between rounded-xl px-3 py-2 bg-primary-pale/60 hover:bg-primary-pale text-left disabled:opacity-40"
                 >
                   <span className="text-sm font-medium text-charcoal">{f.name}</span>
-                  <span className="text-xs font-semibold text-sohati flex items-center gap-1">
+                  <span className="text-xs font-semibold text-primary flex items-center gap-1">
                     <Plus size={12} /> Add
                   </span>
                 </button>

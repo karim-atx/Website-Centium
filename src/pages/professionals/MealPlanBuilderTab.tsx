@@ -121,7 +121,7 @@ export default function MealPlanBuilderTab() {
                   onClick={() => changeWeightGoal(g.value)}
                   className={`tap rounded-xl py-2.5 text-xs font-semibold border transition-colors ${
                     nutritionGoal.weightGoal === g.value
-                      ? "bg-sohati text-white border-sohati"
+                      ? "bg-primary text-white border-primary"
                       : "bg-cream-soft border-transparent text-charcoal-soft"
                   }`}
                 >
@@ -140,7 +140,7 @@ export default function MealPlanBuilderTab() {
                       onChange={(e) => setDesiredWeightDraft(e.target.value.replace(/[^\d.]/g, ""))}
                       disabled={nutritionGoal.desiredWeightConfirmed}
                       inputMode="decimal"
-                      className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm font-semibold text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20 disabled:opacity-60"
+                      className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm font-semibold text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
                     />
                     <span className="text-xs text-charcoal-faint">kg</span>
                     <button
@@ -149,7 +149,7 @@ export default function MealPlanBuilderTab() {
                       className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors ${
                         nutritionGoal.desiredWeightConfirmed
                           ? "bg-charcoal/10 border-transparent text-charcoal-faint"
-                          : "bg-sohati border-sohati text-white"
+                          : "bg-primary border-primary text-white"
                       }`}
                     >
                       <Check size={16} strokeWidth={3} />
@@ -223,7 +223,7 @@ export default function MealPlanBuilderTab() {
             </p>
             <button
               onClick={() => setCreateMealOpen(true)}
-              className="tap flex items-center gap-1.5 text-xs font-semibold text-sohati"
+              className="tap flex items-center gap-1.5 text-xs font-semibold text-primary"
             >
               <Plus size={13} /> New meal plan
             </button>
@@ -232,12 +232,12 @@ export default function MealPlanBuilderTab() {
             {customMeals.map((m) => (
               <Card key={m.id} padded={false} className="flex items-center justify-between px-4 py-3.5">
                 <div className="flex items-center gap-2.5 min-w-0">
-                  <ClipboardList size={16} className="text-sohati shrink-0" />
+                  <ClipboardList size={16} className="text-primary shrink-0" />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-charcoal truncate flex items-center gap-1.5">
                       {m.title}
                       {m.mealType && (
-                        <span className="text-[9px] font-bold uppercase tracking-wide text-sohati-dark bg-sohati-pale rounded-full px-1.5 py-0.5 shrink-0">
+                        <span className="text-[9px] font-bold uppercase tracking-wide text-primary-dark bg-primary-pale rounded-full px-1.5 py-0.5 shrink-0">
                           {mealLabels[m.mealType]}
                         </span>
                       )}

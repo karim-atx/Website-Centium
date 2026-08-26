@@ -17,8 +17,8 @@ export default function MealPrepPanel() {
   return (
     <div className="space-y-5 animate-fade-slide-up">
       <Card className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
-          <ClipboardList size={18} className="text-sohati" />
+        <div className="w-10 h-10 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
+          <ClipboardList size={18} className="text-primary" />
         </div>
         <div>
           <p className="text-sm font-semibold text-charcoal">Custom Meals</p>

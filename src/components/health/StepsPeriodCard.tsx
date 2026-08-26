@@ -22,7 +22,7 @@ export const StepsPeriodCard: React.FC<{ onExpand?: () => void }> = ({ onExpand 
       </div>
       <p className="text-2xl font-bold text-charcoal leading-none">{metricValues.steps.toLocaleString()}</p>
       <p className="text-[11px] text-charcoal-faint mt-1">today</p>
-      <p className="text-[11px] text-sohati-dark font-semibold mt-1 mb-2">
+      <p className="text-[11px] text-primary-dark font-semibold mt-1 mb-2">
         Weekly avg {weeklyAvg.toLocaleString()}
       </p>
       <div className="w-full overflow-hidden">

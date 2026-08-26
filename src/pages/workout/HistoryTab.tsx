@@ -58,8 +58,8 @@ export default function HistoryTab() {
       <Card>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
-              <BarChart3 size={16} className="text-sohati" />
+            <div className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
+              <BarChart3 size={16} className="text-primary" />
             </div>
             <div>
               <p className="text-sm font-bold text-charcoal">{totalVolume.toLocaleString()} kg</p>

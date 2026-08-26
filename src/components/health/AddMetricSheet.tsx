@@ -61,7 +61,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
         <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Weight today</p>
         <div className="flex items-center gap-2 mb-2">
           <div className="flex-1 flex items-center gap-2.5 bg-cream-soft rounded-2xl px-4 py-3">
-            <Scale size={16} className="text-sohati-dark shrink-0" />
+            <Scale size={16} className="text-primary-dark shrink-0" />
             <input
               value={weightDraft}
               onChange={(e) => setWeightDraft(e.target.value.replace(/[^\d.]/g, ""))}
@@ -75,7 +75,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             onClick={saveWeight}
             disabled={!weightDraft}
             aria-label="Save today's weight"
-            className="tap w-11 h-11 rounded-full bg-sohati text-white flex items-center justify-center shrink-0 disabled:opacity-40"
+            className="tap w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center shrink-0 disabled:opacity-40"
           >
             <Check size={16} strokeWidth={3} />
           </button>

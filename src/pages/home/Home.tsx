@@ -58,7 +58,7 @@ export default function Home() {
         </div>
         <button
           onClick={() => navigate("/profile")}
-          className="tap w-11 h-11 rounded-full bg-ember-pale flex items-center justify-center text-ember-dark font-bold shrink-0 overflow-hidden"
+          className="tap w-11 h-11 rounded-full bg-teal-pale flex items-center justify-center text-teal-dark font-bold shrink-0 overflow-hidden"
         >
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -108,7 +108,7 @@ export default function Home() {
         <WidgetBoard onWaterClick={() => setMetricOpen(true)} />
       </div>
 
-      <Card interactive onClick={() => navigate("/professionals")} className="mb-4 animate-fade-slide-up bg-gradient-to-br from-sohati to-sohati-dark !text-white">
+      <Card interactive onClick={() => navigate("/professionals")} className="mb-4 animate-fade-slide-up bg-gradient-to-br from-primary to-primary-dark !text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center">

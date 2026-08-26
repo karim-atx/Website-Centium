@@ -36,7 +36,7 @@ export const StreakEditSheet: React.FC<{
           <input
             value={label}
             onChange={(e) => setLabel(e.target.value)}
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
         <label className="block">
@@ -45,7 +45,7 @@ export const StreakEditSheet: React.FC<{
             value={goalDays}
             onChange={(e) => setGoalDays(e.target.value.replace(/\D/g, ""))}
             inputMode="numeric"
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
         <div className="flex gap-2.5">

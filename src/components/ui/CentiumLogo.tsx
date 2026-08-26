@@ -22,15 +22,15 @@ export const CentiumLogo: React.FC<{ size?: number; className?: string }> = ({
   >
     <path
       d="M39.06 80.07A32 32 0 1 1 70.58 74.51"
-      stroke="#7D6BB5"
+      stroke="#7D67D9"
       strokeWidth="22"
       strokeLinecap="round"
       fill="none"
     />
-    <path d="M55.47 65.04 Q73.55 73.78 66.4 95.1 Q55.69 80.28 55.47 65.04 Z" fill="#8FBBB2" />
+    <path d="M55.47 65.04 Q73.55 73.78 66.4 95.1 Q55.69 80.28 55.47 65.04 Z" fill="#A2C8C2" />
     <path
       d="M55.47 65.04 Q65.09 76.86 66.4 95.1"
-      stroke="#5F9187"
+      stroke="#4F8F8A"
       strokeWidth="1.4"
       strokeLinecap="round"
       fill="none"

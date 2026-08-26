@@ -94,7 +94,7 @@ export default function Health() {
           <p className="text-xl font-bold text-charcoal">
             {metricValues.weight} <span className="text-sm font-normal text-charcoal-faint">kg</span>
           </p>
-          <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5">
+          <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2 py-0.5">
             <ArrowDown size={10} /> 0.6 kg this week
           </span>
         </Card>
@@ -110,7 +110,7 @@ export default function Health() {
           <p className="text-xl font-bold text-charcoal">
             {metricValues.bodyFat} <span className="text-sm font-normal text-charcoal-faint">%</span>
           </p>
-          <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5">
+          <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2 py-0.5">
             <ArrowDown size={10} /> 0.4% this week
           </span>
         </Card>
@@ -164,7 +164,7 @@ export default function Health() {
           <p className="text-xl font-bold text-charcoal">
             {Math.floor(metricValues.sleepHours)}h {Math.round((metricValues.sleepHours % 1) * 60)}m
           </p>
-          <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2 py-0.5">
+          <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2 py-0.5">
             <ArrowUp size={10} /> +0.3h vs avg
           </span>
         </Card>
@@ -183,13 +183,13 @@ export default function Health() {
         <div className="flex items-center gap-3">
           <button
             onClick={() => setShareAllOpen(true)}
-            className="tap flex items-center gap-1.5 text-xs font-semibold text-sohati"
+            className="tap flex items-center gap-1.5 text-xs font-semibold text-primary"
           >
             <Share2 size={13} /> Share all
           </button>
           <button
             onClick={() => setScanOpen(true)}
-            className="tap flex items-center gap-1.5 text-xs font-semibold text-sohati"
+            className="tap flex items-center gap-1.5 text-xs font-semibold text-primary"
           >
             <Camera size={13} /> Scan result
           </button>

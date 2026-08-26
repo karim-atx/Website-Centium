@@ -94,7 +94,7 @@ export const CreateCustomExerciseSheet: React.FC<{
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="e.g. Abdallah's Bungees"
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
 
@@ -110,7 +110,7 @@ export const CreateCustomExerciseSheet: React.FC<{
                 className={clsx(
                   "tap rounded-xl px-3 py-2 text-xs font-semibold border transition-colors",
                   muscleGroups.includes(mg.value)
-                    ? "bg-sohati text-white border-sohati"
+                    ? "bg-primary text-white border-primary"
                     : "bg-cream-card border-charcoal/10 text-charcoal-soft"
                 )}
               >
@@ -140,7 +140,7 @@ export const CreateCustomExerciseSheet: React.FC<{
                   }}
                   className={clsx(
                     "tap w-full text-left px-4 py-2.5 text-sm border-b border-white/5 last:border-0",
-                    classification === c.value ? "text-sohati font-semibold" : "text-cream/90"
+                    classification === c.value ? "text-primary font-semibold" : "text-cream/90"
                   )}
                 >
                   {c.label}

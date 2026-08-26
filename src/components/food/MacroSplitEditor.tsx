@@ -52,7 +52,7 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
               value={pct}
               onChange={(e) => handleSlide(m.key, Number(e.target.value))}
               disabled={disabled}
-              className="w-full accent-sohati h-2"
+              className="w-full accent-primary h-2"
               style={{ accentColor: m.color }}
             />
           </div>

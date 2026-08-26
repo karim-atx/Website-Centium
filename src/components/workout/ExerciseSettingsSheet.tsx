@@ -84,7 +84,7 @@ export const ExerciseSettingsSheet: React.FC<{
       value={draft[key] === undefined || draft[key] === null ? "" : String(draft[key])}
       onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value === "" ? undefined : Number(e.target.value) }))}
       inputMode="decimal"
-      className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+      className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
     />
   );
 
@@ -168,7 +168,7 @@ export const ExerciseSettingsSheet: React.FC<{
               {exercise.muscleGroups?.map((mg) => (
                 <span
                   key={mg}
-                  className="rounded-full bg-sohati-pale text-sohati-dark text-[11px] font-semibold px-2.5 py-1"
+                  className="rounded-full bg-primary-pale text-primary-dark text-[11px] font-semibold px-2.5 py-1"
                 >
                   {muscleGroupLabel[mg]}
                 </span>
@@ -188,7 +188,7 @@ export const ExerciseSettingsSheet: React.FC<{
                 value={oneRmDraft}
                 onChange={(e) => setOneRmDraft(e.target.value.replace(/[^\d.]/g, ""))}
                 inputMode="decimal"
-                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </label>
           )}
@@ -236,7 +236,7 @@ export const ExerciseSettingsSheet: React.FC<{
               value={draft.tempo ?? ""}
               onChange={(e) => setDraft((d) => ({ ...d, tempo: e.target.value }))}
               placeholder="3-1-1-0"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -252,7 +252,7 @@ export const ExerciseSettingsSheet: React.FC<{
                   className={clsx(
                     "tap w-full text-left rounded-xl px-3.5 py-2.5 border transition-colors",
                     draft.repMaxUpdateMode === m.value
-                      ? "bg-sohati-pale border-sohati"
+                      ? "bg-primary-pale border-primary"
                       : "bg-cream-soft border-transparent"
                   )}
                 >
@@ -270,7 +270,7 @@ export const ExerciseSettingsSheet: React.FC<{
             <Button
               fullWidth
               variant="outline"
-              className="!border-ember/30 !text-ember-dark"
+              className="!border-teal/30 !text-teal-dark"
               onClick={() => {
                 if (!confirmDelete) {
                   setConfirmDelete(true);

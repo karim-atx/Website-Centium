@@ -61,7 +61,7 @@ export default function Professionals() {
         <Card
           interactive
           onClick={() => setLinkedProfileOpen(true)}
-          className="mb-6 bg-gradient-to-br from-sohati to-sohati-dark !text-white animate-fade-slide-up"
+          className="mb-6 bg-gradient-to-br from-primary to-primary-dark !text-white animate-fade-slide-up"
         >
           <div className="flex items-center gap-3 mb-3">
             <span className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center shrink-0">
@@ -103,7 +103,7 @@ export default function Professionals() {
         <Card
           interactive
           onClick={() => navigate(`/professionals/${connected.id}`)}
-          className="mb-6 bg-gradient-to-br from-sohati to-sohati-dark !text-white animate-fade-slide-up"
+          className="mb-6 bg-gradient-to-br from-primary to-primary-dark !text-white animate-fade-slide-up"
         >
           <div className="flex items-center gap-3 mb-3">
             <span className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center shrink-0">
@@ -138,10 +138,10 @@ export default function Professionals() {
         {filtered.map((p) => (
           <Card key={p.id} className="animate-fade-slide-up">
             <div className="flex items-start gap-3.5 mb-3">
-              <span className="w-11 h-11 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
+              <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
                 {(() => {
                   const Icon = professionalTypeIcon[p.type];
-                  return <Icon size={19} className="text-sohati-dark" />;
+                  return <Icon size={19} className="text-primary-dark" />;
                 })()}
               </span>
               <div className="flex-1 min-w-0">
@@ -151,7 +151,7 @@ export default function Professionals() {
                     <Star size={12} className="fill-gold" /> {p.rating}
                   </span>
                 </div>
-                <p className="text-xs text-sohati-dark font-medium">{p.specialty}</p>
+                <p className="text-xs text-primary-dark font-medium">{p.specialty}</p>
                 <p className="text-xs text-charcoal-faint">{p.location} · {p.reviews} reviews</p>
               </div>
             </div>
@@ -191,7 +191,7 @@ export default function Professionals() {
               onChange={(e) => setReviewText(e.target.value)}
               placeholder="How has your experience been?"
               rows={4}
-              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20 resize-none"
+              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
           </label>
           <Button
@@ -213,10 +213,10 @@ export default function Professionals() {
       <BottomSheet open={linkedProfileOpen} onClose={() => setLinkedProfileOpen(false)} title={user.linkedProfessionalName}>
         <div className="space-y-4 animate-fade-slide-up">
           <div className="flex items-center gap-3">
-            <span className="w-12 h-12 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
+            <span className="w-12 h-12 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
               {(() => {
                 const Icon = linkedIcon(user.linkedProfessionalSubtype);
-                return <Icon size={22} className="text-sohati-dark" />;
+                return <Icon size={22} className="text-primary-dark" />;
               })()}
             </span>
             <div>

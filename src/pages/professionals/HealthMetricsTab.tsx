@@ -35,8 +35,8 @@ export default function HealthMetricsTab() {
                 className="tap w-full flex items-center justify-between p-4 text-left"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="w-10 h-10 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
-                    <HeartPulse size={17} className="text-sohati-dark" />
+                  <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+                    <HeartPulse size={17} className="text-primary-dark" />
                   </span>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-charcoal truncate">{c.name}</p>
@@ -92,7 +92,7 @@ export default function HealthMetricsTab() {
                             value={note[f.key] ?? ""}
                             onChange={(e) => updateClientHealthNote(c.id, { [f.key]: e.target.value })}
                             placeholder={f.placeholder}
-                            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
                           />
                         </label>
                       ))}

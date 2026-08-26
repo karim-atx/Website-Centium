@@ -71,14 +71,14 @@ function ProfessionalSubscription() {
             onClick={() => setSelected(t.id)}
             className={clsx(
               "tap w-full flex items-center justify-between rounded-2xl px-4 py-4 border-2 transition-colors",
-              selected === t.id ? "border-sohati bg-sohati-pale" : "border-charcoal/10 bg-cream-card"
+              selected === t.id ? "border-primary bg-primary-pale" : "border-charcoal/10 bg-cream-card"
             )}
           >
             <div className="text-left">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-bold text-charcoal">{t.name}</p>
                 {t.id === professionalTier && (
-                  <span className="text-[10px] font-bold text-sohati-dark bg-white rounded-full px-2 py-0.5">
+                  <span className="text-[10px] font-bold text-primary-dark bg-white rounded-full px-2 py-0.5">
                     CURRENT
                   </span>
                 )}
@@ -88,7 +88,7 @@ function ProfessionalSubscription() {
               </p>
             </div>
             {selected === t.id && (
-              <div className="w-5 h-5 rounded-full bg-sohati flex items-center justify-center shrink-0">
+              <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
                 <Check size={12} className="text-white" strokeWidth={3} />
               </div>
             )}
@@ -147,14 +147,14 @@ function BusinessSubscription() {
             onClick={() => setSelected(t.id)}
             className={clsx(
               "tap w-full flex items-center justify-between rounded-2xl px-4 py-4 border-2 transition-colors",
-              selected === t.id ? "border-sohati bg-sohati-pale" : "border-charcoal/10 bg-cream-card"
+              selected === t.id ? "border-primary bg-primary-pale" : "border-charcoal/10 bg-cream-card"
             )}
           >
             <div className="text-left">
               <div className="flex items-center gap-2">
                 <p className="text-sm font-bold text-charcoal">{t.name}</p>
                 {t.id === currentTier && (
-                  <span className="text-[10px] font-bold text-sohati-dark bg-white rounded-full px-2 py-0.5">
+                  <span className="text-[10px] font-bold text-primary-dark bg-white rounded-full px-2 py-0.5">
                     CURRENT
                   </span>
                 )}
@@ -164,7 +164,7 @@ function BusinessSubscription() {
               </p>
             </div>
             {selected === t.id && (
-              <div className="w-5 h-5 rounded-full bg-sohati flex items-center justify-center shrink-0">
+              <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
                 <Check size={12} className="text-white" strokeWidth={3} />
               </div>
             )}
@@ -220,7 +220,7 @@ export default function Subscription() {
       <div className="grid grid-cols-2 gap-2.5 mb-6">
         {features.map((f) => (
           <div key={f.label} className="flex items-center gap-2.5 bg-cream-card rounded-2xl px-3.5 py-3 shadow-soft animate-fade-slide-up">
-            <f.icon size={16} className="text-sohati shrink-0" />
+            <f.icon size={16} className="text-primary shrink-0" />
             <span className="text-xs font-medium text-charcoal leading-tight">{f.label}</span>
           </div>
         ))}
@@ -231,20 +231,20 @@ export default function Subscription() {
           onClick={() => setPlan("yearly")}
           className={clsx(
             "tap w-full flex items-center justify-between rounded-2xl px-4 py-4 border-2 transition-colors",
-            plan === "yearly" ? "border-sohati bg-sohati-pale" : "border-charcoal/10 bg-cream-card"
+            plan === "yearly" ? "border-primary bg-primary-pale" : "border-charcoal/10 bg-cream-card"
           )}
         >
           <div className="text-left">
             <div className="flex items-center gap-2">
               <p className="text-sm font-bold text-charcoal">Yearly</p>
-              <span className="text-[10px] font-bold text-white bg-ember rounded-full px-2 py-0.5">
+              <span className="text-[10px] font-bold text-white bg-teal rounded-full px-2 py-0.5">
                 SAVE 30%
               </span>
             </div>
             <p className="text-xs text-charcoal-faint">$49.99/year · billed annually</p>
           </div>
           {plan === "yearly" && (
-            <div className="w-5 h-5 rounded-full bg-sohati flex items-center justify-center">
+            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
               <Check size={12} className="text-white" strokeWidth={3} />
             </div>
           )}
@@ -254,7 +254,7 @@ export default function Subscription() {
           onClick={() => setPlan("monthly")}
           className={clsx(
             "tap w-full flex items-center justify-between rounded-2xl px-4 py-4 border-2 transition-colors",
-            plan === "monthly" ? "border-sohati bg-sohati-pale" : "border-charcoal/10 bg-cream-card"
+            plan === "monthly" ? "border-primary bg-primary-pale" : "border-charcoal/10 bg-cream-card"
           )}
         >
           <div className="text-left">
@@ -262,7 +262,7 @@ export default function Subscription() {
             <p className="text-xs text-charcoal-faint">$5.99/month</p>
           </div>
           {plan === "monthly" && (
-            <div className="w-5 h-5 rounded-full bg-sohati flex items-center justify-center">
+            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center">
               <Check size={12} className="text-white" strokeWidth={3} />
             </div>
           )}

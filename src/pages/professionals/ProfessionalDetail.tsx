@@ -125,15 +125,15 @@ export default function ProfessionalDetail() {
       </button>
 
       <div className="flex items-center gap-4 mb-5 animate-fade-slide-up">
-        <span className="w-16 h-16 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
+        <span className="w-16 h-16 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
           {(() => {
             const Icon = professionalTypeIcon[professional.type];
-            return <Icon size={28} className="text-sohati-dark" />;
+            return <Icon size={28} className="text-primary-dark" />;
           })()}
         </span>
         <div>
           <h1 className="font-display text-2xl font-semibold text-charcoal">{professional.name}</h1>
-          <p className="text-sm text-sohati-dark font-medium">{professional.specialty}</p>
+          <p className="text-sm text-primary-dark font-medium">{professional.specialty}</p>
           <p className="text-xs text-charcoal-faint">{professional.location}</p>
         </div>
       </div>
@@ -146,7 +146,7 @@ export default function ProfessionalDetail() {
           {totalReviews} reviews
         </button>
         {isConnected && (
-          <span className="text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-2.5 py-1">
+          <span className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1">
             Client since August 2026
           </span>
         )}
@@ -200,7 +200,7 @@ export default function ProfessionalDetail() {
                   onClick={() => setAccess((a) => ({ ...a, [item.label]: !a[item.label] }))}
                   className={clsx(
                     "tap w-11 h-6 rounded-full flex items-center px-0.5 transition-colors",
-                    access[item.label] ? "bg-sohati justify-end" : "bg-charcoal/10 justify-start"
+                    access[item.label] ? "bg-primary justify-end" : "bg-charcoal/10 justify-start"
                   )}
                 >
                   <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
@@ -230,10 +230,10 @@ export default function ProfessionalDetail() {
           <div className="absolute inset-0 bg-charcoal/40" onClick={() => setMessageOpen(false)} />
           <div className="relative w-full sm:max-w-md h-[70vh] sm:h-[60vh] bg-cream rounded-t-4xl sm:rounded-4xl shadow-lift flex flex-col animate-sheet-up">
             <div className="flex items-center gap-3 px-5 py-4 border-b border-charcoal/5">
-              <span className="w-9 h-9 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
+              <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
                 {(() => {
                   const Icon = professionalTypeIcon[professional.type];
-                  return <Icon size={16} className="text-sohati-dark" />;
+                  return <Icon size={16} className="text-primary-dark" />;
                 })()}
               </span>
               <p className="font-semibold text-charcoal">{professional.name}</p>
@@ -244,7 +244,7 @@ export default function ProfessionalDetail() {
                   <div
                     className={clsx(
                       "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm",
-                      m.from === "me" ? "bg-sohati text-white" : "bg-cream-card text-charcoal"
+                      m.from === "me" ? "bg-primary text-white" : "bg-cream-card text-charcoal"
                     )}
                   >
                     {m.text}
@@ -258,11 +258,11 @@ export default function ProfessionalDetail() {
                 onChange={(e) => setMessageText(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && sendMessage()}
                 placeholder="Message…"
-                className="flex-1 rounded-full bg-cream-card border border-charcoal/10 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sohati/15"
+                className="flex-1 rounded-full bg-cream-card border border-charcoal/10 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/15"
               />
               <button
                 onClick={sendMessage}
-                className="tap w-10 h-10 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
+                className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shrink-0"
               >
                 <Send size={15} />
               </button>
@@ -295,7 +295,7 @@ export default function ProfessionalDetail() {
               onChange={(e) => setReviewText(e.target.value)}
               placeholder={`How has your experience with ${professional.name.split(" ")[0]} been?`}
               rows={4}
-              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20 resize-none"
+              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
           </label>
           <Button
@@ -315,7 +315,7 @@ export default function ProfessionalDetail() {
       <BottomSheet open={allReviewsOpen} onClose={() => setAllReviewsOpen(false)} title={`${totalReviews} Reviews`}>
         <div className="space-y-3 animate-fade-slide-up">
           {myReview && (
-            <Card className="!bg-sohati-pale">
+            <Card className="!bg-primary-pale">
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-sm font-semibold text-charcoal">You</p>
                 <div className="flex items-center gap-0.5">

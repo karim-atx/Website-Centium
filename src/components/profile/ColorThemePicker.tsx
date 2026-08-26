@@ -5,7 +5,7 @@ import { Check } from "lucide-react";
 import clsx from "clsx";
 
 const themes: { value: ColorTheme; label: string; swatch: string }[] = [
-  { value: "sohati", label: "Centium", swatch: "#AEA1DC" },
+  { value: "centium", label: "Centium", swatch: "#AEA1DC" },
   { value: "ocean", label: "Ocean", swatch: "#4C8FD1" },
   { value: "sunset", label: "Sunset", swatch: "#E97452" },
   { value: "berry", label: "Berry", swatch: "#9C4F7C" },

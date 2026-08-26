@@ -35,7 +35,7 @@ export const WidgetShell: React.FC<WidgetShellProps> = ({
       className={clsx(
         "relative bg-cream-card rounded-3xl shadow-soft border border-charcoal/[0.04] p-4 transition-transform",
         size === "large" ? "col-span-2" : "col-span-1",
-        editMode && "cursor-grab active:cursor-grabbing ring-2 ring-sohati/30"
+        editMode && "cursor-grab active:cursor-grabbing ring-2 ring-primary/30"
       )}
     >
       {editMode && (
@@ -50,7 +50,7 @@ export const WidgetShell: React.FC<WidgetShellProps> = ({
             </button>
             <button
               onClick={onRemove}
-              className="tap w-7 h-7 rounded-full bg-ember text-white flex items-center justify-center shadow-lift"
+              className="tap w-7 h-7 rounded-full bg-teal text-white flex items-center justify-center shadow-lift"
               aria-label="Remove widget"
             >
               <X size={13} strokeWidth={3} />

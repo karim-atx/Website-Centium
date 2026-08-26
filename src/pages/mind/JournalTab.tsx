@@ -107,7 +107,7 @@ export default function JournalTab() {
               }
             }}
             placeholder="Folder name…"
-            className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <button
             onClick={() => {
@@ -115,7 +115,7 @@ export default function JournalTab() {
               setNewFolderName("");
               setNewFolderOpen(false);
             }}
-            className="tap px-3 rounded-xl bg-sohati text-white text-sm font-semibold"
+            className="tap px-3 rounded-xl bg-primary text-white text-sm font-semibold"
           >
             Add
           </button>
@@ -129,14 +129,14 @@ export default function JournalTab() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Entry title…"
-            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/15 mb-3"
+            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm font-semibold text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/15 mb-3"
           />
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
             placeholder="شو صار معك اليوم؟ How was your day?"
             rows={5}
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/15 resize-none mb-3"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/15 resize-none mb-3"
           />
           <div className="flex gap-2">
             <Button variant="outline" onClick={resetCompose}>
@@ -163,7 +163,7 @@ export default function JournalTab() {
                   <button
                     onClick={() => startEdit(e)}
                     aria-label="Edit entry"
-                    className="tap w-9 h-9 rounded-full bg-sohati text-white flex items-center justify-center"
+                    className="tap w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center"
                   >
                     <Pencil size={14} />
                   </button>
@@ -173,7 +173,7 @@ export default function JournalTab() {
                       setRevealedId(null);
                     }}
                     aria-label="Delete entry"
-                    className="tap w-9 h-9 rounded-full bg-ember text-white flex items-center justify-center"
+                    className="tap w-9 h-9 rounded-full bg-teal text-white flex items-center justify-center"
                   >
                     <Trash2 size={14} />
                   </button>

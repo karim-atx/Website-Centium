@@ -135,7 +135,7 @@ export default function Onboarding() {
             <div
               key={i}
               className="h-1.5 flex-1 rounded-full transition-colors duration-300"
-              style={{ background: i <= step - 1 ? "rgb(var(--c-sohati))" : "rgb(var(--c-cream-soft))" }}
+              style={{ background: i <= step - 1 ? "rgb(var(--c-primary))" : "rgb(var(--c-cream-soft))" }}
             />
           ))}
         </div>

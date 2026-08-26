@@ -22,7 +22,7 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
             value={oneRm}
             onChange={(e) => setOneRm(e.target.value.replace(/[^\d.]/g, ""))}
             inputMode="decimal"
-            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
 
@@ -32,7 +32,7 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
             value={reps}
             onChange={(e) => setReps(e.target.value.replace(/\D/g, ""))}
             inputMode="numeric"
-            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
 
@@ -44,7 +44,7 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
                 key={r}
                 onClick={() => setRpe(r)}
                 className={`tap px-3 py-1.5 rounded-full text-xs font-semibold border ${
-                  rpe === r ? "bg-sohati text-white border-sohati" : "bg-cream-soft border-transparent text-charcoal-soft"
+                  rpe === r ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
                 }`}
               >
                 {r}
@@ -53,11 +53,11 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
           </div>
         </div>
 
-        <div className="bg-sohati-pale rounded-2xl p-5 text-center">
-          <p className="text-xs font-semibold text-sohati-dark uppercase tracking-wide mb-1">
+        <div className="bg-primary-pale rounded-2xl p-5 text-center">
+          <p className="text-xs font-semibold text-primary-dark uppercase tracking-wide mb-1">
             Suggested weight
           </p>
-          <p className="text-3xl font-bold text-sohati-dark">{suggested} kg</p>
+          <p className="text-3xl font-bold text-primary-dark">{suggested} kg</p>
         </div>
       </div>
     </BottomSheet>

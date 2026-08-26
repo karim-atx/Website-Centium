@@ -39,7 +39,7 @@ export const AddStreakSheet: React.FC<{ open: boolean; onClose: () => void }> = 
       title="New Streak"
     >
       <div className="space-y-5 animate-fade-slide-up">
-        <div className="flex items-center gap-2 text-ember">
+        <div className="flex items-center gap-2 text-teal">
           <Flame size={22} />
           <span className="text-xs text-charcoal-faint">Every streak uses this icon</span>
         </div>
@@ -59,15 +59,15 @@ export const AddStreakSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                     onClick={() => setHabitId(h.id)}
                     className={clsx(
                       "tap w-full flex items-center gap-3 rounded-2xl px-3.5 py-3 text-left border transition-colors",
-                      active ? "bg-sohati-pale border-sohati" : "bg-cream-soft border-transparent"
+                      active ? "bg-primary-pale border-primary" : "bg-cream-soft border-transparent"
                     )}
                   >
                     <span className="w-7 h-7 rounded-lg bg-cream-card flex items-center justify-center shrink-0">
-                      <Icon size={14} className="text-sohati-dark" />
+                      <Icon size={14} className="text-primary-dark" />
                     </span>
                     <span className="text-sm font-semibold text-charcoal flex-1">{h.label}</span>
                     {h.streakDays > 0 && (
-                      <span className="text-[11px] font-bold text-ember-dark">{h.streakDays}d</span>
+                      <span className="text-[11px] font-bold text-teal-dark">{h.streakDays}d</span>
                     )}
                   </button>
                 );
@@ -88,7 +88,7 @@ export const AddStreakSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             value={goalDays}
             onChange={(e) => setGoalDays(e.target.value.replace(/\D/g, ""))}
             inputMode="numeric"
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
         <Button fullWidth size="lg" onClick={save} disabled={!habitId}>

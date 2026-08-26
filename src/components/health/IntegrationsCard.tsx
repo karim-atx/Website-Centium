@@ -37,7 +37,7 @@ export const IntegrationsCard: React.FC = () => {
         <Toggle checked={connected} onChange={setConnected} label={isIos ? "Apple Health" : "Android Health"} />
       </div>
       {connected && (
-        <p className="text-[11px] text-sohati-dark bg-sohati-pale rounded-xl px-3 py-2 mt-2">
+        <p className="text-[11px] text-primary-dark bg-primary-pale rounded-xl px-3 py-2 mt-2">
           Connected (mock) — real syncing arrives in a future version.
         </p>
       )}

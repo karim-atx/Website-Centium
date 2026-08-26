@@ -40,7 +40,7 @@ export const Sidebar: React.FC = () => {
                 clsx(
                   "flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-semibold transition-colors duration-150",
                   isActive
-                    ? "bg-sohati-pale text-sohati-dark"
+                    ? "bg-primary-pale text-primary-dark"
                     : "text-charcoal-soft hover:bg-cream-soft"
                 )
               }
@@ -53,17 +53,17 @@ export const Sidebar: React.FC = () => {
       </nav>
 
       {!isBusiness && (
-        <div className="rounded-3xl bg-sohati-pale p-4 mt-4">
-          <div className="flex items-center gap-2 text-sohati-dark font-semibold text-sm mb-1">
-            <Flame size={16} className="text-ember" />
+        <div className="rounded-3xl bg-primary-pale p-4 mt-4">
+          <div className="flex items-center gap-2 text-primary-dark font-semibold text-sm mb-1">
+            <Flame size={16} className="text-teal" />
             7 day streak
           </div>
-          <p className="text-xs text-sohati-dark/70">Keep logging to unlock rewards 🎁</p>
+          <p className="text-xs text-primary-dark/70">Keep logging to unlock rewards 🎁</p>
         </div>
       )}
 
       <div className="flex items-center gap-2.5 mt-4 px-2">
-        <div className="w-9 h-9 rounded-full bg-ember-pale flex items-center justify-center text-sm font-bold text-ember-dark">
+        <div className="w-9 h-9 rounded-full bg-teal-pale flex items-center justify-center text-sm font-bold text-teal-dark">
           {user.firstName.charAt(0)}
         </div>
         <div className="text-sm">

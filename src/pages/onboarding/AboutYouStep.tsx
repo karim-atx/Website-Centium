@@ -87,7 +87,7 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
             value={draft.firstName}
             onChange={(e) => setDraft((d) => ({ ...d, firstName: e.target.value }))}
             placeholder="Abdallah"
-            className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-sohati/50 focus:ring-2 focus:ring-sohati/10"
+            className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
           />
         </label>
 
@@ -116,19 +116,19 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
                 onClick={() => cameraInputRef.current?.click()}
                 className="tap flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-charcoal/10 bg-cream-card py-5"
               >
-                <Camera size={20} className="text-sohati" />
+                <Camera size={20} className="text-primary" />
                 <span className="text-xs font-semibold text-charcoal-soft">Use camera</span>
               </button>
               <button
                 onClick={() => fileInputRef.current?.click()}
                 className="tap flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-charcoal/10 bg-cream-card py-5"
               >
-                <FileText size={20} className="text-sohati" />
+                <FileText size={20} className="text-primary" />
                 <span className="text-xs font-semibold text-charcoal-soft">Upload file</span>
               </button>
             </div>
             {draft.certificationFile && (
-              <p className="flex items-center gap-1.5 text-xs text-sohati-dark mt-2.5">
+              <p className="flex items-center gap-1.5 text-xs text-primary-dark mt-2.5">
                 <Check size={13} /> Certification attached
               </p>
             )}
@@ -146,7 +146,7 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
                   onChange={(e) => setDraft((d) => ({ ...d, age: e.target.value.replace(/\D/g, "") }))}
                   placeholder="29"
                   inputMode="numeric"
-                  className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-sohati/50 focus:ring-2 focus:ring-sohati/10"
+                  className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
                 />
               </label>
               <label className="block">
@@ -158,7 +158,7 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
                   }
                   placeholder="178"
                   inputMode="numeric"
-                  className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-sohati/50 focus:ring-2 focus:ring-sohati/10"
+                  className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
                 />
               </label>
             </div>
@@ -170,7 +170,7 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
                 onChange={(e) => setDraft((d) => ({ ...d, weightKg: e.target.value.replace(/[^\d.]/g, "") }))}
                 placeholder="106.4"
                 inputMode="decimal"
-                className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-sohati/50 focus:ring-2 focus:ring-sohati/10"
+                className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
               />
             </label>
 
@@ -186,7 +186,7 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
                     className={clsx(
                       "tap flex flex-col items-center justify-center gap-1.5 rounded-2xl py-3 border transition-colors",
                       draft.sex === opt.value
-                        ? "bg-sohati text-white border-sohati"
+                        ? "bg-primary text-white border-primary"
                         : "bg-cream-card text-charcoal-soft border-charcoal/10"
                     )}
                   >

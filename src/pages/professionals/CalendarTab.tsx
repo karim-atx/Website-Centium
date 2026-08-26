@@ -225,7 +225,7 @@ export default function CalendarTab() {
             <p className="text-xs text-charcoal-faint mt-1">With {e.invitees.join(", ")}</p>
           )}
           {e.url && (
-            <p className="flex items-center gap-1 text-xs text-sohati mt-1 truncate">
+            <p className="flex items-center gap-1 text-xs text-primary mt-1 truncate">
               <Link2 size={11} /> {e.url}
             </p>
           )}
@@ -262,7 +262,7 @@ export default function CalendarTab() {
         right={
           <button
             onClick={openCompose}
-            className="tap w-10 h-10 rounded-full bg-sohati text-white flex items-center justify-center shadow-soft"
+            className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft"
             aria-label="New event"
           >
             <Plus size={18} />
@@ -277,7 +277,7 @@ export default function CalendarTab() {
             onClick={() => setView(v)}
             className={clsx(
               "tap px-4 py-1.5 rounded-full text-xs font-bold capitalize",
-              view === v ? "bg-sohati text-white" : "text-charcoal-faint"
+              view === v ? "bg-primary text-white" : "text-charcoal-faint"
             )}
           >
             {v}
@@ -323,15 +323,15 @@ export default function CalendarTab() {
                   className={clsx(
                     "tap aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 text-sm",
                     isSelected
-                      ? "bg-sohati text-white font-bold"
+                      ? "bg-primary text-white font-bold"
                       : isToday
-                      ? "bg-sohati-pale text-sohati-dark font-semibold"
+                      ? "bg-primary-pale text-primary-dark font-semibold"
                       : "text-charcoal hover:bg-cream-soft"
                   )}
                 >
                   {day}
                   {hasEvents && (
-                    <span className={clsx("w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-sohati")} />
+                    <span className={clsx("w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-primary")} />
                   )}
                 </button>
               );
@@ -439,7 +439,7 @@ export default function CalendarTab() {
               value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
               placeholder="Session with client"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -449,7 +449,7 @@ export default function CalendarTab() {
               type="date"
               value={draft.date}
               onChange={(e) => setDraft((d) => ({ ...d, date: e.target.value }))}
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -459,7 +459,7 @@ export default function CalendarTab() {
               onClick={() => setDraft((d) => ({ ...d, allDay: !d.allDay }))}
               className={clsx(
                 "tap w-11 h-6 rounded-full flex items-center px-0.5 transition-colors",
-                draft.allDay ? "bg-sohati justify-end" : "bg-charcoal/10 justify-start"
+                draft.allDay ? "bg-primary justify-end" : "bg-charcoal/10 justify-start"
               )}
             >
               <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
@@ -474,7 +474,7 @@ export default function CalendarTab() {
                   type="time"
                   value={draft.startTime}
                   onChange={(e) => setDraft((d) => ({ ...d, startTime: e.target.value }))}
-                  className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                  className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </label>
               <label className="block">
@@ -483,7 +483,7 @@ export default function CalendarTab() {
                   type="time"
                   value={draft.endTime}
                   onChange={(e) => setDraft((d) => ({ ...d, endTime: e.target.value }))}
-                  className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                  className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
                 />
               </label>
             </div>
@@ -495,7 +495,7 @@ export default function CalendarTab() {
               value={draft.location}
               onChange={(e) => setDraft((d) => ({ ...d, location: e.target.value }))}
               placeholder="Gym, clinic, video call…"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -530,7 +530,7 @@ export default function CalendarTab() {
                     className={clsx(
                       "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
                       draft.repeat === r.value
-                        ? "bg-sohati text-white border-sohati"
+                        ? "bg-primary text-white border-primary"
                         : "bg-cream-soft border-transparent text-charcoal-soft"
                     )}
                   >
@@ -561,7 +561,7 @@ export default function CalendarTab() {
                     inviteeIds: Array.from(e.target.selectedOptions, (o) => o.value),
                   }))
                 }
-                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
                 size={Math.min(4, professionalClients.length)}
               >
                 {professionalClients.map((c) => (
@@ -581,7 +581,7 @@ export default function CalendarTab() {
               value={draft.url}
               onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
               placeholder="https://…"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -601,7 +601,7 @@ export default function CalendarTab() {
               onChange={(e) => setDraft((d) => ({ ...d, notes: e.target.value }))}
               rows={3}
               placeholder="Anything else to remember…"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20 resize-none"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
           </label>
 
@@ -613,7 +613,7 @@ export default function CalendarTab() {
             <Button
               fullWidth
               variant="outline"
-              className="!border-ember/30 !text-ember-dark"
+              className="!border-teal/30 !text-teal-dark"
               onClick={() => {
                 if (!confirmDelete) {
                   setConfirmDelete(true);

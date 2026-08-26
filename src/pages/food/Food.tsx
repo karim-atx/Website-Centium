@@ -145,7 +145,7 @@ export default function Food() {
                 </p>
                 <p className="text-xs text-charcoal-faint mt-1">of {targets.calories.toLocaleString()} kcal</p>
               </div>
-              <span className="text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-3 py-1.5">
+              <span className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-3 py-1.5">
                 {targets.calories - Math.round(totals.calories)} kcal remaining
               </span>
             </div>
@@ -158,7 +158,7 @@ export default function Food() {
 
           <button
             onClick={handleCopyYesterday}
-            className="tap w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-sohati mb-4 -mt-2"
+            className="tap w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-primary mb-4 -mt-2"
           >
             {copiedToast ? (
               <>
@@ -191,7 +191,7 @@ export default function Food() {
                   {entries.length === 0 ? (
                     <button
                       onClick={() => openAdd(meal)}
-                      className="tap w-full flex items-center justify-between rounded-2xl border-2 border-dashed border-charcoal/10 px-4 py-3.5 text-charcoal-faint hover:border-sohati/40"
+                      className="tap w-full flex items-center justify-between rounded-2xl border-2 border-dashed border-charcoal/10 px-4 py-3.5 text-charcoal-faint hover:border-primary/40"
                     >
                       <span className="text-sm">Not logged</span>
                       <Plus size={16} />
@@ -224,8 +224,8 @@ export default function Food() {
                               style={{ transform: revealed ? "translateX(-80px)" : "translateX(0)" }}
                             >
                               <div className="flex items-center gap-3">
-                                <span className="w-9 h-9 rounded-xl bg-sohati-pale flex items-center justify-center shrink-0">
-                                  <Icon size={16} className="text-sohati-dark" />
+                                <span className="w-9 h-9 rounded-xl bg-primary-pale flex items-center justify-center shrink-0">
+                                  <Icon size={16} className="text-primary-dark" />
                                 </span>
                                 <div>
                                   <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
@@ -247,7 +247,7 @@ export default function Food() {
                       })}
                       <button
                         onClick={() => openAdd(meal)}
-                        className="tap w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-sohati hover:bg-sohati-pale/40"
+                        className="tap w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-primary hover:bg-primary-pale/40"
                       >
                         <Plus size={13} /> Add more
                       </button>
@@ -280,7 +280,7 @@ export default function Food() {
         <button
           onClick={() => openAdd(mealForCurrentTime())}
           aria-label="Add Food"
-          className="tap fixed bottom-24 right-5 z-30 w-14 h-14 rounded-full bg-sohati text-white shadow-lift flex items-center justify-center"
+          className="tap fixed bottom-24 right-5 z-30 w-14 h-14 rounded-full bg-primary text-white shadow-lift flex items-center justify-center"
         >
           <Plus size={22} />
         </button>

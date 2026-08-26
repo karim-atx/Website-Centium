@@ -6,10 +6,10 @@ export const mockProfessionals: Professional[] = [
     name: "Maya Haddad",
     type: "dietitian",
     specialty: "Registered Dietitian · Weight Management",
-    location: "Achrafieh, Beirut",
+    location: "Midtown",
     rating: 4.9,
     reviews: 128,
-    bio: "Helps clients build sustainable eating habits rooted in Lebanese cuisine — no extreme diets.",
+    bio: "Helps clients build sustainable eating habits rooted in real food — no extreme diets.",
     connected: true,
   },
   {
@@ -17,7 +17,7 @@ export const mockProfessionals: Professional[] = [
     name: "Karim Abou Zeid",
     type: "trainer",
     specialty: "Certified Personal Trainer · Strength",
-    location: "Hamra, Beirut",
+    location: "Uptown",
     rating: 4.8,
     reviews: 94,
     bio: "Strength & conditioning coach for recreational lifters and athletes alike.",
@@ -27,7 +27,7 @@ export const mockProfessionals: Professional[] = [
     name: "Dr. Rana Fakhoury",
     type: "doctor",
     specialty: "General Practitioner",
-    location: "Jal el Dib",
+    location: "Northside",
     rating: 4.9,
     reviews: 210,
     bio: "Family medicine physician focused on preventive care and longevity.",
@@ -37,7 +37,7 @@ export const mockProfessionals: Professional[] = [
     name: "Elie Sarkis",
     type: "physiotherapist",
     specialty: "Sports Physiotherapist",
-    location: "Jounieh",
+    location: "Harbor District",
     rating: 4.7,
     reviews: 61,
     bio: "Injury recovery and mobility work for athletes and everyday movers.",
@@ -47,7 +47,7 @@ export const mockProfessionals: Professional[] = [
     name: "Layal Choueiri",
     type: "trainer",
     specialty: "Certified Personal Trainer · Mobility",
-    location: "Verdun, Beirut",
+    location: "Riverside",
     rating: 4.9,
     reviews: 77,
     bio: "Builds beginner-friendly programs that stick — form first, always.",
@@ -57,7 +57,7 @@ export const mockProfessionals: Professional[] = [
     name: "Tony Khoury",
     type: "dietitian",
     specialty: "Sports Nutritionist",
-    location: "Zalka",
+    location: "Eastgate",
     rating: 4.6,
     reviews: 52,
     bio: "Works with athletes and lifters on performance nutrition.",
@@ -69,8 +69,8 @@ export const mockProfessionals: Professional[] = [
 export const mockGyms: Gym[] = [
   {
     id: "g1",
-    name: "Gold's Gym Beirut",
-    location: "Downtown Beirut",
+    name: "Iron Peak Gym",
+    location: "Downtown",
     perk: "10% off with Centium",
     rating: 4.6,
     lat: 33.8959,
@@ -86,7 +86,7 @@ export const mockGyms: Gym[] = [
   {
     id: "g2",
     name: "FitRepublik",
-    location: "Dbayeh",
+    location: "Lakeside",
     perk: "Free trial class",
     rating: 4.8,
     lat: 33.9425,
@@ -101,7 +101,7 @@ export const mockGyms: Gym[] = [
   {
     id: "g3",
     name: "PowerHouse Gym",
-    location: "Jounieh",
+    location: "Harbor District",
     perk: "15% off annual plan",
     rating: 4.4,
     lat: 33.9808,
@@ -116,7 +116,7 @@ export const mockGyms: Gym[] = [
   {
     id: "g4",
     name: "Flow Yoga Studio",
-    location: "Mar Mikhael",
+    location: "Arts Quarter",
     perk: "2 free classes",
     rating: 4.9,
     lat: 33.8959,
@@ -144,10 +144,10 @@ export const marketplaceCategories = [
 // V4: tapping "Classes" shows the specific class service — which gym hosts
 // it, where, and any offer — instead of a flat unfiltered list.
 export const mockClasses = [
-  { id: "cl1", name: "Vinyasa Flow", gymName: "Flow Yoga Studio", location: "Mar Mikhael", rating: 4.9, offer: "2 free classes" },
-  { id: "cl2", name: "HIIT Circuit", gymName: "FitRepublik", location: "Dbayeh", rating: 4.7, offer: "Free trial class" },
-  { id: "cl3", name: "Spin", gymName: "Gold's Gym Beirut", location: "Downtown Beirut", rating: 4.5, offer: "10% off with Centium" },
-  { id: "cl4", name: "Boxing Fundamentals", gymName: "PowerHouse Gym", location: "Jounieh", rating: 4.6, offer: "15% off annual plan" },
+  { id: "cl1", name: "Vinyasa Flow", gymName: "Flow Yoga Studio", location: "Arts Quarter", rating: 4.9, offer: "2 free classes" },
+  { id: "cl2", name: "HIIT Circuit", gymName: "FitRepublik", location: "Lakeside", rating: 4.7, offer: "Free trial class" },
+  { id: "cl3", name: "Spin", gymName: "Iron Peak Gym", location: "Downtown", rating: 4.5, offer: "10% off with Centium" },
+  { id: "cl4", name: "Boxing Fundamentals", gymName: "PowerHouse Gym", location: "Harbor District", rating: 4.6, offer: "15% off annual plan" },
 ];
 
 // V8 (QA 8.0): each store now carries actual sellable items (name, price,
@@ -171,18 +171,18 @@ export const mockMarketplaceListings: Record<
     {
       id: "st1",
       name: "Healthy Basket",
-      location: "Achrafieh, Beirut",
+      location: "Midtown",
       rating: 4.6,
       offer: "Free delivery over $30",
       items: [
         { id: "st1-i1", name: "Organic Quinoa (1kg)", price: 12, description: "Locally-packed organic white quinoa." },
-        { id: "st1-i2", name: "Cold-Pressed Olive Oil (500ml)", price: 15, description: "Extra virgin, Lebanese mountain-grown." },
+        { id: "st1-i2", name: "Cold-Pressed Olive Oil (500ml)", price: 15, description: "Extra virgin, cold-pressed and small-batch." },
       ],
     },
     {
       id: "st2",
-      name: "GreenGrocer Lebanon",
-      location: "Jounieh",
+      name: "GreenGrocer Co.",
+      location: "Harbor District",
       rating: 4.4,
       items: [
         { id: "st2-i1", name: "Weekly Veggie Box", price: 25, description: "A curated mix of seasonal local produce." },
@@ -193,8 +193,8 @@ export const mockMarketplaceListings: Record<
   clothing: [
     {
       id: "cw1",
-      name: "ActiveWear Beirut",
-      location: "ABC Achrafieh",
+      name: "ActiveWear Co.",
+      location: "Midtown Mall",
       rating: 4.5,
       offer: "10% off with Centium",
       items: [
@@ -205,7 +205,7 @@ export const mockMarketplaceListings: Record<
     {
       id: "cw2",
       name: "FitStyle",
-      location: "Dbayeh",
+      location: "Lakeside",
       rating: 4.3,
       items: [
         { id: "cw2-i1", name: "Running Shorts", price: 28, description: "Lightweight shorts with a zip pocket." },
@@ -217,7 +217,7 @@ export const mockMarketplaceListings: Record<
     {
       id: "eq1",
       name: "IronWorks Equipment",
-      location: "Sin El Fil",
+      location: "Old Town",
       rating: 4.7,
       offer: "Free shipping",
       items: [
@@ -227,8 +227,8 @@ export const mockMarketplaceListings: Record<
     },
     {
       id: "eq2",
-      name: "HomeGym Lebanon",
-      location: "Zalka",
+      name: "HomeGym Direct",
+      location: "Eastgate",
       rating: 4.5,
       items: [
         { id: "eq2-i1", name: "Resistance Band Set", price: 25, description: "5 bands, light to heavy resistance." },
@@ -240,7 +240,7 @@ export const mockMarketplaceListings: Record<
     {
       id: "su1",
       name: "PureFuel Nutrition",
-      location: "Hamra, Beirut",
+      location: "Uptown",
       rating: 4.6,
       offer: "15% off first order",
       items: [
@@ -251,7 +251,7 @@ export const mockMarketplaceListings: Record<
     {
       id: "su2",
       name: "ProteinHouse",
-      location: "Jal el Dib",
+      location: "Northside",
       rating: 4.4,
       items: [
         { id: "su2-i1", name: "Mass Gainer (2kg)", price: 38, description: "High-calorie blend for lean bulking." },
@@ -263,7 +263,7 @@ export const mockMarketplaceListings: Record<
     {
       id: "we1",
       name: "Serenity Spa & Wellness",
-      location: "Verdun, Beirut",
+      location: "Riverside",
       rating: 4.9,
       offer: "1 free session",
       items: [
@@ -274,7 +274,7 @@ export const mockMarketplaceListings: Record<
     {
       id: "we2",
       name: "Recharge Recovery Lounge",
-      location: "Achrafieh",
+      location: "Midtown",
       rating: 4.7,
       items: [
         { id: "we2-i1", name: "Cryotherapy Session", price: 40, description: "3-minute whole-body cold therapy." },
@@ -286,7 +286,7 @@ export const mockMarketplaceListings: Record<
     {
       id: "mp1",
       name: "Healthy Bites Meal Prep",
-      location: "Achrafieh, Beirut",
+      location: "Midtown",
       rating: 4.8,
       offer: "10% off first order",
       items: [
@@ -296,19 +296,19 @@ export const mockMarketplaceListings: Record<
     },
     {
       id: "mp2",
-      name: "Lebanese MealBox",
-      location: "Jounieh",
+      name: "Homestyle MealBox",
+      location: "Harbor District",
       rating: 4.6,
       offer: "Free delivery over $40",
       items: [
-        { id: "mp2-i1", name: "Family Meal Box (4 servings)", price: 48, description: "Home-style Lebanese dishes, ready to heat." },
+        { id: "mp2-i1", name: "Family Meal Box (4 servings)", price: 48, description: "Home-style comfort meals, ready to heat." },
         { id: "mp2-i2", name: "Vegetarian Mezze Box", price: 22, description: "Hummus, tabbouleh, moutabal and warak enab." },
       ],
     },
     {
       id: "mp3",
       name: "MacroKitchen",
-      location: "Dbayeh",
+      location: "Lakeside",
       rating: 4.7,
       items: [
         { id: "mp3-i1", name: "Cutting Plan (5 days)", price: 60, description: "Lower-calorie, high-protein prepared meals." },

@@ -21,17 +21,17 @@ export default {
           soft: "rgb(var(--c-charcoal-soft) / <alpha-value>)",
           faint: "rgb(var(--c-charcoal-faint) / <alpha-value>)",
         },
-        sohati: {
-          DEFAULT: "rgb(var(--c-sohati) / <alpha-value>)",
-          light: "rgb(var(--c-sohati-light) / <alpha-value>)",
-          pale: "rgb(var(--c-sohati-pale) / <alpha-value>)",
-          dark: "rgb(var(--c-sohati-dark) / <alpha-value>)",
+        primary: {
+          DEFAULT: "rgb(var(--c-primary) / <alpha-value>)",
+          light: "rgb(var(--c-primary-light) / <alpha-value>)",
+          pale: "rgb(var(--c-primary-pale) / <alpha-value>)",
+          dark: "rgb(var(--c-primary-dark) / <alpha-value>)",
         },
-        ember: {
-          DEFAULT: "rgb(var(--c-ember) / <alpha-value>)",
-          light: "rgb(var(--c-ember-light) / <alpha-value>)",
-          pale: "rgb(var(--c-ember-pale) / <alpha-value>)",
-          dark: "rgb(var(--c-ember-dark) / <alpha-value>)",
+        teal: {
+          DEFAULT: "rgb(var(--c-teal) / <alpha-value>)",
+          light: "rgb(var(--c-teal-light) / <alpha-value>)",
+          pale: "rgb(var(--c-teal-pale) / <alpha-value>)",
+          dark: "rgb(var(--c-teal-dark) / <alpha-value>)",
         },
         gold: {
           DEFAULT: "rgb(var(--c-gold) / <alpha-value>)",

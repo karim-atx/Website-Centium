@@ -32,7 +32,7 @@ export default function BusinessDashboard() {
       <Card className="mb-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-2.5">
-            <Tag size={16} className="text-sohati" />
+            <Tag size={16} className="text-primary" />
             <span className="text-sm font-semibold text-charcoal">Active on Explore</span>
           </div>
           <Toggle
@@ -51,14 +51,14 @@ export default function BusinessDashboard() {
                 autoFocus
                 value={perkDraft}
                 onChange={(e) => setPerkDraft(e.target.value)}
-                className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
               <button
                 onClick={() => {
                   updateBusinessListing({ perk: perkDraft });
                   setEditingPerk(false);
                 }}
-                className="tap px-3 rounded-xl bg-sohati text-white text-sm font-semibold"
+                className="tap px-3 rounded-xl bg-primary text-white text-sm font-semibold"
               >
                 Save
               </button>
@@ -69,7 +69,7 @@ export default function BusinessDashboard() {
                 setPerkDraft(businessListing.perk);
                 setEditingPerk(true);
               }}
-              className="tap w-full text-left rounded-2xl bg-cream-soft px-4 py-3 text-sm font-semibold text-sohati-dark"
+              className="tap w-full text-left rounded-2xl bg-cream-soft px-4 py-3 text-sm font-semibold text-primary-dark"
             >
               {businessListing.perk}
             </button>
@@ -78,8 +78,8 @@ export default function BusinessDashboard() {
       </Card>
 
       <Card className="mb-6 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
-          <Users size={18} className="text-sohati" />
+        <div className="w-10 h-10 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
+          <Users size={18} className="text-primary" />
         </div>
         <div>
           <p className="text-lg font-bold text-charcoal">{businessListing.membersReached}</p>

@@ -145,7 +145,7 @@ export default function GoalsPanel() {
               disabled={locked}
               className={`tap rounded-xl py-2.5 text-xs font-semibold border transition-colors disabled:opacity-50 ${
                 nutritionGoal.weightGoal === g.value
-                  ? "bg-sohati text-white border-sohati"
+                  ? "bg-primary text-white border-primary"
                   : "bg-cream-soft border-transparent text-charcoal-soft"
               }`}
             >
@@ -164,7 +164,7 @@ export default function GoalsPanel() {
                   onChange={(e) => setDesiredWeightDraft(e.target.value.replace(/[^\d.]/g, ""))}
                   disabled={nutritionGoal.desiredWeightConfirmed || locked}
                   inputMode="decimal"
-                  className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm font-semibold text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20 disabled:opacity-60"
+                  className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm font-semibold text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
                 />
                 <span className="text-xs text-charcoal-faint">kg</span>
                 <button
@@ -174,7 +174,7 @@ export default function GoalsPanel() {
                   className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors disabled:opacity-50 ${
                     nutritionGoal.desiredWeightConfirmed
                       ? "bg-charcoal/10 border-transparent text-charcoal-faint"
-                      : "bg-sohati border-sohati text-white"
+                      : "bg-primary border-primary text-white"
                   }`}
                 >
                   <Check size={16} strokeWidth={3} />
@@ -247,7 +247,7 @@ export default function GoalsPanel() {
           />
         </div>
         {reachDate && (
-          <p className="text-xs text-sohati-dark bg-sohati-pale rounded-full px-3 py-1.5 mt-3 inline-block">
+          <p className="text-xs text-primary-dark bg-primary-pale rounded-full px-3 py-1.5 mt-3 inline-block">
             At this rate, reach {desiredWeightKg}kg by {reachDate}
           </p>
         )}
@@ -258,7 +258,7 @@ export default function GoalsPanel() {
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
             TDEE estimate
           </p>
-          <Sparkles size={14} className="text-sohati" />
+          <Sparkles size={14} className="text-primary" />
         </div>
         <p className="text-2xl font-bold text-charcoal mb-1">{tdee.toLocaleString()} kcal</p>
         <p className="text-xs text-charcoal-faint mb-2">
@@ -266,7 +266,7 @@ export default function GoalsPanel() {
           estimate, adjust as needed.
         </p>
         {tdeeAtGoal !== null && (
-          <p className="text-xs text-sohati-dark bg-sohati-pale rounded-full px-3 py-1.5 mb-3 inline-block">
+          <p className="text-xs text-primary-dark bg-primary-pale rounded-full px-3 py-1.5 mb-3 inline-block">
             ≈ {tdeeAtGoal.toLocaleString()} kcal once you reach {nutritionGoal.desiredWeightKg}kg
           </p>
         )}
@@ -290,7 +290,7 @@ export default function GoalsPanel() {
             }}
             inputMode="numeric"
             disabled={locked || calorieConfirmed}
-            className="w-32 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-lg font-bold text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20 disabled:opacity-60"
+            className="w-32 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-lg font-bold text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
           />
           <span className="text-sm text-charcoal-faint">kcal / day</span>
           <button
@@ -311,7 +311,7 @@ export default function GoalsPanel() {
             className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors disabled:opacity-50 ${
               calorieConfirmed
                 ? "bg-charcoal/10 border-transparent text-charcoal-faint"
-                : "bg-sohati border-sohati text-white"
+                : "bg-primary border-primary text-white"
             }`}
           >
             <Check size={16} strokeWidth={3} />
@@ -330,17 +330,17 @@ export default function GoalsPanel() {
           disabled={locked}
         />
         <div className="grid grid-cols-3 gap-2 mt-4">
-          <div className="text-center bg-sohati-pale rounded-xl py-2">
-            <p className="text-sm font-bold text-sohati-dark">{targets.protein}g</p>
-            <p className="text-[10px] text-sohati-dark/70">Protein</p>
+          <div className="text-center bg-primary-pale rounded-xl py-2">
+            <p className="text-sm font-bold text-primary-dark">{targets.protein}g</p>
+            <p className="text-[10px] text-primary-dark/70">Protein</p>
           </div>
           <div className="text-center bg-gold-pale rounded-xl py-2">
             <p className="text-sm font-bold text-charcoal">{targets.carbs}g</p>
             <p className="text-[10px] text-charcoal-soft">Carbs</p>
           </div>
-          <div className="text-center bg-ember-pale rounded-xl py-2">
-            <p className="text-sm font-bold text-ember-dark">{targets.fat}g</p>
-            <p className="text-[10px] text-ember-dark/70">Fat</p>
+          <div className="text-center bg-teal-pale rounded-xl py-2">
+            <p className="text-sm font-bold text-teal-dark">{targets.fat}g</p>
+            <p className="text-[10px] text-teal-dark/70">Fat</p>
           </div>
         </div>
       </Card>

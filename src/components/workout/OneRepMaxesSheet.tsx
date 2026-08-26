@@ -24,7 +24,7 @@ export const OneRepMaxesSheet: React.FC<{ open: boolean; onClose: () => void }> 
         {entries.map(([name, kg]) => (
           <div key={name} className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3">
             <div className="flex items-center gap-2.5">
-              <Dumbbell size={15} className="text-sohati-dark" />
+              <Dumbbell size={15} className="text-primary-dark" />
               <span className="text-sm font-semibold text-charcoal">{name}</span>
             </div>
             {editingName === name ? (
@@ -33,14 +33,14 @@ export const OneRepMaxesSheet: React.FC<{ open: boolean; onClose: () => void }> 
                   autoFocus
                   value={draft}
                   onChange={(e) => setDraft(e.target.value.replace(/[^\d.]/g, ""))}
-                  className="w-16 rounded-lg border border-sohati/40 bg-cream-card px-1.5 py-0.5 text-xs text-charcoal focus:outline-none"
+                  className="w-16 rounded-lg border border-primary/40 bg-cream-card px-1.5 py-0.5 text-xs text-charcoal focus:outline-none"
                 />
                 <button
                   onClick={() => {
                     setPersonalRecord(name, Number(draft) || kg);
                     setEditingName(null);
                   }}
-                  className="tap w-6 h-6 rounded-full bg-sohati text-white flex items-center justify-center"
+                  className="tap w-6 h-6 rounded-full bg-primary text-white flex items-center justify-center"
                 >
                   <Check size={11} strokeWidth={3} />
                 </button>

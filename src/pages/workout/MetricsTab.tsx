@@ -24,7 +24,7 @@ export default function MetricsTab() {
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
             Volume progression
           </p>
-          <TrendingUp size={14} className="text-sohati" />
+          <TrendingUp size={14} className="text-primary" />
         </div>
         <div className="flex items-center justify-between">
           <div>
@@ -39,8 +39,8 @@ export default function MetricsTab() {
 
       <Card className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-2xl bg-ember-pale flex items-center justify-center shrink-0">
-            <Dumbbell size={16} className="text-ember-dark" />
+          <div className="w-9 h-9 rounded-2xl bg-teal-pale flex items-center justify-center shrink-0">
+            <Dumbbell size={16} className="text-teal-dark" />
           </div>
           <div>
             <p className="text-sm font-bold text-charcoal">{prCount} tracked</p>

@@ -138,7 +138,7 @@ export const MetricDetailSheet: React.FC<{
                   if (n > 0) onEditStepsGoal?.(n);
                   setEditingStepsGoal(false);
                 }}
-                className="tap w-9 h-9 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
+                className="tap w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shrink-0"
                 aria-label="Save step goal"
               >
                 <Check size={16} strokeWidth={3} />
@@ -159,7 +159,7 @@ export const MetricDetailSheet: React.FC<{
                     setSelectedSleepIdx(null);
                   }}
                   className={`tap w-8 h-7 text-[11px] font-bold rounded-full leading-none ${
-                    period === p.value ? "bg-sohati text-white" : "text-charcoal-faint"
+                    period === p.value ? "bg-primary text-white" : "text-charcoal-faint"
                   }`}
                 >
                   {p.label}
@@ -187,8 +187,8 @@ export const MetricDetailSheet: React.FC<{
         )}
 
         {pickedDate && (
-          <div className="bg-sohati-pale rounded-2xl px-4 py-3 mb-4 text-center">
-            <p className="text-xs font-semibold text-sohati-dark/70 mb-1">
+          <div className="bg-primary-pale rounded-2xl px-4 py-3 mb-4 text-center">
+            <p className="text-xs font-semibold text-primary-dark/70 mb-1">
               {new Date(`${pickedDate}T00:00:00`).toLocaleDateString("en-US", {
                 weekday: "long",
                 month: "short",
@@ -196,7 +196,7 @@ export const MetricDetailSheet: React.FC<{
                 year: "numeric",
               })}
             </p>
-            <p className="text-2xl font-bold text-sohati-dark">
+            <p className="text-2xl font-bold text-primary-dark">
               {metric.type === "sleep"
                 ? `${Math.floor(valueForDate(pickedDate))}h ${Math.round((valueForDate(pickedDate) % 1) * 60)}m`
                 : `${valueForDate(pickedDate).toLocaleString()} ${metric.unit}`}
@@ -252,7 +252,7 @@ export const MetricDetailSheet: React.FC<{
                   <Sparkline values={values} color="#7D6BB5" width={240} height={70} />
                 </div>
                 <div className="flex justify-center gap-4 text-xs">
-                  <span className="text-ember-dark font-semibold">
+                  <span className="text-teal-dark font-semibold">
                     ↑ High {high.toFixed(1)}{unit}
                   </span>
                   <span className="text-sky font-semibold">
@@ -284,9 +284,9 @@ export const MetricDetailSheet: React.FC<{
 
         {isSleep && (
           <div className="animate-fade-slide-up">
-            <div className="flex items-center justify-between bg-sohati-pale rounded-2xl px-4 py-3 mb-4">
-              <span className="text-sm font-semibold text-sohati-dark">Sleep score</span>
-              <span className="text-2xl font-bold text-sohati-dark">{sleepDetail.score}</span>
+            <div className="flex items-center justify-between bg-primary-pale rounded-2xl px-4 py-3 mb-4">
+              <span className="text-sm font-semibold text-primary-dark">Sleep score</span>
+              <span className="text-2xl font-bold text-primary-dark">{sleepDetail.score}</span>
             </div>
 
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">

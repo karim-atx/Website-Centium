@@ -1,12 +1,12 @@
 // Mock "Google Maps"-style distance ranking — real geolocation when granted,
-// a sensible Beirut-center fallback otherwise. No mapping SDK involved.
+// a sensible default-center fallback otherwise. No mapping SDK involved.
 
 export interface Coords {
   lat: number;
   lng: number;
 }
 
-export const BEIRUT_CENTER: Coords = { lat: 33.8938, lng: 35.5018 };
+export const DEFAULT_CENTER: Coords = { lat: 33.8938, lng: 35.5018 };
 
 /** Haversine distance in kilometers. */
 export function distanceKm(a: Coords, b: Coords): number {
@@ -23,12 +23,12 @@ export function distanceKm(a: Coords, b: Coords): number {
 export function getCurrentPosition(): Promise<Coords> {
   return new Promise((resolve) => {
     if (!navigator.geolocation) {
-      resolve(BEIRUT_CENTER);
+      resolve(DEFAULT_CENTER);
       return;
     }
     navigator.geolocation.getCurrentPosition(
       (pos) => resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => resolve(BEIRUT_CENTER),
+      () => resolve(DEFAULT_CENTER),
       { timeout: 4000 }
     );
   });

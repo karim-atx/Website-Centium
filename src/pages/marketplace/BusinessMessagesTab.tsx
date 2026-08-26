@@ -54,11 +54,11 @@ export default function BusinessMessagesTab() {
           >
             <ChevronLeft size={18} />
           </button>
-          <span className="w-9 h-9 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
+          <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
             {isProfessionalThread ? (
-              <PERSON_ICON size={16} className="text-sohati-dark" />
+              <PERSON_ICON size={16} className="text-primary-dark" />
             ) : (
-              <Store size={16} className="text-sohati-dark" />
+              <Store size={16} className="text-primary-dark" />
             )}
           </span>
           <p className="font-semibold text-charcoal">{activeCustomer.name}</p>
@@ -75,7 +75,7 @@ export default function BusinessMessagesTab() {
                 <div
                   className={clsx(
                     "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm",
-                    m.from === "business" ? "bg-sohati text-white" : "bg-cream-card text-charcoal"
+                    m.from === "business" ? "bg-primary text-white" : "bg-cream-card text-charcoal"
                   )}
                 >
                   {m.text}
@@ -91,11 +91,11 @@ export default function BusinessMessagesTab() {
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
             placeholder="Message…"
-            className="flex-1 rounded-full bg-cream-card border border-charcoal/10 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sohati/15"
+            className="flex-1 rounded-full bg-cream-card border border-charcoal/10 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/15"
           />
           <button
             onClick={send}
-            className="tap w-10 h-10 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
+            className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shrink-0"
             aria-label="Send"
           >
             <Send size={15} />
@@ -116,7 +116,7 @@ export default function BusinessMessagesTab() {
             onClick={() => setAudience(a)}
             className={clsx(
               "tap px-4 py-1.5 rounded-full text-xs font-bold capitalize",
-              audience === a ? "bg-sohati text-white" : "text-charcoal-faint"
+              audience === a ? "bg-primary text-white" : "text-charcoal-faint"
             )}
           >
             {a}
@@ -135,8 +135,8 @@ export default function BusinessMessagesTab() {
                 onClick={() => setActiveCustomerId(c.id)}
                 className="flex items-center gap-3 animate-fade-slide-up"
               >
-                <span className="w-11 h-11 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
-                  <Store size={18} className="text-sohati-dark" />
+                <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+                  <Store size={18} className="text-primary-dark" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-charcoal">{c.name}</p>
@@ -165,8 +165,8 @@ export default function BusinessMessagesTab() {
                 onClick={() => isMe && setActiveCustomerId(PROFESSIONAL_THREAD_ID)}
                 className={clsx("flex items-center gap-3 animate-fade-slide-up", !isMe && "opacity-50")}
               >
-                <span className="w-11 h-11 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
-                  <PERSON_ICON size={18} className="text-sohati-dark" />
+                <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+                  <PERSON_ICON size={18} className="text-primary-dark" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-charcoal">{e.professionalName}</p>

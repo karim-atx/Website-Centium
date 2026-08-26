@@ -54,7 +54,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
               onClick={() => setUnit(u)}
               className={clsx(
                 "tap px-4 py-1.5 rounded-full text-xs font-bold uppercase",
-                unit === u ? "bg-sohati text-white" : "text-charcoal-faint"
+                unit === u ? "bg-primary text-white" : "text-charcoal-faint"
               )}
             >
               {u}
@@ -70,7 +70,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
             value={targetDraft}
             onChange={(e) => setTargetDraft(e.target.value.replace(/[^\d.]/g, ""))}
             inputMode="decimal"
-            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-lg font-bold text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-lg font-bold text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
 
@@ -84,7 +84,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
                 className={clsx(
                   "tap rounded-xl px-3.5 py-2 text-xs font-semibold border transition-colors",
                   barChoice === b.value
-                    ? "bg-sohati text-white border-sohati"
+                    ? "bg-primary text-white border-primary"
                     : "bg-cream-soft border-transparent text-charcoal-soft"
                 )}
               >
@@ -98,7 +98,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
               onChange={(e) => setCustomBarDraft(e.target.value.replace(/[^\d.]/g, ""))}
               inputMode="decimal"
               placeholder="Bar weight (kg)"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           )}
         </div>
@@ -109,7 +109,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
             onClick={() => setCollarsOn((v) => !v)}
             className={clsx(
               "tap w-11 h-6 rounded-full flex items-center px-0.5 transition-colors",
-              collarsOn ? "bg-sohati justify-end" : "bg-charcoal/10 justify-start"
+              collarsOn ? "bg-primary justify-end" : "bg-charcoal/10 justify-start"
             )}
           >
             <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
@@ -132,11 +132,11 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
           />
         </div>
 
-        <div className="text-center bg-sohati-pale rounded-2xl py-4">
-          <p className="text-3xl font-bold text-sohati-dark">
+        <div className="text-center bg-primary-pale rounded-2xl py-4">
+          <p className="text-3xl font-bold text-primary-dark">
             {displayKg(workingKg).toLocaleString()} {unit}
           </p>
-          <p className="text-xs text-sohati-dark/70 mt-1">
+          <p className="text-xs text-primary-dark/70 mt-1">
             {pct}% of {displayKg(targetKg).toLocaleString()} {unit}
           </p>
         </div>
@@ -162,7 +162,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
             </div>
           )}
           {remainderKg > 0.01 && (
-            <p className="text-xs text-ember-dark mt-2">
+            <p className="text-xs text-teal-dark mt-2">
               {remainderKg.toFixed(2)}kg per side can't be made exactly with standard IPF plates.
             </p>
           )}

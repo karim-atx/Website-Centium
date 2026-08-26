@@ -48,7 +48,7 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({ onWaterCl
         </p>
         <button
           onClick={() => setEditMode((v) => !v)}
-          className="tap flex items-center gap-1.5 text-xs font-semibold text-sohati"
+          className="tap flex items-center gap-1.5 text-xs font-semibold text-primary"
         >
           {editMode ? (
             <>
@@ -101,7 +101,7 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({ onWaterCl
               }}
               className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
             >
-              <t.icon size={18} className="text-sohati" />
+              <t.icon size={18} className="text-primary" />
               <span className="text-sm font-semibold text-charcoal">{t.label}</span>
             </button>
           ))}

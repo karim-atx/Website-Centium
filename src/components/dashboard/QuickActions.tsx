@@ -15,7 +15,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
   onVoiceLog,
 }) => {
   const actions = [
-    { label: "Log Food", icon: Plus, onClick: onLogFood, bg: "bg-sohati", text: "text-white" },
+    { label: "Log Food", icon: Plus, onClick: onLogFood, bg: "bg-primary", text: "text-white" },
     { label: "Log Workout", icon: Dumbbell, onClick: onLogWorkout, bg: "bg-charcoal", text: "text-white" },
     { label: "Add Metric", icon: Activity, onClick: onAddMetric, bg: "bg-cream-card border border-charcoal/10", text: "text-charcoal" },
   ];
@@ -36,7 +36,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       </div>
       <button
         onClick={onVoiceLog}
-        className="tap w-full flex items-center gap-3 rounded-2xl py-3.5 px-4 bg-gradient-to-r from-ember to-ember-dark text-white shadow-soft"
+        className="tap w-full flex items-center gap-3 rounded-2xl py-3.5 px-4 bg-gradient-to-r from-teal to-teal-dark text-white shadow-soft"
       >
         <span className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center shrink-0">
           <Mic size={15} />

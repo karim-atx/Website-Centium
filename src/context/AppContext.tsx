@@ -446,7 +446,7 @@ interface AppState {
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
-const STORAGE_KEY = "sohati-v4-state";
+const STORAGE_KEY = "centium-state";
 
 function loadPersisted<T>(key: string, fallback: T): T {
   try {
@@ -605,7 +605,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [selectedDate, setSelectedDate] = usePersistentState<string>("selectedDate", TODAY);
 
-  const [colorTheme, setColorThemeState] = usePersistentState<ColorTheme>("colorTheme", "sohati");
+  const [colorTheme, setColorThemeState] = usePersistentState<ColorTheme>("colorTheme", "centium");
   useEffect(() => {
     document.documentElement.setAttribute("data-accent", colorTheme);
   }, [colorTheme]);

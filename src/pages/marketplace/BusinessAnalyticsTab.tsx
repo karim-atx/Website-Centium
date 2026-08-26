@@ -38,7 +38,7 @@ export default function BusinessAnalyticsTab() {
       <div className="grid grid-cols-2 gap-2.5">
         {stats.map((s) => (
           <Card key={s.label} className="animate-fade-slide-up">
-            <s.icon size={16} className="text-sohati mb-2" />
+            <s.icon size={16} className="text-primary mb-2" />
             <p className="text-xl font-bold text-charcoal">{s.value}</p>
             <p className="text-[11px] text-charcoal-faint leading-tight mt-0.5">{s.label}</p>
           </Card>

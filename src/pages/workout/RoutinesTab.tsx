@@ -131,7 +131,7 @@ export default function RoutinesTab() {
                   if (renameDraft.trim()) renameRoutineFolder(folder.id, renameDraft.trim());
                   setRenamingId(null);
                 }}
-                className="text-xs font-semibold text-sohati"
+                className="text-xs font-semibold text-primary"
               >
                 Save
               </button>
@@ -196,7 +196,7 @@ export default function RoutinesTab() {
                         deleteRoutineFolder(folder.id);
                         closeMenu();
                       }}
-                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-ember-dark hover:bg-ember-pale"
+                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-teal-dark hover:bg-teal-pale"
                     >
                       <Trash2 size={13} /> Delete
                     </button>
@@ -249,14 +249,14 @@ export default function RoutinesTab() {
                       }
                     }}
                     placeholder="Subfolder name…"
-                    className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sohati/20"
+                    className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
                   />
                   <button
                     onClick={() => {
                       if (subfolderName.trim()) addRoutineFolder(subfolderName.trim(), folder.id, subfolderColor);
                       setAddingSubfolderTo(null);
                     }}
-                    className="tap px-3 rounded-xl bg-sohati text-white text-sm font-semibold"
+                    className="tap px-3 rounded-xl bg-primary text-white text-sm font-semibold"
                   >
                     Add
                   </button>
@@ -294,7 +294,7 @@ export default function RoutinesTab() {
         <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Folders</p>
         <button
           onClick={() => setNewFolderOpen(true)}
-          className="tap flex items-center gap-1.5 text-xs font-semibold text-sohati"
+          className="tap flex items-center gap-1.5 text-xs font-semibold text-primary"
         >
           <FolderPlus size={13} /> New folder
         </button>
@@ -315,7 +315,7 @@ export default function RoutinesTab() {
                 }
               }}
               placeholder="Folder name…"
-              className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
             <button
               onClick={() => {
@@ -323,7 +323,7 @@ export default function RoutinesTab() {
                 setNewFolderName("");
                 setNewFolderOpen(false);
               }}
-              className="tap px-3 rounded-xl bg-sohati text-white text-sm font-semibold"
+              className="tap px-3 rounded-xl bg-primary text-white text-sm font-semibold"
             >
               Add
             </button>
@@ -446,7 +446,7 @@ export default function RoutinesTab() {
               <Button variant="outline" fullWidth onClick={() => setPendingRoutine(null)}>
                 Keep going
               </Button>
-              <Button fullWidth variant="ember" onClick={confirmSwitchRoutine}>
+              <Button fullWidth variant="teal" onClick={confirmSwitchRoutine}>
                 Start anyway
               </Button>
             </div>
@@ -518,7 +518,7 @@ const RoutineRow: React.FC<{
           aria-label={isOngoing ? `Resume ${routine.name}` : `Start ${routine.name}`}
           className={clsx(
             "tap w-9 h-9 rounded-full text-white flex items-center justify-center shrink-0",
-            isOngoing ? "bg-[#E9736A]" : "bg-sohati"
+            isOngoing ? "bg-[#E9736A]" : "bg-primary"
           )}
         >
           {isOngoing ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" />}
@@ -538,7 +538,7 @@ const RoutineRow: React.FC<{
                     <button
                       onClick={() => setReplaceTarget(ex.id)}
                       aria-label={`Replace ${ex.name}`}
-                      className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-sohati text-white text-[10px] font-semibold"
+                      className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-primary text-white text-[10px] font-semibold"
                     >
                       <Repeat size={14} />
                       Replace
@@ -578,7 +578,7 @@ const RoutineRow: React.FC<{
           })}
           <button
             onClick={() => setAddExerciseOpen(true)}
-            className="tap w-full flex items-center justify-center gap-1.5 px-4 py-3 text-xs font-semibold text-sohati bg-cream-card hover:bg-sohati-pale/40"
+            className="tap w-full flex items-center justify-center gap-1.5 px-4 py-3 text-xs font-semibold text-primary bg-cream-card hover:bg-primary-pale/40"
           >
             <Plus size={13} /> Add exercise
           </button>

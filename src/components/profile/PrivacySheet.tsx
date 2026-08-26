@@ -16,9 +16,9 @@ export const PrivacySheet: React.FC<{ open: boolean; onClose: () => void }> = ({
   return (
     <BottomSheet open={open} onClose={onClose} title="Privacy">
       <div className="space-y-5 animate-fade-slide-up">
-        <div className="flex items-start gap-3 bg-sohati-pale rounded-2xl p-4">
-          <ShieldCheck size={18} className="text-sohati-dark shrink-0 mt-0.5" />
-          <p className="text-xs text-sohati-dark leading-relaxed">
+        <div className="flex items-start gap-3 bg-primary-pale rounded-2xl p-4">
+          <ShieldCheck size={18} className="text-primary-dark shrink-0 mt-0.5" />
+          <p className="text-xs text-primary-dark leading-relaxed">
             Your health data stays on this device by default. It's only shared with a professional or
             business when you explicitly connect with them — you control that per connection in
             Professionals and Explore.
@@ -51,7 +51,7 @@ export const PrivacySheet: React.FC<{ open: boolean; onClose: () => void }> = ({
 
         <div className="border-t border-charcoal/[0.06] pt-4 space-y-2">
           <button className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left">
-            <Download size={17} className="text-sohati" />
+            <Download size={17} className="text-primary" />
             <span className="text-sm font-semibold text-charcoal">Download my data</span>
           </button>
           <button className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left">

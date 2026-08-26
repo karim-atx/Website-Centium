@@ -44,7 +44,7 @@ export const StatCard: React.FC<StatCardProps> = ({
           <span
             className={clsx(
               "inline-flex items-center gap-0.5 text-xs font-semibold rounded-full px-2 py-1",
-              isGood ? "text-sohati-dark bg-sohati-pale" : "text-ember-dark bg-ember-pale"
+              isGood ? "text-primary-dark bg-primary-pale" : "text-teal-dark bg-teal-pale"
             )}
           >
             {trend.positive ? <ArrowUp size={11} /> : <ArrowDown size={11} />}

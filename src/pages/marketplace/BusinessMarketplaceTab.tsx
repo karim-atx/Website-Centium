@@ -40,7 +40,7 @@ export default function BusinessMarketplaceTab() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Signature protein blend"
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
 
@@ -52,7 +52,7 @@ export default function BusinessMarketplaceTab() {
                 key={c.id}
                 onClick={() => setCategory(c.id)}
                 className={`tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors ${
-                  category === c.id ? "bg-sohati text-white border-sohati" : "bg-cream-soft border-transparent text-charcoal-soft"
+                  category === c.id ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
                 }`}
               >
                 {c.label}
@@ -67,7 +67,7 @@ export default function BusinessMarketplaceTab() {
             value={price}
             onChange={(e) => setPrice(e.target.value)}
             placeholder="$25"
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
 
@@ -78,7 +78,7 @@ export default function BusinessMarketplaceTab() {
             onChange={(e) => setDescription(e.target.value)}
             rows={3}
             placeholder="What makes this worth a look?"
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20 resize-none"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
           />
         </label>
 
@@ -93,13 +93,13 @@ export default function BusinessMarketplaceTab() {
           const Icon = marketplaceCategoryIcon[o.category];
           return (
             <Card key={o.id} className="flex items-start gap-3 animate-fade-slide-up">
-              <span className="w-11 h-11 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
-                <Icon size={18} className="text-sohati-dark" />
+              <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
+                <Icon size={18} className="text-primary-dark" />
               </span>
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-charcoal truncate">{o.title}</p>
                 <p className="text-xs text-charcoal-faint mt-0.5">{o.description}</p>
-                {o.price && <p className="text-xs font-semibold text-sohati-dark mt-1">{o.price}</p>}
+                {o.price && <p className="text-xs font-semibold text-primary-dark mt-1">{o.price}</p>}
               </div>
               <button
                 onClick={() => removeBusinessOffering(o.id)}

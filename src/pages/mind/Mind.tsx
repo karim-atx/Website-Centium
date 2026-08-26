@@ -44,7 +44,7 @@ export default function Mind() {
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Streaks</p>
             <button
               onClick={() => setAddStreakOpen(true)}
-              className="tap flex items-center gap-1 text-xs font-semibold text-sohati"
+              className="tap flex items-center gap-1 text-xs font-semibold text-primary"
             >
               <Plus size={12} /> Add streak
             </button>
@@ -91,7 +91,7 @@ export default function Mind() {
               matching Meditation — QA6 had merged them into the tabs above. */}
           <div className="grid grid-cols-3 gap-3">
             <Card interactive onClick={() => setTab("habits")}>
-              <CheckSquare size={22} className="text-sohati mb-3" />
+              <CheckSquare size={22} className="text-primary mb-3" />
               <p className="text-sm font-semibold text-charcoal mb-1">Habits</p>
               <p className="text-xs text-charcoal-faint">Track daily habits</p>
             </Card>

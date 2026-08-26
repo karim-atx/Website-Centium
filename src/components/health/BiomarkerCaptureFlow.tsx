@@ -89,10 +89,10 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
               </button>
               <button
                 onClick={() => pdfInputRef.current?.click()}
-                className="tap w-24 h-24 rounded-full bg-sohati-pale flex items-center justify-center shadow-soft"
+                className="tap w-24 h-24 rounded-full bg-primary-pale flex items-center justify-center shadow-soft"
                 aria-label="Attach a PDF"
               >
-                <FileText size={26} className="text-sohati-dark" />
+                <FileText size={26} className="text-primary-dark" />
               </button>
             </div>
             <p className="font-display text-xl font-semibold text-charcoal mb-2">
@@ -116,8 +116,8 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
                 </div>
               )
             )}
-            <div className="w-14 h-14 rounded-full bg-sohati-pale flex items-center justify-center mb-4 animate-pop">
-              <Sparkles size={24} className="text-sohati animate-pulse" />
+            <div className="w-14 h-14 rounded-full bg-primary-pale flex items-center justify-center mb-4 animate-pop">
+              <Sparkles size={24} className="text-primary animate-pulse" />
             </div>
             <p className="font-display text-lg font-semibold text-charcoal mb-1">
               Reading your results…
@@ -137,7 +137,7 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
                   key={r.name}
                   onClick={() => toggleResult(r.name)}
                   className={`tap w-full flex items-center justify-between rounded-2xl px-4 py-3 border transition-colors ${
-                    r.selected ? "bg-sohati-pale border-sohati" : "bg-cream-soft border-transparent"
+                    r.selected ? "bg-primary-pale border-primary" : "bg-cream-soft border-transparent"
                   }`}
                 >
                   <div className="text-left">
@@ -148,7 +148,7 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
                   </div>
                   <div
                     className={`w-5 h-5 rounded-full flex items-center justify-center border-2 shrink-0 ${
-                      r.selected ? "bg-sohati border-sohati" : "border-charcoal/20"
+                      r.selected ? "bg-primary border-primary" : "border-charcoal/20"
                     }`}
                   >
                     {r.selected && <Check size={11} className="text-white" strokeWidth={3} />}
@@ -164,7 +164,7 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
 
         {stage === "done" && (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-10">
-            <div className="w-14 h-14 rounded-full bg-sohati flex items-center justify-center mb-4 animate-pop">
+            <div className="w-14 h-14 rounded-full bg-primary flex items-center justify-center mb-4 animate-pop">
               <Check size={24} className="text-white" strokeWidth={3} />
             </div>
             <p className="font-display text-lg font-semibold text-charcoal">Added to your health history</p>

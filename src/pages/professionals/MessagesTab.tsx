@@ -61,8 +61,8 @@ export default function MessagesTab() {
           >
             <ChevronLeft size={18} />
           </button>
-          <span className="w-9 h-9 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
-            <PERSON_ICON size={16} className="text-sohati-dark" />
+          <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+            <PERSON_ICON size={16} className="text-primary-dark" />
           </span>
           <p className="font-semibold text-charcoal">{activeClient.name}</p>
         </div>
@@ -78,7 +78,7 @@ export default function MessagesTab() {
                 <div
                   className={clsx(
                     "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm",
-                    m.from === "professional" ? "bg-sohati text-white" : "bg-cream-card text-charcoal"
+                    m.from === "professional" ? "bg-primary text-white" : "bg-cream-card text-charcoal"
                   )}
                 >
                   {m.text}
@@ -94,11 +94,11 @@ export default function MessagesTab() {
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && send()}
             placeholder="Message…"
-            className="flex-1 rounded-full bg-cream-card border border-charcoal/10 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sohati/15"
+            className="flex-1 rounded-full bg-cream-card border border-charcoal/10 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/15"
           />
           <button
             onClick={send}
-            className="tap w-10 h-10 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
+            className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shrink-0"
             aria-label="Send"
           >
             <Send size={15} />
@@ -120,7 +120,7 @@ export default function MessagesTab() {
               onClick={() => setAudience(a)}
               className={clsx(
                 "tap px-4 py-1.5 rounded-full text-xs font-bold capitalize",
-                audience === a ? "bg-sohati text-white" : "text-charcoal-faint"
+                audience === a ? "bg-primary text-white" : "text-charcoal-faint"
               )}
             >
               {a === "clients" ? "Clients" : affiliatedBusiness.businessName}
@@ -132,8 +132,8 @@ export default function MessagesTab() {
       {audience === "business" && affiliatedBusiness ? (
         <div className="flex flex-col" style={{ minHeight: "calc(100dvh - 260px)" }}>
           <div className="flex items-center gap-3 mb-4">
-            <span className="w-9 h-9 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
-              <Store size={16} className="text-sohati-dark" />
+            <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+              <Store size={16} className="text-primary-dark" />
             </span>
             <p className="font-semibold text-charcoal">{affiliatedBusiness.businessName}</p>
           </div>
@@ -148,7 +148,7 @@ export default function MessagesTab() {
                   <div
                     className={clsx(
                       "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm",
-                      m.from === "customer" ? "bg-sohati text-white" : "bg-cream-card text-charcoal"
+                      m.from === "customer" ? "bg-primary text-white" : "bg-cream-card text-charcoal"
                     )}
                   >
                     {m.text}
@@ -164,11 +164,11 @@ export default function MessagesTab() {
               onChange={(e) => setBusinessDraft(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && sendToBusiness()}
               placeholder="Message…"
-              className="flex-1 rounded-full bg-cream-card border border-charcoal/10 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-sohati/15"
+              className="flex-1 rounded-full bg-cream-card border border-charcoal/10 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/15"
             />
             <button
               onClick={sendToBusiness}
-              className="tap w-10 h-10 rounded-full bg-sohati text-white flex items-center justify-center shrink-0"
+              className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shrink-0"
               aria-label="Send"
             >
               <Send size={15} />
@@ -186,8 +186,8 @@ export default function MessagesTab() {
                 onClick={() => setActiveClientId(c.id)}
                 className="flex items-center gap-3 animate-fade-slide-up"
               >
-                <span className="w-11 h-11 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
-                  <PERSON_ICON size={18} className="text-sohati-dark" />
+                <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+                  <PERSON_ICON size={18} className="text-primary-dark" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-charcoal">{c.name}</p>

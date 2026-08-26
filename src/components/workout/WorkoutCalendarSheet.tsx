@@ -75,11 +75,11 @@ export const WorkoutCalendarSheet: React.FC<{ open: boolean; onClose: () => void
                     onClick={() => worked && setSelectedDate(iso)}
                     disabled={!worked}
                     className={`tap aspect-square rounded-xl text-sm font-medium flex flex-col items-center justify-center gap-0.5 ${
-                      worked ? "bg-sohati-pale text-sohati-dark font-bold" : "text-charcoal-faint disabled:opacity-50"
+                      worked ? "bg-primary-pale text-primary-dark font-bold" : "text-charcoal-faint disabled:opacity-50"
                     }`}
                   >
                     {day}
-                    {worked && <span className="w-1 h-1 rounded-full bg-sohati" />}
+                    {worked && <span className="w-1 h-1 rounded-full bg-primary" />}
                   </button>
                 );
               })}
@@ -89,7 +89,7 @@ export const WorkoutCalendarSheet: React.FC<{ open: boolean; onClose: () => void
           <div className="animate-fade-slide-up">
             <button
               onClick={() => setSelectedDate(null)}
-              className="tap flex items-center gap-1 text-xs font-semibold text-sohati mb-3"
+              className="tap flex items-center gap-1 text-xs font-semibold text-primary mb-3"
             >
               <ChevronLeft size={13} /> Back to calendar
             </button>
@@ -106,7 +106,7 @@ export const WorkoutCalendarSheet: React.FC<{ open: boolean; onClose: () => void
                   <p className="text-sm font-semibold text-charcoal">{s.routineName}</p>
                   <span className="text-xs text-charcoal-faint">{formatDuration(s.durationSec)}</span>
                 </div>
-                <p className="text-xs text-sohati-dark font-semibold mb-3">
+                <p className="text-xs text-primary-dark font-semibold mb-3">
                   {s.totalVolumeKg.toLocaleString()} kg total volume
                 </p>
                 <div className="space-y-2.5">
@@ -119,7 +119,7 @@ export const WorkoutCalendarSheet: React.FC<{ open: boolean; onClose: () => void
                         </p>
                       </div>
                       {personalRecords[ex.name] && (
-                        <span className="flex items-center gap-1 text-[11px] font-semibold text-ember-dark bg-ember-pale rounded-full px-2 py-0.5">
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-teal-dark bg-teal-pale rounded-full px-2 py-0.5">
                           <Dumbbell size={10} /> 1RM {personalRecords[ex.name]}kg
                         </span>
                       )}

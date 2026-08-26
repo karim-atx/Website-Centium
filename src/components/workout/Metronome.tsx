@@ -49,7 +49,7 @@ export const Metronome: React.FC = () => {
         onClick={() => setOpen((v) => !v)}
         className={clsx(
           "tap w-9 h-9 rounded-full flex items-center justify-center shadow-soft",
-          running ? "bg-ember text-white" : "bg-cream-card text-charcoal-soft"
+          running ? "bg-teal text-white" : "bg-cream-card text-charcoal-soft"
         )}
         aria-label="Metronome"
       >
@@ -79,7 +79,7 @@ export const Metronome: React.FC = () => {
             onClick={() => setRunning((r) => !r)}
             className={clsx(
               "tap w-full rounded-xl py-2 text-sm font-semibold",
-              running ? "bg-ember text-white" : "bg-sohati text-white"
+              running ? "bg-teal text-white" : "bg-primary text-white"
             )}
           >
             {running ? "Stop" : "Start"}

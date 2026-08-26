@@ -98,7 +98,7 @@ export default function MarketplaceCategoryPage() {
             >
               <ShoppingBag size={17} />
               {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 min-w-[18px] rounded-full bg-ember text-white text-[10px] font-bold flex items-center justify-center px-1">
+                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 min-w-[18px] rounded-full bg-teal text-white text-[10px] font-bold flex items-center justify-center px-1">
                   {cartCount}
                 </span>
               )}
@@ -120,8 +120,8 @@ export default function MarketplaceCategoryPage() {
           rankedGyms.map((g) => (
             <Card key={g.id} interactive onClick={() => setActiveGym(g)} className="animate-fade-slide-up">
               <div className="flex items-start gap-3">
-                <span className="w-11 h-11 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
-                  <Icon size={18} className="text-sohati-dark" />
+                <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
+                  <Icon size={18} className="text-primary-dark" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-charcoal truncate">{g.name}</p>
@@ -137,7 +137,7 @@ export default function MarketplaceCategoryPage() {
                     )}
                   </p>
                 </div>
-                <span className="text-xs font-bold text-sohati-dark bg-sohati-pale rounded-full px-2.5 py-1.5 text-center shrink-0 max-w-[38%] leading-snug">
+                <span className="text-xs font-bold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1.5 text-center shrink-0 max-w-[38%] leading-snug">
                   {g.perk}
                 </span>
               </div>
@@ -153,12 +153,12 @@ export default function MarketplaceCategoryPage() {
                   <Star size={11} className="fill-gold" /> {c.rating}
                 </span>
               </div>
-              <p className="text-xs text-sohati-dark font-medium">{c.gymName}</p>
+              <p className="text-xs text-primary-dark font-medium">{c.gymName}</p>
               <div className="flex items-center justify-between mt-2">
                 <span className="flex items-center gap-1 text-xs text-charcoal-faint">
                   <MapPin size={11} /> {c.location}
                 </span>
-                <span className="text-xs font-bold text-sohati-dark bg-sohati-pale rounded-full px-2.5 py-1">
+                <span className="text-xs font-bold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1">
                   {c.offer}
                 </span>
               </div>
@@ -169,8 +169,8 @@ export default function MarketplaceCategoryPage() {
           rankedListings.map((item) => (
             <Card key={item.id} interactive onClick={() => setActiveStore(item)} className="animate-fade-slide-up">
               <div className="flex items-start gap-3">
-                <span className="w-11 h-11 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
-                  <Icon size={18} className="text-sohati-dark" />
+                <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
+                  <Icon size={18} className="text-primary-dark" />
                 </span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-semibold text-charcoal truncate">{item.name}</p>
@@ -180,7 +180,7 @@ export default function MarketplaceCategoryPage() {
                   <p className="text-xs text-charcoal-faint truncate mt-0.5">{item.location}</p>
                 </div>
                 {item.offer && (
-                  <span className="text-xs font-bold text-sohati-dark bg-sohati-pale rounded-full px-2.5 py-1.5 text-center shrink-0 max-w-[38%] leading-snug">
+                  <span className="text-xs font-bold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1.5 text-center shrink-0 max-w-[38%] leading-snug">
                     {item.offer}
                   </span>
                 )}
@@ -196,7 +196,7 @@ export default function MarketplaceCategoryPage() {
             {(businessListing.bio || businessListing.location) && (
               <Card className="bg-cream-soft animate-fade-slide-up">
                 <div className="flex items-center gap-2 mb-1">
-                  <Building2 size={14} className="text-sohati-dark" />
+                  <Building2 size={14} className="text-primary-dark" />
                   {businessListing.location && (
                     <span className="flex items-center gap-1 text-xs text-charcoal-faint">
                       <MapPin size={10} /> {businessListing.location}
@@ -209,15 +209,15 @@ export default function MarketplaceCategoryPage() {
             {businessListingsForCategory.map((o) => (
               <Card key={o.id} className="animate-fade-slide-up">
                 <div className="flex items-start gap-3">
-                  <span className="w-11 h-11 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
-                    <Icon size={18} className="text-sohati-dark" />
+                  <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
+                    <Icon size={18} className="text-primary-dark" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-charcoal truncate">{o.title}</p>
                     <p className="text-xs text-charcoal-faint mt-0.5">{o.description}</p>
                   </div>
                   {o.price && (
-                    <span className="text-xs font-bold text-sohati-dark bg-sohati-pale rounded-full px-2.5 py-1.5 shrink-0">
+                    <span className="text-xs font-bold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1.5 shrink-0">
                       {o.price}
                     </span>
                   )}

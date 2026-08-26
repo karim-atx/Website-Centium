@@ -35,7 +35,7 @@ export const CaloriesRing: React.FC<{ progress: number; size?: number }> = ({ pr
         />
       </svg>
       {/* V7 (QA 7.0): "the flame logo should have a similar color to the
-          wheel" — was text-ember, which the QA5 rebrand remapped to sage,
+          wheel" — was text-teal, which the QA5 rebrand remapped to sage,
           no longer resembling the flame gradient around it. */}
       <Flame
         size={size * 0.32}

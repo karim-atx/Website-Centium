@@ -4,12 +4,15 @@
 @tailwind components;
 @tailwind utilities;
 
-/* V5 (QA 5.0): rebrand palette — white base, purple #aea1dc primary
-   (was sohati green), sage #a2c8c2 secondary (was ember orange). Light/dark
-   tints below are derived from those two exact given hues so buttons, pale
-   badges and dark-mode text all stay legible — gold/sky/berry stay as their
-   original hues, used only for a few small semantic accents (ratings,
-   water, journal) that don't read as "the app's colors". */
+/* Centium brand palette (Brand Portfolio 3.1). Light mode: white base,
+   Primary Lavender #AEA1DC, Soft Teal #A2C8C2. Dark mode: Deep Night
+   Background #0D0B1A, Dark Surface #17142A, Primary Lavender #A991FE,
+   Light Lavender #C3B3FB, Teal #A2C8C2 (unchanged from light), Dark
+   Lavender Accent #7D67D9, Dark Teal Accent #4F8F8A, Primary Text #F5F3FA,
+   Secondary Text #B8B3C7. -pale variants are derived tints for badges/pills;
+   gold/sky/berry stay as their original hues, used only for a few small
+   semantic accents (ratings, water, journal) that don't read as "the app's
+   colors". */
 :root {
   --c-cream: 255 255 255;
   --c-cream-soft: 245 245 246;
@@ -18,15 +21,15 @@
   --c-charcoal-soft: 91 83 73;
   --c-charcoal-faint: 140 131 120;
 
-  --c-sohati: 174 161 220;
-  --c-sohati-light: 200 191 233;
-  --c-sohati-pale: 240 237 249;
-  --c-sohati-dark: 125 107 181;
+  --c-primary: 174 161 220;
+  --c-primary-light: 200 191 233;
+  --c-primary-pale: 240 237 249;
+  --c-primary-dark: 125 107 181;
 
-  --c-ember: 162 200 194;
-  --c-ember-light: 193 219 214;
-  --c-ember-pale: 234 244 242;
-  --c-ember-dark: 111 153 147;
+  --c-teal: 162 200 194;
+  --c-teal-light: 193 219 214;
+  --c-teal-pale: 234 244 242;
+  --c-teal-dark: 111 153 147;
 
   --c-gold: 217 164 65;
   --c-gold-pale: 246 233 201;
@@ -41,22 +44,22 @@
 }
 
 .dark {
-  --c-cream: 22 20 18;
-  --c-cream-soft: 32 29 25;
-  --c-cream-card: 41 37 32;
-  --c-charcoal: 237 231 222;
-  --c-charcoal-soft: 178 169 156;
-  --c-charcoal-faint: 122 114 103;
+  --c-cream: 13 11 26;
+  --c-cream-soft: 23 20 42;
+  --c-cream-card: 27 24 48;
+  --c-charcoal: 245 243 250;
+  --c-charcoal-soft: 184 179 199;
+  --c-charcoal-faint: 125 119 142;
 
-  --c-sohati: 194 184 233;
-  --c-sohati-light: 213 205 240;
-  --c-sohati-pale: 51 45 71;
-  --c-sohati-dark: 225 219 244;
+  --c-primary: 169 145 254;
+  --c-primary-light: 195 179 251;
+  --c-primary-pale: 52 45 84;
+  --c-primary-dark: 125 103 217;
 
-  --c-ember: 178 212 207;
-  --c-ember-light: 201 227 223;
-  --c-ember-pale: 34 48 46;
-  --c-ember-dark: 217 233 230;
+  --c-teal: 162 200 194;
+  --c-teal-light: 184 216 210;
+  --c-teal-pale: 51 56 72;
+  --c-teal-dark: 79 143 138;
 
   --c-gold: 224 179 96;
   --c-gold-pale: 51 43 26;
@@ -71,45 +74,45 @@
 }
 
 /* V3: accent color themes (Settings > Appearance). Each overrides only the
-   --c-sohati* "primary" tokens used throughout for buttons/active states —
+   --c-primary* "primary" tokens used throughout for buttons/active states —
    everything else in the palette stays put. */
 [data-accent="ocean"] {
-  --c-sohati: 76 143 209;
-  --c-sohati-light: 116 175 227;
-  --c-sohati-pale: 220 234 248;
-  --c-sohati-dark: 30 74 110;
+  --c-primary: 76 143 209;
+  --c-primary-light: 116 175 227;
+  --c-primary-pale: 220 234 248;
+  --c-primary-dark: 30 74 110;
 }
 .dark[data-accent="ocean"] {
-  --c-sohati: 116 175 227;
-  --c-sohati-light: 150 197 237;
-  --c-sohati-pale: 26 41 57;
-  --c-sohati-dark: 209 230 247;
+  --c-primary: 116 175 227;
+  --c-primary-light: 150 197 237;
+  --c-primary-pale: 26 41 57;
+  --c-primary-dark: 209 230 247;
 }
 
 [data-accent="sunset"] {
-  --c-sohati: 233 116 82;
-  --c-sohati-light: 242 164 136;
-  --c-sohati-pale: 252 230 221;
-  --c-sohati-dark: 165 66 36;
+  --c-primary: 233 116 82;
+  --c-primary-light: 242 164 136;
+  --c-primary-pale: 252 230 221;
+  --c-primary-dark: 165 66 36;
 }
 .dark[data-accent="sunset"] {
-  --c-sohati: 240 140 108;
-  --c-sohati-light: 247 178 152;
-  --c-sohati-pale: 57 37 30;
-  --c-sohati-dark: 250 199 176;
+  --c-primary: 240 140 108;
+  --c-primary-light: 247 178 152;
+  --c-primary-pale: 57 37 30;
+  --c-primary-dark: 250 199 176;
 }
 
 [data-accent="berry"] {
-  --c-sohati: 156 79 124;
-  --c-sohati-light: 184 118 156;
-  --c-sohati-pale: 241 224 235;
-  --c-sohati-dark: 107 48 84;
+  --c-primary: 156 79 124;
+  --c-primary-light: 184 118 156;
+  --c-primary-pale: 241 224 235;
+  --c-primary-dark: 107 48 84;
 }
 .dark[data-accent="berry"] {
-  --c-sohati: 200 128 172;
-  --c-sohati-light: 216 158 194;
-  --c-sohati-pale: 46 30 40;
-  --c-sohati-dark: 240 214 231;
+  --c-primary: 200 128 172;
+  --c-primary-light: 216 158 194;
+  --c-primary-pale: 46 30 40;
+  --c-primary-dark: 240 214 231;
 }
 
 * {

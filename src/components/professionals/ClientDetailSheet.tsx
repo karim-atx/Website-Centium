@@ -32,9 +32,9 @@ const noteFields: {
   label: string;
   className: string;
 }[] = [
-  { key: "comorbidities", label: "Comorbidities", className: "bg-ember-pale text-ember-dark" },
+  { key: "comorbidities", label: "Comorbidities", className: "bg-teal-pale text-teal-dark" },
   { key: "previousSurgeries", label: "Previous surgeries", className: "bg-berry/10 text-berry" },
-  { key: "medications", label: "Medications", className: "bg-sohati-pale text-sohati-dark" },
+  { key: "medications", label: "Medications", className: "bg-primary-pale text-primary-dark" },
   { key: "currentInjuries", label: "Current injuries", className: "bg-gold-pale text-charcoal" },
   { key: "personalityType", label: "Personality type", className: "bg-charcoal/[0.06] text-charcoal-soft" },
 ];
@@ -79,8 +79,8 @@ export const ClientDetailSheet: React.FC<{
     <BottomSheet open={open} onClose={onClose} hideHeader>
       <div className="space-y-5 animate-fade-slide-up">
         <div className="flex items-center gap-3">
-          <span className="w-11 h-11 rounded-full bg-sohati-pale flex items-center justify-center shrink-0">
-            <PERSON_ICON size={20} className="text-sohati-dark" />
+          <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+            <PERSON_ICON size={20} className="text-primary-dark" />
           </span>
           <div>
             <p className="font-semibold text-charcoal">
@@ -108,7 +108,7 @@ export const ClientDetailSheet: React.FC<{
             </p>
             <p
               className={`text-lg font-bold flex items-center gap-1 ${
-                client.workoutLoggedToday ? "text-sohati-dark" : "text-charcoal-faint"
+                client.workoutLoggedToday ? "text-primary-dark" : "text-charcoal-faint"
               }`}
             >
               {client.workoutLoggedToday ? <Check size={16} /> : <XIcon size={16} />}
@@ -149,7 +149,7 @@ export const ClientDetailSheet: React.FC<{
               Activity Level
             </p>
             <div className="flex items-center gap-2">
-              <Activity size={16} className="text-sohati" />
+              <Activity size={16} className="text-primary" />
               <span className="text-sm font-semibold text-charcoal capitalize">
                 {client.activityLevel.replace("_", " ")}
               </span>
@@ -165,7 +165,7 @@ export const ClientDetailSheet: React.FC<{
                 </p>
                 <button
                   onClick={() => setAssigningProgram((v) => !v)}
-                  className="text-xs font-semibold text-sohati"
+                  className="text-xs font-semibold text-primary"
                 >
                   {client.assignedProgramName ? "Change" : "Assign"}
                 </button>
@@ -182,7 +182,7 @@ export const ClientDetailSheet: React.FC<{
                         assignProgramToClient(client.id, p.name);
                         setAssigningProgram(false);
                       }}
-                      className="tap text-xs font-semibold bg-sohati-pale text-sohati-dark rounded-full px-3 py-1.5"
+                      className="tap text-xs font-semibold bg-primary-pale text-primary-dark rounded-full px-3 py-1.5"
                     >
                       {p.name}
                     </button>
@@ -200,7 +200,7 @@ export const ClientDetailSheet: React.FC<{
             </p>
             <button
               onClick={() => setAssigningTemplate((v) => !v)}
-              className="text-xs font-semibold text-sohati"
+              className="text-xs font-semibold text-primary"
             >
               {client.assignedFoodTemplateName ? "Change" : "Assign"}
             </button>
@@ -218,7 +218,7 @@ export const ClientDetailSheet: React.FC<{
                     assignFoodTemplateToClient(client.id, `${f.name}-based plan`);
                     setAssigningTemplate(false);
                   }}
-                  className="tap text-xs font-semibold bg-sohati-pale text-sohati-dark rounded-full px-3 py-1.5"
+                  className="tap text-xs font-semibold bg-primary-pale text-primary-dark rounded-full px-3 py-1.5"
                 >
                   {f.name}
                 </button>
@@ -235,7 +235,7 @@ export const ClientDetailSheet: React.FC<{
             </div>
             <span
               className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
-                client.weightTrend <= 0 ? "text-sohati-dark bg-sohati-pale" : "text-ember-dark bg-ember-pale"
+                client.weightTrend <= 0 ? "text-primary-dark bg-primary-pale" : "text-teal-dark bg-teal-pale"
               }`}
             >
               {client.weightTrend <= 0 ? "↓" : "↑"} {Math.abs(client.weightTrend)} kg
@@ -312,7 +312,7 @@ export const ClientDetailSheet: React.FC<{
                   </div>
                   <span
                     className={`flex items-center gap-1 text-xs font-semibold rounded-full px-2 py-0.5 ${
-                      granted ? "text-sohati-dark bg-sohati-pale" : "text-charcoal-faint bg-cream-card"
+                      granted ? "text-primary-dark bg-primary-pale" : "text-charcoal-faint bg-cream-card"
                     }`}
                   >
                     {granted ? <Check size={11} /> : <XIcon size={11} />}
@@ -328,7 +328,7 @@ export const ClientDetailSheet: React.FC<{
           variant="outline"
           fullWidth
           onClick={handleRemove}
-          className="!border-ember/30 !text-ember-dark"
+          className="!border-teal/30 !text-teal-dark"
         >
           <UserMinus size={14} />
           {confirmRemove ? "Tap again to confirm" : "Remove client"}
