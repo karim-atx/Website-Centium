@@ -188,7 +188,14 @@ export default {
       return fetch(request); // not our path — pass through untouched
     }
 
-    const originPath = GH_PAGES_PATH + url.pathname.slice(PUBLIC_PREFIX.length);
+    // GitHub Pages 301s a directory path with no trailing slash (e.g.
+    // "/Website-Centium") to the same path with one added — and since the
+    // exact rest-of-path is empty for a bare "/centium" request, that would
+    // otherwise leak a redirect straight to the raw github.io URL. Treat an
+    // empty remainder as "/" so we always ask GitHub Pages for the
+    // trailing-slash form directly and never trigger that redirect.
+    const rest = url.pathname.slice(PUBLIC_PREFIX.length) || "/";
+    const originPath = GH_PAGES_PATH + rest;
     const originUrl = `https://${GH_PAGES_HOST}${originPath}${url.search}`;
 
     const originRequest = new Request(originUrl, request);
