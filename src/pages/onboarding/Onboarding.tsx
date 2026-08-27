@@ -124,7 +124,7 @@ export default function Onboarding() {
     }
     // Professionals land straight in their client dashboard — mirroring a
     // coaching app's first-run flow — instead of the consumer Home page.
-    navigate(isProfessional ? "/professionals" : "/");
+    navigate(isProfessional ? "/app/professionals" : "/app");
   };
 
   return (

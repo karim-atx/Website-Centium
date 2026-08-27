@@ -102,7 +102,7 @@ export default function Professionals() {
       {connected && (
         <Card
           interactive
-          onClick={() => navigate(`/professionals/${connected.id}`)}
+          onClick={() => navigate(`/app/professionals/${connected.id}`)}
           className="mb-6 bg-gradient-to-br from-primary to-primary-dark !text-white animate-fade-slide-up"
         >
           <div className="flex items-center gap-3 mb-3">
@@ -156,7 +156,7 @@ export default function Professionals() {
               </div>
             </div>
             <p className="text-xs text-charcoal-soft mb-3.5 leading-relaxed">{p.bio}</p>
-            <Button size="sm" fullWidth variant={isConnected(p) ? "secondary" : "primary"} onClick={() => navigate(`/professionals/${p.id}`)}>
+            <Button size="sm" fullWidth variant={isConnected(p) ? "secondary" : "primary"} onClick={() => navigate(`/app/professionals/${p.id}`)}>
               View Profile
             </Button>
           </Card>

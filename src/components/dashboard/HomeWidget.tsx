@@ -55,7 +55,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
 
   switch (widget.type) {
     case "steps": {
-      const onClick = () => navigate("/health", { state: { openMetric: "steps" } });
+      const onClick = () => navigate("/app/health", { state: { openMetric: "steps" } });
       if (!isLarge) {
         return wrap(
           onClick,
@@ -85,7 +85,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
     }
 
     case "weight": {
-      const onClick = () => navigate("/health", { state: { openMetric: "weight" } });
+      const onClick = () => navigate("/app/health", { state: { openMetric: "weight" } });
       if (!isLarge) {
         return wrap(
           onClick,
@@ -140,7 +140,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
       // when pressing the widget in the home screen" — pressing this widget
       // opens the same quick-log sheet the Health tab's "+" used to open;
       // that button is removed from Health entirely.
-      const onClick = onWaterClick ?? (() => navigate("/health"));
+      const onClick = onWaterClick ?? (() => navigate("/app/health"));
       if (!isLarge) {
         return wrap(
           onClick,
@@ -168,7 +168,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
     }
 
     case "sleep": {
-      const onClick = () => navigate("/health", { state: { openMetric: "sleep" } });
+      const onClick = () => navigate("/app/health", { state: { openMetric: "sleep" } });
       if (!isLarge) {
         return wrap(
           onClick,
@@ -199,7 +199,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
 
     case "nutrition": {
       const kcalProgress = totals.calories / targets.calories;
-      const onClick = () => navigate("/food");
+      const onClick = () => navigate("/app/food");
       if (!isLarge) {
         return wrap(
           onClick,
@@ -259,7 +259,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
 
     case "workout": {
       const done = !!todaysWorkoutLog?.completed;
-      const onClick = () => navigate("/workout");
+      const onClick = () => navigate("/app/workout");
       if (!isLarge) {
         return wrap(
           onClick,
@@ -290,7 +290,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
 
     case "habits": {
       const done = habits.filter((h) => h.done).length;
-      const onClick = () => navigate("/mind");
+      const onClick = () => navigate("/app/mind");
       if (!isLarge) {
         return wrap(
           onClick,
@@ -325,7 +325,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
 
     case "journal": {
       const todaysEntry = journalEntries.some((e) => e.date === "2026-08-20");
-      const onClick = () => navigate("/mind");
+      const onClick = () => navigate("/app/mind");
       if (!isLarge) {
         return wrap(
           onClick,
@@ -350,7 +350,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
     }
 
     case "meditation": {
-      const onClick = () => navigate("/mind");
+      const onClick = () => navigate("/app/mind");
       if (!isLarge) {
         return wrap(
           onClick,

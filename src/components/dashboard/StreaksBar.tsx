@@ -11,7 +11,7 @@ export const StreaksBar: React.FC = () => {
 
   return (
     <button
-      onClick={() => navigate("/mind")}
+      onClick={() => navigate("/app/mind")}
       className="tap w-full text-left bg-gradient-to-r from-teal to-teal-dark rounded-3xl p-4 mb-5 shadow-card animate-fade-slide-up"
     >
       <div className="flex items-center justify-between mb-3">

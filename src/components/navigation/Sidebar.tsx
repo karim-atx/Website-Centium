@@ -16,7 +16,7 @@ export const Sidebar: React.FC = () => {
       : isBusiness
       ? businessSidebarNavItems.filter(
           (item) =>
-            user.businessType === "gym" || (item.to !== "/business/employees" && item.to !== "/business/classes")
+            user.businessType === "gym" || (item.to !== "/app/business/employees" && item.to !== "/app/business/classes")
         )
       : sidebarNavItems;
 

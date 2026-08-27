@@ -100,7 +100,7 @@ export default function ProfessionalDetail() {
       <div className="text-center py-20 text-charcoal-soft">
         Professional not found.
         <div className="mt-4">
-          <Button onClick={() => navigate("/professionals")}>Back</Button>
+          <Button onClick={() => navigate("/app/professionals")}>Back</Button>
         </div>
       </div>
     );

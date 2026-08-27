@@ -21,19 +21,19 @@ export const BottomNav: React.FC = () => {
   // and Health Metrics live under More instead, alongside Explore/Profile).
   // Businesses get the same "remove everything that doesn't pertain" trim.
   const isMoreActive =
-    location.pathname === "/more" ||
+    location.pathname === "/app/more" ||
     (isProfessional
       ? [
-          "/marketplace",
-          "/profile",
-          "/subscription",
-          "/settings",
-          "/professionals/messages",
-          "/professionals/health-metrics",
+          "/app/marketplace",
+          "/app/profile",
+          "/app/subscription",
+          "/app/settings",
+          "/app/professionals/messages",
+          "/app/professionals/health-metrics",
         ]
       : isBusiness
-      ? ["/profile", "/subscription", "/settings", "/business/employees", "/business/classes", "/business/profile"]
-      : ["/mind", "/marketplace", "/profile", "/subscription", "/professionals"]
+      ? ["/app/profile", "/app/subscription", "/app/settings", "/app/business/employees", "/app/business/classes", "/app/business/profile"]
+      : ["/app/mind", "/app/marketplace", "/app/profile", "/app/subscription", "/app/professionals"]
     ).some((p) => location.pathname.startsWith(p));
 
   return (
@@ -41,7 +41,7 @@ export const BottomNav: React.FC = () => {
       <div className={clsx("grid max-w-xl mx-auto", gridColsForCount[items.length] ?? "grid-cols-5")}>
         {items.map((item) => {
           const Icon = item.icon;
-          const active = item.to === "/more" ? isMoreActive : location.pathname === item.to;
+          const active = item.to === "/app/more" ? isMoreActive : location.pathname === item.to;
           return (
             <NavLink
               key={item.to}

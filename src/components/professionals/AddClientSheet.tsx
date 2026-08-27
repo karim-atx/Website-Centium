@@ -81,7 +81,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             size="lg"
             onClick={() => {
               onClose();
-              navigate("/subscription");
+              navigate("/app/subscription");
             }}
           >
             View subscription tiers

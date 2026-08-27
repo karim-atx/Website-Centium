@@ -25,7 +25,7 @@ export const NutritionCard: React.FC<{ totals: NutritionTotals }> = ({ totals })
   );
 
   return (
-    <Card interactive onClick={() => navigate("/food")} className="animate-fade-slide-up">
+    <Card interactive onClick={() => navigate("/app/food")} className="animate-fade-slide-up">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-display text-lg font-semibold text-charcoal">Nutrition</h3>
         <ChevronRight size={18} className="text-charcoal-faint" />

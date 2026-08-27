@@ -74,7 +74,7 @@ export default function Profile() {
       return;
     }
     signOut();
-    navigate("/onboarding");
+    navigate("/app/onboarding");
   };
 
   // V6 (QA 6.0): weight/height/age, connected professionals and Goals are
@@ -212,7 +212,7 @@ export default function Profile() {
               return (
                 <button
                   key={p.id}
-                  onClick={() => navigate(`/professionals/${p.id}`)}
+                  onClick={() => navigate(`/app/professionals/${p.id}`)}
                   className="tap shrink-0 flex items-center gap-2.5 bg-cream-card rounded-2xl pl-2.5 pr-4 py-2.5 shadow-soft"
                 >
                   <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0">

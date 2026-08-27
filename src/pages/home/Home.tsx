@@ -57,7 +57,7 @@ export default function Home() {
           <p className="text-charcoal-soft text-sm mt-1">{t("Here's your day")}</p>
         </div>
         <button
-          onClick={() => navigate("/profile")}
+          onClick={() => navigate("/app/profile")}
           className="tap w-11 h-11 rounded-full bg-teal-pale flex items-center justify-center text-teal-dark font-bold shrink-0 overflow-hidden"
         >
           {user.avatarUrl ? (
@@ -76,7 +76,7 @@ export default function Home() {
       {isBusiness && (
         <Card
           interactive
-          onClick={() => navigate("/marketplace")}
+          onClick={() => navigate("/app/marketplace")}
           className="mb-5 bg-gradient-to-br from-charcoal to-charcoal/90 !text-cream animate-fade-slide-up"
         >
           <div className="flex items-center justify-between">
@@ -108,7 +108,7 @@ export default function Home() {
         <WidgetBoard onWaterClick={() => setMetricOpen(true)} />
       </div>
 
-      <Card interactive onClick={() => navigate("/professionals")} className="mb-4 animate-fade-slide-up bg-gradient-to-br from-primary to-primary-dark !text-white">
+      <Card interactive onClick={() => navigate("/app/professionals")} className="mb-4 animate-fade-slide-up bg-gradient-to-br from-primary to-primary-dark !text-white">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-white/15 flex items-center justify-center">

@@ -127,7 +127,7 @@ export default function Marketplace() {
                 key={c.id}
                 onClick={() => {
                   setCategoryPickerOpen(false);
-                  navigate(`/marketplace/${c.id}`);
+                  navigate(`/app/marketplace/${c.id}`);
                 }}
                 className="tap flex flex-col items-center gap-1.5 bg-cream-soft rounded-2xl py-4"
               >
