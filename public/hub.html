@@ -1,44 +1,62 @@
 <!doctype html>
 <!--
   atraxia.org's root "hub of apps" page. Fully self-contained (no external
-  JS/CSS), so it ships as a plain static file through Vite's public/ dir —
-  built and deployed by the same GitHub Actions/Pages pipeline as the rest
-  of the site, reachable at .../hub.html in the built output. The
-  Cloudflare Worker (deploy/cloudflare-worker.js) proxies atraxia.org's
-  root request to this file, the same way it proxies /centium/* to the
-  rest of the built app.
+  JS/CSS frameworks or CDNs), so it ships as a plain static file through
+  Vite's public/ dir — built and deployed by the same GitHub Actions/Pages
+  pipeline as the rest of the site, reachable at .../hub.html in the built
+  output. The Cloudflare Worker (deploy/cloudflare-worker.js) proxies
+  atraxia.org's root request to this file, the same way it proxies
+  /centium/* to the rest of the built app.
+
+  QA 1.0: rebuilt around Atraxia's own mark (navy "A" + teal swoosh/dot,
+  redrawn as inline SVG paths below — same technique as CentiumLogo.tsx:
+  built against the reference mark, not traced pixel-for-pixel from it)
+  and its own navy/teal palette, distinct from Centium's purple. Framed as
+  a parent-company page (meta.com as the reference point) that introduces
+  the founders and points at Centium as the first app in the portfolio.
 -->
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Atraxia</title>
-    <meta name="theme-color" content="#AEA1DC" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#0D0B1A" media="(prefers-color-scheme: dark)" />
+    <title>Atraxia — Health &amp; wellness ventures</title>
+    <meta name="description" content="Atraxia is the parent company behind a growing portfolio of health and wellness apps and businesses, starting with Centium." />
+    <meta name="theme-color" content="#023b4a" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a1420" media="(prefers-color-scheme: dark)" />
     <style>
       :root {
         --cream: 255 255 255;
-        --cream-soft: 245 245 246;
-        --charcoal: 36 31 27;
-        --charcoal-soft: 91 83 73;
-        --primary: 174 161 220;
-        --primary-dark: 125 107 181;
-        --primary-pale: 240 237 249;
-        --teal: 162 200 194;
+        --cream-soft: 234 244 246;
+        --cream-card: 255 255 255;
+        --charcoal: 6 20 25;
+        --charcoal-soft: 74 94 100;
+        --charcoal-faint: 132 150 155;
+        --navy: 2 59 74;
+        --navy-soft: 26 79 96;
+        --teal: 54 130 148;
+        --teal-dark: 33 100 116;
+        --teal-pale: 214 235 238;
+        --border: 6 20 25;
       }
       @media (prefers-color-scheme: dark) {
         :root {
-          --cream: 13 11 26;
-          --cream-soft: 23 20 42;
-          --charcoal: 245 243 250;
-          --charcoal-soft: 184 179 199;
-          --primary: 169 145 254;
-          --primary-dark: 125 103 217;
-          --primary-pale: 52 45 84;
-          --teal: 162 200 194;
+          --cream: 10 20 32;
+          --cream-soft: 15 28 42;
+          --cream-card: 18 32 48;
+          --charcoal: 240 246 248;
+          --charcoal-soft: 172 190 196;
+          --charcoal-faint: 108 130 138;
+          --navy: 235 245 247;
+          --navy-soft: 200 224 228;
+          --teal: 94 190 205;
+          --teal-dark: 130 210 222;
+          --teal-pale: 27 52 62;
+          --border: 240 246 248;
         }
       }
+
       * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
       html, body {
         margin: 0;
         min-height: 100%;
@@ -46,103 +64,412 @@
         color: rgb(var(--charcoal));
         font-family: Manrope, ui-sans-serif, system-ui, -apple-system, sans-serif;
       }
-      body {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        min-height: 100vh;
-        padding: 2rem 1.25rem;
-        text-align: center;
+      body { overflow-x: hidden; }
+      img { max-width: 100%; display: block; }
+      a { color: inherit; }
+
+      .wrap {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding-inline: 1.5rem;
       }
-      .brand {
-        font-weight: 800;
-        letter-spacing: 0.06em;
-        font-size: 1.05rem;
-        color: rgb(var(--charcoal-soft));
-        margin-bottom: 0.5rem;
-      }
-      h1 {
-        font-size: clamp(1.75rem, 4vw, 2.5rem);
-        font-weight: 800;
-        letter-spacing: -0.02em;
-        margin: 0 0 2.5rem;
-      }
-      .grid {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 1.25rem;
-        justify-content: center;
-      }
-      .tile {
-        width: 220px;
-        padding: 1.75rem 1.5rem;
-        border-radius: 1.75rem;
-        text-decoration: none;
-        color: inherit;
-        background: rgb(var(--cream-soft));
-        box-shadow: 0 2px 10px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 0.85rem;
-        transition: transform 0.18s ease, box-shadow 0.18s ease;
-      }
-      a.tile:hover, a.tile:focus-visible {
-        transform: translateY(-3px);
-        box-shadow: 0 8px 30px rgb(0 0 0 / 0.10);
-      }
-      .icon {
-        width: 64px;
-        height: 64px;
-        border-radius: 18px;
+
+      /* ---------- intro loader ---------- */
+      .loader {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
         display: flex;
         align-items: center;
         justify-content: center;
         background: rgb(var(--cream));
+        animation: loaderOut 1.8s ease forwards;
       }
-      .tile .name {
-        font-weight: 700;
-        font-size: 1.05rem;
+      .loader .mark { width: min(34vw, 180px); height: auto; }
+      .loader .mark .leg { opacity: 0; animation: legIn 0.35s ease forwards; }
+      .loader .mark .leg--l { animation-delay: 0.05s; }
+      .loader .mark .leg--r { animation-delay: 0.15s; }
+      .loader .mark .swoosh {
+        stroke-dasharray: 260;
+        stroke-dashoffset: 260;
+        animation: swooshDraw 0.85s cubic-bezier(.4,.1,.2,1) 0.35s forwards;
       }
-      .tile .desc {
-        font-size: 0.85rem;
+      .loader .mark .dot { opacity: 0; transform-origin: 178px 64px; animation: dotPop 0.3s ease 1.05s forwards; }
+
+      @keyframes loaderOut { 0%, 68% { opacity: 1; pointer-events: auto; } 100% { opacity: 0; pointer-events: none; } }
+      @keyframes legIn { from { opacity: 0; transform: scaleY(0.6); transform-origin: bottom; } to { opacity: 1; transform: scaleY(1); } }
+      @keyframes swooshDraw { to { stroke-dashoffset: 0; } }
+      @keyframes dotPop { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: scale(1); } }
+
+      @media (prefers-reduced-motion: reduce) {
+        .loader { animation: loaderOut 0.6s linear forwards; }
+        .loader .mark .leg, .loader .mark .swoosh, .loader .mark .dot { animation: none; opacity: 1; stroke-dashoffset: 0; transform: none; }
+        .blob { animation: none !important; }
+      }
+
+      /* ---------- shared mark styling ---------- */
+      .mark .leg { stroke: rgb(var(--navy)); stroke-width: 20; stroke-linecap: round; fill: none; }
+      .mark .swoosh { stroke: rgb(var(--teal)); stroke-width: 13; stroke-linecap: round; fill: none; }
+      .mark .dot { fill: rgb(var(--teal)); }
+
+      /* ---------- nav ---------- */
+      .nav {
+        position: sticky;
+        top: 0;
+        z-index: 20;
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 1.25rem 1.5rem;
+        background: rgb(var(--cream) / 0.82);
+        backdrop-filter: blur(10px);
+      }
+      .nav .mark { width: 26px; height: 26px; }
+      .nav .word {
+        font-weight: 800;
+        letter-spacing: 0.14em;
+        font-size: 0.95rem;
+      }
+
+      /* ---------- hero ---------- */
+      .hero {
+        position: relative;
+        padding: 4.5rem 0 5rem;
+        overflow: hidden;
+        isolation: isolate;
+      }
+      .blob {
+        position: absolute;
+        z-index: -1;
+        width: 60vw;
+        height: 60vw;
+        max-width: 720px;
+        max-height: 720px;
+        border-radius: 50%;
+        background: radial-gradient(circle at 35% 35%, rgb(var(--teal) / 0.28), transparent 70%),
+                    radial-gradient(circle at 65% 65%, rgb(var(--navy) / 0.14), transparent 70%);
+        top: -18%;
+        right: -18%;
+        animation: blobDrift 16s ease-in-out infinite;
+      }
+      @keyframes blobDrift {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        50% { transform: translate(-3%, 4%) scale(1.08); }
+      }
+      .eyebrow {
+        display: inline-block;
+        font-weight: 800;
+        font-size: 0.72rem;
+        letter-spacing: 0.16em;
+        color: rgb(var(--teal-dark));
+        margin-bottom: 1rem;
+      }
+      .hero h1 {
+        font-size: clamp(2.2rem, 5.2vw, 3.6rem);
+        line-height: 1.08;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        margin: 0 0 1.25rem;
+        max-width: 20ch;
+      }
+      .hero p.lede {
+        font-size: clamp(1.02rem, 1.6vw, 1.2rem);
         color: rgb(var(--charcoal-soft));
+        max-width: 52ch;
+        margin: 0 0 2.25rem;
+        line-height: 1.6;
       }
-      .tile--soon {
-        opacity: 0.6;
+      .hero-actions { display: flex; flex-wrap: wrap; gap: 0.9rem; align-items: center; }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 700;
+        font-size: 0.95rem;
+        padding: 0.85rem 1.5rem;
+        border-radius: 999px;
+        text-decoration: none;
+        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
       }
-      .tile--soon .icon {
-        border: 2px dashed rgb(var(--charcoal-soft) / 0.35);
-        background: transparent;
+      .btn--primary { background: rgb(var(--navy)); color: rgb(var(--cream)); }
+      .btn--primary:hover, .btn--primary:focus-visible { transform: translateY(-2px); box-shadow: 0 10px 26px rgb(var(--navy) / 0.28); }
+      .btn--ghost { color: rgb(var(--navy)); }
+      .btn--ghost:hover, .btn--ghost:focus-visible { color: rgb(var(--teal-dark)); }
+      .btn:focus-visible { outline: 2px solid rgb(var(--teal)); outline-offset: 3px; }
+      .hero-mark { margin-top: 3.5rem; width: min(46vw, 210px); }
+      .hero-mark .mark { width: 100%; height: auto; }
+
+      /* ---------- sections ---------- */
+      section { padding: 4rem 0; }
+      .section-head { max-width: 62ch; margin-bottom: 2.5rem; }
+      .section-head h2 {
+        font-size: clamp(1.6rem, 3vw, 2.15rem);
+        font-weight: 800;
+        letter-spacing: -0.01em;
+        margin: 0.6rem 0 0.75rem;
+      }
+      .section-head p { color: rgb(var(--charcoal-soft)); line-height: 1.6; margin: 0; }
+
+      .mission {
+        background: rgb(var(--cream-soft));
+        border-top: 1px solid rgb(var(--border) / 0.06);
+        border-bottom: 1px solid rgb(var(--border) / 0.06);
+      }
+      .mission-grid {
+        display: grid;
+        grid-template-columns: 1.1fr 1fr;
+        gap: 2.5rem;
+        align-items: center;
+      }
+      .mission h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); font-weight: 800; letter-spacing: -0.01em; margin: 0 0 1rem; }
+      .mission p { color: rgb(var(--charcoal-soft)); line-height: 1.7; margin: 0 0 1rem; }
+      .mission-stats { display: flex; gap: 2rem; flex-wrap: wrap; }
+      .mission-stats div strong { display: block; font-size: 1.6rem; font-weight: 800; color: rgb(var(--navy)); }
+      .mission-stats div span { font-size: 0.85rem; color: rgb(var(--charcoal-faint)); }
+
+      /* ---------- portfolio grid ---------- */
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 1.25rem;
+      }
+      .tile {
+        padding: 2rem 1.75rem;
+        border-radius: 1.75rem;
+        text-decoration: none;
+        color: inherit;
+        background: rgb(var(--cream-card));
+        border: 1px solid rgb(var(--border) / 0.07);
+        box-shadow: 0 2px 10px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.03);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.9rem;
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+      }
+      a.tile:hover, a.tile:focus-visible { transform: translateY(-4px); box-shadow: 0 14px 34px rgb(0 0 0 / 0.10); }
+      a.tile:focus-visible { outline: 2px solid rgb(var(--teal)); outline-offset: 2px; }
+      .tile .icon {
+        width: 56px;
+        height: 56px;
+        border-radius: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgb(var(--teal-pale));
+      }
+      .tile .name { font-weight: 800; font-size: 1.1rem; }
+      .tile .desc { font-size: 0.9rem; color: rgb(var(--charcoal-soft)); line-height: 1.5; }
+      .tile .cta { margin-top: 0.35rem; font-size: 0.85rem; font-weight: 700; color: rgb(var(--teal-dark)); display: inline-flex; align-items: center; gap: 0.3rem; }
+      .tile--soon { opacity: 0.6; }
+      .tile--soon .icon { border: 2px dashed rgb(var(--charcoal-faint) / 0.4); background: transparent; }
+
+      /* ---------- founders ---------- */
+      .founders-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 2rem;
+      }
+      .founder-card {
+        border-radius: 1.75rem;
+        overflow: hidden;
+        background: rgb(var(--cream-card));
+        border: 1px solid rgb(var(--border) / 0.07);
+        box-shadow: 0 2px 10px rgb(0 0 0 / 0.05);
+      }
+      .founder-card img { width: 100%; aspect-ratio: 4 / 3.85; object-fit: cover; }
+      .founder-card .body { padding: 1.5rem 1.6rem 1.85rem; }
+      .founder-card h3 { margin: 0 0 0.15rem; font-size: 1.15rem; font-weight: 800; }
+      .founder-card .role { font-size: 0.85rem; font-weight: 700; color: rgb(var(--teal-dark)); margin-bottom: 0.75rem; }
+      .founder-card p.bio { margin: 0; font-size: 0.92rem; line-height: 1.6; color: rgb(var(--charcoal-soft)); }
+
+      /* ---------- footer ---------- */
+      footer {
+        padding: 2.5rem 0 3rem;
+        border-top: 1px solid rgb(var(--border) / 0.07);
+      }
+      footer .wrap {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+      }
+      footer .brand-lockup { display: flex; align-items: center; gap: 0.5rem; }
+      footer .brand-lockup .mark { width: 20px; height: 20px; }
+      footer .brand-lockup .word { font-weight: 800; letter-spacing: 0.12em; font-size: 0.82rem; }
+      footer small { color: rgb(var(--charcoal-faint)); font-size: 0.8rem; }
+
+      /* ---------- responsive ---------- */
+      @media (max-width: 760px) {
+        .mission-grid { grid-template-columns: 1fr; }
+        .hero { padding-top: 3rem; }
       }
     </style>
   </head>
   <body>
-    <div class="brand">ATRAXIA</div>
-    <h1>Our apps, in one place.</h1>
-    <div class="grid">
-      <a class="tile" href="/centium" id="centium-tile">
-        <span class="icon">
-          <svg width="40" height="40" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M39.06 80.07A32 32 0 1 1 70.58 74.51" stroke="rgb(var(--primary-dark))" stroke-width="22" stroke-linecap="round" fill="none"/>
-            <path d="M55.47 65.04 Q73.55 73.78 66.4 95.1 Q55.69 80.28 55.47 65.04 Z" fill="rgb(var(--teal))"/>
-          </svg>
-        </span>
-        <span class="name">Centium</span>
-        <span class="desc">Health &amp; wellness</span>
-      </a>
-      <div class="tile tile--soon">
-        <span class="icon">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="9" stroke="rgb(var(--charcoal-soft))" stroke-width="1.6"/>
-            <path d="M12 8v4l2.5 2.5" stroke="rgb(var(--charcoal-soft))" stroke-width="1.6" stroke-linecap="round"/>
-          </svg>
-        </span>
-        <span class="name">Coming soon</span>
-        <span class="desc">More on the way</span>
-      </div>
+    <div class="loader" aria-hidden="true">
+      <svg class="mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path class="leg leg--l" d="M70,172 L100,32" />
+        <path class="leg leg--r" d="M100,32 L166,150" />
+        <path class="swoosh" d="M22,166 C55,150 95,128 130,112 C150,103 162,90 172,74" />
+        <circle class="dot" cx="178" cy="64" r="9" />
+      </svg>
     </div>
+
+    <nav class="nav">
+      <svg class="mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path class="leg" d="M70,172 L100,32" />
+        <path class="leg" d="M100,32 L166,150" />
+        <path class="swoosh" d="M22,166 C55,150 95,128 130,112 C150,103 162,90 172,74" style="stroke-dasharray:none;stroke-dashoffset:0" />
+        <circle class="dot" cx="178" cy="64" r="9" style="opacity:1" />
+      </svg>
+      <span class="word">ATRAXIA</span>
+    </nav>
+
+    <main>
+      <header class="hero">
+        <div class="blob"></div>
+        <div class="wrap">
+          <span class="eyebrow">A HEALTH &amp; WELLNESS HOLDING COMPANY</span>
+          <h1>We build and house the apps shaping the future of health.</h1>
+          <p class="lede">
+            Atraxia is the parent company behind a growing portfolio of health and
+            wellness ventures. One team, one set of standards — a family of
+            independent apps and businesses built to last, starting with Centium.
+          </p>
+          <div class="hero-actions">
+            <a class="btn btn--primary" href="#portfolio">Check out our latest apps &amp; developments</a>
+            <a class="btn btn--ghost" href="#founders">Meet the founders →</a>
+          </div>
+          <div class="hero-mark" aria-hidden="true">
+            <svg class="mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path class="leg" d="M70,172 L100,32" />
+              <path class="leg" d="M100,32 L166,150" />
+              <path class="swoosh" d="M22,166 C55,150 95,128 130,112 C150,103 162,90 172,74" style="stroke-dasharray:none;stroke-dashoffset:0" />
+              <circle class="dot" cx="178" cy="64" r="9" style="opacity:1" />
+            </svg>
+          </div>
+        </div>
+      </header>
+
+      <section class="mission">
+        <div class="wrap mission-grid">
+          <div>
+            <h2>One company, many ventures.</h2>
+            <p>
+              Instead of one product trying to do everything, Atraxia builds
+              focused, independent apps and businesses — each solving a real
+              problem, each backed by the same team, standards and long-term
+              thinking.
+            </p>
+            <p>
+              Healthcare and fitness sit at the core of everything we build,
+              from the first line of code to the way each product is run.
+            </p>
+          </div>
+          <div class="mission-stats">
+            <div><strong>1</strong><span>App live today</span></div>
+            <div><strong>2</strong><span>Co-founders</span></div>
+            <div><strong>∞</strong><span>Ventures ahead</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section id="portfolio">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">OUR PORTFOLIO</span>
+            <h2>Check out our latest apps &amp; developments</h2>
+            <p>Every Atraxia product shares the same team, standards and long-term thinking — starting here.</p>
+          </div>
+          <div class="grid">
+            <a class="tile" href="/centium" id="centium-tile">
+              <span class="icon">
+                <svg width="30" height="30" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M39.06 80.07A32 32 0 1 1 70.58 74.51" stroke="#7D67D9" stroke-width="22" stroke-linecap="round" fill="none"/>
+                  <path d="M55.47 65.04 Q73.55 73.78 66.4 95.1 Q55.69 80.28 55.47 65.04 Z" fill="#A2C8C2"/>
+                </svg>
+              </span>
+              <span class="name">Centium</span>
+              <span class="desc">Nutrition, training, health data and community — one place to manage your health.</span>
+              <span class="cta">Visit Centium →</span>
+            </a>
+            <div class="tile tile--soon">
+              <span class="icon">
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <circle cx="12" cy="12" r="9" stroke="rgb(var(--charcoal-faint))" stroke-width="1.6"/>
+                  <path d="M12 8v4l2.5 2.5" stroke="rgb(var(--charcoal-faint))" stroke-width="1.6" stroke-linecap="round"/>
+                </svg>
+              </span>
+              <span class="name">Coming soon</span>
+              <span class="desc">The next venture in the Atraxia portfolio is already in the works.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="founders">
+        <div class="wrap">
+          <div class="section-head">
+            <span class="eyebrow">LEADERSHIP</span>
+            <h2>Founders</h2>
+            <p>
+              Abdallah Diab and Dr. Karim Khaldi are both passionate about
+              healthcare and fitness, as well as building companies and
+              solutions that matter.
+            </p>
+          </div>
+          <div class="founders-grid">
+            <div class="founder-card">
+              <img src="atraxia/founder-abdallah-diab.jpg" alt="Abdallah Diab, Co-Founder of Atraxia" width="900" height="870" loading="lazy" />
+              <div class="body">
+                <h3>Abdallah Diab</h3>
+                <div class="role">Co-Founder &amp; Operations Manager</div>
+                <p class="bio">
+                  Operations Manager with 5+ years of experience in Operations
+                  &amp; Business Management. Specialized in creating
+                  easy-to-comprehend, organized systems that facilitate
+                  decision-making and provide clarity.
+                </p>
+              </div>
+            </div>
+            <div class="founder-card">
+              <img src="atraxia/founder-karim-khaldi.jpg" alt="Dr. Karim Khaldi, Co-Founder of Atraxia" width="900" height="870" loading="lazy" />
+              <div class="body">
+                <h3>Dr. Karim Khaldi</h3>
+                <div class="role">Co-Founder &amp; Medical Doctor</div>
+                <p class="bio">
+                  Sharing a profound dedication to healthcare and fitness, Dr.
+                  Khaldi seamlessly bridges clinical expertise with corporate
+                  strategy. As a Medical Doctor specialized in corporate
+                  health consultancy and data analytics, he leverages
+                  concrete data to identify market opportunities, optimize
+                  brand performance, and ensure Atraxia remains at the
+                  cutting edge of industry innovation.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="wrap">
+        <div class="brand-lockup">
+          <svg class="mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path class="leg" d="M70,172 L100,32" />
+            <path class="leg" d="M100,32 L166,150" />
+            <path class="swoosh" d="M22,166 C55,150 95,128 130,112 C150,103 162,90 172,74" style="stroke-dasharray:none;stroke-dashoffset:0" />
+            <circle class="dot" cx="178" cy="64" r="9" style="opacity:1" />
+          </svg>
+          <span class="word">ATRAXIA</span>
+        </div>
+        <small>&copy; 2026 Atraxia. All rights reserved.</small>
+      </div>
+    </footer>
+
     <script>
       // "/centium" is correct for the real domain (atraxia.org/centium),
       // but this page is also reachable raw on GitHub Pages, one level
