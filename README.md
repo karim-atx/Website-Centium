@@ -77,14 +77,15 @@ To make it reachable at **`atraxia.org/centium`**, `atraxia.org` is behind
 Cloudflare, so a Cloudflare Worker reverse-proxies that subpath to the
 GitHub Pages origin — see
 [`deploy/cloudflare-worker.js`](deploy/cloudflare-worker.js) for the script
-and exact setup steps. That same Worker also serves a small static "hub of
-apps" page (source at [`deploy/hub.html`](deploy/hub.html)) at
-`atraxia.org`'s root, listing Centium (linking to `/centium`) alongside a
-"coming soon" placeholder for future apps. This repo has no Cloudflare
-credentials configured, so someone with access to the `atraxia.org`
-Cloudflare account needs to set that part up manually; no DNS record
-changes are needed for it (Workers routes run in front of whatever already
-serves the domain).
+and exact setup steps. That same Worker also reverse-proxies `atraxia.org`'s
+root to a small static "hub of apps" page — [`public/hub.html`](public/hub.html),
+built and deployed by this same pipeline (fully self-contained, so it ships
+as-is via Vite's `public/` dir, reachable at `.../hub.html` in the built
+output) — listing Centium (linking to `/centium`) alongside a "coming soon"
+placeholder for future apps. This repo has no Cloudflare credentials
+configured, so someone with access to the `atraxia.org` Cloudflare account
+needs to set that part up manually; no DNS record changes are needed for
+it (Workers routes run in front of whatever already serves the domain).
 
 There's no `CNAME` file in this repo — that's intentional. A `CNAME` tells
 GitHub Pages to expect a custom domain pointed directly at it, which isn't

@@ -1,10 +1,12 @@
 <!doctype html>
 <!--
-  Source of truth for the atraxia.org root "hub of apps" page. This file
-  isn't built or served on its own — it's copy-pasted verbatim into the
-  HUB_HTML constant in cloudflare-worker.js, which is what the Worker
-  actually returns for requests to "/". Keep the two in sync; open this
-  file directly in a browser to preview it.
+  atraxia.org's root "hub of apps" page. Fully self-contained (no external
+  JS/CSS), so it ships as a plain static file through Vite's public/ dir —
+  built and deployed by the same GitHub Actions/Pages pipeline as the rest
+  of the site, reachable at .../hub.html in the built output. The
+  Cloudflare Worker (deploy/cloudflare-worker.js) proxies atraxia.org's
+  root request to this file, the same way it proxies /centium/* to the
+  rest of the built app.
 -->
 <html lang="en">
   <head>
