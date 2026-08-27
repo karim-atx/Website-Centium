@@ -53,10 +53,10 @@ npm run build
 ```
 
 Type-checks with `tsc -b`, then builds a static bundle to `dist/` via Vite.
-The build is configured with `base: '/centium/'` (see `vite.config.ts`) —
-the site is meant to be reachable at `atraxia.org/centium/`, not at a
-domain root. The dev server stays at `/` so local URLs don't need that
-prefix.
+The build emits relative asset paths (`base: './'` in `vite.config.ts`) and
+picks the right `<base>` at runtime instead of hardcoding one at build
+time — see [Deployment](#deployment) below for why. The dev server stays
+at `/` so local URLs don't need any prefix.
 
 ## Deployment
 
@@ -67,25 +67,30 @@ settings, **Settings → Pages → Source** needs to be set to **GitHub
 Actions** for this to take effect.
 
 That gives the site a GitHub Pages URL
-(`https://karim-atx.github.io/Website-Centium/`). The build emits relative
-asset paths (see `vite.config.ts`) and picks the right `<base>` at runtime
-(see the inline script in `index.html`), so it renders correctly both raw
-at that GitHub Pages URL and proxied at `atraxia.org/centium` below —
-whichever prefix it was actually loaded under.
+(`https://karim-atx.github.io/Website-Centium/`) — but the workflow
+reorganizes `dist/` after building it: the Centium app itself (built from
+`index.html`/`src/`) moves into a `/centium` subfolder, and
+[`public/hub.html`](public/hub.html) — a small static "hub of apps" page,
+fully self-contained so it ships as-is via Vite's `public/` dir — takes
+over the true root. That mirrors the public URL structure one level down:
+Centium's raw GitHub Pages URL is `.../Website-Centium/centium/`, and the
+hub is `.../Website-Centium/`.
 
-To make it reachable at **`atraxia.org/centium`**, `atraxia.org` is behind
-Cloudflare, so a Cloudflare Worker reverse-proxies that subpath to the
-GitHub Pages origin — see
+The Centium app's build emits relative asset paths (see `vite.config.ts`)
+and picks the right `<base>` at runtime (see the inline script in
+`index.html`), so it renders correctly both raw at that nested GitHub
+Pages path and proxied at `atraxia.org/centium` below — whichever prefix
+it was actually loaded under.
+
+To make it reachable at **`atraxia.org`** (hub) and **`atraxia.org/centium`**
+(Centium app), `atraxia.org` is behind Cloudflare, so a Cloudflare Worker
+reverse-proxies both straight through to the matching path on the GitHub
+Pages origin above — see
 [`deploy/cloudflare-worker.js`](deploy/cloudflare-worker.js) for the script
-and exact setup steps. That same Worker also reverse-proxies `atraxia.org`'s
-root to a small static "hub of apps" page — [`public/hub.html`](public/hub.html),
-built and deployed by this same pipeline (fully self-contained, so it ships
-as-is via Vite's `public/` dir, reachable at `.../hub.html` in the built
-output) — listing Centium (linking to `/centium`) alongside a "coming soon"
-placeholder for future apps. This repo has no Cloudflare credentials
-configured, so someone with access to the `atraxia.org` Cloudflare account
-needs to set that part up manually; no DNS record changes are needed for
-it (Workers routes run in front of whatever already serves the domain).
+and exact setup steps. This repo has no Cloudflare credentials configured,
+so someone with access to the `atraxia.org` Cloudflare account needs to set
+that part up manually; no DNS record changes are needed for it (Workers
+routes run in front of whatever already serves the domain).
 
 There's no `CNAME` file in this repo — that's intentional. A `CNAME` tells
 GitHub Pages to expect a custom domain pointed directly at it, which isn't

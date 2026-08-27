@@ -25,13 +25,24 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build
+      # The hub page (public/hub.html, built to dist/hub.html) is meant to
+      # be reachable at the true root — atraxia.org/ proxies straight to
+      # this site's root — so the Centium app itself moves into a
+      # /centium subfolder here, and the hub takes over dist/index.html.
+      - run: |
+          mkdir -p dist/centium
+          mv dist/assets dist/centium/assets
+          mv dist/index.html dist/centium/index.html
+          cp dist/favicon.svg dist/centium/favicon.svg
+          mv dist/hub.html dist/index.html
       # GitHub Pages serves static files only — it has no server-side rewrite
       # for a single-page app, so a direct/refreshed request to a route like
-      # /pricing 404s unless something serves the app shell there too. GitHub
-      # Pages falls back to 404.html for any unmatched path, so shipping the
-      # built index.html under that name lets the client-side router take
-      # over and render the right page from the URL.
-      - run: cp dist/index.html dist/404.html
+      # /centium/pricing 404s unless something serves the app shell there
+      # too. GitHub Pages falls back to 404.html for any unmatched path
+      # site-wide, so shipping the Centium app's built index.html under
+      # that name lets the client-side router take over and render the
+      # right page from the URL for any deep link under /centium/*.
+      - run: cp dist/centium/index.html dist/404.html
       - uses: actions/upload-pages-artifact@v3
         with:
           path: dist
