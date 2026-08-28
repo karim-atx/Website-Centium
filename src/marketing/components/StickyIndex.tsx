@@ -1,29 +1,52 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import clsx from "clsx";
+
+const THRESHOLD = 140; // roughly sticky-nav height + a little breathing room
 
 /** Sticky, scroll-spied left rail used on Product (section index) and the
  *  legal pages (table of contents). Hidden below lg — on narrower screens
- *  the sections just run in reading order instead. */
+ *  the sections just run in reading order instead.
+ *
+ *  Recomputes the active item directly from each tracked element's current
+ *  position on every scroll/resize, rather than reacting to IntersectionObserver
+ *  crossing events — that stayed correct on a normal scroll, but a fast flick
+ *  or an instant jump back to the top could skip past the observed band
+ *  entirely and leave a stale section highlighted. Recomputing from live
+ *  positions means whatever is on screen is always what's highlighted. */
 export const StickyIndex: React.FC<{ items: { id: string; label: string }[]; className?: string }> = ({
   items,
   className,
 }) => {
   const [active, setActive] = useState(items[0]?.id);
-  const observerRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
-    const targets = items.map((it) => document.getElementById(it.id)).filter((el): el is HTMLElement => !!el);
-    if (!targets.length) return;
+    const compute = () => {
+      const targets = items
+        .map((it) => document.getElementById(it.id))
+        .filter((el): el is HTMLElement => !!el);
+      if (!targets.length) return;
 
-    observerRef.current = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top);
-        if (visible[0]) setActive(visible[0].target.id);
-      },
-      { rootMargin: "-15% 0px -70% 0px" }
-    );
-    targets.forEach((t) => observerRef.current!.observe(t));
-    return () => observerRef.current?.disconnect();
+      // The active section is the last one whose top has scrolled up past
+      // the threshold line; if none has yet (we're above the first
+      // section), that first section is the correct default.
+      let current = items[0].id;
+      for (const el of targets) {
+        if (el.getBoundingClientRect().top <= THRESHOLD) {
+          current = el.id;
+        } else {
+          break;
+        }
+      }
+      setActive(current);
+    };
+
+    compute();
+    window.addEventListener("scroll", compute, { passive: true });
+    window.addEventListener("resize", compute);
+    return () => {
+      window.removeEventListener("scroll", compute);
+      window.removeEventListener("resize", compute);
+    };
   }, [items]);
 
   return (
