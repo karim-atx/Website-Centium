@@ -23,7 +23,10 @@ export const TabShowcase: React.FC<{ tabs: ShowcaseTab[] }> = ({ tabs }) => {
 
   return (
     <div>
-      <div className="flex gap-2 flex-wrap" role="tablist">
+      {/* A horizontally-scrollable rail rather than wrapping pills - the
+          hi-fi mock is explicit that mobile tabs "become a scroll rail"
+          rather than stacking to a second row. */}
+      <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0" role="tablist">
         {tabs.map((t, i) => (
           <button
             key={t.label}
@@ -31,7 +34,7 @@ export const TabShowcase: React.FC<{ tabs: ShowcaseTab[] }> = ({ tabs }) => {
             aria-selected={i === active}
             onClick={() => setActive(i)}
             className={clsx(
-              "px-5 py-[11px] rounded-full border font-semibold text-sm transition-colors",
+              "shrink-0 px-5 py-[11px] rounded-full border font-semibold text-sm transition-colors whitespace-nowrap",
               i === active
                 ? "bg-mkt-ink text-white border-mkt-ink"
                 : "bg-white text-mkt-soft border-mkt-line hover:border-mkt-ink/30"
