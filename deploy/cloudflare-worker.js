@@ -1,10 +1,14 @@
 // Cloudflare Worker for atraxia.org. Two jobs, both reverse-proxying to
 // this project's GitHub Pages deployment:
 //
-//   1. atraxia.org (root) -> the "hub of apps" static page. The build (see
-//      .github/workflows/deploy.yml) moves the Centium app to a /centium
-//      subfolder and puts the hub (public/hub.html) at the site's own
-//      root, so this is a straight proxy to that GitHub Pages root.
+//   1. atraxia.org (root) -> the "hub of apps" static page, plus the
+//      root-level static files it references (favicon.svg, icons.svg,
+//      robots.txt, sitemap.xml, and everything under /atraxia/ — the
+//      logo assets and founder photos hub.html loads by root-relative
+//      path). The build (see .github/workflows/deploy.yml) moves the
+//      Centium app to a /centium subfolder and puts the hub
+//      (public/hub.html) and its sibling public/ files at the site's own
+//      root, so these are all straight proxies to that GitHub Pages root.
 //   2. atraxia.org/centium/* -> the Centium app itself, at that same
 //      /centium subfolder.
 //
@@ -12,7 +16,10 @@
 // at GitHub Pages (which can't serve just a subpath of a domain that
 // already serves something else at its root). Anything else (any other
 // path) passes through untouched, in case atraxia.org's hosting already
-// serves other real content there.
+// serves other real content there — which is exactly why the hub's own
+// assets are proxied by an explicit allowlist below rather than "anything
+// not under /centium": a blanket rule would risk shadowing that other
+// content too.
 //
 // This file is NOT deployed automatically — it's reference material.
 // This repo has no Cloudflare credentials configured, so someone with
@@ -36,6 +43,18 @@ const GH_PAGES_HOST = "karim-atx.github.io";
 const GH_PAGES_PATH = "/Website-Centium";
 const PUBLIC_PREFIX = "/centium";
 
+// Root-level files public/ ships alongside hub.html — referenced by
+// hub.html via root-relative paths, so they need the same GitHub Pages
+// proxy treatment as "/" itself. Update this if a new top-level file or
+// folder is added under public/ (other than hub.html, which the build
+// renames to index.html and is covered by the "/" case).
+const HUB_ASSET_PATHS = new Set(["/favicon.svg", "/icons.svg", "/robots.txt", "/sitemap.xml"]);
+const HUB_ASSET_PREFIXES = ["/atraxia/"];
+
+function isHubAsset(pathname) {
+  return pathname === "/" || HUB_ASSET_PATHS.has(pathname) || HUB_ASSET_PREFIXES.some((p) => pathname.startsWith(p));
+}
+
 async function proxy(originPath, search, request) {
   const originUrl = `https://${GH_PAGES_HOST}${originPath}${search}`;
   const originRequest = new Request(originUrl, request);
@@ -51,8 +70,8 @@ export default {
   async fetch(request) {
     const url = new URL(request.url);
 
-    if (url.pathname === "/") {
-      return proxy(GH_PAGES_PATH + "/", url.search, request);
+    if (isHubAsset(url.pathname)) {
+      return proxy(GH_PAGES_PATH + url.pathname, url.search, request);
     }
 
     if (!url.pathname.startsWith(PUBLIC_PREFIX)) {
