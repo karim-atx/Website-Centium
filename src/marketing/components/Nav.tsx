@@ -1,9 +1,9 @@
 import React, { useState } from "react";
 import { NavLink, Link } from "react-router-dom";
-import { Sun, Moon, Menu, X } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import clsx from "clsx";
+import { motion } from "framer-motion";
 import { CentiumLogo } from "../../components/ui/CentiumLogo";
-import { useApp } from "../../context/AppContext";
 
 const links = [
   { to: "/product", label: "Product" },
@@ -14,51 +14,52 @@ const links = [
 ];
 
 export const Nav: React.FC = () => {
-  const { theme, toggleTheme } = useApp();
   const [open, setOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-40 bg-cream/80 backdrop-blur-lg border-b border-charcoal/5">
-      <div className="max-w-6xl mx-auto px-5 sm:px-8 h-16 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-2 shrink-0" onClick={() => setOpen(false)}>
-          <CentiumLogo size={30} />
-          <span className="font-display font-extrabold tracking-tight text-charcoal text-lg">CENTIUM</span>
+    <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-lg border-b border-mkt-line">
+      <div className="max-w-[1180px] mx-auto px-5 sm:px-10 h-[72px] flex items-center justify-between gap-6">
+        <Link to="/" className="flex items-center gap-2.5 shrink-0" onClick={() => setOpen(false)}>
+          <CentiumLogo size={26} />
+          <span className="font-display font-extrabold tracking-[.16em] text-mkt-ink text-[15px]">CENTIUM</span>
         </Link>
 
-        <nav className="hidden lg:flex items-center gap-1" aria-label="Primary">
+        <nav
+          className="hidden lg:flex items-center gap-0.5 bg-mkt-capsule rounded-full p-1"
+          aria-label="Primary"
+        >
           {links.map((l) => (
             <NavLink
               key={l.to}
               to={l.to}
-              className={({ isActive }) =>
-                clsx(
-                  "px-3.5 py-2 rounded-full text-sm font-semibold transition-colors",
-                  isActive ? "text-primary-dark bg-primary-pale" : "text-charcoal-soft hover:text-charcoal"
-                )
-              }
+              className="relative px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap"
             >
-              {l.label}
+              {({ isActive }) => (
+                <>
+                  {isActive && (
+                    <motion.span
+                      layoutId="nav-active-pill"
+                      className="absolute inset-0 bg-white rounded-full shadow-[0_1px_2px_rgba(34,30,26,.06)]"
+                      transition={{ type: "spring", stiffness: 500, damping: 40 }}
+                    />
+                  )}
+                  <span className={clsx("relative", isActive ? "text-mkt-ink" : "text-mkt-soft")}>{l.label}</span>
+                </>
+              )}
             </NavLink>
           ))}
         </nav>
 
-        <div className="hidden lg:flex items-center gap-2">
-          <button
-            onClick={toggleTheme}
-            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-            className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft"
-          >
-            {theme === "dark" ? <Sun size={17} /> : <Moon size={17} />}
-          </button>
+        <div className="hidden lg:flex items-center gap-3.5 shrink-0">
           <Link
             to="/app"
-            className="tap px-4 py-2 rounded-full text-sm font-semibold text-charcoal-soft hover:bg-cream-soft"
+            className="tap text-[13.5px] font-semibold text-mkt-soft hover:text-mkt-ink whitespace-nowrap"
           >
-            Log In
+            Log in
           </Link>
           <Link
             to="/app"
-            className="tap px-4 py-2 rounded-full text-sm font-semibold bg-primary text-white hover:bg-primary-dark shadow-soft"
+            className="tap px-[19px] py-2.5 rounded-full bg-mkt-accent text-white text-[13.5px] font-semibold whitespace-nowrap hover:bg-mkt-accent-hover transition-colors"
           >
             Get Started
           </Link>
@@ -68,14 +69,14 @@ export const Nav: React.FC = () => {
           onClick={() => setOpen((o) => !o)}
           aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
-          className="lg:hidden tap w-10 h-10 rounded-full flex items-center justify-center text-charcoal"
+          className="lg:hidden tap w-10 h-10 rounded-full flex items-center justify-center text-mkt-ink"
         >
           {open ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
       {open && (
-        <div className="lg:hidden border-t border-charcoal/5 bg-cream px-5 py-4 animate-fade-slide-up">
+        <div className="lg:hidden border-t border-mkt-line bg-white px-5 py-4 animate-fade-slide-up">
           <nav className="flex flex-col gap-1" aria-label="Primary">
             {links.map((l) => (
               <NavLink
@@ -85,7 +86,7 @@ export const Nav: React.FC = () => {
                 className={({ isActive }) =>
                   clsx(
                     "px-3 py-2.5 rounded-xl text-sm font-semibold",
-                    isActive ? "text-primary-dark bg-primary-pale" : "text-charcoal-soft"
+                    isActive ? "text-mkt-accent bg-mkt-tint" : "text-mkt-soft"
                   )
                 }
               >
@@ -93,27 +94,18 @@ export const Nav: React.FC = () => {
               </NavLink>
             ))}
           </nav>
-          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-charcoal/5">
-            <button
-              onClick={toggleTheme}
-              className="tap flex-1 px-4 py-2.5 rounded-xl text-sm font-semibold text-charcoal-soft bg-cream-soft flex items-center justify-center gap-2"
-            >
-              {theme === "dark" ? <Sun size={16} /> : <Moon size={16} />}
-              {theme === "dark" ? "Light mode" : "Dark mode"}
-            </button>
-          </div>
-          <div className="flex items-center gap-2 mt-2">
+          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-mkt-line">
             <Link
               to="/app"
               onClick={() => setOpen(false)}
-              className="tap flex-1 text-center px-4 py-2.5 rounded-xl text-sm font-semibold text-charcoal-soft bg-cream-soft"
+              className="tap flex-1 text-center px-4 py-2.5 rounded-xl text-sm font-semibold text-mkt-soft bg-mkt-wash2"
             >
-              Log In
+              Log in
             </Link>
             <Link
               to="/app"
               onClick={() => setOpen(false)}
-              className="tap flex-1 text-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-primary text-white"
+              className="tap flex-1 text-center px-4 py-2.5 rounded-xl text-sm font-semibold bg-mkt-accent text-white"
             >
               Get Started
             </Link>

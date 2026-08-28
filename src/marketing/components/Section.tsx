@@ -8,6 +8,6 @@ export const Section: React.FC<{
   narrow?: boolean;
 }> = ({ children, className, id, narrow }) => (
   <section id={id} className={clsx("py-20 sm:py-28", className)}>
-    <div className={clsx("mx-auto px-5 sm:px-8", narrow ? "max-w-3xl" : "max-w-6xl")}>{children}</div>
+    <div className={clsx("mx-auto px-5 sm:px-10", narrow ? "max-w-3xl" : "max-w-[1180px]")}>{children}</div>
   </section>
 );

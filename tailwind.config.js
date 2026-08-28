@@ -45,6 +45,33 @@ export default {
           DEFAULT: "rgb(var(--c-berry) / <alpha-value>)",
           pale: "rgb(var(--c-berry-pale) / <alpha-value>)",
         },
+        // Marketing-site-only premium refinement tokens (fixed values, not
+        // theme-reactive — the marketing site is intentionally a light site
+        // with dark accent bands, independent of the app's user-controlled
+        // light/dark toggle). Additive: nothing here renames or overrides
+        // the shared --c-* tokens above, so the app / shared ui components
+        // (Button, CentiumLogo, dashboards, etc.) are unaffected.
+        mkt: {
+          ink: "#221E1A",
+          soft: "#5B5349",
+          faint: "#8C8378",
+          line: "#EDEAE4",
+          wash: "#FBFAF8",
+          wash2: "#FAF9F7",
+          tint: "#F4F1FB",
+          capsule: "#F5F3F9",
+          accent: "#7D67D9",
+          "accent-hover": "#6A54C4",
+          "accent-ring": "#C6B9EE",
+          teal: "#4F8F8A",
+          "teal-tint": "#EDF4F3",
+          dark: "#0D0B1A",
+          "dark-surface": "#17142A",
+          "dark-line": "#241F3D",
+          "dark-accent": "#A991FE",
+          "dark-ink": "#F5F3FA",
+          "dark-soft": "#B8B3C7",
+        },
       },
       borderRadius: {
         "4xl": "2rem",

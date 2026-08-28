@@ -1,60 +1,78 @@
 import React from "react";
-import { Utensils, HeartPulse, Sparkles, Users, Store, Briefcase } from "lucide-react";
+import { Link } from "react-router-dom";
+import clsx from "clsx";
 import { Section } from "../components/Section";
 import { Reveal } from "../components/Reveal";
-import { BlobBackdrop } from "../components/illustrations/BlobBackdrop";
-import { Button } from "../../components/ui/Button";
+import { Eyebrow } from "../components/Eyebrow";
+import { StickyIndex } from "../components/StickyIndex";
+import { AppScreen } from "../components/illustrations/AppScreen";
 import { useSEO } from "../useSEO";
 
 const modules: {
-  icon: React.ReactNode;
+  id: string;
+  index: string;
   title: string;
   description: string;
   points: string[];
   tone: "primary" | "teal";
+  screen: Parameters<typeof AppScreen>[0]["variant"];
+  dark?: boolean;
 }[] = [
   {
-    icon: <Utensils size={22} />,
-    title: "Nutrition & workout logging",
+    id: "nutrition-training",
+    index: "01",
+    title: "Nutrition & training",
     description:
       "Log meals and training in the same place — no switching between a food app and a fitness app to see the full picture.",
-    points: ["Meal logging", "Workout & routine logging", "Progress over time"],
+    points: ["Meal logging with custom foods and macros", "Workout & routine logging", "Progress over time, in one history"],
     tone: "primary",
+    screen: "nutrition",
   },
   {
-    icon: <HeartPulse size={22} />,
+    id: "health",
+    index: "02",
     title: "Health tracking",
     description: "Everyday health metrics kept current, so you always know where you stand.",
-    points: ["Weight, sleep & steps", "Trends over time", "One view of your health"],
+    points: ["Weight, sleep & steps", "Trends over time", "One view of your everyday health"],
     tone: "teal",
+    screen: "health",
   },
   {
-    icon: <Sparkles size={22} />,
-    title: "AI-powered guidance",
+    id: "ai",
+    index: "03",
+    title: "AI guidance",
     description: "Practical, personalized help making sense of your data — not just numbers on a screen.",
-    points: ["Personalized guidance", "Helps you act on your data", "Built into everyday logging"],
+    points: ["Personalised guidance from your own data", "Helps you act on it, not just see it", "Built into everyday logging"],
     tone: "primary",
+    screen: "ai",
+    dark: true,
   },
   {
-    icon: <Users size={22} />,
+    id: "community",
+    index: "04",
     title: "Community & professionals",
     description: "Connect with a community of people working toward similar goals, and the professionals who can help.",
-    points: ["Community access", "Personal trainers, dietitians, physiotherapists & more", "Direct connection to professionals"],
+    points: ["Community access", "Trainers, dietitians, physiotherapists & more", "Direct connection to professionals"],
     tone: "teal",
+    screen: "community",
   },
   {
-    icon: <Store size={22} />,
+    id: "marketplace",
+    index: "05",
     title: "Marketplace",
     description: "Discover gyms, stores and services from the same place you manage your health.",
     points: ["Gyms & studios", "Clothing, equipment & supplements", "Wellness services & meal prepping"],
     tone: "primary",
+    screen: "listing",
   },
   {
-    icon: <Briefcase size={22} />,
-    title: "Professional booking & jobs",
+    id: "booking",
+    index: "06",
+    title: "Booking & jobs",
     description: "Book time with professionals, and a jobs layer connecting the wider health & wellness ecosystem.",
     points: ["Book professionals directly", "Manage bookings in one place", "Jobs — part of the wider ecosystem"],
     tone: "teal",
+    screen: "roster",
   },
 ];
 
@@ -66,62 +84,93 @@ export const Product: React.FC = () => {
 
   return (
     <>
-      <Section className="pt-14 sm:pt-20 pb-12 relative overflow-hidden">
-        <BlobBackdrop className="absolute -top-20 -right-20 w-[480px] opacity-60" />
-        <Reveal className="relative max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-wide text-primary-dark mb-3">Product</p>
-          <h1 className="font-display font-extrabold text-4xl sm:text-5xl text-charcoal tracking-tight mb-5">
-            Everything you need, nowhere else to go
+      <Section className="pt-14 sm:pt-24 pb-10 bg-mkt-wash">
+        <Reveal className="max-w-xl">
+          <Eyebrow>PRODUCT</Eyebrow>
+          <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-[58px] leading-[1.05] tracking-[-.03em] text-mkt-ink mt-5">
+            Everything you need, nowhere else to go.
           </h1>
-          <p className="text-charcoal-soft text-lg leading-relaxed">
+          <p className="text-lg leading-relaxed text-mkt-soft mt-5">
             One simple place to understand, manage and improve your health — combining everyday tracking with
             practical tools, AI-powered assistance, and access to a community of people and professionals.
           </p>
         </Reveal>
       </Section>
 
-      <Section className="pt-0">
-        <div className="flex flex-col gap-5">
-          {modules.map((m, i) => (
-            <Reveal key={m.title} delay={i * 0.04}>
-              <div className="rounded-3xl bg-cream-card shadow-soft p-7 sm:p-9 flex flex-col sm:flex-row gap-6 sm:gap-9">
-                <div
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 ${
-                    m.tone === "primary" ? "bg-primary-pale text-primary-dark" : "bg-teal-pale text-teal-dark"
-                  }`}
-                >
-                  {m.icon}
-                </div>
-                <div>
-                  <h2 className="font-display font-bold text-xl text-charcoal mb-2">{m.title}</h2>
-                  <p className="text-charcoal-soft leading-relaxed mb-4 max-w-xl">{m.description}</p>
-                  <ul className="flex flex-wrap gap-2">
-                    {m.points.map((p) => (
-                      <li
-                        key={p}
-                        className={`text-xs font-semibold px-3 py-1.5 rounded-full ${
-                          m.tone === "primary" ? "bg-primary-pale text-primary-dark" : "bg-teal-pale text-teal-dark"
-                        }`}
+      <Section className="pt-0 pb-0">
+        <div className="flex gap-14">
+          <StickyIndex items={modules.map((m) => ({ id: m.id, label: m.title }))} />
+          <div className="flex-1 flex flex-col min-w-0">
+            {modules.map((m, i) => (
+              <div
+                key={m.id}
+                id={m.id}
+                className={clsx(
+                  "py-16 sm:py-20 scroll-mt-28",
+                  i !== 0 && "border-t border-mkt-line",
+                  m.dark && "bg-mkt-dark -mx-5 sm:-mx-10 px-5 sm:px-10 rounded-3xl my-4 border-t-0"
+                )}
+              >
+                <Reveal delay={0.04}>
+                  <div className={clsx("grid lg:grid-cols-2 gap-10 items-center", i % 2 === 1 && "lg:[&>*:first-child]:order-2")}>
+                    <div>
+                      <span className={clsx("font-semibold text-[13px] tracking-wide", m.dark ? "text-mkt-dark-accent" : "text-mkt-accent-ring")}>
+                        {m.index}
+                      </span>
+                      <h2
+                        className={clsx(
+                          "font-display font-bold text-2xl sm:text-[28px] tracking-tight mt-2",
+                          m.dark ? "text-mkt-dark-ink" : "text-mkt-ink"
+                        )}
                       >
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
+                        {m.title}
+                      </h2>
+                      <p className={clsx("leading-relaxed mt-3 max-w-md", m.dark ? "text-mkt-dark-soft" : "text-mkt-soft")}>
+                        {m.description}
+                      </p>
+                      <ul className="flex flex-wrap gap-2 mt-5">
+                        {m.points.map((p) => (
+                          <li
+                            key={p}
+                            className={clsx(
+                              "text-xs font-semibold px-3 py-1.5 rounded-full",
+                              m.dark
+                                ? "bg-white/10 text-mkt-dark-ink"
+                                : m.tone === "primary"
+                                ? "bg-mkt-tint text-mkt-accent-hover"
+                                : "bg-mkt-teal-tint text-mkt-teal"
+                            )}
+                          >
+                            {p}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div
+                      className={clsx(
+                        "h-[220px] sm:h-[280px] rounded-2xl overflow-hidden border",
+                        m.dark ? "border-mkt-dark-line bg-mkt-dark-surface" : "border-mkt-line bg-mkt-wash2"
+                      )}
+                    >
+                      <AppScreen variant={m.screen} dark={m.dark} />
+                    </div>
+                  </div>
+                </Reveal>
               </div>
-            </Reveal>
-          ))}
+            ))}
+          </div>
         </div>
       </Section>
 
       <Section narrow className="text-center">
         <Reveal>
-          <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-charcoal tracking-tight mb-6">
-            See it for yourself
-          </h2>
-          <Button size="lg" onClick={() => (window.location.href = "/app")}>
+          <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-mkt-ink tracking-tight mb-7">See it for yourself</h2>
+          <Link
+            to="/app"
+            className="tap inline-block px-8 py-4 rounded-full bg-mkt-accent hover:bg-mkt-accent-hover text-white font-semibold text-[15px] transition-colors"
+          >
             Get Started
-          </Button>
+          </Link>
         </Reveal>
       </Section>
     </>

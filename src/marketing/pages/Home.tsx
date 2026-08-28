@@ -1,52 +1,113 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { Utensils, Dumbbell, HeartPulse, Sparkles, Users, ArrowRight } from "lucide-react";
 import { Section } from "../components/Section";
 import { Reveal } from "../components/Reveal";
-import { FeatureCard } from "../components/FeatureCard";
-import { HeroIllustration } from "../components/illustrations/HeroIllustration";
-import { UnifyDiagram } from "../components/illustrations/UnifyDiagram";
-import { Button } from "../../components/ui/Button";
+import { Eyebrow } from "../components/Eyebrow";
+import { TabShowcase, type ShowcaseTab } from "../components/TabShowcase";
+import { PlanPicker, type Plan } from "../components/PlanPicker";
+import { PhoneShell } from "../components/illustrations/PhoneShell";
+import { AppScreen } from "../components/illustrations/AppScreen";
 import { useSEO } from "../useSEO";
 
-const pillars = [
+const proof = ["Nutrition tracking", "Workout logging", "Health tracking", "AI guidance", "Community & professionals"];
+
+const legacyApps = [
+  { name: "A nutrition app", note: "subscription" },
+  { name: "A workout app", note: "subscription" },
+  { name: "A sleep tracker", note: "subscription" },
+  { name: "A coach on WhatsApp", note: "somewhere else" },
+  { name: "A spreadsheet you stopped filling in", note: "March" },
+];
+
+const platformTabs: ShowcaseTab[] = [
   {
-    icon: <Utensils size={20} />,
-    title: "Nutrition tracking",
-    description: "Log meals and understand what you're eating without switching apps to do it.",
-    tone: "primary" as const,
+    label: "Nutrition",
+    title: "Log a meal in seconds, not menus.",
+    description:
+      "Meals, macros and custom foods in the same place as everything else you track — so what you eat sits next to how you trained and how you slept.",
+    points: ["Meal logging with custom foods and macros", "Goals calculated from your own TDEE", "Copy yesterday in a single swipe"],
+    tone: "primary",
+    screen: "nutrition",
   },
   {
-    icon: <Dumbbell size={20} />,
-    title: "Workout logging",
-    description: "Track training and progress in the same place you track everything else about your health.",
-    tone: "teal" as const,
+    label: "Workouts",
+    title: "Training that keeps its own history.",
+    description:
+      "Build routines, log the session as it happens, and let the progression take care of itself. Nothing to re-enter afterwards.",
+    points: ["Routines, folders and a full exercise library", "Live session logger with timer, RPE and tempo", "Volume and 1RM trends over time"],
+    tone: "primary",
+    screen: "workout",
   },
   {
-    icon: <HeartPulse size={20} />,
-    title: "Health tracking",
-    description: "Weight, sleep, steps and more — one view of your everyday health, kept current.",
-    tone: "primary" as const,
+    label: "Health",
+    title: "One view of everyday health.",
+    description:
+      "Weight, sleep, steps and biomarkers, kept current and readable — a trend you can act on rather than a number you forget.",
+    points: ["Weight, sleep, steps and body composition", "Seven-day trend behind every metric", "Bloodwork captured by photo, not typing"],
+    tone: "teal",
+    screen: "health",
   },
   {
-    icon: <Sparkles size={20} />,
-    title: "AI-powered guidance",
-    description: "Practical, personalized help making sense of your data and what to do with it.",
-    tone: "teal" as const,
+    label: "AI guidance",
+    title: "Guidance, not just numbers.",
+    description:
+      "Centium reads what you log and tells you what it means — practical, personal, and built into the tracking rather than bolted on beside it.",
+    points: ["Personalised insight from your own data", "Log by voice or photo when typing is too slow", "Present in every part of the app, quietly"],
+    tone: "primary",
+    screen: "ai",
   },
   {
-    icon: <Users size={20} />,
-    title: "Community & professionals",
-    description: "Access to a community of people and professionals, not just a log of numbers.",
-    tone: "primary" as const,
+    label: "Community",
+    title: "The people around your goals.",
+    description:
+      "A community of people working toward similar things, and the professionals who can help — reachable from inside the same app you already log in.",
+    points: ["Trainers, dietitians, physiotherapists and more", "Share exactly what you choose to share", "Gyms, stores and services in the marketplace"],
+    tone: "teal",
+    screen: "community",
   },
 ];
 
 const personas = [
-  { title: "Consistent", description: "Shows up regularly and wants a place that keeps up with them." },
-  { title: "Determined", description: "Working toward a specific goal, not just tracking for the sake of it." },
-  { title: "Health enthusiasts", description: "Already deep into fitness and nutrition, want it all connected." },
-  { title: "Health conscious", description: "Paying attention to their health and looking for one clear place to do it." },
+  { title: "Consistent", description: "Shows up regularly and wants a place that keeps up." },
+  { title: "Determined", description: "Working toward a specific goal, not tracking for its own sake." },
+  { title: "Health enthusiasts", description: "Already deep into fitness and nutrition, want it connected." },
+  { title: "Health conscious", description: "Paying attention, looking for one clear place to do it." },
+];
+
+const homePlans: Plan[] = [
+  {
+    key: "professionals",
+    badge: "FOR PROFESSIONALS",
+    name: "Professionals",
+    description: "Trainers, dietitians and physiotherapists managing clients.",
+    priceLabel: "Per seat",
+    billingNote: "Monthly or yearly",
+    features: ["Client roster & booking", "Professional dashboard", "Client sharing controls"],
+    ctaLabel: "Get Started",
+    ctaHref: "/app",
+  },
+  {
+    key: "clients",
+    badge: "FOR INDIVIDUALS",
+    name: "Clients",
+    description: "Everything you need to track and understand your own health.",
+    priceLabel: "One subscription",
+    billingNote: "Monthly or yearly",
+    features: ["Nutrition & workout logging", "Health tracking & trends", "AI-powered guidance", "Community & marketplace"],
+    ctaLabel: "Get Started",
+    ctaHref: "/app",
+  },
+  {
+    key: "business",
+    badge: "FOR BUSINESSES",
+    name: "Business",
+    description: "Gyms, studios, stores and services listing on Centium.",
+    priceLabel: "Plan + revenue share",
+    billingNote: "Monthly or yearly",
+    features: ["Marketplace listing", "Employees & classes", "Analytics"],
+    ctaLabel: "Talk to us",
+    ctaHref: "/contact",
+  },
 ];
 
 export const Home: React.FC = () => {
@@ -58,151 +119,301 @@ export const Home: React.FC = () => {
   return (
     <>
       {/* Hero */}
-      <Section className="pt-14 sm:pt-20 pb-16 sm:pb-20">
-        <div className="grid lg:grid-cols-2 gap-12 lg:gap-8 items-center">
+      <section
+        id="top"
+        className="relative overflow-hidden border-b border-mkt-line"
+        style={{ background: "linear-gradient(#F6F3FC 0%, #FBFAFE 46%, #FFFFFF 100%)" }}
+      >
+        <div className="max-w-[1180px] mx-auto px-5 sm:px-10 pt-16 sm:pt-[104px] flex flex-col items-center text-center">
           <Reveal>
-            <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-[3.4rem] leading-[1.08] text-charcoal tracking-tight">
+            <Eyebrow>NUTRITION · TRAINING · HEALTH · AI · COMMUNITY</Eyebrow>
+            <h1 className="font-display font-extrabold text-[44px] sm:text-6xl lg:text-[76px] leading-[1.04] lg:leading-[1.02] tracking-[-.03em] lg:tracking-[-.035em] text-mkt-ink mt-5 max-w-[780px]">
               Your health.
               <br />
               All in one place.
             </h1>
-            <p className="text-charcoal-soft text-lg leading-relaxed mt-6 max-w-md">
-              Centium brings the tools you already use to manage your health — nutrition, workouts, health
-              tracking, AI guidance and community — into one place, so staying healthy feels less like
-              managing a collection of apps and more like managing your life.
+            <p className="text-lg leading-relaxed text-mkt-soft mt-6 max-w-[560px] mx-auto">
+              Centium brings the tools you already use to manage your health into one place — so staying healthy
+              feels less like managing a collection of apps, and more like managing your life.
             </p>
-            <div className="flex flex-wrap items-center gap-3 mt-9">
-              <Button size="lg" onClick={() => (window.location.href = "/app")}>
-                Get Started
-              </Button>
+            <div className="flex flex-wrap justify-center gap-3 mt-9">
               <Link
-                to="/product"
-                className="tap inline-flex items-center gap-1.5 px-5 py-4 rounded-2xl text-sm font-semibold text-charcoal hover:bg-cream-soft"
+                to="/app"
+                className="tap px-[30px] py-4 rounded-full bg-mkt-accent hover:bg-mkt-accent-hover text-white font-semibold text-[15px] transition-colors"
               >
-                See how it works <ArrowRight size={16} />
+                Get Started
               </Link>
+              <a
+                href="#platform"
+                className="tap px-[26px] py-4 rounded-full border border-[#DFDAD2] hover:border-mkt-ink text-mkt-ink font-semibold text-[15px] transition-colors"
+              >
+                See how it works
+              </a>
             </div>
           </Reveal>
-          <Reveal delay={0.1}>
-            <HeroIllustration className="w-full max-w-md mx-auto" />
+
+          <Reveal delay={0.1} className="w-full">
+            <div className="hidden sm:flex items-end justify-center gap-5 mt-[76px] mb-[-90px]">
+              <PhoneShell width={214} height={400} radius={19} shadow="0 18px 50px rgba(72,58,130,.10)">
+                <AppScreen variant="nutrition" />
+              </PhoneShell>
+              <PhoneShell width={262} height={520} radius={24} border="#D9D2EF" shadow="0 28px 70px rgba(72,58,130,.16)">
+                <AppScreen variant="home" />
+              </PhoneShell>
+              <PhoneShell width={214} height={400} radius={19} shadow="0 18px 50px rgba(72,58,130,.10)">
+                <AppScreen variant="health" />
+              </PhoneShell>
+            </div>
+            <div className="sm:hidden mt-12 flex justify-center">
+              <PhoneShell width={220} height={410} radius={20} border="#D9D2EF" shadow="0 20px 50px rgba(72,58,130,.14)">
+                <AppScreen variant="home" />
+              </PhoneShell>
+            </div>
           </Reveal>
         </div>
-      </Section>
+      </section>
+
+      {/* Proof strip */}
+      <section className="border-b border-mkt-line bg-white">
+        <div className="max-w-[1180px] mx-auto px-5 sm:px-10 grid grid-cols-2 sm:grid-cols-5">
+          {proof.map((label, i) => (
+            <div
+              key={label}
+              className={`py-6 text-center font-semibold text-[13px] text-mkt-soft ${
+                i !== proof.length - 1 ? "sm:border-r border-mkt-line" : ""
+              } ${i < 4 ? "border-b sm:border-b-0 border-mkt-line" : ""} ${i === proof.length - 1 ? "col-span-2 sm:col-span-1" : ""}`}
+            >
+              {label}
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Problem */}
-      <Section className="bg-cream-soft/60">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
-          <Reveal className="order-2 lg:order-1">
-            <UnifyDiagram />
-          </Reveal>
-          <Reveal className="order-1 lg:order-2">
-            <p className="text-sm font-bold uppercase tracking-wide text-primary-dark mb-3">The problem</p>
-            <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-charcoal tracking-tight mb-4">
-              One hub, not another app to manage
+      <Section className="bg-white">
+        <div className="grid lg:grid-cols-2 gap-14 lg:gap-24 items-center">
+          <Reveal>
+            <Eyebrow tone="faint">THE PROBLEM</Eyebrow>
+            <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px]">
+              One hub, not another app to manage.
             </h2>
-            <p className="text-charcoal-soft text-base leading-relaxed max-w-lg">
-              Multiple subscriptions. Multiple apps. Managing your health today means juggling a different
-              tool for every part of it — Centium avoids the multi-app shuffle by putting nutrition,
-              training, health data, guidance and community in one accessible place.
+            <p className="text-[17px] leading-relaxed text-mkt-soft mt-5 max-w-[460px]">
+              Multiple subscriptions. Multiple apps. Managing your health today means juggling a different tool
+              for every part of it. Centium puts nutrition, training, health data, guidance and community in one
+              accessible place.
             </p>
+          </Reveal>
+          <Reveal delay={0.08}>
+            <div className="flex flex-col">
+              {legacyApps.map((a) => (
+                <div key={a.name} className="flex items-center justify-between py-[15px] border-t border-mkt-line">
+                  <span className="text-base text-[#A9A29A] line-through">{a.name}</span>
+                  <span className="text-xs text-[#C3BCB2]">{a.note}</span>
+                </div>
+              ))}
+              <div className="flex items-center justify-between py-[22px] px-6 mt-[22px] rounded-2xl bg-mkt-tint border-t border-b-0 border-mkt-line">
+                <span className="font-bold text-[17px] tracking-tight text-mkt-ink">Centium</span>
+                <span className="font-semibold text-xs tracking-[.14em] text-mkt-accent">ONE PLACE</span>
+              </div>
+            </div>
           </Reveal>
         </div>
       </Section>
 
-      {/* Pillars */}
-      <Section>
-        <Reveal className="text-center max-w-2xl mx-auto mb-14">
-          <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-charcoal tracking-tight mb-4">
-            Everything health, together
-          </h2>
-          <p className="text-charcoal-soft text-base leading-relaxed">
-            Five pillars, one place to check in on all of them.
-          </p>
+      {/* Platform */}
+      <Section id="platform" className="bg-mkt-wash border-t border-b border-mkt-line">
+        <Reveal>
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+            <div>
+              <Eyebrow>THE PLATFORM</Eyebrow>
+              <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] max-w-[520px]">
+                Everything health, together.
+              </h2>
+            </div>
+            <p className="text-base leading-relaxed text-mkt-soft max-w-[340px]">
+              Five pillars, one place to check in on all of them — and one history that stays connected.
+            </p>
+          </div>
         </Reveal>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
-          {pillars.map((p, i) => (
-            <Reveal key={p.title} delay={i * 0.05}>
-              <FeatureCard icon={p.icon} title={p.title} description={p.description} tone={p.tone} />
-            </Reveal>
-          ))}
-          <Reveal delay={pillars.length * 0.05}>
-            <Link
-              to="/product"
-              className="tap h-full rounded-3xl border-2 border-dashed border-primary/25 p-6 sm:p-7 flex flex-col items-center justify-center text-center gap-2 hover:border-primary/50 transition-colors"
-            >
-              <span className="font-display font-bold text-primary-dark">See the full product</span>
-              <span className="text-sm text-charcoal-faint flex items-center gap-1">
-                All features <ArrowRight size={14} />
-              </span>
-            </Link>
-          </Reveal>
-        </div>
+        <Reveal delay={0.08} className="mt-11">
+          <TabShowcase tabs={platformTabs} />
+        </Reveal>
+      </Section>
+
+      {/* AI dark band */}
+      <Section className="bg-mkt-dark">
+        <Reveal>
+          <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-center">
+            <div>
+              <Eyebrow tone="dark-accent">AI-POWERED GUIDANCE</Eyebrow>
+              <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-dark-ink mt-[18px]">
+                It reads your data, so you don't have to.
+              </h2>
+              <p className="text-[17px] leading-relaxed text-mkt-dark-soft mt-5 max-w-[440px]">
+                Centium turns everything you log into something you can act on today — what changed, what it
+                means, and what to do next. The same intelligence runs through nutrition, training and health.
+              </p>
+              <div className="flex flex-wrap gap-8 mt-9 pt-7 border-t border-mkt-dark-line">
+                <div>
+                  <div className="font-extrabold text-[15px] text-mkt-dark-ink">Voice & photo logging</div>
+                  <div className="text-[13.5px] text-mkt-dark-soft/70 mt-1.5">Speak a meal, snap a label</div>
+                </div>
+                <div>
+                  <div className="font-extrabold text-[15px] text-mkt-dark-ink">Always in context</div>
+                  <div className="text-[13.5px] text-mkt-dark-soft/70 mt-1.5">Never a separate chatbot tab</div>
+                </div>
+              </div>
+            </div>
+            <div className="h-[300px] sm:h-[420px] rounded-3xl overflow-hidden border border-mkt-dark-line bg-mkt-dark-surface">
+              <AppScreen variant="ai" dark />
+            </div>
+          </div>
+        </Reveal>
       </Section>
 
       {/* Personas */}
-      <Section className="bg-cream-soft/60">
-        <Reveal className="text-center max-w-2xl mx-auto mb-14">
-          <p className="text-sm font-bold uppercase tracking-wide text-teal-dark mb-3">Who it's for</p>
-          <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-charcoal tracking-tight">
-            Built for people who show up
+      <Section className="bg-white border-b border-mkt-line">
+        <Reveal>
+          <Eyebrow tone="faint">WHO IT'S FOR</Eyebrow>
+          <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] mb-11 max-w-[560px]">
+            Built for people who show up.
           </h2>
         </Reveal>
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {personas.map((p, i) => (
-            <Reveal key={p.title} delay={i * 0.05}>
-              <div className="rounded-3xl bg-cream-card p-6 h-full shadow-soft">
-                <h3 className="font-display font-bold text-charcoal text-base mb-1.5">{p.title}</h3>
-                <p className="text-sm text-charcoal-soft leading-relaxed">{p.description}</p>
+        <Reveal delay={0.08}>
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 border-t border-mkt-line">
+            {personas.map((p, i) => (
+              <div
+                key={p.title}
+                className={`pt-8 pb-0 pr-0 lg:pr-7 ${i !== 0 ? "lg:border-l border-mkt-line lg:pl-7" : ""}`}
+              >
+                <div className="font-bold text-lg tracking-tight text-mkt-ink">{p.title}</div>
+                <p className="text-[15px] leading-relaxed text-mkt-soft mt-2.5">{p.description}</p>
               </div>
-            </Reveal>
-          ))}
+            ))}
+          </div>
+        </Reveal>
+      </Section>
+
+      {/* Business */}
+      <Section className="bg-white">
+        <Reveal>
+          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-10">
+            <div>
+              <Eyebrow tone="teal">B2B + B2C</Eyebrow>
+              <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] max-w-[600px]">
+                Trainers, dietitians, gyms and businesses too.
+              </h2>
+            </div>
+            <Link
+              to="/business"
+              className="tap shrink-0 px-[26px] py-[15px] rounded-full border border-[#DFDAD2] hover:border-mkt-ink text-mkt-ink font-semibold text-[15px] transition-colors"
+            >
+              Explore for Business
+            </Link>
+          </div>
+        </Reveal>
+        <div className="grid lg:grid-cols-2 gap-5">
+          <Reveal>
+            <div className="border border-mkt-line hover:border-mkt-accent-ring rounded-3xl p-9 transition-colors">
+              <div className="font-bold text-xl tracking-tight text-mkt-ink">For professionals</div>
+              <p className="text-base leading-relaxed text-mkt-soft mt-3">
+                Manage your client roster, bookings and the health data clients choose to share — billed monthly
+                or yearly, per seat.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-6">
+                {["Personal trainers", "Dietitians", "Physiotherapists"].map((t) => (
+                  <span key={t} className="px-3.5 py-2 rounded-full bg-mkt-tint text-mkt-accent-hover font-semibold text-[13px]">
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-7 h-[210px] rounded-2xl overflow-hidden bg-mkt-wash2 border border-mkt-line">
+                <AppScreen variant="roster" />
+              </div>
+            </div>
+          </Reveal>
+          <Reveal delay={0.06}>
+            <div className="border border-mkt-line hover:border-[#A8CCC6] rounded-3xl p-9 transition-colors">
+              <div className="font-bold text-xl tracking-tight text-mkt-ink">For businesses</div>
+              <p className="text-base leading-relaxed text-mkt-soft mt-3">
+                List your gym, store or service where people already track their health — billed monthly or
+                yearly, plus a share of revenue generated through Centium.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-6">
+                {["Gyms & studios", "Equipment & supplements", "Meal prep"].map((t) => (
+                  <span key={t} className="px-3.5 py-2 rounded-full bg-mkt-teal-tint text-mkt-teal font-semibold text-[13px]">
+                    {t}
+                  </span>
+                ))}
+              </div>
+              <div className="mt-7 h-[210px] rounded-2xl overflow-hidden bg-mkt-wash2 border border-mkt-line">
+                <AppScreen variant="listing" />
+              </div>
+            </div>
+          </Reveal>
         </div>
       </Section>
 
-      {/* Vision */}
-      <Section narrow className="text-center">
-        <Reveal>
-          <p className="text-sm font-bold uppercase tracking-wide text-primary-dark mb-3">Where we're headed</p>
-          <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-charcoal tracking-tight mb-5">
-            One ecosystem, not ten apps
+      {/* Pricing preview */}
+      <Section className="bg-mkt-wash border-t border-b border-mkt-line">
+        <Reveal className="text-center max-w-[560px] mx-auto mb-11">
+          <Eyebrow className="mx-auto">PRICING</Eyebrow>
+          <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px]">
+            Plans for however you use Centium.
           </h2>
-          <p className="text-charcoal-soft text-base leading-relaxed">
-            We want Centium to grow into a health ecosystem where people can track their progress, understand
-            their habits, work toward their goals, and connect with the right resources and professionals —
-            all without needing a different app for every part of their health.
-          </p>
+          <p className="text-base leading-relaxed text-mkt-soft mt-[18px]">Rates are announced at launch. The structure below is final.</p>
+        </Reveal>
+        <Reveal delay={0.08}>
+          <PlanPicker plans={homePlans} defaultSelected={1} />
         </Reveal>
       </Section>
 
-      {/* B2B teaser */}
-      <Section className="bg-cream-soft/60">
-        <Reveal className="rounded-[2.5rem] bg-cream-card shadow-soft px-8 py-12 sm:px-14 sm:py-16 flex flex-col lg:flex-row items-center justify-between gap-8">
-          <div className="max-w-lg">
-            <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-charcoal tracking-tight mb-3">
-              Trainers, dietitians, gyms and businesses too
-            </h2>
-            <p className="text-charcoal-soft text-base leading-relaxed">
-              Centium isn't just for individuals — professionals and businesses get their own tools to manage
-              clients, listings and offers on the same platform.
-            </p>
+      {/* Vision */}
+      <Section className="bg-white text-center" narrow>
+        <Reveal>
+          <Eyebrow tone="faint" className="mx-auto">
+            WHERE WE'RE HEADED
+          </Eyebrow>
+          <h2 className="font-display font-extrabold text-[34px] sm:text-[52px] leading-[1.1] tracking-[-.032em] text-mkt-ink mt-5">
+            One ecosystem for everyday health — not ten apps.
+          </h2>
+          <p className="text-lg leading-relaxed text-mkt-soft mt-6 max-w-xl mx-auto">
+            Track your progress, understand your habits, work toward your goals, and connect with the right
+            people and resources — without needing a different app for every part of your health.
+          </p>
+          <div className="flex flex-wrap justify-center gap-7 items-center mt-11 font-semibold text-[13px] tracking-[.1em] text-mkt-faint">
+            <span>WELLNESS</span>
+            <span className="text-[#DDD8D0]">·</span>
+            <span>LUXURY</span>
+            <span className="text-[#DDD8D0]">·</span>
+            <span>EASY ON THE EYE</span>
+            <span className="text-[#DDD8D0]">·</span>
+            <span>INTERNATIONAL</span>
           </div>
-          <Link to="/business" className="tap shrink-0">
-            <Button variant="outline" size="lg">
-              Explore for Business
-            </Button>
-          </Link>
         </Reveal>
       </Section>
 
       {/* Final CTA */}
-      <Section narrow className="text-center pb-28">
-        <Reveal>
-          <h2 className="font-display font-extrabold text-3xl sm:text-4xl text-charcoal tracking-tight mb-6">
+      <Section className="bg-mkt-tint border-t border-[#E7E1F6] text-center">
+        <Reveal className="flex flex-col items-center">
+          <h2 className="font-display font-extrabold text-[34px] sm:text-[52px] leading-[1.08] tracking-[-.032em] text-mkt-ink max-w-[620px]">
             Ready to bring it all together?
           </h2>
-          <Button size="lg" onClick={() => (window.location.href = "/app")}>
-            Get Started
-          </Button>
+          <div className="flex flex-wrap justify-center gap-3 mt-8">
+            <Link
+              to="/app"
+              className="tap px-8 py-4 rounded-full bg-mkt-accent hover:bg-mkt-accent-hover text-white font-semibold text-[15px] transition-colors"
+            >
+              Get Started
+            </Link>
+            <a
+              href="#platform"
+              className="tap px-[26px] py-4 rounded-full border border-[#CFC5EA] hover:border-mkt-accent text-mkt-ink font-semibold text-[15px] transition-colors"
+            >
+              See the product
+            </a>
+          </div>
+          <p className="text-[13.5px] text-mkt-faint mt-5">A product prototype — not yet available for download.</p>
         </Reveal>
       </Section>
     </>
