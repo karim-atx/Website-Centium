@@ -37,6 +37,13 @@ export const StickyIndex: React.FC<{ items: { id: string; label: string }[]; cla
           break;
         }
       }
+      // A short final section can sit entirely below the threshold line
+      // even at max scroll, if there isn't enough remaining page height to
+      // push its heading up past it — the loop above would then leave an
+      // earlier section highlighted while the last one is what's on screen.
+      // At the bottom of the page, the last item is always the right one.
+      const atBottom = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+      if (atBottom) current = items[items.length - 1].id;
       setActive(current);
     };
 
