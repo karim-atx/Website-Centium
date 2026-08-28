@@ -8,12 +8,17 @@
   atraxia.org's root request to this file, the same way it proxies
   /centium/* to the rest of the built app.
 
-  QA 1.0: rebuilt around Atraxia's own mark (navy "A" + teal swoosh/dot,
-  redrawn as inline SVG paths below — same technique as CentiumLogo.tsx:
-  built against the reference mark, not traced pixel-for-pixel from it)
-  and its own navy/teal palette, distinct from Centium's purple. Framed as
-  a parent-company page (meta.com as the reference point) that introduces
-  the founders and points at Centium as the first app in the portfolio.
+  Design pass (Claude Design handoff, "Atraxia hub page" — see
+  scratchpad/design_handoff_atraxia_hub/README.md for the source spec):
+  real-logo hero/nav/footer lockup (kept as the existing hand-built vector
+  mark rather than the handoff's raster PNGs — same mark, no rasterization
+  loss, recolors correctly for dark mode), an animated orbital hero scene
+  replacing the old CSS blob, and a page-level star field. Portfolio section
+  is unchanged per the handoff ("ship it as-is"); founders section unchanged
+  structurally (only Karim's role line updated). Colours/sizes/timings below
+  are reproduced from the handoff's literal values where it specifies raw
+  hex/px — reused as the existing --navy/--teal/--charcoal-soft tokens
+  wherever a literal value coincides with one exactly.
 -->
 <html lang="en">
   <head>
@@ -74,6 +79,13 @@
         padding-inline: 1.5rem;
       }
 
+      .page { position: relative; overflow: hidden; }
+
+      /* ---------- page-level star field ---------- */
+      .star-field { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+      .star-field span { position: absolute; border-radius: 50%; }
+      .nav, main, footer { position: relative; z-index: 1; }
+
       /* ---------- intro loader ---------- */
       .loader {
         position: fixed;
@@ -85,29 +97,15 @@
         background: rgb(var(--cream));
         animation: loaderOut 1.8s ease forwards;
       }
-      .loader .mark { width: min(34vw, 180px); height: auto; }
-      .loader .mark .leg { opacity: 0; animation: legIn 0.35s ease forwards; }
-      .loader .mark .leg--l { animation-delay: 0.05s; }
-      .loader .mark .leg--r { animation-delay: 0.15s; }
-      .loader .mark .swoosh {
-        stroke-dasharray: 260;
-        stroke-dashoffset: 260;
-        animation: swooshDraw 0.85s cubic-bezier(.4,.1,.2,1) 0.35s forwards;
-      }
-      .loader .mark .dot { opacity: 0; transform-origin: 178px 64px; animation: dotPop 0.3s ease 1.05s forwards; }
+      .loader .mark-wrap { position: relative; width: 260px; height: 260px; display: flex; align-items: center; justify-content: center; }
+      .loader .mark { width: 66%; height: auto; opacity: 0; animation: markIn 0.55s cubic-bezier(.22,1,.36,1) 0.05s forwards; }
+      .loader .orbits { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; animation: ringIn 0.7s cubic-bezier(.22,1,.36,1) 0.25s forwards; }
 
       @keyframes loaderOut { 0%, 68% { opacity: 1; pointer-events: auto; } 100% { opacity: 0; pointer-events: none; } }
-      @keyframes legIn { from { opacity: 0; transform: scaleY(0.6); transform-origin: bottom; } to { opacity: 1; transform: scaleY(1); } }
-      @keyframes swooshDraw { to { stroke-dashoffset: 0; } }
-      @keyframes dotPop { from { opacity: 0; transform: scale(0.3); } to { opacity: 1; transform: scale(1); } }
+      @keyframes markIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+      @keyframes ringIn { from { opacity: 0; transform: scale(0.75); } to { opacity: 1; transform: scale(1); } }
 
-      @media (prefers-reduced-motion: reduce) {
-        .loader { animation: loaderOut 0.6s linear forwards; }
-        .loader .mark .leg, .loader .mark .swoosh, .loader .mark .dot { animation: none; opacity: 1; stroke-dashoffset: 0; transform: none; }
-        .blob { animation: none !important; }
-      }
-
-      /* ---------- shared mark styling ---------- */
+      /* ---------- shared mark styling (nav / footer / hero / loader) ---------- */
       .mark .leg { stroke: rgb(var(--navy)); stroke-width: 20; stroke-linecap: round; fill: none; }
       .mark .swoosh { stroke: rgb(var(--teal)); stroke-width: 13; stroke-linecap: round; fill: none; }
       .mark .dot { fill: rgb(var(--teal)); }
@@ -117,19 +115,19 @@
         position: sticky;
         top: 0;
         z-index: 20;
-        display: flex;
-        align-items: center;
-        gap: 0.6rem;
-        padding: 1.25rem 1.5rem;
-        background: rgb(var(--cream) / 0.82);
-        backdrop-filter: blur(10px);
+        background: rgb(var(--cream) / 0.86);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid rgb(var(--border) / 0.055);
       }
-      .nav .mark { width: 26px; height: 26px; }
+      .nav .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1.6rem; }
+      .nav .lockup { display: flex; align-items: center; gap: 0.7rem; }
+      .nav .mark { width: 31px; height: 31px; flex: none; }
       .nav .word {
         font-weight: 800;
         letter-spacing: 0.14em;
         font-size: 0.95rem;
       }
+      .nav .meta { font-size: 0.7rem; letter-spacing: 0.2em; font-weight: 700; color: #9AACB1; }
 
       /* ---------- hero ---------- */
       .hero {
@@ -138,24 +136,29 @@
         overflow: hidden;
         isolation: isolate;
       }
-      .blob {
+      .orbit-wrap {
         position: absolute;
         z-index: -1;
-        width: 60vw;
-        height: 60vw;
-        max-width: 720px;
-        max-height: 720px;
-        border-radius: 50%;
-        background: radial-gradient(circle at 35% 35%, rgb(var(--teal) / 0.28), transparent 70%),
-                    radial-gradient(circle at 65% 65%, rgb(var(--navy) / 0.14), transparent 70%);
-        top: -18%;
-        right: -18%;
-        animation: blobDrift 16s ease-in-out infinite;
+        top: 0;
+        right: -12%;
+        width: 720px;
+        height: 720px;
+        animation: blobDrift 22s ease-in-out infinite;
       }
+      .orbit-wrap svg { width: 100%; height: 100%; display: block; }
+      .orbit-wrap .atmos { animation: breathe 16s ease-in-out infinite; }
+      .orbit-wrap .meteor { animation: meteor 6s linear infinite; }
+      .orbit-wrap .meteor2 { animation: meteor2 7.5s linear 2.2s infinite; }
+      .orbit-wrap .meteor3 { animation: meteor3 9s linear 4.5s infinite; }
       @keyframes blobDrift {
         0%, 100% { transform: translate(0, 0) scale(1); }
-        50% { transform: translate(-3%, 4%) scale(1.08); }
+        50% { transform: translate(-3%, 4%) scale(1.06); }
       }
+      @keyframes breathe { 0%, 100% { opacity: 0.9; transform: scale(1); } 50% { opacity: 1; transform: scale(1.04); } }
+      @keyframes meteor  { 0% { opacity: 0; transform: translate(60px,30px); } 4% { opacity: 1; } 22% { opacity: 1; } 30%, 100% { opacity: 0; transform: translate(560px,232px); } }
+      @keyframes meteor2 { 0% { opacity: 0; transform: translate(380px,460px); } 5% { opacity: .85; } 24% { opacity: .85; } 32%, 100% { opacity: 0; transform: translate(760px,616px); } }
+      @keyframes meteor3 { 0% { opacity: 0; transform: translate(180px,600px); } 5% { opacity: .9; } 23% { opacity: .9; } 31%, 100% { opacity: 0; transform: translate(620px,780px); } }
+
       .eyebrow {
         display: inline-block;
         font-weight: 800;
@@ -164,39 +167,52 @@
         color: rgb(var(--teal-dark));
         margin-bottom: 1rem;
       }
+      .eyebrow-rule { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1.75rem; }
+      .eyebrow-rule .rule { width: 30px; height: 1px; background: #B7C7CB; display: block; }
+      .eyebrow-rule .label { font-weight: 700; font-size: 0.7rem; letter-spacing: 0.2em; color: #7C8F95; }
+
       .hero h1 {
-        font-size: clamp(2.2rem, 5.2vw, 3.6rem);
-        line-height: 1.08;
+        font-size: 57.6px;
+        line-height: 1.03;
         font-weight: 800;
-        letter-spacing: -0.02em;
-        margin: 0 0 1.25rem;
-        max-width: 20ch;
+        letter-spacing: -0.035em;
+        margin: 0 0 1.75rem;
+        max-width: 16ch;
       }
       .hero p.lede {
-        font-size: clamp(1.02rem, 1.6vw, 1.2rem);
-        color: rgb(var(--charcoal-soft));
-        max-width: 52ch;
-        margin: 0 0 2.25rem;
-        line-height: 1.6;
+        font-size: 19.2px;
+        color: #55696F;
+        max-width: 46ch;
+        margin: 0 0 3rem;
+        line-height: 1.65;
       }
-      .hero-actions { display: flex; flex-wrap: wrap; gap: 0.9rem; align-items: center; }
+      .hero-actions { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; }
       .btn {
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
         font-weight: 700;
-        font-size: 0.95rem;
-        padding: 0.85rem 1.5rem;
-        border-radius: 999px;
+        font-size: 0.9rem;
+        letter-spacing: 0.01em;
         text-decoration: none;
-        transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
       }
-      .btn--primary { background: rgb(var(--navy)); color: rgb(var(--cream)); }
-      .btn--primary:hover, .btn--primary:focus-visible { transform: translateY(-2px); box-shadow: 0 10px 26px rgb(var(--navy) / 0.28); }
-      .btn--ghost { color: rgb(var(--navy)); }
-      .btn--ghost:hover, .btn--ghost:focus-visible { color: rgb(var(--teal-dark)); }
+      .btn--primary {
+        padding: 1.05rem 2rem;
+        border-radius: 999px;
+        background: rgb(var(--navy));
+        color: rgb(var(--cream));
+        transition: background 0.2s ease, transform 0.2s ease;
+      }
+      .btn--primary:hover, .btn--primary:focus-visible { background: #0A5064; transform: translateY(-1px); }
+      .btn--ghost {
+        color: rgb(var(--navy));
+        padding-bottom: 2px;
+        border-bottom: 1px solid rgb(var(--navy) / 0.25);
+        transition: border-color 0.2s ease;
+      }
+      .btn--ghost:hover, .btn--ghost:focus-visible { border-bottom-color: rgb(var(--navy)); }
       .btn:focus-visible { outline: 2px solid rgb(var(--teal)); outline-offset: 3px; }
-      .hero-mark { margin-top: 3.5rem; width: min(46vw, 210px); }
+      .hero-mark { margin-top: 3.5rem; width: 290px; }
       .hero-mark .mark { width: 100%; height: auto; }
 
       /* ---------- sections ---------- */
@@ -210,24 +226,42 @@
       }
       .section-head p { color: rgb(var(--charcoal-soft)); line-height: 1.6; margin: 0; }
 
+      /* ---------- mission ---------- */
       .mission {
+        padding: 8rem 0;
         background: rgb(var(--cream-soft));
         border-top: 1px solid rgb(var(--border) / 0.06);
         border-bottom: 1px solid rgb(var(--border) / 0.06);
       }
-      .mission-grid {
-        display: grid;
-        grid-template-columns: 1.1fr 1fr;
-        gap: 2.5rem;
-        align-items: center;
+      .mission .eyebrow { margin-bottom: 2.25rem; }
+      .mission .statement {
+        font-size: 56px;
+        line-height: 1.14;
+        font-weight: 800;
+        letter-spacing: -0.022em;
+        margin: 0;
+        max-width: 17ch;
       }
-      .mission h2 { font-size: clamp(1.6rem, 3vw, 2.1rem); font-weight: 800; letter-spacing: -0.01em; margin: 0 0 1rem; }
-      .mission p { color: rgb(var(--charcoal-soft)); line-height: 1.7; margin: 0 0 1rem; }
-      .mission-stats { display: flex; gap: 2rem; flex-wrap: wrap; }
-      .mission-stats div strong { display: block; font-size: 1.6rem; font-weight: 800; color: rgb(var(--navy)); }
-      .mission-stats div span { font-size: 0.85rem; color: rgb(var(--charcoal-faint)); }
+      .mission-prose {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 3.5rem;
+        margin-top: 2.75rem;
+        max-width: 820px;
+      }
+      .mission-prose p { color: rgb(var(--charcoal-soft)); line-height: 1.75; margin: 0; font-size: 17.5px; }
+      .mission-stats {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 2rem;
+        margin-top: 5rem;
+        padding-top: 2.25rem;
+        border-top: 1px solid rgb(var(--border) / 0.10);
+      }
+      .mission-stats strong { display: block; font-size: 3.25rem; font-weight: 800; color: rgb(var(--navy)); letter-spacing: -0.02em; line-height: 1; }
+      .mission-stats span { display: block; font-size: 0.78rem; letter-spacing: 0.14em; font-weight: 700; color: #7C8F95; margin-top: 0.85rem; }
 
-      /* ---------- portfolio grid ---------- */
+      /* ---------- portfolio grid (unchanged) ---------- */
       .grid {
         display: grid;
         grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
@@ -296,179 +330,369 @@
         gap: 1rem;
       }
       footer .brand-lockup { display: flex; align-items: center; gap: 0.5rem; }
-      footer .brand-lockup .mark { width: 20px; height: 20px; }
+      footer .brand-lockup .mark { width: 25px; height: 25px; }
       footer .brand-lockup .word { font-weight: 800; letter-spacing: 0.12em; font-size: 0.82rem; }
       footer small { color: rgb(var(--charcoal-faint)); font-size: 0.8rem; }
 
-      /* ---------- responsive ---------- */
+      /* ---------- responsive: tablet ---------- */
+      @media (max-width: 1024px) {
+        .orbit-wrap { width: 500px; height: 500px; }
+        .hero h1 { font-size: 43.4px; }
+        .mission .statement { font-size: 42px; }
+      }
+
+      /* ---------- responsive: mobile ---------- */
       @media (max-width: 760px) {
-        .mission-grid { grid-template-columns: 1fr; }
         .hero { padding-top: 3rem; }
+        .orbit-wrap { width: 234px; height: 234px; }
+        .hero h1 { font-size: 35.2px; }
+        .hero p.lede { font-size: 16.3px; }
+        .hero-mark { width: 230px; }
+        .mission { padding: 4.5rem 0; }
+        .mission .statement { font-size: 32px; }
+        .mission-prose { grid-template-columns: 1fr; gap: 1.25rem; max-width: 100%; }
+        .mission-prose p { font-size: 16px; }
+        .mission-stats { grid-template-columns: 1fr 1fr; gap: 1.75rem; margin-top: 3rem; }
+        .mission-stats strong { font-size: 2.4rem; }
+      }
+      @media (max-width: 1024px) and (min-width: 761px) {
+        .mission-prose { max-width: 100%; }
+      }
+
+      /* ---------- reduced motion ---------- */
+      @media (prefers-reduced-motion: reduce) {
+        .loader { animation: loaderOut 0.6s linear forwards; }
+        .loader .mark, .loader .orbits { animation: none; opacity: 1; }
+        .orbit-wrap { animation: none !important; }
+        .orbit-wrap .atmos { animation: none !important; }
+        .orbit-wrap .meteor, .orbit-wrap .meteor2, .orbit-wrap .meteor3 { animation: none !important; opacity: 0 !important; }
+        .orbit-dot { display: none !important; }
+        .star-field span { animation: none !important; opacity: 0.5 !important; }
       }
     </style>
   </head>
   <body>
     <div class="loader" aria-hidden="true">
-      <svg class="mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-        <path class="leg leg--l" d="M70,172 L100,32" />
-        <path class="leg leg--r" d="M100,32 L166,150" />
-        <path class="swoosh" d="M22,166 C55,150 95,128 130,112 C150,103 162,90 172,74" />
-        <circle class="dot" cx="178" cy="64" r="9" />
-      </svg>
+      <div class="mark-wrap">
+        <svg class="mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path class="leg" d="M70,172 L100,32" />
+          <path class="leg" d="M100,32 L166,150" />
+          <path class="swoosh" d="M22,166 C55,150 95,128 130,112 C150,103 162,90 172,74" style="stroke-dasharray:none;stroke-dashoffset:0" />
+          <circle class="dot" cx="178" cy="64" r="9" style="opacity:1" />
+        </svg>
+        <svg class="orbits" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <g transform="rotate(-18 200 200)">
+            <path id="atx-load-o1" d="M14,200 a186,74 0 1,0 372,0 a186,74 0 1,0 -372,0" fill="none" stroke="#368294" stroke-opacity=".32" stroke-width="1.5" />
+            <circle r="7" fill="#368294" class="orbit-dot">
+              <animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#atx-load-o1" /></animateMotion>
+            </circle>
+          </g>
+          <g transform="rotate(52 200 200)">
+            <path id="atx-load-o2" d="M56,200 a144,58 0 1,0 288,0 a144,58 0 1,0 -288,0" fill="none" stroke="#023B4A" stroke-opacity=".18" stroke-width="1.5" />
+            <circle r="5" fill="#023B4A" fill-opacity=".5" class="orbit-dot">
+              <animateMotion dur="1.9s" begin="-.5s" repeatCount="indefinite"><mpath href="#atx-load-o2" /></animateMotion>
+            </circle>
+          </g>
+        </svg>
+      </div>
     </div>
 
-    <nav class="nav">
-      <svg class="mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-        <path class="leg" d="M70,172 L100,32" />
-        <path class="leg" d="M100,32 L166,150" />
-        <path class="swoosh" d="M22,166 C55,150 95,128 130,112 C150,103 162,90 172,74" style="stroke-dasharray:none;stroke-dashoffset:0" />
-        <circle class="dot" cx="178" cy="64" r="9" style="opacity:1" />
-      </svg>
-      <span class="word">ATRAXIA</span>
-    </nav>
+    <div class="page">
+      <div class="star-field" aria-hidden="true">
+        <span style="left:89.21%;top:2.90%;width:3.4px;height:3.4px;background:#2E7386;animation:sparkle 27.9s ease-in-out 4.6s infinite"></span>
+        <span style="left:84.87%;top:33.34%;width:4.0px;height:4.0px;background:#023B4A;animation:sparkle 25.9s ease-in-out 3.5s infinite"></span>
+        <span style="left:65.77%;top:14.03%;width:2.9px;height:2.9px;background:#2E7386;animation:twinkle 14.4s ease-in-out 7.3s infinite"></span>
+        <span style="left:96.21%;top:5.19%;width:3.9px;height:3.9px;background:#023B4A;animation:sparkle 19.7s ease-in-out 4.1s infinite"></span>
+        <span style="left:68.74%;top:20.83%;width:3.5px;height:3.5px;background:#023B4A;animation:twinkle 17.0s ease-in-out 2.9s infinite"></span>
+        <span style="left:81.15%;top:3.25%;width:3.1px;height:3.1px;background:#2E7386;animation:twinkle 12.0s ease-in-out 4.4s infinite"></span>
+        <span style="left:78.31%;top:24.28%;width:3.0px;height:3.0px;background:#2E7386;animation:twinkle 11.2s ease-in-out 2.2s infinite"></span>
+        <span style="left:79.07%;top:44.32%;width:3.0px;height:3.0px;background:#368294;animation:twinkle 15.8s ease-in-out 3.2s infinite"></span>
+        <span style="left:51.13%;top:26.22%;width:3.0px;height:3.0px;background:#023B4A;animation:twinkle 15.1s ease-in-out 7.9s infinite"></span>
+        <span style="left:62.20%;top:27.22%;width:3.0px;height:3.0px;background:#368294;animation:twinkle 15.0s ease-in-out 4.8s infinite"></span>
+        <span style="left:95.62%;top:42.74%;width:2.7px;height:2.7px;background:#368294;animation:twinkle 9.7s ease-in-out 4.9s infinite"></span>
+        <span style="left:53.46%;top:29.79%;width:2.7px;height:2.7px;background:#023B4A;animation:twinkle 15.5s ease-in-out 4.1s infinite"></span>
+        <span style="left:62.57%;top:23.71%;width:2.1px;height:2.1px;background:#023B4A;animation:twinkle 11.0s ease-in-out 3.0s infinite"></span>
+        <span style="left:38.48%;top:8.39%;width:2.4px;height:2.4px;background:#5E8E9B;animation:twinkle 9.4s ease-in-out 1.1s infinite"></span>
+        <span style="left:39.51%;top:3.86%;width:2.0px;height:2.0px;background:#5E8E9B;animation:twinkle 12.0s ease-in-out 3.8s infinite"></span>
+        <span style="left:32.23%;top:1.88%;width:2.2px;height:2.2px;background:#5E8E9B;animation:twinkle 9.5s ease-in-out 3.9s infinite"></span>
+        <span style="left:49.20%;top:49.79%;width:2.3px;height:2.3px;background:#3C5F69;animation:twinkle 12.6s ease-in-out 8.1s infinite"></span>
+        <span style="left:40.29%;top:25.39%;width:1.7px;height:1.7px;background:#3C5F69;animation:twinkle 17.0s ease-in-out 7.3s infinite"></span>
+        <span style="left:15.89%;top:3.90%;width:1.9px;height:1.9px;background:#7EA0A8;animation:twinkle 12.3s ease-in-out 4.9s infinite"></span>
+        <span style="left:19.88%;top:52.35%;width:1.9px;height:1.9px;background:#7EA0A8;animation:twinkle 13.9s ease-in-out 3.1s infinite"></span>
+        <span style="left:18.06%;top:34.60%;width:2.1px;height:2.1px;background:#94A9AE;animation:twinkle 11.3s ease-in-out 2.3s infinite"></span>
+      </div>
 
-    <main>
-      <header class="hero">
-        <div class="blob"></div>
+      <nav class="nav">
         <div class="wrap">
-          <span class="eyebrow">A HEALTH &amp; WELLNESS HOLDING COMPANY</span>
-          <h1>We build and house the apps shaping the future of health.</h1>
-          <p class="lede">
-            Atraxia is the parent company behind a growing portfolio of health and
-            wellness ventures. One team, one set of standards — a family of
-            independent apps and businesses built to last, starting with Centium.
-          </p>
-          <div class="hero-actions">
-            <a class="btn btn--primary" href="#portfolio">Check out our latest apps &amp; developments</a>
-            <a class="btn btn--ghost" href="#founders">Meet the founders →</a>
-          </div>
-          <div class="hero-mark" aria-hidden="true">
-            <svg class="mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <div class="lockup">
+            <svg class="mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
               <path class="leg" d="M70,172 L100,32" />
               <path class="leg" d="M100,32 L166,150" />
               <path class="swoosh" d="M22,166 C55,150 95,128 130,112 C150,103 162,90 172,74" style="stroke-dasharray:none;stroke-dashoffset:0" />
               <circle class="dot" cx="178" cy="64" r="9" style="opacity:1" />
             </svg>
+            <span class="word">ATRAXIA</span>
           </div>
+          <span class="meta">EST. 2026</span>
         </div>
-      </header>
+      </nav>
 
-      <section class="mission">
-        <div class="wrap mission-grid">
-          <div>
-            <h2>One company, many ventures.</h2>
-            <p>
-              Instead of one product trying to do everything, Atraxia builds
-              focused, independent apps and businesses — each solving a real
-              problem, each backed by the same team, standards and long-term
-              thinking.
-            </p>
-            <p>
-              Healthcare and fitness sit at the core of everything we build,
-              from the first line of code to the way each product is run.
-            </p>
-          </div>
-          <div class="mission-stats">
-            <div><strong>1</strong><span>App live today</span></div>
-            <div><strong>2</strong><span>Co-founders</span></div>
-            <div><strong>∞</strong><span>Ventures ahead</span></div>
-          </div>
-        </div>
-      </section>
+      <main>
+        <header class="hero">
+          <div class="orbit-wrap" aria-hidden="true">
+            <svg viewBox="0 0 800 800" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <radialGradient id="atx-atmos" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#368294" stop-opacity=".20" />
+                  <stop offset="45%" stop-color="#368294" stop-opacity=".08" />
+                  <stop offset="100%" stop-color="#368294" stop-opacity="0" />
+                </radialGradient>
+                <linearGradient id="atx-body" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stop-color="#5E9FB0" stop-opacity=".22" />
+                  <stop offset="52%" stop-color="#2E7386" stop-opacity=".16" />
+                  <stop offset="100%" stop-color="#023B4A" stop-opacity=".10" />
+                </linearGradient>
+                <radialGradient id="atx-term" cx="72%" cy="76%" r="72%">
+                  <stop offset="55%" stop-color="#023B4A" stop-opacity="0" />
+                  <stop offset="100%" stop-color="#023B4A" stop-opacity=".13" />
+                </radialGradient>
+                <linearGradient id="atx-ring" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#368294" stop-opacity="0" />
+                  <stop offset="22%" stop-color="#368294" stop-opacity=".42" />
+                  <stop offset="50%" stop-color="#023B4A" stop-opacity=".22" />
+                  <stop offset="78%" stop-color="#368294" stop-opacity=".38" />
+                  <stop offset="100%" stop-color="#368294" stop-opacity="0" />
+                </linearGradient>
+                <radialGradient id="atx-spark" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stop-color="#4A8DA0" stop-opacity=".9" />
+                  <stop offset="40%" stop-color="#4A8DA0" stop-opacity=".35" />
+                  <stop offset="100%" stop-color="#4A8DA0" stop-opacity="0" />
+                </radialGradient>
+                <radialGradient id="atx-hi" cx="32%" cy="26%" r="52%">
+                  <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".42" />
+                  <stop offset="60%" stop-color="#FFFFFF" stop-opacity=".08" />
+                  <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
+                </radialGradient>
+                <linearGradient id="atx-meteor" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#4A8DA0" stop-opacity="0" />
+                  <stop offset="100%" stop-color="#4A8DA0" stop-opacity=".85" />
+                </linearGradient>
+                <clipPath id="atx-clip"><circle cx="400" cy="400" r="168" /></clipPath>
+                <radialGradient id="atx-moon" cx="34%" cy="30%" r="70%">
+                  <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".55" />
+                  <stop offset="100%" stop-color="#023B4A" stop-opacity=".25" />
+                </radialGradient>
+                <mask id="atx-occlude">
+                  <rect x="0" y="0" width="800" height="800" fill="#fff" />
+                  <circle cx="400" cy="400" r="171" fill="#000" />
+                </mask>
+                <filter id="atx-soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="16" /></filter>
+              </defs>
 
-      <section id="portfolio">
-        <div class="wrap">
-          <div class="section-head">
-            <span class="eyebrow">OUR PORTFOLIO</span>
-            <h2>Check out our latest apps &amp; developments</h2>
-            <p>Every Atraxia product shares the same team, standards and long-term thinking — starting here.</p>
+              <circle class="atmos" cx="400" cy="400" r="340" fill="url(#atx-atmos)" />
+
+              <g transform="rotate(-16 400 400)">
+                <ellipse cx="400" cy="400" rx="332" ry="98" fill="none" stroke="url(#atx-ring)" stroke-width="1.1" />
+                <ellipse cx="400" cy="400" rx="300" ry="88" fill="none" stroke="url(#atx-ring)" stroke-width="2.2" opacity=".55" />
+                <ellipse cx="400" cy="400" rx="272" ry="79" fill="none" stroke="url(#atx-ring)" stroke-width=".9" opacity=".7" />
+                <path id="atx-path" d="M100,400 a300,88 0 1,0 600,0 a300,88 0 1,0 -600,0" fill="none" stroke="none" />
+              </g>
+
+              <circle cx="400" cy="400" r="168" fill="#F4F8F9" />
+              <circle cx="400" cy="400" r="168" fill="url(#atx-body)" />
+              <g style="clip-path:url(#atx-clip)">
+                <g transform="rotate(-16 400 400)">
+                  <ellipse cx="400" cy="318" rx="210" ry="22" fill="#023B4A" opacity=".045" />
+                  <ellipse cx="400" cy="372" rx="210" ry="14" fill="#023B4A" opacity=".035" />
+                  <ellipse cx="400" cy="436" rx="210" ry="30" fill="#023B4A" opacity=".05" />
+                  <ellipse cx="400" cy="492" rx="210" ry="16" fill="#023B4A" opacity=".04" />
+                </g>
+                <g style="filter:url(#atx-soft)">
+                  <circle cx="352" cy="342" r="44" fill="#023B4A" opacity=".05" />
+                  <circle cx="466" cy="452" r="36" fill="#023B4A" opacity=".055" />
+                  <circle cx="330" cy="470" r="26" fill="#5E9FB0" opacity=".10" />
+                  <circle cx="436" cy="336" r="18" fill="#5E9FB0" opacity=".09" />
+                </g>
+                <circle cx="400" cy="400" r="168" fill="url(#atx-hi)" />
+                <circle cx="400" cy="400" r="168" fill="url(#atx-term)" />
+              </g>
+              <circle cx="400" cy="400" r="168" fill="none" stroke="#368294" stroke-opacity=".22" stroke-width="1" />
+              <circle cx="400" cy="400" r="176" fill="none" stroke="#368294" stroke-opacity=".09" stroke-width="8" />
+
+              <g transform="rotate(-16 400 400)">
+                <path d="M68,400 A332,98 0 0 0 732,400" fill="none" stroke="url(#atx-ring)" stroke-width="1.1" />
+                <path d="M100,400 A300,88 0 0 0 700,400" fill="none" stroke="url(#atx-ring)" stroke-width="2.2" opacity=".55" />
+                <path d="M128,400 A272,79 0 0 0 672,400" fill="none" stroke="url(#atx-ring)" stroke-width=".9" opacity=".7" />
+                <g mask="url(#atx-occlude)" class="orbit-dot">
+                  <circle r="24" fill="url(#atx-spark)">
+                    <animateMotion dur="28s" repeatCount="indefinite"><mpath href="#atx-path" /></animateMotion>
+                  </circle>
+                  <circle r="7" fill="#2E7386">
+                    <animateMotion dur="28s" repeatCount="indefinite"><mpath href="#atx-path" /></animateMotion>
+                  </circle>
+                  <circle r="7" fill="url(#atx-moon)">
+                    <animateMotion dur="28s" repeatCount="indefinite"><mpath href="#atx-path" /></animateMotion>
+                  </circle>
+                </g>
+              </g>
+
+              <g class="meteor">
+                <line x1="0" y1="0" x2="86" y2="34" stroke="url(#atx-meteor)" stroke-width="1.6" stroke-linecap="round" />
+                <circle cx="86" cy="34" r="2" fill="#4A8DA0" />
+              </g>
+              <g class="meteor2">
+                <line x1="0" y1="0" x2="64" y2="26" stroke="url(#atx-meteor)" stroke-width="1.2" stroke-linecap="round" />
+                <circle cx="64" cy="26" r="1.6" fill="#2E7386" />
+              </g>
+              <g class="meteor3">
+                <line x1="0" y1="0" x2="72" y2="30" stroke="url(#atx-meteor)" stroke-width="1.3" stroke-linecap="round" />
+                <circle cx="72" cy="30" r="1.8" fill="#4A8DA0" />
+              </g>
+            </svg>
           </div>
-          <div class="grid">
-            <a class="tile" href="/centium" id="centium-tile">
-              <span class="icon">
-                <svg width="30" height="30" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <path d="M39.06 80.07A32 32 0 1 1 70.58 74.51" stroke="#7D67D9" stroke-width="22" stroke-linecap="round" fill="none"/>
-                  <path d="M55.47 65.04 Q73.55 73.78 66.4 95.1 Q55.69 80.28 55.47 65.04 Z" fill="#A2C8C2"/>
-                </svg>
-              </span>
-              <span class="name">Centium</span>
-              <span class="desc">Nutrition, training, health data and community — one place to manage your health.</span>
-              <span class="cta">Visit Centium →</span>
-            </a>
-            <div class="tile tile--soon">
-              <span class="icon">
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <circle cx="12" cy="12" r="9" stroke="rgb(var(--charcoal-faint))" stroke-width="1.6"/>
-                  <path d="M12 8v4l2.5 2.5" stroke="rgb(var(--charcoal-faint))" stroke-width="1.6" stroke-linecap="round"/>
-                </svg>
-              </span>
-              <span class="name">Coming soon</span>
-              <span class="desc">The next venture in the Atraxia portfolio is already in the works.</span>
+          <div class="wrap">
+            <div class="eyebrow-rule">
+              <span class="rule"></span>
+              <span class="label">HEALTH &amp; WELLNESS VENTURES</span>
+            </div>
+            <h1>We build and house the apps shaping the future of health.</h1>
+            <p class="lede">
+              Atraxia is the parent company behind a growing portfolio of health and
+              wellness ventures. Independent companies, one team, built to last.
+              Centium is the first.
+            </p>
+            <div class="hero-actions">
+              <a class="btn btn--primary" href="#portfolio">See the portfolio</a>
+              <a class="btn btn--ghost" href="#founders">Meet the founders</a>
+            </div>
+            <div class="hero-mark" aria-hidden="true">
+              <svg class="mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path class="leg" d="M70,172 L100,32" />
+                <path class="leg" d="M100,32 L166,150" />
+                <path class="swoosh" d="M22,166 C55,150 95,128 130,112 C150,103 162,90 172,74" style="stroke-dasharray:none;stroke-dashoffset:0" />
+                <circle class="dot" cx="178" cy="64" r="9" style="opacity:1" />
+              </svg>
             </div>
           </div>
-        </div>
-      </section>
+        </header>
 
-      <section id="founders">
-        <div class="wrap">
-          <div class="section-head">
-            <span class="eyebrow">LEADERSHIP</span>
-            <h2>Founders</h2>
-            <p>
-              Abdallah Diab and Dr. Karim Khaldi are both passionate about
-              healthcare and fitness, as well as building companies and
-              solutions that matter.
-            </p>
+        <section class="mission">
+          <div class="wrap">
+            <span class="eyebrow">HOW WE BUILD</span>
+            <h2 class="statement">One company.<br />Many ventures.</h2>
+            <div class="mission-prose">
+              <p>
+                We build focused products rather than one that tries to do
+                everything. Each venture stands on its own, run by the same
+                team, held to the same standard.
+              </p>
+              <p>
+                Healthcare and fitness sit at the core of what we make, from
+                the first line of code to the way each company is run.
+              </p>
+            </div>
+            <div class="mission-stats">
+              <div><strong>1</strong><span>LIVE PRODUCT</span></div>
+              <div><strong>2</strong><span>FOUNDERS</span></div>
+              <div><strong>∞</strong><span>VENTURES AHEAD</span></div>
+            </div>
           </div>
-          <div class="founders-grid">
-            <div class="founder-card">
-              <img src="atraxia/founder-abdallah-diab.jpg" alt="Abdallah Diab, Co-Founder of Atraxia" width="900" height="870" loading="lazy" />
-              <div class="body">
-                <h3>Abdallah Diab</h3>
-                <div class="role">Co-Founder &amp; Operations Manager</div>
-                <p class="bio">
-                  Operations Manager with 5+ years of experience in Operations
-                  &amp; Business Management. Specialized in creating
-                  easy-to-comprehend, organized systems that facilitate
-                  decision-making and provide clarity.
-                </p>
+        </section>
+
+        <section id="portfolio">
+          <div class="wrap">
+            <div class="section-head">
+              <span class="eyebrow">OUR PORTFOLIO</span>
+              <h2>Check out our latest apps &amp; developments</h2>
+              <p>Every Atraxia product shares the same team, standards and long-term thinking — starting here.</p>
+            </div>
+            <div class="grid">
+              <a class="tile" href="/centium" id="centium-tile">
+                <span class="icon">
+                  <svg width="30" height="30" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M39.06 80.07A32 32 0 1 1 70.58 74.51" stroke="#7D67D9" stroke-width="22" stroke-linecap="round" fill="none"/>
+                    <path d="M55.47 65.04 Q73.55 73.78 66.4 95.1 Q55.69 80.28 55.47 65.04 Z" fill="#A2C8C2"/>
+                  </svg>
+                </span>
+                <span class="name">Centium</span>
+                <span class="desc">Nutrition, training, health data and community — one place to manage your health.</span>
+                <span class="cta">Visit Centium →</span>
+              </a>
+              <div class="tile tile--soon">
+                <span class="icon">
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12" r="9" stroke="rgb(var(--charcoal-faint))" stroke-width="1.6"/>
+                    <path d="M12 8v4l2.5 2.5" stroke="rgb(var(--charcoal-faint))" stroke-width="1.6" stroke-linecap="round"/>
+                  </svg>
+                </span>
+                <span class="name">Coming soon</span>
+                <span class="desc">The next venture in the Atraxia portfolio is already in the works.</span>
               </div>
             </div>
-            <div class="founder-card">
-              <img src="atraxia/founder-karim-khaldi.jpg" alt="Dr. Karim Khaldi, Co-Founder of Atraxia" width="900" height="870" loading="lazy" />
-              <div class="body">
-                <h3>Dr. Karim Khaldi</h3>
-                <div class="role">Co-Founder &amp; Medical Doctor</div>
-                <p class="bio">
-                  Sharing a profound dedication to healthcare and fitness, Dr.
-                  Khaldi seamlessly bridges clinical expertise with corporate
-                  strategy. As a Medical Doctor specialized in corporate
-                  health consultancy and data analytics, he leverages
-                  concrete data to identify market opportunities, optimize
-                  brand performance, and ensure Atraxia remains at the
-                  cutting edge of industry innovation.
-                </p>
+          </div>
+        </section>
+
+        <section id="founders">
+          <div class="wrap">
+            <div class="section-head">
+              <span class="eyebrow">LEADERSHIP</span>
+              <h2>Founders</h2>
+              <p>
+                Abdallah Diab and Dr. Karim Khaldi are both passionate about
+                healthcare and fitness, as well as building companies and
+                solutions that matter.
+              </p>
+            </div>
+            <div class="founders-grid">
+              <div class="founder-card">
+                <img src="atraxia/founder-abdallah-diab.jpg" alt="Abdallah Diab, Co-Founder of Atraxia" width="900" height="870" loading="lazy" />
+                <div class="body">
+                  <h3>Abdallah Diab</h3>
+                  <div class="role">Co-Founder &amp; Operations Manager</div>
+                  <p class="bio">
+                    Operations Manager with 5+ years of experience in Operations
+                    &amp; Business Management. Specialized in creating
+                    easy-to-comprehend, organized systems that facilitate
+                    decision-making and provide clarity.
+                  </p>
+                </div>
+              </div>
+              <div class="founder-card">
+                <img src="atraxia/founder-karim-khaldi.jpg" alt="Dr. Karim Khaldi, Co-Founder of Atraxia" width="900" height="870" loading="lazy" />
+                <div class="body">
+                  <h3>Dr. Karim Khaldi</h3>
+                  <div class="role">Co-Founder &amp; Medical Doctor, MPH</div>
+                  <p class="bio">
+                    Sharing a profound dedication to healthcare and fitness, Dr.
+                    Khaldi seamlessly bridges clinical expertise with corporate
+                    strategy. As a Medical Doctor specialized in corporate
+                    health consultancy and data analytics, he leverages
+                    concrete data to identify market opportunities, optimize
+                    brand performance, and ensure Atraxia remains at the
+                    cutting edge of industry innovation.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-    </main>
+        </section>
+      </main>
 
-    <footer>
-      <div class="wrap">
-        <div class="brand-lockup">
-          <svg class="mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-            <path class="leg" d="M70,172 L100,32" />
-            <path class="leg" d="M100,32 L166,150" />
-            <path class="swoosh" d="M22,166 C55,150 95,128 130,112 C150,103 162,90 172,74" style="stroke-dasharray:none;stroke-dashoffset:0" />
-            <circle class="dot" cx="178" cy="64" r="9" style="opacity:1" />
-          </svg>
-          <span class="word">ATRAXIA</span>
+      <footer>
+        <div class="wrap">
+          <div class="brand-lockup">
+            <svg class="mark" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <path class="leg" d="M70,172 L100,32" />
+              <path class="leg" d="M100,32 L166,150" />
+              <path class="swoosh" d="M22,166 C55,150 95,128 130,112 C150,103 162,90 172,74" style="stroke-dasharray:none;stroke-dashoffset:0" />
+              <circle class="dot" cx="178" cy="64" r="9" style="opacity:1" />
+            </svg>
+            <span class="word">ATRAXIA</span>
+          </div>
+          <small>&copy; 2026 Atraxia. All rights reserved.</small>
         </div>
-        <small>&copy; 2026 Atraxia. All rights reserved.</small>
-      </div>
-    </footer>
+      </footer>
+    </div>
 
     <script>
       // "/centium" is correct for the real domain (atraxia.org/centium),
