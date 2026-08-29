@@ -6,7 +6,9 @@ import { CentiumLogo } from "../../components/ui/CentiumLogo";
 // started" — the logo punches forward with a pulsing ring behind it while
 // the rest of the screen fades, then the real step transition fires once
 // the animation has had time to read.
-const LAUNCH_MS = 500;
+// V9 (QA 9.0): "more animated and noticeable" — stretched out to match the
+// longer, bigger keyframes so the transition doesn't fire mid-animation.
+const LAUNCH_MS = 750;
 
 export const WelcomeStep: React.FC<{ onNext: () => void }> = ({ onNext }) => {
   const [launching, setLaunching] = useState(false);
@@ -21,7 +23,10 @@ export const WelcomeStep: React.FC<{ onNext: () => void }> = ({ onNext }) => {
     <div className="flex-1 flex flex-col items-center justify-center text-center animate-fade-slide-up">
       <div className="relative w-20 h-20 mb-8">
         {launching && (
-          <span className="absolute inset-0 rounded-[1.75rem] bg-primary/40 animate-logo-launch-ring" />
+          <>
+            <span className="absolute inset-0 rounded-[1.75rem] bg-primary/40 animate-logo-launch-ring" />
+            <span className="absolute inset-0 rounded-[1.75rem] bg-primary/25 animate-logo-launch-ring-2" />
+          </>
         )}
         <div
           className={`relative w-20 h-20 rounded-[1.75rem] bg-white shadow-lift flex items-center justify-center ${

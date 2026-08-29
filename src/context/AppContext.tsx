@@ -33,6 +33,7 @@ import type {
   CustomFood,
   HabitIconKey,
   BusinessOffering,
+  MembershipPlan,
   CustomExerciseLibraryItem,
   ProfessionalReview,
   CalendarEvent,
@@ -44,8 +45,11 @@ import type {
   BusinessMessage,
   GymPurchase,
   CartItem,
+  ForumPost,
+  ForumCategory,
 } from "../types";
 import { mockFoods } from "../data/mockFoods";
+import { mockForumPosts } from "../data/mockForum";
 import { defaultHabits, streaks as seedStreaks, bloodPanel } from "../data/mockHealthData";
 import { todaysWorkout, workoutPrograms, exerciseLibrary } from "../data/mockWorkouts";
 import { estimate1RM } from "../services/workout";
@@ -60,6 +64,7 @@ const TODAY = "2026-08-20";
 const defaultUser: UserProfile = {
   id: "u1",
   firstName: "Abdallah",
+  email: "",
   age: 29,
   sex: "male",
   heightCm: 178,
@@ -134,6 +139,9 @@ const trackableWidgets: { type: WidgetType; size: WidgetSize; trackKey?: TrackPr
   { type: "nutrition", size: "large", trackKey: "nutrition" },
   { type: "workout", size: "small", trackKey: "workouts" },
   { type: "habits", size: "small", trackKey: "habits" },
+  // V9 (QA 9.0): "a widget in the homescreen that has a logo of a
+  // minimalistic key" — no tracking equivalent, same as Water.
+  { type: "gymPasses", size: "small" },
 ];
 
 /** Seeds the board from the user's "What do you want to track?" selections
@@ -254,21 +262,28 @@ interface AppState {
   addStreak: (habitId: string, goalDays: number) => void;
   removeStreak: (id: string) => void;
 
-  metricValues: { weight: number; bodyFat: number; steps: number; sleepHours: number; caloriesBurned: number };
+  metricValues: { weight: number; heartRate: number; steps: number; sleepHours: number; caloriesBurned: number };
   updateMetricValue: (
-    type: "weight" | "bodyFat" | "steps" | "sleepHours" | "caloriesBurned",
+    type: "weight" | "heartRate" | "steps" | "sleepHours" | "caloriesBurned",
     value: number
   ) => void;
   // V8 (QA 8.0): "Add metric" can log today's weight, not just water — this
   // tracks whether it's already been logged today so the input resets once
   // a new day starts instead of staying pre-filled forever.
   weightLoggedDate: string | null;
+  weightByDate: Record<string, number>;
   logWeightForToday: (value: number) => void;
   // V8 (QA 8.0): "Pressing the edit feature only prompts you to edit daily
   // step count goal" — the goal is user-configurable; the count itself
   // stays auto-synced.
   stepsGoal: number;
   setStepsGoal: (goal: number) => void;
+
+  // V9 (QA 9.0): "swiping down on [Health] should prompt syncing data with
+  // selected integrated health data device" — lifted out of IntegrationsCard
+  // (was component-local) so the Health page can tell whether one is on.
+  healthIntegrationConnected: boolean;
+  setHealthIntegrationConnected: (connected: boolean) => void;
 
   widgets: WidgetConfig[];
   addWidget: (type: WidgetType, size?: WidgetSize) => void;
@@ -285,6 +300,7 @@ interface AppState {
   // one title; logging the meal logs every item individually.
   customMeals: CustomMeal[];
   addCustomMeal: (title: string, items: CustomMeal["items"], mealType?: MealType) => void;
+  updateCustomMeal: (id: string, title: string, items: CustomMeal["items"], mealType?: MealType) => void;
   removeCustomMeal: (id: string) => void;
   logCustomMeal: (mealId: string, meal: MealType, date: string) => void;
 
@@ -332,12 +348,19 @@ interface AppState {
   professionalReviews: ProfessionalReview[];
   submitProfessionalReview: (professionalId: string, rating: number, text: string) => void;
 
+  // V9 (QA 9.0): "a hub for all clients to share information publicly."
+  forumPosts: ForumPost[];
+  addForumPost: (category: ForumCategory, title: string, body: string) => void;
+  toggleForumLike: (postId: string) => void;
+  addForumComment: (postId: string, text: string) => void;
+
   // V7 (QA 7.0): "When pressing connect on a professional, it becomes part
   // of the connected professionals with the same privileges" — mock
   // professionals are static seed data, so which ones the user has
   // connected to lives here instead.
   connectedProfessionalIds: string[];
   connectProfessional: (id: string) => void;
+  disconnectProfessional: (id: string) => void;
 
   // V7 (QA 7.0): Professional UI — Explore reframes categories as job
   // postings for hiring the professional, gated by a unique-ID affiliation
@@ -382,7 +405,10 @@ interface AppState {
     professionalName: string,
     profile?: { clientName?: string; age?: number; sex?: Sex; heightCm?: number; weightKg?: number },
     professionalSubtype?: ProfessionalSubtype,
-    professionalCertificationUrl?: string
+    professionalCertificationUrl?: string,
+    professionalBio?: string,
+    professionalPhone?: string,
+    professionalWebsite?: string
   ) => string;
   redeemClientCode: (code: string) => boolean;
 
@@ -408,6 +434,7 @@ interface AppState {
 
   workoutTemplates: WorkoutTemplateAssignment[];
   addWorkoutTemplate: (t: Omit<WorkoutTemplateAssignment, "id" | "createdAt">) => void;
+  updateWorkoutTemplate: (id: string, patch: Partial<Omit<WorkoutTemplateAssignment, "id" | "createdAt">>) => void;
   removeWorkoutTemplate: (id: string) => void;
 
   workoutTemplateFolders: WorkoutTemplateFolder[];
@@ -419,12 +446,43 @@ interface AppState {
   updateClientHealthNote: (clientId: string, patch: Partial<ClientHealthNote>) => void;
 
   professionalMessages: ProfessionalMessage[];
-  sendProfessionalMessage: (clientId: string, from: "professional" | "client", text: string) => void;
+  sendProfessionalMessage: (
+    clientId: string,
+    from: "professional" | "client",
+    text: string,
+    extra?: { attachment?: string; voiceNoteSec?: number }
+  ) => void;
 
   signOut: () => void;
 
-  businessListing: { perk: string; active: boolean; membersReached: number; bio: string; location: string };
+  businessListing: {
+    perk: string;
+    active: boolean;
+    membersReached: number;
+    bio: string;
+    location: string;
+    // V9 (QA 9.0): "give you an option to write branch type if the
+    // business has multiple branches."
+    branchType?: string;
+    // V10 (QA 10.0): "a credentials tab should include the email, phone
+    // number, website. If either one is filled, it should reflect in the
+    // client UI as well as part of the explore tab for that specific
+    // profile."
+    email?: string;
+    phone?: string;
+    website?: string;
+    // V10 (QA 10.0): gym membership plans the business offers, editable
+    // from Operations > Gym.
+    membershipPlans: MembershipPlan[];
+    // V10 (QA 10.0): "The ability to add/remove discounts in the market place."
+    discounts: { id: string; label: string }[];
+  };
   updateBusinessListing: (patch: Partial<AppState["businessListing"]>) => void;
+  addMembershipPlan: (plan: Omit<MembershipPlan, "id">) => void;
+  updateMembershipPlan: (id: string, patch: Partial<Omit<MembershipPlan, "id">>) => void;
+  removeMembershipPlan: (id: string) => void;
+  addDiscount: (label: string) => void;
+  removeDiscount: (id: string) => void;
 
   // V4: businesses can list their own products/services in the marketplace.
   businessOfferings: BusinessOffering[];
@@ -567,14 +625,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   const [routines, setRoutines] = usePersistentState<Routine[]>("routines", seedRoutines());
 
-  const [water, setWater] = usePersistentState<number>("water", 1800);
   const [waterGoalMl, setWaterGoalState] = usePersistentState<number>("waterGoalMl", 2500);
   const [habits, setHabits] = usePersistentState<HabitItem[]>("habits", defaultHabits);
   const [streaks, setStreaks] = usePersistentState<Streak[]>("streaks", seedStreaks);
 
   const [metricValues, setMetricValues] = usePersistentState("metricValues", {
     weight: 106.4,
-    bodyFat: 27.4,
+    heartRate: 68,
     steps: 8421,
     sleepHours: 7.7,
     caloriesBurned: 2340,
@@ -605,6 +662,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [selectedDate, setSelectedDate] = usePersistentState<string>("selectedDate", TODAY);
 
+  // V10 (QA 10.0): "logging... metrics in a day that is not today should
+  // add and log values pertaining to that mentioned day" — water is now
+  // keyed by date instead of a single running total, so viewing a past day
+  // via the Home date selector shows (and logs to) that day's own amount.
+  const [waterByDate, setWaterByDate] = usePersistentState<Record<string, number>>("waterByDate", {
+    [TODAY]: 1800,
+  });
+  const water = waterByDate[selectedDate] ?? 0;
+
   const [colorTheme, setColorThemeState] = usePersistentState<ColorTheme>("colorTheme", "centium");
   useEffect(() => {
     document.documentElement.setAttribute("data-accent", colorTheme);
@@ -633,6 +699,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   const connectProfessional: AppState["connectProfessional"] = (id) =>
     setConnectedProfessionalIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  // V10 (QA 10.0): "a hired professional should have a remove professional
+  // button... should prompt you to make sure you want to remove."
+  const disconnectProfessional: AppState["disconnectProfessional"] = (id) =>
+    setConnectedProfessionalIds((prev) => prev.filter((p) => p !== id));
 
   const [businessDirectory, setBusinessDirectory] = usePersistentState<BusinessDirectoryEntry[]>(
     "businessDirectory",
@@ -723,7 +793,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     membersReached: 34,
     bio: "",
     location: "",
+    membershipPlans: [
+      { id: "mp1", name: "Monthly Membership", price: "$45", billing: "monthly", paymentType: "Card" },
+      { id: "mp2", name: "Day Pass", price: "$8", billing: "daily", paymentType: "Cash" },
+    ] as MembershipPlan[],
+    discounts: [] as { id: string; label: string }[],
   });
+  const addDiscount: AppState["addDiscount"] = (label) =>
+    setBusinessListing((prev) => ({ ...prev, discounts: [...prev.discounts, { id: `disc${Date.now()}`, label }] }));
+  const removeDiscount: AppState["removeDiscount"] = (id) =>
+    setBusinessListing((prev) => ({ ...prev, discounts: prev.discounts.filter((d) => d.id !== id) }));
+  const addMembershipPlan: AppState["addMembershipPlan"] = (plan) =>
+    setBusinessListing((prev) => ({
+      ...prev,
+      membershipPlans: [...prev.membershipPlans, { ...plan, id: `mp${Date.now()}` }],
+    }));
+  const updateMembershipPlan: AppState["updateMembershipPlan"] = (id, patch) =>
+    setBusinessListing((prev) => ({
+      ...prev,
+      membershipPlans: prev.membershipPlans.map((p) => (p.id === id ? { ...p, ...patch } : p)),
+    }));
+  const removeMembershipPlan: AppState["removeMembershipPlan"] = (id) =>
+    setBusinessListing((prev) => ({ ...prev, membershipPlans: prev.membershipPlans.filter((p) => p.id !== id) }));
   const [businessOfferings, setBusinessOfferings] = usePersistentState<BusinessOffering[]>(
     "businessOfferings",
     []
@@ -745,13 +836,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "workoutTemplates",
     []
   );
-  const addWorkoutTemplate: AppState["addWorkoutTemplate"] = (t) =>
-    setWorkoutTemplates((prev) => [
-      ...prev,
-      { ...t, id: `wt-${Date.now()}-${prev.length}`, createdAt: TODAY },
-    ]);
-  const removeWorkoutTemplate: AppState["removeWorkoutTemplate"] = (id) =>
+  // V10 (QA 10.0): "Templates Created for the assigned clients shows up in
+  // their client UI in the routines tab. If professional add/removes
+  // client from template, automatically do that as well in the client UI"
+  // + "the ability to select a day to assign the workout to, it would also
+  // appear at the assigned clients calendar."
+  // This prototype has exactly one real account behind every mock
+  // client/professional view (the "me" sentinel used elsewhere, e.g.
+  // addProfessionalClient/businessEmployees) — so "the assigned client's"
+  // Routines tab and Calendar are literally the current account's own
+  // routines/calendarEvents. Assigning a template to any mock client
+  // mirrors it into that one real Routine; unassigning removes it again.
+  const syncTemplateToClientView = (template: WorkoutTemplateAssignment) => {
+    setRoutines((prev) => {
+      const existing = prev.find((r) => r.sourceTemplateId === template.id);
+      if (template.assignedClientIds.length === 0) {
+        return existing ? prev.filter((r) => r.sourceTemplateId !== template.id) : prev;
+      }
+      if (existing) {
+        return prev.map((r) =>
+          r.sourceTemplateId === template.id
+            ? { ...r, name: template.name, exercises: template.exercises, coachNote: template.coachNote }
+            : r
+        );
+      }
+      return [
+        ...prev,
+        {
+          id: `routine-${template.id}`,
+          folderId: null,
+          name: template.name,
+          color: "#7D6BB5",
+          estimatedDurationMin: 45,
+          exercises: template.exercises,
+          coachNote: template.coachNote,
+          assignedByProfessional: true,
+          sourceTemplateId: template.id,
+        },
+      ];
+    });
+    setCalendarEvents((prev) => {
+      const withoutOld = prev.filter((e) => e.sourceTemplateId !== template.id);
+      if (template.assignedClientIds.length === 0 || !template.assignedDay) return withoutOld;
+      return [
+        ...withoutOld,
+        {
+          id: `cal-tpl-${template.id}`,
+          title: template.name,
+          date: template.assignedDay,
+          allDay: true,
+          repeat: "none",
+          sourceTemplateId: template.id,
+        },
+      ];
+    });
+  };
+
+  const addWorkoutTemplate: AppState["addWorkoutTemplate"] = (t) => {
+    const template: WorkoutTemplateAssignment = { ...t, id: `wt-${Date.now()}`, createdAt: TODAY };
+    setWorkoutTemplates((prev) => [...prev, template]);
+    syncTemplateToClientView(template);
+  };
+  const updateWorkoutTemplate: AppState["updateWorkoutTemplate"] = (id, patch) => {
+    setWorkoutTemplates((prev) => {
+      const next = prev.map((t) => (t.id === id ? { ...t, ...patch } : t));
+      const updated = next.find((t) => t.id === id);
+      if (updated) syncTemplateToClientView(updated);
+      return next;
+    });
+  };
+  const removeWorkoutTemplate: AppState["removeWorkoutTemplate"] = (id) => {
     setWorkoutTemplates((prev) => prev.filter((t) => t.id !== id));
+    setRoutines((prev) => prev.filter((r) => r.sourceTemplateId !== id));
+    setCalendarEvents((prev) => prev.filter((e) => e.sourceTemplateId !== id));
+  };
 
   const [workoutTemplateFolders, setWorkoutTemplateFolders] = usePersistentState<WorkoutTemplateFolder[]>(
     "workoutTemplateFolders",
@@ -779,10 +937,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "professionalMessages",
     []
   );
-  const sendProfessionalMessage: AppState["sendProfessionalMessage"] = (clientId, from, text) =>
+  const sendProfessionalMessage: AppState["sendProfessionalMessage"] = (clientId, from, text, extra) =>
     setProfessionalMessages((prev) => [
       ...prev,
-      { id: `msg-${Date.now()}-${prev.length}`, clientId, from, text, at: new Date().toISOString() },
+      { id: `msg-${Date.now()}-${prev.length}`, clientId, from, text, at: new Date().toISOString(), ...extra },
     ]);
 
   const completeOnboarding = (profile: Partial<UserProfile>) => {
@@ -829,9 +987,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeFoodEntry = (id: string) => setFoodLog((prev) => prev.filter((e) => e.id !== id));
 
   const logWorkout: AppState["logWorkout"] = (entry) => {
+    // V10 (QA 10.0): "logging... workout... in a day that is not today
+    // should add and log values pertaining to that mentioned day" — was
+    // hardcoded to TODAY regardless of the Home date selector.
     setWorkoutLog((prev) => [
       ...prev,
-      { ...entry, id: `w${Date.now()}${Math.random().toString(16).slice(2)}`, date: TODAY },
+      { ...entry, id: `w${Date.now()}${Math.random().toString(16).slice(2)}`, date: selectedDate },
     ]);
   };
 
@@ -882,8 +1043,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   const deleteRoutine = (id: string) => setRoutines((prev) => prev.filter((r) => r.id !== id));
 
-  const addWater = (ml: number) => setWater((prev) => Math.max(0, Math.min(prev + ml, 5000)));
-  const setWaterAmount = (ml: number) => setWater(Math.max(0, Math.min(ml, 5000)));
+  const addWater = (ml: number) =>
+    setWaterByDate((prev) => ({
+      ...prev,
+      [selectedDate]: Math.max(0, Math.min((prev[selectedDate] ?? 0) + ml, 5000)),
+    }));
+  const setWaterAmount = (ml: number) =>
+    setWaterByDate((prev) => ({ ...prev, [selectedDate]: Math.max(0, Math.min(ml, 5000)) }));
   const setWaterGoal = (ml: number) => setWaterGoalState(Math.max(500, Math.min(ml, 6000)));
 
   const toggleHabit = (id: string) =>
@@ -973,12 +1139,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "weightLoggedDate",
     null
   );
+  // V10 (QA 10.0): "logging... metrics in a day that is not today should
+  // add and log values pertaining to that mentioned day" — logs against
+  // whatever day is currently selected on Home, not always TODAY. The
+  // live "current weight" (used for BMI, widgets, etc.) still only updates
+  // when logging for today, same as before.
+  const [weightByDate, setWeightByDate] = usePersistentState<Record<string, number>>(
+    "weightByDate",
+    {}
+  );
   const logWeightForToday: AppState["logWeightForToday"] = (value) => {
-    updateMetricValue("weight", value);
-    setWeightLoggedDate(TODAY);
+    setWeightByDate((prev) => ({ ...prev, [selectedDate]: value }));
+    if (selectedDate === TODAY) updateMetricValue("weight", value);
+    setWeightLoggedDate(selectedDate);
   };
 
   const [stepsGoal, setStepsGoal] = usePersistentState<number>("stepsGoal", 10000);
+
+  const [healthIntegrationConnected, setHealthIntegrationConnected] = usePersistentState<boolean>(
+    "healthIntegrationConnected",
+    false
+  );
 
   const addWidget: AppState["addWidget"] = (type, size = "small") =>
     setWidgets((prev) => [
@@ -1018,6 +1199,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const addCustomMeal: AppState["addCustomMeal"] = (title, items, mealType) =>
     setCustomMeals((prev) => [...prev, { id: `cm${Date.now()}`, title: title.trim(), items, mealType }]);
+  // V10 (QA 10.0): "Creating a meal prep should also allow you to edit and delete it."
+  const updateCustomMeal: AppState["updateCustomMeal"] = (id, title, items, mealType) =>
+    setCustomMeals((prev) => prev.map((m) => (m.id === id ? { ...m, title: title.trim(), items, mealType } : m)));
   const removeCustomMeal = (id: string) => setCustomMeals((prev) => prev.filter((m) => m.id !== id));
   const logCustomMeal: AppState["logCustomMeal"] = (mealId, meal, date) => {
     const custom = customMeals.find((m) => m.id === mealId);
@@ -1146,12 +1330,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return [...next, { professionalId, rating, text, date: TODAY }];
     });
 
+  const [forumPosts, setForumPosts] = usePersistentState<ForumPost[]>("forumPosts", mockForumPosts);
+  const addForumPost: AppState["addForumPost"] = (category, title, body) =>
+    setForumPosts((prev) => [
+      {
+        id: `fp-${Date.now()}`,
+        authorName: user.firstName,
+        category,
+        title,
+        body,
+        likes: 0,
+        likedByMe: false,
+        comments: [],
+        at: new Date().toISOString(),
+        mine: true,
+      },
+      ...prev,
+    ]);
+  const toggleForumLike: AppState["toggleForumLike"] = (postId) =>
+    setForumPosts((prev) =>
+      prev.map((p) => (p.id === postId ? { ...p, likedByMe: !p.likedByMe, likes: p.likes + (p.likedByMe ? -1 : 1) } : p))
+    );
+  const addForumComment: AppState["addForumComment"] = (postId, text) =>
+    setForumPosts((prev) =>
+      prev.map((p) =>
+        p.id === postId
+          ? { ...p, comments: [...p.comments, { id: `fc-${Date.now()}`, authorName: user.firstName, text, at: new Date().toISOString() }] }
+          : p
+      )
+    );
+
   const generateClientCode: AppState["generateClientCode"] = (
     professionalId,
     professionalName,
     profile,
     professionalSubtype,
-    professionalCertificationUrl
+    professionalCertificationUrl,
+    professionalBio,
+    professionalPhone,
+    professionalWebsite
   ) => {
     let code = "";
     do {
@@ -1165,6 +1382,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         professionalName,
         professionalSubtype,
         professionalCertificationUrl,
+        professionalBio,
+        professionalPhone,
+        professionalWebsite,
         createdAt: TODAY,
         redeemed: false,
         clientName: profile?.clientName,
@@ -1193,6 +1413,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       linkedProfessionalName: match.professionalName,
       linkedProfessionalSubtype: match.professionalSubtype,
       linkedProfessionalCertificationUrl: match.professionalCertificationUrl,
+      linkedProfessionalBio: match.professionalBio,
+      linkedProfessionalPhone: match.professionalPhone,
+      linkedProfessionalWebsite: match.professionalWebsite,
     }));
     return true;
   };
@@ -1205,7 +1428,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user.firstName || "Your professional",
       { ...profile, clientName: name },
       user.professionalSubtype,
-      user.certificationUrl
+      user.certificationUrl,
+      user.professionalBio,
+      user.professionalPhone,
+      user.professionalWebsite
     );
     const id = `pc${Date.now()}${Math.random().toString(16).slice(2)}`;
     setProfessionalClients((prev) => [
@@ -1369,9 +1595,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       metricValues,
       updateMetricValue,
       weightLoggedDate,
+      weightByDate,
       logWeightForToday,
       stepsGoal,
       setStepsGoal,
+      healthIntegrationConnected,
+      setHealthIntegrationConnected,
       widgets,
       addWidget,
       removeWidget,
@@ -1383,6 +1612,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setMacroSplit,
       customMeals,
       addCustomMeal,
+      updateCustomMeal,
       removeCustomMeal,
       logCustomMeal,
       journalFolders,
@@ -1411,8 +1641,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateCustomExercise,
       professionalReviews,
       submitProfessionalReview,
+      forumPosts,
+      addForumPost,
+      toggleForumLike,
+      addForumComment,
       connectedProfessionalIds,
       connectProfessional,
+      disconnectProfessional,
       businessDirectory,
       affiliateWithBusiness,
       removeAffiliation,
@@ -1446,6 +1681,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       removeCalendarEvent,
       workoutTemplates,
       addWorkoutTemplate,
+      updateWorkoutTemplate,
       removeWorkoutTemplate,
       workoutTemplateFolders,
       addWorkoutTemplateFolder,
@@ -1458,6 +1694,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       signOut,
       businessListing,
       updateBusinessListing,
+      addMembershipPlan,
+      updateMembershipPlan,
+      removeMembershipPlan,
+      addDiscount,
+      removeDiscount,
       businessOfferings,
       addBusinessOffering,
       removeBusinessOffering,
@@ -1488,7 +1729,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       streaks,
       metricValues,
       weightLoggedDate,
+      weightByDate,
       stepsGoal,
+      healthIntegrationConnected,
       widgets,
       nutritionGoal,
       customMeals,
@@ -1501,6 +1744,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clientCustomFoods,
       customExercises,
       professionalReviews,
+      forumPosts,
       connectedProfessionalIds,
       businessDirectory,
       professionalTier,

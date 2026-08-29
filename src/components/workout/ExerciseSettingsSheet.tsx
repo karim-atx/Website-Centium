@@ -21,6 +21,7 @@ const muscleGroupLabel: Record<MuscleGroup, string> = {
   chest: "Chest",
   core: "Core",
   full_body: "Full Body",
+  glutes: "Glutes",
   hamstrings: "Hamstrings",
   olympic: "Olympic",
   other: "Other",
@@ -82,7 +83,14 @@ export const ExerciseSettingsSheet: React.FC<{
   const num = (key: keyof Exercise) => (
     <input
       value={draft[key] === undefined || draft[key] === null ? "" : String(draft[key])}
-      onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value === "" ? undefined : Number(e.target.value) }))}
+      // V10 (QA 10.0): "Min/max sets, Min/max reps/ Intensity %, rep max, rest,
+      // rpe should only allow numerical values to avoid NaN error" — filter
+      // non-numeric characters before they ever reach state, same as the 1RM
+      // input just below.
+      onChange={(e) => {
+        const cleaned = e.target.value.replace(/[^\d.]/g, "");
+        setDraft((d) => ({ ...d, [key]: cleaned === "" ? undefined : Number(cleaned) }));
+      }}
       inputMode="decimal"
       className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
     />
@@ -234,8 +242,9 @@ export const ExerciseSettingsSheet: React.FC<{
             </span>
             <input
               value={draft.tempo ?? ""}
-              onChange={(e) => setDraft((d) => ({ ...d, tempo: e.target.value }))}
+              onChange={(e) => setDraft((d) => ({ ...d, tempo: e.target.value.replace(/[^\d-]/g, "") }))}
               placeholder="3-1-1-0"
+              inputMode="numeric"
               className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>

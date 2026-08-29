@@ -107,7 +107,7 @@ export default function BusinessMessagesTab() {
 
   return (
     <div>
-      <PageHeader title="Messages" />
+      <PageHeader title="Messages" showBack />
 
       <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit mb-4">
         {(["clients", "professionals"] as const).map((a) => (

@@ -4,7 +4,8 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { useApp } from "../../context/AppContext";
 import { mockGyms, mockClasses, mockMarketplaceListings } from "../../data/mockProfessionals";
-import { Briefcase, Building2, Check, LogOut, MapPin } from "lucide-react";
+import { Briefcase, Building2, Check, LogOut, MapPin, Calendar } from "lucide-react";
+import { BottomSheet } from "../../components/ui/BottomSheet";
 
 // V7 (QA 7.0): the professional's own Explore tab is not a consumer
 // marketplace — it's a set of job postings from businesses hiring, gated
@@ -35,6 +36,16 @@ export default function ProfessionalExplore() {
   const [category, setCategory] = useState<(typeof jobCategories)[number]["id"]>("gyms");
   const [idDraft, setIdDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
+  // V10 (QA 10.0): "Pressing on a job listing in the Job hiring, would go
+  // into the detail of that listing."
+  const [detailPosting, setDetailPosting] = useState<{
+    id: string;
+    name: string;
+    location: string;
+    type: string;
+    hiring: boolean;
+    deadline: string;
+  } | null>(null);
 
   const affiliated = !!user.affiliatedBusinessId;
 
@@ -136,7 +147,12 @@ export default function ProfessionalExplore() {
               // job-listing deadline line under location."
               const hiring = h % 3 !== 0;
               return (
-                <Card key={p.id} className="flex items-start gap-3 animate-fade-slide-up">
+                <Card
+                  key={p.id}
+                  interactive
+                  onClick={() => setDetailPosting({ id: p.id, name: p.name, location: p.location, type, hiring, deadline: deadlineFor(h) })}
+                  className="flex items-start gap-3 animate-fade-slide-up"
+                >
                   <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
                     <Briefcase size={18} className="text-primary-dark" />
                   </span>
@@ -164,6 +180,51 @@ export default function ProfessionalExplore() {
           </div>
         </>
       )}
+
+      <BottomSheet open={!!detailPosting} onClose={() => setDetailPosting(null)} title={detailPosting?.name}>
+        {detailPosting && (
+          <div className="space-y-4 animate-fade-slide-up">
+            <div className="flex items-center gap-3">
+              <span className="w-12 h-12 rounded-2xl bg-sohati-pale flex items-center justify-center shrink-0">
+                <Briefcase size={20} className="text-sohati-dark" />
+              </span>
+              <div>
+                <p className="flex items-center gap-1 text-sm text-charcoal-soft">
+                  <MapPin size={13} /> {detailPosting.location}
+                </p>
+                <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
+                  <Calendar size={11} /> Apply by {detailPosting.deadline}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span
+                className="text-xs font-bold rounded-full px-2.5 py-1.5"
+                style={{
+                  color: detailPosting.hiring ? "#3F9165" : "#C0392B",
+                  background: detailPosting.hiring ? "#E3F3E9" : "#FBE7E4",
+                }}
+              >
+                {detailPosting.hiring ? "Hiring" : "Not hiring"}
+              </span>
+              <span className="text-xs font-bold text-sohati-dark bg-sohati-pale rounded-full px-2.5 py-1.5">
+                {detailPosting.type}
+              </span>
+            </div>
+            <p className="text-sm text-charcoal-soft leading-relaxed">
+              This business is looking for an affiliated professional to run sessions/classes for their
+              members. Affiliating links your account to theirs and adds you to their team.
+            </p>
+            <Button fullWidth size="lg" disabled={!detailPosting.hiring || affiliated} onClick={() => setDetailPosting(null)}>
+              {affiliated
+                ? "Already affiliated elsewhere"
+                : detailPosting.hiring
+                ? "Enter their business ID below to apply"
+                : "Not currently hiring"}
+            </Button>
+          </div>
+        )}
+      </BottomSheet>
     </div>
   );
 }

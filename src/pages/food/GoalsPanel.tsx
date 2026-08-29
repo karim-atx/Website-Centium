@@ -8,7 +8,7 @@ import { useApp } from "../../context/AppContext";
 import { calculateTDEE, targetsFromGoal } from "../../services/nutrition";
 import { healthMetrics } from "../../data/mockHealthData";
 import type { WeightGoalType, PlanType } from "../../types";
-import { Sparkles, Check } from "lucide-react";
+import { Sparkles, Check, Minus, Plus } from "lucide-react";
 
 const goalOptions: { value: WeightGoalType; label: string }[] = [
   { value: "lose", label: "Lose weight" },
@@ -29,7 +29,7 @@ const existingPlanPreset = {
 export default function GoalsPanel() {
   const { user, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal } = useApp();
   const [calorieDraft, setCalorieDraft] = useState(String(nutritionGoal.targetCalories));
-  const [calorieConfirmed, setCalorieConfirmed] = useState(true);
+  const [planError, setPlanError] = useState<string | null>(null);
   const [desiredWeightDraft, setDesiredWeightDraft] = useState(
     String(nutritionGoal.desiredWeightKg ?? user.weightKg)
   );
@@ -42,6 +42,16 @@ export default function GoalsPanel() {
 
   const tdee = calculateTDEE(user);
   const targets = targetsFromGoal(nutritionGoal);
+  // V9 (QA 9.0): "TDEE estimate should include the maintenance calorie as
+  // well as the calories based on what goal is chosen" — same formula
+  // "Use suggested target" applies, shown alongside the maintenance figure.
+  const suggestedForGoal = Math.round(
+    nutritionGoal.weightGoal === "lose"
+      ? tdee - ((nutritionGoal.weeklyRateKg || 0.5) * 7700) / 7
+      : nutritionGoal.weightGoal === "gain"
+      ? tdee + ((nutritionGoal.weeklyRateKg || 0.5) * 7700) / 7
+      : tdee
+  );
   // V5 (QA 5.0): the weight trend uses the weight provided in Profile
   // (user.weightKg), not the static mock — the mock's 7-day shape is kept
   // (this prototype has no daily weight-history log) but rescaled so it
@@ -265,6 +275,12 @@ export default function GoalsPanel() {
           Estimated maintenance calories at your current weight (Mifflin-St Jeor) — a prototype
           estimate, adjust as needed.
         </p>
+        {nutritionGoal.weightGoal !== "maintain" && (
+          <p className="text-xs text-charcoal bg-cream-soft rounded-full px-3 py-1.5 mb-2 inline-block">
+            {suggestedForGoal.toLocaleString()} kcal to {nutritionGoal.weightGoal} weight at your
+            current rate
+          </p>
+        )}
         {tdeeAtGoal !== null && (
           <p className="text-xs text-primary-dark bg-primary-pale rounded-full px-3 py-1.5 mb-3 inline-block">
             ≈ {tdeeAtGoal.toLocaleString()} kcal once you reach {nutritionGoal.desiredWeightKg}kg
@@ -281,42 +297,49 @@ export default function GoalsPanel() {
         <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
           Daily calorie target
         </p>
-        <div className="flex items-center gap-2 mb-1">
+        {/* V10 (QA 10.0): "I want another better way to edit daily calorie
+            target instead of pressing a pencil icon" — a +/- stepper (same
+            pattern already used for food quantity) plus direct typing,
+            with an explicit Save that only appears once the value changes. */}
+        <div className="flex items-center gap-2.5 mb-1">
+          <button
+            onClick={() => !locked && setCalorieDraft(String(Math.max(0, Number(calorieDraft || 0) - 50)))}
+            disabled={locked}
+            aria-label="Decrease by 50 kcal"
+            className="tap w-9 h-9 rounded-full bg-cream-soft shadow-soft flex items-center justify-center text-charcoal disabled:opacity-50 shrink-0"
+          >
+            <Minus size={14} />
+          </button>
           <input
             value={calorieDraft}
-            onChange={(e) => {
-              setCalorieDraft(e.target.value.replace(/\D/g, ""));
-              setCalorieConfirmed(false);
-            }}
+            onChange={(e) => setCalorieDraft(e.target.value.replace(/\D/g, ""))}
             inputMode="numeric"
-            disabled={locked || calorieConfirmed}
-            className="w-32 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-lg font-bold text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
+            disabled={locked}
+            className="w-24 text-center rounded-xl bg-cream-soft border border-charcoal/10 px-2 py-2 text-lg font-bold text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
           />
-          <span className="text-sm text-charcoal-faint">kcal / day</span>
           <button
+            onClick={() => !locked && setCalorieDraft(String(Number(calorieDraft || 0) + 50))}
+            disabled={locked}
+            aria-label="Increase by 50 kcal"
+            className="tap w-9 h-9 rounded-full bg-cream-soft shadow-soft flex items-center justify-center text-charcoal disabled:opacity-50 shrink-0"
+          >
+            <Plus size={14} />
+          </button>
+          <span className="text-sm text-charcoal-faint">kcal</span>
+        </div>
+        {!locked && Number(calorieDraft || 0) !== nutritionGoal.targetCalories && (
+          <Button
+            size="sm"
+            className="mt-1"
             onClick={() => {
-              if (calorieConfirmed) {
-                setCalorieConfirmed(false);
-                return;
-              }
               const kcal = Number(calorieDraft);
               if (!kcal) return;
-              // Macro distribution recomputes automatically — `targets`
-              // below derives from targetCalories + the existing split.
               setNutritionGoal({ ...nutritionGoal, targetCalories: kcal });
-              setCalorieConfirmed(true);
             }}
-            disabled={locked}
-            aria-label={calorieConfirmed ? "Edit calorie target" : "Confirm calorie target"}
-            className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors disabled:opacity-50 ${
-              calorieConfirmed
-                ? "bg-charcoal/10 border-transparent text-charcoal-faint"
-                : "bg-primary border-primary text-white"
-            }`}
           >
-            <Check size={16} strokeWidth={3} />
-          </button>
-        </div>
+            <Check size={13} /> Save target
+          </Button>
+        )}
       </Card>
 
       <Card>
@@ -353,19 +376,35 @@ export default function GoalsPanel() {
               key={p}
               active={nutritionGoal.planType === p}
               onClick={() => {
-                if (p === "existing") applyExistingPlan();
-                else setNutritionGoal({ ...nutritionGoal, planType: p });
+                // V10 (QA 10.0): "Pressing existing plan, will tell the
+                // client that the professional will be responsible for the
+                // goals and macros. if they don't have a hired professional,
+                // make it so that when pressed it reverts back to custom
+                // plan with an error message saying that they should hire a
+                // professional."
+                if (p === "existing") {
+                  if (!user.linkedProfessionalName) {
+                    setPlanError("You need to hire a professional before switching to an existing plan.");
+                    setNutritionGoal({ ...nutritionGoal, planType: "custom" });
+                    return;
+                  }
+                  setPlanError(null);
+                  applyExistingPlan();
+                } else {
+                  setPlanError(null);
+                  setNutritionGoal({ ...nutritionGoal, planType: p });
+                }
               }}
             >
               {p === "custom" ? "Custom plan" : "Existing plan"}
             </Chip>
           ))}
         </div>
-        {nutritionGoal.planType === "existing" && (
+        {planError && <p className="text-xs font-semibold text-[#C0392B] mt-3">{planError}</p>}
+        {!planError && nutritionGoal.planType === "existing" && (
           <p className="text-xs text-charcoal-faint mt-3">
-            {user.linkedProfessionalName
-              ? `Applied the plan ${user.linkedProfessionalName} set for you — weight goal, calorie target and macros updated.`
-              : "Applied a starter dietitian-style plan — connect with a professional in Professionals for one built for you."}
+            {user.linkedProfessionalName} is responsible for your goals and macros while this plan is
+            active — weight goal, calorie target and macro distribution can only be changed by them.
           </p>
         )}
       </Card>

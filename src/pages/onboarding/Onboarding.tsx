@@ -12,6 +12,7 @@ import type {
   TrackPreference,
 } from "../../types";
 import { WelcomeStep } from "./WelcomeStep";
+import { AuthStep } from "./AuthStep";
 import { AccountTypeStep } from "./AccountTypeStep";
 import { AboutYouStep } from "./AboutYouStep";
 import { GoalStep } from "./GoalStep";
@@ -20,6 +21,7 @@ import { TrackingStep } from "./TrackingStep";
 import { ReadyStep } from "./ReadyStep";
 
 export interface OnboardingDraft {
+  email: string;
   accountType: AccountType | null;
   customerSubtype: CustomerSubtype | null;
   professionalSubtype: ProfessionalSubtype | null;
@@ -39,6 +41,7 @@ export interface OnboardingDraft {
 }
 
 const initialDraft: OnboardingDraft = {
+  email: "",
   accountType: null,
   customerSubtype: null,
   professionalSubtype: null,
@@ -56,7 +59,7 @@ const initialDraft: OnboardingDraft = {
   certificationFile: null,
 };
 
-type StepKey = "welcome" | "accountType" | "aboutYou" | "goal" | "activity" | "tracking" | "ready";
+type StepKey = "welcome" | "auth" | "accountType" | "aboutYou" | "goal" | "activity" | "tracking" | "ready";
 
 // V4 (QA 4.0): professionals are onboarding to add clients, not to be
 // tracked themselves — the goal/activity-level/tracking-preference steps
@@ -75,6 +78,7 @@ function stepsFor(accountType: OnboardingDraft["accountType"], skipAboutYou: boo
   const isBusiness = accountType === "business";
   return [
     "welcome",
+    "auth",
     "accountType",
     ...(skipAboutYou || isBusiness ? [] : (["aboutYou"] as StepKey[])),
     ...(isProfessional || isBusiness ? [] : (["goal", "activity", "tracking"] as StepKey[])),
@@ -103,6 +107,7 @@ export default function Onboarding() {
 
   const finish = () => {
     completeOnboarding({
+      email: draft.email,
       accountType: draft.accountType || "customer",
       customerSubtype: draft.accountType === "customer" ? draft.customerSubtype || "general" : undefined,
       professionalSubtype:
@@ -143,6 +148,7 @@ export default function Onboarding() {
 
       <div className="flex-1 flex flex-col px-6 pt-8 pb-10 max-w-md mx-auto w-full">
         {stepKey === "welcome" && <WelcomeStep onNext={next} />}
+        {stepKey === "auth" && <AuthStep draft={draft} setDraft={setDraft} onNext={next} />}
         {stepKey === "accountType" && (
           <AccountTypeStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
         )}

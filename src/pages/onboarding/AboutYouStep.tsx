@@ -82,11 +82,11 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
     >
       <div className="space-y-4">
         <label className="block">
-          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">First name</span>
+          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Name</span>
           <input
             value={draft.firstName}
             onChange={(e) => setDraft((d) => ({ ...d, firstName: e.target.value }))}
-            placeholder="Abdallah"
+            placeholder="Abdallah Karam"
             className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
           />
         </label>
@@ -129,7 +129,7 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
             </div>
             {draft.certificationFile && (
               <p className="flex items-center gap-1.5 text-xs text-primary-dark mt-2.5">
-                <Check size={13} /> Certification attached
+                <Check size={13} /> Submitted — pending authentication
               </p>
             )}
             <p className="text-[11px] text-charcoal-faint mt-2">

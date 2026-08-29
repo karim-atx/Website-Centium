@@ -11,6 +11,7 @@ const muscleGroupOptions: { value: MuscleGroup; label: string }[] = [
   { value: "chest", label: "Chest" },
   { value: "core", label: "Core" },
   { value: "full_body", label: "Full Body" },
+  { value: "glutes", label: "Glutes" },
   { value: "hamstrings", label: "Hamstrings" },
   { value: "olympic", label: "Olympic" },
   { value: "other", label: "Other" },
@@ -33,6 +34,10 @@ const classificationOptions: { value: ExerciseClassification; label: string }[] 
 export interface CustomExerciseData {
   name: string;
   muscleGroups: MuscleGroup[];
+  // V10 (QA 10.0): a muscle group chip now cycles unselected → main →
+  // secondary → unselected, so an exercise can record e.g. "chest" as the
+  // primary mover and "shoulders"/"tricep" as secondary, like a bench press.
+  secondaryMuscleGroups: MuscleGroup[];
   classification: ExerciseClassification;
 }
 
@@ -53,6 +58,7 @@ export const CreateCustomExerciseSheet: React.FC<{
 }> = ({ open, onClose, onSave, initial, duplicateFromStock }) => {
   const [name, setName] = useState("");
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([]);
+  const [secondaryMuscleGroups, setSecondaryMuscleGroups] = useState<MuscleGroup[]>([]);
   const [classification, setClassification] = useState<ExerciseClassification>("machine_other");
   const [classificationOpen, setClassificationOpen] = useState(false);
 
@@ -60,17 +66,31 @@ export const CreateCustomExerciseSheet: React.FC<{
     if (open) {
       setName(initial?.name ?? "");
       setMuscleGroups(initial?.muscleGroups ?? []);
+      setSecondaryMuscleGroups(initial?.secondaryMuscleGroups ?? []);
       setClassification(initial?.classification ?? "machine_other");
       setClassificationOpen(false);
     }
   }, [open, initial]);
 
-  const toggleMuscleGroup = (mg: MuscleGroup) =>
-    setMuscleGroups((prev) => (prev.includes(mg) ? prev.filter((m) => m !== mg) : [...prev, mg]));
+  // V10 (QA 10.0): "it can be organized as main muscle group by clicking
+  // once, secondary muscle group by another click or reset selection for a
+  // third click" — a 3-state cycle per chip instead of a plain toggle.
+  const cycleMuscleGroup = (mg: MuscleGroup) => {
+    const isPrimary = muscleGroups.includes(mg);
+    const isSecondary = secondaryMuscleGroups.includes(mg);
+    if (!isPrimary && !isSecondary) {
+      setMuscleGroups((prev) => [...prev, mg]);
+    } else if (isPrimary) {
+      setMuscleGroups((prev) => prev.filter((m) => m !== mg));
+      setSecondaryMuscleGroups((prev) => [...prev, mg]);
+    } else {
+      setSecondaryMuscleGroups((prev) => prev.filter((m) => m !== mg));
+    }
+  };
 
   const save = () => {
     if (!name.trim()) return;
-    onSave({ name: name.trim(), muscleGroups, classification });
+    onSave({ name: name.trim(), muscleGroups, secondaryMuscleGroups, classification });
     onClose();
   };
 
@@ -99,24 +119,32 @@ export const CreateCustomExerciseSheet: React.FC<{
         </label>
 
         <div>
-          <span className="text-xs font-semibold text-charcoal-soft mb-2 block">
-            Muscle Group <span className="text-charcoal-faint font-normal">(select any that apply)</span>
-          </span>
+          <span className="text-xs font-semibold text-charcoal-soft mb-1 block">Muscle Group</span>
+          <p className="text-[11px] text-charcoal-faint mb-2">
+            Click once for main, twice for secondary, three times to clear.
+          </p>
           <div className="flex flex-wrap gap-2">
-            {muscleGroupOptions.map((mg) => (
-              <button
-                key={mg.value}
-                onClick={() => toggleMuscleGroup(mg.value)}
-                className={clsx(
-                  "tap rounded-xl px-3 py-2 text-xs font-semibold border transition-colors",
-                  muscleGroups.includes(mg.value)
-                    ? "bg-primary text-white border-primary"
-                    : "bg-cream-card border-charcoal/10 text-charcoal-soft"
-                )}
-              >
-                {mg.label}
-              </button>
-            ))}
+            {muscleGroupOptions.map((mg) => {
+              const isPrimary = muscleGroups.includes(mg.value);
+              const isSecondary = secondaryMuscleGroups.includes(mg.value);
+              return (
+                <button
+                  key={mg.value}
+                  onClick={() => cycleMuscleGroup(mg.value)}
+                  className={clsx(
+                    "tap rounded-xl px-3 py-2 text-xs font-semibold border transition-colors",
+                    isPrimary
+                      ? "bg-primary text-white border-primary"
+                      : isSecondary
+                      ? "bg-primary-pale text-primary-dark border-primary/40"
+                      : "bg-cream-card border-charcoal/10 text-charcoal-soft"
+                  )}
+                >
+                  {mg.label}
+                  {isSecondary && <span className="ml-1 text-[9px] align-super">2°</span>}
+                </button>
+              );
+            })}
           </div>
         </div>
 

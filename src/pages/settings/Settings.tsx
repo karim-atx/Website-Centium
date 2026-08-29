@@ -8,6 +8,7 @@ import { ContactUsSheet } from "../../components/profile/ContactUsSheet";
 import { NotificationsSheet } from "../../components/profile/NotificationsSheet";
 import { AccessibilitySheet } from "../../components/profile/AccessibilitySheet";
 import { PrivacySheet } from "../../components/profile/PrivacySheet";
+import { TermsOfServiceSheet } from "../../components/profile/TermsOfServiceSheet";
 import { useApp } from "../../context/AppContext";
 import { useState } from "react";
 import {
@@ -22,6 +23,7 @@ import {
   ChevronRight,
   Check,
   Accessibility,
+  FileText,
 } from "lucide-react";
 
 export default function Settings() {
@@ -33,6 +35,7 @@ export default function Settings() {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [tosOpen, setTosOpen] = useState(false);
 
   const requestMic = async () => {
     try {
@@ -193,6 +196,19 @@ export default function Settings() {
           </div>
           <ChevronRight size={15} className="text-charcoal-faint" />
         </button>
+        {/* V9 (QA 9.0): "a button for terms and services... applicable in
+            the other professional and business UI as well" — Settings.tsx
+            is already the one shared page for every account type. */}
+        <button
+          onClick={() => setTosOpen(true)}
+          className="tap w-full flex items-center justify-between px-4 py-3.5"
+        >
+          <div className="flex items-center gap-3">
+            <FileText size={16} className="text-charcoal-soft" />
+            <span className="text-sm font-medium text-charcoal">Terms of Service</span>
+          </div>
+          <ChevronRight size={15} className="text-charcoal-faint" />
+        </button>
         <button
           onClick={() => setContactOpen(true)}
           className="tap w-full flex items-center justify-between px-4 py-3.5"
@@ -209,6 +225,7 @@ export default function Settings() {
       <NotificationsSheet open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
       <AccessibilitySheet open={accessibilityOpen} onClose={() => setAccessibilityOpen(false)} />
       <PrivacySheet open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
+      <TermsOfServiceSheet open={tosOpen} onClose={() => setTosOpen(false)} />
 
       <BottomSheet open={languageOpen} onClose={() => setLanguageOpen(false)} title={t("Language")}>
         <div className="space-y-2.5 animate-fade-slide-up">

@@ -1,19 +1,22 @@
-import React, { useState } from "react";
+import React from "react";
 import { Card } from "../ui/Card";
 import { Toggle } from "../ui/Toggle";
+import { useApp } from "../../context/AppContext";
 import { Apple, Smartphone } from "lucide-react";
 
 // V4: "Integration should be based on the device whether iOS or Android, do
 // not include both" — detect the platform and show only the matching
 // integration instead of offering both toggles side by side.
-function detectPlatform(): "ios" | "android" {
+export function detectPlatform(): "ios" | "android" {
   if (typeof navigator === "undefined") return "ios";
   return /android/i.test(navigator.userAgent) ? "android" : "ios";
 }
 
 export const IntegrationsCard: React.FC = () => {
   const platform = detectPlatform();
-  const [connected, setConnected] = useState(false);
+  // V9 (QA 9.0): lifted into AppContext (was local state) so the Health
+  // page's swipe-to-sync gesture can tell whether a device is connected.
+  const { healthIntegrationConnected: connected, setHealthIntegrationConnected: setConnected } = useApp();
 
   const isIos = platform === "ios";
 
@@ -38,7 +41,7 @@ export const IntegrationsCard: React.FC = () => {
       </div>
       {connected && (
         <p className="text-[11px] text-primary-dark bg-primary-pale rounded-xl px-3 py-2 mt-2">
-          Connected (mock) — real syncing arrives in a future version.
+          Connected (mock) — swipe down on Health to sync.
         </p>
       )}
     </Card>

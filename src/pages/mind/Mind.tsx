@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
-import { Chip } from "../../components/ui/Chip";
 import { useApp } from "../../context/AppContext";
 import { StreakEditSheet } from "../../components/mind/StreakEditSheet";
 import { AddStreakSheet } from "../../components/mind/AddStreakSheet";
@@ -9,7 +8,7 @@ import { MeditationSheet } from "../../components/mind/MeditationSheet";
 import { YogaFigureIcon } from "../../components/mind/YogaFigureIcon";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
-import { Flame, Plus, CheckSquare, BookOpen } from "lucide-react";
+import { Flame, Plus, CheckSquare, BookOpen, ChevronLeft } from "lucide-react";
 import type { Streak } from "../../types";
 import { flameColor } from "../../utils/flameColor";
 
@@ -26,17 +25,17 @@ export default function Mind() {
     <div>
       <PageHeader title="Mind" subtitle="Habits, journaling & meditation" showBack />
 
-      <div className="flex gap-2 mb-5 animate-fade-slide-up">
-        <Chip active={tab === "overview"} onClick={() => setTab("overview")}>
-          Overview
-        </Chip>
-        <Chip active={tab === "habits"} onClick={() => setTab("habits")}>
-          Habits
-        </Chip>
-        <Chip active={tab === "journal"} onClick={() => setTab("journal")}>
-          Journal
-        </Chip>
-      </div>
+      {/* V10 (QA 10.0): "Remove the overview, habits and journal tabs at
+          the top" — Habits/Journal are still reached via their own cards
+          below, with a plain back link here instead of a tab strip. */}
+      {tab !== "overview" && (
+        <button
+          onClick={() => setTab("overview")}
+          className="tap flex items-center gap-1 text-sm font-semibold text-charcoal-soft mb-4 -ml-1"
+        >
+          <ChevronLeft size={16} /> Mind
+        </button>
+      )}
 
       {tab === "overview" && (
         <div className="animate-fade-slide-up">

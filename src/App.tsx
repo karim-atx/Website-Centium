@@ -32,9 +32,14 @@ import BusinessProfileTab from "./pages/marketplace/BusinessProfileTab";
 import BusinessMessagesTab from "./pages/marketplace/BusinessMessagesTab";
 import BusinessEmployeesTab from "./pages/marketplace/BusinessEmployeesTab";
 import BusinessClassesTab from "./pages/marketplace/BusinessClassesTab";
+import BusinessOperationsTab from "./pages/marketplace/BusinessOperationsTab";
+import BusinessGymTab from "./pages/marketplace/BusinessGymTab";
+import BusinessCalendarTab from "./pages/marketplace/BusinessCalendarTab";
 import Profile from "./pages/profile/Profile";
 import Subscription from "./pages/subscription/Subscription";
 import More from "./pages/profile/More";
+import ClientCalendarTab from "./pages/profile/ClientCalendarTab";
+import ForumTab from "./pages/profile/ForumTab";
 import Settings from "./pages/settings/Settings";
 
 const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -87,9 +92,14 @@ function AppRoutes() {
         <Route path="/app/business/messages" element={<BusinessMessagesTab />} />
         <Route path="/app/business/employees" element={<BusinessEmployeesTab />} />
         <Route path="/app/business/classes" element={<BusinessClassesTab />} />
+        <Route path="/app/business/operations" element={<BusinessOperationsTab />} />
+        <Route path="/app/business/gym" element={<BusinessGymTab />} />
+        <Route path="/app/business/calendar" element={<BusinessCalendarTab />} />
         <Route path="/app/profile" element={<Profile />} />
         <Route path="/app/subscription" element={<Subscription />} />
         <Route path="/app/more" element={<More />} />
+        <Route path="/app/calendar" element={<ClientCalendarTab />} />
+        <Route path="/app/forum" element={<ForumTab />} />
         <Route path="/app/settings" element={<Settings />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />

@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/ui/Card";
-import { previousWorkouts } from "../../data/mockWorkouts";
 import { formatDuration } from "../../services/workout";
 import { WorkoutCalendarSheet } from "../../components/workout/WorkoutCalendarSheet";
 import { ChevronDown, ChevronUp, Calendar, BarChart3, Clock } from "lucide-react";
@@ -34,7 +33,6 @@ export default function HistoryTab() {
   const { workoutSessions } = useApp();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
-  const [previousExpandedId, setPreviousExpandedId] = useState<string | null>(null);
 
   const totalVolume = workoutSessions.reduce((s, w) => s + w.totalVolumeKg, 0);
   const totalSeconds = workoutSessions.reduce((s, w) => s + w.durationSec, 0);
@@ -101,50 +99,11 @@ export default function HistoryTab() {
         </div>
       )}
 
-      <div>
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-          Previous workouts
+      {workoutSessions.length === 0 && (
+        <p className="text-center text-sm text-charcoal-faint py-8">
+          No logged workouts yet — finish a routine to see it here.
         </p>
-        <div className="space-y-2.5">
-          {previousWorkouts.map((w) => {
-            const open = previousExpandedId === w.id;
-            return (
-              <Card key={w.id} padded={false} className="overflow-hidden">
-                <button
-                  onClick={() => setPreviousExpandedId(open ? null : w.id)}
-                  className="tap w-full flex items-center justify-between p-4 text-left"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-charcoal">{w.name}</p>
-                    <p className="text-xs text-charcoal-faint">
-                      {w.date} · {w.exerciseCount} exercises
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs font-medium text-charcoal-faint">{w.durationMin}m</span>
-                    {open ? (
-                      <ChevronUp size={15} className="text-charcoal-faint" />
-                    ) : (
-                      <ChevronDown size={15} className="text-charcoal-faint" />
-                    )}
-                  </div>
-                </button>
-                {open && (
-                  <div className="border-t border-charcoal/[0.06] px-4 py-3 animate-fade-slide-up">
-                    <div className="flex flex-wrap gap-1.5">
-                      {w.exercises.map((name) => (
-                        <span key={name} className="text-xs font-medium text-charcoal bg-cream-soft rounded-full px-2.5 py-1">
-                          {name}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </Card>
-            );
-          })}
-        </div>
-      </div>
+      )}
 
       <WorkoutCalendarSheet open={calendarOpen} onClose={() => setCalendarOpen(false)} />
     </div>

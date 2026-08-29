@@ -63,7 +63,7 @@ export const dailyTargets = {
   fat: 70,
 };
 
-const activityMultiplier: Record<UserProfile["activityLevel"], number> = {
+export const activityMultiplier: Record<UserProfile["activityLevel"], number> = {
   sedentary: 1.2,
   light: 1.375,
   moderate: 1.55,
@@ -71,12 +71,18 @@ const activityMultiplier: Record<UserProfile["activityLevel"], number> = {
   athlete: 1.9,
 };
 
-/**
- * Mifflin-St Jeor BMR -> TDEE. A standard, transparent estimate — clearly
- * prototype-level, not a clinical calculation.
- */
-export function calculateTDEE(user: UserProfile): number {
-  const { weightKg, heightCm, age, sex, activityLevel } = user;
+// V9 (QA 9.0): "Move the TDEE estimate... to the professional UI. It
+// should be applicable to the specific client" — the professional only has
+// a ProfessionalClient (partial, optional demographics), not a full
+// UserProfile, so the Mifflin-St Jeor math is factored out to take the raw
+// parts instead of requiring the client-only shape.
+export function calculateTDEEFromParts(
+  weightKg: number,
+  heightCm: number,
+  age: number,
+  sex: UserProfile["sex"],
+  activityLevel: UserProfile["activityLevel"]
+): number {
   let bmr: number;
   if (sex === "male") {
     bmr = 10 * weightKg + 6.25 * heightCm - 5 * age + 5;
@@ -86,6 +92,14 @@ export function calculateTDEE(user: UserProfile): number {
     bmr = 10 * weightKg + 6.25 * heightCm - 5 * age - 78; // midpoint estimate
   }
   return Math.round(bmr * activityMultiplier[activityLevel]);
+}
+
+/**
+ * Mifflin-St Jeor BMR -> TDEE. A standard, transparent estimate — clearly
+ * prototype-level, not a clinical calculation.
+ */
+export function calculateTDEE(user: UserProfile): number {
+  return calculateTDEEFromParts(user.weightKg, user.heightCm, user.age, user.sex, user.activityLevel);
 }
 
 const KCAL_PER_KG_BODYFAT = 7700;

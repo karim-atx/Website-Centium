@@ -1,10 +1,11 @@
 import React from "react";
 
-// V8 (QA 8.0): "does not resemble the attached picture" — redrawn from
-// scratch against the reference mark instead of resizing the old paths.
-// A thick purple ring open at bottom-right (~4 to 5:30 o'clock), with a
-// sage-green leaf tucked into that same notch, base near the ring's inner
-// edge and tip pointing outward past it, plus a thin vein down its length.
+// V9 (QA 9.0): "Replace all instances where the logo was used with this" —
+// redrawn again against the new reference mark, now a clean "C" letterform
+// (a wide ~255° ring with a flat/angled butt-cap opening, not a small round-
+// capped notch) with the leaf tucked into the ring's lower opening arm,
+// its tip staying well short of the ring's upper arm so the negative-space
+// gap between them reads clearly, per the reference.
 // Wordmark is intentionally not part of this SVG — callers that want the
 // "CENTIUM" text render it separately (see WelcomeStep/Subscription).
 export const CentiumLogo: React.FC<{ size?: number; className?: string }> = ({
@@ -21,20 +22,20 @@ export const CentiumLogo: React.FC<{ size?: number; className?: string }> = ({
     role="img"
   >
     <path
-      d="M39.06 80.07A32 32 0 1 1 70.58 74.51"
+      d="M 65.5 22.0 A 33 33 0 1 0 64.5 78.6"
       stroke="#7D67D9"
-      strokeWidth="22"
-      strokeLinecap="round"
+      strokeWidth="17"
+      strokeLinecap="butt"
       fill="none"
     />
-    <path d="M55.47 65.04 Q73.55 73.78 66.4 95.1 Q55.69 80.28 55.47 65.04 Z" fill="#A2C8C2" />
+    <path d="M55,92 Q102,86 96,66 Q66,70 55,92 Z" fill="#7FBFAE" />
     <path
-      d="M55.47 65.04 Q65.09 76.86 66.4 95.1"
-      stroke="#4F8F8A"
+      d="M66,82 Q78,77 90,68"
+      stroke="#ffffff"
       strokeWidth="1.4"
       strokeLinecap="round"
       fill="none"
-      opacity="0.6"
+      opacity="0.55"
     />
   </svg>
 );

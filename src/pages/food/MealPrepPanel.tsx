@@ -3,9 +3,10 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { useApp } from "../../context/AppContext";
 import { CreateMealSheet } from "../../components/food/CreateMealSheet";
-import { Plus, X, ClipboardList, UtensilsCrossed } from "lucide-react";
+import { Plus, X, ClipboardList, UtensilsCrossed, Pencil } from "lucide-react";
 import { foodCategoryIcon } from "../../utils/icons";
 import { entryMultiplier } from "../../services/nutrition";
+import type { CustomMeal } from "../../types";
 
 // V4: Meal Prep reworked from a per-meal-type planner into "Create Meal" —
 // group existing food items under one title; searching that title from Add
@@ -13,6 +14,8 @@ import { entryMultiplier } from "../../services/nutrition";
 export default function MealPrepPanel() {
   const { customMeals, removeCustomMeal } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
+  // V10 (QA 10.0): "Creating a meal prep should also allow you to edit and delete it."
+  const [editingMeal, setEditingMeal] = useState<CustomMeal | null>(null);
 
   return (
     <div className="space-y-5 animate-fade-slide-up">
@@ -40,13 +43,22 @@ export default function MealPrepPanel() {
                     {m.items.length} item{m.items.length !== 1 ? "s" : ""} · {totalCal} kcal total
                   </p>
                 </div>
-                <button
-                  onClick={() => removeCustomMeal(m.id)}
-                  className="tap w-7 h-7 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-faint shrink-0"
-                  aria-label={`Remove ${m.title}`}
-                >
-                  <X size={13} />
-                </button>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <button
+                    onClick={() => setEditingMeal(m)}
+                    className="tap w-7 h-7 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-faint"
+                    aria-label={`Edit ${m.title}`}
+                  >
+                    <Pencil size={12} />
+                  </button>
+                  <button
+                    onClick={() => removeCustomMeal(m.id)}
+                    className="tap w-7 h-7 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-faint"
+                    aria-label={`Remove ${m.title}`}
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
               </div>
               <div className="flex flex-wrap gap-1.5 px-4 pb-3.5">
                 {m.items.map((i) => {
@@ -77,6 +89,7 @@ export default function MealPrepPanel() {
       </Button>
 
       <CreateMealSheet open={createOpen} onClose={() => setCreateOpen(false)} />
+      <CreateMealSheet open={!!editingMeal} onClose={() => setEditingMeal(null)} editMeal={editingMeal} />
     </div>
   );
 }

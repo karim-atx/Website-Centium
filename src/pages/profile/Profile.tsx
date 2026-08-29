@@ -21,6 +21,9 @@ import {
   Star,
   Crown,
   BadgeCheck,
+  Mail,
+  Phone,
+  Globe,
 } from "lucide-react";
 
 const accountTypeLabel: Record<string, string> = {
@@ -164,6 +167,60 @@ export default function Profile() {
             </div>
             <ChevronRight size={16} className="text-charcoal-faint" />
           </button>
+        </Card>
+      )}
+
+      {/* V10 (QA 10.0): "Under the profile pic should be a Bio section
+          where anything a professional writes shows on the explore of the
+          client UI... as well as credentials tab that includes the email,
+          phone number, website." */}
+      {user.accountType === "professional" && (
+        <Card className="mb-6 animate-fade-slide-up">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Bio</p>
+          <textarea
+            value={user.professionalBio ?? ""}
+            onChange={(e) => updateProfile({ professionalBio: e.target.value })}
+            placeholder="This will appear to clients on your Explore listing."
+            rows={3}
+            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20 resize-none"
+          />
+        </Card>
+      )}
+
+      {user.accountType === "professional" && (
+        <Card className="mb-6 animate-fade-slide-up">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">Credentials</p>
+          <div className="space-y-2.5">
+            <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
+              <Mail size={15} className="text-charcoal-faint shrink-0" />
+              <input
+                value={user.email}
+                readOnly
+                className="flex-1 bg-transparent text-sm text-charcoal-faint focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
+              <Phone size={15} className="text-charcoal-faint shrink-0" />
+              <input
+                value={user.professionalPhone ?? ""}
+                onChange={(e) => updateProfile({ professionalPhone: e.target.value })}
+                placeholder="Phone number"
+                className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
+              />
+            </div>
+            <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
+              <Globe size={15} className="text-charcoal-faint shrink-0" />
+              <input
+                value={user.professionalWebsite ?? ""}
+                onChange={(e) => updateProfile({ professionalWebsite: e.target.value })}
+                placeholder="Website"
+                className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
+              />
+            </div>
+          </div>
+          <p className="text-[11px] text-charcoal-faint mt-2.5">
+            Whichever of these you fill in shows on your Explore listing and profile.
+          </p>
         </Card>
       )}
 

@@ -1,4 +1,4 @@
-import { Home, UtensilsCrossed, Dumbbell, HeartPulse, MoreHorizontal, Sparkles, Users, Store, User as UserIcon, CalendarDays, ClipboardList, MessageCircle, BarChart3, Tag, Building2 } from "lucide-react";
+import { Home, UtensilsCrossed, Dumbbell, HeartPulse, MoreHorizontal, Sparkles, Users, Store, User as UserIcon, CalendarDays, ClipboardList, MessageCircle, MessageSquare, BarChart3, Tag, Building2, Briefcase } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 export interface NavItem {
@@ -27,8 +27,8 @@ export const primaryNavItems: NavItem[] = [
 export const professionalPrimaryNavItems: NavItem[] = [
   { to: "/app/professionals", label: "Clients", icon: Users },
   { to: "/app/professionals/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/app/professionals/templates", label: "Templates", icon: ClipboardList },
-  { to: "/app/professionals/meal-plans", label: "Meal Plans", icon: UtensilsCrossed },
+  { to: "/app/professionals/templates", label: "Training", icon: ClipboardList },
+  { to: "/app/professionals/meal-plans", label: "Nutrition", icon: UtensilsCrossed },
   { to: "/app/more", label: "More", icon: MoreHorizontal },
 ];
 
@@ -39,11 +39,15 @@ export const professionalPrimaryNavItems: NavItem[] = [
 // V7 (QA 7.0): Analytics, Marketplace (listing creation) and Messages are
 // now real tabs — Employees/Classes (gym-type only) live in More instead,
 // since the bottom nav only has 5 slots.
+// V9 (QA 9.0): "Add a new button between analytics and marketplace called
+// operations that house both the employees and classes buttons found in
+// more" — Operations takes the bottom-nav slot Messages used to hold;
+// Messages moves into More instead (still a 5-slot bar).
 export const businessPrimaryNavItems: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: Store },
   { to: "/app/business/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/app/business/operations", label: "Operations", icon: Briefcase },
   { to: "/app/business/marketplace", label: "Marketplace", icon: Tag },
-  { to: "/app/business/messages", label: "Messages", icon: MessageCircle },
   { to: "/app/more", label: "More", icon: MoreHorizontal },
 ];
 
@@ -54,7 +58,9 @@ export const sidebarNavItems: NavItem[] = [
   { to: "/app/workout", label: "Workout", icon: Dumbbell },
   { to: "/app/health", label: "Health", icon: HeartPulse },
   { to: "/app/mind", label: "Mind", icon: Sparkles },
+  { to: "/app/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/app/professionals", label: "Professionals", icon: Users },
+  { to: "/app/forum", label: "Forum", icon: MessageSquare },
   { to: "/app/marketplace", label: "Explore", icon: Store },
   { to: "/app/profile", label: "Profile", icon: UserIcon },
 ];
@@ -62,8 +68,8 @@ export const sidebarNavItems: NavItem[] = [
 export const professionalSidebarNavItems: NavItem[] = [
   { to: "/app/professionals", label: "My Clients", icon: Users },
   { to: "/app/professionals/calendar", label: "Calendar", icon: CalendarDays },
-  { to: "/app/professionals/templates", label: "Templates", icon: ClipboardList },
-  { to: "/app/professionals/meal-plans", label: "Meal Plans", icon: UtensilsCrossed },
+  { to: "/app/professionals/templates", label: "Training", icon: ClipboardList },
+  { to: "/app/professionals/meal-plans", label: "Nutrition", icon: UtensilsCrossed },
   { to: "/app/professionals/messages", label: "Messages", icon: MessageCircle },
   { to: "/app/professionals/health-metrics", label: "Health Metrics", icon: HeartPulse },
   { to: "/app/marketplace", label: "Explore", icon: Store },
@@ -73,10 +79,11 @@ export const professionalSidebarNavItems: NavItem[] = [
 export const businessSidebarNavItems: NavItem[] = [
   { to: "/app", label: "Dashboard", icon: Store },
   { to: "/app/business/analytics", label: "Analytics", icon: BarChart3 },
+  { to: "/app/business/operations", label: "Operations", icon: Briefcase },
   { to: "/app/business/marketplace", label: "Marketplace", icon: Tag },
   { to: "/app/business/messages", label: "Messages", icon: MessageCircle },
   { to: "/app/business/employees", label: "Employees", icon: Users },
   { to: "/app/business/classes", label: "Classes", icon: CalendarDays },
+  { to: "/app/business/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/app/business/profile", label: "Business Profile", icon: Building2 },
-  { to: "/app/profile", label: "Profile", icon: UserIcon },
 ];

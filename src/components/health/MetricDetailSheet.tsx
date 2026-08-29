@@ -1,12 +1,22 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { Sparkline } from "./Sparkline";
 import { PeriodBarChart } from "./PeriodBarChart";
 import { StackedSleepBar, StackedSleepColumns, sleepStageLegend, type SleepStages } from "./StackedSleepBar";
 import { CaloriesRing } from "./CaloriesRing";
-import { sleepDetail } from "../../data/mockHealthData";
+import { sleepDetail, heartRateDetail } from "../../data/mockHealthData";
 import type { HealthMetric } from "../../types";
-import { Lock, CalendarDays, Pencil, Check } from "lucide-react";
+import { CalendarDays, Pencil, Check, HeartPulse, Scale, Moon, Flame } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+
+// V10 (QA 10.0): "Similar to the water widget, replace the lock icon in
+// other widgets to minimalistic icons relevant to each widget" — a
+// per-metric icon instead of a generic Lock next to "Keep auto-synced".
+const autoSyncedIcon: Partial<Record<HealthMetric["type"], LucideIcon>> = {
+  weight: Scale,
+  heartRate: HeartPulse,
+  sleep: Moon,
+  caloriesBurned: Flame,
+};
 
 type Period = "daily" | "weekly" | "monthly" | "yearly";
 const periodTabs: { value: Period; label: string }[] = [
@@ -19,7 +29,7 @@ const periodTabs: { value: Period; label: string }[] = [
 // Auto-sourced metrics (per QA: "cannot be edited since they get their data
 // automatically via either Apple or Android Health") — only Water stays
 // user-editable, handled by its own WaterDetailSheet instead of this one.
-const AUTO_SOURCED_TYPES = new Set(["weight", "bodyFat", "steps", "sleep", "caloriesBurned"]);
+const AUTO_SOURCED_TYPES = new Set(["weight", "heartRate", "steps", "sleep", "caloriesBurned"]);
 
 // Deterministic small variation used only to synthesize longer-period demo
 // aggregates from a single week of real-looking data — same spirit as the
@@ -49,22 +59,33 @@ export const MetricDetailSheet: React.FC<{
   onEditStepsGoal?: (goal: number) => void;
 }> = ({ open, onClose, metric, current, stepsGoal, onEditStepsGoal }) => {
   const [period, setPeriod] = useState<Period>("daily");
-  const [lastType, setLastType] = useState<string | null>(null);
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const [selectedSleepIdx, setSelectedSleepIdx] = useState<number | null>(null);
   const [editingStepsGoal, setEditingStepsGoal] = useState(false);
   const [stepsGoalDraft, setStepsGoalDraft] = useState("");
-  if (metric && metric.type !== lastType) {
-    setLastType(metric.type);
+  // V9 (QA 9.0): "each detailed widget [should] be separate, and every time
+  // the detailed widget is exited out, the calendar button is no longer
+  // selected and needs to be chosen again" — this one sheet instance is
+  // reused for every metric, so its calendar/period/sleep-bar selection is
+  // reset on every fresh open instead of bleeding from the last metric (or
+  // the last time this same metric was viewed).
+  const [wasOpen, setWasOpen] = useState(false);
+  if (open && !wasOpen) {
+    setWasOpen(true);
     if (period !== "daily") setPeriod("daily");
+    if (pickedDate !== null) setPickedDate(null);
+    if (selectedSleepIdx !== null) setSelectedSleepIdx(null);
+    if (editingStepsGoal) setEditingStepsGoal(false);
+  } else if (!open && wasOpen) {
+    setWasOpen(false);
   }
   if (!metric) return null;
 
   const isSleep = metric.type === "sleep";
   const isSteps = metric.type === "steps";
   const isWeight = metric.type === "weight";
-  const isBodyFat = metric.type === "bodyFat";
-  const isTrend = isWeight || isBodyFat;
+  const isHeartRate = metric.type === "heartRate";
+  const isTrend = isWeight;
   const isCalories = metric.type === "caloriesBurned";
   const isAuto = AUTO_SOURCED_TYPES.has(metric.type);
 
@@ -72,6 +93,19 @@ export const MetricDetailSheet: React.FC<{
   const weekdayLabels = metric.history.map((h) =>
     new Date(`${h.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" })
   );
+  const weekOfMonthLabels = Array.from({ length: 4 }, (_, i) => `Week ${i + 1}`);
+
+  // V10 (QA 10.0): "Pressing Day, week, month or year in the detailed
+  // widget should reflect the value of the day, weekly average, monthly
+  // average, or yearly average above respectively" — the headline number
+  // now tracks the selected period instead of always showing today's value.
+  const weeklyAvg = dailyHistory.reduce((s, v) => s + v, 0) / dailyHistory.length;
+  const monthOfWeekAvgs = Array.from({ length: 4 }, (_, i) => weeklyAvg * wobble(i, isTrend ? 0.03 : 0.08));
+  const yearOfMonthAvgs = Array.from({ length: 12 }, (_, i) => weeklyAvg * wobble(i, isTrend ? 0.05 : 0.12));
+  const monthlyAvg = monthOfWeekAvgs.reduce((s, v) => s + v, 0) / monthOfWeekAvgs.length;
+  const yearlyAvg = yearOfMonthAvgs.reduce((s, v) => s + v, 0) / yearOfMonthAvgs.length;
+  const periodValue =
+    period === "daily" ? current : period === "weekly" ? weeklyAvg : period === "monthly" ? monthlyAvg : yearlyAvg;
 
   // Deterministic mock value for an arbitrary picked date, in the same
   // spirit as the rest of this prototype's synthesized longer-range data.
@@ -88,14 +122,18 @@ export const MetricDetailSheet: React.FC<{
           <div>
             <p className="text-4xl font-bold text-charcoal leading-none">
               {metric.type === "sleep"
-                ? `${Math.floor(current)}h ${Math.round((current % 1) * 60)}m`
-                : current.toLocaleString()}
+                ? `${Math.floor(periodValue)}h ${Math.round((periodValue % 1) * 60)}m`
+                : isTrend
+                ? periodValue.toFixed(1)
+                : Math.round(periodValue).toLocaleString()}
               {metric.type !== "sleep" && (
                 <span className="text-base font-normal text-charcoal-faint ml-1">{metric.unit}</span>
               )}
             </p>
             <p className="text-xs text-charcoal-faint mt-1">
-              {metric.trend >= 0 ? "↑" : "↓"} {Math.abs(metric.trend)} {metric.unit} vs last week
+              {period === "daily"
+                ? `${metric.trend >= 0 ? "↑" : "↓"} ${Math.abs(metric.trend)} ${metric.unit} vs last week`
+                : { weekly: "Weekly average", monthly: "Monthly average", yearly: "Yearly average" }[period]}
             </p>
           </div>
           {isSteps && onEditStepsGoal ? (
@@ -110,11 +148,15 @@ export const MetricDetailSheet: React.FC<{
               <Pencil size={13} />
             </button>
           ) : (
-            isAuto && (
-              <span className="flex items-center gap-1 text-[10px] font-semibold text-charcoal-faint bg-cream-soft rounded-full px-2.5 py-1">
-                <Lock size={10} /> Auto-synced
-              </span>
-            )
+            isAuto &&
+            (() => {
+              const Icon = autoSyncedIcon[metric.type];
+              return (
+                <span className="flex items-center gap-1 text-[10px] font-semibold text-charcoal-faint bg-cream-soft rounded-full px-2.5 py-1">
+                  {Icon && <Icon size={10} />} Keep auto-synced
+                </span>
+              );
+            })()
           )}
         </div>
 
@@ -227,16 +269,17 @@ export const MetricDetailSheet: React.FC<{
             );
           })()}
 
-        {/* Weight / Body Fat: trend line, real Day/Week/Month/Year granularity */}
+        {/* Weight: real Day/Week/Month/Year granularity.
+            V10 (QA 10.0): "pressing week, month, or year in the detailed
+            weight widget... should show a graph with the date being on the
+            x-axis and weight in the y-axis" — a labeled bar chart (dates on
+            weekly, week-of-month on monthly, months on yearly) instead of
+            an unlabeled sparkline. */}
         {isTrend &&
           (() => {
             const base = dailyHistory[dailyHistory.length - 1];
-            const dayVal = [base];
-            const weekVals = dailyHistory; // Mon-Sun, real 7-day history
             const monthVals = Array.from({ length: 4 }, (_, i) => +(base * wobble(i, 0.03)).toFixed(1));
             const yearVals = Array.from({ length: 12 }, (_, i) => +(base * wobble(i, 0.05)).toFixed(1));
-            const values = { daily: dayVal, weekly: weekVals, monthly: monthVals, yearly: yearVals }[period];
-            const unit = isWeight ? "kg" : "%";
             if (period === "daily") {
               return (
                 <div className="mb-4 text-center">
@@ -244,24 +287,75 @@ export const MetricDetailSheet: React.FC<{
                 </div>
               );
             }
-            const high = Math.max(...values);
-            const low = Math.min(...values);
+            const view = {
+              weekly: { values: dailyHistory, labels: weekdayLabels },
+              monthly: { values: monthVals, labels: weekOfMonthLabels },
+              yearly: { values: yearVals, labels: monthNames },
+            }[period];
+            const high = Math.max(...view.values);
+            const low = Math.min(...view.values);
             return (
               <div className="mb-4">
-                <div className="flex justify-center mb-2">
-                  <Sparkline values={values} color="#7D6BB5" width={240} height={70} />
-                </div>
-                <div className="flex justify-center gap-4 text-xs">
-                  <span className="text-teal-dark font-semibold">
-                    ↑ High {high.toFixed(1)}{unit}
-                  </span>
-                  <span className="text-sky font-semibold">
-                    ↓ Low {low.toFixed(1)}{unit}
-                  </span>
+                <PeriodBarChart values={view.values} labels={view.labels} color="#7D6BB5" />
+                <div className="flex justify-center gap-4 text-xs mt-2">
+                  <span className="text-teal-dark font-semibold">↑ High {high.toFixed(1)}kg</span>
+                  <span className="text-sky font-semibold">↓ Low {low.toFixed(1)}kg</span>
                 </div>
               </div>
             );
           })()}
+
+        {/* Heart Rate: resting/average headline plus low/high range and a
+            zone-minutes breakdown, Apple-Health-inspired. */}
+        {isHeartRate && (
+          <div className="mb-4 animate-fade-slide-up">
+            {period !== "daily" && (
+              <div className="mb-4">
+                <PeriodBarChart
+                  values={
+                    { weekly: dailyHistory, monthly: monthOfWeekAvgs.map((v) => Math.round(v)), yearly: yearOfMonthAvgs.map((v) => Math.round(v)) }[
+                      period
+                    ]
+                  }
+                  labels={{ weekly: weekdayLabels, monthly: weekOfMonthLabels, yearly: monthNames }[period]}
+                  color="#E9736A"
+                />
+              </div>
+            )}
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              <div className="text-center bg-cream-soft rounded-xl py-2.5">
+                <p className="text-sm font-bold text-charcoal">{heartRateDetail.resting}</p>
+                <p className="text-[10px] text-charcoal-faint">Resting</p>
+              </div>
+              <div className="text-center bg-cream-soft rounded-xl py-2.5">
+                <p className="text-sm font-bold text-charcoal">{heartRateDetail.low}–{heartRateDetail.high}</p>
+                <p className="text-[10px] text-charcoal-faint">Range (bpm)</p>
+              </div>
+              <div className="text-center bg-cream-soft rounded-xl py-2.5">
+                <p className="text-sm font-bold text-charcoal">{heartRateDetail.average}</p>
+                <p className="text-[10px] text-charcoal-faint">Average</p>
+              </div>
+            </div>
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+              Time in heart-rate zones today
+            </p>
+            <div className="grid grid-cols-4 gap-2">
+              {[
+                { label: "Rest", min: heartRateDetail.zoneMinutes.rest, color: "#4C8FD1" },
+                { label: "Fat burn", min: heartRateDetail.zoneMinutes.fatBurn, color: "#3F9165" },
+                { label: "Cardio", min: heartRateDetail.zoneMinutes.cardio, color: "#D9A441" },
+                { label: "Peak", min: heartRateDetail.zoneMinutes.peak, color: "#E9736A" },
+              ].map((z) => (
+                <div key={z.label} className="text-center bg-cream-soft rounded-xl py-2">
+                  <p className="text-sm font-bold" style={{ color: z.color }}>
+                    {Math.floor(z.min / 60)}h{z.min % 60}m
+                  </p>
+                  <p className="text-[9px] text-charcoal-faint">{z.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Calories burned: Apple-Fitness-ring-inspired flame fill */}
         {isCalories && (
@@ -271,7 +365,7 @@ export const MetricDetailSheet: React.FC<{
           </div>
         )}
 
-        {!isSleep && !isSteps && !isTrend && !isCalories && (
+        {!isSleep && !isSteps && !isTrend && !isCalories && !isHeartRate && (
           <div className="grid grid-cols-7 gap-1.5 mb-4">
             {metric.history.map((h, i) => (
               <div key={i} className="text-center">

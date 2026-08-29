@@ -3,8 +3,6 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import type { ProfessionalClient, ProfessionalSubtype } from "../../types";
-import { workoutPrograms } from "../../data/mockWorkouts";
-import { mockFoods } from "../../data/mockFoods";
 import {
   UtensilsCrossed,
   Dumbbell,
@@ -45,7 +43,14 @@ export const ClientDetailSheet: React.FC<{
   client: ProfessionalClient | null;
   professionalSubtype?: ProfessionalSubtype;
 }> = ({ open, onClose, client, professionalSubtype }) => {
-  const { assignProgramToClient, assignFoodTemplateToClient, removeProfessionalClient, clientHealthNotes } = useApp();
+  const {
+    assignProgramToClient,
+    assignFoodTemplateToClient,
+    removeProfessionalClient,
+    clientHealthNotes,
+    workoutTemplates,
+    customMeals,
+  } = useApp();
   const [assigningProgram, setAssigningProgram] = useState(false);
   const [assigningTemplate, setAssigningTemplate] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
@@ -123,14 +128,6 @@ export const ClientDetailSheet: React.FC<{
               {client.access.weight ? `${client.lastWeightKg} kg` : "—"}
             </p>
           </div>
-          <div className="bg-cream-soft rounded-2xl p-3.5">
-            <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
-              Health metrics
-            </p>
-            <p className="text-lg font-bold text-charcoal">
-              {client.access.healthMetrics && client.healthSummary ? "Shared" : "Not shared"}
-            </p>
-          </div>
         </div>
 
         {client.access.foodDiary && (
@@ -174,19 +171,29 @@ export const ClientDetailSheet: React.FC<{
                 {client.assignedProgramName ?? "No program assigned yet"}
               </p>
               {assigningProgram && (
+                // V9 (QA 9.0): "Assigning workout... template should only
+                // show templates created in the templates... page" — was
+                // the generic mock workoutPrograms catalog, not anything
+                // this professional actually built in Templates.
                 <div className="flex flex-wrap gap-1.5 mt-2.5">
-                  {workoutPrograms.map((p) => (
-                    <button
-                      key={p.id}
-                      onClick={() => {
-                        assignProgramToClient(client.id, p.name);
-                        setAssigningProgram(false);
-                      }}
-                      className="tap text-xs font-semibold bg-primary-pale text-primary-dark rounded-full px-3 py-1.5"
-                    >
-                      {p.name}
-                    </button>
-                  ))}
+                  {workoutTemplates.length === 0 ? (
+                    <p className="text-xs text-charcoal-faint">
+                      No templates yet — build one in the Templates tab.
+                    </p>
+                  ) : (
+                    workoutTemplates.map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          assignProgramToClient(client.id, p.name);
+                          setAssigningProgram(false);
+                        }}
+                        className="tap text-xs font-semibold bg-primary-pale text-primary-dark rounded-full px-3 py-1.5"
+                      >
+                        {p.name}
+                      </button>
+                    ))
+                  )}
                 </div>
               )}
             </div>
@@ -210,19 +217,28 @@ export const ClientDetailSheet: React.FC<{
             {client.assignedFoodTemplateName ?? "No template assigned yet"}
           </p>
           {assigningTemplate && (
+            // V9 (QA 9.0): "...food template should only show templates
+            // created in... the meal plans page" — the professional's own
+            // customMeals (built in Meal Plans), not the generic food catalog.
             <div className="flex flex-wrap gap-1.5 mt-2.5">
-              {mockFoods.slice(0, 6).map((f) => (
-                <button
-                  key={f.id}
-                  onClick={() => {
-                    assignFoodTemplateToClient(client.id, `${f.name}-based plan`);
-                    setAssigningTemplate(false);
-                  }}
-                  className="tap text-xs font-semibold bg-primary-pale text-primary-dark rounded-full px-3 py-1.5"
-                >
-                  {f.name}
-                </button>
-              ))}
+              {customMeals.length === 0 ? (
+                <p className="text-xs text-charcoal-faint">
+                  No meal plans yet — build one in the Meal Plans tab.
+                </p>
+              ) : (
+                customMeals.map((f) => (
+                  <button
+                    key={f.id}
+                    onClick={() => {
+                      assignFoodTemplateToClient(client.id, f.title);
+                      setAssigningTemplate(false);
+                    }}
+                    className="tap text-xs font-semibold bg-primary-pale text-primary-dark rounded-full px-3 py-1.5"
+                  >
+                    {f.title}
+                  </button>
+                ))
+              )}
             </div>
           )}
         </div>

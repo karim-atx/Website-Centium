@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import type { Exercise } from "../../types";
+import type { Exercise, WorkoutTemplateAssignment } from "../../types";
 import { exerciseLibrary } from "../../data/mockWorkouts";
 import { useApp } from "../../context/AppContext";
 import { ExerciseLibrarySheet, type ExercisePick } from "../workout/ExerciseLibrarySheet";
@@ -26,25 +26,45 @@ const blankExercise = (pick: ExercisePick): Exercise => ({
 // routine-building UI as the client's Workout tab (CreateRoutineSheet), but
 // produces a template assignable to one or more clients instead of a
 // personal routine.
-export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () => void; defaultFolderId?: string | null }> = ({
-  open,
-  onClose,
-  defaultFolderId = null,
-}) => {
-  const { addWorkoutTemplate, customExercises, professionalClients, workoutTemplateFolders } = useApp();
-  const [name, setName] = useState("");
-  const [exercises, setExercises] = useState<Exercise[]>([]);
-  const [assignedClientIds, setAssignedClientIds] = useState<string[]>([]);
+export const CreateWorkoutTemplateSheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  defaultFolderId?: string | null;
+  // V10 (QA 10.0): "Created templates have a 3 dot logo... gives the
+  // option to duplicate, rename, edit template, and delete template" —
+  // passing an existing template pre-fills the form and saves update it.
+  editTemplate?: WorkoutTemplateAssignment | null;
+}> = ({ open, onClose, defaultFolderId = null, editTemplate }) => {
+  const { addWorkoutTemplate, updateWorkoutTemplate, customExercises, professionalClients, workoutTemplateFolders } = useApp();
+  const [name, setName] = useState(editTemplate?.name ?? "");
+  const [exercises, setExercises] = useState<Exercise[]>(editTemplate?.exercises ?? []);
+  const [assignedClientIds, setAssignedClientIds] = useState<string[]>(editTemplate?.assignedClientIds ?? []);
+  const [notes, setNotes] = useState(editTemplate?.coachNote ?? "");
+  const [assignedDay, setAssignedDay] = useState(editTemplate?.assignedDay ?? "");
   const [searchQuery, setSearchQuery] = useState("");
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [settingsIndex, setSettingsIndex] = useState<number | null>(null);
-  const [folderId, setFolderId] = useState<string | null>(defaultFolderId);
+  const [folderId, setFolderId] = useState<string | null>(editTemplate?.folderId ?? defaultFolderId);
+
+  React.useEffect(() => {
+    if (open) {
+      setName(editTemplate?.name ?? "");
+      setExercises(editTemplate?.exercises ?? []);
+      setAssignedClientIds(editTemplate?.assignedClientIds ?? []);
+      setNotes(editTemplate?.coachNote ?? "");
+      setAssignedDay(editTemplate?.assignedDay ?? "");
+      setFolderId(editTemplate?.folderId ?? defaultFolderId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editTemplate]);
 
   const reset = () => {
     setName("");
     setExercises([]);
     setAssignedClientIds([]);
+    setNotes("");
+    setAssignedDay("");
     setSearchQuery("");
     setFolderId(defaultFolderId);
   };
@@ -85,7 +105,16 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
 
   const save = () => {
     if (!name.trim() || exercises.length === 0) return;
-    addWorkoutTemplate({ name: name.trim(), exercises, assignedClientIds, folderId });
+    const payload = {
+      name: name.trim(),
+      exercises,
+      assignedClientIds,
+      folderId,
+      coachNote: notes.trim() || undefined,
+      assignedDay: assignedDay || undefined,
+    };
+    if (editTemplate) updateWorkoutTemplate(editTemplate.id, payload);
+    else addWorkoutTemplate(payload);
     reset();
     onClose();
   };
@@ -98,7 +127,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
           reset();
           onClose();
         }}
-        title="New Workout Template"
+        title={editTemplate ? "Edit Workout Template" : "New Workout Template"}
       >
         <div className="space-y-5 animate-fade-slide-up">
           <label className="block">
@@ -208,7 +237,9 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
 
           {professionalClients.length > 0 && (
             <div>
-              <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Assign to</span>
+              <span className="text-xs font-semibold text-charcoal-soft mb-2 block">
+                Assign to <span className="text-charcoal-faint font-normal">(all your current clients)</span>
+              </span>
               <div className="flex flex-wrap gap-2">
                 {professionalClients.map((c) => (
                   <button
@@ -228,8 +259,39 @@ export const CreateWorkoutTemplateSheet: React.FC<{ open: boolean; onClose: () =
             </div>
           )}
 
+          {/* V10 (QA 10.0): "the ability to select a day to assign the
+              workout to, it would also appear at the assigned clients
+              calendar." */}
+          <label className="block">
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
+              Assign to a day <span className="text-charcoal-faint font-normal">(optional)</span>
+            </span>
+            <input
+              type="date"
+              value={assignedDay}
+              onChange={(e) => setAssignedDay(e.target.value)}
+              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            />
+          </label>
+
+          {/* V10 (QA 10.0): "Add a note section where anything the
+              professional writes will be shown on the client UI in the
+              coach note section." */}
+          <label className="block">
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
+              Note to client <span className="text-charcoal-faint font-normal">(read-only for them)</span>
+            </span>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. Focus on form this week, keep RPE under 8."
+              rows={3}
+              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20 resize-none"
+            />
+          </label>
+
           <Button fullWidth size="lg" onClick={save} disabled={!name.trim() || exercises.length === 0}>
-            Save template
+            {editTemplate ? "Save changes" : "Save template"}
           </Button>
         </div>
       </BottomSheet>

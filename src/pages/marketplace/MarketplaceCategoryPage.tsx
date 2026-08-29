@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
-import { Chip } from "../../components/ui/Chip";
+import { BottomSheet } from "../../components/ui/BottomSheet";
 import {
   mockGyms,
   mockClasses,
@@ -11,7 +11,7 @@ import {
 } from "../../data/mockProfessionals";
 import { useApp } from "../../context/AppContext";
 import { getCurrentPosition, distanceKm, type Coords } from "../../services/geo";
-import { Star, MapPin, Building2, ShoppingBag } from "lucide-react";
+import { Star, MapPin, Building2, ShoppingBag, SlidersHorizontal, Check } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import type { MarketplaceCategoryId, Gym } from "../../types";
 import type { StoreItem } from "../../data/mockProfessionals";
@@ -37,6 +37,7 @@ export default function MarketplaceCategoryPage() {
   const Icon = marketplaceCategoryIcon[id] ?? marketplaceCategoryIcon.gyms;
   const [position, setPosition] = useState<Coords | null>(null);
   const [filter, setFilter] = useState<FilterMode>("rating");
+  const [filterOpen, setFilterOpen] = useState(false);
   const [activeGym, setActiveGym] = useState<Gym | null>(null);
   const [activeStore, setActiveStore] = useState<
     { id: string; name: string; location: string; rating: number; offer?: string; items: StoreItem[] } | null
@@ -107,13 +108,37 @@ export default function MarketplaceCategoryPage() {
         }
       />
 
-      <div className="flex gap-2 mb-4">
-        {filterOptions.map((f) => (
-          <Chip key={f.value} active={filter === f.value} onClick={() => setFilter(f.value)}>
-            {f.label}
-          </Chip>
-        ))}
+      {/* V9 (QA 9.0): "this filter logo instead of the separate tabs that
+          shows you what the filters are when pressed" — one icon button
+          opening a picker, replacing the always-visible Rating/Proximity/
+          Discounts chip row. */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={() => setFilterOpen(true)}
+          className="tap flex items-center gap-1.5 text-xs font-semibold text-sohati bg-sohati-pale rounded-full px-3.5 py-1.5"
+        >
+          <SlidersHorizontal size={13} />
+          {filterOptions.find((f) => f.value === filter)?.label}
+        </button>
       </div>
+
+      <BottomSheet open={filterOpen} onClose={() => setFilterOpen(false)} title="Filter by">
+        <div className="space-y-2 animate-fade-slide-up">
+          {filterOptions.map((f) => (
+            <button
+              key={f.value}
+              onClick={() => {
+                setFilter(f.value);
+                setFilterOpen(false);
+              }}
+              className="tap w-full flex items-center justify-between rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
+            >
+              <span className="text-sm font-semibold text-charcoal">{f.label}</span>
+              {filter === f.value && <Check size={16} className="text-sohati" />}
+            </button>
+          ))}
+        </div>
+      </BottomSheet>
 
       <div className="space-y-2.5">
         {id === "gyms" &&

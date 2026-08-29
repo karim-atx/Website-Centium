@@ -5,12 +5,9 @@ import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import type { CalendarEvent } from "../../types";
-import { ChevronLeft, ChevronRight, Plus, MapPin, Link2, FileText, Trash2, Repeat, Pencil, Store } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, MapPin, FileText, Trash2, Repeat, User, Store } from "lucide-react";
 import clsx from "clsx";
 
-// V7 (QA 7.0): Year → Month → Day, Month selected by default.
-// V9 (QA 9.0): "Alongside year monthly and daily I would like a weekly
-// option as well."
 type View = "year" | "month" | "week" | "day";
 
 const repeatOptions: { value: CalendarEvent["repeat"]; label: string }[] = [
@@ -38,11 +35,6 @@ const startOfWeekISO = (iso: string) => {
   d.setDate(d.getDate() - d.getDay());
   return toISO(d.getFullYear(), d.getMonth(), d.getDate());
 };
-const addMonthsISO = (iso: string, months: number) => {
-  const d = new Date(`${iso}T00:00:00`);
-  d.setMonth(d.getMonth() + months);
-  return toISO(d.getFullYear(), d.getMonth(), d.getDate());
-};
 const minutesOf = (hhmm?: string) => {
   if (!hhmm) return 0;
   const [h, m] = hhmm.split(":").map(Number);
@@ -52,24 +44,28 @@ const minutesOf = (hhmm?: string) => {
 const blankDraft = (date: string) => ({
   title: "",
   date,
-  // V7 (QA 7.0): all-day now defaults off — most events are scheduled at a
-  // specific time, not blocking the whole day.
   allDay: false,
   startTime: "09:00",
   endTime: "10:00",
   location: "",
   repeat: "none" as CalendarEvent["repeat"],
-  inviteeIds: [] as string[],
-  url: "",
   notes: "",
-  attachmentName: "",
   color: eventColorOptions[0],
 });
 
 const HOUR_PX = 56;
 
-export default function CalendarTab() {
-  const { calendarEvents, addCalendarEvent, updateCalendarEvent, removeCalendarEvent, professionalClients, businessClasses, businessDirectory, user } = useApp();
+// V9 (QA 9.0): "Copy the calendar tab found in the Professional's UI here
+// in a button found in the More's page. This serves as a calendar where the
+// client can add events but also syncs up with anything the connected
+// professional might add with the selected client as well as anything the
+// gym... might add that involves the client" — reads the same shared
+// calendarEvents/businessClasses stores the Professional/Business calendars
+// write to, filtered to what actually involves this client, rather than a
+// separate client-only event list.
+export default function ClientCalendarTab() {
+  const { calendarEvents, addCalendarEvent, updateCalendarEvent, removeCalendarEvent, user, businessDirectory } =
+    useApp();
   const today = new Date();
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
@@ -79,37 +75,22 @@ export default function CalendarTab() {
   const [draft, setDraft] = useState(blankDraft(selectedDate));
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // V8 (QA 8.0): "business-scheduled events involving an affiliated
-  // professional show on BOTH the business's and the professional's
-  // calendars" — classes a business assigned to this professional (via the
-  // "me" stand-in id already used across the affiliation system) are folded
-  // into the same calendar, read-only. The "bc" id prefix (set in
-  // addBusinessClass) is how the rest of this file tells them apart from
-  // events the professional created themselves.
-  const businessCalendarEvents = useMemo<CalendarEvent[]>(() => {
-    const businessName = businessDirectory.find((b) => b.id === user.affiliatedBusinessId)?.businessName;
-    return businessClasses
-      .filter((c) => c.professionalId === "me")
-      .map((c) => ({
-        id: c.id,
-        title: c.title,
-        date: c.date,
-        allDay: false,
-        startTime: c.startTime,
-        endTime: c.endTime,
-        repeat: "none" as const,
-        notes: `Scheduled by ${businessName ?? "your affiliated business"}${c.notes ? ` — ${c.notes}` : ""}`,
-        color: "#D9A441",
-      }));
-  }, [businessClasses, businessDirectory, user.affiliatedBusinessId]);
+  // Events that involve this client: their own, or one a connected
+  // professional invited them to by name.
+  const myEvents = useMemo(
+    () => calendarEvents.filter((e) => e.createdByClient || e.invitees?.includes(user.firstName)),
+    [calendarEvents, user.firstName]
+  );
+
+  const isMine = (e: CalendarEvent) => !!e.createdByClient;
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
-    [...calendarEvents, ...businessCalendarEvents].forEach((e) => {
+    myEvents.forEach((e) => {
       (map[e.date] ??= []).push(e);
     });
     return map;
-  }, [calendarEvents, businessCalendarEvents]);
+  }, [myEvents]);
 
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
   const firstWeekday = new Date(cursor.year, cursor.month, 1).getDay();
@@ -139,6 +120,7 @@ export default function CalendarTab() {
   };
 
   const openEdit = (e: CalendarEvent) => {
+    if (!isMine(e)) return;
     setEditingId(e.id);
     setConfirmDelete(false);
     setDraft({
@@ -149,10 +131,7 @@ export default function CalendarTab() {
       endTime: e.endTime ?? "10:00",
       location: e.location ?? "",
       repeat: e.repeat,
-      inviteeIds: professionalClients.filter((c) => e.invitees?.includes(c.name)).map((c) => c.id),
-      url: e.url ?? "",
       notes: e.notes ?? "",
-      attachmentName: "",
       color: e.color ?? eventColorOptions[0],
     });
     setComposeOpen(true);
@@ -168,33 +147,12 @@ export default function CalendarTab() {
       endTime: draft.allDay ? undefined : draft.endTime,
       location: draft.location.trim() || undefined,
       repeat: draft.repeat,
-      invitees: draft.inviteeIds
-        .map((id) => professionalClients.find((c) => c.id === id)?.name)
-        .filter((n): n is string => !!n),
-      url: draft.url.trim() || undefined,
-      notes: draft.notes.trim() || (draft.attachmentName ? `Attachment: ${draft.attachmentName}` : undefined),
+      notes: draft.notes.trim() || undefined,
       color: draft.color,
+      createdByClient: true,
     };
-
-    if (editingId) {
-      updateCalendarEvent(editingId, base);
-    } else {
-      addCalendarEvent(base);
-      // V7 (QA 7.0): a repeat selection now actually generates the
-      // recurring occurrences, each its own editable/deletable event.
-      if (draft.repeat !== "none") {
-        const horizon = draft.repeat === "daily" ? 30 : draft.repeat === "weekly" ? 12 : 12;
-        for (let i = 1; i <= horizon; i++) {
-          const occurrenceDate =
-            draft.repeat === "daily"
-              ? addDaysISO(draft.date, i)
-              : draft.repeat === "weekly"
-              ? addDaysISO(draft.date, i * 7)
-              : addMonthsISO(draft.date, i);
-          addCalendarEvent({ ...base, date: occurrenceDate });
-        }
-      }
-    }
+    if (editingId) updateCalendarEvent(editingId, base);
+    else addCalendarEvent(base);
     setComposeOpen(false);
   };
 
@@ -207,17 +165,17 @@ export default function CalendarTab() {
   const timedEvents = selectedEvents.filter((e) => !e.allDay);
   const allDayEvents = selectedEvents.filter((e) => e.allDay);
 
-  // V8 (QA 8.0): business-scheduled classes ride along in the same calendar
-  // (see businessCalendarEvents above) but aren't this professional's to
-  // edit or delete — the "bc" id prefix set in addBusinessClass is how they're
-  // told apart from events the professional created themselves.
-  const isFromBusiness = (e: CalendarEvent) => e.id.startsWith("bc");
+  const sourceLabel = (e: CalendarEvent) => {
+    if (isMine(e)) return null;
+    const businessName = businessDirectory.find((b) => b.id === user.affiliatedBusinessId)?.businessName;
+    return e.notes?.startsWith("Scheduled by") ? e.notes : `From ${businessName ?? "your professional"}`;
+  };
 
   const eventCard = (e: CalendarEvent) => {
-    const readOnly = isFromBusiness(e);
+    const mine = isMine(e);
     return (
       <Card key={e.id} className="flex items-start justify-between gap-3" style={{ borderLeft: `4px solid ${e.color ?? "#7D6BB5"}` }}>
-        <button className="min-w-0 text-left flex-1" onClick={() => !readOnly && openEdit(e)} disabled={readOnly}>
+        <button className="min-w-0 text-left flex-1" onClick={() => openEdit(e)} disabled={!mine}>
           <p className="text-sm font-semibold text-charcoal">{e.title}</p>
           <p className="text-xs text-charcoal-faint">
             {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
@@ -228,36 +186,17 @@ export default function CalendarTab() {
               <MapPin size={11} /> {e.location}
             </p>
           )}
-          {e.invitees && e.invitees.length > 0 && (
-            <p className="text-xs text-charcoal-faint mt-1">With {e.invitees.join(", ")}</p>
-          )}
-          {e.url && (
-            <p className="flex items-center gap-1 text-xs text-primary mt-1 truncate">
-              <Link2 size={11} /> {e.url}
-            </p>
-          )}
-          {e.notes && (
+          {mine && e.notes && (
             <p className="flex items-start gap-1 text-xs text-charcoal-faint mt-1">
               <FileText size={11} className="mt-0.5 shrink-0" /> {e.notes}
             </p>
           )}
         </button>
-        <div className="flex items-center gap-2 shrink-0">
-          {readOnly ? (
-            <span className="flex items-center gap-1 text-[10px] font-semibold text-charcoal-faint" aria-label="From your affiliated business">
-              <Store size={12} />
-            </span>
-          ) : (
-            <>
-              <button onClick={() => openEdit(e)} aria-label={`Edit ${e.title}`} className="tap text-charcoal-faint">
-                <Pencil size={14} />
-              </button>
-              <button onClick={() => removeCalendarEvent(e.id)} aria-label={`Delete ${e.title}`} className="tap text-charcoal-faint">
-                <Trash2 size={14} />
-              </button>
-            </>
-          )}
-        </div>
+        {!mine && (
+          <span className="flex items-center gap-1 text-[10px] font-semibold text-charcoal-faint shrink-0" aria-label={sourceLabel(e) ?? undefined}>
+            {e.invitees ? <User size={12} /> : <Store size={12} />}
+          </span>
+        )}
       </Card>
     );
   };
@@ -266,6 +205,7 @@ export default function CalendarTab() {
     <div>
       <PageHeader
         title="Calendar"
+        showBack
         right={
           <button
             onClick={openCompose}
@@ -337,9 +277,7 @@ export default function CalendarTab() {
                   )}
                 >
                   {day}
-                  {hasEvents && (
-                    <span className={clsx("w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-primary")} />
-                  )}
+                  {hasEvents && <span className={clsx("w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-primary")} />}
                 </button>
               );
             })}
@@ -347,18 +285,14 @@ export default function CalendarTab() {
         </>
       )}
 
-      {/* V9 (QA 9.0): "Alongside year monthly and daily I would like a
-          weekly option as well." — one card per day of the week the
-          selected date falls in, each listing its own events. */}
       {view === "week" &&
         (() => {
           const weekStart = startOfWeekISO(selectedDate);
           const weekDays = Array.from({ length: 7 }, (_, i) => addDaysISO(weekStart, i));
-          const weekEnd = weekDays[6];
           const rangeLabel = `${new Date(`${weekStart}T00:00:00`).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
-          })} – ${new Date(`${weekEnd}T00:00:00`).toLocaleDateString("en-US", {
+          })} – ${new Date(`${weekDays[6]}T00:00:00`).toLocaleDateString("en-US", {
             month: "short",
             day: "numeric",
             year: "numeric",
@@ -366,17 +300,11 @@ export default function CalendarTab() {
           return (
             <>
               <div className="flex items-center justify-between mb-4">
-                <button
-                  onClick={() => setSelectedDate(addDaysISO(selectedDate, -7))}
-                  className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft"
-                >
+                <button onClick={() => setSelectedDate(addDaysISO(selectedDate, -7))} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
                   <ChevronLeft size={16} />
                 </button>
                 <p className="font-display font-semibold text-charcoal">{rangeLabel}</p>
-                <button
-                  onClick={() => setSelectedDate(addDaysISO(selectedDate, 7))}
-                  className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft"
-                >
+                <button onClick={() => setSelectedDate(addDaysISO(selectedDate, 7))} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
                   <ChevronRight size={16} />
                 </button>
               </div>
@@ -399,7 +327,7 @@ export default function CalendarTab() {
                         }}
                         className={clsx(
                           "tap shrink-0 w-14 rounded-2xl flex flex-col items-center justify-center py-2 gap-0.5",
-                          isToday ? "bg-sohati text-white" : "bg-cream-soft text-charcoal-soft"
+                          isToday ? "bg-primary text-white" : "bg-cream-soft text-charcoal-soft"
                         )}
                       >
                         <span className="text-[10px] font-bold uppercase tracking-wide">
@@ -445,17 +373,11 @@ export default function CalendarTab() {
       {view === "day" && (
         <>
           <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => setSelectedDate(addDaysISO(selectedDate, -1))}
-              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft"
-            >
+            <button onClick={() => setSelectedDate(addDaysISO(selectedDate, -1))} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
               <ChevronLeft size={16} />
             </button>
             <p className="font-display font-semibold text-charcoal">{selectedDateLabel}</p>
-            <button
-              onClick={() => setSelectedDate(addDaysISO(selectedDate, 1))}
-              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft"
-            >
+            <button onClick={() => setSelectedDate(addDaysISO(selectedDate, 1))} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
               <ChevronRight size={16} />
             </button>
           </div>
@@ -467,16 +389,9 @@ export default function CalendarTab() {
             </div>
           )}
 
-          {/* V8 (QA 8.0): "the 12am-11pm hour-row list in Day view always
-              renders regardless of whether any events exist that day" —
-              the hour grid is no longer hidden behind an events-only check. */}
           <div className="relative" style={{ height: HOUR_PX * 24 }}>
             {Array.from({ length: 24 }, (_, h) => (
-              <div
-                key={h}
-                className="absolute left-0 right-0 border-t border-charcoal/[0.06] flex items-start"
-                style={{ top: h * HOUR_PX }}
-              >
+              <div key={h} className="absolute left-0 right-0 border-t border-charcoal/[0.06] flex items-start" style={{ top: h * HOUR_PX }}>
                 <span className="text-[9px] text-charcoal-faint -mt-1.5 pr-1.5 w-9 text-right shrink-0">
                   {h === 0 ? "12am" : h < 12 ? `${h}am` : h === 12 ? "12pm" : `${h - 12}pm`}
                 </span>
@@ -488,18 +403,18 @@ export default function CalendarTab() {
                 const end = Math.max(minutesOf(e.endTime), start + 20);
                 const top = (start / 60) * HOUR_PX;
                 const height = Math.max(((end - start) / 60) * HOUR_PX, 26);
-                const readOnly = isFromBusiness(e);
+                const mine = isMine(e);
                 return (
                   <button
                     key={e.id}
-                    onClick={() => !readOnly && openEdit(e)}
-                    disabled={readOnly}
+                    onClick={() => openEdit(e)}
+                    disabled={!mine}
                     className="tap absolute left-0 right-1 rounded-xl px-2.5 py-1.5 text-left overflow-hidden shadow-soft"
                     style={{ top, height, background: `${e.color ?? "#7D6BB5"}22`, borderLeft: `3px solid ${e.color ?? "#7D6BB5"}` }}
                   >
                     <p className="text-xs font-semibold text-charcoal truncate flex items-center gap-1">
                       {e.title}
-                      {readOnly && <Store size={10} className="shrink-0" />}
+                      {!mine && (e.invitees ? <User size={10} /> : <Store size={10} />)}
                     </p>
                     <p className="text-[10px] text-charcoal-faint truncate">
                       {e.startTime} – {e.endTime}
@@ -520,7 +435,7 @@ export default function CalendarTab() {
             <input
               value={draft.title}
               onChange={(e) => setDraft((d) => ({ ...d, title: e.target.value }))}
-              placeholder="Session with client"
+              placeholder="Doctor's appointment"
               className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
@@ -539,10 +454,7 @@ export default function CalendarTab() {
             <span className="text-sm font-semibold text-charcoal">All day</span>
             <button
               onClick={() => setDraft((d) => ({ ...d, allDay: !d.allDay }))}
-              className={clsx(
-                "tap w-11 h-6 rounded-full flex items-center px-0.5 transition-colors",
-                draft.allDay ? "bg-primary justify-end" : "bg-charcoal/10 justify-start"
-              )}
+              className={clsx("tap w-11 h-6 rounded-full flex items-center px-0.5 transition-colors", draft.allDay ? "bg-primary justify-end" : "bg-charcoal/10 justify-start")}
             >
               <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
             </button>
@@ -576,7 +488,7 @@ export default function CalendarTab() {
             <input
               value={draft.location}
               onChange={(e) => setDraft((d) => ({ ...d, location: e.target.value }))}
-              placeholder="Gym, clinic, video call…"
+              placeholder="Clinic, gym, video call…"
               className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
@@ -590,91 +502,31 @@ export default function CalendarTab() {
                   onClick={() => setDraft((d) => ({ ...d, color: c }))}
                   aria-label={`Color ${c}`}
                   className="tap w-7 h-7 rounded-full"
-                  style={{
-                    background: c,
-                    boxShadow: draft.color === c ? "0 0 0 2px rgb(var(--c-cream)), 0 0 0 4px " + c : undefined,
-                  }}
+                  style={{ background: c, boxShadow: draft.color === c ? "0 0 0 2px rgb(var(--c-cream)), 0 0 0 4px " + c : undefined }}
                 />
               ))}
             </div>
           </div>
 
-          {!editingId && (
-            <div>
-              <span className="text-xs font-semibold text-charcoal-soft mb-2 flex items-center gap-1.5">
-                <Repeat size={12} /> Repeat
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {repeatOptions.map((r) => (
-                  <button
-                    key={r.value}
-                    onClick={() => setDraft((d) => ({ ...d, repeat: r.value }))}
-                    className={clsx(
-                      "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
-                      draft.repeat === r.value
-                        ? "bg-primary text-white border-primary"
-                        : "bg-cream-soft border-transparent text-charcoal-soft"
-                    )}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-              {draft.repeat !== "none" && (
-                <p className="text-[11px] text-charcoal-faint mt-2">
-                  This will create separate {draft.repeat} events you can each edit or delete individually.
-                </p>
-              )}
+          <div>
+            <span className="text-xs font-semibold text-charcoal-soft mb-2 flex items-center gap-1.5">
+              <Repeat size={12} /> Repeat
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {repeatOptions.map((r) => (
+                <button
+                  key={r.value}
+                  onClick={() => setDraft((d) => ({ ...d, repeat: r.value }))}
+                  className={clsx(
+                    "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
+                    draft.repeat === r.value ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
+                  )}
+                >
+                  {r.label}
+                </button>
+              ))}
             </div>
-          )}
-
-          {professionalClients.length > 0 && (
-            <label className="block">
-              {/* V8 (QA 8.0): "Change the invitees UI from toggle-Chip-buttons
-                  to an actual dropdown." Native multi-select — cmd/ctrl+click
-                  to pick more than one, same as any standard form control. */}
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Invitees</span>
-              <select
-                multiple
-                value={draft.inviteeIds}
-                onChange={(e) =>
-                  setDraft((d) => ({
-                    ...d,
-                    inviteeIds: Array.from(e.target.selectedOptions, (o) => o.value),
-                  }))
-                }
-                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
-                size={Math.min(4, professionalClients.length)}
-              >
-                {professionalClients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.prefix ? `${c.prefix} ` : ""}
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-              <p className="text-[11px] text-charcoal-faint mt-1.5">Hold Ctrl/Cmd to select more than one.</p>
-            </label>
-          )}
-
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">URL</span>
-            <input
-              value={draft.url}
-              onChange={(e) => setDraft((d) => ({ ...d, url: e.target.value }))}
-              placeholder="https://…"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
-
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Attachment</span>
-            <input
-              type="file"
-              onChange={(e) => setDraft((d) => ({ ...d, attachmentName: e.target.files?.[0]?.name ?? "" }))}
-              className="w-full text-xs text-charcoal-faint file:mr-3 file:rounded-lg file:border-0 file:bg-cream-soft file:px-3 file:py-2 file:text-xs file:font-semibold file:text-charcoal-soft"
-            />
-          </label>
+          </div>
 
           <label className="block">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Notes</span>

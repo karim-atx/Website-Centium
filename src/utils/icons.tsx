@@ -14,6 +14,7 @@ import {
   Store,
   Home,
   Wheat,
+  Container,
   UtensilsCrossed,
   Dumbbell,
   Footprints,
@@ -52,6 +53,7 @@ export const foodCategoryIcon: Record<string, LucideIcon> = {
   restaurant: Store,
   homemade: Home,
   ingredients: Wheat,
+  meal_prep: Container,
 };
 
 // Exercise `category` -> icon (used by the exercise library + routine rows).

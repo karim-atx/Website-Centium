@@ -2,7 +2,7 @@ import React, { useRef } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
-import { Camera, FileText, Check, Trash2 } from "lucide-react";
+import { Camera, FileText, Clock, Trash2 } from "lucide-react";
 
 // V7 (QA 7.0): the certification a professional uploads during onboarding
 // had no surface to view or replace afterward — this gives it one under More.
@@ -49,8 +49,10 @@ export const CertificationSheet: React.FC<{ open: boolean; onClose: () => void }
                 className="w-full max-h-64 object-contain rounded-2xl border border-charcoal/10 bg-cream-soft"
               />
             )}
-            <p className="flex items-center gap-1.5 text-xs text-primary-dark mt-2.5">
-              <Check size={13} /> Certification on file
+            {/* V9 (QA 9.0): "have it pending confirmation and approval by
+                administrators to verify authentication" */}
+            <p className="flex items-center gap-1.5 text-xs text-gold mt-2.5">
+              <Clock size={13} /> Pending confirmation & approval by administrators
             </p>
           </div>
         ) : (

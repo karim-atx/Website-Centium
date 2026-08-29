@@ -32,8 +32,8 @@ export const BottomNav: React.FC = () => {
           "/app/professionals/health-metrics",
         ]
       : isBusiness
-      ? ["/app/profile", "/app/subscription", "/app/settings", "/app/business/employees", "/app/business/classes", "/app/business/profile"]
-      : ["/app/mind", "/app/marketplace", "/app/profile", "/app/subscription", "/app/professionals"]
+      ? ["/app/profile", "/app/subscription", "/app/settings", "/app/business/profile", "/app/business/messages", "/app/business/calendar"]
+      : ["/app/mind", "/app/marketplace", "/app/profile", "/app/subscription", "/app/professionals", "/app/calendar", "/app/forum"]
     ).some((p) => location.pathname.startsWith(p));
 
   return (

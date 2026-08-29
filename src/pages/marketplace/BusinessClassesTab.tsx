@@ -5,8 +5,10 @@ import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { Plus, Trash2, Users, Clock } from "lucide-react";
+import { QrPattern } from "../../components/marketplace/GymDetailSheet";
 
 const classTypeOptions = ["Group fitness", "Yoga", "Spin", "HIIT", "Personal training", "Physio session"];
+const paymentOptions = ["Card", "Cash", "Whish Money"];
 
 const blankDraft = (date: string) => ({
   title: "",
@@ -17,6 +19,8 @@ const blankDraft = (date: string) => ({
   maxCapacity: "10",
   professionalId: "",
   notes: "",
+  price: "",
+  paymentType: paymentOptions[0],
 });
 
 // V7 (QA 7.0): "Classes tab (a professionals-style calendar for creating
@@ -40,6 +44,8 @@ export default function BusinessClassesTab() {
       maxCapacity: Number(draft.maxCapacity) || 10,
       professionalId: draft.professionalId || undefined,
       notes: draft.notes.trim() || undefined,
+      price: draft.price.trim() || undefined,
+      paymentType: draft.price.trim() ? draft.paymentType : undefined,
     });
     setDraft(blankDraft(today));
     setComposeOpen(false);
@@ -69,7 +75,8 @@ export default function BusinessClassesTab() {
           const professional = employees.find((e) => e.professionalId === c.professionalId);
           return (
             <Card key={c.id} className="flex items-start justify-between gap-3 animate-fade-slide-up">
-              <div className="min-w-0">
+              {c.price && <QrPattern seed={`${user.businessId ?? "biz"}-class-${c.id}`} className="w-12 h-12 shrink-0" />}
+              <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold text-charcoal">{c.title}</p>
                 <p className="text-xs text-primary-dark font-medium">{c.classType}</p>
                 <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
@@ -79,6 +86,11 @@ export default function BusinessClassesTab() {
                   <Users size={11} /> Max {c.maxCapacity}
                   {professional ? ` · ${professional.professionalName}` : ""}
                 </p>
+                {c.price && (
+                  <p className="text-xs font-semibold text-charcoal mt-0.5">
+                    {c.price} · {c.paymentType}
+                  </p>
+                )}
                 {c.notes && <p className="text-xs text-charcoal-faint mt-1 italic">{c.notes}</p>}
               </div>
               <button
@@ -166,6 +178,37 @@ export default function BusinessClassesTab() {
               className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
+
+          <label className="block">
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
+              Price <span className="text-charcoal-faint font-normal">(leave blank if free)</span>
+            </span>
+            <input
+              value={draft.price}
+              onChange={(e) => setDraft((d) => ({ ...d, price: e.target.value }))}
+              placeholder="$15"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            />
+          </label>
+
+          {draft.price.trim() && (
+            <div>
+              <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Payment type</span>
+              <div className="flex gap-2">
+                {paymentOptions.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => setDraft((d) => ({ ...d, paymentType: p }))}
+                    className={`tap flex-1 rounded-xl py-2 text-xs font-semibold border transition-colors ${
+                      draft.paymentType === p ? "bg-sohati text-white border-sohati" : "bg-cream-soft border-transparent text-charcoal-soft"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {employees.length > 0 && (
             <div>

@@ -3,7 +3,7 @@ import { useApp } from "../../context/AppContext";
 import { WidgetShell } from "./WidgetShell";
 import { HomeWidget } from "./HomeWidget";
 import type { WidgetType } from "../../types";
-import { Pencil, Check, Plus, Footprints, Scale, Droplet, Moon, Utensils, Dumbbell, CheckSquare, BookOpen, Sparkles } from "lucide-react";
+import { Pencil, Check, Plus, Footprints, Scale, Droplet, Moon, Utensils, Dumbbell, CheckSquare, BookOpen, Sparkles, KeyRound, HeartPulse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 
@@ -16,12 +16,19 @@ const allWidgetTypes: { type: WidgetType; label: string; icon: LucideIcon }[] = 
   { type: "sleep", label: "Sleep", icon: Moon },
   { type: "nutrition", label: "Nutrition", icon: Utensils },
   { type: "workout", label: "Workout", icon: Dumbbell },
+  // V10 (QA 10.0): "Add a heart rate widget that syncs with the one found
+  // in health metrics."
+  { type: "heartRate", label: "Heart Rate", icon: HeartPulse },
   { type: "habits", label: "Habits", icon: CheckSquare },
   { type: "journal", label: "Journal", icon: BookOpen },
   { type: "meditation", label: "Meditation", icon: Sparkles },
+  { type: "gymPasses", label: "Gym Passes", icon: KeyRound },
 ];
 
-export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({ onWaterClick }) => {
+export const WidgetBoard: React.FC<{ onWaterClick?: () => void; onGymPassesClick?: () => void }> = ({
+  onWaterClick,
+  onGymPassesClick,
+}) => {
   const { widgets, removeWidget, reorderWidgets, resizeWidget, addWidget } = useApp();
   const [editMode, setEditMode] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -74,7 +81,11 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({ onWaterCl
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => handleDrop(i)}
           >
-            <HomeWidget widget={w} onWaterClick={w.type === "water" ? onWaterClick : undefined} />
+            <HomeWidget
+              widget={w}
+              onWaterClick={w.type === "water" ? onWaterClick : undefined}
+              onGymPassesClick={w.type === "gymPasses" ? onGymPassesClick : undefined}
+            />
           </WidgetShell>
         ))}
 

@@ -2,13 +2,13 @@ import { useMemo, useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Chip } from "../../components/ui/Chip";
+import { Button } from "../../components/ui/Button";
 import { MacroSplitEditor } from "../../components/food/MacroSplitEditor";
-import { CreateMealSheet } from "../../components/food/CreateMealSheet";
 import { WeightTrendChart } from "../../components/health/WeightTrendChart";
 import { useApp } from "../../context/AppContext";
 import type { ProfessionalClient, WeightGoalType } from "../../types";
-import { Plus, Trash2, ClipboardList, Check } from "lucide-react";
-import { mealLabels } from "../../services/nutrition";
+import { ClipboardList, Check, Pencil, Sparkles, Lock } from "lucide-react";
+import { mealLabels, calculateTDEEFromParts } from "../../services/nutrition";
 
 const goalOptions: { value: WeightGoalType; label: string }[] = [
   { value: "lose", label: "Lose weight" },
@@ -45,22 +45,51 @@ const weightHistoryFor = (c: ProfessionalClient) => {
 // the client" adds it to the same customMeals list their Meal Prep tab
 // reads from.
 export default function MealPlanBuilderTab() {
-  const {
-    professionalClients,
-    nutritionGoal,
-    setWeightGoal,
-    setMacroSplit,
-    setNutritionGoal,
-    customMeals,
-    removeCustomMeal,
-  } = useApp();
+  const { professionalClients, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, customMeals } =
+    useApp();
   const [clientId, setClientId] = useState(professionalClients[0]?.id ?? "");
-  const [createMealOpen, setCreateMealOpen] = useState(false);
   const [desiredWeightDraft, setDesiredWeightDraft] = useState(String(nutritionGoal.desiredWeightKg ?? ""));
   const [weightGoalError, setWeightGoalError] = useState<string | null>(null);
+  const [editingCalorie, setEditingCalorie] = useState(false);
+  const [calorieDraft, setCalorieDraft] = useState(String(nutritionGoal.targetCalories));
 
   const client = professionalClients.find((c) => c.id === clientId);
   const weightHistory = useMemo(() => (client ? weightHistoryFor(client) : []), [client]);
+
+  // V9 (QA 9.0): "Changes done by the professional in the client UI
+  // regarding weight goal, daily target macro distribution should only be
+  // changeable if the client presses existing plan." — the inverse of the
+  // client-side GoalsPanel's own "locked" gate (there, "existing" locks the
+  // client OUT; here, it's the only state that lets the professional IN).
+  const isExistingPlan = nutritionGoal.planType === "existing";
+
+  // V9 (QA 9.0): "Move the TDEE estimate and daily calorie target to the
+  // professional UI... applicable to the specific client" — computed from
+  // the client's own captured demographics, when available.
+  const hasDemographics = !!(client?.age && client?.heightCm && client?.sex);
+  const clientTdee =
+    client && hasDemographics
+      ? calculateTDEEFromParts(
+          client.weightKg ?? client.lastWeightKg,
+          client.heightCm!,
+          client.age!,
+          client.sex!,
+          client.activityLevel
+        )
+      : null;
+
+  const applySuggested = () => {
+    if (clientTdee === null) return;
+    const delta = ((nutritionGoal.weeklyRateKg || 0.5) * 7700) / 7;
+    const cals =
+      nutritionGoal.weightGoal === "lose"
+        ? clientTdee - delta
+        : nutritionGoal.weightGoal === "gain"
+        ? clientTdee + delta
+        : clientTdee;
+    setNutritionGoal({ ...nutritionGoal, targetCalories: Math.round(cals) });
+    setCalorieDraft(String(Math.round(cals)));
+  };
 
   // V7 (QA 7.0): mirrors the client UI's own desired-weight validation —
   // a target that contradicts the chosen direction is rejected, not
@@ -94,7 +123,10 @@ export default function MealPlanBuilderTab() {
 
   return (
     <div>
-      <PageHeader title="Meal Plans" subtitle="Edit goals & build meal plans for your clients" />
+      {/* V10 (QA 10.0): "Rename the tab Meal Plans into something that
+          pertains to Meal Plans and being able to track what the assigned
+          client logged when it came to logging in the food diary." */}
+      <PageHeader title="Nutrition" subtitle="Edit goals, build meal plans and track client food logs" />
 
       {professionalClients.length === 0 ? (
         <Card className="text-center py-8">
@@ -110,6 +142,21 @@ export default function MealPlanBuilderTab() {
             ))}
           </div>
 
+          {/* V9 (QA 9.0): "should only be changeable if the client presses
+              existing plan. If it is not pressed prompt the professional
+              that the client has not pressed the button" */}
+          {!isExistingPlan && (
+            <Card className="mb-5 bg-gold-pale">
+              <p className="flex items-center gap-2 text-sm font-semibold text-charcoal">
+                <Lock size={15} className="shrink-0" /> {client?.name} hasn't selected "Existing plan"
+              </p>
+              <p className="text-xs text-charcoal-soft mt-1.5">
+                Ask them to switch to it on their Food &gt; Goals &amp; Macros tab — until then, their weight
+                goal, calorie target and macro distribution stay theirs to edit, not yours.
+              </p>
+            </Card>
+          )}
+
           <Card className="mb-5">
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
               {client?.name}'s weight goal
@@ -119,7 +166,8 @@ export default function MealPlanBuilderTab() {
                 <button
                   key={g.value}
                   onClick={() => changeWeightGoal(g.value)}
-                  className={`tap rounded-xl py-2.5 text-xs font-semibold border transition-colors ${
+                  disabled={!isExistingPlan}
+                  className={`tap rounded-xl py-2.5 text-xs font-semibold border transition-colors disabled:opacity-50 ${
                     nutritionGoal.weightGoal === g.value
                       ? "bg-primary text-white border-primary"
                       : "bg-cream-soft border-transparent text-charcoal-soft"
@@ -138,15 +186,16 @@ export default function MealPlanBuilderTab() {
                     <input
                       value={desiredWeightDraft}
                       onChange={(e) => setDesiredWeightDraft(e.target.value.replace(/[^\d.]/g, ""))}
-                      disabled={nutritionGoal.desiredWeightConfirmed}
+                      disabled={nutritionGoal.desiredWeightConfirmed || !isExistingPlan}
                       inputMode="decimal"
                       className="flex-1 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm font-semibold text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
                     />
                     <span className="text-xs text-charcoal-faint">kg</span>
                     <button
                       onClick={confirmDesiredWeight}
+                      disabled={!isExistingPlan}
                       aria-label={nutritionGoal.desiredWeightConfirmed ? "Edit desired weight" : "Confirm desired weight"}
-                      className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors ${
+                      className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors disabled:opacity-50 ${
                         nutritionGoal.desiredWeightConfirmed
                           ? "bg-charcoal/10 border-transparent text-charcoal-faint"
                           : "bg-primary border-primary text-white"
@@ -169,7 +218,7 @@ export default function MealPlanBuilderTab() {
                     step={0.1}
                     value={nutritionGoal.weeklyRateKg || 0.5}
                     onChange={(e) => setWeightGoal(nutritionGoal.weightGoal, Number(e.target.value))}
-                    disabled={!nutritionGoal.desiredWeightConfirmed}
+                    disabled={!nutritionGoal.desiredWeightConfirmed || !isExistingPlan}
                     className="w-full disabled:opacity-50"
                     style={{ accentColor: nutritionGoal.weightGoal === "gain" ? "#3F9165" : "#C0392B" }}
                   />
@@ -177,7 +226,7 @@ export default function MealPlanBuilderTab() {
                     {nutritionGoal.weightGoal === "gain" ? "+" : "-"}
                     {(nutritionGoal.weeklyRateKg || 0.5).toFixed(1)} kg / week
                   </p>
-                  {!nutritionGoal.desiredWeightConfirmed && (
+                  {!nutritionGoal.desiredWeightConfirmed && isExistingPlan && (
                     <p className="text-[11px] text-charcoal-faint mt-1">
                       Add and confirm a desired weight above to set the weekly rate.
                     </p>
@@ -206,6 +255,69 @@ export default function MealPlanBuilderTab() {
             </Card>
           )}
 
+          {/* V9 (QA 9.0): "Move the TDEE estimate and daily calorie target
+              to the professional UI. It should be applicable to the
+              specific client and once updated should reflect in the client
+              UI" — same shared nutritionGoal the client's own Goals & Macros
+              tab reads from. */}
+          <Card className="mb-5">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">TDEE estimate</p>
+              <Sparkles size={14} className="text-sohati" />
+            </div>
+            {clientTdee !== null ? (
+              <>
+                <p className="text-2xl font-bold text-charcoal mb-2">{clientTdee.toLocaleString()} kcal</p>
+                <Button size="sm" variant="secondary" onClick={applySuggested} disabled={!isExistingPlan}>
+                  Use suggested target
+                </Button>
+              </>
+            ) : (
+              <p className="text-xs text-charcoal-faint">
+                Add {client?.name}'s age, height and sex (from My Clients) to estimate their maintenance
+                calories.
+              </p>
+            )}
+          </Card>
+
+          <Card className="mb-5">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
+              Daily calorie target
+            </p>
+            <div className="flex items-center gap-2">
+              <input
+                value={calorieDraft}
+                onChange={(e) => {
+                  setCalorieDraft(e.target.value.replace(/\D/g, ""));
+                  setEditingCalorie(true);
+                }}
+                inputMode="numeric"
+                disabled={!isExistingPlan || !editingCalorie}
+                className="w-32 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-lg font-bold text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20 disabled:opacity-60"
+              />
+              <span className="text-sm text-charcoal-faint">kcal / day</span>
+              <button
+                onClick={() => {
+                  if (editingCalorie) {
+                    const kcal = Number(calorieDraft);
+                    if (kcal) setNutritionGoal({ ...nutritionGoal, targetCalories: kcal });
+                    setEditingCalorie(false);
+                    return;
+                  }
+                  setCalorieDraft(String(nutritionGoal.targetCalories));
+                  setEditingCalorie(true);
+                }}
+                disabled={!isExistingPlan}
+                aria-label={editingCalorie ? "Confirm calorie target" : "Edit calorie target"}
+                className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors disabled:opacity-50 ${
+                  editingCalorie ? "bg-sohati border-2 border-sohati text-white" : "bg-cream-soft text-charcoal-soft"
+                }`}
+              >
+                {editingCalorie ? <Check size={16} strokeWidth={3} /> : <Pencil size={13} />}
+              </button>
+            </div>
+          </Card>
+
           <Card className="mb-6">
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
               Macro distribution
@@ -214,20 +326,17 @@ export default function MealPlanBuilderTab() {
               split={nutritionGoal.macroSplit}
               calories={nutritionGoal.targetCalories}
               onChange={setMacroSplit}
+              disabled={!isExistingPlan}
             />
           </Card>
 
-          <div className="flex items-center justify-between mb-2.5">
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
-              Custom meal plans
-            </p>
-            <button
-              onClick={() => setCreateMealOpen(true)}
-              className="tap flex items-center gap-1.5 text-xs font-semibold text-primary"
-            >
-              <Plus size={13} /> New meal plan
-            </button>
-          </div>
+          {/* V9 (QA 9.0): "Making a custom meal plan should be limited to
+              the client and not be applicable to all" — view-only here now;
+              creating/removing one only happens from the client's own Food
+              > Meal Prep tab. */}
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+            {client?.name}'s custom meal plans
+          </p>
           <div className="space-y-2">
             {customMeals.map((m) => (
               <Card key={m.id} padded={false} className="flex items-center justify-between px-4 py-3.5">
@@ -247,13 +356,6 @@ export default function MealPlanBuilderTab() {
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={() => removeCustomMeal(m.id)}
-                  aria-label={`Remove ${m.title}`}
-                  className="tap text-charcoal-faint shrink-0"
-                >
-                  <Trash2 size={14} />
-                </button>
               </Card>
             ))}
             {customMeals.length === 0 && (
@@ -264,8 +366,6 @@ export default function MealPlanBuilderTab() {
           </div>
         </>
       )}
-
-      <CreateMealSheet open={createMealOpen} onClose={() => setCreateMealOpen(false)} clientId={clientId || undefined} />
     </div>
   );
 }

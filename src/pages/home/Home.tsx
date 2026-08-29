@@ -9,6 +9,7 @@ import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { AIVoiceLogger } from "../../components/food/AIVoiceLogger";
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
+import { GymPassesSheet } from "../../components/marketplace/GymPassesSheet";
 import { ChevronRight, Sparkles, Store, Crown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { todaysWorkout } from "../../data/mockWorkouts";
@@ -29,6 +30,7 @@ export default function Home() {
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [workoutOpen, setWorkoutOpen] = useState(false);
   const [metricOpen, setMetricOpen] = useState(false);
+  const [gymPassesOpen, setGymPassesOpen] = useState(false);
 
   const isBusiness = user.accountType === "business";
 
@@ -105,7 +107,7 @@ export default function Home() {
       </div>
 
       <div className="mb-6">
-        <WidgetBoard onWaterClick={() => setMetricOpen(true)} />
+        <WidgetBoard onWaterClick={() => setMetricOpen(true)} onGymPassesClick={() => setGymPassesOpen(true)} />
       </div>
 
       <Card interactive onClick={() => navigate("/app/professionals")} className="mb-4 animate-fade-slide-up bg-gradient-to-br from-primary to-primary-dark !text-white">
@@ -133,6 +135,7 @@ export default function Home() {
         exercises={todaysWorkout.exercises}
       />
       <AddMetricSheet open={metricOpen} onClose={() => setMetricOpen(false)} />
+      <GymPassesSheet open={gymPassesOpen} onClose={() => setGymPassesOpen(false)} />
     </div>
   );
 }

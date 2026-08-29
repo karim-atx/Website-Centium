@@ -3,7 +3,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Search, Plus, X, UtensilsCrossed } from "lucide-react";
 import { mockFoods } from "../../data/mockFoods";
-import type { Food, CustomFood, CustomMealItem, MealType } from "../../types";
+import type { Food, CustomFood, CustomMeal, CustomMealItem, MealType } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { foodCategoryIcon } from "../../utils/icons";
 import { mealOrder, mealLabels } from "../../services/nutrition";
@@ -18,18 +18,31 @@ const EMPTY_FOODS: CustomFood[] = [];
 // `clientId` scopes food creation to that client's own food database
 // instead of the account's personal custom foods, and a meal-type tag
 // (breakfast/lunch/snack/dinner) can now be set on the plan itself.
-export const CreateMealSheet: React.FC<{ open: boolean; onClose: () => void; clientId?: string }> = ({
-  open,
-  onClose,
-  clientId,
-}) => {
-  const { customFoods, clientCustomFoods, addCustomMeal, addClientCustomFood, addCustomFood } = useApp();
+export const CreateMealSheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  clientId?: string;
+  // V10 (QA 10.0): "Creating a meal prep should also allow you to edit and
+  // delete it" — passing an existing meal pre-fills the form and saving
+  // updates it in place instead of creating a new one.
+  editMeal?: CustomMeal | null;
+}> = ({ open, onClose, clientId, editMeal }) => {
+  const { customFoods, clientCustomFoods, addCustomMeal, updateCustomMeal, addClientCustomFood, addCustomFood } = useApp();
   const [query, setQuery] = useState("");
-  const [items, setItems] = useState<CustomMealItem[]>([]);
-  const [title, setTitle] = useState("");
-  const [mealType, setMealType] = useState<MealType | null>(null);
+  const [items, setItems] = useState<CustomMealItem[]>(editMeal?.items ?? []);
+  const [title, setTitle] = useState(editMeal?.title ?? "");
+  const [mealType, setMealType] = useState<MealType | null>(editMeal?.mealType ?? null);
   const [creatingFood, setCreatingFood] = useState(false);
   const [foodDraft, setFoodDraft] = useState({ name: "", serving: "1 serving", calories: "", protein: "", carbs: "", fat: "" });
+
+  React.useEffect(() => {
+    if (open) {
+      setItems(editMeal?.items ?? []);
+      setTitle(editMeal?.title ?? "");
+      setMealType(editMeal?.mealType ?? null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, editMeal]);
 
   const ownFoods = clientId ? clientCustomFoods[clientId] ?? EMPTY_FOODS : customFoods;
   const allFoods = useMemo(() => [...ownFoods, ...mockFoods], [ownFoods]);
@@ -73,7 +86,8 @@ export const CreateMealSheet: React.FC<{ open: boolean; onClose: () => void; cli
 
   const save = () => {
     if (!title.trim() || items.length === 0) return;
-    addCustomMeal(title, items, mealType ?? undefined);
+    if (editMeal) updateCustomMeal(editMeal.id, title, items, mealType ?? undefined);
+    else addCustomMeal(title, items, mealType ?? undefined);
     reset();
     onClose();
   };
@@ -85,7 +99,7 @@ export const CreateMealSheet: React.FC<{ open: boolean; onClose: () => void; cli
         reset();
         onClose();
       }}
-      title="Create Meal"
+      title={editMeal ? "Edit Meal" : "Create Meal"}
     >
       <div className="space-y-5 animate-fade-slide-up">
         <label className="block">
@@ -225,7 +239,7 @@ export const CreateMealSheet: React.FC<{ open: boolean; onClose: () => void; cli
         </div>
 
         <Button fullWidth size="lg" onClick={save} disabled={!title.trim() || items.length === 0}>
-          Save meal
+          {editMeal ? "Save changes" : "Save meal"}
         </Button>
         <p className="text-[11px] text-charcoal-faint text-center">
           Search "{title || "this meal's title"}" from Add Food to log every item at once.

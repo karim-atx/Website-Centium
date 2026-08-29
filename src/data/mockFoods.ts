@@ -45,7 +45,23 @@ export const foodCategories = [
   { id: "restaurant", label: "Restaurant" },
   { id: "homemade", label: "Homemade" },
   { id: "ingredients", label: "Ingredients" },
+  { id: "meal_prep", label: "Meal Prep" },
 ] as const;
+
+// V10 (QA 10.0): "Limit filter in add food to just breakfast, lunch,
+// dinner, snacks, resturant, ingredients and meal prep" — the Add Food
+// sheet's category-filter chips use this narrower list; the full
+// `foodCategories` above still backs the custom-food creation icon picker.
+const filterableCategoryIds = new Set([
+  "breakfast",
+  "lunch",
+  "dinner",
+  "snacks",
+  "restaurant",
+  "ingredients",
+  "meal_prep",
+]);
+export const addFoodFilterCategories = foodCategories.filter((c) => filterableCategoryIds.has(c.id));
 
 export const findFoodByName = (name: string): Food | undefined =>
   mockFoods.find((f) => f.name.toLowerCase() === name.toLowerCase());

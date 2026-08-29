@@ -53,6 +53,9 @@ export type BusinessType =
 export interface UserProfile {
   id: string;
   firstName: string;
+  // V10 (QA 10.0): collected on the new sign-in/sign-up step before account
+  // type selection.
+  email: string;
   age: number;
   sex: Sex;
   heightCm: number;
@@ -82,6 +85,16 @@ export interface UserProfile {
   // V5 (QA 5.0): professional's uploaded certification, data URL — camera
   // or file, captured during onboarding in place of age/height/sex.
   certificationUrl?: string;
+  // V10 (QA 10.0): a professional's own bio (shown on their Explore listing,
+  // grey placeholder text until filled) and public credentials — mirrored to
+  // a linked client via the fields below, same snapshot mechanism as
+  // certification.
+  professionalBio?: string;
+  professionalPhone?: string;
+  professionalWebsite?: string;
+  linkedProfessionalBio?: string;
+  linkedProfessionalPhone?: string;
+  linkedProfessionalWebsite?: string;
 }
 
 // V3: a professional generates one of these for a prospective client; the
@@ -111,6 +124,9 @@ export interface ClientCode {
   // well when viewing their profile" — snapshotted here at code-generation
   // time, the only channel this prototype has between the two accounts.
   professionalCertificationUrl?: string;
+  professionalBio?: string;
+  professionalPhone?: string;
+  professionalWebsite?: string;
   createdAt: string;
   redeemed: boolean;
   // V7 (QA 7.0): profile info the professional entered for this client when
@@ -185,6 +201,13 @@ export interface CalendarEvent {
   notes?: string;
   // V7 (QA 7.0): per-event background color, shown on the Day timeline.
   color?: string;
+  // V9 (QA 9.0): "the client can add events" to their own copy of this
+  // calendar (see More > Calendar) — marks which events are theirs to
+  // edit/delete, as opposed to ones synced in from a professional/business.
+  createdByClient?: boolean;
+  // V10 (QA 10.0): marks a day-assignment synced in from a professional's
+  // workout template — removed automatically if the assignment changes.
+  sourceTemplateId?: string;
 }
 
 // V6 (QA 6.0): a professional-built workout template — same routine-builder
@@ -199,6 +222,13 @@ export interface WorkoutTemplateAssignment {
   // V7 (QA 7.0): organize templates into folders/subfolders, mirroring the
   // client UI's routine-folder system.
   folderId?: string | null;
+  // V10 (QA 10.0): "Add a note section where anything the professional
+  // writes will be shown on the client UI in the coach note section" —
+  // copied onto the synced Routine's `coachNote` for each assigned client.
+  coachNote?: string;
+  // V10 (QA 10.0): "the ability to select a day to assign the workout to,
+  // it would also appear at the assigned clients calendar."
+  assignedDay?: string;
 }
 
 // V7 (QA 7.0): same shape as RoutineFolder, kept as its own store since
@@ -228,6 +258,11 @@ export interface ProfessionalMessage {
   from: "professional" | "client";
   text: string;
   at: string; // ISO
+  // V9 (QA 9.0): "alongside sending texts, the client should be able to
+  // send voice notes and attach files/pictures" — text stays the common
+  // case; a message carries at most one of these instead.
+  attachment?: string;
+  voiceNoteSec?: number;
 }
 
 export type MealType = "breakfast" | "lunch" | "snack" | "dinner";
@@ -245,7 +280,11 @@ export interface Food {
     | "drinks"
     | "restaurant"
     | "homemade"
-    | "ingredients";
+    | "ingredients"
+    // V10 (QA 10.0): "Limit filter in add food to just breakfast, lunch,
+    // dinner, snacks, resturant, ingredients and meal prep" — a new
+    // filterable category for meal-prepped custom foods.
+    | "meal_prep";
   serving: string;
   calories: number;
   protein: number;
@@ -282,6 +321,7 @@ export type MuscleGroup =
   | "chest"
   | "core"
   | "full_body"
+  | "glutes"
   | "hamstrings"
   | "olympic"
   | "other"
@@ -324,6 +364,10 @@ export interface Exercise {
   // V4: multi-select muscle groups + a classification, alongside the
   // original single `category` (kept for the exercise-library icon lookup).
   muscleGroups?: MuscleGroup[];
+  // V10 (QA 10.0): secondary movers, e.g. a bench press is chest (primary),
+  // shoulders/tricep (secondary). Filtering by muscle group only matches
+  // against the primary `muscleGroups` list, per QA.
+  secondaryMuscleGroups?: MuscleGroup[];
   classification?: ExerciseClassification;
   isCustom?: boolean;
   // Optional V2 programming detail — falls back to sensible defaults in the UI.
@@ -348,6 +392,7 @@ export interface Exercise {
 export interface CustomExerciseLibraryItem {
   name: string;
   muscleGroups?: MuscleGroup[];
+  secondaryMuscleGroups?: MuscleGroup[];
   classification: ExerciseClassification;
 }
 
@@ -388,6 +433,15 @@ export interface Routine {
   color: string;
   estimatedDurationMin: number;
   exercises: Exercise[];
+  // V10 (QA 10.0): a read-only note the hired professional writes for this
+  // routine (via an assigned workout template), shown in a coach-note
+  // button during the session.
+  coachNote?: string;
+  // V10 (QA 10.0): set when this routine came from a professional's
+  // assigned template, so it can be identified/cleaned up if the
+  // client-professional relationship ends.
+  assignedByProfessional?: boolean;
+  sourceTemplateId?: string;
 }
 
 // V3: per-set classification + notes + RPE, added via the "..." menu.
@@ -403,6 +457,8 @@ export interface LoggedSet {
   rpe?: number;
   // V6 (QA 6.0): 1 (bad mood) to 10 (very good mood), set alongside RPE.
   mood?: number;
+  // V9 (QA 9.0): 0 (no injury) to 10 (severe pain), shown above mood.
+  pain?: number;
 }
 
 export interface LoggedExercise {
@@ -439,7 +495,10 @@ export interface HealthMetricPoint {
 }
 
 export interface HealthMetric {
-  type: "weight" | "bodyFat" | "steps" | "sleep" | "water" | "caloriesBurned";
+  // V10 (QA 10.0): "Replace the body fat % with heart rate that is synced
+  // with apple health/ android health" — bodyFat retired from the Health
+  // page in favor of heartRate.
+  type: "weight" | "heartRate" | "steps" | "sleep" | "water" | "caloriesBurned";
   label: string;
   unit: string;
   current: number;
@@ -486,6 +545,9 @@ export interface Professional {
   reviews: number;
   bio: string;
   connected?: boolean;
+  // V9 (QA 9.0): "hire that when pressed shows you how much they charge" —
+  // a flat monthly rate for hiring this professional.
+  monthlyRate: number;
 }
 
 export interface Gym {
@@ -564,9 +626,11 @@ export type WidgetType =
   | "nutrition"
   | "workout"
   | "bodyFat"
+  | "heartRate"
   | "habits"
   | "journal"
-  | "meditation";
+  | "meditation"
+  | "gymPasses";
 export type WidgetSize = "small" | "large";
 
 export interface WidgetConfig {
@@ -662,6 +726,20 @@ export type MarketplaceCategoryId =
   | "meal_prep";
 
 // V4: a business's own product/service listing in the marketplace.
+// V10 (QA 10.0): "In the operations tab, I want a button that has to do
+// with the gym itself. Inside it can list/edit/delete the different type
+// of gym memberships it can offer, by stating the price, type (Daily,
+// monthly, annually, etc..), and payment type... generate unique QR codes
+// for each client that will show up in the client UI upon purchase."
+export type MembershipBilling = "daily" | "monthly" | "annually";
+export interface MembershipPlan {
+  id: string;
+  name: string;
+  price: string;
+  billing: MembershipBilling;
+  paymentType: string;
+}
+
 export interface BusinessOffering {
   id: string;
   title: string;
@@ -689,6 +767,14 @@ export interface BusinessClass {
   professionalId?: string;
   // V8 (QA 8.0): a free-text note for the assigned professional.
   notes?: string;
+  // V9 (QA 9.0): "the business can add single or multiple clients at once
+  // to affiliated professionals and/or classes."
+  clientIds?: string[];
+  // V10 (QA 10.0): "list/edit/delete the different type of classes it can
+  // offer, by stating the price, type, and payment type... generate unique
+  // QR codes for each client."
+  price?: string;
+  paymentType?: string;
 }
 
 export interface BusinessMessage {
@@ -698,3 +784,29 @@ export interface BusinessMessage {
   text: string;
   at: string;
 }
+
+// V9 (QA 9.0): "a hub for all clients to share information publicly" — a
+// lightweight community forum, one flat list of posts each with its own
+// comment thread (no nested categories/subforums, to match the rest of this
+// prototype's "keep it simple" feature depth).
+export interface ForumComment {
+  id: string;
+  authorName: string;
+  text: string;
+  at: string;
+}
+
+export interface ForumPost {
+  id: string;
+  authorName: string;
+  category: ForumCategory;
+  title: string;
+  body: string;
+  likes: number;
+  likedByMe: boolean;
+  comments: ForumComment[];
+  at: string;
+  mine?: boolean;
+}
+
+export type ForumCategory = "Nutrition" | "Workouts" | "Progress" | "Motivation" | "General";

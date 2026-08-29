@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Plus, Check, Calculator, Square, MoreHorizontal, Play, Pause, Weight } from "lucide-react";
+import { X, Plus, Check, Calculator, Square, MoreHorizontal, Play, Pause, Weight, MessageSquareText } from "lucide-react";
 import type { Exercise, LoggedExercise, LoggedSet } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { Metronome } from "./Metronome";
@@ -36,7 +36,10 @@ export const WorkoutSessionSheet: React.FC<{
   routineId: string | null;
   routineName: string;
   exercises: Exercise[];
-}> = ({ open, onClose, routineId, routineName, exercises }) => {
+  // V10 (QA 10.0): "a notepad that the client cannot edit, that the hired
+  // professional can write his notes to the client" — read-only here.
+  coachNote?: string;
+}> = ({ open, onClose, routineId, routineName, exercises, coachNote }) => {
   const { saveWorkoutSession, logWorkout, pausedSessions, savePausedSession, clearPausedSession } = useApp();
   const [startedAt, setStartedAt] = useState(() => new Date());
   const [elapsed, setElapsed] = useState(0);
@@ -49,6 +52,8 @@ export const WorkoutSessionSheet: React.FC<{
   // sheet opens — a separate Start button (next to the metronome) begins it.
   const [started, setStarted] = useState(false);
   const [quitConfirmOpen, setQuitConfirmOpen] = useState(false);
+  const [emptyFinishOpen, setEmptyFinishOpen] = useState(false);
+  const [coachNoteOpen, setCoachNoteOpen] = useState(false);
 
   useEffect(() => {
     if (!open || finished || !started) return;
@@ -141,7 +146,16 @@ export const WorkoutSessionSheet: React.FC<{
     });
   };
 
+  const hasCompletedSet = logged.some((ex) => ex.sets.some((s) => s.completed));
+
   const finishWorkout = () => {
+    // V10 (QA 10.0): "If you press finish workout and no set is checked,
+    // it prompts you that nothing has been added and will instead exit
+    // out of the routine without logging it."
+    if (!hasCompletedSet) {
+      setEmptyFinishOpen(true);
+      return;
+    }
     const endedAt = new Date();
     saveWorkoutSession({
       routineId,
@@ -196,6 +210,19 @@ export const WorkoutSessionSheet: React.FC<{
             {started ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" />}
           </button>
           <Metronome />
+          {/* V10 (QA 10.0): "a small button with a minimalistic logo of a
+              coach, that changes color depending if the coach wrote a
+              message for that routine." */}
+          <button
+            onClick={() => setCoachNoteOpen(true)}
+            aria-label="Coach's note"
+            className={clsx(
+              "tap w-9 h-9 rounded-full flex items-center justify-center shadow-soft",
+              coachNote ? "bg-sohati text-white" : "bg-cream-soft text-charcoal-faint"
+            )}
+          >
+            <MessageSquareText size={14} />
+          </button>
         </div>
       </div>
 
@@ -260,7 +287,17 @@ export const WorkoutSessionSheet: React.FC<{
                     <MoreHorizontal size={15} />
                   </button>
                   <button
-                    onClick={() => updateSet(exIdx, setIdx, { completed: !s.completed })}
+                    onClick={() => {
+                      const nowCompleted = !s.completed;
+                      updateSet(exIdx, setIdx, { completed: nowCompleted });
+                      // V10 (QA 10.0): "If you check off a set, while the
+                      // timer is not playing, it automatically plays the
+                      // timer as it assumes you have started the routine."
+                      if (nowCompleted && !started) {
+                        if (elapsed === 0) setStartedAt(new Date());
+                        setStarted(true);
+                      }
+                    }}
                     className={`tap w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
                       s.completed ? "bg-primary text-white" : "bg-cream-soft text-charcoal-faint"
                     }`}
@@ -326,6 +363,45 @@ export const WorkoutSessionSheet: React.FC<{
           updateSet(setOptionsTarget.exIdx, setOptionsTarget.setIdx, patch);
         }}
       />
+
+      {emptyFinishOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-charcoal/40" onClick={() => setEmptyFinishOpen(false)} />
+          <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
+            <p className="font-display font-semibold text-lg text-charcoal mb-1.5">Nothing logged yet</p>
+            <p className="text-sm text-charcoal-soft mb-5">
+              No sets are checked off, so there's nothing to save. Exiting without logging this workout.
+            </p>
+            <Button
+              fullWidth
+              onClick={() => {
+                setEmptyFinishOpen(false);
+                if (routineId) clearPausedSession(routineId);
+                onClose();
+              }}
+            >
+              Exit routine
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {coachNoteOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center px-6">
+          <div className="absolute inset-0 bg-charcoal/40" onClick={() => setCoachNoteOpen(false)} />
+          <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
+            <p className="font-display font-semibold text-lg text-charcoal mb-1.5 flex items-center gap-2">
+              <MessageSquareText size={16} className="text-sohati" /> Coach's note
+            </p>
+            <p className="text-sm text-charcoal-soft mb-5 whitespace-pre-wrap">
+              {coachNote || "Your professional hasn't left a note for this routine yet."}
+            </p>
+            <Button fullWidth onClick={() => setCoachNoteOpen(false)}>
+              Close
+            </Button>
+          </div>
+        </div>
+      )}
 
       {quitConfirmOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center px-6">

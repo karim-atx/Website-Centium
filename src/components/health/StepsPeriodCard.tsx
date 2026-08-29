@@ -3,7 +3,7 @@ import { Card } from "../ui/Card";
 import { Sparkline } from "./Sparkline";
 import { healthMetrics } from "../../data/mockHealthData";
 import { useApp } from "../../context/AppContext";
-import { Lock } from "lucide-react";
+import { Footprints } from "lucide-react";
 
 // V4: the D/W/M/Y period toggle and the edit affordance both moved into the
 // detail sheet — steps are now auto-sourced from Apple/Android Health and
@@ -18,7 +18,7 @@ export const StepsPeriodCard: React.FC<{ onExpand?: () => void }> = ({ onExpand 
     <Card className="relative" interactive={!!onExpand} onClick={() => onExpand?.()}>
       <div className="flex items-center justify-between mb-2">
         <p className="text-xs font-semibold text-charcoal-soft">Steps</p>
-        <Lock size={10} className="text-charcoal-faint" />
+        <Footprints size={11} className="text-sky" />
       </div>
       <p className="text-2xl font-bold text-charcoal leading-none">{metricValues.steps.toLocaleString()}</p>
       <p className="text-[11px] text-charcoal-faint mt-1">today</p>

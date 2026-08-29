@@ -14,6 +14,7 @@ type SortMode = "alphabetical" | "muscleGroup" | "classification";
 interface DbExercise {
   name: string;
   muscleGroups: MuscleGroup[];
+  secondaryMuscleGroups: MuscleGroup[];
   classification: ExerciseClassification;
   isCustom: boolean;
 }
@@ -25,6 +26,7 @@ const muscleGroupLabel: Record<MuscleGroup, string> = {
   chest: "Chest",
   core: "Core",
   full_body: "Full Body",
+  glutes: "Glutes",
   hamstrings: "Hamstrings",
   olympic: "Olympic",
   other: "Other",
@@ -49,7 +51,9 @@ const classificationLabel: Record<ExerciseClassification, string> = {
 // actually visible from that side. cardio/full_body/olympic stay list-only
 // (no single body zone represents them).
 const frontZones: MuscleGroup[] = ["shoulders", "chest", "bicep", "core", "quads"];
-const backZones: MuscleGroup[] = ["shoulders", "back", "tricep", "hamstrings"];
+// V9 (QA 9.0): "add glutes as a muscle group" — visible from the back view,
+// between the back and hamstrings.
+const backZones: MuscleGroup[] = ["shoulders", "back", "glutes", "tricep", "hamstrings"];
 
 // V8 (QA 8.0): "replace the stick figure with a more detailed anatomical
 // model" — tap zones are now body-shaped paths (tapered limbs, a rounded
@@ -70,11 +74,16 @@ const frontZoneRects: BodyZone[] = [
 
 const backZoneRects: BodyZone[] = [
   { group: "shoulders", shape: "rect", x: 35, y: 62, w: 90, h: 18, rx: 9 },
-  { group: "back", shape: "path", d: "M52 78 Q80 70 108 78 L106 112 L102 160 Q80 168 58 160 L54 112 Z" },
+  { group: "back", shape: "path", d: "M52 78 Q80 70 108 78 L106 112 L103 150 Q80 158 57 150 L54 112 Z" },
   { group: "tricep", shape: "path", d: "M18 82 Q16 100 18 118 Q22 130 30 132 L34 84 Z" },
   { group: "tricep", shape: "path", d: "M142 82 Q144 100 142 118 Q138 130 130 132 L126 84 Z" },
-  { group: "hamstrings", shape: "path", d: "M56 166 Q66 172 76 166 L74 246 L58 246 Z" },
-  { group: "hamstrings", shape: "path", d: "M104 166 Q94 172 84 166 L86 246 L102 246 Z" },
+  // V9 (QA 9.0): glutes sit between the lower back and the hamstrings —
+  // two lobes at hip width, matching the paired-limb shape convention
+  // already used for bicep/tricep/quads/hamstrings.
+  { group: "glutes", shape: "path", d: "M57 150 Q68 145 80 150 L78 176 Q68 182 58 176 Z" },
+  { group: "glutes", shape: "path", d: "M103 150 Q92 145 80 150 L82 176 Q92 182 102 176 Z" },
+  { group: "hamstrings", shape: "path", d: "M58 176 Q68 181 78 176 L74 246 L58 246 Z" },
+  { group: "hamstrings", shape: "path", d: "M104 176 Q94 181 84 176 L86 246 L102 246 Z" },
 ];
 
 export default function ExerciseDatabaseTab() {
@@ -95,12 +104,14 @@ export default function ExerciseDatabaseTab() {
     const library = exerciseLibrary.map((e) => ({
       name: e.name,
       muscleGroups: e.muscleGroups,
+      secondaryMuscleGroups: e.secondaryMuscleGroups ?? [],
       classification: e.classification,
       isCustom: false,
     }));
     const custom = customExercises.map((e) => ({
       name: e.name,
       muscleGroups: e.muscleGroups ?? [],
+      secondaryMuscleGroups: e.secondaryMuscleGroups ?? [],
       classification: e.classification,
       isCustom: true,
     }));
@@ -174,7 +185,11 @@ export default function ExerciseDatabaseTab() {
         {(["list", "body"] as ViewMode[]).map((v) => (
           <button
             key={v}
-            onClick={() => setView(v)}
+            onClick={() => {
+              setView(v);
+              // V10 (QA 10.0): "switching between body and list resets selection"
+              setSelectedGroup(null);
+            }}
             className={clsx(
               "tap flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold",
               view === v ? "bg-primary text-white" : "text-charcoal-faint"
@@ -232,14 +247,28 @@ export default function ExerciseDatabaseTab() {
           </p>
           <div className="flex justify-center mb-3">
             <svg viewBox="0 0 160 320" width={180} height={360}>
-              {/* decorative silhouette base, same for both sides */}
+              {/* decorative silhouette base, same for both sides.
+                  V9 (QA 9.0): "make the anatomical model more detailed" —
+                  added hands/feet, a spine hint, and ab segmentation lines
+                  on top of the QA8 silhouette shapes below. */}
               <circle cx="80" cy="26" r="18" fill="#EDEAF7" />
               <rect x="72" y="41" width="16" height="14" rx="5" fill="#EDEAF7" />
               <path d="M40 66 Q80 52 120 66 L124 108 Q80 120 36 108 Z" fill="#EDEAF7" />
               <path d="M56 104 Q80 112 104 104 L100 152 Q80 160 60 152 Z" fill="#EDEAF7" />
-              <path d="M22 70 Q16 100 20 132 L34 130 Q32 98 36 72 Z" fill="#EDEAF7" />
-              <path d="M138 70 Q144 100 140 132 L126 130 Q128 98 124 72 Z" fill="#EDEAF7" />
+              <path d="M22 70 Q16 100 20 132 Q22 138 30 136 L34 130 Q32 98 36 72 Z" fill="#EDEAF7" />
+              <ellipse cx="21" cy="139" rx="7" ry="8" fill="#EDEAF7" />
+              <path d="M138 70 Q144 100 140 132 Q138 138 130 136 L126 130 Q128 98 124 72 Z" fill="#EDEAF7" />
+              <ellipse cx="139" cy="139" rx="7" ry="8" fill="#EDEAF7" />
               <path d="M58 150 Q80 158 102 150 L98 250 L84 250 L80 180 L76 250 L62 250 Z" fill="#EDEAF7" />
+              <ellipse cx="67" cy="255" rx="9" ry="6" fill="#EDEAF7" />
+              <ellipse cx="93" cy="255" rx="9" ry="6" fill="#EDEAF7" />
+              <path
+                d="M80 56 L80 148 M64 96 L96 96 M62 108 L98 108 M67 120 L67 148 M93 120 L93 148"
+                stroke="#C9C2E8"
+                strokeWidth="1.1"
+                opacity="0.55"
+                fill="none"
+              />
 
               {(bodySide === "front" ? frontZoneRects : backZoneRects).map((z, i) =>
                 z.shape === "rect" ? (

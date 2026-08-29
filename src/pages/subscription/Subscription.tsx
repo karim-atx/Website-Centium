@@ -106,16 +106,34 @@ function ProfessionalSubscription() {
   );
 }
 
+// V9 (QA 9.0): monthly is the base rate; yearly/5-year are discounted
+// multiples of it, same "longer commitment saves more" idea as the client
+// UI's own Yearly/Monthly toggle above.
+const billingPeriods = [
+  { value: "monthly", label: "Monthly", months: 1, discount: 0 },
+  { value: "yearly", label: "Yearly", months: 12, discount: 0.2 },
+  { value: "5year", label: "Every 5 years", months: 60, discount: 0.35 },
+] as const;
+type BillingPeriod = (typeof billingPeriods)[number]["value"];
+
 function BusinessSubscription() {
   const navigate = useNavigate();
   const { user, businessDirectory, updateMyBusinessTier } = useApp();
   const currentTier = businessDirectory.find((b) => b.id === user.businessId)?.tier ?? "starter";
   const [selected, setSelected] = useState(currentTier);
+  const [period, setPeriod] = useState<BillingPeriod>("yearly");
   const [confirmed, setConfirmed] = useState(false);
 
   const confirm = () => {
     updateMyBusinessTier(selected);
     setConfirmed(true);
+  };
+
+  const priceFor = (monthlyPrice: number | null) => {
+    if (monthlyPrice === null) return "Free";
+    const { months, discount, label } = billingPeriods.find((p) => p.value === period)!;
+    const total = monthlyPrice * months * (1 - discount);
+    return `$${total.toFixed(2)} / ${label.toLowerCase()}`;
   };
 
   return (
@@ -140,7 +158,24 @@ function BusinessSubscription() {
         </p>
       </div>
 
-      <div className="space-y-2.5 mb-6">
+      {/* V9 (QA 9.0): "should be monthly and yearly as well as every 5
+          years" */}
+      <div className="flex gap-2 mb-5">
+        {billingPeriods.map((p) => (
+          <button
+            key={p.value}
+            onClick={() => setPeriod(p.value)}
+            className={clsx(
+              "tap flex-1 rounded-xl py-2.5 text-xs font-bold transition-colors",
+              period === p.value ? "bg-sohati text-white" : "bg-cream-soft text-charcoal-faint"
+            )}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="space-y-2.5 mb-4">
         {businessTiers.map((t) => (
           <button
             key={t.id}
@@ -160,7 +195,8 @@ function BusinessSubscription() {
                 )}
               </div>
               <p className="text-xs text-charcoal-faint">
-                {t.maxEmployees === null ? "Unlimited professionals" : `Up to ${t.maxEmployees} professionals`} · {t.price}
+                {t.maxEmployees === null ? "Unlimited professionals" : `Up to ${t.maxEmployees} professionals`} ·{" "}
+                {priceFor(t.monthlyPrice)}
               </p>
             </div>
             {selected === t.id && (
@@ -171,6 +207,14 @@ function BusinessSubscription() {
           </button>
         ))}
       </div>
+
+      {/* V9 (QA 9.0): "mention that we take 10% off of every listing sold
+          in our market place, this feature is set and not part of the
+          subscription plan" */}
+      <p className="text-xs text-charcoal-faint bg-cream-soft rounded-2xl px-4 py-3 mb-6">
+        Centium takes a flat 10% of every marketplace listing you sell — this applies at every tier and
+        isn't part of the subscription plan above.
+      </p>
 
       <Button fullWidth size="lg" onClick={confirm} disabled={confirmed && selected === currentTier}>
         {confirmed && selected === currentTier ? "You're all set ✓" : "Confirm tier"}

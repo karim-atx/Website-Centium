@@ -3,7 +3,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
 import { Search, Mic, Camera, ScanLine, Clock, Star, Minus, Plus, Check, UtensilsCrossed, Sparkles } from "lucide-react";
-import { mockFoods, foodCategories } from "../../data/mockFoods";
+import { mockFoods, foodCategories, addFoodFilterCategories } from "../../data/mockFoods";
 import type { Food, MealType, ServingUnit } from "../../types";
 import { mealLabels, mealOrder, entryMultiplier } from "../../services/nutrition";
 import { useApp } from "../../context/AppContext";
@@ -395,6 +395,12 @@ export const AddFoodSheet: React.FC<{
     <>
       <BottomSheet open={open} onClose={resetAndClose} title="Add Food">
         <div className="animate-fade-slide-up">
+          {/* V10 (QA 10.0): "Only the circled part in the attached picture
+              should scroll the rest is locked in add food" — search, the
+              AI/scan/custom buttons, recent, custom meals and the category
+              chips all stay pinned right under the sheet's own sticky
+              title bar; only the results list below scrolls. */}
+          <div className="sticky top-16 -mt-5 -mx-5 px-5 pt-3 pb-1 bg-cream z-10">
           <div className="relative mb-4">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-faint" />
             <input
@@ -484,18 +490,19 @@ export const AddFoodSheet: React.FC<{
             </div>
           )}
 
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-4">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
             <Chip active={category === null} onClick={() => setCategory(null)}>
               All
             </Chip>
-            {foodCategories.map((c) => (
+            {addFoodFilterCategories.map((c) => (
               <Chip key={c.id} active={category === c.id} onClick={() => setCategory(c.id)}>
                 {c.label}
               </Chip>
             ))}
           </div>
+          </div>
 
-          <div className="space-y-1.5 max-h-[300px] overflow-y-auto no-scrollbar">
+          <div className="space-y-1.5 pt-4 min-h-[200px]">
             {filtered.map((f) => (
               <button
                 key={f.id}

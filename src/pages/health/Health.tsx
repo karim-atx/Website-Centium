@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
@@ -8,11 +8,19 @@ import { ShareBiomarkerSheet } from "../../components/health/ShareBiomarkerSheet
 import { BiomarkerDetailSheet } from "../../components/health/BiomarkerDetailSheet";
 import { MetricDetailSheet } from "../../components/health/MetricDetailSheet";
 import { WaterDetailSheet } from "../../components/health/WaterDetailSheet";
+import { detectPlatform } from "../../components/health/IntegrationsCard";
 import { healthMetrics } from "../../data/mockHealthData";
 import { useApp } from "../../context/AppContext";
-import { ArrowDown, ArrowUp, Droplet, Flame, Camera, Share2, Lock } from "lucide-react";
+import { ArrowDown, ArrowUp, Droplet, Flame, Camera, Share2, HeartPulse } from "lucide-react";
 import clsx from "clsx";
 import type { BloodMarker, HealthMetric } from "../../types";
+
+// V9 (QA 9.0): "swiping down on this page should prompt syncing data with
+// selected integrated health data device" — a pull-to-refresh gesture,
+// only armed at the very top of the page so it doesn't fight normal
+// scrolling further down.
+const PULL_THRESHOLD = 70;
+const SYNC_DURATION_MS = 1400;
 
 // Kept as explicit warning/normal hues (independent of the brand
 // purple/sage tokens) so an out-of-range "HIGH" reading still reads as a
@@ -24,7 +32,8 @@ const statusColor: Record<string, string> = {
 };
 
 export default function Health() {
-  const { water, waterGoalMl, metricValues, bloodMarkers, stepsGoal, setStepsGoal } = useApp();
+  const { water, waterGoalMl, metricValues, bloodMarkers, stepsGoal, setStepsGoal, healthIntegrationConnected } =
+    useApp();
   const [waterOpen, setWaterOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [shareMarker, setShareMarker] = useState<BloodMarker | null>(null);
@@ -32,9 +41,55 @@ export default function Health() {
   const [shareAllOpen, setShareAllOpen] = useState(false);
   const [detailMetric, setDetailMetric] = useState<{ metric: HealthMetric; current: number } | null>(null);
 
+  const [pullY, setPullY] = useState(0);
+  const [syncing, setSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState(0);
+  const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const pullStartY = useRef<number | null>(null);
+  const platformLabel = detectPlatform() === "ios" ? "Apple Health" : "Android Health";
+
+  const runSync = () => {
+    if (syncing) return;
+    if (!healthIntegrationConnected) {
+      setSyncMessage(`Connect ${platformLabel} in Settings to sync.`);
+      setTimeout(() => setSyncMessage(null), 2200);
+      return;
+    }
+    setSyncing(true);
+    setSyncProgress(0);
+    const start = Date.now();
+    const tick = () => {
+      const pct = Math.min(100, ((Date.now() - start) / SYNC_DURATION_MS) * 100);
+      setSyncProgress(pct);
+      if (pct < 100) requestAnimationFrame(tick);
+      else {
+        setSyncing(false);
+        setSyncMessage(`Synced with ${platformLabel}`);
+        setTimeout(() => setSyncMessage(null), 1800);
+      }
+    };
+    requestAnimationFrame(tick);
+  };
+
+  const handlePullStart = (clientY: number) => {
+    if (syncing || window.scrollY > 0) return;
+    pullStartY.current = clientY;
+  };
+  const handlePullMove = (clientY: number) => {
+    if (pullStartY.current === null || syncing) return;
+    const delta = clientY - pullStartY.current;
+    if (delta > 0) setPullY(Math.min(delta, 100));
+  };
+  const handlePullEnd = () => {
+    if (pullStartY.current === null) return;
+    pullStartY.current = null;
+    if (pullY >= PULL_THRESHOLD) runSync();
+    setPullY(0);
+  };
+
   const sleepMeta = healthMetrics.find((m) => m.type === "sleep")!;
   const weightMeta = healthMetrics.find((m) => m.type === "weight")!;
-  const bodyFatMeta = healthMetrics.find((m) => m.type === "bodyFat")!;
+  const heartRateMeta = healthMetrics.find((m) => m.type === "heartRate")!;
   const caloriesMeta = healthMetrics.find((m) => m.type === "caloriesBurned")!;
 
   const heightM = 1.78;
@@ -65,6 +120,7 @@ export default function Health() {
       weight: metricValues.weight,
       steps: metricValues.steps,
       sleep: metricValues.sleepHours,
+      heartRate: metricValues.heartRate,
     };
     const meta = healthMetrics.find((m) => m.type === openMetric);
     if (meta && currentByType[openMetric] !== undefined) {
@@ -75,7 +131,36 @@ export default function Health() {
   }, [location.state]);
 
   return (
-    <div>
+    <div
+      onTouchStart={(e) => handlePullStart(e.touches[0].clientY)}
+      onTouchMove={(e) => handlePullMove(e.touches[0].clientY)}
+      onTouchEnd={handlePullEnd}
+      onMouseDown={(e) => handlePullStart(e.clientY)}
+      onMouseMove={(e) => e.buttons === 1 && handlePullMove(e.clientY)}
+      onMouseUp={handlePullEnd}
+      onMouseLeave={handlePullEnd}
+    >
+      {(pullY > 0 || syncing) && (
+        <div className="flex flex-col items-center justify-center overflow-hidden" style={{ height: syncing ? 28 : pullY }}>
+          {syncing ? (
+            <div className="w-24 h-1 rounded-full bg-cream-soft overflow-hidden">
+              <div
+                className="h-full bg-sohati rounded-full"
+                style={{ width: `${syncProgress}%`, transition: "width 0.05s linear" }}
+              />
+            </div>
+          ) : (
+            <p className="text-[10px] font-semibold text-charcoal-faint">
+              {pullY >= PULL_THRESHOLD ? "Release to sync" : "Pull to sync"}
+            </p>
+          )}
+        </div>
+      )}
+      {syncMessage && (
+        <p className="text-center text-xs font-semibold text-sohati-dark bg-sohati-pale rounded-full px-3 py-1.5 mb-3 animate-fade-in">
+          {syncMessage}
+        </p>
+      )}
       {/* V7 (QA 7.0): the "+" quick water-log moved to the Home water
           widget — pressing it opens this same AddMetricSheet. */}
       <PageHeader title="Health" />
@@ -87,10 +172,7 @@ export default function Health() {
           className="relative"
           onClick={() => openDetail(weightMeta, metricValues.weight)}
         >
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-xs font-semibold text-charcoal-soft">Weight</p>
-            <Lock size={10} className="text-charcoal-faint" />
-          </div>
+          <p className="text-xs font-semibold text-charcoal-soft mb-1">Weight</p>
           <p className="text-xl font-bold text-charcoal">
             {metricValues.weight} <span className="text-sm font-normal text-charcoal-faint">kg</span>
           </p>
@@ -101,18 +183,16 @@ export default function Health() {
         <Card
           interactive
           className="relative"
-          onClick={() => openDetail(bodyFatMeta, metricValues.bodyFat)}
+          onClick={() => openDetail(heartRateMeta, metricValues.heartRate)}
         >
           <div className="flex items-center justify-between mb-1">
-            <p className="text-xs font-semibold text-charcoal-soft">Body Fat</p>
-            <Lock size={10} className="text-charcoal-faint" />
+            <p className="text-xs font-semibold text-charcoal-soft">Heart Rate</p>
+            <HeartPulse size={11} className="text-teal-dark" />
           </div>
           <p className="text-xl font-bold text-charcoal">
-            {metricValues.bodyFat} <span className="text-sm font-normal text-charcoal-faint">%</span>
+            {metricValues.heartRate} <span className="text-sm font-normal text-charcoal-faint">bpm</span>
           </p>
-          <span className="mt-2 inline-flex items-center gap-0.5 text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2 py-0.5">
-            <ArrowDown size={10} /> 0.4% this week
-          </span>
+          <p className="text-xs text-charcoal-faint mt-2">Resting, synced from Health</p>
         </Card>
         {/* V8 (QA 8.0): "Have the result of the BMI be more central and
             slightly bigger" — the number is now the centered focal point
@@ -141,10 +221,7 @@ export default function Health() {
           className="relative"
           onClick={() => openDetail(caloriesMeta, metricValues.caloriesBurned)}
         >
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-xs font-semibold text-charcoal-soft">Calories burned</p>
-            <Lock size={10} className="text-charcoal-faint" />
-          </div>
+          <p className="text-xs font-semibold text-charcoal-soft mb-1">Calories burned</p>
           <p className="text-xl font-bold text-charcoal">{metricValues.caloriesBurned.toLocaleString()}</p>
           <p className="text-xs text-charcoal-faint mt-2">Estimated, incl. workouts</p>
         </Card>
@@ -157,10 +234,7 @@ export default function Health() {
           className="relative"
           onClick={() => openDetail(sleepMeta, metricValues.sleepHours)}
         >
-          <div className="flex items-center justify-between mb-1">
-            <p className="text-xs font-semibold text-charcoal-soft">Sleep</p>
-            <Lock size={10} className="text-charcoal-faint" />
-          </div>
+          <p className="text-xs font-semibold text-charcoal-soft mb-1">Sleep</p>
           <p className="text-xl font-bold text-charcoal">
             {Math.floor(metricValues.sleepHours)}h {Math.round((metricValues.sleepHours % 1) * 60)}m
           </p>

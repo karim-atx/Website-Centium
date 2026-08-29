@@ -11,6 +11,21 @@ const COLLAR_KG = 2.5; // per side, 2.5kg each -> 5kg total when both selected
 const IPF_PLATES_KG = [25, 20, 15, 10, 5, 2.5, 1.25];
 const KG_TO_LB = 2.20462;
 
+// V10 (QA 10.0): IPF powerlifting plate colors, for the visual barbell
+// representation under each plate count.
+const PLATE_COLOR: Record<number, string> = {
+  25: "#C0392B", // red
+  20: "#2E5F8A", // blue
+  15: "#D9A441", // yellow
+  10: "#3F9165", // green
+  5: "#E8E4DA", // white
+  2.5: "#2A2622", // black
+  1.25: "#8A8478", // (no standard color — muted grey)
+};
+const COLLAR_COLOR = "#B9BEC4"; // silver
+// Taller plates for heavier discs, same relative proportions on every bar.
+const plateHeight = (kg: number) => 32 + Math.round((kg / 25) * 40);
+
 // Greedy per-side plate breakdown from the standard IPF powerlifting set.
 function plateBreakdown(perSideKg: number) {
   let remaining = perSideKg;
@@ -150,16 +165,43 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
               Working weight is at or below the bar + collars — no plates needed.
             </p>
           ) : (
-            <div className="flex flex-wrap gap-2">
-              {plates.map((p) => (
-                <span
-                  key={p.kg}
-                  className="flex items-center gap-1.5 rounded-xl bg-cream-soft px-3 py-2 text-sm font-semibold text-charcoal"
-                >
-                  {p.kg}kg <span className="text-charcoal-faint">× {p.count}</span>
-                </span>
-              ))}
-            </div>
+            <>
+              {/* V10 (QA 10.0): "under each number in the Per side selection
+                  have a visual representation of a barbell and plates...
+                  color coordinated based on IPF powerlifting plates." */}
+              <div className="flex items-end gap-3 mb-3 overflow-x-auto no-scrollbar pb-1">
+                <div className="w-6 h-2.5 rounded-l-sm bg-charcoal/30 shrink-0" aria-hidden />
+                {collarsOn && (
+                  <div
+                    className="w-2 rounded-sm shrink-0 self-center"
+                    style={{ height: 30, background: COLLAR_COLOR }}
+                    aria-label="Collar"
+                  />
+                )}
+                {plates.map((p) =>
+                  Array.from({ length: p.count }, (_, i) => (
+                    <div key={`${p.kg}-${i}`} className="flex flex-col items-center shrink-0">
+                      <div
+                        className="w-4 rounded-sm"
+                        style={{ height: plateHeight(p.kg), background: PLATE_COLOR[p.kg] ?? "#999" }}
+                        aria-label={`${p.kg}kg plate`}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {plates.map((p) => (
+                  <span
+                    key={p.kg}
+                    className="flex items-center gap-1.5 rounded-xl bg-cream-soft px-3 py-2 text-sm font-semibold text-charcoal"
+                  >
+                    <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ background: PLATE_COLOR[p.kg] ?? "#999" }} />
+                    {p.kg}kg <span className="text-charcoal-faint">× {p.count}</span>
+                  </span>
+                ))}
+              </div>
+            </>
           )}
           {remainderKg > 0.01 && (
             <p className="text-xs text-teal-dark mt-2">

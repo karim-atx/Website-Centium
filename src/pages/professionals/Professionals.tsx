@@ -41,7 +41,10 @@ export default function Professionals() {
 
   const isConnected = (p: { id: string; connected?: boolean }) =>
     p.connected || connectedProfessionalIds.includes(p.id);
-  const connected = mockProfessionals.find(isConnected);
+  // V10 (QA 10.0): "hired professionals should get updated every time the
+  // client hires a professional" — show every currently hired professional
+  // (up to one per specialty), not just the first match in array order.
+  const connectedList = mockProfessionals.filter(isConnected);
   const filtered = type ? mockProfessionals.filter((p) => p.type === type) : mockProfessionals;
 
   // Professionals get an entirely different dashboard here (client roster,
@@ -99,8 +102,9 @@ export default function Professionals() {
         </Card>
       )}
 
-      {connected && (
+      {connectedList.map((connected) => (
         <Card
+          key={connected.id}
           interactive
           onClick={() => navigate(`/app/professionals/${connected.id}`)}
           className="mb-6 bg-gradient-to-br from-primary to-primary-dark !text-white animate-fade-slide-up"
@@ -113,7 +117,7 @@ export default function Professionals() {
               })()}
             </span>
             <div>
-              <p className="text-xs text-white/70 font-semibold uppercase tracking-wide">My Dietitian</p>
+              <p className="text-xs text-white/70 font-semibold uppercase tracking-wide">My {typeLabels[connected.type].replace(/s$/, "")}</p>
               <p className="font-display font-semibold text-lg">{connected.name}</p>
             </div>
           </div>
@@ -121,7 +125,7 @@ export default function Professionals() {
             <ShieldCheck size={13} /> Client since August 2026
           </div>
         </Card>
-      )}
+      ))}
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-5">
         <Chip active={type === null} onClick={() => setType(null)}>
@@ -249,6 +253,27 @@ export default function Professionals() {
               <p className="text-sm text-charcoal-faint">No certification uploaded yet.</p>
             )}
           </div>
+
+          {user.linkedProfessionalBio && (
+            <div>
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Bio</p>
+              <p className="text-sm text-charcoal-soft leading-relaxed">{user.linkedProfessionalBio}</p>
+            </div>
+          )}
+
+          {(user.linkedProfessionalPhone || user.linkedProfessionalWebsite) && (
+            <div>
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Contact</p>
+              <div className="space-y-1">
+                {user.linkedProfessionalPhone && (
+                  <p className="text-sm text-charcoal-soft">{user.linkedProfessionalPhone}</p>
+                )}
+                {user.linkedProfessionalWebsite && (
+                  <p className="text-sm text-charcoal-soft">{user.linkedProfessionalWebsite}</p>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </BottomSheet>
     </div>

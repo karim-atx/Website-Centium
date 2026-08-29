@@ -14,7 +14,8 @@ const days = (n: number) => {
 const weightHistory = [107.6, 107.3, 107.1, 106.9, 106.8, 106.6, 106.4];
 const stepsHistory = [7200, 9100, 6400, 10200, 8800, 9600, 8421];
 const sleepHistory = [6.8, 7.2, 7.5, 6.9, 7.8, 7.1, 7.7];
-const bodyFatHistory = [27.8, 27.7, 27.6, 27.6, 27.5, 27.4, 27.4];
+// V10 (QA 10.0): "Replace the body fat % with heart rate" — resting bpm.
+const heartRateHistory = [71, 69, 70, 67, 68, 66, 68];
 const caloriesHistory = [2180, 2410, 1990, 2560, 2290, 2470, 2340];
 
 export const healthMetrics: HealthMetric[] = [
@@ -27,12 +28,12 @@ export const healthMetrics: HealthMetric[] = [
     history: days(7).map((date, i) => ({ date, value: weightHistory[i] })),
   },
   {
-    type: "bodyFat",
-    label: "Body Fat",
-    unit: "%",
-    current: 27.4,
-    trend: -0.4,
-    history: days(7).map((date, i) => ({ date, value: bodyFatHistory[i] })),
+    type: "heartRate",
+    label: "Heart Rate",
+    unit: "bpm",
+    current: 68,
+    trend: -2,
+    history: days(7).map((date, i) => ({ date, value: heartRateHistory[i] })),
   },
   {
     type: "steps",
@@ -147,6 +148,17 @@ export const defaultHabits: HabitItem[] = [
   { id: "h4", label: "Journal", icon: "journal", done: false, streakDays: 0 },
   { id: "h5", label: "Meditate", icon: "meditation", done: false, streakDays: 0 },
 ];
+
+// V10 (QA 10.0): "take inspiration from health metric apps when it comes to
+// what to put in the detailed widget of the heart rate" — resting/average
+// plus a daily low/high range, Apple-Health-inspired (not copied).
+export const heartRateDetail = {
+  resting: 68,
+  average: 74,
+  low: 58,
+  high: 142,
+  zoneMinutes: { rest: 1180, fatBurn: 180, cardio: 55, peak: 25 },
+};
 
 export const sleepDetail = {
   score: 82,

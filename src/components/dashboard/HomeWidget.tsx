@@ -6,19 +6,21 @@ import { ProgressBar } from "../ui/ProgressBar";
 import { WaterFillContainer } from "./WaterFillContainer";
 import { MacroRing } from "./MacroRing";
 import { SleepStageWheel } from "../health/SleepStageWheel";
-import { healthMetrics, sleepDetail } from "../../data/mockHealthData";
+import { healthMetrics, sleepDetail, heartRateDetail } from "../../data/mockHealthData";
 import { todaysWorkout } from "../../data/mockWorkouts";
 import { sumNutrition, targetsFromGoal } from "../../services/nutrition";
-import { Footprints, Scale, Moon, Dumbbell, ArrowUp, ArrowDown, Droplet, CheckSquare, BookOpen, Utensils } from "lucide-react";
+import { Footprints, Scale, Moon, Dumbbell, ArrowUp, ArrowDown, Droplet, CheckSquare, BookOpen, Utensils, KeyRound, HeartPulse } from "lucide-react";
 import { habitIcon } from "../../utils/icons";
 import { YogaFigureIcon } from "../mind/YogaFigureIcon";
+import { mockGyms } from "../../data/mockProfessionals";
 
-export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => void }> = ({
+export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => void; onGymPassesClick?: () => void }> = ({
   widget,
   onWaterClick,
+  onGymPassesClick,
 }) => {
   const navigate = useNavigate();
-  const { metricValues, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries } =
+  const { metricValues, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries, gymPurchases, streaks } =
     useApp();
   const isLarge = widget.size === "large";
 
@@ -134,6 +136,32 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
       );
     }
 
+    case "heartRate": {
+      const onClick = () => navigate("/health", { state: { openMetric: "heartRate" } });
+      if (!isLarge) {
+        return wrap(
+          onClick,
+          <div>
+            {header("Heart Rate", <HeartPulse size={15} className="text-ember-dark" />)}
+            <p className="text-2xl font-bold text-charcoal leading-none">{metricValues.heartRate} <span className="text-xs font-normal text-charcoal-faint">bpm</span></p>
+          </div>
+        );
+      }
+      return wrap(
+        onClick,
+        <div>
+          {header("Heart Rate", <HeartPulse size={15} className="text-ember-dark" />)}
+          <p className="text-3xl font-bold text-charcoal leading-none mb-1.5">
+            {metricValues.heartRate} <span className="text-sm font-normal text-charcoal-faint">bpm</span>
+          </p>
+          <p className="text-xs text-charcoal-faint mb-1.5">Resting · avg {heartRateDetail.average} bpm</p>
+          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-ember-dark bg-ember-pale rounded-full px-2 py-0.5">
+            Range {heartRateDetail.low}–{heartRateDetail.high} bpm today
+          </span>
+        </div>
+      );
+    }
+
     case "water": {
       const pct = water / waterGoalMl;
       // V7 (QA 7.0): "the water log in the plus sign should appear instead
@@ -192,6 +220,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
             <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2 py-0.5">
               <ArrowUp size={10} /> +0.3h vs weekly avg
             </span>
+            <p className="text-xs text-charcoal-faint mt-1.5">Sleep score {sleepDetail.score}/100</p>
           </div>
         </div>
       );
@@ -284,6 +313,9 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
           <p className="text-xs text-charcoal-faint mt-1.5">
             {todaysWorkout.exercises.length} exercises · ~{todaysWorkout.durationMin} min
           </p>
+          <p className="text-xs text-sohati-dark font-semibold mt-1">
+            🔥 {streaks.find((s) => s.id === "s3")?.days ?? 0} workout streak
+          </p>
         </div>
       );
     }
@@ -309,7 +341,8 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
           <p className="text-3xl font-bold text-charcoal leading-none mb-2">
             {done}/{habits.length} <span className="text-sm font-normal text-charcoal-faint">done today</span>
           </p>
-          <div className="flex flex-wrap gap-1.5">
+          <ProgressBar progress={habits.length ? done / habits.length : 0} color="#7D6BB5" height={6} />
+          <div className="flex flex-wrap gap-1.5 mt-2.5">
             {habits.slice(0, 5).map((h) => (
               <span
                 key={h.id}
@@ -345,6 +378,11 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
             {todaysEntry ? "Today's entry written ✓" : "Reflect on your day"}
           </p>
           <p className="text-xs text-charcoal-faint">{journalEntries.length} entries total</p>
+          {journalEntries.length > 0 && (
+            <p className="text-xs text-charcoal-faint mt-1">
+              Last: {journalEntries[journalEntries.length - 1].date}
+            </p>
+          )}
         </div>
       );
     }
@@ -368,6 +406,39 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
           <span className="inline-flex items-center text-xs font-semibold text-berry bg-berry-pale rounded-full px-2 py-0.5">
             Open library
           </span>
+          <p className="text-xs text-charcoal-faint mt-1.5">5-15 min sessions · guided or free-form</p>
+        </div>
+      );
+    }
+
+    case "gymPasses": {
+      const passCount = Object.values(gymPurchases).reduce((n, arr) => n + arr.length, 0);
+      const passNames = Object.entries(gymPurchases)
+        .flatMap(([gymId, arr]) => arr.map(() => mockGyms.find((g) => g.id === gymId)?.name))
+        .filter((n): n is string => !!n);
+      const onClick = onGymPassesClick ?? (() => {});
+      if (!isLarge) {
+        return wrap(
+          onClick,
+          <div>
+            {header("Gym Passes", <KeyRound size={15} className="text-sohati" />)}
+            <p className="text-2xl font-bold text-charcoal leading-none">{passCount}</p>
+          </div>
+        );
+      }
+      return wrap(
+        onClick,
+        <div>
+          {header("Gym Passes", <KeyRound size={15} className="text-sohati" />)}
+          <p className="text-xl font-bold text-charcoal leading-none mb-1.5">
+            {passCount > 0 ? `${passCount} active` : "None yet"}
+          </p>
+          <span className="inline-flex items-center text-xs font-semibold text-sohati bg-sohati-pale rounded-full px-2 py-0.5">
+            Tap to show QR
+          </span>
+          {passNames.length > 0 && (
+            <p className="text-xs text-charcoal-faint mt-1.5 truncate">{passNames.join(" · ")}</p>
+          )}
         </div>
       );
     }

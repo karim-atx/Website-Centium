@@ -3,13 +3,22 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import type { Gym } from "../../types";
-import { Star, MapPin, Check, Clock, XCircle, AlertTriangle } from "lucide-react";
+import { Star, MapPin, Check, Clock, XCircle, AlertTriangle, CreditCard, Wallet, Banknote } from "lucide-react";
+
+// V10 (QA 10.0): "the button to get the membership should be called buy
+// that prompts you to the similar payment mechanism the hiring the
+// professional has" — same 3-method picker used in ProfessionalDetail.tsx.
+const paymentMethods = [
+  { id: "card", label: "Card", icon: CreditCard },
+  { id: "whish", label: "Whish Money", icon: Wallet },
+  { id: "cash", label: "Cash", icon: Banknote },
+] as const;
 
 // Decorative QR-style grid — a deterministic pseudo-random pattern seeded
 // by the gym id + plan, not a real scannable code (this prototype has no
 // backend to redeem it against). Different plans get visibly different
 // codes since the seed includes the plan name.
-function QrPattern({ seed }: { seed: string }) {
+export function QrPattern({ seed, className = "w-32 h-32" }: { seed: string; className?: string }) {
   let h = 0;
   for (let i = 0; i < seed.length; i++) h = (h * 31 + seed.charCodeAt(i)) >>> 0;
   const cells = Array.from({ length: 100 }, () => {
@@ -17,7 +26,7 @@ function QrPattern({ seed }: { seed: string }) {
     return (h >> 16) % 3 === 0;
   });
   return (
-    <div className="grid grid-cols-10 gap-0.5 w-32 h-32 bg-white p-2 rounded-xl shrink-0">
+    <div className={`grid grid-cols-10 gap-0.5 bg-white p-2 rounded-xl shrink-0 ${className}`}>
       {cells.map((filled, i) => (
         <div key={i} className={filled ? "bg-charcoal" : "bg-white"} />
       ))}
@@ -25,8 +34,8 @@ function QrPattern({ seed }: { seed: string }) {
   );
 }
 
-const DAY_MS = 24 * 60 * 60 * 1000;
-const isOneTimePlan = (plan: string) => /day|drop-in/i.test(plan);
+export const DAY_MS = 24 * 60 * 60 * 1000;
+export const isOneTimePlan = (plan: string) => /day|drop-in/i.test(plan);
 
 const formatRemaining = (ms: number) => {
   const totalMin = Math.max(0, Math.ceil(ms / 60000));
@@ -46,6 +55,22 @@ export const GymDetailSheet: React.FC<{ open: boolean; onClose: () => void; gym:
   const { gymPurchases, purchaseGymPlan, cancelGymPlan } = useApp();
   const [confirmCancel, setConfirmCancel] = useState<string | null>(null);
   const [, forceTick] = useState(0);
+  // V9 (QA 9.0): "Pressing the QR code from a purchased membership... would
+  // make it bigger across the screen with a blur backdrop."
+  const [fullscreenPlan, setFullscreenPlan] = useState<string | null>(null);
+  const [buyPlan, setBuyPlan] = useState<{ plan: string; price: string; oneTime: boolean } | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<(typeof paymentMethods)[number]["id"]>("card");
+  const [paid, setPaid] = useState(false);
+
+  const confirmBuy = () => {
+    if (!buyPlan || paid) return;
+    setPaid(true);
+    setTimeout(() => {
+      purchaseGymPlan(gym!.id, buyPlan.plan, buyPlan.oneTime);
+      setBuyPlan(null);
+      setPaid(false);
+    }, 900);
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -92,7 +117,13 @@ export const GymDetailSheet: React.FC<{ open: boolean; onClose: () => void; gym:
             <div className="space-y-3">
               {activePurchases.map((p) => (
                 <div key={p.plan} className="flex items-center gap-3 rounded-2xl bg-cream-soft p-3">
-                  <QrPattern seed={`${gym.id}-${p.plan}`} />
+                  <button
+                    onClick={() => setFullscreenPlan(p.plan)}
+                    aria-label={`View ${p.plan} QR code full screen`}
+                    className="tap shrink-0"
+                  >
+                    <QrPattern seed={`${gym.id}-${p.plan}`} />
+                  </button>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-charcoal">{p.plan}</p>
                     {p.oneTime ? (
@@ -165,8 +196,8 @@ export const GymDetailSheet: React.FC<{ open: boolean; onClose: () => void; gym:
                       <Check size={13} /> Active
                     </span>
                   ) : (
-                    <Button size="sm" onClick={() => purchaseGymPlan(gym.id, p.plan, oneTime)}>
-                      <Check size={13} /> Get
+                    <Button size="sm" onClick={() => setBuyPlan({ plan: p.plan, price: p.price, oneTime })}>
+                      <Check size={13} /> Buy
                     </Button>
                   )}
                 </div>
@@ -178,6 +209,62 @@ export const GymDetailSheet: React.FC<{ open: boolean; onClose: () => void; gym:
           </p>
         </div>
       </div>
+
+      {fullscreenPlan && (
+        <div
+          className="fixed inset-0 z-[70] flex flex-col items-center justify-center bg-charcoal/70 backdrop-blur-md"
+          onClick={() => setFullscreenPlan(null)}
+        >
+          <QrPattern seed={`${gym.id}-${fullscreenPlan}`} className="w-72 h-72" />
+          <p className="text-white font-display text-lg font-semibold mt-6">{gym.name}</p>
+          <p className="text-white/70 text-sm">{fullscreenPlan}</p>
+          <button
+            onClick={() => setFullscreenPlan(null)}
+            aria-label="Close"
+            className="tap mt-8 w-11 h-11 rounded-full bg-white/15 flex items-center justify-center text-white"
+          >
+            <XCircle size={22} />
+          </button>
+        </div>
+      )}
+
+      <BottomSheet open={!!buyPlan} onClose={() => setBuyPlan(null)} title={buyPlan ? `Buy ${buyPlan.plan}` : ""}>
+        {buyPlan && (
+          <div className="space-y-5 animate-fade-slide-up">
+            <div className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3.5">
+              <span className="text-sm font-semibold text-charcoal">{buyPlan.plan}</span>
+              <span className="text-sm font-bold text-charcoal">{buyPlan.price}</span>
+            </div>
+            <div>
+              <p className="text-xs font-semibold text-charcoal-soft mb-2">Payment method</p>
+              <div className="grid grid-cols-3 gap-2.5">
+                {paymentMethods.map((m) => (
+                  <button
+                    key={m.id}
+                    onClick={() => setPaymentMethod(m.id)}
+                    className={`tap flex flex-col items-center justify-center gap-1.5 rounded-2xl py-4 border ${
+                      paymentMethod === m.id ? "bg-sohati text-white border-sohati" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
+                    }`}
+                  >
+                    <m.icon size={18} />
+                    <span className="text-xs font-semibold">{m.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <Button fullWidth size="lg" onClick={confirmBuy} disabled={paid}>
+              {paid ? (
+                <>
+                  <Check size={16} /> Purchased
+                </>
+              ) : (
+                `Pay ${buyPlan.price} & buy`
+              )}
+            </Button>
+            <p className="text-[11px] text-charcoal-faint text-center">Prototype payment — no real charge is made.</p>
+          </div>
+        )}
+      </BottomSheet>
     </BottomSheet>
   );
 };

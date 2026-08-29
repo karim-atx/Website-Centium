@@ -17,6 +17,20 @@ const statusGradient: Record<BloodMarker["status"], [string, string]> = {
   low: ["#6FA8DC", "#2E5F8A"],
 };
 
+// V10 (QA 10.0): "The title for share all and the specific biomarkers
+// should be bigger and more readable. For the specific biomarker the title
+// should be at least as big as the value" — shrink-to-fit so a long marker
+// name never overflows the card width.
+function fitTitleFontSize(ctx: CanvasRenderingContext2D, text: string, maxWidth: number, maxPx: number, minPx: number) {
+  let size = maxPx;
+  while (size > minPx) {
+    ctx.font = `700 ${size}px Manrope, sans-serif`;
+    if (ctx.measureText(text).width <= maxWidth) break;
+    size -= 2;
+  }
+  return size;
+}
+
 function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -31,15 +45,16 @@ function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, CARD_W, CARD_H);
 
-  // wordmark
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.font = "600 28px Manrope, sans-serif";
-  ctx.fillText("CENTIUM", 48, 72);
-
-  // marker name
-  ctx.fillStyle = "rgba(255,255,255,0.65)";
-  ctx.font = "600 20px Manrope, sans-serif";
-  ctx.fillText(marker.name.toUpperCase(), 48, 200);
+  // V9 (QA 9.0): "the main title should be the Biomarker itself, please
+  // remove centium" — the marker name is now the card's title, no separate
+  // Centium wordmark above it.
+  // V10 (QA 10.0): "the title should be at least as big as the value" —
+  // the value below is 96px, so the title starts there too and only
+  // shrinks as far as needed for long marker names to fit.
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  const titleSize = fitTitleFontSize(ctx, marker.name.toUpperCase(), CARD_W - 96, 100, 56);
+  ctx.font = `700 ${titleSize}px Manrope, sans-serif`;
+  ctx.fillText(marker.name.toUpperCase(), 48, 72);
 
   // value
   ctx.fillStyle = "#FFFFFF";
@@ -113,12 +128,12 @@ function drawSummaryCard(canvas: HTMLCanvasElement, markers: BloodMarker[]) {
   ctx.fillStyle = grad;
   ctx.fillRect(0, 0, CARD_W, canvas.height);
 
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.font = "600 28px Manrope, sans-serif";
-  ctx.fillText("CENTIUM", 48, 60);
-  ctx.fillStyle = "rgba(255,255,255,0.65)";
-  ctx.font = "600 18px Manrope, sans-serif";
-  ctx.fillText("BIOMARKER SUMMARY", 48, 100);
+  // V9 (QA 9.0): "the main title should be Biomarker summary, not centium
+  // please remove" — promoted to the card's title in place of the wordmark.
+  // V10 (QA 10.0): "should be bigger and more readable."
+  ctx.fillStyle = "rgba(255,255,255,0.92)";
+  ctx.font = "700 44px Manrope, sans-serif";
+  ctx.fillText("BIOMARKER SUMMARY", 48, 80);
 
   const statusDot: Record<BloodMarker["status"], string> = {
     normal: "#7ED6A5",

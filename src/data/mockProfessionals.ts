@@ -11,6 +11,7 @@ export const mockProfessionals: Professional[] = [
     reviews: 128,
     bio: "Helps clients build sustainable eating habits rooted in real food — no extreme diets.",
     connected: true,
+    monthlyRate: 65,
   },
   {
     id: "pr2",
@@ -21,6 +22,7 @@ export const mockProfessionals: Professional[] = [
     rating: 4.8,
     reviews: 94,
     bio: "Strength & conditioning coach for recreational lifters and athletes alike.",
+    monthlyRate: 55,
   },
   {
     id: "pr3",
@@ -31,6 +33,7 @@ export const mockProfessionals: Professional[] = [
     rating: 4.9,
     reviews: 210,
     bio: "Family medicine physician focused on preventive care and longevity.",
+    monthlyRate: 80,
   },
   {
     id: "pr4",
@@ -41,6 +44,7 @@ export const mockProfessionals: Professional[] = [
     rating: 4.7,
     reviews: 61,
     bio: "Injury recovery and mobility work for athletes and everyday movers.",
+    monthlyRate: 60,
   },
   {
     id: "pr5",
@@ -51,6 +55,7 @@ export const mockProfessionals: Professional[] = [
     rating: 4.9,
     reviews: 77,
     bio: "Builds beginner-friendly programs that stick — form first, always.",
+    monthlyRate: 50,
   },
   {
     id: "pr6",
@@ -61,6 +66,7 @@ export const mockProfessionals: Professional[] = [
     rating: 4.6,
     reviews: 52,
     bio: "Works with athletes and lifters on performance nutrition.",
+    monthlyRate: 70,
   },
 ];
 

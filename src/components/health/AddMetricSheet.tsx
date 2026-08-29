@@ -13,17 +13,22 @@ const TODAY = "2026-08-20";
 // V8 (QA 8.0): "should not only log water but be able to add weight of that
 // day. It should reset if it is a new day" — weight gets its own section,
 // pre-filled only if already logged today (weightLoggedDate === TODAY).
+// V10 (QA 10.0): both water and weight now log against whichever day is
+// selected on Home, not always literal "today".
 export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { water, waterGoalMl, addWater, metricValues, weightLoggedDate, logWeightForToday } = useApp();
+  const { water, waterGoalMl, addWater, metricValues, weightLoggedDate, weightByDate, logWeightForToday, selectedDate } =
+    useApp();
   const pct = water / waterGoalMl;
-  const loggedToday = weightLoggedDate === TODAY;
-  const [weightDraft, setWeightDraft] = useState(loggedToday ? String(metricValues.weight) : "");
+  const isToday = selectedDate === TODAY;
+  const loggedForDay = weightLoggedDate === selectedDate;
+  const dayWeight = weightByDate[selectedDate] ?? (isToday ? metricValues.weight : undefined);
+  const [weightDraft, setWeightDraft] = useState(loggedForDay && dayWeight !== undefined ? String(dayWeight) : "");
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    if (open) setWeightDraft(loggedToday ? String(metricValues.weight) : "");
+    if (open) setWeightDraft(loggedForDay && dayWeight !== undefined ? String(dayWeight) : "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+  }, [open, selectedDate]);
 
   const saveWeight = () => {
     const n = Number(weightDraft);
@@ -58,7 +63,9 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
           ))}
         </div>
 
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Weight today</p>
+        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+          Weight {isToday ? "today" : "for this day"}
+        </p>
         <div className="flex items-center gap-2 mb-2">
           <div className="flex-1 flex items-center gap-2.5 bg-cream-soft rounded-2xl px-4 py-3">
             <Scale size={16} className="text-primary-dark shrink-0" />
@@ -83,9 +90,9 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
         <p className="text-[11px] text-charcoal-faint">
           {saved
             ? "Saved — updated in Health."
-            : loggedToday
-            ? "Already logged today — edit and save to update it."
-            : "Not logged yet today."}
+            : loggedForDay
+            ? `Already logged ${isToday ? "today" : "for this day"} — edit and save to update it.`
+            : `Not logged yet ${isToday ? "today" : "for this day"}.`}
         </p>
 
         <p className="text-[11px] text-charcoal-faint mt-5 text-center">

@@ -68,7 +68,13 @@ export default function RoutinesTab() {
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
   const [pendingRoutine, setPendingRoutine] = useState<Routine | null>(null);
   const [settingsExercise, setSettingsExercise] = useState<{ routineId: string; exercise: Exercise } | null>(null);
-  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
+  // V9 (QA 9.0): "Example folders strength and hypertrophy start collapsed
+  // already" — the two seeded example folders (see defaultRoutineFolders in
+  // AppContext.tsx) default to collapsed; any folder the user creates still
+  // starts expanded.
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(
+    new Set(["rf-strength", "rf-hypertrophy"])
+  );
 
   const toggleFolderCollapsed = (id: string) =>
     setCollapsedFolders((prev) => {
@@ -430,6 +436,7 @@ export default function RoutinesTab() {
           routineId={activeRoutine.id}
           routineName={activeRoutine.name}
           exercises={activeRoutine.exercises}
+          coachNote={activeRoutine.coachNote}
         />
       )}
 

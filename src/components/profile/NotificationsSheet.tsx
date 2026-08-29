@@ -7,7 +7,10 @@ const rows: { key: keyof ReturnType<typeof useApp>["notificationPrefs"]; label: 
   { key: "mealReminders", label: "Meal reminders", desc: "Nudges to log breakfast, lunch, dinner & snacks" },
   { key: "workoutReminders", label: "Workout reminders", desc: "Reminders for your scheduled routines" },
   { key: "streakAlerts", label: "Streak alerts", desc: "When a streak is about to reset" },
-  { key: "professionalMessages", label: "Professional messages", desc: "New messages from a connected professional" },
+  // V9 (QA 9.0): "Notifications should now include notifications for
+  // messages" — generalized so the label makes sense across Client,
+  // Professional and Business UI (this sheet is shared by all three).
+  { key: "professionalMessages", label: "Messages", desc: "New messages in any of your chats" },
   { key: "weeklySummary", label: "Weekly summary", desc: "A recap of your week every Monday" },
 ];
 

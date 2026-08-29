@@ -16,7 +16,15 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 }) => {
   const actions = [
     { label: "Log Food", icon: Plus, onClick: onLogFood, bg: "bg-primary", text: "text-white" },
-    { label: "Log Workout", icon: Dumbbell, onClick: onLogWorkout, bg: "bg-charcoal", text: "text-white" },
+    // V9 (QA 9.0): "replace the black Log Workout widget... with a color
+    // that fits more with the overall color palette" — reuses the same
+    // brand-accent family as Log Food, a shade darker to stay distinct.
+    // V10 (QA 10.0): "-dark" tokens flip to a LIGHTER shade in dark theme
+    // (so text stays readable on dark surfaces elsewhere), which made this
+    // button nearly invisible (light-lavender bg + white text) once dark
+    // mode shipped — pin an explicit dark-mode override instead of relying
+    // on the token.
+    { label: "Log Workout", icon: Dumbbell, onClick: onLogWorkout, bg: "bg-sohati-dark dark:bg-[#7D6BB5]", text: "text-white" },
     { label: "Add Metric", icon: Activity, onClick: onAddMetric, bg: "bg-cream-card border border-charcoal/10", text: "text-charcoal" },
   ];
 
