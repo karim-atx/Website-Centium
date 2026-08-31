@@ -1,0 +1,71 @@
+<!doctype html>
+<!--
+  atraxia.org/atraxia-404.html — Atraxia's custom "page not found" page.
+
+  Named distinctly from dist/404.html on purpose: that file is already
+  claimed by the Centium SPA (see .github/workflows/deploy.yml — it's a
+  copy of the built Centium app's index.html, which is what makes deep
+  links like atraxia.org/centium/pricing work via GitHub Pages' 404
+  fallback + React Router's client-side routing). Overwriting it here
+  would break every deep link into the Centium app, so this hub-branded
+  404 lives at its own path instead and is wired up as the true catch-all
+  for the hub's own paths in deploy/cloudflare-worker.js.
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Page not found — Atraxia</title>
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#023b4a" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0a1420" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <style>
+      :root {
+        --cream: 255 255 255; --cream-soft: 234 244 246;
+        --charcoal: 6 20 25; --charcoal-soft: 74 94 100; --charcoal-faint: 132 150 155;
+        --navy: 2 59 74; --teal-dark: 33 100 116; --border: 6 20 25;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --cream: 10 20 32; --cream-soft: 15 28 42;
+          --charcoal: 240 246 248; --charcoal-soft: 172 190 196; --charcoal-faint: 108 130 138;
+          --navy: 235 245 247; --teal-dark: 130 210 222; --border: 240 246 248;
+        }
+        .logo-img { filter: brightness(0) invert(1); }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; min-height: 100%; background: rgb(var(--cream)); color: rgb(var(--charcoal)); font-family: Manrope, ui-sans-serif, system-ui, -apple-system, sans-serif; }
+      img { max-width: 100%; display: block; }
+      body { display: flex; flex-direction: column; min-height: 100vh; }
+      main { flex: 1; display: flex; align-items: center; justify-content: center; text-align: center; padding: 3rem 1.5rem; }
+      .mark { width: 64px; height: auto; margin: 0 auto 2rem; }
+      .code { font-size: 0.8rem; font-weight: 800; letter-spacing: 0.2em; color: rgb(var(--teal-dark)); margin-bottom: 0.75rem; }
+      h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.02em; margin: 0 0 0.75rem; }
+      p { max-width: 40ch; margin: 0 auto 2.25rem; line-height: 1.6; color: rgb(var(--charcoal-soft)); }
+      .actions { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
+      .btn { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: 700; font-size: 0.9rem; text-decoration: none; }
+      .btn--primary { padding: 0.95rem 1.9rem; border-radius: 999px; background: rgb(var(--navy)); color: rgb(var(--cream)); }
+      .btn--ghost { color: rgb(var(--navy)); padding-bottom: 2px; border-bottom: 1px solid rgb(var(--navy) / 0.25); }
+      footer { padding: 1.75rem 0; text-align: center; }
+      footer small { color: rgb(var(--charcoal-faint)); font-size: 0.8rem; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div>
+        <img class="mark logo-img" src="atraxia/atraxia-mark.png" alt="" />
+        <div class="code">404</div>
+        <h1>This page doesn't exist.</h1>
+        <p>The link might be broken, or the page may have moved.</p>
+        <div class="actions">
+          <a class="btn btn--primary" href="./">Back to atraxia.org</a>
+          <a class="btn btn--ghost" href="./#portfolio">See our portfolio</a>
+        </div>
+      </div>
+    </main>
+    <footer>
+      <small>&copy; 2026 Atraxia. All rights reserved.</small>
+    </footer>
+  </body>
+</html>

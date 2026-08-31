@@ -48,7 +48,15 @@ const PUBLIC_PREFIX = "/centium";
 // proxy treatment as "/" itself. Update this if a new top-level file or
 // folder is added under public/ (other than hub.html, which the build
 // renames to index.html and is covered by the "/" case).
-const HUB_ASSET_PATHS = new Set(["/favicon.svg", "/icons.svg", "/robots.txt", "/sitemap.xml"]);
+const HUB_ASSET_PATHS = new Set([
+  "/favicon.svg",
+  "/icons.svg",
+  "/robots.txt",
+  "/sitemap.xml",
+  "/privacy.html",
+  "/accessibility.html",
+  "/atraxia-404.html",
+]);
 const HUB_ASSET_PREFIXES = ["/atraxia/"];
 
 function isHubAsset(pathname) {
@@ -66,6 +74,16 @@ async function proxy(originPath, search, request) {
   return new Response(response.body, response);
 }
 
+// Atraxia's own branded 404 (public/atraxia-404.html) — distinct from
+// dist/404.html, which stays dedicated to the Centium SPA's deep-link
+// fallback (see that file's own header comment). Only called after the
+// real origin has already been asked and genuinely said 404 — see below.
+async function proxyHub404() {
+  const originUrl = `https://${GH_PAGES_HOST}${GH_PAGES_PATH}/atraxia-404.html`;
+  const response = await fetch(originUrl);
+  return new Response(response.body, { status: 404, statusText: "Not Found", headers: response.headers });
+}
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
@@ -75,7 +93,16 @@ export default {
     }
 
     if (!url.pathname.startsWith(PUBLIC_PREFIX)) {
-      return fetch(request); // not our path — pass through untouched
+      // Not a known hub asset or /centium path. Ask the real origin first
+      // (atraxia.org's hosting may serve other real content we don't know
+      // about here) and only swap in Atraxia's branded 404 if that origin
+      // genuinely has nothing — never shadows anything that actually
+      // exists.
+      const originResponse = await fetch(request);
+      if (originResponse.status === 404) {
+        return proxyHub404();
+      }
+      return originResponse;
     }
 
     // GitHub Pages 301s a directory path with no trailing slash to the

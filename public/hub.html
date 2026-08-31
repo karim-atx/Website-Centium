@@ -32,6 +32,18 @@
     <meta name="description" content="Atraxia is the parent company behind a growing portfolio of health and wellness apps and businesses, starting with Centium." />
     <meta name="theme-color" content="#023b4a" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0a1420" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="canonical" href="https://atraxia.org/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Atraxia" />
+    <meta property="og:title" content="Atraxia — Health & wellness ventures" />
+    <meta property="og:description" content="Atraxia is the parent company behind a growing portfolio of health and wellness apps and businesses, starting with Centium." />
+    <meta property="og:url" content="https://atraxia.org/" />
+    <meta property="og:image" content="https://atraxia.org/atraxia/atraxia-logo.png" />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content="Atraxia — Health & wellness ventures" />
+    <meta name="twitter:description" content="Atraxia is the parent company behind a growing portfolio of health and wellness apps and businesses, starting with Centium." />
+    <meta name="twitter:image" content="https://atraxia.org/atraxia/atraxia-logo.png" />
     <style>
       :root {
         --cream: 255 255 255;
@@ -122,11 +134,36 @@
         backdrop-filter: blur(14px);
         border-bottom: 1px solid rgb(var(--border) / 0.055);
       }
-      .nav .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1.6rem; }
+      .nav .wrap { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+      .nav .wrap.nav-top { padding-block: 1.35rem 0.9rem; }
+      .nav .wrap.nav-tabs-row { padding-block: 0 1rem; }
       .nav .lockup { display: flex; align-items: center; gap: 0.7rem; }
       .nav .mark { width: 31px; height: auto; flex: none; }
       .nav .wordmark { height: 12px; width: auto; }
       .nav .meta { font-size: 0.7rem; letter-spacing: 0.2em; font-weight: 700; color: #9AACB1; }
+
+      /* ---------- tabs (upper nav + lower footer) ---------- */
+      .tabs {
+        display: flex;
+        align-items: center;
+        gap: 0.2rem;
+        overflow-x: auto;
+        scrollbar-width: none;
+      }
+      .tabs::-webkit-scrollbar { display: none; }
+      .tabs a {
+        flex: none;
+        padding: 0.5rem 1rem;
+        border-radius: 999px;
+        font-size: 0.79rem;
+        font-weight: 700;
+        color: rgb(var(--charcoal-soft));
+        text-decoration: none;
+        white-space: nowrap;
+        transition: background 0.18s ease, color 0.18s ease;
+      }
+      .tabs a:hover, .tabs a:focus-visible { color: rgb(var(--navy)); background: rgb(var(--cream-soft)); }
+      .tabs a:focus-visible { outline: 2px solid rgb(var(--teal)); outline-offset: 2px; }
 
       /* ---------- hero ---------- */
       .hero {
@@ -315,22 +352,129 @@
       .founder-card .role { font-size: 0.85rem; font-weight: 700; color: rgb(var(--teal-dark)); margin-bottom: 0.75rem; }
       .founder-card p.bio { margin: 0; font-size: 0.92rem; line-height: 1.6; color: rgb(var(--charcoal-soft)); }
 
+      /* ---------- trust & security ---------- */
+      .trust-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+        gap: 1.25rem;
+      }
+      .trust-card {
+        padding: 2rem 1.75rem;
+        border-radius: 1.75rem;
+        background: rgb(var(--cream-card));
+        border: 1px solid rgb(var(--border) / 0.07);
+        box-shadow: 0 2px 10px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.03);
+      }
+      .trust-card .icon {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgb(var(--teal-pale));
+        margin-bottom: 1rem;
+      }
+      .trust-card h3 { margin: 0 0 0.5rem; font-size: 1rem; font-weight: 800; }
+      .trust-card p { margin: 0; font-size: 0.9rem; line-height: 1.6; color: rgb(var(--charcoal-soft)); }
+      .trust-note {
+        margin-top: 2rem;
+        padding: 1.25rem 1.5rem;
+        border-radius: 1.25rem;
+        background: rgb(var(--cream-soft));
+        font-size: 0.85rem;
+        line-height: 1.65;
+        color: rgb(var(--charcoal-soft));
+      }
+
+      /* ---------- resources / insights ---------- */
+      .resources-teaser {
+        padding: 2.5rem;
+        border-radius: 1.75rem;
+        background: rgb(var(--cream-soft));
+        border: 2px dashed rgb(var(--charcoal-faint) / 0.3);
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.75rem;
+      }
+      .resources-teaser .badge {
+        font-size: 0.7rem;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        color: rgb(var(--teal-dark));
+        padding: 0.3rem 0.8rem;
+        border-radius: 999px;
+        background: rgb(var(--teal-pale));
+      }
+      .resources-teaser p { margin: 0; color: rgb(var(--charcoal-soft)); line-height: 1.6; max-width: 56ch; }
+
+      /* ---------- contact ---------- */
+      .contact-card {
+        padding: 2.5rem;
+        border-radius: 1.75rem;
+        background: rgb(var(--cream-card));
+        border: 1px solid rgb(var(--border) / 0.07);
+        box-shadow: 0 2px 10px rgb(0 0 0 / 0.05);
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1.5rem;
+      }
+      .contact-card .label { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.1em; color: rgb(var(--charcoal-faint)); margin-bottom: 0.4rem; }
+      .contact-card a.email { font-size: 1.3rem; font-weight: 800; color: rgb(var(--navy)); text-decoration: none; }
+      .contact-card a.email:hover, .contact-card a.email:focus-visible { text-decoration: underline; }
+
       /* ---------- footer ---------- */
       footer {
-        padding: 2.5rem 0 3rem;
+        padding: 0.5rem 0 3rem;
         border-top: 1px solid rgb(var(--border) / 0.07);
       }
-      footer .wrap {
+      footer .wrap.footer-tabs-row {
+        padding: 1.5rem 0 1.75rem;
+        border-bottom: 1px solid rgb(var(--border) / 0.06);
+      }
+      footer .wrap.footer-tabs-row .tabs { justify-content: flex-start; }
+      footer .wrap.footer-meta-row {
         display: flex;
         justify-content: space-between;
         align-items: center;
         flex-wrap: wrap;
         gap: 1rem;
+        padding-top: 1.75rem;
       }
       footer .brand-lockup { display: flex; align-items: center; gap: 0.5rem; }
       footer .brand-lockup .mark { width: 25px; height: auto; }
       footer .brand-lockup .wordmark { height: 11px; width: auto; }
       footer small { color: rgb(var(--charcoal-faint)); font-size: 0.8rem; }
+      footer .footer-legal { display: flex; gap: 1.25rem; }
+      footer .footer-legal a { font-size: 0.8rem; font-weight: 600; color: rgb(var(--charcoal-soft)); text-decoration: none; }
+      footer .footer-legal a:hover, footer .footer-legal a:focus-visible { color: rgb(var(--navy)); text-decoration: underline; }
+      footer .footer-social { display: flex; align-items: center; gap: 0.65rem; }
+      footer .footer-social a {
+        width: 32px;
+        height: 32px;
+        border-radius: 999px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: rgb(var(--charcoal-soft));
+        border: 1px solid rgb(var(--border) / 0.1);
+        transition: color 0.18s ease, border-color 0.18s ease;
+      }
+      footer .footer-social a:hover, footer .footer-social a:focus-visible { color: rgb(var(--navy)); border-color: rgb(var(--navy) / 0.3); }
+      footer .footer-bottom-row {
+        width: 100%;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1.5rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid rgb(var(--border) / 0.06);
+      }
 
       /* ---------- responsive: tablet ---------- */
       @media (max-width: 1024px) {
@@ -352,6 +496,9 @@
         .mission-prose p { font-size: 16px; }
         .mission-stats { grid-template-columns: 1fr 1fr; gap: 1.75rem; margin-top: 3rem; }
         .mission-stats strong { font-size: 2.4rem; }
+        footer .wrap.footer-meta-row { flex-direction: column; align-items: flex-start; }
+        .contact-card { flex-direction: column; align-items: flex-start; }
+        .contact-card .btn { width: 100%; justify-content: center; }
       }
       @media (max-width: 1024px) and (min-width: 761px) {
         .mission-prose { max-width: 100%; }
@@ -416,12 +563,21 @@
       </div>
 
       <nav class="nav">
-        <div class="wrap">
+        <div class="wrap nav-top">
           <div class="lockup">
             <img class="mark logo-img" src="atraxia/atraxia-mark.png" alt="Atraxia" />
             <img class="wordmark logo-img" src="atraxia/atraxia-wordmark.png" alt="ATRAXIA" />
           </div>
           <span class="meta">EST. 2026</span>
+        </div>
+        <div class="wrap nav-tabs-row">
+          <div class="tabs" role="tablist" aria-label="Primary">
+            <a href="#about">About</a>
+            <a href="#portfolio">Portfolio</a>
+            <a href="#trust">Trust &amp; Security</a>
+            <a href="#resources">Resources</a>
+            <a href="#contact">Contact</a>
+          </div>
         </div>
       </nav>
 
@@ -559,7 +715,7 @@
           </div>
         </header>
 
-        <section class="mission">
+        <section class="mission" id="about">
           <div class="wrap">
             <span class="eyebrow">HOW WE BUILD</span>
             <h2 class="statement">One company.<br />Many ventures.</h2>
@@ -659,15 +815,118 @@
             </div>
           </div>
         </section>
+
+        <section id="trust">
+          <div class="wrap">
+            <div class="section-head">
+              <span class="eyebrow">TRUST &amp; SECURITY</span>
+              <h2>How we handle data</h2>
+              <p>Atraxia's own site collects no personal data beyond standard web server logs. Each product in the portfolio publishes its own privacy policy covering what it collects and why.</p>
+            </div>
+            <div class="trust-grid">
+              <div class="trust-card">
+                <span class="icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" stroke="#368294" stroke-width="1.6" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <h3>No tracking on this page</h3>
+                <p>atraxia.org sets no cookies and runs no analytics or advertising scripts today — nothing to consent to yet. This will change here first if that ever changes.</p>
+              </div>
+              <div class="trust-card">
+                <span class="icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="4" y="10" width="16" height="10" rx="2" stroke="#368294" stroke-width="1.6"/>
+                    <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#368294" stroke-width="1.6"/>
+                  </svg>
+                </span>
+                <h3>Per-product data handling</h3>
+                <p>Centium and every future product publish their own privacy policy, scoped to what that specific product collects and stores.</p>
+              </div>
+              <div class="trust-card">
+                <span class="icon" aria-hidden="true">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 21c-4.4-1.5-7-5-7-9.5V6l7-3 7 3v5.5c0 4.5-2.6 8-7 9.5Z" stroke="#368294" stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M9 12l2 2 4-4" stroke="#368294" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <h3>Report a concern</h3>
+                <p>Found a security issue on any Atraxia property? Email us at <a href="mailto:security@atraxia.org" style="color: rgb(var(--teal-dark));">security@atraxia.org</a> and we'll follow up directly.</p>
+              </div>
+            </div>
+            <p class="trust-note">
+              This section is a plain-language summary, not a legal document. See our
+              <a href="privacy.html" style="color: rgb(var(--teal-dark)); font-weight: 700;">Privacy Policy</a>
+              for the complete, current policy for this site.
+            </p>
+          </div>
+        </section>
+
+        <section id="resources">
+          <div class="wrap">
+            <div class="section-head">
+              <span class="eyebrow">RESOURCES</span>
+              <h2>Insights, coming soon</h2>
+              <p>Notes on how we build, what we're learning, and what's next across the Atraxia portfolio.</p>
+            </div>
+            <div class="resources-teaser">
+              <span class="badge">COMING SOON</span>
+              <p>We're building out a Resources &amp; Insights hub — product notes, health &amp; wellness research, and updates from across the portfolio. Nothing published yet, but it's on the way.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="contact">
+          <div class="wrap">
+            <div class="section-head">
+              <span class="eyebrow">GET IN TOUCH</span>
+              <h2>Contact Atraxia</h2>
+              <p>Questions about the company, partnerships, press, or anything else that isn't Centium product support.</p>
+            </div>
+            <div class="contact-card">
+              <div>
+                <div class="label">GENERAL INQUIRIES</div>
+                <a class="email" href="mailto:hello@atraxia.org">hello@atraxia.org</a>
+              </div>
+              <a class="btn btn--primary" href="mailto:hello@atraxia.org">Email us</a>
+            </div>
+          </div>
+        </section>
       </main>
 
       <footer>
-        <div class="wrap">
+        <div class="wrap footer-tabs-row">
+          <div class="tabs" role="navigation" aria-label="Footer">
+            <a href="#about">About</a>
+            <a href="#portfolio">Portfolio</a>
+            <a href="#trust">Trust &amp; Security</a>
+            <a href="#resources">Resources</a>
+            <a href="#contact">Contact</a>
+          </div>
+        </div>
+        <div class="wrap footer-meta-row">
           <div class="brand-lockup">
             <img class="mark logo-img" src="atraxia/atraxia-mark.png" alt="Atraxia" />
             <img class="wordmark logo-img" src="atraxia/atraxia-wordmark.png" alt="ATRAXIA" />
           </div>
-          <small>&copy; 2026 Atraxia. All rights reserved.</small>
+          <nav class="footer-legal" aria-label="Legal">
+            <a href="privacy.html">Privacy Policy</a>
+            <a href="accessibility.html">Accessibility Statement</a>
+          </nav>
+          <div class="footer-social" aria-label="Social">
+            <a href="#" aria-label="Atraxia on LinkedIn" rel="noopener">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M4.98 3.5a2.5 2.5 0 1 1 0 5 2.5 2.5 0 0 1 0-5ZM3 9h4v12H3V9Zm7 0h3.8v1.7h.05c.53-1 1.83-2.05 3.77-2.05C21.4 8.65 22 11 22 14.2V21h-4v-6.1c0-1.45-.03-3.3-2-3.3-2 0-2.3 1.57-2.3 3.2V21h-4V9Z"/></svg>
+            </a>
+            <a href="#" aria-label="Atraxia on X" rel="noopener">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.9 2H22l-7.6 8.7L23.3 22h-7l-5.5-7.2L4.5 22H1.4l8.2-9.3L1 2h7.2l5 6.6L18.9 2Zm-1.2 18h1.7L6.4 4H4.6l13.1 16Z"/></svg>
+            </a>
+            <a href="#" aria-label="Atraxia on Instagram" rel="noopener">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1"/></svg>
+            </a>
+          </div>
+          <div class="footer-bottom-row">
+            <small>&copy; 2026 Atraxia. All rights reserved.</small>
+          </div>
         </div>
       </footer>
     </div>
