@@ -15,11 +15,11 @@
 // Both exist so atraxia.org's DNS/hosting doesn't need to point directly
 // at GitHub Pages (which can't serve just a subpath of a domain that
 // already serves something else at its root). Anything else (any other
-// path) passes through untouched, in case atraxia.org's hosting already
-// serves other real content there — which is exactly why the hub's own
-// assets are proxied by an explicit allowlist below rather than "anything
-// not under /centium": a blanket rule would risk shadowing that other
-// content too.
+// path) gets Atraxia's own branded 404 (public/atraxia-404.html) — see the
+// note above the catch-all branch below for why this doesn't risk
+// shadowing other real content on the domain, and why the hub's own
+// assets are still proxied by an explicit allowlist rather than "anything
+// not under /centium".
 //
 // This file is NOT deployed automatically — it's reference material.
 // This repo has no Cloudflare credentials configured, so someone with
@@ -76,8 +76,7 @@ async function proxy(originPath, search, request) {
 
 // Atraxia's own branded 404 (public/atraxia-404.html) — distinct from
 // dist/404.html, which stays dedicated to the Centium SPA's deep-link
-// fallback (see that file's own header comment). Only called after the
-// real origin has already been asked and genuinely said 404 — see below.
+// fallback (see that file's own header comment).
 async function proxyHub404() {
   const originUrl = `https://${GH_PAGES_HOST}${GH_PAGES_PATH}/atraxia-404.html`;
   const response = await fetch(originUrl);
@@ -93,16 +92,18 @@ export default {
     }
 
     if (!url.pathname.startsWith(PUBLIC_PREFIX)) {
-      // Not a known hub asset or /centium path. Ask the real origin first
-      // (atraxia.org's hosting may serve other real content we don't know
-      // about here) and only swap in Atraxia's branded 404 if that origin
-      // genuinely has nothing — never shadows anything that actually
-      // exists.
-      const originResponse = await fetch(request);
-      if (originResponse.status === 404) {
-        return proxyHub404();
-      }
-      return originResponse;
+      // Not a known hub asset or /centium path. This used to try the real
+      // origin first and only fall back to our branded 404 if that origin
+      // genuinely returned one, in case atraxia.org's hosting served other
+      // real content at some other path. In practice atraxia.org has no
+      // origin configured outside the paths this Worker already handles
+      // explicitly above, so that fetch just hung until Cloudflare gave up
+      // and showed its own raw 522 timeout page — worse than either a real
+      // 404 or no fallback at all. Serving the branded 404 directly avoids
+      // that hang; if a real origin is ever added at some other path on
+      // this domain, add it to HUB_ASSET_PATHS/PREFIXES (or PUBLIC_PREFIX)
+      // above so it's excluded from this catch-all.
+      return proxyHub404();
     }
 
     // GitHub Pages 301s a directory path with no trailing slash to the
