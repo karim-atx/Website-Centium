@@ -20,7 +20,7 @@ export const About: React.FC = () => {
 
   return (
     <>
-      <Section className="pt-14 sm:pt-20 pb-10 bg-mkt-wash">
+      <Section className="pt-32 sm:pt-[152px] pb-10 bg-mkt-wash">
         <Reveal className="max-w-2xl">
           <Eyebrow>ABOUT</Eyebrow>
           <h1 className="font-display font-extrabold text-4xl sm:text-5xl text-mkt-ink tracking-tight mt-5">Why Centium exists</h1>
@@ -63,7 +63,7 @@ export const About: React.FC = () => {
         </Reveal>
       </div>
 
-      <Section className="bg-mkt-dark text-center">
+      <Section className="bg-mkt-dark text-center" navDark>
         <Reveal className="flex flex-col items-center gap-3.5">
           <span className="font-semibold text-[11px] tracking-[.22em] text-mkt-dark-accent">BRAND FEEL</span>
           <div className="flex flex-wrap justify-center gap-4 sm:gap-5 items-center mt-1">

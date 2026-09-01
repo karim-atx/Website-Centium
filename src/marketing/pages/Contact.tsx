@@ -13,7 +13,7 @@ export const Contact: React.FC = () => {
   const [topic, setTopic] = useState(0);
 
   return (
-    <Section className="pt-14 sm:pt-20 pb-24">
+    <Section className="pt-32 sm:pt-[152px] pb-24">
       <Reveal className="text-center mb-14 max-w-2xl mx-auto">
         <Eyebrow className="mx-auto">CONTACT</Eyebrow>
         <h1 className="font-display font-extrabold text-4xl sm:text-5xl text-mkt-ink tracking-tight mt-5">Get in touch</h1>

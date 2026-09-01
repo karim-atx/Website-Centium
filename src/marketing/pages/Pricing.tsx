@@ -90,7 +90,7 @@ export const Pricing: React.FC = () => {
 
   return (
     <>
-      <Section className="pt-14 sm:pt-20 pb-8 bg-mkt-wash text-center">
+      <Section className="pt-32 sm:pt-[152px] pb-8 bg-mkt-wash text-center">
         <Reveal>
           <Eyebrow className="mx-auto">PRICING</Eyebrow>
           <h1 className="font-display font-extrabold text-4xl sm:text-5xl text-mkt-ink tracking-tight mt-5">
@@ -193,7 +193,7 @@ export const Pricing: React.FC = () => {
         </Reveal>
       </Section>
 
-      <Section className="bg-mkt-dark text-center">
+      <Section className="bg-mkt-dark text-center" navDark>
         <Reveal className="flex flex-col items-center">
           <h2 className="font-display font-extrabold text-2xl sm:text-3xl text-mkt-dark-ink tracking-tight max-w-md">
             Know the moment pricing goes live.

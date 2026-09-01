@@ -2,8 +2,8 @@ import React, { useState } from "react";
 import { NavLink, Link } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import clsx from "clsx";
-import { motion } from "framer-motion";
-import { CentiumLogo } from "../../components/ui/CentiumLogo";
+import { CentiumMark, CentiumWordmark } from "./CentiumLogo";
+import { useNavTheme } from "../hooks/useNavTheme";
 
 const links = [
   { to: "/product", label: "Product" },
@@ -13,39 +13,51 @@ const links = [
   { to: "/contact", label: "Contact" },
 ];
 
+/** Sticky, fully transparent nav pulled over the page content (`-mt-[72px]`
+ *  on the element after it) so section color and the hero canvas run behind
+ *  it. Logo, link text and pill fills all flip between a dark-on-light and
+ *  light-on-dark palette depending on whether a `data-nav-dark` section
+ *  (see useNavTheme) currently sits behind the bar — every section that
+ *  needs the dark variant carries that attribute itself. */
 export const Nav: React.FC = () => {
   const [open, setOpen] = useState(false);
+  const dark = useNavTheme();
 
   return (
-    <header className="sticky top-0 z-40 bg-white/85 backdrop-blur-lg border-b border-mkt-line">
-      <div className="max-w-[1180px] mx-auto px-5 sm:px-10 h-[72px] flex items-center justify-between gap-6">
-        <Link to="/" className="flex items-center gap-2.5 shrink-0" onClick={() => setOpen(false)}>
-          <CentiumLogo size={26} />
-          <span className="font-display font-extrabold tracking-[.16em] text-mkt-ink text-[15px]">CENTIUM</span>
+    <header className="sticky top-0 z-40 bg-transparent mb-[-72px]">
+      <div
+        className={clsx(
+          "max-w-[1180px] mx-auto px-5 sm:px-10 h-[72px] flex items-center justify-between gap-6 transition-colors duration-300",
+          dark ? "text-white" : "text-mkt-logo"
+        )}
+      >
+        <Link to="/" className="group flex items-center gap-[11px] shrink-0" onClick={() => setOpen(false)}>
+          <CentiumMark size={28} leafFill={dark ? "#FFFFFF" : "#8AC4BA"} />
+          <CentiumWordmark height={11} />
         </Link>
 
         <nav
-          className="hidden lg:flex items-center gap-0.5 bg-mkt-capsule rounded-full p-1"
+          className="hidden lg:flex items-center gap-0.5 rounded-full p-1 backdrop-blur-[22px] backdrop-saturate-[1.8]"
           aria-label="Primary"
         >
           {links.map((l) => (
             <NavLink
               key={l.to}
               to={l.to}
-              className="relative px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap"
+              className={({ isActive }) =>
+                clsx(
+                  "px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-colors duration-200",
+                  isActive
+                    ? dark
+                      ? "bg-white/16 text-white"
+                      : "bg-mkt-accent/[.12] text-[#5C48A8]"
+                    : dark
+                      ? "text-white/[.82] hover:text-white"
+                      : "text-mkt-soft hover:text-mkt-ink"
+                )
+              }
             >
-              {({ isActive }) => (
-                <>
-                  {isActive && (
-                    <motion.span
-                      layoutId="nav-active-pill"
-                      className="absolute inset-0 bg-white rounded-full shadow-[0_1px_2px_rgba(34,30,26,.06)]"
-                      transition={{ type: "spring", stiffness: 500, damping: 40 }}
-                    />
-                  )}
-                  <span className={clsx("relative", isActive ? "text-mkt-ink" : "text-mkt-soft")}>{l.label}</span>
-                </>
-              )}
+              {l.label}
             </NavLink>
           ))}
         </nav>
@@ -53,13 +65,16 @@ export const Nav: React.FC = () => {
         <div className="hidden lg:flex items-center gap-3.5 shrink-0">
           <Link
             to="/app"
-            className="tap text-[13.5px] font-semibold text-mkt-soft hover:text-mkt-ink whitespace-nowrap"
+            className={clsx(
+              "tap text-[13.5px] font-semibold whitespace-nowrap px-[17px] py-[9px] rounded-full backdrop-blur-[22px] backdrop-saturate-[1.8] border transition-[transform,background-color,color,border-color] duration-150 active:scale-[.96]",
+              dark ? "text-white/[.88] border-white/[.14]" : "text-mkt-soft border-mkt-ink/[.08]"
+            )}
           >
             Log in
           </Link>
           <Link
             to="/app"
-            className="tap px-[19px] py-2.5 rounded-full bg-mkt-accent text-white text-[13.5px] font-semibold whitespace-nowrap hover:bg-mkt-accent-hover transition-colors"
+            className="tap px-[19px] py-2.5 rounded-full bg-mkt-accent text-white text-[13.5px] font-semibold whitespace-nowrap hover:bg-mkt-accent-hover transition-[background-color,transform] duration-150 active:scale-[.96]"
           >
             Get Started
           </Link>
@@ -69,14 +84,22 @@ export const Nav: React.FC = () => {
           onClick={() => setOpen((o) => !o)}
           aria-label={open ? "Close menu" : "Open menu"}
           aria-expanded={open}
-          className="lg:hidden tap w-10 h-10 rounded-full flex items-center justify-center text-mkt-ink"
+          className={clsx(
+            "lg:hidden tap w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-[22px] backdrop-saturate-[1.8] border transition-[transform,color,background-color,border-color] duration-150 active:scale-[.96]",
+            dark ? "text-white border-white/[.14]" : "text-mkt-ink border-mkt-ink/[.08]"
+          )}
         >
           {open ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
       {open && (
-        <div className="lg:hidden border-t border-mkt-line bg-white px-5 py-4 animate-fade-slide-up">
+        <div
+          className={clsx(
+            "lg:hidden mx-3 mb-3 p-4 rounded-[20px] border backdrop-blur-[22px] backdrop-saturate-[1.8] shadow-[0_18px_50px_rgba(34,30,26,.14)] animate-fade-slide-up",
+            dark ? "bg-[#131024]/[.72] border-white/[.14]" : "bg-[#FAF9FC]/[.62] border-mkt-ink/[.08]"
+          )}
+        >
           <nav className="flex flex-col gap-1" aria-label="Primary">
             {links.map((l) => (
               <NavLink
@@ -86,7 +109,13 @@ export const Nav: React.FC = () => {
                 className={({ isActive }) =>
                   clsx(
                     "px-3 py-2.5 rounded-xl text-sm font-semibold",
-                    isActive ? "text-mkt-accent bg-mkt-tint" : "text-mkt-soft"
+                    isActive
+                      ? dark
+                        ? "text-white bg-white/[.14]"
+                        : "text-mkt-accent bg-mkt-tint"
+                      : dark
+                        ? "text-white/[.85]"
+                        : "text-mkt-soft"
                   )
                 }
               >

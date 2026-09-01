@@ -7,9 +7,10 @@ import { TabShowcase, type ShowcaseTab } from "../components/TabShowcase";
 import { PlanPicker, type Plan } from "../components/PlanPicker";
 import { PhoneShell } from "../components/illustrations/PhoneShell";
 import { AppScreen } from "../components/illustrations/AppScreen";
+import { useMembraneCanvas } from "../hooks/useMembraneCanvas";
 import { useSEO } from "../useSEO";
 
-const proof = ["Nutrition tracking", "Workout logging", "Health tracking", "AI guidance", "Community & professionals"];
+const capabilities = ["Nutrition tracking", "Workout logging", "Health tracking", "AI guidance", "Community & professionals"];
 
 const legacyApps = [
   { name: "A nutrition app", note: "subscription" },
@@ -80,8 +81,8 @@ const homePlans: Plan[] = [
     badge: "FOR PROFESSIONALS",
     name: "Professionals",
     description: "Trainers, dietitians and physiotherapists managing clients.",
-    priceLabel: "Per seat",
-    billingNote: "Monthly or yearly",
+    monthly: 30,
+    unit: "per seat / month",
     features: ["Client roster & booking", "Professional dashboard", "Client sharing controls"],
     ctaLabel: "Get Started",
     ctaHref: "/app",
@@ -91,8 +92,8 @@ const homePlans: Plan[] = [
     badge: "FOR INDIVIDUALS",
     name: "Clients",
     description: "Everything you need to track and understand your own health.",
-    priceLabel: "One subscription",
-    billingNote: "Monthly or yearly",
+    monthly: 15,
+    unit: "per month",
     features: ["Nutrition & workout logging", "Health tracking & trends", "AI-powered guidance", "Community & marketplace"],
     ctaLabel: "Get Started",
     ctaHref: "/app",
@@ -102,8 +103,8 @@ const homePlans: Plan[] = [
     badge: "FOR BUSINESSES",
     name: "Business",
     description: "Gyms, studios, stores and services listing on Centium.",
-    priceLabel: "Plan + revenue share",
-    billingNote: "Monthly or yearly",
+    monthly: 100,
+    unit: "per month + rev share",
     features: ["Marketplace listing", "Employees & classes", "Analytics"],
     ctaLabel: "Talk to us",
     ctaHref: "/contact",
@@ -115,16 +116,25 @@ export const Home: React.FC = () => {
     "Your health, all in one place",
     "Centium brings nutrition tracking, workout logging, health tracking, AI-powered guidance and community into one place."
   );
+  const canvasRef = useMembraneCanvas();
 
   return (
     <>
       {/* Hero */}
-      <section
-        id="top"
-        className="relative overflow-hidden border-b border-mkt-line"
-        style={{ background: "linear-gradient(#F6F3FC 0%, #FBFAFE 46%, #FFFFFF 100%)" }}
-      >
-        <div className="max-w-[1180px] mx-auto px-5 sm:px-10 pt-16 sm:pt-[104px] flex flex-col items-center text-center">
+      <section id="top" className="relative overflow-hidden border-b border-mkt-line" style={{ background: "linear-gradient(#F6F3FC 0%, #FBFAFE 46%, #FFFFFF 100%)" }}>
+        <div className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-[.92]" aria-hidden="true">
+          <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
+          <div
+            className="absolute inset-0"
+            style={{ background: "radial-gradient(ellipse 30% 26% at 50% 38%,rgba(252,251,254,.5) 0%,rgba(252,251,254,.24) 58%,rgba(252,251,254,0) 84%)" }}
+          />
+          <div
+            className="absolute inset-0"
+            style={{ background: "linear-gradient(rgba(248,246,253,.35) 0%,rgba(251,250,254,0) 18%,rgba(255,255,255,.32) 84%,#FFFFFF 100%)" }}
+          />
+        </div>
+
+        <div className="relative z-10 max-w-[1180px] mx-auto px-5 sm:px-10 pt-[132px] sm:pt-[172px] flex flex-col items-center text-center">
           <Reveal>
             <Eyebrow>NUTRITION · TRAINING · HEALTH · AI · COMMUNITY</Eyebrow>
             <h1 className="font-display font-extrabold text-[44px] sm:text-6xl lg:text-[76px] leading-[1.04] lg:leading-[1.02] tracking-[-.03em] lg:tracking-[-.035em] text-mkt-ink mt-5 max-w-[780px]">
@@ -173,15 +183,20 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Proof strip */}
-      <section className="border-b border-mkt-line bg-white">
+      {/* Capability bar */}
+      <section
+        className="border-b border-mkt-line"
+        style={{ background: "linear-gradient(100deg,#C9BCEC 0%,#CFC6EE 26%,#D2D3E4 50%,#B9DAD3 76%,#A7D2C9 100%)" }}
+      >
         <div className="max-w-[1180px] mx-auto px-5 sm:px-10 grid grid-cols-2 sm:grid-cols-5">
-          {proof.map((label, i) => (
+          {capabilities.map((label, i) => (
             <div
               key={label}
-              className={`py-6 text-center font-semibold text-[13px] text-mkt-soft ${
-                i !== proof.length - 1 ? "sm:border-r border-mkt-line" : ""
-              } ${i < 4 ? "border-b sm:border-b-0 border-mkt-line" : ""} ${i === proof.length - 1 ? "col-span-2 sm:col-span-1" : ""}`}
+              className={`py-6 text-center font-semibold text-[13px] text-[#2E2740] ${
+                i !== capabilities.length - 1 ? "sm:border-r sm:border-r-[rgba(46,39,64,.12)]" : ""
+              } ${i < 4 ? "border-b sm:border-b-0 border-b-[rgba(46,39,64,.12)]" : ""} ${
+                i === capabilities.length - 1 ? "col-span-2 sm:col-span-1" : ""
+              }`}
             >
               {label}
             </div>
@@ -220,28 +235,32 @@ export const Home: React.FC = () => {
         </div>
       </Section>
 
-      {/* Platform */}
-      <Section id="platform" className="bg-mkt-wash border-t border-b border-mkt-line">
-        <Reveal>
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-            <div>
-              <Eyebrow>THE PLATFORM</Eyebrow>
-              <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] max-w-[520px]">
-                Everything health, together.
-              </h2>
-            </div>
-            <p className="text-base leading-relaxed text-mkt-soft max-w-[340px]">
-              Five pillars, one place to check in on all of them — and one history that stays connected.
-            </p>
+      {/* Platform — scroll-pinned showcase */}
+      <div id="platform-track" className="relative">
+        <section id="platform" className="sticky top-[72px] py-20 bg-mkt-wash border-t border-b border-mkt-line flex flex-col justify-center">
+          <div className="max-w-[1180px] mx-auto px-5 sm:px-10 w-full">
+            <Reveal>
+              <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+                <div>
+                  <Eyebrow>THE PLATFORM</Eyebrow>
+                  <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] max-w-[520px]">
+                    Everything health, together.
+                  </h2>
+                </div>
+                <p className="text-base leading-relaxed text-mkt-soft max-w-[340px]">
+                  Five pillars, one place to check in on all of them — and one history that stays connected.
+                </p>
+              </div>
+            </Reveal>
+            <Reveal delay={0.08} className="mt-11">
+              <TabShowcase tabs={platformTabs} scrollPin={{ sectionId: "platform", trackId: "platform-track" }} />
+            </Reveal>
           </div>
-        </Reveal>
-        <Reveal delay={0.08} className="mt-11">
-          <TabShowcase tabs={platformTabs} />
-        </Reveal>
-      </Section>
+        </section>
+      </div>
 
       {/* AI dark band */}
-      <Section className="bg-mkt-dark">
+      <Section className="bg-mkt-dark" navDark>
         <Reveal>
           <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-center">
             <div>
@@ -272,27 +291,32 @@ export const Home: React.FC = () => {
       </Section>
 
       {/* Personas */}
-      <Section className="bg-white border-b border-mkt-line">
-        <Reveal>
-          <Eyebrow tone="faint">WHO IT'S FOR</Eyebrow>
-          <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] mb-11 max-w-[560px]">
-            Built for people who show up.
-          </h2>
-        </Reveal>
-        <Reveal delay={0.08}>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-4 border-t border-mkt-line">
-            {personas.map((p, i) => (
-              <div
-                key={p.title}
-                className={`pt-8 pb-0 pr-0 lg:pr-7 ${i !== 0 ? "lg:border-l border-mkt-line lg:pl-7" : ""}`}
-              >
-                <div className="font-bold text-lg tracking-tight text-mkt-ink">{p.title}</div>
-                <p className="text-[15px] leading-relaxed text-mkt-soft mt-2.5">{p.description}</p>
-              </div>
-            ))}
-          </div>
-        </Reveal>
-      </Section>
+      <section
+        className="py-20 sm:py-28 border-b border-mkt-line"
+        style={{ background: "linear-gradient(100deg,#EEE9FA 0%,#F1EDFB 28%,#F4F4F7 52%,#E6F3F0 78%,#DCEFEA 100%)" }}
+      >
+        <div className="max-w-[1180px] mx-auto px-5 sm:px-10">
+          <Reveal>
+            <Eyebrow tone="faint">WHO IT'S FOR</Eyebrow>
+            <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] mb-11 max-w-[560px]">
+              Built for people who show up.
+            </h2>
+          </Reveal>
+          <Reveal delay={0.08}>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 border-t border-t-[rgba(46,39,64,.12)]">
+              {personas.map((p, i) => (
+                <div
+                  key={p.title}
+                  className={`pt-8 pb-0 pr-0 lg:pr-7 ${i !== 0 ? "lg:border-l lg:border-l-[rgba(46,39,64,.12)] lg:pl-7" : ""}`}
+                >
+                  <div className="font-bold text-lg tracking-tight text-mkt-ink">{p.title}</div>
+                  <p className="text-[15px] leading-relaxed text-mkt-soft mt-2.5">{p.description}</p>
+                </div>
+              ))}
+            </div>
+          </Reveal>
+        </div>
+      </section>
 
       {/* Business */}
       <Section className="bg-white">
@@ -355,18 +379,23 @@ export const Home: React.FC = () => {
       </Section>
 
       {/* Pricing preview */}
-      <Section className="bg-mkt-wash border-t border-b border-mkt-line">
-        <Reveal className="text-center max-w-[560px] mx-auto mb-11">
-          <Eyebrow className="mx-auto">PRICING</Eyebrow>
-          <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px]">
-            Plans for however you use Centium.
-          </h2>
-          <p className="text-base leading-relaxed text-mkt-soft mt-[18px]">Rates are announced at launch. The structure below is final.</p>
-        </Reveal>
-        <Reveal delay={0.08}>
-          <PlanPicker plans={homePlans} defaultSelected={1} />
-        </Reveal>
-      </Section>
+      <section
+        className="py-20 sm:py-28 border-t border-t-[#DEEBE7] border-b border-b-[#DEEBE7]"
+        style={{ background: "linear-gradient(160deg,#E4F1EE 0%,#EAF4F1 46%,#EEF3F5 78%,#EFEDF8 100%)" }}
+      >
+        <div className="max-w-[1180px] mx-auto px-5 sm:px-10">
+          <Reveal className="text-center max-w-[560px] mx-auto mb-11">
+            <Eyebrow className="mx-auto">PRICING</Eyebrow>
+            <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px]">
+              Plans for however you use Centium.
+            </h2>
+            <p className="text-base leading-relaxed text-mkt-soft mt-[18px]">Indicative pricing — final rates are announced at launch.</p>
+          </Reveal>
+          <Reveal delay={0.08}>
+            <PlanPicker plans={homePlans} defaultSelected={1} />
+          </Reveal>
+        </div>
+      </section>
 
       {/* Vision */}
       <Section className="bg-white text-center" narrow>

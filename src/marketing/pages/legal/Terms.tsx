@@ -21,7 +21,7 @@ export const Terms: React.FC = () => {
   useSEO("Terms of Service", "Centium's terms of service.");
 
   return (
-    <Section className="pt-14 sm:pt-20">
+    <Section className="pt-32 sm:pt-[152px]">
       <h1 className="font-display font-extrabold text-4xl text-mkt-ink tracking-tight mb-2.5">Terms of Service</h1>
       <p className="text-sm text-mkt-faint mb-8">Placeholder draft — not yet reviewed by legal counsel.</p>
       <LegalNotice />

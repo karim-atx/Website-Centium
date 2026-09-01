@@ -1,6 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import { CentiumLogo } from "../../components/ui/CentiumLogo";
+import { CentiumMark, CentiumWordmark } from "./CentiumLogo";
 
 const columns: { title: string; links: { to: string; label: string }[] }[] = [
   {
@@ -33,9 +33,9 @@ export const Footer: React.FC = () => (
     <div className="max-w-[1180px] mx-auto px-5 sm:px-10 pt-16 sm:pt-[72px] pb-8">
       <div className="grid grid-cols-2 sm:grid-cols-[1.6fr_1fr_1fr_1fr] gap-10 sm:gap-12">
         <div className="col-span-2 sm:col-span-1">
-          <Link to="/" className="flex items-center gap-2.5">
-            <CentiumLogo size={24} />
-            <span className="font-display font-extrabold tracking-[.16em] text-mkt-ink text-sm">CENTIUM</span>
+          <Link to="/" className="group flex items-center gap-[11px] text-mkt-logo">
+            <CentiumMark size={26} />
+            <CentiumWordmark height={10} />
           </Link>
           <p className="text-[14.5px] leading-relaxed text-mkt-faint mt-4 max-w-[250px]">
             One place to understand, manage and improve your health.

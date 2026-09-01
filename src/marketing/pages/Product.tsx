@@ -84,7 +84,7 @@ export const Product: React.FC = () => {
 
   return (
     <>
-      <Section className="pt-14 sm:pt-24 pb-10 bg-mkt-wash">
+      <Section className="pt-32 sm:pt-[168px] pb-10 bg-mkt-wash">
         <Reveal className="max-w-xl">
           <Eyebrow>PRODUCT</Eyebrow>
           <h1 className="font-display font-extrabold text-4xl sm:text-5xl lg:text-[58px] leading-[1.05] tracking-[-.03em] text-mkt-ink mt-5">
@@ -105,6 +105,7 @@ export const Product: React.FC = () => {
               <div
                 key={m.id}
                 id={m.id}
+                data-nav-dark={m.dark ? "" : undefined}
                 className={clsx(
                   "py-16 sm:py-20 scroll-mt-28",
                   i !== 0 && "border-t border-mkt-line",

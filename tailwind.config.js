@@ -52,6 +52,10 @@ export default {
         // the shared --c-* tokens above, so the app / shared ui components
         // (Button, CentiumLogo, dashboards, etc.) are unaffected.
         mkt: {
+          // Logo-only lavender (marketing site redesign) — distinct from
+          // mkt.accent: the mark/wordmark use this slightly brighter tone,
+          // buttons/active-states keep using mkt.accent as before.
+          logo: "#9C7FF8",
           ink: "#221E1A",
           soft: "#5B5349",
           faint: "#8C8378",

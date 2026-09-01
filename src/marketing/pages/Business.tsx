@@ -26,7 +26,7 @@ export const Business: React.FC = () => {
     <>
       <Section className="pt-0 pb-0 border-b border-mkt-line">
         <div className="grid lg:grid-cols-2 gap-0 -mx-5 sm:-mx-10">
-          <div className="px-5 sm:px-10 py-16 sm:py-24 flex flex-col justify-center" style={{ background: "linear-gradient(#F6F4FD, #fff)" }}>
+          <div className="px-5 sm:px-10 pt-[136px] pb-16 sm:pt-[168px] sm:pb-24 flex flex-col justify-center" style={{ background: "linear-gradient(#F6F4FD, #fff)" }}>
             <Reveal>
               <Eyebrow>FOR BUSINESS</Eyebrow>
               <h1 className="font-display font-extrabold text-4xl sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-4">
@@ -111,7 +111,7 @@ export const Business: React.FC = () => {
         </Reveal>
       </Section>
 
-      <Section id="lead" className="bg-mkt-dark">
+      <Section id="lead" className="bg-mkt-dark" navDark>
         <Reveal>
           <div className="grid lg:grid-cols-2 gap-10 items-center">
             <div>
