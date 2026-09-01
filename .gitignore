@@ -16,3 +16,7 @@ Thumbs.db
 
 # local Claude Code tooling config — hardcodes this machine's paths
 .claude/
+
+# staging area for design handoffs and other drop-in material —
+# never meant to be committed, just read and applied
+scratchpad/
