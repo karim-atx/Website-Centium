@@ -1,6 +1,18 @@
 import React, { useEffect, useRef, useState } from "react";
-import { Minus, Plus, Timer } from "lucide-react";
+import { Minus, Plus } from "lucide-react";
 import clsx from "clsx";
+
+// Design refinement §6.6: a real metronome mark, drawn at lucide's stroke
+// weight so it sits with the rest of the set — replaces the generic timer
+// glyph.
+const MetronomeIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
+    <path d="M4.8 20 10.6 4h2.8L19.2 20Z" />
+    <path d="M6.9 15.6h10.2" />
+    <path d="M12 19 16.6 7.4" />
+    <circle cx="15.7" cy="9.8" r="1.35" fill="currentColor" stroke="none" />
+  </svg>
+);
 
 /** Small metronome control meant for the corner of the workout logger.
  * Uses the Web Audio API directly — no audio files needed. */
@@ -53,7 +65,7 @@ export const Metronome: React.FC = () => {
         )}
         aria-label="Metronome"
       >
-        <Timer size={16} />
+        <MetronomeIcon size={16} />
       </button>
       {open && (
         <div className="absolute right-0 top-11 z-20 bg-cream-card rounded-2xl shadow-lift p-4 w-48 animate-fade-slide-up">

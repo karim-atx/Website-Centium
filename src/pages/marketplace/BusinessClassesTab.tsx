@@ -187,7 +187,7 @@ export default function BusinessClassesTab() {
               value={draft.price}
               onChange={(e) => setDraft((d) => ({ ...d, price: e.target.value }))}
               placeholder="$15"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -200,7 +200,7 @@ export default function BusinessClassesTab() {
                     key={p}
                     onClick={() => setDraft((d) => ({ ...d, paymentType: p }))}
                     className={`tap flex-1 rounded-xl py-2 text-xs font-semibold border transition-colors ${
-                      draft.paymentType === p ? "bg-sohati text-white border-sohati" : "bg-cream-soft border-transparent text-charcoal-soft"
+                      draft.paymentType === p ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
                     }`}
                   >
                     {p}

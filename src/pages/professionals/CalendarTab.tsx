@@ -399,7 +399,7 @@ export default function CalendarTab() {
                         }}
                         className={clsx(
                           "tap shrink-0 w-14 rounded-2xl flex flex-col items-center justify-center py-2 gap-0.5",
-                          isToday ? "bg-sohati text-white" : "bg-cream-soft text-charcoal-soft"
+                          isToday ? "bg-primary text-white" : "bg-cream-soft text-charcoal-soft"
                         )}
                       >
                         <span className="text-[10px] font-bold uppercase tracking-wide">

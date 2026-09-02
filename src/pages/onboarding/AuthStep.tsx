@@ -44,7 +44,12 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
 
   const passedChecks = passwordChecks.filter((c) => c.test(password)).length;
   const strengthLabel = passedChecks <= 1 ? "Weak" : passedChecks <= 3 ? "Medium" : "Strong";
-  const strengthColor = passedChecks <= 1 ? "#C0392B" : passedChecks <= 3 ? "#D9A441" : "#3F9165";
+  const strengthColor =
+    passedChecks <= 1
+      ? "rgb(var(--c-status-high))"
+      : passedChecks <= 3
+      ? "rgb(var(--c-status-caution))"
+      : "rgb(var(--c-status-good))";
   // Requires length + at least a number and a letter — special char is a bonus for the "Strong" label only.
   const meetsMinimum = passwordChecks[0].test(password) && passwordChecks[2].test(password) && /[A-Za-z]/.test(password);
 
@@ -74,7 +79,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   if (mode === "forgot") {
     return (
       <div className="flex-1 flex flex-col animate-fade-slide-up">
-        <h1 className="font-display text-2xl font-semibold text-charcoal mb-2">Reset your password</h1>
+        <h1 className="font-display text-2xl font-bold text-charcoal mb-2">Reset your password</h1>
         <p className="text-charcoal-soft text-sm mb-6">
           Enter the email on your account and we'll send a reset link.
         </p>
@@ -121,7 +126,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
 
   return (
     <div className="flex-1 flex flex-col animate-fade-slide-up">
-      <h1 className="font-display text-2xl font-semibold text-charcoal mb-2">
+      <h1 className="font-display text-2xl font-bold text-charcoal mb-2">
         {mode === "signIn" ? "Welcome back" : "Create your account"}
       </h1>
       <p className="text-charcoal-soft text-sm mb-6">
@@ -214,7 +219,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
       </div>
 
       <div className="mt-8">
-        {error && <p className="text-xs font-semibold text-[#C0392B] mb-3 text-center">{error}</p>}
+        {error && <p className="text-xs font-semibold text-status-high mb-3 text-center">{error}</p>}
         <Button fullWidth size="lg" onClick={mode === "signIn" ? handleSignIn : handleSignUp}>
           {mode === "signIn" ? "Sign in" : "Sign up"}
         </Button>
@@ -243,6 +248,18 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
         <p className="text-charcoal-faint text-[11px] text-center mt-4">
           Prototype auth — no real account or password is stored remotely.
         </p>
+        {/* QA 11.0: "Because the email authenticator is just a mock for
+            now, make a temporary skip button that skips this page, which
+            can be removed later on." */}
+        <button
+          onClick={() => {
+            if (!draft.email) setEmail("you@example.com");
+            onNext();
+          }}
+          className="tap w-full text-center text-xs font-semibold text-charcoal-faint underline mt-3"
+        >
+          Skip (temporary — mock auth)
+        </button>
       </div>
     </div>
   );

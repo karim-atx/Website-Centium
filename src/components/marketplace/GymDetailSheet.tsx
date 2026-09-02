@@ -152,7 +152,12 @@ export const GymDetailSheet: React.FC<{ open: boolean; onClose: () => void; gym:
                                 cancelGymPlan(gym.id, p.plan);
                                 setConfirmCancel(null);
                               }}
-                              className="tap text-[11px] font-semibold text-white bg-teal-dark rounded-full px-2.5 py-1"
+                              // Literal fill, not `bg-teal-dark` — that
+                              // token holds a near-white "readable text on
+                              // dark ground" value in dark mode, which would
+                              // make this white-text button illegible there.
+                              className="tap text-[11px] font-semibold text-white rounded-full px-2.5 py-1"
+                              style={{ background: "#6F9993" }}
                             >
                               Yes, cancel
                             </button>
@@ -243,7 +248,7 @@ export const GymDetailSheet: React.FC<{ open: boolean; onClose: () => void; gym:
                     key={m.id}
                     onClick={() => setPaymentMethod(m.id)}
                     className={`tap flex flex-col items-center justify-center gap-1.5 rounded-2xl py-4 border ${
-                      paymentMethod === m.id ? "bg-sohati text-white border-sohati" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
+                      paymentMethod === m.id ? "bg-primary text-white border-primary" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
                     }`}
                   >
                     <m.icon size={18} />

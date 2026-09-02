@@ -17,6 +17,7 @@ import { AccountTypeStep } from "./AccountTypeStep";
 import { AboutYouStep } from "./AboutYouStep";
 import { GoalStep } from "./GoalStep";
 import { ActivityStep } from "./ActivityStep";
+import { RecoveryStep } from "./RecoveryStep";
 import { TrackingStep } from "./TrackingStep";
 import { ReadyStep } from "./ReadyStep";
 
@@ -36,6 +37,8 @@ export interface OnboardingDraft {
   goals: Goal[];
   activityLevel: ActivityLevel | null;
   tracking: TrackPreference[];
+  // QA 12.0: opted into a recovery-sensitive experience during onboarding.
+  recoverySensitive: boolean;
   // V5 (QA 5.0): professional's certification upload (camera or file), data URL.
   certificationFile: string | null;
 }
@@ -56,10 +59,20 @@ const initialDraft: OnboardingDraft = {
   goals: [],
   activityLevel: null,
   tracking: [],
+  recoverySensitive: false,
   certificationFile: null,
 };
 
-type StepKey = "welcome" | "auth" | "accountType" | "aboutYou" | "goal" | "activity" | "tracking" | "ready";
+type StepKey =
+  | "welcome"
+  | "auth"
+  | "accountType"
+  | "aboutYou"
+  | "goal"
+  | "activity"
+  | "recovery"
+  | "tracking"
+  | "ready";
 
 // V4 (QA 4.0): professionals are onboarding to add clients, not to be
 // tracked themselves — the goal/activity-level/tracking-preference steps
@@ -81,7 +94,11 @@ function stepsFor(accountType: OnboardingDraft["accountType"], skipAboutYou: boo
     "auth",
     "accountType",
     ...(skipAboutYou || isBusiness ? [] : (["aboutYou"] as StepKey[])),
-    ...(isProfessional || isBusiness ? [] : (["goal", "activity", "tracking"] as StepKey[])),
+    // QA 13.0: "It would make sense to have the recovery sensitive
+    // experience before the 'How active are you?' and 'what are you working
+    // towards' page" — recovery-sensitive is now asked first so those two
+    // steps can already read `draft.recoverySensitive` when they render.
+    ...(isProfessional || isBusiness ? [] : (["recovery", "goal", "activity", "tracking"] as StepKey[])),
     "ready",
   ];
 }
@@ -89,7 +106,8 @@ function stepsFor(accountType: OnboardingDraft["accountType"], skipAboutYou: boo
 export default function Onboarding() {
   const [step, setStep] = useState(0);
   const [draft, setDraft] = useState<OnboardingDraft>(initialDraft);
-  const { completeOnboarding, redeemClientCode, clientCodes } = useApp();
+  const { completeOnboarding, redeemClientCode, clientCodes, setRecoverySensitive, setRecoverySensitiveIntroSeen } =
+    useApp();
   const navigate = useNavigate();
 
   const matchedClientCode = clientCodes.find(
@@ -127,6 +145,13 @@ export default function Onboarding() {
     if (draft.customerSubtype === "client" && draft.professionalUserIdCode.trim()) {
       redeemClientCode(draft.professionalUserIdCode);
     }
+    // QA 12.0: "When accessing the account for the first time an initial
+    // prompt should state you are in recovery sensitive mode... it can be
+    // toggled off in the settings whenever without losing any data."
+    if (draft.recoverySensitive) {
+      setRecoverySensitive(true);
+      setRecoverySensitiveIntroSeen(false);
+    }
     // Professionals land straight in their client dashboard — mirroring a
     // coaching app's first-run flow — instead of the consumer Home page.
     navigate(isProfessional ? "/app/professionals" : "/app");
@@ -134,12 +159,15 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-cream flex flex-col">
+      {/* Design refinement (canvas turn 2 note): "Onboarding's step bar
+          tightens to 3px with the completed span in one continuous
+          lavender run." */}
       {step > 0 && (
-        <div className="px-6 pt-6 flex items-center gap-2">
+        <div className="px-6 pt-6 flex items-center gap-1">
           {Array.from({ length: steps.length - 1 }).map((_, i) => (
             <div
               key={i}
-              className="h-1.5 flex-1 rounded-full transition-colors duration-300"
+              className="h-[3px] flex-1 rounded-full transition-colors duration-300"
               style={{ background: i <= step - 1 ? "rgb(var(--c-primary))" : "rgb(var(--c-cream-soft))" }}
             />
           ))}
@@ -158,6 +186,9 @@ export default function Onboarding() {
         {stepKey === "goal" && <GoalStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />}
         {stepKey === "activity" && (
           <ActivityStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
+        )}
+        {stepKey === "recovery" && (
+          <RecoveryStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
         )}
         {stepKey === "tracking" && (
           <TrackingStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />

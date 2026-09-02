@@ -51,10 +51,16 @@ function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
   // V10 (QA 10.0): "the title should be at least as big as the value" —
   // the value below is 96px, so the title starts there too and only
   // shrinks as far as needed for long marker names to fit.
+  // QA 12.0: "When sharing a specific Biomarker, the Main title is cut
+  // off, please fix positioning" — `fillText`'s y is the text BASELINE, not
+  // its top; at the largest fit size (100px) a fixed baseline of 72 put the
+  // cap-height's ascenders above the canvas's own top edge (y=0). The
+  // baseline now scales with the actual fitted size, always leaving enough
+  // headroom above it for that size's ascenders.
   ctx.fillStyle = "rgba(255,255,255,0.92)";
   const titleSize = fitTitleFontSize(ctx, marker.name.toUpperCase(), CARD_W - 96, 100, 56);
   ctx.font = `700 ${titleSize}px Manrope, sans-serif`;
-  ctx.fillText(marker.name.toUpperCase(), 48, 72);
+  ctx.fillText(marker.name.toUpperCase(), 48, titleSize * 0.8);
 
   // value
   ctx.fillStyle = "#FFFFFF";

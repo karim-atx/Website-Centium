@@ -5,9 +5,10 @@ import { Chip } from "../../components/ui/Chip";
 import { Button } from "../../components/ui/Button";
 import { MacroSplitEditor } from "../../components/food/MacroSplitEditor";
 import { WeightTrendChart } from "../../components/health/WeightTrendChart";
+import { CreateMealSheet } from "../../components/food/CreateMealSheet";
 import { useApp } from "../../context/AppContext";
-import type { ProfessionalClient, WeightGoalType } from "../../types";
-import { ClipboardList, Check, Pencil, Sparkles, Lock } from "lucide-react";
+import type { ProfessionalClient, WeightGoalType, CustomMeal } from "../../types";
+import { ClipboardList, Check, Pencil, Sparkles, Lock, Plus, Trash2 } from "lucide-react";
 import { mealLabels, calculateTDEEFromParts } from "../../services/nutrition";
 
 const goalOptions: { value: WeightGoalType; label: string }[] = [
@@ -45,16 +46,29 @@ const weightHistoryFor = (c: ProfessionalClient) => {
 // the client" adds it to the same customMeals list their Meal Prep tab
 // reads from.
 export default function MealPlanBuilderTab() {
-  const { professionalClients, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, customMeals } =
-    useApp();
+  const {
+    professionalClients,
+    nutritionGoal,
+    setWeightGoal,
+    setMacroSplit,
+    setNutritionGoal,
+    clientCustomMeals,
+    removeClientCustomMeal,
+  } = useApp();
   const [clientId, setClientId] = useState(professionalClients[0]?.id ?? "");
   const [desiredWeightDraft, setDesiredWeightDraft] = useState(String(nutritionGoal.desiredWeightKg ?? ""));
   const [weightGoalError, setWeightGoalError] = useState<string | null>(null);
   const [editingCalorie, setEditingCalorie] = useState(false);
   const [calorieDraft, setCalorieDraft] = useState(String(nutritionGoal.targetCalories));
+  const [createMealOpen, setCreateMealOpen] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<CustomMeal | null>(null);
 
   const client = professionalClients.find((c) => c.id === clientId);
   const weightHistory = useMemo(() => (client ? weightHistoryFor(client) : []), [client]);
+  // QA 11.0: "Meal plans created by the professional should ONLY appear
+  // for the assigned client and not everyone" — scoped by clientId instead
+  // of reading the single shared `customMeals` list.
+  const clientMeals = clientCustomMeals[clientId] ?? [];
 
   // V9 (QA 9.0): "Changes done by the professional in the client UI
   // regarding weight goal, daily target macro distribution should only be
@@ -263,7 +277,7 @@ export default function MealPlanBuilderTab() {
           <Card className="mb-5">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">TDEE estimate</p>
-              <Sparkles size={14} className="text-sohati" />
+              <Sparkles size={14} className="text-primary" />
             </div>
             {clientTdee !== null ? (
               <>
@@ -293,7 +307,7 @@ export default function MealPlanBuilderTab() {
                 }}
                 inputMode="numeric"
                 disabled={!isExistingPlan || !editingCalorie}
-                className="w-32 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-lg font-bold text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20 disabled:opacity-60"
+                className="w-32 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2 text-lg font-bold text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
               />
               <span className="text-sm text-charcoal-faint">kcal / day</span>
               <button
@@ -310,7 +324,7 @@ export default function MealPlanBuilderTab() {
                 disabled={!isExistingPlan}
                 aria-label={editingCalorie ? "Confirm calorie target" : "Edit calorie target"}
                 className={`tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 transition-colors disabled:opacity-50 ${
-                  editingCalorie ? "bg-sohati border-2 border-sohati text-white" : "bg-cream-soft text-charcoal-soft"
+                  editingCalorie ? "bg-primary border-2 border-primary text-white" : "bg-cream-soft text-charcoal-soft"
                 }`}
               >
                 {editingCalorie ? <Check size={16} strokeWidth={3} /> : <Pencil size={13} />}
@@ -330,17 +344,35 @@ export default function MealPlanBuilderTab() {
             />
           </Card>
 
-          {/* V9 (QA 9.0): "Making a custom meal plan should be limited to
-              the client and not be applicable to all" — view-only here now;
-              creating/removing one only happens from the client's own Food
-              > Meal Prep tab. */}
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-            {client?.name}'s custom meal plans
-          </p>
+          {/* QA 11.0: "Meal plans created by the professional should ONLY
+              appear for the assigned client and not everyone" — each plan
+              now lives in `clientCustomMeals[clientId]`, so switching the
+              client chip above shows a different list, and creating one
+              here only ever reaches this one client. */}
+          <div className="flex items-center justify-between mb-2.5">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
+              {client?.name}'s custom meal plans
+            </p>
+            <button
+              onClick={() => {
+                setEditingMeal(null);
+                setCreateMealOpen(true);
+              }}
+              className="tap flex items-center gap-1 text-xs font-semibold text-primary"
+            >
+              <Plus size={12} /> New plan
+            </button>
+          </div>
           <div className="space-y-2">
-            {customMeals.map((m) => (
+            {clientMeals.map((m) => (
               <Card key={m.id} padded={false} className="flex items-center justify-between px-4 py-3.5">
-                <div className="flex items-center gap-2.5 min-w-0">
+                <button
+                  onClick={() => {
+                    setEditingMeal(m);
+                    setCreateMealOpen(true);
+                  }}
+                  className="tap flex items-center gap-2.5 min-w-0 flex-1 text-left"
+                >
                   <ClipboardList size={16} className="text-primary shrink-0" />
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-charcoal truncate flex items-center gap-1.5">
@@ -352,18 +384,35 @@ export default function MealPlanBuilderTab() {
                       )}
                     </p>
                     <p className="text-[11px] text-charcoal-faint">
-                      {m.items.length} item{m.items.length !== 1 ? "s" : ""} · in {client?.name}'s Meal Prep
+                      {m.items.length} item{m.items.length !== 1 ? "s" : ""} · assigned to {client?.name}
                     </p>
                   </div>
-                </div>
+                </button>
+                <button
+                  onClick={() => removeClientCustomMeal(clientId, m.id)}
+                  aria-label={`Delete ${m.title}`}
+                  className="tap text-charcoal-faint shrink-0 ml-2"
+                >
+                  <Trash2 size={15} />
+                </button>
               </Card>
             ))}
-            {customMeals.length === 0 && (
+            {clientMeals.length === 0 && (
               <Card className="text-center py-6">
                 <p className="text-sm text-charcoal-faint">No meal plans yet.</p>
               </Card>
             )}
           </div>
+
+          <CreateMealSheet
+            open={createMealOpen}
+            onClose={() => {
+              setCreateMealOpen(false);
+              setEditingMeal(null);
+            }}
+            clientId={clientId}
+            editMeal={editingMeal}
+          />
         </>
       )}
     </div>

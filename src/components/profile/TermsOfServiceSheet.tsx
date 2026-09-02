@@ -14,8 +14,12 @@ const sections: { heading: string; body: string }[] = [
   },
   {
     heading: "2. Not medical advice",
+    // QA 11.0: "please mention that Centium does not diagnose prognose and
+    // does not act like a replacement for a doctor rather just provides
+    // advice" + "Another legal line should state that Centium does not
+    // condone the use or purchase of steroids/drugs."
     body:
-      "Centium provides health, fitness and nutrition tracking tools for informational purposes only. Nothing in the app constitutes medical advice, diagnosis or treatment. Always consult a qualified healthcare professional before making changes to your diet, exercise or medication routine.",
+      "Centium provides health, fitness and nutrition tracking tools for informational purposes only. Centium does not diagnose, prognose, or treat any condition, and is not a replacement for a doctor — the app and any professional advice given through it are guidance only. Always consult a qualified healthcare professional before making changes to your diet, exercise or medication routine. Centium does not condone, endorse, or facilitate the use or purchase of steroids or other unregulated drugs, and no such content or listing is permitted on the platform.",
   },
   {
     heading: "3. Your data",

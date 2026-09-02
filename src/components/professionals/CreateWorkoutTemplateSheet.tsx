@@ -270,7 +270,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{
               type="date"
               value={assignedDay}
               onChange={(e) => setAssignedDay(e.target.value)}
-              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
 
@@ -286,7 +286,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{
               onChange={(e) => setNotes(e.target.value)}
               placeholder="e.g. Focus on form this week, keep RPE under 8."
               rows={3}
-              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20 resize-none"
+              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
           </label>
 

@@ -24,7 +24,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     // button nearly invisible (light-lavender bg + white text) once dark
     // mode shipped — pin an explicit dark-mode override instead of relying
     // on the token.
-    { label: "Log Workout", icon: Dumbbell, onClick: onLogWorkout, bg: "bg-sohati-dark dark:bg-[#7D6BB5]", text: "text-white" },
+    { label: "Log Workout", icon: Dumbbell, onClick: onLogWorkout, bg: "bg-primary-dark dark:bg-[#7D6BB5]", text: "text-white" },
     { label: "Add Metric", icon: Activity, onClick: onAddMetric, bg: "bg-cream-card border border-charcoal/10", text: "text-charcoal" },
   ];
 

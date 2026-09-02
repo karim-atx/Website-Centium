@@ -92,9 +92,32 @@ export interface UserProfile {
   professionalBio?: string;
   professionalPhone?: string;
   professionalWebsite?: string;
+  // QA 12.0: "In the profile tab have the ability for the Professional to
+  // connect their socials. For now just have instagram, facebook and X."
+  professionalInstagram?: string;
+  professionalFacebook?: string;
+  professionalX?: string;
+  // QA 11.0: "have a credential tab that has the client's email and phone
+  // number" — a customer-facing counterpart to professionalPhone above.
+  phone?: string;
+  // QA 12.0: "credentials which when pressed shows you all relevant info
+  // including social media you can link like Instagram and X" — client's
+  // own counterpart to professionalInstagram/X above.
+  instagramHandle?: string;
+  xHandle?: string;
   linkedProfessionalBio?: string;
   linkedProfessionalPhone?: string;
   linkedProfessionalWebsite?: string;
+  linkedProfessionalInstagram?: string;
+  linkedProfessionalFacebook?: string;
+  linkedProfessionalX?: string;
+  // QA 12.0: "a button called payments, whereby the professional can add
+  // what his monthly rate is to be hired, alongside other types like
+  // consultations and how much they cost. Also let the professional
+  // choose what type of payment modality the client can pay with."
+  monthlyRate?: number;
+  consultationRate?: number;
+  paymentModalities?: ("cash" | "card" | "whish")[];
 }
 
 // V3: a professional generates one of these for a prospective client; the
@@ -127,6 +150,9 @@ export interface ClientCode {
   professionalBio?: string;
   professionalPhone?: string;
   professionalWebsite?: string;
+  professionalInstagram?: string;
+  professionalFacebook?: string;
+  professionalX?: string;
   createdAt: string;
   redeemed: boolean;
   // V7 (QA 7.0): profile info the professional entered for this client when
@@ -174,6 +200,27 @@ export interface ProfessionalClient {
   // the client grants `access.healthMetrics` — mocked, stands in for a real
   // sync of the client's Health page data.
   healthSummary?: { bodyFatPct: number; sleepHours: number; stepsAvg: number };
+  // QA 12.0: "When the client toggles the recovery sensitive experience,
+  // it should show a small status badge in the professional dashboard for
+  // that specific client." This prototype has no live bridge from a
+  // client's own account to a specific ProfessionalClient row (same
+  // limitation as the hire-request inbox), so it's toggled here directly
+  // as a stand-in for what would otherwise sync automatically.
+  recoverySensitive?: boolean;
+  // "The dashboard should also show the client's preferred contact style,
+  // pronouns if provided, reminder preferences, and communication
+  // boundaries."
+  pronouns?: string;
+  contactStyle?: string;
+  reminderPreference?: string;
+  communicationBoundaries?: string;
+  // QA 13.0: "Anything added by the client in the health tab from past
+  // comorbidities, previous surgeries, medications in the Client UI health
+  // tab should also appear here [Professional Health Metrics]." Same
+  // no-live-bridge limitation as `recoverySensitive` above — mocked
+  // directly on the client row as a stand-in for a real sync of the
+  // client's own `comorbidities`/`surgeries`/`medications` state.
+  medicalHistory?: { comorbidities: string[]; surgeries: Surgery[]; medications: Medication[] };
 }
 
 // V4 (QA 4.0): a professional's own rating + written review for a professional,
@@ -314,13 +361,20 @@ export type RepMaxUpdateMode = "no_update" | "prompt" | "prompt_with_estimate";
 // "Classification" (renamed from Category) for the custom-exercise flow.
 // V6 (QA 6.0): "arms" split into bicep/tricep, "legs" split into
 // quads/hamstrings, per QA — more precise muscle-group targeting.
+// Design refinement §6.5: "the taxonomy jumps from quads/hamstrings past
+// the lower leg, and from bicep/tricep past the forearm" — calves and
+// forearms added, visible from both front and back body views.
+// QA 11.0: "Remove full body from muscle group classification, and update
+// exercise muscle group accordingly" — every exercise previously tagged
+// "full_body" now gets a real primary mover instead of a catch-all.
 export type MuscleGroup =
   | "back"
   | "bicep"
+  | "calves"
   | "cardio"
   | "chest"
   | "core"
-  | "full_body"
+  | "forearms"
   | "glutes"
   | "hamstrings"
   | "olympic"
@@ -384,6 +438,14 @@ export interface Exercise {
   // V4: estimated one-rep-max, tracked for barbell/dumbbell/weighted-bodyweight
   // exercises and editable from the History tab.
   estimatedOneRepMaxKg?: number;
+  // QA 11.0: "When editing an exercise that falls under cardio, replace
+  // things like min/max sets, min/max reps, intensity/rep max/RPE tempo
+  // etc. with something more relevant to cardio training."
+  cardioDurationMin?: number;
+  cardioDistanceKm?: number;
+  cardioInclinePct?: number;
+  cardioPaceMinPerKm?: number;
+  cardioAvgHeartRate?: number;
 }
 
 // V4 (QA 4.0): a custom exercise, saved to the searchable library on
@@ -445,7 +507,9 @@ export interface Routine {
 }
 
 // V3: per-set classification + notes + RPE, added via the "..." menu.
-export type SetType = "normal" | "warmup" | "failure" | "dropset";
+// QA 11.0: "When editing a routine, add more buttons like super set and
+// PR" — sibling flags to the existing warmup/failure/dropset set types.
+export type SetType = "normal" | "warmup" | "failure" | "dropset" | "superset" | "pr";
 
 export interface LoggedSet {
   setNumber: number;
@@ -519,6 +583,35 @@ export interface BloodMarker {
 export interface BloodPanel {
   date: string;
   markers: BloodMarker[];
+}
+
+// QA 12.0: "I would like the biomarker widget to be inside a tab that not
+// only has biomarkers but the ability to add imaging and/or other tests
+// like urine analysis... comorbidities, past surgeries, medications."
+export interface ImagingRecord {
+  id: string;
+  type: string;
+  date: string;
+  note?: string;
+}
+
+export interface Surgery {
+  id: string;
+  name: string;
+  date: string;
+}
+
+export type MedicationRoute = "oral" | "injectable" | "topical" | "inhaled" | "other";
+
+export interface Medication {
+  id: string;
+  name: string;
+  dose: string;
+  route: MedicationRoute;
+  // HH:MM entries — one per scheduled daily dose.
+  times: string[];
+  notifyEnabled: boolean;
+  notes?: string;
 }
 
 // V2: camera-captured biomarker extraction (mocked "AI" step).

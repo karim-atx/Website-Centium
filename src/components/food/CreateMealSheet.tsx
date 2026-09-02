@@ -1,14 +1,18 @@
 import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Search, Plus, X, UtensilsCrossed } from "lucide-react";
+import { Search, Plus, X, UtensilsCrossed, Minus } from "lucide-react";
 import { mockFoods } from "../../data/mockFoods";
-import type { Food, CustomFood, CustomMeal, CustomMealItem, MealType } from "../../types";
+import type { Food, CustomFood, CustomMeal, CustomMealItem, MealType, ServingUnit } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { foodCategoryIcon } from "../../utils/icons";
 import { mealOrder, mealLabels } from "../../services/nutrition";
 
 const EMPTY_FOODS: CustomFood[] = [];
+
+// QA 11.0: "At this stage when adding foods as part of creating a meal,
+// there should be the option of choosing the serving size of the food."
+const servingUnitOptions: ServingUnit[] = ["serving", "g", "ml", "cup", "tbsp", "tsp"];
 
 // V4: Meal Prep reworked — "Create Meal" groups several existing food items
 // under one title (e.g. eggs + tea + bread + cream cheese -> "Omelette
@@ -27,7 +31,16 @@ export const CreateMealSheet: React.FC<{
   // updates it in place instead of creating a new one.
   editMeal?: CustomMeal | null;
 }> = ({ open, onClose, clientId, editMeal }) => {
-  const { customFoods, clientCustomFoods, addCustomMeal, updateCustomMeal, addClientCustomFood, addCustomFood } = useApp();
+  const {
+    customFoods,
+    clientCustomFoods,
+    addCustomMeal,
+    updateCustomMeal,
+    addClientCustomFood,
+    addCustomFood,
+    addClientCustomMeal,
+    updateClientCustomMeal,
+  } = useApp();
   const [query, setQuery] = useState("");
   const [items, setItems] = useState<CustomMealItem[]>(editMeal?.items ?? []);
   const [title, setTitle] = useState(editMeal?.title ?? "");
@@ -66,6 +79,13 @@ export const CreateMealSheet: React.FC<{
     setQuery("");
   };
   const removeItem = (foodId: string) => setItems((prev) => prev.filter((i) => i.food.id !== foodId));
+  const updateItemServing = (foodId: string, patch: Partial<Pick<CustomMealItem, "quantity" | "unit">>) =>
+    setItems((prev) => prev.map((i) => (i.food.id === foodId ? { ...i, ...patch } : i)));
+  const cycleUnit = (foodId: string, current: ServingUnit | undefined) => {
+    const idx = servingUnitOptions.indexOf(current ?? "serving");
+    const next = servingUnitOptions[(idx + 1) % servingUnitOptions.length];
+    updateItemServing(foodId, { unit: next });
+  };
 
   const saveFood = () => {
     if (!foodDraft.name.trim() || !foodDraft.calories) return;
@@ -84,10 +104,19 @@ export const CreateMealSheet: React.FC<{
     setFoodDraft({ name: "", serving: "1 serving", calories: "", protein: "", carbs: "", fat: "" });
   };
 
+  // QA 11.0: "Meal plans created by the professional should ONLY appear
+  // for the assigned client and not everyone" — a `clientId` routes the
+  // plan itself (not just foods created while building it) into that
+  // client's own store instead of the shared personal one.
   const save = () => {
     if (!title.trim() || items.length === 0) return;
-    if (editMeal) updateCustomMeal(editMeal.id, title, items, mealType ?? undefined);
-    else addCustomMeal(title, items, mealType ?? undefined);
+    if (clientId) {
+      if (editMeal) updateClientCustomMeal(clientId, editMeal.id, title, items, mealType ?? undefined);
+      else addClientCustomMeal(clientId, title, items, mealType ?? undefined);
+    } else {
+      if (editMeal) updateCustomMeal(editMeal.id, title, items, mealType ?? undefined);
+      else addCustomMeal(title, items, mealType ?? undefined);
+    }
     reset();
     onClose();
   };
@@ -138,14 +167,40 @@ export const CreateMealSheet: React.FC<{
               {items.map((i) => {
                 const Icon = foodCategoryIcon[i.food.category] ?? UtensilsCrossed;
                 return (
-                  <div key={i.food.id} className="flex items-center justify-between bg-cream-soft rounded-xl px-3 py-2">
-                    <div className="flex items-center gap-2.5 min-w-0">
-                      <Icon size={15} className="text-primary-dark shrink-0" />
-                      <span className="text-sm font-medium text-charcoal truncate">{i.food.name}</span>
+                  <div key={i.food.id} className="bg-cream-soft rounded-xl px-3 py-2">
+                    <div className="flex items-center justify-between mb-1.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <Icon size={15} className="text-primary-dark shrink-0" />
+                        <span className="text-sm font-medium text-charcoal truncate">{i.food.name}</span>
+                      </div>
+                      <button onClick={() => removeItem(i.food.id)} className="tap text-charcoal-faint shrink-0">
+                        <X size={14} />
+                      </button>
                     </div>
-                    <button onClick={() => removeItem(i.food.id)} className="tap text-charcoal-faint shrink-0">
-                      <X size={14} />
-                    </button>
+                    {/* QA 11.0: serving size (quantity + unit) chosen per item. */}
+                    <div className="flex items-center gap-2 pl-[26px]">
+                      <button
+                        onClick={() => updateItemServing(i.food.id, { quantity: Math.max(0.1, +(i.quantity - 1).toFixed(1)) })}
+                        className="tap w-6 h-6 rounded-full bg-cream-card flex items-center justify-center text-charcoal-soft shrink-0"
+                        aria-label={`Decrease ${i.food.name} quantity`}
+                      >
+                        <Minus size={11} />
+                      </button>
+                      <span className="text-xs font-semibold text-charcoal w-6 text-center tabular-nums">{i.quantity}</span>
+                      <button
+                        onClick={() => updateItemServing(i.food.id, { quantity: +(i.quantity + 1).toFixed(1) })}
+                        className="tap w-6 h-6 rounded-full bg-cream-card flex items-center justify-center text-charcoal-soft shrink-0"
+                        aria-label={`Increase ${i.food.name} quantity`}
+                      >
+                        <Plus size={11} />
+                      </button>
+                      <button
+                        onClick={() => cycleUnit(i.food.id, i.unit)}
+                        className="tap text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1"
+                      >
+                        {i.unit ?? "serving"}
+                      </button>
+                    </div>
                   </div>
                 );
               })}

@@ -9,7 +9,21 @@ import { SleepStageWheel } from "../health/SleepStageWheel";
 import { healthMetrics, sleepDetail, heartRateDetail } from "../../data/mockHealthData";
 import { todaysWorkout } from "../../data/mockWorkouts";
 import { sumNutrition, targetsFromGoal } from "../../services/nutrition";
-import { Footprints, Scale, Moon, Dumbbell, ArrowUp, ArrowDown, Droplet, CheckSquare, BookOpen, Utensils, KeyRound, HeartPulse } from "lucide-react";
+import {
+  Footprints,
+  Scale,
+  Moon,
+  Dumbbell,
+  ArrowUp,
+  ArrowDown,
+  Droplet,
+  CheckSquare,
+  BookOpen,
+  Utensils,
+  KeyRound,
+  HeartPulse,
+} from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { habitIcon } from "../../utils/icons";
 import { YogaFigureIcon } from "../mind/YogaFigureIcon";
 import { mockGyms } from "../../data/mockProfessionals";
@@ -40,14 +54,18 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
   const targets = targetsFromGoal(nutritionGoal);
   const todaysWorkoutLog = workoutLog[workoutLog.length - 1];
 
-  // V7 (QA 7.0): pressing anywhere on the widget (not just the small header
-  // row) now navigates — the header row itself is just a label anymore.
-  const header = (label: string, icon: React.ReactNode) => (
-    <div className="flex items-center gap-2 mb-2">
-      {icon}
-      <span className="text-xs font-semibold text-charcoal-soft">{label}</span>
+  // Design refinement §6.1: "remove decorative icon tints — all widget
+  // icons become #A79E93 at 13px." Widget label drops to 10.5px/500.
+  const header = (label: string, Icon: LucideIcon) => (
+    <div className="flex items-center gap-1.5 mb-2">
+      <Icon size={13} className="text-charcoal-tertiary" />
+      <span className="text-[10.5px] font-medium text-charcoal-faint">{label}</span>
     </div>
   );
+
+  // Design refinement §4.3: "Data numeral (widget) 26px/800/-0.03em,
+  // tabular." One shared numeral class for every widget's headline value.
+  const numeral = "text-[26px] font-extrabold text-charcoal leading-none tracking-[-0.03em] tabular-nums";
 
   const wrap = (onClick: () => void, content: React.ReactNode) => (
     <div onClick={onClick} role="button" tabIndex={0} className="tap cursor-pointer">
@@ -62,9 +80,10 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
         return wrap(
           onClick,
           <div>
-            {header("Steps", <Footprints size={15} className="text-sky" />)}
-            <p className="text-2xl font-bold text-charcoal leading-none">
-              {metricValues.steps.toLocaleString()}
+            {header("Steps", Footprints)}
+            <p className={numeral}>{metricValues.steps.toLocaleString()}</p>
+            <p className="text-[10.5px] text-charcoal-tertiary mt-0.5">
+              of {stepsGoal.toLocaleString()} · {Math.round((metricValues.steps / stepsGoal) * 100)}%
             </p>
           </div>
         );
@@ -72,15 +91,15 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
       return wrap(
         onClick,
         <div>
-          {header("Steps", <Footprints size={15} className="text-sky" />)}
-          <p className="text-3xl font-bold text-charcoal leading-none mb-1">
+          {header("Steps", Footprints)}
+          <p className={`${numeral} mb-1`}>
             {metricValues.steps.toLocaleString()}{" "}
-            <span className="text-sm font-normal text-charcoal-faint">/ {stepsGoal.toLocaleString()}</span>
+            <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">/ {stepsGoal.toLocaleString()}</span>
           </p>
           <ProgressBar progress={metricValues.steps / stepsGoal} color="#4C8FD1" height={6} />
-          <div className="flex justify-between mt-2.5 text-xs text-charcoal-faint">
+          <div className="flex justify-between mt-2.5 text-[11px] text-charcoal-faint">
             <span>Weekly avg: {weeklyStepsAvg.toLocaleString()}</span>
-            <span className="text-primary-dark font-semibold">↑ 6%</span>
+            <span className="text-teal-deep-text font-semibold">↑ 6%</span>
           </div>
         </div>
       );
@@ -92,8 +111,10 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
         return wrap(
           onClick,
           <div>
-            {header("Weight", <Scale size={15} className="text-primary" />)}
-            <p className="text-2xl font-bold text-charcoal leading-none">{metricValues.weight} kg</p>
+            {header("Weight", Scale)}
+            <p className={numeral}>
+              {metricValues.weight} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">kg</span>
+            </p>
           </div>
         );
       }
@@ -114,16 +135,18 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
         onClick,
         <div className="flex items-start justify-between gap-3">
           <div>
-            {header("Weight", <Scale size={15} className="text-primary" />)}
-            <p className="text-3xl font-bold text-charcoal leading-none mb-1.5">{metricValues.weight} kg</p>
-            <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2 py-0.5 mb-2">
+            {header("Weight", Scale)}
+            <p className={`${numeral} mb-1.5`}>
+              {metricValues.weight} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">kg</span>
+            </p>
+            <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5 mb-2">
               <ArrowDown size={10} /> 0.6 kg this week
             </span>
-            <p className="text-xs text-charcoal-faint">Weekly trend: {weeklyTrendPct}%</p>
+            <p className="text-[11px] text-charcoal-faint">Weekly trend: {weeklyTrendPct}%</p>
           </div>
           {hasGoal && (
             <div className="text-right shrink-0">
-              <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">Goal</p>
+              <p className="text-[10px] font-semibold text-charcoal-tertiary uppercase tracking-wide mb-1">Goal</p>
               <p className="text-sm font-bold text-charcoal">{nutritionGoal.desiredWeightKg} kg</p>
               <p className="text-[11px] text-charcoal-faint">
                 {nutritionGoal.weightGoal === "gain" ? "+" : "-"}
@@ -137,25 +160,27 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
     }
 
     case "heartRate": {
-      const onClick = () => navigate("/health", { state: { openMetric: "heartRate" } });
+      const onClick = () => navigate("/app/health", { state: { openMetric: "heartRate" } });
       if (!isLarge) {
         return wrap(
           onClick,
           <div>
-            {header("Heart Rate", <HeartPulse size={15} className="text-ember-dark" />)}
-            <p className="text-2xl font-bold text-charcoal leading-none">{metricValues.heartRate} <span className="text-xs font-normal text-charcoal-faint">bpm</span></p>
+            {header("Heart Rate", HeartPulse)}
+            <p className={numeral}>
+              {metricValues.heartRate} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">bpm</span>
+            </p>
           </div>
         );
       }
       return wrap(
         onClick,
         <div>
-          {header("Heart Rate", <HeartPulse size={15} className="text-ember-dark" />)}
-          <p className="text-3xl font-bold text-charcoal leading-none mb-1.5">
-            {metricValues.heartRate} <span className="text-sm font-normal text-charcoal-faint">bpm</span>
+          {header("Heart Rate", HeartPulse)}
+          <p className={`${numeral} mb-1.5`}>
+            {metricValues.heartRate} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">bpm</span>
           </p>
-          <p className="text-xs text-charcoal-faint mb-1.5">Resting · avg {heartRateDetail.average} bpm</p>
-          <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-ember-dark bg-ember-pale rounded-full px-2 py-0.5">
+          <p className="text-[11px] text-charcoal-faint mb-1.5">Resting · avg {heartRateDetail.average} bpm</p>
+          <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5">
             Range {heartRateDetail.low}–{heartRateDetail.high} bpm today
           </span>
         </div>
@@ -175,8 +200,10 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
           <div className="flex items-center gap-3">
             <WaterFillContainer pct={pct} height={48} width={30} orientation="vertical" />
             <div>
-              {header("Water", <Droplet size={15} className="text-sky" />)}
-              <p className="text-lg font-bold text-charcoal leading-none">{(water / 1000).toFixed(1)}L</p>
+              {header("Water", Droplet)}
+              <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] tabular-nums">
+                {(water / 1000).toFixed(1)}L
+              </p>
             </div>
           </div>
         );
@@ -184,13 +211,13 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
       return wrap(
         onClick,
         <div>
-          {header("Water intake", <Droplet size={15} className="text-sky" />)}
-          <p className="text-2xl font-bold text-charcoal leading-none mb-1">
+          {header("Water intake", Droplet)}
+          <p className={`${numeral} mb-1`}>
             {(water / 1000).toFixed(2)}L{" "}
-            <span className="text-sm font-normal text-charcoal-faint">/ {(waterGoalMl / 1000).toFixed(1)}L</span>
+            <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">/ {(waterGoalMl / 1000).toFixed(1)}L</span>
           </p>
           <WaterFillContainer pct={pct} height={20} width="100%" orientation="horizontal" />
-          <p className="text-xs text-charcoal-faint mt-1.5">{Math.round(pct * 100)}% of today's goal</p>
+          <p className="text-[11px] text-charcoal-faint mt-1.5">{Math.round(pct * 100)}% of today's goal</p>
         </div>
       );
     }
@@ -201,8 +228,8 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
         return wrap(
           onClick,
           <div>
-            {header("Sleep", <Moon size={15} className="text-berry" />)}
-            <p className="text-2xl font-bold text-charcoal leading-none">
+            {header("Sleep", Moon)}
+            <p className={numeral}>
               {Math.floor(sleepMeta.current)}h {Math.round((sleepMeta.current % 1) * 60)}m
             </p>
           </div>
@@ -213,14 +240,14 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
         <div className="flex items-center gap-3">
           <SleepStageWheel stages={sleepDetail} />
           <div>
-            {header("Sleep", <Moon size={15} className="text-berry" />)}
-            <p className="text-2xl font-bold text-charcoal leading-none mb-1.5">
+            {header("Sleep", Moon)}
+            <p className={`${numeral} mb-1.5`}>
               {Math.floor(sleepMeta.current)}h {Math.round((sleepMeta.current % 1) * 60)}m
             </p>
-            <span className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2 py-0.5">
+            <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-primary-deep-text bg-primary-pale rounded-full px-2 py-0.5">
               <ArrowUp size={10} /> +0.3h vs weekly avg
             </span>
-            <p className="text-xs text-charcoal-faint mt-1.5">Sleep score {sleepDetail.score}/100</p>
+            <p className="text-[11px] text-charcoal-faint mt-1.5">Sleep score {sleepDetail.score}/100</p>
           </div>
         </div>
       );
@@ -239,9 +266,9 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
               </span>
             </MacroRing>
             <div>
-              {header("Nutrition", <Utensils size={15} className="text-primary" />)}
-              <p className="text-lg font-bold text-charcoal leading-none">
-                {Math.round(totals.calories)} <span className="text-xs font-normal text-charcoal-faint">kcal</span>
+              {header("Nutrition", Utensils)}
+              <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] tabular-nums">
+                {Math.round(totals.calories)} <span className="text-[11px] font-semibold text-charcoal-tertiary tracking-normal">kcal</span>
               </p>
             </div>
           </div>
@@ -249,35 +276,38 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
       }
       // V8 (QA 8.0): horizontal bars per macro, color-coordinated with the
       // ring's own segments, showing grams left (target minus consumed).
+      // Design refinement §6.1: one hue family (primary-dark/primary-light/
+      // teal), gram figure moves to neutral charcoal so colour lives only
+      // in the bar.
       const macroRows: { label: string; color: string; consumed: number; target: number }[] = [
         { label: "Protein", color: "#7D6BB5", consumed: totals.protein, target: targets.protein },
-        { label: "Carbs", color: "#D9A441", consumed: totals.carbs, target: targets.carbs },
-        { label: "Fat", color: "#6F9993", consumed: totals.fat, target: targets.fat },
+        { label: "Carbs", color: "#C8BFE9", consumed: totals.carbs, target: targets.carbs },
+        { label: "Fat", color: "#A2C8C2", consumed: totals.fat, target: targets.fat },
       ];
       return wrap(
         onClick,
         <div>
           <div className="flex items-center gap-4 mb-3">
-            <MacroRing progress={kcalProgress} protein={totals.protein} carbs={totals.carbs} fat={totals.fat} size={72} strokeWidth={8}>
+            <MacroRing progress={kcalProgress} protein={totals.protein} carbs={totals.carbs} fat={totals.fat} size={72} strokeWidth={6}>
               <div className="text-center">
-                <p className="text-base font-bold text-charcoal leading-none">{Math.round(totals.calories)}</p>
-                <p className="text-[9px] text-charcoal-faint">of {targets.calories}</p>
+                <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.03em] tabular-nums">
+                  {Math.round(totals.calories)}
+                </p>
+                <p className="text-[9.5px] text-charcoal-tertiary">of {targets.calories}</p>
               </div>
             </MacroRing>
-            <div className="flex-1">{header("Nutrition", <Utensils size={15} className="text-primary" />)}</div>
+            <div className="flex-1">{header("Nutrition", Utensils)}</div>
           </div>
           <div className="space-y-2">
             {macroRows.map((m) => {
               const left = Math.max(0, Math.round(m.target - m.consumed));
               return (
                 <div key={m.label}>
-                  <div className="flex items-center justify-between text-xs mb-1">
+                  <div className="flex items-center justify-between text-[11px] mb-1">
                     <span className="text-charcoal-soft">{m.label}</span>
-                    <span className="font-semibold" style={{ color: m.color }}>
-                      {left}g left
-                    </span>
+                    <span className="font-semibold text-charcoal">{left}g left</span>
                   </div>
-                  <ProgressBar progress={m.consumed / (m.target || 1)} color={m.color} height={6} />
+                  <ProgressBar progress={m.consumed / (m.target || 1)} color={m.color} height={4} />
                 </div>
               );
             })}
@@ -293,27 +323,27 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
         return wrap(
           onClick,
           <div>
-            {header("Workout", <Dumbbell size={15} className="text-charcoal" />)}
-            <p className="text-lg font-bold text-charcoal leading-none">{done ? "Done ✓" : "Pending"}</p>
+            {header("Workout", Dumbbell)}
+            <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em]">{done ? "Done ✓" : "Pending"}</p>
           </div>
         );
       }
       return wrap(
         onClick,
         <div>
-          {header("Workout", <Dumbbell size={15} className="text-charcoal" />)}
-          <p className="text-xl font-bold text-charcoal leading-none mb-1.5">{todaysWorkout.name}</p>
+          {header("Workout", Dumbbell)}
+          <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] mb-1.5">{todaysWorkout.name}</p>
           <span
-            className={`inline-flex items-center gap-1 text-xs font-semibold rounded-full px-2 py-0.5 ${
-              done ? "text-primary-dark bg-primary-pale" : "text-teal-dark bg-teal-pale"
+            className={`inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5 ${
+              done ? "text-primary-deep-text bg-primary-pale" : "text-teal-deep-text bg-teal-pale"
             }`}
           >
             {done ? "Completed ✓" : "Not started yet"}
           </span>
-          <p className="text-xs text-charcoal-faint mt-1.5">
+          <p className="text-[11px] text-charcoal-faint mt-1.5">
             {todaysWorkout.exercises.length} exercises · ~{todaysWorkout.durationMin} min
           </p>
-          <p className="text-xs text-sohati-dark font-semibold mt-1">
+          <p className="text-[11px] text-primary-deep-text font-semibold mt-1">
             🔥 {streaks.find((s) => s.id === "s3")?.days ?? 0} workout streak
           </p>
         </div>
@@ -327,8 +357,8 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
         return wrap(
           onClick,
           <div>
-            {header("Habits", <CheckSquare size={15} className="text-primary" />)}
-            <p className="text-2xl font-bold text-charcoal leading-none">
+            {header("Habits", CheckSquare)}
+            <p className={numeral}>
               {done}/{habits.length}
             </p>
           </div>
@@ -337,11 +367,11 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
       return wrap(
         onClick,
         <div>
-          {header("Habits", <CheckSquare size={15} className="text-primary" />)}
-          <p className="text-3xl font-bold text-charcoal leading-none mb-2">
-            {done}/{habits.length} <span className="text-sm font-normal text-charcoal-faint">done today</span>
+          {header("Habits", CheckSquare)}
+          <p className={`${numeral} mb-2`}>
+            {done}/{habits.length} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">done today</span>
           </p>
-          <ProgressBar progress={habits.length ? done / habits.length : 0} color="#7D6BB5" height={6} />
+          <ProgressBar progress={habits.length ? done / habits.length : 0} color="#7D6BB5" height={4} />
           <div className="flex flex-wrap gap-1.5 mt-2.5">
             {habits.slice(0, 5).map((h) => (
               <span
@@ -363,8 +393,8 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
         return wrap(
           onClick,
           <div>
-            {header("Journal", <BookOpen size={15} className="text-charcoal" />)}
-            <p className="text-lg font-bold text-charcoal leading-none">
+            {header("Journal", BookOpen)}
+            <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em]">
               {todaysEntry ? "Written ✓" : "Not yet"}
             </p>
           </div>
@@ -373,13 +403,13 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
       return wrap(
         onClick,
         <div>
-          {header("Journal", <BookOpen size={15} className="text-charcoal" />)}
-          <p className="text-xl font-bold text-charcoal leading-none mb-1.5">
+          {header("Journal", BookOpen)}
+          <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] mb-1.5">
             {todaysEntry ? "Today's entry written ✓" : "Reflect on your day"}
           </p>
-          <p className="text-xs text-charcoal-faint">{journalEntries.length} entries total</p>
+          <p className="text-[11px] text-charcoal-faint">{journalEntries.length} entries total</p>
           {journalEntries.length > 0 && (
-            <p className="text-xs text-charcoal-faint mt-1">
+            <p className="text-[11px] text-charcoal-faint mt-1">
               Last: {journalEntries[journalEntries.length - 1].date}
             </p>
           )}
@@ -393,20 +423,22 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
         return wrap(
           onClick,
           <div>
-            {header("Meditation", <YogaFigureIcon size={15} className="text-berry" />)}
-            <p className="text-lg font-bold text-charcoal leading-none">5 min</p>
+            {header("Meditation", YogaFigureIcon as unknown as LucideIcon)}
+            <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em]">5 min</p>
           </div>
         );
       }
       return wrap(
         onClick,
         <div>
-          {header("Meditation", <YogaFigureIcon size={15} className="text-berry" />)}
-          <p className="text-xl font-bold text-charcoal leading-none mb-1.5">Breathing, stretching & yoga</p>
-          <span className="inline-flex items-center text-xs font-semibold text-berry bg-berry-pale rounded-full px-2 py-0.5">
+          {header("Meditation", YogaFigureIcon as unknown as LucideIcon)}
+          <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] mb-1.5">
+            Breathing, stretching &amp; yoga
+          </p>
+          <span className="inline-flex items-center text-[11px] font-semibold text-primary-deep-text bg-primary-pale rounded-full px-2 py-0.5">
             Open library
           </span>
-          <p className="text-xs text-charcoal-faint mt-1.5">5-15 min sessions · guided or free-form</p>
+          <p className="text-[11px] text-charcoal-faint mt-1.5">5-15 min sessions · guided or free-form</p>
         </div>
       );
     }
@@ -421,23 +453,23 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
         return wrap(
           onClick,
           <div>
-            {header("Gym Passes", <KeyRound size={15} className="text-sohati" />)}
-            <p className="text-2xl font-bold text-charcoal leading-none">{passCount}</p>
+            {header("Gym Passes", KeyRound)}
+            <p className={numeral}>{passCount}</p>
           </div>
         );
       }
       return wrap(
         onClick,
         <div>
-          {header("Gym Passes", <KeyRound size={15} className="text-sohati" />)}
-          <p className="text-xl font-bold text-charcoal leading-none mb-1.5">
+          {header("Gym Passes", KeyRound)}
+          <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] mb-1.5">
             {passCount > 0 ? `${passCount} active` : "None yet"}
           </p>
-          <span className="inline-flex items-center text-xs font-semibold text-sohati bg-sohati-pale rounded-full px-2 py-0.5">
+          <span className="inline-flex items-center text-[11px] font-semibold text-primary-deep-text bg-primary-pale rounded-full px-2 py-0.5">
             Tap to show QR
           </span>
           {passNames.length > 0 && (
-            <p className="text-xs text-charcoal-faint mt-1.5 truncate">{passNames.join(" · ")}</p>
+            <p className="text-[11px] text-charcoal-faint mt-1.5 truncate">{passNames.join(" · ")}</p>
           )}
         </div>
       );

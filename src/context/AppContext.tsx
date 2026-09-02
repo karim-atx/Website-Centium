@@ -24,6 +24,9 @@ import type {
   JournalEntry,
   BloodMarker,
   ExtractedBiomarker,
+  ImagingRecord,
+  Surgery,
+  Medication,
   ClientCode,
   ProfessionalSubtype,
   WorkoutTemplateFolder,
@@ -58,6 +61,7 @@ import { mockProfessionalClients } from "../data/mockProfessionalClients";
 import { suggestNutritionGoal, normalizeMacroSplit } from "../services/nutrition";
 import { businessTiers } from "../data/businessTiers";
 import { translations, type Language } from "../i18n/translations";
+import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 
 const TODAY = "2026-08-20";
 
@@ -238,6 +242,11 @@ interface AppState {
   addRoutineFolder: (name: string, parentId?: string | null, color?: string) => void;
   renameRoutineFolder: (id: string, name: string) => void;
   deleteRoutineFolder: (id: string) => void;
+  // QA 11.0: "The folders in routines should be given the option to
+  // shuffle and re-order them" + the "⋮" menu should have an Edit option
+  // for things like folder color.
+  updateRoutineFolder: (id: string, patch: Partial<RoutineFolder>) => void;
+  moveRoutineFolder: (id: string, direction: "up" | "down") => void;
   routines: Routine[];
   addRoutine: (routine: Omit<Routine, "id">) => string;
   updateRoutine: (id: string, patch: Partial<Routine>) => void;
@@ -295,6 +304,34 @@ interface AppState {
   setNutritionGoal: (goal: NutritionGoal) => void;
   setWeightGoal: (weightGoal: WeightGoalType, weeklyRateKg: number) => void;
   setMacroSplit: (split: MacroSplit) => void;
+  // QA 11.0: shared between Goals & Macros (where it's picked) and the
+  // Diary tab (where matching items get highlighted).
+  dietaryRestriction: DietaryRestriction | null;
+  setDietaryRestriction: (r: DietaryRestriction | null) => void;
+
+  // QA 12.0: "Recovery-sensitive experience" — a reversible, private mode
+  // that reduces number-focused and potentially triggering content for a
+  // client recovering from (or affected by) disordered eating. Deliberately
+  // NOT named after "ED" anywhere client-facing. `recoverySensitiveIntroSeen`
+  // gates the one-time explainer shown the first time it's active.
+  recoverySensitive: boolean;
+  setRecoverySensitive: (on: boolean) => void;
+  recoverySensitiveIntroSeen: boolean;
+  setRecoverySensitiveIntroSeen: (seen: boolean) => void;
+  // QA 12.0: "Make data-sharing granular... Do not make 'recovery-
+  // sensitive mode' equivalent to 'share everything with my
+  // nutritionist.'" — the per-category "what your professional can see"
+  // toggles (Food Diary/Workout/Weight/Progress/Health Metrics) used to be
+  // local component state that reset on every reload and had no effect on
+  // anything; this persists them per professional, independent of
+  // recoverySensitive.
+  clientAccessGrants: Record<string, Record<string, boolean>>;
+  setClientAccessGrant: (professionalId: string, item: string, granted: boolean) => void;
+  // "Let users pause reminders, summaries, and notifications with one
+  // tap." No real notification engine exists in this prototype to hook
+  // into, so this is the user-facing flag that would gate it.
+  remindersPaused: boolean;
+  setRemindersPaused: (paused: boolean) => void;
 
   // V4: Meal Prep reworked into "Create Meal" — group existing foods under
   // one title; logging the meal logs every item individually.
@@ -302,6 +339,20 @@ interface AppState {
   addCustomMeal: (title: string, items: CustomMeal["items"], mealType?: MealType) => void;
   updateCustomMeal: (id: string, title: string, items: CustomMeal["items"], mealType?: MealType) => void;
   removeCustomMeal: (id: string) => void;
+  // QA 11.0: "Meal plans created by the professional should ONLY appear
+  // for the assigned client and not everyone" — a professional-authored
+  // plan now lives in its own per-client store instead of the single
+  // shared `customMeals` list every client's Meal Prep tab read from.
+  clientCustomMeals: Record<string, CustomMeal[]>;
+  addClientCustomMeal: (clientId: string, title: string, items: CustomMeal["items"], mealType?: MealType) => void;
+  updateClientCustomMeal: (
+    clientId: string,
+    id: string,
+    title: string,
+    items: CustomMeal["items"],
+    mealType?: MealType
+  ) => void;
+  removeClientCustomMeal: (clientId: string, id: string) => void;
   logCustomMeal: (mealId: string, meal: MealType, date: string) => void;
 
   journalFolders: JournalFolder[];
@@ -314,12 +365,33 @@ interface AppState {
   bloodMarkers: BloodMarker[];
   recordBiomarkers: (entries: ExtractedBiomarker[]) => void;
 
+  // QA 12.0: imaging/other tests, medical history (comorbidities/surgeries),
+  // and medications — the "biomarker widget lives inside a wider records
+  // tab" ask. Also surfaced read-only in the Professional UI's Health
+  // Metrics tab for clients sharing health data.
+  imagingRecords: ImagingRecord[];
+  addImagingRecord: (r: Omit<ImagingRecord, "id">) => void;
+  removeImagingRecord: (id: string) => void;
+  comorbidities: string[];
+  setComorbidities: (list: string[]) => void;
+  surgeries: Surgery[];
+  addSurgery: (s: Omit<Surgery, "id">) => void;
+  removeSurgery: (id: string) => void;
+  medications: Medication[];
+  addMedication: (m: Omit<Medication, "id">) => void;
+  updateMedication: (id: string, patch: Partial<Medication>) => void;
+  removeMedication: (id: string) => void;
+
   selectedDate: string;
   goToPrevDate: () => void;
   goToNextDate: () => void;
   goToToday: () => void;
   goToDate: (date: string) => void;
   copyYesterdayFood: () => void;
+  // QA 11.0: "The Swipe to copy yesterdays food option should be located
+  // under each type of meal" — copies just one meal type and returns the
+  // new entries' ids so the caller can offer an undo.
+  copyYesterdayMeal: (meal: MealType) => string[];
 
   today: string;
 
@@ -377,6 +449,19 @@ interface AppState {
   // tier by 1000 points" — added on top of the streak-derived total.
   bonusPoints: number;
   addBonusPoints: (amount: number) => void;
+  // QA 11.0: "Put a referral tab... gives you a code when another client,
+  // professional and/or business subscribes to Centium. The code applies
+  // a 10% discount to the subscription model for a one time use per
+  // account. The client who succeeded in referral gets 1500 points in the
+  // tier list as well as 15% off of the next month subscription." One
+  // account in this prototype, so redeeming a code demonstrates both the
+  // redeemer's one-time 10% discount and the referrer's reward on the
+  // same account — there's no second account to actually credit.
+  referralCode: string;
+  referralRedeemed: boolean;
+  referralDiscountPct: number;
+  referralNextMonthDiscountPct: number;
+  redeemReferralCode: (code: string) => { success: boolean; message: string };
 
   // V8 (QA 8.0): gym membership purchases — day passes expire after 24h and
   // stack with an active monthly/annual plan, which stays active until
@@ -408,7 +493,10 @@ interface AppState {
     professionalCertificationUrl?: string,
     professionalBio?: string,
     professionalPhone?: string,
-    professionalWebsite?: string
+    professionalWebsite?: string,
+    professionalInstagram?: string,
+    professionalFacebook?: string,
+    professionalX?: string
   ) => string;
   redeemClientCode: (code: string) => boolean;
 
@@ -418,10 +506,24 @@ interface AppState {
     profile?: { age?: number; sex?: Sex; heightCm?: number; weightKg?: number; prefix?: string }
   ) => string;
   removeProfessionalClient: (id: string) => void;
+
+  // QA 12.0: "Between the search and plus logo should be an inbox logo
+  // that shows new clients that hire the professional upon successful
+  // payment... the professional has the ability to accept or reject the
+  // client which later becomes part of his clients." This prototype has
+  // no real multi-account backend linking a specific client's hire to a
+  // specific professional's own account, so a hire simulates a pending
+  // request on this same account for the professional-side inbox to
+  // review, the same simulation approach already used for referrals.
+  pendingClientRequests: { id: string; name: string; requestedAt: string }[];
+  submitClientRequest: (name: string) => void;
+  acceptClientRequest: (id: string) => void;
+  rejectClientRequest: (id: string) => void;
   updateProfessionalClientAccess: (
     id: string,
     access: Partial<ProfessionalClient["access"]>
   ) => void;
+  updateProfessionalClient: (id: string, patch: Partial<ProfessionalClient>) => void;
   assignProgramToClient: (clientId: string, programName: string) => void;
   assignFoodTemplateToClient: (clientId: string, templateName: string) => void;
 
@@ -454,6 +556,7 @@ interface AppState {
   ) => void;
 
   signOut: () => void;
+  deleteAccount: () => void;
 
   businessListing: {
     perk: string;
@@ -644,6 +747,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     suggestNutritionGoal(defaultUser, "maintain", 0)
   );
 
+  const [dietaryRestriction, setDietaryRestriction] = usePersistentState<DietaryRestriction | null>(
+    "dietaryRestriction",
+    null
+  );
+
+  const [recoverySensitive, setRecoverySensitive] = usePersistentState<boolean>("recoverySensitive", false);
+  const [recoverySensitiveIntroSeen, setRecoverySensitiveIntroSeen] = usePersistentState<boolean>(
+    "recoverySensitiveIntroSeen",
+    false
+  );
+  const [remindersPaused, setRemindersPaused] = usePersistentState<boolean>("remindersPaused", false);
+  const [clientAccessGrants, setClientAccessGrants] = usePersistentState<Record<string, Record<string, boolean>>>(
+    "clientAccessGrants",
+    {}
+  );
+  const setClientAccessGrant: AppState["setClientAccessGrant"] = (professionalId, item, granted) =>
+    setClientAccessGrants((prev) => ({
+      ...prev,
+      [professionalId]: { ...prev[professionalId], [item]: granted },
+    }));
+
   const [customMeals, setCustomMeals] = usePersistentState<CustomMeal[]>("customMeals", []);
 
   const [journalFolders, setJournalFolders] = usePersistentState<JournalFolder[]>(
@@ -659,6 +783,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "bloodMarkers",
     bloodPanel.markers
   );
+
+  const [imagingRecords, setImagingRecords] = usePersistentState<ImagingRecord[]>("imagingRecords", []);
+  const addImagingRecord: AppState["addImagingRecord"] = (r) =>
+    setImagingRecords((prev) => [...prev, { ...r, id: `img${Date.now()}` }]);
+  const removeImagingRecord = (id: string) => setImagingRecords((prev) => prev.filter((r) => r.id !== id));
+
+  const [comorbidities, setComorbidities] = usePersistentState<string[]>("comorbidities", []);
+
+  const [surgeries, setSurgeries] = usePersistentState<Surgery[]>("surgeries", []);
+  const addSurgery: AppState["addSurgery"] = (s) =>
+    setSurgeries((prev) => [...prev, { ...s, id: `surg${Date.now()}` }]);
+  const removeSurgery = (id: string) => setSurgeries((prev) => prev.filter((s) => s.id !== id));
+
+  const [medications, setMedications] = usePersistentState<Medication[]>("medications", []);
+  const addMedication: AppState["addMedication"] = (m) =>
+    setMedications((prev) => [...prev, { ...m, id: `med${Date.now()}` }]);
+  const updateMedication = (id: string, patch: Partial<Medication>) =>
+    setMedications((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
+  const removeMedication = (id: string) => setMedications((prev) => prev.filter((m) => m.id !== id));
 
   const [selectedDate, setSelectedDate] = usePersistentState<string>("selectedDate", TODAY);
 
@@ -754,6 +897,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [bonusPoints, setBonusPoints] = usePersistentState<number>("bonusPoints", 0);
   const addBonusPoints: AppState["addBonusPoints"] = (amount) => setBonusPoints((prev) => prev + amount);
 
+  const [referralRedeemed, setReferralRedeemed] = usePersistentState<boolean>("referralRedeemed", false);
+  const [referralDiscountPct, setReferralDiscountPct] = usePersistentState<number>("referralDiscountPct", 0);
+  const [referralNextMonthDiscountPct, setReferralNextMonthDiscountPct] = usePersistentState<number>(
+    "referralNextMonthDiscountPct",
+    0
+  );
+  // Deterministic from the account so it doesn't change across sessions,
+  // without needing a real backend to issue/track unique codes.
+  const referralCode = `CENT-${(user.firstName || user.businessName || "USER").slice(0, 4).toUpperCase()}${
+    user.email ? user.email.length : 0
+  }${new Date(TODAY).getDate()}`;
+  const redeemReferralCode: AppState["redeemReferralCode"] = (code) => {
+    const trimmed = code.trim();
+    if (!trimmed) return { success: false, message: "Enter a referral code." };
+    if (referralRedeemed) return { success: false, message: "You've already used a referral code on this account." };
+    if (trimmed.toUpperCase() === referralCode.toUpperCase()) {
+      return { success: false, message: "You can't redeem your own referral code." };
+    }
+    setReferralRedeemed(true);
+    setReferralDiscountPct(10);
+    // Stands in for crediting the referrer's (separate) account.
+    addBonusPoints(1500);
+    setReferralNextMonthDiscountPct(15);
+    return { success: true, message: "Code applied — 10% off your subscription." };
+  };
+
   const [premiumPlan, setPremiumPlan] = usePersistentState<"monthly" | "yearly" | null>("premiumPlan", null);
 
   const [gymPurchases, setGymPurchases] = usePersistentState<Record<string, GymPurchase[]>>(
@@ -823,6 +992,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "professionalClients",
     mockProfessionalClients
   );
+  const [pendingClientRequests, setPendingClientRequests] = usePersistentState<
+    { id: string; name: string; requestedAt: string }[]
+  >("pendingClientRequests", []);
 
   const [calendarEvents, setCalendarEvents] = usePersistentState<CalendarEvent[]>("calendarEvents", []);
   const addCalendarEvent: AppState["addCalendarEvent"] = (event) =>
@@ -1033,6 +1205,36 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
     setRoutines((prev) => prev.map((r) => (r.folderId === id ? { ...r, folderId: null } : r)));
   };
+  const updateRoutineFolder = (id: string, patch: Partial<RoutineFolder>) =>
+    setRoutineFolders((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
+  // Reorders among siblings sharing the same parentId — top-level folders
+  // and each folder's own subfolders each keep their own independent order.
+  const moveRoutineFolder = (id: string, direction: "up" | "down") => {
+    setRoutineFolders((prev) => {
+      const folder = prev.find((f) => f.id === id);
+      if (!folder) return prev;
+      const siblingIds = prev.filter((f) => f.parentId === folder.parentId).map((f) => f.id);
+      const from = siblingIds.indexOf(id);
+      const to = direction === "up" ? from - 1 : from + 1;
+      if (to < 0 || to >= siblingIds.length) return prev;
+      const reorderedSiblingIds = [...siblingIds];
+      [reorderedSiblingIds[from], reorderedSiblingIds[to]] = [reorderedSiblingIds[to], reorderedSiblingIds[from]];
+      // Rebuild the full array in the new sibling order, preserving the
+      // relative position of every other (non-sibling) folder. A lookup
+      // map (not a nested `.find` re-run per outer iteration, which was
+      // the original bug here — `.find`'s own internal iteration bumped a
+      // shared `cursor` far past where the outer `.map` intended) makes
+      // each slot resolve independently and correctly.
+      const byId = new Map(prev.map((f) => [f.id, f]));
+      let cursor = 0;
+      return prev.map((f) => {
+        if (f.parentId !== folder.parentId) return f;
+        const nextId = reorderedSiblingIds[cursor];
+        cursor += 1;
+        return byId.get(nextId) ?? f;
+      });
+    });
+  };
 
   const addRoutine: AppState["addRoutine"] = (routine) => {
     const id = `routine${Date.now()}${Math.random().toString(16).slice(2)}`;
@@ -1203,6 +1405,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateCustomMeal: AppState["updateCustomMeal"] = (id, title, items, mealType) =>
     setCustomMeals((prev) => prev.map((m) => (m.id === id ? { ...m, title: title.trim(), items, mealType } : m)));
   const removeCustomMeal = (id: string) => setCustomMeals((prev) => prev.filter((m) => m.id !== id));
+
+  const addClientCustomMeal: AppState["addClientCustomMeal"] = (clientId, title, items, mealType) =>
+    setClientCustomMeals((prev) => ({
+      ...prev,
+      [clientId]: [...(prev[clientId] ?? []), { id: `ccm${Date.now()}`, title: title.trim(), items, mealType }],
+    }));
+  const updateClientCustomMeal: AppState["updateClientCustomMeal"] = (clientId, id, title, items, mealType) =>
+    setClientCustomMeals((prev) => ({
+      ...prev,
+      [clientId]: (prev[clientId] ?? []).map((m) =>
+        m.id === id ? { ...m, title: title.trim(), items, mealType } : m
+      ),
+    }));
+  const removeClientCustomMeal: AppState["removeClientCustomMeal"] = (clientId, id) =>
+    setClientCustomMeals((prev) => ({ ...prev, [clientId]: (prev[clientId] ?? []).filter((m) => m.id !== id) }));
   const logCustomMeal: AppState["logCustomMeal"] = (mealId, meal, date) => {
     const custom = customMeals.find((m) => m.id === mealId);
     if (!custom) return;
@@ -1289,6 +1506,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
   };
 
+  const copyYesterdayMeal = (meal: MealType): string[] => {
+    const yesterday = shiftDate(selectedDate, -1);
+    const yesterdaysEntries = foodLog.filter((e) => e.date === yesterday && e.meal === meal);
+    if (yesterdaysEntries.length === 0) return [];
+    const copied = yesterdaysEntries.map((e) => ({
+      ...e,
+      id: `f${Date.now()}${Math.random().toString(16).slice(2)}${Math.random().toString(16).slice(2)}`,
+      date: selectedDate,
+    }));
+    setFoodLog((prev) => [...prev, ...copied]);
+    return copied.map((e) => e.id);
+  };
+
   const setColorTheme = (t: ColorTheme) => setColorThemeState(t);
 
   const addCustomFood: AppState["addCustomFood"] = (food) => {
@@ -1303,6 +1533,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [clientCustomFoods, setClientCustomFoods] = usePersistentState<Record<string, CustomFood[]>>(
     "clientCustomFoods",
+    {}
+  );
+  const [clientCustomMeals, setClientCustomMeals] = usePersistentState<Record<string, CustomMeal[]>>(
+    "clientCustomMeals",
     {}
   );
   const addClientCustomFood: AppState["addClientCustomFood"] = (clientId, food) => {
@@ -1368,7 +1602,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     professionalCertificationUrl,
     professionalBio,
     professionalPhone,
-    professionalWebsite
+    professionalWebsite,
+    professionalInstagram,
+    professionalFacebook,
+    professionalX
   ) => {
     let code = "";
     do {
@@ -1385,6 +1622,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         professionalBio,
         professionalPhone,
         professionalWebsite,
+        professionalInstagram,
+        professionalFacebook,
+        professionalX,
         createdAt: TODAY,
         redeemed: false,
         clientName: profile?.clientName,
@@ -1416,6 +1656,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       linkedProfessionalBio: match.professionalBio,
       linkedProfessionalPhone: match.professionalPhone,
       linkedProfessionalWebsite: match.professionalWebsite,
+      linkedProfessionalInstagram: match.professionalInstagram,
+      linkedProfessionalFacebook: match.professionalFacebook,
+      linkedProfessionalX: match.professionalX,
     }));
     return true;
   };
@@ -1431,7 +1674,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user.certificationUrl,
       user.professionalBio,
       user.professionalPhone,
-      user.professionalWebsite
+      user.professionalWebsite,
+      user.professionalInstagram,
+      user.professionalFacebook,
+      user.professionalX
     );
     const id = `pc${Date.now()}${Math.random().toString(16).slice(2)}`;
     setProfessionalClients((prev) => [
@@ -1464,10 +1710,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const removeProfessionalClient = (id: string) =>
     setProfessionalClients((prev) => prev.filter((c) => c.id !== id));
+
+  const submitClientRequest: AppState["submitClientRequest"] = (name) =>
+    setPendingClientRequests((prev) => [...prev, { id: `req${Date.now()}`, name, requestedAt: TODAY }]);
+  const acceptClientRequest: AppState["acceptClientRequest"] = (id) => {
+    const req = pendingClientRequests.find((r) => r.id === id);
+    if (!req) return;
+    addProfessionalClient(req.name);
+    setPendingClientRequests((prev) => prev.filter((r) => r.id !== id));
+  };
+  const rejectClientRequest = (id: string) =>
+    setPendingClientRequests((prev) => prev.filter((r) => r.id !== id));
   const updateProfessionalClientAccess = (id: string, access: Partial<ProfessionalClient["access"]>) =>
     setProfessionalClients((prev) =>
       prev.map((c) => (c.id === id ? { ...c, access: { ...c.access, ...access } } : c))
     );
+  const updateProfessionalClient: AppState["updateProfessionalClient"] = (id, patch) =>
+    setProfessionalClients((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
   // V6 (QA 6.0): "The calendar app should update automatically when the
   // professional assigns a workout and/or food template for the client on
   // a specific day" — both assign actions also drop a same-day calendar
@@ -1542,6 +1801,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setUser({ ...defaultUser });
   };
 
+  // QA 12.0: "put the ability to delete account" — this prototype has no
+  // real backend account to delete, so the closest honest equivalent is
+  // wiping every bit of locally-persisted state, same as signing out fresh.
+  const deleteAccount = () => {
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(STORAGE_KEY))
+      .forEach((k) => localStorage.removeItem(k));
+    setUser({ ...defaultUser });
+  };
+
   const value = useMemo<AppState>(
     () => ({
       user,
@@ -1574,6 +1843,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addRoutineFolder,
       renameRoutineFolder,
       deleteRoutineFolder,
+      updateRoutineFolder,
+      moveRoutineFolder,
       routines,
       addRoutine,
       updateRoutine,
@@ -1610,10 +1881,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setNutritionGoal,
       setWeightGoal,
       setMacroSplit,
+      dietaryRestriction,
+      setDietaryRestriction,
+      recoverySensitive,
+      setRecoverySensitive,
+      recoverySensitiveIntroSeen,
+      setRecoverySensitiveIntroSeen,
+      remindersPaused,
+      setRemindersPaused,
+      clientAccessGrants,
+      setClientAccessGrant,
       customMeals,
       addCustomMeal,
       updateCustomMeal,
       removeCustomMeal,
+      clientCustomMeals,
+      addClientCustomMeal,
+      updateClientCustomMeal,
+      removeClientCustomMeal,
       logCustomMeal,
       journalFolders,
       journalEntries,
@@ -1623,12 +1908,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addJournalFolder,
       bloodMarkers,
       recordBiomarkers,
+      imagingRecords,
+      addImagingRecord,
+      removeImagingRecord,
+      comorbidities,
+      setComorbidities,
+      surgeries,
+      addSurgery,
+      removeSurgery,
+      medications,
+      addMedication,
+      updateMedication,
+      removeMedication,
       selectedDate,
       goToPrevDate,
       goToNextDate,
       goToToday,
       goToDate,
       copyYesterdayFood,
+      copyYesterdayMeal,
       today: TODAY,
       colorTheme,
       setColorTheme,
@@ -1656,6 +1954,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setProfessionalTier,
       bonusPoints,
       addBonusPoints,
+      referralCode,
+      referralRedeemed,
+      referralDiscountPct,
+      referralNextMonthDiscountPct,
+      redeemReferralCode,
       premiumPlan,
       setPremiumPlan,
       gymPurchases,
@@ -1672,7 +1975,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       professionalClients,
       addProfessionalClient,
       removeProfessionalClient,
+      pendingClientRequests,
+      submitClientRequest,
+      acceptClientRequest,
+      rejectClientRequest,
       updateProfessionalClientAccess,
+      updateProfessionalClient,
       assignProgramToClient,
       assignFoodTemplateToClient,
       calendarEvents,
@@ -1692,6 +2000,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       professionalMessages,
       sendProfessionalMessage,
       signOut,
+      deleteAccount,
       businessListing,
       updateBusinessListing,
       addMembershipPlan,
@@ -1735,9 +2044,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       widgets,
       nutritionGoal,
       customMeals,
+      clientCustomMeals,
+      dietaryRestriction,
+      recoverySensitive,
+      recoverySensitiveIntroSeen,
+      remindersPaused,
+      clientAccessGrants,
+      referralRedeemed,
+      referralDiscountPct,
+      referralNextMonthDiscountPct,
       journalFolders,
       journalEntries,
       bloodMarkers,
+      imagingRecords,
+      comorbidities,
+      surgeries,
+      medications,
       selectedDate,
       colorTheme,
       customFoods,
@@ -1754,6 +2076,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cart,
       clientCodes,
       professionalClients,
+      pendingClientRequests,
       calendarEvents,
       workoutTemplates,
       workoutTemplateFolders,

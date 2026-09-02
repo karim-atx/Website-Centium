@@ -1,4 +1,5 @@
 import React, { useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/ui/Card";
@@ -23,6 +24,9 @@ import {
   Plus,
   Repeat,
   Pause,
+  Palette,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 
 const SWIPE_THRESHOLD = 50;
@@ -36,6 +40,7 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
   weightKg: 20,
   category: "full_body",
   muscleGroups: pick.muscleGroups,
+  secondaryMuscleGroups: pick.secondaryMuscleGroups,
   classification: pick.classification,
   isCustom: pick.isCustom,
 });
@@ -49,6 +54,8 @@ export default function RoutinesTab() {
     addRoutineFolder,
     renameRoutineFolder,
     deleteRoutineFolder,
+    updateRoutineFolder,
+    moveRoutineFolder,
     updateRoutine,
     deleteRoutine,
     pausedSessions,
@@ -62,11 +69,17 @@ export default function RoutinesTab() {
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [menuFolderId, setMenuFolderId] = useState<string | null>(null);
+  // QA 11.0: "The three dots here should show an 'edit' option, to edit
+  // things like Folder Color."
+  const [editingColorId, setEditingColorId] = useState<string | null>(null);
   const [addingSubfolderTo, setAddingSubfolderTo] = useState<string | null>(null);
   const [subfolderName, setSubfolderName] = useState("");
   const [subfolderColor, setSubfolderColor] = useState(folderColorOptions[0]);
   const [activeRoutine, setActiveRoutine] = useState<Routine | null>(null);
   const [pendingRoutine, setPendingRoutine] = useState<Routine | null>(null);
+  // QA 12.0: "Removing a routine should prompt you as confirmation before
+  // deleting" — same full-screen confirm pattern as pendingRoutine above.
+  const [pendingDeleteRoutine, setPendingDeleteRoutine] = useState<Routine | null>(null);
   const [settingsExercise, setSettingsExercise] = useState<{ routineId: string; exercise: Exercise } | null>(null);
   // V9 (QA 9.0): "Example folders strength and hypertrophy start collapsed
   // already" — the two seeded example folders (see defaultRoutineFolders in
@@ -166,7 +179,7 @@ export default function RoutinesTab() {
                   <MoreVertical size={15} />
                 </button>
                 {menuFolderId === folder.id && (
-                  <div className="absolute right-0 top-7 z-20 w-44 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] overflow-hidden animate-fade-slide-up">
+                  <div className="absolute right-0 top-7 z-20 w-48 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] overflow-hidden animate-fade-slide-up">
                     <button
                       onClick={() => {
                         setRenamingId(folder.id);
@@ -176,6 +189,38 @@ export default function RoutinesTab() {
                       className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-charcoal hover:bg-cream-soft"
                     >
                       <Pencil size={13} /> Rename
+                    </button>
+                    {/* QA 11.0: "The three dots here should show an 'edit'
+                        option, to edit things like Folder Color, or Routine
+                        color." */}
+                    <button
+                      onClick={() => {
+                        setEditingColorId(folder.id);
+                        closeMenu();
+                      }}
+                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-charcoal hover:bg-cream-soft"
+                    >
+                      <Palette size={13} /> Edit color
+                    </button>
+                    {/* QA 11.0: "The folders in routines should be given the
+                        option to shuffle and re-order them." */}
+                    <button
+                      onClick={() => {
+                        moveRoutineFolder(folder.id, "up");
+                        closeMenu();
+                      }}
+                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-charcoal hover:bg-cream-soft"
+                    >
+                      <ArrowUp size={13} /> Move up
+                    </button>
+                    <button
+                      onClick={() => {
+                        moveRoutineFolder(folder.id, "down");
+                        closeMenu();
+                      }}
+                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-charcoal hover:bg-cream-soft"
+                    >
+                      <ArrowDown size={13} /> Move down
                     </button>
                     <button
                       onClick={() => {
@@ -208,6 +253,37 @@ export default function RoutinesTab() {
                     </button>
                   </div>
                 )}
+                {editingColorId === folder.id && (
+                  <div className="absolute right-0 top-7 z-20 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] p-3 animate-fade-slide-up">
+                    <div className="flex gap-2 mb-2">
+                      {folderColorOptions.map((c) => (
+                        <button
+                          key={c}
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            updateRoutineFolder(folder.id, { color: c });
+                          }}
+                          aria-label={`Color ${c}`}
+                          className="tap w-7 h-7 rounded-full"
+                          style={{
+                            background: c,
+                            outline: folder.color === c ? "2px solid rgb(var(--c-charcoal))" : "none",
+                            outlineOffset: 2,
+                          }}
+                        />
+                      ))}
+                    </div>
+                    <button
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        setEditingColorId(null);
+                      }}
+                      className="tap w-full text-center text-xs font-semibold text-charcoal-soft"
+                    >
+                      Done
+                    </button>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -221,7 +297,7 @@ export default function RoutinesTab() {
                 routine={r}
                 onStart={() => startRoutine(r)}
                 isOngoing={!!pausedSessions[r.id]}
-                onDelete={() => deleteRoutine(r.id)}
+                onDelete={() => setPendingDeleteRoutine(r)}
                 onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
                 onDeleteExercise={(exId) =>
                   updateRoutine(r.id, { exercises: r.exercises.filter((e) => e.id !== exId) })
@@ -230,7 +306,7 @@ export default function RoutinesTab() {
                   updateRoutine(r.id, {
                     exercises: r.exercises.map((e) =>
                       e.id === exId
-                        ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, classification: pick.classification, isCustom: pick.isCustom }
+                        ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, secondaryMuscleGroups: pick.secondaryMuscleGroups, classification: pick.classification, isCustom: pick.isCustom }
                         : e
                     ),
                   })
@@ -238,6 +314,7 @@ export default function RoutinesTab() {
                 onAddExercise={(pick) =>
                   updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] })
                 }
+                onColorChange={(color) => updateRoutine(r.id, { color })}
               />
             ))}
 
@@ -295,7 +372,13 @@ export default function RoutinesTab() {
   };
 
   return (
-    <div className="animate-fade-slide-up" onClick={() => menuFolderId && closeMenu()}>
+    <div
+      className="animate-fade-slide-up"
+      onClick={() => {
+        if (menuFolderId) closeMenu();
+        if (editingColorId) setEditingColorId(null);
+      }}
+    >
       <div className="flex items-center justify-between mb-4">
         <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Folders</p>
         <button
@@ -367,7 +450,7 @@ export default function RoutinesTab() {
                   routine={r}
                   onStart={() => startRoutine(r)}
                 isOngoing={!!pausedSessions[r.id]}
-                  onDelete={() => deleteRoutine(r.id)}
+                  onDelete={() => setPendingDeleteRoutine(r)}
                   onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
                   onDeleteExercise={(exId) =>
                     updateRoutine(r.id, { exercises: r.exercises.filter((e) => e.id !== exId) })
@@ -376,7 +459,7 @@ export default function RoutinesTab() {
                     updateRoutine(r.id, {
                       exercises: r.exercises.map((e) =>
                         e.id === exId
-                          ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, classification: pick.classification, isCustom: pick.isCustom }
+                          ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, secondaryMuscleGroups: pick.secondaryMuscleGroups, classification: pick.classification, isCustom: pick.isCustom }
                           : e
                       ),
                     })
@@ -384,6 +467,7 @@ export default function RoutinesTab() {
                   onAddExercise={(pick) =>
                     updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] })
                   }
+                  onColorChange={(color) => updateRoutine(r.id, { color })}
                 />
               ))}
             </div>
@@ -440,26 +524,72 @@ export default function RoutinesTab() {
         />
       )}
 
-      {pendingRoutine && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-          <div className="absolute inset-0 bg-charcoal/40" onClick={() => setPendingRoutine(null)} />
-          <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
-            <p className="font-display font-semibold text-lg text-charcoal mb-1.5">Cancel ongoing routine?</p>
-            <p className="text-sm text-charcoal-soft mb-5">
-              Starting "{pendingRoutine.name}" will cancel your other ongoing routine entirely — its
-              progress won't be saved.
-            </p>
-            <div className="flex gap-2.5">
-              <Button variant="outline" fullWidth onClick={() => setPendingRoutine(null)}>
-                Keep going
-              </Button>
-              <Button fullWidth variant="teal" onClick={confirmSwitchRoutine}>
-                Start anyway
-              </Button>
+      {/* QA 13.0: "When deleting a routine the dark blur behind the prompt
+          is cut for some reason, please fix." This component's root carries
+          `animate-fade-slide-up`, a transform-based animation — any
+          non-none `transform` on an ancestor becomes the containing block
+          for descendant `position: fixed` elements, clipping the backdrop
+          to this component's box instead of the viewport. Portaling to
+          `document.body` sidesteps the ancestor chain, same fix already
+          applied to BottomSheet.tsx for the identical bug. */}
+      {pendingRoutine &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+            <div
+              className="absolute inset-0 bg-charcoal/40 backdrop-blur-[2px] animate-fade-in"
+              onClick={() => setPendingRoutine(null)}
+            />
+            <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
+              <p className="font-display font-semibold text-lg text-charcoal mb-1.5">Cancel ongoing routine?</p>
+              <p className="text-sm text-charcoal-soft mb-5">
+                Starting "{pendingRoutine.name}" will cancel your other ongoing routine entirely — its
+                progress won't be saved.
+              </p>
+              <div className="flex gap-2.5">
+                <Button variant="outline" fullWidth onClick={() => setPendingRoutine(null)}>
+                  Keep going
+                </Button>
+                <Button fullWidth variant="teal" onClick={confirmSwitchRoutine}>
+                  Start anyway
+                </Button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
+
+      {pendingDeleteRoutine &&
+        createPortal(
+          <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+            <div
+              className="absolute inset-0 bg-charcoal/40 backdrop-blur-[2px] animate-fade-in"
+              onClick={() => setPendingDeleteRoutine(null)}
+            />
+            <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
+              <p className="font-display font-semibold text-lg text-charcoal mb-1.5">Delete routine?</p>
+              <p className="text-sm text-charcoal-soft mb-5">
+                "{pendingDeleteRoutine.name}" and its exercises will be permanently removed. This can't be
+                undone.
+              </p>
+              <div className="flex gap-2.5">
+                <Button variant="outline" fullWidth onClick={() => setPendingDeleteRoutine(null)}>
+                  Keep it
+                </Button>
+                <Button
+                  fullWidth
+                  variant="teal"
+                  onClick={() => {
+                    deleteRoutine(pendingDeleteRoutine.id);
+                    setPendingDeleteRoutine(null);
+                  }}
+                >
+                  Delete
+                </Button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 }
@@ -472,12 +602,14 @@ const RoutineRow: React.FC<{
   onDeleteExercise: (exerciseId: string) => void;
   onReplaceExercise: (exerciseId: string, pick: ExercisePick) => void;
   onAddExercise: (pick: ExercisePick) => void;
+  onColorChange: (color: string) => void;
   isOngoing?: boolean;
-}> = ({ routine, onStart, onDelete, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, isOngoing }) => {
+}> = ({ routine, onStart, onDelete, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, onColorChange, isOngoing }) => {
   const [expanded, setExpanded] = useState(false);
   const [revealedId, setRevealedId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
+  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   // Swipe-left on an exercise row reveals Replace/Delete, Apple-UI style —
@@ -503,10 +635,43 @@ const RoutineRow: React.FC<{
   return (
     <Card padded={false} className="overflow-hidden">
       <div className="flex items-center gap-3 p-4">
-        <div
-          className={clsx("w-2.5 h-10 rounded-full shrink-0", isOngoing && "animate-pulse")}
-          style={{ background: isOngoing ? "#E9736A" : routine.color }}
-        />
+        {/* QA 11.0: "the three dots... edit things like Folder Color, or
+            Routine color" — the routine's own colour bar doubles as the
+            edit affordance for it. */}
+        <div className="relative shrink-0">
+          <button
+            onClick={(ev) => {
+              ev.stopPropagation();
+              setColorPickerOpen((v) => !v);
+            }}
+            aria-label={`Edit ${routine.name} color`}
+            className={clsx("tap w-2.5 h-10 rounded-full block", isOngoing && "animate-pulse")}
+            style={{ background: isOngoing ? "#E9736A" : routine.color }}
+          />
+          {colorPickerOpen && (
+            <div className="absolute left-0 top-12 z-20 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] p-3 animate-fade-slide-up">
+              <div className="flex gap-2">
+                {folderColorOptions.map((c) => (
+                  <button
+                    key={c}
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      onColorChange(c);
+                      setColorPickerOpen(false);
+                    }}
+                    aria-label={`Color ${c}`}
+                    className="tap w-7 h-7 rounded-full"
+                    style={{
+                      background: c,
+                      outline: routine.color === c ? "2px solid rgb(var(--c-charcoal))" : "none",
+                      outlineOffset: 2,
+                    }}
+                  />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
         <button onClick={() => setExpanded((v) => !v)} className="flex-1 text-left min-w-0">
           <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
             {routine.name}

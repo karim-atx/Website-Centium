@@ -10,6 +10,7 @@ import { AccessibilitySheet } from "../../components/profile/AccessibilitySheet"
 import { PrivacySheet } from "../../components/profile/PrivacySheet";
 import { TermsOfServiceSheet } from "../../components/profile/TermsOfServiceSheet";
 import { useApp } from "../../context/AppContext";
+import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
   Moon,
@@ -20,6 +21,7 @@ import {
   HelpCircle,
   Mic,
   Camera,
+  MapPin,
   ChevronRight,
   Check,
   Accessibility,
@@ -27,9 +29,16 @@ import {
 } from "lucide-react";
 
 export default function Settings() {
-  const { theme, toggleTheme, language, setLanguage, t, user } = useApp();
+  const { theme, toggleTheme, language, setLanguage, t, user, deleteAccount } = useApp();
+  const navigate = useNavigate();
+  // QA 12.0: "For all UIs put the ability to delete account which when
+  // pressed will prompt you to make sure... Make it not that obvious or
+  // big." Settings.tsx is already the one shared page for every account
+  // type, so this covers Client/Professional/Business at once.
+  const [deleteOpen, setDeleteOpen] = useState(false);
   const [micAllowed, setMicAllowed] = useState<boolean | null>(null);
   const [cameraAllowed, setCameraAllowed] = useState<boolean | null>(null);
+  const [locationAllowed, setLocationAllowed] = useState<boolean | null>(null);
   const [contactOpen, setContactOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -55,6 +64,16 @@ export default function Settings() {
     } catch {
       setCameraAllowed(false);
     }
+  };
+
+  // QA 11.0: "Besides microphone and camera, the app should also ask for
+  // location permission" — used for distance-to-gym/business results in
+  // Explore.
+  const requestLocation = () => {
+    navigator.geolocation.getCurrentPosition(
+      () => setLocationAllowed(true),
+      () => setLocationAllowed(false)
+    );
   };
 
   return (
@@ -131,6 +150,31 @@ export default function Settings() {
             className="tap text-xs font-semibold text-primary bg-primary-pale rounded-full px-3 py-1.5"
           >
             {t(cameraAllowed === true ? "Re-check" : "Allow")}
+          </button>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
+              <MapPin size={16} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-charcoal">{t("Location")}</p>
+              <p className="text-[11px] text-charcoal-faint">
+                {t(
+                  locationAllowed === true
+                    ? "Granted"
+                    : locationAllowed === false
+                    ? "Denied"
+                    : "Needed to find gyms & businesses near you"
+                )}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={requestLocation}
+            className="tap text-xs font-semibold text-primary bg-primary-pale rounded-full px-3 py-1.5"
+          >
+            {t(locationAllowed === true ? "Re-check" : "Allow")}
           </button>
         </div>
       </Card>
@@ -221,6 +265,13 @@ export default function Settings() {
         </button>
       </Card>
 
+      <button
+        onClick={() => setDeleteOpen(true)}
+        className="tap block mx-auto mt-6 text-[11px] font-medium text-charcoal-faint"
+      >
+        Delete account
+      </button>
+
       <ContactUsSheet open={contactOpen} onClose={() => setContactOpen(false)} />
       <NotificationsSheet open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
       <AccessibilitySheet open={accessibilityOpen} onClose={() => setAccessibilityOpen(false)} />
@@ -244,6 +295,31 @@ export default function Settings() {
               {language === lng && <Check size={16} className="text-primary" />}
             </button>
           ))}
+        </div>
+      </BottomSheet>
+
+      <BottomSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete account">
+        <div className="space-y-4 animate-fade-slide-up">
+          <p className="text-sm text-charcoal-soft leading-relaxed">
+            This permanently deletes your account and all of its data — food logs, workouts, health
+            metrics, and connections. This can't be undone.
+          </p>
+          <button
+            onClick={() => {
+              deleteAccount();
+              setDeleteOpen(false);
+              navigate("/onboarding");
+            }}
+            className="tap w-full rounded-2xl bg-status-high text-white text-sm font-semibold py-3.5"
+          >
+            Yes, delete my account
+          </button>
+          <button
+            onClick={() => setDeleteOpen(false)}
+            className="tap w-full rounded-2xl bg-cream-soft text-charcoal text-sm font-semibold py-3.5"
+          >
+            Cancel
+          </button>
         </div>
       </BottomSheet>
     </div>

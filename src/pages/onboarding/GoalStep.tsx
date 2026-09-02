@@ -27,6 +27,13 @@ const goals: { value: Goal; label: string; icon: LucideIcon }[] = [
   { value: "live_healthier", label: "Live healthier", icon: Leaf },
 ];
 
+// QA 13.0: "Please fix the 'what are you working towards' tab accordingly to
+// abiding by the recovery sensitive principals" — mirrors TrackingStep's
+// existing `triggeringOptions` pattern. "Lose weight" is the one
+// number/appearance-focused goal here, so it's hidden once recovery-sensitive
+// mode is on (chosen one step earlier now, see Onboarding.tsx step order).
+const triggeringGoals: Goal[] = ["lose_weight"];
+
 export const GoalStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
   const toggle = (g: Goal) =>
     setDraft((d) => ({
@@ -34,36 +41,48 @@ export const GoalStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) =
       goals: d.goals.includes(g) ? d.goals.filter((x) => x !== g) : [...d.goals, g],
     }));
 
+  const visibleGoals = draft.recoverySensitive
+    ? goals.filter((g) => !triggeringGoals.includes(g.value))
+    : goals;
+
   return (
     <OnboardingShell
       title="What are you working toward?"
       subtitle="Pick as many as you like."
       onBack={onBack}
       footer={
-        <Button fullWidth size="lg" onClick={onNext}>
-          {draft.goals.length === 0 ? "Skip" : "Continue"}
-        </Button>
+        <div>
+          <Button fullWidth size="lg" onClick={onNext}>
+            {draft.goals.length === 0 ? "Skip" : "Continue"}
+          </Button>
+          <p className="text-[11px] font-medium text-charcoal-tertiary text-center mt-3.5">
+            {draft.goals.length} of {visibleGoals.length} selected
+          </p>
+        </div>
       }
     >
-      <div className="grid grid-cols-2 gap-3">
-        {goals.map((g) => {
+      {/* Design refinement §6/2c "Onboarding · Goals": "Selection is now a
+          filled lavender tile rather than a pale tint plus a floating tick,
+          so the choice reads at a glance." */}
+      <div className="grid grid-cols-2 gap-[11px]">
+        {visibleGoals.map((g) => {
           const active = draft.goals.includes(g.value);
           return (
             <button
               key={g.value}
               onClick={() => toggle(g.value)}
               className={clsx(
-                "tap relative text-left rounded-2xl p-4 border transition-colors",
-                active ? "bg-primary-pale border-primary" : "bg-cream-card border-charcoal/10"
+                "tap relative text-left rounded-[18px] p-4 border transition-colors",
+                active ? "bg-primary border-primary" : "bg-cream-card border-charcoal/[0.11]"
               )}
             >
               {active && (
-                <div className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
-                  <Check size={12} className="text-white" strokeWidth={3} />
+                <div className="absolute top-[11px] right-[11px] w-[19px] h-[19px] rounded-full bg-white flex items-center justify-center">
+                  <Check size={11} className="text-primary-dark" strokeWidth={3} />
                 </div>
               )}
-              <g.icon size={22} className={clsx("mb-2", active ? "text-primary-dark" : "text-charcoal-soft")} />
-              <span className="text-sm font-semibold text-charcoal leading-snug block">
+              <g.icon size={22} className={clsx("mb-[22px]", active ? "text-white" : "text-charcoal-faint")} />
+              <span className={clsx("text-[13.5px] leading-snug block", active ? "font-bold text-white" : "font-semibold text-charcoal")}>
                 {g.label}
               </span>
             </button>

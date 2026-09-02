@@ -4,10 +4,11 @@ import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import { HeartPulse, ChevronDown, ChevronUp, Scale, Moon, Footprints } from "lucide-react";
 
-const noteFields: { key: "comorbidities" | "previousSurgeries" | "medications" | "currentInjuries" | "personalityType"; label: string; placeholder: string }[] = [
-  { key: "comorbidities", label: "Past comorbidities", placeholder: "e.g. hypertension, type 2 diabetes" },
-  { key: "previousSurgeries", label: "Previous surgeries", placeholder: "e.g. ACL reconstruction, 2022" },
-  { key: "medications", label: "Medications", placeholder: "e.g. metformin, 500mg daily" },
+// QA 13.0: comorbidities/previous surgeries/medications are no longer
+// typed by the professional here — they're synced read-only from what the
+// client themselves added in their own Health tab (see `medicalHistory`
+// below). Only fields the client doesn't enter stay professional-editable.
+const noteFields: { key: "currentInjuries" | "personalityType"; label: string; placeholder: string }[] = [
   { key: "currentInjuries", label: "Current injuries", placeholder: "e.g. lower back strain" },
   { key: "personalityType", label: "Personality type", placeholder: "e.g. motivated by accountability" },
 ];
@@ -79,6 +80,50 @@ export default function HealthMetricsTab() {
                   ) : (
                     <p className="text-xs text-charcoal-faint">No auto-synced health data shared yet.</p>
                   )}
+
+                  {/* QA 13.0: "Anything added by the client in the health
+                      tab from past comorbidities, previous surgeries,
+                      medications in the Client UI health tab should also
+                      appear here." */}
+                  <div>
+                    <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+                      Synced from client's Health tab
+                    </p>
+                    {c.medicalHistory &&
+                    (c.medicalHistory.comorbidities.length ||
+                      c.medicalHistory.surgeries.length ||
+                      c.medicalHistory.medications.length) ? (
+                      <div className="space-y-2.5">
+                        {c.medicalHistory.comorbidities.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5">
+                            {c.medicalHistory.comorbidities.map((cm) => (
+                              <span key={cm} className="text-[11px] font-semibold rounded-full px-2.5 py-1 bg-teal-pale text-teal-dark">
+                                {cm}
+                              </span>
+                            ))}
+                          </div>
+                        )}
+                        {c.medicalHistory.surgeries.map((s) => (
+                          <div key={s.id} className="rounded-xl px-3 py-2 bg-berry/10 text-berry">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide opacity-80">Surgery</p>
+                            <p className="text-sm font-medium">
+                              {s.name} <span className="text-xs font-normal opacity-80">· {s.date}</span>
+                            </p>
+                          </div>
+                        ))}
+                        {c.medicalHistory.medications.map((m) => (
+                          <div key={m.id} className="rounded-xl px-3 py-2 bg-primary-pale text-primary-dark">
+                            <p className="text-[10px] font-semibold uppercase tracking-wide opacity-80">Medication</p>
+                            <p className="text-sm font-medium">
+                              {m.name} <span className="text-xs font-normal opacity-80">· {m.dose} · {m.route}</span>
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-charcoal-faint">Nothing shared from the client's Health tab yet.</p>
+                    )}
+                  </div>
 
                   <div>
                     <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">

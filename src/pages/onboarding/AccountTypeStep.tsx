@@ -134,11 +134,11 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                 placeholder="SOHA-XXXX"
                 className={clsx(
                   "w-full rounded-2xl bg-cream-card border-2 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20",
-                  enteredCode.length > 0 && !codeIsValid ? "border-[#C0392B]/50" : "border-primary/50"
+                  enteredCode.length > 0 && !codeIsValid ? "border-status-high/50" : "border-primary/50"
                 )}
               />
               {enteredCode.length > 0 && !codeIsValid ? (
-                <p className="flex items-center gap-1.5 text-[11px] text-[#C0392B] mt-1.5">
+                <p className="flex items-center gap-1.5 text-[11px] text-status-high mt-1.5">
                   <AlertCircle size={12} /> That code doesn't match a professional's — check it and try again.
                 </p>
               ) : (

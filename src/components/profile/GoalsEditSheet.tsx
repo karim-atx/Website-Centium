@@ -21,8 +21,15 @@ const goals: { value: Goal; label: string; icon: LucideIcon }[] = [
   { value: "live_healthier", label: "Live healthier", icon: Leaf },
 ];
 
+// QA 13.0: "Changing goals and activity while the recovery sensitive
+// experience is turned on should use the goals in onboarding adapted to
+// recovery sensitive experience" — same `triggeringGoals` filter as
+// GoalStep.tsx's onboarding step, so editing goals later stays consistent
+// with what recovery-sensitive users saw at sign-up.
+const triggeringGoals: Goal[] = ["lose_weight"];
+
 export const GoalsEditSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { user, updateProfile } = useApp();
+  const { user, updateProfile, recoverySensitive } = useApp();
   const [selected, setSelected] = useState<Goal[]>(user.goals);
 
   useEffect(() => {
@@ -37,10 +44,12 @@ export const GoalsEditSheet: React.FC<{ open: boolean; onClose: () => void }> = 
     onClose();
   };
 
+  const visibleGoals = recoverySensitive ? goals.filter((g) => !triggeringGoals.includes(g.value)) : goals;
+
   return (
     <BottomSheet open={open} onClose={onClose} title="Edit Goals">
       <div className="grid grid-cols-2 gap-3 mb-5 animate-fade-slide-up">
-        {goals.map((g) => {
+        {visibleGoals.map((g) => {
           const active = selected.includes(g.value);
           return (
             <button

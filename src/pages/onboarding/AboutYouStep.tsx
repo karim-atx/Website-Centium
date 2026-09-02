@@ -73,7 +73,7 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
       onBack={onBack}
       footer={
         <div>
-          {error && <p className="text-xs font-semibold text-[#C0392B] mb-3 text-center">{error}</p>}
+          {error && <p className="text-xs font-semibold text-status-high mb-3 text-center">{error}</p>}
           <Button fullWidth size="lg" disabled={!canContinue} onClick={handleContinue}>
             Continue
           </Button>

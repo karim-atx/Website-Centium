@@ -8,7 +8,7 @@ import { mockProfessionals } from "../../data/mockProfessionals";
 import { useApp } from "../../context/AppContext";
 import type { ProfessionalType } from "../../types";
 import { BottomSheet } from "../../components/ui/BottomSheet";
-import { Star, ShieldCheck, UserCheck, Pencil, BadgeCheck } from "lucide-react";
+import { Star, ShieldCheck, UserCheck, Pencil, BadgeCheck, AtSign, Globe2, XIcon } from "lucide-react";
 import ProfessionalDashboard from "./ProfessionalDashboard";
 import { professionalTypeIcon } from "../../utils/icons";
 
@@ -270,6 +270,33 @@ export default function Professionals() {
                 )}
                 {user.linkedProfessionalWebsite && (
                   <p className="text-sm text-charcoal-soft">{user.linkedProfessionalWebsite}</p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* QA 12.0: "In the profile tab have the ability for the
+              Professional to connect their socials... When connecting to
+              socials it should show in the connect to a professional tab
+              in the Clients UI." */}
+          {(user.linkedProfessionalInstagram || user.linkedProfessionalFacebook || user.linkedProfessionalX) && (
+            <div>
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Social</p>
+              <div className="space-y-1">
+                {user.linkedProfessionalInstagram && (
+                  <p className="flex items-center gap-1.5 text-sm text-charcoal-soft">
+                    <AtSign size={13} className="text-charcoal-faint" /> {user.linkedProfessionalInstagram}
+                  </p>
+                )}
+                {user.linkedProfessionalFacebook && (
+                  <p className="flex items-center gap-1.5 text-sm text-charcoal-soft">
+                    <Globe2 size={13} className="text-charcoal-faint" /> {user.linkedProfessionalFacebook}
+                  </p>
+                )}
+                {user.linkedProfessionalX && (
+                  <p className="flex items-center gap-1.5 text-sm text-charcoal-soft">
+                    <XIcon size={13} className="text-charcoal-faint" /> {user.linkedProfessionalX}
+                  </p>
                 )}
               </div>
             </div>

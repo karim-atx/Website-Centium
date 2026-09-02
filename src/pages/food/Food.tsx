@@ -9,8 +9,18 @@ import { EditFoodEntrySheet } from "../../components/food/EditFoodEntrySheet";
 import { DateSelector } from "../../components/dashboard/DateSelector";
 import { mealOrder, mealLabels, sumNutrition, targetsFromGoal, entryMultiplier } from "../../services/nutrition";
 import type { MealType, FoodLogEntry } from "../../types";
-import { Plus, Star, RefreshCw, Check, UtensilsCrossed, Trash2 } from "lucide-react";
+import {
+  Plus,
+  Star,
+  RefreshCw,
+  UtensilsCrossed,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  Undo2,
+} from "lucide-react";
 import { foodCategoryIcon } from "../../utils/icons";
+import { isFoodRestricted } from "../../utils/dietaryRestrictions";
 import GoalsPanel from "./GoalsPanel";
 import MealPrepPanel from "./MealPrepPanel";
 
@@ -30,15 +40,24 @@ function mealForCurrentTime(): MealType {
 }
 
 export default function Food() {
-  const { foodLog, nutritionGoal, selectedDate, copyYesterdayFood, removeFoodEntry } = useApp();
+  const { foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive } =
+    useApp();
   const [tab, setTab] = useState<Tab>("diary");
   const [addOpen, setAddOpen] = useState(false);
   const [addMeal, setAddMeal] = useState<MealType>("lunch");
-  const [copiedToast, setCopiedToast] = useState(false);
   const [editingEntry, setEditingEntry] = useState<FoodLogEntry | null>(null);
   const [revealedId, setRevealedId] = useState<string | null>(null);
-  const touchStart = useRef<{ x: number; y: number } | null>(null);
+  // QA 11.0: meal sections collapse like Routine folders on Workout >
+  // Routines.
+  const [collapsedMeals, setCollapsedMeals] = useState<Set<MealType>>(new Set());
+  // QA 11.0: "Add an undo button... which only appears after someone
+  // swipes or double taps to add food... only remain appearing for 15
+  // seconds." Tracks which meal + which entry ids a copy just added.
+  const [undoState, setUndoState] = useState<{ meal: MealType; ids: string[] } | null>(null);
+  const undoTimerRef = useRef<number | null>(null);
   const rowTouchStart = useRef<{ x: number; y: number } | null>(null);
+  const mealTouchStart = useRef<{ x: number; y: number } | null>(null);
+  const lastTapRef = useRef<{ meal: MealType; at: number } | null>(null);
 
   const todaysEntries = useMemo(
     () => foodLog.filter((e) => e.date === selectedDate),
@@ -58,27 +77,54 @@ export default function Food() {
     setAddOpen(true);
   };
 
-  const handleCopyYesterday = () => {
-    copyYesterdayFood();
-    setCopiedToast(true);
-    setTimeout(() => setCopiedToast(false), 1600);
+  const toggleCollapsed = (meal: MealType) =>
+    setCollapsedMeals((prev) => {
+      const next = new Set(prev);
+      if (next.has(meal)) next.delete(meal);
+      else next.add(meal);
+      return next;
+    });
+
+  const handleCopyYesterdayMeal = (meal: MealType) => {
+    const ids = copyYesterdayMeal(meal);
+    if (ids.length === 0) return;
+    if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
+    setUndoState({ meal, ids });
+    undoTimerRef.current = window.setTimeout(() => setUndoState(null), 15000);
   };
 
-  // "Copy yesterday's food" via a simple swipe-right gesture on the diary
-  // list, MyNetDiary-style. A visible button covers the same action for
-  // discoverability/accessibility.
-  const onTouchStart = (e: React.TouchEvent) => {
-    const t = e.touches[0];
-    touchStart.current = { x: t.clientX, y: t.clientY };
+  const handleUndo = () => {
+    if (!undoState) return;
+    undoState.ids.forEach((id) => removeFoodEntry(id));
+    if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
+    setUndoState(null);
   };
-  const onTouchEnd = (e: React.TouchEvent) => {
-    if (!touchStart.current) return;
+
+  // QA 11.0: "Firstly make it 'Swipe right or Double Tap'." — a swipe-right
+  // or a double-tap on a meal's header copies yesterday's food for that
+  // meal only, instead of one global gesture for the whole diary.
+  const onMealTouchStart = (e: React.TouchEvent) => {
+    const t = e.touches[0];
+    mealTouchStart.current = { x: t.clientX, y: t.clientY };
+  };
+  const onMealTouchEnd = (e: React.TouchEvent, meal: MealType) => {
+    if (!mealTouchStart.current) return;
     const t = e.changedTouches[0];
-    const dx = t.clientX - touchStart.current.x;
-    const dy = t.clientY - touchStart.current.y;
-    touchStart.current = null;
+    const dx = t.clientX - mealTouchStart.current.x;
+    const dy = t.clientY - mealTouchStart.current.y;
+    mealTouchStart.current = null;
     if (dx > SWIPE_THRESHOLD && Math.abs(dy) < 40) {
-      handleCopyYesterday();
+      handleCopyYesterdayMeal(meal);
+    }
+  };
+  const onMealTap = (meal: MealType) => {
+    const now = Date.now();
+    const last = lastTapRef.current;
+    if (last && last.meal === meal && now - last.at < 350) {
+      lastTapRef.current = null;
+      handleCopyYesterdayMeal(meal);
+    } else {
+      lastTapRef.current = { meal, at: now };
     }
   };
 
@@ -104,12 +150,12 @@ export default function Food() {
   const macroRow = (label: string, value: number, target: number, color: string) => {
     const over = Math.round(value) - target;
     return (
-      <div>
+      <div key={label}>
         <div className="flex items-baseline justify-between mb-1">
-          <span className="text-xs font-semibold text-charcoal-soft">{label}</span>
-          <span className="text-xs text-charcoal-faint">
+          <span className="text-[12px] font-semibold text-charcoal-soft">{label}</span>
+          <span className="text-[12px] text-charcoal-faint">
             {Math.round(value)} / {target}g
-            {over > 0 && <span className="text-[#C0392B] font-semibold"> (+{over}g)</span>}
+            {over > 0 && <span className="text-status-high font-semibold"> (+{over}g)</span>}
           </span>
         </div>
         <ProgressBar progress={value / target} color={over > 0 ? "#C0392B" : color} height={7} />
@@ -134,42 +180,49 @@ export default function Food() {
       </div>
 
       {tab === "diary" && (
-        <div className="animate-fade-slide-up" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+        <div className="animate-fade-slide-up">
           <DateSelector />
 
-          <Card className="mb-6">
-            <div className="flex items-baseline justify-between mb-4">
-              <div>
-                <p className="text-3xl font-bold text-charcoal leading-none">
-                  {Math.round(totals.calories).toLocaleString()}
-                </p>
-                <p className="text-xs text-charcoal-faint mt-1">of {targets.calories.toLocaleString()} kcal</p>
+          {/* QA 12.0 recovery-sensitive experience: "Hide calorie and macro
+              totals... Disable deficit/remaining-calorie language... Use
+              neutral food language." Same diary, same entries below — just
+              no numbers-first summary card above them. */}
+          {recoverySensitive ? (
+            <Card className="mb-6">
+              <p className="text-sm font-bold text-charcoal mb-1">
+                {todaysEntries.length === 0 ? "Nothing logged yet today" : `${todaysEntries.length} item${todaysEntries.length === 1 ? "" : "s"} logged today`}
+              </p>
+              <p className="text-xs text-charcoal-faint">
+                Meals, notes, and how you're feeling — no calorie counting required.
+              </p>
+            </Card>
+          ) : (
+            <Card className="mb-6">
+              <div className="flex items-baseline justify-between mb-4">
+                <div>
+                  <p className="text-[34px] font-extrabold text-charcoal leading-none tracking-[-0.035em] tabular-nums">
+                    {Math.round(totals.calories).toLocaleString()}
+                  </p>
+                  <p className="text-[11.5px] font-medium text-charcoal-faint mt-1">of {targets.calories.toLocaleString()} kcal</p>
+                </div>
+                <span className="text-[12px] font-bold text-primary-deep-text bg-primary-pale rounded-full px-3 py-1.5">
+                  {targets.calories - Math.round(totals.calories)} kcal left
+                </span>
               </div>
-              <span className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-3 py-1.5">
-                {targets.calories - Math.round(totals.calories)} kcal remaining
-              </span>
-            </div>
-            <div className="space-y-3">
-              {macroRow("Protein", totals.protein, targets.protein, "#7D6BB5")}
-              {macroRow("Carbs", totals.carbs, targets.carbs, "#D9A441")}
-              {macroRow("Fat", totals.fat, targets.fat, "#6F9993")}
-            </div>
-          </Card>
+              <div className="space-y-3">
+                {macroRow("Protein", totals.protein, targets.protein, "#7D6BB5")}
+                {macroRow("Carbs", totals.carbs, targets.carbs, "#C8BFE9")}
+                {macroRow("Fat", totals.fat, targets.fat, "#A2C8C2")}
+              </div>
+            </Card>
+          )}
 
-          <button
-            onClick={handleCopyYesterday}
-            className="tap w-full flex items-center justify-center gap-1.5 text-xs font-semibold text-primary mb-4 -mt-2"
-          >
-            {copiedToast ? (
-              <>
-                <Check size={13} /> Copied yesterday's food
-              </>
-            ) : (
-              <>
-                <RefreshCw size={12} /> Swipe right, or tap, to copy yesterday's food
-              </>
-            )}
-          </button>
+          {/* QA 11.0: the global swipe hint moves per-meal (each header
+              below is itself the swipe/double-tap target) — this is now
+              just a one-time explainer instead of 4 repeated hint rows. */}
+          <p className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-charcoal-faint mb-4 -mt-2">
+            <RefreshCw size={11} /> Swipe right or double-tap a meal to copy yesterday's food
+          </p>
 
           <div className="space-y-5">
             {mealOrder.map((meal) => {
@@ -178,22 +231,65 @@ export default function Food() {
               const mealProtein = entries.reduce((s, e) => s + e.food.protein * entryMultiplier(e), 0);
               const mealCarbs = entries.reduce((s, e) => s + e.food.carbs * entryMultiplier(e), 0);
               const mealFat = entries.reduce((s, e) => s + e.food.fat * entryMultiplier(e), 0);
+              const collapsed = collapsedMeals.has(meal);
+              const showUndo = undoState?.meal === meal;
               return (
                 <div key={meal}>
-                  <div className="flex items-center justify-between mb-2.5">
-                    <h3 className="font-display text-base font-semibold text-charcoal">
-                      {mealLabels[meal]}
-                    </h3>
-                    {entries.length > 0 && (
-                      <span className="text-xs text-charcoal-faint">{Math.round(mealCal)} kcal</span>
-                    )}
+                  <div
+                    // QA 13.0: "Have the titles breakfast, lunch, dinner,
+                    // snacks be colored black, while the box that has them
+                    // be colored the current font color" — inverts QA 12.0's
+                    // choice: the purple now lives on the row's background
+                    // instead of the title text.
+                    className="flex items-center justify-between mb-2.5 rounded-2xl bg-primary-pale px-3.5 py-2.5"
+                    onTouchStart={onMealTouchStart}
+                    onTouchEnd={(ev) => onMealTouchEnd(ev, meal)}
+                    onClick={() => onMealTap(meal)}
+                  >
+                    <button
+                      onClick={(ev) => {
+                        ev.stopPropagation();
+                        toggleCollapsed(meal);
+                      }}
+                      className="tap flex items-center gap-1.5"
+                      aria-label={collapsed ? `Expand ${mealLabels[meal]}` : `Collapse ${mealLabels[meal]}`}
+                    >
+                      {collapsed ? (
+                        <ChevronDown size={15} className="text-charcoal-faint" />
+                      ) : (
+                        <ChevronUp size={15} className="text-charcoal-faint" />
+                      )}
+                      <h3 className="font-display text-[15px] font-bold text-charcoal">
+                        {mealLabels[meal]}
+                      </h3>
+                    </button>
+                    <div className="flex items-center gap-2">
+                      {/* QA 11.0: "Add an undo button to the far right, in a
+                          light grey shade color, which only appears after
+                          someone swipes or double taps to add food... only
+                          remain appearing for 15 seconds." */}
+                      {showUndo && (
+                        <button
+                          onClick={(ev) => {
+                            ev.stopPropagation();
+                            handleUndo();
+                          }}
+                          className="tap flex items-center gap-1 text-[10.5px] font-semibold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-1"
+                        >
+                          <Undo2 size={11} /> Undo
+                        </button>
+                      )}
+                      {entries.length > 0 && !recoverySensitive && (
+                        <span className="text-[11.5px] font-medium text-charcoal-faint">{Math.round(mealCal)} kcal</span>
+                      )}
+                    </div>
                   </div>
-                  {entries.length === 0 ? (
+                  {collapsed ? null : entries.length === 0 ? (
                     <button
                       onClick={() => openAdd(meal)}
-                      className="tap w-full flex items-center justify-between rounded-2xl border-2 border-dashed border-charcoal/10 px-4 py-3.5 text-charcoal-faint hover:border-primary/40"
+                      className="tap w-full flex items-center justify-between rounded-2xl border-[1.5px] border-dashed border-charcoal/[0.16] px-4 py-3.5 text-charcoal-faint hover:border-primary/40"
                     >
-                      <span className="text-sm">Not logged</span>
+                      <span className="text-[13px] font-medium">Not logged</span>
                       <Plus size={16} />
                     </button>
                   ) : (
@@ -201,6 +297,10 @@ export default function Food() {
                       {entries.map((e) => {
                         const Icon = foodCategoryIcon[e.food.category] ?? UtensilsCrossed;
                         const revealed = revealedId === e.id;
+                        // QA 11.0: "Pressing a specific restriction will
+                        // highlight specific food diary items that are not
+                        // compatible with the restriction."
+                        const restricted = !!dietaryRestriction && isFoodRestricted(e.food, dietaryRestriction);
                         return (
                           <div key={e.id} className="relative overflow-hidden">
                             {revealed && (
@@ -220,43 +320,56 @@ export default function Food() {
                               onClick={() => (revealed ? setRevealedId(null) : setEditingEntry(e))}
                               onTouchStart={onRowTouchStart}
                               onTouchEnd={(ev) => onRowTouchEnd(ev, e.id)}
-                              className="tap relative z-10 w-full flex items-center justify-between px-4 py-3 text-left bg-cream-card hover:bg-cream-soft transition-transform duration-200"
+                              className={`tap relative z-10 w-full flex items-center justify-between px-4 py-3 text-left transition-transform duration-200 ${
+                                restricted ? "bg-status-high-bg" : "bg-cream-card hover:bg-cream-soft"
+                              }`}
                               style={{ transform: revealed ? "translateX(-80px)" : "translateX(0)" }}
                             >
                               <div className="flex items-center gap-3">
-                                <span className="w-9 h-9 rounded-xl bg-primary-pale flex items-center justify-center shrink-0">
-                                  <Icon size={16} className="text-primary-dark" />
+                                <span
+                                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
+                                    restricted ? "bg-status-high/[0.14]" : "bg-primary-pale"
+                                  }`}
+                                >
+                                  <Icon size={16} className={restricted ? "text-status-high" : "text-primary-dark"} />
                                 </span>
                                 <div>
-                                  <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
+                                  <p className="text-[13.5px] font-semibold text-charcoal flex items-center gap-1.5">
                                     {e.food.name}
                                     {e.food.isLebanese && <Star size={10} className="text-gold fill-gold" />}
+                                    {restricted && (
+                                      <span className="text-[9px] font-bold uppercase text-status-high bg-status-high-bg rounded-full px-1.5 py-0.5">
+                                        Not compatible
+                                      </span>
+                                    )}
                                   </p>
-                                  <p className="text-[11px] text-charcoal-faint">
+                                  <p className="text-[11px] font-medium text-charcoal-faint">
                                     {e.quantity !== 1 ? `${e.quantity} × ` : ""}
                                     {e.unit && e.unit !== "serving" ? e.unit : e.food.serving}
                                   </p>
                                 </div>
                               </div>
-                              <span className="text-xs font-semibold text-charcoal-soft">
-                                {Math.round(e.food.calories * entryMultiplier(e))} kcal
-                              </span>
+                              {!recoverySensitive && (
+                                <span className="text-[11.5px] font-semibold text-charcoal-soft">
+                                  {Math.round(e.food.calories * entryMultiplier(e))} kcal
+                                </span>
+                              )}
                             </button>
                           </div>
                         );
                       })}
                       <button
                         onClick={() => openAdd(meal)}
-                        className="tap w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-xs font-semibold text-primary hover:bg-primary-pale/40"
+                        className="tap w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[11.5px] font-bold text-primary-dark hover:bg-primary-pale/40"
                       >
                         <Plus size={13} /> Add more
                       </button>
                     </Card>
                   )}
-                  {entries.length > 0 && (
-                    <div className="flex items-center justify-center gap-3 mt-1.5 text-[10px] font-semibold">
+                  {!collapsed && entries.length > 0 && !recoverySensitive && (
+                    <div className="flex items-center justify-center gap-3 mt-1.5 text-[10px] font-bold">
                       <span style={{ color: "#7D6BB5" }}>P {Math.round(mealProtein)}g</span>
-                      <span style={{ color: "#D9A441" }}>C {Math.round(mealCarbs)}g</span>
+                      <span style={{ color: "#8C7CC4" }}>C {Math.round(mealCarbs)}g</span>
                       <span style={{ color: "#6F9993" }}>F {Math.round(mealFat)}g</span>
                     </div>
                   )}
@@ -280,7 +393,7 @@ export default function Food() {
         <button
           onClick={() => openAdd(mealForCurrentTime())}
           aria-label="Add Food"
-          className="tap fixed bottom-24 right-5 z-30 w-14 h-14 rounded-full bg-primary text-white shadow-lift flex items-center justify-center"
+          className="tap fixed bottom-[104px] right-5 z-30 w-14 h-14 rounded-full bg-primary text-white shadow-fab flex items-center justify-center"
         >
           <Plus size={22} />
         </button>

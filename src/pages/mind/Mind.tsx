@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
@@ -8,39 +8,67 @@ import { MeditationSheet } from "../../components/mind/MeditationSheet";
 import { YogaFigureIcon } from "../../components/mind/YogaFigureIcon";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
-import { Flame, Plus, CheckSquare, BookOpen, ChevronLeft } from "lucide-react";
+import { Flame, Plus, CheckSquare, BookOpen, Pencil } from "lucide-react";
 import type { Streak } from "../../types";
 import { flameColor } from "../../utils/flameColor";
+import clsx from "clsx";
 
 type Tab = "overview" | "habits" | "journal";
 
 export default function Mind() {
-  const { streaks } = useApp();
+  const { streaks, habits, toggleHabit } = useApp();
   const [tab, setTab] = useState<Tab>("overview");
   const [editingStreak, setEditingStreak] = useState<Streak | null>(null);
   const [addStreakOpen, setAddStreakOpen] = useState(false);
   const [meditationOpen, setMeditationOpen] = useState(false);
+  // §7.2: which user-added streak just incremented, so its card can fire
+  // the one-shot celebration burst — never on the four auto-derived
+  // streaks, which can't be logged by hand.
+  const [burstKey, setBurstKey] = useState<string | null>(null);
+  const burstNonce = React.useRef(0);
+
+  // A user-added streak's `days` mirrors its linked habit's `streakDays`
+  // (see AppContext) — "tap to log" means checking off today's habit, not
+  // editing the streak's label/goal, which now lives behind the pencil.
+  const logStreak = (s: Streak) => {
+    if (!s.habitId) return;
+    const habit = habits.find((h) => h.id === s.habitId);
+    if (!habit) return;
+    const wasDone = habit.done;
+    toggleHabit(habit.id);
+    if (!wasDone) {
+      burstNonce.current += 1;
+      setBurstKey(`${s.id}-b${burstNonce.current}`);
+    }
+  };
 
   return (
     <div>
-      <PageHeader title="Mind" subtitle="Habits, journaling & meditation" showBack />
-
-      {/* V10 (QA 10.0): "Remove the overview, habits and journal tabs at
-          the top" — Habits/Journal are still reached via their own cards
-          below, with a plain back link here instead of a tab strip. */}
-      {tab !== "overview" && (
-        <button
-          onClick={() => setTab("overview")}
-          className="tap flex items-center gap-1 text-sm font-semibold text-charcoal-soft mb-4 -ml-1"
-        >
-          <ChevronLeft size={16} /> Mind
-        </button>
+      {/* QA 11.0: "fix title and back button" — showing the full page
+          header (its own back chevron + "Mind" title) at the same time as
+          the in-page "‹ Mind" link below was a redundant double
+          back-button. The full header now only shows on the overview;
+          Habits/Journal rely on the in-page link alone.
+          QA 12.0: "The title and button going back to Mind should have the
+          same style as [the standard PageHeader]" — that in-page link was
+          a small plain-text chevron, inconsistent with the rest of the
+          app's back-navigation style. Reuses PageHeader itself (now with
+          an onBack override) instead of a bespoke smaller link. */}
+      {tab === "overview" ? (
+        <PageHeader title="Mind" subtitle="Habits, journaling & meditation" showBack />
+      ) : (
+        <PageHeader
+          title={tab === "habits" ? "Habits" : "Journal"}
+          subtitle={tab === "habits" ? "Track your daily habits" : "Your thoughts, logged"}
+          showBack
+          onBack={() => setTab("overview")}
+        />
       )}
 
       {tab === "overview" && (
         <div className="animate-fade-slide-up">
           <div className="flex items-center justify-between mb-2.5">
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Streaks</p>
+            <p className="section-label text-charcoal-faint">Streaks</p>
             <button
               onClick={() => setAddStreakOpen(true)}
               className="tap flex items-center gap-1 text-xs font-semibold text-primary"
@@ -48,43 +76,93 @@ export default function Mind() {
               <Plus size={12} /> Add streak
             </button>
           </div>
+          {/* Design refinement §6.8: auto-tracked and user-added streaks now
+              read differently at a glance — an auto streak can't be tapped
+              to log, so its border and caption say so instead of implying
+              the same tap affordance as a user-added one. */}
           <div className="grid grid-cols-2 gap-3 mb-6">
-            {streaks.map((s) => (
+            {streaks.map((s) => {
+              const bursting = burstKey?.startsWith(`${s.id}-b`);
+              const color = flameColor(s.days / s.goalDays);
+              return (
               <Card
                 key={s.id}
                 interactive={!s.auto}
-                onClick={() => !s.auto && setEditingStreak(s)}
-                className={s.auto ? "!cursor-default" : undefined}
+                onClick={() => !s.auto && logStreak(s)}
+                className={clsx("relative overflow-hidden", s.auto ? "!cursor-default !border-charcoal/[0.11]" : "!border-primary/30")}
               >
-                <div className="flex items-center gap-1.5 mb-2">
-                  <Flame size={16} style={{ color: flameColor(s.days / s.goalDays) }} />
-                  <span className="text-lg font-bold text-charcoal">{s.days}</span>
+                {!s.auto && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingStreak(s);
+                    }}
+                    aria-label="Edit streak"
+                    className="tap absolute top-3 right-3 w-6 h-6 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-faint"
+                  >
+                    <Pencil size={11} />
+                  </button>
+                )}
+                <div className="flex items-center gap-1.5 mb-1.5 relative">
+                  <Flame
+                    key={bursting ? burstKey : undefined}
+                    size={14}
+                    style={{ color, transformOrigin: "50% 85%" }}
+                    className={bursting ? "animate-streak-flame" : undefined}
+                  />
+                  {bursting && (
+                    <span
+                      key={`${burstKey}-ring`}
+                      className="absolute -left-1 -top-1 w-6 h-6 rounded-full border-2 pointer-events-none animate-streak-teal-ring"
+                      style={{ borderColor: color }}
+                    />
+                  )}
+                  {bursting &&
+                    [-9, 1, 8].map((dx, i) => (
+                      <span
+                        key={`${burstKey}-teal-${i}`}
+                        className="absolute left-1.5 top-0 w-1 h-1 rounded-full pointer-events-none animate-streak-teal-particle"
+                        style={{ background: color, transform: `translateX(${dx}px)`, animationDelay: `${i * 50}ms` }}
+                      />
+                    ))}
+                  <span
+                    key={bursting ? `${burstKey}-count` : undefined}
+                    className={clsx(
+                      "text-[20px] font-extrabold text-charcoal tabular-nums leading-none",
+                      bursting && "animate-streak-count-roll"
+                    )}
+                  >
+                    {s.days}
+                  </span>
                   <span className="text-xs text-charcoal-faint">days</span>
                 </div>
                 <p className="text-xs text-charcoal-soft mb-2">{s.label}</p>
-                <div className="h-1.5 rounded-full bg-cream-soft overflow-hidden">
+                <div className="h-[5px] rounded-full bg-cream-soft overflow-hidden">
                   <div
-                    className="h-full rounded-full transition-all duration-700"
+                    className="h-full rounded-full transition-all duration-[620ms]"
                     style={{
                       width: `${Math.min((s.days / s.goalDays) * 100, 100)}%`,
-                      background: flameColor(s.days / s.goalDays),
+                      background: color,
                     }}
                   />
                 </div>
-                {!s.auto && <p className="text-[10px] text-charcoal-faint mt-1">Goal: {s.goalDays} days</p>}
+                <p className="text-[10px] text-charcoal-faint mt-1">
+                  {s.auto ? "Auto — tracked for you" : `Goal: ${s.goalDays} days · tap to log`}
+                </p>
               </Card>
-            ))}
+              );
+            })}
           </div>
 
-          <Card className="mb-6 bg-gradient-to-br from-gold-pale to-cream-card">
-            <div className="flex items-center gap-2 mb-1.5">
-              <Flame size={16} className="text-gold" />
+          <div className="flex items-start gap-2.5 border-t border-charcoal/[0.08] pt-4 mb-6">
+            <Flame size={15} className="text-gold shrink-0 mt-0.5" />
+            <div>
               <p className="text-sm font-semibold text-charcoal">Rewards coming soon</p>
+              <p className="text-xs text-charcoal-faint">
+                Keep your streaks alive and unlock rewards from Centium partners — gyms, meals, classes & more.
+              </p>
             </div>
-            <p className="text-xs text-charcoal-soft">
-              Keep your streaks alive and unlock rewards from Centium partners — gyms, meals, classes & more.
-            </p>
-          </Card>
+          </div>
 
           {/* V7 (QA 7.0): Habits/Journal restored as their own buttons,
               matching Meditation — QA6 had merged them into the tabs above. */}

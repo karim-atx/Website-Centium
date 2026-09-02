@@ -1,9 +1,9 @@
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
-import { marketplaceCategories } from "../../data/mockProfessionals";
+import { marketplaceCategories, mockGyms, mockClasses } from "../../data/mockProfessionals";
 import { useApp } from "../../context/AppContext";
-import { Flame, Sparkles, Gem, Plus, Award, Medal, Trophy, Crown } from "lucide-react";
+import { Flame, Sparkles, Gem, Plus, Award, Medal, Trophy, Crown, ChevronRight } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import BusinessDashboard from "./BusinessDashboard";
 import ProfessionalExplore from "./ProfessionalExplore";
@@ -57,66 +57,129 @@ export default function Marketplace() {
     <div>
       <PageHeader title="Explore" subtitle="The future Centium ecosystem" showBack />
 
-      <Card className="mb-6 bg-gradient-to-br from-teal to-teal-dark !text-white animate-fade-slide-up">
-        <div className="flex items-center justify-between mb-2">
+      {/* Design refinement §6.9: the two teal gradient cards (tier +
+          streak-reward) merge into one hairline panel — tier mark, points,
+          progress and the streak reward all read as one unit instead of
+          two competing full-bleed colour blocks. */}
+      <Card className="mb-6 animate-fade-slide-up">
+        <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2">
-            <tier.icon size={16} />
-            <p className="text-sm font-bold">{tier.name} tier</p>
+            <tier.icon size={16} style={{ color: tier.color }} />
+            <p className="section-label text-charcoal-faint">{tier.name} tier</p>
           </div>
-          <div className="flex items-center gap-2">
-            <p className="text-sm font-bold">{points.toLocaleString()} pts</p>
-            {/* V8 (QA 8.0): "as a place holder add a plus sign logo that
-                increases the tier by 1000 points" */}
-            <button
-              onClick={() => addBonusPoints(1000)}
-              aria-label="Add 1000 points (placeholder)"
-              className="tap w-6 h-6 rounded-full bg-white/20 flex items-center justify-center"
-            >
-              <Plus size={13} />
-            </button>
-          </div>
+          {/* V8 (QA 8.0): "as a place holder add a plus sign logo that
+              increases the tier by 1000 points" */}
+          <button
+            onClick={() => addBonusPoints(1000)}
+            aria-label="Add 1000 points (placeholder)"
+            className="tap w-6 h-6 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft"
+          >
+            <Plus size={13} />
+          </button>
         </div>
-        <div className="h-1.5 rounded-full bg-white/25 overflow-hidden mb-2">
-          <div className="h-full rounded-full bg-white transition-all duration-700" style={{ width: `${progressPct}%` }} />
+        <p className="text-[34px] font-extrabold text-charcoal leading-none tracking-[-0.035em] tabular-nums mb-3">
+          {points.toLocaleString()} <span className="text-sm font-semibold text-charcoal-faint">pts</span>
+        </p>
+        <div className="h-1.5 rounded-full bg-cream-soft overflow-hidden mb-2">
+          <div
+            // §7.4: "Tier progress bar: transition: width .7s cubic-bezier(.22,1,.36,1)."
+            className="h-full rounded-full"
+            style={{
+              width: `${progressPct}%`,
+              background: tier.color,
+              transition: "width 0.7s cubic-bezier(0.22,1,0.36,1)",
+            }}
+          />
         </div>
-        <p className="text-xs text-white/85">
+        <p className="text-xs text-charcoal-faint mb-4">
           {nextTier
             ? `${(nextTier.threshold - points).toLocaleString()} pts to ${nextTier.name}`
             : "Highest tier reached — Diamond"}
         </p>
+
+        {/* 5-tier ladder */}
+        <div className="flex items-center justify-between mb-4">
+          {rewardTiers.map((t) => {
+            const reached = points >= t.threshold;
+            return (
+              <div key={t.name} className="flex flex-col items-center gap-1">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center"
+                  style={{ background: reached ? `${t.color}20` : "rgb(var(--c-cream-soft))" }}
+                >
+                  <t.icon size={14} style={{ color: reached ? t.color : "rgb(var(--c-charcoal-faint))" }} />
+                </div>
+                <span className={reached ? "text-[9px] font-semibold text-charcoal-soft" : "text-[9px] font-medium text-charcoal-faint"}>
+                  {t.name}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="flex items-center gap-2.5 border-t border-charcoal/[0.08] pt-3.5">
+          <Flame size={15} className="text-teal-dark shrink-0" />
+          <div>
+            <p className="text-xs font-semibold text-charcoal">Your {streak.days}-day streak unlocked a reward</p>
+            <p className="text-[11px] text-charcoal-faint">10% off your next gym membership at partner gyms</p>
+          </div>
+        </div>
       </Card>
 
-      <Card className="mb-6 bg-gradient-to-br from-teal to-teal-dark !text-white animate-fade-slide-up">
-        <div className="flex items-center gap-2 mb-1.5">
-          <Flame size={16} />
-          <p className="text-sm font-bold">Your {streak.days}-day streak unlocked a reward</p>
-        </div>
-        <p className="text-sm text-white/85">10% off your next gym membership at partner gyms</p>
+      {/* Design refinement §6.9: Gyms/Classes promoted to grouped-list rows
+          with a live count; the remaining categories stay a 2-up grid. */}
+      <Card padded={false} className="mb-6 divide-y divide-charcoal/[0.04] animate-fade-slide-up">
+        {[
+          { id: "gyms", label: "Gyms", count: mockGyms.length },
+          { id: "classes", label: "Classes", count: mockClasses.length },
+        ].map((c) => {
+          const Icon = marketplaceCategoryIcon[c.id as "gyms" | "classes"];
+          return (
+            <button
+              key={c.id}
+              onClick={() => navigate(`/marketplace/${c.id}`)}
+              className="tap w-full flex items-center justify-between gap-3.5 px-4 py-3.5 text-left"
+            >
+              <div className="flex items-center gap-3.5">
+                <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0">
+                  <Icon size={16} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-charcoal">{c.label}</p>
+                  <p className="text-xs text-charcoal-faint">{c.count} nearby</p>
+                </div>
+              </div>
+              <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
+            </button>
+          );
+        })}
       </Card>
 
       {/* V9 (QA 9.0): "Remove the browse a category and keep the choose a
           category each with their own selectable button" — every category
           is its own directly-tappable button again, no picker sheet
           in between. */}
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        Choose a category
+      <p className="section-label text-charcoal-faint mb-2.5">
+        More categories
       </p>
       <div className="grid grid-cols-2 gap-2.5 mb-6 animate-fade-slide-up">
-        {marketplaceCategories.map((c) => {
-          const Icon = marketplaceCategoryIcon[c.id];
-          return (
-            <button
-              key={c.id}
-              onClick={() => navigate(`/marketplace/${c.id}`)}
-              className="tap flex flex-col items-center gap-1.5 bg-cream-card rounded-2xl py-4 shadow-soft"
-            >
-              <Icon size={20} className="text-primary" />
-              <span className="text-[11px] font-semibold text-charcoal-soft text-center leading-tight px-1">
-                {c.label}
-              </span>
-            </button>
-          );
-        })}
+        {marketplaceCategories
+          .filter((c) => c.id !== "gyms" && c.id !== "classes")
+          .map((c) => {
+            const Icon = marketplaceCategoryIcon[c.id];
+            return (
+              <button
+                key={c.id}
+                onClick={() => navigate(`/marketplace/${c.id}`)}
+                className="tap flex flex-col items-center gap-1.5 bg-cream-card border border-charcoal/[0.11] rounded-2xl py-4"
+              >
+                <Icon size={20} className="text-primary" />
+                <span className="text-[11px] font-semibold text-charcoal-soft text-center leading-tight px-1">
+                  {c.label}
+                </span>
+              </button>
+            );
+          })}
       </div>
 
       <Card className="text-center py-8 animate-fade-slide-up">

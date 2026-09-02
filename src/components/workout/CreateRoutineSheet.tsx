@@ -19,6 +19,7 @@ const blankExercise = (pick: ExercisePick): Exercise => ({
   weightKg: 20,
   category: "full_body",
   muscleGroups: pick.muscleGroups,
+  secondaryMuscleGroups: pick.secondaryMuscleGroups,
   classification: pick.classification,
   isCustom: pick.isCustom,
 });

@@ -27,7 +27,11 @@ export const OnboardingShell: React.FC<OnboardingShellProps> = ({
           <ChevronLeft size={20} />
         </button>
       )}
-      <h1 className="font-display text-2xl font-semibold text-charcoal mb-2">{title}</h1>
+      {/* Design refinement: onboarding headings unify to 700 weight,
+          matching the weight used by Welcome (33px/700) and Goals
+          (26px/700) in the handoff canvas — the only two onboarding
+          screens with an explicit spec. */}
+      <h1 className="font-display text-2xl font-bold text-charcoal mb-2">{title}</h1>
       {subtitle && <p className="text-charcoal-soft text-sm mb-6">{subtitle}</p>}
       <div className="flex-1">{children}</div>
       <div className="mt-8">{footer}</div>

@@ -96,17 +96,38 @@ const accessItems = [
 export default function ProfessionalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { professionalReviews, submitProfessionalReview, connectedProfessionalIds, connectProfessional, disconnectProfessional } = useApp();
+  const {
+    professionalReviews,
+    submitProfessionalReview,
+    connectedProfessionalIds,
+    connectProfessional,
+    disconnectProfessional,
+    user,
+    submitClientRequest,
+    clientAccessGrants,
+    setClientAccessGrant,
+  } = useApp();
   const [removeConfirm, setRemoveConfirm] = useState(false);
   const professional = mockProfessionals.find((p) => p.id === id);
   const isConnected = !!professional && (professional.connected || connectedProfessionalIds.includes(professional.id));
-  const [access, setAccess] = useState<Record<string, boolean>>({
+  // QA 12.0: "Make data-sharing granular" — this used to be plain local
+  // state that reset on every reload and never affected anything the
+  // professional could see; it's now persisted per professional.
+  const defaultAccess: Record<string, boolean> = {
     "Food diary": true,
     "Workout activity": true,
     Weight: true,
     Progress: true,
     "Health metrics": false,
-  });
+  };
+  const access = professional ? { ...defaultAccess, ...clientAccessGrants[professional.id] } : defaultAccess;
+  const setAccess = (updater: (a: Record<string, boolean>) => Record<string, boolean>) => {
+    if (!professional) return;
+    const next = updater(access);
+    Object.entries(next).forEach(([item, granted]) => {
+      if (access[item] !== granted) setClientAccessGrant(professional.id, item, granted);
+    });
+  };
   const [messageOpen, setMessageOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -192,6 +213,12 @@ export default function ProfessionalDetail() {
     setPaid(true);
     setTimeout(() => {
       connectProfessional(professional.id);
+      // QA 12.0: "Between the search and plus logo should be an inbox
+      // logo that shows new clients that hire the professional upon
+      // successful payment... The professional has the ability to accept
+      // or reject the client." Simulated on this same account — see the
+      // pendingClientRequests comment in AppContext for why.
+      submitClientRequest(user.firstName || user.businessName || "New client");
       setHireOpen(false);
       setPaid(false);
     }, 900);
@@ -304,7 +331,7 @@ export default function ProfessionalDetail() {
           <Button
             fullWidth
             variant="outline"
-            className="!border-ember/30 !text-ember-dark mt-2.5"
+            className="!border-teal/30 !text-teal-dark mt-2.5"
             onClick={() => {
               if (removeConfirm) {
                 disconnectProfessional(professional.id);
@@ -384,12 +411,19 @@ export default function ProfessionalDetail() {
               ))}
             </div>
             <div className="flex items-center gap-2 px-4 py-3 border-t border-charcoal/5">
+              {/* QA 12.0: "attach files should be contextual... for the
+                  sake of fitness related content. By no means should you
+                  be able to upload anything besides that." */}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,application/pdf"
+                accept="image/*,video/*"
                 className="hidden"
-                onChange={(e) => e.target.files?.[0] && sendAttachment(e.target.files[0])}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file && /^(image|video)\//.test(file.type)) sendAttachment(file);
+                  e.target.value = "";
+                }}
               />
               <button
                 onClick={() => fileInputRef.current?.click()}

@@ -142,12 +142,23 @@ export default function MessagesTab() {
         </div>
 
         <div className="flex items-center gap-2 sticky bottom-0 bg-cream pt-2">
+          {/* QA 12.0: "The ability to attach files should be contextual...
+              for the sake of fitness related content. By no means should
+              you be able to upload anything besides that which might
+              compromise security." `accept` is just a picker hint (some
+              OS file dialogs let a user bypass it via "All files"), so the
+              onChange handler below re-checks the actual MIME type before
+              ever calling sendAttachment. */}
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,application/pdf"
+            accept="image/*,video/*"
             className="hidden"
-            onChange={(e) => e.target.files?.[0] && sendAttachment(e.target.files[0])}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file && /^(image|video)\//.test(file.type)) sendAttachment(file);
+              e.target.value = "";
+            }}
           />
           <button
             onClick={() => fileInputRef.current?.click()}

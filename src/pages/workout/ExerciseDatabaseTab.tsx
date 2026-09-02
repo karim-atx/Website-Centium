@@ -22,10 +22,11 @@ interface DbExercise {
 const muscleGroupLabel: Record<MuscleGroup, string> = {
   back: "Back",
   bicep: "Bicep",
+  calves: "Calves",
   cardio: "Cardio",
   chest: "Chest",
   core: "Core",
-  full_body: "Full Body",
+  forearms: "Forearms",
   glutes: "Glutes",
   hamstrings: "Hamstrings",
   olympic: "Olympic",
@@ -46,44 +47,60 @@ const classificationLabel: Record<ExerciseClassification, string> = {
   duration: "Duration",
 };
 
-// V7 (QA 7.0): two pictures (front/back) instead of one stick figure — a
-// rotating arrow swaps between them, each highlighting the muscle groups
-// actually visible from that side. cardio/full_body/olympic stay list-only
-// (no single body zone represents them).
-const frontZones: MuscleGroup[] = ["shoulders", "chest", "bicep", "core", "quads"];
-// V9 (QA 9.0): "add glutes as a muscle group" — visible from the back view,
-// between the back and hamstrings.
-const backZones: MuscleGroup[] = ["shoulders", "back", "glutes", "tricep", "hamstrings"];
+// Design refinement §6.4/§6.5: real anatomical line art (masked PNGs, see
+// public/body/) with contoured, body-clipped highlight zones — replacing
+// the flat silhouette blobs + rectangle/path hit zones. Order per §6.4.6
+// (chips, bidirectional hover with the figure).
+const frontZones: MuscleGroup[] = ["shoulders", "chest", "bicep", "forearms", "core", "quads", "calves"];
+const backZones: MuscleGroup[] = ["shoulders", "back", "tricep", "forearms", "glutes", "hamstrings", "calves"];
 
-// V8 (QA 8.0): "replace the stick figure with a more detailed anatomical
-// model" — tap zones are now body-shaped paths (tapered limbs, a rounded
-// torso) layered over a matching silhouette, instead of plain rectangles.
-type BodyZone =
-  | { group: MuscleGroup; shape: "rect"; x: number; y: number; w: number; h: number; rx: number }
-  | { group: MuscleGroup; shape: "path"; d: string };
+interface ZoneEllipse {
+  group: MuscleGroup;
+  cx: number;
+  cy: number;
+  rx: number;
+  ry: number;
+}
 
-const frontZoneRects: BodyZone[] = [
-  { group: "shoulders", shape: "rect", x: 35, y: 62, w: 90, h: 18, rx: 9 },
-  { group: "chest", shape: "path", d: "M52 78 Q80 70 108 78 L106 112 Q80 122 54 112 Z" },
-  { group: "core", shape: "path", d: "M58 116 Q80 122 102 116 L98 160 Q80 168 62 160 Z" },
-  { group: "bicep", shape: "path", d: "M18 82 Q16 100 18 118 Q22 130 30 132 L34 84 Z" },
-  { group: "bicep", shape: "path", d: "M142 82 Q144 100 142 118 Q138 130 130 132 L126 84 Z" },
-  { group: "quads", shape: "path", d: "M56 166 Q66 172 76 166 L74 246 L58 246 Z" },
-  { group: "quads", shape: "path", d: "M104 166 Q94 172 84 166 L86 246 L102 246 Z" },
+// §6.4.3 — coordinates in the artwork's own 186×390 box, matching the
+// front/back masks 1:1 at any render size.
+const frontZoneEllipses: ZoneEllipse[] = [
+  { group: "shoulders", cx: 52, cy: 77, rx: 14, ry: 16 },
+  { group: "shoulders", cx: 134, cy: 77, rx: 14, ry: 16 },
+  { group: "chest", cx: 75, cy: 83, rx: 18, ry: 18 },
+  { group: "chest", cx: 111, cy: 83, rx: 18, ry: 18 },
+  { group: "bicep", cx: 46, cy: 108, rx: 11, ry: 21 },
+  { group: "bicep", cx: 140, cy: 108, rx: 11, ry: 21 },
+  { group: "forearms", cx: 40, cy: 140, rx: 9, ry: 18 },
+  { group: "forearms", cx: 146, cy: 140, rx: 9, ry: 18 },
+  { group: "core", cx: 93, cy: 118, rx: 19, ry: 20 },
+  { group: "core", cx: 93, cy: 154, rx: 17, ry: 21 },
+  { group: "quads", cx: 71, cy: 200, rx: 16, ry: 34 },
+  { group: "quads", cx: 115, cy: 200, rx: 16, ry: 34 },
+  { group: "quads", cx: 68, cy: 240, rx: 13, ry: 18 },
+  { group: "quads", cx: 118, cy: 240, rx: 13, ry: 18 },
+  { group: "calves", cx: 69, cy: 292, rx: 11, ry: 25 },
+  { group: "calves", cx: 117, cy: 292, rx: 11, ry: 25 },
 ];
 
-const backZoneRects: BodyZone[] = [
-  { group: "shoulders", shape: "rect", x: 35, y: 62, w: 90, h: 18, rx: 9 },
-  { group: "back", shape: "path", d: "M52 78 Q80 70 108 78 L106 112 L103 150 Q80 158 57 150 L54 112 Z" },
-  { group: "tricep", shape: "path", d: "M18 82 Q16 100 18 118 Q22 130 30 132 L34 84 Z" },
-  { group: "tricep", shape: "path", d: "M142 82 Q144 100 142 118 Q138 130 130 132 L126 84 Z" },
-  // V9 (QA 9.0): glutes sit between the lower back and the hamstrings —
-  // two lobes at hip width, matching the paired-limb shape convention
-  // already used for bicep/tricep/quads/hamstrings.
-  { group: "glutes", shape: "path", d: "M57 150 Q68 145 80 150 L78 176 Q68 182 58 176 Z" },
-  { group: "glutes", shape: "path", d: "M103 150 Q92 145 80 150 L82 176 Q92 182 102 176 Z" },
-  { group: "hamstrings", shape: "path", d: "M58 176 Q68 181 78 176 L74 246 L58 246 Z" },
-  { group: "hamstrings", shape: "path", d: "M104 176 Q94 181 84 176 L86 246 L102 246 Z" },
+const backZoneEllipses: ZoneEllipse[] = [
+  { group: "shoulders", cx: 52, cy: 79, rx: 14, ry: 16 },
+  { group: "shoulders", cx: 134, cy: 79, rx: 14, ry: 16 },
+  { group: "back", cx: 93, cy: 80, rx: 25, ry: 15 },
+  { group: "back", cx: 78, cy: 118, rx: 18, ry: 31 },
+  { group: "back", cx: 108, cy: 118, rx: 18, ry: 31 },
+  { group: "tricep", cx: 46, cy: 109, rx: 11, ry: 21 },
+  { group: "tricep", cx: 140, cy: 109, rx: 11, ry: 21 },
+  { group: "forearms", cx: 40, cy: 140, rx: 9, ry: 18 },
+  { group: "forearms", cx: 146, cy: 140, rx: 9, ry: 18 },
+  { group: "glutes", cx: 80, cy: 183, rx: 16, ry: 23 },
+  { group: "glutes", cx: 106, cy: 183, rx: 16, ry: 23 },
+  { group: "hamstrings", cx: 71, cy: 232, rx: 16, ry: 30 },
+  { group: "hamstrings", cx: 115, cy: 232, rx: 16, ry: 30 },
+  { group: "hamstrings", cx: 70, cy: 264, rx: 13, ry: 14 },
+  { group: "hamstrings", cx: 116, cy: 264, rx: 13, ry: 14 },
+  { group: "calves", cx: 70, cy: 298, rx: 12, ry: 26 },
+  { group: "calves", cx: 116, cy: 298, rx: 12, ry: 26 },
 ];
 
 export default function ExerciseDatabaseTab() {
@@ -123,6 +140,8 @@ export default function ExerciseDatabaseTab() {
     [all, query]
   );
 
+  // §6.4: "When filtering by muscle group, only go with the main muscle
+  // group selection" — matches primary `muscleGroups` only, never secondary.
   const filteredByGroup = useMemo(
     () => (selectedGroup ? searched.filter((e) => e.muscleGroups.includes(selectedGroup)) : searched),
     [searched, selectedGroup]
@@ -166,11 +185,35 @@ export default function ExerciseDatabaseTab() {
       }));
   }, [filteredByGroup, sort]);
 
-  const zoneFill = (zone: MuscleGroup) =>
-    selectedGroup === zone ? "#7D6BB5" : hoveredGroup === zone ? "#AEA1DC" : "#D9D3EC";
+  // Design refinement §6.4.2: highlight fills — idle transparent, hover a
+  // translucent lavender wash, selected a stronger lavender fill. Values
+  // differ slightly by theme so they hold against the dark ground too.
+  const zoneFill = (zone: MuscleGroup) => {
+    if (selectedGroup === zone) return "var(--zone-selected)";
+    if (hoveredGroup === zone) return "var(--zone-hover)";
+    return "transparent";
+  };
+
+  const flipSide = () => {
+    const next = bodySide === "front" ? "back" : "front";
+    const nextZones = next === "front" ? frontZones : backZones;
+    // §6.4.5: keep the selection only if it exists on the destination side.
+    setSelectedGroup((g) => (g && nextZones.includes(g) ? g : null));
+    setHoveredGroup(null);
+    setBodySide(next);
+  };
+
+  const ellipses = bodySide === "front" ? frontZoneEllipses : backZoneEllipses;
+  const fillAsset = bodySide === "front" ? "/body/centium-body-front-fill.png" : "/body/centium-body-back-fill.png";
+  const lineAsset = bodySide === "front" ? "/body/centium-body-front.png" : "/body/centium-body-back.png";
+  const maskId = `centBody-${bodySide}`;
 
   return (
     <div className="animate-fade-slide-up">
+      <style>{`
+        :root { --zone-hover: rgba(174,161,220,0.42); --zone-selected: rgba(125,107,181,0.55); }
+        .dark { --zone-hover: rgba(195,179,251,0.30); --zone-selected: rgba(169,145,254,0.50); }
+      `}</style>
       <div className="relative mb-4">
         <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
         <input
@@ -214,12 +257,8 @@ export default function ExerciseDatabaseTab() {
           <div className="space-y-5">
             {groups.map((g, i) => (
               <div key={g.label ?? i}>
-                {g.label && (
-                  <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-                    {g.label}
-                  </p>
-                )}
-                <Card padded={false} className="divide-y divide-charcoal/[0.04]">
+                {g.label && <p className="section-label text-charcoal-faint mb-2">{g.label}</p>}
+                <Card padded={false} className="divide-y divide-charcoal/[0.06]">
                   {g.items.map((e) => (
                     <button
                       key={e.name}
@@ -246,81 +285,80 @@ export default function ExerciseDatabaseTab() {
             Tap a muscle group to see its exercises — {bodySide === "front" ? "front" : "back"} view.
           </p>
           <div className="flex justify-center mb-3">
-            <svg viewBox="0 0 160 320" width={180} height={360}>
-              {/* decorative silhouette base, same for both sides.
-                  V9 (QA 9.0): "make the anatomical model more detailed" —
-                  added hands/feet, a spine hint, and ab segmentation lines
-                  on top of the QA8 silhouette shapes below. */}
-              <circle cx="80" cy="26" r="18" fill="#EDEAF7" />
-              <rect x="72" y="41" width="16" height="14" rx="5" fill="#EDEAF7" />
-              <path d="M40 66 Q80 52 120 66 L124 108 Q80 120 36 108 Z" fill="#EDEAF7" />
-              <path d="M56 104 Q80 112 104 104 L100 152 Q80 160 60 152 Z" fill="#EDEAF7" />
-              <path d="M22 70 Q16 100 20 132 Q22 138 30 136 L34 130 Q32 98 36 72 Z" fill="#EDEAF7" />
-              <ellipse cx="21" cy="139" rx="7" ry="8" fill="#EDEAF7" />
-              <path d="M138 70 Q144 100 140 132 Q138 138 130 136 L126 130 Q128 98 124 72 Z" fill="#EDEAF7" />
-              <ellipse cx="139" cy="139" rx="7" ry="8" fill="#EDEAF7" />
-              <path d="M58 150 Q80 158 102 150 L98 250 L84 250 L80 180 L76 250 L62 250 Z" fill="#EDEAF7" />
-              <ellipse cx="67" cy="255" rx="9" ry="6" fill="#EDEAF7" />
-              <ellipse cx="93" cy="255" rx="9" ry="6" fill="#EDEAF7" />
-              <path
-                d="M80 56 L80 148 M64 96 L96 96 M62 108 L98 108 M67 120 L67 148 M93 120 L93 148"
-                stroke="#C9C2E8"
-                strokeWidth="1.1"
-                opacity="0.55"
-                fill="none"
+            {/* §6.4.1/§6.4.2: line art as a CSS mask (colour comes from
+                currentColor via the mask trick below), highlights clipped
+                to the body silhouette via an SVG mask built from the
+                "-fill" asset. key={bodySide} forces a full remount on
+                flip — §6.4.4's fix for the cross-fade-flash bug (sharing
+                one subtree across front/back let React reuse ellipse N's
+                DOM node for a different muscle and carry its lit fill). */}
+            <div className="relative" style={{ width: 186, height: 390 }}>
+              <div
+                className="absolute inset-0 text-charcoal-soft"
+                style={{
+                  backgroundColor: "currentColor",
+                  maskImage: `url(${lineAsset})`,
+                  maskSize: "contain",
+                  maskRepeat: "no-repeat",
+                  maskPosition: "center",
+                  WebkitMaskImage: `url(${lineAsset})`,
+                  WebkitMaskSize: "contain",
+                  WebkitMaskRepeat: "no-repeat",
+                  WebkitMaskPosition: "center",
+                  pointerEvents: "none",
+                }}
               />
-
-              {(bodySide === "front" ? frontZoneRects : backZoneRects).map((z, i) =>
-                z.shape === "rect" ? (
-                  <rect
-                    key={`${z.group}-${i}`}
-                    x={z.x}
-                    y={z.y}
-                    width={z.w}
-                    height={z.h}
-                    rx={z.rx}
-                    fill={zoneFill(z.group)}
-                    className="cursor-pointer"
-                    onMouseEnter={() => setHoveredGroup(z.group)}
-                    onMouseLeave={() => setHoveredGroup(null)}
-                    onClick={() => setSelectedGroup(selectedGroup === z.group ? null : z.group)}
-                  />
-                ) : (
-                  <path
-                    key={`${z.group}-${i}`}
-                    d={z.d}
-                    fill={zoneFill(z.group)}
-                    className="cursor-pointer"
-                    onMouseEnter={() => setHoveredGroup(z.group)}
-                    onMouseLeave={() => setHoveredGroup(null)}
-                    onClick={() => setSelectedGroup(selectedGroup === z.group ? null : z.group)}
-                  />
-                )
-              )}
-            </svg>
+              <svg viewBox="0 0 186 390" width={186} height={390} className="absolute inset-0">
+                <defs>
+                  <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="186" height="390">
+                    <image href={fillAsset} x="0" y="0" width="186" height="390" preserveAspectRatio="xMidYMid meet" />
+                  </mask>
+                </defs>
+                <g key={bodySide} mask={`url(#${maskId})`}>
+                  {ellipses.map((z, i) => (
+                    <ellipse
+                      key={`${bodySide}-${z.group}-${i}`}
+                      cx={z.cx}
+                      cy={z.cy}
+                      rx={z.rx}
+                      ry={z.ry}
+                      fill={zoneFill(z.group)}
+                      className="cursor-pointer"
+                      style={{ transition: "fill 0.18s ease" }}
+                      onMouseEnter={() => setHoveredGroup(z.group)}
+                      onMouseLeave={() => setHoveredGroup(null)}
+                      onClick={() => setSelectedGroup(selectedGroup === z.group ? null : z.group)}
+                    />
+                  ))}
+                </g>
+              </svg>
+            </div>
           </div>
 
           <div className="flex justify-center mb-5">
             <button
-              onClick={() => {
-                setBodySide((s) => (s === "front" ? "back" : "front"));
-                setHoveredGroup(null);
-              }}
-              className="tap flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary-pale rounded-full px-3.5 py-1.5"
+              onClick={flipSide}
+              className="tap flex items-center gap-1.5 text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-3.5 py-1.5"
             >
               <RotateCw size={13} /> Switch to {bodySide === "front" ? "back" : "front"} view
             </button>
           </div>
 
+          {/* §6.4.6: hover is bidirectional — hovering a chip lights its
+              muscle, hovering a muscle lights its chip (via hoveredGroup). */}
           <div className="flex flex-wrap justify-center gap-1.5 mb-5">
             {bodyZones.map((mg) => (
               <button
                 key={mg}
                 onClick={() => setSelectedGroup(selectedGroup === mg ? null : mg)}
+                onMouseEnter={() => setHoveredGroup(mg)}
+                onMouseLeave={() => setHoveredGroup(null)}
                 className={clsx(
-                  "tap px-2.5 py-1 rounded-full text-[10px] font-semibold border",
+                  "tap px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors",
                   selectedGroup === mg
                     ? "bg-primary text-white border-primary"
+                    : hoveredGroup === mg
+                    ? "bg-primary-pale border-primary text-primary-deep-text"
                     : "bg-cream-soft border-transparent text-charcoal-soft"
                 )}
               >
@@ -335,10 +373,8 @@ export default function ExerciseDatabaseTab() {
 
           {selectedGroup && (
             <div>
-              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-                {muscleGroupLabel[selectedGroup]}
-              </p>
-              <Card padded={false} className="divide-y divide-charcoal/[0.04]">
+              <p className="section-label text-charcoal-faint mb-2">{muscleGroupLabel[selectedGroup]}</p>
+              <Card padded={false} className="divide-y divide-charcoal/[0.06]">
                 {filteredByGroup.length === 0 ? (
                   <p className="text-sm text-charcoal-faint text-center py-6">No exercises for this group.</p>
                 ) : (

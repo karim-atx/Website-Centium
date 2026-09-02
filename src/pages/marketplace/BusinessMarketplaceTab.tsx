@@ -96,7 +96,7 @@ export default function BusinessMarketplaceTab() {
             value={discountDraft}
             onChange={(e) => setDiscountDraft(e.target.value)}
             placeholder="e.g. 15% off first visit"
-            className="flex-1 rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="flex-1 rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <Button
             onClick={() => {

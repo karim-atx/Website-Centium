@@ -54,6 +54,7 @@ export const WaterDetailSheet: React.FC<{ open: boolean; onClose: () => void }> 
               setWaterAmount(v);
             }}
             className="w-full"
+            style={{ accentColor: "rgb(var(--c-sky))" }}
           />
           <p className="text-xs text-charcoal-faint mt-1">{(amountDraft / 1000).toFixed(1)}L</p>
         </label>
@@ -72,6 +73,7 @@ export const WaterDetailSheet: React.FC<{ open: boolean; onClose: () => void }> 
               setWaterGoal(v);
             }}
             className="w-full"
+            style={{ accentColor: "rgb(var(--c-sky))" }}
           />
           <p className="text-xs text-charcoal-faint mt-1">{(goalDraft / 1000).toFixed(1)}L / day</p>
         </label>

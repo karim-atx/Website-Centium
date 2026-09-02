@@ -11,6 +11,7 @@ import type { MuscleGroup } from "../../types";
 export interface ExercisePick {
   name: string;
   muscleGroups?: CustomExerciseData["muscleGroups"];
+  secondaryMuscleGroups?: CustomExerciseData["secondaryMuscleGroups"];
   classification?: CustomExerciseData["classification"];
   isCustom?: boolean;
 }
@@ -113,7 +114,7 @@ export const ExerciseLibrarySheet: React.FC<{
               return (
                 <button
                   key={e.name}
-                  onClick={() => !added && onPick({ name: e.name, classification: e.classification, muscleGroups: e.muscleGroups })}
+                  onClick={() => !added && onPick({ name: e.name, classification: e.classification, muscleGroups: e.muscleGroups, secondaryMuscleGroups: e.secondaryMuscleGroups })}
                   disabled={added}
                   className="tap w-full flex items-center justify-between rounded-2xl px-3.5 py-3 hover:bg-cream-soft text-left disabled:opacity-40"
                 >

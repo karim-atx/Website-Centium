@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Chip } from "../../components/ui/Chip";
@@ -8,7 +8,8 @@ import { useApp } from "../../context/AppContext";
 import { calculateTDEE, targetsFromGoal } from "../../services/nutrition";
 import { healthMetrics } from "../../data/mockHealthData";
 import type { WeightGoalType, PlanType } from "../../types";
-import { Sparkles, Check, Minus, Plus } from "lucide-react";
+import { Sparkles, Check, Minus, Plus, ChevronDown, X } from "lucide-react";
+import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
 
 const goalOptions: { value: WeightGoalType; label: string }[] = [
   { value: "lose", label: "Lose weight" },
@@ -27,9 +28,33 @@ const existingPlanPreset = {
 };
 
 export default function GoalsPanel() {
-  const { user, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal } = useApp();
+  const { user, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, dietaryRestriction, setDietaryRestriction } =
+    useApp();
   const [calorieDraft, setCalorieDraft] = useState(String(nutritionGoal.targetCalories));
   const [planError, setPlanError] = useState<string | null>(null);
+  const [restrictionOpen, setRestrictionOpen] = useState(false);
+  const restrictionContentRef = useRef<HTMLDivElement>(null);
+  // The picker, its "no selection" empty state, and its "X restriction
+  // active" summary line are three different heights of the SAME slot —
+  // previously the summary line was a separate element that popped in
+  // instantly the moment an option was tapped, right next to the picker
+  // box which was still mid-collapse from its own separate animation, so
+  // the two uncoordinated layout changes landing at once looked like a
+  // glitch. Measuring this slot's actual content height and animating a
+  // single max-height/margin between whatever it was and whatever it
+  // becomes makes every transition between all three states one smooth
+  // motion, regardless of what triggered it.
+  const [restrictionSlotHeight, setRestrictionSlotHeight] = useState(0);
+  useLayoutEffect(() => {
+    setRestrictionSlotHeight(restrictionContentRef.current?.scrollHeight ?? 0);
+  }, [restrictionOpen, dietaryRestriction]);
+  // This dropdown sits at the bottom of the page, and when it opens while
+  // already scrolled near the end, the browser doesn't auto-scroll to
+  // reveal the new content — it opens partly hidden behind the fixed
+  // bottom nav (which also swallows taps in the overlap zone).
+  useEffect(() => {
+    if (restrictionOpen) restrictionContentRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }, [restrictionOpen]);
   const [desiredWeightDraft, setDesiredWeightDraft] = useState(
     String(nutritionGoal.desiredWeightKg ?? user.weightKg)
   );
@@ -370,7 +395,7 @@ export default function GoalsPanel() {
 
       <Card>
         <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">Plan</p>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           {(["custom", "existing"] as PlanType[]).map((p) => (
             <Chip
               key={p}
@@ -399,6 +424,15 @@ export default function GoalsPanel() {
               {p === "custom" ? "Custom plan" : "Existing plan"}
             </Chip>
           ))}
+          {/* QA 11.0: "Besides custom and existing plan, another button
+              should include dietary restriction that when pressed shows
+              many dietary restrictions in a drop down box." */}
+          <Chip active={!!dietaryRestriction || restrictionOpen} onClick={() => setRestrictionOpen((v) => !v)}>
+            <span className="flex items-center gap-1">
+              Dietary restriction
+              <ChevronDown size={12} className={restrictionOpen ? "rotate-180" : undefined} />
+            </span>
+          </Chip>
         </div>
         {planError && <p className="text-xs font-semibold text-[#C0392B] mt-3">{planError}</p>}
         {!planError && nutritionGoal.planType === "existing" && (
@@ -407,6 +441,42 @@ export default function GoalsPanel() {
             active — weight goal, calorie target and macro distribution can only be changed by them.
           </p>
         )}
+        {/* One slot, one animated height — see the state comment above for
+            why this used to glitch. */}
+        <div
+          className="overflow-hidden transition-[height,margin-top] duration-300 ease-out"
+          style={{ height: restrictionSlotHeight, marginTop: restrictionSlotHeight > 0 ? 12 : 0 }}
+        >
+          <div ref={restrictionContentRef}>
+            {restrictionOpen ? (
+              <div className="bg-cream-soft rounded-2xl p-2 space-y-1 scroll-mb-24">
+                {dietaryRestrictionOptions.map((r) => (
+                  <button
+                    key={r.value}
+                    onClick={() => {
+                      setDietaryRestriction(dietaryRestriction === r.value ? null : r.value);
+                      setRestrictionOpen(false);
+                    }}
+                    className={`tap w-full text-left rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
+                      dietaryRestriction === r.value ? "bg-primary text-white" : "text-charcoal hover:bg-cream-card"
+                    }`}
+                  >
+                    {r.label}
+                  </button>
+                ))}
+              </div>
+            ) : dietaryRestriction ? (
+              <button
+                onClick={() => setDietaryRestriction(null)}
+                className="tap flex items-center gap-1.5 text-xs font-semibold text-charcoal-faint"
+              >
+                <X size={12} />
+                {dietaryRestrictionOptions.find((r) => r.value === dietaryRestriction)?.label} active —
+                incompatible Diary items are highlighted. Tap to clear.
+              </button>
+            ) : null}
+          </div>
+        </div>
       </Card>
     </div>
   );

@@ -17,10 +17,11 @@ const repMaxModes: { value: RepMaxUpdateMode; label: string; desc: string }[] = 
 const muscleGroupLabel: Record<MuscleGroup, string> = {
   back: "Back",
   bicep: "Bicep",
+  calves: "Calves",
   cardio: "Cardio",
   chest: "Chest",
   core: "Core",
-  full_body: "Full Body",
+  forearms: "Forearms",
   glutes: "Glutes",
   hamstrings: "Hamstrings",
   olympic: "Olympic",
@@ -100,6 +101,7 @@ export const ExerciseSettingsSheet: React.FC<{
     onSave({
       name: pick.name,
       muscleGroups: pick.muscleGroups,
+      secondaryMuscleGroups: pick.secondaryMuscleGroups,
       classification: pick.classification,
       isCustom: pick.isCustom,
     });
@@ -171,14 +173,31 @@ export const ExerciseSettingsSheet: React.FC<{
             Tap the exercise name to replace it from the exercise database.
           </p>
 
-          {(exercise.muscleGroups?.length || exercise.classification) && (
+          {(exercise.muscleGroups?.length || exercise.secondaryMuscleGroups?.length || exercise.classification) && (
             <div className="flex flex-wrap gap-1.5">
+              {/* QA 11.0: "The primary muscle group should have a 1 degree
+                  above it similar to how it looks like in the secondary
+                  muscle group" — matches the "N°" superscript convention
+                  already used when picking muscle groups (see
+                  CreateCustomExerciseSheet), and gives primary the more
+                  prominent solid fill instead of the same pale tint as
+                  secondary. */}
               {exercise.muscleGroups?.map((mg) => (
+                <span
+                  key={mg}
+                  className="rounded-full bg-primary text-white text-[11px] font-semibold px-2.5 py-1"
+                >
+                  {muscleGroupLabel[mg]}
+                  <span className="ml-0.5 text-[9px] align-super">1°</span>
+                </span>
+              ))}
+              {exercise.secondaryMuscleGroups?.map((mg) => (
                 <span
                   key={mg}
                   className="rounded-full bg-primary-pale text-primary-dark text-[11px] font-semibold px-2.5 py-1"
                 >
                   {muscleGroupLabel[mg]}
+                  <span className="ml-0.5 text-[9px] align-super">2°</span>
                 </span>
               ))}
               {exercise.classification && (
@@ -201,76 +220,112 @@ export const ExerciseSettingsSheet: React.FC<{
             </label>
           )}
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Min sets")}</span>
-              {num("minSets")}
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Max sets")}</span>
-              {num("maxSets")}
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Min reps")}</span>
-              {num("minReps")}
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Max reps")}</span>
-              {num("maxReps")}
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Intensity", "%")}</span>
-              {num("intensityPct")}
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rep Max", "kg")}</span>
-              {num("repMaxKg")}
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rest", "sec")}</span>
-              {num("restSeconds")}
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">RPE</span>
-              {num("rpe")}
-            </label>
-          </div>
-
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-              Tempo (ecc-pause-con-pause)
-            </span>
-            <input
-              value={draft.tempo ?? ""}
-              onChange={(e) => setDraft((d) => ({ ...d, tempo: e.target.value.replace(/[^\d-]/g, "") }))}
-              placeholder="3-1-1-0"
-              inputMode="numeric"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
-
-          <div>
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-              Rep Max update mode
-            </p>
-            <div className="space-y-2">
-              {repMaxModes.map((m) => (
-                <button
-                  key={m.value}
-                  onClick={() => setDraft((d) => ({ ...d, repMaxUpdateMode: m.value }))}
-                  className={clsx(
-                    "tap w-full text-left rounded-xl px-3.5 py-2.5 border transition-colors",
-                    draft.repMaxUpdateMode === m.value
-                      ? "bg-primary-pale border-primary"
-                      : "bg-cream-soft border-transparent"
-                  )}
-                >
-                  <p className="text-sm font-semibold text-charcoal">{m.label}</p>
-                  <p className="text-xs text-charcoal-faint">{m.desc}</p>
-                </button>
-              ))}
+          {/* QA 11.0: "When editing an exercise that falls under cardio,
+              replace things like min/max sets, min/max reps, intensity/rep
+              max/RPE tempo etc. with something more relevant to cardio
+              training." Strength-only programming detail makes no sense
+              for a treadmill run, so cardio gets its own field set. */}
+          {draft.classification === "cardio" ? (
+            <div className="grid grid-cols-2 gap-3">
+              <label className="block">
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Duration", "min")}</span>
+                {num("cardioDurationMin")}
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Distance", "km")}</span>
+                {num("cardioDistanceKm")}
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Incline", "%")}</span>
+                {num("cardioInclinePct")}
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Pace", "min/km")}</span>
+                {num("cardioPaceMinPerKm")}
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Avg heart rate", "bpm")}</span>
+                {num("cardioAvgHeartRate")}
+              </label>
+              <label className="block">
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rest", "sec")}</span>
+                {num("restSeconds")}
+              </label>
             </div>
-          </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Min sets")}</span>
+                  {num("minSets")}
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Max sets")}</span>
+                  {num("maxSets")}
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Min reps")}</span>
+                  {num("minReps")}
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Max reps")}</span>
+                  {num("maxReps")}
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Intensity", "%")}</span>
+                  {num("intensityPct")}
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rep Max", "kg")}</span>
+                  {num("repMaxKg")}
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rest", "sec")}</span>
+                  {num("restSeconds")}
+                </label>
+                <label className="block">
+                  <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">RPE</span>
+                  {num("rpe")}
+                </label>
+              </div>
+
+              <label className="block">
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
+                  Tempo (ecc-pause-con-pause)
+                </span>
+                <input
+                  value={draft.tempo ?? ""}
+                  onChange={(e) => setDraft((d) => ({ ...d, tempo: e.target.value.replace(/[^\d-]/g, "") }))}
+                  placeholder="3-1-1-0"
+                  inputMode="numeric"
+                  className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+                />
+              </label>
+
+              <div>
+                <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+                  Rep Max update mode
+                </p>
+                <div className="space-y-2">
+                  {repMaxModes.map((m) => (
+                    <button
+                      key={m.value}
+                      onClick={() => setDraft((d) => ({ ...d, repMaxUpdateMode: m.value }))}
+                      className={clsx(
+                        "tap w-full text-left rounded-xl px-3.5 py-2.5 border transition-colors",
+                        draft.repMaxUpdateMode === m.value
+                          ? "bg-primary-pale border-primary"
+                          : "bg-cream-soft border-transparent"
+                      )}
+                    >
+                      <p className="text-sm font-semibold text-charcoal">{m.label}</p>
+                      <p className="text-xs text-charcoal-faint">{m.desc}</p>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           <Button fullWidth size="lg" onClick={save}>
             Save settings

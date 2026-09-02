@@ -42,7 +42,11 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({ open, onClose, title, 
       />
       <div className="relative w-full sm:max-w-md bg-cream rounded-t-4xl sm:rounded-4xl shadow-lift max-h-[88vh] overflow-y-auto animate-sheet-up sm:animate-pop">
         {!hideHeader && (
-          <div className="sticky top-0 bg-cream/95 backdrop-blur-sm px-5 pt-4 pb-3 flex items-center justify-between border-b border-charcoal/5 rounded-t-4xl">
+          // QA 11.0: "Terms of service title and X button intersect text
+          // when scrolling" — the header's translucency (bg-cream/95 +
+          // backdrop-blur) let scrolled content show through it. A fully
+          // opaque background fixes this for every sheet, not just ToS.
+          <div className="sticky top-0 z-10 bg-cream px-5 pt-4 pb-3 flex items-center justify-between border-b border-charcoal/5 rounded-t-4xl">
             <div className="w-8" />
             {title && <h2 className="font-display text-lg font-semibold text-charcoal">{title}</h2>}
             <button

@@ -2,19 +2,24 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { X, Plus, Check, Calculator, Square, MoreHorizontal, Play, Pause, Weight, MessageSquareText } from "lucide-react";
 import type { Exercise, LoggedExercise, LoggedSet } from "../../types";
+import { ONE_RM_CLASSIFICATIONS } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { Metronome } from "./Metronome";
 import { RPECalculator } from "./RPECalculator";
 import { PlateCalculatorSheet } from "./PlateCalculatorSheet";
 import { SetOptionsSheet } from "./SetOptionsSheet";
+import { Confetti } from "./Confetti";
 import { Button } from "../ui/Button";
-import { formatDuration, volumeForSession } from "../../services/workout";
+import { formatDuration, volumeForSession, estimate1RM } from "../../services/workout";
+import { exerciseLibrary } from "../../data/mockWorkouts";
 import clsx from "clsx";
 
 const setTypeBadge: Record<string, string> = {
   warmup: "W",
   failure: "F",
   dropset: "D",
+  superset: "S",
+  pr: "PR",
 };
 
 function initLoggedExercises(exercises: Exercise[]): LoggedExercise[] {
@@ -40,7 +45,8 @@ export const WorkoutSessionSheet: React.FC<{
   // professional can write his notes to the client" — read-only here.
   coachNote?: string;
 }> = ({ open, onClose, routineId, routineName, exercises, coachNote }) => {
-  const { saveWorkoutSession, logWorkout, pausedSessions, savePausedSession, clearPausedSession } = useApp();
+  const { saveWorkoutSession, logWorkout, pausedSessions, savePausedSession, clearPausedSession, personalRecords, setPersonalRecord } =
+    useApp();
   const [startedAt, setStartedAt] = useState(() => new Date());
   const [elapsed, setElapsed] = useState(0);
   const [logged, setLogged] = useState<LoggedExercise[]>(() => initLoggedExercises(exercises));
@@ -54,6 +60,14 @@ export const WorkoutSessionSheet: React.FC<{
   const [quitConfirmOpen, setQuitConfirmOpen] = useState(false);
   const [emptyFinishOpen, setEmptyFinishOpen] = useState(false);
   const [coachNoteOpen, setCoachNoteOpen] = useState(false);
+  // §7.1: which set just animated a completion tick — a per-tap nonce so
+  // re-checking the same set re-fires the (CSS-animation, remount-only)
+  // sequence instead of doing nothing on a second tap.
+  const [tickKey, setTickKey] = useState<string | null>(null);
+  const tickNonce = React.useRef(0);
+  // QA 11.0: "If a set was selected as a PR and the checkmark was
+  // selected confetti flies through the page as a celebration."
+  const [confettiActive, setConfettiActive] = useState(false);
 
   useEffect(() => {
     if (!open || finished || !started) return;
@@ -184,13 +198,13 @@ export const WorkoutSessionSheet: React.FC<{
       <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-charcoal/5 shrink-0">
         <button
           onClick={requestClose}
-          className="tap w-9 h-9 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft"
+          className="tap w-[34px] h-[34px] rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft"
         >
           <X size={16} />
         </button>
         <div className="text-center">
-          <p className="font-display font-semibold text-charcoal">{routineName}</p>
-          <p className="text-xs text-charcoal-faint">
+          <p className="font-display text-[15px] font-bold text-charcoal">{routineName}</p>
+          <p className="text-[10.5px] font-medium text-charcoal-faint tabular-nums">
             {started
               ? `Started ${startedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${formatDuration(elapsed)} elapsed`
               : elapsed > 0
@@ -205,7 +219,7 @@ export const WorkoutSessionSheet: React.FC<{
               setStarted((v) => !v);
             }}
             aria-label={started ? "Pause elapsed time" : "Start elapsed time"}
-            className="tap w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shadow-soft"
+            className="tap w-[34px] h-[34px] rounded-full bg-primary text-white flex items-center justify-center"
           >
             {started ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" />}
           </button>
@@ -217,8 +231,8 @@ export const WorkoutSessionSheet: React.FC<{
             onClick={() => setCoachNoteOpen(true)}
             aria-label="Coach's note"
             className={clsx(
-              "tap w-9 h-9 rounded-full flex items-center justify-center shadow-soft",
-              coachNote ? "bg-sohati text-white" : "bg-cream-soft text-charcoal-faint"
+              "tap w-[34px] h-[34px] rounded-full flex items-center justify-center",
+              coachNote ? "bg-primary text-white" : "bg-cream-soft text-charcoal-faint"
             )}
           >
             <MessageSquareText size={14} />
@@ -231,7 +245,12 @@ export const WorkoutSessionSheet: React.FC<{
           const meta = exercises.find((e) => e.id === ex.exerciseId);
           return (
           <div key={ex.exerciseId} className="mb-6">
-            <p className="font-semibold text-charcoal">{ex.name}</p>
+            <div className="flex items-center justify-between mb-1">
+              <p className="font-semibold text-[15px] text-charcoal">{ex.name}</p>
+              <span className="text-[10.5px] font-medium text-charcoal-tertiary tabular-nums">
+                {exIdx + 1} of {logged.length}
+              </span>
+            </div>
             {started && meta && (meta.restSeconds || meta.rpe || meta.tempo) && (
               <p className="text-[11px] text-charcoal-faint mb-1">
                 {[
@@ -243,18 +262,31 @@ export const WorkoutSessionSheet: React.FC<{
                   .join(" · ")}
               </p>
             )}
-            <div className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-2 items-center text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5 px-1 mt-2">
+            <div
+              className="grid gap-2 items-center text-[9.5px] font-semibold text-charcoal-tertiary uppercase tracking-[0.09em] mb-1.5 px-1 mt-2"
+              style={{ gridTemplateColumns: "26px 1fr 1fr 30px 30px" }}
+            >
               <span>Set</span>
               <span>Weight (kg)</span>
               <span>Reps</span>
               <span></span>
               <span></span>
             </div>
-            <div className="space-y-1.5">
-              {ex.sets.map((s, setIdx) => (
+            {/* Design refinement §6.6: "one hairline card with dividers" —
+                remove the per-row shadow-soft. Completed sets get a
+                distinct row/field treatment, not just the tick. */}
+            <div className="rounded-2xl border border-charcoal/[0.11] divide-y divide-charcoal/[0.06] overflow-hidden">
+              {ex.sets.map((s, setIdx) => {
+                const rowKey = `${exIdx}-${setIdx}`;
+                const justTicked = tickKey === rowKey;
+                return (
                 <div
                   key={setIdx}
-                  className="grid grid-cols-[auto_1fr_1fr_auto_auto] gap-2 items-center bg-cream-card rounded-xl px-3 py-2 shadow-soft"
+                  className={clsx("grid gap-2 items-center px-3 py-2", justTicked && "animate-set-row-settle")}
+                  style={{
+                    gridTemplateColumns: "26px 1fr 1fr 30px 30px",
+                    background: s.completed ? "#EFECF8" : "transparent",
+                  }}
                 >
                   <span className="text-sm font-bold text-charcoal-faint w-5 flex items-center gap-1">
                     {s.setNumber}
@@ -268,13 +300,19 @@ export const WorkoutSessionSheet: React.FC<{
                     value={s.weightKg}
                     onChange={(e) => updateSet(exIdx, setIdx, { weightKg: Number(e.target.value) || 0 })}
                     inputMode="decimal"
-                    className="w-full rounded-lg bg-cream-soft px-2 py-1.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className={clsx(
+                      "w-full rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border",
+                      s.completed ? "bg-[#E4DFF3] border-primary/[0.16] text-primary-deep-text" : "bg-cream-soft border-charcoal/[0.07] text-charcoal"
+                    )}
                   />
                   <input
                     value={s.reps}
                     onChange={(e) => updateSet(exIdx, setIdx, { reps: Number(e.target.value) || 0 })}
                     inputMode="numeric"
-                    className="w-full rounded-lg bg-cream-soft px-2 py-1.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
+                    className={clsx(
+                      "w-full rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border",
+                      s.completed ? "bg-[#E4DFF3] border-primary/[0.16] text-primary-deep-text" : "bg-cream-soft border-charcoal/[0.07] text-charcoal"
+                    )}
                   />
                   <button
                     onClick={() => setSetOptionsTarget({ exIdx, setIdx })}
@@ -286,26 +324,63 @@ export const WorkoutSessionSheet: React.FC<{
                   >
                     <MoreHorizontal size={15} />
                   </button>
-                  <button
-                    onClick={() => {
-                      const nowCompleted = !s.completed;
-                      updateSet(exIdx, setIdx, { completed: nowCompleted });
-                      // V10 (QA 10.0): "If you check off a set, while the
-                      // timer is not playing, it automatically plays the
-                      // timer as it assumes you have started the routine."
-                      if (nowCompleted && !started) {
-                        if (elapsed === 0) setStartedAt(new Date());
-                        setStarted(true);
-                      }
-                    }}
-                    className={`tap w-7 h-7 rounded-full flex items-center justify-center shrink-0 ${
-                      s.completed ? "bg-primary text-white" : "bg-cream-soft text-charcoal-faint"
-                    }`}
-                  >
-                    <Check size={13} strokeWidth={3} />
-                  </button>
+                  {/* §7.1: a bare colour swap becomes a 420ms three-part
+                      confirmation — tick squash/overshoot, an expanding
+                      ring, and a delayed check-glyph draw-in. Keyed on a
+                      per-tap nonce so CSS animations (which only replay on
+                      remount) re-fire on every completion, not just the
+                      first. */}
+                  <div className="relative w-7 h-7 shrink-0">
+                    {justTicked && (
+                      <span
+                        key={tickKey}
+                        className="absolute inset-0 rounded-full border-2 pointer-events-none animate-set-tick-ring"
+                        style={{ borderColor: "#AEA1DC" }}
+                      />
+                    )}
+                    <button
+                      key={justTicked ? `${tickKey}-btn` : "btn"}
+                      onClick={() => {
+                        const nowCompleted = !s.completed;
+                        updateSet(exIdx, setIdx, { completed: nowCompleted });
+                        if (nowCompleted) {
+                          tickNonce.current += 1;
+                          setTickKey(`${rowKey}-t${tickNonce.current}`);
+                          if (s.setType === "pr") {
+                            setConfettiActive(true);
+                            // QA 12.0: "When choosing PR for a set it
+                            // automatically gets added to the one rep max
+                            // if it fits the criteria of barbell, dumbbell
+                            // or weighted bodyweight" — immediate, rather
+                            // than waiting for saveWorkoutSession at the
+                            // end of the whole workout.
+                            const libEntry = exerciseLibrary.find((l) => l.name === ex.name);
+                            if (libEntry && ONE_RM_CLASSIFICATIONS.includes(libEntry.classification) && s.weightKg > 0) {
+                              const est = estimate1RM(s.weightKg, s.reps);
+                              if (est > (personalRecords[ex.name] ?? 0)) setPersonalRecord(ex.name, est);
+                            }
+                          }
+                        }
+                        // V10 (QA 10.0): "If you check off a set, while the
+                        // timer is not playing, it automatically plays the
+                        // timer as it assumes you have started the routine."
+                        if (nowCompleted && !started) {
+                          if (elapsed === 0) setStartedAt(new Date());
+                          setStarted(true);
+                        }
+                      }}
+                      className={clsx(
+                        "tap relative w-7 h-7 rounded-full flex items-center justify-center shrink-0",
+                        s.completed ? "bg-primary text-white" : "bg-cream-soft text-charcoal-disabled",
+                        justTicked && "animate-set-tick"
+                      )}
+                    >
+                      <Check key={justTicked ? tickKey : "check"} size={13} strokeWidth={3} className={justTicked ? "animate-set-tick-check" : undefined} />
+                    </button>
+                  </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
             <button
               onClick={() => addSet(exIdx)}
@@ -321,15 +396,15 @@ export const WorkoutSessionSheet: React.FC<{
       <div className="border-t border-charcoal/5 px-5 py-4 shrink-0 bg-cream-card">
         <div className="flex items-center justify-between mb-3">
           <div>
-            <p className="text-xs text-charcoal-faint">Total volume</p>
-            <p className="text-lg font-bold text-charcoal">{totalVolume.toLocaleString()} kg</p>
+            <p className="section-label text-charcoal-faint">Total volume</p>
+            <p className="text-[24px] font-extrabold text-charcoal tracking-[-0.03em] tabular-nums">{totalVolume.toLocaleString()} kg</p>
           </div>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setRpeOpen(true)}
-              className="tap flex items-center gap-1.5 text-xs font-semibold text-charcoal-soft bg-cream-soft rounded-full px-3 py-2"
+              className="tap flex items-center justify-center gap-1.5 text-xs font-semibold text-charcoal-soft bg-cream-soft rounded-full h-8 px-3.5"
             >
-              <Calculator size={13} /> RPE calc
+              <Calculator size={13} /> RPE
             </button>
             <button
               onClick={() => setPlateCalcOpen(true)}
@@ -353,6 +428,7 @@ export const WorkoutSessionSheet: React.FC<{
 
       <RPECalculator open={rpeOpen} onClose={() => setRpeOpen(false)} />
       <PlateCalculatorSheet open={plateCalcOpen} onClose={() => setPlateCalcOpen(false)} />
+      {confettiActive && <Confetti onDone={() => setConfettiActive(false)} />}
 
       <SetOptionsSheet
         open={!!setOptionsTarget}
@@ -391,7 +467,7 @@ export const WorkoutSessionSheet: React.FC<{
           <div className="absolute inset-0 bg-charcoal/40" onClick={() => setCoachNoteOpen(false)} />
           <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
             <p className="font-display font-semibold text-lg text-charcoal mb-1.5 flex items-center gap-2">
-              <MessageSquareText size={16} className="text-sohati" /> Coach's note
+              <MessageSquareText size={16} className="text-primary" /> Coach's note
             </p>
             <p className="text-sm text-charcoal-soft mb-5 whitespace-pre-wrap">
               {coachNote || "Your professional hasn't left a note for this routine yet."}

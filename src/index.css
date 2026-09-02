@@ -20,16 +20,23 @@
   --c-charcoal: 36 31 27;
   --c-charcoal-soft: 91 83 73;
   --c-charcoal-faint: 140 131 120;
+  /* Design refinement (App-Centium, Aug 2026): weakest metadata ("of
+     10,000 · 84%") and disabled glyphs (inactive chevrons/arrows) each get
+     their own step instead of reusing `faint` for both. */
+  --c-charcoal-tertiary: 167 158 147;
+  --c-charcoal-disabled: 201 194 184;
 
   --c-primary: 174 161 220;
   --c-primary-light: 200 191 233;
   --c-primary-pale: 240 237 249;
   --c-primary-dark: 125 107 181;
+  --c-primary-deep-text: 95 80 147;
 
   --c-teal: 162 200 194;
   --c-teal-light: 193 219 214;
   --c-teal-pale: 234 244 242;
   --c-teal-dark: 111 153 147;
+  --c-teal-deep-text: 95 127 122;
 
   --c-gold: 217 164 65;
   --c-gold-pale: 246 233 201;
@@ -39,6 +46,20 @@
 
   --c-berry: 156 79 124;
   --c-berry-pale: 241 224 235;
+
+  /* Design refinement: theme-aware status hues. An out-of-range reading
+     must not be decorative — these replace ad-hoc literal hex classes so
+     status colour actually adapts in dark mode. */
+  --c-status-good: 63 145 101;
+  --c-status-good-bg: 227 243 233;
+  --c-status-high: 192 57 43;
+  --c-status-high-bg: 251 231 228;
+  --c-status-low: 58 118 176;
+  --c-status-low-bg: 220 234 248;
+  --c-status-caution: 217 164 65;
+  --c-status-caution-bg: 246 233 201;
+
+  --shadow-fab: 0 16px 40px rgba(125, 107, 181, 0.4);
 
   color-scheme: light;
 }
@@ -50,16 +71,20 @@
   --c-charcoal: 245 243 250;
   --c-charcoal-soft: 184 179 199;
   --c-charcoal-faint: 125 119 142;
+  --c-charcoal-tertiary: 137 131 160;
+  --c-charcoal-disabled: 87 81 112;
 
   --c-primary: 169 145 254;
   --c-primary-light: 195 179 251;
   --c-primary-pale: 52 45 84;
   --c-primary-dark: 125 103 217;
+  --c-primary-deep-text: 195 179 251;
 
   --c-teal: 162 200 194;
   --c-teal-light: 184 216 210;
   --c-teal-pale: 51 56 72;
   --c-teal-dark: 79 143 138;
+  --c-teal-deep-text: 178 212 207;
 
   --c-gold: 224 179 96;
   --c-gold-pale: 51 43 26;
@@ -69,6 +94,17 @@
 
   --c-berry: 200 128 172;
   --c-berry-pale: 46 30 40;
+
+  --c-status-good: 127 199 156;
+  --c-status-good-bg: 25 42 32;
+  --c-status-high: 240 154 142;
+  --c-status-high-bg: 46 27 26;
+  --c-status-low: 116 175 227;
+  --c-status-low-bg: 26 41 57;
+  --c-status-caution: 224 179 96;
+  --c-status-caution-bg: 51 43 26;
+
+  --shadow-fab: 0 16px 40px rgba(169, 145, 254, 0.35);
 
   color-scheme: dark;
 }
@@ -178,4 +214,14 @@ body {
 }
 .tap:active {
   transform: scale(0.96);
+}
+
+/* Design refinement: the one text role repeated on nearly every screen —
+   section labels ("WEIGHT GOAL", "TODAY", "BIOMARKERS"...). Quieter than
+   the old 12px/600/wide-tracking convention. */
+.section-label {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
 }

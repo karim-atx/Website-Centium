@@ -105,7 +105,7 @@ export default function WorkoutTemplateBuilderTab() {
               {expanded && (
                 <div className="border-t border-charcoal/[0.06] px-4 py-3.5 space-y-4">
                   {t.coachNote && (
-                    <p className="text-xs text-sohati-dark bg-sohati-pale rounded-xl px-3 py-2">
+                    <p className="text-xs text-primary-dark bg-primary-pale rounded-xl px-3 py-2">
                       Note to client: {t.coachNote}
                     </p>
                   )}
@@ -355,7 +355,7 @@ export default function WorkoutTemplateBuilderTab() {
           <input
             value={renameDraft}
             onChange={(e) => setRenameDraft(e.target.value)}
-            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-sohati/20"
+            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
           <Button
             fullWidth

@@ -29,6 +29,15 @@ export const mockProfessionalClients: ProfessionalClient[] = [
     lastCaloriesKcal: 2650,
     healthSummary: { bodyFatPct: 18.4, sleepHours: 7.2, stepsAvg: 9100 },
     workoutLoggedToday: true,
+    // QA 13.0: stands in for what he's added in his own Health tab, synced
+    // through to this Professional-side view.
+    medicalHistory: {
+      comorbidities: ["Asthma"],
+      surgeries: [{ id: "sami-surg-1", name: "Meniscus repair", date: "2023-09-11" }],
+      medications: [
+        { id: "sami-med-1", name: "Albuterol", dose: "90mcg", route: "inhaled", times: ["08:00"], notifyEnabled: true },
+      ],
+    },
   },
   {
     id: "pc3",

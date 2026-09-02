@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/Button";
-import { CentiumLogo } from "../../components/ui/CentiumLogo";
+import { PaymentMethodSheet } from "../../components/profile/PaymentMethodSheet";
+import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { professionalTiers } from "../../data/professionalTiers";
 import { businessTiers } from "../../data/businessTiers";
@@ -35,10 +36,32 @@ function ProfessionalSubscription() {
   const { professionalTier, setProfessionalTier, professionalClients } = useApp();
   const [selected, setSelected] = useState(professionalTier);
   const [confirmed, setConfirmed] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [downgradeOpen, setDowngradeOpen] = useState(false);
+  const [downgradeFeedback, setDowngradeFeedback] = useState("");
+
+  const currentIdx = professionalTiers.findIndex((t) => t.id === professionalTier);
+  const selectedIdx = professionalTiers.findIndex((t) => t.id === selected);
+  const selectedIsFree = professionalTiers.find((t) => t.id === selected)?.price === "Free";
+  const isDowngrade = selectedIdx < currentIdx;
 
   const confirm = () => {
     setProfessionalTier(selected);
     setConfirmed(true);
+  };
+
+  // QA 12.0: "The free version should not prompt you on any payment
+  // modality because it is free." / "If the user were to downgrade back
+  // to the basic and/or free package, prompt the user that we are sorry
+  // for losing you and then ask for recommendations."
+  const handlePrimaryAction = () => {
+    if (isDowngrade) {
+      setDowngradeOpen(true);
+    } else if (selectedIsFree) {
+      confirm();
+    } else {
+      setPaymentOpen(true);
+    }
   };
 
   return (
@@ -51,10 +74,10 @@ function ProfessionalSubscription() {
       </button>
 
       <div className="text-center mb-8 animate-fade-slide-up">
-        <div className="w-16 h-16 rounded-3xl bg-white shadow-lift flex items-center justify-center mx-auto mb-5">
-          <CentiumLogo size={36} />
-        </div>
-        <p className="font-display text-2xl font-semibold text-charcoal mb-1">CENTIUM</p>
+        {/* Design refinement §3c "Placements": full lockup — splash,
+            subscription, share cards — replaces the icon-tile + separate
+            wordmark line. */}
+        <img src="/centium-lockup.png" alt="Centium" className="w-[104px] h-auto object-contain mx-auto mb-5" />
         <h1 className="font-display text-3xl font-semibold text-charcoal leading-tight mb-3">
           Grow your client roster.
         </h1>
@@ -96,12 +119,51 @@ function ProfessionalSubscription() {
         ))}
       </div>
 
-      <Button fullWidth size="lg" onClick={confirm} disabled={confirmed && selected === professionalTier}>
-        {confirmed && selected === professionalTier ? "You're all set ✓" : "Confirm tier"}
+      <Button
+        fullWidth
+        size="lg"
+        onClick={handlePrimaryAction}
+        disabled={confirmed && selected === professionalTier}
+      >
+        {confirmed && selected === professionalTier
+          ? "You're all set ✓"
+          : selected === professionalTier
+          ? "Confirm tier"
+          : isDowngrade
+          ? "Switch package"
+          : "Upgrade package"}
       </Button>
       <p className="text-[11px] text-charcoal-faint text-center mt-4">
         Prototype pricing for demo purposes — no payment will be processed.
       </p>
+      <PaymentMethodSheet open={paymentOpen} onClose={() => setPaymentOpen(false)} onConfirm={confirm} />
+
+      <BottomSheet open={downgradeOpen} onClose={() => setDowngradeOpen(false)} title="We're sorry to see you go">
+        <div className="space-y-4 animate-fade-slide-up">
+          <p className="text-sm text-charcoal-soft leading-relaxed">
+            Before you switch to {professionalTiers[selectedIdx].name}, would you tell us what didn't work,
+            or what would've kept you on your current plan? It helps us improve.
+          </p>
+          <textarea
+            value={downgradeFeedback}
+            onChange={(e) => setDowngradeFeedback(e.target.value)}
+            placeholder="Optional — e.g. too expensive, didn't need the extra client slots…"
+            rows={3}
+            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+          />
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => {
+              confirm();
+              setDowngradeOpen(false);
+              setDowngradeFeedback("");
+            }}
+          >
+            Confirm switch to {professionalTiers[selectedIdx].name}
+          </Button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }
@@ -123,10 +185,31 @@ function BusinessSubscription() {
   const [selected, setSelected] = useState(currentTier);
   const [period, setPeriod] = useState<BillingPeriod>("yearly");
   const [confirmed, setConfirmed] = useState(false);
+  const [paymentOpen, setPaymentOpen] = useState(false);
+  const [downgradeOpen, setDowngradeOpen] = useState(false);
+  const [downgradeFeedback, setDowngradeFeedback] = useState("");
+
+  const currentIdx = businessTiers.findIndex((t) => t.id === currentTier);
+  const selectedIdx = businessTiers.findIndex((t) => t.id === selected);
+  const selectedIsFree = businessTiers.find((t) => t.id === selected)?.monthlyPrice === null;
+  const isDowngrade = selectedIdx < currentIdx;
 
   const confirm = () => {
     updateMyBusinessTier(selected);
     setConfirmed(true);
+  };
+
+  // QA 12.0: "The free version should not prompt you on any payment
+  // modality... If the user were to downgrade... prompt the user that we
+  // are sorry for losing you and then ask for recommendations."
+  const handlePrimaryAction = () => {
+    if (isDowngrade) {
+      setDowngradeOpen(true);
+    } else if (selectedIsFree) {
+      confirm();
+    } else {
+      setPaymentOpen(true);
+    }
   };
 
   const priceFor = (monthlyPrice: number | null) => {
@@ -146,10 +229,10 @@ function BusinessSubscription() {
       </button>
 
       <div className="text-center mb-8 animate-fade-slide-up">
-        <div className="w-16 h-16 rounded-3xl bg-white shadow-lift flex items-center justify-center mx-auto mb-5">
-          <CentiumLogo size={36} />
-        </div>
-        <p className="font-display text-2xl font-semibold text-charcoal mb-1">CENTIUM</p>
+        {/* Design refinement §3c "Placements": full lockup — splash,
+            subscription, share cards — replaces the icon-tile + separate
+            wordmark line. */}
+        <img src="/centium-lockup.png" alt="Centium" className="w-[104px] h-auto object-contain mx-auto mb-5" />
         <h1 className="font-display text-3xl font-semibold text-charcoal leading-tight mb-3">
           Grow your team.
         </h1>
@@ -167,7 +250,7 @@ function BusinessSubscription() {
             onClick={() => setPeriod(p.value)}
             className={clsx(
               "tap flex-1 rounded-xl py-2.5 text-xs font-bold transition-colors",
-              period === p.value ? "bg-sohati text-white" : "bg-cream-soft text-charcoal-faint"
+              period === p.value ? "bg-primary text-white" : "bg-cream-soft text-charcoal-faint"
             )}
           >
             {p.label}
@@ -216,12 +299,51 @@ function BusinessSubscription() {
         isn't part of the subscription plan above.
       </p>
 
-      <Button fullWidth size="lg" onClick={confirm} disabled={confirmed && selected === currentTier}>
-        {confirmed && selected === currentTier ? "You're all set ✓" : "Confirm tier"}
+      <Button
+        fullWidth
+        size="lg"
+        onClick={handlePrimaryAction}
+        disabled={confirmed && selected === currentTier}
+      >
+        {confirmed && selected === currentTier
+          ? "You're all set ✓"
+          : selected === currentTier
+          ? "Confirm tier"
+          : isDowngrade
+          ? "Switch package"
+          : "Upgrade package"}
       </Button>
       <p className="text-[11px] text-charcoal-faint text-center mt-4">
         Prototype pricing for demo purposes — no payment will be processed.
       </p>
+      <PaymentMethodSheet open={paymentOpen} onClose={() => setPaymentOpen(false)} onConfirm={confirm} />
+
+      <BottomSheet open={downgradeOpen} onClose={() => setDowngradeOpen(false)} title="We're sorry to see you go">
+        <div className="space-y-4 animate-fade-slide-up">
+          <p className="text-sm text-charcoal-soft leading-relaxed">
+            Before you switch to {businessTiers[selectedIdx].name}, would you tell us what didn't work, or
+            what would've kept you on your current plan? It helps us improve.
+          </p>
+          <textarea
+            value={downgradeFeedback}
+            onChange={(e) => setDowngradeFeedback(e.target.value)}
+            placeholder="Optional — e.g. too expensive, didn't need the extra professional slots…"
+            rows={3}
+            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+          />
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => {
+              confirm();
+              setDowngradeOpen(false);
+              setDowngradeFeedback("");
+            }}
+          >
+            Confirm switch to {businessTiers[selectedIdx].name}
+          </Button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }
@@ -230,6 +352,7 @@ export default function Subscription() {
   const navigate = useNavigate();
   const { user, premiumPlan, setPremiumPlan } = useApp();
   const [plan, setPlan] = useState<"monthly" | "yearly">(premiumPlan ?? "yearly");
+  const [paymentOpen, setPaymentOpen] = useState(false);
   const confirmed = premiumPlan === plan;
 
   if (user.accountType === "professional") {
@@ -249,10 +372,10 @@ export default function Subscription() {
       </button>
 
       <div className="text-center mb-8 animate-fade-slide-up">
-        <div className="w-16 h-16 rounded-3xl bg-white shadow-lift flex items-center justify-center mx-auto mb-5">
-          <CentiumLogo size={36} />
-        </div>
-        <p className="font-display text-2xl font-semibold text-charcoal mb-1">CENTIUM</p>
+        {/* Design refinement §3c "Placements": full lockup — splash,
+            subscription, share cards — replaces the icon-tile + separate
+            wordmark line. */}
+        <img src="/centium-lockup.png" alt="Centium" className="w-[104px] h-auto object-contain mx-auto mb-5" />
         <h1 className="font-display text-3xl font-semibold text-charcoal leading-tight mb-3">
           Your health, without the limits.
         </h1>
@@ -313,12 +436,13 @@ export default function Subscription() {
         </button>
       </div>
 
-      <Button fullWidth size="lg" onClick={() => setPremiumPlan(plan)} disabled={confirmed}>
+      <Button fullWidth size="lg" onClick={() => setPaymentOpen(true)} disabled={confirmed}>
         {confirmed ? "You're on the list ✓" : "Continue"}
       </Button>
       <p className="text-[11px] text-charcoal-faint text-center mt-4">
         Prototype pricing for demo purposes — no payment will be processed.
       </p>
+      <PaymentMethodSheet open={paymentOpen} onClose={() => setPaymentOpen(false)} onConfirm={() => setPremiumPlan(plan)} />
     </div>
   );
 }

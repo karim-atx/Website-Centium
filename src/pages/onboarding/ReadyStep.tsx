@@ -58,11 +58,11 @@ export const ReadyStep: React.FC<{
           </p>
           <div className="flex flex-wrap gap-2">
             {draft.professionalSubtype && (
-              <span className="text-xs font-semibold bg-sohati-pale text-sohati-dark rounded-full px-3 py-1.5 capitalize">
+              <span className="text-xs font-semibold bg-primary-pale text-primary-dark rounded-full px-3 py-1.5 capitalize">
                 {draft.professionalSubtype}
               </span>
             )}
-            <span className="text-xs font-semibold bg-sohati-pale text-sohati-dark rounded-full px-3 py-1.5">
+            <span className="text-xs font-semibold bg-primary-pale text-primary-dark rounded-full px-3 py-1.5">
               {draft.certificationFile ? "Certification submitted" : "No certification yet"}
             </span>
           </div>
@@ -76,12 +76,12 @@ export const ReadyStep: React.FC<{
           </p>
           <div className="flex flex-wrap gap-2">
             {draft.businessName && (
-              <span className="text-xs font-semibold bg-sohati-pale text-sohati-dark rounded-full px-3 py-1.5">
+              <span className="text-xs font-semibold bg-primary-pale text-primary-dark rounded-full px-3 py-1.5">
                 {draft.businessName}
               </span>
             )}
             {draft.businessType && (
-              <span className="text-xs font-semibold bg-sohati-pale text-sohati-dark rounded-full px-3 py-1.5 capitalize">
+              <span className="text-xs font-semibold bg-primary-pale text-primary-dark rounded-full px-3 py-1.5 capitalize">
                 {draft.businessType.replace(/_/g, " ")}
               </span>
             )}

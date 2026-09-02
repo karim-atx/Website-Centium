@@ -3,7 +3,6 @@ import { NavLink } from "react-router-dom";
 import clsx from "clsx";
 import { sidebarNavItems, professionalSidebarNavItems, businessSidebarNavItems } from "./navItems";
 import { useApp } from "../../context/AppContext";
-import { CentiumLogo } from "../ui/CentiumLogo";
 import { Flame } from "lucide-react";
 
 export const Sidebar: React.FC = () => {
@@ -22,9 +21,11 @@ export const Sidebar: React.FC = () => {
 
   return (
     <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-charcoal/[0.06] bg-cream-card/60 px-4 py-6">
-      <div className="flex items-center gap-2 px-2 mb-8">
-        <CentiumLogo size={30} />
-        <span className="font-display text-xl font-semibold text-charcoal tracking-tight">
+      {/* Design refinement §3c "Placements": the redrawn-SVG mark is
+          replaced with the real brand asset wherever it appears. */}
+      <div className="flex items-center gap-2.5 px-2 mb-8">
+        <img src="/centium-mark.png" alt="" className="w-[30px] h-[30px] object-contain" />
+        <span className="font-display text-xl font-bold text-charcoal tracking-tight">
           Centium
         </span>
       </div>

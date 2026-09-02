@@ -5,11 +5,16 @@ import type { LoggedSet, SetType } from "../../types";
 import { rpeOptions } from "../../services/workout";
 import clsx from "clsx";
 
+// QA 11.0: "When editing a routine, add more buttons like super set and
+// PR." A PR set that gets checked off fires a confetti celebration (see
+// WorkoutSessionSheet).
 const setTypes: { value: SetType; label: string }[] = [
   { value: "normal", label: "Normal" },
   { value: "warmup", label: "Warm up" },
   { value: "failure", label: "Failure" },
   { value: "dropset", label: "Drop set" },
+  { value: "superset", label: "Superset" },
+  { value: "pr", label: "PR" },
 ];
 
 export const SetOptionsSheet: React.FC<{

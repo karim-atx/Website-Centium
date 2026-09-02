@@ -29,16 +29,22 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void; onGymPassesClick
   onWaterClick,
   onGymPassesClick,
 }) => {
-  const { widgets, removeWidget, reorderWidgets, resizeWidget, addWidget } = useApp();
+  const { widgets, removeWidget, reorderWidgets, resizeWidget, addWidget, recoverySensitive } = useApp();
   const [editMode, setEditMode] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
 
   // Defensive: self-heals any old persisted board that still carries the
   // now-removed "bodyFat" widget type.
-  const visibleWidgets = widgets.filter((w) => (w.type as string) !== "bodyFat");
+  // QA 12.0 recovery-sensitive experience: "Hide weight, BMI, and body
+  // measurement features." The widget itself is only hidden from view (not
+  // removed from the underlying board), so turning the mode back off
+  // restores it exactly where it was, per "without losing any data."
+  const visibleWidgets = widgets.filter(
+    (w) => (w.type as string) !== "bodyFat" && !(recoverySensitive && w.type === "weight")
+  );
   const availableToAdd = allWidgetTypes.filter(
-    (t) => !widgets.some((w) => w.type === t.type)
+    (t) => !widgets.some((w) => w.type === t.type) && !(recoverySensitive && t.type === "weight")
   );
 
   const handleDrop = (targetIndex: number) => {

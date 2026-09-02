@@ -115,7 +115,7 @@ export default function MarketplaceCategoryPage() {
       <div className="flex justify-end mb-4">
         <button
           onClick={() => setFilterOpen(true)}
-          className="tap flex items-center gap-1.5 text-xs font-semibold text-sohati bg-sohati-pale rounded-full px-3.5 py-1.5"
+          className="tap flex items-center gap-1.5 text-xs font-semibold text-primary bg-primary-pale rounded-full px-3.5 py-1.5"
         >
           <SlidersHorizontal size={13} />
           {filterOptions.find((f) => f.value === filter)?.label}
@@ -134,7 +134,7 @@ export default function MarketplaceCategoryPage() {
               className="tap w-full flex items-center justify-between rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
             >
               <span className="text-sm font-semibold text-charcoal">{f.label}</span>
-              {filter === f.value && <Check size={16} className="text-sohati" />}
+              {filter === f.value && <Check size={16} className="text-primary" />}
             </button>
           ))}
         </div>

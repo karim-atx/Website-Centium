@@ -7,10 +7,11 @@ import clsx from "clsx";
 const muscleGroupOptions: { value: MuscleGroup; label: string }[] = [
   { value: "back", label: "Back" },
   { value: "bicep", label: "Bicep" },
+  { value: "calves", label: "Calves" },
   { value: "cardio", label: "Cardio" },
   { value: "chest", label: "Chest" },
   { value: "core", label: "Core" },
-  { value: "full_body", label: "Full Body" },
+  { value: "forearms", label: "Forearms" },
   { value: "glutes", label: "Glutes" },
   { value: "hamstrings", label: "Hamstrings" },
   { value: "olympic", label: "Olympic" },

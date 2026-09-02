@@ -178,12 +178,12 @@ export const exerciseLibrary: {
   { name: "Cable Crossover", category: "chest", classification: "machine_other", muscleGroups: ["chest"], secondaryMuscleGroups: ["shoulders"] },
   { name: "Dips", category: "chest", classification: "weighted_bodyweight", muscleGroups: ["chest"], secondaryMuscleGroups: ["tricep", "shoulders"] },
 
-  { name: "Deadlift", category: "back", classification: "barbell", muscleGroups: ["back"], secondaryMuscleGroups: ["hamstrings", "glutes"] },
-  { name: "Barbell Row", category: "back", classification: "barbell", muscleGroups: ["back"], secondaryMuscleGroups: ["bicep"] },
+  { name: "Deadlift", category: "back", classification: "barbell", muscleGroups: ["back"], secondaryMuscleGroups: ["hamstrings", "glutes", "forearms"] },
+  { name: "Barbell Row", category: "back", classification: "barbell", muscleGroups: ["back"], secondaryMuscleGroups: ["bicep", "forearms"] },
   { name: "Lat Pulldown", category: "back", classification: "machine_other", muscleGroups: ["back"], secondaryMuscleGroups: ["bicep"] },
   { name: "Seated Row", category: "back", classification: "machine_other", muscleGroups: ["back"], secondaryMuscleGroups: ["bicep"] },
   { name: "Cable Row", category: "back", classification: "machine_other", muscleGroups: ["back"], secondaryMuscleGroups: ["bicep"] },
-  { name: "Pull Up", category: "back", classification: "weighted_bodyweight", muscleGroups: ["back"], secondaryMuscleGroups: ["bicep"] },
+  { name: "Pull Up", category: "back", classification: "weighted_bodyweight", muscleGroups: ["back"], secondaryMuscleGroups: ["bicep", "forearms"] },
 
   { name: "Overhead Press", category: "shoulders", classification: "barbell", muscleGroups: ["shoulders"], secondaryMuscleGroups: ["tricep"] },
   { name: "Shoulder Press", category: "shoulders", classification: "dumbbell", muscleGroups: ["shoulders"], secondaryMuscleGroups: ["tricep"] },
@@ -197,12 +197,14 @@ export const exerciseLibrary: {
   { name: "Skull Crusher", category: "arms", classification: "barbell", muscleGroups: ["tricep"] },
   { name: "Preacher Curl", category: "arms", classification: "barbell", muscleGroups: ["bicep"] },
 
-  { name: "Back Squat", category: "legs", classification: "barbell", muscleGroups: ["quads"], secondaryMuscleGroups: ["glutes", "hamstrings"] },
+  { name: "Back Squat", category: "legs", classification: "barbell", muscleGroups: ["quads"], secondaryMuscleGroups: ["glutes", "hamstrings", "calves"] },
   { name: "Goblet Squat", category: "legs", classification: "dumbbell", muscleGroups: ["quads"], secondaryMuscleGroups: ["glutes"] },
   { name: "Leg Press", category: "legs", classification: "machine_other", muscleGroups: ["quads"], secondaryMuscleGroups: ["glutes"] },
   { name: "Romanian Deadlift", category: "legs", classification: "barbell", muscleGroups: ["hamstrings"], secondaryMuscleGroups: ["glutes", "back"] },
   { name: "Walking Lunge", category: "legs", classification: "dumbbell", muscleGroups: ["quads"], secondaryMuscleGroups: ["glutes"] },
-  { name: "Calf Raise", category: "legs", classification: "machine_other", muscleGroups: ["quads"] },
+  // Design refinement §6.5: "Calf Raise moves from quads to calves — it is
+  // the one calf movement currently filed under quads."
+  { name: "Calf Raise", category: "legs", classification: "machine_other", muscleGroups: ["calves"] },
 
   // V10 (QA 10.0): new glutes-primary exercises.
   { name: "Hip Thrust", category: "legs", classification: "barbell", muscleGroups: ["glutes"], secondaryMuscleGroups: ["hamstrings"] },
@@ -211,18 +213,30 @@ export const exerciseLibrary: {
   { name: "Hip Abduction Machine", category: "legs", classification: "machine_other", muscleGroups: ["glutes"] },
   { name: "Bulgarian Split Squat", category: "legs", classification: "dumbbell", muscleGroups: ["glutes"], secondaryMuscleGroups: ["quads", "hamstrings"] },
 
+  // Design refinement §6.5: new calves/forearms entries — two of the
+  // most-trained groups had nowhere to live.
+  { name: "Standing Calf Raise", category: "legs", classification: "machine_other", muscleGroups: ["calves"] },
+  { name: "Seated Calf Raise", category: "legs", classification: "machine_other", muscleGroups: ["calves"] },
+  { name: "Jump Rope", category: "cardio", classification: "cardio", muscleGroups: ["calves"] },
+  { name: "Wrist Curl", category: "arms", classification: "dumbbell", muscleGroups: ["forearms"] },
+  { name: "Reverse Wrist Curl", category: "arms", classification: "dumbbell", muscleGroups: ["forearms"] },
+  { name: "Farmer's Carry", category: "full_body", classification: "dumbbell", muscleGroups: ["forearms"], secondaryMuscleGroups: ["back", "core"] },
+  { name: "Dead Hang", category: "arms", classification: "weighted_bodyweight", muscleGroups: ["forearms"], secondaryMuscleGroups: ["back"] },
+
   { name: "Plank", category: "core", classification: "duration", muscleGroups: ["core"] },
   { name: "Hanging Leg Raise", category: "core", classification: "reps_only", muscleGroups: ["core"] },
   { name: "Cable Woodchop", category: "core", classification: "machine_other", muscleGroups: ["core"] },
   { name: "Ab Wheel Rollout", category: "core", classification: "reps_only", muscleGroups: ["core"], secondaryMuscleGroups: ["shoulders"] },
 
-  { name: "Kettlebell Swing", category: "full_body", classification: "dumbbell", muscleGroups: ["full_body"], secondaryMuscleGroups: ["glutes", "hamstrings"] },
-  { name: "Clean and Press", category: "full_body", classification: "barbell", muscleGroups: ["full_body"], secondaryMuscleGroups: ["shoulders", "back"] },
-  { name: "Burpee", category: "full_body", classification: "reps_only", muscleGroups: ["full_body"] },
+  // QA 11.0: "full_body" removed as a muscle-group classification — each
+  // gets a real primary mover instead of the old catch-all.
+  { name: "Kettlebell Swing", category: "full_body", classification: "dumbbell", muscleGroups: ["glutes"], secondaryMuscleGroups: ["hamstrings", "back"] },
+  { name: "Clean and Press", category: "full_body", classification: "barbell", muscleGroups: ["olympic"], secondaryMuscleGroups: ["shoulders", "back"] },
+  { name: "Burpee", category: "full_body", classification: "reps_only", muscleGroups: ["cardio"], secondaryMuscleGroups: ["core", "shoulders"] },
 
   { name: "Easy Run", category: "cardio", classification: "cardio", muscleGroups: ["cardio"] },
   { name: "Interval Sprints", category: "cardio", classification: "cardio", muscleGroups: ["cardio"] },
   { name: "Rowing Machine", category: "cardio", classification: "cardio", muscleGroups: ["cardio"], secondaryMuscleGroups: ["back"] },
-  { name: "Stair Climber", category: "cardio", classification: "cardio", muscleGroups: ["cardio"], secondaryMuscleGroups: ["glutes"] },
+  { name: "Stair Climber", category: "cardio", classification: "cardio", muscleGroups: ["cardio"], secondaryMuscleGroups: ["glutes", "calves"] },
   { name: "Cycling", category: "cardio", classification: "cardio", muscleGroups: ["cardio"] },
 ];
