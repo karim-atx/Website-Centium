@@ -165,15 +165,17 @@
 
   Bugfix (2026-09-04): clicking one nav item then a different one made the
   active-tab pill flash back to the just-left tab before landing on the new
-  one. Cause: clicking link A then link B fires blur(A) before focus(B) (the
-  browser moves focus off A before B receives it); the blur handler
-  unconditionally set hovered=-1, which fell through to the stale `current`
-  index (A's own position) for one paint before focus(B) corrected it to B.
-  The blur-driven repaint is now deferred one animation frame and cancelled
-  if a pointerenter/focus for another tab arrives first — which it always
-  does on a click-to-click switch — so the pill goes directly from A to B.
-  Genuine focus-loss (tabbing out of the nav) still resolves to `current`
-  exactly as before, just one frame later.
+  one. First pass: deferred the blur-driven repaint (blur(A) firing before
+  focus(B) on a link-to-link click was falling through to the stale
+  `current` index) by one animation frame, cancelled once a
+  pointerenter/focus for the new tab arrived. That covers Chrome's
+  focus-on-click order but not every browser/input path — Safari in
+  particular doesn't focus a link on click at all, so nothing was there to
+  cancel the fallback. Replaced with a click-time pin: clicking a tab pins
+  the pill to it for a short window, during which any hover-loss reset
+  (blur, pointerleave) is ignored outright, regardless of what triggers it
+  or whether a prior hover/focus ever ran. Genuine focus/hover loss still
+  resolves to `current` exactly as before, just outside that window.
 -->
 
 <html lang="en">
@@ -1832,28 +1834,38 @@
           // jitter. navTheme() was already coalesced to one call per frame via
           // navTick(); active() now gets the same treatment.
           function activeTick() { if (!activeraf) activeraf = requestAnimationFrame(active); }
-          // v7 fix: clicking link A then link B fires blur(A) before focus(B)
-          // (mousedown moves focus off the previously-clicked link before the
-          // newly-clicked one receives it). blur's unconditional hovered=-1
-          // fell through paint() to the stale `current` (A's own position),
-          // so the pill visibly snapped back to the just-left tab for one
-          // frame before focus(B) corrected it back to B. Deferring the
-          // blur-driven repaint by a frame — and cancelling it if a
-          // pointerenter/focus for another tab arrives first, as it always
-          // does on a click-to-click switch — removes that snap-back while
-          // leaving genuine focus-loss (tabbing out of the nav entirely)
-          // resolving to `current` exactly as before, just one frame later.
-          var blurraf = 0;
+          // v7 fix: clicking link A then link B can fire blur(A) (or a
+          // spurious pointerleave on the tabs row) before B's own hover/focus
+          // lands — the exact order isn't consistent across browsers/input
+          // devices (e.g. Safari doesn't focus a link on click at all). Any
+          // of those reset hovered to -1, which fell through paint() to the
+          // stale `current` (A's own position), so the pill visibly snapped
+          // back to the just-left tab before settling on B. A click now pins
+          // the pill to the clicked tab for a brief window, during which any
+          // hover-loss reset is ignored outright — so nothing can flash the
+          // pill away from what was just clicked, regardless of what causes
+          // it. Genuine focus/hover loss still resolves to `current` exactly
+          // as before, just outside that window.
+          var blurraf = 0, pinned = -1, pinTimer = 0;
           function clearBlur() { if (blurraf) { cancelAnimationFrame(blurraf); blurraf = 0; } }
           links.forEach(function (a, i) {
-            a.addEventListener('pointerenter', function () { clearBlur(); hovered = i; paint(); });
+            a.addEventListener('pointerenter', function () { clearBlur(); pinned = -1; hovered = i; paint(); });
             a.addEventListener('focus', function () { clearBlur(); hovered = i; paint(); });
             a.addEventListener('blur', function () {
               clearBlur();
-              blurraf = requestAnimationFrame(function () { blurraf = 0; hovered = -1; paint(); });
+              if (pinned > -1) return;
+              blurraf = requestAnimationFrame(function () { blurraf = 0; if (pinned < 0) { hovered = -1; paint(); } });
+            });
+            a.addEventListener('click', function () {
+              clearBlur();
+              clearTimeout(pinTimer);
+              pinned = i;
+              hovered = i;
+              paint();
+              pinTimer = setTimeout(function () { pinned = -1; }, 400);
             });
           });
-          tabs.addEventListener('pointerleave', function () { hovered = -1; paint(); });
+          tabs.addEventListener('pointerleave', function () { if (pinned > -1) return; hovered = -1; paint(); });
           var navroot = document.querySelector('.nav');
           function navH() { document.documentElement.style.setProperty('--navh', navroot.offsetHeight + 'px'); }
           var navraf = 0;
