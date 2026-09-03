@@ -162,6 +162,18 @@
   repeatedly. navTheme() (the nav dark/light crossfade) was already
   coalesced to one call per animation frame via requestAnimationFrame;
   active() now gets the same treatment.
+
+  Bugfix (2026-09-04): clicking one nav item then a different one made the
+  active-tab pill flash back to the just-left tab before landing on the new
+  one. Cause: clicking link A then link B fires blur(A) before focus(B) (the
+  browser moves focus off A before B receives it); the blur handler
+  unconditionally set hovered=-1, which fell through to the stale `current`
+  index (A's own position) for one paint before focus(B) corrected it to B.
+  The blur-driven repaint is now deferred one animation frame and cancelled
+  if a pointerenter/focus for another tab arrives first — which it always
+  does on a click-to-click switch — so the pill goes directly from A to B.
+  Genuine focus-loss (tabbing out of the nav) still resolves to `current`
+  exactly as before, just one frame later.
 -->
 
 <html lang="en">
@@ -1820,10 +1832,26 @@
           // jitter. navTheme() was already coalesced to one call per frame via
           // navTick(); active() now gets the same treatment.
           function activeTick() { if (!activeraf) activeraf = requestAnimationFrame(active); }
+          // v7 fix: clicking link A then link B fires blur(A) before focus(B)
+          // (mousedown moves focus off the previously-clicked link before the
+          // newly-clicked one receives it). blur's unconditional hovered=-1
+          // fell through paint() to the stale `current` (A's own position),
+          // so the pill visibly snapped back to the just-left tab for one
+          // frame before focus(B) corrected it back to B. Deferring the
+          // blur-driven repaint by a frame — and cancelling it if a
+          // pointerenter/focus for another tab arrives first, as it always
+          // does on a click-to-click switch — removes that snap-back while
+          // leaving genuine focus-loss (tabbing out of the nav entirely)
+          // resolving to `current` exactly as before, just one frame later.
+          var blurraf = 0;
+          function clearBlur() { if (blurraf) { cancelAnimationFrame(blurraf); blurraf = 0; } }
           links.forEach(function (a, i) {
-            a.addEventListener('pointerenter', function () { hovered = i; paint(); });
-            a.addEventListener('focus', function () { hovered = i; paint(); });
-            a.addEventListener('blur', function () { hovered = -1; paint(); });
+            a.addEventListener('pointerenter', function () { clearBlur(); hovered = i; paint(); });
+            a.addEventListener('focus', function () { clearBlur(); hovered = i; paint(); });
+            a.addEventListener('blur', function () {
+              clearBlur();
+              blurraf = requestAnimationFrame(function () { blurraf = 0; hovered = -1; paint(); });
+            });
           });
           tabs.addEventListener('pointerleave', function () { hovered = -1; paint(); });
           var navroot = document.querySelector('.nav');
