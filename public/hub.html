@@ -77,6 +77,23 @@
   here). Per the handoff's own note, its `public/atraxia/...` asset paths
   and the `.dc.html` editor-shell-only `overflow-x`/`height:auto` rules are
   prototype-only artifacts and were not carried over.
+
+  Design pass v4 (Claude Design handoff, "Atraxia landing page — mobile
+  header/nav + founder card crop" — see
+  scratchpad/design-handoff-atraxia-landing-v4/design_handoff_mobile_header_and_founder_card/
+  README.md): two scoped mobile-only (max-width: 760px) fixes; desktop is
+  untouched in both.
+    1. Mobile nav: "EST. 2026" moved under the lockup, and the five-tab
+       pill — which the handoff measured as needing ~487px of row width,
+       still cramped even with that row freed up — collapses to a 46px
+       glass menu button + dropdown panel, duplicating the desktop tabs'
+       hrefs. Toggle/outside-click/link-click behavior via a delegated,
+       once-bound click listener.
+    2. Founder card (mobile): Abdallah's photo used the same 15% focal
+       point as Karim's despite being framed ~7% higher in its source
+       file, clipping his hair. An `img[src*="abdallah"]` override switches
+       just his mobile focal point to `center top` — same frame and zoom
+       as Karim's, only the crop point changed.
 -->
 <html lang="en">
   <head>
@@ -185,6 +202,9 @@
       .nav .wrap.nav-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1rem; padding-block: 1.5rem; }
       .nav .wrap.nav-top .tabs { justify-self: center; max-width: 100%; }
       .nav .wrap.nav-top .meta { justify-self: end; }
+      /* v4: mobile menu button + dropdown, kept fully out of the desktop
+         layout at base — only shown by the mobile media query below. */
+      .nav-toggle, .nav-menu { display: none; }
       .nav .lockup { display: flex; align-items: center; gap: 0.8rem; }
       .nav .mark { width: 78px; height: auto; flex: none; display: block; }
       .nav .wordmark { height: 21px; width: auto; display: block; margin-top: 3px; }
@@ -404,6 +424,10 @@
         .hero-backdrop { width: 88vw !important; }
         .founder-card { flex-direction: column !important; }
         .founder-card img { width: 100% !important; height: 220px !important; aspect-ratio: auto !important; object-position: center 15% !important; border-radius: 1.15rem !important; }
+        /* v4: Abdallah's source photo is framed higher than Karim's, so the
+           shared 15% focal point clipped his hair. Same frame + zoom, focal
+           point only. */
+        .founder-card img[src*="abdallah"] { object-position: center top !important; }
         .hero-h1 { font-size: 35.2px !important; }
         .hero-lede { font-size: 16.3px !important; }
         .mission { padding: 4.5rem 0 !important; }
@@ -415,6 +439,64 @@
         footer .wrap.footer-meta-row { flex-direction: column !important; align-items: flex-start !important; }
         .contact-card { flex-direction: column !important; align-items: flex-start !important; }
         .contact-card .btn { width: 100% !important; justify-content: center !important; }
+      }
+
+      /* v4: mobile nav — "EST. 2026" moves under the lockup, and the
+         five-tab pill (needs ~487px at a 390px viewport, still cramped even
+         with the row freed up) collapses to a glass menu button + dropdown. */
+      @media (max-width: 760px) {
+        .nav .wrap.nav-top {
+          grid-template-columns: auto minmax(0, 1fr) !important;
+          grid-template-rows: auto auto !important;
+          row-gap: 0.3rem !important;
+          column-gap: 0.85rem !important;
+          align-items: center !important;
+        }
+        .nav .wrap.nav-top .lockup { grid-column: 1 !important; grid-row: 1 !important; }
+        .nav .wrap.nav-top .meta {
+          grid-column: 1 !important; grid-row: 2 !important;
+          justify-self: start !important;
+        }
+        .nav .wrap.nav-top .tabs { display: none !important; }
+
+        .nav-toggle {
+          display: flex !important; grid-column: 2 !important; grid-row: 1 / span 2 !important;
+          justify-self: end !important; align-items: center; justify-content: center;
+          width: 46px; height: 46px; padding: 0; border-radius: 999px; cursor: pointer;
+          background: rgb(var(--teal-pale) / 0.5);
+          backdrop-filter: blur(22px) saturate(1.8); -webkit-backdrop-filter: blur(22px) saturate(1.8);
+          border: 1px solid rgb(var(--border) / 0.04);
+          color: rgb(var(--charcoal-soft));
+          transition: color 0.3s ease, background 0.3s ease, border-color 0.3s ease;
+        }
+        .nav.is-dark .nav-toggle {
+          background: rgb(255 255 255 / 0.10); border-color: rgb(255 255 255 / 0.14); color: #ffffff;
+        }
+        .nav-toggle:focus-visible { outline: 2px solid rgb(var(--teal)); outline-offset: 2px; }
+
+        .nav-menu.is-open {
+          display: flex !important; flex-direction: column; gap: 0.15rem;
+          position: absolute; top: calc(100% - 0.35rem); left: 1.5rem; right: 1.5rem; z-index: 30;
+          padding: 0.5rem; border-radius: 1.25rem;
+          background: rgb(var(--cream) / 0.92);
+          backdrop-filter: blur(22px) saturate(1.8); -webkit-backdrop-filter: blur(22px) saturate(1.8);
+          border: 1px solid rgb(var(--border) / 0.05);
+          box-shadow: 0 18px 40px -18px rgb(var(--border) / 0.28);
+        }
+        .nav-menu a {
+          padding: 0.85rem 1rem; border-radius: 999px;
+          font-size: 0.92rem; font-weight: 700; text-decoration: none;
+          color: rgb(var(--charcoal-soft));
+          transition: background 0.18s ease, color 0.18s ease;
+        }
+        .nav-menu a:hover, .nav-menu a:focus-visible {
+          color: rgb(var(--navy)); background: rgb(var(--cream-soft));
+        }
+        .nav.is-dark .nav-menu.is-open { background: rgb(8 16 24 / 0.86); border-color: rgb(255 255 255 / 0.14); }
+        .nav.is-dark .nav-menu a { color: rgb(255 255 255 / 0.86); }
+        .nav.is-dark .nav-menu a:hover, .nav.is-dark .nav-menu a:focus-visible {
+          color: #ffffff; background: rgb(255 255 255 / 0.12);
+        }
       }
 
       /* ---------- reduced motion ---------- */
@@ -944,6 +1026,20 @@
           </div>
           <div class="tabs" role="tablist" aria-label="Primary">
             <span class="tab-pill" aria-hidden="true"></span>
+            <a href="#about">About</a>
+            <a href="#portfolio">Portfolio</a>
+            <a href="#trust">Trust &amp; Security</a>
+            <a href="#resources">Resources</a>
+            <a href="#contact">Contact</a>
+          </div>
+          <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-menu">
+            <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+              <rect x="2" y="5" width="16" height="1.7" rx="0.85" fill="currentColor"></rect>
+              <rect x="2" y="9.15" width="16" height="1.7" rx="0.85" fill="currentColor"></rect>
+              <rect x="2" y="13.3" width="16" height="1.7" rx="0.85" fill="currentColor"></rect>
+            </svg>
+          </button>
+          <div class="nav-menu" id="nav-menu">
             <a href="#about">About</a>
             <a href="#portfolio">Portfolio</a>
             <a href="#trust">Trust &amp; Security</a>
@@ -1706,6 +1802,27 @@
           card.classList.add('is-turning');
           clearTimeout(timers.get(card));
           timers.set(card, setTimeout(function () { card.classList.remove('is-turning'); }, 800));
+        });
+      })();
+
+      // v4: mobile nav menu toggle. Delegated so it survives re-renders,
+      // guarded so it binds once.
+      (function () {
+        if (window.__atxNavMenu) return; window.__atxNavMenu = true;
+        document.addEventListener('click', function (e) {
+          var menu = document.querySelector('.nav-menu');
+          if (!menu) return;
+          var btn = e.target.closest && e.target.closest('.nav-toggle');
+          if (btn) {
+            var open = menu.classList.toggle('is-open');
+            btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            return;
+          }
+          if (!e.target.closest || !e.target.closest('.nav-menu') || e.target.closest('.nav-menu a')) {
+            menu.classList.remove('is-open');
+            var b = document.querySelector('.nav-toggle');
+            if (b) b.setAttribute('aria-expanded', 'false');
+          }
         });
       })();
     </script>
