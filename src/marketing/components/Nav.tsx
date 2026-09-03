@@ -1,15 +1,18 @@
 import React, { useState } from "react";
-import { NavLink, Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import clsx from "clsx";
 import { CentiumMark, CentiumWordmark } from "./CentiumLogo";
 import { useNavTheme } from "../hooks/useNavTheme";
 
+// QA - Web 2.0 §01: the nav is part of the single-page landing page, not a
+// set of separate routes — every item scrolls to a section on "/" instead
+// of navigating to its own page. "Contact" has no equivalent landing-page
+// section, so it's kept as a real route to the existing /contact page.
 const links = [
-  { to: "/product", label: "Product" },
-  { to: "/pricing", label: "Pricing" },
-  { to: "/business", label: "For Business" },
-  { to: "/about", label: "About" },
+  { to: "/#platform", label: "Features" },
+  { to: "/#pricing", label: "Pricing" },
+  { to: "/#faq", label: "FAQ" },
   { to: "/contact", label: "Contact" },
 ];
 
@@ -22,6 +25,7 @@ const links = [
 export const Nav: React.FC = () => {
   const [open, setOpen] = useState(false);
   const dark = useNavTheme();
+  const { pathname } = useLocation();
 
   return (
     <header className="sticky top-0 z-40 bg-transparent mb-[-72px]">
@@ -40,12 +44,17 @@ export const Nav: React.FC = () => {
           className="hidden lg:flex items-center gap-0.5 rounded-full p-1 backdrop-blur-[22px] backdrop-saturate-[1.8]"
           aria-label="Primary"
         >
-          {links.map((l) => (
-            <NavLink
-              key={l.to}
-              to={l.to}
-              className={({ isActive }) =>
-                clsx(
+          {links.map((l) => {
+            // Only "Contact" is a real route — the rest are same-page
+            // anchors, so highlighting them as "active" while on "/" would
+            // light up all three at once. Active state is meaningful for
+            // Contact alone.
+            const isActive = !l.to.includes("#") && pathname === l.to;
+            return (
+              <Link
+                key={l.to}
+                to={l.to}
+                className={clsx(
                   "px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-colors duration-200",
                   isActive
                     ? dark
@@ -54,12 +63,12 @@ export const Nav: React.FC = () => {
                     : dark
                       ? "text-white/[.82] hover:text-white"
                       : "text-mkt-soft hover:text-mkt-ink"
-                )
-              }
-            >
-              {l.label}
-            </NavLink>
-          ))}
+                )}
+              >
+                {l.label}
+              </Link>
+            );
+          })}
         </nav>
 
         <div className="hidden lg:flex items-center gap-3.5 shrink-0">
@@ -101,13 +110,14 @@ export const Nav: React.FC = () => {
           )}
         >
           <nav className="flex flex-col gap-1" aria-label="Primary">
-            {links.map((l) => (
-              <NavLink
-                key={l.to}
-                to={l.to}
-                onClick={() => setOpen(false)}
-                className={({ isActive }) =>
-                  clsx(
+            {links.map((l) => {
+              const isActive = !l.to.includes("#") && pathname === l.to;
+              return (
+                <Link
+                  key={l.to}
+                  to={l.to}
+                  onClick={() => setOpen(false)}
+                  className={clsx(
                     "px-3 py-2.5 rounded-xl text-sm font-semibold",
                     isActive
                       ? dark
@@ -116,12 +126,12 @@ export const Nav: React.FC = () => {
                       : dark
                         ? "text-white/[.85]"
                         : "text-mkt-soft"
-                  )
-                }
-              >
-                {l.label}
-              </NavLink>
-            ))}
+                  )}
+                >
+                  {l.label}
+                </Link>
+              );
+            })}
           </nav>
           <div className="flex items-center gap-2 mt-4 pt-4 border-t border-mkt-line">
             <Link

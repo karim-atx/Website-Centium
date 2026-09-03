@@ -2,12 +2,16 @@ import React from "react";
 import { Link } from "react-router-dom";
 import { CentiumMark, CentiumWordmark } from "./CentiumLogo";
 
+// QA - Web 2.0 §01/§06: nav's "Product"/"Pricing" are now same-page anchors
+// on "/" rather than separate routes, and "About" is renamed to "FAQ" and
+// points at the new FAQ section (the standalone About page is deleted) —
+// mirrored here so the footer doesn't link anywhere the nav no longer does.
 const columns: { title: string; links: { to: string; label: string }[] }[] = [
   {
     title: "Product",
     links: [
-      { to: "/product", label: "Features" },
-      { to: "/pricing", label: "Pricing" },
+      { to: "/#platform", label: "Features" },
+      { to: "/#pricing", label: "Pricing" },
       { to: "/app", label: "Log in" },
     ],
   },
@@ -15,7 +19,7 @@ const columns: { title: string; links: { to: string; label: string }[] }[] = [
     title: "Company",
     links: [
       { to: "/business", label: "For Business" },
-      { to: "/about", label: "About" },
+      { to: "/#faq", label: "FAQ" },
       { to: "/contact", label: "Contact" },
     ],
   },
@@ -67,8 +71,13 @@ export const Footer: React.FC = () => (
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mt-14 pt-6 border-t border-mkt-line">
         <span className="text-[12.5px] text-mkt-faint/80">© {new Date().getFullYear()} Centium. All rights reserved.</span>
         <div className="flex items-center gap-2.5">
-          <span className="px-3.5 py-[7px] border border-mkt-line rounded-full text-xs font-semibold text-mkt-faint">
-            EN
+          {/* QA - Web 2.0 §12: language shown as "EN - AR". Both remain
+              inert labels, same as the existing EN badge — full Arabic
+              copy/RTL support is a separate i18n effort, not a content
+              edit; see summary. */}
+          <span className="flex items-center rounded-full border border-mkt-line text-xs font-semibold text-mkt-faint overflow-hidden">
+            <span className="px-3.5 py-[7px] bg-mkt-tint text-mkt-ink">EN</span>
+            <span className="px-3.5 py-[7px]">AR</span>
           </span>
           <span className="px-3.5 py-[7px] border border-mkt-line rounded-full text-xs font-semibold text-mkt-faint">
             Dark mode — in the app

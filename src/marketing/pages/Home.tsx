@@ -5,74 +5,87 @@ import { Reveal } from "../components/Reveal";
 import { Eyebrow } from "../components/Eyebrow";
 import { TabShowcase, type ShowcaseTab } from "../components/TabShowcase";
 import { PlanPicker, type Plan } from "../components/PlanPicker";
+import { FaqAccordion } from "../components/FaqAccordion";
 import { PhoneShell } from "../components/illustrations/PhoneShell";
 import { AppScreen } from "../components/illustrations/AppScreen";
 import { useMembraneCanvas } from "../hooks/useMembraneCanvas";
 import { useSEO } from "../useSEO";
 
-const capabilities = ["Nutrition tracking", "Workout logging", "Health tracking", "AI guidance", "Community & professionals"];
+const capabilities = ["Nutrition tracking", "Workout logging", "Health tracking", "Community & professionals"];
 
 const legacyApps = [
-  { name: "A nutrition app", note: "subscription" },
-  { name: "A workout app", note: "subscription" },
-  { name: "A sleep tracker", note: "subscription" },
-  { name: "A coach on WhatsApp", note: "somewhere else" },
-  { name: "A spreadsheet you stopped filling in", note: "March" },
+  { name: "A nutrition app", note: "Costly" },
+  { name: "A workout app", note: "Generic" },
+  { name: "A health app", note: "Discrepancies" },
+  { name: "A messenger app", note: "Elsewhere" },
+  { name: "A spreadsheet you stopped filling", note: "Inconsistency" },
 ];
 
 const platformTabs: ShowcaseTab[] = [
   {
     label: "Nutrition",
-    title: "Log a meal in seconds, not menus.",
+    title: "Meal logging, made effortless.",
     description:
-      "Meals, macros and custom foods in the same place as everything else you track — so what you eat sits next to how you trained and how you slept.",
-    points: ["Meal logging with custom foods and macros", "Goals calculated from your own TDEE", "Copy yesterday in a single swipe"],
+      "Nutrition and training have always gone hand in hand. Centium brings them together with your health metrics, giving you a clearer picture of how everything is connected.",
+    points: ["Extensive food database, always at your fingertips", "Nutrition goals that adapt to you, not the other way around.", "Log less, eat better."],
     tone: "primary",
     screen: "nutrition",
   },
   {
     label: "Workouts",
-    title: "Training that keeps its own history.",
-    description:
-      "Build routines, log the session as it happens, and let the progression take care of itself. Nothing to re-enter afterwards.",
-    points: ["Routines, folders and a full exercise library", "Live session logger with timer, RPE and tempo", "Volume and 1RM trends over time"],
+    title: "Train today. Track yesterday. Progress tomorrow.",
+    description: "Meticulous where it matters, simple where it should be. Built for every level of athlete.",
+    points: ["Thousands of exercises. Endless ways to train.", "Every set, every rep, every metric, tracked live.", "See the trends. Find your next breakthrough."],
     tone: "primary",
     screen: "workout",
   },
   {
     label: "Health",
-    title: "One view of everyday health.",
+    title: "Your health, always at the forefront.",
     description:
-      "Weight, sleep, steps and biomarkers, kept current and readable — a trend you can act on rather than a number you forget.",
-    points: ["Weight, sleep, steps and body composition", "Seven-day trend behind every metric", "Bloodwork captured by photo, not typing"],
+      "All your health metrics and medical information, kept up to date, easy to read and built to drive action.",
+    points: ["Every metric tracked. Every trend analyzed.", "Your health hub, all your information, one clear picture.", "Connected care, guided by established health standards."],
     tone: "teal",
     screen: "health",
   },
   {
-    label: "AI guidance",
-    title: "Guidance, not just numbers.",
-    description:
-      "Centium reads what you log and tells you what it means — practical, personal, and built into the tracking rather than bolted on beside it.",
-    points: ["Personalised insight from your own data", "Log by voice or photo when typing is too slow", "Present in every part of the app, quietly"],
-    tone: "primary",
-    screen: "ai",
-  },
-  {
     label: "Community",
-    title: "The people around your goals.",
-    description:
-      "A community of people working toward similar things, and the professionals who can help — reachable from inside the same app you already log in.",
-    points: ["Trainers, dietitians, physiotherapists and more", "Share exactly what you choose to share", "Gyms, stores and services in the marketplace"],
+    title: "One ecosystem. Every specialist.",
+    description: "Progress faster, together. Expert guidance gets you there.",
+    points: ["Trainers, dietitians and more, seamlessly connected to your health journey.", "Share what matters, on your terms.", "A marketplace built to take your fitness further."],
     tone: "teal",
     screen: "community",
   },
 ];
 
+const faqItems = [
+  {
+    q: "Why does Centium exist?",
+    a: "As a means to an end. Centium was built around the challenges people face, the goals they pursue, and the support they need to make meaningful progress.",
+  },
+  {
+    q: "What exactly can I track with Centium?",
+    a: "Everything. From your health and workouts to nutrition and progress, Centium brings it all together in one all-encompassing platform.",
+  },
+  {
+    q: "Who is Centium built for?",
+    a: "Anyone. If you care about your health, Centium adapts to your needs with little effort, whether you're just starting out or already deep into your journey.",
+  },
+  {
+    q: "Where does Centium fit into my daily routine?",
+    a: "All day, every day. Centium seamlessly fits into your routine without being invasive, acting as a smooth, always-accessible partner in your health journey.",
+  },
+  {
+    q: "When should Centium be part of my journey?",
+    a: "From wherever you are. Fitness will always require effort, but Centium guides and supports you every step of the way, helping you turn your goals into progress.",
+  },
+];
+
 const personas = [
-  { title: "Consistent", description: "Shows up regularly and wants a place that keeps up." },
-  { title: "Determined", description: "Working toward a specific goal, not tracking for its own sake." },
-  { title: "Health enthusiasts", description: "Already deep into fitness and nutrition, want it connected." },
-  { title: "Health conscious", description: "Paying attention, looking for one clear place to do it." },
+  { title: "Consistent", description: "Shows up, puts in the work, and wants a platform that keeps up." },
+  { title: "Determined", description: "Knows where they want to go and wants everything connected to get there." },
+  { title: "Intentional", description: "Pays attention to the details that shape their health and wants them all in one place." },
+  { title: "Proactive", description: "Wants to understand their health, act on it, and keep moving forward." },
 ];
 
 const homePlans: Plan[] = [
@@ -80,21 +93,21 @@ const homePlans: Plan[] = [
     key: "professionals",
     badge: "FOR PROFESSIONALS",
     name: "Professionals",
-    description: "Trainers, dietitians and physiotherapists managing clients.",
+    description: "Manage your entire roster, while keeping every experience personal.",
     monthly: 30,
     unit: "per seat / month",
-    features: ["Client roster & booking", "Professional dashboard", "Client sharing controls"],
+    features: ["Client roster & booking", "Programs Management", "Comprehensive Data Tracking"],
     ctaLabel: "Get Started",
     ctaHref: "/app",
   },
   {
     key: "clients",
     badge: "FOR INDIVIDUALS",
-    name: "Clients",
-    description: "Everything you need to track and understand your own health.",
+    name: "General Users",
+    description: "Take charge of your health with one click.",
     monthly: 15,
     unit: "per month",
-    features: ["Nutrition & workout logging", "Health tracking & trends", "AI-powered guidance", "Community & marketplace"],
+    features: ["Nutrition & workout logging", "Health tracking & trends", "Connected Community & Experts"],
     ctaLabel: "Get Started",
     ctaHref: "/app",
   },
@@ -102,10 +115,10 @@ const homePlans: Plan[] = [
     key: "business",
     badge: "FOR BUSINESSES",
     name: "Business",
-    description: "Gyms, studios, stores and services listing on Centium.",
+    description: "Unlock new opportunities. Scale your business with Centium.",
     monthly: 100,
     unit: "per month + rev share",
-    features: ["Marketplace listing", "Employees & classes", "Analytics"],
+    features: ["Marketplace Visibility", "Team Operations", "Growth Analytics"],
     ctaLabel: "Talk to us",
     ctaHref: "/contact",
   },
@@ -114,7 +127,7 @@ const homePlans: Plan[] = [
 export const Home: React.FC = () => {
   useSEO(
     "Your health, all in one place",
-    "Centium brings nutrition tracking, workout logging, health tracking, AI-powered guidance and community into one place."
+    "Centium brings nutrition tracking, workout logging, health tracking and community into one place."
   );
   const canvasRef = useMembraneCanvas();
 
@@ -136,15 +149,14 @@ export const Home: React.FC = () => {
 
         <div className="relative z-10 max-w-[1180px] mx-auto px-5 sm:px-10 pt-[132px] sm:pt-[172px] flex flex-col items-center text-center">
           <Reveal>
-            <Eyebrow>NUTRITION · TRAINING · HEALTH · AI · COMMUNITY</Eyebrow>
+            <Eyebrow>NUTRITION · TRAINING · HEALTH · COMMUNITY</Eyebrow>
             <h1 className="font-display font-extrabold text-[44px] sm:text-6xl lg:text-[76px] leading-[1.04] lg:leading-[1.02] tracking-[-.03em] lg:tracking-[-.035em] text-mkt-ink mt-5 max-w-[780px]">
-              Your health.
+              Your health,
               <br />
-              All in one place.
+              All in one place
             </h1>
             <p className="text-lg leading-relaxed text-mkt-soft mt-6 max-w-[560px] mx-auto">
-              Centium brings the tools you already use to manage your health into one place — so staying healthy
-              feels less like managing a collection of apps, and more like managing your life.
+              More clarity. More control. More you.
             </p>
             <div className="flex flex-wrap justify-center gap-3 mt-9">
               <Link
@@ -153,12 +165,12 @@ export const Home: React.FC = () => {
               >
                 Get Started
               </Link>
-              <a
-                href="#platform"
+              <Link
+                to="/contact"
                 className="tap px-[26px] py-4 rounded-full border border-[#DFDAD2] hover:border-mkt-ink text-mkt-ink font-semibold text-[15px] transition-colors"
               >
-                See how it works
-              </a>
+                Request a Demo
+              </Link>
             </div>
           </Reveal>
 
@@ -188,14 +200,14 @@ export const Home: React.FC = () => {
         className="border-b border-mkt-line"
         style={{ background: "linear-gradient(100deg,#C9BCEC 0%,#CFC6EE 26%,#D2D3E4 50%,#B9DAD3 76%,#A7D2C9 100%)" }}
       >
-        <div className="max-w-[1180px] mx-auto px-5 sm:px-10 grid grid-cols-2 sm:grid-cols-5">
+        <div className="max-w-[1180px] mx-auto px-5 sm:px-10 grid grid-cols-2 sm:grid-cols-4">
           {capabilities.map((label, i) => (
             <div
               key={label}
-              className={`py-6 text-center font-semibold text-[13px] text-[#2E2740] ${
-                i !== capabilities.length - 1 ? "sm:border-r sm:border-r-[rgba(46,39,64,.12)]" : ""
-              } ${i < 4 ? "border-b sm:border-b-0 border-b-[rgba(46,39,64,.12)]" : ""} ${
-                i === capabilities.length - 1 ? "col-span-2 sm:col-span-1" : ""
+              className={`py-6 text-center font-semibold text-[13px] text-[#2E2740] border-r-[rgba(46,39,64,.12)] border-b-[rgba(46,39,64,.12)] ${
+                i % 2 === 0 ? "border-r" : ""
+              } ${i !== capabilities.length - 1 ? "sm:border-r" : "sm:border-r-0"} ${
+                i < 2 ? "border-b sm:border-b-0" : ""
               }`}
             >
               {label}
@@ -213,9 +225,9 @@ export const Home: React.FC = () => {
               One hub, not another app to manage.
             </h2>
             <p className="text-[17px] leading-relaxed text-mkt-soft mt-5 max-w-[460px]">
-              Multiple subscriptions. Multiple apps. Managing your health today means juggling a different tool
-              for every part of it. Centium puts nutrition, training, health data, guidance and community in one
-              accessible place.
+              Health shouldn't feel like a chore. No more jumping between apps, subscriptions and platforms just
+              to keep track of your progress. Centium brings it all together in one place, so you can spend less
+              time managing your health and more time improving it.
             </p>
           </Reveal>
           <Reveal delay={0.08}>
@@ -248,7 +260,7 @@ export const Home: React.FC = () => {
                   </h2>
                 </div>
                 <p className="text-base leading-relaxed text-mkt-soft max-w-[340px]">
-                  Five pillars, one place to check in on all of them — and one history that stays connected.
+                  Four pillars, one place to check in on all of them, and one history that stays connected.
                 </p>
               </div>
             </Reveal>
@@ -259,34 +271,19 @@ export const Home: React.FC = () => {
         </section>
       </div>
 
-      {/* AI dark band */}
-      <Section className="bg-mkt-dark" navDark>
-        <Reveal>
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-20 items-center">
-            <div>
-              <Eyebrow tone="dark-accent">AI-POWERED GUIDANCE</Eyebrow>
-              <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-dark-ink mt-[18px]">
-                It reads your data, so you don't have to.
-              </h2>
-              <p className="text-[17px] leading-relaxed text-mkt-dark-soft mt-5 max-w-[440px]">
-                Centium turns everything you log into something you can act on today — what changed, what it
-                means, and what to do next. The same intelligence runs through nutrition, training and health.
-              </p>
-              <div className="flex flex-wrap gap-8 mt-9 pt-7 border-t border-mkt-dark-line">
-                <div>
-                  <div className="font-extrabold text-[15px] text-mkt-dark-ink">Voice & photo logging</div>
-                  <div className="text-[13.5px] text-mkt-dark-soft/70 mt-1.5">Speak a meal, snap a label</div>
-                </div>
-                <div>
-                  <div className="font-extrabold text-[15px] text-mkt-dark-ink">Always in context</div>
-                  <div className="text-[13.5px] text-mkt-dark-soft/70 mt-1.5">Never a separate chatbot tab</div>
-                </div>
-              </div>
-            </div>
-            <div className="h-[300px] sm:h-[420px] rounded-3xl overflow-hidden border border-mkt-dark-line bg-mkt-dark-surface">
-              <AppScreen variant="ai" dark />
-            </div>
-          </div>
+      {/* FAQ — replaces the deleted AI-powered guidance section and the
+          standalone About page, per QA - Web 2.0 §06. */}
+      <Section id="faq" className="bg-white border-t border-mkt-line scroll-mt-[88px]" narrow>
+        <Reveal className="text-center mb-11">
+          <Eyebrow tone="faint" className="mx-auto">
+            FAQ
+          </Eyebrow>
+          <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px]">
+            Questions, answered.
+          </h2>
+        </Reveal>
+        <Reveal delay={0.08}>
+          <FaqAccordion items={faqItems} />
         </Reveal>
       </Section>
 
@@ -318,22 +315,14 @@ export const Home: React.FC = () => {
         </div>
       </section>
 
-      {/* Business */}
+      {/* Beyond the individual (was B2B + B2C) */}
       <Section className="bg-white">
         <Reveal>
-          <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-8 mb-10">
-            <div>
-              <Eyebrow tone="teal">B2B + B2C</Eyebrow>
-              <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] max-w-[600px]">
-                Trainers, dietitians, gyms and businesses too.
-              </h2>
-            </div>
-            <Link
-              to="/business"
-              className="tap shrink-0 px-[26px] py-[15px] rounded-full border border-[#DFDAD2] hover:border-mkt-ink text-mkt-ink font-semibold text-[15px] transition-colors"
-            >
-              Explore for Business
-            </Link>
+          <div className="mb-10">
+            <Eyebrow tone="teal">BEYOND THE INDIVIDUAL</Eyebrow>
+            <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] max-w-[600px]">
+              The ecosystem built around your health.
+            </h2>
           </div>
         </Reveal>
         <div className="grid lg:grid-cols-2 gap-5">
@@ -341,11 +330,11 @@ export const Home: React.FC = () => {
             <div className="border border-mkt-line hover:border-mkt-accent-ring rounded-3xl p-9 transition-colors">
               <div className="font-bold text-xl tracking-tight text-mkt-ink">For professionals</div>
               <p className="text-base leading-relaxed text-mkt-soft mt-3">
-                Manage your client roster, bookings and the health data clients choose to share — billed monthly
-                or yearly, per seat.
+                Your clients, your plans, one seamless system. Manage everything from their health data to
+                workouts and nutrition, with updates flowing straight to their app.
               </p>
               <div className="flex flex-wrap gap-2 mt-6">
-                {["Personal trainers", "Dietitians", "Physiotherapists"].map((t) => (
+                {["Personal trainers", "Dietitians", "Physiotherapists", "General Practitioners"].map((t) => (
                   <span key={t} className="px-3.5 py-2 rounded-full bg-mkt-tint text-mkt-accent-hover font-semibold text-[13px]">
                     {t}
                   </span>
@@ -360,11 +349,11 @@ export const Home: React.FC = () => {
             <div className="border border-mkt-line hover:border-[#A8CCC6] rounded-3xl p-9 transition-colors">
               <div className="font-bold text-xl tracking-tight text-mkt-ink">For businesses</div>
               <p className="text-base leading-relaxed text-mkt-soft mt-3">
-                List your gym, store or service where people already track their health — billed monthly or
-                yearly, plus a share of revenue generated through Centium.
+                Put your gym, classes and services on the map, digitize memberships, connect with professionals
+                and gain insights through client analytics.
               </p>
               <div className="flex flex-wrap gap-2 mt-6">
-                {["Gyms & studios", "Equipment & supplements", "Meal prep"].map((t) => (
+                {["Gyms & studios", "Equipment & supplements", "Meal prep services", "Activewear"].map((t) => (
                   <span key={t} className="px-3.5 py-2 rounded-full bg-mkt-teal-tint text-mkt-teal font-semibold text-[13px]">
                     {t}
                   </span>
@@ -380,47 +369,23 @@ export const Home: React.FC = () => {
 
       {/* Pricing preview */}
       <section
-        className="py-20 sm:py-28 border-t border-t-[#DEEBE7] border-b border-b-[#DEEBE7]"
+        id="pricing"
+        className="py-20 sm:py-28 border-t border-t-[#DEEBE7] border-b border-b-[#DEEBE7] scroll-mt-[88px]"
         style={{ background: "linear-gradient(160deg,#E4F1EE 0%,#EAF4F1 46%,#EEF3F5 78%,#EFEDF8 100%)" }}
       >
         <div className="max-w-[1180px] mx-auto px-5 sm:px-10">
           <Reveal className="text-center max-w-[560px] mx-auto mb-11">
             <Eyebrow className="mx-auto">PRICING</Eyebrow>
             <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px]">
-              Plans for however you use Centium.
+              Whatever your role, Centium fits.
             </h2>
-            <p className="text-base leading-relaxed text-mkt-soft mt-[18px]">Indicative pricing — final rates are announced at launch.</p>
+            <p className="text-base leading-relaxed text-mkt-soft mt-[18px]">One app instead of a stack of subscriptions.</p>
           </Reveal>
           <Reveal delay={0.08}>
             <PlanPicker plans={homePlans} defaultSelected={1} />
           </Reveal>
         </div>
       </section>
-
-      {/* Vision */}
-      <Section className="bg-white text-center" narrow>
-        <Reveal>
-          <Eyebrow tone="faint" className="mx-auto">
-            WHERE WE'RE HEADED
-          </Eyebrow>
-          <h2 className="font-display font-extrabold text-[34px] sm:text-[52px] leading-[1.1] tracking-[-.032em] text-mkt-ink mt-5">
-            One ecosystem for everyday health — not ten apps.
-          </h2>
-          <p className="text-lg leading-relaxed text-mkt-soft mt-6 max-w-xl mx-auto">
-            Track your progress, understand your habits, work toward your goals, and connect with the right
-            people and resources — without needing a different app for every part of your health.
-          </p>
-          <div className="flex flex-wrap justify-center gap-7 items-center mt-11 font-semibold text-[13px] tracking-[.1em] text-mkt-faint">
-            <span>WELLNESS</span>
-            <span className="text-[#DDD8D0]">·</span>
-            <span>LUXURY</span>
-            <span className="text-[#DDD8D0]">·</span>
-            <span>EASY ON THE EYE</span>
-            <span className="text-[#DDD8D0]">·</span>
-            <span>INTERNATIONAL</span>
-          </div>
-        </Reveal>
-      </Section>
 
       {/* Final CTA */}
       <Section className="bg-mkt-tint border-t border-[#E7E1F6] text-center">
@@ -435,14 +400,13 @@ export const Home: React.FC = () => {
             >
               Get Started
             </Link>
-            <a
-              href="#platform"
+            <Link
+              to="/contact"
               className="tap px-[26px] py-4 rounded-full border border-[#CFC5EA] hover:border-mkt-accent text-mkt-ink font-semibold text-[15px] transition-colors"
             >
-              See the product
-            </a>
+              Request a Demo
+            </Link>
           </div>
-          <p className="text-[13.5px] text-mkt-faint mt-5">A product prototype — not yet available for download.</p>
         </Reveal>
       </Section>
     </>

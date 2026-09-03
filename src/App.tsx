@@ -7,7 +7,6 @@ import { Home as MarketingHome } from "./marketing/pages/Home";
 import { Product as MarketingProduct } from "./marketing/pages/Product";
 import { Pricing as MarketingPricing } from "./marketing/pages/Pricing";
 import { Business as MarketingBusiness } from "./marketing/pages/Business";
-import { About as MarketingAbout } from "./marketing/pages/About";
 import { Contact as MarketingContact } from "./marketing/pages/Contact";
 import { Privacy as MarketingPrivacy } from "./marketing/pages/legal/Privacy";
 import { Terms as MarketingTerms } from "./marketing/pages/legal/Terms";
@@ -57,7 +56,6 @@ function AppRoutes() {
         <Route path="/product" element={<MarketingProduct />} />
         <Route path="/pricing" element={<MarketingPricing />} />
         <Route path="/business" element={<MarketingBusiness />} />
-        <Route path="/about" element={<MarketingAbout />} />
         <Route path="/contact" element={<MarketingContact />} />
         <Route path="/legal/privacy" element={<MarketingPrivacy />} />
         <Route path="/legal/terms" element={<MarketingTerms />} />
