@@ -45,6 +45,38 @@
   the raw github.io URL, where an absolute /centium would resolve wrong).
   That fallback isn't part of what either handoff was scoped to change, so
   it's kept as-is rather than regressing it.
+
+  Design pass v3 (Claude Design handoff, "Atraxia landing page — v3 (nav
+  row, loader fixes, founder cards)" — see
+  scratchpad/design-handoff-atraxia-landing-v3/design_handoff_atraxia_landing_v3/
+  README.md): a scoped revision on top of v2, covering exactly five areas
+  per that handoff's own stated scope — everything else is unmodified:
+    1. Nav collapsed from two rows to one (logo · tabs · EST. 2026 on one
+       grid row); bar height ~99px (was 159px), --navh still measured at
+       runtime so hero padding/scroll-margin follow automatically.
+    2. Nav crossfade bugfix: the 70px crossfade band could exceed the
+       shorter bar's own half-height and clamp --navsolid to a permanent
+       grey wash over the hero instead of full transparency — band is now
+       capped at the bar's half-height.
+    3. Intro loader: explicit z-index paint order (circle always topmost),
+       the swoosh-reveal clip-path keyframes rebuilt as true half-planes
+       behind the same unchanged leading edge (the old trailing edge swung
+       back and sliced a wedge out of the artwork mid-sweep), and the
+       swoosh's reveal delay nudged from 0.9s to 0.85s so it trails the
+       circle by 0.15s.
+    4. Swoosh artwork swapped to a repaired copy (atraxia-swish-solid.png)
+       with ~470 enclosed transparent/near-white pixels along the inner
+       edge and tip filled in — present in the source PNG itself, not
+       introduced by the animation.
+    5. Founder cards: click-to-flip (front face → placeholder back-face
+       copy), updated titles, placeholder bio copy, and cards now hug their
+       own content height instead of stretching to match each other.
+  All CSS/markup/script here is lifted near-verbatim from the handoff's
+  `.dc.html`, including the swoosh keyframes' literal computed polygon
+  values (algorithmically derived per the handoff, not hand-rederived
+  here). Per the handoff's own note, its `public/atraxia/...` asset paths
+  and the `.dc.html` editor-shell-only `overflow-x`/`height:auto` rules are
+  prototype-only artifacts and were not carried over.
 -->
 <html lang="en">
   <head>
@@ -146,12 +178,17 @@
         backdrop-filter: blur(14px);
         border-bottom: 1px solid rgb(var(--border) / 0.055);
       }
-      .nav .wrap.nav-top { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding-block: 1.5rem 0.7rem; }
+      /* v3: nav collapsed from two rows to one — logo, tabs, EST. 2026 all
+         on the same level. auto minmax(0,1fr) auto (not 1fr auto 1fr) so
+         the side columns take their natural width and the wordmark never
+         collides with the centred pill at narrow widths. */
+      .nav .wrap.nav-top { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 1rem; padding-block: 1.5rem; }
+      .nav .wrap.nav-top .tabs { justify-self: center; max-width: 100%; }
+      .nav .wrap.nav-top .meta { justify-self: end; }
       .nav .lockup { display: flex; align-items: center; gap: 0.8rem; }
       .nav .mark { width: 78px; height: auto; flex: none; display: block; }
       .nav .wordmark { height: 21px; width: auto; display: block; margin-top: 3px; }
       .nav .meta { font-size: 0.7rem; letter-spacing: 0.2em; font-weight: 700; color: #9AACB1; }
-      .nav .wrap.nav-tabs-row { display: flex; align-items: center; justify-content: center; padding-block: 0 1rem; }
 
       .tabs {
         display: flex; align-items: center; gap: 0.15rem;
@@ -254,7 +291,7 @@
       .tile--soon .icon { border: 2px dashed rgb(var(--charcoal-faint) / 0.4); background: transparent; }
 
       /* ---------- founders ---------- */
-      .founders-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.5rem; }
+      .founders-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 1.5rem; align-items: start; }
       .founder-card {
         display: flex; align-items: stretch; border-radius: 1.5rem; overflow: hidden;
         background: rgb(var(--cream-card));
@@ -266,6 +303,29 @@
       .founder-card h3 { margin: 0 0 0.15rem; font-size: 1.15rem; font-weight: 800; }
       .founder-card .role { font-size: 0.85rem; font-weight: 700; color: rgb(var(--teal-dark)); margin-bottom: 0.75rem; }
       .founder-card p.bio { margin: 0; font-size: 0.92rem; line-height: 1.6; color: rgb(var(--charcoal-soft)); }
+
+      /* v3: click-to-flip founder cards. */
+      .founder-flip { perspective: 1600px; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+      .founder-inner {
+        position: relative; transform-style: preserve-3d; border-radius: 1.5rem;
+        transition: transform 0.78s cubic-bezier(.2,.75,.2,1), box-shadow 0.78s cubic-bezier(.2,.75,.2,1);
+      }
+      .founder-flip.is-turning .founder-inner { box-shadow: 0 30px 64px -20px rgb(6 20 25 / 0.28); }
+      .founder-flip.is-flipped .founder-inner { transform: rotateY(180deg); }
+      .founder-flip:active .founder-inner { transform: scale(0.995); }
+      .founder-flip.is-flipped:active .founder-inner { transform: rotateY(180deg) scale(0.995); }
+
+      .founder-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+      /* belt-and-braces for renderers that ignore backface-visibility */
+      .founder-face--back { visibility: hidden; transition: visibility 0s linear 0.39s; }
+      .founder-flip.is-flipped .founder-face--back { visibility: visible; transition-delay: 0s; }
+      .founder-flip.is-flipped .founder-face--front { visibility: hidden; transition: visibility 0s linear 0.39s; }
+
+      .founder-card.founder-face--back {
+        position: absolute; inset: 0; transform: rotateY(180deg);
+        align-items: center; justify-content: center; padding: 1.35rem 1.5rem;
+      }
+      .founder-face--back p { margin: 0; font-size: 0.92rem; line-height: 1.6; color: rgb(var(--charcoal-soft)); text-align: center; }
 
       /* ---------- trust & security ---------- */
       .trust-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 1.25rem; }
@@ -428,7 +488,7 @@
       main { margin-top: calc(var(--navh, 159px) * -1); }
       .hero { padding-top: calc(var(--navh, 159px) + 1.5rem); }
       section[id], header.hero { scroll-margin-top: calc(var(--navh, 159px) + 14px); }
-      .nav .wrap.nav-top { padding-block: 2.15rem 0.5rem; }
+      .nav .wrap.nav-top { padding-block: 1.5rem; }
       .nav .mark, .nav .wordmark { transition: filter 0.3s ease; }
       .nav .meta, .nav .tabs, .nav .tabs a { transition: color 0.3s ease, background 0.3s ease, border-color 0.3s ease; }
       .nav.is-dark .wordmark { filter: brightness(0) invert(1); }
@@ -502,7 +562,11 @@
       .loader-lockup { position: relative; display: flex; flex-direction: column; align-items: center; gap: 1.6rem; }
       .atx-stage { position: relative; width: min(330px, 62vw); aspect-ratio: 1200 / 863; }
       .atx-stage .atx-trail, .atx-stage .atx-mark, .atx-stage .atx-swish { position: absolute; inset: 0; width: 100%; height: 100%; }
-      .atx-stage .atx-trail { overflow: visible; }
+      /* v3: explicit paint order so the circle holds topmost for the whole
+         sequence rather than relying on document order alone. */
+      .atx-stage .atx-trail { overflow: visible; z-index: 3; }
+      .atx-stage .atx-mark  { z-index: 1; }
+      .atx-stage .atx-swish { z-index: 2; }
       .atx-stage, .loader-lockup { overflow: visible; }
       .atx-mark {
         opacity: 0; object-fit: contain;
@@ -519,7 +583,7 @@
       .atx-swish {
         object-fit: contain;
         -webkit-clip-path: polygon(-15.37% 387.84%, 16.37% -213.10%, -232.96% -238.55%, -264.70% 362.38%); clip-path: polygon(-15.37% 387.84%, 16.37% -213.10%, -232.96% -238.55%, -264.70% 362.38%);
-        animation: atxSwishDraw 1.35s linear 0.9s forwards;
+        animation: atxSwishDraw 1.35s linear 0.85s forwards;
       }
       .atx-comet { stroke-dasharray: 130 1000; stroke-dashoffset: 130; opacity: 0; animation: atxComet 1.35s cubic-bezier(.34,0,.16,1) 0.7s forwards; }
       .atx-shimmer { stroke-dasharray: 90 1000; stroke-dashoffset: 90; opacity: 0; animation: atxShimmer 4s ease-in-out 2.5s infinite; }
@@ -532,34 +596,40 @@
       }
       @keyframes atxMarkResolve { from { opacity: 0; } to { opacity: 0.97; } }
       @keyframes atxWordIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 0.9; transform: translateY(0); } }
+      /* v3: the quad's trailing edge (p2/p3) used to swing back across the
+         artwork mid-sweep, slicing a wedge out of it. Every stop's leading
+         edge (p0/p1) is unchanged; p2/p3 are rebuilt as a true half-plane
+         behind that same leading edge, so nothing can be cut out. The two
+         final stops resolve to clip-path: none. */
       @keyframes atxSwishDraw {
-        0.00% { -webkit-clip-path: polygon(-15.37% 387.84%, 16.37% -213.10%, -232.96% -238.55%, -264.70% 362.38%); clip-path: polygon(-15.37% 387.84%, 16.37% -213.10%, -232.96% -238.55%, -264.70% 362.38%); }
-        3.85% { -webkit-clip-path: polygon(-14.85% 387.89%, 16.88% -213.04%, -232.45% -238.50%, -264.18% 362.43%); clip-path: polygon(-14.85% 387.89%, 16.88% -213.04%, -232.45% -238.50%, -264.18% 362.43%); }
-        7.69% { -webkit-clip-path: polygon(-13.17% 388.06%, 18.72% -212.86%, -230.61% -238.43%, -262.49% 362.48%); clip-path: polygon(-13.17% 388.06%, 18.72% -212.86%, -230.61% -238.43%, -262.49% 362.48%); }
-        11.54% { -webkit-clip-path: polygon(-10.25% 388.36%, 22.67% -212.45%, -226.60% -238.86%, -259.53% 361.95%); clip-path: polygon(-10.25% 388.36%, 22.67% -212.45%, -226.60% -238.86%, -259.53% 361.95%); }
-        15.38% { -webkit-clip-path: polygon(-5.87% 388.83%, 29.62% -211.69%, -219.54% -240.16%, -255.03% 360.36%); clip-path: polygon(-5.87% 388.83%, 29.62% -211.69%, -219.54% -240.16%, -255.03% 360.36%); }
-        19.23% { -webkit-clip-path: polygon(4.47% 390.27%, 35.90% -210.69%, -213.44% -235.91%, -244.87% 365.05%); clip-path: polygon(4.47% 390.27%, 35.90% -210.69%, -213.44% -235.91%, -244.87% 365.05%); }
-        23.08% { -webkit-clip-path: polygon(118.50% 360.27%, -57.79% -190.16%, -286.17% -48.74%, -109.88% 501.69%); clip-path: polygon(118.50% 360.27%, -57.79% -190.16%, -286.17% -48.74%, -109.88% 501.69%); }
-        26.92% { -webkit-clip-path: polygon(141.11% 344.95%, -59.17% -189.38%, -280.87% -28.71%, -80.58% 505.62%); clip-path: polygon(141.11% 344.95%, -59.17% -189.38%, -280.87% -28.71%, -80.58% 505.62%); }
-        30.77% { -webkit-clip-path: polygon(163.62% 327.31%, -62.19% -186.96%, -275.57% -5.81%, -49.76% 508.46%); clip-path: polygon(163.62% 327.31%, -62.19% -186.96%, -275.57% -5.81%, -49.76% 508.46%); }
-        34.62% { -webkit-clip-path: polygon(176.42% 316.17%, -58.54% -190.11%, -268.60% -1.62%, -33.64% 504.67%); clip-path: polygon(176.42% 316.17%, -58.54% -190.11%, -268.60% -1.62%, -33.64% 504.67%); }
-        38.46% { -webkit-clip-path: polygon(189.73% 303.74%, -58.32% -190.33%, -263.31% 8.66%, -15.26% 502.73%); clip-path: polygon(189.73% 303.74%, -58.32% -190.33%, -263.31% 8.66%, -15.26% 502.73%); }
-        42.31% { -webkit-clip-path: polygon(199.98% 293.52%, -57.50% -191.12%, -258.58% 15.44%, -1.10% 500.08%); clip-path: polygon(199.98% 293.52%, -57.50% -191.12%, -258.58% 15.44%, -1.10% 500.08%); }
-        46.15% { -webkit-clip-path: polygon(209.42% 283.59%, -57.84% -190.71%, -254.63% 23.69%, 12.63% 497.99%); clip-path: polygon(209.42% 283.59%, -57.84% -190.71%, -254.63% 23.69%, 12.63% 497.99%); }
-        50.00% { -webkit-clip-path: polygon(217.99% 273.93%, -59.00% -189.45%, -251.26% 32.75%, 25.73% 496.13%); clip-path: polygon(217.99% 273.93%, -59.00% -189.45%, -251.26% 32.75%, 25.73% 496.13%); }
-        53.85% { -webkit-clip-path: polygon(210.14% 282.27%, -44.90% -204.86%, -247.02% -0.27%, 8.02% 486.87%); clip-path: polygon(210.14% 282.27%, -44.90% -204.86%, -247.02% -0.27%, 8.02% 486.87%); }
-        57.69% { -webkit-clip-path: polygon(206.21% 286.42%, -35.20% -213.97%, -242.81% -20.31%, -1.40% 480.08%); clip-path: polygon(206.21% 286.42%, -35.20% -213.97%, -242.81% -20.31%, -1.40% 480.08%); }
-        61.54% { -webkit-clip-path: polygon(263.56% 209.08%, -88.50% -142.22%, -234.26% 140.21%, 117.81% 491.51%); clip-path: polygon(263.56% 209.08%, -88.50% -142.22%, -234.26% 140.21%, 117.81% 491.51%); }
-        65.38% { -webkit-clip-path: polygon(266.98% 202.19%, -89.25% -140.90%, -231.60% 144.87%, 124.63% 487.96%); clip-path: polygon(266.98% 202.19%, -89.25% -140.90%, -231.60% 144.87%, 124.63% 487.96%); }
-        69.23% { -webkit-clip-path: polygon(261.17% 213.19%, -81.06% -156.42%, -234.41% 118.13%, 107.82% 487.74%); clip-path: polygon(261.17% 213.19%, -81.06% -156.42%, -234.41% 118.13%, 107.82% 487.74%); }
-        73.08% { -webkit-clip-path: polygon(257.36% 219.76%, -75.16% -166.60%, -235.46% 100.16%, 97.06% 486.52%); clip-path: polygon(257.36% 219.76%, -75.16% -166.60%, -235.46% 100.16%, 97.06% 486.52%); }
-        76.92% { -webkit-clip-path: polygon(255.23% 223.23%, -71.26% -172.95%, -235.64% 88.97%, 90.86% 485.15%); clip-path: polygon(255.23% 223.23%, -71.26% -172.95%, -235.64% 88.97%, 90.86% 485.15%); }
-        80.77% { -webkit-clip-path: polygon(255.95% 222.09%, -70.54% -174.09%, -234.92% 87.83%, 91.57% 484.01%); clip-path: polygon(255.95% 222.09%, -70.54% -174.09%, -234.92% 87.83%, 91.57% 484.01%); }
-        84.62% { -webkit-clip-path: polygon(256.51% 221.20%, -69.99% -174.98%, -234.36% 86.94%, 92.13% 483.12%); clip-path: polygon(256.51% 221.20%, -69.99% -174.98%, -234.36% 86.94%, 92.13% 483.12%); }
-        88.46% { -webkit-clip-path: polygon(256.92% 220.55%, -69.58% -175.63%, -233.95% 86.28%, 92.54% 482.46%); clip-path: polygon(256.92% 220.55%, -69.58% -175.63%, -233.95% 86.28%, 92.54% 482.46%); }
-        92.31% { -webkit-clip-path: polygon(257.20% 220.10%, -69.29% -176.08%, -233.67% 85.84%, 92.82% 482.02%); clip-path: polygon(257.20% 220.10%, -69.29% -176.08%, -233.67% 85.84%, 92.82% 482.02%); }
-        96.15% { -webkit-clip-path: polygon(257.36% 219.84%, -69.13% -176.34%, -233.51% 85.58%, 92.99% 481.76%); clip-path: polygon(257.36% 219.84%, -69.13% -176.34%, -233.51% 85.58%, 92.99% 481.76%); }
-        100.00% { -webkit-clip-path: polygon(257.41% 219.76%, -69.08% -176.42%, -233.46% 85.50%, 93.04% 481.68%); clip-path: polygon(257.41% 219.76%, -69.08% -176.42%, -233.46% 85.50%, 93.04% 481.68%); }
+        0.00% { -webkit-clip-path: polygon(-15.37% 387.84%, 16.37% -213.10%, -1376.39% -355.29%, -1408.13% 245.65%); clip-path: polygon(-15.37% 387.84%, 16.37% -213.10%, -1376.39% -355.29%, -1408.13% 245.65%); }
+        3.85% { -webkit-clip-path: polygon(-14.85% 387.89%, 16.88% -213.04%, -1375.88% -355.26%, -1407.61% 245.67%); clip-path: polygon(-14.85% 387.89%, 16.88% -213.04%, -1375.88% -355.26%, -1407.61% 245.67%); }
+        7.69% { -webkit-clip-path: polygon(-13.17% 388.06%, 18.72% -212.86%, -1373.97% -355.72%, -1405.86% 245.20%); clip-path: polygon(-13.17% 388.06%, 18.72% -212.86%, -1373.97% -355.72%, -1405.86% 245.20%); }
+        11.54% { -webkit-clip-path: polygon(-10.25% 388.36%, 22.67% -212.45%, -1369.54% -359.95%, -1402.46% 240.86%); clip-path: polygon(-10.25% 388.36%, 22.67% -212.45%, -1369.54% -359.95%, -1402.46% 240.86%); }
+        15.38% { -webkit-clip-path: polygon(-5.87% 388.83%, 29.62% -211.69%, -1361.33% -370.63%, -1396.82% 229.89%); clip-path: polygon(-5.87% 388.83%, 29.62% -211.69%, -1361.33% -370.63%, -1396.82% 229.89%); }
+        19.23% { -webkit-clip-path: polygon(4.47% 390.27%, 35.90% -210.69%, -1356.99% -351.58%, -1388.42% 249.38%); clip-path: polygon(4.47% 390.27%, 35.90% -210.69%, -1356.99% -351.58%, -1388.42% 249.38%); }
+        23.08% { -webkit-clip-path: polygon(118.50% 360.27%, -57.79% -190.16%, -1248.06% 546.89%, -1071.77% 1097.32%); clip-path: polygon(118.50% 360.27%, -57.79% -190.16%, -1248.06% 546.89%, -1071.77% 1097.32%); }
+        26.92% { -webkit-clip-path: polygon(141.11% 344.95%, -59.17% -189.38%, -1192.77% 632.18%, -992.49% 1166.51%); clip-path: polygon(141.11% 344.95%, -59.17% -189.38%, -1192.77% 632.18%, -992.49% 1166.51%); }
+        30.77% { -webkit-clip-path: polygon(163.62% 327.31%, -62.19% -186.96%, -1129.46% 719.10%, -903.65% 1233.37%); clip-path: polygon(163.62% 327.31%, -62.19% -186.96%, -1129.46% 719.10%, -903.65% 1233.37%); }
+        34.62% { -webkit-clip-path: polygon(176.42% 316.17%, -58.54% -190.11%, -1100.53% 744.91%, -865.57% 1251.19%); clip-path: polygon(176.42% 316.17%, -58.54% -190.11%, -1100.53% 744.91%, -865.57% 1251.19%); }
+        38.46% { -webkit-clip-path: polygon(189.73% 303.74%, -58.32% -190.33%, -1062.86% 784.81%, -814.81% 1278.88%); clip-path: polygon(189.73% 303.74%, -58.32% -190.33%, -1062.86% 784.81%, -814.81% 1278.88%); }
+        42.31% { -webkit-clip-path: polygon(199.98% 293.52%, -57.50% -191.12%, -1034.05% 812.05%, -776.57% 1296.69%); clip-path: polygon(199.98% 293.52%, -57.50% -191.12%, -1034.05% 812.05%, -776.57% 1296.69%); }
+        46.15% { -webkit-clip-path: polygon(209.42% 283.59%, -57.84% -190.71%, -1004.53% 840.69%, -737.27% 1314.99%); clip-path: polygon(209.42% 283.59%, -57.84% -190.71%, -1004.53% 840.69%, -737.27% 1314.99%); }
+        50.00% { -webkit-clip-path: polygon(217.99% 273.93%, -59.00% -189.45%, -975.05% 869.25%, -698.06% 1332.63%); clip-path: polygon(217.99% 273.93%, -59.00% -189.45%, -975.05% 869.25%, -698.06% 1332.63%); }
+        53.85% { -webkit-clip-path: polygon(210.14% 282.27%, -44.90% -204.86%, -1028.81% 791.10%, -773.77% 1278.23%); clip-path: polygon(210.14% 282.27%, -44.90% -204.86%, -1028.81% 791.10%, -773.77% 1278.23%); }
+        57.69% { -webkit-clip-path: polygon(206.21% 286.42%, -35.20% -213.97%, -1058.95% 740.99%, -817.54% 1241.38%); clip-path: polygon(206.21% 286.42%, -35.20% -213.97%, -1058.95% 740.99%, -817.54% 1241.38%); }
+        61.54% { -webkit-clip-path: polygon(263.56% 209.08%, -88.50% -142.22%, -730.55% 1101.88%, -378.49% 1453.18%); clip-path: polygon(263.56% 209.08%, -88.50% -142.22%, -730.55% 1101.88%, -378.49% 1453.18%); }
+        65.38% { -webkit-clip-path: polygon(266.98% 202.19%, -89.25% -140.90%, -713.47% 1112.24%, -357.24% 1455.33%); clip-path: polygon(266.98% 202.19%, -89.25% -140.90%, -713.47% 1112.24%, -357.24% 1455.33%); }
+        69.23% { -webkit-clip-path: polygon(261.17% 213.19%, -81.06% -156.42%, -763.76% 1065.84%, -421.53% 1435.45%); clip-path: polygon(261.17% 213.19%, -81.06% -156.42%, -763.76% 1065.84%, -421.53% 1435.45%); }
+        73.08% { -webkit-clip-path: polygon(257.36% 219.76%, -75.16% -166.60%, -796.26% 1033.41%, -463.74% 1419.77%); clip-path: polygon(257.36% 219.76%, -75.16% -166.60%, -796.26% 1033.41%, -463.74% 1419.77%); }
+        76.92% { -webkit-clip-path: polygon(255.23% 223.23%, -71.26% -172.95%, -815.45% 1012.87%, -488.96% 1409.05%); clip-path: polygon(255.23% 223.23%, -71.26% -172.95%, -815.45% 1012.87%, -488.96% 1409.05%); }
+        80.77% { -webkit-clip-path: polygon(255.95% 222.09%, -70.54% -174.09%, -814.75% 1011.72%, -488.26% 1407.90%); clip-path: polygon(255.95% 222.09%, -70.54% -174.09%, -814.75% 1011.72%, -488.26% 1407.90%); }
+        84.62% { -webkit-clip-path: polygon(256.51% 221.20%, -69.99% -174.98%, -814.18% 1010.84%, -487.68% 1407.02%); clip-path: polygon(256.51% 221.20%, -69.99% -174.98%, -814.18% 1010.84%, -487.68% 1407.02%); }
+        88.46% { -webkit-clip-path: polygon(256.92% 220.55%, -69.58% -175.63%, -813.80% 1010.18%, -487.30% 1406.36%); clip-path: polygon(256.92% 220.55%, -69.58% -175.63%, -813.80% 1010.18%, -487.30% 1406.36%); }
+        92.31% { -webkit-clip-path: polygon(257.20% 220.10%, -69.29% -176.08%, -813.50% 1009.73%, -487.01% 1405.91%); clip-path: polygon(257.20% 220.10%, -69.29% -176.08%, -813.50% 1009.73%, -487.01% 1405.91%); }
+        96.15% { -webkit-clip-path: polygon(257.36% 219.84%, -69.13% -176.34%, -813.32% 1009.48%, -486.83% 1405.66%); clip-path: polygon(257.36% 219.84%, -69.13% -176.34%, -813.32% 1009.48%, -486.83% 1405.66%); }
+        99.90% { -webkit-clip-path: none; clip-path: none; }
+        100.00% { -webkit-clip-path: none; clip-path: none; }
       }
       @keyframes atxComet {
         0% { stroke-dashoffset: 130; opacity: 0; }
@@ -624,7 +694,7 @@
       <div class="loader-lockup">
         <div class="atx-stage">
           <img class="atx-mark logo-img" src="atraxia/atraxia-a-only.png" alt="" />
-          <img class="atx-swish logo-img" src="atraxia/atraxia-swish-only.png" alt="" />
+          <img class="atx-swish logo-img" src="atraxia/atraxia-swish-solid.png" alt="" />
           <svg class="atx-trail" viewBox="0 0 1200 863" fill="none" xmlns="http://www.w3.org/2000/svg">
             <defs>
               <linearGradient id="atxTrailGrad" x1="0" y1="1" x2="1" y2="0">
@@ -872,9 +942,6 @@
             <img class="mark logo-img" src="atraxia/atraxia-mark-hi.png" alt="Atraxia" />
             <img class="wordmark logo-img" src="atraxia/atraxia-wordmark.png" alt="ATRAXIA" />
           </div>
-          <span class="meta">EST. 2026</span>
-        </div>
-        <div class="wrap nav-tabs-row">
           <div class="tabs" role="tablist" aria-label="Primary">
             <span class="tab-pill" aria-hidden="true"></span>
             <a href="#about">About</a>
@@ -883,6 +950,7 @@
             <a href="#resources">Resources</a>
             <a href="#contact">Contact</a>
           </div>
+          <span class="meta">EST. 2026</span>
         </div>
       </nav>
 
@@ -1384,33 +1452,34 @@
               </p>
             </div>
             <div class="founders-grid">
-              <div class="founder-card">
-                <img src="atraxia/founder-abdallah-v8.jpg" alt="Abdallah Diab, Co-Founder of Atraxia" width="720" height="828" loading="lazy" />
-                <div class="body">
-                  <h3>Abdallah Diab</h3>
-                  <div class="role">Co-Founder &amp; Operations Manager</div>
-                  <p class="bio">
-                    Operations Manager with 5+ years of experience in Operations
-                    &amp; Business Management. Specialized in creating
-                    easy-to-comprehend, organized systems that facilitate
-                    decision-making and provide clarity.
-                  </p>
+              <div class="founder-flip">
+                <div class="founder-inner">
+                  <div class="founder-card founder-face founder-face--front">
+                    <img src="atraxia/founder-abdallah-v8.jpg" alt="Abdallah Diab, Co-founder of Atraxia" width="720" height="828" loading="lazy" />
+                    <div class="body">
+                      <h3>Abdallah Diab</h3>
+                      <div class="role">Co-founder | Operations Manager</div>
+                      <p class="bio">placeholder quotes</p>
+                    </div>
+                  </div>
+                  <div class="founder-card founder-face founder-face--back">
+                    <p>text placeholder</p>
+                  </div>
                 </div>
               </div>
-              <div class="founder-card">
-                <img src="atraxia/founder-karim-v6.jpg" alt="Dr. Karim Khaldi, Co-Founder of Atraxia" width="720" height="828" loading="lazy" />
-                <div class="body">
-                  <h3>Dr. Karim Khaldi</h3>
-                  <div class="role">Co-Founder &amp; Medical Doctor, MPH</div>
-                  <p class="bio">
-                    Sharing a profound dedication to healthcare and fitness, Dr.
-                    Khaldi seamlessly bridges clinical expertise with corporate
-                    strategy. As a Medical Doctor specialized in corporate
-                    health consultancy and data analytics, he leverages
-                    concrete data to identify market opportunities, optimize
-                    brand performance, and ensure Atraxia remains at the
-                    cutting edge of industry innovation.
-                  </p>
+              <div class="founder-flip">
+                <div class="founder-inner">
+                  <div class="founder-card founder-face founder-face--front">
+                    <img src="atraxia/founder-karim-v6.jpg" alt="Dr. Karim Khaldi, Co-founder of Atraxia" width="720" height="828" loading="lazy" />
+                    <div class="body">
+                      <h3>Dr. Karim Khaldi</h3>
+                      <div class="role">Co-founder | MD | MPH</div>
+                      <p class="bio">placeholder quotes</p>
+                    </div>
+                  </div>
+                  <div class="founder-card founder-face founder-face--back">
+                    <p>text placeholder</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1574,10 +1643,16 @@
           tabs.addEventListener('pointerleave', function () { hovered = -1; paint(); });
           var navroot = document.querySelector('.nav');
           function navH() { document.documentElement.style.setProperty('--navh', navroot.offsetHeight + 'px'); }
-          var BAND = 70, navraf = 0;
+          var navraf = 0;
           function navTheme() {
             navraf = 0;
+            // v3 fix: with the single-row nav shorter than before, a fixed
+            // 70px band could exceed the bar's own half-height and clamp
+            // --navsolid to a permanent grey wash instead of full
+            // transparency over the hero. The band can never exceed the
+            // bar's half-height.
             var mid = navroot.offsetHeight * 0.5, solid = 1, over = false;
+            var BAND = Math.min(70, mid);
             var els = document.querySelectorAll('[data-nav-dark]');
             for (var i = 0; i < els.length; i++) {
               var r = els[i].getBoundingClientRect();
@@ -1618,6 +1693,20 @@
         var segs = location.pathname.split('/').filter(Boolean);
         var href = segs[0] === 'Website-Centium' ? '/Website-Centium/centium/' : '/centium';
         document.getElementById('centium-tile').href = href;
+      })();
+
+      // v3: click-to-flip founder cards. Delegated so it survives re-renders.
+      (function () {
+        if (window.__atxFounderFlip) return; window.__atxFounderFlip = true;
+        var timers = new WeakMap();
+        document.addEventListener('click', function (e) {
+          var card = e.target && e.target.closest && e.target.closest('.founder-flip');
+          if (!card) return;
+          card.classList.toggle('is-flipped');
+          card.classList.add('is-turning');
+          clearTimeout(timers.get(card));
+          timers.set(card, setTimeout(function () { card.classList.remove('is-turning'); }, 800));
+        });
       })();
     </script>
   </body>
