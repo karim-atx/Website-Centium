@@ -121,7 +121,39 @@
        in the capture phase plus a pointerdown listener that closes the
        panel on any press outside it and outside the toggle button. Same
        toggle/link-click/aria-expanded behavior otherwise.
+
+  QA pass (2026-09-03, "Atraxia | Web QA 2.0" — a copy/content QA doc, not
+  a design handoff; applied directly to every section against this file's
+  own current content since the doc itself was extracted from the live
+  site). Full copy pivot from "health & wellness parent company" framing
+  to a broader "curiosity-led exploration company" framing:
+    - Nav renamed: Trust & Security -> Values (#trust -> #values),
+      Resources -> Blog (#resources -> #blog). About/Portfolio/Contact
+      unchanged.
+    - Hero: new eyebrow/headline/body/CTAs (arrows added to match the doc).
+    - About/mission: new eyebrow, headline, both body paragraphs, and the
+      first stat relabeled LIVE PRODUCT -> CORE MISSION.
+    - Portfolio: new headline/body; the two tiles themselves (Centium,
+      Coming soon) are unchanged per the doc.
+    - Founders: front-face bio and back-face text rewritten for both.
+      Abdallah's original front quote (an Arabic proverb) was withdrawn
+      in the doc with nothing given to replace it, so his front bio line
+      is omitted rather than left as an empty placeholder — flagged in
+      the task summary rather than invented.
+    - Values (was Trust & Security): fully reframed from data/privacy
+      specifics (cookies, per-product privacy policy, a security contact
+      email) to brand values (Principled / Client-Centric / Simplicity);
+      the "plain-language summary, see Privacy Policy" disclaimer is
+      removed. This section no longer says anything about data handling —
+      that now lives solely in privacy.html.
+    - Blog (was Resources): new eyebrow/headline/body/teaser copy.
+    - Contact: new eyebrow/body; email changed hello@ -> support@atraxia.org
+      (both the section's own two links and the icon SVGs were left as-is —
+      the doc didn't ask for new ones). privacy.html and accessibility.html
+      still reference hello@atraxia.org; the doc didn't cover those pages,
+      so they're untouched — worth a follow-up decision.
 -->
+
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -1072,8 +1104,8 @@
             <span class="tab-pill" aria-hidden="true"></span>
             <a href="#about">About</a>
             <a href="#portfolio">Portfolio</a>
-            <a href="#trust">Trust &amp; Security</a>
-            <a href="#resources">Resources</a>
+            <a href="#values">Values</a>
+            <a href="#blog">Blog</a>
             <a href="#contact">Contact</a>
           </div>
           <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-menu">
@@ -1086,8 +1118,8 @@
           <div class="nav-menu" id="nav-menu">
             <a href="#about">About</a>
             <a href="#portfolio">Portfolio</a>
-            <a href="#trust">Trust &amp; Security</a>
-            <a href="#resources">Resources</a>
+            <a href="#values">Values</a>
+            <a href="#blog">Blog</a>
             <a href="#contact">Contact</a>
           </div>
           <span class="meta">EST. 2026</span>
@@ -1512,38 +1544,37 @@
           <div class="wrap">
             <div class="eyebrow-rule">
               <span class="rule"></span>
-              <span class="label">HEALTH &amp; WELLNESS VENTURES</span>
+              <span class="label">LED BY CURIOSITY</span>
             </div>
-            <h1 class="hero-h1">We build and house the apps shaping the future of health.</h1>
+            <h1 class="hero-h1">Beyond the obvious.<br />Toward what&rsquo;s next.</h1>
             <p class="hero-lede">
-              Atraxia is the parent company behind a growing portfolio of health and
-              wellness ventures. Independent companies, one team, built to last.
-              Centium is the first.
+              We explore ideas worth pursuing, rethink complex problems, and turn
+              possibilities into solutions designed to move things forward.
             </p>
             <div class="hero-actions">
-              <a class="btn btn--primary" href="#portfolio">See the portfolio</a>
-              <a class="btn btn--ghost" href="#founders">Meet the founders</a>
+              <a class="btn btn--primary" href="#portfolio">See the portfolio →</a>
+              <a class="btn btn--ghost" href="#founders">Meet the founders →</a>
             </div>
           </div>
         </header>
 
         <section class="mission" id="about">
           <div class="wrap">
-            <span class="eyebrow">HOW WE BUILD</span>
-            <h2 class="mission-statement">One company.<br />Many ventures.</h2>
+            <span class="eyebrow">OUR PHILOSOPHY</span>
+            <h2 class="mission-statement">Understand first.<br />Build better.</h2>
             <div class="mission-prose">
               <p>
-                We build focused products rather than one that tries to do
-                everything. Each venture stands on its own, run by the same
-                team, held to the same standard.
+                We don't create solutions for problems that don't exist. We
+                study real needs, understand the complexity behind them, and
+                build thoughtful products that make the answer feel obvious.
               </p>
               <p>
-                Healthcare and fitness sit at the core of what we make, from
-                the first line of code to the way each company is run.
+                From functionality to experience, every detail is designed
+                with the user in mind.
               </p>
             </div>
             <div class="mission-stats">
-              <div><strong>1</strong><span>LIVE PRODUCT</span></div>
+              <div><strong>1</strong><span>CORE MISSION</span></div>
               <div><strong>2</strong><span>FOUNDERS</span></div>
               <div><strong>∞</strong><span>VENTURES AHEAD</span></div>
             </div>
@@ -1554,8 +1585,8 @@
           <div class="wrap">
             <div class="section-head">
               <span class="eyebrow">OUR PORTFOLIO</span>
-              <h2>Check out our latest apps &amp; developments</h2>
-              <p>Every Atraxia product shares the same team, standards and long-term thinking — starting here.</p>
+              <h2>Discover what&rsquo;s taking shape.</h2>
+              <p>Our portfolio is only the beginning, a growing collection of ideas, each explored, refined, and built around a real opportunity to make a difference.</p>
             </div>
             <div class="grid">
               <a class="tile" href="/centium" id="centium-tile">
@@ -1599,11 +1630,10 @@
                     <div class="body">
                       <h3>Abdallah Diab</h3>
                       <div class="role">Co-founder | Operations Manager</div>
-                      <p class="bio">placeholder quotes</p>
                     </div>
                   </div>
                   <div class="founder-card founder-face founder-face--back">
-                    <p>text placeholder</p>
+                    <p>A firm believer in simplifying complexity, removing obstacles, and bringing clarity to chaos. I strive to create organized, intuitive solutions that feel effortless to understand from the very first interaction.</p>
                   </div>
                 </div>
               </div>
@@ -1614,11 +1644,11 @@
                     <div class="body">
                       <h3>Dr. Karim Khaldi</h3>
                       <div class="role">Co-founder | MD | MPH</div>
-                      <p class="bio">placeholder quotes</p>
+                      <p class="bio">&ldquo;The mind is that which is roused and directed by itself.&rdquo; &mdash;Marcus Aurelius</p>
                     </div>
                   </div>
                   <div class="founder-card founder-face founder-face--back">
-                    <p>text placeholder</p>
+                    <p>I believe the lessons of medicine are simple: be rigorous, stay passionate, and create solutions where none yet exist.</p>
                   </div>
                 </div>
               </div>
@@ -1626,12 +1656,12 @@
           </div>
         </section>
 
-        <section id="trust">
+        <section id="values">
           <div class="wrap">
             <div class="section-head">
-              <span class="eyebrow">TRUST &amp; SECURITY</span>
-              <h2>How we handle data</h2>
-              <p>Atraxia's own site collects no personal data beyond standard web server logs. Each product in the portfolio publishes its own privacy policy covering what it collects and why.</p>
+              <span class="eyebrow">WHAT GUIDES US</span>
+              <h2>Three principles, one way of thinking.</h2>
+              <p>Curiosity may drive us forward, but these values keep us grounded in how we think, build, and serve.</p>
             </div>
             <div class="trust-grid">
               <div class="trust-card">
@@ -1640,8 +1670,8 @@
                     <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" stroke="#368294" stroke-width="1.6" stroke-linejoin="round"/>
                   </svg>
                 </span>
-                <h3>No tracking on this page</h3>
-                <p>atraxia.org sets no cookies and runs no analytics or advertising scripts today — nothing to consent to yet. This will change here first if that ever changes.</p>
+                <h3>Principled</h3>
+                <p>We only put our name behind what we genuinely believe in. Commercial opportunity will never outweigh our principles or the value we aim to create.</p>
               </div>
               <div class="trust-card">
                 <span class="icon" aria-hidden="true">
@@ -1650,8 +1680,8 @@
                     <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#368294" stroke-width="1.6"/>
                   </svg>
                 </span>
-                <h3>Per-product data handling</h3>
-                <p>Centium and every future product publish their own privacy policy, scoped to what that specific product collects and stores.</p>
+                <h3>Client-Centric</h3>
+                <p>Our clients sit at the heart of every decision. We listen, understand, and build around their needs, creating value without compromising what we stand for.</p>
               </div>
               <div class="trust-card">
                 <span class="icon" aria-hidden="true">
@@ -1660,28 +1690,23 @@
                     <path d="M9 12l2 2 4-4" stroke="#368294" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </span>
-                <h3>Report a concern</h3>
-                <p>Found a security issue on any Atraxia property? Email us at <a href="mailto:security@atraxia.org" style="color: rgb(var(--teal-dark));">security@atraxia.org</a> and we'll follow up directly.</p>
+                <h3>Simplicity</h3>
+                <p>Our job is to make things easier. We absorb the complexity, remove the unnecessary, and turn difficult problems into experiences that feel simple.</p>
               </div>
             </div>
-            <p class="trust-note">
-              This section is a plain-language summary, not a legal document. See our
-              <a href="privacy.html" style="color: rgb(var(--teal-dark)); font-weight: 700;">Privacy Policy</a>
-              for the complete, current policy for this site.
-            </p>
           </div>
         </section>
 
-        <section id="resources">
+        <section id="blog">
           <div class="wrap">
             <div class="section-head">
-              <span class="eyebrow">RESOURCES</span>
-              <h2>Insights, coming soon</h2>
-              <p>Notes on how we build, what we're learning, and what's next across the Atraxia portfolio.</p>
+              <span class="eyebrow">EXPLORATIONS</span>
+              <h2>Thoughts on what's next</h2>
+              <p>A space for the thinking behind our work, what we're learning, what we're questioning, and what we're discovering along the way.</p>
             </div>
             <div class="resources-teaser">
               <span class="badge">COMING SOON</span>
-              <p>We're building out a Resources &amp; Insights hub — product notes, health &amp; wellness research, and updates from across the portfolio. Nothing published yet, but it's on the way.</p>
+              <p>Ideas, insights, and discoveries from everything we're exploring and building. Coming soon.</p>
             </div>
           </div>
         </section>
@@ -1689,16 +1714,16 @@
         <section id="contact">
           <div class="wrap">
             <div class="section-head">
-              <span class="eyebrow">GET IN TOUCH</span>
+              <span class="eyebrow">REACH OUT</span>
               <h2>Contact Atraxia</h2>
-              <p>Questions about the company, partnerships, press, or anything else that isn't Centium product support.</p>
+              <p>Questions about the company, partnerships, press, or our ventures and what's on the horizon.</p>
             </div>
             <div class="contact-card">
               <div>
                 <div class="label">GENERAL INQUIRIES</div>
-                <a class="email" href="mailto:hello@atraxia.org">hello@atraxia.org</a>
+                <a class="email" href="mailto:support@atraxia.org">support@atraxia.org</a>
               </div>
-              <a class="btn btn--primary" href="mailto:hello@atraxia.org">Email us</a>
+              <a class="btn btn--primary" href="mailto:support@atraxia.org">Email us</a>
             </div>
           </div>
         </section>
@@ -1709,8 +1734,8 @@
           <div class="tabs" role="navigation" aria-label="Footer">
             <a href="#about">About</a>
             <a href="#portfolio">Portfolio</a>
-            <a href="#trust">Trust &amp; Security</a>
-            <a href="#resources">Resources</a>
+            <a href="#values">Values</a>
+            <a href="#blog">Blog</a>
             <a href="#contact">Contact</a>
           </div>
         </div>
