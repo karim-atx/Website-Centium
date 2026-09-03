@@ -94,6 +94,33 @@
        file, clipping his hair. An `img[src*="abdallah"]` override switches
        just his mobile focal point to `center top` — same frame and zoom
        as Karim's, only the crop point changed.
+
+  Design pass v5 (Claude Design handoff, "Atraxia landing page — v5 (mobile
+  founder crop + mobile nav dropdown)" — see
+  scratchpad/design-handoff-atraxia-landing-v5/design_handoff_atraxia_landing_v5/
+  README.md): three targeted mobile-only (max-width: 760px) changes;
+  desktop/tablet and the dark (top-of-page) header state are untouched.
+    1. Founder photo crop replaced with a device-independent one: the v4
+       fix pinned a fixed 220px height against a fluid width, so the crop
+       window's aspect ratio (and effective zoom) changed with viewport
+       width — that's why a per-photo override was needed and still didn't
+       hold across devices. A fixed 4/3 container + object-fit: cover + one
+       shared 22% focal point gives both 720x828 photos pixel-identical
+       chest-up framing at every mobile width; the abdallah-specific
+       override from v4 is removed as no longer needed.
+    2. Mobile dropdown seam fix: the scrolled/light header's own
+       translucent surface and the dropdown's separate translucent
+       background resolved to slightly different values, showing a
+       horizontal seam where the bar ended and the panel began. Background
+       made fully opaque cream with a transparent top border; size, radius,
+       padding and shadow unchanged. The dark-state override stays after
+       this rule so it keeps winning at the top of the page.
+    3. Tap-outside-to-close: a single bubbling document click listener
+       doesn't reliably fire from a tap on non-interactive area on touch
+       devices, so the v4 __atxNavMenu IIFE is replaced by a v5 one bound
+       in the capture phase plus a pointerdown listener that closes the
+       panel on any press outside it and outside the toggle button. Same
+       toggle/link-click/aria-expanded behavior otherwise.
 -->
 <html lang="en">
   <head>
@@ -423,11 +450,21 @@
         .orbit-wrap { width: 340px !important; height: 340px !important; top: -10px !important; right: -30% !important; opacity: .7 !important; }
         .hero-backdrop { width: 88vw !important; }
         .founder-card { flex-direction: column !important; }
-        .founder-card img { width: 100% !important; height: 220px !important; aspect-ratio: auto !important; object-position: center 15% !important; border-radius: 1.15rem !important; }
-        /* v4: Abdallah's source photo is framed higher than Karim's, so the
-           shared 15% focal point clipped his hair. Same frame + zoom, focal
-           point only. */
-        .founder-card img[src*="abdallah"] { object-position: center top !important; }
+        /* v5: a fixed pixel height against a fluid width meant the crop
+           window's aspect ratio (and effective zoom) changed with viewport
+           width, which is why a per-photo override was needed and still
+           didn't hold across devices. A fixed 4/3 container ratio + cover +
+           one shared focal point keeps the crop pixel-identical at every
+           mobile width — both source photos are 720x828, so a 4:3 box always
+           shows the same 540px-tall (65%) band starting ~63px down. */
+        .founder-card img {
+          width: 100% !important;
+          height: auto !important;
+          aspect-ratio: 4 / 3 !important;
+          object-fit: cover !important;
+          object-position: center 22% !important;
+          border-radius: 1.15rem !important;
+        }
         .hero-h1 { font-size: 35.2px !important; }
         .hero-lede { font-size: 16.3px !important; }
         .mission { padding: 4.5rem 0 !important; }
@@ -474,13 +511,20 @@
         }
         .nav-toggle:focus-visible { outline: 2px solid rgb(var(--teal)); outline-offset: 2px; }
 
+        /* v5: the scrolled/light header paints rgb(var(--cream) / 0.86)
+           behind its own blur; the panel's separate rgb(var(--cream) / 0.92)
+           over its own blur resolved to a slightly different value and
+           produced a visible seam where the bar's surface ended and the
+           panel began. Fully opaque background + a transparent top border
+           removes the seam without changing size/radius/padding/shadow. */
         .nav-menu.is-open {
           display: flex !important; flex-direction: column; gap: 0.15rem;
           position: absolute; top: calc(100% - 0.35rem); left: 1.5rem; right: 1.5rem; z-index: 30;
           padding: 0.5rem; border-radius: 1.25rem;
-          background: rgb(var(--cream) / 0.92);
+          background: rgb(var(--cream));
           backdrop-filter: blur(22px) saturate(1.8); -webkit-backdrop-filter: blur(22px) saturate(1.8);
           border: 1px solid rgb(var(--border) / 0.05);
+          border-top-color: transparent;
           box-shadow: 0 18px 40px -18px rgb(var(--border) / 0.28);
         }
         .nav-menu a {
@@ -1805,25 +1849,38 @@
         });
       })();
 
-      // v4: mobile nav menu toggle. Delegated so it survives re-renders,
-      // guarded so it binds once.
+      // v5: same toggle behavior, plus a real tap-outside close. A single
+      // bubbling document `click` listener doesn't reliably fire from a tap
+      // on non-interactive area (background, headline, hero) on touch
+      // devices, so this binds in the capture phase and adds a `pointerdown`
+      // listener that closes an open panel on any press outside the panel
+      // and outside the toggle button. Replaces the v4 __atxNavMenu IIFE.
       (function () {
-        if (window.__atxNavMenu) return; window.__atxNavMenu = true;
+        if (window.__atxNavMenuV5) return; window.__atxNavMenuV5 = true;
+        function close(menu) {
+          if (menu) menu.classList.remove('is-open');
+          var b = document.querySelector('.nav-toggle');
+          if (b) b.setAttribute('aria-expanded', 'false');
+        }
+        function inside(t, sel) { return t && t.closest ? t.closest(sel) : null; }
         document.addEventListener('click', function (e) {
           var menu = document.querySelector('.nav-menu');
           if (!menu) return;
-          var btn = e.target.closest && e.target.closest('.nav-toggle');
+          var btn = inside(e.target, '.nav-toggle');
           if (btn) {
             var open = menu.classList.toggle('is-open');
             btn.setAttribute('aria-expanded', open ? 'true' : 'false');
             return;
           }
-          if (!e.target.closest || !e.target.closest('.nav-menu') || e.target.closest('.nav-menu a')) {
-            menu.classList.remove('is-open');
-            var b = document.querySelector('.nav-toggle');
-            if (b) b.setAttribute('aria-expanded', 'false');
-          }
-        });
+          if (inside(e.target, '.nav-menu') && !inside(e.target, '.nav-menu a')) return;
+          close(menu);
+        }, true);
+        document.addEventListener('pointerdown', function (e) {
+          var menu = document.querySelector('.nav-menu');
+          if (!menu || !menu.classList.contains('is-open')) return;
+          if (inside(e.target, '.nav-menu') || inside(e.target, '.nav-toggle')) return;
+          close(menu);
+        }, true);
       })();
     </script>
   </body>
