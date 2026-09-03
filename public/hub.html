@@ -153,6 +153,15 @@
       the doc didn't ask for new ones). privacy.html and accessibility.html
       still reference hello@atraxia.org; the doc didn't cover those pages,
       so they're untouched — worth a follow-up decision.
+
+  Bugfix (2026-09-03): nav-bar click caused a visible jitter/back-and-forth
+  in the active-tab pill. The scroll-driven active-section function ran
+  synchronously on every raw 'scroll' event — dozens per second during a
+  nav link's smooth-scroll — each one forcing a layout read and rewriting
+  the pill's transform mid-transition, restarting its CSS transition
+  repeatedly. navTheme() (the nav dark/light crossfade) was already
+  coalesced to one call per animation frame via requestAnimationFrame;
+  active() now gets the same treatment.
 -->
 
 <html lang="en">
@@ -1790,7 +1799,9 @@
             pill.style.transform = 'translate3d(' + (a.offsetLeft - tabs.clientLeft) + 'px,0,0)';
           }
           function paint() { place(hovered > -1 ? hovered : current); }
+          var activeraf = 0;
           function active() {
+            activeraf = 0;
             var mark = window.scrollY + window.innerHeight * 0.34, found = -1;
             for (var i = 0; i < ids.length; i++) {
               var el = document.getElementById(ids[i]);
@@ -1802,6 +1813,13 @@
               if (hovered < 0) paint();
             }
           }
+          // v6 fix: this ran synchronously on every raw 'scroll' event (dozens
+          // per second during a nav-click's smooth-scroll), each time forcing
+          // a layout read and re-writing the pill's transform mid-transition —
+          // restarting/redirecting the CSS transition and reading as a visible
+          // jitter. navTheme() was already coalesced to one call per frame via
+          // navTick(); active() now gets the same treatment.
+          function activeTick() { if (!activeraf) activeraf = requestAnimationFrame(active); }
           links.forEach(function (a, i) {
             a.addEventListener('pointerenter', function () { hovered = i; paint(); });
             a.addEventListener('focus', function () { hovered = i; paint(); });
@@ -1836,7 +1854,7 @@
             navroot.classList.toggle('is-dark', over);
           }
           function navTick() { if (!navraf) navraf = requestAnimationFrame(navTheme); }
-          window.addEventListener('scroll', function () { active(); navTick(); }, { passive: true });
+          window.addEventListener('scroll', function () { activeTick(); navTick(); }, { passive: true });
           window.addEventListener('resize', function () { navH(); navTheme(); }, { passive: true });
           navH(); navTheme();
           if (window.ResizeObserver) new ResizeObserver(function () { navH(); navTheme(); }).observe(navroot);
