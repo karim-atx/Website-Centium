@@ -176,16 +176,49 @@
   (blur, pointerleave) is ignored outright, regardless of what triggers it
   or whether a prior hover/focus ever ran. Genuine focus/hover loss still
   resolves to `current` exactly as before, just outside that window.
+
+  Design pass v6 (Claude Design handoff, "Atraxia landing page enhancements"
+  — see
+  scratchpad/design-handoff-atraxia-landing-v6/design_handoff_atraxia_landing_enhancements/
+  README.md): six scoped enhancements on top of v1-v5; the page itself was
+  not redesigned.
+    1. Mission stats: the three plain stat boxes became one unified panel
+       (dividers, brand swish/star motifs, a per-cell scramble count-up on
+       scroll-into-view, and a hover comet — an SVG meteor riding an orbital
+       ring between cells, eased so a direction change decelerates/arcs/
+       re-accelerates rather than flipping).
+    2. Portfolio: the two static tiles became a centre-snapping horizontal
+       selector (native scroll-snap drives selection) with a per-app
+       gradient glow sampled from each logo; #centium-tile's id moved from
+       the old tile onto the new CTA link, unchanged otherwise.
+    3. Values: new currentColor icons (balance scales / concentric circles /
+       tapering lines, replacing the old shield/lock/checkmark set), centred
+       content, hover lift + navy icon-tile inversion, staggered scroll-in,
+       icon stroke draw-in.
+    4. Founders: "Dr. Karim Khaldi" -> "Dr. Karim El Khaldi" (intro
+       paragraph, card heading, photo alt); mobile photo crop tightened from
+       a 4/3 window to 1/1 at a higher focal point so Abdallah's hairline
+       stays fully in frame.
+    5. Mobile nav: the scrolled/open dropdown's bar surface now goes fully
+       opaque (via :has()) instead of painting at 0.86 alpha over the
+       opaque panel, removing a visible seam between the two.
+    6. Document head: title -> "Atraxia — Led by Curiosity"; favicon
+       switched from favicon.svg to the atraxia-mark.png brand mark (og:
+       and twitter: meta still read the old title — out of this handoff's
+       stated scope, flagged rather than changed silently).
+  All CSS/markup/script lifted near-verbatim from the handoff's .dc.html/.js
+  pair; unused prototype-only particle-trail markup (dead .haze/.burn SVG
+  groups the shipped JS never queries) was not carried over.
 -->
 
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Atraxia — Health &amp; wellness ventures</title>
+    <title>Atraxia — Led by Curiosity</title>
     <meta name="description" content="Atraxia is the parent company behind a growing portfolio of health and wellness apps and businesses, starting with Centium." />
     <meta name="theme-color" content="#023b4a" />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="icon" href="atraxia/atraxia-mark.png" type="image/png" />
     <link rel="canonical" href="https://atraxia.org/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Atraxia" />
@@ -509,16 +542,17 @@
         /* v5: a fixed pixel height against a fluid width meant the crop
            window's aspect ratio (and effective zoom) changed with viewport
            width, which is why a per-photo override was needed and still
-           didn't hold across devices. A fixed 4/3 container ratio + cover +
-           one shared focal point keeps the crop pixel-identical at every
-           mobile width — both source photos are 720x828, so a 4:3 box always
-           shows the same 540px-tall (65%) band starting ~63px down. */
+           didn't hold across devices. A fixed ratio + cover + one shared
+           focal point keeps the crop pixel-identical at every mobile width
+           — both source photos are 720x828. v7: the 4/3 window still cut
+           into Abdallah's hairline at some widths; a squarer 1/1 window at
+           a higher focal point keeps the full hairline in frame for both. */
         .founder-card img {
           width: 100% !important;
           height: auto !important;
-          aspect-ratio: 4 / 3 !important;
+          aspect-ratio: 1 / 1 !important;
           object-fit: cover !important;
-          object-position: center 22% !important;
+          object-position: center 10% !important;
           border-radius: 1.15rem !important;
         }
         .hero-h1 { font-size: 35.2px !important; }
@@ -836,6 +870,284 @@
         .atx-comet, .atx-shimmer, .atx-glint { animation: none !important; opacity: 0 !important; }
         .atx-swish { animation: none !important; -webkit-clip-path: none !important; clip-path: none !important; }
         .atx-dot { animation: none !important; display: none !important; }
+      }
+
+      /* ---------- v8: stats — one unified panel, dividers, brand motifs ---------- */
+      .mission-stats {
+        display: block; position: relative; overflow: hidden;
+        margin-top: 5rem; padding: 0; border-top: none;
+        border-radius: 2rem;
+        background: rgb(var(--cream-card) / 0.66);
+        border: 1px solid rgb(var(--border) / 0.07);
+        box-shadow: 0 2px 12px rgb(6 20 25 / 0.04), 0 24px 60px -46px rgb(6 20 25 / 0.3);
+        opacity: 0; transform: translateY(16px);
+        transition: opacity 0.8s cubic-bezier(.22,1,.36,1), transform 0.8s cubic-bezier(.22,1,.36,1);
+      }
+      .mission-stats.is-in { opacity: 1; transform: none; }
+      /* brand motifs instead of generic pattern fill: the logo's swish sweeping
+         across the panel, the hero's four-point stars, and the orbital ring. */
+      .stat-swish {
+        position: absolute; right: 4%; top: 12%; width: 42%; max-width: 420px; height: auto;
+        opacity: 0.1; pointer-events: none; user-select: none;
+        /* feathered on every side so it dissolves well inside the panel
+           rather than meeting (and appearing cut by) the rounded border */
+        -webkit-mask-image: radial-gradient(closest-side, #000 34%, rgb(0 0 0 / 0.45) 68%, transparent 100%);
+        mask-image: radial-gradient(closest-side, #000 34%, rgb(0 0 0 / 0.45) 68%, transparent 100%);
+      }
+      /* v9: hover comet — one element that travels between segments, so moving
+         the hover left or right slides it in that direction rather than
+         popping. Clipped by the panel's own overflow:hidden. */
+      .stat-comet {
+        position: absolute; top: 34%; left: 0; z-index: 0;
+        width: 300px; height: 300px; margin: -150px 0 0 -150px;
+        pointer-events: none; opacity: 0;
+        transform: translateX(0) scale(0.86);
+        transition: transform 0.85s cubic-bezier(.22,1,.36,1), opacity 0.4s ease;
+      }
+      .mission-stats.has-comet .stat-comet { opacity: 1; transform: translateX(var(--comet-x, 0px)) scale(1); }
+      .stat-comet .core, .stat-comet .trail { display: none; }
+      .stat-comet .halo {
+        position: absolute; inset: 0; border-radius: 50%;
+        background: radial-gradient(circle at 50% 50%,
+          rgb(var(--teal) / 0.3) 0%, rgb(var(--teal) / 0.16) 34%,
+          rgb(var(--teal) / 0.07) 54%, transparent 76%);
+      }
+
+      /* v9c: the meteor now rides the outer ring itself. JS advances its angle
+         with eased velocity, so a hover-direction change decelerates, arcs and
+         re-accelerates as one continuous motion instead of flipping. */
+      .stat-orbit {
+        position: absolute; left: 50%; top: 50%; width: 0; height: 0;
+        pointer-events: none; opacity: 0; transition: opacity 0.4s ease;
+      }
+      .mission-stats.has-comet .stat-orbit { opacity: 1; }
+      .stat-orbit .rider { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+      .stat-orbit .tangent { position: absolute; left: 0; top: 0; width: 0; height: 0; }
+      .stat-trail {
+        position: absolute; left: 50%; top: 50%; width: 300px; height: 300px;
+        margin: -150px 0 0 -150px; overflow: visible; pointer-events: none;
+      }
+      .stat-trail circle { stroke: none; transform-origin: 150px 150px; }
+      /* the nucleus lives in the SVG alongside the flame path, so head and
+         trail share one coordinate space and can never drift apart */
+      .stat-orbit .glow, .stat-orbit .head { display: none; }
+      .stat-trail .nucleus { filter: drop-shadow(0 0 7px rgb(var(--teal) / 0.9)) drop-shadow(0 0 16px rgb(var(--teal) / 0.5)); }
+      /* orbital ring around the head, tilted like the hero's planet */
+      .stat-comet .arc {
+        position: absolute; left: 50%; top: 50%; width: 264px; height: 264px; margin: -132px 0 0 -132px;
+        border-radius: 50%; border: 2px solid rgb(var(--teal) / 0.55);
+        border-right-color: rgb(var(--teal) / 0.12); border-bottom-color: transparent;
+        animation: atxCometArc 7s linear infinite;
+      }
+      .stat-comet .arc2 {
+        position: absolute; left: 50%; top: 50%; width: 180px; height: 180px; margin: -90px 0 0 -90px;
+        border-radius: 50%; border: 1.5px solid rgb(var(--teal-dark) / 0.4);
+        border-left-color: transparent; border-top-color: transparent;
+        animation: atxCometArc 4.6s linear infinite reverse;
+      }
+      @keyframes atxCometArc { to { transform: rotate(360deg); } }
+      @media (prefers-reduced-motion: reduce) {
+        .stat-comet, .stat-comet .trail { transition: none !important; }
+        .stat-comet .arc, .stat-comet .arc2 { animation: none !important; }
+        .stat-orbit .head, .stat-orbit .glow { animation: none !important; }
+      }
+
+      .stat-stars { position: absolute; inset: 0; pointer-events: none; }
+      .stat-stars svg { position: absolute; color: rgb(var(--teal)); }
+      .stat-spark {
+        display: block; width: 14px; height: 14px; margin-bottom: 1.3rem;
+        color: rgb(var(--teal));
+        transition: transform 0.5s cubic-bezier(.22,1,.36,1), color 0.35s ease;
+      }
+      .stat-cell:hover .stat-spark { transform: rotate(72deg) scale(1.28); color: rgb(var(--teal-dark)); }
+      .stat-cell:first-child .stat-spark { width: 19px; height: 19px; color: rgb(var(--teal-dark)); }
+      /* a soft teal light from the hero's planet, fully inside the panel */
+      .mission-stats::after {
+        content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: radial-gradient(70% 120% at 14% 108%, rgb(var(--teal) / 0.1), transparent 62%);
+      }
+      .stat-grid {
+        position: relative; z-index: 1;
+        display: grid; grid-template-columns: 1.32fr 1fr 1fr; align-items: stretch;
+      }
+      .stat-cell {
+        position: relative; padding: 2.5rem 2rem 2.35rem;
+        transition: background 0.35s ease;
+      }
+      .stat-cell + .stat-cell { border-left: 1px solid rgb(var(--border) / 0.08); }
+      .stat-cell:hover { background: rgb(var(--teal-pale) / 0.34); }
+      .stat-cell:first-child { padding-left: 2.5rem; }
+      .mission-stats strong {
+        display: block; font-weight: 800; letter-spacing: -0.03em; line-height: 0.92;
+        color: rgb(var(--navy)); font-variant-numeric: tabular-nums;
+        font-size: 3.15rem; transition: text-shadow 0.6s ease;
+      }
+      .stat-cell:first-child strong { font-size: 4.5rem; }
+      .mission-stats span {
+        display: block; margin-top: 0.95rem;
+        font-size: 0.74rem; letter-spacing: 0.16em; font-weight: 700; color: #7C8F95;
+      }
+      .stat-cell.is-rolling strong { text-shadow: 0 0 22px rgb(var(--teal) / 0.38); }
+
+      @media (max-width: 1024px) {
+        .stat-grid { grid-template-columns: 1fr 1fr; }
+        .stat-cell:nth-child(3) { grid-column: 1 / -1; border-left: none; border-top: 1px solid rgb(var(--border) / 0.08); }
+      }
+      @media (max-width: 760px) {
+        .mission-stats { margin-top: 3rem !important; border-radius: 1.5rem; }
+        .stat-grid { grid-template-columns: 1fr; }
+        .stat-cell { padding: 1.9rem 1.6rem !important; }
+        .stat-cell + .stat-cell { border-left: none; border-top: 1px solid rgb(var(--border) / 0.08); }
+        .stat-cell:first-child strong { font-size: 3.4rem; }
+        .mission-stats strong { font-size: 2.6rem; }
+      }
+
+      /* ---------- v6: portfolio — horizontal snap selector ---------- */
+      .pf-rail {
+        display: flex; align-items: flex-end; gap: 2.25rem;
+        overflow-x: auto; scroll-snap-type: x mandatory; scroll-behavior: smooth;
+        padding: 0.5rem calc(50% - 88px) 1.5rem; scrollbar-width: none;
+        -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
+      }
+      .pf-rail::-webkit-scrollbar { display: none; }
+      .pf-item {
+        scroll-snap-align: center; flex: none; width: 176px;
+        display: flex; flex-direction: column; align-items: center; gap: 0.85rem;
+        background: none; border: 0; padding: 0.5rem 0; cursor: pointer;
+        font: inherit; color: inherit; opacity: 0.36; transform: scale(0.86);
+        transition: opacity 0.45s cubic-bezier(.22,1,.36,1), transform 0.45s cubic-bezier(.22,1,.36,1);
+      }
+      .pf-item .pf-logo {
+        width: 88px; height: 88px; border-radius: 26px;
+        display: flex; align-items: center; justify-content: center;
+        background: rgb(var(--cream-card));
+        border: 1px solid rgb(var(--border) / 0.07);
+        box-shadow: 0 2px 10px rgb(0 0 0 / 0.05);
+        transition: box-shadow 0.45s ease, border-color 0.45s ease;
+      }
+      .pf-item .pf-logo img { width: 46px; height: 46px; object-fit: contain; }
+      .pf-item .pf-name { font-weight: 800; font-size: 1rem; letter-spacing: -0.01em; }
+      .pf-item.is-active { opacity: 1; transform: scale(1); }
+      .pf-item.is-active .pf-logo {
+        border-color: rgb(var(--teal) / 0.35);
+        box-shadow: 0 16px 34px -16px rgb(6 20 25 / 0.22), 0 0 0 4px rgb(var(--teal-pale));
+      }
+      .pf-item--soon .pf-logo { background: transparent; border: 2px dashed rgb(var(--charcoal-faint) / 0.4); box-shadow: none; }
+      .pf-item--soon.is-active .pf-logo { box-shadow: 0 0 0 4px rgb(var(--teal-pale)); }
+      .pf-item:focus-visible { outline: none; }
+      .pf-item:focus-visible .pf-logo { outline: 2px solid rgb(var(--teal)); outline-offset: 3px; }
+      .pf-panels { position: relative; min-height: 108px; }
+      .pf-panel {
+        position: absolute; inset: 0; display: flex; flex-direction: column;
+        align-items: center; gap: 1rem; text-align: center;
+        opacity: 0; transform: translateY(8px); pointer-events: none;
+        transition: opacity 0.4s ease, transform 0.4s cubic-bezier(.22,1,.36,1);
+      }
+      .pf-panel.is-active { opacity: 1; transform: none; pointer-events: auto; }
+      /* legibility carried entirely by the type — the glow is untouched */
+      .pf-panel .desc {
+        margin: 0; max-width: 44ch; font-size: 0.95rem; line-height: 1.6;
+        font-weight: 600; color: rgb(var(--charcoal));
+        text-shadow: 0 1px 2px rgb(var(--cream) / 0.95), 0 0 12px rgb(var(--cream) / 0.85);
+        backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+      }
+      .pf-panel .cta {
+        font-size: 0.85rem; font-weight: 800; color: rgb(var(--navy)); text-decoration: none;
+        text-shadow: 0 1px 2px rgb(var(--cream) / 0.95), 0 0 12px rgb(var(--cream) / 0.85);
+        backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
+      }
+      .pf-panel .cta:hover, .pf-panel .cta:focus-visible { text-decoration: underline; }
+
+      /* ---------- v6: values — staggered entrance, icon draw-in, hover lift ---------- */
+      .trust-card {
+        opacity: 0; transform: translateY(16px);
+        transition: opacity 0.7s cubic-bezier(.22,1,.36,1), transform 0.7s cubic-bezier(.22,1,.36,1),
+                    box-shadow 0.3s ease, border-color 0.3s ease;
+      }
+      .trust-grid.is-in .trust-card { opacity: 1; transform: none; }
+      .trust-grid.is-in .trust-card:nth-child(2) { transition-delay: 0.1s; }
+      .trust-grid.is-in .trust-card:nth-child(3) { transition-delay: 0.2s; }
+      .trust-card { transition: opacity 0.7s cubic-bezier(.22,1,.36,1), transform 0.7s cubic-bezier(.22,1,.36,1), box-shadow 0.3s ease, border-color 0.3s ease, background 0.35s ease; }
+      .trust-card:hover {
+        transform: translateY(-6px) scale(1.014);
+        background: rgb(var(--teal-pale) / 0.62);
+        border-color: rgb(var(--teal) / 0.34);
+        box-shadow: 0 26px 50px -24px rgb(6 20 25 / 0.3), 0 0 0 1px rgb(var(--teal) / 0.08);
+      }
+      /* icons draw in currentColor, so the tile inverts on hover and they stay legible */
+      .trust-card .icon { color: rgb(var(--teal)); transition: background 0.35s ease, color 0.35s ease, transform 0.4s cubic-bezier(.22,1,.36,1), box-shadow 0.35s ease; }
+      .trust-card:hover .icon { background: rgb(var(--navy)); color: #ffffff; }
+
+      /* v7: portfolio selection glow — a lens-shaped wash, wide at the centre
+         and feathered to nothing at the edges, coloured from the selected
+         app's own logo (per-item data-pf-from/mid/to). */
+      .pf-carousel { position: relative; }
+      .pf-glow {
+        position: absolute; left: 50%; top: -136px; transform: translateX(-50%);
+        width: min(1700px, 196%); height: 448px; z-index: 0; pointer-events: none;
+        background: linear-gradient(90deg,
+          var(--pf-from, #8E6DE0) 0%,
+          var(--pf-from, #8E6DE0) 16%,
+          var(--pf-mid, #7E8FD8) 50%,
+          var(--pf-to, #4FC08C) 84%,
+          var(--pf-to, #4FC08C) 100%);
+        -webkit-mask-image: radial-gradient(ellipse 52% 52% at 50% 50%, #000 0%, rgb(0 0 0 / 0.9) 34%, rgb(0 0 0 / 0.42) 64%, transparent 100%);
+        mask-image: radial-gradient(ellipse 52% 52% at 50% 50%, #000 0%, rgb(0 0 0 / 0.9) 34%, rgb(0 0 0 / 0.42) 64%, transparent 100%);
+        filter: blur(34px) saturate(1.12);
+        opacity: 0; transition: opacity 0.55s ease, background 0.55s ease;
+      }
+      .pf-carousel.is-glowing .pf-glow { opacity: 0.82; }
+      .pf-rail, .pf-panels { position: relative; z-index: 1; }
+
+      /* v7: mobile dropdown seam — the bar painted its surface at 0.86 alpha
+         while the panel is opaque cream, so the two read as separate boxes.
+         While the panel is open the bar's own surface goes fully opaque in the
+         same colour; the panel's size, radius and padding are untouched. */
+      @media (max-width: 760px) {
+        .nav:has(.nav-menu.is-open)::before {
+          opacity: 1 !important;
+          background: rgb(var(--cream));
+          box-shadow: none;
+        }
+        .nav.is-dark:has(.nav-menu.is-open)::before { background: rgb(8 16 24 / 0.86); }
+      }
+      /* centred content block: icon sits directly above its title */
+      .trust-card { text-align: center; }
+      .trust-card .icon {
+        width: 56px; height: 56px; border-radius: 18px; margin: 0 auto 1.15rem;
+        transition: background 0.35s ease, transform 0.4s cubic-bezier(.22,1,.36,1), box-shadow 0.35s ease;
+      }
+      .trust-card .icon svg { width: 24px; height: 24px; }
+      /* hover: the tile inverts to solid navy with a white glyph, so the icon
+         reads clearly against the teal-pale card wash (default state stays
+         teal-on-pale, which already carries strong contrast). */
+      .trust-card:hover .icon {
+        transform: translateY(-3px) scale(1.08) rotate(-3deg);
+        background: rgb(var(--navy));
+        color: #ffffff;
+        box-shadow: 0 0 0 7px rgb(var(--navy) / 0.1);
+      }
+      .trust-card:hover .icon svg [stroke] { stroke: #ffffff; }
+      .trust-card h3 { margin-bottom: 0.6rem; }
+      .trust-card p { margin-inline: auto; max-width: 34ch; }
+      .trust-card .icon svg [stroke] { stroke-dasharray: 96; stroke-dashoffset: 96; }
+      .trust-grid.is-in .trust-card .icon svg [stroke] { animation: atxDrawIn 1.1s cubic-bezier(.4,0,.2,1) forwards; }
+      .trust-grid.is-in .trust-card:nth-child(2) .icon svg [stroke] { animation-delay: 0.1s; }
+      .trust-grid.is-in .trust-card:nth-child(3) .icon svg [stroke] { animation-delay: 0.2s; }
+      @keyframes atxDrawIn { to { stroke-dashoffset: 0; } }
+
+      @media (max-width: 760px) {
+        .pf-rail { gap: 1.5rem; padding: 0.5rem calc(50% - 72px) 1.25rem !important; }
+        .pf-item { width: 144px; }
+        .pf-item .pf-logo { width: 76px; height: 76px; border-radius: 22px; }
+        .pf-panels { min-height: 132px; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .stat-card, .trust-card { opacity: 1 !important; transform: none !important; transition: none !important; }
+        .trust-card .icon svg [stroke] { stroke-dasharray: none !important; stroke-dashoffset: 0 !important; animation: none !important; }
+        .pf-rail { scroll-behavior: auto !important; }
+        .pf-item, .pf-panel { transition: none !important; }
       }
     </style>
     <script>
@@ -1598,9 +1910,70 @@
               </p>
             </div>
             <div class="mission-stats">
-              <div><strong>1</strong><span>CORE MISSION</span></div>
-              <div><strong>2</strong><span>FOUNDERS</span></div>
-              <div><strong>∞</strong><span>VENTURES AHEAD</span></div>
+              <img class="stat-swish" src="atraxia/atraxia-swish-only.png" alt="" aria-hidden="true" />
+              <span class="stat-comet" aria-hidden="true">
+                <span class="trail"></span>
+                <span class="halo"></span>
+                <span class="arc"></span>
+                <span class="arc2"></span>
+                <span class="stat-orbit">
+                  <svg class="stat-trail" viewBox="0 0 300 300" aria-hidden="true">
+                    <defs>
+                      <filter id="atxTrailBurn" x="-60%" y="-60%" width="220%" height="220%">
+                        <feGaussianBlur stdDeviation="1.6" result="b" />
+                        <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+                      </filter>
+                      <filter id="atxTrailHaze" x="-80%" y="-80%" width="260%" height="260%">
+                        <feGaussianBlur stdDeviation="6" />
+                      </filter>
+                    </defs>
+                    <radialGradient id="atxTrailGrad" gradientUnits="userSpaceOnUse" cx="282" cy="150" r="200">
+                      <stop offset="0" stop-color="#ffffff" stop-opacity="1"></stop>
+                      <stop offset="0.08" stop-color="#eafcff" stop-opacity="0.98"></stop>
+                      <stop offset="0.26" stop-color="rgb(94 186 205)" stop-opacity="0.82"></stop>
+                      <stop offset="0.58" stop-color="rgb(54 130 148)" stop-opacity="0.5"></stop>
+                      <stop offset="1" stop-color="rgb(54 130 148)" stop-opacity="0"></stop>
+                    </radialGradient>
+                    <path class="flameHaze" d="" fill="url(#atxTrailGrad)" opacity="0.5" filter="url(#atxTrailHaze)"></path>
+                    <path class="flame" d="" fill="url(#atxTrailGrad)" filter="url(#atxTrailBurn)"></path>
+                    <radialGradient id="atxNucleus">
+                      <stop offset="0" stop-color="#ffffff"></stop>
+                      <stop offset="0.35" stop-color="#eafcff"></stop>
+                      <stop offset="0.7" stop-color="rgb(94 186 205)"></stop>
+                      <stop offset="1" stop-color="rgb(54 130 148)"></stop>
+                    </radialGradient>
+                    <circle class="nucleus" cx="282" cy="150" r="6.5" fill="url(#atxNucleus)"></circle>
+                  </svg>
+                  <span class="rider">
+                    <span class="tangent">
+                      <span class="glow"></span>
+                      <span class="head"></span>
+                    </span>
+                  </span>
+                </span>
+                <span class="core"></span>
+              </span>
+              <span class="stat-stars" aria-hidden="true">
+                <svg viewBox="0 0 40 40" style="left:13%;top:22%;width:11px;height:11px;opacity:.3"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
+                <svg viewBox="0 0 40 40" style="left:47%;top:70%;width:8px;height:8px;opacity:.22"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
+                <svg viewBox="0 0 40 40" style="left:73%;top:22%;width:14px;height:14px;opacity:.26"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
+                <svg viewBox="0 0 40 40" style="left:83%;top:58%;width:9px;height:9px;opacity:.2"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
+                <svg viewBox="0 0 40 40" style="left:31%;top:34%;width:7px;height:7px;opacity:.18"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
+              </span>
+              <div class="stat-grid">
+                <div class="stat-cell">
+                  <svg class="stat-spark" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
+                  <strong data-stat-final="1" data-stat-kind="number">1</strong><span>CORE MISSION</span>
+                </div>
+                <div class="stat-cell">
+                  <svg class="stat-spark" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
+                  <strong data-stat-final="2" data-stat-kind="number">2</strong><span>FOUNDERS</span>
+                </div>
+                <div class="stat-cell">
+                  <svg class="stat-spark" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
+                  <strong data-stat-final="∞" data-stat-kind="symbol">∞</strong><span>VENTURES AHEAD</span>
+                </div>
+              </div>
             </div>
           </div>
         </section>
@@ -1612,24 +1985,33 @@
               <h2>Discover what&rsquo;s taking shape.</h2>
               <p>Our portfolio is only the beginning, a growing collection of ideas, each explored, refined, and built around a real opportunity to make a difference.</p>
             </div>
-            <div class="grid">
-              <a class="tile" href="/centium" id="centium-tile">
-                <span class="icon">
-                  <img src="atraxia/centium-mark.png" alt="" />
-                </span>
-                <span class="name">Centium</span>
-                <span class="desc">Nutrition, training, health data and community — one place to manage your health.</span>
-                <span class="cta">Visit Centium →</span>
-              </a>
-              <div class="tile tile--soon">
-                <span class="icon">
-                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="9" stroke="rgb(var(--charcoal-faint))" stroke-width="1.6"/>
-                    <path d="M12 8v4l2.5 2.5" stroke="rgb(var(--charcoal-faint))" stroke-width="1.6" stroke-linecap="round"/>
-                  </svg>
-                </span>
-                <span class="name">Coming soon</span>
-                <span class="desc">The next venture in the Atraxia portfolio is already in the works.</span>
+            <div class="pf-carousel is-glowing">
+              <span class="pf-glow" aria-hidden="true"></span>
+              <div class="pf-rail" role="tablist" aria-label="Portfolio">
+                <button class="pf-item is-active" type="button" role="tab" aria-selected="true" data-pf="centium" data-pf-from="#8E6DE0" data-pf-mid="#7E8FD8" data-pf-to="#4FC08C">
+                  <span class="pf-logo">
+                    <img src="atraxia/centium-mark.png" alt="" />
+                  </span>
+                  <span class="pf-name">Centium</span>
+                </button>
+                <button class="pf-item pf-item--soon" type="button" role="tab" aria-selected="false" data-pf="soon">
+                  <span class="pf-logo">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                      <circle cx="12" cy="12" r="9" stroke="rgb(var(--charcoal-faint))" stroke-width="1.6"/>
+                      <path d="M12 8v4l2.5 2.5" stroke="rgb(var(--charcoal-faint))" stroke-width="1.6" stroke-linecap="round"/>
+                    </svg>
+                  </span>
+                  <span class="pf-name">Coming soon</span>
+                </button>
+              </div>
+              <div class="pf-panels">
+                <div class="pf-panel is-active" data-pf-panel="centium">
+                  <p class="desc">Nutrition, training, health data and community — one place to manage your health.</p>
+                  <a class="cta" href="/centium" id="centium-tile">Visit Centium →</a>
+                </div>
+                <div class="pf-panel" data-pf-panel="soon">
+                  <p class="desc">The next venture in the Atraxia portfolio is already in the works.</p>
+                </div>
               </div>
             </div>
           </div>
@@ -1641,7 +2023,7 @@
               <span class="eyebrow">LEADERSHIP</span>
               <h2>Founders</h2>
               <p>
-                Abdallah Diab and Dr. Karim Khaldi are both passionate about
+                Abdallah Diab and Dr. Karim El Khaldi are both passionate about
                 healthcare and fitness, as well as building companies and
                 solutions that matter.
               </p>
@@ -1665,9 +2047,9 @@
               <div class="founder-flip">
                 <div class="founder-inner">
                   <div class="founder-card founder-face founder-face--front">
-                    <img src="atraxia/founder-karim-v6.jpg" alt="Dr. Karim Khaldi, Co-founder of Atraxia" width="720" height="828" loading="lazy" />
+                    <img src="atraxia/founder-karim-v6.jpg" alt="Dr. Karim El Khaldi, Co-founder of Atraxia" width="720" height="828" loading="lazy" />
                     <div class="body">
-                      <h3>Dr. Karim Khaldi</h3>
+                      <h3>Dr. Karim El Khaldi</h3>
                       <div class="role">Co-founder | MD | MPH</div>
                       <p class="bio">&ldquo;The mind is that which is roused and directed by itself.&rdquo; &mdash;Marcus Aurelius</p>
                     </div>
@@ -1692,7 +2074,11 @@
               <div class="trust-card">
                 <span class="icon" aria-hidden="true">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6l7-3Z" stroke="#368294" stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M12 4v16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M5 7h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M5 7l-2.5 5.5h5L5 7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M19 7l-2.5 5.5h5L19 7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                    <path d="M9 20h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
                   </svg>
                 </span>
                 <h3>Principled</h3>
@@ -1701,8 +2087,9 @@
               <div class="trust-card">
                 <span class="icon" aria-hidden="true">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="4" y="10" width="16" height="10" rx="2" stroke="#368294" stroke-width="1.6"/>
-                    <path d="M8 10V7a4 4 0 0 1 8 0v3" stroke="#368294" stroke-width="1.6"/>
+                    <circle cx="12" cy="12" r="2.4" stroke="currentColor" stroke-width="1.6"/>
+                    <circle cx="12" cy="12" r="6.2" stroke="currentColor" stroke-width="1.6"/>
+                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" stroke-opacity=".45"/>
                   </svg>
                 </span>
                 <h3>Client-Centric</h3>
@@ -1711,8 +2098,9 @@
               <div class="trust-card">
                 <span class="icon" aria-hidden="true">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 21c-4.4-1.5-7-5-7-9.5V6l7-3 7 3v5.5c0 4.5-2.6 8-7 9.5Z" stroke="#368294" stroke-width="1.6" stroke-linejoin="round"/>
-                    <path d="M9 12l2 2 4-4" stroke="#368294" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+                    <path d="M4 7h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M6 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    <path d="M9 17h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
                   </svg>
                 </span>
                 <h3>Simplicity</h3>
@@ -1966,6 +2354,308 @@
           if (inside(e.target, '.nav-menu') || inside(e.target, '.nav-toggle')) return;
           close(menu);
         }, true);
+      })();
+
+      /* ---------- v6 (Claude Design): scroll reveals, stat scramble, portfolio rail ---------- */
+      /* Re-queries its nodes on every pass instead of capturing them once, so the
+         reveals, scramble and rail stay wired when the component re-renders. */
+      (function () {
+        if (window.__atxV6) return; window.__atxV6 = true;
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+        var boundRails = new WeakSet();
+
+        /* IntersectionObserver rather than a rect test: the page can live inside a
+           scaled/scrolling host container, where window-relative rects never resolve.
+           Nodes are (re-)observed on every pass, so a re-render re-arms them. */
+        var watched = new WeakSet();
+        function inView(el) {
+          var r = el.getBoundingClientRect();
+          return !!r.height && r.top < window.innerHeight * 0.88 && r.bottom > window.innerHeight * 0.1;
+        }
+        function watch(el, fn) {
+          if (inView(el)) { watched.add(el); fn(); return; }
+          if (watched.has(el)) return;
+          watched.add(el);
+          // safety net: never leave a revealed-on-scroll block permanently hidden
+          setTimeout(function () { if (el.isConnected && !el.classList.contains('is-in')) fn(); }, 9000);
+          if (!('IntersectionObserver' in window)) { fn(); return; }
+          var io = new IntersectionObserver(function (entries) {
+            for (var i = 0; i < entries.length; i++) {
+              if (entries[i].isIntersecting) { io.disconnect(); fn(); return; }
+            }
+          }, { threshold: 0.2 });
+          io.observe(el);
+        }
+
+        /* Each number scrambles through random glyphs and resolves to its own final
+           value — slight stagger in, different durations out, and the frame cadence
+           eases off as it settles so it never reads mechanical. */
+        function scramble(strong, dur, delay) {
+          var final = strong.getAttribute('data-stat-final');
+          var card = strong.closest('.stat-cell') || strong.closest('.stat-card');
+          var glyphs = strong.getAttribute('data-stat-kind') === 'symbol'
+            ? '0123456789∞∆§∑◊'
+            : '0123456789';
+          setTimeout(function () {
+            if (card) card.classList.add('is-rolling');
+            var start = performance.now(), last = 0;
+            function frame(now) {
+              var t = (now - start) / dur;
+              if (t >= 1) {
+                strong.textContent = final;
+                if (card) card.classList.remove('is-rolling');
+                return;
+              }
+              if (now - last >= 62 + 150 * t * t) {
+                last = now;
+                strong.textContent = glyphs.charAt(Math.floor(Math.random() * glyphs.length));
+              }
+              requestAnimationFrame(frame);
+            }
+            requestAnimationFrame(frame);
+          }, delay);
+        }
+
+        var DURS = [900, 1060, 1260], DELAYS = [0, 70, 145];
+
+        function stats() {
+          var el = document.querySelector('.mission-stats');
+          if (!el || el.classList.contains('is-in')) return;
+          var nums = [].slice.call(el.querySelectorAll('strong[data-stat-final]'));
+          if (reduce.matches) { el.classList.add('is-in'); return; }
+          // armed but not yet revealed: hold at a neutral glyph
+          nums.forEach(function (n) { if (n.textContent !== '0') n.textContent = '0'; });
+          watchStats(el);
+        }
+        function watchStats(el) {
+          watch(el, function () {
+            el.classList.add('is-in');
+            [].slice.call(el.querySelectorAll('strong[data-stat-final]')).forEach(function (n, i) {
+              scramble(n, DURS[i] || 1000, DELAYS[i] || 0);
+            });
+          });
+        }
+
+        function values() {
+          var grids = document.querySelectorAll('.trust-grid');
+          for (var i = 0; i < grids.length; i++) {
+            if (grids[i].classList.contains('is-in')) continue;
+            if (reduce.matches) { grids[i].classList.add('is-in'); continue; }
+            (function (g) {
+              if (inView(g)) { g.classList.add('is-in'); return; }
+              watch(g, function () { g.classList.add('is-in'); });
+            })(grids[i]);
+          }
+        }
+
+        /* Portfolio: native snap scrolling drives selection — whichever item sits
+           nearest the rail's centre is the active one; clicking one centres it. */
+        function bindRail(rail) {
+          if (boundRails.has(rail)) return;
+          boundRails.add(rail);
+          var items = [].slice.call(rail.querySelectorAll('.pf-item'));
+          if (!items.length) { boundRails.delete(rail); return; }
+          var current = -1, raf = 0;
+
+          function select(i) {
+            if (i === current || i < 0) return;
+            current = i;
+            var key = items[i].getAttribute('data-pf');
+            // selection glow: colours come from the app's own logo, per item
+            var wrap = rail.closest('.pf-carousel');
+            if (wrap) {
+              var from = items[i].getAttribute('data-pf-from');
+              var to = items[i].getAttribute('data-pf-to');
+              if (from && to) {
+                wrap.style.setProperty('--pf-from', from);
+                wrap.style.setProperty('--pf-to', to);
+                wrap.style.setProperty('--pf-mid', items[i].getAttribute('data-pf-mid') || to);
+                wrap.classList.add('is-glowing');
+              } else {
+                wrap.classList.remove('is-glowing');
+              }
+            }
+            items.forEach(function (it, n) {
+              it.classList.toggle('is-active', n === i);
+              it.setAttribute('aria-selected', n === i ? 'true' : 'false');
+            });
+            var panels = document.querySelectorAll('.pf-panel');
+            for (var p = 0; p < panels.length; p++) {
+              panels[p].classList.toggle('is-active', panels[p].getAttribute('data-pf-panel') === key);
+            }
+          }
+          function nearest() {
+            raf = 0;
+            var mid = rail.scrollLeft + rail.clientWidth / 2, best = 0, bestD = Infinity;
+            items.forEach(function (it, n) {
+              var d = Math.abs(it.offsetLeft + it.offsetWidth / 2 - mid);
+              if (d < bestD) { bestD = d; best = n; }
+            });
+            select(best);
+          }
+          function tick() { if (!raf) raf = requestAnimationFrame(nearest); }
+          function center(i) {
+            var it = items[i];
+            rail.scrollTo({
+              left: it.offsetLeft + it.offsetWidth / 2 - rail.clientWidth / 2,
+              behavior: reduce.matches ? 'auto' : 'smooth'
+            });
+          }
+          items.forEach(function (it, i) {
+            it.addEventListener('click', function () { center(i); select(i); });
+            it.addEventListener('keydown', function (e) {
+              var next = e.key === 'ArrowRight' ? i + 1 : e.key === 'ArrowLeft' ? i - 1 : -1;
+              if (next < 0 || !items[next]) return;
+              e.preventDefault(); items[next].focus(); center(next); select(next);
+            });
+          });
+          rail.addEventListener('scroll', tick, { passive: true });
+          nearest();
+        }
+
+        function pass() {
+          stats(); values();
+          var rails = document.querySelectorAll('.pf-rail');
+          for (var i = 0; i < rails.length; i++) bindRail(rails[i]);
+        }
+        var praf = 0;
+        function schedule() { if (!praf) praf = requestAnimationFrame(function () { praf = 0; pass(); }); }
+        window.addEventListener('scroll', schedule, { passive: true });
+        window.addEventListener('resize', schedule, { passive: true });
+        window.addEventListener('load', schedule);
+        setInterval(pass, 250);
+        pass();
+      })();
+
+      /* v9: stats hover comet — a single travelling element. Its x is the centre of
+         the hovered cell, so hovering a neighbour slides it there; the trail flips
+         to face the direction of travel. */
+      (function () {
+        if (window.__atxComet) return; window.__atxComet = true;
+        var bound = new WeakSet();
+        function bind(panel) {
+          if (bound.has(panel)) return;
+          var comet = panel.querySelector('.stat-comet');
+          var cells = [].slice.call(panel.querySelectorAll('.stat-cell'));
+          if (!comet || !cells.length) return;
+          bound.add(panel);
+          var last = -1, moveT = 0;
+          cells.forEach(function (cell, i) {
+            cell.addEventListener('mouseenter', function () {
+              var pr = panel.getBoundingClientRect(), cr = cell.getBoundingClientRect();
+              var x = cr.left - pr.left + cr.width / 2;
+              if (last > -1 && last !== i) {
+                panel.classList.toggle('dir-back', i < last);
+                panel.classList.add('is-moving');
+                clearTimeout(moveT);
+                moveT = setTimeout(function () { panel.classList.remove('is-moving'); }, 820);
+              }
+              comet.style.setProperty('--comet-x', x + 'px');
+              panel.classList.add('has-comet');
+              last = i;
+            });
+          });
+          panel.addEventListener('mouseleave', function () {
+            panel.classList.remove('has-comet', 'is-moving');
+            last = -1;
+          });
+        }
+        function pass() {
+          var panels = document.querySelectorAll('.mission-stats');
+          for (var i = 0; i < panels.length; i++) bind(panels[i]);
+        }
+        setInterval(pass, 300);
+        pass();
+      })();
+
+      /* v9e: the meteor rides the outer ring.
+         The tail is built from the meteor's OWN position history (the last N angles
+         it actually occupied), so it is a continuation of the nucleus by
+         construction: point 0 of the ribbon IS the current head position, and a
+         direction reversal makes the history curl back and retract on its own — no
+         side-flipping, no gap. Nucleus and ribbon are both SVG in one coordinate
+         space; nodes are re-queried each frame because the panel survives
+         re-renders while its children are replaced. */
+      (function () {
+        if (window.__atxOrbit) return; window.__atxOrbit = true;
+        var R = 132, BASE = 1.5, WIDE = 13, N = 76;
+        var CX = 150, CY = 150, RAD = Math.PI / 180;
+        var angle = -110, vel = BASE, target = BASE, last = -1;
+        var hist = [], listening = new WeakSet();
+
+        function pt(a, r) { return [CX + r * Math.cos(a * RAD), CY + r * Math.sin(a * RAD)]; }
+
+        function buildPath() {
+          // nose: a rounded leading edge whose reach scales with signed velocity, so
+          // it shrinks to nothing and grows back the other way through a reversal
+          var nose = 13 * (vel / BASE);
+          var pts = [{ a: angle + nose, w: 0 }, { a: angle + nose * 0.55, w: WIDE * 0.72 }];
+          for (var i = 0; i < hist.length; i++) {
+            var age = i / (N - 1);
+            pts.push({ a: hist[i], w: WIDE * Math.pow(Math.max(0, 1 - age), 0.72) });
+          }
+          var outer = [], inner = [];
+          for (var k = 0; k < pts.length; k++) {
+            outer.push(pt(pts[k].a, R + pts[k].w));
+            inner.push(pt(pts[k].a, R - pts[k].w));
+          }
+          var d = 'M' + outer[0][0].toFixed(1) + ',' + outer[0][1].toFixed(1);
+          for (var m = 1; m < outer.length; m++) d += 'L' + outer[m][0].toFixed(1) + ',' + outer[m][1].toFixed(1);
+          for (var j = inner.length - 1; j >= 0; j--) d += 'L' + inner[j][0].toFixed(1) + ',' + inner[j][1].toFixed(1);
+          return d + 'Z';
+        }
+
+        function frame() {
+          var panel = document.querySelector('.mission-stats');
+          if (panel) {
+            var cells = panel.querySelectorAll('.stat-cell');
+            for (var c = 0; c < cells.length; c++) {
+              if (listening.has(cells[c])) continue;
+              listening.add(cells[c]);
+              (function (cell, i) {
+                cell.addEventListener('mouseenter', function () {
+                  if (last > -1 && last !== i) target = (i > last ? 1 : -1) * BASE;
+                  last = i;
+                });
+              })(cells[c], c);
+            }
+            if (!listening.has(panel)) {
+              listening.add(panel);
+              panel.addEventListener('mouseleave', function () { last = -1; });
+            }
+
+            vel += (target - vel) * 0.05;   // eased: coast through zero, re-accelerate
+            angle += vel;
+            hist.unshift(angle);
+            if (hist.length > N) hist.length = N;
+
+            var speed = Math.min(1, Math.abs(vel) / BASE);
+            var burn = 0.88 + 0.12 * Math.sin(performance.now() / 220);
+
+            var flame = panel.querySelector('.stat-trail .flame');
+            var haze = panel.querySelector('.stat-trail .flameHaze');
+            var nuc = panel.querySelector('.stat-trail .nucleus');
+            var grad = panel.querySelector('#atxTrailGrad');
+            var d = buildPath();
+            if (flame) { flame.setAttribute('d', d); flame.setAttribute('opacity', (0.94 * burn).toFixed(3)); }
+            if (haze) { haze.setAttribute('d', d); haze.setAttribute('opacity', (0.5 * burn).toFixed(3)); }
+            if (nuc) {
+              var h = pt(angle, R);
+              nuc.setAttribute('cx', h[0].toFixed(1));
+              nuc.setAttribute('cy', h[1].toFixed(1));
+              nuc.setAttribute('r', (6.5 * (0.94 + 0.06 * Math.sin(performance.now() / 180))).toFixed(2));
+            }
+            if (grad) {
+              // gradient anchored on the nucleus: white-hot there, cooling down the tail
+              var g = pt(angle, R);
+              grad.setAttribute('cx', g[0].toFixed(1));
+              grad.setAttribute('cy', g[1].toFixed(1));
+              grad.setAttribute('r', (60 + 200 * speed).toFixed(1));
+            }
+          }
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
       })();
     </script>
   </body>
