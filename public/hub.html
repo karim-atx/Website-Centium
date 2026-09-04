@@ -258,6 +258,61 @@
   AFTER the ≤760px block's `display: block` override, so at equal
   specificity the base rule always won and the mobile track would never
   actually show — reordered so the override wins as intended.
+
+  Design pass v8 (Claude Design handoff, "Atraxia landing page (atraxia.org
+  root) — imported changes", round 5 — see
+  scratchpad/design-handoff-atraxia-landing-v8/design_handoff_atraxia_landing/
+  README.md): items 12-18 on top of v7's items 1-11, several superseding an
+  earlier v7 item as noted.
+    12. Favicon set made explicit (supersedes v7 item 8/#12's own head
+        markup): a size-less rel="icon" + rel="shortcut icon" pair added
+        ahead of the sized set so every browser has an unambiguous default
+        (the previous sized-only set let some fall back to a missing
+        /favicon.ico and show nothing); added rel="manifest" pointing at a
+        new public/icons/site.webmanifest (name "Atraxia", theme #023b4a,
+        background white, the 192/512 icons, display "browser").
+    13. Portfolio logo->site redirect (supersedes v7 item 2): moved to the
+        capture phase with stopPropagation. The rail's own click handler
+        centres (and thus activates) the clicked item in the target phase,
+        so a bubble-phase listener here saw is-active already true even for
+        a logo that had just been off-centre, making every click both
+        select AND navigate. Capture-phase reads is-active before the rail
+        acts on the same click, which is the only point the guard means
+        anything.
+    14. Comet core detail + trailing embers, added to both comets: a
+        layered core (haze shell, nucleus, a slowly rotating faceted
+        hexagon, a specular highlight) replaces the flat disc, and a fixed
+        pool of SVG circles (16 desktop / 20 mobile, re-attributed per
+        frame rather than created/destroyed) spawns as embers opposite the
+        direction of travel while speed > 0.12, each fading independently
+        on its own decay.
+    15. Mobile comet path (supersedes v7 item 4c's straight vertical
+        track): now a sine weave (3.2 lobes) descending alongside the
+        stats instead of a straight line down a dead-space column. The
+        SVG's viewBox is rewritten to the wrapper's actual pixel size each
+        frame (was a fixed non-uniform 64x600 with preserveAspectRatio:
+        none, which would have stretched the new round core/embers), and
+        the ribbon is offset along each point's local normal instead of in
+        x alone, so the taper follows the curve.
+    16. Mobile stat-cell padding made symmetric (supersedes v7 item 4a,
+        which reserved a 4.6rem left column for the old straight track and
+        so centred content in the space to its right, not the cell itself)
+        — 1.6rem on both sides, since the winding path now passes behind
+        the content instead of beside it.
+    17. Mobile nav dropdown seam fully closed (supersedes v7 item 5, which
+        only squared the corners): the residual hairline was the open
+        panel's own top/side border plus the top bleed of its drop shadow.
+        Border-top dropped, shadow pushed fully below the panel, and a
+        clip-path masks anything that could still paint above the panel's
+        top edge.
+    18. Equal-width stats columns (v7 item 7) reconfirmed unchanged.
+  Same two environment shims as v7 (the design host's document-capture
+  scroll listeners/polls and zero-height guards) were present in this
+  handoff's extracted script and were not ported, for the same reason.
+  Re-fixed the same `.stat-vtrack` display:none-after-display:block
+  ordering bug noted above — the handoff's stylesheet still had the pair
+  in the losing order, so the reorder from v7 carries forward here too,
+  now with the new 44% width.
 -->
 
 <html lang="en">
@@ -267,10 +322,14 @@
     <title>Atraxia — Led by Curiosity</title>
     <meta name="description" content="Atraxia is the parent company behind a growing portfolio of health and wellness apps and businesses, starting with Centium." />
     <meta name="theme-color" content="#023b4a" />
-    <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
-    <link rel="icon" href="icons/favicon-16.png" sizes="16x16" type="image/png" />
-    <link rel="icon" href="icons/favicon-192.png" sizes="192x192" type="image/png" />
+    <link rel="icon" type="image/png" href="icons/favicon-32.png" />
+    <link rel="shortcut icon" type="image/png" href="icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="icons/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/favicon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
+    <link rel="manifest" href="icons/site.webmanifest" />
     <link rel="canonical" href="https://atraxia.org/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Atraxia" />
@@ -1058,7 +1117,7 @@
          left the media query's override silently beaten by this base rule
          and the track permanently hidden even on mobile; fixed on port. */
       .mission-stats .stat-vtrack {
-        display: none; position: absolute; left: 0; top: 0; bottom: 0; width: 68px;
+        display: none; position: absolute; left: 0; top: 0; bottom: 0; width: 44%;
         z-index: 0; pointer-events: none; margin-top: 0; font-size: 0; color: inherit;
       }
       .stat-vtrail { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
@@ -1071,10 +1130,13 @@
         .stat-cell + .stat-cell { border-left: none; border-top: 1px solid rgb(var(--border) / 0.08); }
         .stat-cell:first-child strong { font-size: 3.4rem; }
         .mission-stats strong { font-size: 2.6rem; }
-        /* v10: number + spark + label centre as one block in the space right
-           of the vertical comet track. */
-        .stat-cell { text-align: center; padding-left: 4.6rem !important; }
-        .stat-cell:first-child { padding-left: 4.6rem !important; }
+        /* v10b: #4a reserved a 4.6rem left column for the old straight track,
+           which centred the content in the remaining space — visibly off-centre
+           in the block. The winding path now passes behind the content
+           (stat-vtrack is z-index:0, stat-grid is z-index:1), so the padding
+           is symmetric and the cells are genuinely centred. */
+        .stat-cell { text-align: center; padding-left: 1.6rem !important; padding-right: 1.6rem !important; }
+        .stat-cell:first-child { padding-left: 1.6rem !important; }
         .stat-cell .stat-spark { margin-left: auto; margin-right: auto; }
         /* the circular orbit and its hover comet are desktop-only */
         .stat-comet, .stat-orbit { display: none !important; }
@@ -1211,7 +1273,18 @@
         .nav-menu.is-open {
           border-top-left-radius: 0 !important;
           border-top-right-radius: 0 !important;
+          /* v10b: squaring the corners wasn't enough — the residual seam was
+             the panel's own 1px top/side border and the top bleed of its drop
+             shadow drawing a hairline where the two surfaces meet. Drop the
+             top border, push the shadow fully below the panel, and clip
+             everything above the panel's top edge so no border, shadow or
+             antialiased corner can render at the seam. Geometry, radius,
+             padding and the bottom corner rounding are unchanged. */
+          border-top: 0 !important;
+          box-shadow: 0 24px 40px -22px rgb(var(--border) / 0.28) !important;
+          clip-path: inset(0 -70px -70px -70px);
         }
+        .nav:has(.nav-menu.is-open)::before { border-bottom: 0 !important; }
       }
       /* centred content block: icon sits directly above its title */
       .trust-card { text-align: center; }
@@ -2058,7 +2131,25 @@
                       <stop offset="0.7" stop-color="rgb(94 186 205)"></stop>
                       <stop offset="1" stop-color="rgb(54 130 148)"></stop>
                     </radialGradient>
+                    <radialGradient id="atxCoreHaze">
+                      <stop offset="0" stop-color="#eafcff" stop-opacity="0.5"></stop>
+                      <stop offset="0.45" stop-color="rgb(94 186 205)" stop-opacity="0.3"></stop>
+                      <stop offset="1" stop-color="rgb(54 130 148)" stop-opacity="0"></stop>
+                    </radialGradient>
+                    <radialGradient id="atxEmber">
+                      <stop offset="0" stop-color="#ffffff"></stop>
+                      <stop offset="0.45" stop-color="#eafcff"></stop>
+                      <stop offset="1" stop-color="rgb(94 186 205)" stop-opacity="0"></stop>
+                    </radialGradient>
+                    <g class="embers"></g>
                     <circle class="nucleus" cx="282" cy="150" r="6.5" fill="url(#atxNucleus)"></circle>
+                    <g class="core">
+                      <circle class="core-haze" r="14" fill="url(#atxCoreHaze)"></circle>
+                      <g class="facet">
+                        <path d="M0,-5.6 L4.85,-2.8 L4.85,2.8 L0,5.6 L-4.85,2.8 L-4.85,-2.8 Z" fill="#ffffff" opacity="0.4"></path>
+                      </g>
+                      <circle class="spec" cx="-1.4" cy="-1.4" r="2.1" fill="#ffffff"></circle>
+                    </g>
                   </svg>
                   <span class="rider">
                     <span class="tangent">
@@ -2070,7 +2161,7 @@
                 <span class="core"></span>
               </span>
               <span class="stat-vtrack" aria-hidden="true">
-                <svg class="stat-vtrail" viewBox="0 0 64 600" preserveAspectRatio="none">
+                <svg class="stat-vtrail" viewBox="0 0 170 600" preserveAspectRatio="none">
                   <defs>
                     <filter id="atxVBurn" x="-60%" y="-60%" width="220%" height="220%">
                       <feGaussianBlur stdDeviation="1.6" result="b"></feGaussianBlur>
@@ -2091,18 +2182,36 @@
                       <stop offset="0.7" stop-color="rgb(94 186 205)"></stop>
                       <stop offset="1" stop-color="rgb(54 130 148)"></stop>
                     </radialGradient>
+                    <radialGradient id="atxVCoreHaze">
+                      <stop offset="0" stop-color="#eafcff" stop-opacity="0.5"></stop>
+                      <stop offset="0.45" stop-color="rgb(94 186 205)" stop-opacity="0.3"></stop>
+                      <stop offset="1" stop-color="rgb(54 130 148)" stop-opacity="0"></stop>
+                    </radialGradient>
+                    <radialGradient id="atxVEmber">
+                      <stop offset="0" stop-color="#ffffff"></stop>
+                      <stop offset="0.45" stop-color="#eafcff"></stop>
+                      <stop offset="1" stop-color="rgb(94 186 205)" stop-opacity="0"></stop>
+                    </radialGradient>
                   </defs>
-                  <radialGradient id="atxVTrailGrad" gradientUnits="userSpaceOnUse" cx="32" cy="150" r="200">
+                  <radialGradient id="atxVTrailGrad" gradientUnits="userSpaceOnUse" cx="85" cy="150" r="200">
                     <stop offset="0" stop-color="#ffffff" stop-opacity="1"></stop>
                     <stop offset="0.08" stop-color="#eafcff" stop-opacity="0.98"></stop>
                     <stop offset="0.26" stop-color="rgb(94 186 205)" stop-opacity="0.82"></stop>
                     <stop offset="0.58" stop-color="rgb(54 130 148)" stop-opacity="0.5"></stop>
                     <stop offset="1" stop-color="rgb(54 130 148)" stop-opacity="0"></stop>
                   </radialGradient>
-                  <line x1="32" y1="20" x2="32" y2="580" stroke="url(#atxVTrack)" stroke-width="1"></line>
+                  <path class="vtrack-line" d="" fill="none" stroke="url(#atxVTrack)" stroke-width="1"></path>
                   <path class="flameHaze" d="" fill="url(#atxVTrailGrad)" opacity="0.5" filter="url(#atxVHaze)"></path>
                   <path class="flame" d="" fill="url(#atxVTrailGrad)" filter="url(#atxVBurn)"></path>
-                  <circle class="nucleus" cx="32" cy="150" r="6.5" fill="url(#atxVNucleus)"></circle>
+                  <g class="embers"></g>
+                  <g class="core">
+                    <circle class="core-haze" r="15" fill="url(#atxVCoreHaze)"></circle>
+                    <circle class="nucleus" r="7.4" fill="url(#atxVNucleus)"></circle>
+                    <g class="facet">
+                      <path d="M0,-6.2 L5.4,-3.1 L5.4,3.1 L0,6.2 L-5.4,3.1 L-5.4,-3.1 Z" fill="#ffffff" opacity="0.42"></path>
+                    </g>
+                    <circle class="spec" cx="-1.6" cy="-1.6" r="2.4" fill="#ffffff"></circle>
+                  </g>
                 </svg>
               </span>
               <span class="stat-stars" aria-hidden="true">
@@ -2769,6 +2878,23 @@
         var CX = 150, CY = 150, RAD = Math.PI / 180;
         var angle = -110, vel = BASE, target = BASE, last = -1;
         var hist = [], listening = new WeakSet();
+        /* v10b: matching core detail and trailing embers for the desktop ring —
+           same treatment as the mobile comet, in the ring's own 300-unit space
+           (uniform scale, so everything stays round). */
+        var EMBERS = 16, embers = [], pool = null;
+        function ensurePool(g) {
+          if (pool && pool.length && g.firstChild) return;
+          while (g.firstChild) g.removeChild(g.firstChild);
+          pool = [];
+          for (var i = 0; i < EMBERS; i++) {
+            var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            c.setAttribute('r', '1.5');
+            c.setAttribute('fill', 'url(#atxEmber)');
+            c.setAttribute('opacity', '0');
+            g.appendChild(c);
+            pool.push(c);
+          }
+        }
 
         function pt(a, r) { return [CX + r * Math.cos(a * RAD), CY + r * Math.sin(a * RAD)]; }
 
@@ -2832,6 +2958,47 @@
               nuc.setAttribute('cy', h[1].toFixed(1));
               nuc.setAttribute('r', (6.5 * (0.94 + 0.06 * Math.sin(performance.now() / 180))).toFixed(2));
             }
+            var pulse = 0.94 + 0.06 * Math.sin(performance.now() / 180);
+            var core = panel.querySelector('.stat-trail .core');
+            if (core) {
+              var cp = pt(angle, R);
+              core.setAttribute('transform', 'translate(' + cp[0].toFixed(1) + ',' + cp[1].toFixed(1) + ')');
+              var hz = core.querySelector('.core-haze');
+              var fc = core.querySelector('.facet');
+              var sp = core.querySelector('.spec');
+              if (hz) hz.setAttribute('r', (14 * (1 + 0.08 * speed)).toFixed(2));
+              if (fc) fc.setAttribute('transform', 'rotate(' + ((performance.now() / 42) % 360).toFixed(1) + ') scale(' + pulse.toFixed(3) + ')');
+              if (sp) sp.setAttribute('opacity', (0.7 + 0.3 * Math.sin(performance.now() / 150)).toFixed(2));
+            }
+            var eg = panel.querySelector('.stat-trail .embers');
+            if (eg) {
+              ensurePool(eg);
+              var hp = pt(angle, R);
+              if (speed > 0.12 && embers.length < EMBERS && Math.random() < 0.5) {
+                var tang = (angle + 90 * Math.sign(vel || 1)) * RAD;
+                embers.push({
+                  x: hp[0] + (Math.random() - 0.5) * 6,
+                  y: hp[1] + (Math.random() - 0.5) * 6,
+                  vx: -Math.cos(tang) * (0.5 + Math.random() * 1.4 * speed) + (Math.random() - 0.5) * 0.5,
+                  vy: -Math.sin(tang) * (0.5 + Math.random() * 1.4 * speed) + (Math.random() - 0.5) * 0.5,
+                  life: 1, decay: 0.016 + Math.random() * 0.03, size: 0.8 + Math.random() * 1.4
+                });
+              }
+              for (var e = embers.length - 1; e >= 0; e--) {
+                var em = embers[e];
+                em.x += em.vx; em.y += em.vy; em.vx *= 0.985; em.vy *= 0.985;
+                em.life -= em.decay;
+                if (em.life <= 0) embers.splice(e, 1);
+              }
+              for (var q = 0; q < pool.length; q++) {
+                var s = embers[q];
+                if (!s) { pool[q].setAttribute('opacity', '0'); continue; }
+                pool[q].setAttribute('cx', s.x.toFixed(1));
+                pool[q].setAttribute('cy', s.y.toFixed(1));
+                pool[q].setAttribute('r', (s.size * s.life).toFixed(2));
+                pool[q].setAttribute('opacity', (Math.max(0, s.life) * 0.85).toFixed(3));
+              }
+            }
             if (grad) {
               // gradient anchored on the nucleus: white-hot there, cooling down the tail
               var g = pt(angle, R);
@@ -2847,7 +3014,15 @@
 
       /* v10: the app logo in the portfolio selector links to that app's site,
          the same destination as its "Visit …" CTA. Items without a
-         data-pf-url (Coming soon) keep the plain selector behaviour. */
+         data-pf-url (Coming soon) keep the plain selector behaviour.
+         v10b: the rail's own click handler centres (and thus activates) the
+         clicked item during the same click, in the target phase — a
+         bubble-phase listener here saw is-active === true even for a logo
+         that had just been off-centre, so the click both selected AND
+         navigated. Running in the capture phase reads is-active BEFORE the
+         rail centres the item, which is the only place the guard is
+         meaningful; stopPropagation keeps the rail's own listener from also
+         acting on the same click once we've decided to navigate. */
       (function () {
         if (window.__atxPfLogo) return; window.__atxPfLogo = true;
         document.addEventListener('click', function (e) {
@@ -2863,8 +3038,9 @@
           var url = item.getAttribute('data-pf-url');
           if (!url) return;
           e.preventDefault();
+          e.stopPropagation();
           window.location.href = url;
-        });
+        }, true);   // capture: read is-active BEFORE the rail centres this item
       })();
 
       /* v10 (mobile): the stats panel's circular orbit meteor does not suit the
@@ -2873,54 +3049,164 @@
          never separate), driven by the panel's scroll progress rather than
          hover: scrolling down carries the comet down the track, scrolling up
          carries it back. */
+      /* v10b (mobile): the straight track is replaced by a winding path that
+         weaves back and forth as it descends alongside the stats, so the comet
+         stays close to the content. Geometry is computed in real pixels (the
+         viewBox is rewritten to the wrapper's own size each frame) so the core
+         and its embers stay perfectly round instead of being stretched by a
+         non-uniform viewBox. Still scroll-driven; still history-built, so head
+         and tail can never separate. */
       (function () {
         if (window.__atxVComet) return; window.__atxVComet = true;
-        var X = 32, TOP = 42, BOT = 558, WIDE = 9, N = 64;
-        var hist = [], y = TOP, vel = 0;
+        var WIDE = 9, N = 74, LOBES = 3.2, PHASE = 0.6, EMBERS = 20;
+        var hist = [], p0 = -1, vel = 0, embers = [], pool = null;
         var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+        var W = 170, H = 600;
 
-        function buildPath() {
-          var nose = Math.max(-24, Math.min(24, vel * 3.2));
-          var pts = [{ y: y + nose, w: 0 }, { y: y + nose * 0.55, w: WIDE * 0.72 }];
+        function wind(y) {
+          var t = (y - H * 0.06) / (H * 0.88);
+          return W * 0.5 + W * 0.32 * Math.sin(t * Math.PI * 2 * LOBES + PHASE);
+        }
+        function headY(p) { return H * 0.06 + H * 0.88 * p; }
+
+        function trackPath() {
+          var d = '', y0 = H * 0.06, y1 = H * 0.94;
+          for (var y = y0; y <= y1; y += 6) {
+            d += (d ? 'L' : 'M') + wind(y).toFixed(1) + ',' + y.toFixed(1);
+          }
+          return d;
+        }
+
+        /* ribbon offset along the local normal, so the taper follows the curve */
+        function ribbon() {
+          if (hist.length < 2) return '';
+          var pts = [];
           for (var i = 0; i < hist.length; i++) {
             var age = i / (N - 1);
-            pts.push({ y: hist[i], w: WIDE * Math.pow(Math.max(0, 1 - age), 0.72) });
+            pts.push({ x: hist[i].x, y: hist[i].y, w: WIDE * Math.pow(Math.max(0, 1 - age), 0.72) });
           }
-          var d = 'M' + (X + pts[0].w).toFixed(1) + ',' + pts[0].y.toFixed(1);
-          for (var k = 1; k < pts.length; k++) d += 'L' + (X + pts[k].w).toFixed(1) + ',' + pts[k].y.toFixed(1);
-          for (var j = pts.length - 1; j >= 0; j--) d += 'L' + (X - pts[j].w).toFixed(1) + ',' + pts[j].y.toFixed(1);
+          var nose = Math.max(-26, Math.min(26, vel * 3.2));
+          if (nose) {
+            var ny = pts[0].y + nose, nx = wind(ny);
+            pts.unshift({ x: (nx + pts[0].x) / 2, y: (ny + pts[0].y) / 2, w: WIDE * 0.72 });
+            pts.unshift({ x: nx, y: ny, w: 0 });
+          }
+          var outer = [], inner = [];
+          for (var k = 0; k < pts.length; k++) {
+            var a = pts[Math.max(0, k - 1)], b = pts[Math.min(pts.length - 1, k + 1)];
+            var dx = b.x - a.x, dy = b.y - a.y, len = Math.sqrt(dx * dx + dy * dy) || 1;
+            var nxx = -dy / len, nyy = dx / len;
+            outer.push([pts[k].x + nxx * pts[k].w, pts[k].y + nyy * pts[k].w]);
+            inner.push([pts[k].x - nxx * pts[k].w, pts[k].y - nyy * pts[k].w]);
+          }
+          var d = 'M' + outer[0][0].toFixed(1) + ',' + outer[0][1].toFixed(1);
+          for (var m = 1; m < outer.length; m++) d += 'L' + outer[m][0].toFixed(1) + ',' + outer[m][1].toFixed(1);
+          for (var j = inner.length - 1; j >= 0; j--) d += 'L' + inner[j][0].toFixed(1) + ',' + inner[j][1].toFixed(1);
           return d + 'Z';
+        }
+
+        function ensurePool(g) {
+          if (pool && pool.length && pool[0].ownerSVGElement === g.ownerSVGElement) return;
+          while (g.firstChild) g.removeChild(g.firstChild);
+          pool = [];
+          for (var i = 0; i < EMBERS; i++) {
+            var c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+            c.setAttribute('r', '1.7');
+            c.setAttribute('fill', 'url(#atxVEmber)');
+            c.setAttribute('opacity', '0');
+            g.appendChild(c);
+            pool.push(c);
+          }
+        }
+
+        /* embers break off the head and fade independently over a short drift */
+        function spawn(x, y, speed) {
+          if (embers.length >= EMBERS) return;
+          var spread = (Math.random() - 0.5) * 1.7;
+          embers.push({
+            x: x + (Math.random() - 0.5) * 7,
+            y: y - Math.sign(vel || 1) * (4 + Math.random() * 8),
+            vx: spread,
+            vy: -Math.sign(vel || 1) * (0.5 + Math.random() * 1.5 * speed),
+            life: 1,
+            decay: 0.016 + Math.random() * 0.03,
+            size: 0.9 + Math.random() * 1.5
+          });
         }
 
         function frame() {
           var wrap = document.querySelector('.stat-vtrack');
           if (wrap && wrap.offsetParent && !reduce.matches) {
+            var svg = wrap.querySelector('.stat-vtrail');
             var panel = wrap.closest('.mission-stats');
-            var r = panel.getBoundingClientRect(), vh = window.innerHeight || 1;
-            var p = Math.max(0, Math.min(1, (vh - r.top) / (vh + r.height)));
-            var ty = TOP + (BOT - TOP) * p;
-            var prev = y;
-            y += (ty - y) * 0.14;
-            vel = y - prev;
-            hist.unshift(y);
-            if (hist.length > N) hist.length = N;
+            var wr = wrap.getBoundingClientRect(), r = panel.getBoundingClientRect();
+            if (wr.width > 2 && wr.height > 2) {
+              if (Math.abs(wr.width - W) > 1 || Math.abs(wr.height - H) > 1) {
+                W = wr.width; H = wr.height;
+                svg.setAttribute('viewBox', '0 0 ' + W.toFixed(0) + ' ' + H.toFixed(0));
+                var line = wrap.querySelector('.vtrack-line');
+                if (line) line.setAttribute('d', trackPath());
+                hist.length = 0; p0 = -1;
+              }
+              var vh = window.innerHeight || 1;
+              var p = Math.max(0, Math.min(1, (vh - r.top) / (vh + r.height)));
+              if (p0 < 0) p0 = p;
+              var prev = p0;
+              p0 += (p - p0) * 0.14;
+              var y = headY(p0), x = wind(y);
+              vel = (p0 - prev) * (H * 0.88);
+              hist.unshift({ x: x, y: y });
+              if (hist.length > N) hist.length = N;
 
-            var speed = Math.min(1, Math.abs(vel) / 6);
-            var burn = 0.88 + 0.12 * Math.sin(performance.now() / 220);
-            var d = buildPath();
-            var flame = wrap.querySelector('.flame');
-            var haze = wrap.querySelector('.flameHaze');
-            var nuc = wrap.querySelector('.nucleus');
-            var grad = wrap.querySelector('#atxVTrailGrad');
-            if (flame) { flame.setAttribute('d', d); flame.setAttribute('opacity', (0.94 * burn).toFixed(3)); }
-            if (haze) { haze.setAttribute('d', d); haze.setAttribute('opacity', (0.5 * burn).toFixed(3)); }
-            if (nuc) {
-              nuc.setAttribute('cy', y.toFixed(1));
-              nuc.setAttribute('r', (6.5 * (0.94 + 0.06 * Math.sin(performance.now() / 180))).toFixed(2));
-            }
-            if (grad) {
-              grad.setAttribute('cy', y.toFixed(1));
-              grad.setAttribute('r', (60 + 200 * speed).toFixed(1));
+              var speed = Math.min(1, Math.abs(vel) / 6);
+              var burn = 0.88 + 0.12 * Math.sin(performance.now() / 220);
+              var d = ribbon();
+              var flame = wrap.querySelector('.flame');
+              var haze = wrap.querySelector('.flameHaze');
+              var grad = wrap.querySelector('#atxVTrailGrad');
+              if (flame) { flame.setAttribute('d', d); flame.setAttribute('opacity', (0.94 * burn).toFixed(3)); }
+              if (haze) { haze.setAttribute('d', d); haze.setAttribute('opacity', (0.5 * burn).toFixed(3)); }
+              if (grad) {
+                grad.setAttribute('cx', x.toFixed(1));
+                grad.setAttribute('cy', y.toFixed(1));
+                grad.setAttribute('r', (60 + 200 * speed).toFixed(1));
+              }
+
+              // detailed core: haze shell, nucleus, a slowly turning facet and a
+              // specular highlight — a rendered body rather than a flat disc
+              var core = wrap.querySelector('.core');
+              if (core) {
+                core.setAttribute('transform', 'translate(' + x.toFixed(1) + ',' + y.toFixed(1) + ')');
+                var pulse = 0.94 + 0.06 * Math.sin(performance.now() / 180);
+                var nuc = core.querySelector('.nucleus');
+                var hz = core.querySelector('.core-haze');
+                var fc = core.querySelector('.facet');
+                var sp = core.querySelector('.spec');
+                if (nuc) nuc.setAttribute('r', (7.4 * pulse).toFixed(2));
+                if (hz) hz.setAttribute('r', (15 * (1 + 0.08 * speed)).toFixed(2));
+                if (fc) fc.setAttribute('transform', 'rotate(' + ((performance.now() / 42) % 360).toFixed(1) + ') scale(' + pulse.toFixed(3) + ')');
+                if (sp) sp.setAttribute('opacity', (0.7 + 0.3 * Math.sin(performance.now() / 150)).toFixed(2));
+              }
+
+              var g = wrap.querySelector('.embers');
+              if (g) {
+                ensurePool(g);
+                if (speed > 0.12 && Math.random() < 0.55) spawn(x, y, speed);
+                for (var e = embers.length - 1; e >= 0; e--) {
+                  var em = embers[e];
+                  em.x += em.vx; em.y += em.vy; em.vx *= 0.985; em.vy *= 0.985;
+                  em.life -= em.decay;
+                  if (em.life <= 0) embers.splice(e, 1);
+                }
+                for (var q = 0; q < pool.length; q++) {
+                  var s = embers[q];
+                  if (!s) { pool[q].setAttribute('opacity', '0'); continue; }
+                  pool[q].setAttribute('cx', s.x.toFixed(1));
+                  pool[q].setAttribute('cy', s.y.toFixed(1));
+                  pool[q].setAttribute('r', (s.size * s.life).toFixed(2));
+                  pool[q].setAttribute('opacity', (Math.max(0, s.life) * 0.85).toFixed(3));
+                }
+              }
             }
           }
           requestAnimationFrame(frame);
