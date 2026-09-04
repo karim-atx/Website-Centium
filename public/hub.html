@@ -209,6 +209,55 @@
   All CSS/markup/script lifted near-verbatim from the handoff's .dc.html/.js
   pair; unused prototype-only particle-trail markup (dead .haze/.burn SVG
   groups the shipped JS never queries) was not carried over.
+
+  Design pass v7 (Claude Design handoff, "Atraxia landing page (atraxia.org
+  root) — imported changes" — see
+  scratchpad/design-handoff-atraxia-landing-v7/design_handoff_atraxia_landing/
+  README.md): eleven targeted changes on top of v1-v6; everything else on
+  the page is unchanged.
+    1. Stats scramble now flashes one/two-digit numbers (was single random
+       glyphs) before resolving to the same final values.
+    2. Portfolio: the app logo is now also a link to that app's site,
+       gated to the already-selected item so it doesn't fight the rail's
+       own click-to-select behaviour (mirrors the "Visit …" CTA).
+    3. Abdallah Diab's front-quote reverted to the Plato quote's English
+       translation ("Necessity is the mother of invention"), dropping the
+       Arabic/RTL markup — this explicitly re-reverses the Arabic-quote
+       restoration from the 2026-09-03 QA-follow-up commit; confirmed with
+       the user given the direct conflict before applying.
+    4. Mobile stats: cells centre as one block, the desktop's circular
+       orbit/comet are hidden, and a new scroll-driven straight vertical
+       comet track (same nucleus/ribbon construction as the desktop ring,
+       linearised) takes its place — desktop untouched.
+    5. Mobile nav dropdown: the bar/panel seam corners now go square where
+       they meet (bar bottom, panel top), keeping their radius everywhere
+       else, so the two read as one connected shape.
+    6. Mobile hero parallax is now scroll-driven (swept through the hero's
+       scroll progress) instead of cursor-driven, since touch has no
+       cursor; fine-pointer desktop is unaffected.
+    7. Stats grid columns equalized (was a wider first column) so the
+       dividers land evenly regardless of content length.
+    8. Six generated bookmark/home-screen icons (derived from the existing
+       atraxia-mark-hi.png, opaque background) replace the single PNG
+       favicon; new public/icons/ directory.
+    9. Portfolio glow's purple-to-green transition point is now measured
+       to the active logo's own centreline (was the glow's fixed geometric
+       centre), realigned on select/resize/rail-scroll.
+    10. Portfolio glow enlarged to cover the whole selected-app block (logo
+        + name + description + CTA), not just the logo.
+    11. Added top margin above the portfolio selector, separate from the
+        section header's own bottom margin.
+  Two edits present in the handoff's extracted script were environment
+  shims for the design host's scrolling container (a document-capture
+  scroll listener plus poll in both the parallax and nav IIFEs, and a
+  zero-height guard in each) and were not ported — this static page's
+  script already runs after the DOM is parsed, so window's own scroll
+  event and the existing measurement calls are sufficient, as before.
+  One bug caught while porting item 4: the handoff's own stylesheet
+  declared the base `.mission-stats .stat-vtrack { display: none }` rule
+  AFTER the ≤760px block's `display: block` override, so at equal
+  specificity the base rule always won and the mobile track would never
+  actually show — reordered so the override wins as intended.
 -->
 
 <html lang="en">
@@ -218,7 +267,10 @@
     <title>Atraxia — Led by Curiosity</title>
     <meta name="description" content="Atraxia is the parent company behind a growing portfolio of health and wellness apps and businesses, starting with Centium." />
     <meta name="theme-color" content="#023b4a" />
-    <link rel="icon" href="atraxia/atraxia-mark.png" type="image/png" />
+    <link rel="icon" href="icons/favicon-32.png" sizes="32x32" type="image/png" />
+    <link rel="icon" href="icons/favicon-16.png" sizes="16x16" type="image/png" />
+    <link rel="icon" href="icons/favicon-192.png" sizes="192x192" type="image/png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
     <link rel="canonical" href="https://atraxia.org/" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Atraxia" />
@@ -968,7 +1020,7 @@
       }
       .stat-grid {
         position: relative; z-index: 1;
-        display: grid; grid-template-columns: 1.32fr 1fr 1fr; align-items: stretch;
+        display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: stretch;
       }
       .stat-cell {
         position: relative; padding: 2.5rem 2rem 2.35rem;
@@ -993,6 +1045,25 @@
         .stat-grid { grid-template-columns: 1fr 1fr; }
         .stat-cell:nth-child(3) { grid-column: 1 / -1; border-left: none; border-top: 1px solid rgb(var(--border) / 0.08); }
       }
+
+      /* v10: mobile-only straight vertical track — the linear counterpart to the
+         desktop ring. Same nucleus, halo and history-built ribbon; only the path
+         is a line instead of a circle. */
+      /* scoped under .mission-stats so it outranks the panel's generic
+         `.mission-stats span` label rule, which would otherwise force this
+         wrapper to display:block and inherit the label's margin/size/colour.
+         Declared here, before the ≤760px block below, so that block's
+         `display: block` override actually wins at equal specificity — the
+         handoff's own stylesheet had this pair the other way round, which
+         left the media query's override silently beaten by this base rule
+         and the track permanently hidden even on mobile; fixed on port. */
+      .mission-stats .stat-vtrack {
+        display: none; position: absolute; left: 0; top: 0; bottom: 0; width: 68px;
+        z-index: 0; pointer-events: none; margin-top: 0; font-size: 0; color: inherit;
+      }
+      .stat-vtrail { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+      .stat-vtrail .nucleus { filter: drop-shadow(0 0 7px rgb(var(--teal) / 0.9)) drop-shadow(0 0 16px rgb(var(--teal) / 0.5)); }
+
       @media (max-width: 760px) {
         .mission-stats { margin-top: 3rem !important; border-radius: 1.5rem; }
         .stat-grid { grid-template-columns: 1fr; }
@@ -1000,6 +1071,14 @@
         .stat-cell + .stat-cell { border-left: none; border-top: 1px solid rgb(var(--border) / 0.08); }
         .stat-cell:first-child strong { font-size: 3.4rem; }
         .mission-stats strong { font-size: 2.6rem; }
+        /* v10: number + spark + label centre as one block in the space right
+           of the vertical comet track. */
+        .stat-cell { text-align: center; padding-left: 4.6rem !important; }
+        .stat-cell:first-child { padding-left: 4.6rem !important; }
+        .stat-cell .stat-spark { margin-left: auto; margin-right: auto; }
+        /* the circular orbit and its hover comet are desktop-only */
+        .stat-comet, .stat-orbit { display: none !important; }
+        .mission-stats .stat-vtrack { display: block; }
       }
 
       /* ---------- v6: portfolio — horizontal snap selector ---------- */
@@ -1082,14 +1161,26 @@
          and feathered to nothing at the edges, coloured from the selected
          app's own logo (per-item data-pf-from/mid/to). */
       .pf-carousel { position: relative; }
+      /* v10: clearer separation between the title/description block and the
+         app selector row below it. */
+      #portfolio .pf-carousel { margin-top: 3.25rem; }
+      @media (max-width: 760px) { #portfolio .pf-carousel { margin-top: 2rem; } }
       .pf-glow {
-        position: absolute; left: 50%; top: -136px; transform: translateX(-50%);
-        width: min(1700px, 196%); height: 448px; z-index: 0; pointer-events: none;
+        /* v10: the glow now spans the whole selected-app block (logo + name +
+           description + CTA), not just the icon. Same gradient, mask shape and
+           feathering — the ellipse is simply taller and re-centred on the
+           carousel's midline so its soft core covers the text too. */
+        position: absolute; left: 50%; top: -210px; transform: translateX(-50%);
+        width: min(1700px, 196%); height: 700px; z-index: 0; pointer-events: none;
+        /* v10: the purple→green transition is pinned to --pf-mid-pos, the active
+           logo's own centreline within this glow (set in JS), instead of the
+           glow's geometric centre; the flanking stops stay proportional to it so
+           the ramp keeps its original shape. */
         background: linear-gradient(90deg,
           var(--pf-from, #8E6DE0) 0%,
-          var(--pf-from, #8E6DE0) 16%,
-          var(--pf-mid, #7E8FD8) 50%,
-          var(--pf-to, #4FC08C) 84%,
+          var(--pf-from, #8E6DE0) calc(var(--pf-mid-pos, 50%) * 0.32),
+          var(--pf-mid, #7E8FD8) var(--pf-mid-pos, 50%),
+          var(--pf-to, #4FC08C) calc(var(--pf-mid-pos, 50%) + (100% - var(--pf-mid-pos, 50%)) * 0.68),
           var(--pf-to, #4FC08C) 100%);
         -webkit-mask-image: radial-gradient(ellipse 52% 52% at 50% 50%, #000 0%, rgb(0 0 0 / 0.9) 34%, rgb(0 0 0 / 0.42) 64%, transparent 100%);
         mask-image: radial-gradient(ellipse 52% 52% at 50% 50%, #000 0%, rgb(0 0 0 / 0.9) 34%, rgb(0 0 0 / 0.42) 64%, transparent 100%);
@@ -1110,6 +1201,17 @@
           box-shadow: none;
         }
         .nav.is-dark:has(.nav-menu.is-open)::before { background: rgb(8 16 24 / 0.86); }
+        /* v10: the bar and the open panel meet as one connected shape — the
+           corners at the seam (bar bottom, panel top) go square while the outer
+           corners (bar top, panel bottom) keep their radius. */
+        .nav:has(.nav-menu.is-open)::before {
+          border-bottom-left-radius: 0 !important;
+          border-bottom-right-radius: 0 !important;
+        }
+        .nav-menu.is-open {
+          border-top-left-radius: 0 !important;
+          border-top-right-radius: 0 !important;
+        }
       }
       /* centred content block: icon sits directly above its title */
       .trust-card { text-align: center; }
@@ -1172,8 +1274,22 @@
           if (Math.abs(tx - mx) > 0.002 || Math.abs(ty - my) > 0.002) tick();
         }
         function tick() { if (!raf) raf = requestAnimationFrame(paint); }
-        window.addEventListener('scroll', function () { y = window.scrollY || 0; tick(); }, { passive: true });
+        /* v10 (mobile): there is no cursor on touch, so the hero's parallax is
+           driven by scroll progress through the hero instead — the same tx/ty
+           the pointer would supply, swept as the section passes. */
+        var coarse = window.matchMedia('(max-width: 760px), (pointer: coarse)');
+        function heroDrive() {
+          if (!coarse.matches) return;
+          var hero = document.querySelector('.hero');
+          if (!hero) return;
+          var r = hero.getBoundingClientRect(), h = r.height || 1;
+          var p = Math.max(0, Math.min(1, -r.top / h));
+          tx = Math.sin(p * Math.PI);
+          ty = p * 2 - 1;
+        }
+        window.addEventListener('scroll', function () { y = window.scrollY || 0; heroDrive(); tick(); }, { passive: true });
         window.addEventListener('pointermove', function (e) {
+          if (coarse.matches) return;   // scroll owns the motion on touch
           tx = (e.clientX / window.innerWidth - 0.5) * 2;
           ty = (e.clientY / window.innerHeight - 0.5) * 2;
           tick();
@@ -1953,6 +2069,42 @@
                 </span>
                 <span class="core"></span>
               </span>
+              <span class="stat-vtrack" aria-hidden="true">
+                <svg class="stat-vtrail" viewBox="0 0 64 600" preserveAspectRatio="none">
+                  <defs>
+                    <filter id="atxVBurn" x="-60%" y="-60%" width="220%" height="220%">
+                      <feGaussianBlur stdDeviation="1.6" result="b"></feGaussianBlur>
+                      <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+                    </filter>
+                    <filter id="atxVHaze" x="-80%" y="-80%" width="260%" height="260%">
+                      <feGaussianBlur stdDeviation="6"></feGaussianBlur>
+                    </filter>
+                    <linearGradient id="atxVTrack" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0" stop-color="rgb(79 163 176)" stop-opacity="0"></stop>
+                      <stop offset="0.16" stop-color="rgb(79 163 176)" stop-opacity="0.22"></stop>
+                      <stop offset="0.84" stop-color="rgb(79 163 176)" stop-opacity="0.22"></stop>
+                      <stop offset="1" stop-color="rgb(79 163 176)" stop-opacity="0"></stop>
+                    </linearGradient>
+                    <radialGradient id="atxVNucleus">
+                      <stop offset="0" stop-color="#ffffff"></stop>
+                      <stop offset="0.35" stop-color="#eafcff"></stop>
+                      <stop offset="0.7" stop-color="rgb(94 186 205)"></stop>
+                      <stop offset="1" stop-color="rgb(54 130 148)"></stop>
+                    </radialGradient>
+                  </defs>
+                  <radialGradient id="atxVTrailGrad" gradientUnits="userSpaceOnUse" cx="32" cy="150" r="200">
+                    <stop offset="0" stop-color="#ffffff" stop-opacity="1"></stop>
+                    <stop offset="0.08" stop-color="#eafcff" stop-opacity="0.98"></stop>
+                    <stop offset="0.26" stop-color="rgb(94 186 205)" stop-opacity="0.82"></stop>
+                    <stop offset="0.58" stop-color="rgb(54 130 148)" stop-opacity="0.5"></stop>
+                    <stop offset="1" stop-color="rgb(54 130 148)" stop-opacity="0"></stop>
+                  </radialGradient>
+                  <line x1="32" y1="20" x2="32" y2="580" stroke="url(#atxVTrack)" stroke-width="1"></line>
+                  <path class="flameHaze" d="" fill="url(#atxVTrailGrad)" opacity="0.5" filter="url(#atxVHaze)"></path>
+                  <path class="flame" d="" fill="url(#atxVTrailGrad)" filter="url(#atxVBurn)"></path>
+                  <circle class="nucleus" cx="32" cy="150" r="6.5" fill="url(#atxVNucleus)"></circle>
+                </svg>
+              </span>
               <span class="stat-stars" aria-hidden="true">
                 <svg viewBox="0 0 40 40" style="left:13%;top:22%;width:11px;height:11px;opacity:.3"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
                 <svg viewBox="0 0 40 40" style="left:47%;top:70%;width:8px;height:8px;opacity:.22"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
@@ -1988,7 +2140,7 @@
             <div class="pf-carousel is-glowing">
               <span class="pf-glow" aria-hidden="true"></span>
               <div class="pf-rail" role="tablist" aria-label="Portfolio">
-                <button class="pf-item is-active" type="button" role="tab" aria-selected="true" data-pf="centium" data-pf-from="#8E6DE0" data-pf-mid="#7E8FD8" data-pf-to="#4FC08C">
+                <button class="pf-item is-active" type="button" role="tab" aria-selected="true" data-pf="centium" data-pf-url="/centium" data-pf-from="#8E6DE0" data-pf-mid="#7E8FD8" data-pf-to="#4FC08C">
                   <span class="pf-logo">
                     <img src="atraxia/centium-mark.png" alt="" />
                   </span>
@@ -2036,7 +2188,7 @@
                     <div class="body">
                       <h3>Abdallah Diab</h3>
                       <div class="role">Co-founder | Operations Manager</div>
-                      <p class="bio" dir="rtl" lang="ar">&laquo;الحاجة أم الاختراع&raquo; &mdash; أفلاطون</p>
+                      <p class="bio">&ldquo;Necessity is the mother of invention&rdquo; &mdash;Plato</p>
                     </div>
                   </div>
                   <div class="founder-card founder-face founder-face--back">
@@ -2393,9 +2545,19 @@
         function scramble(strong, dur, delay) {
           var final = strong.getAttribute('data-stat-final');
           var card = strong.closest('.stat-cell') || strong.closest('.stat-card');
-          var glyphs = strong.getAttribute('data-stat-kind') === 'symbol'
+          var kind = strong.getAttribute('data-stat-kind');
+          var glyphs = kind === 'symbol'
             ? '0123456789∞∆§∑◊'
             : '0123456789';
+          /* v10: the cycle flashes one- and two-digit numbers (47, 12, 83…)
+             before resolving, so it reads less predictable. Final values are
+             unchanged — they come from data-stat-final. */
+          function flick() {
+            if (kind === 'symbol') return glyphs.charAt(Math.floor(Math.random() * glyphs.length));
+            return Math.random() < 0.72
+              ? String(10 + Math.floor(Math.random() * 90))
+              : String(1 + Math.floor(Math.random() * 9));
+          }
           setTimeout(function () {
             if (card) card.classList.add('is-rolling');
             var start = performance.now(), last = 0;
@@ -2408,7 +2570,7 @@
               }
               if (now - last >= 62 + 150 * t * t) {
                 last = now;
-                strong.textContent = glyphs.charAt(Math.floor(Math.random() * glyphs.length));
+                strong.textContent = flick();
               }
               requestAnimationFrame(frame);
             }
@@ -2457,6 +2619,26 @@
           if (!items.length) { boundRails.delete(rail); return; }
           var current = -1, raf = 0;
 
+          /* v10: put the gradient's colour-shift midpoint on the active logo's
+             vertical centreline. The glow is far wider than the carousel and
+             the rail scrolls, so the position is measured, not assumed. */
+          var alignT = 0;
+          function alignGlow(wrap, item) {
+            var glow = wrap.querySelector('.pf-glow');
+            var logo = item && item.querySelector('.pf-logo');
+            if (!glow || !logo) return;
+            var gr = glow.getBoundingClientRect(), lr = logo.getBoundingClientRect();
+            if (!gr.width) return;
+            var pct = ((lr.left + lr.width / 2) - gr.left) / gr.width * 100;
+            wrap.style.setProperty('--pf-mid-pos', Math.max(0, Math.min(100, pct)).toFixed(2) + '%');
+          }
+          function realign() {
+            var wrap = rail.closest('.pf-carousel');
+            if (wrap && current > -1) alignGlow(wrap, items[current]);
+          }
+          window.addEventListener('resize', realign, { passive: true });
+          rail.addEventListener('scroll', realign, { passive: true });
+
           function select(i) {
             if (i === current || i < 0) return;
             current = i;
@@ -2471,8 +2653,13 @@
                 wrap.style.setProperty('--pf-to', to);
                 wrap.style.setProperty('--pf-mid', items[i].getAttribute('data-pf-mid') || to);
                 wrap.classList.add('is-glowing');
+                alignGlow(wrap, items[i]);
+                requestAnimationFrame(function () { alignGlow(wrap, items[i]); });
+                clearTimeout(alignT);
+                alignT = setTimeout(function () { alignGlow(wrap, items[i]); }, 480);
               } else {
                 wrap.classList.remove('is-glowing');
+                wrap.style.removeProperty('--pf-mid-pos');
               }
             }
             items.forEach(function (it, n) {
@@ -2650,6 +2837,89 @@
               var g = pt(angle, R);
               grad.setAttribute('cx', g[0].toFixed(1));
               grad.setAttribute('cy', g[1].toFixed(1));
+              grad.setAttribute('r', (60 + 200 * speed).toFixed(1));
+            }
+          }
+          requestAnimationFrame(frame);
+        }
+        requestAnimationFrame(frame);
+      })();
+
+      /* v10: the app logo in the portfolio selector links to that app's site,
+         the same destination as its "Visit …" CTA. Items without a
+         data-pf-url (Coming soon) keep the plain selector behaviour. */
+      (function () {
+        if (window.__atxPfLogo) return; window.__atxPfLogo = true;
+        document.addEventListener('click', function (e) {
+          var logo = e.target.closest && e.target.closest('.pf-item .pf-logo');
+          if (!logo) return;
+          var item = logo.closest('.pf-item');
+          if (!item) return;
+          // The logo doubles as the rail's selection target, so it only follows
+          // the link once its app is the selected one — a click on an unselected
+          // app selects it first (Coming soon → Centium keeps working), exactly
+          // mirroring its "Visit …" CTA, which is only present when active.
+          if (!item.classList.contains('is-active')) return;
+          var url = item.getAttribute('data-pf-url');
+          if (!url) return;
+          e.preventDefault();
+          window.location.href = url;
+        });
+      })();
+
+      /* v10 (mobile): the stats panel's circular orbit meteor does not suit the
+         stacked single-column layout, so mobile gets a straight vertical track
+         instead — same nucleus, same history-built ribbon (so head and tail can
+         never separate), driven by the panel's scroll progress rather than
+         hover: scrolling down carries the comet down the track, scrolling up
+         carries it back. */
+      (function () {
+        if (window.__atxVComet) return; window.__atxVComet = true;
+        var X = 32, TOP = 42, BOT = 558, WIDE = 9, N = 64;
+        var hist = [], y = TOP, vel = 0;
+        var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+        function buildPath() {
+          var nose = Math.max(-24, Math.min(24, vel * 3.2));
+          var pts = [{ y: y + nose, w: 0 }, { y: y + nose * 0.55, w: WIDE * 0.72 }];
+          for (var i = 0; i < hist.length; i++) {
+            var age = i / (N - 1);
+            pts.push({ y: hist[i], w: WIDE * Math.pow(Math.max(0, 1 - age), 0.72) });
+          }
+          var d = 'M' + (X + pts[0].w).toFixed(1) + ',' + pts[0].y.toFixed(1);
+          for (var k = 1; k < pts.length; k++) d += 'L' + (X + pts[k].w).toFixed(1) + ',' + pts[k].y.toFixed(1);
+          for (var j = pts.length - 1; j >= 0; j--) d += 'L' + (X - pts[j].w).toFixed(1) + ',' + pts[j].y.toFixed(1);
+          return d + 'Z';
+        }
+
+        function frame() {
+          var wrap = document.querySelector('.stat-vtrack');
+          if (wrap && wrap.offsetParent && !reduce.matches) {
+            var panel = wrap.closest('.mission-stats');
+            var r = panel.getBoundingClientRect(), vh = window.innerHeight || 1;
+            var p = Math.max(0, Math.min(1, (vh - r.top) / (vh + r.height)));
+            var ty = TOP + (BOT - TOP) * p;
+            var prev = y;
+            y += (ty - y) * 0.14;
+            vel = y - prev;
+            hist.unshift(y);
+            if (hist.length > N) hist.length = N;
+
+            var speed = Math.min(1, Math.abs(vel) / 6);
+            var burn = 0.88 + 0.12 * Math.sin(performance.now() / 220);
+            var d = buildPath();
+            var flame = wrap.querySelector('.flame');
+            var haze = wrap.querySelector('.flameHaze');
+            var nuc = wrap.querySelector('.nucleus');
+            var grad = wrap.querySelector('#atxVTrailGrad');
+            if (flame) { flame.setAttribute('d', d); flame.setAttribute('opacity', (0.94 * burn).toFixed(3)); }
+            if (haze) { haze.setAttribute('d', d); haze.setAttribute('opacity', (0.5 * burn).toFixed(3)); }
+            if (nuc) {
+              nuc.setAttribute('cy', y.toFixed(1));
+              nuc.setAttribute('r', (6.5 * (0.94 + 0.06 * Math.sin(performance.now() / 180))).toFixed(2));
+            }
+            if (grad) {
+              grad.setAttribute('cy', y.toFixed(1));
               grad.setAttribute('r', (60 + 200 * speed).toFixed(1));
             }
           }
