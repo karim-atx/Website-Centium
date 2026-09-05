@@ -313,6 +313,105 @@
   ordering bug noted above — the handoff's stylesheet still had the pair
   in the losing order, so the reorder from v7 carries forward here too,
   now with the new 44% width.
+
+  Design pass v9 (Claude Design handoff, "Atraxia landing page (atraxia.org
+  root) — imported changes", rounds 6-14 — items 12-34): see commit bbcb69d
+  for the full item-by-item summary. Headlines: primary favicon inlined as
+  a data URI (can't 404 or serve stale); mobile dropdown open/closed states
+  rebuilt as one interpolated state via three registered custom properties
+  (--dd-gap/--dd-radius/--dd-sep); several stacked stats-comet defects
+  fixed (lost IntersectionObserver across re-renders, a viewport-gate that
+  starved both loops below the fold, an over-broad `.core`-hiding
+  selector); new public/legal.html (seven-section legal centre, unreviewed
+  draft). Also fixed a live production bug found while wiring the above:
+  deploy/cloudflare-worker.js's asset allowlist never gained "/icons/" or
+  "/legal.html", so those had been 404ing on atraxia.org since the v7
+  favicon-set rollout — fixed here, but needs manual redeploy to the
+  Cloudflare dashboard to take effect (this file isn't auto-deployed).
+
+  Design pass v10 (Claude Design handoff, "Atraxia landing page (atraxia.org
+  root) — imported changes", rounds 15-22 — see
+  scratchpad/design-handoff-atraxia-landing-v10/design_handoff_atraxia_landing/
+  README.md): items 35-51 on top of v9's items 1-34.
+    35. Intro loader: the travelling dot's SMIL `<animateMotion>` removed in
+        favour of a CSS motion path (`offset-path`/`offset-distance`), since
+        SMIL runs on the document timeline — late-parsed markup could seek
+        past its own duration and freeze at the path's end, where a CSS
+        motion path is element-relative and always starts at 0%. `.atx-swish`
+        retimed to match the dot's new easing.
+    37. New on-brand 404 page (public/atraxia-404.html, replacing the old
+        plain placeholder): cream/teal gradient, teal-pale glow, a seeded
+        46-star field (deterministic PRNG, not Math.random(), so the layout
+        never reshuffles on reload), two drifting streaks, mark + wordmark
+        linking home, a large ghosted "404", and buttons to home and the
+        legal centre. Respects prefers-reduced-motion. Kept light-mode only,
+        matching hub.html itself — the old file's separate dark-mode
+        palette wasn't part of this page's actual design and was dropped.
+    38. Portfolio glow purple/green rebalance (three attempts upstream, only
+        the final one applied): the flanking gradient stops were
+        proportional to --pf-mid-pos (mid*0.32 / 0.68*(100-mid)), symmetric
+        only when the midpoint happened to sit at 50% — fixed ±30/+14
+        offsets instead, and the radial mask's centre now tracks
+        --pf-mid-pos too instead of a fixed 50%. --pf-from/--pf-mid/--pf-to/
+        --pf-mid-pos registered as typed custom properties (colour/
+        percentage) and transitioned on .pf-carousel, so the gradient
+        re-resolves and cross-fades every frame instead of the colour swap
+        snapping instantly.
+    39/42/44/48. Hero primary CTA redesigned: light gradient-bordered pill
+        (`.btn--hero-cta`) replacing the plain link, purple->teal->green
+        ramp drifting slowly at rest (hover-only, since animating
+        background-position at rest repaints for the life of the page),
+        hover adds a teal glow, a one-pass sheen and a lift. Final markup
+        dropped the arrow (`<span class="cta-label">See the portfolio</span>`
+        only) — the handoff's own `.cta-arrow` CSS rules were left dead
+        after that change upstream and were dropped here rather than
+        ported inert.
+    40/47. Hero cursor jitter + parallax performance: `.star-layer,
+        .orbit-wrap` no longer carry `transition: transform` — a transition
+        on a property a rAF loop writes every frame fights the loop's own
+        easing and was the actual jitter source, not the loop itself;
+        `will-change: transform` instead. The parallax IIFE also rewritten
+        to cache its layer list (rebuilt on resize), read scroll position
+        once per frame instead of per listener, and skip DOM writes whose
+        value hasn't changed (WeakMap of last-written transforms) — this is
+        what made fast scrolling feel laggy.
+    46. Portfolio switch flicker, root cause: the passive nearest-item
+        watcher and a click's own `center()` call could disagree mid-scroll
+        and both write selection state. Fixed with a selection lock —
+        `center(i)` sets a `lockTarget` the passive watcher defers to until
+        the rail actually arrives (or a 900ms fallback releases it) — in
+        `bindRail()`'s `center()`/`nearest()`/`select()`. (Items 41/45 were
+        superseded first attempts at this same bug, not applied.)
+    49. Legal Centre tab clicks now reset scroll to top: a `toTop(el)`
+        helper smooth-scrolls the document scroller and walks up from the
+        clicked link resetting any scrollable ancestor too, since the page
+        could in principle be embedded in a constrained scroll container.
+    50. Shared-script null guard: the centium-tile href IIFE's element
+        lookup was unguarded, so it threw at the script's top level on any
+        page without that element (Legal, the new 404 page) — aborting
+        every IIFE registered after it in the same script, including the
+        mobile nav dropdown and founder-card flip. Guarded with `if (tile)`.
+    51. Legal Centre background watermark: the same `.hero-backdrop`
+        element/class/rule the landing page's hero uses (so scale, opacity,
+        desaturation and sizing come from one shared definition), as the
+        first child of the page, plus the same cursor parallax (ported
+        standalone in legal.html's own script, since that page has no star
+        layers/orbit to share a loop with). Two supporting rules were
+        needed since this page doesn't share hub.html's `.page`/`.nav`/main
+        layering: `position: relative; z-index: 1` added directly to its
+        existing `.header`/`main`/`footer` rules (a position:fixed z-index:0
+        watermark would otherwise paint over static in-flow content per the
+        CSS stacking order), and no `--navh` neutralising was needed since
+        this page never had that hub.html-specific negative margin to begin
+        with. A full nav/dark-header treatment was tried upstream and
+        reverted per the handoff's own note — only the watermark and
+        parallax were ported, not the nav.
+  Two environment shims flagged in the handoff (a document-capture scroll
+  listener/poll and an `atxScrollY()` helper, present only because the
+  design host scrolls an internal container rather than window) were not
+  ported, same as every prior round. v10's icon PNGs differ in byte size
+  from what's deployed but are pixel-identical on inspection — re-export
+  noise, not a real change, so public/icons/* was left as-is.
 -->
 
 <html lang="en">
@@ -394,8 +493,15 @@
 
       .wrap { max-width: 1100px; margin: 0 auto; padding-inline: 1.5rem; }
       .page { position: relative; overflow: hidden; background: linear-gradient(180deg, rgb(var(--bg-grad-a)) 0%, rgb(var(--bg-grad-b)) 100%); }
-      .hero-backdrop { position: fixed; z-index: 0; left: 50%; top: 58%; transform: translate(-50%, -50%); width: 58vw; max-width: 760px; max-width: 760px; opacity: 0.045; filter: saturate(0.3) brightness(1.5) blur(0.5px); pointer-events: none; user-select: none; }
-      .star-layer, .orbit-wrap { transition: transform 0.12s linear; }
+      .hero-backdrop { will-change: transform; position: fixed; z-index: 0; left: 50%; top: 58%; transform: translate(-50%, -50%); width: 58vw; max-width: 760px; max-width: 760px; opacity: 0.045; filter: saturate(0.3) brightness(1.5) blur(0.5px); pointer-events: none; user-select: none; }
+      /* v13: was transition: transform 0.12s linear. The parallax loop writes
+         a new inline transform every rAF frame and already eases in JS
+         (mx += (tx - mx) * 0.08) — a CSS transition on the same property
+         restarted a 120ms tween every single frame, so the transition engine
+         and the JS easing fought each other. That fight was the jitter on
+         cursor movement. Never put a transition on a property a rAF loop
+         writes per-frame; will-change is the correct hint here instead. */
+      .star-layer, .orbit-wrap { will-change: transform; }
       .star-field { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
       .star-layer { position: absolute; inset: -6% 0; will-change: transform; }
       .star-layer span { position: absolute; border-radius: 50%; }
@@ -958,11 +1064,32 @@
       .atx-swish {
         object-fit: contain;
         -webkit-clip-path: polygon(-15.37% 387.84%, 16.37% -213.10%, -232.96% -238.55%, -264.70% 362.38%); clip-path: polygon(-15.37% 387.84%, 16.37% -213.10%, -232.96% -238.55%, -264.70% 362.38%);
-        animation: atxSwishDraw 1.35s linear 0.85s forwards;
+        /* v13: was 1.35s linear 0.85s. Linear easing on a baked-clip-path
+           reveal whose own stops already accelerate hard early meant the
+           drawn edge overtook the head (which travels eased) mid-sweep.
+           Matching the circle's own easing, with a slightly longer lead-in,
+           keeps the reveal trailing the head throughout. */
+        animation: atxSwishDraw 1.3s cubic-bezier(.34,0,.16,1) 0.9s forwards;
       }
       .atx-comet { stroke-dasharray: 130 1000; stroke-dashoffset: 130; opacity: 0; animation: atxComet 1.35s cubic-bezier(.34,0,.16,1) 0.7s forwards; }
       .atx-shimmer { stroke-dasharray: 90 1000; stroke-dashoffset: 90; opacity: 0; animation: atxShimmer 4s ease-in-out 2.5s infinite; }
-      .atx-dot { opacity: 0; animation: atxDotIn 0.5s cubic-bezier(.4,0,.3,1) 0.12s forwards, atxDotSettle 3.5s ease-in-out 2.4s infinite; }
+      /* v13: the path already starts bottom-left (M6,754); the old
+         <animateMotion begin="0s"> ran on the document timeline, so if the
+         markup parsed a second or more into page life the animation was
+         seeked past its own duration and froze at the path's END instead —
+         reading as "the circle starts at the top". A CSS motion path is
+         element-relative and always begins at 0% = the bottom regardless of
+         when it starts running. If #atxSwish's `d` is ever edited, this
+         offset-path copy must be edited with it. */
+      .atx-dot {
+        opacity: 0;
+        offset-path: path("M6,754 Q213,769 233.5,773.5 Q254,778 275.0,770.5 Q296,763 316.5,754.5 Q337,746 357.5,737.0 Q378,728 399.0,718.0 Q420,708 440.5,697.5 Q461,687 481.5,676.5 Q502,666 523.0,654.5 Q544,643 564.5,631.5 Q585,620 605.5,607.5 Q626,595 647.0,582.0 Q668,569 688.5,556.0 Q709,543 729.5,529.5 Q750,516 771.0,501.5 Q792,487 812.5,472.5 Q833,458 854.0,442.5 Q875,427 895.5,411.5 Q916,396 936.5,379.0 Q957,362 978.0,344.5 Q999,327 1019.5,316.5 Q1040,306 1057.5,278.0 Q1075,250 1102.5,218.5 L1130,187");
+        offset-distance: 0%;   /* 0% = M6,754 — the bottom of the sweep */
+        offset-rotate: 0deg;   /* travel only; the circle must not spin */
+        animation: atxDotIn 0.5s cubic-bezier(.4,0,.3,1) 0.12s forwards,
+                   atxDotMove 1.35s cubic-bezier(.34,0,.16,1) 0.7s forwards,
+                   atxDotSettle 3.5s ease-in-out 2.4s infinite;
+      }
       .atx-glint { opacity: 0; animation: atxGlint 1.35s ease-in-out 0.7s forwards; }
 
       @keyframes atxLoaderOut {
@@ -1018,6 +1145,7 @@
         26% { stroke-dashoffset: -1000; opacity: 0; }
         100% { stroke-dashoffset: -1000; opacity: 0; }
       }
+      @keyframes atxDotMove { from { offset-distance: 0%; } to { offset-distance: 100%; } }
       @keyframes atxDotIn { 0% { opacity: 0; } 70% { opacity: 0.82; } 100% { opacity: 1; } }
       @keyframes atxDotSettle { 0%, 100% { opacity: 0.92; } 8% { opacity: 1; } }
       @keyframes atxGlint { 0%, 46% { opacity: 0; } 62% { opacity: 0.5; } 100% { opacity: 0; } }
@@ -1028,7 +1156,7 @@
         .atx-wordmark { animation: atxWordIn 0.4s ease 0.1s forwards !important; }
         .atx-comet, .atx-shimmer, .atx-glint { animation: none !important; opacity: 0 !important; }
         .atx-swish { animation: none !important; -webkit-clip-path: none !important; clip-path: none !important; }
-        .atx-dot { animation: none !important; display: none !important; }
+        .atx-dot { animation: none !important; display: none !important; offset-path: none !important; }
       }
 
       /* ---------- v8: stats — one unified panel, dividers, brand motifs ---------- */
@@ -1283,7 +1411,17 @@
       /* v7: portfolio selection glow — a lens-shaped wash, wide at the centre
          and feathered to nothing at the edges, coloured from the selected
          app's own logo (per-item data-pf-from/mid/to). */
-      .pf-carousel { position: relative; }
+      .pf-carousel {
+        position: relative;
+        /* v12a: the glow's colours and midpoint animate here, on the element
+           that actually sets them, at the same 0.45s/curve as the items and
+           panels — so glow, logo and copy move as one. This also smooths the
+           +1-frame and +480ms midpoint re-measurements, which used to land as
+           two visible snaps mid-transition. */
+        transition: --pf-from 0.45s cubic-bezier(.22,1,.36,1),
+                    --pf-mid 0.45s cubic-bezier(.22,1,.36,1),
+                    --pf-to 0.45s cubic-bezier(.22,1,.36,1);
+      }
       /* v10: clearer separation between the title/description block and the
          app selector row below it. */
       #portfolio .pf-carousel { margin-top: 3.25rem; }
@@ -1297,18 +1435,27 @@
         width: min(1700px, 196%); height: 700px; z-index: 0; pointer-events: none;
         /* v10: the purple→green transition is pinned to --pf-mid-pos, the active
            logo's own centreline within this glow (set in JS), instead of the
-           glow's geometric centre; the flanking stops stay proportional to it so
-           the ramp keeps its original shape. */
+           glow's geometric centre.
+           v12: the flanking stops were proportional to the midpoint (mid*0.32 /
+           0.68*(100-mid)), which is only symmetric when the midpoint happens to
+           land on 50% — any drift gave one colour more of the ramp, and purple
+           was winning. Fixed ±30/+14 either side instead (asymmetric on purpose:
+           green reads lighter once blurred over cream, so it gets more of the
+           ramp to balance perceptually, not just geometrically). */
         background: linear-gradient(90deg,
-          var(--pf-from, #8E6DE0) 0%,
-          var(--pf-from, #8E6DE0) calc(var(--pf-mid-pos, 50%) * 0.32),
-          var(--pf-mid, #7E8FD8) var(--pf-mid-pos, 50%),
-          var(--pf-to, #4FC08C) calc(var(--pf-mid-pos, 50%) + (100% - var(--pf-mid-pos, 50%)) * 0.68),
-          var(--pf-to, #4FC08C) 100%);
-        -webkit-mask-image: radial-gradient(ellipse 52% 52% at 50% 50%, #000 0%, rgb(0 0 0 / 0.9) 34%, rgb(0 0 0 / 0.42) 64%, transparent 100%);
-        mask-image: radial-gradient(ellipse 52% 52% at 50% 50%, #000 0%, rgb(0 0 0 / 0.9) 34%, rgb(0 0 0 / 0.42) 64%, transparent 100%);
+          var(--pf-from) 0%,
+          var(--pf-from) calc(var(--pf-mid-pos) - 30%),
+          var(--pf-mid) var(--pf-mid-pos),
+          var(--pf-to) calc(var(--pf-mid-pos) + 14%),
+          var(--pf-to) 100%);
+        -webkit-mask-image: radial-gradient(ellipse 52% 52% at var(--pf-mid-pos) 50%, #000 0%, rgb(0 0 0 / 0.9) 34%, rgb(0 0 0 / 0.42) 64%, transparent 100%);
+        mask-image: radial-gradient(ellipse 52% 52% at var(--pf-mid-pos) 50%, #000 0%, rgb(0 0 0 / 0.9) 34%, rgb(0 0 0 / 0.42) 64%, transparent 100%);
         filter: blur(34px) saturate(1.12);
-        opacity: 0; transition: opacity 0.55s ease, background 0.55s ease;
+        /* background-image cannot interpolate between two gradients, so the
+           colour swap used to be instant (the flicker). The stops are registered
+           custom properties transitioned on .pf-carousel above, so the gradient
+           re-resolves every frame and cross-fades instead. */
+        opacity: 0; transition: opacity 0.45s cubic-bezier(.22,1,.36,1);
       }
       .pf-carousel.is-glowing .pf-glow { opacity: 0.82; }
       .pf-rail, .pf-panels { position: relative; z-index: 1; }
@@ -1445,28 +1592,128 @@
       @property --dd-gap { syntax: "<length>"; inherits: true; initial-value: -5.6px; }
       @property --dd-radius { syntax: "<length>"; inherits: true; initial-value: 0px; }
       @property --dd-sep { syntax: "<number>"; inherits: true; initial-value: 0; }
+      /* v10: registering these as typed custom properties (not plain vars with
+         fallbacks) is what lets .pf-carousel's transition above actually
+         interpolate the portfolio glow's colours and midpoint frame-by-frame,
+         instead of the gradient snapping instantly on every colour change. */
+      @property --pf-from { syntax: "<color>"; inherits: true; initial-value: #8E6DE0; }
+      @property --pf-mid { syntax: "<color>"; inherits: true; initial-value: #6EA6A6; }
+      @property --pf-to { syntax: "<color>"; inherits: true; initial-value: #35B37D; }
+      @property --pf-mid-pos { syntax: "<percentage>"; inherits: true; initial-value: 50%; }
+      /* v12: hero primary CTA. A light surface keeps 4.5:1+ navy-on-near-white
+         over the dark hero, with the brand's purple→teal→green ramp moved to a
+         gradient BORDER (two-layer background: padding-box surface over
+         border-box ramp) so the colour language is referenced without shouting.
+         The ramp drifts slowly at rest; hover adds a teal glow, a one-pass
+         sheen and a lift. Nothing moves for reduced-motion users. */
+      .hero .btn--hero-cta {
+        /* clearly larger than the adjacent ghost link (0.9rem) so the primary
+           reads as primary; padding grows with it to stay proportionate. */
+        font-size: 1.06rem;
+        font-weight: 800;
+        padding: 0.82rem 1.6rem;
+        gap: 0;
+        position: relative;
+        overflow: hidden;
+        isolation: isolate;
+        border: 1.6px solid transparent;
+        border-radius: 999px;
+        color: rgb(var(--navy));
+        background:
+          linear-gradient(180deg, rgb(247 252 253) 0%, rgb(231 244 248) 100%) padding-box,
+          linear-gradient(100deg, #8E6DE0 0%, rgb(var(--teal)) 34%, #4FC08C 62%, rgb(var(--teal)) 100%) border-box;
+        background-size: auto, 240% 100%;
+        background-position: 0 0, 0% 50%;
+        box-shadow:
+          0 1px 0 rgb(255 255 255 / 0.7) inset,
+          0 10px 26px -10px rgb(5 6 12 / 0.5),
+          0 0 0 rgb(var(--teal) / 0);
+        transition: transform 0.24s cubic-bezier(.22,1,.36,1),
+                    box-shadow 0.28s ease,
+                    background-position 0.4s ease;
+      }
+      /* the sheen sits above the surface but below the label */
+      .hero .btn--hero-cta::after {
+        content: ""; position: absolute; top: 0; bottom: 0; left: -60%;
+        width: 45%; z-index: -1; pointer-events: none;
+        background: linear-gradient(100deg, rgb(255 255 255 / 0) 0%, rgb(255 255 255 / 0.85) 50%, rgb(255 255 255 / 0) 100%);
+        transform: skewX(-18deg);
+        opacity: 0;
+      }
+      .hero .btn--hero-cta:hover, .hero .btn--hero-cta:focus-visible {
+        transform: translateY(-2px);
+        animation: atxCtaRamp 9s linear infinite;
+        box-shadow:
+          0 1px 0 rgb(255 255 255 / 0.8) inset,
+          0 16px 34px -12px rgb(5 6 12 / 0.55),
+          0 0 26px -2px rgb(var(--teal) / 0.55);
+      }
+      .hero .btn--hero-cta:hover::after, .hero .btn--hero-cta:focus-visible::after {
+        animation: atxCtaSheen 0.72s cubic-bezier(.4,0,.2,1) 1;
+      }
+      .hero .btn--hero-cta:active { transform: translateY(0); }
+      @keyframes atxCtaRamp { from { background-position: 0 0, 0% 50%; } to { background-position: 0 0, 200% 50%; } }
+      @keyframes atxCtaSheen {
+        0% { opacity: 0; left: -60%; }
+        18% { opacity: 1; }
+        100% { opacity: 0; left: 115%; }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .hero .btn--hero-cta,
+        .hero .btn--hero-cta:hover,
+        .hero .btn--hero-cta:focus-visible { animation: none !important; transition: none !important; }
+        .hero .btn--hero-cta::after { animation: none !important; opacity: 0 !important; }
+        .hero .btn--hero-cta:hover, .hero .btn--hero-cta:focus-visible { transform: none !important; }
+      }
     </style>
     <script>
       (function () {
         if (window.__atxParallax) return; window.__atxParallax = true;
         var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
         var mx = 0, my = 0, tx = 0, ty = 0, y = 0, raf = 0;
+        /* v13: paint() used to run three querySelector(All) calls and
+           re-parse two attributes per layer every frame, then write a
+           transform to every element whether or not its value had changed —
+           including .hero-backdrop, which is position:fixed with a filter,
+           so each write forced a large repaint. This is what made fast
+           scrolling feel laggy. Three fixes: cache the layer list and its
+           parsed data-depth/data-mx factors (rebuilt on resize and every ~90
+           frames); read scroll once per frame here instead of in every
+           listener; skip writes whose value hasn't changed via a WeakMap of
+           last-written values (during pure scrolling mx/my are static, so
+           this eliminates the backdrop repaint entirely). */
+        var cache = null, cacheAge = 0, orbEl = null, wmEl = null, lastWrite = new WeakMap();
+        function buildCache() {
+          var nodes = document.querySelectorAll('.star-layer, .parx');
+          cache = [];
+          for (var i = 0; i < nodes.length; i++) {
+            var d = parseFloat(nodes[i].getAttribute('data-depth')) || 0;
+            cache.push({ el: nodes[i], d: d, f: parseFloat(nodes[i].getAttribute('data-mx')) || d * 24 });
+          }
+          orbEl = document.querySelector('.orbit-wrap');
+          wmEl = document.querySelector('.hero-backdrop');
+          cacheAge = 0;
+        }
+        function put(el, v) {
+          if (!el || lastWrite.get(el) === v) return;
+          lastWrite.set(el, v);
+          el.style.transform = v;
+        }
         function paint() {
           raf = 0;
           if (mq.matches) return;
+          if (!cache || cacheAge++ > 90) buildCache();
+          y = window.scrollY || 0;   // read once per frame, not per event
           mx += (tx - mx) * 0.08; my += (ty - my) * 0.08;
-          var layers = document.querySelectorAll('.star-layer, .nebula, .parx');
-          for (var i = 0; i < layers.length; i++) {
-            var d = parseFloat(layers[i].getAttribute('data-depth')) || 0;
-            var f = parseFloat(layers[i].getAttribute('data-mx')) || d * 24;
-            layers[i].style.transform = 'translate3d(' + (mx * f).toFixed(2) + 'px,' + (y * d + my * f).toFixed(2) + 'px,0)';
+          for (var i = 0; i < cache.length; i++) {
+            var L = cache[i];
+            put(L.el, 'translate3d(' + (mx * L.f).toFixed(2) + 'px,' + (y * L.d + my * L.f).toFixed(2) + 'px,0)');
           }
-          var orb = document.querySelector('.orbit-wrap');
-          if (orb) orb.style.transform = 'translate3d(' + (mx * -8).toFixed(2) + 'px,' + (y * -0.16 + my * -8).toFixed(2) + 'px,0) scale(' + (1 + Math.min(y, 900) * 0.00006).toFixed(4) + ')';
-          var wm = document.querySelector('.hero-backdrop');
-          if (wm) wm.style.transform = 'translate(-50%,-50%) translate3d(' + (mx * 5).toFixed(2) + 'px,' + (my * 5).toFixed(2) + 'px,0)';
+          put(orbEl, 'translate3d(' + (mx * -8).toFixed(2) + 'px,' + (y * -0.16 + my * -8).toFixed(2) + 'px,0) scale(' + (1 + Math.min(y, 900) * 0.00006).toFixed(4) + ')');
+          put(wmEl, 'translate(-50%,-50%) translate3d(' + (mx * 5).toFixed(2) + 'px,' + (my * 5).toFixed(2) + 'px,0)');
           if (Math.abs(tx - mx) > 0.002 || Math.abs(ty - my) > 0.002) tick();
         }
+        window.addEventListener('resize', function () { cache = null; }, { passive: true });
         function tick() { if (!raf) raf = requestAnimationFrame(paint); }
         /* v10 (mobile): there is no cursor on touch, so the hero's parallax is
            driven by scroll progress through the hero instead — the same tx/ty
@@ -1481,7 +1728,7 @@
           tx = Math.sin(p * Math.PI);
           ty = p * 2 - 1;
         }
-        window.addEventListener('scroll', function () { y = window.scrollY || 0; heroDrive(); tick(); }, { passive: true });
+        window.addEventListener('scroll', function () { heroDrive(); tick(); }, { passive: true });
         window.addEventListener('pointermove', function (e) {
           if (coarse.matches) return;   // scroll owns the motion on touch
           tx = (e.clientX / window.innerWidth - 0.5) * 2;
@@ -1532,7 +1779,6 @@
             <g class="atx-dot" filter="url(#atxBloom)">
               <circle r="88" fill="url(#atxGlintGrad)" class="atx-glint" />
               <circle r="55" fill="url(#atxDotGrad)" />
-              <animateMotion dur="2.05s" begin="0s" fill="freeze" calcMode="spline" keyPoints="0;0;1" keyTimes="0;0.341;1" keySplines="0 0 0 0;0.34 0 0.16 1"><mpath href="#atxSwish" /></animateMotion>
             </g>
           </svg>
         </div>
@@ -2198,7 +2444,7 @@
               possibilities into solutions designed to move things forward.
             </p>
             <div class="hero-actions">
-              <a class="btn btn--primary" href="#portfolio">See the portfolio →</a>
+              <a class="btn btn--primary btn--hero-cta" href="#portfolio"><span class="cta-label">See the portfolio</span></a>
               <a class="btn btn--ghost" href="#founders">Meet the founders →</a>
             </div>
           </div>
@@ -2370,7 +2616,7 @@
             <div class="pf-carousel is-glowing">
               <span class="pf-glow" aria-hidden="true"></span>
               <div class="pf-rail" role="tablist" aria-label="Portfolio">
-                <button class="pf-item is-active" type="button" role="tab" aria-selected="true" data-pf="centium" data-pf-url="/centium" data-pf-from="#8E6DE0" data-pf-mid="#7E8FD8" data-pf-to="#4FC08C">
+                <button class="pf-item is-active" type="button" role="tab" aria-selected="true" data-pf="centium" data-pf-url="/centium" data-pf-from="#8E6DE0" data-pf-mid="#6EA6A6" data-pf-to="#35B37D">
                   <span class="pf-logo">
                     <img src="atraxia/centium-mark.png" alt="" />
                   </span>
@@ -2705,7 +2951,11 @@
       (function () {
         var segs = location.pathname.split('/').filter(Boolean);
         var href = segs[0] === 'Website-Centium' ? '/Website-Centium/centium/' : '/centium';
-        document.getElementById('centium-tile').href = href;
+        // v10: guarded, since this same shared script runs on the Legal and
+        // 404 pages too, which have no #centium-tile — the old unguarded
+        // lookup threw at script top-level there, aborting every IIFE after it.
+        var tile = document.getElementById('centium-tile');
+        if (tile) tile.href = href;
       })();
 
       // v3: click-to-flip founder cards. Delegated so it survives re-renders.
@@ -2890,10 +3140,13 @@
             var pct = ((lr.left + lr.width / 2) - gr.left) / gr.width * 100;
             wrap.style.setProperty('--pf-mid-pos', Math.max(0, Math.min(100, pct)).toFixed(2) + '%');
           }
-          function realign() {
+          var lockTarget = -1, lockTimer = 0, realignRaf = 0;
+          function realignNow() {
+            realignRaf = 0;
             var wrap = rail.closest('.pf-carousel');
             if (wrap && current > -1) alignGlow(wrap, items[current]);
           }
+          function realign() { if (!realignRaf) realignRaf = requestAnimationFrame(realignNow); }
           window.addEventListener('resize', realign, { passive: true });
           rail.addEventListener('scroll', realign, { passive: true });
 
@@ -2912,12 +3165,12 @@
                 wrap.style.setProperty('--pf-mid', items[i].getAttribute('data-pf-mid') || to);
                 wrap.classList.add('is-glowing');
                 alignGlow(wrap, items[i]);
-                requestAnimationFrame(function () { alignGlow(wrap, items[i]); });
                 clearTimeout(alignT);
                 alignT = setTimeout(function () { alignGlow(wrap, items[i]); }, 480);
               } else {
                 wrap.classList.remove('is-glowing');
-                wrap.style.removeProperty('--pf-mid-pos');
+                clearTimeout(alignT);
+                if (realignRaf) { cancelAnimationFrame(realignRaf); realignRaf = 0; }
               }
             }
             items.forEach(function (it, n) {
@@ -2929,8 +3182,19 @@
               panels[p].classList.toggle('is-active', panels[p].getAttribute('data-pf-panel') === key);
             }
           }
+          function targetLeft(i) {
+            var it = items[i];
+            return it.offsetLeft + it.offsetWidth / 2 - rail.clientWidth / 2;
+          }
           function nearest() {
             raf = 0;
+            if (lockTarget > -1) {
+              // arrival check, so the lock can never strand the watcher
+              if (Math.abs(rail.scrollLeft - targetLeft(lockTarget)) < 2) {
+                lockTarget = -1; clearTimeout(lockTimer);
+              }
+              return;
+            }
             var mid = rail.scrollLeft + rail.clientWidth / 2, best = 0, bestD = Infinity;
             items.forEach(function (it, n) {
               var d = Math.abs(it.offsetLeft + it.offsetWidth / 2 - mid);
@@ -2940,9 +3204,13 @@
           }
           function tick() { if (!raf) raf = requestAnimationFrame(nearest); }
           function center(i) {
-            var it = items[i];
+            lockTarget = i;
+            clearTimeout(lockTimer);
+            // fallback release, in case the scroll is interrupted and the
+            // arrival check above never sees the target position
+            lockTimer = setTimeout(function () { lockTarget = -1; }, 900);
             rail.scrollTo({
-              left: it.offsetLeft + it.offsetWidth / 2 - rail.clientWidth / 2,
+              left: targetLeft(i),
               behavior: reduce.matches ? 'auto' : 'smooth'
             });
           }

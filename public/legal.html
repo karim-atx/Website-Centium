@@ -62,6 +62,16 @@
       a { color: rgb(var(--teal-dark)); text-decoration: none; }
       a:hover, a:focus-visible { color: rgb(var(--navy)); }
 
+      /* v10: background watermark, ported from hub.html's .hero-backdrop —
+         same element/class/rule so scale, opacity, desaturation and sizing
+         come from one shared definition rather than being re-derived. It's
+         position: fixed with z-index: 0, so header/main/footer below all
+         need position: relative + z-index: 1 to paint above it (static,
+         non-positioned boxes paint before z-index: 0 positioned ones per the
+         CSS stacking order — without this the watermark would cover the
+         page content instead of sitting behind it). */
+      .hero-backdrop { will-change: transform; position: fixed; z-index: 0; left: 50%; top: 58%; transform: translate(-50%, -50%); width: 58vw; max-width: 760px; opacity: 0.045; filter: saturate(0.3) brightness(1.5) blur(0.5px); pointer-events: none; user-select: none; }
+      @media (max-width: 760px) { .hero-backdrop { width: 88vw; } }
       .header { border-bottom: 1px solid rgb(var(--border) / 0.1); background: rgb(var(--cream) / 0.92); position: sticky; top: 0; z-index: 10; backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
       .header .wrap { max-width: 1100px; margin: 0 auto; padding: 1.1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
       .header .brand { display: flex; align-items: center; gap: 0.8rem; }
@@ -70,7 +80,7 @@
       .header .back { font-size: 0.86rem; font-weight: 600; color: rgb(var(--charcoal-soft)); }
       .header .back:hover, .header .back:focus-visible { color: rgb(var(--navy)); }
 
-      main { max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+      main { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
       h1 { font-size: clamp(2rem, 5vw, 2.9rem); line-height: 1.08; margin: 0 0 0.7rem; letter-spacing: -0.02em; }
       .lede { margin: 0 0 1.5rem; max-width: 60ch; font-size: 1.05rem; line-height: 1.7; color: rgb(var(--charcoal-soft)); }
       .draft-banner { margin: 0 0 2.5rem; padding: 0.9rem 1.1rem; border-radius: 0.9rem; background: rgb(var(--cream-soft)); border: 1px solid rgb(var(--border) / 0.1); font-size: 0.85rem; line-height: 1.6; color: rgb(var(--charcoal-soft)); max-width: 70ch; }
@@ -132,7 +142,7 @@
       .contact-line { margin-top: 3.5rem; padding-top: 1.5rem; border-top: 1px solid rgb(var(--border) / 0.12); font-size: 0.86rem; color: rgb(var(--charcoal-faint)); }
       .contact-line p { margin: 0; color: inherit; font-size: inherit; }
 
-      footer { border-top: 1px solid rgb(var(--border) / 0.1); padding: 2rem 1.5rem; background: rgb(var(--cream-soft)); }
+      footer { position: relative; z-index: 1; border-top: 1px solid rgb(var(--border) / 0.1); padding: 2rem 1.5rem; background: rgb(var(--cream-soft)); }
       footer .wrap { max-width: 1100px; margin: 0 auto; display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
       footer small { color: rgb(var(--charcoal-faint)); }
       footer a { font-size: 0.86rem; font-weight: 600; }
@@ -145,6 +155,7 @@
     </style>
   </head>
   <body>
+    <img class="hero-backdrop" src="atraxia/atraxia-mark-hi.png" alt="" aria-hidden="true" />
     <header class="header">
       <div class="wrap">
         <a href="/" class="brand">
@@ -465,12 +476,34 @@
           });
           panels.forEach(function (p) { p.classList.toggle('is-active', p.getAttribute('data-panel') === id); });
         }
+        // A new tab should start at the top of its content. This page is
+        // normally its own document scroller, but resets the document
+        // scroller AND walks up from the clicked link resetting any
+        // scrollable ancestor too, so the reset still works if it's ever
+        // embedded inside a constrained scroll container.
+        function toTop(el) {
+          var soft = { top: 0, behavior: 'smooth' };
+          try { window.scrollTo(soft); } catch (e) { window.scrollTo(0, 0); }
+          var de = document.scrollingElement || document.documentElement;
+          if (de) { try { de.scrollTo(soft); } catch (e) { de.scrollTop = 0; } }
+          var n = el && el.parentNode;
+          while (n && n.nodeType === 1) {
+            if (n.scrollHeight > n.clientHeight + 4) {
+              var oy = getComputedStyle(n).overflowY;
+              if (oy === 'auto' || oy === 'scroll') {
+                try { n.scrollTo(soft); } catch (e) { n.scrollTop = 0; }
+              }
+            }
+            n = n.parentNode;
+          }
+        }
         tabs.forEach(function (a) {
           a.addEventListener('click', function (e) {
             e.preventDefault();
             var id = a.getAttribute('data-tab');
             history.replaceState(null, '', '#' + id);
             show(id);
+            toTop(a);
           });
         });
         show(location.hash ? location.hash.slice(1) : ids[0]);
@@ -513,6 +546,28 @@
         document.getElementById('cookie-accept-all').addEventListener('click', function () { state.analytics = true; state.preference = true; save(); });
         document.getElementById('cookie-reject-all').addEventListener('click', function () { state.analytics = false; state.preference = false; save(); });
         paint();
+      })();
+
+      // v10: cursor parallax for the background watermark — the same subtle
+      // drift hub.html's hero gives .hero-backdrop, ported standalone since
+      // this page has no star layers/orbit for it to share a loop with.
+      (function () {
+        var mq = window.matchMedia('(prefers-reduced-motion: reduce)');
+        var wm = document.querySelector('.hero-backdrop');
+        if (!wm || mq.matches) return;
+        var mx = 0, my = 0, tx = 0, ty = 0, raf = 0;
+        function paint() {
+          raf = 0;
+          mx += (tx - mx) * 0.08; my += (ty - my) * 0.08;
+          wm.style.transform = 'translate(-50%,-50%) translate3d(' + (mx * 5).toFixed(2) + 'px,' + (my * 5).toFixed(2) + 'px,0)';
+          if (Math.abs(tx - mx) > 0.002 || Math.abs(ty - my) > 0.002) tick();
+        }
+        function tick() { if (!raf) raf = requestAnimationFrame(paint); }
+        window.addEventListener('pointermove', function (e) {
+          tx = (e.clientX / window.innerWidth - 0.5) * 2;
+          ty = (e.clientY / window.innerHeight - 0.5) * 2;
+          tick();
+        }, { passive: true });
       })();
     </script>
   </body>
