@@ -3,12 +3,13 @@
 //
 //   1. atraxia.org (root) -> the "hub of apps" static page, plus the
 //      root-level static files it references (favicon.svg, icons.svg,
-//      robots.txt, sitemap.xml, and everything under /atraxia/ — the
-//      logo assets and founder photos hub.html loads by root-relative
-//      path). The build (see .github/workflows/deploy.yml) moves the
-//      Centium app to a /centium subfolder and puts the hub
-//      (public/hub.html) and its sibling public/ files at the site's own
-//      root, so these are all straight proxies to that GitHub Pages root.
+//      robots.txt, sitemap.xml, legal.html, and everything under /atraxia/
+//      and /icons/ — the logo assets, founder photos and favicon/manifest
+//      set hub.html loads by root-relative path). The build (see
+//      .github/workflows/deploy.yml) moves the Centium app to a /centium
+//      subfolder and puts the hub (public/hub.html) and its sibling
+//      public/ files at the site's own root, so these are all straight
+//      proxies to that GitHub Pages root.
 //   2. atraxia.org/centium/* -> the Centium app itself, at that same
 //      /centium subfolder.
 //
@@ -55,9 +56,18 @@ const HUB_ASSET_PATHS = new Set([
   "/sitemap.xml",
   "/privacy.html",
   "/accessibility.html",
+  "/legal.html",
   "/atraxia-404.html",
 ]);
-const HUB_ASSET_PREFIXES = ["/atraxia/"];
+// "/icons/" added for the favicon/manifest set hub.html has referenced by
+// root-relative path since the "landing page enhancements" v7 handoff — this
+// prefix was never added alongside it, so every one of those files (the
+// sized favicons, the apple-touch-icon and the manifest) has been 404ing in
+// production ever since, confirmed directly against atraxia.org. The v9
+// handoff's inline data-URI primary favicon (see hub.html's first rel="icon")
+// is what will actually render meanwhile, since it needs no fetch at all —
+// but the rest stay broken without this until this file is redeployed.
+const HUB_ASSET_PREFIXES = ["/atraxia/", "/icons/"];
 
 function isHubAsset(pathname) {
   return pathname === "/" || HUB_ASSET_PATHS.has(pathname) || HUB_ASSET_PREFIXES.some((p) => pathname.startsWith(p));
