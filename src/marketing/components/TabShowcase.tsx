@@ -1,6 +1,4 @@
 import React, { useEffect, useRef, useState } from "react";
-import clsx from "clsx";
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { AppScreen } from "./illustrations/AppScreen";
 
 export interface ShowcaseTab {
@@ -8,19 +6,30 @@ export interface ShowcaseTab {
   title: string;
   description: string;
   points: string[];
-  tone: "primary" | "teal";
   screen: Parameters<typeof AppScreen>[0]["variant"];
 }
 
 const PIN_TOP = 72; // sticky nav height — the track pins its section just below it
 
+// v2 landing handoff: each slide alternates lavender/teal, dark-left to
+// light-right — this is the sole source of a slide's color now that the
+// pill-tab row (and its own lavender/teal alternation) has been removed.
+const PANE_BG = [
+  "linear-gradient(90deg,#4E3894 0%,#6F55BE 34%,#A895E0 68%,#E4DCF8 100%)",
+  "linear-gradient(90deg,#2F5F58 0%,#4B857C 34%,#8DBDB4 68%,#DDEEEA 100%)",
+  "linear-gradient(90deg,#54409B 0%,#7660C4 34%,#AE9DE4 68%,#E7E0F9 100%)",
+  "linear-gradient(90deg,#33665E 0%,#508B82 34%,#93C1B9 68%,#E0F0EC 100%)",
+];
+
 /** Drives the Home platform section's scroll-through: pins the section under
  *  the nav while the page scrolls past it, and maps that scroll distance to
  *  a tab index — so scrolling down runs the showcase sideways before
- *  releasing into the next section. Ported from the handoff's
- *  `trackPlatform()`. Pins only when the compact layout genuinely fits the
- *  viewport (≥1024×620 and the measured section height clears it);
- *  otherwise this is a no-op and the tabs behave as plain click-to-switch. */
+ *  releasing into the next section. Pins only when the compact layout
+ *  genuinely fits the viewport (≥1024×620 and the measured section height
+ *  clears it); otherwise this is a no-op and slides fall back to a plain
+ *  stack (no click-to-switch control exists anymore — v2 removed the pill
+ *  tabs entirely, so the pinned scroll-through is the only way to move
+ *  between slides on a viewport that supports it). */
 function usePlatformScrollPin(tabCount: number, sectionId: string, trackId: string) {
   const [tab, setTab] = useState(0);
   const [pinned, setPinned] = useState(false);
@@ -65,140 +74,80 @@ function usePlatformScrollPin(tabCount: number, sectionId: string, trackId: stri
     };
   }, [tabCount, sectionId, trackId]);
 
-  const jumpTo = (i: number) => {
-    const track = document.getElementById(trackId);
-    if (track && track.style.height) {
-      const step = Math.round(window.innerHeight * 0.72);
-      window.scrollTo({ top: track.offsetTop + step * i - PIN_TOP, behavior: "smooth" });
-    } else {
-      setTab(i);
-    }
-  };
-
-  return { tab, pinned, jumpTo };
+  return { tab, pinned };
 }
 
-/** Segmented pill tabs above a single panel that swaps content on click ---
- *  the "five pillar cards become one tabbed showcase" pattern from the
- *  hi-fi Home page, reused on Product. Active pill background is dark
- *  (#221E1A) per the hi-fi spec, distinct from the nav's white sliding pill.
- *
- *  `scrollPin` opts into the Home-only scroll-driven behavior above: wrap
- *  this component in `<div id={trackId}>` / `<section id={sectionId}
- *  className="sticky top-[72px]">` and pass matching ids. Without it, this
- *  is the plain click-to-switch showcase used elsewhere. */
+/** The Platform section's pinned horizontal gallery. No pill tabs — each
+ *  slide carries its own large in-slide title (per the v2 handoff, which
+ *  explicitly removed the pill row from the earlier design). Falls back to
+ *  a plain stacked-cards layout (all slides visible, no pinning) on
+ *  viewports too small to pin. */
 export const TabShowcase: React.FC<{
   tabs: ShowcaseTab[];
-  scrollPin?: { sectionId: string; trackId: string };
+  scrollPin: { sectionId: string; trackId: string };
 }> = ({ tabs, scrollPin }) => {
-  const [clickActive, setClickActive] = useState(0);
-  const reduceMotion = useReducedMotion();
-  const pin = usePlatformScrollPin(tabs.length, scrollPin?.sectionId ?? "", scrollPin?.trackId ?? "");
+  const { tab: active, pinned } = usePlatformScrollPin(tabs.length, scrollPin.sectionId, scrollPin.trackId);
 
-  const active = scrollPin ? pin.tab : clickActive;
-  const tab = tabs[active];
-  const setActive = scrollPin ? pin.jumpTo : setClickActive;
-  const pinned = !!scrollPin && pin.pinned;
-
-  return (
-    <div>
-      {/* A horizontally-scrollable rail rather than wrapping pills - the
-          hi-fi mock is explicit that mobile tabs "become a scroll rail"
-          rather than stacking to a second row. */}
-      <div
-        className={clsx("flex gap-2 overflow-x-auto no-scrollbar -mx-5 px-5 sm:mx-0 sm:px-0", pinned && "mt-5")}
-        role="tablist"
-      >
+  if (!pinned) {
+    return (
+      <div className="flex flex-col gap-5">
         {tabs.map((t, i) => (
-          <button
-            key={t.label}
-            role="tab"
-            aria-selected={i === active}
-            onClick={() => setActive(i)}
-            className={clsx(
-              "shrink-0 rounded-full border font-semibold whitespace-nowrap transition-colors",
-              pinned ? "px-[18px] py-[9px] text-[13.5px]" : "px-5 py-[11px] text-sm",
-              i === active
-                ? "bg-mkt-ink text-white border-mkt-ink"
-                : "bg-white text-mkt-soft border-mkt-line hover:border-mkt-ink/30"
-            )}
-          >
-            {t.label}
-          </button>
+          <ShowcasePane key={t.label} tab={t} bg={PANE_BG[i]} />
         ))}
       </div>
+    );
+  }
 
-      <div
-        className={clsx(
-          "border border-mkt-line rounded-[26px] bg-white overflow-hidden",
-          pinned ? "mt-4 p-[22px]" : "mt-7 p-6 sm:p-11"
-        )}
-      >
-        {scrollPin ? (
-          <div className="grid grid-cols-1 grid-rows-1">
-            {tabs.map((t, i) => (
-              <div
-                key={t.label}
-                className="col-start-1 row-start-1 transition-[opacity,transform] duration-[340ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)]"
-                style={{
-                  opacity: i === active ? 1 : 0,
-                  transform: `translate3d(${i === active ? 0 : i < active ? -34 : 34}px,0,0)`,
-                  pointerEvents: i === active ? "auto" : "none",
-                }}
-                aria-hidden={i !== active}
-              >
-                <ShowcasePane tab={t} pinned={pinned} />
-              </div>
-            ))}
+  return (
+    <div className="rounded-[26px] overflow-hidden">
+      <div className="grid grid-cols-1 grid-rows-1">
+        {tabs.map((t, i) => (
+          <div
+            key={t.label}
+            className="col-start-1 row-start-1 transition-[opacity,transform] duration-500 [transition-timing-function:cubic-bezier(.22,1,.36,1)]"
+            style={{
+              opacity: i === active ? 1 : 0.2,
+              transform: `scale(${i === active ? 1 : 0.94})`,
+              pointerEvents: i === active ? "auto" : "none",
+            }}
+            aria-hidden={i !== active}
+          >
+            <ShowcasePane tab={t} bg={PANE_BG[i]} />
           </div>
-        ) : (
-          <AnimatePresence mode="wait" initial={false}>
-            <motion.div
-              key={tab.label}
-              initial={reduceMotion ? false : { opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={reduceMotion ? undefined : { opacity: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-            >
-              <ShowcasePane tab={tab} pinned={false} />
-            </motion.div>
-          </AnimatePresence>
-        )}
+        ))}
       </div>
     </div>
   );
 };
 
-const ShowcasePane: React.FC<{ tab: ShowcaseTab; pinned: boolean }> = ({ tab, pinned }) => (
-  <div className={clsx("grid lg:grid-cols-2 items-center", pinned ? "gap-8" : "gap-8 sm:gap-14")}>
-    <div>
-      <h3
-        className={clsx(
-          "font-display font-extrabold leading-[1.15] tracking-tight text-mkt-ink",
-          pinned ? "text-[23px]" : "text-[26px] sm:text-[30px]"
-        )}
-      >
-        {tab.title}
-      </h3>
-      <p className="text-[16px] leading-relaxed text-mkt-soft mt-4 max-w-[420px]">{tab.description}</p>
-      <ul className="flex flex-col gap-3 mt-[26px]">
-        {tab.points.map((p) => (
-          <li key={p} className="flex gap-[11px] items-baseline">
-            <span className={clsx("font-bold text-[13px]", tab.tone === "primary" ? "text-mkt-accent" : "text-mkt-teal")}>
-              —
-            </span>
-            <span className="text-[15px] text-mkt-ink/85">{p}</span>
-          </li>
-        ))}
-      </ul>
+const ShowcasePane: React.FC<{ tab: ShowcaseTab; bg: string }> = ({ tab, bg }) => (
+  <div className="rounded-[26px]" style={{ background: bg, padding: "clamp(28px,3vw,44px)" }}>
+    <div className="font-display font-extrabold text-[34px] leading-[1.05] tracking-[-.03em] text-white mb-[26px]">
+      {tab.label}
     </div>
-    <div
-      className={clsx(
-        "rounded-[20px] overflow-hidden bg-mkt-wash2 border border-mkt-line",
-        pinned ? "h-[228px]" : "h-[280px] sm:h-[400px]"
-      )}
-    >
-      <AppScreen variant={tab.screen} className="rounded-[20px]" />
+    <div className="grid lg:grid-cols-2 items-center gap-8">
+      <div>
+        <h3 className="font-display font-extrabold text-[23px] leading-[1.15] tracking-[-.02em] text-white m-0">
+          {tab.title}
+        </h3>
+        <p className="text-base leading-relaxed text-white/90 mt-4 max-w-[420px]" style={{ textWrap: "pretty" }}>
+          {tab.description}
+        </p>
+        <ul className="flex flex-col gap-3 mt-[26px] list-none p-0">
+          {tab.points.map((p) => (
+            <li key={p} className="flex gap-[11px] items-baseline">
+              <span className="font-bold text-[13px] text-white/75">—</span>
+              <span className="text-[15px] text-white/92">{p}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+      <div
+        className="rounded-[20px] overflow-hidden bg-white border border-white/50 h-[228px]"
+        style={{ boxShadow: "0 22px 54px rgba(30,22,60,.22)" }}
+      >
+        <AppScreen variant={tab.screen} className="rounded-[20px]" />
+      </div>
     </div>
   </div>
 );

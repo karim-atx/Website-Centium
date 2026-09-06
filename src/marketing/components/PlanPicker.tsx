@@ -3,7 +3,6 @@ import clsx from "clsx";
 
 export interface Plan {
   key: string;
-  badge: string;
   name: string;
   description: string;
   /** Monthly price in whole dollars — yearly is derived as -20%, rounded. */
@@ -80,18 +79,24 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
               className={clsx(
                 "relative rounded-3xl bg-white p-[34px] flex flex-col cursor-pointer transition-[border-color,box-shadow,transform]",
                 "duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]",
-                isSelected
-                  ? "border border-mkt-accent-ring shadow-[0_24px_60px_rgba(72,58,130,.10)] scale-[1.045] z-10"
-                  : "border border-mkt-line"
+                isSelected ? "border border-mkt-accent-ring scale-[1.045] z-10" : "border border-mkt-line"
               )}
+              style={
+                // a touch of teal alongside the lavender on the highlighted
+                // tier, distinct from the plain lavender-only shadow v1 used
+                isSelected
+                  ? { boxShadow: "0 24px 60px rgba(72,58,130,.12), inset 0 3px 0 0 #5E9E95, inset 0 0 0 1px rgba(94,158,149,.18)" }
+                  : undefined
+              }
             >
               <span
                 className={clsx(
-                  "absolute -top-[11px] left-[34px] bg-mkt-accent text-white font-bold text-[10px] tracking-[.14em] px-[11px] py-[5px] rounded-full",
+                  "absolute -top-[11px] left-[34px] text-white font-bold text-[10px] tracking-[.14em] px-[11px] py-[5px] rounded-full whitespace-nowrap",
                   isSelected ? "inline-block" : "hidden"
                 )}
+                style={{ background: "linear-gradient(100deg,#7D67D9 0%,#6E86C0 62%,#5E9E95 100%)" }}
               >
-                {plan.badge}
+                Explore For
               </span>
               <div className="font-bold text-[19px] text-mkt-ink">{plan.name}</div>
               <p className="text-[14.5px] leading-relaxed text-mkt-soft mt-2.5 min-h-[74px]">{plan.description}</p>

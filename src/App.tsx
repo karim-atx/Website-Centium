@@ -8,8 +8,7 @@ import { Product as MarketingProduct } from "./marketing/pages/Product";
 import { Pricing as MarketingPricing } from "./marketing/pages/Pricing";
 import { Business as MarketingBusiness } from "./marketing/pages/Business";
 import { Contact as MarketingContact } from "./marketing/pages/Contact";
-import { Privacy as MarketingPrivacy } from "./marketing/pages/legal/Privacy";
-import { Terms as MarketingTerms } from "./marketing/pages/legal/Terms";
+import { Legal as MarketingLegal } from "./marketing/pages/Legal";
 import Onboarding from "./pages/onboarding/Onboarding";
 import Home from "./pages/home/Home";
 import Food from "./pages/food/Food";
@@ -57,8 +56,12 @@ function AppRoutes() {
         <Route path="/pricing" element={<MarketingPricing />} />
         <Route path="/business" element={<MarketingBusiness />} />
         <Route path="/contact" element={<MarketingContact />} />
-        <Route path="/legal/privacy" element={<MarketingPrivacy />} />
-        <Route path="/legal/terms" element={<MarketingTerms />} />
+        <Route path="/legal" element={<MarketingLegal />} />
+        {/* v2 landing handoff consolidated the two standalone legal pages
+            into one page with anchored sections — redirect the old routes
+            rather than leave them 404ing for anyone with an old link. */}
+        <Route path="/legal/privacy" element={<Navigate to="/legal#privacy" replace />} />
+        <Route path="/legal/terms" element={<Navigate to="/legal#terms" replace />} />
       </Route>
 
       {/* Customer portal (authenticated app shell) */}

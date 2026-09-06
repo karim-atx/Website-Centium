@@ -87,6 +87,10 @@ export default {
           wash: "#FBFAF8",
           wash2: "#FAF9F7",
           tint: "#F4F1FB",
+          // v2 landing handoff: a darker lavender tint for small emphasis
+          // blocks (e.g. the Problem section's resolved answer row) that
+          // need to read a step stronger than mkt.tint's chip/card wash.
+          "tint-deep": "#E6DFF7",
           capsule: "#F5F3F9",
           accent: "#7D67D9",
           "accent-hover": "#6A54C4",
@@ -282,6 +286,28 @@ export default {
           "0%": { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
           "100%": { transform: "translate(var(--confetti-drift), 100vh) rotate(var(--confetti-rotate))", opacity: 0.2 },
         },
+        // v2 Centium landing handoff: the reviews conveyor belt (duplicated
+        // card list, translated exactly -50% of its own width minus the
+        // gap so the loop seam is invisible) and the two drifting decorative
+        // orbs behind the "Beyond the Individual" ecosystem cards.
+        "mkt-belt": {
+          "0%": { transform: "translate3d(0,0,0)" },
+          "100%": { transform: "translate3d(calc(-50% - 7px),0,0)" },
+        },
+        "mkt-drift-a": {
+          "0%, 100%": { transform: "translate3d(0,0,0)" },
+          "50%": { transform: "translate3d(26px,-34px,0)" },
+        },
+        "mkt-drift-b": {
+          "0%, 100%": { transform: "translate3d(0,0,0)" },
+          "50%": { transform: "translate3d(-30px,26px,0)" },
+        },
+        // The Problem section's one-shot answer-row shimmer, and the loader
+        // wordmark's identical sweep highlight — same motion, same curve.
+        "mkt-shimmer": {
+          "0%": { backgroundPosition: "-90% 0" },
+          "100%": { backgroundPosition: "190% 0" },
+        },
       },
       animation: {
         "fade-slide-up": "fade-slide-up 0.45s cubic-bezier(0.22,1,0.36,1) both",
@@ -323,6 +349,10 @@ export default {
         "calorie-glow": "calorie-glow 2.4s ease-out infinite",
         "ekg-scroll": "ekg-scroll 3s linear infinite",
         "confetti-fall": "confetti-fall 1.8s ease-in both",
+        "mkt-belt": "mkt-belt 46s linear infinite",
+        "mkt-drift-a": "mkt-drift-a 22s ease-in-out infinite",
+        "mkt-drift-b": "mkt-drift-b 27s ease-in-out infinite",
+        "mkt-shimmer": "mkt-shimmer 1.2s ease-in-out both",
       },
     },
   },
