@@ -1,11 +1,11 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { OnboardingShell } from "./OnboardingShell";
 import { Button } from "../../components/ui/Button";
-import { useApp } from "../../context/AppContext";
 import type { OnboardingDraft } from "./Onboarding";
 import type { AccountType, BusinessType, CustomerSubtype, ProfessionalSubtype } from "../../types";
 import clsx from "clsx";
-import { User, Dumbbell, Building2, AlertCircle } from "lucide-react";
+import { User, Dumbbell, Building2, AlertCircle, Check, Loader2 } from "lucide-react";
+import { previewClientCode, type ClientCodePreview } from "../../services/redemption";
 
 interface Props {
   draft: OnboardingDraft;
@@ -44,13 +44,82 @@ const businessTypes: { value: BusinessType; label: string }[] = [
   { value: "meal_prep_service", label: "Meal-Prepping Service" },
 ];
 
+type CodeCheck =
+  | { status: "idle" }
+  | { status: "checking" }
+  | { status: "found"; data: ClientCodePreview }
+  | { status: "not_found" }
+  | { status: "unusable"; message: string }
+  | { status: "error"; message: string };
+
+const subtypeLabel: Record<ProfessionalSubtype | "doctor", string> = {
+  trainer: "Personal trainer",
+  physiotherapist: "Physiotherapist",
+  dietitian: "Dietitian",
+  doctor: "Doctor",
+  other: "Health professional",
+};
+
 export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
-  const { clientCodes } = useApp();
   const needsCode = draft.accountType === "customer" && draft.customerSubtype === "client";
-  // V6 (QA 6.0): the code must actually match one a professional generated —
-  // no longer enough to just type something non-empty.
   const enteredCode = draft.professionalUserIdCode.trim().toUpperCase();
-  const codeIsValid = enteredCode.length > 0 && clientCodes.some((c) => c.code.toUpperCase() === enteredCode);
+  const [check, setCheck] = useState<CodeCheck>({ status: "idle" });
+
+  // V6 (QA 6.0): the code must actually match one a professional generated.
+  // That check used to run against a local array; it now calls
+  // preview_client_code() — debounced, since it fires per keystroke — and
+  // shows who the code actually belongs to before anything is redeemed.
+  useEffect(() => {
+    if (!needsCode || enteredCode.length === 0) {
+      setCheck({ status: "idle" });
+      setDraft((d) => (d.clientCodeProfessional ? { ...d, clientCodeProfessional: null } : d));
+      return;
+    }
+    let cancelled = false;
+    setCheck({ status: "checking" });
+    const timer = setTimeout(async () => {
+      const result = await previewClientCode(enteredCode);
+      if (cancelled) return;
+
+      if (result.status === "error") {
+        setCheck({ status: "error", message: result.message });
+        return;
+      }
+      if (result.status === "not_found") {
+        setCheck({ status: "not_found" });
+        setDraft((d) => ({ ...d, clientCodeProfessional: null }));
+        return;
+      }
+      // Found, but that alone doesn't mean it can be used.
+      if (result.data.redeemed) {
+        setCheck({ status: "unusable", message: "That code has already been used." });
+        setDraft((d) => ({ ...d, clientCodeProfessional: null }));
+        return;
+      }
+      if (result.data.expiresAt && new Date(result.data.expiresAt).getTime() < Date.now()) {
+        setCheck({ status: "unusable", message: "That code has expired — ask for a new one." });
+        setDraft((d) => ({ ...d, clientCodeProfessional: null }));
+        return;
+      }
+      setCheck({ status: "found", data: result.data });
+      setDraft((d) => ({
+        ...d,
+        clientCodeProfessional: {
+          id: result.data.professionalId,
+          firstName: result.data.professionalFirstName,
+          avatarUrl: result.data.professionalAvatarUrl,
+          subtype: result.data.professionalSubtype as ProfessionalSubtype,
+        },
+      }));
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [enteredCode, needsCode, setDraft]);
+
+  const codeIsValid = check.status === "found";
 
   const canContinue =
     draft.accountType === "customer"
@@ -134,14 +203,59 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                 placeholder="SOHA-XXXX"
                 className={clsx(
                   "w-full rounded-2xl bg-cream-card border-2 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20",
-                  enteredCode.length > 0 && !codeIsValid ? "border-status-high/50" : "border-primary/50"
+                  check.status === "not_found" || check.status === "unusable" || check.status === "error"
+                    ? "border-status-high/50"
+                    : check.status === "found"
+                    ? "border-status-good/60"
+                    : "border-primary/50"
                 )}
               />
-              {enteredCode.length > 0 && !codeIsValid ? (
-                <p className="flex items-center gap-1.5 text-[11px] text-status-high mt-1.5">
-                  <AlertCircle size={12} /> That code doesn't match a professional's — check it and try again.
+
+              {check.status === "checking" && (
+                <p className="flex items-center gap-1.5 text-[11px] text-charcoal-faint mt-1.5">
+                  <Loader2 size={12} className="animate-spin" /> Checking code…
                 </p>
-              ) : (
+              )}
+
+              {check.status === "found" && (
+                // Confirmation before anything is redeemed — the code is only
+                // actually spent at the end of onboarding.
+                <div className="mt-2 rounded-2xl bg-primary-pale p-3 flex items-center gap-3 animate-fade-slide-up">
+                  {check.data.professionalAvatarUrl ? (
+                    <img
+                      src={check.data.professionalAvatarUrl}
+                      alt=""
+                      className="w-10 h-10 rounded-2xl object-cover shrink-0"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 rounded-2xl bg-primary text-white flex items-center justify-center shrink-0">
+                      <Dumbbell size={18} />
+                    </div>
+                  )}
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-primary-deep-text truncate">
+                      You'll connect with {check.data.professionalFirstName}
+                    </p>
+                    <p className="text-[11px] text-primary-dark">
+                      {subtypeLabel[check.data.professionalSubtype] ?? "Health professional"}
+                    </p>
+                  </div>
+                  <Check size={16} className="text-status-good ml-auto shrink-0" />
+                </div>
+              )}
+
+              {(check.status === "not_found" ||
+                check.status === "unusable" ||
+                check.status === "error") && (
+                <p className="flex items-center gap-1.5 text-[11px] text-status-high mt-1.5">
+                  <AlertCircle size={12} />{" "}
+                  {check.status === "not_found"
+                    ? "Code not found — check it and try again."
+                    : check.message}
+                </p>
+              )}
+
+              {check.status === "idle" && (
                 <p className="text-[11px] text-charcoal-faint mt-1.5">
                   Ask your trainer, dietitian or physiotherapist for the code they generated for you.
                 </p>

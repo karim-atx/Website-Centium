@@ -7,7 +7,12 @@ export const ReadyStep: React.FC<{
   draft: OnboardingDraft;
   onFinish: () => void;
   isProfessional?: boolean;
-}> = ({ draft, onFinish, isProfessional }) => {
+  // Set when the client code couldn't be redeemed at the last moment. The
+  // rest of onboarding is already saved, so this explains what happened and
+  // the button becomes a plain "continue anyway" rather than a dead end.
+  notice?: string | null;
+  busy?: boolean;
+}> = ({ draft, onFinish, isProfessional, notice, busy }) => {
   // V10 (QA 10.0): "The picture attached is the last page for the
   // onboarding for the professionals/business UI that resembles more
   // Client UI features... adjust accordingly" — the professional/business
@@ -89,8 +94,26 @@ export const ReadyStep: React.FC<{
         </div>
       )}
 
-      <Button size="lg" fullWidth onClick={onFinish} className={!isCustomer ? "mt-10" : undefined}>
-        {isProfessional ? "Go to my dashboard" : isBusiness ? "Go to my dashboard" : "Let's go"}
+      {notice && (
+        <div className="w-full rounded-2xl bg-cream-card border border-status-high/30 px-4 py-3 mb-4 text-left">
+          <p className="text-xs text-charcoal-soft leading-relaxed">{notice}</p>
+        </div>
+      )}
+
+      <Button
+        size="lg"
+        fullWidth
+        onClick={onFinish}
+        disabled={busy}
+        className={!isCustomer && !notice ? "mt-10" : undefined}
+      >
+        {busy
+          ? "Setting up…"
+          : notice
+          ? "Continue anyway"
+          : isProfessional || isBusiness
+          ? "Go to my dashboard"
+          : "Let's go"}
       </Button>
     </div>
   );

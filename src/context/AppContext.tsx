@@ -520,7 +520,6 @@ interface AppState {
     professionalFacebook?: string,
     professionalX?: string
   ) => string;
-  redeemClientCode: (code: string) => boolean;
 
   professionalClients: ProfessionalClient[];
   addProfessionalClient: (
@@ -1696,32 +1695,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return code;
   };
 
-  const redeemClientCode: AppState["redeemClientCode"] = (code) => {
-    // V6 (QA 6.0): onboarding can no longer continue on an unmatched code —
-    // this must find a real match, not fall back to accepting anything typed.
-    const trimmed = code.trim().toUpperCase();
-    if (!trimmed) return false;
-    const match = clientCodes.find((c) => c.code.toUpperCase() === trimmed);
-    if (!match) return false;
-    setClientCodes((prev) =>
-      prev.map((c) => (c.code.toUpperCase() === trimmed ? { ...c, redeemed: true } : c))
-    );
-    setUser((prev) => ({
-      ...prev,
-      linkedProfessionalCode: match.code,
-      linkedProfessionalName: match.professionalName,
-      linkedProfessionalSubtype: match.professionalSubtype,
-      linkedProfessionalCertificationUrl: match.professionalCertificationUrl,
-      linkedProfessionalBio: match.professionalBio,
-      linkedProfessionalPhone: match.professionalPhone,
-      linkedProfessionalWebsite: match.professionalWebsite,
-      linkedProfessionalInstagram: match.professionalInstagram,
-      linkedProfessionalFacebook: match.professionalFacebook,
-      linkedProfessionalX: match.professionalX,
-    }));
-    return true;
-  };
-
   const addProfessionalClient: AppState["addProfessionalClient"] = (name, profile) => {
     // V7 (QA 7.0): use the professional's real name/subtype so the client's
     // Professionals tab can show who they're actually linked to.
@@ -2049,7 +2022,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearCart,
       clientCodes,
       generateClientCode,
-      redeemClientCode,
       professionalClients,
       addProfessionalClient,
       removeProfessionalClient,

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { updateProfileFromOnboarding } from "../../services/profile";
+import { redeemClientCode } from "../../services/redemption";
 import type {
   AccountType,
   ActivityLevel,
@@ -28,6 +29,16 @@ export interface OnboardingDraft {
   customerSubtype: CustomerSubtype | null;
   professionalSubtype: ProfessionalSubtype | null;
   professionalUserIdCode: string;
+  // Filled in by AccountTypeStep from preview_client_code(). Carried to
+  // finish() so the linked-professional details shown around the client UI
+  // come from the real code preview rather than the snapshot fields the mock
+  // used to copy.
+  clientCodeProfessional: {
+    id: string;
+    firstName: string;
+    avatarUrl: string | null;
+    subtype: ProfessionalSubtype;
+  } | null;
   businessName: string;
   businessType: BusinessType | null;
   firstName: string;
@@ -50,6 +61,7 @@ const initialDraft: OnboardingDraft = {
   customerSubtype: null,
   professionalSubtype: null,
   professionalUserIdCode: "",
+  clientCodeProfessional: null,
   businessName: "",
   businessType: null,
   firstName: "",
@@ -80,9 +92,17 @@ type StepKey =
 // are customer-only questions, so professionals skip straight from About
 // You to the finish screen (coaching-app style onboarding, not a client
 // health-tracking wizard).
-// V7 (QA 7.0): a "Client of Professional" with a valid code skips About You
-// entirely — their name/age/height/sex/weight come from what the
-// professional already entered when generating that code.
+//
+// V7's "a client with a valid code skips About You entirely" is GONE, and
+// deliberately so: it depended on the professional having pre-entered the
+// client's name/age/height/sex/weight onto the code. The real `client_codes`
+// table has no such columns and `preview_client_code` returns none — only
+// the professional's own name, avatar, subtype and expiry. With no data to
+// prefill from, skipping the step would have left the client defaulted to
+// "Friend", 28 years, 170cm, 70kg. Every client now fills in About You.
+// Restoring the shortcut needs those columns added on the database side
+// first. `skipAboutYou` is kept as a parameter so the shape of this
+// function doesn't change if that happens.
 function stepsFor(accountType: OnboardingDraft["accountType"], skipAboutYou: boolean): StepKey[] {
   const isProfessional = accountType === "professional";
   // V7 (QA 7.0): a business isn't a person to profile/track either — same
@@ -142,13 +162,17 @@ export default function Onboarding() {
   const [draft, setDraft] = useState<OnboardingDraft>(loadDraft);
   const {
     completeOnboarding,
-    redeemClientCode,
-    clientCodes,
+    updateProfile,
     setRecoverySensitive,
     setRecoverySensitiveIntroSeen,
     authUserId,
   } = useApp();
   const navigate = useNavigate();
+  // Set when the client code fails at the last step. Onboarding is already
+  // saved at that point, so this is shown on the Ready screen and the user
+  // continues into the app on a second tap.
+  const [finishNotice, setFinishNotice] = useState<string | null>(null);
+  const [finishing, setFinishing] = useState(false);
 
   useEffect(() => {
     try {
@@ -160,10 +184,9 @@ export default function Onboarding() {
     }
   }, [draft, step]);
 
-  const matchedClientCode = clientCodes.find(
-    (c) => c.code.toUpperCase() === draft.professionalUserIdCode.trim().toUpperCase()
-  );
-  const skipAboutYou = draft.customerSubtype === "client" && !!matchedClientCode;
+  // See the note on stepsFor: a real client code carries no client profile
+  // data, so there is nothing to prefill and nothing to skip.
+  const skipAboutYou = false;
 
   const steps = stepsFor(draft.accountType, skipAboutYou);
   const stepKey = steps[Math.min(step, steps.length - 1)];
@@ -174,10 +197,18 @@ export default function Onboarding() {
   const isProfessional = draft.accountType === "professional";
 
   const finish = async () => {
+    // A second tap after a code failure just proceeds — the notice has been
+    // read, and everything except the code was already saved on the first pass.
+    if (finishNotice) {
+      clearPersistedDraft();
+      navigate(isProfessional ? "/app/professionals" : "/app");
+      return;
+    }
+    if (finishing) return;
+    setFinishing(true);
+
     // Resolved once so the local state and the remote profiles row are
-    // written from exactly the same values — a client who skipped About You
-    // gets their details from the professional's code, everyone else from
-    // what they typed, and both writes agree.
+    // written from exactly the same values.
     const accountType: AccountType = draft.accountType || "customer";
     const resolved = {
       email: draft.email,
@@ -188,11 +219,11 @@ export default function Onboarding() {
         accountType === "professional"
           ? draft.professionalSubtype || ("other" as ProfessionalSubtype)
           : undefined,
-      firstName: matchedClientCode?.clientName || draft.firstName || "Friend",
-      age: matchedClientCode?.clientAge ?? (Number(draft.age) || 28),
-      sex: matchedClientCode?.clientSex ?? draft.sex,
-      heightCm: matchedClientCode?.clientHeightCm ?? (Number(draft.heightCm) || 170),
-      weightKg: matchedClientCode?.clientWeightKg ?? (Number(draft.weightKg) || 70),
+      firstName: draft.firstName || "Friend",
+      age: Number(draft.age) || 28,
+      sex: draft.sex,
+      heightCm: Number(draft.heightCm) || 170,
+      weightKg: Number(draft.weightKg) || 70,
       goals: draft.goals.length ? draft.goals : (["improve_health"] as Goal[]),
       activityLevel: draft.activityLevel || ("moderate" as ActivityLevel),
       tracking: draft.tracking.length ? draft.tracking : (["nutrition", "workouts"] as TrackPreference[]),
@@ -216,8 +247,39 @@ export default function Onboarding() {
       await updateProfileFromOnboarding(authUserId, resolved);
     }
 
+    // Redeem the client code for real. Everything the RPC can do is handled:
+    // a thrown/transport failure, a raised error (not authenticated, or the
+    // ATX02 rate limit whose message carries a retry hint), and a returned
+    // success:false for the business-logic failures that do NOT raise —
+    // wrong code, expired, already redeemed, professional at capacity.
     if (draft.customerSubtype === "client" && draft.professionalUserIdCode.trim()) {
-      redeemClientCode(draft.professionalUserIdCode);
+      const result = await redeemClientCode(draft.professionalUserIdCode);
+
+      if (result.status === "success") {
+        // The relationship is a real professional_clients row now. These
+        // fields are only the display copy the client UI already reads —
+        // sourced from the code preview, not from snapshot columns.
+        const pro = draft.clientCodeProfessional;
+        if (pro) {
+          updateProfile({
+            linkedProfessionalCode: draft.professionalUserIdCode.trim().toUpperCase(),
+            linkedProfessionalName: pro.firstName,
+            linkedProfessionalSubtype: pro.subtype,
+          });
+        }
+      } else {
+        // A failure here must not trap the user on the last step — they've
+        // already completed onboarding and their profile is written. They
+        // continue as a regular customer and are told why, rather than being
+        // blocked by a code that went stale between the preview and now.
+        setFinishNotice(
+          result.status === "error"
+            ? result.message
+            : `${result.message} You can add a professional later from the Professionals tab.`
+        );
+        setFinishing(false);
+        return;
+      }
     }
     // QA 12.0: "When accessing the account for the first time an initial
     // prompt should state you are in recovery sensitive mode... it can be
@@ -271,7 +333,15 @@ export default function Onboarding() {
         {stepKey === "tracking" && (
           <TrackingStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
         )}
-        {stepKey === "ready" && <ReadyStep draft={draft} onFinish={finish} isProfessional={isProfessional} />}
+        {stepKey === "ready" && (
+          <ReadyStep
+            draft={draft}
+            onFinish={finish}
+            isProfessional={isProfessional}
+            notice={finishNotice}
+            busy={finishing}
+          />
+        )}
       </div>
     </div>
   );
