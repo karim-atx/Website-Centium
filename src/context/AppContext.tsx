@@ -65,6 +65,7 @@ import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, onAuthChange, signOutRemote } from "../services/auth";
 import { ensureProfileRow } from "../services/profile";
+import { getMyReferrerReward } from "../services/redemption";
 
 const TODAY = "2026-08-20";
 
@@ -479,11 +480,15 @@ interface AppState {
   // account in this prototype, so redeeming a code demonstrates both the
   // redeemer's one-time 10% discount and the referrer's reward on the
   // same account — there's no second account to actually credit.
-  referralCode: string;
   referralRedeemed: boolean;
   referralDiscountPct: number;
   referralNextMonthDiscountPct: number;
-  redeemReferralCode: (code: string) => { success: boolean; message: string };
+  // Records the outcome of a real redeem_referral() call locally so the
+  // subscription UI can show the discount. Only the referee's side is
+  // applied here — the referrer's points and next-month discount are
+  // credited to THEIR account by the RPC, not this one, which is the part
+  // the old single-account mock had to fake.
+  applyReferralReward: (discountPct: number) => void;
 
   // V8 (QA 8.0): gym membership purchases — day passes expire after 24h and
   // stack with an active monthly/annual plan, which stays active until
@@ -961,25 +966,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "referralNextMonthDiscountPct",
     0
   );
-  // Deterministic from the account so it doesn't change across sessions,
-  // without needing a real backend to issue/track unique codes.
-  const referralCode = `CENT-${(user.firstName || user.businessName || "USER").slice(0, 4).toUpperCase()}${
-    user.email ? user.email.length : 0
-  }${new Date(TODAY).getDate()}`;
-  const redeemReferralCode: AppState["redeemReferralCode"] = (code) => {
-    const trimmed = code.trim();
-    if (!trimmed) return { success: false, message: "Enter a referral code." };
-    if (referralRedeemed) return { success: false, message: "You've already used a referral code on this account." };
-    if (trimmed.toUpperCase() === referralCode.toUpperCase()) {
-      return { success: false, message: "You can't redeem your own referral code." };
-    }
+  // The code itself now comes from the `referrals` table via
+  // getOrCreateMyReferralCode(), and every validation the mock did here
+  // (empty, already redeemed, own code) is enforced by redeem_referral()
+  // server-side. All that's left locally is recording the outcome.
+  const applyReferralReward: AppState["applyReferralReward"] = (discountPct) => {
     setReferralRedeemed(true);
-    setReferralDiscountPct(10);
-    // Stands in for crediting the referrer's (separate) account.
-    addBonusPoints(1500);
-    setReferralNextMonthDiscountPct(15);
-    return { success: true, message: "Code applied — 10% off your subscription." };
+    setReferralDiscountPct(discountPct);
   };
+
+  // The referrer-side reward is earned by someone ELSE redeeming this
+  // user's code, so it can't come from any response this client sees —
+  // it's read back from their own referral rows once a session exists.
+  useEffect(() => {
+    if (!authUserId) return;
+    let cancelled = false;
+    void getMyReferrerReward(authUserId).then((reward) => {
+      if (cancelled) return;
+      setReferralNextMonthDiscountPct(reward.discountPct);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId]);
 
   const [premiumPlan, setPremiumPlan] = usePersistentState<"monthly" | "yearly" | null>("premiumPlan", null);
 
@@ -2005,11 +2014,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setProfessionalTier,
       bonusPoints,
       addBonusPoints,
-      referralCode,
       referralRedeemed,
       referralDiscountPct,
       referralNextMonthDiscountPct,
-      redeemReferralCode,
+      applyReferralReward,
       premiumPlan,
       setPremiumPlan,
       gymPurchases,

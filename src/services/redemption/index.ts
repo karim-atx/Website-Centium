@@ -31,6 +31,16 @@ export interface ClientCodePreview {
   professionalSubtype: Enums<"professional_subtype">;
 }
 
+export interface ReferralPreview {
+  code: string;
+  redeemed: boolean;
+  referrerId: string;
+  referrerFirstName: string;
+  referrerAvatarUrl: string | null;
+  refereeDiscountPct: number;
+  referrerDiscountPct: number;
+}
+
 export type PreviewResult<T> =
   | { status: "found"; data: T }
   | { status: "not_found" }
@@ -131,3 +141,112 @@ export async function redeemClientCode(code: string): Promise<RedeemResult> {
   }
 }
 
+// --- referrals ------------------------------------------------------------
+
+export async function previewReferral(code: string): Promise<PreviewResult<ReferralPreview>> {
+  try {
+    const { data, error } = await supabase.rpc("preview_referral", { p_code: code.trim() });
+    if (error) return { status: "error", message: describeRedemptionError(error) };
+    const row = data?.[0];
+    if (!row) return { status: "not_found" };
+    return {
+      status: "found",
+      data: {
+        code: row.code,
+        redeemed: row.redeemed,
+        referrerId: row.referrer_id,
+        referrerFirstName: row.referrer_first_name,
+        referrerAvatarUrl: row.referrer_avatar_url ?? null,
+        refereeDiscountPct: row.referee_discount_pct,
+        referrerDiscountPct: row.referrer_discount_pct,
+      },
+    };
+  } catch (e) {
+    return { status: "error", message: e instanceof Error ? e.message : "Could not check that code." };
+  }
+}
+
+export async function redeemReferral(
+  code: string
+): Promise<RedeemResult & { discountPct?: number; bonusPoints?: number }> {
+  try {
+    const { data, error } = await supabase.rpc("redeem_referral", { p_code: code.trim() });
+    if (error) return { status: "error", message: describeRedemptionError(error) };
+    const result = data as unknown as {
+      success: boolean | null;
+      message: string | null;
+      referral: Tables<"referrals"> | null;
+    } | null;
+    const base = interpretRedeem(result, result?.referral?.id);
+    if (base.status !== "success") return base;
+    // Real values off the row, so the UI stops asserting hardcoded numbers.
+    return {
+      ...base,
+      discountPct: result?.referral?.referee_discount_pct,
+      bonusPoints: result?.referral?.referrer_bonus_points,
+    };
+  } catch (e) {
+    return { status: "error", message: e instanceof Error ? e.message : "Could not redeem that code." };
+  }
+}
+
+/**
+ * What the user has earned as a REFERRER — i.e. from codes of theirs that
+ * someone else redeemed. Separate from the referee-side discount, and it
+ * lives on their own rows rather than on any redeem response, since the
+ * crediting happens on the other person's action.
+ *
+ * Returns the best (highest) discount among redeemed referrals rather than
+ * summing, which matches how the UI phrases it: one "% off next month".
+ */
+export async function getMyReferrerReward(
+  userId: string
+): Promise<{ discountPct: number; bonusPoints: number }> {
+  try {
+    const { data, error } = await supabase
+      .from("referrals")
+      .select("referrer_discount_pct, referrer_bonus_points")
+      .eq("referrer_id", userId)
+      .eq("redeemed", true);
+
+    if (error || !data?.length) return { discountPct: 0, bonusPoints: 0 };
+    return {
+      discountPct: Math.max(...data.map((r) => r.referrer_discount_pct ?? 0)),
+      bonusPoints: data.reduce((sum, r) => sum + (r.referrer_bonus_points ?? 0), 0),
+    };
+  } catch {
+    return { discountPct: 0, bonusPoints: 0 };
+  }
+}
+
+/**
+ * The signed-in user's own shareable referral code.
+ *
+ * Queries for an existing unredeemed one first and only calls
+ * create_referral() when there isn't one — otherwise every open of the
+ * Referral sheet would mint a fresh code and orphan the one the user may
+ * already have shared.
+ */
+export async function getOrCreateMyReferralCode(
+  userId: string
+): Promise<{ status: "ok"; code: string } | { status: "error"; message: string }> {
+  try {
+    const { data: existing, error: queryError } = await supabase
+      .from("referrals")
+      .select("code, redeemed, expires_at")
+      .eq("referrer_id", userId)
+      .eq("redeemed", false)
+      .order("created_at", { ascending: false })
+      .limit(1);
+
+    if (queryError) return { status: "error", message: describeRedemptionError(queryError) };
+    if (existing?.[0]?.code) return { status: "ok", code: existing[0].code };
+
+    const { data: created, error: createError } = await supabase.rpc("create_referral", {});
+    if (createError) return { status: "error", message: describeRedemptionError(createError) };
+    if (!created?.code) return { status: "error", message: "Could not create a referral code." };
+    return { status: "ok", code: created.code };
+  } catch (e) {
+    return { status: "error", message: e instanceof Error ? e.message : "Could not load your code." };
+  }
+}
