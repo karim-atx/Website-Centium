@@ -4,6 +4,7 @@ import { Section } from "../components/Section";
 import { Reveal } from "../components/Reveal";
 import { Eyebrow } from "../components/Eyebrow";
 import { PillarRail, type PillarData } from "../components/PillarRail";
+import { BrowserMockup } from "../components/BrowserMockup";
 import { PersonaArc, type PersonaData } from "../components/PersonaArc";
 import { PlanPicker, type Plan } from "../components/PlanPicker";
 import { FaqAccordion, type FaqItem } from "../components/FaqAccordion";
@@ -326,68 +327,19 @@ const HeroPhoneNarrow: React.FC = () => (
 );
 
 // ---------------------------------------------------------------------------
-// Platform pillar phone screens + graphics
+// Platform pillar graphics + browser-chrome mockups
+//
+// Regression fix: these previously reused the hero's large phone-shell
+// mockups and a ~78px graphic scale. The actual handoff markup
+// (`Centium Landing.dc.html`) uses a much more compact browser-window
+// device (BrowserMockup, 430px max-width) and ~44-52px inline graphics —
+// ported 1:1 from the .dc.html rather than the earlier, larger reproduction.
 // ---------------------------------------------------------------------------
-
-const PillarPhoneNutrition: React.FC = () => (
-  <div className="w-full h-full flex flex-col text-left">
-    <StatusBar />
-    <div className="flex-1 flex flex-col gap-2.5 px-3.5 pt-2.5 pb-3.5">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <div className="text-[12.5px] font-extrabold tracking-[-.02em] text-mkt-ink">Today's goals</div>
-          <div className="text-[9px] text-mkt-faint whitespace-nowrap">TDEE 2,340 kcal · maintain</div>
-        </div>
-        <div className="flex gap-1.5">
-          <span className="px-2.5 py-1 rounded-full text-[9.5px] font-bold whitespace-nowrap" style={{ background: "#7D67D9", color: "#fff" }}>Log</span>
-          <span className="px-2.5 py-1 rounded-full text-[9.5px] font-bold whitespace-nowrap" style={{ background: "#F6F3FD", color: "#4E3894" }}>Meal Prep</span>
-        </div>
-      </div>
-      <div className="flex flex-col gap-[9px] mt-0.5">
-        {[
-          { label: "Protein", val: "165 g · 30%", pct: 30 },
-          { label: "Carbs", val: "260 g · 45%", pct: 45 },
-          { label: "Fat", val: "65 g · 25%", pct: 25 },
-        ].map((row) => (
-          <div key={row.label} className="flex flex-col gap-[5px]">
-            <div className="flex items-center justify-between gap-2.5">
-              <span className="text-[11px] font-semibold text-mkt-soft whitespace-nowrap">{row.label}</span>
-              <span className="text-[11px] font-extrabold text-mkt-ink whitespace-nowrap">{row.val}</span>
-            </div>
-            <div className="relative h-[5px] rounded-full" style={{ background: "#F6F3FD" }}>
-              <span className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${row.pct}%`, background: "#7D67D9" }} />
-              <span
-                className="absolute rounded-full bg-white border-2"
-                style={{ left: `calc(${row.pct}% - 5px)`, top: -3, width: 11, height: 11, borderColor: "#7D67D9" }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="rounded-xl p-[11px] flex items-center gap-2.5 mt-0.5" style={{ border: "1px solid #E4DCF8" }}>
-        <span className="w-[30px] h-[30px] rounded-lg flex items-center justify-center text-xs font-extrabold" style={{ background: "#F6F3FD", color: "#4E3894" }}>
-          +
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="text-[11.5px] font-bold text-mkt-ink whitespace-nowrap">Log Breakfast</div>
-          <div className="text-[9.5px] text-mkt-faint whitespace-nowrap">Oats, whey, banana · 512 kcal</div>
-        </div>
-        <span className="text-[9.5px] font-bold whitespace-nowrap" style={{ color: "#4E3894" }}>38P · 62C · 12F</span>
-      </div>
-    </div>
-    <div className="flex items-center justify-around px-3 pt-2 pb-[11px] border-t" style={{ borderColor: "#F1EEE9" }}>
-      <span className="w-[17px] h-[17px] rounded-[5px]" style={{ background: "#4E3894", opacity: 0.9 }} />
-      <span className="w-[17px] h-[17px] rounded-[5px] bg-mkt-line" />
-      <span className="w-[17px] h-[17px] rounded-[5px] bg-mkt-line" />
-      <span className="w-[17px] h-[17px] rounded-[5px] bg-mkt-line" />
-    </div>
-  </div>
-);
 
 const NutritionGraphic: React.FC = () => (
   <>
     <span
-      className="relative w-[78px] h-[78px] shrink-0 rounded-full flex items-center justify-center"
+      className="relative w-11 h-11 shrink-0 rounded-full flex items-center justify-center"
       style={{ background: "conic-gradient(#4E3894 0turn .30turn,#7D67D9 .30turn .75turn,#5E9E95 .75turn 1turn)" }}
     >
       <span className="absolute inset-[13px] rounded-full bg-white flex items-center justify-center text-[11px] font-extrabold" style={{ color: "#4E3894" }}>
@@ -414,65 +366,53 @@ const NutritionGraphic: React.FC = () => (
   </>
 );
 
-const PillarPhoneTraining: React.FC = () => (
-  <div className="w-full h-full flex flex-col text-left">
-    <StatusBar />
-    <div className="flex-1 flex flex-col gap-2.5 px-3.5 pt-2.5 pb-3.5">
-      <div className="flex items-center justify-between">
-        <span className="text-[13px] font-extrabold tracking-[-.02em] text-mkt-ink">Workout</span>
-        <span className="px-2 py-[3px] rounded-full text-[7px] font-extrabold whitespace-nowrap" style={{ background: "#F4F1FB", color: "#5C48A8" }}>32:18</span>
+const NutritionMockup: React.FC = () => (
+  <BrowserMockup url="app.centium.health/nutrition" border="#E4DCF8" headerBg="#F4F1FB" railActive="#7D67D9" railInactive="#F4F1FB">
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <div className="text-xs font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">Today</div>
+        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">1,842 / 2,340 kcal</div>
       </div>
-      <div className="flex gap-1">
-        <span className="px-2 py-1 rounded-full text-[7.5px] font-bold whitespace-nowrap" style={{ background: "#7D67D9", color: "#fff" }}>Routines</span>
-        <span className="px-2 py-1 rounded-full text-[7.5px] font-bold whitespace-nowrap" style={{ background: "#F6F4F0", color: "#8C8378" }}>Library</span>
-        <span className="px-2 py-1 rounded-full text-[7.5px] font-bold whitespace-nowrap" style={{ background: "#F6F4F0", color: "#8C8378" }}>History</span>
-      </div>
-      <div className="rounded-[14px] p-[11px]" style={{ border: "1px solid #EDEAE4" }}>
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <div className="text-xs font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">Upper Body</div>
-            <div className="text-[8px] text-mkt-faint whitespace-nowrap">Strength · 52 min · intermediate</div>
-          </div>
-          <span className="px-2 py-1 rounded-full text-[8px] font-extrabold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#3F726D" }}>In progress</span>
-        </div>
-        <div className="flex items-baseline gap-[5px] mt-2">
-          <span className="text-[10.5px] font-extrabold text-mkt-ink whitespace-nowrap">Bench Press</span>
-          <span className="text-[8px] text-mkt-faint whitespace-nowrap">4 × 8 · 80 kg</span>
-        </div>
-        <div className="flex flex-col gap-[5px] mt-2">
-          {[0, 1].map((i) => (
-            <div key={i} className="flex items-center gap-[7px] px-2 py-1.5 rounded-[9px]" style={{ background: "rgba(125,103,217,.09)", border: "1px solid rgba(125,103,217,.2)" }}>
-              <span className="w-[15px] h-[15px] rounded-[5px] shrink-0 text-white text-[8px] font-extrabold flex items-center justify-center" style={{ background: "#7D67D9" }}>✓</span>
-              <span className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap">80 kg</span>
-              <span className="text-[9px] text-mkt-faint whitespace-nowrap">× 8</span>
-              <span className="ml-auto text-[8.5px] font-bold whitespace-nowrap" style={{ color: "#6A54C4" }}>Logged</span>
-            </div>
-          ))}
-          <div className="flex items-center gap-[7px] px-2 py-1.5 rounded-[9px]" style={{ border: "1px solid #EDEAE4" }}>
-            <span className="w-[15px] h-[15px] rounded-[5px] shrink-0 text-[8px] font-extrabold flex items-center justify-center" style={{ background: "#F6F4F0", color: "#A9A29A" }}>3</span>
-            <span className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap">80 kg</span>
-            <span className="text-[9px] text-mkt-faint whitespace-nowrap">× 8</span>
-            <span className="ml-auto text-[8.5px] font-bold whitespace-nowrap text-mkt-faint">Log set</span>
-          </div>
-        </div>
-      </div>
-      <div className="flex flex-col gap-1.5 flex-1">
-        <div className="text-[6.5px] font-bold tracking-[.1em] text-mkt-faint">UP NEXT</div>
-        <div className="flex items-center gap-2 rounded-[11px] p-2" style={{ border: "1px solid #EDEAE4" }}>
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold text-mkt-ink whitespace-nowrap">Lat Pulldown</div>
-            <div className="text-[8px] text-mkt-faint whitespace-nowrap">3 × 10 · 65 kg</div>
-          </div>
-          <span className="shrink-0 px-[7px] py-[3px] rounded-full text-[7.5px] font-extrabold whitespace-nowrap" style={{ background: "#F4F1FB", color: "#5C48A8" }}>Back</span>
-        </div>
+      <div className="flex gap-1 shrink-0">
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#7D67D9", color: "#fff" }}>Log</span>
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#F6F3FD", color: "#4E3894" }}>Meal Prep</span>
       </div>
     </div>
-  </div>
+    <div className="flex flex-col gap-1.5">
+      {[
+        { label: "Protein", val: "128 / 165 g", pct: 78, bar: "#4E3894" },
+        { label: "Carbs", val: "196 / 260 g", pct: 75, bar: "#A895E0" },
+        { label: "Fat", val: "48 / 65 g", pct: 74, bar: "#5E9E95" },
+      ].map((row) => (
+        <div key={row.label} className="flex flex-col gap-[3px]">
+          <div className="flex justify-between gap-1.5">
+            <span className="text-[9px] font-semibold text-[#5B5349] whitespace-nowrap">{row.label}</span>
+            <span className="text-[9px] font-extrabold text-mkt-ink whitespace-nowrap">{row.val}</span>
+          </div>
+          <div className="h-1 rounded-full" style={{ background: "#F4F1FB" }}>
+            <span className="block h-full rounded-full" style={{ width: `${row.pct}%`, background: row.bar }} />
+          </div>
+        </div>
+      ))}
+    </div>
+    <div className="flex flex-col gap-[5px]">
+      {[
+        { title: "Breakfast", meta: "38P · 62C · 12F", kcal: "512" },
+        { title: "Lunch", meta: "52P · 74C · 18F", kcal: "686" },
+      ].map((row) => (
+        <div key={row.title} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5" style={{ border: "1px solid #E4DCF8" }}>
+          <span className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap overflow-hidden text-ellipsis min-w-0">{row.title}</span>
+          <span className="text-[8.5px] text-[#5B5349] whitespace-nowrap shrink-0">{row.meta}</span>
+          <span className="text-[8px] font-bold whitespace-nowrap shrink-0" style={{ color: "#4E3894" }}>{row.kcal}</span>
+        </div>
+      ))}
+    </div>
+  </BrowserMockup>
 );
 
 const TrainingGraphic: React.FC = () => (
   <>
-    <span className="flex items-center justify-center gap-1.5 shrink-0 w-[120px] h-[78px]">
+    <span className="flex items-center justify-center gap-[5px] shrink-0 w-[108px] h-16">
       <span className="w-[15px] h-[52px] rounded" style={{ background: "#2F5F58" }} />
       <span className="w-2.5 h-[34px] rounded-sm" style={{ background: "#5E9E95" }} />
       <span className="flex-1 h-2 rounded-full" style={{ background: "#3B352D" }} />
@@ -480,9 +420,20 @@ const TrainingGraphic: React.FC = () => (
       <span className="w-[15px] h-[52px] rounded" style={{ background: "#2F5F58" }} />
     </span>
     <span className="flex flex-col gap-[7px] flex-1 min-w-0">
-      <span className="flex items-end gap-[5px] h-[38px]">
-        {[38, 52, 46, 70, 86, 100].map((h, i) => (
-          <span key={i} className="flex-1 rounded" style={{ height: `${h}%`, background: i === 5 ? "#2F5F58" : "#5E9E95", opacity: i === 5 ? 1 : 0.3 + i * 0.08 }} />
+      <span className="flex items-end gap-[5px] h-[30px]">
+        {[
+          { h: 38, o: 0.3 },
+          { h: 52, o: 0.45 },
+          { h: 46, o: 0.38 },
+          { h: 70, o: 0.62 },
+          { h: 86, o: 0.8 },
+          { h: 100, o: 1 },
+        ].map((bar, i) => (
+          <span
+            key={i}
+            className="flex-1 rounded"
+            style={{ height: `${bar.h}%`, background: i === 5 ? "#2F5F58" : "#5E9E95", opacity: bar.o }}
+          />
         ))}
       </span>
       <span className="flex gap-1.5">
@@ -496,154 +447,167 @@ const TrainingGraphic: React.FC = () => (
   </>
 );
 
-const PillarPhoneHealth: React.FC = () => (
-  <div className="w-full h-full flex flex-col text-left">
-    <StatusBar />
-    <div className="flex-1 flex flex-col gap-2.5 px-3.5 pt-2.5 pb-3.5">
-      <div className="flex items-center justify-between">
-        <span className="text-[13px] font-extrabold tracking-[-.02em] text-mkt-ink">Steps</span>
-        <div className="flex gap-1">
-          <span className="px-2 py-[3px] rounded-full text-[8.5px] font-bold" style={{ background: "#7D67D9", color: "#fff" }}>D</span>
-          <span className="px-2 py-[3px] rounded-full text-[8.5px] font-bold" style={{ background: "#F4F1FB", color: "#5C48A8" }}>W</span>
-          <span className="px-2 py-[3px] rounded-full text-[8.5px] font-bold" style={{ background: "#F4F1FB", color: "#5C48A8" }}>M</span>
-        </div>
+const TrainingMockup: React.FC = () => (
+  <BrowserMockup url="app.centium.health/training" border="#D8EAE6" headerBg="#EDF4F3" railActive="#5E9E95" railInactive="#EDF4F3">
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <div className="text-xs font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">Push Day</div>
+        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">Session 41:08 · 8,420 kg</div>
       </div>
-      <div className="flex items-end gap-1 h-10">
-        {[52, 68, 44, 88, 60, 100, 72].map((h, i) => (
-          <span key={i} className="flex-1 rounded-t-sm" style={{ height: `${h}%`, background: i === 5 ? "#7D67D9" : "#F4F1FB", opacity: i === 3 ? 0.5 : 1 }} />
-        ))}
-      </div>
-      <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-xl p-2" style={{ border: "1px solid #EDEAE4" }}>
-          <div className="text-[8px] font-bold tracking-[.12em] text-mkt-faint">WEIGHT</div>
-          <div className="text-xs font-extrabold text-mkt-ink mt-0.5">74.6 kg</div>
-          <div className="text-[8px] font-bold" style={{ color: "#5C48A8" }}>tap to edit</div>
-        </div>
-        <div className="rounded-xl p-2" style={{ border: "1px solid #EDEAE4" }}>
-          <div className="text-[8px] font-bold tracking-[.12em] text-mkt-faint">BODY FAT</div>
-          <div className="text-xs font-extrabold text-mkt-ink mt-0.5">17.2%</div>
-          <div className="text-[8px] font-bold" style={{ color: "#3F726D" }}>tap to edit</div>
-        </div>
-      </div>
-      <div className="rounded-xl p-[9px] flex-1" style={{ border: "1px solid #EDEAE4" }}>
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold text-mkt-ink whitespace-nowrap">Sleep score 84</span>
-          <span className="text-[8.5px] text-mkt-faint whitespace-nowrap">7h 22m</span>
-        </div>
-        <div className="flex gap-[3px] mt-1.5 h-1.5">
-          <span className="rounded-full" style={{ flex: 22, background: "#7D67D9" }} />
-          <span className="rounded-full" style={{ flex: 26, background: "#7D67D9", opacity: 0.6 }} />
-          <span className="rounded-full" style={{ flex: 44, background: "#F4F1FB" }} />
-          <span className="rounded-full" style={{ flex: 8, background: "#E7E3DC" }} />
-        </div>
-      </div>
-      <div className="flex items-center gap-2 rounded-xl p-2" style={{ border: "1px solid #EDEAE4" }}>
-        <span className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[9px] font-extrabold" style={{ background: "#F4F1FB", color: "#5C48A8" }}>
-          ●
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap">Vitamin D · 31 ng/mL</div>
-          <div className="text-[8px] text-mkt-faint whitespace-nowrap">Captured from photo · added to history</div>
-        </div>
+      <div className="flex gap-1 shrink-0">
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#5E9E95", color: "#fff" }}>Live</span>
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#F0F7F5", color: "#2F5F58" }}>History</span>
       </div>
     </div>
-  </div>
+    <div className="flex flex-col gap-[5px]">
+      {[
+        { name: "Bench Press", meta: "4 × 8 · 82.5 kg", rpe: "RPE 8" },
+        { name: "Incline DB Press", meta: "3 × 10 · 30 kg", rpe: "RPE 7" },
+        { name: "Cable Fly", meta: "3 × 12 · 17.5 kg", rpe: "RPE 9" },
+      ].map((row) => (
+        <div key={row.name} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5" style={{ border: "1px solid #D8EAE6" }}>
+          <span className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap overflow-hidden text-ellipsis min-w-0">{row.name}</span>
+          <span className="text-[8.5px] text-[#5B5349] whitespace-nowrap shrink-0">{row.meta}</span>
+          <span className="text-[8px] font-bold whitespace-nowrap shrink-0" style={{ color: "#2F5F58" }}>{row.rpe}</span>
+        </div>
+      ))}
+    </div>
+    <div className="flex flex-col gap-1">
+      <span className="text-[8px] font-bold tracking-[.14em]" style={{ color: "#8C8378" }}>VOLUME · 6 WEEKS +14%</span>
+      <span className="flex items-end gap-1 h-[26px]">
+        {[
+          { h: 38, o: 0.3 },
+          { h: 52, o: 0.4 },
+          { h: 46, o: 0.5 },
+          { h: 70, o: 0.6 },
+          { h: 86, o: 0.7 },
+          { h: 100, o: 1 },
+        ].map((bar, i) => (
+          <span key={i} className="flex-1 rounded" style={{ height: `${bar.h}%`, background: i === 5 ? "#2F5F58" : "#5E9E95", opacity: bar.o }} />
+        ))}
+      </span>
+    </div>
+  </BrowserMockup>
 );
 
 const HealthGraphic: React.FC = () => (
   <>
-    <span className="relative w-[78px] h-[78px] shrink-0 rounded-full border-[6px] flex items-center justify-center" style={{ borderColor: "#EDF4F3" }}>
-      <span className="absolute -inset-1.5 rounded-full border-[6px] border-r-transparent" style={{ borderColor: "#5E9E95", borderRightColor: "transparent", transform: "rotate(45deg)" }} />
-      <span className="text-[15px] font-extrabold" style={{ color: "#2F5F58" }}>84</span>
+    <span className="relative w-[52px] h-[52px] shrink-0 rounded-full flex items-center justify-center" style={{ border: "6px solid #F4F1FB" }}>
+      <span
+        className="absolute -inset-1.5 rounded-full"
+        style={{ border: "6px solid #7D67D9", borderRightColor: "transparent", borderBottomColor: "transparent", transform: "rotate(24deg)" }}
+      />
+      <span className="text-[14px] font-extrabold" style={{ color: "#54409B" }}>84</span>
     </span>
-    <span className="flex flex-col gap-2 flex-1 min-w-0">
-      <svg viewBox="0 0 120 34" className="w-full h-[34px]" preserveAspectRatio="none">
-        <polyline points="0,26 20,20 40,23 60,12 80,16 100,6 120,10" fill="none" stroke="#221E1A" strokeOpacity="0.35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-        <polyline points="0,30 20,24 40,20 60,18 80,12 100,14 120,4" fill="none" stroke="#5E9E95" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    <span className="flex flex-col gap-[9px] flex-1 min-w-0">
+      <svg viewBox="0 0 200 48" className="w-full h-8" preserveAspectRatio="none">
+        <polyline points="0,38 24,26 48,31 72,14 96,22 120,9 144,17 168,6 200,11" fill="none" stroke="#7D67D9" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+        <polyline points="0,44 24,40 48,42 72,36 96,39 120,33 144,37 168,31 200,34" fill="none" stroke="#54409B" strokeOpacity="0.35" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
       <span className="flex gap-1.5">
-        <span className="px-2 py-[3px] rounded-full text-[9.5px] font-extrabold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#2F5F58" }}>9,412 steps</span>
-        <span className="px-2 py-[3px] rounded-full text-[9.5px] font-extrabold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#2F5F58" }}>74.6 kg</span>
+        <span className="px-2 py-[3px] rounded-full text-[9.5px] font-extrabold whitespace-nowrap" style={{ background: "#F4F1FB", color: "#54409B" }}>9,412 steps</span>
+        <span className="px-2 py-[3px] rounded-full text-[9.5px] font-extrabold whitespace-nowrap" style={{ background: "#F4F1FB", color: "#54409B" }}>74.6 kg</span>
       </span>
     </span>
   </>
 );
 
-const PillarPhoneCommunity: React.FC = () => (
-  <div className="w-full h-full flex flex-col text-left">
-    <StatusBar />
-    <div className="flex-1 flex flex-col gap-2.5 px-3.5 pt-2.5 pb-3.5">
-      <div className="flex items-center justify-between">
-        <span className="text-[12.5px] font-extrabold tracking-[-.02em] text-mkt-ink">Habits</span>
-        <span className="px-2 py-[3px] rounded-full text-[8.5px] font-extrabold whitespace-nowrap" style={{ background: "#F6F3FD", color: "#54409B" }}>4 of 5 done</span>
+const HealthMockup: React.FC = () => (
+  <BrowserMockup url="app.centium.health/health" border="#E4DCF8" headerBg="#F4F1FB" railActive="#7D67D9" railInactive="#F4F1FB">
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <div className="text-xs font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">Steps</div>
+        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">9,412 · avg 8,640</div>
       </div>
-      <div className="flex gap-1.5">
-        <span className="px-2.5 py-1 rounded-full text-[9.5px] font-bold whitespace-nowrap" style={{ background: "#7D67D9", color: "#fff" }}>Habits</span>
-        <span className="px-2.5 py-1 rounded-full text-[9.5px] font-bold whitespace-nowrap" style={{ background: "#F6F3FD", color: "#54409B" }}>Journal</span>
-      </div>
-      <div className="flex flex-col gap-[7px]">
-        {[
-          { label: "Morning walk", streak: "18-day streak" },
-          { label: "Read 10 pages", streak: "6-day streak" },
-          { label: "Stretch routine", streak: "3-day streak" },
-        ].map((row) => (
-          <div key={row.label} className="flex items-center gap-2.5 rounded-[11px] p-2" style={{ border: "1px solid #EDEAE4" }}>
-            <span className="w-5 h-5 rounded-md shrink-0 flex items-center justify-center text-[9px] font-extrabold text-white" style={{ background: "#7D67D9" }}>✓</span>
-            <div className="flex-1 min-w-0">
-              <div className="text-[10px] font-bold text-mkt-ink whitespace-nowrap">{row.label}</div>
-              <div className="text-[8px] text-mkt-faint whitespace-nowrap">{row.streak}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="flex flex-wrap gap-1.5">
-        {["Personal", "Training", "Nutrition", "General"].map((chip) => (
-          <span key={chip} className="px-2 py-1 rounded-full text-[8.5px] font-bold whitespace-nowrap" style={{ background: "#F6F3FD", color: "#54409B" }}>
-            {chip}
-          </span>
-        ))}
-      </div>
-      <div className="flex flex-col gap-[7px] flex-1 justify-end">
-        <div className="flex items-center gap-2.5 rounded-xl p-2" style={{ border: "1px solid #EDEAE4" }}>
-          <span className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[9px] font-extrabold" style={{ background: "#DED4F4", color: "#5C48A8" }}>RH</span>
-          <div className="flex-1 min-w-0">
-            <div className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap">Rana H. · client roster</div>
-            <div className="text-[8px] text-mkt-faint whitespace-nowrap">12 clients · 9 logged today</div>
-          </div>
-        </div>
-        <div className="flex items-center justify-between rounded-xl p-2" style={{ border: "1px solid #EDEAE4" }}>
-          <div className="min-w-0">
-            <div className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap">Beirut Strength Club</div>
-            <div className="text-[8px] text-mkt-faint whitespace-nowrap">Listing active · 1,240 members reached</div>
-          </div>
-          <span className="w-8 h-[18px] rounded-full shrink-0 relative" style={{ background: "#7D67D9" }}>
-            <span className="absolute top-0.5 right-0.5 w-[14px] h-[14px] rounded-full bg-white" />
-          </span>
-        </div>
+      <div className="flex gap-1 shrink-0">
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold" style={{ background: "#7D67D9", color: "#fff" }}>D</span>
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold" style={{ background: "#F6F3FD", color: "#54409B" }}>W</span>
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold" style={{ background: "#F6F3FD", color: "#54409B" }}>M</span>
       </div>
     </div>
-  </div>
+    <span className="flex items-end gap-1 h-[30px]">
+      {[52, 68, 44, 86, 62, 100, 74].map((h, i) => (
+        <span key={i} className="flex-1 rounded-sm" style={{ height: `${h}%`, background: i === 5 ? "#7D67D9" : "#F4F1FB" }} />
+      ))}
+    </span>
+    <div className="grid grid-cols-2 gap-[7px]">
+      <div className="rounded-lg p-1.5" style={{ border: "1px solid #E4DCF8" }}>
+        <div className="text-[7.5px] font-bold tracking-[.12em] text-mkt-faint">WEIGHT</div>
+        <div className="text-[11px] font-extrabold text-mkt-ink">74.6 kg</div>
+      </div>
+      <div className="rounded-lg p-1.5" style={{ border: "1px solid #E4DCF8" }}>
+        <div className="text-[7.5px] font-bold tracking-[.12em] text-mkt-faint">BODY FAT</div>
+        <div className="text-[11px] font-extrabold text-mkt-ink">17.2%</div>
+      </div>
+    </div>
+    <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5" style={{ border: "1px solid #E4DCF8" }}>
+      <span className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap">Sleep score 84</span>
+      <span className="text-[8.5px] text-mkt-faint whitespace-nowrap">7h 22m</span>
+    </div>
+  </BrowserMockup>
 );
 
 const CommunityGraphic: React.FC = () => (
   <>
-    <span className="relative flex items-center justify-center shrink-0 w-[120px] h-[78px]">
-      <span className="absolute left-1/2 top-0 -translate-x-1/2 w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-extrabold" style={{ background: "#DED4F4", color: "#5C48A8" }}>KD</span>
-      <span className="absolute left-2 bottom-0 w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-extrabold" style={{ background: "#DAEAE7", color: "#3F726D" }}>NF</span>
-      <span className="absolute right-2 bottom-0 w-7 h-7 rounded-full flex items-center justify-center text-[8px] font-extrabold" style={{ background: "#DED4F4", color: "#5C48A8" }}>RH</span>
+    <span className="relative shrink-0 w-[88px] h-16">
+      <span className="absolute w-[34px] h-[34px] rounded-full flex items-center justify-center text-[11px] font-extrabold text-white" style={{ left: 31, top: 0, background: "#33665E" }}>KD</span>
+      <span className="absolute w-[30px] h-[30px] rounded-full flex items-center justify-center text-[10px] font-extrabold text-white" style={{ left: 0, bottom: 2, background: "#5E9E95" }}>NF</span>
+      <span className="absolute w-[30px] h-[30px] rounded-full flex items-center justify-center text-[10px] font-extrabold text-white" style={{ right: 0, bottom: 2, background: "#7D67D9" }}>RH</span>
+      <span className="absolute w-[26px] h-0.5 rounded-full" style={{ left: 19, top: 31, background: "#5E9E95", transform: "rotate(38deg)" }} />
+      <span className="absolute w-[26px] h-0.5 rounded-full" style={{ right: 19, top: 31, background: "#5E9E95", transform: "rotate(-38deg)" }} />
+      <span className="absolute w-[34px] h-0.5 rounded-full" style={{ left: 31, bottom: 15, background: "#EDF4F3" }} />
     </span>
     <span className="flex flex-col gap-[7px] flex-1 min-w-0">
-      <span className="flex gap-1 h-2">
+      <span className="flex gap-[5px]">
         {[0, 1, 2, 3, 4].map((i) => (
-          <span key={i} className="flex-1 rounded-full" style={{ background: i < 4 ? "#2F5F58" : "#EDEAE4" }} />
+          <span key={i} className="flex-1 h-[22px] rounded-[5px]" style={{ background: i < 4 ? "#33665E" : "#EDF4F3" }} />
         ))}
       </span>
       <span className="flex gap-1.5">
-        <span className="px-2 py-[3px] rounded-full text-[9.5px] font-extrabold whitespace-nowrap" style={{ background: "#F6F3FD", color: "#54409B" }}>18-day streak</span>
-        <span className="px-2 py-[3px] rounded-full text-[9.5px] font-extrabold whitespace-nowrap" style={{ background: "#F6F3FD", color: "#54409B" }}>12 clients</span>
+        <span className="px-2 py-[3px] rounded-full text-[9.5px] font-extrabold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#33665E" }}>18-day streak</span>
+        <span className="px-2 py-[3px] rounded-full text-[9.5px] font-extrabold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#33665E" }}>12 clients</span>
       </span>
     </span>
   </>
+);
+
+const CommunityMockup: React.FC = () => (
+  <BrowserMockup url="app.centium.health/community" border="#D8EAE6" headerBg="#EDF4F3" railActive="#5E9E95" railInactive="#EDF4F3">
+    <div className="flex items-start justify-between gap-2">
+      <div className="min-w-0">
+        <div className="text-xs font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">Habits</div>
+        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">4 of 5 done · 18-day streak</div>
+      </div>
+      <div className="flex gap-1 shrink-0">
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#5E9E95", color: "#fff" }}>Habits</span>
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#F0F7F5", color: "#33665E" }}>Journal</span>
+      </div>
+    </div>
+    <div className="flex flex-col gap-[5px]">
+      {[
+        { name: "Morning walk", meta: "7 days", status: "done" },
+        { name: "Protein target", meta: "18 days", status: "done" },
+        { name: "Sleep by 11pm", meta: "4 days", status: "open" },
+      ].map((row) => (
+        <div key={row.name} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5" style={{ border: "1px solid #D8EAE6" }}>
+          <span className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap overflow-hidden text-ellipsis min-w-0">{row.name}</span>
+          <span className="text-[8.5px] text-[#5B5349] whitespace-nowrap shrink-0">{row.meta}</span>
+          <span className="text-[8px] font-bold whitespace-nowrap shrink-0" style={{ color: "#33665E" }}>{row.status}</span>
+        </div>
+      ))}
+    </div>
+    <div className="flex flex-wrap gap-1">
+      {["Personal", "Training", "Nutrition", "General"].map((chip) => (
+        <span key={chip} className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#F0F7F5", color: "#33665E" }}>
+          {chip}
+        </span>
+      ))}
+    </div>
+    <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5" style={{ border: "1px solid #D8EAE6" }}>
+      <span className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap">Rana H. · roster</span>
+      <span className="text-[8.5px] text-mkt-faint whitespace-nowrap">12 clients</span>
+    </div>
+  </BrowserMockup>
 );
 
 const pillars: PillarData[] = [
@@ -662,7 +626,7 @@ const pillars: PillarData[] = [
       { color: "#5E9E95", text: "Plan the week ahead in Meal Prep" },
     ],
     graphic: <NutritionGraphic />,
-    phone: <PillarPhoneNutrition />,
+    mockup: <NutritionMockup />,
   },
   {
     eyebrowNum: "02",
@@ -679,7 +643,7 @@ const pillars: PillarData[] = [
       { color: "#7D67D9", text: "Volume progression charted under History" },
     ],
     graphic: <TrainingGraphic />,
-    phone: <PillarPhoneTraining />,
+    mockup: <TrainingMockup />,
   },
   {
     eyebrowNum: "03",
@@ -697,7 +661,7 @@ const pillars: PillarData[] = [
       { color: "#5E9E95", text: "Capture a biomarker by photo, straight into history" },
     ],
     graphic: <HealthGraphic />,
-    phone: <PillarPhoneHealth />,
+    mockup: <HealthMockup />,
   },
   {
     eyebrowNum: "04",
@@ -715,7 +679,7 @@ const pillars: PillarData[] = [
       { color: "#7D67D9", text: "Gym listings with an active toggle and members reached" },
     ],
     graphic: <CommunityGraphic />,
-    phone: <PillarPhoneCommunity />,
+    mockup: <CommunityMockup />,
   },
 ];
 
@@ -887,21 +851,32 @@ export const Home: React.FC = () => {
           overlay, or a hard edge shows. #hero-band/#reviews-belt (rendered
           by ReviewsConveyor) are read by useNavHeroGlass to know when the
           nav should show its glass treatment. */}
-      <div
-        id="hero-band"
-        className="relative bg-white"
-        style={{
-          background:
-            "radial-gradient(70% 42% at 50% 22%,#F6F3FC 0%,rgba(246,243,252,.72) 36%,rgba(246,243,252,0) 72%)," +
-            "radial-gradient(58% 44% at 2% 60%,rgba(140,110,222,.34) 0%,rgba(140,110,222,0) 62%)," +
-            "radial-gradient(58% 44% at 98% 60%,rgba(84,158,146,.34) 0%,rgba(84,158,146,0) 62%)," +
-            "linear-gradient(90deg,#B49DEA 0%,#C4B7EC 24%,#D2D6E4 50%,#A8CFC6 76%,#8CC1B6 100%)",
-          WebkitMaskImage:
-            "linear-gradient(to bottom,#000 0%,#000 30%,rgba(0,0,0,.94) 42%,rgba(0,0,0,.82) 52%,rgba(0,0,0,.64) 62%,rgba(0,0,0,.44) 71%,rgba(0,0,0,.26) 79%,rgba(0,0,0,.12) 87%,rgba(0,0,0,.04) 94%,rgba(0,0,0,0) 100%)",
-          maskImage:
-            "linear-gradient(to bottom,#000 0%,#000 30%,rgba(0,0,0,.94) 42%,rgba(0,0,0,.82) 52%,rgba(0,0,0,.64) 62%,rgba(0,0,0,.44) 71%,rgba(0,0,0,.26) 79%,rgba(0,0,0,.12) 87%,rgba(0,0,0,.04) 94%,rgba(0,0,0,0) 100%)",
-        }}
-      >
+      {/* Regression fix: the gradient + vertical fade previously lived
+          directly on this wrapping div — but `mask-image` alpha-multiplies
+          an element's *entire* rendered output, foreground included, so
+          everything inside (the hero copy, and the review belt further
+          down) inherited the same fade-to-transparent and read as washed
+          out/barely visible by the time the mask reached ~80-100%. Per the
+          handoff: "the gradient lives on an absolutely-positioned child
+          that is masked out vertically" — the mask belongs on its own
+          background-only layer, sibling to the real content, not on the
+          content's own container. */}
+      <div id="hero-band" className="relative bg-white">
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background:
+              "radial-gradient(70% 42% at 50% 22%,#F6F3FC 0%,rgba(246,243,252,.72) 36%,rgba(246,243,252,0) 72%)," +
+              "radial-gradient(58% 44% at 2% 60%,rgba(140,110,222,.34) 0%,rgba(140,110,222,0) 62%)," +
+              "radial-gradient(58% 44% at 98% 60%,rgba(84,158,146,.34) 0%,rgba(84,158,146,0) 62%)," +
+              "linear-gradient(90deg,#B49DEA 0%,#C4B7EC 24%,#D2D6E4 50%,#A8CFC6 76%,#8CC1B6 100%)",
+            WebkitMaskImage:
+              "linear-gradient(to bottom,#000 0%,#000 30%,rgba(0,0,0,.94) 42%,rgba(0,0,0,.82) 52%,rgba(0,0,0,.64) 62%,rgba(0,0,0,.44) 71%,rgba(0,0,0,.26) 79%,rgba(0,0,0,.12) 87%,rgba(0,0,0,.04) 94%,rgba(0,0,0,0) 100%)",
+            maskImage:
+              "linear-gradient(to bottom,#000 0%,#000 30%,rgba(0,0,0,.94) 42%,rgba(0,0,0,.82) 52%,rgba(0,0,0,.64) 62%,rgba(0,0,0,.44) 71%,rgba(0,0,0,.26) 79%,rgba(0,0,0,.12) 87%,rgba(0,0,0,.04) 94%,rgba(0,0,0,0) 100%)",
+          }}
+        />
         <section id="top" className="relative overflow-hidden">
           <div
             className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-[.92]"
@@ -1048,12 +1023,17 @@ export const Home: React.FC = () => {
         </div>
       </Section>
 
-      {/* Platform — pinned four-pillar scroll-scrubbed rail */}
-      <section className="py-[clamp(72px,8vw,96px)] bg-mkt-wash border-t border-b border-mkt-line">
-        <div className="max-w-[1180px] mx-auto px-5 sm:px-10">
+      {/* Platform — pinned four-pillar scroll-scrubbed rail. The heading
+          lives *inside* PillarRail's own sticky section (not a separate
+          block above it) — regression fix: the handoff pins the heading and
+          the rail together at top:72px as one unit, never vertically
+          centering it, which an earlier build never carried over. */}
+      <PillarRail
+        pillars={pillars}
+        heading={
           <Reveal>
             <Eyebrow>THE PLATFORM</Eyebrow>
-            <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] max-w-[860px]">
+            <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[10px] max-w-[860px]">
               Everything health,
               <br />
               together.{" "}
@@ -1062,19 +1042,21 @@ export const Home: React.FC = () => {
               </span>
             </h2>
           </Reveal>
-          <Reveal delay={0.08} className="mt-11">
-            <PillarRail pillars={pillars} />
-          </Reveal>
-        </div>
-      </section>
+        }
+      />
 
       {/* FAQ → Who it's for → Beyond the Individual → Pricing → Closing CTA
-          share one descending gradient band (green enters at "Beyond the
-          Individual" and merges into purple). */}
+          share one background that fades to solid white by 34% and stays
+          white the rest of the way. Regression fix: this previously carried
+          a much busier multi-stop gradient (green fading into purple) left
+          over from an earlier round — its purple tail sat directly behind
+          the footer's own colour-wash layer (which bleeds up from the
+          footer, per Footer.tsx), so the two competed visibly right around
+          the "Ready to bring it all together?" heading. The footer expects
+          plain white underneath it, per the handoff. */}
       <div
         style={{
-          background:
-            "linear-gradient(#FBFAF8 0%,#F3F8F6 8%,#FBFCFB 22%,#FFFFFF 36%,#EDF6F2 48%,#D7ECE5 58%,#D9E7EC 70%,#E2DEF6 84%,#E7E0F9 100%)",
+          background: "linear-gradient(#FBFAF8 0%,#FDFCFB 14%,#FFFFFF 34%,#FFFFFF 100%)",
         }}
       >
         <Section id="faq" className="bg-transparent scroll-mt-[88px]">
