@@ -2,8 +2,11 @@ import React, { useEffect, useState } from "react";
 import { CentiumWordmark } from "./CentiumLogo";
 
 /** Home's first-paint brand moment, per the v2 landing handoff's "Loading
- *  screen" spec. Fixed full-viewport overlay; auto-dismisses at 1.4s or on
- *  click, and shown at most once per browser session (see LOADER_SESSION_KEY).
+ *  screen" spec. Fixed full-viewport overlay; auto-dismisses at 3.7s or on
+ *  click, and shown at most once per browser session (see
+ *  LOADER_SESSION_KEY) — the original design replayed on every visit, but
+ *  there's no reason to repeat a 3.7s brand moment for a returning visitor
+ *  in the same browser session (#31).
  *  Sequence (all fill-mode "both"):
  *    1. leaf falls in behind the mark, zigzagging to rest
  *    2. the C draws clockwise via a conic-gradient mask sweep over
@@ -15,12 +18,11 @@ import { CentiumWordmark } from "./CentiumLogo";
  *  driving conic-gradient angles would drop frames; a CSS animation over
  *  25 keyframes doesn't).
  *
- *  Timing was originally 3.7s total (see #30b) — confirmed unchanged since
- *  the file's creation and matching the handoff's own "3.7s total" spec, so
- *  the slowness reported in #30b wasn't a regression. Per #31, every
- *  duration/delay below is the original scaled by the same ratio
- *  (1.4 / 3.7 ≈ 0.378) so the sequence still reads as the same design, just
- *  faster. */
+ *  #31 briefly shipped this at 1.4s (scaled proportionally) after #30b's
+ *  investigation into perceived slowness, but reverted per #31c — the
+ *  slowdown was likely the reporting user's own device, not the site, and
+ *  1.4s read as too fast to actually see. Timing here is back to the
+ *  original 3.7s exactly; only the session-gating from #31 stayed. */
 const LOADER_SESSION_KEY = "centium_brand_loader_shown";
 
 export const BrandLoader: React.FC = () => {
@@ -44,7 +46,7 @@ export const BrandLoader: React.FC = () => {
       // sessionStorage unavailable — the loader will simply show again on
       // this browser's next visit too, which is an acceptable fallback.
     }
-    const t = setTimeout(() => setVisible(false), 1400);
+    const t = setTimeout(() => setVisible(false), 3700);
     return () => clearTimeout(t);
     // Only ever meant to run once, against the state this component mounted
     // with — `visible` toggling to false later (skip or timeout) shouldn't
@@ -87,7 +89,7 @@ export const BrandLoader: React.FC = () => {
           flexDirection: "column",
           alignItems: "center",
           gap: 20,
-          animation: "centLoaderOut 227ms ease 1135ms both",
+          animation: "centLoaderOut .6s ease 3s both",
         }}
       >
         <span style={{ position: "relative", display: "block", width: 104, height: 112.5 }}>
@@ -97,7 +99,7 @@ export const BrandLoader: React.FC = () => {
             className="cent-loader-c"
             style={{
               position: "absolute", left: 0, top: 0, width: 104, height: 112.5, objectFit: "contain",
-              animation: "centLoaderCDraw 341ms steps(1,end) 359ms both",
+              animation: "centLoaderCDraw .9s steps(1,end) .95s both",
             }}
           />
           <img
@@ -106,7 +108,7 @@ export const BrandLoader: React.FC = () => {
             className="cent-loader-leaf"
             style={{
               position: "absolute", left: 0, top: 0, width: 104, height: 112.5, objectFit: "contain",
-              animation: "centLoaderLeafFall 454ms cubic-bezier(.35,.85,.4,1) both",
+              animation: "centLoaderLeafFall 1.2s cubic-bezier(.35,.85,.4,1) both",
             }}
           />
         </span>
@@ -114,7 +116,7 @@ export const BrandLoader: React.FC = () => {
           className="cent-loader-word"
           style={{
             position: "relative", display: "block", height: 15, width: 162.1, color: "#9C7FF8",
-            animation: "centLoaderWordIn 208ms ease 757ms both",
+            animation: "centLoaderWordIn .55s ease 2s both",
           }}
         >
           <CentiumWordmark height={15} />
@@ -128,7 +130,7 @@ export const BrandLoader: React.FC = () => {
               maskSize: "280% 100%",
               WebkitMaskRepeat: "no-repeat",
               maskRepeat: "no-repeat",
-              animation: "centLoaderSweep 454ms ease-in-out 814ms both",
+              animation: "centLoaderSweep 1.2s ease-in-out 2.15s both",
             }}
           >
             <CentiumWordmark height={15} />
