@@ -18,16 +18,14 @@ export interface ProblemItem {
  *  text-decoration: line-through rule is visible — a clip-path reveals that
  *  duplicate row by row, so the strike follows the text exactly (including
  *  wraps) instead of being a separately-positioned line that could drift.
- *  Row 2 ("A health app") is the odd one out: instead of a line-through, two
- *  independent bars cross into an X — distinct enough from the other four
- *  that no two rows read the same. */
-const STRIKE_SPEC = [
-  { kind: "line", dur: ".38s", ease: "cubic-bezier(.3,0,.2,1)", th: 2, style: "solid", from: "right", rot: "-1.2deg" },
-  { kind: "line", dur: ".85s", ease: "cubic-bezier(.62,0,.38,1)", th: 1.5, style: "wavy", from: "left", rot: "0.9deg" },
-  { kind: "x" },
-  { kind: "line", dur: "1.05s", ease: "linear", th: 1.5, style: "double", from: "right", rot: "1.6deg" },
-  { kind: "line", dur: ".72s", ease: "steps(11,end)", th: 2, style: "dashed", from: "left", rot: "-0.5deg" },
-] as const;
+ *
+ *  v4 landing handoff: every row now gets the identical plain treatment
+ *  (solid 2px #8C8378, revealed left-to-right, no rotation) — the v3 handoff
+ *  varied rotation/thickness/style per row and swapped row 2 for a crossing
+ *  "X", but that read as busy, and the plain line was chosen deliberately as
+ *  the more premium read. Any styled variant here is a regression. */
+const STRIKE_DUR = ".5s";
+const STRIKE_EASE = "cubic-bezier(.3,0,.2,1)";
 
 export const ProblemList: React.FC<{ items: ProblemItem[] }> = ({ items }) => {
   const [struck, setStruck] = useState(0);
@@ -69,7 +67,6 @@ export const ProblemList: React.FC<{ items: ProblemItem[] }> = ({ items }) => {
   return (
     <div ref={listRef} className="flex flex-col">
       {items.map((item, i) => {
-        const sp = STRIKE_SPEC[i];
         const on = struck > i;
         return (
           <div key={item.label} className="flex items-center justify-between py-[15px] border-t border-mkt-line">
@@ -78,65 +75,30 @@ export const ProblemList: React.FC<{ items: ProblemItem[] }> = ({ items }) => {
               style={{ color: on ? "#A9A29A" : "#221E1A" }}
             >
               {item.label}
-              {sp.kind === "x" ? (
-                <span aria-hidden="true" className="absolute left-0 top-1/2 w-[calc(100%-14px)] h-0 pointer-events-none">
-                  <span
-                    className="absolute left-0 top-0 w-full rounded-sm"
-                    style={{
-                      height: 2.5,
-                      background: "#8C8378",
-                      transform: on ? "translateY(-50%) rotate(8deg) scaleX(1)" : "translateY(-50%) rotate(8deg) scaleX(0)",
-                      transformOrigin: "center center",
-                      transition: "transform .5s cubic-bezier(.34,1.5,.5,1)",
-                    }}
-                  />
-                  <span
-                    className="absolute left-0 top-0 w-full rounded-sm"
-                    style={{
-                      height: 2.5,
-                      background: "#8C8378",
-                      transform: on ? "translateY(-50%) rotate(-8deg) scaleX(1)" : "translateY(-50%) rotate(-8deg) scaleX(0)",
-                      transformOrigin: "center center",
-                      transition: "transform .5s cubic-bezier(.34,1.5,.5,1) .12s",
-                    }}
-                  />
-                </span>
-              ) : (
-                <span
-                  aria-hidden="true"
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    top: 0,
-                    width: "100%",
-                    boxSizing: "border-box",
-                    whiteSpace: "nowrap",
-                    paddingRight: 14,
-                    color: "transparent",
-                    WebkitTextFillColor: "transparent",
-                    textDecorationLine: "line-through",
-                    textDecorationColor: i % 2 === 0 ? "#8C8378" : "#A9A29A",
-                    textDecorationStyle: sp.style,
-                    textDecorationThickness: sp.th,
-                    clipPath: on
-                      ? "inset(0 0 0 0)"
-                      : sp.from === "right"
-                        ? "inset(0 100% 0 0)"
-                        : "inset(0 0 0 100%)",
-                    WebkitClipPath: on
-                      ? "inset(0 0 0 0)"
-                      : sp.from === "right"
-                        ? "inset(0 100% 0 0)"
-                        : "inset(0 0 0 100%)",
-                    transform: `rotate(${sp.rot})`,
-                    transformOrigin: sp.from === "right" ? "left center" : "right center",
-                    transition: `clip-path ${sp.dur} ${sp.ease}`,
-                    pointerEvents: "none",
-                  }}
-                >
-                  {item.label}
-                </span>
-              )}
+              <span
+                aria-hidden="true"
+                style={{
+                  position: "absolute",
+                  left: 0,
+                  top: 0,
+                  width: "100%",
+                  boxSizing: "border-box",
+                  whiteSpace: "nowrap",
+                  paddingRight: 14,
+                  color: "transparent",
+                  WebkitTextFillColor: "transparent",
+                  textDecorationLine: "line-through",
+                  textDecorationColor: "#8C8378",
+                  textDecorationStyle: "solid",
+                  textDecorationThickness: 2,
+                  clipPath: on ? "inset(0 0 0 0)" : "inset(0 100% 0 0)",
+                  WebkitClipPath: on ? "inset(0 0 0 0)" : "inset(0 100% 0 0)",
+                  transition: `clip-path ${STRIKE_DUR} ${STRIKE_EASE}`,
+                  pointerEvents: "none",
+                }}
+              >
+                {item.label}
+              </span>
             </span>
             <span className="text-xs text-[#C3BCB2] whitespace-nowrap shrink-0">{item.tag}</span>
           </div>

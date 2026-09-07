@@ -18,9 +18,14 @@ const links = [
   { to: "/contact", label: "Contact", spyId: null },
 ];
 
-/** Sticky, fully transparent nav pulled over the page content (`-mt-[72px]`
- *  on the element after it) so section color and the hero canvas run behind
- *  it. Three palettes, evaluated in this priority order:
+/** Fixed, fully transparent nav overlaying the page content so section color
+ *  and the hero canvas run behind it — v4 landing handoff: an earlier build
+ *  used `position: sticky` with a `-72px` bottom margin to let the hero start
+ *  beneath it, and that negative margin let the bar scroll away instead of
+ *  staying pinned. `position: fixed` has zero flow height either way, so
+ *  every other marketing page's existing top padding (tuned for the old
+ *  zero-flow-height sticky nav) already clears it without change. Three
+ *  palettes, evaluated in this priority order:
  *   1. `dark` (useNavTheme) — light-on-dark, for the other marketing pages'
  *      own `data-nav-dark` bands (Business/Product/Pricing/Contact). Home
  *      never marks a section dark, so this and `glass` never coexist.
@@ -40,7 +45,7 @@ export const Nav: React.FC = () => {
   const { active: spyActive, onLinkClick } = useNavScrollSpy(["platform", "pricing", "faq"]);
 
   return (
-    <header className="sticky top-0 z-40 bg-transparent mb-[-72px]">
+    <header className="fixed top-0 left-0 right-0 z-[60] bg-transparent">
       <div
         className={clsx(
           "max-w-[1180px] mx-auto px-5 sm:px-10 h-[72px] flex items-center justify-between gap-6 transition-colors duration-300",

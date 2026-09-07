@@ -23,10 +23,18 @@ const PIN_TOP = 72;
  *  onto sibling nodes *after* a re-render landed on the wrong node once
  *  React reconciled them, freezing the fan. Reading refs and writing style
  *  directly in the same scroll-frame callback (never deferring to the next
- *  render) avoids that. */
+ *  render) avoids that.
+ *
+ *  v4 landing handoff: the focused card's glow is now tinted in its own
+ *  title colour (purple for Principled/Intentional, teal for
+ *  Determined/Proactive) rather than a fixed neutral purple, and its largest
+ *  glow layer reaches ~46px above the card — so the outer frame grew to
+ *  552px with the ring of cards inset 52px from its top, giving the halo
+ *  room before `overflow: hidden` clips it flat. */
 export const PersonaArc: React.FC<{ personas: PersonaData[] }> = ({ personas }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
+  const frameRef = useRef<HTMLDivElement>(null);
   const wrapRef = useRef<HTMLDivElement>(null);
   const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
   const artRefs = useRef<(HTMLDivElement | null)[]>([]);
@@ -80,7 +88,11 @@ export const PersonaArc: React.FC<{ personas: PersonaData[] }> = ({ personas }) 
         card.style.filter = d === 0 ? "none" : `grayscale(1) contrast(.9) brightness(1.03) blur(${(d * 0.9).toFixed(1)}px)`;
         card.style.opacity = d === 0 ? "1" : d === 1 ? ".72" : d === 2 ? ".44" : ".26";
         card.style.zIndex = String(20 - d);
-        card.style.boxShadow = d === 0 ? "0 22px 48px rgba(72,58,130,.2)" : "0 8px 20px rgba(72,58,130,.07)";
+        const tint = i % 2 === 0 ? "125,103,217" : "94,158,149";
+        card.style.boxShadow =
+          d === 0
+            ? `0 0 0 1px rgba(${tint},.34),0 0 28px rgba(${tint},.5),0 18px 44px rgba(${tint},.42),0 30px 76px rgba(${tint},.28)`
+            : "0 8px 20px rgba(72,58,130,.07)";
       }
     };
 
@@ -150,8 +162,21 @@ export const PersonaArc: React.FC<{ personas: PersonaData[] }> = ({ personas }) 
   return (
     <div ref={trackRef} id="traits-track" className="relative">
       <div ref={sectionRef} id="traits-section" className="relative">
-        <div ref={wrapRef} className="relative mt-14 h-[470px] overflow-hidden">
-          <div className="absolute inset-0">
+        <div
+          ref={frameRef}
+          className="relative mt-11 h-[552px] overflow-hidden"
+          style={{
+            maskImage:
+              "linear-gradient(90deg,transparent 0%,rgba(0,0,0,.35) 5%,rgba(0,0,0,.85) 12%,#000 20%,#000 80%,rgba(0,0,0,.85) 88%,rgba(0,0,0,.35) 95%,transparent 100%)," +
+              "linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 4%,#000 11%,#000 90%,rgba(0,0,0,.6) 97%,transparent 100%)",
+            WebkitMaskImage:
+              "linear-gradient(90deg,transparent 0%,rgba(0,0,0,.35) 5%,rgba(0,0,0,.85) 12%,#000 20%,#000 80%,rgba(0,0,0,.85) 88%,rgba(0,0,0,.35) 95%,transparent 100%)," +
+              "linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 4%,#000 11%,#000 90%,rgba(0,0,0,.6) 97%,transparent 100%)",
+            maskComposite: "intersect",
+            WebkitMaskComposite: "source-in",
+          }}
+        >
+          <div ref={wrapRef} className="absolute left-0 right-0 top-[52px] bottom-0">
             {personas.map((p, i) => (
               <div
                 key={p.title}

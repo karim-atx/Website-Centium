@@ -6,11 +6,14 @@ import { Eyebrow } from "../components/Eyebrow";
 import { PillarRail, type PillarData } from "../components/PillarRail";
 import { PersonaArc, type PersonaData } from "../components/PersonaArc";
 import { PlanPicker, type Plan } from "../components/PlanPicker";
-import { FaqAccordion } from "../components/FaqAccordion";
+import { FaqAccordion, type FaqItem } from "../components/FaqAccordion";
 import { ProblemList, type ProblemItem } from "../components/ProblemList";
 import { ReviewsConveyor, type Review } from "../components/ReviewsConveyor";
 import { BrandLoader } from "../components/BrandLoader";
+import { PricingLeafAccent } from "../components/PricingLeafAccent";
 import { useHeroFlow } from "../hooks/useHeroFlow";
+import { useHeroSubtextPlacement } from "../hooks/useHeroSubtextPlacement";
+import { usePricingAccents } from "../hooks/usePricingAccents";
 import { useSEO } from "../useSEO";
 
 const legacyApps: ProblemItem[] = [
@@ -21,25 +24,35 @@ const legacyApps: ProblemItem[] = [
   { label: "A spreadsheet you stopped filling", tag: "Inconsistency" },
 ];
 
-const faqItems = [
+const faqItems: FaqItem[] = [
   {
     q: "Why does Centium exist?",
+    lead: "Why",
+    color: "#7D67D9",
     a: "As a means to an end. Centium was built around the challenges people face, the goals they pursue, and the support they need to make meaningful progress.",
   },
   {
     q: "What exactly can I track with Centium?",
+    lead: "What",
+    color: "#5E9E95",
     a: "Everything. From your health and workouts to nutrition and progress, Centium brings it all together in one all-encompassing platform.",
   },
   {
     q: "Who is Centium built for?",
+    lead: "Who",
+    color: "#7D67D9",
     a: "Anyone. If you care about your health, Centium adapts to your needs with little effort, whether you're just starting out or already deep into your journey.",
   },
   {
     q: "Where does Centium fit into my daily routine?",
+    lead: "Where",
+    color: "#5E9E95",
     a: "All day, every day. Centium seamlessly fits into your routine without being invasive, acting as a smooth, always-accessible partner in your health journey.",
   },
   {
     q: "When should Centium be part of my journey?",
+    lead: "When",
+    color: "#7D67D9",
     a: "From wherever you are. Fitness will always require effort, but Centium guides and supports you every step of the way, helping you turn your goals into progress.",
   },
 ];
@@ -835,12 +848,34 @@ const personas: PersonaData[] = [
   { title: "Proactive", accent: "#3F726D", description: "Wants to understand their health, act on it, and keep moving forward.", art: traitArt.video },
 ];
 
+/** Pricing section heading with the v4 handoff's mirrored leaf-stem accents
+ *  flanking it — shown only once the heading block itself measures at least
+ *  620px wide (see usePricingAccents), so a narrow container never has the
+ *  accents crowding the text. */
+const PricingHeading: React.FC = () => {
+  const headRef = usePricingAccents<HTMLDivElement>();
+  return (
+    <Reveal className="relative text-center max-w-[820px] mx-auto mb-11">
+      <div ref={headRef} className="relative">
+        <PricingLeafAccent />
+        <PricingLeafAccent mirror />
+        <Eyebrow className="mx-auto">PRICING</Eyebrow>
+        <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px]">
+          Whatever your role, Centium fits.
+        </h2>
+        <p className="text-base leading-relaxed text-mkt-soft mt-[18px]">One app instead of a stack of subscriptions.</p>
+      </div>
+    </Reveal>
+  );
+};
+
 export const Home: React.FC = () => {
   useSEO(
     "Your health, all in one place",
     "Centium brings nutrition tracking, workout logging, health tracking and community into one place."
   );
   const canvasRef = useHeroFlow();
+  useHeroSubtextPlacement();
 
   return (
     <>
@@ -895,13 +930,25 @@ export const Home: React.FC = () => {
               <h1 className="font-display font-extrabold text-[44px] sm:text-6xl lg:text-[76px] leading-[1.03] tracking-[-.034em] text-mkt-ink mt-5 max-w-[900px]">
                 Your health,
               </h1>
-              <div className="font-display font-extrabold text-[44px] sm:text-6xl lg:text-[76px] leading-[1.03] tracking-[-.034em] text-mkt-ink mt-1.5 whitespace-nowrap">
-                All in one place
+              <div
+                id="hero-line2"
+                className="inline-block font-display font-extrabold text-[44px] sm:text-6xl lg:text-[76px] leading-[1.03] tracking-[-.034em] text-mkt-ink mt-1.5 whitespace-nowrap"
+              >
+                <span id="hw-all">All</span> in <span id="hw-one">one</span> <span id="hw-place">place</span>
               </div>
-              <div className="flex flex-wrap items-baseline justify-center gap-x-[26px] gap-y-2.5 mt-6 text-lg leading-[1.4] text-mkt-soft">
-                <span className="whitespace-nowrap">More clarity.</span>
-                <span className="whitespace-nowrap">More control.</span>
-                <span className="whitespace-nowrap">More you.</span>
+              <div
+                id="hero-sub"
+                className="flex flex-wrap items-baseline justify-center gap-x-6 gap-y-2.5 mt-6 text-lg leading-[1.4] text-mkt-soft"
+              >
+                <span className="hero-sub-line whitespace-nowrap" data-word="hw-all">
+                  More clarity.
+                </span>
+                <span className="hero-sub-line whitespace-nowrap" data-word="hw-one">
+                  More control.
+                </span>
+                <span className="hero-sub-line whitespace-nowrap" data-word="hw-place">
+                  More you.
+                </span>
               </div>
               <div className="flex flex-wrap justify-center gap-3 mt-9">
                 <Link
@@ -1078,151 +1125,157 @@ export const Home: React.FC = () => {
                 </h2>
               </div>
             </Reveal>
-            <div className="grid lg:grid-cols-2 gap-5">
-              <Reveal>
+            <div className="grid lg:grid-cols-2 gap-5 items-stretch">
+              <Reveal className="flex">
                 <div
-                  className="rounded-3xl p-9 transition-[transform,box-shadow,border-color] duration-[350ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)] hover:-translate-y-1.5"
-                  style={{
-                    background: "linear-gradient(155deg,rgba(255,255,255,.94) 0%,rgba(255,255,255,.72) 100%)",
-                    border: "1px solid rgba(125,103,217,.2)",
-                    boxShadow: "0 20px 50px rgba(72,58,130,.09)",
-                    backdropFilter: "blur(10px)",
-                  }}
+                  className="flex-1 flex flex-col rounded-[26px] overflow-hidden transition-[transform,box-shadow,border-color] duration-[350ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)] hover:-translate-y-1.5"
+                  style={{ background: "#FFFFFF", border: "1px solid #DCD2F5", boxShadow: "0 1px 0 rgba(255,255,255,.9) inset,0 22px 54px rgba(72,58,130,.12)" }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="w-[38px] h-[38px] shrink-0 rounded-[11px] flex items-center justify-center" style={{ background: "rgba(125,103,217,.14)", color: "#7D67D9" }}>
-                      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <div className="flex items-center gap-3.5" style={{ padding: "22px 28px", background: "#F4F1FB", borderBottom: "1px solid #DCD2F5" }}>
+                    <span
+                      className="w-[46px] h-[46px] shrink-0 rounded-[14px] flex items-center justify-center"
+                      style={{ background: "#FFFFFF", border: "1px solid #DCD2F5", color: "#7D67D9", boxShadow: "0 6px 16px rgba(72,58,130,.1)" }}
+                    >
+                      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                         <circle cx="9" cy="7" r="4" />
                         <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11" />
                       </svg>
                     </span>
-                    <div className="font-bold text-xl tracking-[-.01em] text-mkt-ink whitespace-nowrap">For professionals</div>
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-xl tracking-[-.02em] text-mkt-ink whitespace-nowrap">For professionals</div>
+                      <div className="text-[11px] font-bold tracking-[.16em] mt-[3px]" style={{ color: "#7D67D9" }}>PRACTITIONER SIDE</div>
+                    </div>
                   </div>
-                  <p className="text-base leading-relaxed text-mkt-soft mt-3" style={{ textWrap: "pretty" }}>
-                    Your clients, your plans, one seamless system. Manage everything from their health data to
-                    workouts and nutrition, with updates flowing straight to their app.
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-6">
-                    {["Personal trainers", "Dietitians", "Physiotherapists", "General Practitioners"].map((t) => (
-                      <span key={t} className="px-3.5 py-2 rounded-full bg-mkt-tint text-mkt-accent-hover font-semibold text-[13px] whitespace-nowrap shrink-0">
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-7 rounded-2xl overflow-hidden" style={{ background: "#FAF9F7", border: "1px solid #EDEAE4" }}>
-                    <div className="p-5 bg-white flex flex-col gap-3">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <div className="text-[12.5px] font-extrabold tracking-[-.02em] text-mkt-ink">Clients</div>
-                          <div className="text-[9px] text-mkt-faint whitespace-nowrap">3 active · Thu 4 Sep</div>
-                        </div>
-                        <div className="flex gap-[5px]">
-                          <span className="px-[9px] py-1 rounded-full bg-mkt-accent text-white text-[8.5px] font-bold whitespace-nowrap">All</span>
-                          <span className="px-[9px] py-1 rounded-full text-[8.5px] font-bold whitespace-nowrap" style={{ background: "#F6F4F0", color: "#8C8378" }}>Needs review</span>
-                        </div>
-                      </div>
-                      <div className="flex flex-col mt-1">
-                        {[
-                          { initials: "NK", name: "Nadine Khalil", meta: "64.2 kg · −0.8 · 1,840 kcal", status: "Logged", tone: "primary" },
-                          { initials: "SR", name: "Sami Rahal", meta: "81.6 kg · +0.3 · 2,650 kcal", status: "Logged", tone: "teal" },
-                          { initials: "YB", name: "Yara Bou Saab", meta: "58.9 kg · −0.2 · 1,620 kcal", status: "Pending", tone: "primary" },
-                          { initials: "RT", name: "Roster today", meta: "2 logged today · 1 pending", status: "3 clients", tone: "teal" },
-                        ].map((row, i) => (
-                          <div key={row.initials + i} className="flex items-center gap-3 py-2.5" style={i !== 0 ? { borderTop: "1px solid #EDEAE4" } : undefined}>
-                            <span
-                              className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-[10px] font-extrabold"
-                              style={row.tone === "primary" ? { background: "#DED4F4", color: "#5C48A8" } : { background: "#DAEAE7", color: "#3F726D" }}
-                            >
-                              {row.initials}
-                            </span>
-                            <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                              <div className="text-[11.5px] font-bold text-mkt-ink whitespace-nowrap">{row.name}</div>
-                              <div className="text-[9.5px] text-mkt-faint whitespace-nowrap">{row.meta}</div>
-                            </div>
-                            <div
-                              className="shrink-0 px-[9px] py-1 rounded-full text-[9.5px] font-bold text-mkt-soft"
-                              style={{ background: row.tone === "primary" ? "#F4F1FB" : "#EDF4F3" }}
-                            >
-                              {row.status}
-                            </div>
+                  <div className="flex-1 flex flex-col" style={{ padding: "24px 28px 28px" }}>
+                    <p className="text-base leading-relaxed text-mkt-soft" style={{ textWrap: "pretty" }}>
+                      Your clients, your plans, one seamless system. Manage everything from their health data to
+                      workouts and nutrition, with updates flowing straight to their app.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-6">
+                      {["Personal trainers", "Dietitians", "Physiotherapists", "General Practitioners"].map((t) => (
+                        <span key={t} className="px-3.5 py-2 rounded-full bg-mkt-tint text-mkt-accent-hover font-semibold text-[13px] whitespace-nowrap shrink-0">
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-7 rounded-2xl overflow-hidden" style={{ background: "#FAF9F7", border: "1px solid #EDEAE4" }}>
+                      <div className="p-5 bg-white flex flex-col gap-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="text-[12.5px] font-extrabold tracking-[-.02em] text-mkt-ink">Clients</div>
+                            <div className="text-[9px] text-mkt-faint whitespace-nowrap">3 active · Thu 4 Sep</div>
                           </div>
-                        ))}
+                          <div className="flex gap-[5px]">
+                            <span className="px-[9px] py-1 rounded-full bg-mkt-accent text-white text-[8.5px] font-bold whitespace-nowrap">All</span>
+                            <span className="px-[9px] py-1 rounded-full text-[8.5px] font-bold whitespace-nowrap" style={{ background: "#F6F4F0", color: "#8C8378" }}>Needs review</span>
+                          </div>
+                        </div>
+                        <div className="flex flex-col mt-1">
+                          {[
+                            { initials: "NK", name: "Nadine Khalil", meta: "64.2 kg · −0.8 · 1,840 kcal", status: "Logged", tone: "primary" },
+                            { initials: "SR", name: "Sami Rahal", meta: "81.6 kg · +0.3 · 2,650 kcal", status: "Logged", tone: "teal" },
+                            { initials: "YB", name: "Yara Bou Saab", meta: "58.9 kg · −0.2 · 1,620 kcal", status: "Pending", tone: "primary" },
+                            { initials: "RT", name: "Roster today", meta: "2 logged today · 1 pending", status: "3 clients", tone: "teal" },
+                          ].map((row, i) => (
+                            <div key={row.initials + i} className="flex items-center gap-3 py-2.5" style={i !== 0 ? { borderTop: "1px solid #EDEAE4" } : undefined}>
+                              <span
+                                className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-[10px] font-extrabold"
+                                style={row.tone === "primary" ? { background: "#DED4F4", color: "#5C48A8" } : { background: "#DAEAE7", color: "#3F726D" }}
+                              >
+                                {row.initials}
+                              </span>
+                              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+                                <div className="text-[11.5px] font-bold text-mkt-ink whitespace-nowrap">{row.name}</div>
+                                <div className="text-[9.5px] text-mkt-faint whitespace-nowrap">{row.meta}</div>
+                              </div>
+                              <div
+                                className="shrink-0 px-[9px] py-1 rounded-full text-[9.5px] font-bold text-mkt-soft"
+                                style={{ background: row.tone === "primary" ? "#F4F1FB" : "#EDF4F3" }}
+                              >
+                                {row.status}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </Reveal>
-              <Reveal delay={0.06}>
+              <Reveal delay={0.06} className="flex">
                 <div
-                  className="rounded-3xl p-9 transition-[transform,box-shadow,border-color] duration-[350ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)] hover:-translate-y-1.5"
-                  style={{
-                    background: "linear-gradient(155deg,rgba(255,255,255,.94) 0%,rgba(255,255,255,.72) 100%)",
-                    border: "1px solid rgba(94,158,149,.22)",
-                    boxShadow: "0 20px 50px rgba(72,58,130,.09)",
-                    backdropFilter: "blur(10px)",
-                  }}
+                  className="flex-1 flex flex-col rounded-[26px] overflow-hidden transition-[transform,box-shadow,border-color] duration-[350ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)] hover:-translate-y-1.5"
+                  style={{ background: "#FFFFFF", border: "1px solid #CFE4DF", boxShadow: "0 1px 0 rgba(255,255,255,.9) inset,0 22px 54px rgba(72,58,130,.12)" }}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="w-[38px] h-[38px] shrink-0 rounded-[11px] flex items-center justify-center" style={{ background: "rgba(94,158,149,.16)", color: "#5E9E95" }}>
-                      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <div className="flex items-center gap-3.5" style={{ padding: "22px 28px", background: "#EDF4F3", borderBottom: "1px solid #CFE4DF" }}>
+                    <span
+                      className="w-[46px] h-[46px] shrink-0 rounded-[14px] flex items-center justify-center"
+                      style={{ background: "#FFFFFF", border: "1px solid #CFE4DF", color: "#5E9E95", boxShadow: "0 6px 16px rgba(72,58,130,.1)" }}
+                    >
+                      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                         <path d="M3 21V8l9-5 9 5v13" />
                         <path d="M9 21v-6h6v6" />
                         <path d="M3 21h18" />
                       </svg>
                     </span>
-                    <div className="font-bold text-xl tracking-[-.01em] text-mkt-ink whitespace-nowrap">For businesses</div>
+                    <div className="min-w-0">
+                      <div className="font-extrabold text-xl tracking-[-.02em] text-mkt-ink whitespace-nowrap">For businesses</div>
+                      <div className="text-[11px] font-bold tracking-[.16em] mt-[3px]" style={{ color: "#5E9E95" }}>BUSINESS SIDE</div>
+                    </div>
                   </div>
-                  <p className="text-base leading-relaxed text-mkt-soft mt-3" style={{ textWrap: "pretty" }}>
-                    Put your gym, classes and services on the map, digitize memberships, connect with professionals
-                    and gain insights through client analytics.
-                  </p>
-                  <div className="flex flex-wrap gap-2 mt-6">
-                    {["Gyms & studios", "Equipment & supplements", "Meal prep services", "Activewear"].map((t) => (
-                      <span key={t} className="px-3.5 py-2 rounded-full font-semibold text-[13px] whitespace-nowrap shrink-0" style={{ background: "#EDF4F3", color: "#4F8F8A" }}>
-                        {t}
-                      </span>
-                    ))}
-                  </div>
-                  <div className="mt-7 rounded-2xl overflow-hidden" style={{ background: "#FAF9F7", border: "1px solid #EDEAE4" }}>
-                    <div className="p-5 bg-white flex flex-col gap-3">
-                      <div className="flex items-end justify-between gap-2">
-                        <div>
-                          <div className="text-[12.5px] font-extrabold tracking-[-.02em] text-mkt-ink">Check-ins</div>
-                          <div className="text-[9px] text-mkt-faint whitespace-nowrap">This week · 591 visits</div>
+                  <div className="flex-1 flex flex-col" style={{ padding: "24px 28px 28px" }}>
+                    <p className="text-base leading-relaxed text-mkt-soft" style={{ textWrap: "pretty" }}>
+                      Put your gym, classes and services on the map, digitize memberships, connect with professionals
+                      and gain insights through client analytics.
+                    </p>
+                    <div className="flex flex-wrap gap-2 mt-6">
+                      {["Gyms & studios", "Equipment & supplements", "Meal prep services", "Activewear"].map((t) => (
+                        <span key={t} className="px-3.5 py-2 rounded-full font-semibold text-[13px] whitespace-nowrap shrink-0" style={{ background: "#EDF4F3", color: "#4F8F8A" }}>
+                          {t}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="mt-7 rounded-2xl overflow-hidden" style={{ background: "#FAF9F7", border: "1px solid #EDEAE4" }}>
+                      <div className="p-5 bg-white flex flex-col gap-3">
+                        <div className="flex items-end justify-between gap-2">
+                          <div>
+                            <div className="text-[12.5px] font-extrabold tracking-[-.02em] text-mkt-ink">Check-ins</div>
+                            <div className="text-[9px] text-mkt-faint whitespace-nowrap">This week · 591 visits</div>
+                          </div>
+                          <span className="px-[9px] py-1 rounded-full text-[8.5px] font-extrabold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#3F726D" }}>+18% WoW</span>
                         </div>
-                        <span className="px-[9px] py-1 rounded-full text-[8.5px] font-extrabold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#3F726D" }}>+18% WoW</span>
-                      </div>
-                      <div className="flex items-end gap-1.5 h-[88px]">
-                        {[
-                          { day: "Mon", v: 53, h: 38 },
-                          { day: "Tue", v: 87, h: 62 },
-                          { day: "Wed", v: 70, h: 50 },
-                          { day: "Thu", v: 109, h: 78 },
-                          { day: "Fri", v: 81, h: 58 },
-                          { day: "Sat", v: 129, h: 92 },
-                          { day: "Sun", v: 62, h: 44 },
-                        ].map((bar) => (
-                          <div key={bar.day} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                            <span className="text-[7px] font-bold whitespace-nowrap" style={{ color: bar.day === "Sat" ? "#5C48A8" : "#A9A29A" }}>{bar.v}</span>
-                            <div
-                              className="w-full rounded-t"
-                              style={{ height: `${bar.h}%`, background: bar.day === "Sat" ? "#7D67D9" : "rgba(125,103,217,.26)" }}
-                            />
-                            <span className="text-[7px] font-semibold text-mkt-faint whitespace-nowrap">{bar.day}</span>
-                          </div>
-                        ))}
-                      </div>
-                      <div className="grid grid-cols-2 gap-2.5">
-                        {[
-                          { name: "Nour Aad", status: "Membership active" },
-                          { name: "Fadi Chamoun", status: "Class booked" },
-                        ].map((c) => (
-                          <div key={c.name} className="rounded-xl p-2.5 flex flex-col gap-1.5" style={{ border: "1px solid #EDEAE4" }}>
-                            <div className="text-[11.5px] font-bold text-mkt-ink whitespace-nowrap">{c.name}</div>
-                            <div className="text-[9.5px] text-mkt-faint whitespace-nowrap mt-0.5">{c.status}</div>
-                          </div>
-                        ))}
+                        <div className="flex items-end gap-1.5 h-[88px]">
+                          {[
+                            { day: "Mon", v: 53, h: 38 },
+                            { day: "Tue", v: 87, h: 62 },
+                            { day: "Wed", v: 70, h: 50 },
+                            { day: "Thu", v: 109, h: 78 },
+                            { day: "Fri", v: 81, h: 58 },
+                            { day: "Sat", v: 129, h: 92 },
+                            { day: "Sun", v: 62, h: 44 },
+                          ].map((bar) => (
+                            <div key={bar.day} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
+                              <span className="text-[7px] font-bold whitespace-nowrap" style={{ color: bar.day === "Sat" ? "#5C48A8" : "#A9A29A" }}>{bar.v}</span>
+                              <div
+                                className="w-full rounded-t"
+                                style={{ height: `${bar.h}%`, background: bar.day === "Sat" ? "#7D67D9" : "rgba(125,103,217,.26)" }}
+                              />
+                              <span className="text-[7px] font-semibold text-mkt-faint whitespace-nowrap">{bar.day}</span>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2.5">
+                          {[
+                            { name: "Nour Aad", status: "Membership active" },
+                            { name: "Fadi Chamoun", status: "Class booked" },
+                          ].map((c) => (
+                            <div key={c.name} className="rounded-xl p-2.5 flex flex-col gap-1.5" style={{ border: "1px solid #EDEAE4" }}>
+                              <div className="text-[11.5px] font-bold text-mkt-ink whitespace-nowrap">{c.name}</div>
+                              <div className="text-[9.5px] text-mkt-faint whitespace-nowrap mt-0.5">{c.status}</div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1235,13 +1288,7 @@ export const Home: React.FC = () => {
         {/* Pricing preview */}
         <section id="pricing" className="py-[clamp(48px,6vw,72px)] pb-[clamp(72px,8vw,96px)] scroll-mt-[88px]">
           <div className="max-w-[1180px] mx-auto px-5 sm:px-10">
-            <Reveal className="text-center max-w-[560px] mx-auto mb-11">
-              <Eyebrow className="mx-auto">PRICING</Eyebrow>
-              <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px]">
-                Whatever your role, Centium fits.
-              </h2>
-              <p className="text-base leading-relaxed text-mkt-soft mt-[18px]">One app instead of a stack of subscriptions.</p>
-            </Reveal>
+            <PricingHeading />
             <Reveal delay={0.08}>
               <PlanPicker plans={homePlans} defaultSelected={1} />
             </Reveal>

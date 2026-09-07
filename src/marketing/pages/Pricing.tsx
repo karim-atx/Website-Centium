@@ -5,7 +5,7 @@ import { Section } from "../components/Section";
 import { Reveal } from "../components/Reveal";
 import { Eyebrow } from "../components/Eyebrow";
 import { ComparisonTable, type ComparisonRow } from "../components/ComparisonTable";
-import { FaqAccordion } from "../components/FaqAccordion";
+import { FaqAccordion, type FaqItem } from "../components/FaqAccordion";
 import { useSEO } from "../useSEO";
 
 type Billing = "monthly" | "yearly";
@@ -63,21 +63,29 @@ const comparisonRows: ComparisonRow[] = [
   { label: "Community access", clients: true, professionals: true, business: true },
 ];
 
-const faqs = [
+const faqs: FaqItem[] = [
   {
     q: "Why isn't there a price yet?",
+    lead: "Why",
+    color: "#7D67D9",
     a: "Centium hasn't launched. Rates for each plan will be announced at launch — the structure above (what's included in each plan, and how billing works) is final even though the numbers aren't set yet.",
   },
   {
     q: "What's the difference between monthly and yearly billing?",
+    lead: "What's",
+    color: "#5E9E95",
     a: "Every plan can be billed monthly or yearly. Yearly billing will offer a discount versus paying monthly — the exact discount is confirmed at launch alongside pricing.",
   },
   {
     q: "How does business revenue share work?",
+    lead: "How",
+    color: "#7D67D9",
     a: "Business accounts pay a plan fee plus a share of the revenue generated through bookings and sales made via Centium's marketplace. Percentages are confirmed at launch.",
   },
   {
     q: "Can I switch between plans later?",
+    lead: "Can",
+    color: "#5E9E95",
     a: "Yes — clients, professionals and businesses are separate account types, and you'll be able to change your plan or account type from inside the app once it's live.",
   },
 ];

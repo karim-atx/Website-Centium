@@ -2,12 +2,26 @@ import React, { useState } from "react";
 import clsx from "clsx";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
-/** "+" in a lavender pill when closed, "−" in a teal pill when open — per
- *  the v2 landing handoff (supersedes the plain rotate-45 Plus glyph). The
- *  vertical bar of the plus collapses via scaleY while the whole glyph
- *  rotates 180°, so it reads as a genuine plus-to-minus morph rather than
- *  a generic rotation. */
-export const FaqAccordion: React.FC<{ items: { q: string; a: string }[] }> = ({ items }) => {
+export interface FaqItem {
+  q: string;
+  a: string;
+  /** The question's leading interrogative ("Why", "What", "Who"...) — must be
+   *  the literal start of `q` so it can be sliced off and wrapped in its own
+   *  colored span. */
+  lead: string;
+  /** Color for both the lead word and the toggle pill — read from data
+   *  rather than derived from index/open-state, so reordering the questions
+   *  can't desync the two (v4 landing handoff). */
+  color: string;
+}
+
+/** v4 landing handoff: the toggle pill's ink/background now come from the
+ *  question's own lead-word color and stay constant across open/closed
+ *  (previously: closed = lavender/#6A54C4, open = teal/#3F726D, the same
+ *  pair for every row regardless of the question). The "+" still collapses
+ *  its vertical bar via scaleY while the whole glyph rotates 180° to read
+ *  as a plus-to-minus morph. */
+export const FaqAccordion: React.FC<{ items: FaqItem[] }> = ({ items }) => {
   const [open, setOpen] = useState<number | null>(0);
   const reduceMotion = useReducedMotion();
 
@@ -15,6 +29,7 @@ export const FaqAccordion: React.FC<{ items: { q: string; a: string }[] }> = ({ 
     <div className="flex flex-col">
       {items.map((item, i) => {
         const isOpen = open === i;
+        const rest = item.q.slice(item.lead.length);
         return (
           <div key={item.q} className={clsx("border-t border-mkt-line", i === items.length - 1 && "border-b")}>
             <button
@@ -22,10 +37,13 @@ export const FaqAccordion: React.FC<{ items: { q: string; a: string }[] }> = ({ 
               aria-expanded={isOpen}
               className="w-full flex items-center justify-between gap-4 py-[17px] text-left"
             >
-              <span className="text-[16px] font-semibold text-mkt-ink">{item.q}</span>
+              <span className="text-[16px] font-semibold text-mkt-ink">
+                <span style={{ color: item.color }}>{item.lead}</span>
+                {rest}
+              </span>
               <span
                 className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center transition-colors duration-[280ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)]"
-                style={isOpen ? { background: "rgba(95,158,149,.2)", color: "#3F726D" } : { background: "rgba(125,103,217,.16)", color: "#6A54C4" }}
+                style={{ background: `${item.color}29`, color: item.color }}
               >
                 <svg
                   width="14"
