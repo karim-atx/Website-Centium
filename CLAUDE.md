@@ -50,11 +50,41 @@ already-implemented section, under `src/marketing/`.
    styles, bounding rects, and transforms directly against the handoff's
    specified values (`getComputedStyle`, `getBoundingClientRect`, inline
    `style.transform`). Screenshots are a useful sanity check but shouldn't be
-   the only evidence — the Browser pane's screenshot capture has an
-   intermittent blank-frame issue at deep scroll depths; when a screenshot
-   looks wrong or blank, re-verify via DOM measurement before concluding
-   there's a real bug.
+   the only evidence — the Browser pane has an intermittent staleness issue
+   at deep scroll depths / when backgrounded that affects *both* screenshot
+   capture (blank frames) and `getComputedStyle` reads (a genuinely-correct
+   inline style can transiently read back as a stale/wrong computed value).
+   If a screenshot or a computed-style read looks wrong, don't conclude
+   there's a bug from one reading — front the tab (a click or a fresh
+   `navigate`/`preview_start` works) and re-read; check the raw DOM
+   attribute (`el.getAttribute('style')` / `el.style.color`) against the
+   computed value as a cross-check when they disagree.
 5. **After finishing a section, do an orphan check on the files touched.**
    Search for old class names, unused gradient/mask definitions, or
    duplicate component logic that the new work should have replaced but
    might not have fully removed.
+6. **Trace every function a mechanism calls, and every piece of state's
+   initial value, separately from verifying its interactive behavior.** A
+   handoff's `init*()` function is not one effect — `setTab()` in the
+   platform-pin script does both an aria/pointer-events swap *and* a
+   separate opacity+blur treatment, and `initFaq()`'s state starts at
+   `null` (collapsed) independently of whatever its click handler does
+   correctly. Verifying "the interaction works" is not the same as
+   verifying "every function this calls does what the handoff says" or
+   "the state starts where the handoff says." When auditing a section,
+   re-read the *entire* handoff function it's ported from, not just the
+   lines already implicated by a past bug, and check the state variable's
+   initializer as its own line item.
+7. **Prefer inline `style={{ color: ... }}` over `text-[#hex]` arbitrary-value
+   classes for anchor text color**, matching how every other custom hex
+   color in this codebase is already applied. This was adopted after a
+   `text-[#hex]` class on an `<a>` read back via `getComputedStyle` as the
+   wrong (inherited) color across several checks, including a full page
+   reload — the CSS rule itself generated correctly, and this app does have
+   an unlayered `a { color: inherit }` reset, but a later re-check (after
+   "waking" the Browser pane per rule 4) showed the equivalent inline-style
+   version rendering correctly, so the original class may well have worked
+   fine too and this may have been rule 4's staleness issue rather than a
+   real cascade bug. Root cause unconfirmed either way — inline style is
+   the safe default already used everywhere else, so keep using it here
+   rather than re-relitigating which explanation was right.
