@@ -33,7 +33,11 @@ export function useSEO(title: string, description: string = DEFAULT_DESCRIPTION)
   const { pathname } = useLocation();
   useEffect(() => {
     const fullTitle = title ? `${title} · ${SITE_NAME}` : SITE_NAME;
-    document.title = fullTitle;
+    // Tab title is always just "Centium" — flat across every route, no
+    // per-page name or separator. og:title/twitter:title below still use
+    // the per-page fullTitle, unaffected by this — those describe how the
+    // page appears when shared/searched, a separate concern from the tab.
+    document.title = SITE_NAME;
     setMeta("description", description);
     setMeta("og:title", fullTitle, "property");
     setMeta("og:description", description, "property");
