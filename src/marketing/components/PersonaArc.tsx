@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useReducedMotion } from "framer-motion";
+import { Reveal } from "./Reveal";
 
 export interface PersonaData {
   title: string;
@@ -30,8 +31,21 @@ const PIN_TOP = 72;
  *  Determined/Proactive) rather than a fixed neutral purple, and its largest
  *  glow layer reaches ~46px above the card — so the outer frame grew to
  *  552px with the ring of cards inset 52px from its top, giving the halo
- *  room before `overflow: hidden` clips it flat. */
-export const PersonaArc: React.FC<{ personas: PersonaData[] }> = ({ personas }) => {
+ *  room before `overflow: hidden` clips it flat.
+ *
+ *  Full-page regression audit fix: the section heading ("Who it's for" /
+ *  "Built for people who show up.") now renders *inside* this component's
+ *  own sticky section (via the `heading` prop) instead of Home.tsx
+ *  rendering it as a separate, unpinned block above `<PersonaArc>` — the
+ *  handoff's `#traits-section` pins the heading and the card ring together
+ *  as one unit, the same pattern the pillar rail needed fixing for. The
+ *  pin-offset formula was also drifted from the handoff's own
+ *  `initTraitsPin()`: unlike the pillar rail (which always pins flush at
+ *  the nav), the persona section *does* centre vertically when it fits
+ *  the viewport with room to spare, and gives back headroom gradually
+ *  (not a hard jump to flush-bottom) when it doesn't — both branches below
+ *  are ported verbatim from the handoff rather than approximated. */
+export const PersonaArc: React.FC<{ personas: PersonaData[]; heading: React.ReactNode }> = ({ personas, heading }) => {
   const trackRef = useRef<HTMLDivElement>(null);
   const sectionRef = useRef<HTMLDivElement>(null);
   const frameRef = useRef<HTMLDivElement>(null);
@@ -117,7 +131,14 @@ export const PersonaArc: React.FC<{ personas: PersonaData[] }> = ({ personas }) 
     const measurePin = () => {
       const vh = window.innerHeight;
       const secH = sec.offsetHeight;
-      const top = secH + PIN_TOP <= vh ? PIN_TOP : Math.round(vh - secH);
+      let top: number;
+      if (secH + PIN_TOP <= vh) {
+        top = Math.round(Math.max(PIN_TOP, (vh - secH) / 2));
+      } else {
+        // only give back as much of the header as the overflow demands, so
+        // the pin lands with heading and cards on screen together
+        top = Math.round(Math.max(vh - secH, Math.min(PIN_TOP, PIN_TOP - (secH - vh) * 0.5)));
+      }
       if (pinTop !== top) {
         pinTop = top;
         sec.style.position = "sticky";
@@ -161,11 +182,19 @@ export const PersonaArc: React.FC<{ personas: PersonaData[] }> = ({ personas }) 
 
   return (
     <div ref={trackRef} id="traits-track" className="relative">
-      <div ref={sectionRef} id="traits-section" className="relative">
-        <div
-          ref={frameRef}
-          className="relative mt-11 h-[552px] overflow-hidden"
-          style={{
+      <div
+        ref={sectionRef}
+        id="traits-section"
+        className="relative"
+        style={{ padding: "clamp(72px,8vw,96px) 0 clamp(28px,3vw,40px)" }}
+      >
+        <div className="max-w-[1180px] mx-auto px-5 sm:px-10">
+          {heading}
+          <Reveal delay={0.08}>
+          <div
+            ref={frameRef}
+            className="relative mt-11 h-[552px] overflow-hidden"
+            style={{
             maskImage:
               "linear-gradient(90deg,transparent 0%,rgba(0,0,0,.35) 5%,rgba(0,0,0,.85) 12%,#000 20%,#000 80%,rgba(0,0,0,.85) 88%,rgba(0,0,0,.35) 95%,transparent 100%)," +
               "linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 4%,#000 11%,#000 90%,rgba(0,0,0,.6) 97%,transparent 100%)",
@@ -199,6 +228,8 @@ export const PersonaArc: React.FC<{ personas: PersonaData[] }> = ({ personas }) 
               </div>
             ))}
           </div>
+        </div>
+        </Reveal>
         </div>
       </div>
     </div>

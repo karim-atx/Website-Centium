@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { Reveal } from "./Reveal";
 
 export interface PillarData {
   eyebrowNum: string;
@@ -170,6 +171,7 @@ export const PillarRail: React.FC<{ pillars: PillarData[]; heading: React.ReactN
           {heading}
           <div ref={railBoxRef} className="mt-[18px]">
             <div ref={railFitRef} className="origin-top" style={{ transformOrigin: "top center" }}>
+              <Reveal delay={0.08}>
               <div ref={viewportRef} className="rounded-[26px] overflow-hidden">
                 <div
                   ref={galleryRef}
@@ -255,6 +257,7 @@ export const PillarRail: React.FC<{ pillars: PillarData[]; heading: React.ReactN
                   ))}
                 </div>
               </div>
+              </Reveal>
             </div>
           </div>
         </div>

@@ -1071,23 +1071,31 @@ export const Home: React.FC = () => {
           </Reveal>
         </Section>
 
-        {/* Who it's for — persona arc */}
-        <section className="py-[clamp(72px,8vw,96px)] pb-[clamp(48px,6vw,72px)]">
-          <div className="max-w-[1180px] mx-auto px-5 sm:px-10">
+        {/* Who it's for — persona arc. Regression fix: the heading now
+            lives inside PersonaArc's own sticky section (see its own
+            comment) instead of sitting above it as a separate, unpinned
+            block — and the bottom padding is the handoff's actual
+            clamp(28px,3vw,40px) (the tight seam into "Beyond the
+            individual"), not the generic section rhythm value this
+            previously had. */}
+        <PersonaArc
+          personas={personas}
+          heading={
             <Reveal>
               <Eyebrow>WHO IT'S FOR</Eyebrow>
               <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] max-w-[560px]">
                 Built for people who show up.
               </h2>
             </Reveal>
-            <Reveal delay={0.08}>
-              <PersonaArc personas={personas} />
-            </Reveal>
-          </div>
-        </section>
+          }
+        />
 
-        {/* Beyond the individual */}
-        <section className="relative py-[clamp(48px,6vw,72px)] overflow-hidden">
+        {/* Beyond the individual. Regression fix: top padding was the
+            generic clamp(48px,6vw,72px) section rhythm — the handoff tightens
+            this specific boundary (persona section's bottom padding was
+            already trimmed to match) to clamp(26px,2.8vw,38px) so the two
+            sections read as connected. */}
+        <section className="relative pt-[clamp(26px,2.8vw,38px)] pb-[clamp(48px,6vw,72px)] overflow-hidden">
           <div
             aria-hidden="true"
             className="absolute rounded-full pointer-events-none animate-mkt-drift-a"
