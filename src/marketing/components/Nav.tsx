@@ -80,11 +80,16 @@ export const Nav: React.FC = () => {
         >
           {links.map((l) => {
             const isActive = l.spyId ? spyActive === l.spyId : pathname === l.to;
-            const inactiveClass = dark
-              ? "text-white/[.82] hover:text-white"
-              : glass
-                ? "text-[#3B352D] hover:text-mkt-ink"
-                : "text-mkt-soft hover:text-mkt-ink";
+            // Regression fix: `text-[#hex]` Tailwind arbitrary-value classes
+            // silently lose to this app's unlayered `a { color: inherit }`
+            // reset (verified: the utility rule generates and its
+            // `--tw-text-opacity` custom property does apply, but `color`
+            // itself still renders the inherited value) — every other custom
+            // hex color in this codebase already goes through inline
+            // `style` for exactly this reason; `<a>` text color needs the
+            // same treatment rather than an arbitrary-value class.
+            const inactiveClass = dark ? "text-white/[.82] hover:text-white" : glass ? "hover:text-mkt-ink" : "text-mkt-soft hover:text-mkt-ink";
+            const inactiveStyle = !dark && glass ? { color: "#3B352D" } : undefined;
             return (
               <Link
                 key={l.to}
@@ -93,8 +98,9 @@ export const Nav: React.FC = () => {
                 aria-current={isActive ? "true" : undefined}
                 className={clsx(
                   "px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-colors duration-200",
-                  isActive ? (dark ? "bg-white/16 text-white" : "bg-mkt-accent/[.12] text-[#5C48A8]") : inactiveClass
+                  isActive ? (dark ? "bg-white/16 text-white" : undefined) : inactiveClass
                 )}
+                style={isActive ? (dark ? undefined : { background: "rgba(125,103,217,.14)", color: "#6A54C4" }) : inactiveStyle}
               >
                 {l.label}
               </Link>
@@ -159,14 +165,9 @@ export const Nav: React.FC = () => {
                   }}
                   className={clsx(
                     "px-3 py-2.5 rounded-xl text-sm font-semibold",
-                    isActive
-                      ? dark
-                        ? "text-white bg-white/[.14]"
-                        : "text-mkt-accent bg-mkt-tint"
-                      : dark
-                        ? "text-white/[.85]"
-                        : "text-mkt-soft"
+                    isActive ? (dark ? "text-white bg-white/[.14]" : undefined) : dark ? "text-white/[.85]" : "text-mkt-soft"
                   )}
+                  style={isActive && !dark ? { background: "rgba(125,103,217,.14)", color: "#6A54C4" } : undefined}
                 >
                   {l.label}
                 </Link>

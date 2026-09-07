@@ -33,11 +33,27 @@ export const ProblemList: React.FC<{ items: ProblemItem[] }> = ({ items }) => {
   const listRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
 
+  // Regression fix: rows now stage in one at a time (320ms apart via a
+  // queued/drain timer), matching the handoff's own onScroll/drain — a
+  // fast scroll or resize that crosses several rows' 82vh thresholds in one
+  // tick previously struck all of them in the same instant instead of in
+  // sequence.
   useEffect(() => {
     if (reduceMotion) {
       setStruck(items.length);
       return;
     }
+    const STEP = 320;
+    let queued = 0;
+    let done = 0;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const drain = () => {
+      timer = null;
+      if (done >= queued) return;
+      done += 1;
+      setStruck(done);
+      if (done < queued) timer = setTimeout(drain, STEP);
+    };
     const onScroll = () => {
       const list = listRef.current;
       if (!list) return;
@@ -47,11 +63,17 @@ export const ProblemList: React.FC<{ items: ProblemItem[] }> = ({ items }) => {
       for (let i = 0; i < items.length && i < rows.length; i++) {
         if (rows[i].getBoundingClientRect().top < vh * 0.82) k = i + 1;
       }
-      setStruck((prev) => (k > prev ? k : prev));
+      if (k > queued) {
+        queued = k;
+        if (!timer) drain();
+      }
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      if (timer) clearTimeout(timer);
+      window.removeEventListener("scroll", onScroll);
+    };
   }, [items.length, reduceMotion]);
 
   const allStruck = struck >= items.length;

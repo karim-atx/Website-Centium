@@ -292,7 +292,7 @@ export default {
         // orbs behind the "Beyond the Individual" ecosystem cards.
         "mkt-belt": {
           "0%": { transform: "translate3d(0,0,0)" },
-          "100%": { transform: "translate3d(calc(-50% - 7px),0,0)" },
+          "100%": { transform: "translate3d(calc(-50% - 9px),0,0)" },
         },
         "mkt-drift-a": {
           "0%, 100%": { transform: "translate3d(0,0,0)" },

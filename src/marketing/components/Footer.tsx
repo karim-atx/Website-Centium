@@ -1,5 +1,6 @@
 import React from "react";
 import { Link } from "react-router-dom";
+import clsx from "clsx";
 import { CentiumMark, CentiumWordmarkCropped } from "./CentiumLogo";
 
 // v4 Centium landing handoff: footer restructured to a centred vertical
@@ -8,14 +9,16 @@ import { CentiumMark, CentiumWordmarkCropped } from "./CentiumLogo";
 // no LinkedIn icon in this handoff), column titles/links go grey instead of
 // purple/teal, and a peaked "colour wash" gradient layer sits behind the
 // whole thing.
-const columns: { title: string; links: { to: string; label: string }[] }[] = [
+const columns: { title: string; links: { to: string; label: string; tealHover?: boolean }[] }[] = [
   {
     title: "Product",
     links: [
       { to: "/#platform", label: "Features" },
       { to: "/#pricing", label: "Pricing" },
       { to: "/app", label: "Log in" },
-      { to: "/contact", label: "Request a Demo" },
+      // Only this link carries a hover color in the handoff (style-hover:
+      // color:#2F5F58) — the rest of the footer links have none.
+      { to: "/contact", label: "Request a Demo", tealHover: true },
     ],
   },
   {
@@ -128,7 +131,11 @@ export const Footer: React.FC = () => (
               <ul className="flex flex-col gap-[13px] mt-5 text-center">
                 {col.links.map((l) => (
                   <li key={l.to}>
-                    <Link to={l.to} className="text-[12.5px] font-semibold transition-colors" style={{ color: "#A9A29A" }}>
+                    <Link
+                      to={l.to}
+                      className={clsx("text-[12.5px] font-semibold transition-colors", l.tealHover && "hover:text-[#2F5F58]")}
+                      style={{ color: "#A9A29A" }}
+                    >
                       {l.label}
                     </Link>
                   </li>

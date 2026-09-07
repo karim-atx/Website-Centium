@@ -23,13 +23,14 @@ export function useNavScrollSpy(ids: string[]) {
     const spy = () => {
       if (clickedRef.current && Date.now() - clickedRef.current.at < 900) return;
       clickedRef.current = null;
+      // No `break`: the handoff's own spy() lets a later match overwrite an
+      // earlier one in the same pass rather than stopping at the first hit —
+      // only matters in the single-frame case where two sections' edges
+      // straddle the line at once, but matches its behavior exactly.
       let found: string | null = null;
       for (const id of present) {
         const r = document.getElementById(id)!.getBoundingClientRect();
-        if (r.top <= LINE && r.bottom > LINE) {
-          found = id;
-          break;
-        }
+        if (r.top <= LINE && r.bottom > LINE) found = id;
       }
       setActive((prev) => (prev === found ? prev : found));
     };

@@ -1118,8 +1118,8 @@ export const Home: React.FC = () => {
             <div className="grid lg:grid-cols-2 gap-5 items-stretch">
               <Reveal className="flex">
                 <div
-                  className="flex-1 flex flex-col rounded-[26px] overflow-hidden transition-[transform,box-shadow,border-color] duration-[350ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)] hover:-translate-y-1.5"
-                  style={{ background: "#FFFFFF", border: "1px solid #DCD2F5", boxShadow: "0 1px 0 rgba(255,255,255,.9) inset,0 22px 54px rgba(72,58,130,.12)" }}
+                  className="flex-1 flex flex-col rounded-[26px] overflow-hidden transition-[transform,box-shadow,border-color] duration-[350ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)] hover:-translate-y-2 shadow-[0_1px_0_rgba(255,255,255,.9)_inset,0_22px_54px_rgba(72,58,130,.12)] hover:shadow-[0_1px_0_rgba(255,255,255,.9)_inset,0_30px_68px_rgba(72,58,130,.2)]"
+                  style={{ background: "#FFFFFF", border: "1px solid #DCD2F5" }}
                 >
                   <div className="flex items-center gap-3.5" style={{ padding: "22px 28px", background: "#F4F1FB", borderBottom: "1px solid #DCD2F5" }}>
                     <span
@@ -1195,8 +1195,8 @@ export const Home: React.FC = () => {
               </Reveal>
               <Reveal delay={0.06} className="flex">
                 <div
-                  className="flex-1 flex flex-col rounded-[26px] overflow-hidden transition-[transform,box-shadow,border-color] duration-[350ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)] hover:-translate-y-1.5"
-                  style={{ background: "#FFFFFF", border: "1px solid #CFE4DF", boxShadow: "0 1px 0 rgba(255,255,255,.9) inset,0 22px 54px rgba(72,58,130,.12)" }}
+                  className="flex-1 flex flex-col rounded-[26px] overflow-hidden transition-[transform,box-shadow,border-color] duration-[350ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)] hover:-translate-y-2 shadow-[0_1px_0_rgba(255,255,255,.9)_inset,0_22px_54px_rgba(72,58,130,.12)] hover:shadow-[0_1px_0_rgba(255,255,255,.9)_inset,0_30px_68px_rgba(94,158,149,.22)]"
+                  style={{ background: "#FFFFFF", border: "1px solid #CFE4DF" }}
                 >
                   <div className="flex items-center gap-3.5" style={{ padding: "22px 28px", background: "#EDF4F3", borderBottom: "1px solid #CFE4DF" }}>
                     <span
