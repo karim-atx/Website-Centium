@@ -30,6 +30,16 @@ function describeAuthError(error: AuthError): string {
   const code = error.code ?? "";
   const message = error.message ?? "";
 
+  // Kept separate from the auth-attempt throttle below on purpose. This one
+  // is not the user doing anything wrong — it is the project's outbound
+  // email quota being exhausted, project-wide, for everyone. Supabase's
+  // built-in SMTP sender allows only a handful of messages per hour, so a
+  // testing session drains it, and the window is an hour or more rather
+  // than the "wait a minute" the generic throttle message promises.
+  // The real fix is configuring custom SMTP on the project.
+  if (code === "over_email_send_rate_limit") {
+    return "We can't send confirmation emails right now — the email limit for this project has been reached. Try again later, or contact support if this persists.";
+  }
   if (error.status === 429 || code.startsWith("over_")) {
     return "Too many attempts. Wait a minute and try again.";
   }

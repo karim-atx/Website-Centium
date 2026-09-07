@@ -3,6 +3,7 @@ import { Button } from "../../components/ui/Button";
 import type { OnboardingDraft } from "./Onboarding";
 import { Mail, Lock, Eye, EyeOff, Check, X, MailCheck } from "lucide-react";
 import { useApp } from "../../context/AppContext";
+import type { Session } from "@supabase/supabase-js";
 import {
   sendPasswordReset,
   signInWithEmail,
@@ -43,8 +44,15 @@ const inputClass =
   "w-full rounded-2xl bg-cream-card border border-charcoal/10 pl-10 pr-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10";
 
 export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
-  const { session, authReady } = useApp();
+  const { session, authReady, signOut } = useApp();
   const [mode, setMode] = useState<Mode>("signIn");
+  // Why we're on the check-email screen, which changes what we may say.
+  // After a sign-up we must not reveal whether the address already has an
+  // account; after a sign-in that came back `email_not_confirmed`, Supabase
+  // has already told us the account exists and the user proved they know
+  // the password, so there is nothing left to protect and the copy can be
+  // direct.
+  const [checkEmailReason, setCheckEmailReason] = useState<"signup" | "unconfirmed">("signup");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -56,14 +64,23 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   const email = draft.email;
   const setEmail = (v: string) => setDraft((d) => ({ ...d, email: v }));
 
-  // The single gate out of this step: a real session. Covers all three ways
-  // one can appear — password sign-in, the returning click on a confirmation
-  // link, and the Google OAuth round trip — so no handler advances on its
-  // own. The ref stops a re-render from firing onNext twice.
-  const advanced = useRef(false);
+  // The single gate out of this step: a session *arriving* while we're here.
+  // Covers all three ways that happens — password sign-in, the returning
+  // click on a confirmation link, and the Google OAuth round trip — so no
+  // handler advances on its own.
+  //
+  // It must be the null -> session TRANSITION, not merely "a session
+  // exists". This step is conditionally mounted, so navigating back to it
+  // remounts the component and re-runs this effect with the session still
+  // in place; keying off existence alone re-fired onNext() immediately and
+  // made the back button on the next step look broken. Seeding the ref with
+  // whatever session is present at mount means an already-signed-in user
+  // stays put and gets the "signed in as" screen below instead.
+  const prevSession = useRef<Session | null>(session);
   useEffect(() => {
-    if (!session || advanced.current) return;
-    advanced.current = true;
+    const had = prevSession.current;
+    prevSession.current = session;
+    if (!session || had) return;
     // Google (and a confirmation return) carry the authoritative address;
     // adopt it so the rest of onboarding shows what they actually signed in
     // with rather than whatever was half-typed in the field.
@@ -110,6 +127,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
     if (result.status === "email_not_confirmed") {
       // Deliberately distinct from a wrong password: the credentials were
       // right, the account just isn't confirmed yet.
+      setCheckEmailReason("unconfirmed");
       setMode("checkEmail");
       return;
     }
@@ -134,6 +152,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
       return;
     }
     if (result.status === "confirmation_required") {
+      setCheckEmailReason("signup");
       setMode("checkEmail");
       return;
     }
@@ -170,19 +189,68 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
     );
   }
 
+  // Already signed in and arrived here anyway — almost always by pressing
+  // back from the next step. Auto-advancing would make that back button
+  // useless, so offer the way forward explicitly instead. The onboarding
+  // draft is untouched either way, so Continue resumes exactly where they
+  // were.
+  if (session) {
+    return (
+      <div className="flex-1 flex flex-col animate-fade-slide-up">
+        <h1 className="font-display text-2xl font-bold text-charcoal mb-2">You're signed in</h1>
+        <p className="text-charcoal-soft text-sm mb-6">Continue setting up your Centium account.</p>
+        <div className="flex-1">
+          <div className="rounded-2xl bg-primary-pale px-4 py-3.5 flex items-center gap-2.5">
+            <MailCheck size={16} className="shrink-0 text-primary-dark" />
+            <span className="text-sm text-primary-dark">
+              Signed in as <span className="font-semibold">{session.user?.email ?? email}</span>
+            </span>
+          </div>
+        </div>
+        <div className="mt-8">
+          <Button fullWidth size="lg" onClick={onNext}>
+            Continue
+          </Button>
+          <button
+            onClick={() => {
+              setError(null);
+              void signOut();
+            }}
+            className="tap w-full text-center text-sm font-semibold text-charcoal-soft mt-4"
+          >
+            Not you? <span className="text-primary">Sign out</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (mode === "checkEmail") {
+    const fromSignUp = checkEmailReason === "signup";
     return (
       <div className="flex-1 flex flex-col animate-fade-slide-up">
         <h1 className="font-display text-2xl font-bold text-charcoal mb-2">Check your email</h1>
-        <p className="text-charcoal-soft text-sm mb-6">
-          We sent a confirmation link to <span className="font-semibold text-charcoal">{email}</span>.
-          Open it to activate your account — you'll come straight back here to finish setting up.
-        </p>
+        {fromSignUp ? (
+          // Enumeration-safe: the response Supabase gives is identical for a
+          // new address and one that already has an account, deliberately, so
+          // sign-up can't be used to discover who has registered. This copy
+          // holds for both cases without leaking which one it is.
+          <p className="text-charcoal-soft text-sm mb-6">
+            If an account doesn't already exist for{" "}
+            <span className="font-semibold text-charcoal">{email}</span>, you'll get a confirmation
+            link. Already registered? Sign in instead.
+          </p>
+        ) : (
+          <p className="text-charcoal-soft text-sm mb-6">
+            Your account isn't confirmed yet. Open the confirmation link we sent to{" "}
+            <span className="font-semibold text-charcoal">{email}</span> to activate it.
+          </p>
+        )}
         <div className="flex-1">
           <div className="rounded-2xl bg-primary-pale px-4 py-3.5 text-sm text-primary-dark flex items-start gap-2.5">
             <MailCheck size={16} className="mt-0.5 shrink-0" />
             <span>
-              Your account isn't active until that link is clicked. You can leave this page open —
+              An account isn't active until that link is clicked. You can leave this page open —
               onboarding picks up where you left off when you return.
             </span>
           </div>
@@ -192,6 +260,19 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
         </div>
         <div className="mt-8">
           {error && <p className="text-xs font-semibold text-status-high mb-3 text-center">{error}</p>}
+          {fromSignUp && (
+            <Button
+              fullWidth
+              size="lg"
+              className="mb-3"
+              onClick={() => {
+                setError(null);
+                setMode("signIn");
+              }}
+            >
+              Sign in instead
+            </Button>
+          )}
           <Button fullWidth size="lg" variant="outline" disabled={busy || !password} onClick={handleResend}>
             {busy ? "Sending…" : "Resend confirmation email"}
           </Button>
