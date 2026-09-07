@@ -5,9 +5,22 @@ health & wellness platform: one place for nutrition tracking, workout
 logging, health tracking, AI-powered guidance, community, and a
 marketplace connecting people with professionals and businesses.
 
-Built with React + TypeScript + Vite + Tailwind CSS. The portal's data is
-mock data held in local state (persisted to `localStorage`) — there is no
-backend, no real AI, and no payment processing, by design. See
+Built with React + TypeScript + Vite + Tailwind CSS, on a real Supabase
+backend that the app is **partway** through adopting — be precise about
+which half you are looking at:
+
+- **Real and remote.** Authentication (email/password with required email
+  confirmation, plus Google OAuth) creates genuine Supabase sessions, and
+  onboarding writes a row to the `profiles` table — created the moment a
+  session exists, then filled in when onboarding completes.
+- **Still local mock state.** Everything else. Nutrition and food logging,
+  workouts and routines, health metrics and biomarkers, habits, streaks and
+  journal, the marketplace, messaging, forum, and the professional and
+  business dashboards all read and write mock data held in React state and
+  persisted to `localStorage`. The client-code and referral redemption
+  flows are also still mock, despite the real RPCs existing in the database.
+
+There is also no real AI and no payment processing, by design. See
 [SECURITY.md](SECURITY.md) for what that means for this being a public repo.
 
 ## Project structure
@@ -99,10 +112,73 @@ the Cloudflare Worker is what stitches the subpath together).
 
 ## Environment variables
 
-None are required yet — the app has no real backend. `.env.example`
-documents the pattern for when real auth/backend integration is added (see
-[SECURITY.md](SECURITY.md) for why only publishable/anon keys ever belong
-in a `VITE_`-prefixed variable in a statically-deployed app like this one).
+**A `.env.local` is now required to run the app at all.** Copy
+`.env.example` to `.env.local` and fill in all four Supabase credentials:
+
+```
+NEXT_PUBLIC_SUPABASE_URL_STAGING=
+NEXT_PUBLIC_SUPABASE_ANON_KEY_STAGING=
+NEXT_PUBLIC_SUPABASE_URL_PROD=
+NEXT_PUBLIC_SUPABASE_ANON_KEY_PROD=
+NEXT_PUBLIC_APP_ENV=staging        # "staging" (default) or "prod"
+```
+
+Values come from the Supabase dashboard: Project Settings → API → Project
+URL + anon/public key. `NEXT_PUBLIC_APP_ENV` selects which pair is used.
+
+This is not optional or lazily checked. `getSupabaseConfig()`
+(`lib/supabase/config.ts`) **throws on load** if the URL or anon key for
+the selected environment is missing, and `AppContext` imports the Supabase
+client at startup — so a missing or misnamed variable white-screens the
+entire app rather than degrading quietly. The thrown message names the
+exact variable it wanted.
+
+Both `VITE_`-prefixed and `NEXT_PUBLIC_`-prefixed variables are compiled
+into the public bundle (see `envPrefix` in `vite.config.ts`), so only
+publishable/anon keys ever belong in either — never a service-role or
+secret key. See [SECURITY.md](SECURITY.md).
+
+## Known follow-ups
+
+Deliberate gaps carried by the current code. Each is a real correctness or
+compliance issue rather than a style preference, and each is flagged in the
+source at the point it matters.
+
+### `date_of_birth` is a derived approximation, not a collected date
+
+Onboarding never asks for a birth date — `AboutYouStep` collects a
+whole-number **age** and nothing else. `updateProfileFromOnboarding`
+(`src/services/profile/index.ts`) therefore derives `profiles.date_of_birth`
+as **January 1st of the implied birth year**.
+
+That value is wrong by up to ~364 days for every user, and it goes stale:
+an age of 29 captured at sign-up means "29 as of that day", not "29 today",
+so the derived date drifts further from the truth every year the row is not
+rewritten.
+
+**Nothing that needs date precision may trust this column** — age-gating,
+clinical or medical calculations, cohort analytics, and birthday features
+all included. The fix is to collect a real date of birth during onboarding
+and backfill; until then the column exists only so it is populated with
+something coherent.
+
+### `deleteAccount` does not delete the account
+
+`deleteAccount` (`src/context/AppContext.tsx`) clears every
+`centium-state:*` key from `localStorage` and resets the in-memory user.
+That is all it does. It does **not** delete the `auth.users` entry, the
+`profiles` row, or any other row owned by that user — all of it remains
+intact server-side.
+
+It is presented in Settings as "Delete account". Now that accounts are
+real, a user tapping it is told their data is gone when it is not, which is
+a data-erasure compliance problem (GDPR/CCPA), not merely a UX
+inconsistency.
+
+A real deletion path needs to run server-side — an RPC or edge function
+performing the cascade — because `auth.users` cannot be deleted with an
+anon key. This should be resolved before the app reaches anyone holding a
+real account.
 
 ## Version history
 
