@@ -178,16 +178,25 @@ export const PillarRail: React.FC<{ pillars: PillarData[]; heading: React.ReactN
                   className="flex flex-row will-change-transform"
                   style={{ gap: GUTTER, width: `calc(${count * 100}% + ${GUTTER * (count - 1)}px)` }}
                 >
-                  {pillars.map((p, i) => (
+                  {pillars.map((p, i) => {
+                    // Regression fix: the handoff's own setTab() softens
+                    // off-centre panes with opacity + a distance-scaled blur
+                    // (never the fully sharp edge cut the port previously
+                    // had) — only pointerEvents/aria-hidden were ported.
+                    const d = Math.abs(i - active);
+                    return (
                     <div
                       key={p.eyebrowNum}
-                      className="relative rounded-[26px] transition-[opacity,transform] duration-500 [transition-timing-function:cubic-bezier(.22,1,.36,1)]"
+                      className="relative rounded-[26px]"
                       style={{
                         flex: `0 0 calc((100% - ${GUTTER * (count - 1)}px) / ${count})`,
                         background: p.wash,
                         border: `3px solid ${p.ink}`,
                         padding: "clamp(16px,1.6vw,22px)",
                         pointerEvents: i === active ? "auto" : "none",
+                        opacity: d === 0 ? 1 : d === 1 ? 0.5 : 0.28,
+                        filter: d === 0 ? "none" : `blur(${Math.min(4, d * 2.5)}px)`,
+                        transition: "opacity .45s ease,filter .45s ease",
                       }}
                       aria-hidden={i === active ? undefined : "true"}
                     >
@@ -254,7 +263,8 @@ export const PillarRail: React.FC<{ pillars: PillarData[]; heading: React.ReactN
                         {p.mockup}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
               </Reveal>

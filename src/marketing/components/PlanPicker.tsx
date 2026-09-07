@@ -78,8 +78,13 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
               tabIndex={0}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setSelected(i)}
               className={clsx(
+                // Regression fix: `overflow-hidden` here isn't in the handoff
+                // (the card has no `overflow` property at all) and was
+                // clipping the top half of the "Explore For" badge, which is
+                // deliberately positioned partly outside the card at
+                // `top: -11px`.
                 "relative rounded-3xl p-[34px] flex flex-col cursor-pointer transition-[border-color,box-shadow,transform]",
-                "duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] overflow-hidden",
+                "duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]",
                 isSelected ? "scale-[1.09] z-10" : "scale-[.975]"
               )}
               style={{

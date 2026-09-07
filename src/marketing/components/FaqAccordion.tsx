@@ -22,7 +22,10 @@ export interface FaqItem {
  *  its vertical bar via scaleY while the whole glyph rotates 180° to read
  *  as a plus-to-minus morph. */
 export const FaqAccordion: React.FC<{ items: FaqItem[] }> = ({ items }) => {
-  const [open, setOpen] = useState<number | null>(0);
+  // Regression fix: all items load collapsed (the handoff's own initFaq()
+  // starts with `let open = null`) — this previously defaulted to 0, opening
+  // the first question on load.
+  const [open, setOpen] = useState<number | null>(null);
   const reduceMotion = useReducedMotion();
 
   return (
