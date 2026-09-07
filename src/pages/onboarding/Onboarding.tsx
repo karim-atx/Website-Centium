@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
+import { updateProfileFromOnboarding } from "../../services/profile";
 import type {
   AccountType,
   ActivityLevel,
@@ -103,12 +104,61 @@ function stepsFor(accountType: OnboardingDraft["accountType"], skipAboutYou: boo
   ];
 }
 
+// Sign-up sends the user out to their email client to click a confirmation
+// link, and they come back on a fresh page load. Without this the draft —
+// plain component state — would be gone, dropping them back at Welcome with
+// nothing filled in. Persisting it means they return to exactly the step
+// they left.
+const DRAFT_KEY = "centium-onboarding:draft";
+const STEP_KEY = "centium-onboarding:step";
+
+function loadDraft(): OnboardingDraft {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY);
+    // Merged over the current defaults so a draft saved before a new field
+    // existed doesn't come back with it undefined.
+    return raw ? { ...initialDraft, ...(JSON.parse(raw) as Partial<OnboardingDraft>) } : initialDraft;
+  } catch {
+    return initialDraft;
+  }
+}
+
+function loadStep(): number {
+  const parsed = Number(localStorage.getItem(STEP_KEY));
+  return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function clearPersistedDraft() {
+  try {
+    localStorage.removeItem(DRAFT_KEY);
+    localStorage.removeItem(STEP_KEY);
+  } catch {
+    /* nothing to clean up */
+  }
+}
+
 export default function Onboarding() {
-  const [step, setStep] = useState(0);
-  const [draft, setDraft] = useState<OnboardingDraft>(initialDraft);
-  const { completeOnboarding, redeemClientCode, clientCodes, setRecoverySensitive, setRecoverySensitiveIntroSeen } =
-    useApp();
+  const [step, setStep] = useState(loadStep);
+  const [draft, setDraft] = useState<OnboardingDraft>(loadDraft);
+  const {
+    completeOnboarding,
+    redeemClientCode,
+    clientCodes,
+    setRecoverySensitive,
+    setRecoverySensitiveIntroSeen,
+    authUserId,
+  } = useApp();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
+      localStorage.setItem(STEP_KEY, String(step));
+    } catch {
+      // A full or disabled localStorage only costs the resume-after-email
+      // convenience — onboarding itself still works in-session.
+    }
+  }, [draft, step]);
 
   const matchedClientCode = clientCodes.find(
     (c) => c.code.toUpperCase() === draft.professionalUserIdCode.trim().toUpperCase()
@@ -123,25 +173,49 @@ export default function Onboarding() {
 
   const isProfessional = draft.accountType === "professional";
 
-  const finish = () => {
-    completeOnboarding({
+  const finish = async () => {
+    // Resolved once so the local state and the remote profiles row are
+    // written from exactly the same values — a client who skipped About You
+    // gets their details from the professional's code, everyone else from
+    // what they typed, and both writes agree.
+    const accountType: AccountType = draft.accountType || "customer";
+    const resolved = {
       email: draft.email,
-      accountType: draft.accountType || "customer",
-      customerSubtype: draft.accountType === "customer" ? draft.customerSubtype || "general" : undefined,
+      accountType,
+      customerSubtype:
+        accountType === "customer" ? draft.customerSubtype || ("general" as CustomerSubtype) : undefined,
       professionalSubtype:
-        draft.accountType === "professional" ? draft.professionalSubtype || "other" : undefined,
-      businessName: draft.accountType === "business" ? draft.businessName : undefined,
-      businessType: draft.accountType === "business" ? draft.businessType || "gym" : undefined,
+        accountType === "professional"
+          ? draft.professionalSubtype || ("other" as ProfessionalSubtype)
+          : undefined,
       firstName: matchedClientCode?.clientName || draft.firstName || "Friend",
       age: matchedClientCode?.clientAge ?? (Number(draft.age) || 28),
       sex: matchedClientCode?.clientSex ?? draft.sex,
       heightCm: matchedClientCode?.clientHeightCm ?? (Number(draft.heightCm) || 170),
       weightKg: matchedClientCode?.clientWeightKg ?? (Number(draft.weightKg) || 70),
-      goals: draft.goals.length ? draft.goals : ["improve_health"],
-      activityLevel: draft.activityLevel || "moderate",
-      tracking: draft.tracking.length ? draft.tracking : ["nutrition", "workouts"],
+      goals: draft.goals.length ? draft.goals : (["improve_health"] as Goal[]),
+      activityLevel: draft.activityLevel || ("moderate" as ActivityLevel),
+      tracking: draft.tracking.length ? draft.tracking : (["nutrition", "workouts"] as TrackPreference[]),
+    };
+
+    completeOnboarding({
+      ...resolved,
+      businessName: accountType === "business" ? draft.businessName : undefined,
+      businessType: accountType === "business" ? draft.businessType || "gym" : undefined,
       certificationUrl: draft.certificationFile ?? undefined,
     });
+
+    // Phase 2 of the profiles write: the row itself was created the moment
+    // the session appeared (see ensureProfileRow in AppContext); this fills
+    // in everything that only exists now that onboarding has run.
+    //
+    // Best-effort and deliberately not blocking navigation on failure — the
+    // UI reads local state today, so a network blip here must not strand the
+    // user on the final step with no way forward.
+    if (authUserId) {
+      await updateProfileFromOnboarding(authUserId, resolved);
+    }
+
     if (draft.customerSubtype === "client" && draft.professionalUserIdCode.trim()) {
       redeemClientCode(draft.professionalUserIdCode);
     }
@@ -152,6 +226,10 @@ export default function Onboarding() {
       setRecoverySensitive(true);
       setRecoverySensitiveIntroSeen(false);
     }
+    // Onboarding is done, so the resume-after-email draft has served its
+    // purpose — leaving it behind would restore a stale half-filled flow the
+    // next time this route is opened.
+    clearPersistedDraft();
     // Professionals land straight in their client dashboard — mirroring a
     // coaching app's first-run flow — instead of the consumer Home page.
     navigate(isProfessional ? "/app/professionals" : "/app");

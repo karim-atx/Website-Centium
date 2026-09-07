@@ -62,6 +62,9 @@ import { suggestNutritionGoal, normalizeMacroSplit } from "../services/nutrition
 import { businessTiers } from "../data/businessTiers";
 import { translations, type Language } from "../i18n/translations";
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
+import type { Session } from "@supabase/supabase-js";
+import { getCurrentSession, onAuthChange, signOutRemote } from "../services/auth";
+import { ensureProfileRow } from "../services/profile";
 
 const TODAY = "2026-08-20";
 
@@ -195,6 +198,16 @@ interface AppState {
   setUser: React.Dispatch<React.SetStateAction<UserProfile>>;
   completeOnboarding: (profile: Partial<UserProfile>) => void;
   updateProfile: (patch: Partial<UserProfile>) => void;
+
+  // Real Supabase auth session, kept in sync by onAuthStateChange rather
+  // than read once at load — a session can arrive well after first paint
+  // (returning from an email-confirmation link or the Google OAuth round
+  // trip) or expire mid-session.
+  session: Session | null;
+  authUserId: string | null;
+  // False until the initial getSession() settles, so the auth screen isn't
+  // flashed at a user who is already signed in.
+  authReady: boolean;
 
   theme: "light" | "dark";
   toggleTheme: () => void;
@@ -564,7 +577,7 @@ interface AppState {
     extra?: { attachment?: string; voiceNoteSec?: number }
   ) => void;
 
-  signOut: () => void;
+  signOut: () => Promise<void>;
   deleteAccount: () => void;
 
   businessListing: {
@@ -664,6 +677,43 @@ function shiftDate(date: string, days: number): string {
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = usePersistentState<UserProfile>("user", defaultUser);
+
+  // --- Supabase session ----------------------------------------------------
+  const [session, setSession] = useState<Session | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    // Restore an existing session on load, so an already-signed-in user is
+    // never shown the auth screen again.
+    void getCurrentSession().then((existing) => {
+      if (cancelled) return;
+      setSession(existing);
+      setAuthReady(true);
+    });
+
+    // Then stay subscribed. This is the single place a profiles row gets
+    // created: every path into a session (email confirmation, password
+    // sign-in, Google OAuth, token refresh on a later visit) lands here, so
+    // one idempotent upsert covers all of them instead of three separate
+    // call sites that can drift apart.
+    const unsubscribe = onAuthChange((next) => {
+      if (cancelled) return;
+      setSession(next);
+      setAuthReady(true);
+      if (next?.user) {
+        void ensureProfileRow(next.user.id, next.user.email ?? null);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, []);
+
+  const authUserId = session?.user?.id ?? null;
 
   const [theme, setTheme] = usePersistentState<"light" | "dark">("theme", "light");
   useEffect(() => {
@@ -1803,16 +1853,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       { id: `bmsg-${Date.now()}-${prev.length}`, customerId, from, text, at: new Date().toISOString() },
     ]);
 
-  const signOut = () => {
+  const signOut = async () => {
+    // Local cache is cleared FIRST and unconditionally. On a shared device
+    // the cached profile/health data is the thing that actually matters, so
+    // it must not be left behind by a network failure on the way to
+    // Supabase — clearing it synchronously guarantees that even if the
+    // remote call below hangs or throws.
     Object.keys(localStorage)
       .filter((k) => k.startsWith(STORAGE_KEY))
       .forEach((k) => localStorage.removeItem(k));
     setUser({ ...defaultUser });
+    setSession(null);
+    await signOutRemote();
   };
 
   // QA 12.0: "put the ability to delete account" — this prototype has no
   // real backend account to delete, so the closest honest equivalent is
   // wiping every bit of locally-persisted state, same as signing out fresh.
+  //
+  // TODO: now that accounts are real, this is misleading — it is a local
+  // wipe wearing a "Delete account" label. It leaves the auth.users entry,
+  // the profiles row, and every other row owned by that user fully intact,
+  // so a user who taps it believing their data is gone is being misinformed
+  // (a GDPR/CCPA erasure problem, not just a UX one). Needs a real deletion
+  // path — an RPC or edge function running the cascade server-side, since
+  // auth.users cannot be deleted with an anon key — before this ships to
+  // anyone with a real account.
   const deleteAccount = () => {
     Object.keys(localStorage)
       .filter((k) => k.startsWith(STORAGE_KEY))
@@ -1826,6 +1892,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setUser,
       completeOnboarding,
       updateProfile,
+      session,
+      authUserId,
+      authReady,
       theme,
       toggleTheme,
       language,
@@ -2030,6 +2099,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }),
     [
       user,
+      session,
+      authUserId,
+      authReady,
       theme,
       language,
       notificationPrefs,

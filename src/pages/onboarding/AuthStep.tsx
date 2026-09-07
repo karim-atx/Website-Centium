@@ -1,7 +1,14 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Button } from "../../components/ui/Button";
 import type { OnboardingDraft } from "./Onboarding";
-import { Mail, Lock, Eye, EyeOff, Check, X } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, Check, X, MailCheck } from "lucide-react";
+import { useApp } from "../../context/AppContext";
+import {
+  sendPasswordReset,
+  signInWithEmail,
+  signInWithGoogle,
+  signUpWithEmail,
+} from "../../services/auth";
 
 interface Props {
   draft: OnboardingDraft;
@@ -9,17 +16,22 @@ interface Props {
   onNext: () => void;
 }
 
-type Mode = "signIn" | "signUp" | "forgot";
+type Mode = "signIn" | "signUp" | "forgot" | "checkEmail";
 
 // V10 (QA 10.0): "Between the get started and What brings you to Centium?
 // page, i would like a page that prompts you to either sign in ... Or sign
 // up ... Ensure password should be strong ... amongst other things i might
-// have forgotten [forgot password]." This is a backend-free prototype (one
-// local profile, no real multi-account auth) so Sign In/Sign Up both just
-// capture an email (+ a validated password on sign-up) and continue into
-// the existing account-type step — there's nowhere else for them to lead
-// in this single-account app, but every piece of the flow the QA asked for
-// (fields, Google button, password strength, forgot-password) is real UI.
+// have forgotten [forgot password]."
+//
+// Now backed by real Supabase auth. The UI is unchanged from the prototype
+// version — same fields, same strength meter, same Google button — but the
+// handlers call signUp/signInWithPassword/signInWithOAuth instead of just
+// validating format and advancing.
+//
+// Email confirmation is REQUIRED on this project, so sign-up does not log
+// anyone in: it sends a link and parks on a "check your email" state. The
+// step only advances once a real session exists, which is why the advance
+// is driven by the session in AppContext rather than by the submit handler.
 const passwordChecks = [
   { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
   { label: "One uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
@@ -31,6 +43,7 @@ const inputClass =
   "w-full rounded-2xl bg-cream-card border border-charcoal/10 pl-10 pr-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10";
 
 export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
+  const { session, authReady } = useApp();
   const [mode, setMode] = useState<Mode>("signIn");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -38,9 +51,26 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   const [forgotEmail, setForgotEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const email = draft.email;
   const setEmail = (v: string) => setDraft((d) => ({ ...d, email: v }));
+
+  // The single gate out of this step: a real session. Covers all three ways
+  // one can appear — password sign-in, the returning click on a confirmation
+  // link, and the Google OAuth round trip — so no handler advances on its
+  // own. The ref stops a re-render from firing onNext twice.
+  const advanced = useRef(false);
+  useEffect(() => {
+    if (!session || advanced.current) return;
+    advanced.current = true;
+    // Google (and a confirmation return) carry the authoritative address;
+    // adopt it so the rest of onboarding shows what they actually signed in
+    // with rather than whatever was half-typed in the field.
+    const sessionEmail = session.user?.email;
+    if (sessionEmail) setDraft((d) => ({ ...d, email: sessionEmail }));
+    onNext();
+  }, [session, setDraft, onNext]);
 
   const passedChecks = passwordChecks.filter((c) => c.test(password)).length;
   const strengthLabel = passedChecks <= 1 ? "Weak" : passedChecks <= 3 ? "Medium" : "Strong";
@@ -55,26 +85,129 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
 
   const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
-  const handleGoogle = () => {
+  // Google needs no confirmation step — this navigates away to Google and
+  // the session lands on the return trip, picked up by the effect above.
+  const handleGoogle = async () => {
     setError(null);
-    if (!draft.email) setEmail("you@gmail.com");
-    onNext();
+    setBusy(true);
+    const result = await signInWithGoogle();
+    if (result.status === "error") {
+      setError(result.message);
+      setBusy(false);
+    }
+    // On success the browser is already leaving; leave `busy` set so the
+    // button can't be double-fired during the redirect.
   };
 
-  const handleSignIn = () => {
+  const handleSignIn = async () => {
     if (!isValidEmail(email)) return setError("Enter a valid email address.");
     if (!password) return setError("Enter your password.");
     setError(null);
-    onNext();
+    setBusy(true);
+    const result = await signInWithEmail(email, password);
+    setBusy(false);
+
+    if (result.status === "email_not_confirmed") {
+      // Deliberately distinct from a wrong password: the credentials were
+      // right, the account just isn't confirmed yet.
+      setMode("checkEmail");
+      return;
+    }
+    if (result.status === "error") {
+      setError(result.message);
+      return;
+    }
+    // Success advances via the session effect, not from here.
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (!isValidEmail(email)) return setError("Enter a valid email address.");
     if (!meetsMinimum) return setError("Choose a stronger password — see the checklist below.");
     if (password !== confirmPassword) return setError("Passwords don't match.");
     setError(null);
-    onNext();
+    setBusy(true);
+    const result = await signUpWithEmail(email, password);
+    setBusy(false);
+
+    if (result.status === "error") {
+      setError(result.message);
+      return;
+    }
+    if (result.status === "confirmation_required") {
+      setMode("checkEmail");
+      return;
+    }
+    // status === "signed_in" only if confirmations get disabled on the
+    // project; the session effect handles advancing in that case too.
   };
+
+  const handleResend = async () => {
+    setError(null);
+    setBusy(true);
+    const result = await signUpWithEmail(email, password);
+    setBusy(false);
+    if (result.status === "error") setError(result.message);
+  };
+
+  const handleSendReset = async () => {
+    setError(null);
+    setBusy(true);
+    const result = await sendPasswordReset(forgotEmail);
+    setBusy(false);
+    // Shown regardless of outcome — the copy is deliberately worded so it
+    // reveals nothing about whether the address has an account.
+    if (!result.ok && result.message) setError(result.message);
+    else setResetSent(true);
+  };
+
+  // Restoring a session on load is async; showing the sign-in form in the
+  // meantime would flash it at a user who is already signed in.
+  if (!authReady) {
+    return (
+      <div className="flex-1 flex items-center justify-center">
+        <p className="text-sm text-charcoal-faint">Checking your session…</p>
+      </div>
+    );
+  }
+
+  if (mode === "checkEmail") {
+    return (
+      <div className="flex-1 flex flex-col animate-fade-slide-up">
+        <h1 className="font-display text-2xl font-bold text-charcoal mb-2">Check your email</h1>
+        <p className="text-charcoal-soft text-sm mb-6">
+          We sent a confirmation link to <span className="font-semibold text-charcoal">{email}</span>.
+          Open it to activate your account — you'll come straight back here to finish setting up.
+        </p>
+        <div className="flex-1">
+          <div className="rounded-2xl bg-primary-pale px-4 py-3.5 text-sm text-primary-dark flex items-start gap-2.5">
+            <MailCheck size={16} className="mt-0.5 shrink-0" />
+            <span>
+              Your account isn't active until that link is clicked. You can leave this page open —
+              onboarding picks up where you left off when you return.
+            </span>
+          </div>
+          <p className="text-[11px] text-charcoal-faint mt-3">
+            Nothing arrived? Check spam, then resend below.
+          </p>
+        </div>
+        <div className="mt-8">
+          {error && <p className="text-xs font-semibold text-status-high mb-3 text-center">{error}</p>}
+          <Button fullWidth size="lg" variant="outline" disabled={busy || !password} onClick={handleResend}>
+            {busy ? "Sending…" : "Resend confirmation email"}
+          </Button>
+          <button
+            onClick={() => {
+              setError(null);
+              setMode("signIn");
+            }}
+            className="tap w-full text-center text-sm font-semibold text-charcoal-soft mt-4"
+          >
+            Back to sign in
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (mode === "forgot") {
     return (
@@ -102,9 +235,15 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
           )}
         </div>
         <div className="mt-8">
+          {error && <p className="text-xs font-semibold text-status-high mb-3 text-center">{error}</p>}
           {!resetSent ? (
-            <Button fullWidth size="lg" disabled={!isValidEmail(forgotEmail)} onClick={() => setResetSent(true)}>
-              Send reset link
+            <Button
+              fullWidth
+              size="lg"
+              disabled={!isValidEmail(forgotEmail) || busy}
+              onClick={handleSendReset}
+            >
+              {busy ? "Sending…" : "Send reset link"}
             </Button>
           ) : (
             <Button fullWidth size="lg" onClick={() => { setMode("signIn"); setResetSent(false); }}>
@@ -220,8 +359,13 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
 
       <div className="mt-8">
         {error && <p className="text-xs font-semibold text-status-high mb-3 text-center">{error}</p>}
-        <Button fullWidth size="lg" onClick={mode === "signIn" ? handleSignIn : handleSignUp}>
-          {mode === "signIn" ? "Sign in" : "Sign up"}
+        <Button
+          fullWidth
+          size="lg"
+          disabled={busy}
+          onClick={mode === "signIn" ? handleSignIn : handleSignUp}
+        >
+          {busy ? "Please wait…" : mode === "signIn" ? "Sign in" : "Sign up"}
         </Button>
 
         <div className="flex items-center gap-3 my-4">
@@ -230,7 +374,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
           <div className="flex-1 h-px bg-charcoal/10" />
         </div>
 
-        <Button fullWidth size="lg" variant="outline" onClick={handleGoogle}>
+        <Button fullWidth size="lg" variant="outline" disabled={busy} onClick={handleGoogle}>
           Continue with Google
         </Button>
 
@@ -245,21 +389,6 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
           <span className="text-primary">{mode === "signIn" ? "Sign up" : "Sign in"}</span>
         </button>
 
-        <p className="text-charcoal-faint text-[11px] text-center mt-4">
-          Prototype auth — no real account or password is stored remotely.
-        </p>
-        {/* QA 11.0: "Because the email authenticator is just a mock for
-            now, make a temporary skip button that skips this page, which
-            can be removed later on." */}
-        <button
-          onClick={() => {
-            if (!draft.email) setEmail("you@example.com");
-            onNext();
-          }}
-          className="tap w-full text-center text-xs font-semibold text-charcoal-faint underline mt-3"
-        >
-          Skip (temporary — mock auth)
-        </button>
       </div>
     </div>
   );
