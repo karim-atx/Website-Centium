@@ -2,30 +2,42 @@ import React, { useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Menu, X } from "lucide-react";
 import clsx from "clsx";
-import { CentiumMark, CentiumWordmark } from "./CentiumLogo";
+import { CentiumMark, CentiumWordmarkCropped } from "./CentiumLogo";
 import { useNavTheme } from "../hooks/useNavTheme";
+import { useNavHeroGlass } from "../hooks/useNavHeroGlass";
+import { useNavScrollSpy } from "../hooks/useNavScrollSpy";
 
 // QA - Web 2.0 §01: the nav is part of the single-page landing page, not a
 // set of separate routes — every item scrolls to a section on "/" instead
 // of navigating to its own page. "Contact" has no equivalent landing-page
 // section, so it's kept as a real route to the existing /contact page.
 const links = [
-  { to: "/#platform", label: "Features" },
-  { to: "/#pricing", label: "Pricing" },
-  { to: "/#faq", label: "FAQ" },
-  { to: "/contact", label: "Contact" },
+  { to: "/#platform", label: "Features", spyId: "platform" },
+  { to: "/#pricing", label: "Pricing", spyId: "pricing" },
+  { to: "/#faq", label: "FAQ", spyId: "faq" },
+  { to: "/contact", label: "Contact", spyId: null },
 ];
 
 /** Sticky, fully transparent nav pulled over the page content (`-mt-[72px]`
  *  on the element after it) so section color and the hero canvas run behind
- *  it. Logo, link text and pill fills all flip between a dark-on-light and
- *  light-on-dark palette depending on whether a `data-nav-dark` section
- *  (see useNavTheme) currently sits behind the bar — every section that
- *  needs the dark variant carries that attribute itself. */
+ *  it. Three palettes, evaluated in this priority order:
+ *   1. `dark` (useNavTheme) — light-on-dark, for the other marketing pages'
+ *      own `data-nav-dark` bands (Business/Product/Pricing/Contact). Home
+ *      never marks a section dark, so this and `glass` never coexist.
+ *   2. `glass` (useNavHeroGlass) — Home-only: over its hero the transparent
+ *      pill has almost no contrast against the light lavender/teal gradient,
+ *      so the pill/buttons gain a real glass fill and the logo lightens.
+ *   3. plain — the default dark-ink-on-transparent look.
+ *  Same-page hash links (Features/Pricing/FAQ) get a real active state via
+ *  scroll-spy (useNavScrollSpy) — a no-op returning null on any page other
+ *  than Home, where those section ids don't exist. Contact keeps its
+ *  existing route-based active check since it's a real page, not a section. */
 export const Nav: React.FC = () => {
   const [open, setOpen] = useState(false);
   const dark = useNavTheme();
+  const glass = useNavHeroGlass();
   const { pathname } = useLocation();
+  const { active: spyActive, onLinkClick } = useNavScrollSpy(["platform", "pricing", "faq"]);
 
   return (
     <header className="sticky top-0 z-40 bg-transparent mb-[-72px]">
@@ -35,34 +47,48 @@ export const Nav: React.FC = () => {
           dark ? "text-white" : "text-mkt-logo"
         )}
       >
-        <Link to="/" className="group flex items-center gap-[11px] shrink-0" onClick={() => setOpen(false)}>
-          <CentiumMark size={28} leafFill={dark ? "#FFFFFF" : "#8AC4BA"} />
-          <CentiumWordmark height={11} />
+        <Link
+          to="/"
+          className="group flex items-center gap-[10.9px] shrink-0"
+          onClick={() => setOpen(false)}
+          style={
+            glass && !dark
+              ? { color: "#FFFFFF", filter: "drop-shadow(0 2px 10px rgba(52,38,110,.42))" }
+              : undefined
+          }
+        >
+          <CentiumMark size={28} leafFill={dark ? "#FFFFFF" : glass ? "#D8F1EB" : "#8AC4BA"} />
+          <CentiumWordmarkCropped height={11} />
         </Link>
 
         <nav
-          className="hidden lg:flex items-center gap-0.5 rounded-full p-1 backdrop-blur-[22px] backdrop-saturate-[1.8]"
+          className={clsx(
+            "hidden lg:flex items-center gap-0.5 rounded-full p-1 backdrop-blur-[22px] backdrop-saturate-[1.8] transition-[background-color,border-color,box-shadow] duration-[450ms]",
+            glass && !dark && "border"
+          )}
+          style={
+            glass && !dark
+              ? { background: "rgba(255,255,255,.66)", borderColor: "rgba(255,255,255,.78)", boxShadow: "0 8px 26px rgba(72,58,130,.14)" }
+              : undefined
+          }
           aria-label="Primary"
         >
           {links.map((l) => {
-            // Only "Contact" is a real route — the rest are same-page
-            // anchors, so highlighting them as "active" while on "/" would
-            // light up all three at once. Active state is meaningful for
-            // Contact alone.
-            const isActive = !l.to.includes("#") && pathname === l.to;
+            const isActive = l.spyId ? spyActive === l.spyId : pathname === l.to;
+            const inactiveClass = dark
+              ? "text-white/[.82] hover:text-white"
+              : glass
+                ? "text-[#3B352D] hover:text-mkt-ink"
+                : "text-mkt-soft hover:text-mkt-ink";
             return (
               <Link
                 key={l.to}
                 to={l.to}
+                onClick={() => l.spyId && onLinkClick(l.spyId)}
+                aria-current={isActive ? "true" : undefined}
                 className={clsx(
                   "px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-colors duration-200",
-                  isActive
-                    ? dark
-                      ? "bg-white/16 text-white"
-                      : "bg-mkt-accent/[.12] text-[#5C48A8]"
-                    : dark
-                      ? "text-white/[.82] hover:text-white"
-                      : "text-mkt-soft hover:text-mkt-ink"
+                  isActive ? (dark ? "bg-white/16 text-white" : "bg-mkt-accent/[.12] text-[#5C48A8]") : inactiveClass
                 )}
               >
                 {l.label}
@@ -76,8 +102,13 @@ export const Nav: React.FC = () => {
             to="/app"
             className={clsx(
               "tap text-[13.5px] font-semibold whitespace-nowrap px-[17px] py-[9px] rounded-full backdrop-blur-[22px] backdrop-saturate-[1.8] border transition-[transform,background-color,color,border-color] duration-150 active:scale-[.96]",
-              dark ? "text-white/[.88] border-white/[.14]" : "text-mkt-soft border-mkt-ink/[.08]"
+              dark
+                ? "text-white/[.88] border-white/[.14]"
+                : glass
+                  ? "text-[#3B352D]"
+                  : "text-mkt-soft border-mkt-ink/[.08]"
             )}
+            style={glass && !dark ? { background: "rgba(255,255,255,.66)", borderColor: "rgba(255,255,255,.78)", boxShadow: "0 8px 26px rgba(72,58,130,.14)" } : undefined}
           >
             Log in
           </Link>
@@ -95,8 +126,9 @@ export const Nav: React.FC = () => {
           aria-expanded={open}
           className={clsx(
             "lg:hidden tap w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-[22px] backdrop-saturate-[1.8] border transition-[transform,color,background-color,border-color] duration-150 active:scale-[.96]",
-            dark ? "text-white border-white/[.14]" : "text-mkt-ink border-mkt-ink/[.08]"
+            dark ? "text-white border-white/[.14]" : glass ? "text-mkt-ink" : "text-mkt-ink border-mkt-ink/[.08]"
           )}
+          style={glass && !dark ? { background: "rgba(255,255,255,.66)", borderColor: "rgba(255,255,255,.78)", boxShadow: "0 8px 26px rgba(72,58,130,.14)" } : undefined}
         >
           {open ? <X size={20} /> : <Menu size={20} />}
         </button>
@@ -111,12 +143,15 @@ export const Nav: React.FC = () => {
         >
           <nav className="flex flex-col gap-1" aria-label="Primary">
             {links.map((l) => {
-              const isActive = !l.to.includes("#") && pathname === l.to;
+              const isActive = l.spyId ? spyActive === l.spyId : pathname === l.to;
               return (
                 <Link
                   key={l.to}
                   to={l.to}
-                  onClick={() => setOpen(false)}
+                  onClick={() => {
+                    setOpen(false);
+                    if (l.spyId) onLinkClick(l.spyId);
+                  }}
                   className={clsx(
                     "px-3 py-2.5 rounded-xl text-sm font-semibold",
                     isActive

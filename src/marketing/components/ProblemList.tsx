@@ -6,28 +6,32 @@ export interface ProblemItem {
   tag: string;
 }
 
-/** The Problem section's animated strikethrough list, per the v2 landing
- *  handoff. Each row strikes as it crosses 82% of viewport height; once all
- *  five have struck, the "Centium is the solution" row resolves in with a
- *  one-shot shimmer.
+/** The Problem section's animated strikethrough list. Each row strikes as it
+ *  crosses 82% of viewport height, fading its own ink from #221E1A to
+ *  #A9A29A as it goes; once all five have struck, the "Centium is the
+ *  solution" bar resolves in with a one-shot three-layer teal sheen (a
+ *  vertical wipe, a diagonal gloss, and a pulsing ring on the bar itself)
+ *  that clears itself at 2200ms so the bar always rests on its flat fill.
  *
  *  Each label carries an absolutely-positioned duplicate of itself, painted
  *  fully transparent (color + -webkit-text-fill-color) so only its
  *  text-decoration: line-through rule is visible — a clip-path reveals that
  *  duplicate row by row, so the strike follows the text exactly (including
  *  wraps) instead of being a separately-positioned line that could drift.
- *  No two rows strike the same way: distinct duration, easing, thickness,
- *  style, direction and rotation per the handoff's own spec. */
+ *  Row 2 ("A health app") is the odd one out: instead of a line-through, two
+ *  independent bars cross into an X — distinct enough from the other four
+ *  that no two rows read the same. */
 const STRIKE_SPEC = [
-  { dur: ".38s", ease: "cubic-bezier(.3,0,.2,1)", th: 2, style: "solid", from: "right", rot: "-1.2deg" },
-  { dur: ".85s", ease: "cubic-bezier(.62,0,.38,1)", th: 1.5, style: "wavy", from: "left", rot: "0.9deg" },
-  { dur: ".55s", ease: "cubic-bezier(.34,1.5,.5,1)", th: 3, style: "solid", from: "center", rot: "-2.2deg" },
-  { dur: "1.05s", ease: "linear", th: 1.5, style: "double", from: "right", rot: "1.6deg" },
-  { dur: ".72s", ease: "steps(11,end)", th: 2, style: "dashed", from: "left", rot: "-0.5deg" },
+  { kind: "line", dur: ".38s", ease: "cubic-bezier(.3,0,.2,1)", th: 2, style: "solid", from: "right", rot: "-1.2deg" },
+  { kind: "line", dur: ".85s", ease: "cubic-bezier(.62,0,.38,1)", th: 1.5, style: "wavy", from: "left", rot: "0.9deg" },
+  { kind: "x" },
+  { kind: "line", dur: "1.05s", ease: "linear", th: 1.5, style: "double", from: "right", rot: "1.6deg" },
+  { kind: "line", dur: ".72s", ease: "steps(11,end)", th: 2, style: "dashed", from: "left", rot: "-0.5deg" },
 ] as const;
 
 export const ProblemList: React.FC<{ items: ProblemItem[] }> = ({ items }) => {
   const [struck, setStruck] = useState(0);
+  const [sheenOn, setSheenOn] = useState(false);
   const listRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
 
@@ -54,65 +58,132 @@ export const ProblemList: React.FC<{ items: ProblemItem[] }> = ({ items }) => {
 
   const allStruck = struck >= items.length;
 
+  useEffect(() => {
+    if (!allStruck || reduceMotion) return;
+    setSheenOn(true);
+    const t = setTimeout(() => setSheenOn(false), 2200);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allStruck]);
+
   return (
     <div ref={listRef} className="flex flex-col">
       {items.map((item, i) => {
         const sp = STRIKE_SPEC[i];
         const on = struck > i;
-        const hidden =
-          sp.from === "right" ? "inset(0 100% 0 0)" : sp.from === "left" ? "inset(0 0 0 100%)" : "inset(0 50% 0 50%)";
         return (
           <div key={item.label} className="flex items-center justify-between py-[15px] border-t border-mkt-line">
-            <span className="relative block whitespace-nowrap text-[17.5px] text-[#A9A29A] pr-3.5">
+            <span
+              className="relative block whitespace-nowrap text-[17.5px] pr-3.5 transition-colors duration-[700ms] ease-out"
+              style={{ color: on ? "#A9A29A" : "#221E1A" }}
+            >
               {item.label}
-              <span
-                aria-hidden="true"
-                style={{
-                  position: "absolute",
-                  left: 0,
-                  top: 0,
-                  width: "100%",
-                  boxSizing: "border-box",
-                  whiteSpace: "nowrap",
-                  paddingRight: 14,
-                  color: "transparent",
-                  WebkitTextFillColor: "transparent",
-                  textDecorationLine: "line-through",
-                  textDecorationColor: i % 2 === 0 ? "#8C8378" : "#A9A29A",
-                  textDecorationStyle: sp.style,
-                  textDecorationThickness: sp.th,
-                  clipPath: on ? "inset(0 0 0 0)" : hidden,
-                  WebkitClipPath: on ? "inset(0 0 0 0)" : hidden,
-                  transform: `rotate(${sp.rot})`,
-                  transformOrigin: sp.from === "right" ? "left center" : sp.from === "left" ? "right center" : "center",
-                  transition: `clip-path ${sp.dur} ${sp.ease}`,
-                  pointerEvents: "none",
-                }}
-              >
-                {item.label}
-              </span>
+              {sp.kind === "x" ? (
+                <span aria-hidden="true" className="absolute left-0 top-1/2 w-[calc(100%-14px)] h-0 pointer-events-none">
+                  <span
+                    className="absolute left-0 top-0 w-full rounded-sm"
+                    style={{
+                      height: 2.5,
+                      background: "#8C8378",
+                      transform: on ? "translateY(-50%) rotate(8deg) scaleX(1)" : "translateY(-50%) rotate(8deg) scaleX(0)",
+                      transformOrigin: "center center",
+                      transition: "transform .5s cubic-bezier(.34,1.5,.5,1)",
+                    }}
+                  />
+                  <span
+                    className="absolute left-0 top-0 w-full rounded-sm"
+                    style={{
+                      height: 2.5,
+                      background: "#8C8378",
+                      transform: on ? "translateY(-50%) rotate(-8deg) scaleX(1)" : "translateY(-50%) rotate(-8deg) scaleX(0)",
+                      transformOrigin: "center center",
+                      transition: "transform .5s cubic-bezier(.34,1.5,.5,1) .12s",
+                    }}
+                  />
+                </span>
+              ) : (
+                <span
+                  aria-hidden="true"
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    top: 0,
+                    width: "100%",
+                    boxSizing: "border-box",
+                    whiteSpace: "nowrap",
+                    paddingRight: 14,
+                    color: "transparent",
+                    WebkitTextFillColor: "transparent",
+                    textDecorationLine: "line-through",
+                    textDecorationColor: i % 2 === 0 ? "#8C8378" : "#A9A29A",
+                    textDecorationStyle: sp.style,
+                    textDecorationThickness: sp.th,
+                    clipPath: on
+                      ? "inset(0 0 0 0)"
+                      : sp.from === "right"
+                        ? "inset(0 100% 0 0)"
+                        : "inset(0 0 0 100%)",
+                    WebkitClipPath: on
+                      ? "inset(0 0 0 0)"
+                      : sp.from === "right"
+                        ? "inset(0 100% 0 0)"
+                        : "inset(0 0 0 100%)",
+                    transform: `rotate(${sp.rot})`,
+                    transformOrigin: sp.from === "right" ? "left center" : "right center",
+                    transition: `clip-path ${sp.dur} ${sp.ease}`,
+                    pointerEvents: "none",
+                  }}
+                >
+                  {item.label}
+                </span>
+              )}
             </span>
             <span className="text-xs text-[#C3BCB2] whitespace-nowrap shrink-0">{item.tag}</span>
           </div>
         );
       })}
       <div
-        className="relative flex items-center justify-between py-[22px] px-6 mt-[22px] rounded-2xl bg-mkt-tint-deep overflow-hidden transition-[opacity,transform] duration-[600ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)]"
-        style={{ opacity: allStruck ? 1 : 0, transform: allStruck ? "none" : "translateY(14px) scale(.98)" }}
+        className={
+          "relative flex items-center justify-between py-[22px] px-6 mt-[22px] rounded-2xl overflow-hidden transition-[opacity,transform] duration-[600ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)]" +
+          (sheenOn ? " animate-cent-teal-edge" : "")
+        }
+        style={{
+          opacity: allStruck ? 1 : 0,
+          transform: allStruck ? "none" : "translateY(14px) scale(.98)",
+          background: "#E6DFF7",
+          border: "3px solid #7D67D9",
+          boxShadow: "0 14px 32px rgba(72,58,130,.14)",
+        }}
       >
-        <span className="font-bold text-[17px] tracking-tight text-mkt-ink">Centium is the solution</span>
-        <span className="font-semibold text-xs tracking-[.14em] text-[#5C48A8] whitespace-nowrap">ONE PLACE</span>
-        {allStruck && (
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 pointer-events-none"
-            style={{
-              background: "linear-gradient(100deg, transparent 42%, rgba(255,255,255,.85) 50%, transparent 58%)",
-              backgroundSize: "280% 100%",
-              backgroundPosition: "-90% 0",
-              animation: "mkt-shimmer 1.2s ease-in-out .25s",
-            }}
-          />
+        <span className="font-bold text-[17px] tracking-tight" style={{ color: "#7D67D9" }}>
+          Centium is the solution
+        </span>
+        <span className="font-semibold text-xs tracking-[.14em] whitespace-nowrap" style={{ color: "#7D67D9" }}>
+          ONE PLACE
+        </span>
+        {sheenOn && (
+          <>
+            <span
+              aria-hidden="true"
+              className="absolute inset-x-0 top-0 h-full pointer-events-none rounded-[inherit] animate-cent-teal-wipe"
+              style={{
+                background:
+                  "linear-gradient(rgba(94,158,149,0) 0%,rgba(94,158,149,.34) 38%,rgba(120,190,180,.72) 50%,rgba(94,158,149,.3) 62%,rgba(94,158,149,0) 100%)",
+                boxShadow: "inset 0 1px 0 rgba(255,255,255,.5),inset 0 -1px 0 rgba(47,95,88,.18)",
+              }}
+            />
+            <span
+              aria-hidden="true"
+              className="absolute left-0 w-[34%] pointer-events-none animate-cent-teal-gloss"
+              style={{
+                top: "-20%",
+                bottom: "-20%",
+                background:
+                  "linear-gradient(100deg,rgba(255,255,255,0) 0%,rgba(255,255,255,.42) 42%,rgba(214,240,235,.7) 52%,rgba(255,255,255,0) 100%)",
+                filter: "blur(1px)",
+              }}
+            />
+          </>
         )}
       </div>
     </div>

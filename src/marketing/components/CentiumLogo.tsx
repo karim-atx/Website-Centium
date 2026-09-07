@@ -40,7 +40,11 @@ export const CentiumMark: React.FC<{ size?: number; leafFill?: string; className
 /** "CENTIUM" as vector strokes (stencil E, M with a short centre vertex) —
  *  traced from the brand artwork, not a text span, so it renders identically
  *  regardless of font availability. `currentColor` so it inherits the same
- *  adaptive color as CentiumMark when both sit inside the same colored wrapper. */
+ *  adaptive color as CentiumMark when both sit inside the same colored wrapper.
+ *
+ *  Used as the full wordmark (with its own leading "C" stroke) only by the
+ *  brand loader, which draws the C separately via CentiumMark first — see
+ *  CentiumWordmarkCropped below for the nav/footer variant. */
 export const CentiumWordmark: React.FC<{ height?: number; className?: string }> = ({ height = 11, className }) => (
   <svg
     viewBox="48 44 1005 93"
@@ -52,6 +56,34 @@ export const CentiumWordmark: React.FC<{ height?: number; className?: string }> 
   >
     <g stroke="currentColor" strokeWidth="17" strokeLinecap="butt" strokeLinejoin="miter" fill="none">
       <path d="M 113.4 69.9 A 32 32 0 1 0 113.4 110.1" />
+      <path d="M 213 58.5 H 272" />
+      <path d="M 221.5 82 V 129 M 221.5 89.5 H 267 M 221.5 121.5 H 272" />
+      <path d="M 376.5 51 V 129 M 429.5 51 V 129 M 376.5 51 L 429.5 129" />
+      <path d="M 532 59.5 H 596 M 564 51 V 129" />
+      <path d="M 700 51 V 129" />
+      <path d="M 814.5 51 V 95.5 A 26 26 0 0 0 866.5 95.5 V 51" />
+      <path d="M 980 129 V 51 L 1012 111 L 1044 51 V 129" />
+    </g>
+  </svg>
+);
+
+/** v3 landing handoff: nav/footer wordmark cropped to drop the standalone "C"
+ *  glyph (the leaf mark itself already reads as the C there) — viewBox starts
+ *  at the "E" ink edge instead of 48. Same paths as CentiumWordmark minus the
+ *  first, just re-windowed. */
+export const CentiumWordmarkCropped: React.FC<{ height?: number; className?: string }> = ({
+  height = 11,
+  className,
+}) => (
+  <svg
+    viewBox="204 44 849 93"
+    fill="none"
+    role="img"
+    aria-label="entium"
+    className={clsx("shrink-0 overflow-visible", className)}
+    style={{ height, width: height * (849 / 93) }}
+  >
+    <g stroke="currentColor" strokeWidth="17" strokeLinecap="butt" strokeLinejoin="miter" fill="none">
       <path d="M 213 58.5 H 272" />
       <path d="M 221.5 82 V 129 M 221.5 89.5 H 267 M 221.5 121.5 H 272" />
       <path d="M 376.5 51 V 129 M 429.5 51 V 129 M 376.5 51 L 429.5 129" />

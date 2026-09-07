@@ -9,6 +9,7 @@ import { Pricing as MarketingPricing } from "./marketing/pages/Pricing";
 import { Business as MarketingBusiness } from "./marketing/pages/Business";
 import { Contact as MarketingContact } from "./marketing/pages/Contact";
 import { Legal as MarketingLegal } from "./marketing/pages/Legal";
+import { NotFound as MarketingNotFound } from "./marketing/pages/NotFound";
 import Onboarding from "./pages/onboarding/Onboarding";
 import Home from "./pages/home/Home";
 import Food from "./pages/food/Food";
@@ -62,6 +63,12 @@ function AppRoutes() {
             rather than leave them 404ing for anyone with an old link. */}
         <Route path="/legal/privacy" element={<Navigate to="/legal#privacy" replace />} />
         <Route path="/legal/terms" element={<Navigate to="/legal#terms" replace />} />
+        {/* v3 landing handoff: branded 404 for anything else under the
+            marketing site. Ranked below every explicit path above (and
+            below /app/* below, a more specific splat) by React Router's own
+            specificity scoring, so this only ever catches genuine
+            mismatches — it can't shadow a real route. */}
+        <Route path="*" element={<MarketingNotFound />} />
       </Route>
 
       {/* Customer portal (authenticated app shell) */}
@@ -103,7 +110,10 @@ function AppRoutes() {
         <Route path="/app/forum" element={<ForumTab />} />
         <Route path="/app/settings" element={<Settings />} />
       </Route>
-      <Route path="*" element={<Navigate to="/" replace />} />
+      {/* More specific than the marketing group's own path="*" (an extra
+          static "app" segment outranks a bare splat), so this — not the
+          marketing 404 — is what catches an unmatched /app/... path. */}
+      <Route path="/app/*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }

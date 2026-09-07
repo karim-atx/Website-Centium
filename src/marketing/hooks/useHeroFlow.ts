@@ -1,15 +1,20 @@
 import { useEffect, useRef } from "react";
 
-/** The Home hero's animated "river currents" background — supersedes
- *  useMembraneCanvas per the v2 Claude Design handoff ("Atraxia landing
- *  page (atraxia.org root) — imported changes" is the Atraxia file; this
- *  one is scratchpad/design-handoff-centium-landing-v2/design_handoff_centium_landing/README.md).
- *  Soft blurred gradient streaks flow inward from both edges, converging on
- *  the headline ("all health data flows into Centium"). Ported near-verbatim
- *  from the handoff's own hero-flow.js per its explicit instruction that the
- *  file is framework-agnostic and should be ported as-is — variable names
- *  and structure match the original so the two stay easy to diff against
- *  each other.
+/** The Home hero's animated "river currents" background. Soft blurred
+ *  gradient strands flow inward from both edges, converging on the headline.
+ *  Ported near-verbatim from the v3 landing handoff's own inline canvas
+ *  script (itself ported from this same hook, per that handoff's own
+ *  comment — "Ported from src/marketing/hooks/useHeroFlow.ts") — variable
+ *  names and structure match so the two stay easy to diff against each other.
+ *
+ *  v3: denser bank (34 rows/side, 68 strands total) with three weight
+ *  classes per strand (hairline/mid/heavy) instead of one uniform width, and
+ *  five stroke passes instead of three (a wide soft halo, the main body, a
+ *  travelling dashed mid filament, a hair-thin bright core, and — on strands
+ *  wider than 7px — a second dashed inner filament) so the field reads as a
+ *  river of varied currents rather than uniform ribbons. Brightness now
+ *  breathes in scattered per-strand bursts (each strand's own slow cycle
+ *  cresting) rather than pulsing uniformly.
  *
  *  Rendered at half resolution into an offscreen canvas, then upscaled with
  *  a ~1px CSS blur on the visible canvas. A single continuous eased
@@ -30,8 +35,8 @@ export function useHeroFlow() {
     const reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     const TAU = Math.PI * 2;
     const LOOP = 18; // seconds, ambient flow period
-    const PULSE = 15; // seconds, opacity pulse period
-    const N = 72; // samples per streak
+    const PULSE = 15; // seconds, base for the per-strand pulse cycle
+    const N = 72; // samples per strand
 
     let seed = 91731;
     const rnd = () => {
@@ -39,7 +44,7 @@ export function useHeroFlow() {
       return seed / 4294967296;
     };
 
-    interface Streak {
+    interface Strand {
       side: number;
       y0: number;
       y1: number;
@@ -53,17 +58,21 @@ export function useHeroFlow() {
     }
 
     // side: -1 = enters from the left and sweeps right/inward, 1 = mirror.
-    const streaks: Streak[] = [];
-    const rows = [0.02, 0.09, 0.15, 0.21, 0.27, 0.34, 0.4, 0.47, 0.54, 0.61, 0.68, 0.76, 0.84, 0.93];
+    const streaks: Strand[] = [];
+    const rows: number[] = [];
+    for (let r = 0; r < 34; r++) rows.push(0.012 + (r / 33) * 0.94);
     for (let s = 0; s < 2; s++) {
       for (let i = 0; i < rows.length; i++) {
-        const side = s === 0 ? -1 : 1;
+        const thin = rnd();
+        // three weight classes — hairline filaments, mid strands and a few
+        // heavy currents — so the field has texture instead of uniform ribbons
+        const w = thin < 0.5 ? 1.2 + thin * 5 : thin < 0.84 ? 6 + rnd() * 12 : 16 + rnd() * 18;
         streaks.push({
-          side,
+          side: s === 0 ? -1 : 1,
           y0: rows[i] + (rnd() - 0.5) * 0.03,
           y1: 0.2 + rnd() * 0.46,
           bend: 0.22 + rnd() * 0.5,
-          w: 7 + rnd() * 11,
+          w,
           alpha: 0.4 + rnd() * 0.3,
           speed: 0.7 + rnd() * 0.7,
           phase: rnd() * TAU,
@@ -109,7 +118,7 @@ export function useHeroFlow() {
     };
 
     // Cubic bezier from off-canvas edge toward a point just short of centre.
-    const pt = (st: Streak, u: number, t: number) => {
+    const pt = (st: Strand, u: number, t: number) => {
       const x0 = st.side < 0 ? -0.16 * bw : 1.16 * bw;
       const y0 = st.y0 * bh;
       const x3 = st.side < 0 ? bw * 0.485 : bw * 0.515;
@@ -121,7 +130,7 @@ export function useHeroFlow() {
       const m = 1 - u;
       let x = m * m * m * x0 + 3 * m * m * u * x1 + 3 * m * u * u * x2 + u * u * u * x3;
       let y = m * m * m * y0 + 3 * m * m * u * y1 + 3 * m * u * u * y2 + u * u * u * y3;
-      // ambient undulation — the "current" moving through the streak
+      // ambient undulation — the "current" moving through the strand
       const f = Math.sin(u * st.k * Math.PI * 2 - (t / LOOP) * TAU * st.speed + st.phase);
       y += f * bh * st.wob * (0.35 + u * 0.9);
       x += Math.cos(u * st.k * 4 + st.phase) * bw * 0.006;
@@ -144,7 +153,7 @@ export function useHeroFlow() {
       return p;
     };
 
-    const stroke = (st: Streak, t: number, width: number, alpha: number, dash: boolean) => {
+    const stroke = (st: Strand, t: number, width: number, alpha: number, dash: boolean) => {
       if (!octx) return;
       const g = octx.createLinearGradient(
         st.side < 0 ? 0 : bw,
@@ -208,13 +217,23 @@ export function useHeroFlow() {
 
       for (let i = 0; i < streaks.length; i++) {
         const st = streaks[i];
-        const pulse = 0.66 + 0.34 * Math.sin((t / PULSE) * TAU + st.phase * 1.7);
+        // Occasional pulse: each strand rests near full brightness and only
+        // swells when its own slow cycle crests, so the field breathes in
+        // scattered bursts rather than throbbing all at once.
+        const cyc = Math.sin((t / (PULSE * 1.9)) * TAU + st.phase * 2.3);
+        const burst = Math.pow(Math.max(0, cyc), 5);
+        const pulse = 0.86 + 0.42 * burst - 0.1 * Math.max(0, -cyc);
         octx.filter = "blur(" + Math.max(2, Math.round(bw * 0.005)) + "px)";
         stroke(st, t, st.w * 2.6, st.alpha * pulse * 0.42, false);
         octx.filter = "blur(" + Math.max(1, Math.round(bw * 0.0016)) + "px)";
         stroke(st, t, st.w, st.alpha * pulse, false);
         octx.filter = "blur(" + Math.max(1, Math.round(bw * 0.0012)) + "px)";
         stroke(st, t, st.w * 0.5, st.alpha * pulse * 1.15, true);
+        // a hair-thin bright core and a dashed inner filament add the fine
+        // detail the wide passes can't carry
+        octx.filter = "none";
+        stroke(st, t, Math.max(0.6, st.w * 0.16), st.alpha * pulse * 0.72, false);
+        if (st.w > 7) stroke(st, t, Math.max(0.5, st.w * 0.08), st.alpha * pulse * 0.5, true);
       }
       octx.filter = "none";
 

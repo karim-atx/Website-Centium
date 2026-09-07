@@ -13,12 +13,13 @@ export interface Plan {
   ctaHref: string;
 }
 
-/** The selectable plan-card grid from the hi-fi Pricing section (and its
- *  preview on Home): unselected cards share one fixed height; the selected
- *  card scales up, gains a lavender border/shadow/badge and a filled CTA.
- *  Every visual property is derived from the single `selected` index below
- *  so it can never drift between the border, shadow, scale, badge and CTA
- *  fill on a given card (the bug the original hi-fi mock hit and fixed).
+/** The selectable plan-card grid from the Pricing section (and its preview
+ *  on Home): unselected cards share one fixed height and padding — emphasis
+ *  on the selected card comes only from `transform: scale()` plus a solid
+ *  color tab top and bottom, so the toggle-to-card gap never shifts when
+ *  selection changes. Every visual property is derived from the single
+ *  `selected` index below so it can never drift between the border, shadow,
+ *  scale, tabs, badge and CTA fill on a given card.
  *
  *  Monthly/yearly billing toggle (−20% yearly, placeholder rates pending
  *  real pricing — see each page's own note) sits above the grid and is
@@ -34,14 +35,15 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
 
   return (
     <div className={className}>
-      <div className="flex justify-center mb-9">
+      <div className="flex justify-center mb-[clamp(52px,6vw,76px)]">
         <div className="inline-flex gap-1 bg-white/[.62] border border-mkt-ink/[.07] rounded-full p-1">
           <button
             onClick={() => setYearly(false)}
             className={clsx(
               "px-5 py-2.5 rounded-full text-[13.5px] font-bold transition-[background-color,color,box-shadow] duration-200",
-              !yearly ? "bg-white text-mkt-ink shadow-[0_1px_3px_rgba(34,30,26,.1)]" : "bg-transparent text-mkt-soft"
+              !yearly ? "text-white" : "bg-transparent text-mkt-soft"
             )}
+            style={!yearly ? { background: "#7D67D9", boxShadow: "0 6px 16px rgba(125,103,217,.28)" } : undefined}
           >
             Monthly
           </button>
@@ -49,15 +51,14 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
             onClick={() => setYearly(true)}
             className={clsx(
               "inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-[13.5px] font-bold transition-[background-color,color,box-shadow] duration-200",
-              yearly ? "bg-white text-mkt-ink shadow-[0_1px_3px_rgba(34,30,26,.1)]" : "bg-transparent text-mkt-soft"
+              yearly ? "text-white" : "bg-transparent text-mkt-soft"
             )}
+            style={yearly ? { background: "#7D67D9", boxShadow: "0 6px 16px rgba(125,103,217,.28)" } : undefined}
           >
             Yearly
             <span
-              className={clsx(
-                "text-[10.5px] font-bold tracking-[.04em] px-[7px] py-[3px] rounded-full",
-                yearly ? "bg-mkt-accent text-white" : "bg-mkt-accent/[.14] text-mkt-accent-hover"
-              )}
+              className="text-[10.5px] font-bold tracking-[.04em] px-[7px] py-[3px] rounded-full"
+              style={{ background: yearly ? "rgba(255,255,255,.9)" : "rgba(125,103,217,.14)", color: "#6A54C4" }}
             >
               −20%
             </span>
@@ -77,34 +78,42 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
               tabIndex={0}
               onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && setSelected(i)}
               className={clsx(
-                "relative rounded-3xl bg-white p-[34px] flex flex-col cursor-pointer transition-[border-color,box-shadow,transform]",
-                "duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)]",
-                isSelected ? "border border-mkt-accent-ring scale-[1.045] z-10" : "border border-mkt-line"
+                "relative rounded-3xl p-[34px] flex flex-col cursor-pointer transition-[border-color,box-shadow,transform]",
+                "duration-300 [transition-timing-function:cubic-bezier(0.22,1,0.36,1)] overflow-hidden",
+                isSelected ? "scale-[1.09] z-10" : "scale-[.975]"
               )}
-              style={
-                // a touch of teal alongside the lavender on the highlighted
-                // tier, distinct from the plain lavender-only shadow v1 used
-                isSelected
-                  ? { boxShadow: "0 24px 60px rgba(72,58,130,.12), inset 0 3px 0 0 #5E9E95, inset 0 0 0 1px rgba(94,158,149,.18)" }
-                  : undefined
-              }
+              style={{
+                background: isSelected
+                  ? "linear-gradient(165deg,#FFFFFF 0%,#F8F5FF 58%,#F1F7F5 100%)"
+                  : "linear-gradient(165deg,#FFFFFF 0%,#FCFBFE 100%)",
+                border: isSelected ? "2px solid #7D67D9" : "1px solid #EDEAE4",
+                boxShadow: isSelected
+                  ? "0 34px 74px rgba(72,58,130,.2), inset 0 0 0 1px rgba(125,103,217,.22)"
+                  : "0 10px 30px rgba(72,58,130,.07)",
+              }}
             >
+              {isSelected && (
+                <>
+                  <span aria-hidden="true" className="absolute left-0 right-0 top-0 h-3.5 rounded-t-3xl" style={{ background: "#7D67D9" }} />
+                  <span aria-hidden="true" className="absolute left-0 right-0 bottom-0 h-3.5 rounded-b-3xl" style={{ background: "#7D67D9" }} />
+                </>
+              )}
               <span
                 className={clsx(
                   "absolute -top-[11px] left-[34px] text-white font-bold text-[10px] tracking-[.14em] px-[11px] py-[5px] rounded-full whitespace-nowrap",
                   isSelected ? "inline-block" : "hidden"
                 )}
-                style={{ background: "linear-gradient(100deg,#7D67D9 0%,#6E86C0 62%,#5E9E95 100%)" }}
+                style={{ background: "#7D67D9" }}
               >
                 Explore For
               </span>
               <div className="font-bold text-[19px] text-mkt-ink">{plan.name}</div>
               <p className="text-[14.5px] leading-relaxed text-mkt-soft mt-2.5 min-h-[74px]">{plan.description}</p>
-              <div className="min-h-16 flex items-end gap-1.5">
-                <span className="font-extrabold text-2xl sm:text-[26px] tracking-tight leading-[1.1] text-mkt-ink">
+              <div className="min-h-16 flex flex-wrap items-end gap-x-1.5 gap-y-0.5 pt-2">
+                <span className="font-extrabold text-[clamp(24px,2vw,26px)] tracking-tight leading-[1.1] text-mkt-ink">
                   ${price}
                 </span>
-                <span className="text-[13.5px] text-mkt-faint pb-[3px]">{plan.unit}</span>
+                <span className="text-[13.5px] text-mkt-faint pb-[3px] whitespace-nowrap">{plan.unit}</span>
               </div>
               <div className="text-[13px] text-mkt-faint mt-1.5">
                 {yearly ? "Billed yearly — 20% off" : "Billed monthly"}
@@ -119,10 +128,12 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
               <a
                 href={plan.ctaHref}
                 onClick={(e) => e.stopPropagation()}
-                className={clsx(
-                  "block text-center py-3.5 rounded-full font-semibold text-[14.5px] mt-auto border transition-colors",
-                  isSelected ? "bg-mkt-accent border-mkt-accent text-white" : "bg-transparent border-[#DFDAD2] text-mkt-ink"
-                )}
+                className="block text-center py-3.5 rounded-full font-semibold text-[14.5px] mt-auto border transition-colors"
+                style={
+                  isSelected
+                    ? { background: "#5E9E95", borderColor: "#5E9E95", color: "#fff" }
+                    : { background: "transparent", borderColor: "#DFDAD2", color: "#221E1A" }
+                }
               >
                 {plan.ctaLabel}
               </a>

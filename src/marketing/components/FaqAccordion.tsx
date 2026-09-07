@@ -20,9 +20,9 @@ export const FaqAccordion: React.FC<{ items: { q: string; a: string }[] }> = ({ 
             <button
               onClick={() => setOpen(isOpen ? null : i)}
               aria-expanded={isOpen}
-              className="w-full flex items-center justify-between gap-4 py-[15px] text-left"
+              className="w-full flex items-center justify-between gap-4 py-[17px] text-left"
             >
-              <span className="text-[15px] font-semibold text-mkt-ink">{item.q}</span>
+              <span className="text-[16px] font-semibold text-mkt-ink">{item.q}</span>
               <span
                 className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center transition-colors duration-[280ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)]"
                 style={isOpen ? { background: "rgba(95,158,149,.2)", color: "#3F726D" } : { background: "rgba(125,103,217,.16)", color: "#6A54C4" }}
@@ -62,7 +62,7 @@ export const FaqAccordion: React.FC<{ items: { q: string; a: string }[] }> = ({ 
                   transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
                   className="overflow-hidden"
                 >
-                  <p className="text-[14.5px] leading-relaxed text-mkt-soft pb-5 max-w-xl">{item.a}</p>
+                  <p className="text-[14.5px] leading-[1.65] text-mkt-soft pb-[22px] max-w-[520px]">{item.a}</p>
                 </motion.div>
               )}
             </AnimatePresence>

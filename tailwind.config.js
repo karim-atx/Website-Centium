@@ -308,6 +308,30 @@ export default {
           "0%": { backgroundPosition: "-90% 0" },
           "100%": { backgroundPosition: "190% 0" },
         },
+        // v3 landing handoff: the solved Problem section's teal sheen — three
+        // layers (a skewed vertical wipe, a diagonal gloss crossing
+        // horizontally, and a pulsing ring on the bar itself) that fire once
+        // and are removed from the DOM at 2200ms, so the bar always rests on
+        // its flat fill rather than looping.
+        "cent-teal-wipe": {
+          "0%": { opacity: "0", transform: "translateY(-100%) skewY(-3deg)" },
+          "18%": { opacity: "1" },
+          "82%": { opacity: "1" },
+          "100%": { opacity: "0", transform: "translateY(100%) skewY(-3deg)" },
+        },
+        "cent-teal-gloss": {
+          "0%": { opacity: "0", transform: "translate3d(-120%,0,0) skewX(-18deg)" },
+          "22%": { opacity: "0.9" },
+          "70%": { opacity: "0.55" },
+          "100%": { opacity: "0", transform: "translate3d(220%,0,0) skewX(-18deg)" },
+        },
+        "cent-teal-edge": {
+          "0%": { boxShadow: "0 0 0 0 rgba(94,158,149,0)" },
+          "22%": { boxShadow: "0 0 0 5px rgba(94,158,149,.34)" },
+          "52%": { boxShadow: "0 0 0 0 rgba(94,158,149,0)" },
+          "74%": { boxShadow: "0 0 0 4px rgba(94,158,149,.26)" },
+          "100%": { boxShadow: "0 0 0 0 rgba(94,158,149,0)" },
+        },
       },
       animation: {
         "fade-slide-up": "fade-slide-up 0.45s cubic-bezier(0.22,1,0.36,1) both",
@@ -353,6 +377,9 @@ export default {
         "mkt-drift-a": "mkt-drift-a 22s ease-in-out infinite",
         "mkt-drift-b": "mkt-drift-b 27s ease-in-out infinite",
         "mkt-shimmer": "mkt-shimmer 1.2s ease-in-out both",
+        "cent-teal-wipe": "cent-teal-wipe 1.5s cubic-bezier(.4,0,.3,1) .1s both",
+        "cent-teal-gloss": "cent-teal-gloss 1.35s cubic-bezier(.32,0,.24,1) .22s both",
+        "cent-teal-edge": "cent-teal-edge 1.9s ease-out .1s both",
       },
     },
   },
