@@ -345,7 +345,16 @@ export type ServingUnit = "serving" | "g" | "ml" | "cup" | "tbsp" | "tsp";
 
 export interface FoodLogEntry {
   id: string;
-  foodId: string;
+  // Reference to the catalog Food this entry was logged from. Nullable
+  // because the catalog entry can be edited or deleted later (or, once
+  // this moves to a real Supabase foreign key, removed outright) without
+  // invalidating the log — `food` below is what keeps this entry accurate
+  // regardless of what happens to the catalog afterward.
+  foodId: string | null;
+  // Snapshot of the nutrition values (name, calories, protein, carbs, fat,
+  // serving) as they were at log time. Always read from here for display/
+  // totals — never re-read live off the catalog Food via foodId, since the
+  // catalog entry can change after the fact and a past log shouldn't.
   food: Food;
   quantity: number;
   unit?: ServingUnit;
@@ -726,6 +735,9 @@ export type WidgetType =
   | "gymPasses";
 export type WidgetSize = "small" | "large";
 
+// Future Supabase migration: device_presentation_settings (per-platform,
+// stays local, never synced) — widget/home-screen layout is presentation,
+// not a synced app preference. See the `widgets` field on AppState.
 export interface WidgetConfig {
   id: string;
   type: WidgetType;
@@ -789,6 +801,8 @@ export interface JournalEntry {
 }
 
 // V3: appearance — accent color theme, alongside light/dark.
+// Future Supabase migration: device_presentation_settings (per-platform,
+// stays local, never synced).
 export type ColorTheme = "centium" | "ocean" | "sunset" | "berry";
 
 // V3: custom (user-added) foods, kept separate from the curated mock database.

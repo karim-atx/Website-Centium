@@ -199,18 +199,23 @@ interface AppState {
   theme: "light" | "dark";
   toggleTheme: () => void;
 
+  // Future Supabase migration: app_preferences (syncs across all platforms).
   language: Language;
   setLanguage: (language: Language) => void;
   t: (key: string) => string;
 
   // V7 (QA 7.0): granular per-category notification toggles (was one
   // all-or-nothing switch), and a couple of real accessibility settings.
+  // Future Supabase migration: app_preferences (syncs across all platforms).
   notificationPrefs: Record<
     "mealReminders" | "workoutReminders" | "streakAlerts" | "professionalMessages" | "weeklySummary",
     boolean
   >;
   updateNotificationPrefs: (patch: Partial<AppState["notificationPrefs"]>) => void;
 
+  // Future Supabase migration: device_presentation_settings (per-platform,
+  // stays local, never synced) — larger text / reduce motion are
+  // presentation, not synced app preferences.
   accessibility: { largerText: boolean; reduceMotion: boolean };
   updateAccessibility: (patch: Partial<AppState["accessibility"]>) => void;
 
@@ -294,6 +299,8 @@ interface AppState {
   healthIntegrationConnected: boolean;
   setHealthIntegrationConnected: (connected: boolean) => void;
 
+  // Future Supabase migration: device_presentation_settings (per-platform,
+  // stays local, never synced) — see the WidgetConfig type comment.
   widgets: WidgetConfig[];
   addWidget: (type: WidgetType, size?: WidgetSize) => void;
   removeWidget: (id: string) => void;
@@ -395,6 +402,8 @@ interface AppState {
 
   today: string;
 
+  // Future Supabase migration: device_presentation_settings (per-platform,
+  // stays local, never synced) — see the ColorTheme type comment.
   colorTheme: ColorTheme;
   setColorTheme: (theme: ColorTheme) => void;
 
