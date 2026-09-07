@@ -1,4 +1,15 @@
-name: Deploy to GitHub Pages
+name: Deploy hub to GitHub Pages
+
+# Publishes the Atraxia hub (hub/) — and only the hub. It's hand-written
+# static HTML with no build step, so this workflow just uploads the directory
+# as-is: no Node, no npm ci, no `npm run build`.
+#
+# Centium used to be built here too and then reshuffled into a /centium
+# subfolder so the hub could take over the site root. It now builds and
+# deploys on its own (Cloudflare Pages, centium.atraxia.org), so that whole
+# step is gone along with the /404.html copy that gave the Centium SPA its
+# deep-link fallback — GitHub Pages now serves hub/404.html (formerly
+# public/atraxia-404.html) as this site's 404 instead.
 
 on:
   push:
@@ -19,33 +30,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npm run build
-      # The hub page (public/hub.html, built to dist/hub.html) is meant to
-      # be reachable at the true root — atraxia.org/ proxies straight to
-      # this site's root — so the Centium app itself moves into a
-      # /centium subfolder here, and the hub takes over dist/index.html.
-      - run: |
-          mkdir -p dist/centium
-          mv dist/assets dist/centium/assets
-          mv dist/index.html dist/centium/index.html
-          cp dist/favicon.svg dist/centium/favicon.svg
-          mv dist/hub.html dist/index.html
-      # GitHub Pages serves static files only — it has no server-side rewrite
-      # for a single-page app, so a direct/refreshed request to a route like
-      # /centium/pricing 404s unless something serves the app shell there
-      # too. GitHub Pages falls back to 404.html for any unmatched path
-      # site-wide, so shipping the Centium app's built index.html under
-      # that name lets the client-side router take over and render the
-      # right page from the URL for any deep link under /centium/*.
-      - run: cp dist/centium/index.html dist/404.html
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: hub
 
   deploy:
     needs: build

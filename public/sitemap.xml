@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
+<!-- Centium's own sitemap, shipped by Centium's Vite build (public/ is copied
+     verbatim into dist/). The Atraxia hub has its own at hub/sitemap.xml —
+     each site lists only its own URLs. -->
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://atraxia.org/</loc></url>
-  <url><loc>https://atraxia.org/privacy.html</loc></url>
-  <url><loc>https://atraxia.org/accessibility.html</loc></url>
-  <url><loc>https://atraxia.org/centium/</loc></url>
-  <url><loc>https://atraxia.org/centium/product</loc></url>
-  <url><loc>https://atraxia.org/centium/pricing</loc></url>
-  <url><loc>https://atraxia.org/centium/business</loc></url>
-  <url><loc>https://atraxia.org/centium/contact</loc></url>
-  <url><loc>https://atraxia.org/centium/legal/privacy</loc></url>
-  <url><loc>https://atraxia.org/centium/legal/terms</loc></url>
+  <url><loc>https://centium.atraxia.org/</loc></url>
+  <url><loc>https://centium.atraxia.org/product</loc></url>
+  <url><loc>https://centium.atraxia.org/pricing</loc></url>
+  <url><loc>https://centium.atraxia.org/business</loc></url>
+  <url><loc>https://centium.atraxia.org/contact</loc></url>
+  <url><loc>https://centium.atraxia.org/legal</loc></url>
 </urlset>

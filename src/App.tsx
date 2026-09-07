@@ -121,7 +121,14 @@ function AppRoutes() {
 export default function App() {
   return (
     <AppProvider>
-      <BrowserRouter basename={new URL(document.baseURI).pathname.replace(/\/$/, "") || "/"}>
+      {/* No basename: Centium is served from a domain root and only ever from
+          a domain root (see vite.config.ts). This used to derive the basename
+          from document.baseURI, which only worked because index.html injected
+          a <base> tag at runtime to cope with being served under /centium/ or
+          /Website-Centium/centium/. With that tag gone baseURI is just the
+          current page URL, so the same expression would read a deep link like
+          /pricing back as basename="/pricing" and strip the route away. */}
+      <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>
     </AppProvider>

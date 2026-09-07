@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /app
 
-Sitemap: https://atraxia.org/centium/sitemap.xml
+Sitemap: https://centium.atraxia.org/sitemap.xml

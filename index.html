@@ -2,28 +2,6 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <script>
-      // Built with relative asset paths (see vite.config.ts) so this same
-      // build works both raw on GitHub Pages and proxied at
-      // atraxia.org/centium/ — this picks the right one to resolve
-      // everything else in the document against, before anything else
-      // here gets fetched. The build (see .github/workflows/deploy.yml)
-      // moves this app's build output to a /centium subfolder so the hub
-      // page can take over the true root, so the raw GitHub Pages path is
-      // one segment deeper than the proxied one.
-      (function () {
-        var segs = location.pathname.split('/').filter(Boolean);
-        var base = '/';
-        if (segs[0] === 'centium') {
-          base = '/centium/';
-        } else if (segs[0] === 'Website-Centium' && segs[1] === 'centium') {
-          base = '/Website-Centium/centium/';
-        }
-        var el = document.createElement('base');
-        el.href = base;
-        document.head.appendChild(el);
-      })();
-    </script>
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#AEA1DC" media="(prefers-color-scheme: light)" />
@@ -33,6 +11,13 @@
       name="description"
       content="Centium brings nutrition tracking, workout logging, health tracking, AI-powered guidance and community into one place."
     />
+    <!-- Static fallback tags for crawlers that don't execute JS. Clients that
+         do run JS get per-route values instead — src/marketing/useSEO.ts
+         rewrites the title, description, canonical, og:* and twitter:* tags on
+         every marketing route, so these only ever describe the site root. -->
+    <link rel="canonical" href="https://centium.atraxia.org/" />
+    <meta property="og:url" content="https://centium.atraxia.org/" />
+    <meta property="og:site_name" content="Centium" />
     <meta property="og:title" content="Centium — Your health, all in one place" />
     <meta
       property="og:description"
@@ -40,6 +25,7 @@
     />
     <meta property="og:type" content="website" />
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://centium.atraxia.org/" />
     <meta name="twitter:title" content="Centium — Your health, all in one place" />
     <meta
       name="twitter:description"
