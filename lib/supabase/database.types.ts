@@ -2663,6 +2663,42 @@ export type Database = {
         }
         Relationships: []
       }
+      rate_limit_attempts: {
+        Row: {
+          action: Database["public"]["Enums"]["rate_limited_action"]
+          actor_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          action: Database["public"]["Enums"]["rate_limited_action"]
+          actor_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          action?: Database["public"]["Enums"]["rate_limited_action"]
+          actor_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rate_limit_attempts_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rate_limit_attempts_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recovery_mode_settings: {
         Row: {
           created_at: string
@@ -4082,6 +4118,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      check_rate_limit: {
+        Args: {
+          p_action: Database["public"]["Enums"]["rate_limited_action"]
+          p_max_attempts: number
+          p_window: string
+        }
+        Returns: undefined
+      }
       create_client_code: {
         Args: { p_valid_for?: string }
         Returns: {
@@ -4182,46 +4226,20 @@ export type Database = {
       }
       redeem_client_code: {
         Args: { p_code: string }
-        Returns: {
-          assigned_food_template_id: string | null
-          assigned_program_id: string | null
-          client_id: string
-          communication_boundaries: string | null
-          contact_style: string | null
-          created_at: string
-          disconnected_at: string | null
-          id: string
-          joined_at: string
-          prefix: string | null
-          professional_id: string
-          pronouns: string | null
-          reminder_preference: string | null
-        }
+        Returns: Database["public"]["CompositeTypes"]["redeem_client_code_result"]
         SetofOptions: {
           from: "*"
-          to: "professional_clients"
+          to: "redeem_client_code_result"
           isOneToOne: true
           isSetofReturn: false
         }
       }
       redeem_referral: {
         Args: { p_code: string }
-        Returns: {
-          code: string
-          created_at: string
-          expires_at: string | null
-          id: string
-          redeemed: boolean
-          redeemed_at: string | null
-          referee_discount_pct: number
-          referee_id: string | null
-          referrer_bonus_points: number
-          referrer_discount_pct: number
-          referrer_id: string
-        }
+        Returns: Database["public"]["CompositeTypes"]["redeem_referral_result"]
         SetofOptions: {
           from: "*"
-          to: "referrals"
+          to: "redeem_referral_result"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -4381,6 +4399,13 @@ export type Database = {
         | "dietitian"
         | "doctor"
         | "other"
+      rate_limited_action:
+        | "create_client_code"
+        | "redeem_client_code"
+        | "preview_client_code"
+        | "create_referral"
+        | "redeem_referral"
+        | "preview_referral"
       rep_max_update_mode: "no_update" | "prompt" | "prompt_with_estimate"
       request_status: "pending" | "accepted" | "rejected"
       set_type: "normal" | "warmup" | "failure" | "dropset" | "superset" | "pr"
@@ -4407,7 +4432,18 @@ export type Database = {
         | "gym_passes"
     }
     CompositeTypes: {
-      [_ in never]: never
+      redeem_client_code_result: {
+        success: boolean | null
+        message: string | null
+        relationship:
+          | Database["public"]["Tables"]["professional_clients"]["Row"]
+          | null
+      }
+      redeem_referral_result: {
+        success: boolean | null
+        message: string | null
+        referral: Database["public"]["Tables"]["referrals"]["Row"] | null
+      }
     }
   }
 }
@@ -4420,12 +4456,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4449,11 +4485,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4474,11 +4510,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4499,11 +4535,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4516,11 +4552,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -4658,6 +4694,14 @@ export const Constants = {
         "dietitian",
         "doctor",
         "other",
+      ],
+      rate_limited_action: [
+        "create_client_code",
+        "redeem_client_code",
+        "preview_client_code",
+        "create_referral",
+        "redeem_referral",
+        "preview_referral",
       ],
       rep_max_update_mode: ["no_update", "prompt", "prompt_with_estimate"],
       request_status: ["pending", "accepted", "rejected"],
