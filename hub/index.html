@@ -2,11 +2,13 @@
 <!--
   atraxia.org's root "hub of apps" page. Fully self-contained (no external
   JS/CSS frameworks or CDNs, save for Google Fonts), so it ships as a plain
-  static file through Vite's public/ dir — built and deployed by the same
-  GitHub Actions/Pages pipeline as the rest of the site, reachable at
-  .../hub.html in the built output. The Cloudflare Worker
+  static file. It lives in the repo's hub/ directory, which GitHub Actions
+  publishes to GitHub Pages verbatim — no build step (see
+  .github/workflows/deploy.yml). The Cloudflare Worker
   (deploy/cloudflare-worker.js) proxies atraxia.org's root request to this
-  file, the same way it proxies /centium/* to the rest of the built app.
+  file. Centium is no longer part of this deployment at all: it builds and
+  deploys separately at centium.atraxia.org, and the Worker 301-redirects
+  the old atraxia.org/centium/* URLs there.
 
   Design pass v1 (Claude Design handoff, "Atraxia Landing Page" — see
   scratchpad/design-handoff-atraxia-landing/design_handoff_atraxia_landing/
@@ -39,12 +41,13 @@
   instructions (its `.dc.html` wrapper aside, the markup/CSS/JS is already
   meant to transfer directly into a static file like this one).
 
-  One deliberate deviation: the handoff's own centium-tile-href script sets
-  an unconditional absolute URL, dropping the existing raw-GitHub-Pages
-  fallback below (this file is also reachable one path segment down at
-  the raw github.io URL, where an absolute /centium would resolve wrong).
-  That fallback isn't part of what either handoff was scoped to change, so
-  it's kept as-is rather than regressing it.
+  (Historical note: this file used to deviate from the handoff by keeping a
+  script that rewrote the Centium tile's href to a raw-GitHub-Pages subpath,
+  since the handoff's unconditional absolute URL would have resolved wrong
+  when this page was viewed at the github.io URL. That script is gone —
+  Centium no longer exists at any subpath of this deployment, so there is no
+  variant left to rewrite to, and the tile now carries the handoff's
+  absolute URL after all.)
 
   Design pass v3 (Claude Design handoff, "Atraxia landing page — v3 (nav
   row, loader fixes, founder cards)" — see
@@ -2616,7 +2619,7 @@
             <div class="pf-carousel is-glowing">
               <span class="pf-glow" aria-hidden="true"></span>
               <div class="pf-rail" role="tablist" aria-label="Portfolio">
-                <button class="pf-item is-active" type="button" role="tab" aria-selected="true" data-pf="centium" data-pf-url="/centium" data-pf-from="#8E6DE0" data-pf-mid="#6EA6A6" data-pf-to="#35B37D">
+                <button class="pf-item is-active" type="button" role="tab" aria-selected="true" data-pf="centium" data-pf-url="https://centium.atraxia.org" data-pf-from="#8E6DE0" data-pf-mid="#6EA6A6" data-pf-to="#35B37D">
                   <span class="pf-logo">
                     <img src="atraxia/centium-mark.png" alt="" />
                   </span>
@@ -2635,7 +2638,7 @@
               <div class="pf-panels">
                 <div class="pf-panel is-active" data-pf-panel="centium">
                   <p class="desc">Nutrition, training, health data and community — one place to manage your health.</p>
-                  <a class="cta" href="/centium" id="centium-tile">Visit Centium →</a>
+                  <a class="cta" href="https://centium.atraxia.org" id="centium-tile">Visit Centium →</a>
                 </div>
                 <div class="pf-panel" data-pf-panel="soon">
                   <p class="desc">The next venture in the Atraxia portfolio is already in the works.</p>
@@ -2937,25 +2940,6 @@
           window.addEventListener('resize', function () { paint(); }, { passive: true });
           active(); paint();
         }, 60);
-      })();
-
-      // "/centium" is correct for the real domain (atraxia.org/centium),
-      // but this page is also reachable raw on GitHub Pages, one level
-      // under the repo name — where "/centium" would resolve against the
-      // wrong root entirely. Point the link at whichever is actually
-      // correct for how this page was loaded. (Kept as our own existing
-      // version rather than the handoff's unconditional absolute URL —
-      // this fallback isn't part of what that handoff was scoped to
-      // change, and the handoff's version would break the tile link when
-      // viewed at the raw github.io URL.)
-      (function () {
-        var segs = location.pathname.split('/').filter(Boolean);
-        var href = segs[0] === 'Website-Centium' ? '/Website-Centium/centium/' : '/centium';
-        // v10: guarded, since this same shared script runs on the Legal and
-        // 404 pages too, which have no #centium-tile — the old unguarded
-        // lookup threw at script top-level there, aborting every IIFE after it.
-        var tile = document.getElementById('centium-tile');
-        if (tile) tile.href = href;
       })();
 
       // v3: click-to-flip founder cards. Delegated so it survives re-renders.
