@@ -180,6 +180,34 @@ performing the cascade — because `auth.users` cannot be deleted with an
 anon key. This should be resolved before the app reaches anyone holding a
 real account.
 
+### Client codes carry no profile prefill, so "skip About You" is gone
+
+The V7 prototype let a client redeeming a valid professional's code skip
+the About You step entirely: the professional had pre-entered their name,
+age, sex, height and weight when generating the code, and onboarding read
+them straight off it.
+
+That has no backend equivalent. The real `client_codes` table stores only
+`code`, `professional_id`, `expires_at`, and the redemption bookkeeping —
+no client-profile columns — and `preview_client_code` returns only the
+professional's own name, avatar, subtype, expiry and redeemed flag. With
+nothing to prefill from, keeping the skip would have silently defaulted
+every coded client to "Friend", 28 years old, 170cm, 70kg.
+
+So the skip was removed and **every client now fills in About You
+themselves**. `stepsFor(accountType, skipAboutYou)` in
+`src/pages/onboarding/Onboarding.tsx` keeps its `skipAboutYou` parameter,
+currently hardcoded `false`, as a one-line hook for restoring the
+behaviour later.
+
+Restoring it is a **product design question, not a schema patch** — adding
+prefill columns and wiring them up would be the easy part and the wrong
+place to start. It needs decisions first: which fields a professional may
+pre-fill on someone else's behalf, whether the client reviews and confirms
+those values before they are committed, what happens when they disagree
+with them, and how that interacts with the health data the profile feeds.
+Design that before touching the table.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
