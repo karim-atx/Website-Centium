@@ -327,25 +327,34 @@ tabs are fine (they prefer the SVG); this affects iOS home-screen icons
 and PWA installs. Fixing it needs real image-editing tooling to regenerate
 the set, not a code change.
 
-### The diary is written to Supabase but never read back from it
+### The diary loads from Supabase, but only the last 90 days
 
-`getDiaryEntries()` (`src/services/food/index.ts`) is built and tested,
-including the 90-day rolling window that was chosen so the auto-streaks and
-copy-yesterday keep working. **Nothing calls it.** The diary renders from
-`foodLog` in `AppContext`, which is `localStorage`.
+**Resolved.** `getDiaryEntries()` is now called from `AppContext` — not from
+`Food.tsx`, because `foodLog` also feeds `HomeWidget`'s nutrition summary and
+`AddFoodSheet`'s Recent strip, and hydrating in the page would leave those
+stale. The diary previously rendered from `localStorage` alone, so entries
+only *looked* durable: a reload preserved them because the browser remembered,
+not because anything read them back, and the same account on another device
+showed nothing. Verified by removing an entry from `localStorage` and
+reloading — it came back, so it could only have come from the database.
 
-The result is that entries only *look* durable. Logging, editing and deleting
-all reach `food_log_entries` correctly, and a reload preserves the diary — but
-that is `localStorage` doing the work, not the database. **Open the same
-account on a different browser or device and the history is empty**, even
-though every row is sitting in Supabase. Clearing site data has the same
-effect, and there is nothing to distinguish "you have not logged anything"
-from "your entries are on another machine".
+**The caveat: the window is 90 days.** `DIARY_WINDOW_DAYS` in `AppContext` was
+chosen so the auto-streaks, which walk backwards through every dated entry,
+and copy-yesterday keep working on one read rather than a query per day. The
+range always covers today and — if the user has navigated outside it — the
+selected date, so paging back through history does fetch older entries. But
+**nothing loads more than 90 days at once**, so a streak longer than that
+would cap. Not reachable on an app with no real logging history yet; it will
+be, and the fix is paging rather than a bigger constant.
 
-The fix is to call `getDiaryEntries()` once the profile hydrates and again on
-a date change outside the loaded window, and let the result replace local
-state rather than merge into it — the rows carry their real database ids, so a
-replace is idempotent and a merge risks showing an entry twice.
+Two details worth knowing before changing this. The hydration **replaces**
+rather than merges, because rows carry real database ids and merging would
+show an entry twice under two id shapes; and it deliberately preserves
+entries that exist only locally (see the next item) plus any remote entry
+outside the fetched range, since the read says nothing about those. A failed
+read is also distinct from an empty one — `getDiaryEntries()` returns
+`{ ok, entries }` precisely so a dropped connection keeps the cached entries
+on screen instead of wiping the diary.
 
 ### AI Voice, custom meals and copy-yesterday still write only locally
 
