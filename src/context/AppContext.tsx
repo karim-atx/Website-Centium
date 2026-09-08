@@ -60,7 +60,7 @@ import { translations, type Language } from "../i18n/translations";
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, onAuthChange, signOutRemote } from "../services/auth";
-import { ensureProfileRow } from "../services/profile";
+import { ensureProfileRow, fetchProfile } from "../services/profile";
 import { getMyReferrerReward } from "../services/redemption";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
 
@@ -206,6 +206,11 @@ interface AppState {
   // False until the initial getSession() settles, so the auth screen isn't
   // flashed at a user who is already signed in.
   authReady: boolean;
+  // False until the server profile has been read for the current session.
+  // Route guards must wait for this: `user.onboarded` is seeded from
+  // localStorage, and acting on it early sends an onboarded user through
+  // onboarding again.
+  profileReady: boolean;
 
   theme: "light" | "dark";
   toggleTheme: () => void;
@@ -698,6 +703,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const authUserId = session?.user?.id ?? null;
+
+  // Hydrate the local profile from the server whenever the signed-in account
+  // changes.
+  //
+  // `user` is one localStorage entry, not keyed by account, so it carries
+  // whoever used this browser last — and signOut resets it to the seeded
+  // demo profile ("Abdallah", 106.4kg). Both make it useless as a source of
+  // truth for `onboarded`: a genuinely onboarded user signing in on a fresh
+  // or reset browser was sent back through onboarding. The server row wins;
+  // the cached copy only survives for fields `profiles` has no column for.
+  const [profileReady, setProfileReady] = useState(false);
+  useEffect(() => {
+    if (!authReady) return;
+    if (!authUserId) {
+      // Signed out: nothing to hydrate, and guards shouldn't block.
+      setProfileReady(true);
+      return;
+    }
+    let cancelled = false;
+    setProfileReady(false);
+    void fetchProfile(authUserId).then((result) => {
+      if (cancelled) return;
+      if (result) setUser((prev) => ({ ...prev, ...result.profile }));
+      // Ready even on failure — a read error must not lock the user out of
+      // the app behind a permanent loading state.
+      setProfileReady(true);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, authReady, setUser]);
 
   const [theme, setTheme] = usePersistentState<"light" | "dark">("theme", "light");
   useEffect(() => {
@@ -1803,6 +1839,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       session,
       authUserId,
       authReady,
+      profileReady,
       theme,
       toggleTheme,
       language,
@@ -2007,6 +2044,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       session,
       authUserId,
       authReady,
+      profileReady,
       theme,
       language,
       notificationPrefs,

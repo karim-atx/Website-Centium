@@ -42,7 +42,22 @@ import ForumTab from "./pages/profile/ForumTab";
 import Settings from "./pages/settings/Settings";
 
 const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user } = useApp();
+  const { user, authReady, profileReady } = useApp();
+
+  // Wait for the server profile before deciding. `user.onboarded` starts from
+  // localStorage, which is per-browser and not keyed by account — redirecting
+  // on it directly is what sent genuinely-onboarded users back through
+  // onboarding after a sign-out or on a second account in the same browser.
+  // Once profileReady is true, `user.onboarded` has been overwritten by
+  // profiles.onboarded, so it is the server's answer rather than the cache's.
+  if (!authReady || !profileReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-cream">
+        <p className="text-sm text-charcoal-faint">Loading…</p>
+      </div>
+    );
+  }
+
   if (!user.onboarded) return <Navigate to="/app/onboarding" replace />;
   return <>{children}</>;
 };
