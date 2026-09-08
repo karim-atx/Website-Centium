@@ -360,9 +360,10 @@ on screen instead of wiping the diary.
 
 **Resolved: every logging path now writes remotely.** AI Voice resolves each
 parsed item to a real catalog row by name and falls back to a manual,
-provenance-free write only when nothing matches; `logCustomMeal()` writes with
-null provenance (its items may reference foods that only exist in
-`localStorage` — see the custom-food gap above); and copy-yesterday goes
+provenance-free write only when nothing matches; `logCustomMeal()` passes real
+`custom_food_id` provenance for items whose food reached `custom_foods`, and
+falls back to a manual write for ones created before those writes existed; and
+copy-yesterday goes
 through `copyDiaryEntry()`, which duplicates an existing row's snapshot,
 quantity, unit and provenance verbatim rather than re-logging it. Every path
 now produces rows with real database ids, consistent with `AddFoodSheet`,
@@ -383,17 +384,32 @@ post-deploy, or via a one-time cleanup that drops (or uploads) any entry whose
 id is not a uuid. Not urgent, and not a correctness problem today; just dead
 weight that should not become permanent by default.
 
-They need the same treatment `AddFoodSheet` got: write remote-first through
-the service, and insert the returned row — with its real database id — via
-`addFoodEntryRecord` rather than minting a local one.
+### Client-scoped custom foods are still local only
 
-`isRemoteEntryId()` (`src/services/food/index.ts`) exists only to tolerate the
-resulting mix. The diary currently holds both real rows with uuids and
-local-only entries with ids like `f1757352…`, and sending one of the latter to
-Postgres returns `invalid input syntax for type uuid`, so delete and edit
-branch on it. **It is a transitional shim and should be deleted once every
-logging path writes remotely** — at that point every entry has a real id and
-the branch is dead code.
+A user's own custom foods are now written to `custom_foods` on create, so they
+are searchable everywhere and give logged entries real `custom_food_id`
+provenance. `addClientCustomFood` — the professional path, where a
+professional authors a food *for* a named client while building their meal
+plan — was deliberately left out of that change and still writes only to
+`clientCustomFoods` in `localStorage`.
+
+The blocker is an id mismatch, and it is the kind that fails loudly if fixed
+carelessly. `custom_foods.scoped_to_client_id` is a foreign key to
+`profiles(id)`, but `MealPlanBuilderTab` identifies clients by
+`professionalClients[i].id`, which is the **relationship** id
+(`professional_clients.id`). The client's actual profile id lives separately on
+`ProfessionalClient.clientId`, as that type's own comment says. Writing the
+former into that column would violate the foreign key.
+
+So the fix is not "call `createCustomFood` with a `scoped_to_client_id`" — it
+is threading the profile id through the meal-plan builder first, then writing.
+That touches professional-side UI which has been out of scope, which is why it
+was split out rather than done hastily.
+
+Until then, a food a professional creates for a client exists on that
+professional's browser only. The client cannot see it, and
+`custom_foods_select_scoped_client` — the policy that exists precisely to let
+them — has no row to select.
 
 ## Version history
 
