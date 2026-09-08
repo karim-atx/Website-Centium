@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
@@ -7,8 +7,9 @@ import { ActivityLevelSheet } from "../../components/profile/ActivityLevelSheet"
 import { CertificationSheet } from "../../components/profile/CertificationSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
-import { mockProfessionals } from "../../data/mockProfessionals";
-import { professionalTypeIcon } from "../../utils/icons";
+import { DataSharingSection } from "../../components/professionals/DataSharingSection";
+import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
+import { PERSON_ICON } from "../../utils/icons";
 import { LINKED_PROFESSIONAL_REVIEW_ID } from "../professionals/Professionals";
 import {
   Target,
@@ -44,7 +45,7 @@ export default function Profile() {
     user,
     updateProfile,
     signOut,
-    connectedProfessionalIds,
+    authUserId,
     professionalReviews,
     premiumPlan,
     referralNextMonthDiscountPct,
@@ -106,9 +107,30 @@ export default function Profile() {
   // client-only concepts — hidden for both professional and business
   // accounts, whose own profile has nothing to do with personal tracking.
   const hidesClientFields = user.accountType === "professional" || user.accountType === "business";
-  const connectedProfessionals = hidesClientFields
-    ? []
-    : mockProfessionals.filter((p) => p.connected || connectedProfessionalIds.includes(p.id));
+
+  // Real relationships only. This used to list `mockProfessionals` filtered
+  // by `connectedProfessionalIds` — the browse directory's local "Connect"
+  // bookmarks, whose ids ("pr1") are not accounts. Those entries can't hold
+  // a consent grant, so surfacing them beside data-sharing controls would
+  // offer settings that could never be written. Same reason the mock roster
+  // and the default-on grants went.
+  const [connectedProfessionals, setConnectedProfessionals] = useState<LinkedProfessional[]>([]);
+  const [sharingFor, setSharingFor] = useState<LinkedProfessional | null>(null);
+
+  useEffect(() => {
+    if (hidesClientFields || !authUserId) {
+      setConnectedProfessionals([]);
+      return;
+    }
+    let cancelled = false;
+    void fetchLinkedProfessionals().then((result) => {
+      if (cancelled) return;
+      if (result.status === "ok") setConnectedProfessionals(result.professionals);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [hidesClientFields, authUserId]);
 
   // V4 (QA 4.0) trimmed to Goals + Help; V5 (QA 5.0) removes Help too —
   // Settings (reachable from More) already covers everything it pointed to.
@@ -294,24 +316,28 @@ export default function Profile() {
             Connected professionals
           </p>
           <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
-            {connectedProfessionals.map((p) => {
-              const Icon = professionalTypeIcon[p.type];
-              return (
-                <button
-                  key={p.id}
-                  onClick={() => navigate(`/app/professionals/${p.id}`)}
-                  className="tap shrink-0 flex items-center gap-2.5 bg-cream-card rounded-2xl pl-2.5 pr-4 py-2.5 shadow-soft"
-                >
-                  <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
-                    <Icon size={16} className="text-primary-dark" />
-                  </span>
-                  <div className="text-left">
-                    <p className="text-xs font-semibold text-charcoal whitespace-nowrap">{p.name}</p>
-                    <p className="text-[10px] text-charcoal-faint whitespace-nowrap">{p.specialty}</p>
-                  </div>
-                </button>
-              );
-            })}
+            {connectedProfessionals.map((p) => (
+              // Opens that professional's own data-sharing controls. Used to
+              // navigate to the mock directory's detail page, which no longer
+              // carries these toggles.
+              <button
+                key={p.professionalId}
+                onClick={() => setSharingFor(p)}
+                className="tap shrink-0 flex items-center gap-2.5 bg-cream-card rounded-2xl pl-2.5 pr-4 py-2.5 shadow-soft"
+              >
+                <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
+                  {p.avatarUrl ? (
+                    <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <PERSON_ICON size={16} className="text-primary-dark" />
+                  )}
+                </span>
+                <div className="text-left">
+                  <p className="text-xs font-semibold text-charcoal whitespace-nowrap">{p.name}</p>
+                  <p className="text-[10px] text-charcoal-faint whitespace-nowrap">Manage data sharing</p>
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       )}
@@ -525,6 +551,18 @@ export default function Profile() {
         className="hidden"
         onChange={(e) => e.target.files?.[0] && handleAvatarFile(e.target.files[0])}
       />
+      {/* Second entry point to the same controls the Professionals tab shows.
+          Reuses DataSharingSection narrowed to one professional rather than
+          duplicating the toggles, so both paths read and write the same
+          client_access_grants rows. */}
+      <BottomSheet
+        open={!!sharingFor}
+        onClose={() => setSharingFor(null)}
+        title={sharingFor?.name ?? "Data sharing"}
+      >
+        {sharingFor && <DataSharingSection professionalId={sharingFor.professionalId} />}
+      </BottomSheet>
+
       <BottomSheet open={avatarSheetOpen} onClose={() => setAvatarSheetOpen(false)} hideHeader>
         <div className="space-y-2.5 animate-fade-slide-up">
           <button

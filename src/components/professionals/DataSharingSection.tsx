@@ -22,7 +22,15 @@ import {
 // set could ever be written, and nothing the professional saw could ever
 // reflect them. They now hang off the client's REAL relationships
 // (active_professional_clients) and write real rows.
-export const DataSharingSection: React.FC = () => {
+export const DataSharingSection: React.FC<{
+  /**
+   * Narrows the section to a single professional. Used by the Profile tab,
+   * which picks one from its pill row and shows the toggles in a sheet.
+   * Omitted on the Professionals tab, which lists every connected
+   * professional — that call site is unchanged.
+   */
+  professionalId?: string;
+}> = ({ professionalId }) => {
   const { authUserId } = useApp();
   const [professionals, setProfessionals] = useState<LinkedProfessional[]>([]);
   const [grants, setGrants] = useState<Record<string, GrantMap>>({});
@@ -82,18 +90,27 @@ export const DataSharingSection: React.FC = () => {
     }
   };
 
+  // One fetch, filtered — not a second query or a second component.
+  const visible = professionalId
+    ? professionals.filter((p) => p.professionalId === professionalId)
+    : professionals;
+
   if (!authUserId || loading) return null;
-  if (professionals.length === 0) return null;
+  if (visible.length === 0) return null;
 
   return (
-    <div className="mb-6">
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2 flex items-center gap-1.5">
-        <ShieldCheck size={13} /> Data sharing
-      </p>
+    <div className={professionalId ? undefined : "mb-6"}>
+      {/* The sheet that renders the single-professional variant carries its
+          own title, so the section heading would just repeat it. */}
+      {!professionalId && (
+        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2 flex items-center gap-1.5">
+          <ShieldCheck size={13} /> Data sharing
+        </p>
+      )}
 
       {error && <p className="text-xs font-semibold text-status-high mb-2">{error}</p>}
 
-      {professionals.map((pro) => (
+      {visible.map((pro) => (
         <Card key={pro.professionalId} className="mb-2.5 animate-fade-slide-up">
           <div className="flex items-center gap-3 mb-3">
             <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
