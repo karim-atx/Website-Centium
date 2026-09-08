@@ -356,14 +356,32 @@ read is also distinct from an empty one — `getDiaryEntries()` returns
 `{ ok, entries }` precisely so a dropped connection keeps the cached entries
 on screen instead of wiping the diary.
 
-### AI Voice, custom meals and copy-yesterday still write only locally
+### `isRemoteEntryId` is a shim that can go once old local entries are gone
 
-`AddFoodSheet` was wired to the real `logFoodEntry()` this session, but three
-logging paths were not: the AI Voice logger, `logCustomMeal()`, and
-copy-yesterday (`copyYesterdayMeal` / `copyYesterdayFood`). All three still
-call `addFoodEntry` in `AppContext`, which appends to local state and writes
-nowhere. Anything logged through them exists on one browser only, and is
-invisible to the professional read path that `food_diary` consent grants.
+**Resolved: every logging path now writes remotely.** AI Voice resolves each
+parsed item to a real catalog row by name and falls back to a manual,
+provenance-free write only when nothing matches; `logCustomMeal()` writes with
+null provenance (its items may reference foods that only exist in
+`localStorage` — see the custom-food gap above); and copy-yesterday goes
+through `copyDiaryEntry()`, which duplicates an existing row's snapshot,
+quantity, unit and provenance verbatim rather than re-logging it. Every path
+now produces rows with real database ids, consistent with `AddFoodSheet`,
+diary hydration, and delete/edit.
+
+**The caveat: `isRemoteEntryId()` is still load-bearing.** It exists to
+tolerate a diary holding both real uuids and local-only ids like
+`f1757352…`, and it is still used in two places — the hydration reconcile,
+which preserves local-only entries rather than dropping them, and the
+delete/edit branch, which routes them locally because sending one to Postgres
+returns `invalid input syntax for type uuid`.
+
+Nothing writes such ids any more, but **entries created before this change are
+still sitting in real users' browsers**, so removing the shim now would break
+them: their diary would try to delete rows that never existed. It can go once
+there is confidence none remain — either after enough time has passed
+post-deploy, or via a one-time cleanup that drops (or uploads) any entry whose
+id is not a uuid. Not urgent, and not a correctness problem today; just dead
+weight that should not become permanent by default.
 
 They need the same treatment `AddFoodSheet` got: write remote-first through
 the service, and insert the returned row — with its real database id — via
