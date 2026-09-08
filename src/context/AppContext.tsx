@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import type {
   UserProfile,
   FoodLogEntry,
@@ -63,7 +63,14 @@ import { translations, type Language } from "../i18n/translations";
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, onAuthChange, signOutRemote } from "../services/auth";
+import { onPasswordRecovery } from "../services/auth";
 import { ensureProfileRow, fetchProfile } from "../services/profile";
+import {
+  getRecoveryPendingUserId,
+  markRecoveryPending,
+  clearRecoveryPending,
+  isRecoveryExchangeInFlight,
+} from "../../lib/supabase/recovery";
 import { getMyReferrerReward } from "../services/redemption";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
 
@@ -180,6 +187,14 @@ interface AppState {
   // trip) or expire mid-session.
   session: Session | null;
   authUserId: string | null;
+  // True while this session arrived from a password-reset link and the new
+  // password has not been set yet. Route guards refuse everything under /app
+  // while it holds.
+  recoveryPending: boolean;
+  // Ends the recovery block. Must be used instead of clearRecoveryPending():
+  // the guards read React state, not localStorage, so clearing only storage
+  // leaves the app redirecting for the rest of the page session.
+  clearRecovery: () => void;
   // False until the initial getSession() settles, so the auth screen isn't
   // flashed at a user who is already signed in.
   authReady: boolean;
@@ -685,6 +700,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const authUserId = session?.user?.id ?? null;
+
+  // --- password recovery scoping ------------------------------------------
+  //
+  // A recovery session is a real session, so nothing stops it reaching the
+  // app on its own. These two pieces of state are what refuse it.
+  const [recoveryUserId, setRecoveryUserId] = useState<string | null>(() =>
+    getRecoveryPendingUserId()
+  );
+  // Covers the window before PASSWORD_RECOVERY fires: GoTrue saves the session
+  // first and notifies afterwards, so for a moment a session exists and the
+  // flag does not. Detected from the PKCE verifier, which carries the flow
+  // type, so it needs no event.
+  const [recoveryInFlight, setRecoveryInFlight] = useState(() => isRecoveryExchangeInFlight());
+
+  useEffect(() => {
+    const unsubscribe = onPasswordRecovery((userId) => {
+      markRecoveryPending(userId);
+      setRecoveryUserId(userId);
+      // The flag now covers what the in-flight check was covering.
+      setRecoveryInFlight(false);
+    });
+    return unsubscribe;
+  }, []);
+
+  // Self-clearing: once the verifier is consumed the exchange is over, and
+  // whether it was a recovery is recorded in the flag by then.
+  useEffect(() => {
+    if (recoveryInFlight && !isRecoveryExchangeInFlight()) setRecoveryInFlight(false);
+  }, [session, authReady, recoveryInFlight]);
+
+  const recoveryPending =
+    recoveryInFlight || (!!authUserId && recoveryUserId === authUserId);
+
+  // Both halves, together. Clearing storage alone was the bug: the flag went
+  // away but recoveryUserId did not, so recoveryPending stayed true and the
+  // guards bounced every navigation back to /app/reset-password. Only a full
+  // page load re-ran the state initializer and freed the account — and since
+  // sign-out and sign-in are client-side too, neither of them helped.
+  const clearRecovery = useCallback(() => {
+    clearRecoveryPending();
+    setRecoveryUserId(null);
+    setRecoveryInFlight(false);
+  }, []);
 
   // Hydrate the local profile from the server whenever the signed-in account
   // changes.
@@ -1876,6 +1934,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateProfile,
       session,
       authUserId,
+      recoveryPending,
+      clearRecovery,
       authReady,
       profileReady,
       theme,
@@ -2082,6 +2142,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       user,
       session,
       authUserId,
+      recoveryPending,
+      clearRecovery,
       authReady,
       profileReady,
       theme,

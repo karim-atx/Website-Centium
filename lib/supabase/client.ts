@@ -1,6 +1,7 @@
 import { createBrowserClient, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr'
 import { getSupabaseConfig } from './config'
 import { getRememberMe } from './rememberMe'
+import { isPkceVerifierCookie } from './recovery'
 import type { Database } from './database.types'
 
 // Single browser client for the whole app. createBrowserClient memoises
@@ -42,8 +43,17 @@ export const supabase = createBrowserClient<Database>(url, anonKey, {
         // closed. Removals pass through untouched no matter the preference.
         const isRemoval = options?.maxAge === 0
 
+        // PKCE verifiers are not session credentials, they are short-lived
+        // technical tokens that must still exist when an emailed link is
+        // opened later — possibly after the browser has been closed. Scoping
+        // them to the session silently broke password-reset links for anyone
+        // who had unticked "Remember me".
+        const isVerifier = isPkceVerifierCookie(name)
+
         const finalOptions =
-          remember || isRemoval ? options : { ...options, maxAge: undefined, expires: undefined }
+          remember || isRemoval || isVerifier
+            ? options
+            : { ...options, maxAge: undefined, expires: undefined }
 
         document.cookie = serializeCookieHeader(name, value, finalOptions)
       }

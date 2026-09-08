@@ -25,6 +25,19 @@ export function authRedirectUrl(): string {
   return `${window.location.origin}/app/onboarding`;
 }
 
+/**
+ * Where a password-reset link comes back to.
+ *
+ * Deliberately NOT authRedirectUrl(). That one is shared by signup
+ * confirmation and OAuth, both of which legitimately end at onboarding, and
+ * sharing it left the destination unable to tell a recovery arrival from an
+ * ordinary sign-in — which is how a reset link ended up forwarding people
+ * straight to the dashboard.
+ */
+export function passwordResetRedirectUrl(): string {
+  return `${window.location.origin}/app/reset-password`;
+}
+
 /** Supabase error -> a sentence worth showing a user. */
 function describeAuthError(error: AuthError): string {
   const code = error.code ?? "";
@@ -131,7 +144,7 @@ export async function signInWithGoogle(): Promise<OAuthResult> {
  */
 export async function sendPasswordReset(email: string): Promise<{ ok: boolean; message?: string }> {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: authRedirectUrl(),
+    redirectTo: passwordResetRedirectUrl(),
   });
   if (error) return { ok: false, message: describeAuthError(error) };
   return { ok: true };
@@ -157,6 +170,34 @@ export async function getCurrentSession(): Promise<Session | null> {
 export function onAuthChange(callback: (session: Session | null) => void): () => void {
   const { data } = supabase.auth.onAuthStateChange((_event, session) => callback(session));
   return () => data.subscription.unsubscribe();
+}
+
+/**
+ * A SEPARATE subscription, only for PASSWORD_RECOVERY.
+ *
+ * onAuthChange above deliberately keeps its (session) => void signature:
+ * AppContext depends on it for profiles-row creation on every auth path, and
+ * widening it would ripple through that. Recovery needs the event type and
+ * nothing else, so it gets its own narrow listener rather than reshaping the
+ * shared one.
+ */
+export function onPasswordRecovery(callback: (userId: string) => void): () => void {
+  const { data } = supabase.auth.onAuthStateChange((event, session) => {
+    if (event === "PASSWORD_RECOVERY" && session?.user) callback(session.user.id);
+  });
+  return () => data.subscription.unsubscribe();
+}
+
+/**
+ * Sets a new password for the signed-in (or recovery) session.
+ *
+ * This is the only thing a recovery session is allowed to do, and completing
+ * it is what lifts the pending flag.
+ */
+export async function updatePassword(newPassword: string): Promise<{ ok: boolean; message?: string }> {
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { ok: false, message: describeAuthError(error) };
+  return { ok: true };
 }
 
 /** Clears the Supabase session. Local cached state is cleared by AppContext. */

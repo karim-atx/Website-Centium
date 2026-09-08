@@ -40,6 +40,7 @@ import More from "./pages/profile/More";
 import ClientCalendarTab from "./pages/profile/ClientCalendarTab";
 import ForumTab from "./pages/profile/ForumTab";
 import Settings from "./pages/settings/Settings";
+import ResetPassword from "./pages/auth/ResetPassword";
 
 const RouteLoading: React.FC = () => (
   <div className="min-h-screen flex items-center justify-center bg-cream">
@@ -48,7 +49,7 @@ const RouteLoading: React.FC = () => (
 );
 
 const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, authReady, profileReady } = useApp();
+  const { user, authReady, profileReady, recoveryPending } = useApp();
 
   // Wait for the server profile before deciding. `user.onboarded` starts from
   // localStorage, which is per-browser and not keyed by account — redirecting
@@ -57,6 +58,11 @@ const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children })
   // Once profileReady is true, `user.onboarded` has been overwritten by
   // profiles.onboarded, so it is the server's answer rather than the cache's.
   if (!authReady || !profileReady) return <RouteLoading />;
+
+  // A recovery session may do exactly one thing: set a new password. It is a
+  // real session, so without this it would sail straight through — which is
+  // how an emailed link, or a forwarded one, handed over a working account.
+  if (recoveryPending) return <Navigate to="/app/reset-password" replace />;
 
   if (!user.onboarded) return <Navigate to="/app/onboarding" replace />;
   return <>{children}</>;
@@ -73,7 +79,7 @@ const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children })
  * person had already finished.
  */
 const RedirectIfOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, authUserId, authReady, profileReady } = useApp();
+  const { user, authUserId, authReady, profileReady, recoveryPending } = useApp();
 
   // Decided once PER ACCOUNT, then held.
   //
@@ -94,6 +100,10 @@ const RedirectIfOnboarded: React.FC<{ children: React.ReactNode }> = ({ children
   const decidedFor = useRef<{ userId: string; onboarded: boolean } | null>(null);
 
   if (!authReady || !profileReady) return <RouteLoading />;
+
+  // Onboarding is no more reachable than the dashboard while a recovery is
+  // outstanding — it is still the app, and it still implies a usable account.
+  if (recoveryPending) return <Navigate to="/app/reset-password" replace />;
 
   // Signed out: onboarding is where they belong — AuthStep is its first step.
   // Deliberately no latch, because there is no account to latch an answer
@@ -134,6 +144,11 @@ function AppRoutes() {
             mismatches — it can't shadow a real route. */}
         <Route path="*" element={<MarketingNotFound />} />
       </Route>
+
+      {/* The one route a recovery session may reach. Deliberately outside
+          RequireOnboarded: those guards redirect INTO here, so putting it
+          behind them would loop. It does its own auth check instead. */}
+      <Route path="/app/reset-password" element={<ResetPassword />} />
 
       {/* Customer portal (authenticated app shell) */}
       <Route

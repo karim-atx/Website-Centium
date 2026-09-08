@@ -11,6 +11,11 @@ import {
   signUpWithEmail,
 } from "../../services/auth";
 import { setRememberMe as setRememberMePreference } from "../../../lib/supabase/rememberMe";
+import {
+  passwordChecks,
+  meetsMinimumPassword,
+  shouldWarnPasswordMismatch,
+} from "../../utils/password";
 
 interface Props {
   draft: OnboardingDraft;
@@ -34,12 +39,10 @@ type Mode = "signIn" | "signUp" | "forgot" | "checkEmail";
 // anyone in: it sends a link and parks on a "check your email" state. The
 // step only advances once a real session exists, which is why the advance
 // is driven by the session in AppContext rather than by the submit handler.
-const passwordChecks = [
-  { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
-  { label: "One uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
-  { label: "One number", test: (p: string) => /\d/.test(p) },
-  { label: "One special character", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
-];
+
+// passwordChecks, the minimum rule and the confirm-match rule all live in
+// utils/password now, shared with the reset-password screen so the two
+// screens cannot end up accepting different passwords.
 
 const inputClass =
   "w-full rounded-2xl bg-cream-card border border-charcoal/10 pl-10 pr-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10";
@@ -110,10 +113,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
    * the disabled button are for.
    */
   const confirmMismatch =
-    mode === "signUp" &&
-    confirmPassword.length > 0 &&
-    confirmPassword !== password &&
-    (confirmBlurred || confirmPassword.length >= password.length);
+    mode === "signUp" && shouldWarnPasswordMismatch(password, confirmPassword, confirmBlurred);
 
   const passedChecks = passwordChecks.filter((c) => c.test(password)).length;
   const strengthLabel = passedChecks <= 1 ? "Weak" : passedChecks <= 3 ? "Medium" : "Strong";
@@ -123,8 +123,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
       : passedChecks <= 3
       ? "rgb(var(--c-status-caution))"
       : "rgb(var(--c-status-good))";
-  // Requires length + at least a number and a letter — special char is a bonus for the "Strong" label only.
-  const meetsMinimum = passwordChecks[0].test(password) && passwordChecks[2].test(password) && /[A-Za-z]/.test(password);
+  const meetsMinimum = meetsMinimumPassword(password);
 
   const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
