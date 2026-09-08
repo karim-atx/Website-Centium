@@ -358,24 +358,48 @@ export interface Food {
 // V4: preset serving units, offered as tap targets instead of free typing.
 export type ServingUnit = "serving" | "g" | "ml" | "cup" | "tbsp" | "tsp";
 
+/**
+ * One row of the food diary, mirroring public.food_log_entries.
+ *
+ * RESOLVED SNAPSHOT. `name` and the four macros are the TOTALS for this
+ * entry — already multiplied by quantity at log time. They are never
+ * per-serving values, and they are never recomputed on read: summing a day
+ * is `sum(calories)` with no arithmetic per row.
+ *
+ * This is the one structural difference from the mock this type replaced,
+ * where `food` held per-serving values that every read site multiplied by
+ * `entryMultiplier(entry)`. Doing that here would double-count.
+ */
 export interface FoodLogEntry {
   id: string;
-  // Reference to the catalog Food this entry was logged from. Nullable
-  // because the catalog entry can be edited or deleted later (or, once
-  // this moves to a real Supabase foreign key, removed outright) without
-  // invalidating the log — `food` below is what keeps this entry accurate
-  // regardless of what happens to the catalog afterward.
+  // Provenance only, and at most one is ever set (the schema's
+  // food_log_entries_single_source_check). Both null is legitimate: a food
+  // the user typed in by hand. Both are ON DELETE SET NULL, so a deleted
+  // catalog row empties the pointer without touching the snapshot above —
+  // which is exactly why the snapshot exists.
   foodId: string | null;
-  // Snapshot of the nutrition values (name, calories, protein, carbs, fat,
-  // serving) as they were at log time. Always read from here for display/
-  // totals — never re-read live off the catalog Food via foodId, since the
-  // catalog entry can change after the fact and a past log shouldn't.
-  food: Food;
+  customFoodId: string | null;
+  name: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  // How much was logged, in `unit`. Display and provenance metadata ONLY —
+  // the macros above are already multiplied, so never multiply by this.
   quantity: number;
-  unit?: ServingUnit;
+  unit: ServingUnit;
   meal: MealType;
   date: string; // ISO date, yyyy-mm-dd
   loggedVia?: "search" | "ai" | "scan" | "barcode" | "recent" | "quick";
+  // Presentation only, joined from the source catalog row at read time and
+  // deliberately kept apart from the snapshot above so the boundary is
+  // visible: nothing in here may ever feed a nutrition calculation.
+  // Falls back to neutral values when there is no source row to join.
+  display: {
+    category: Food["category"];
+    serving: string;
+    isLebanese: boolean;
+  };
 }
 
 // V2: editable per-exercise programming settings (Strong/Hevy-inspired).

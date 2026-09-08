@@ -943,6 +943,7 @@ export type Database = {
           id: string
           name: string
           name_ar: string | null
+          overrides_food_id: string | null
           owner_id: string
           protein_g: number
           scoped_to_client_id: string | null
@@ -958,6 +959,7 @@ export type Database = {
           id?: string
           name: string
           name_ar?: string | null
+          overrides_food_id?: string | null
           owner_id: string
           protein_g: number
           scoped_to_client_id?: string | null
@@ -973,6 +975,7 @@ export type Database = {
           id?: string
           name?: string
           name_ar?: string | null
+          overrides_food_id?: string | null
           owner_id?: string
           protein_g?: number
           scoped_to_client_id?: string | null
@@ -980,6 +983,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "custom_foods_overrides_food_id_fkey"
+            columns: ["overrides_food_id"]
+            isOneToOne: false
+            referencedRelation: "foods"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "custom_foods_owner_id_fkey"
             columns: ["owner_id"]
@@ -1377,6 +1387,7 @@ export type Database = {
       }
       foods: {
         Row: {
+          barcode: string | null
           calories: number
           carbs_g: number
           category: Database["public"]["Enums"]["food_category"]
@@ -1384,6 +1395,7 @@ export type Database = {
           fat_g: number
           id: string
           is_lebanese: boolean
+          is_verified: boolean
           name: string
           name_ar: string | null
           protein_g: number
@@ -1391,6 +1403,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          barcode?: string | null
           calories: number
           carbs_g: number
           category: Database["public"]["Enums"]["food_category"]
@@ -1398,6 +1411,7 @@ export type Database = {
           fat_g: number
           id?: string
           is_lebanese?: boolean
+          is_verified?: boolean
           name: string
           name_ar?: string | null
           protein_g: number
@@ -1405,6 +1419,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          barcode?: string | null
           calories?: number
           carbs_g?: number
           category?: Database["public"]["Enums"]["food_category"]
@@ -1412,6 +1427,7 @@ export type Database = {
           fat_g?: number
           id?: string
           is_lebanese?: boolean
+          is_verified?: boolean
           name?: string
           name_ar?: string | null
           protein_g?: number
@@ -2029,20 +2045,20 @@ export type Database = {
         Row: {
           created_at: string
           id: string
-          participant_one_id: string
-          participant_two_id: string
+          participant_one_id: string | null
+          participant_two_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
-          participant_one_id: string
-          participant_two_id: string
+          participant_one_id?: string | null
+          participant_two_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
-          participant_one_id?: string
-          participant_two_id?: string
+          participant_one_id?: string | null
+          participant_two_id?: string | null
         }
         Relationships: [
           {
@@ -2081,7 +2097,7 @@ export type Database = {
           created_at: string
           id: string
           read_at: string | null
-          sender_id: string
+          sender_id: string | null
           text: string | null
           thread_id: string
           voice_note_seconds: number | null
@@ -2091,7 +2107,7 @@ export type Database = {
           created_at?: string
           id?: string
           read_at?: string | null
-          sender_id: string
+          sender_id?: string | null
           text?: string | null
           thread_id: string
           voice_note_seconds?: number | null
@@ -2101,7 +2117,7 @@ export type Database = {
           created_at?: string
           id?: string
           read_at?: string | null
-          sender_id?: string
+          sender_id?: string | null
           text?: string | null
           thread_id?: string
           voice_note_seconds?: number | null
@@ -2598,6 +2614,7 @@ export type Database = {
             | Database["public"]["Enums"]["customer_subtype"]
             | null
           date_of_birth: string | null
+          deletion_requested_at: string | null
           email: string | null
           first_name: string | null
           goals: string[]
@@ -2622,6 +2639,7 @@ export type Database = {
             | Database["public"]["Enums"]["customer_subtype"]
             | null
           date_of_birth?: string | null
+          deletion_requested_at?: string | null
           email?: string | null
           first_name?: string | null
           goals?: string[]
@@ -2646,6 +2664,7 @@ export type Database = {
             | Database["public"]["Enums"]["customer_subtype"]
             | null
           date_of_birth?: string | null
+          deletion_requested_at?: string | null
           email?: string | null
           first_name?: string | null
           goals?: string[]
@@ -4118,6 +4137,40 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cancel_account_deletion: {
+        Args: never
+        Returns: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          activity_level: Database["public"]["Enums"]["activity_level"] | null
+          avatar_url: string | null
+          created_at: string
+          customer_subtype:
+            | Database["public"]["Enums"]["customer_subtype"]
+            | null
+          date_of_birth: string | null
+          deletion_requested_at: string | null
+          email: string | null
+          first_name: string | null
+          goals: string[]
+          height_cm: number | null
+          id: string
+          onboarded: boolean
+          phone: string | null
+          professional_subtype:
+            | Database["public"]["Enums"]["professional_subtype"]
+            | null
+          sex: Database["public"]["Enums"]["sex"] | null
+          tracking_preferences: string[]
+          updated_at: string
+          weight_kg: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       check_rate_limit: {
         Args: {
           p_action: Database["public"]["Enums"]["rate_limited_action"]
@@ -4191,6 +4244,42 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      find_or_create_food_by_barcode: {
+        Args: {
+          p_barcode: string
+          p_calories: number
+          p_carbs_g: number
+          p_category: Database["public"]["Enums"]["food_category"]
+          p_fat_g: number
+          p_is_lebanese?: boolean
+          p_name: string
+          p_name_ar?: string
+          p_protein_g: number
+          p_serving_label: string
+        }
+        Returns: {
+          barcode: string | null
+          calories: number
+          carbs_g: number
+          category: Database["public"]["Enums"]["food_category"]
+          created_at: string
+          fat_g: number
+          id: string
+          is_lebanese: boolean
+          is_verified: boolean
+          name: string
+          name_ar: string | null
+          protein_g: number
+          serving_label: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "foods"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       generate_client_code: { Args: { p_prefix: string }; Returns: string }
       generate_referral_code: { Args: { p_prefix: string }; Returns: string }
       has_client_access: {
@@ -4224,6 +4313,7 @@ export type Database = {
           referrer_id: string
         }[]
       }
+      process_scheduled_account_deletions: { Args: never; Returns: number }
       redeem_client_code: {
         Args: { p_code: string }
         Returns: Database["public"]["CompositeTypes"]["redeem_client_code_result"]
@@ -4261,13 +4351,47 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      request_account_deletion: {
+        Args: never
+        Returns: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          activity_level: Database["public"]["Enums"]["activity_level"] | null
+          avatar_url: string | null
+          created_at: string
+          customer_subtype:
+            | Database["public"]["Enums"]["customer_subtype"]
+            | null
+          date_of_birth: string | null
+          deletion_requested_at: string | null
+          email: string | null
+          first_name: string | null
+          goals: string[]
+          height_cm: number | null
+          id: string
+          onboarded: boolean
+          phone: string | null
+          professional_subtype:
+            | Database["public"]["Enums"]["professional_subtype"]
+            | null
+          sex: Database["public"]["Enums"]["sex"] | null
+          tracking_preferences: string[]
+          updated_at: string
+          weight_kg: number | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       start_message_thread: {
         Args: { p_other_user_id: string }
         Returns: {
           created_at: string
           id: string
-          participant_one_id: string
-          participant_two_id: string
+          participant_one_id: string | null
+          participant_two_id: string | null
         }
         SetofOptions: {
           from: "*"
@@ -4406,6 +4530,7 @@ export type Database = {
         | "create_referral"
         | "redeem_referral"
         | "preview_referral"
+        | "create_food_by_barcode"
       rep_max_update_mode: "no_update" | "prompt" | "prompt_with_estimate"
       request_status: "pending" | "accepted" | "rejected"
       set_type: "normal" | "warmup" | "failure" | "dropset" | "superset" | "pr"
@@ -4702,6 +4827,7 @@ export const Constants = {
         "create_referral",
         "redeem_referral",
         "preview_referral",
+        "create_food_by_barcode",
       ],
       rep_max_update_mode: ["no_update", "prompt", "prompt_with_estimate"],
       request_status: ["pending", "accepted", "rejected"],

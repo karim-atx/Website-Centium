@@ -44,7 +44,7 @@ export const EditFoodEntrySheet: React.FC<{
   }, [entry]);
 
   if (!entry) return null;
-  const Icon = foodCategoryIcon[entry.food.category] ?? UtensilsCrossed;
+  const Icon = foodCategoryIcon[entry.display.category] ?? UtensilsCrossed;
 
   return (
     <BottomSheet open={open} onClose={onClose} title="Edit Logged Food">
@@ -54,8 +54,8 @@ export const EditFoodEntrySheet: React.FC<{
             <Icon size={19} className="text-primary-dark" />
           </span>
           <div>
-            <p className="font-display font-semibold text-lg text-charcoal">{entry.food.name}</p>
-            <p className="text-xs text-charcoal-faint">{entry.food.serving}</p>
+            <p className="font-display font-semibold text-lg text-charcoal">{entry.name}</p>
+            <p className="text-xs text-charcoal-faint">{entry.display.serving}</p>
           </div>
         </div>
 

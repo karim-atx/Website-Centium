@@ -5,7 +5,7 @@ import { Chip } from "../ui/Chip";
 import { Search, Mic, Camera, ScanLine, Clock, Star, Minus, Plus, Check, UtensilsCrossed, Sparkles } from "lucide-react";
 import { mockFoods, foodCategories, addFoodFilterCategories } from "../../data/mockFoods";
 import type { Food, MealType, ServingUnit } from "../../types";
-import { mealLabels, mealOrder, entryMultiplier } from "../../services/nutrition";
+import { mealLabels, mealOrder, servingMultiplier, snapshotFromFood } from "../../services/nutrition";
 import { useApp } from "../../context/AppContext";
 import { AIVoiceLogger } from "./AIVoiceLogger";
 import { foodCategoryIcon } from "../../utils/icons";
@@ -71,20 +71,25 @@ export const AddFoodSheet: React.FC<{
     category: "homemade" as Food["category"],
   });
 
+  const allFoods = useMemo(() => [...customFoods, ...mockFoods], [customFoods]);
+
+  // Recent resolves each entry's foodId back to a catalog food, since a diary
+  // entry snapshots its name and macros but no longer carries the Food it came
+  // from. An entry whose source is gone (a manual entry, or a deleted food)
+  // simply drops out of the strip rather than rendering a dead tile.
   const recentFoods = useMemo(() => {
     const seen = new Set<string>();
     const items: Food[] = [];
     for (let i = foodLog.length - 1; i >= 0 && items.length < 5; i--) {
-      const f = foodLog[i].food;
-      if (!seen.has(f.id)) {
-        seen.add(f.id);
-        items.push(f);
-      }
+      const id = foodLog[i].foodId;
+      if (!id || seen.has(id)) continue;
+      const f = allFoods.find((x) => x.id === id);
+      if (!f) continue;
+      seen.add(id);
+      items.push(f);
     }
     return items;
-  }, [foodLog]);
-
-  const allFoods = useMemo(() => [...customFoods, ...mockFoods], [customFoods]);
+  }, [foodLog, allFoods]);
 
   const matchingMeals = useMemo(
     () => (query.trim() ? customMeals.filter((m) => m.title.toLowerCase().includes(query.toLowerCase())) : []),
@@ -139,7 +144,8 @@ export const AddFoodSheet: React.FC<{
     if (!selectedFood) return;
     addFoodEntry({
       foodId: selectedFood.id,
-      food: selectedFood,
+      customFoodId: null,
+      ...snapshotFromFood(selectedFood, quantity, unit),
       quantity,
       unit,
       meal,
@@ -160,7 +166,7 @@ export const AddFoodSheet: React.FC<{
 
   // Detail / quantity view
   if (selectedFood) {
-    const multiplier = entryMultiplier({ quantity, unit });
+    const multiplier = servingMultiplier(selectedFood.serving, quantity, unit);
     const foodTotalCal = Math.round(selectedFood.calories * multiplier);
     return (
       <BottomSheet open={open} onClose={resetAndClose} title="Add Food">

@@ -1,5 +1,3 @@
-import type { Food } from "../types";
-
 // QA 11.0: "another button should include dietary restriction that when
 // pressed shows many dietary restrictions in a drop down box. Pressing a
 // specific restriction will highlight specific food diary items that are
@@ -38,7 +36,9 @@ const RESTRICTED_KEYWORDS: Record<DietaryRestriction, string[]> = {
   pescatarian: ["chicken", "beef", "lamb", "meat", "shawarma", "bacon", "sujuk", "kafta"],
 };
 
-export function isFoodRestricted(food: Food, restriction: DietaryRestriction): boolean {
+// Takes just a name: a diary entry snapshots its name but not the catalog
+// Food it came from, and the keyword match never needed anything else.
+export function isFoodRestricted(food: { name: string }, restriction: DietaryRestriction): boolean {
   const name = food.name.toLowerCase();
   return RESTRICTED_KEYWORDS[restriction].some((kw) => name.includes(kw));
 }

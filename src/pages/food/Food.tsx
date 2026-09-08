@@ -7,7 +7,7 @@ import { Chip } from "../../components/ui/Chip";
 import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { EditFoodEntrySheet } from "../../components/food/EditFoodEntrySheet";
 import { DateSelector } from "../../components/dashboard/DateSelector";
-import { mealOrder, mealLabels, sumNutrition, targetsFromGoal, entryMultiplier } from "../../services/nutrition";
+import { mealOrder, mealLabels, sumNutrition, targetsFromGoal } from "../../services/nutrition";
 import type { MealType, FoodLogEntry } from "../../types";
 import {
   Plus,
@@ -227,10 +227,11 @@ export default function Food() {
           <div className="space-y-5">
             {mealOrder.map((meal) => {
               const entries = grouped[meal];
-              const mealCal = entries.reduce((s, e) => s + e.food.calories * entryMultiplier(e), 0);
-              const mealProtein = entries.reduce((s, e) => s + e.food.protein * entryMultiplier(e), 0);
-              const mealCarbs = entries.reduce((s, e) => s + e.food.carbs * entryMultiplier(e), 0);
-              const mealFat = entries.reduce((s, e) => s + e.food.fat * entryMultiplier(e), 0);
+              // Plain sums: each entry already carries its own totals.
+              const mealCal = entries.reduce((s, e) => s + e.calories, 0);
+              const mealProtein = entries.reduce((s, e) => s + e.protein, 0);
+              const mealCarbs = entries.reduce((s, e) => s + e.carbs, 0);
+              const mealFat = entries.reduce((s, e) => s + e.fat, 0);
               const collapsed = collapsedMeals.has(meal);
               const showUndo = undoState?.meal === meal;
               return (
@@ -295,12 +296,12 @@ export default function Food() {
                   ) : (
                     <Card padded={false} className="divide-y divide-charcoal/[0.04]">
                       {entries.map((e) => {
-                        const Icon = foodCategoryIcon[e.food.category] ?? UtensilsCrossed;
+                        const Icon = foodCategoryIcon[e.display.category] ?? UtensilsCrossed;
                         const revealed = revealedId === e.id;
                         // QA 11.0: "Pressing a specific restriction will
                         // highlight specific food diary items that are not
                         // compatible with the restriction."
-                        const restricted = !!dietaryRestriction && isFoodRestricted(e.food, dietaryRestriction);
+                        const restricted = !!dietaryRestriction && isFoodRestricted(e, dietaryRestriction);
                         return (
                           <div key={e.id} className="relative overflow-hidden">
                             {revealed && (
@@ -309,7 +310,7 @@ export default function Food() {
                                   removeFoodEntry(e.id);
                                   setRevealedId(null);
                                 }}
-                                aria-label={`Delete ${e.food.name}`}
+                                aria-label={`Delete ${e.name}`}
                                 className="tap absolute inset-y-0 right-0 w-20 flex flex-col items-center justify-center gap-0.5 bg-[#C0392B] text-white text-[10px] font-semibold z-0"
                               >
                                 <Trash2 size={14} />
@@ -335,8 +336,8 @@ export default function Food() {
                                 </span>
                                 <div>
                                   <p className="text-[13.5px] font-semibold text-charcoal flex items-center gap-1.5">
-                                    {e.food.name}
-                                    {e.food.isLebanese && <Star size={10} className="text-gold fill-gold" />}
+                                    {e.name}
+                                    {e.display.isLebanese && <Star size={10} className="text-gold fill-gold" />}
                                     {restricted && (
                                       <span className="text-[9px] font-bold uppercase text-status-high bg-status-high-bg rounded-full px-1.5 py-0.5">
                                         Not compatible
@@ -345,13 +346,13 @@ export default function Food() {
                                   </p>
                                   <p className="text-[11px] font-medium text-charcoal-faint">
                                     {e.quantity !== 1 ? `${e.quantity} × ` : ""}
-                                    {e.unit && e.unit !== "serving" ? e.unit : e.food.serving}
+                                    {e.unit && e.unit !== "serving" ? e.unit : e.display.serving}
                                   </p>
                                 </div>
                               </div>
                               {!recoverySensitive && (
                                 <span className="text-[11.5px] font-semibold text-charcoal-soft">
-                                  {Math.round(e.food.calories * entryMultiplier(e))} kcal
+                                  {Math.round(e.calories)} kcal
                                 </span>
                               )}
                             </button>

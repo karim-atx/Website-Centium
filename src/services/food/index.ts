@@ -1,0 +1,380 @@
+import { supabase } from "../../../lib/supabase/client";
+import type { PostgrestError } from "@supabase/supabase-js";
+import type { Enums } from "../../../lib/supabase/database.types";
+import type { FoodLogEntry, MealType, ServingUnit } from "../../types";
+import { servingMultiplier } from "../nutrition";
+
+// Reads and writes the real food catalog and diary.
+//
+// The one rule that shapes this whole file: food_log_entries is a RESOLVED
+// SNAPSHOT. name and macros are copied onto the row at log time, already
+// multiplied by quantity, and are the truth forever after. food_id and
+// custom_food_id are provenance only — both are ON DELETE SET NULL, so a
+// deleted catalog row must never be able to rewrite or erase history.
+// Re-reading nutrition from foods/custom_foods to render a logged entry is a
+// bug, not an optimisation.
+
+export type FoodSource = "catalog" | "custom";
+
+/** A food the user can log: a public catalog row, or one of their own. */
+export interface FoodSearchResult {
+  id: string;
+  source: FoodSource;
+  name: string;
+  nameAr: string | null;
+  category: Enums<"food_category">;
+  /** Per SERVING, not per entry. Multiplied at log time, never at read time. */
+  servingLabel: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  isLebanese: boolean;
+  /** True only for sourced catalog rows. A user's own food is never verified. */
+  isVerified: boolean;
+  barcode: string | null;
+  /** Set when this custom food is a personal correction of a catalog row. */
+  overridesFoodId: string | null;
+}
+
+const CATALOG_COLUMNS =
+  "id, name, name_ar, category, serving_label, calories, protein_g, carbs_g, fat_g, is_lebanese, is_verified, barcode";
+const CUSTOM_COLUMNS =
+  "id, name, name_ar, category, serving_label, calories, protein_g, carbs_g, fat_g, overrides_food_id";
+
+interface CatalogRow {
+  id: string;
+  name: string;
+  name_ar: string | null;
+  category: Enums<"food_category">;
+  serving_label: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  is_lebanese: boolean;
+  is_verified: boolean;
+  barcode: string | null;
+}
+
+type CustomRow = Omit<CatalogRow, "is_lebanese" | "is_verified" | "barcode"> & {
+  overrides_food_id: string | null;
+};
+
+const fromCatalog = (r: CatalogRow): FoodSearchResult => ({
+  id: r.id,
+  source: "catalog",
+  name: r.name,
+  nameAr: r.name_ar,
+  category: r.category,
+  servingLabel: r.serving_label,
+  calories: r.calories,
+  protein: r.protein_g,
+  carbs: r.carbs_g,
+  fat: r.fat_g,
+  isLebanese: r.is_lebanese,
+  isVerified: r.is_verified,
+  barcode: r.barcode,
+  overridesFoodId: null,
+});
+
+const fromCustom = (r: CustomRow): FoodSearchResult => ({
+  id: r.id,
+  source: "custom",
+  name: r.name,
+  nameAr: r.name_ar,
+  category: r.category,
+  servingLabel: r.serving_label,
+  calories: r.calories,
+  protein: r.protein_g,
+  carbs: r.carbs_g,
+  fat: r.fat_g,
+  // A user-authored food carries neither flag: is_lebanese is a curation
+  // judgement nobody has made about it, and is_verified is false by
+  // definition — custom_foods has no such column precisely because the
+  // answer is always the same.
+  isLebanese: false,
+  isVerified: false,
+  barcode: null,
+  overridesFoodId: r.overrides_food_id,
+});
+
+/** PostgREST ilike treats % and _ as wildcards; a searched name must not. */
+function escapeLike(term: string): string {
+  return term.replace(/[\\%_]/g, (c) => "\\" + c);
+}
+
+function describe(error: PostgrestError): string {
+  // 42501 is a column- or table-privilege violation. It is NOT an auth
+  // failure — reporting it as "sign in again" is what sent the consent bug
+  // chasing the wrong cause for an afternoon.
+  if (error.code === "42501") return "You don't have permission to do that.";
+  return error.message || "Something went wrong. Please try again.";
+}
+
+/**
+ * Searches the public catalog and the signed-in user's own foods by name.
+ *
+ * Two queries rather than one: they are different tables with different RLS,
+ * and PostgREST has no union. Custom foods are listed first — a user who
+ * created their own version of something meant to use it.
+ *
+ * An override supersedes what it overrides. When a user has corrected a
+ * catalog row, that catalog row is dropped from the results rather than shown
+ * beside their correction, which is the point of overrides_food_id.
+ */
+export async function searchFoods(query: string): Promise<FoodSearchResult[]> {
+  const term = query.trim();
+  if (!term) return [];
+  const pattern = "%" + escapeLike(term) + "%";
+
+  const [catalog, custom] = await Promise.all([
+    supabase.from("foods").select(CATALOG_COLUMNS).ilike("name", pattern).order("name").limit(50),
+    supabase
+      .from("custom_foods")
+      .select(CUSTOM_COLUMNS)
+      .ilike("name", pattern)
+      .order("name")
+      .limit(50),
+  ]);
+
+  if (catalog.error) console.error("[food] catalog search failed:", catalog.error.message);
+  if (custom.error) console.error("[food] custom search failed:", custom.error.message);
+
+  const mine = (custom.data ?? []).map((r) => fromCustom(r as CustomRow));
+  const overridden = new Set(
+    mine.map((f) => f.overridesFoodId).filter((id): id is string => !!id)
+  );
+  const shared = (catalog.data ?? [])
+    .map((r) => fromCatalog(r as CatalogRow))
+    .filter((f) => !overridden.has(f.id));
+
+  return [...mine, ...shared];
+}
+
+/**
+ * Resolves a barcode against the catalog. Returns null when nothing matches.
+ *
+ * Deliberately does NOT call find_or_create_food_by_barcode(). That RPC
+ * creates a shared catalog row visible to every user, and creating one is a
+ * decision the person scanning has to make explicitly with nutrition values
+ * in front of them — not a side effect of pointing a camera at a package.
+ * The lookup here is a plain read of a world-readable table, so it is free
+ * and unthrottled; only creation spends the 30/hour quota.
+ *
+ * A personal override wins, so a user who has corrected this product sees
+ * their own numbers rather than whatever the first scanner entered.
+ */
+export async function lookupByBarcode(barcode: string): Promise<FoodSearchResult | null> {
+  const code = barcode.trim();
+  if (!code) return null;
+
+  const { data, error } = await supabase
+    .from("foods")
+    .select(CATALOG_COLUMNS)
+    .eq("barcode", code)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[food] barcode lookup failed:", error.message);
+    return null;
+  }
+  if (!data) return null;
+
+  const shared = fromCatalog(data as CatalogRow);
+
+  const { data: override } = await supabase
+    .from("custom_foods")
+    .select(CUSTOM_COLUMNS)
+    .eq("overrides_food_id", shared.id)
+    .maybeSingle();
+
+  return override ? fromCustom(override as CustomRow) : shared;
+}
+
+export interface LogFoodEntryParams {
+  userId: string;
+  food: FoodSearchResult;
+  quantity: number;
+  unit: ServingUnit;
+  meal: MealType;
+  /** yyyy-mm-dd. The diary's selected date, not necessarily today. */
+  date: string;
+  loggedVia: Enums<"food_log_source">;
+}
+
+export interface LogFoodEntryResult {
+  ok: boolean;
+  message?: string;
+  entry?: FoodLogEntry;
+}
+
+/**
+ * Writes one diary entry, resolving the snapshot as it goes.
+ *
+ * The multiplication happens HERE and only here. What lands in the row is the
+ * total for the whole entry, so summing a day is sum(calories) with no
+ * per-row arithmetic — which is what the schema's own comment demands.
+ *
+ * Reports failure rather than no-opping, like updateBodyMetric: the user
+ * pressed a button expecting a diary row, and a silent failure would leave
+ * them believing they had logged something they had not.
+ */
+export async function logFoodEntry(params: LogFoodEntryParams): Promise<LogFoodEntryResult> {
+  const { userId, food, quantity, unit, meal, date, loggedVia } = params;
+
+  if (!(quantity > 0)) return { ok: false, message: "Quantity must be greater than zero." };
+
+  const multiplier = servingMultiplier(food.servingLabel, quantity, unit);
+  const round = (n: number) => Math.round(n * 100) / 100;
+
+  const snapshot = {
+    name: food.name,
+    calories: round(food.calories * multiplier),
+    protein: round(food.protein * multiplier),
+    carbs: round(food.carbs * multiplier),
+    fat: round(food.fat * multiplier),
+  };
+
+  const { data, error } = await supabase
+    .from("food_log_entries")
+    .insert({
+      user_id: userId,
+      // At most one may be set — food_log_entries_single_source_check. Both
+      // null is legal and means a food the user typed in by hand.
+      food_id: food.source === "catalog" ? food.id : null,
+      custom_food_id: food.source === "custom" ? food.id : null,
+      name: snapshot.name,
+      calories: snapshot.calories,
+      protein_g: snapshot.protein,
+      carbs_g: snapshot.carbs,
+      fat_g: snapshot.fat,
+      quantity,
+      unit,
+      meal,
+      logged_date: date,
+      logged_via: loggedVia,
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    console.error("[food] Could not log entry:", error?.message);
+    return { ok: false, message: error ? describe(error) : "Could not save that entry." };
+  }
+
+  return {
+    ok: true,
+    entry: {
+      id: data.id,
+      foodId: food.source === "catalog" ? food.id : null,
+      customFoodId: food.source === "custom" ? food.id : null,
+      ...snapshot,
+      quantity,
+      unit,
+      meal,
+      date,
+      loggedVia,
+      display: {
+        category: food.category,
+        serving: food.servingLabel,
+        isLebanese: food.isLebanese,
+      },
+    },
+  };
+}
+
+// The joined shape. Only ever read for DISPLAY — icon, star, serving text.
+// Never for nutrition; that comes off the row itself.
+interface DiaryRow {
+  id: string;
+  food_id: string | null;
+  custom_food_id: string | null;
+  name: string;
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  quantity: number;
+  unit: ServingUnit;
+  meal: MealType;
+  logged_date: string;
+  logged_via: Enums<"food_log_source"> | null;
+  foods: { category: Enums<"food_category">; serving_label: string; is_lebanese: boolean } | null;
+  custom_foods: { category: Enums<"food_category">; serving_label: string } | null;
+}
+
+/**
+ * Reads the diary for a date range — the 90-day rolling window the app
+ * hydrates on sign-in.
+ *
+ * The join is display metadata ONLY: category for the row icon, is_lebanese
+ * for the star, serving_label for the text under the name. food_log_entries
+ * carries none of the three. Macros are never taken from it.
+ *
+ * It can legitimately come back null — a manual entry has no source row, and
+ * ON DELETE SET NULL means a deleted catalog row leaves the pointer empty.
+ * Both cases fall back to a neutral presentation rather than failing, because
+ * the entry itself is still perfectly valid.
+ *
+ * NOTE: joining serving_label rather than snapshotting it means a future edit
+ * to a catalog row's label would change how an old entry reads. See the
+ * README follow-up — the honest fix is a column on food_log_entries.
+ */
+export async function getDiaryEntries(
+  userId: string,
+  startDate: string,
+  endDate: string
+): Promise<FoodLogEntry[]> {
+  const { data, error } = await supabase
+    .from("food_log_entries")
+    .select(
+      "id, food_id, custom_food_id, name, calories, protein_g, carbs_g, fat_g, quantity, unit, meal, logged_date, logged_via, " +
+        "foods(category, serving_label, is_lebanese), custom_foods(category, serving_label)"
+    )
+    .eq("user_id", userId)
+    .gte("logged_date", startDate)
+    .lte("logged_date", endDate)
+    .order("logged_date", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    console.error("[food] Could not read diary:", error.message);
+    return [];
+  }
+
+  return (data ?? []).map((row) => {
+    const r = row as unknown as DiaryRow;
+    const meta = r.foods ?? r.custom_foods ?? null;
+    return {
+      id: r.id,
+      foodId: r.food_id,
+      customFoodId: r.custom_food_id,
+      name: r.name,
+      calories: r.calories,
+      protein: r.protein_g,
+      carbs: r.carbs_g,
+      fat: r.fat_g,
+      quantity: r.quantity,
+      unit: r.unit,
+      meal: r.meal,
+      date: r.logged_date,
+      loggedVia: r.logged_via ?? undefined,
+      display: {
+        category: meta?.category ?? "homemade",
+        serving: meta?.serving_label ?? "",
+        isLebanese: r.foods?.is_lebanese ?? false,
+      },
+    };
+  });
+}
+
+/** Deletes one of the user's own entries. RLS scopes this to the owner. */
+export async function deleteDiaryEntry(entryId: string): Promise<{ ok: boolean; message?: string }> {
+  const { error } = await supabase.from("food_log_entries").delete().eq("id", entryId);
+  if (error) {
+    console.error("[food] Could not delete entry:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  return { ok: true };
+}

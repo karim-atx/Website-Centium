@@ -22,17 +22,13 @@ export const mockFoods: Food[] = [
   { id: "f17", name: "Laban", nameAr: "لبن", category: "drinks", serving: "1 cup", calories: 90, protein: 6, carbs: 9, fat: 3, isLebanese: true },
   { id: "f18", name: "French Fries", category: "restaurant", serving: "1 small", calories: 340, protein: 4, carbs: 43, fat: 17 },
   { id: "f19", name: "Diet Pepsi", category: "drinks", serving: "1 can", calories: 0, protein: 0, carbs: 0, fat: 0 },
-  { id: "f20", name: "Banana", category: "snacks", serving: "1 medium", calories: 105, protein: 1, carbs: 27, fat: 0 },
   { id: "f21", name: "Coffee", category: "drinks", serving: "1 cup", calories: 20, protein: 0, carbs: 3, fat: 1, isLebanese: true },
   { id: "f22", name: "Grilled Chicken Breast", category: "homemade", serving: "150g", calories: 250, protein: 46, carbs: 0, fat: 6 },
-  { id: "f23", name: "Rice", category: "homemade", serving: "1 cup", calories: 205, protein: 4, carbs: 45, fat: 0 },
   { id: "f24", name: "Greek Salad", category: "lunch", serving: "1 bowl", calories: 220, protein: 6, carbs: 12, fat: 17 },
   { id: "f25", name: "Falafel", nameAr: "فلافل", category: "traditional", serving: "4 pieces", calories: 330, protein: 12, carbs: 30, fat: 18, isLebanese: true },
   { id: "f26", name: "Man'oushe Keshek", nameAr: "مناقيش كشك", category: "breakfast", serving: "1 piece", calories: 380, protein: 12, carbs: 46, fat: 16, isLebanese: true },
   { id: "f27", name: "Om Ali", nameAr: "أم علي", category: "snacks", serving: "1 bowl", calories: 410, protein: 8, carbs: 46, fat: 20, isLebanese: true },
   { id: "f28", name: "Grilled Fish", category: "dinner", serving: "180g", calories: 260, protein: 40, carbs: 0, fat: 10 },
-  { id: "f29", name: "Almonds", category: "snacks", serving: "1 oz", calories: 165, protein: 6, carbs: 6, fat: 14 },
-  { id: "f30", name: "Oatmeal", category: "breakfast", serving: "1 bowl", calories: 220, protein: 8, carbs: 38, fat: 4 },
 ];
 
 export const foodCategories = [

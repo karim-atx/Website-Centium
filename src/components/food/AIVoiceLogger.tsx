@@ -4,6 +4,7 @@ import { Button } from "../ui/Button";
 import { Mic, Sparkles, Pencil, MicOff, UtensilsCrossed } from "lucide-react";
 import { parseFoodInput, type ParsedFoodResult } from "../../services/ai/parseFoodInput";
 import { useApp } from "../../context/AppContext";
+import { snapshotFromFood } from "../../services/nutrition";
 import { foodCategoryIcon } from "../../utils/icons";
 
 type Stage = "idle" | "requesting" | "denied" | "recording" | "processing" | "result";
@@ -61,10 +62,13 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
   const handleAddAll = () => {
     if (!result) return;
     result.items.forEach((item) => {
+      const quantity = item.food.name === "Toum" ? item.quantity : 1;
       addFoodEntry({
         foodId: item.food.id,
-        food: item.food,
-        quantity: item.food.name === "Toum" ? item.quantity : 1,
+        customFoodId: null,
+        ...snapshotFromFood(item.food, quantity, "serving"),
+        quantity,
+        unit: "serving",
         meal: "lunch",
         loggedVia: "ai",
       });

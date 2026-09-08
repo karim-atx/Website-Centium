@@ -3,7 +3,6 @@ import type {
   UserProfile,
   FoodLogEntry,
   WorkoutLogEntry,
-  Food,
   MealType,
   HabitItem,
   Streak,
@@ -48,13 +47,17 @@ import type {
   ForumPost,
   ForumCategory,
 } from "../types";
-import { mockFoods } from "../data/mockFoods";
 import { mockForumPosts } from "../data/mockForum";
 import { defaultHabits, streaks as seedStreaks, bloodPanel } from "../data/mockHealthData";
 import { todaysWorkout, workoutPrograms, exerciseLibrary } from "../data/mockWorkouts";
 import { estimate1RM } from "../services/workout";
 import { ONE_RM_CLASSIFICATIONS } from "../types";
-import { suggestNutritionGoal, normalizeMacroSplit } from "../services/nutrition";
+import {
+  suggestNutritionGoal,
+  normalizeMacroSplit,
+  snapshotFromFood,
+  rescaleEntry,
+} from "../services/nutrition";
 import { businessTiers } from "../data/businessTiers";
 import { translations, type Language } from "../i18n/translations";
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
@@ -81,32 +84,6 @@ const defaultUser: UserProfile = {
   accountType: "customer",
   customerSubtype: "general",
 };
-
-const YESTERDAY = "2026-08-19";
-
-function seedFoodLog(): FoodLogEntry[] {
-  const byName = (name: string) => mockFoods.find((f) => f.name === name)!;
-  const entry = (
-    food: Food,
-    quantity: number,
-    meal: MealType,
-    id: string,
-    date = TODAY
-  ): FoodLogEntry => ({ id, foodId: food.id, food, quantity, meal, date });
-
-  return [
-    entry(byName("Manoushe Zaatar"), 1, "breakfast", "seed1"),
-    entry(byName("Labneh"), 1, "breakfast", "seed2"),
-    entry(byName("Coffee"), 1, "breakfast", "seed3"),
-    entry(byName("Chicken Shawarma"), 1, "lunch", "seed4"),
-    entry(byName("Banana"), 1, "snack", "seed5"),
-    // yesterday, so "copy yesterday's food" has something to demonstrate
-    entry(byName("Oatmeal"), 1, "breakfast", "seedY1", YESTERDAY),
-    entry(byName("Grilled Chicken Breast"), 1, "lunch", "seedY2", YESTERDAY),
-    entry(byName("Rice"), 1, "lunch", "seedY3", YESTERDAY),
-    entry(byName("Hummus"), 1, "dinner", "seedY4", YESTERDAY),
-  ];
-}
 
 function seedWorkoutLog(): WorkoutLogEntry[] {
   return [
@@ -791,7 +768,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     document.documentElement.classList.toggle("reduce-motion", accessibility.reduceMotion);
   }, [accessibility]);
 
-  const [foodLog, setFoodLog] = usePersistentState<FoodLogEntry[]>("foodLog", seedFoodLog());
+  // Starts empty. The seeded demo meals are gone — see services/food, which
+  // is what will hydrate this from food_log_entries.
+  //
+  // The key is versioned because the persisted SHAPE changed. Entries used to
+  // nest a whole Food and hold per-serving macros; they now hold totals and a
+  // `display` block. An old entry read back under the new type has no
+  // `display` at all, and the diary crashes on `e.display.category` — a
+  // failure the type system cannot catch, because localStorage is untyped by
+  // construction. Reading a fresh key sidesteps every stale row at once.
+  // Migrating them was rejected: they are local-only prototype data whose
+  // foodIds point at mock foods that no longer exist.
+  const [foodLog, setFoodLog] = usePersistentState<FoodLogEntry[]>("foodLog_v2", []);
+
+  // Drop the superseded key rather than leaving it to accumulate in every
+  // existing user's browser forever.
+  useEffect(() => {
+    try {
+      localStorage.removeItem(`${STORAGE_KEY}:foodLog`);
+    } catch {
+      // A browser blocking site data is not a reason to fail startup.
+    }
+  }, []);
   const [workoutLog, setWorkoutLog] = usePersistentState<WorkoutLogEntry[]>(
     "workoutLog",
     seedWorkoutLog()
@@ -1277,8 +1275,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       { ...entry, id: `f${Date.now()}${Math.random().toString(16).slice(2)}`, date: selectedDate },
     ]);
   };
+  // Editing quantity or unit has to rescale the snapshot, because an entry
+  // carries totals rather than per-serving values. The ratio of the new
+  // multiplier to the old one is enough; no per-serving base is stored.
   const updateFoodEntry: AppState["updateFoodEntry"] = (id, patch) =>
-    setFoodLog((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+    setFoodLog((prev) =>
+      prev.map((e) => {
+        if (e.id !== id) return e;
+        const next = { ...e, ...patch };
+        if (patch.quantity === undefined && patch.unit === undefined) return next;
+        return { ...next, ...rescaleEntry(e, next.quantity, next.unit) };
+      })
+    );
   const removeFoodEntry = (id: string) => setFoodLog((prev) => prev.filter((e) => e.id !== id));
 
   const logWorkout: AppState["logWorkout"] = (entry) => {
@@ -1551,9 +1559,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       ...custom.items.map((item, i) => ({
         id: `f${Date.now()}${i}${Math.random().toString(16).slice(2)}`,
         foodId: item.food.id,
-        food: item.food,
+        customFoodId: null,
+        ...snapshotFromFood(item.food, item.quantity, item.unit ?? "serving"),
         quantity: item.quantity,
-        unit: item.unit,
+        unit: item.unit ?? ("serving" as const),
         meal,
         date,
         loggedVia: "quick" as const,
