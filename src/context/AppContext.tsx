@@ -214,6 +214,11 @@ interface AppState {
 
   foodLog: FoodLogEntry[];
   addFoodEntry: (entry: Omit<FoodLogEntry, "id" | "date">) => void;
+  // Inserts an entry that already exists in food_log_entries, keeping its
+  // real database id. addFoodEntry mints a local id instead, which is fine
+  // for the paths that are still local-only but would make a future diary
+  // hydration duplicate rather than replace this row.
+  addFoodEntryRecord: (entry: FoodLogEntry) => void;
   // V4: logged foods are editable (quantity/unit) and removable.
   updateFoodEntry: (id: string, patch: Partial<Pick<FoodLogEntry, "quantity" | "unit" | "meal">>) => void;
   removeFoodEntry: (id: string) => void;
@@ -1275,6 +1280,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       { ...entry, id: `f${Date.now()}${Math.random().toString(16).slice(2)}`, date: selectedDate },
     ]);
   };
+  // Already written to food_log_entries by the food service, so this keeps
+  // the row's real id. Idempotent by id, so a re-render or a retry cannot
+  // double-insert the same row.
+  const addFoodEntryRecord: AppState["addFoodEntryRecord"] = (entry) =>
+    setFoodLog((prev) => (prev.some((e) => e.id === entry.id) ? prev : [...prev, entry]));
+
   // Editing quantity or unit has to rescale the snapshot, because an entry
   // carries totals rather than per-serving values. The ratio of the new
   // multiplier to the old one is enough; no per-serving base is stored.
@@ -1878,6 +1889,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateAccessibility,
       foodLog,
       addFoodEntry,
+      addFoodEntryRecord,
       updateFoodEntry,
       removeFoodEntry,
       workoutLog,

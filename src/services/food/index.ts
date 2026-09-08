@@ -153,6 +153,123 @@ export async function searchFoods(query: string): Promise<FoodSearchResult[]> {
 }
 
 /**
+ * The whole catalog, for the browse list an empty search box shows.
+ *
+ * A plain list is affordable because the catalog is deliberately small — 92
+ * curated rows, not an open-ended product database. If it ever grows past a
+ * few hundred this should become a paged or category-scoped query rather
+ * than a bigger limit.
+ */
+export async function listFoods(): Promise<FoodSearchResult[]> {
+  const [catalog, custom] = await Promise.all([
+    supabase.from("foods").select(CATALOG_COLUMNS).order("name").limit(300),
+    supabase.from("custom_foods").select(CUSTOM_COLUMNS).order("name").limit(300),
+  ]);
+
+  if (catalog.error) console.error("[food] catalog list failed:", catalog.error.message);
+  if (custom.error) console.error("[food] custom list failed:", custom.error.message);
+
+  const mine = (custom.data ?? []).map((r) => fromCustom(r as CustomRow));
+  const overridden = new Set(
+    mine.map((f) => f.overridesFoodId).filter((id): id is string => !!id)
+  );
+  const shared = (catalog.data ?? [])
+    .map((r) => fromCatalog(r as CatalogRow))
+    .filter((f) => !overridden.has(f.id));
+
+  return [...mine, ...shared];
+}
+
+/**
+ * Re-reads catalog foods by id, for the "Recent" strip.
+ *
+ * A diary entry snapshots totals, so a food cannot be reconstructed from one
+ * — logging it again needs the per-serving values, which only the catalog
+ * has. Ids that no longer resolve are simply absent from the result, which is
+ * what should happen when a food has been deleted.
+ */
+export async function getFoodsByIds(ids: string[]): Promise<FoodSearchResult[]> {
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) return [];
+
+  const [catalog, custom] = await Promise.all([
+    supabase.from("foods").select(CATALOG_COLUMNS).in("id", unique),
+    supabase.from("custom_foods").select(CUSTOM_COLUMNS).in("id", unique),
+  ]);
+
+  if (catalog.error) console.error("[food] recent catalog read failed:", catalog.error.message);
+  if (custom.error) console.error("[food] recent custom read failed:", custom.error.message);
+
+  const byId = new Map<string, FoodSearchResult>();
+  for (const r of catalog.data ?? []) {
+    const f = fromCatalog(r as CatalogRow);
+    byId.set(f.id, f);
+  }
+  for (const r of custom.data ?? []) {
+    const f = fromCustom(r as CustomRow);
+    byId.set(f.id, f);
+  }
+  // Returned in the caller's order, which is most-recent-first.
+  return unique.map((id) => byId.get(id)).filter((f): f is FoodSearchResult => !!f);
+}
+
+export interface NewBarcodeFood {
+  barcode: string;
+  name: string;
+  category: Enums<"food_category">;
+  servingLabel: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  nameAr?: string | null;
+  isLebanese?: boolean;
+}
+
+/**
+ * Creates a shared catalog row for a barcode, or returns the existing one.
+ *
+ * Called ONLY when the user has confirmed they want to add a scanned product
+ * that the catalog does not have, with the nutrition values in front of them.
+ * Separate from lookupByBarcode() on purpose: this one writes a row every
+ * other user of the app will see, and it spends the 30/hour rate limit.
+ *
+ * FIRST SCAN WINS. If someone else registered this barcode between the
+ * lookup and the confirmation, the RPC returns their row and ignores
+ * everything passed here — so the caller must use what comes back rather
+ * than assuming its own values were stored.
+ */
+export async function createFoodByBarcode(
+  food: NewBarcodeFood
+): Promise<{ ok: boolean; message?: string; food?: FoodSearchResult }> {
+  const { data, error } = await supabase.rpc("find_or_create_food_by_barcode", {
+    p_barcode: food.barcode,
+    p_name: food.name,
+    p_category: food.category,
+    p_serving_label: food.servingLabel,
+    p_calories: food.calories,
+    p_protein_g: food.protein,
+    p_carbs_g: food.carbs,
+    p_fat_g: food.fat,
+    p_name_ar: food.nameAr ?? undefined,
+    p_is_lebanese: food.isLebanese ?? false,
+  });
+
+  if (error || !data) {
+    console.error("[food] Could not create food by barcode:", error?.message);
+    // The function raises for an unauthenticated caller and for a throttled
+    // one; neither is worth a raw Postgres string in the UI.
+    const message = error?.message ?? "";
+    if (/rate limit|too many/i.test(message)) {
+      return { ok: false, message: "Too many new products scanned this hour. Try again later." };
+    }
+    return { ok: false, message: error ? describe(error) : "Could not add that product." };
+  }
+
+  return { ok: true, food: fromCatalog(data as unknown as CatalogRow) };
+}
+
+/**
  * Resolves a barcode against the catalog. Returns null when nothing matches.
  *
  * Deliberately does NOT call find_or_create_food_by_barcode(). That RPC
