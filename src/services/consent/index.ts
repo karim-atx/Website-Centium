@@ -56,14 +56,17 @@ function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   const message = error.message ?? "";
   if (code === "23505") return "That consent setting was already being updated. Try again.";
-  if (
-    code === "PGRST301" ||
-    code === "42501" ||
-    /jwt|not authenticated|authentication|permission denied|row-level security/i.test(message)
-  ) {
-    // Also the honest message if a professional ever reaches this code path:
-    // only the client may write their own grants.
-    return "You can only change data sharing on your own account. Sign in and try again.";
+  // Genuinely an auth problem — no session, or an expired one.
+  if (code === "PGRST301" || /jwt|not authenticated|authentication/i.test(message)) {
+    return "You need to be signed in to change data sharing. Sign in and try again.";
+  }
+  // A permission/RLS refusal is NOT an auth problem, and must not be
+  // reported as one. Telling a correctly-signed-in user to sign in again
+  // sent a real bug (see setGrant's note on column-scoped UPDATE) chasing
+  // the session for far longer than it should have. Surface the database's
+  // own words instead.
+  if (code === "42501" || /permission denied|row-level security/i.test(message)) {
+    return `Data sharing couldn't be saved — the database refused the change. ${message}`;
   }
   return message || "Could not update data sharing. Try again.";
 }
@@ -171,13 +174,52 @@ export async function setGrant(
   category: AccessCategory,
   granted: boolean
 ): Promise<SetGrantResult> {
+  // Update-then-insert rather than a single upsert, deliberately.
+  //
+  // PostgREST's .upsert() compiles to INSERT ... ON CONFLICT DO UPDATE and
+  // sets EVERY column in the payload on the conflict path — so it tries to
+  // update client_id, professional_id and category as well as granted.
+  // This table grants column-scoped UPDATE (granted) only, which is the
+  // right design: a client may flip their own switch and nothing else, and
+  // granted_at/revoked_at stay the trigger's. Postgres therefore refused the
+  // whole statement with 42501 the moment a row already existed — so the
+  // first toggle of a category appeared to work and every later one failed.
+  //
+  // Postgres' own hint ("GRANT UPDATE ON ... TO authenticated") would have
+  // fixed the symptom by letting clients rewrite client_id, professional_id,
+  // category and the audit timestamps. Not on consent data.
+  const updateGranted = async () => {
+    const { data, error } = await supabase
+      .from("client_access_grants")
+      .update({ granted })
+      .eq("client_id", clientId)
+      .eq("professional_id", professionalId)
+      .eq("category", category)
+      .select("id");
+    return { data, error };
+  };
+
   try {
-    const { error } = await supabase.from("client_access_grants").upsert(
-      { client_id: clientId, professional_id: professionalId, category, granted },
-      { onConflict: "client_id,professional_id,category" }
-    );
-    if (error) return { status: "error", message: describe(error) };
-    return { status: "ok" };
+    const first = await updateGranted();
+    if (first.error) return { status: "error", message: describe(first.error) };
+    if ((first.data?.length ?? 0) > 0) return { status: "ok" };
+
+    // No row for this category yet — create it. Inserting all four columns
+    // is legitimate; only UPDATE is column-restricted.
+    const { error: insertError } = await supabase
+      .from("client_access_grants")
+      .insert({ client_id: clientId, professional_id: professionalId, category, granted });
+    if (!insertError) return { status: "ok" };
+
+    // A concurrent toggle won the race and created the row between our
+    // update and our insert. The unique constraint caught it; update the
+    // row that now exists.
+    if (insertError.code === "23505") {
+      const retry = await updateGranted();
+      if (retry.error) return { status: "error", message: describe(retry.error) };
+      if ((retry.data?.length ?? 0) > 0) return { status: "ok" };
+    }
+    return { status: "error", message: describe(insertError) };
   } catch (e) {
     return { status: "error", message: e instanceof Error ? e.message : "Could not save that change." };
   }
