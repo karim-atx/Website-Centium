@@ -10,7 +10,8 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
 import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
-import { updateDateOfBirth } from "../../services/profile";
+import { updateBodyMetric, updateDateOfBirth } from "../../services/profile";
+import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
 import {
   ageFromDateOfBirth,
   isoDateYearsAgo,
@@ -70,14 +71,16 @@ export default function Profile() {
   const [activityLevelOpen, setActivityLevelOpen] = useState(false);
   const [certOpen, setCertOpen] = useState(false);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
-  // V8 (QA 8.0): "Remove the pencil edit logo. Instead each of the age,
-  // height and weight is editable if pressed on separately. When you click
-  // away from the edited box, the new value gets set. Do not include a
-  // checkmark logo." — replaces the single shared edit-sheet affordance.
-  // "age" is no longer one of these. It is derived from date of birth, so it
-  // isn't directly editable — tapping the card opens the date editor below.
-  const [editingField, setEditingField] = useState<"weightKg" | "heightCm" | null>(null);
-  const [fieldDraft, setFieldDraft] = useState("");
+  // V8 (QA 8.0) made each of age/height/weight editable by tapping the card
+  // itself. That still holds — what changed is where the edit happens and
+  // what it does. These values now persist to `profiles`, so an edit has to
+  // be able to fail and say so; an inline input committing on blur has
+  // nowhere to put an error or a saving state. Each card therefore opens a
+  // sheet, matching the date-of-birth editor.
+  const [metricOpen, setMetricOpen] = useState<"weightKg" | "heightCm" | null>(null);
+  const [metricDraft, setMetricDraft] = useState("");
+  const [metricError, setMetricError] = useState<string | null>(null);
+  const [savingMetric, setSavingMetric] = useState(false);
   const [dobOpen, setDobOpen] = useState(false);
   const [dobDraft, setDobDraft] = useState("");
   const [dobError, setDobError] = useState<string | null>(null);
@@ -96,9 +99,40 @@ export default function Profile() {
     reader.readAsDataURL(file);
   };
 
-  const startEditing = (field: "weightKg" | "heightCm") => {
-    setEditingField(field);
-    setFieldDraft(String(user[field]));
+  const openMetricEditor = (field: "weightKg" | "heightCm") => {
+    setMetricDraft(String(user[field]));
+    setMetricError(null);
+    setMetricOpen(field);
+  };
+
+  const saveMetric = async () => {
+    if (!metricOpen) return;
+    const value = Number(metricDraft);
+    const message =
+      metricOpen === "weightKg" ? validateWeightKg(value) : validateHeightCm(value);
+    if (message) {
+      setMetricError(message);
+      return;
+    }
+    if (!authUserId) {
+      setMetricError("You need to be signed in to change this.");
+      return;
+    }
+    setSavingMetric(true);
+    const result = await updateBodyMetric(
+      authUserId,
+      metricOpen === "weightKg" ? "weight_kg" : "height_cm",
+      value
+    );
+    setSavingMetric(false);
+    if (!result.ok) {
+      setMetricError(result.message ?? "Could not save that. Try again.");
+      return;
+    }
+    // Mirror locally so the card updates immediately; the next profile
+    // hydration reads the same value back from the server.
+    updateProfile({ [metricOpen]: value });
+    setMetricOpen(null);
   };
 
   const openDobEditor = () => {
@@ -128,13 +162,6 @@ export default function Profile() {
     // profile hydration will read the same value back from the server.
     updateProfile({ dateOfBirth: dobDraft, age: ageFromDateOfBirth(dobDraft) ?? user.age });
     setDobOpen(false);
-  };
-
-  const commitEditing = () => {
-    if (!editingField) return;
-    const n = Number(fieldDraft);
-    if (n > 0) updateProfile({ [editingField]: n });
-    setEditingField(null);
   };
 
   const handleSignOut = () => {
@@ -311,23 +338,11 @@ export default function Profile() {
           ).map((f) => (
             <Card
               key={f.field}
-              interactive={editingField !== f.field}
-              onClick={() => editingField !== f.field && startEditing(f.field)}
+              interactive
+              onClick={() => openMetricEditor(f.field)}
               className="text-center animate-fade-slide-up"
             >
-              {editingField === f.field ? (
-                <input
-                  autoFocus
-                  value={fieldDraft}
-                  onChange={(e) => setFieldDraft(e.target.value.replace(/[^\d.]/g, ""))}
-                  onBlur={commitEditing}
-                  onKeyDown={(e) => e.key === "Enter" && commitEditing()}
-                  inputMode="decimal"
-                  className="w-full text-lg font-bold text-charcoal text-center bg-transparent focus:outline-none"
-                />
-              ) : (
-                <p className="text-lg font-bold text-charcoal">{f.value}</p>
-              )}
+              <p className="text-lg font-bold text-charcoal">{f.value}</p>
               <p className="text-[11px] text-charcoal-faint">{f.unit}</p>
             </Card>
           ))}
@@ -607,8 +622,46 @@ export default function Profile() {
         className="hidden"
         onChange={(e) => e.target.files?.[0] && handleAvatarFile(e.target.files[0])}
       />
-      {/* Date of birth, not age. Writes straight to profiles.date_of_birth —
-          the only field on this row that persists server-side today. */}
+      {/* Weight and height. One sheet for both — the fields differ only by
+          label, unit and bound, and two near-identical sheets would drift. */}
+      <BottomSheet
+        open={metricOpen !== null}
+        onClose={() => setMetricOpen(null)}
+        title={metricOpen === "weightKg" ? "Weight" : "Height"}
+      >
+        <div className="space-y-4 animate-fade-slide-up">
+          <label className="block relative">
+            <input
+              autoFocus
+              value={metricDraft}
+              onChange={(e) => {
+                setMetricDraft(e.target.value.replace(/[^\d.]/g, ""));
+                setMetricError(null);
+              }}
+              onKeyDown={(e) => e.key === "Enter" && void saveMetric()}
+              inputMode="decimal"
+              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 pr-12 text-charcoal focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+            />
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-sm text-charcoal-faint">
+              {metricOpen === "weightKg" ? "kg" : "cm"}
+            </span>
+          </label>
+
+          <p className="text-[11px] text-charcoal-faint">
+            {metricOpen === "weightKg"
+              ? "Used for your calorie targets, and shown to any professional you share weight with."
+              : "Used for your calorie targets and BMI-based health recommendations."}
+          </p>
+
+          {metricError && <p className="text-xs font-semibold text-status-high">{metricError}</p>}
+
+          <Button fullWidth size="lg" disabled={!metricDraft || savingMetric} onClick={saveMetric}>
+            {savingMetric ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      </BottomSheet>
+
+      {/* Date of birth, not age. Writes straight to profiles.date_of_birth. */}
       <BottomSheet open={dobOpen} onClose={() => setDobOpen(false)} title="Date of birth">
         <div className="space-y-4 animate-fade-slide-up">
           <input

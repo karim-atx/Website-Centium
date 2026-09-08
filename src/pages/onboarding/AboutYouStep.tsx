@@ -12,6 +12,7 @@ import {
   MIN_AGE,
   MAX_AGE,
 } from "../../utils/date";
+import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
 
 interface Props {
   draft: OnboardingDraft;
@@ -26,11 +27,8 @@ const sexOptions: { value: Sex; label: string; icon: typeof Venus }[] = [
   { value: "other", label: "Other", icon: VenusAndMars },
 ];
 
-// V7 (QA 7.0): reject exaggerated height/weight instead of silently
-// accepting them — wide enough to allow any real person, narrow enough to
-// catch fat-fingered or joke values.
-const HEIGHT_RANGE = [100, 250] as const;
-const WEIGHT_RANGE = [25, 300] as const;
+// Height/weight bounds and messages live in utils/bodyMetrics, shared with
+// the Profile tab's editors — same reason as the date-of-birth rule below.
 
 // Date of birth replaced a free-typed age. The bounds are on the DATE, so a
 // birthday passing never invalidates a profile the way an age bound would.
@@ -63,13 +61,19 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
           return;
         }
       }
-      if (draft.heightCm && (height < HEIGHT_RANGE[0] || height > HEIGHT_RANGE[1])) {
-        setError(`Height should be between ${HEIGHT_RANGE[0]} and ${HEIGHT_RANGE[1]}cm.`);
-        return;
+      if (draft.heightCm) {
+        const heightError = validateHeightCm(height);
+        if (heightError) {
+          setError(heightError);
+          return;
+        }
       }
-      if (draft.weightKg && (weight < WEIGHT_RANGE[0] || weight > WEIGHT_RANGE[1])) {
-        setError(`Weight should be between ${WEIGHT_RANGE[0]} and ${WEIGHT_RANGE[1]}kg.`);
-        return;
+      if (draft.weightKg) {
+        const weightError = validateWeightKg(weight);
+        if (weightError) {
+          setError(weightError);
+          return;
+        }
       }
     }
     setError(null);

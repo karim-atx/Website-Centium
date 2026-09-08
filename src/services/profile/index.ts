@@ -170,6 +170,39 @@ export async function updateDateOfBirth(
 }
 
 /**
+ * Updates one body metric — weight or height — for the Profile tab's editors.
+ *
+ * One function rather than two near-identical ones, but still narrow in the
+ * way that matters: a call writes exactly one column, named by a union type
+ * the compiler checks. That is the property worth preserving. Sending the
+ * whole profile to change a weight would overwrite server values with
+ * whatever the local cache happened to hold.
+ *
+ * Reports failure for the same reason updateDateOfBirth does: the user is
+ * deliberately changing one value and watching for it to stick, so a silent
+ * no-op is worse than an error.
+ */
+export async function updateBodyMetric(
+  userId: string,
+  field: "weight_kg" | "height_cm",
+  value: number
+): Promise<{ ok: boolean; message?: string }> {
+  // Spelled out rather than a computed key: the generated Update type rejects
+  // an index signature, and writing the column names literally is what lets
+  // the compiler confirm only these two are ever touched.
+  const patch: TablesUpdate<"profiles"> =
+    field === "weight_kg" ? { weight_kg: value } : { height_cm: value };
+
+  const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
+
+  if (error) {
+    console.error(`[profile] Could not save ${field}:`, error.message);
+    return { ok: false, message: error.message };
+  }
+  return { ok: true };
+}
+
+/**
  * Fills in the profiles row at the end of onboarding. Best-effort: a failure
  * here must not strand the user on the last step, since the local app state
  * has already been written and is what the UI reads today.
