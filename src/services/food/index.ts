@@ -2,7 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 import type { FoodLogEntry, MealType, ServingUnit } from "../../types";
-import { servingMultiplier } from "../nutrition";
+import { servingMultiplier, rescaleEntry } from "../nutrition";
 
 // Reads and writes the real food catalog and diary.
 //
@@ -486,12 +486,91 @@ export async function getDiaryEntries(
   });
 }
 
-/** Deletes one of the user's own entries. RLS scopes this to the owner. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Whether a diary entry exists in food_log_entries, or only in local state.
+ *
+ * Transitional. Entries logged through AddFoodSheet are real rows with real
+ * uuids; AI Voice, custom meals and copy-yesterday still write local-only
+ * entries with ids like "f1757352…". Sending one of those to the database
+ * would match nothing, and the row-count checks below would then correctly —
+ * but uselessly — report a failure for an entry that was never there.
+ *
+ * This goes away once every logging path writes remotely.
+ */
+export function isRemoteEntryId(entryId: string): boolean {
+  return UUID_RE.test(entryId);
+}
+
+/**
+ * Deletes one of the user's own entries.
+ *
+ * Checks the returned rows, not just `error`. A DELETE refused by a row
+ * policy comes back as zero rows with error === null — RLS rejects silently,
+ * and `if (error)` alone is not a check. Reporting success there would remove
+ * the entry from the diary while the row lived on in the database.
+ */
 export async function deleteDiaryEntry(entryId: string): Promise<{ ok: boolean; message?: string }> {
-  const { error } = await supabase.from("food_log_entries").delete().eq("id", entryId);
+  const { data, error } = await supabase
+    .from("food_log_entries")
+    .delete()
+    .eq("id", entryId)
+    .select("id");
+
   if (error) {
     console.error("[food] Could not delete entry:", error.message);
     return { ok: false, message: describe(error) };
+  }
+  if (!data || data.length === 0) {
+    console.error("[food] Delete affected no rows:", entryId);
+    return { ok: false, message: "That entry could not be deleted." };
+  }
+  return { ok: true };
+}
+
+/**
+ * Changes an entry's quantity, unit or meal, rescaling the snapshot to match.
+ *
+ * The macros on a row are totals, so changing the quantity has to change them
+ * too. rescaleEntry does that arithmetic — the same function the local
+ * updateFoodEntry uses, so the two cannot drift apart.
+ *
+ * Same silent-rejection guard as the delete above: a row-policy UPDATE
+ * refusal returns zero rows and no error. Every column written here is in the
+ * column-scoped UPDATE grant nutrition defines.
+ */
+export async function updateDiaryEntry(
+  entry: FoodLogEntry,
+  quantity: number,
+  unit: ServingUnit,
+  meal: MealType = entry.meal
+): Promise<{ ok: boolean; message?: string }> {
+  if (!(quantity > 0)) return { ok: false, message: "Quantity must be greater than zero." };
+
+  const totals = rescaleEntry(entry, quantity, unit);
+
+  const { data, error } = await supabase
+    .from("food_log_entries")
+    .update({
+      quantity,
+      unit,
+      meal,
+      calories: totals.calories,
+      protein_g: totals.protein,
+      carbs_g: totals.carbs,
+      fat_g: totals.fat,
+    })
+    .eq("id", entry.id)
+    .select("id");
+
+  if (error) {
+    console.error("[food] Could not update entry:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  if (!data || data.length === 0) {
+    console.error("[food] Update affected no rows:", entry.id);
+    return { ok: false, message: "That change could not be saved." };
   }
   return { ok: true };
 }

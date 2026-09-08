@@ -8,6 +8,7 @@ import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { EditFoodEntrySheet } from "../../components/food/EditFoodEntrySheet";
 import { DateSelector } from "../../components/dashboard/DateSelector";
 import { mealOrder, mealLabels, sumNutrition, targetsFromGoal } from "../../services/nutrition";
+import { deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
 import type { MealType, FoodLogEntry } from "../../types";
 import {
   Plus,
@@ -54,6 +55,8 @@ export default function Food() {
   // swipes or double taps to add food... only remain appearing for 15
   // seconds." Tracks which meal + which entry ids a copy just added.
   const [undoState, setUndoState] = useState<{ meal: MealType; ids: string[] } | null>(null);
+  // Deleting now goes to the database first, so it can fail and has to say so.
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const undoTimerRef = useRef<number | null>(null);
   const rowTouchStart = useRef<{ x: number; y: number } | null>(null);
   const mealTouchStart = useRef<{ x: number; y: number } | null>(null);
@@ -93,9 +96,37 @@ export default function Food() {
     undoTimerRef.current = window.setTimeout(() => setUndoState(null), 15000);
   };
 
+  /**
+   * Deletes an entry, database first.
+   *
+   * Nothing is removed from the diary until the row is actually gone. An
+   * optimistic removal would show the entry vanishing while it survived in
+   * food_log_entries, and it would come back on the next hydration — worse
+   * than a visible error, because the user would never know.
+   *
+   * Entries that only exist locally (AI Voice, custom meals, copy-yesterday
+   * still write local-only rows) skip the request entirely; there is nothing
+   * to delete remotely.
+   */
+  const handleDelete = async (id: string) => {
+    setDeleteError(null);
+    if (!isRemoteEntryId(id)) {
+      removeFoodEntry(id);
+      return;
+    }
+    const result = await deleteDiaryEntry(id);
+    if (!result.ok) {
+      setDeleteError(result.message ?? "Could not delete that entry.");
+      return;
+    }
+    removeFoodEntry(id);
+  };
+
   const handleUndo = () => {
     if (!undoState) return;
-    undoState.ids.forEach((id) => removeFoodEntry(id));
+    // Copy-yesterday writes local-only entries today, so these are local ids;
+    // handleDelete still routes each one correctly either way.
+    undoState.ids.forEach((id) => void handleDelete(id));
     if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
     setUndoState(null);
   };
@@ -224,6 +255,12 @@ export default function Food() {
             <RefreshCw size={11} /> Swipe right or double-tap a meal to copy yesterday's food
           </p>
 
+          {deleteError && (
+            <p className="text-[11.5px] font-semibold text-status-high text-center mb-4 -mt-2">
+              {deleteError}
+            </p>
+          )}
+
           <div className="space-y-5">
             {mealOrder.map((meal) => {
               const entries = grouped[meal];
@@ -307,7 +344,7 @@ export default function Food() {
                             {revealed && (
                               <button
                                 onClick={() => {
-                                  removeFoodEntry(e.id);
+                                  void handleDelete(e.id);
                                   setRevealedId(null);
                                 }}
                                 aria-label={`Delete ${e.name}`}
