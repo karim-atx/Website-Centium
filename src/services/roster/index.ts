@@ -33,6 +33,8 @@ export interface RosterClient {
     weight: boolean;
     progress: boolean;
     healthMetrics: boolean;
+    labResults: boolean;
+    medicalHistory: boolean;
   };
 }
 
@@ -42,6 +44,8 @@ const emptyAccess = (): RosterClient["access"] => ({
   weight: false,
   progress: false,
   healthMetrics: false,
+  labResults: false,
+  medicalHistory: false,
 });
 
 /** access_category enum -> the key the app's UI uses. */
@@ -51,6 +55,8 @@ const accessKeyFor: Record<Enums<"access_category">, keyof RosterClient["access"
   weight: "weight",
   progress: "progress",
   health_metrics: "healthMetrics",
+  lab_results: "labResults",
+  medical_history: "medicalHistory",
 };
 
 function describe(error: PostgrestError): string {

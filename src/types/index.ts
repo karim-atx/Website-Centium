@@ -201,13 +201,18 @@ export interface ProfessionalClient {
   lastWeightKg?: number;
   weightTrend?: number;
   lastCaloriesKcal?: number;
-  // Real, from client_access_grants.
+  // Real, from client_access_grants. `healthMetrics` is vitals only — steps,
+  // sleep, heart rate, water, calories burned. Lab work and clinical records
+  // are separate grants, because one switch covering both was not a question
+  // a client could answer honestly.
   access: {
     foodDiary: boolean;
     workoutActivity: boolean;
     weight: boolean;
     progress: boolean;
     healthMetrics: boolean;
+    labResults: boolean;
+    medicalHistory: boolean;
   };
   assignedProgramName?: string;
   assignedFoodTemplateName?: string;

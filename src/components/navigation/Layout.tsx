@@ -1,6 +1,7 @@
 import React, { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
 import { PendingDeletionBanner } from "./PendingDeletionBanner";
+import { ConsentReviewBanner } from "../professionals/ConsentReviewBanner";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
 
@@ -23,6 +24,7 @@ export const Layout: React.FC = () => {
       <div className="flex-1 min-w-0">
         <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-28 lg:pb-12">
           <PendingDeletionBanner />
+          <ConsentReviewBanner />
           <Outlet />
         </main>
       </div>

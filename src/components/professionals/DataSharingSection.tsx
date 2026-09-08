@@ -13,7 +13,12 @@ import {
   type AccessCategory,
   type GrantMap,
   type LinkedProfessional,
+  type UnansweredMap,
 } from "../../services/consent";
+
+/** The display label for a category, for use inside prose. */
+const labelFor = (category: AccessCategory): string =>
+  ACCESS_CATEGORIES.find((c) => c.category === category)?.label ?? "This setting";
 
 // The client's data-sharing controls.
 //
@@ -34,6 +39,9 @@ export const DataSharingSection: React.FC<{
   const { authUserId } = useApp();
   const [professionals, setProfessionals] = useState<LinkedProfessional[]>([]);
   const [grants, setGrants] = useState<Record<string, GrantMap>>({});
+  // Categories a split created that this client has never answered. Drives
+  // the re-consent notice; see `isUnanswered` in services/consent.
+  const [unanswered, setUnanswered] = useState<UnansweredMap>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   // Which (professional, category) pair is mid-write, so a toggle can't be
@@ -58,8 +66,10 @@ export const DataSharingSection: React.FC<{
         return;
       }
       setProfessionals(linked.professionals);
-      if (myGrants.status === "ok") setGrants(myGrants.grants);
-      else setError(myGrants.message);
+      if (myGrants.status === "ok") {
+        setGrants(myGrants.grants);
+        setUnanswered(myGrants.unanswered);
+      } else setError(myGrants.message);
       setLoading(false);
     })();
     return () => {
@@ -87,6 +97,57 @@ export const DataSharingSection: React.FC<{
     if (result.status === "error") {
       setGrants((g) => ({ ...g, [professionalId]: { ...g[professionalId], [category]: previous } }));
       setError(result.message);
+      return;
+    }
+    // The question has now been answered, so the notice retires for that
+    // category. Done after the write rather than optimistically: a notice
+    // that vanished on a write the database then refused would leave the
+    // client believing they had answered something they had not.
+    setUnanswered((u) => ({
+      ...u,
+      [professionalId]: (u[professionalId] ?? []).filter((c) => c !== category),
+    }));
+  };
+
+  /**
+   * Answers "no" to every category still awaiting a first answer.
+   *
+   * WHY THIS EXISTS AT ALL. The switches can only ever say yes to these. An
+   * unanswered category renders off, so its onChange always fires `true` —
+   * meaning that without this, declining was not something the UI could
+   * express, and the client's only route to "no" would have been to grant
+   * access and immediately take it back. On medications and imaging, a
+   * round trip of real disclosure is not an acceptable way to say no.
+   *
+   * The write is issued even though `granted` is already false, and that is
+   * the entire point: record_declined_consent stamps revoked_at on exactly
+   * that no-op UPDATE, which is what turns "never asked" into "asked and
+   * declined". Skipping the write because the value looks unchanged would
+   * leave the decline unrecorded and the client asked again forever.
+   */
+  const declineAll = async (professionalId: string) => {
+    if (!authUserId) return;
+    const pending = unanswered[professionalId] ?? [];
+    if (pending.length === 0 || saving === professionalId) return;
+    setSaving(professionalId);
+    setError(null);
+
+    const declined: AccessCategory[] = [];
+    for (const category of pending) {
+      const result = await setGrant(authUserId, professionalId, category, false);
+      if (result.status === "error") {
+        setError(result.message);
+        break;
+      }
+      declined.push(category);
+    }
+
+    setSaving(null);
+    if (declined.length > 0) {
+      setUnanswered((u) => ({
+        ...u,
+        [professionalId]: (u[professionalId] ?? []).filter((c) => !declined.includes(c)),
+      }));
     }
   };
 
@@ -131,6 +192,47 @@ export const DataSharingSection: React.FC<{
           <p className="text-[11px] text-charcoal-soft mb-3">
             Choose what {pro.name} can see. Nothing is shared unless you turn it on.
           </p>
+
+          {(unanswered[pro.professionalId]?.length ?? 0) > 0 && (
+            <div className="rounded-xl bg-primary-pale border border-primary/[0.16] px-3 py-2.5 mb-3">
+              <p className="text-[11.5px] font-semibold text-charcoal mb-1">
+                Two things we should have asked separately
+              </p>
+              <p className="text-[11px] text-charcoal-soft leading-relaxed">
+                When you agreed to share health metrics with {pro.name}, that one switch also
+                covered your lab results and your medical history. That was too much to bundle
+                into a single question. We've split it out below — your activity and vitals are
+                still shared exactly as before, and{" "}
+                {unanswered[pro.professionalId]!.length > 1 ? (
+                  <>
+                    these two are waiting on your answer. Until you answer, {pro.name} can't see
+                    either one.
+                  </>
+                ) : (
+                  <>
+                    {labelFor(unanswered[pro.professionalId]![0])} is waiting on your answer.
+                    Until you answer, {pro.name} can't see it.
+                  </>
+                )}{" "}
+                Either answer is fine.
+              </p>
+              {/* The switches below are the "yes". This is the "no" — without
+                  it the only way to decline would be to grant access and take
+                  it straight back, which on medications and imaging means a
+                  real disclosure in order to refuse one. */}
+              <button
+                onClick={() => void declineAll(pro.professionalId)}
+                disabled={saving === pro.professionalId}
+                className="tap mt-2.5 rounded-xl bg-white text-charcoal text-[11px] font-semibold px-3 py-1.5 shadow-soft disabled:opacity-50"
+              >
+                {saving === pro.professionalId
+                  ? "Saving…"
+                  : unanswered[pro.professionalId]!.length > 1
+                  ? "Don't share these"
+                  : "Don't share this"}
+              </button>
+            </div>
+          )}
 
           <div className="space-y-2.5">
             {ACCESS_CATEGORIES.map(({ category, label, description }) => {
