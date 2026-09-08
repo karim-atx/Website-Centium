@@ -438,11 +438,25 @@ interface DiaryRow {
  * to a catalog row's label would change how an old entry reads. See the
  * README follow-up — the honest fix is a column on food_log_entries.
  */
+export interface DiaryFetchResult {
+  /**
+   * False means the read FAILED, which is not the same as returning nothing.
+   *
+   * Callers replace local state with `entries`, so the two must be
+   * distinguishable: an earlier version returned [] for both, and a dropped
+   * connection would then have looked like an empty diary and wiped every
+   * visible entry. On failure the caller keeps what it already has.
+   */
+  ok: boolean;
+  entries: FoodLogEntry[];
+  message?: string;
+}
+
 export async function getDiaryEntries(
   userId: string,
   startDate: string,
   endDate: string
-): Promise<FoodLogEntry[]> {
+): Promise<DiaryFetchResult> {
   const { data, error } = await supabase
     .from("food_log_entries")
     .select(
@@ -457,10 +471,10 @@ export async function getDiaryEntries(
 
   if (error) {
     console.error("[food] Could not read diary:", error.message);
-    return [];
+    return { ok: false, entries: [], message: describe(error) };
   }
 
-  return (data ?? []).map((row) => {
+  const entries = (data ?? []).map((row) => {
     const r = row as unknown as DiaryRow;
     const meta = r.foods ?? r.custom_foods ?? null;
     return {
@@ -484,6 +498,8 @@ export async function getDiaryEntries(
       },
     };
   });
+
+  return { ok: true, entries };
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;

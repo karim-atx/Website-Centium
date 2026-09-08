@@ -64,6 +64,7 @@ import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, onAuthChange, signOutRemote } from "../services/auth";
 import { onPasswordRecovery } from "../services/auth";
+import { getDiaryEntries, isRemoteEntryId } from "../services/food";
 import { ensureProfileRow, fetchProfile } from "../services/profile";
 import {
   getRecoveryPendingUserId,
@@ -75,6 +76,12 @@ import { getMyReferrerReward } from "../services/redemption";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
 
 const TODAY = "2026-08-20";
+
+// How much history the diary loads from Supabase in one read. Chosen so the
+// auto-streaks (which walk backwards through every dated entry) and
+// copy-yesterday keep working without a query per day. A streak longer than
+// this would cap, which is not reachable on an app with no logging history.
+const DIARY_WINDOW_DAYS = 90;
 
 const defaultUser: UserProfile = {
   id: "u1",
@@ -191,6 +198,10 @@ interface AppState {
   // password has not been set yet. Route guards refuse everything under /app
   // while it holds.
   recoveryPending: boolean;
+  // Diary read state. Loading never blanks the screen — cached entries stay
+  // visible — and an error keeps them rather than replacing them with nothing.
+  diaryLoading: boolean;
+  diaryError: string | null;
   // Ends the recovery block. Must be used instead of clearRecoveryPending():
   // the guards read React state, not localStorage, so clearing only storage
   // leaves the app redirecting for the rest of the page session.
@@ -953,6 +964,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeMedication = (id: string) => setMedications((prev) => prev.filter((m) => m.id !== id));
 
   const [selectedDate, setSelectedDate] = usePersistentState<string>("selectedDate", TODAY);
+
+  // --- diary hydration -----------------------------------------------------
+  //
+  // Until this existed the diary was localStorage that also happened to write
+  // to Supabase: entries survived a reload because the browser remembered
+  // them, not because anything read them back, so the same account on another
+  // device showed nothing.
+  //
+  // The window always covers TODAY and, if the user has navigated outside it,
+  // selectedDate — so these two strings only change when someone actually
+  // leaves the loaded range, and the effect below does not refetch on ordinary
+  // day-to-day navigation.
+  const diaryWindowStart = shiftDate(TODAY, -(DIARY_WINDOW_DAYS - 1));
+  const diaryStart = selectedDate < diaryWindowStart ? selectedDate : diaryWindowStart;
+  const diaryEnd = selectedDate > TODAY ? selectedDate : TODAY;
+
+  const [diaryLoading, setDiaryLoading] = useState(false);
+  const [diaryError, setDiaryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    setDiaryLoading(true);
+
+    void getDiaryEntries(authUserId, diaryStart, diaryEnd).then((result) => {
+      if (cancelled) return;
+      setDiaryLoading(false);
+
+      // A failed read is NOT an empty diary. Keep showing whatever is already
+      // there rather than blanking the screen on a dropped connection — which
+      // is why getDiaryEntries reports `ok` separately from `entries`.
+      if (!result.ok) {
+        setDiaryError(result.message ?? "Could not load your diary.");
+        return;
+      }
+      setDiaryError(null);
+
+      setFoodLog((prev) => {
+        const inRange = (d: string) => d >= diaryStart && d <= diaryEnd;
+        // Replace, don't merge: these rows carry their real database ids, and
+        // merging would show an entry twice once it exists under both a local
+        // and a remote id.
+        //
+        // Two things are deliberately preserved. Entries that exist ONLY
+        // locally — AI Voice, custom meals and copy-yesterday still write
+        // nowhere else — would otherwise vanish on every hydration. And
+        // remote-sourced entries outside the fetched range are kept, because
+        // this read says nothing about them.
+        const kept = prev.filter((e) => !isRemoteEntryId(e.id) || !inRange(e.date));
+        return [...kept, ...result.entries];
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, profileReady, diaryStart, diaryEnd, setFoodLog]);
 
   // V10 (QA 10.0): "logging... metrics in a day that is not today should
   // add and log values pertaining to that mentioned day" — water is now
@@ -1936,6 +2004,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       authUserId,
       recoveryPending,
       clearRecovery,
+      diaryLoading,
+      diaryError,
       authReady,
       profileReady,
       theme,
@@ -2144,6 +2214,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       authUserId,
       recoveryPending,
       clearRecovery,
+      diaryLoading,
+      diaryError,
       authReady,
       profileReady,
       theme,

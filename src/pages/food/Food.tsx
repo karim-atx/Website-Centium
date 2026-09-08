@@ -41,7 +41,7 @@ function mealForCurrentTime(): MealType {
 }
 
 export default function Food() {
-  const { foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive } =
+  const { foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, diaryError } =
     useApp();
   const [tab, setTab] = useState<Tab>("diary");
   const [addOpen, setAddOpen] = useState(false);
@@ -254,6 +254,14 @@ export default function Food() {
           <p className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-charcoal-faint mb-4 -mt-2">
             <RefreshCw size={11} /> Swipe right or double-tap a meal to copy yesterday's food
           </p>
+
+          {/* A failed diary read leaves the cached entries on screen, so this
+              says the list may be stale rather than implying it is empty. */}
+          {diaryError && !deleteError && (
+            <p className="text-[11.5px] font-semibold text-status-high text-center mb-4 -mt-2">
+              Couldn't refresh your diary — showing what was saved on this device.
+            </p>
+          )}
 
           {deleteError && (
             <p className="text-[11.5px] font-semibold text-status-high text-center mb-4 -mt-2">
