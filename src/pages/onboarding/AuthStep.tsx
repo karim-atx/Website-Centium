@@ -10,6 +10,7 @@ import {
   signInWithGoogle,
   signUpWithEmail,
 } from "../../services/auth";
+import { setRememberMe as setRememberMePreference } from "../../../lib/supabase/rememberMe";
 
 interface Props {
   draft: OnboardingDraft;
@@ -56,6 +57,8 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [confirmBlurred, setConfirmBlurred] = useState(false);
+  // Default on: the persistent session everyone had before this existed.
+  const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
@@ -143,6 +146,10 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
     if (!isValidEmail(email)) return setError("Enter a valid email address.");
     if (!password) return setError("Enter your password.");
     setError(null);
+    // Recorded BEFORE the request. Supabase writes the session cookie the
+    // moment auth succeeds, and the cookie adapter reads this synchronously
+    // at that point — setting it afterwards would be one write too late.
+    setRememberMePreference(rememberMe);
     setBusy(true);
     const result = await signInWithEmail(email, password);
     setBusy(false);
@@ -408,9 +415,22 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
         </label>
 
         {mode === "signIn" && (
-          <button onClick={() => setMode("forgot")} className="tap text-xs font-semibold text-primary -mt-2">
-            Forgot password?
-          </button>
+          <div className="flex items-center justify-between -mt-2">
+            {/* Unticked, the session cookie is written without Max-Age, so the
+                browser drops it on close. See lib/supabase/rememberMe.ts. */}
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded accent-primary"
+              />
+              <span className="text-xs font-semibold text-charcoal-soft">Remember me</span>
+            </label>
+            <button onClick={() => setMode("forgot")} className="tap text-xs font-semibold text-primary">
+              Forgot password?
+            </button>
+          </div>
         )}
 
         {mode === "signUp" && (
