@@ -336,15 +336,6 @@ interface AppState {
   setRecoverySensitive: (on: boolean) => void;
   recoverySensitiveIntroSeen: boolean;
   setRecoverySensitiveIntroSeen: (seen: boolean) => void;
-  // QA 12.0: "Make data-sharing granular... Do not make 'recovery-
-  // sensitive mode' equivalent to 'share everything with my
-  // nutritionist.'" — the per-category "what your professional can see"
-  // toggles (Food Diary/Workout/Weight/Progress/Health Metrics) used to be
-  // local component state that reset on every reload and had no effect on
-  // anything; this persists them per professional, independent of
-  // recoverySensitive.
-  clientAccessGrants: Record<string, Record<string, boolean>>;
-  setClientAccessGrant: (professionalId: string, item: string, granted: boolean) => void;
   // "Let users pause reminders, summaries, and notifications with one
   // tap." No real notification engine exists in this prototype to hook
   // into, so this is the user-facing flag that would gate it.
@@ -810,15 +801,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     false
   );
   const [remindersPaused, setRemindersPaused] = usePersistentState<boolean>("remindersPaused", false);
-  const [clientAccessGrants, setClientAccessGrants] = usePersistentState<Record<string, Record<string, boolean>>>(
-    "clientAccessGrants",
-    {}
-  );
-  const setClientAccessGrant: AppState["setClientAccessGrant"] = (professionalId, item, granted) =>
-    setClientAccessGrants((prev) => ({
-      ...prev,
-      [professionalId]: { ...prev[professionalId], [item]: granted },
-    }));
 
   const [customMeals, setCustomMeals] = usePersistentState<CustomMeal[]>("customMeals", []);
 
@@ -1050,7 +1032,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
     setRosterLoading(true);
-    const result = await fetchRoster();
+    const result = await fetchRoster(authUserId);
     setRosterLoading(false);
     if (result.status === "error") {
       setRosterError(result.message);
@@ -1893,8 +1875,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setRecoverySensitiveIntroSeen,
       remindersPaused,
       setRemindersPaused,
-      clientAccessGrants,
-      setClientAccessGrant,
       customMeals,
       addCustomMeal,
       updateCustomMeal,
@@ -2055,7 +2035,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recoverySensitive,
       recoverySensitiveIntroSeen,
       remindersPaused,
-      clientAccessGrants,
       referralRedeemed,
       referralDiscountPct,
       referralNextMonthDiscountPct,

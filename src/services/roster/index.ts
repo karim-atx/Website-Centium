@@ -101,11 +101,16 @@ export type RosterResult =
  *
  * Three reads rather than one: the view carries no profile data, so display
  * info comes from `public_profile_summary` and consent from
- * `client_access_grants`. RLS scopes all three to the caller
- * (`security_invoker = true` on the view), so there is no professional_id
- * filter to pass or to get wrong.
+ * `client_access_grants`.
+ *
+ * RLS already scopes all three to the caller (`security_invoker = true` on
+ * the view), but the grants read ALSO filters on professional_id explicitly.
+ * That read hits the table directly rather than the view, and this is consent
+ * data: if that policy is ever loosened, an unfiltered query would quietly
+ * show a professional what a shared client granted to someone else. The
+ * filter costs nothing and removes the single point of failure.
  */
-export async function fetchRoster(): Promise<RosterResult> {
+export async function fetchRoster(professionalId: string): Promise<RosterResult> {
   try {
     const { data: rels, error } = await supabase
       .from("active_professional_clients")
@@ -124,6 +129,7 @@ export async function fetchRoster(): Promise<RosterResult> {
       supabase
         .from("client_access_grants")
         .select("client_id, category, granted")
+        .eq("professional_id", professionalId)
         .in("client_id", clientIds),
     ]);
 

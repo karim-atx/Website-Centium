@@ -10,11 +10,6 @@ import {
   Star,
   MessageCircle,
   Lock,
-  UtensilsCrossed,
-  Dumbbell,
-  Scale,
-  TrendingUp,
-  HeartPulse,
   Send,
   Pencil,
   CreditCard,
@@ -85,14 +80,6 @@ const specialtyLabel: Record<string, string> = {
 
 type ChatMessage = { from: "me" | "them"; text?: string; attachment?: string; voiceNoteSec?: number };
 
-const accessItems = [
-  { icon: UtensilsCrossed, label: "Food diary" },
-  { icon: Dumbbell, label: "Workout activity" },
-  { icon: Scale, label: "Weight" },
-  { icon: TrendingUp, label: "Progress" },
-  { icon: HeartPulse, label: "Health metrics" },
-];
-
 export default function ProfessionalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -104,30 +91,10 @@ export default function ProfessionalDetail() {
     disconnectProfessional,
     user,
     submitClientRequest,
-    clientAccessGrants,
-    setClientAccessGrant,
   } = useApp();
   const [removeConfirm, setRemoveConfirm] = useState(false);
   const professional = mockProfessionals.find((p) => p.id === id);
   const isConnected = !!professional && (professional.connected || connectedProfessionalIds.includes(professional.id));
-  // QA 12.0: "Make data-sharing granular" — this used to be plain local
-  // state that reset on every reload and never affected anything the
-  // professional could see; it's now persisted per professional.
-  const defaultAccess: Record<string, boolean> = {
-    "Food diary": true,
-    "Workout activity": true,
-    Weight: true,
-    Progress: true,
-    "Health metrics": false,
-  };
-  const access = professional ? { ...defaultAccess, ...clientAccessGrants[professional.id] } : defaultAccess;
-  const setAccess = (updater: (a: Record<string, boolean>) => Record<string, boolean>) => {
-    if (!professional) return;
-    const next = updater(access);
-    Object.entries(next).forEach(([item, granted]) => {
-      if (access[item] !== granted) setClientAccessGrant(professional.id, item, granted);
-    });
-  };
   const [messageOpen, setMessageOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
   const [messages, setMessages] = useState<ChatMessage[]>([
@@ -295,30 +262,15 @@ export default function ProfessionalDetail() {
 
       {isConnected ? (
         <>
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-            What {professional.name.split(" ")[0]} can see
-          </p>
-          <Card padded={false} className="mb-3 divide-y divide-charcoal/[0.04] animate-fade-slide-up">
-            {accessItems.map((item) => (
-              <div key={item.label} className="flex items-center justify-between px-4 py-3.5">
-                <div className="flex items-center gap-3">
-                  <item.icon size={17} className="text-charcoal-soft" />
-                  <span className="text-sm text-charcoal font-medium">{item.label}</span>
-                </div>
-                <button
-                  onClick={() => setAccess((a) => ({ ...a, [item.label]: !a[item.label] }))}
-                  className={clsx(
-                    "tap w-11 h-6 rounded-full flex items-center px-0.5 transition-colors",
-                    access[item.label] ? "bg-primary justify-end" : "bg-charcoal/10 justify-start"
-                  )}
-                >
-                  <div className="w-5 h-5 rounded-full bg-white shadow-sm" />
-                </button>
-              </div>
-            ))}
-          </Card>
+          {/* The data-sharing toggles that used to live here have moved to
+              the Professionals page (DataSharingSection). They were keyed by
+              this page's mock directory id ("pr1"), which is not a real
+              account and can never hold a grant — so nothing set here was
+              ever written, or ever visible to a professional. Real consent
+              hangs off real relationships. */}
           <p className="flex items-center gap-1.5 text-xs text-charcoal-faint mb-6">
-            <Lock size={12} /> You control what your professional can access.
+            <Lock size={12} /> Manage what your professionals can see under Professionals › Data
+            sharing.
           </p>
 
           <Button fullWidth variant="outline" onClick={() => setMessageOpen(true)}>
