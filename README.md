@@ -411,6 +411,23 @@ professional's browser only. The client cannot see it, and
 `custom_foods_select_scoped_client` — the policy that exists precisely to let
 them — has no row to select.
 
+### The re-consent notice names its categories in hardcoded prose
+
+`DataSharingSection`'s split notice opens with "that one switch also covered
+your lab results and your medical history" — those two categories written out
+by name, not derived from the categories actually awaiting an answer. That is
+correct for the split it was written for (Database follow-up 33, the
+`health_metrics` split) and it is the only split that exists, so nothing is
+wrong today. Only the trailing clause adapts, switching between the two- and
+one-category wordings.
+
+If a future migration ever splits another category, the notice will appear
+above the new categories while still naming lab results and medical history.
+Generalizing it means deriving the whole sentence from the unanswered
+categories' labels — which was deliberately not done up front, because the
+approved copy is specific on purpose and a generic version reads worse for the
+case that actually exists.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
