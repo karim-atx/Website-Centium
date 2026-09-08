@@ -208,6 +208,71 @@ those values before they are committed, what happens when they disagree
 with them, and how that interacts with the health data the profile feeds.
 Design that before touching the table.
 
+### The professional's client roster still reads mock data
+
+Client-code redemption is real: redeeming creates a genuine
+`professional_clients` row, verified against staging. **Nothing in the
+professional dashboard displays those rows.**
+
+`AppContext` still seeds `professionalClients` from
+`src/data/mockProfessionalClients.ts` and persists it to `localStorage`, so
+a professional whose code was just redeemed sees the same three seeded
+demo clients as before, and the person who actually redeemed it appears
+nowhere. The two halves of the feature are wired to different data
+sources.
+
+Wiring it up means querying `active_professional_clients` (a view that
+already excludes disconnected relationships) — or `professional_clients`
+directly — and **joining `profiles` on `client_id` for the display info**.
+That join is required, not optional: the view carries only relationship
+columns (`id`, `professional_id`, `client_id`, `joined_at`, `prefix`,
+`pronouns`, `contact_style`, `reminder_preference`,
+`communication_boundaries`, the two `assigned_*_id`s) and no client name
+or avatar at all.
+
+Two things make this bigger than swapping one array:
+
+- **Ten files read `professionalClients`** — the dashboard, Calendar,
+  Messages, Health Metrics, Meal Plan Builder and Workout Template Builder
+  tabs, `AddClientSheet`, `CreateWorkoutTemplateSheet`, and Subscription
+  (which counts the roster against the tier cap). All of them currently
+  expect a synchronous array; a real query is async and can fail.
+- **The mock `ProfessionalClient` shape carries fields the real tables
+  don't** — `lastWeightKg`, `weightTrend`, `lastCaloriesKcal`,
+  `healthSummary`, `medicalHistory`, `access`. Those are the cached
+  projections of client data flagged in the data inventory, and they
+  should come from the client's own rows gated by `client_access_grant`,
+  not be stored on the relationship.
+
+#### Every code "Add Client" generates is silently un-redeemable
+
+Same root cause, worth stating on its own because it fails quietly.
+
+`generateClientCode` in `AppContext` is still mock: it writes codes to
+`localStorage` under `centium-state:clientCodes`. The redemption side is
+now real, and `preview_client_code` / `redeem_client_code` check the
+**database**. A locally-generated code does not exist there.
+
+So the professional's "Add Client" flow *appears* to work — a code is
+shown, a mock roster row is added locally — but **any real attempt to
+redeem that code fails with "Code not found."** To the client typing it in,
+that reads as a typo rather than a broken feature, which is why this is
+worse than an obviously broken function: nothing surfaces the actual
+cause to either party.
+
+The mock also writes `clientName`, `clientAge`, `clientSex`,
+`clientHeightCm` and `clientWeightKg` onto each code — the prefill columns
+the real `client_codes` table does not have, per the follow-up above.
+
+The fix is wiring `generateClientCode` to the real `create_client_code()`
+RPC. **Do it together with the roster-UI wiring above, not as a separate
+pass** — they are the same feature seen from the two ends, they share the
+same `professional_clients` rows, and fixing either one alone leaves the
+professional half still split across two data sources.
+
+Until both are wired, a genuinely redeemable code has to be created from
+the Supabase SQL editor.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
