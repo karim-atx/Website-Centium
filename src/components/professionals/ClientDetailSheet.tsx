@@ -22,6 +22,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
+import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "./HealthDataPending";
 
 const activityTypeLabel: Record<string, string> = {
@@ -120,7 +121,7 @@ export const ClientDetailSheet: React.FC<{
                 </span>
               )}
             </div>
-            <p className="text-xs text-charcoal-faint">Client since {client.joinedAt}</p>
+            <p className="text-xs text-charcoal-faint">Client since {formatDisplayDate(client.joinedAt)}</p>
           </div>
         </div>
 

@@ -7,6 +7,7 @@ import { ClientDetailSheet } from "../../components/professionals/ClientDetailSh
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { ChevronRight, Plus, Search, HeartPulse, TrendingDown, TrendingUp, Inbox, Check, X, HeartHandshake } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
+import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "../../components/professionals/HealthDataPending";
 import clsx from "clsx";
 
@@ -168,7 +169,7 @@ export default function ProfessionalDashboard() {
                     )}
                   </div>
                   <p className="text-xs text-charcoal-faint truncate">
-                    Client since {c.joinedAt}
+                    Client since {formatDisplayDate(c.joinedAt)}
                     {c.activityLevel ? ` · ${activityLevelLabel[c.activityLevel] ?? c.activityLevel}` : ""}
                     {c.assignedProgramName ? ` · ${c.assignedProgramName}` : ""}
                   </p>
