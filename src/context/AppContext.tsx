@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from "react";
 import type {
   UserProfile,
-  Sex,
   FoodLogEntry,
   WorkoutLogEntry,
   Food,
@@ -27,8 +26,6 @@ import type {
   ImagingRecord,
   Surgery,
   Medication,
-  ClientCode,
-  ProfessionalSubtype,
   WorkoutTemplateFolder,
   BusinessDirectoryEntry,
   ProfessionalClient,
@@ -57,7 +54,6 @@ import { defaultHabits, streaks as seedStreaks, bloodPanel } from "../data/mockH
 import { todaysWorkout, workoutPrograms, exerciseLibrary } from "../data/mockWorkouts";
 import { estimate1RM } from "../services/workout";
 import { ONE_RM_CLASSIFICATIONS } from "../types";
-import { mockProfessionalClients } from "../data/mockProfessionalClients";
 import { suggestNutritionGoal, normalizeMacroSplit } from "../services/nutrition";
 import { businessTiers } from "../data/businessTiers";
 import { translations, type Language } from "../i18n/translations";
@@ -66,6 +62,7 @@ import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, onAuthChange, signOutRemote } from "../services/auth";
 import { ensureProfileRow } from "../services/profile";
 import { getMyReferrerReward } from "../services/redemption";
+import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
 
 const TODAY = "2026-08-20";
 
@@ -511,27 +508,19 @@ interface AppState {
   removeFromCart: (itemId: string) => void;
   clearCart: () => void;
 
-  clientCodes: ClientCode[];
-  generateClientCode: (
-    professionalId: string,
-    professionalName: string,
-    profile?: { clientName?: string; age?: number; sex?: Sex; heightCm?: number; weightKg?: number },
-    professionalSubtype?: ProfessionalSubtype,
-    professionalCertificationUrl?: string,
-    professionalBio?: string,
-    professionalPhone?: string,
-    professionalWebsite?: string,
-    professionalInstagram?: string,
-    professionalFacebook?: string,
-    professionalX?: string
-  ) => string;
+  // Issues a real invite code via create_client_code(). Takes no client
+  // details: `client_codes` stores provenance only, and the client's profile
+  // comes from their own account when they redeem. Creates no relationship —
+  // the client appears on the roster only after redeeming.
+  generateClientCode: () => Promise<{ ok: boolean; code?: string; message?: string }>;
 
+  // Real, from active_professional_clients + public_profile_summary +
+  // client_access_grants. Refetched via refreshRoster().
   professionalClients: ProfessionalClient[];
-  addProfessionalClient: (
-    name: string,
-    profile?: { age?: number; sex?: Sex; heightCm?: number; weightKg?: number; prefix?: string }
-  ) => string;
-  removeProfessionalClient: (id: string) => void;
+  rosterLoading: boolean;
+  rosterError: string | null;
+  refreshRoster: () => Promise<void>;
+  removeProfessionalClient: (id: string) => Promise<{ ok: boolean; message?: string }>;
 
   // QA 12.0: "Between the search and plus logo should be an inbox logo
   // that shows new clients that hire the professional upon successful
@@ -892,13 +881,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     []
   );
 
-  // V6 (QA 6.0): client signup now strictly requires a real, matching code —
-  // seed one demo code so a fresh install is still testable without first
-  // creating a professional account to generate one.
-  const [clientCodes, setClientCodes] = usePersistentState<ClientCode[]>("clientCodes", [
-    { code: "SOHA-DEMO", professionalId: "demo", professionalName: "Maya Haddad", createdAt: TODAY, redeemed: false },
-  ]);
-
   const [connectedProfessionalIds, setConnectedProfessionalIds] = usePersistentState<string[]>(
     "connectedProfessionalIds",
     []
@@ -1055,10 +1037,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "businessOfferings",
     []
   );
-  const [professionalClients, setProfessionalClients] = usePersistentState<ProfessionalClient[]>(
-    "professionalClients",
-    mockProfessionalClients
-  );
+  // Real roster. Deliberately NOT persisted: it is server state, and caching
+  // it in localStorage is how the old mock ended up showing demo clients to
+  // a professional who had none.
+  const [professionalClients, setProfessionalClients] = useState<ProfessionalClient[]>([]);
+  const [rosterLoading, setRosterLoading] = useState(false);
+  const [rosterError, setRosterError] = useState<string | null>(null);
+
+  const refreshRoster = React.useCallback(async () => {
+    if (!authUserId || user.accountType !== "professional") {
+      setProfessionalClients([]);
+      return;
+    }
+    setRosterLoading(true);
+    const result = await fetchRoster();
+    setRosterLoading(false);
+    if (result.status === "error") {
+      setRosterError(result.message);
+      return;
+    }
+    setRosterError(null);
+    setProfessionalClients(
+      result.clients.map((c) => ({
+        id: c.id,
+        clientId: c.clientId,
+        name: c.name,
+        avatarUrl: c.avatarUrl,
+        prefix: c.prefix ?? undefined,
+        joinedAt: c.joinedAt,
+        pronouns: c.pronouns ?? undefined,
+        contactStyle: c.contactStyle ?? undefined,
+        reminderPreference: c.reminderPreference ?? undefined,
+        communicationBoundaries: c.communicationBoundaries ?? undefined,
+        access: c.access,
+        // Health/training fields intentionally left undefined — see the
+        // ProfessionalClient type comment.
+      }))
+    );
+  }, [authUserId, user.accountType]);
+
+  useEffect(() => {
+    void refreshRoster();
+  }, [refreshRoster]);
   const [pendingClientRequests, setPendingClientRequests] = usePersistentState<
     { id: string; name: string; requestedAt: string }[]
   >("pendingClientRequests", []);
@@ -1661,103 +1681,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       )
     );
 
-  const generateClientCode: AppState["generateClientCode"] = (
-    professionalId,
-    professionalName,
-    profile,
-    professionalSubtype,
-    professionalCertificationUrl,
-    professionalBio,
-    professionalPhone,
-    professionalWebsite,
-    professionalInstagram,
-    professionalFacebook,
-    professionalX
-  ) => {
-    let code = "";
-    do {
-      code = `SOHA-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-    } while (clientCodes.some((c) => c.code === code));
-    setClientCodes((prev) => [
-      ...prev,
-      {
-        code,
-        professionalId,
-        professionalName,
-        professionalSubtype,
-        professionalCertificationUrl,
-        professionalBio,
-        professionalPhone,
-        professionalWebsite,
-        professionalInstagram,
-        professionalFacebook,
-        professionalX,
-        createdAt: TODAY,
-        redeemed: false,
-        clientName: profile?.clientName,
-        clientAge: profile?.age,
-        clientSex: profile?.sex,
-        clientHeightCm: profile?.heightCm,
-        clientWeightKg: profile?.weightKg,
-      },
-    ]);
-    return code;
+
+  const generateClientCode: AppState["generateClientCode"] = async () => {
+    const result = await createClientCode();
+    if (result.status === "error") return { ok: false, message: result.message };
+    return { ok: true, code: result.code };
   };
 
-  const addProfessionalClient: AppState["addProfessionalClient"] = (name, profile) => {
-    // V7 (QA 7.0): use the professional's real name/subtype so the client's
-    // Professionals tab can show who they're actually linked to.
-    const code = generateClientCode(
-      "me",
-      user.firstName || "Your professional",
-      { ...profile, clientName: name },
-      user.professionalSubtype,
-      user.certificationUrl,
-      user.professionalBio,
-      user.professionalPhone,
-      user.professionalWebsite,
-      user.professionalInstagram,
-      user.professionalFacebook,
-      user.professionalX
-    );
-    const id = `pc${Date.now()}${Math.random().toString(16).slice(2)}`;
-    setProfessionalClients((prev) => [
-      ...prev,
-      {
-        id,
-        name,
-        prefix: profile?.prefix,
-        code,
-        joinedAt: TODAY,
-        activityLevel: "moderate",
-        activityType: "both",
-        age: profile?.age,
-        sex: profile?.sex,
-        heightCm: profile?.heightCm,
-        weightKg: profile?.weightKg,
-        access: {
-          foodDiary: true,
-          workoutActivity: true,
-          weight: true,
-          progress: true,
-          healthMetrics: false,
-        },
-        lastWeightKg: 0,
-        weightTrend: 0,
-        lastCaloriesKcal: 0,
-      },
-    ]);
-    return code;
+  const removeProfessionalClient: AppState["removeProfessionalClient"] = async (id) => {
+    const result = await disconnectClient(id);
+    if (result.status === "error") return { ok: false, message: result.message };
+    // The view filters on disconnected_at, so a refetch drops the row.
+    await refreshRoster();
+    return { ok: true };
   };
-  const removeProfessionalClient = (id: string) =>
-    setProfessionalClients((prev) => prev.filter((c) => c.id !== id));
 
   const submitClientRequest: AppState["submitClientRequest"] = (name) =>
     setPendingClientRequests((prev) => [...prev, { id: `req${Date.now()}`, name, requestedAt: TODAY }]);
   const acceptClientRequest: AppState["acceptClientRequest"] = (id) => {
-    const req = pendingClientRequests.find((r) => r.id === id);
-    if (!req) return;
-    addProfessionalClient(req.name);
+    // The hire inbox is still a local simulation, and accepting can no longer
+    // conjure a relationship: a real one only exists once the client redeems
+    // an invite code. Accepting therefore just clears the request.
     setPendingClientRequests((prev) => prev.filter((r) => r.id !== id));
   };
   const rejectClientRequest = (id: string) =>
@@ -2028,10 +1972,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateCartQuantity,
       removeFromCart,
       clearCart,
-      clientCodes,
       generateClientCode,
+      rosterLoading,
+      rosterError,
+      refreshRoster,
       professionalClients,
-      addProfessionalClient,
       removeProfessionalClient,
       pendingClientRequests,
       submitClientRequest,
@@ -2135,7 +2080,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       premiumPlan,
       gymPurchases,
       cart,
-      clientCodes,
       professionalClients,
       pendingClientRequests,
       calendarEvents,

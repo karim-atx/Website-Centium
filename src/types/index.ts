@@ -173,17 +173,30 @@ export interface ProfessionalClient {
   name: string;
   // V8 (QA 8.0): "Add prefix above first name like Mr, Ms, Dr, etc.."
   prefix?: string;
-  code: string;
+  // The client's own profile id, distinct from `id` (the relationship).
+  clientId?: string;
+  avatarUrl?: string | null;
+  // No longer set for real rows: a relationship carries no invite code once
+  // redeemed, and `client_codes` is provenance data the roster doesn't read.
+  code?: string;
   joinedAt: string;
-  activityLevel: ActivityLevel;
-  activityType: "cardio" | "strength" | "both";
-  // V7 (QA 7.0): captured when the professional adds the client.
+  // --- Everything below is CLIENT HEALTH/TRAINING DATA and is undefined on
+  // real rows. It lives on the client's own tables behind
+  // `client_access_grants`, which is still decorative, and those tables are
+  // still mock. Anything reading these must handle undefined and say so in
+  // the UI rather than rendering a confident zero. See the README follow-up
+  // "The professional dashboard's client-health tiles are not wired".
+  activityLevel?: ActivityLevel;
+  activityType?: "cardio" | "strength" | "both";
   age?: number;
   sex?: Sex;
   heightCm?: number;
   weightKg?: number;
-  // V7 (QA 7.0): shown in the client dashboard's performance summary.
   workoutLoggedToday?: boolean;
+  lastWeightKg?: number;
+  weightTrend?: number;
+  lastCaloriesKcal?: number;
+  // Real, from client_access_grants.
   access: {
     foodDiary: boolean;
     workoutActivity: boolean;
@@ -191,9 +204,6 @@ export interface ProfessionalClient {
     progress: boolean;
     healthMetrics: boolean;
   };
-  lastWeightKg: number;
-  weightTrend: number;
-  lastCaloriesKcal: number;
   assignedProgramName?: string;
   assignedFoodTemplateName?: string;
   // V4 (QA 4.0): a small health-metrics summary the professional can see once

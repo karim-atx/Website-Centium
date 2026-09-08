@@ -7,6 +7,7 @@ import { ClientDetailSheet } from "../../components/professionals/ClientDetailSh
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { ChevronRight, Plus, Search, HeartPulse, TrendingDown, TrendingUp, Inbox, Check, X, HeartHandshake } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
+import { HealthDataPending } from "../../components/professionals/HealthDataPending";
 import clsx from "clsx";
 
 const activityLevelLabel: Record<string, string> = {
@@ -48,8 +49,15 @@ export default function ProfessionalDashboard() {
   const notTrained = professionalClients.filter((c) => c.workoutLoggedToday === false).length;
   const noData = total - trained - notTrained;
   const missingClient = professionalClients.find((c) => c.workoutLoggedToday === false);
+  // `access` is real (client_access_grants); the rest of the hero's figures
+  // are not, so the hero is suppressed entirely rather than rendered against
+  // absent data — see HealthDataPending.
   const sharedCount = professionalClients.filter((c) => Object.values(c.access).some(Boolean)).length;
   const programCount = professionalClients.filter((c) => c.assignedProgramName).length;
+  // The hero is entirely built on training data. With none available every
+  // figure collapses to zero, and "0 of 5 trained" reads as a measurement
+  // rather than an absence — so the hero is replaced outright instead.
+  const hasTrainingData = professionalClients.some((c) => c.workoutLoggedToday !== undefined);
 
   return (
     <div>
@@ -97,7 +105,11 @@ export default function ProfessionalDashboard() {
         />
       )}
 
-      {total > 0 && (
+      {total > 0 && !hasTrainingData && (
+        <HealthDataPending label="Today's training summary" className="mb-6 animate-fade-slide-up" />
+      )}
+
+      {total > 0 && hasTrainingData && (
         // Literal #7D6BB5 (not the theme-reactive primary-dark token, which
         // in dark mode holds a light "readable text on dark ground" value
         // rather than a fill colour) — a fixed hero accent, same approach
@@ -156,7 +168,8 @@ export default function ProfessionalDashboard() {
                     )}
                   </div>
                   <p className="text-xs text-charcoal-faint truncate">
-                    Client since {c.joinedAt} · {activityLevelLabel[c.activityLevel] ?? c.activityLevel}
+                    Client since {c.joinedAt}
+                    {c.activityLevel ? ` · ${activityLevelLabel[c.activityLevel] ?? c.activityLevel}` : ""}
                     {c.assignedProgramName ? ` · ${c.assignedProgramName}` : ""}
                   </p>
                 </div>
@@ -167,7 +180,15 @@ export default function ProfessionalDashboard() {
                   Red/green compliance colors, punitive missed-log
                   indicators" for a recovery-sensitive client — replaced
                   with a neutral meal-logged/not-yet line, no numbers. */}
-              {c.recoverySensitive ? (
+              {c.lastWeightKg === undefined ? (
+                // Real roster row: no health data available yet. Show the
+                // consent state, which IS real, and nothing else.
+                <div className="pt-2.5 border-t border-charcoal/[0.06] text-[11px] text-charcoal-faint">
+                  {Object.values(c.access).some(Boolean)
+                    ? "Sharing data with you"
+                    : "Not sharing any data yet"}
+                </div>
+              ) : c.recoverySensitive ? (
                 <div className="pt-2.5 border-t border-charcoal/[0.06] text-[11px] text-charcoal-faint">
                   {c.access.foodDiary ? "Meals logged today" : "Not sharing food diary"}
                 </div>
@@ -176,14 +197,14 @@ export default function ProfessionalDashboard() {
                   <div className="flex items-center gap-3.5 text-[11px] text-charcoal-faint">
                     <span className="flex items-center gap-1">
                       {c.lastWeightKg}kg
-                      {c.weightTrend !== 0 && (
-                        <span className={clsx("flex items-center", c.weightTrend <= 0 ? "text-primary-dark" : "text-teal-dark")}>
-                          {c.weightTrend <= 0 ? <TrendingDown size={11} /> : <TrendingUp size={11} />}
-                          {Math.abs(c.weightTrend)}kg
+                      {(c.weightTrend ?? 0) !== 0 && (
+                        <span className={clsx("flex items-center", (c.weightTrend ?? 0) <= 0 ? "text-primary-dark" : "text-teal-dark")}>
+                          {(c.weightTrend ?? 0) <= 0 ? <TrendingDown size={11} /> : <TrendingUp size={11} />}
+                          {Math.abs(c.weightTrend ?? 0)}kg
                         </span>
                       )}
                     </span>
-                    <span>{c.lastCaloriesKcal.toLocaleString()} kcal yesterday</span>
+                    <span>{(c.lastCaloriesKcal ?? 0).toLocaleString()} kcal yesterday</span>
                   </div>
                   <span
                     className={clsx(

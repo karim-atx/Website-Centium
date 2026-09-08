@@ -3,55 +3,48 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
-import type { Sex } from "../../types";
 import { professionalTiers } from "../../data/professionalTiers";
-import { Check, Copy, Venus, Mars, VenusAndMars } from "lucide-react";
-import clsx from "clsx";
+import { Check, Copy, UserPlus } from "lucide-react";
 
-const sexOptions: { value: Sex; label: string; icon: typeof Venus }[] = [
-  { value: "female", label: "Female", icon: Venus },
-  { value: "male", label: "Male", icon: Mars },
-  { value: "other", label: "Other", icon: VenusAndMars },
-];
-
-// V8 (QA 8.0): "Add prefix above first name like Mr, Ms, Dr, etc.."
-const prefixOptions = ["", "Mr", "Ms", "Mrs", "Dr", "Mx"];
-
+// Invite-a-client. This used to collect the client's name, prefix, age, sex,
+// height and weight, and stash them on a locally-generated code.
+//
+// None of that survives contact with the real schema: `client_codes` stores
+// provenance only (code, professional, expiry, redemption) and has no
+// client-profile columns, and the client's own details come from their
+// `profiles` row when they redeem. Rather than keep collecting five fields
+// that would be silently discarded, the sheet now does the one thing it can
+// honestly do — issue a real code.
+//
+// It also no longer pretends a client exists. Generating a code creates no
+// relationship; the client appears on the roster only once they redeem.
 export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { addProfessionalClient, professionalClients, professionalTier } = useApp();
+  const { generateClientCode, professionalClients, professionalTier } = useApp();
   const navigate = useNavigate();
   const tier = professionalTiers.find((t) => t.id === professionalTier) ?? professionalTiers[0];
   const atCap = tier.maxClients !== null && professionalClients.length >= tier.maxClients;
-  const [name, setName] = useState("");
-  const [prefix, setPrefix] = useState("");
-  const [age, setAge] = useState("");
-  const [sex, setSex] = useState<Sex | null>(null);
-  const [heightCm, setHeightCm] = useState("");
-  const [weightKg, setWeightKg] = useState("");
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState(false);
 
   const reset = () => {
-    setName("");
-    setPrefix("");
-    setAge("");
-    setSex(null);
-    setHeightCm("");
-    setWeightKg("");
     setGeneratedCode(null);
+    setError(null);
+    setBusy(false);
     setCopied(false);
   };
 
-  const create = () => {
-    if (!name.trim()) return;
-    const code = addProfessionalClient(name.trim(), {
-      prefix: prefix || undefined,
-      age: age ? Number(age) : undefined,
-      sex: sex ?? undefined,
-      heightCm: heightCm ? Number(heightCm) : undefined,
-      weightKg: weightKg ? Number(weightKg) : undefined,
-    });
-    setGeneratedCode(code);
+  const create = async () => {
+    setError(null);
+    setBusy(true);
+    const result = await generateClientCode();
+    setBusy(false);
+    if (!result.ok || !result.code) {
+      setError(result.message ?? "Could not generate a code. Try again.");
+      return;
+    }
+    setGeneratedCode(result.code);
   };
 
   const copyCode = () => {
@@ -88,105 +81,39 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
           </Button>
         </div>
       ) : !generatedCode ? (
-        <div className="space-y-5 animate-fade-slide-up">
-          <div className="grid grid-cols-[88px_1fr] gap-3">
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Prefix</span>
-              <select
-                value={prefix}
-                onChange={(e) => setPrefix(e.target.value)}
-                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-3 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
-              >
-                {prefixOptions.map((p) => (
-                  <option key={p} value={p}>
-                    {p || "—"}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Client name</span>
-              <input
-                autoFocus
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Full name"
-                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </label>
+        <div className="animate-fade-slide-up py-2">
+          <div className="w-14 h-14 rounded-2xl bg-primary-pale flex items-center justify-center mx-auto mb-4">
+            <UserPlus size={24} className="text-primary-dark" />
           </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Age</span>
-              <input
-                value={age}
-                onChange={(e) => setAge(e.target.value.replace(/\D/g, ""))}
-                inputMode="numeric"
-                placeholder="29"
-                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </label>
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Height (cm)</span>
-              <input
-                value={heightCm}
-                onChange={(e) => setHeightCm(e.target.value.replace(/\D/g, ""))}
-                inputMode="numeric"
-                placeholder="178"
-                className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-              />
-            </label>
-          </div>
-
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Weight (kg)</span>
-            <input
-              value={weightKg}
-              onChange={(e) => setWeightKg(e.target.value.replace(/[^\d.]/g, ""))}
-              inputMode="decimal"
-              placeholder="70"
-              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
-
-          <div>
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Sex</span>
-            <div className="grid grid-cols-3 gap-2">
-              {sexOptions.map((opt) => (
-                <button
-                  key={opt.value}
-                  onClick={() => setSex(opt.value)}
-                  aria-label={opt.label}
-                  title={opt.label}
-                  className={clsx(
-                    "tap flex items-center justify-center rounded-2xl py-3 border transition-colors",
-                    sex === opt.value
-                      ? "bg-primary text-white border-primary"
-                      : "bg-cream-soft text-charcoal-soft border-transparent"
-                  )}
-                >
-                  <opt.icon size={20} />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <Button fullWidth size="lg" onClick={create} disabled={!name.trim()}>
-            Generate unique client code
+          <p className="text-sm text-charcoal-soft text-center mb-6">
+            Generate a code and share it with your client. They enter it when signing up as a Client
+            of Professional, and their own profile details come across with them.
+          </p>
+          {error && (
+            <p className="text-xs font-semibold text-status-high text-center mb-3">{error}</p>
+          )}
+          <Button fullWidth size="lg" onClick={create} disabled={busy}>
+            {busy ? "Generating…" : "Generate unique client code"}
           </Button>
         </div>
       ) : (
         <div className="text-center animate-fade-slide-up">
           <p className="text-sm text-charcoal-soft mb-4">
-            Share this code with <strong>{name}</strong> — they'll enter it when they sign up as a
-            Client of Professional to link accounts.
+            Code generated. Share it with your client — they'll appear on your roster once they join.
           </p>
           <div className="bg-primary-pale rounded-2xl py-5 mb-4">
             <p className="text-2xl font-bold tracking-widest text-primary-dark">{generatedCode}</p>
           </div>
           <Button fullWidth onClick={copyCode} variant="outline">
-            {copied ? <><Check size={15} /> Copied</> : <><Copy size={15} /> Copy code</>}
+            {copied ? (
+              <>
+                <Check size={15} /> Copied
+              </>
+            ) : (
+              <>
+                <Copy size={15} /> Copy code
+              </>
+            )}
           </Button>
           <Button
             fullWidth

@@ -22,6 +22,7 @@ import {
   MessageCircle,
 } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
+import { HealthDataPending } from "./HealthDataPending";
 
 const activityTypeLabel: Record<string, string> = {
   cardio: "Cardio",
@@ -62,18 +63,28 @@ export const ClientDetailSheet: React.FC<{
   const [assigningProgram, setAssigningProgram] = useState(false);
   const [assigningTemplate, setAssigningTemplate] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  const [removeError, setRemoveError] = useState<string | null>(null);
   const [clinicalOpen, setClinicalOpen] = useState(false);
   const [editingPrefs, setEditingPrefs] = useState(false);
 
   if (!client) return null;
 
-  const handleRemove = () => {
+  // Now calls disconnect_client_relationship(). The two-tap confirm is
+  // unchanged; only what the second tap does has changed — it ends a real
+  // relationship server-side rather than splicing a local array.
+  const handleRemove = async () => {
     if (!confirmRemove) {
       setConfirmRemove(true);
       setTimeout(() => setConfirmRemove(false), 3000);
       return;
     }
-    removeProfessionalClient(client.id);
+    setRemoveError(null);
+    const result = await removeProfessionalClient(client.id);
+    if (!result.ok) {
+      setRemoveError(result.message ?? "Could not remove that client. Try again.");
+      setConfirmRemove(false);
+      return;
+    }
     onClose();
   };
 
@@ -135,31 +146,37 @@ export const ClientDetailSheet: React.FC<{
             feedback generated from calories, food quantity, or body
             metrics." Calories and weight move to the restricted Clinical
             data panel further down instead of showing here by default. */}
+        {client.lastWeightKg === undefined && (
+          <HealthDataPending label="Client activity & nutrition" />
+        )}
+
         <div className={client.recoverySensitive ? "grid grid-cols-1 gap-2.5" : "grid grid-cols-2 gap-2.5"}>
-          {!client.recoverySensitive && (
+          {!client.recoverySensitive && client.lastCaloriesKcal !== undefined && (
             <div className="bg-cream-soft rounded-2xl p-3.5">
               <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
                 Calories consumed
               </p>
               <p className="text-lg font-bold text-charcoal">
-                {client.access.foodDiary ? `${client.lastCaloriesKcal.toLocaleString()} kcal` : "—"}
+                {client.access.foodDiary ? `${(client.lastCaloriesKcal ?? 0).toLocaleString()} kcal` : "—"}
               </p>
             </div>
           )}
-          <div className="bg-cream-soft rounded-2xl p-3.5">
-            <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
-              Workout logged
-            </p>
-            <p
-              className={`text-lg font-bold flex items-center gap-1 ${
-                client.workoutLoggedToday ? "text-primary-dark" : "text-charcoal-faint"
-              }`}
-            >
-              {client.workoutLoggedToday ? <Check size={16} /> : <XIcon size={16} />}
-              {client.workoutLoggedToday ? "Today" : "Not yet"}
-            </p>
-          </div>
-          {!client.recoverySensitive && (
+          {client.workoutLoggedToday !== undefined && (
+            <div className="bg-cream-soft rounded-2xl p-3.5">
+              <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
+                Workout logged
+              </p>
+              <p
+                className={`text-lg font-bold flex items-center gap-1 ${
+                  client.workoutLoggedToday ? "text-primary-dark" : "text-charcoal-faint"
+                }`}
+              >
+                {client.workoutLoggedToday ? <Check size={16} /> : <XIcon size={16} />}
+                {client.workoutLoggedToday ? "Today" : "Not yet"}
+              </p>
+            </div>
+          )}
+          {!client.recoverySensitive && client.lastWeightKg !== undefined && (
             <div className="bg-cream-soft rounded-2xl p-3.5">
               <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
                 Current weight
@@ -176,7 +193,7 @@ export const ClientDetailSheet: React.FC<{
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
               Food Diary
             </p>
-            <p className="text-xl font-bold text-charcoal">{client.lastCaloriesKcal.toLocaleString()} kcal</p>
+            <p className="text-xl font-bold text-charcoal">{(client.lastCaloriesKcal ?? 0).toLocaleString()} kcal</p>
             <p className="text-xs text-charcoal-faint">Last logged day</p>
           </div>
         )}
@@ -191,18 +208,26 @@ export const ClientDetailSheet: React.FC<{
         )}
 
         {isDietitian ? (
-          <div className="bg-cream-soft rounded-2xl p-4">
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-              Activity Level
-            </p>
-            <div className="flex items-center gap-2">
-              <Activity size={16} className="text-primary" />
-              <span className="text-sm font-semibold text-charcoal capitalize">
-                {client.activityLevel.replace("_", " ")}
-              </span>
-              <span className="text-xs text-charcoal-faint">· {activityTypeLabel[client.activityType]}</span>
+          // Activity level comes from the client's own profile and is not
+          // read here yet — hidden rather than rendered blank.
+          client.activityLevel && (
+            <div className="bg-cream-soft rounded-2xl p-4">
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+                Activity Level
+              </p>
+              <div className="flex items-center gap-2">
+                <Activity size={16} className="text-primary" />
+                <span className="text-sm font-semibold text-charcoal capitalize">
+                  {client.activityLevel.replace("_", " ")}
+                </span>
+                {client.activityType && (
+                  <span className="text-xs text-charcoal-faint">
+                    · {activityTypeLabel[client.activityType]}
+                  </span>
+                )}
+              </div>
             </div>
-          </div>
+          )
         ) : (
           client.access.workoutActivity && (
             <div className="bg-cream-soft rounded-2xl p-4">
@@ -304,10 +329,10 @@ export const ClientDetailSheet: React.FC<{
             </div>
             <span
               className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
-                client.weightTrend <= 0 ? "text-primary-dark bg-primary-pale" : "text-teal-dark bg-teal-pale"
+                (client.weightTrend ?? 0) <= 0 ? "text-primary-dark bg-primary-pale" : "text-teal-dark bg-teal-pale"
               }`}
             >
-              {client.weightTrend <= 0 ? "↓" : "↑"} {Math.abs(client.weightTrend)} kg
+              {(client.weightTrend ?? 0) <= 0 ? "↓" : "↑"} {Math.abs(client.weightTrend ?? 0)} kg
             </span>
           </div>
         )}
@@ -441,7 +466,7 @@ export const ClientDetailSheet: React.FC<{
                     <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
                       Calories consumed
                     </p>
-                    <p className="text-sm font-bold text-charcoal">{client.lastCaloriesKcal.toLocaleString()} kcal</p>
+                    <p className="text-sm font-bold text-charcoal">{(client.lastCaloriesKcal ?? 0).toLocaleString()} kcal</p>
                   </div>
                 )}
                 {client.access.weight && (
@@ -533,6 +558,9 @@ export const ClientDetailSheet: React.FC<{
           </div>
         </div>
 
+        {removeError && (
+          <p className="text-xs font-semibold text-status-high text-center">{removeError}</p>
+        )}
         <Button
           variant="outline"
           fullWidth

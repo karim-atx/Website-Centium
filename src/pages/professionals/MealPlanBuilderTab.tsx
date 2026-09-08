@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
+import { HealthDataPending } from "../../components/professionals/HealthDataPending";
 import { Chip } from "../../components/ui/Chip";
 import { Button } from "../../components/ui/Button";
 import { MacroSplitEditor } from "../../components/food/MacroSplitEditor";
@@ -30,8 +31,8 @@ const isoDaysAgo = (n: number) => {
 // same "rescale a mocked shape to the real endpoint" approach GoalsPanel
 // uses for the client's own chart.
 const weightHistoryFor = (c: ProfessionalClient) => {
-  const end = c.lastWeightKg;
-  const start = end - c.weightTrend;
+  const end = c.lastWeightKg ?? 0;
+  const start = end - (c.weightTrend ?? 0);
   return Array.from({ length: 7 }, (_, i) => ({
     date: isoDaysAgo(6 - i),
     value: +(start + ((end - start) * i) / 6).toFixed(1),
@@ -84,11 +85,11 @@ export default function MealPlanBuilderTab() {
   const clientTdee =
     client && hasDemographics
       ? calculateTDEEFromParts(
-          client.weightKg ?? client.lastWeightKg,
+          client.weightKg ?? client.lastWeightKg ?? 0,
           client.heightCm!,
           client.age!,
           client.sex!,
-          client.activityLevel
+          client.activityLevel ?? "moderate"
         )
       : null;
 
@@ -117,12 +118,12 @@ export default function MealPlanBuilderTab() {
     }
     const kg = Number(desiredWeightDraft);
     if (!kg) return;
-    if (nutritionGoal.weightGoal === "lose" && kg >= client.lastWeightKg) {
-      setWeightGoalError(`Desired weight must be lower than ${client.name}'s current weight (${client.lastWeightKg}kg) to lose weight.`);
+    if (nutritionGoal.weightGoal === "lose" && kg >= (client.lastWeightKg ?? 0)) {
+      setWeightGoalError(`Desired weight must be lower than ${client.name}'s current weight (${client.lastWeightKg ?? 0}kg) to lose weight.`);
       return;
     }
-    if (nutritionGoal.weightGoal === "gain" && kg <= client.lastWeightKg) {
-      setWeightGoalError(`Desired weight must be higher than ${client.name}'s current weight (${client.lastWeightKg}kg) to gain weight.`);
+    if (nutritionGoal.weightGoal === "gain" && kg <= (client.lastWeightKg ?? 0)) {
+      setWeightGoalError(`Desired weight must be higher than ${client.name}'s current weight (${client.lastWeightKg ?? 0}kg) to gain weight.`);
       return;
     }
     setWeightGoalError(null);
@@ -250,7 +251,11 @@ export default function MealPlanBuilderTab() {
             )}
           </Card>
 
-          {client && (
+          {client && client.lastWeightKg === undefined && (
+            <HealthDataPending label={`${client.name}'s weight trend`} className="mb-5" />
+          )}
+
+          {client && client.lastWeightKg !== undefined && (
             <Card className="mb-5">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
@@ -260,7 +265,7 @@ export default function MealPlanBuilderTab() {
               <div className="mb-1">
                 <p className="text-2xl font-bold text-charcoal">{client.lastWeightKg} kg</p>
                 <p className="text-xs text-charcoal-faint">
-                  {client.weightTrend <= 0 ? "↓" : "↑"} {Math.abs(client.weightTrend)} kg this week
+                  {(client.weightTrend ?? 0) <= 0 ? "↓" : "↑"} {Math.abs(client.weightTrend ?? 0)} kg this week
                 </p>
               </div>
               <div className="flex justify-center">
