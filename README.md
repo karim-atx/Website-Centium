@@ -273,6 +273,65 @@ professional half still split across two data sources.
 Until both are wired, a genuinely redeemable code has to be created from
 the Supabase SQL editor.
 
+### The professional dashboard's client-health tiles are not wired
+
+The roster is real — `active_professional_clients` joined to
+`public_profile_summary`, with consent from `client_access_grants`. The
+**client health and training figures are not**, and are deliberately hidden
+rather than shown empty or left on mock data.
+
+Affected: `workoutLoggedToday`, `lastWeightKg`, `weightTrend`,
+`lastCaloriesKcal`, `healthSummary`, `medicalHistory`, `activityLevel` and
+`activityType`. They are optional on `ProfessionalClient` and `undefined`
+on every real row. Where a panel depends on them it renders
+`HealthDataPending` ("coming soon") instead — the dashboard's "N of M
+trained" hero, the client sheet's activity/nutrition summary, and the meal
+planner's weight-trend card.
+
+This was a deliberate call. Zeros would have been worse than blanks: "0 of
+5 trained" reads as a measurement, not an absence, and a professional could
+act on it. Leaving the old mock numbers beside a real roster would be worse
+still — a professional would read demo figures as their own client's.
+
+Two things gate fixing it, in order:
+
+1. **`client_access_grants` is not enforced.** The table exists and the
+   roster reads it, but nothing stops a professional querying a client's
+   data regardless. Until RLS consults it, surfacing client health data to
+   a professional would ship a privacy hole, not a feature.
+2. **The health tables are still mock.** Weight, nutrition and workout data
+   all live in `localStorage`, so there is nothing to query yet.
+
+Related: professional-side mutations (`updateProfessionalClientAccess`,
+`updateProfessionalClient`, `assignProgramToClient`,
+`assignFoodTemplateToClient`, and `clientHealthNotes`) still write to
+in-memory state only. They update the UI and are lost on the next roster
+refetch. The hire inbox (`pendingClientRequests`) is also still a local
+simulation; accepting a request now only clears it, since a real
+relationship can only come from a redeemed code.
+
+### `CalendarTab` matches invitees by name, not id
+
+`CalendarTab` resolves event invitees by comparing against `client.name`
+(`invitees?.includes(c.name)`). With a real roster that is fragile: names
+come from `profiles.first_name`, are not unique, and can change — after
+which an event silently stops matching its invitee.
+
+Left exactly as-is in the roster pass. Fixing it means migrating
+`CalendarEvent.invitees` from names to client ids, which touches calendar
+state already persisted in `localStorage` and so needs a migration path of
+its own rather than being folded into a data-source swap.
+
+### The hub's sized PNG icons still lack the rounded-square backdrop
+
+`hub/favicon.svg` was updated to the white `rx=22` rounded-square treatment
+matching Centium's, but the sized PNG fallback set —
+`hub/icons/favicon-16/32/48/192.png`, `apple-touch-icon.png` and
+`site.webmanifest` — still shows the bare mark with no backdrop. Browser
+tabs are fine (they prefer the SVG); this affects iOS home-screen icons
+and PWA installs. Fixing it needs real image-editing tooling to regenerate
+the set, not a code change.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
