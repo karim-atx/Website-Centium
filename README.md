@@ -393,6 +393,32 @@ professional's browser only. The client cannot see it, and
 `custom_foods_select_scoped_client` — the policy that exists precisely to let
 them — has no row to select.
 
+### The hire-request inbox is a local mock, so requesters have no names
+
+A professional reviewing incoming hire requests sees whatever the mock put
+there, because the inbox never touches the database. `pendingClientRequests`
+is `usePersistentState` in `AppContext`, and `acceptClientRequest` /
+`rejectClientRequest` mutate that local array — they do not call the
+`accept_client_request` / `reject_client_request` RPCs, which exist and work.
+Nothing in the repo queries `pending_client_requests` at all.
+
+This was deliberately **not** folded into the `related_profile_summary` swap.
+That change moved two existing lookups onto the right view; this is a surface
+that has to be built rather than repointed:
+
+- Fetch real `pending_client_requests` rows for the signed-in professional.
+- Resolve requester names through `related_profile_summary`, which already
+  covers pending relationships and not only active ones.
+- Wire accept and reject to `accept_client_request` /
+  `reject_client_request`, which promote a request to a roster row in one
+  transaction rather than leaving the client to redeem a code.
+- Delete the local simulation once the real path works, rather than leaving
+  both — a mock kept alongside a real implementation is how a professional
+  ends up accepting a request that never existed.
+
+Until then a real hire request is invisible to the professional it was sent
+to, and the only route onto a roster is a redeemed client code.
+
 ### The re-consent notice names its categories in hardcoded prose
 
 `DataSharingSection`'s split notice opens with "that one switch also covered
