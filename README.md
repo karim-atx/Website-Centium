@@ -327,6 +327,47 @@ tabs are fine (they prefer the SVG); this affects iOS home-screen icons
 and PWA installs. Fixing it needs real image-editing tooling to regenerate
 the set, not a code change.
 
+### The diary is written to Supabase but never read back from it
+
+`getDiaryEntries()` (`src/services/food/index.ts`) is built and tested,
+including the 90-day rolling window that was chosen so the auto-streaks and
+copy-yesterday keep working. **Nothing calls it.** The diary renders from
+`foodLog` in `AppContext`, which is `localStorage`.
+
+The result is that entries only *look* durable. Logging, editing and deleting
+all reach `food_log_entries` correctly, and a reload preserves the diary — but
+that is `localStorage` doing the work, not the database. **Open the same
+account on a different browser or device and the history is empty**, even
+though every row is sitting in Supabase. Clearing site data has the same
+effect, and there is nothing to distinguish "you have not logged anything"
+from "your entries are on another machine".
+
+The fix is to call `getDiaryEntries()` once the profile hydrates and again on
+a date change outside the loaded window, and let the result replace local
+state rather than merge into it — the rows carry their real database ids, so a
+replace is idempotent and a merge risks showing an entry twice.
+
+### AI Voice, custom meals and copy-yesterday still write only locally
+
+`AddFoodSheet` was wired to the real `logFoodEntry()` this session, but three
+logging paths were not: the AI Voice logger, `logCustomMeal()`, and
+copy-yesterday (`copyYesterdayMeal` / `copyYesterdayFood`). All three still
+call `addFoodEntry` in `AppContext`, which appends to local state and writes
+nowhere. Anything logged through them exists on one browser only, and is
+invisible to the professional read path that `food_diary` consent grants.
+
+They need the same treatment `AddFoodSheet` got: write remote-first through
+the service, and insert the returned row — with its real database id — via
+`addFoodEntryRecord` rather than minting a local one.
+
+`isRemoteEntryId()` (`src/services/food/index.ts`) exists only to tolerate the
+resulting mix. The diary currently holds both real rows with uuids and
+local-only entries with ids like `f1757352…`, and sending one of the latter to
+Postgres returns `invalid input syntax for type uuid`, so delete and edit
+branch on it. **It is a transitional shim and should be deleted once every
+logging path writes remotely** — at that point every entry has a real id and
+the branch is dead code.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
