@@ -11,14 +11,19 @@ which half you are looking at:
 
 - **Real and remote.** Authentication (email/password with required email
   confirmation, plus Google OAuth) creates genuine Supabase sessions, and
-  onboarding writes a row to the `profiles` table — created the moment a
-  session exists, then filled in when onboarding completes.
-- **Still local mock state.** Everything else. Nutrition and food logging,
+  `profiles` is both written and read — the row is created the moment a
+  session exists, filled in when onboarding completes, and read back on
+  every account change, so `profiles.onboarded` (not `localStorage`) decides
+  whether someone is sent through onboarding. Also real: client-code
+  redemption and generation, referral redemption, the professional's client
+  roster, disconnecting a client, and the `client_access_grants` consent
+  system that gates what a professional may see.
+- **Still local mock state.** The data itself. Nutrition and food logging,
   workouts and routines, health metrics and biomarkers, habits, streaks and
-  journal, the marketplace, messaging, forum, and the professional and
-  business dashboards all read and write mock data held in React state and
-  persisted to `localStorage`. The client-code and referral redemption
-  flows are also still mock, despite the real RPCs existing in the database.
+  journal, plus the marketplace, messaging, forum and the business
+  dashboard, all read and write mock data held in React state and persisted
+  to `localStorage`. So a client can genuinely grant a professional access
+  to their food diary — and there is not yet a real food diary behind it.
 
 There is also no real AI and no payment processing, by design. See
 [SECURITY.md](SECURITY.md) for what that means for this being a public repo.
@@ -208,71 +213,6 @@ those values before they are committed, what happens when they disagree
 with them, and how that interacts with the health data the profile feeds.
 Design that before touching the table.
 
-### The professional's client roster still reads mock data
-
-Client-code redemption is real: redeeming creates a genuine
-`professional_clients` row, verified against staging. **Nothing in the
-professional dashboard displays those rows.**
-
-`AppContext` still seeds `professionalClients` from
-`src/data/mockProfessionalClients.ts` and persists it to `localStorage`, so
-a professional whose code was just redeemed sees the same three seeded
-demo clients as before, and the person who actually redeemed it appears
-nowhere. The two halves of the feature are wired to different data
-sources.
-
-Wiring it up means querying `active_professional_clients` (a view that
-already excludes disconnected relationships) — or `professional_clients`
-directly — and **joining `profiles` on `client_id` for the display info**.
-That join is required, not optional: the view carries only relationship
-columns (`id`, `professional_id`, `client_id`, `joined_at`, `prefix`,
-`pronouns`, `contact_style`, `reminder_preference`,
-`communication_boundaries`, the two `assigned_*_id`s) and no client name
-or avatar at all.
-
-Two things make this bigger than swapping one array:
-
-- **Ten files read `professionalClients`** — the dashboard, Calendar,
-  Messages, Health Metrics, Meal Plan Builder and Workout Template Builder
-  tabs, `AddClientSheet`, `CreateWorkoutTemplateSheet`, and Subscription
-  (which counts the roster against the tier cap). All of them currently
-  expect a synchronous array; a real query is async and can fail.
-- **The mock `ProfessionalClient` shape carries fields the real tables
-  don't** — `lastWeightKg`, `weightTrend`, `lastCaloriesKcal`,
-  `healthSummary`, `medicalHistory`, `access`. Those are the cached
-  projections of client data flagged in the data inventory, and they
-  should come from the client's own rows gated by `client_access_grant`,
-  not be stored on the relationship.
-
-#### Every code "Add Client" generates is silently un-redeemable
-
-Same root cause, worth stating on its own because it fails quietly.
-
-`generateClientCode` in `AppContext` is still mock: it writes codes to
-`localStorage` under `centium-state:clientCodes`. The redemption side is
-now real, and `preview_client_code` / `redeem_client_code` check the
-**database**. A locally-generated code does not exist there.
-
-So the professional's "Add Client" flow *appears* to work — a code is
-shown, a mock roster row is added locally — but **any real attempt to
-redeem that code fails with "Code not found."** To the client typing it in,
-that reads as a typo rather than a broken feature, which is why this is
-worse than an obviously broken function: nothing surfaces the actual
-cause to either party.
-
-The mock also writes `clientName`, `clientAge`, `clientSex`,
-`clientHeightCm` and `clientWeightKg` onto each code — the prefill columns
-the real `client_codes` table does not have, per the follow-up above.
-
-The fix is wiring `generateClientCode` to the real `create_client_code()`
-RPC. **Do it together with the roster-UI wiring above, not as a separate
-pass** — they are the same feature seen from the two ends, they share the
-same `professional_clients` rows, and fixing either one alone leaves the
-professional half still split across two data sources.
-
-Until both are wired, a genuinely redeemable code has to be created from
-the Supabase SQL editor.
-
 ### The professional dashboard's client-health tiles are not wired
 
 The roster is real — `active_professional_clients` joined to
@@ -293,14 +233,18 @@ This was a deliberate call. Zeros would have been worse than blanks: "0 of
 act on it. Leaving the old mock numbers beside a real roster would be worse
 still — a professional would read demo figures as their own client's.
 
-Two things gate fixing it, in order:
+**Consent is no longer the blocker.** `client_access_grants` is real and
+enforced: the client grants and revokes per category from either the
+Professionals tab or the Profile tab, the professional reads those rows,
+and RLS was verified against staging — a professional attempting to write
+another party's grant affects zero rows (see the RLS failure-signature
+note below for why that shows up as silence rather than an error).
 
-1. **`client_access_grants` is not enforced.** The table exists and the
-   roster reads it, but nothing stops a professional querying a client's
-   data regardless. Until RLS consults it, surfacing client health data to
-   a professional would ship a privacy hole, not a feature.
-2. **The health tables are still mock.** Weight, nutrition and workout data
-   all live in `localStorage`, so there is nothing to query yet.
+**One thing gates fixing this now: the health tables are still mock.**
+Weight, nutrition, workout and biomarker data all live in `localStorage`,
+so a granted toggle has nothing real to unlock. Wiring one of those tables
+end-to-end — food logs being the obvious first — is what turns the first
+of these tiles on, and `has_client_access()` is already there to gate it.
 
 Related: professional-side mutations (`updateProfessionalClientAccess`,
 `updateProfessionalClient`, `assignProgramToClient`,
@@ -309,6 +253,42 @@ in-memory state only. They update the UI and are lost on the next roster
 refetch. The hire inbox (`pendingClientRequests`) is also still a local
 simulation; accepting a request now only clears it, since a real
 relationship can only come from a redeemed code.
+
+### RLS rejects UPDATEs silently — `if (error)` is not a security check
+
+Not a gap in the code, but a property of the schema that has already cost
+debugging time twice, and that anyone writing or testing against these
+tables needs to know. The two ways a write gets refused look completely
+different:
+
+| Refusal | What you get back |
+|---|---|
+| **Row-level policy** (updating a row you don't own) | **No error.** `error` is null, and `data` is an empty array — zero rows affected |
+| **Column privilege** (writing a column your role isn't granted) | **`42501`** `permission denied for table ...` |
+
+The silent case is standard Postgres, not a misconfiguration: rows that
+fail a policy's `USING` clause are simply invisible to the statement, so
+the UPDATE matches nothing and succeeds against zero rows. Only `INSERT`
+raises on a policy violation, because a failing `WITH CHECK` has an actual
+row to reject.
+
+**Consequences, both of which have bitten:**
+
+- **Testing.** A check written as `if (error) { /* blocked */ }` concludes
+  an unauthorized UPDATE was *allowed* when RLS actually stopped it. Assert
+  on the affected-row count instead — `.select()` the update and check the
+  returned array is empty. This is how the professional-write-to-consent
+  test has to be written.
+- **Debugging.** The inverse also misleads. `client_access_grants` grants
+  column-scoped `UPDATE (granted)` — deliberately, so a client can flip
+  their own switch and nothing else — and a `.upsert()` there failed with
+  `42501` because PostgREST's upsert sets *every* payload column on the
+  conflict path. Postgres' own hint suggested `GRANT UPDATE ON ... TO
+  authenticated`, which would have "fixed" it by letting clients rewrite
+  `client_id`, `professional_id`, `category` and the trigger-managed audit
+  timestamps. The right fix was update-then-insert in the app
+  (`src/services/consent/index.ts`). **Treat a 42501 hint as a description
+  of the check that failed, not as advice.**
 
 ### `CalendarTab` matches invitees by name, not id
 
