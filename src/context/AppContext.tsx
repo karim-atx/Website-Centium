@@ -55,7 +55,6 @@ import { ONE_RM_CLASSIFICATIONS } from "../types";
 import {
   suggestNutritionGoal,
   normalizeMacroSplit,
-  snapshotFromFood,
   rescaleEntry,
 } from "../services/nutrition";
 import { businessTiers } from "../data/businessTiers";
@@ -64,7 +63,13 @@ import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, onAuthChange, signOutRemote } from "../services/auth";
 import { onPasswordRecovery } from "../services/auth";
-import { getDiaryEntries, isRemoteEntryId } from "../services/food";
+import {
+  copyDiaryEntry,
+  getDiaryEntries,
+  isRemoteEntryId,
+  logFoodEntry,
+  manualFood,
+} from "../services/food";
 import { ensureProfileRow, fetchProfile } from "../services/profile";
 import {
   getRecoveryPendingUserId,
@@ -375,7 +380,7 @@ interface AppState {
     mealType?: MealType
   ) => void;
   removeClientCustomMeal: (clientId: string, id: string) => void;
-  logCustomMeal: (mealId: string, meal: MealType, date: string) => void;
+  logCustomMeal: (mealId: string, meal: MealType, date: string) => Promise<void>;
 
   journalFolders: JournalFolder[];
   journalEntries: JournalEntry[];
@@ -409,11 +414,11 @@ interface AppState {
   goToNextDate: () => void;
   goToToday: () => void;
   goToDate: (date: string) => void;
-  copyYesterdayFood: () => void;
+  copyYesterdayFood: () => Promise<void>;
   // QA 11.0: "The Swipe to copy yesterdays food option should be located
   // under each type of meal" — copies just one meal type and returns the
   // new entries' ids so the caller can offer an undo.
-  copyYesterdayMeal: (meal: MealType) => string[];
+  copyYesterdayMeal: (meal: MealType) => Promise<string[]>;
 
   today: string;
 
@@ -1688,23 +1693,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }));
   const removeClientCustomMeal: AppState["removeClientCustomMeal"] = (clientId, id) =>
     setClientCustomMeals((prev) => ({ ...prev, [clientId]: (prev[clientId] ?? []).filter((m) => m.id !== id) }));
-  const logCustomMeal: AppState["logCustomMeal"] = (mealId, meal, date) => {
+  // Written with NULL provenance. A custom meal's items may reference foods
+  // that only exist in localStorage and were never written to custom_foods, so
+  // there is often no id to point at -- see the README follow-up on custom-food
+  // writes. The snapshot is what matters, and the schema permits both
+  // provenance columns being null precisely for this case.
+  const logCustomMeal: AppState["logCustomMeal"] = async (mealId, meal, date) => {
     const custom = customMeals.find((m) => m.id === mealId);
-    if (!custom) return;
-    setFoodLog((prev) => [
-      ...prev,
-      ...custom.items.map((item, i) => ({
-        id: `f${Date.now()}${i}${Math.random().toString(16).slice(2)}`,
-        foodId: item.food.id,
-        customFoodId: null,
-        ...snapshotFromFood(item.food, item.quantity, item.unit ?? "serving"),
+    if (!custom || !authUserId) return;
+
+    for (const item of custom.items) {
+      const result = await logFoodEntry({
+        userId: authUserId,
+        food: manualFood(item.food),
         quantity: item.quantity,
-        unit: item.unit ?? ("serving" as const),
+        unit: item.unit ?? "serving",
         meal,
         date,
-        loggedVia: "quick" as const,
-      })),
-    ]);
+        loggedVia: "quick",
+      });
+      if (result.ok && result.entry) addFoodEntryRecord(result.entry);
+      else console.error("[diary] custom meal item failed:", result.message);
+    }
   };
 
   const addJournalEntry = (folderId: string, title: string, text: string) => {
@@ -1761,31 +1771,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const goToToday = () => setSelectedDate(TODAY);
   const goToDate = (date: string) => setSelectedDate(date);
 
-  const copyYesterdayFood = () => {
+  // Copies rather than re-logs. An existing entry holds TOTALS, so putting it
+  // back through logFoodEntry would multiply by quantity a second time; see
+  // copyDiaryEntry for the full reasoning.
+  const copyYesterdayFood = async () => {
+    if (!authUserId) return;
     const yesterday = shiftDate(selectedDate, -1);
     const yesterdaysEntries = foodLog.filter((e) => e.date === yesterday);
-    if (yesterdaysEntries.length === 0) return;
-    setFoodLog((prev) => [
-      ...prev,
-      ...yesterdaysEntries.map((e) => ({
-        ...e,
-        id: `f${Date.now()}${Math.random().toString(16).slice(2)}`,
-        date: selectedDate,
-      })),
-    ]);
+
+    for (const entry of yesterdaysEntries) {
+      const result = await copyDiaryEntry(authUserId, entry, selectedDate);
+      if (result.ok && result.entry) addFoodEntryRecord(result.entry);
+      else console.error("[diary] copy failed:", result.message);
+    }
   };
 
-  const copyYesterdayMeal = (meal: MealType): string[] => {
+  // Returns the ids actually written, which is what the 15-second Undo pill
+  // removes. Only successful copies are returned, so Undo can never try to
+  // delete a row that was never created.
+  const copyYesterdayMeal = async (meal: MealType): Promise<string[]> => {
+    if (!authUserId) return [];
     const yesterday = shiftDate(selectedDate, -1);
     const yesterdaysEntries = foodLog.filter((e) => e.date === yesterday && e.meal === meal);
-    if (yesterdaysEntries.length === 0) return [];
-    const copied = yesterdaysEntries.map((e) => ({
-      ...e,
-      id: `f${Date.now()}${Math.random().toString(16).slice(2)}${Math.random().toString(16).slice(2)}`,
-      date: selectedDate,
-    }));
-    setFoodLog((prev) => [...prev, ...copied]);
-    return copied.map((e) => e.id);
+
+    const written: string[] = [];
+    for (const entry of yesterdaysEntries) {
+      const result = await copyDiaryEntry(authUserId, entry, selectedDate);
+      if (result.ok && result.entry) {
+        addFoodEntryRecord(result.entry);
+        written.push(result.entry.id);
+      } else {
+        console.error("[diary] copy failed:", result.message);
+      }
+    }
+    return written;
   };
 
   const setColorTheme = (t: ColorTheme) => setColorThemeState(t);

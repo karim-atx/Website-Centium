@@ -4,7 +4,11 @@ import { Button } from "../ui/Button";
 import { Mic, Sparkles, Pencil, MicOff, UtensilsCrossed } from "lucide-react";
 import { parseFoodInput, type ParsedFoodResult } from "../../services/ai/parseFoodInput";
 import { useApp } from "../../context/AppContext";
-import { snapshotFromFood } from "../../services/nutrition";
+import {
+  findCatalogFoodByName,
+  logFoodEntry,
+  manualFood,
+} from "../../services/food";
 import { foodCategoryIcon } from "../../utils/icons";
 
 type Stage = "idle" | "requesting" | "denied" | "recording" | "processing" | "result";
@@ -15,7 +19,9 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 }) => {
   const [stage, setStage] = useState<Stage>("idle");
   const [result, setResult] = useState<ParsedFoodResult | null>(null);
-  const { addFoodEntry } = useApp();
+  const { addFoodEntryRecord, authUserId, selectedDate } = useApp();
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
   const [added, setAdded] = useState(false);
 
   const reset = () => {
@@ -59,20 +65,49 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     }
   }, [stage]);
 
-  const handleAddAll = () => {
-    if (!result) return;
-    result.items.forEach((item) => {
+  /**
+   * Writes each parsed item to food_log_entries.
+   *
+   * The parser returns prototype foods whose ids ("f7", "f12") are not
+   * database ids, so each one is resolved to a real catalog row by name
+   * first — those names were seeded, so most match, and an entry that points
+   * at a real food is worth more than one pointing at nothing. Anything with
+   * no match is written as a manual entry with null provenance rather than
+   * being dropped or failing the insert.
+   */
+  const handleAddAll = async () => {
+    if (!result || !authUserId || saving) return;
+    setSaving(true);
+    setError(null);
+
+    let failed = 0;
+    for (const item of result.items) {
       const quantity = item.food.name === "Toum" ? item.quantity : 1;
-      addFoodEntry({
-        foodId: item.food.id,
-        customFoodId: null,
-        ...snapshotFromFood(item.food, quantity, "serving"),
+      const resolved = (await findCatalogFoodByName(item.food.name)) ?? manualFood(item.food);
+
+      const written = await logFoodEntry({
+        userId: authUserId,
+        food: resolved,
         quantity,
         unit: "serving",
         meal: "lunch",
+        date: selectedDate,
         loggedVia: "ai",
       });
-    });
+
+      if (written.ok && written.entry) addFoodEntryRecord(written.entry);
+      else failed += 1;
+    }
+
+    setSaving(false);
+    if (failed > 0) {
+      setError(
+        failed === result.items.length
+          ? "Couldn't save those items. Please try again."
+          : `Saved, but ${failed} item${failed === 1 ? "" : "s"} couldn't be added.`
+      );
+      if (failed === result.items.length) return;
+    }
     setAdded(true);
     setTimeout(handleClose, 900);
   };
@@ -199,12 +234,16 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               </div>
             </div>
 
+            {error && (
+              <p className="text-xs font-semibold text-status-high text-center mb-3">{error}</p>
+            )}
+
             <div className="flex gap-2.5">
               <Button variant="outline" size="md" className="!px-4" onClick={reset}>
                 <Pencil size={14} /> Edit
               </Button>
-              <Button fullWidth size="md" onClick={handleAddAll} disabled={added}>
-                {added ? "Added ✓" : "Add to Diary"}
+              <Button fullWidth size="md" onClick={handleAddAll} disabled={added || saving}>
+                {added ? "Added ✓" : saving ? "Saving…" : "Add to Diary"}
               </Button>
             </div>
             <p className="text-[11px] text-charcoal-faint mt-4 text-center">

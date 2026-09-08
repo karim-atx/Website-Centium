@@ -88,8 +88,10 @@ export default function Food() {
       return next;
     });
 
-  const handleCopyYesterdayMeal = (meal: MealType) => {
-    const ids = copyYesterdayMeal(meal);
+  const handleCopyYesterdayMeal = async (meal: MealType) => {
+    // Each copy is now a real insert, so this awaits the writes and only
+    // offers Undo for rows that actually landed.
+    const ids = await copyYesterdayMeal(meal);
     if (ids.length === 0) return;
     if (undoTimerRef.current) window.clearTimeout(undoTimerRef.current);
     setUndoState({ meal, ids });
@@ -145,7 +147,7 @@ export default function Food() {
     const dy = t.clientY - mealTouchStart.current.y;
     mealTouchStart.current = null;
     if (dx > SWIPE_THRESHOLD && Math.abs(dy) < 40) {
-      handleCopyYesterdayMeal(meal);
+      void handleCopyYesterdayMeal(meal);
     }
   };
   const onMealTap = (meal: MealType) => {
@@ -153,7 +155,7 @@ export default function Food() {
     const last = lastTapRef.current;
     if (last && last.meal === meal && now - last.at < 350) {
       lastTapRef.current = null;
-      handleCopyYesterdayMeal(meal);
+      void handleCopyYesterdayMeal(meal);
     } else {
       lastTapRef.current = { meal, at: now };
     }

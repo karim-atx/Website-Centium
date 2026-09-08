@@ -14,7 +14,22 @@ import { servingMultiplier, rescaleEntry } from "../nutrition";
 // Re-reading nutrition from foods/custom_foods to render a logged entry is a
 // bug, not an optimisation.
 
-export type FoodSource = "catalog" | "custom";
+/**
+ * Where a loggable food came from, which decides its provenance columns.
+ *
+ * "manual" means no provenance at all — food_id and custom_food_id both null.
+ * The schema permits exactly this (`num_nonnulls(food_id, custom_food_id) <= 1`,
+ * and the migration calls both-null "a fully manual entry the user typed in"),
+ * and it is why the snapshot columns are not nullable.
+ *
+ * It exists because two logging paths cannot supply a real id: the AI parser
+ * returns prototype foods, and a custom meal's items may reference foods that
+ * only live in localStorage and were never written to custom_foods. Passing
+ * their ids through as provenance produced
+ * `invalid input syntax for type uuid: "f7"` — a hard insert failure rather
+ * than a degraded row.
+ */
+export type FoodSource = "catalog" | "custom" | "manual";
 
 /** A food the user can log: a public catalog row, or one of their own. */
 export interface FoodSearchResult {
@@ -500,6 +515,118 @@ export async function getDiaryEntries(
   });
 
   return { ok: true, entries };
+}
+
+/**
+ * Looks up one catalog food by exact name, case-insensitively.
+ *
+ * Used to give the AI parser real provenance. Its items are prototype foods
+ * with ids like "f7", but those names were seeded into the catalog, so most
+ * resolve to a genuine row — and an entry pointing at one is worth more than
+ * a manual entry pointing at nothing.
+ *
+ * `ilike` with no wildcards is an exact, case-insensitive match; the name is
+ * still escaped so a food containing % or _ cannot act as a pattern.
+ */
+export async function findCatalogFoodByName(name: string): Promise<FoodSearchResult | null> {
+  const term = name.trim();
+  if (!term) return null;
+
+  const { data, error } = await supabase
+    .from("foods")
+    .select(CATALOG_COLUMNS)
+    .ilike("name", escapeLike(term))
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[food] name lookup failed:", error.message);
+    return null;
+  }
+  return data ? fromCatalog(data as CatalogRow) : null;
+}
+
+/**
+ * Wraps a food the catalog does not have as a manual, provenance-free entry.
+ *
+ * The id is carried for React keys and local adapters only — it is never
+ * written, because it is not a database id.
+ */
+export function manualFood(food: {
+  id: string;
+  name: string;
+  nameAr?: string | null;
+  category: Enums<"food_category">;
+  serving: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  isLebanese?: boolean;
+}): FoodSearchResult {
+  return {
+    id: food.id,
+    source: "manual",
+    name: food.name,
+    nameAr: food.nameAr ?? null,
+    category: food.category,
+    servingLabel: food.serving,
+    calories: food.calories,
+    protein: food.protein,
+    carbs: food.carbs,
+    fat: food.fat,
+    isLebanese: !!food.isLebanese,
+    isVerified: false,
+    barcode: null,
+    overridesFoodId: null,
+  };
+}
+
+/**
+ * Duplicates an existing diary entry onto another date.
+ *
+ * Deliberately NOT logFoodEntry per item. That multiplies per-serving values
+ * by quantity, and an existing entry already holds TOTALS — putting one
+ * through it would multiply a second time. Passing the totals as if they were
+ * per-serving with quantity 1 would give the right macros but write the wrong
+ * quantity and unit, so "3 tbsp" would come back as "1 serving" and the edit
+ * sheet's rescale would then work from a false base.
+ *
+ * So this copies verbatim: same snapshot, same quantity and unit, same
+ * provenance. Only the date changes, and logged_via records how the row came
+ * to exist — it was copied, not searched for.
+ */
+export async function copyDiaryEntry(
+  userId: string,
+  entry: FoodLogEntry,
+  date: string
+): Promise<{ ok: boolean; message?: string; entry?: FoodLogEntry }> {
+  const { data, error } = await supabase
+    .from("food_log_entries")
+    .insert({
+      user_id: userId,
+      food_id: entry.foodId,
+      custom_food_id: entry.customFoodId,
+      name: entry.name,
+      calories: entry.calories,
+      protein_g: entry.protein,
+      carbs_g: entry.carbs,
+      fat_g: entry.fat,
+      quantity: entry.quantity,
+      unit: entry.unit,
+      meal: entry.meal,
+      logged_date: date,
+      logged_via: "recent",
+    })
+    .select("id")
+    .single();
+
+  if (error || !data) {
+    console.error("[food] Could not copy entry:", error?.message);
+    return { ok: false, message: error ? describe(error) : "Could not copy that entry." };
+  }
+
+  return { ok: true, entry: { ...entry, id: data.id, date, loggedVia: "recent" } };
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
