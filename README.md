@@ -182,24 +182,6 @@ rather than new UI), or add a column recording whether the value was
 collected or derived, so consumers can tell the difference instead of
 guessing.
 
-### `deleteAccount` does not delete the account
-
-`deleteAccount` (`src/context/AppContext.tsx`) clears every
-`centium-state:*` key from `localStorage` and resets the in-memory user.
-That is all it does. It does **not** delete the `auth.users` entry, the
-`profiles` row, or any other row owned by that user — all of it remains
-intact server-side.
-
-It is presented in Settings as "Delete account". Now that accounts are
-real, a user tapping it is told their data is gone when it is not, which is
-a data-erasure compliance problem (GDPR/CCPA), not merely a UX
-inconsistency.
-
-A real deletion path needs to run server-side — an RPC or edge function
-performing the cascade — because `auth.users` cannot be deleted with an
-anon key. This should be resolved before the app reaches anyone holding a
-real account.
-
 ### Client codes carry no profile prefill, so "skip About You" is gone
 
 The V7 prototype let a client redeeming a valid professional's code skip
