@@ -547,6 +547,56 @@ export async function findCatalogFoodByName(name: string): Promise<FoodSearchRes
 }
 
 /**
+ * Persists a user-authored food to custom_foods.
+ *
+ * owner_id is set explicitly because RLS checks it rather than defaulting it:
+ * custom_foods_insert_own is `with check (auth.uid() = owner_id)`, so a row
+ * claiming a different owner is rejected outright rather than silently
+ * rewritten.
+ *
+ * scoped_to_client_id is deliberately never set here. That column is for a
+ * professional authoring a food FOR a named client, and the meal-plan builder
+ * currently identifies clients by relationship id rather than profile id — see
+ * addClientCustomFood, which stays local until that is threaded through.
+ */
+export async function createCustomFood(
+  userId: string,
+  food: {
+    name: string;
+    nameAr?: string | null;
+    category: Enums<"food_category">;
+    serving: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+  }
+): Promise<{ ok: boolean; message?: string; food?: FoodSearchResult }> {
+  const { data, error } = await supabase
+    .from("custom_foods")
+    .insert({
+      owner_id: userId,
+      name: food.name,
+      name_ar: food.nameAr ?? null,
+      category: food.category,
+      serving_label: food.serving,
+      calories: food.calories,
+      protein_g: food.protein,
+      carbs_g: food.carbs,
+      fat_g: food.fat,
+    })
+    .select(CUSTOM_COLUMNS)
+    .single();
+
+  if (error || !data) {
+    console.error("[food] Could not create custom food:", error?.message);
+    return { ok: false, message: error ? describe(error) : "Could not save that food." };
+  }
+
+  return { ok: true, food: fromCustom(data as CustomRow) };
+}
+
+/**
  * Wraps a food the catalog does not have as a manual, provenance-free entry.
  *
  * The id is carried for React keys and local adapters only — it is never
@@ -643,7 +693,18 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * This goes away once every logging path writes remotely.
  */
 export function isRemoteEntryId(entryId: string): boolean {
-  return UUID_RE.test(entryId);
+  return isUuid(entryId);
+}
+
+/**
+ * Whether an id is a real database id rather than a locally-minted one.
+ *
+ * Used for custom foods as well as diary entries: a food created before
+ * custom-food writes existed still carries a `custom17573…` id and has no row
+ * to point provenance at, so it has to be logged as a manual entry.
+ */
+export function isUuid(value: string): boolean {
+  return UUID_RE.test(value);
 }
 
 /**

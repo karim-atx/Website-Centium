@@ -65,8 +65,10 @@ import { getCurrentSession, onAuthChange, signOutRemote } from "../services/auth
 import { onPasswordRecovery } from "../services/auth";
 import {
   copyDiaryEntry,
+  createCustomFood,
   getDiaryEntries,
   isRemoteEntryId,
+  isUuid,
   logFoodEntry,
   manualFood,
 } from "../services/food";
@@ -428,7 +430,7 @@ interface AppState {
   setColorTheme: (theme: ColorTheme) => void;
 
   customFoods: CustomFood[];
-  addCustomFood: (food: Omit<CustomFood, "id" | "isCustom">) => CustomFood;
+  addCustomFood: (food: Omit<CustomFood, "id" | "isCustom">) => Promise<CustomFood>;
 
   // V7 (QA 7.0): a food a professional creates while building a specific
   // client's meal plan goes only into that client's own food database, not
@@ -1703,9 +1705,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!custom || !authUserId) return;
 
     for (const item of custom.items) {
+      // A food that made it into custom_foods can carry real provenance; one
+      // created before those writes existed still has a local id and has to be
+      // logged as a manual entry.
+      const base = manualFood(item.food);
+      const food = isUuid(item.food.id) ? { ...base, source: "custom" as const } : base;
+
       const result = await logFoodEntry({
         userId: authUserId,
-        food: manualFood(item.food),
+        food,
         quantity: item.quantity,
         unit: item.unit ?? "serving",
         meal,
@@ -1809,12 +1817,37 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const setColorTheme = (t: ColorTheme) => setColorThemeState(t);
 
-  const addCustomFood: AppState["addCustomFood"] = (food) => {
-    const custom: CustomFood = {
+  // Written to custom_foods on create, not on first use. A food defined once
+  // and logged next week is exactly the case worth persisting -- deferring the
+  // write would leave it invisible on every other device until it happened to
+  // be used, which is the same bug in a smaller box. It also makes the sheet's
+  // own promise ("Saved foods appear in search next time") literally true,
+  // since searchFoods already queries this table.
+  //
+  // A failed write does NOT lose what the user typed. The food falls back to a
+  // local-only entry with a minted id, stays usable and loggable immediately,
+  // and simply has no provenance to point at -- the same state every custom
+  // food was in before this existed.
+  const addCustomFood: AppState["addCustomFood"] = async (food) => {
+    const localOnly = (): CustomFood => ({
       ...food,
       id: `custom${Date.now()}${Math.random().toString(16).slice(2)}`,
       isCustom: true,
-    };
+    });
+
+    let custom: CustomFood;
+    if (!authUserId) {
+      custom = localOnly();
+    } else {
+      const result = await createCustomFood(authUserId, food);
+      if (result.ok && result.food) {
+        custom = { ...food, id: result.food.id, isCustom: true };
+      } else {
+        console.error("[food] custom food kept local only:", result.message);
+        custom = localOnly();
+      }
+    }
+
     setCustomFoods((prev) => [...prev, custom]);
     return custom;
   };

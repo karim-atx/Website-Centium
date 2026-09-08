@@ -114,6 +114,7 @@ export const AddFoodSheet: React.FC<{
   // --- logging ------------------------------------------------------------
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [savingCustom, setSavingCustom] = useState(false);
 
   // Search runs against Supabase, so it is debounced: a query per keystroke
   // would be a request per keystroke. An empty box lists the whole catalog,
@@ -227,9 +228,13 @@ export const AddFoodSheet: React.FC<{
     onClose();
   }, [onClose]);
 
-  const saveCustomFood = () => {
-    if (!customDraft.name.trim() || !customDraft.calories) return;
-    const food = addCustomFood({
+  // Awaits the write so the food that lands in the detail view carries its
+  // real custom_foods id, which is what gives the resulting diary entry real
+  // provenance. A failed write still returns a usable local food.
+  const saveCustomFood = async () => {
+    if (!customDraft.name.trim() || !customDraft.calories || savingCustom) return;
+    setSavingCustom(true);
+    const food = await addCustomFood({
       name: customDraft.name.trim(),
       category: customDraft.category,
       serving: customDraft.serving || "1 serving",
@@ -238,6 +243,7 @@ export const AddFoodSheet: React.FC<{
       carbs: Number(customDraft.carbs) || 0,
       fat: Number(customDraft.fat) || 0,
     });
+    setSavingCustom(false);
     setCustomMode(false);
     setSelectedFood({
       id: food.id,
@@ -535,9 +541,9 @@ export const AddFoodSheet: React.FC<{
             fullWidth
             size="lg"
             onClick={saveCustomFood}
-            disabled={!customDraft.name.trim() || !customDraft.calories}
+            disabled={!customDraft.name.trim() || !customDraft.calories || savingCustom}
           >
-            Save custom food
+            {savingCustom ? "Saving…" : "Save custom food"}
           </Button>
           <p className="text-[11px] text-charcoal-faint text-center">
             Saved foods appear in search next time, alongside the food database.

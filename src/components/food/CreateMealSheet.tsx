@@ -87,7 +87,7 @@ export const CreateMealSheet: React.FC<{
     updateItemServing(foodId, { unit: next });
   };
 
-  const saveFood = () => {
+  const saveFood = async () => {
     if (!foodDraft.name.trim() || !foodDraft.calories) return;
     const payload = {
       name: foodDraft.name.trim(),
@@ -98,7 +98,10 @@ export const CreateMealSheet: React.FC<{
       carbs: Number(foodDraft.carbs) || 0,
       fat: Number(foodDraft.fat) || 0,
     };
-    const food = clientId ? addClientCustomFood(clientId, payload) : addCustomFood(payload);
+    // addClientCustomFood stays synchronous and local: the professional path
+    // identifies clients by relationship id rather than profile id, so there is
+    // nothing valid to put in scoped_to_client_id yet.
+    const food = clientId ? addClientCustomFood(clientId, payload) : await addCustomFood(payload);
     addItem(food);
     setCreatingFood(false);
     setFoodDraft({ name: "", serving: "1 serving", calories: "", protein: "", carbs: "", fat: "" });
