@@ -713,22 +713,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // truth for `onboarded`: a genuinely onboarded user signing in on a fresh
   // or reset browser was sent back through onboarding. The server row wins;
   // the cached copy only survives for fields `profiles` has no column for.
-  const [profileReady, setProfileReady] = useState(false);
+  // Which account the local profile has been hydrated for. `undefined` means
+  // "not yet", and is deliberately distinct from `null`, which means "hydrated
+  // for the signed-out state".
+  const [hydratedFor, setHydratedFor] = useState<string | null | undefined>(undefined);
+
+  // DERIVED, not stored. This is what closes the race.
+  //
+  // A stored `profileReady` flag stays stale for one render after the account
+  // changes: signing in flips authUserId immediately, but the effect that
+  // would reset the flag only runs after that render. In that window a route
+  // guard sees "ready" next to the PREVIOUS account's data — or, right after
+  // sign-out reset it, next to the seeded default with onboarded:false — and
+  // acts on it. Comparing against the id we actually hydrated for cannot go
+  // stale, because both sides come from the same render.
+  //
+  // Held in state rather than a ref because completing a hydration has to
+  // re-render; a ref would update silently and readiness would never become
+  // visible to the guards.
+  const profileReady = authReady && hydratedFor === authUserId;
+
   useEffect(() => {
     if (!authReady) return;
     if (!authUserId) {
       // Signed out: nothing to hydrate, and guards shouldn't block.
-      setProfileReady(true);
+      setHydratedFor(null);
       return;
     }
     let cancelled = false;
-    setProfileReady(false);
     void fetchProfile(authUserId).then((result) => {
       if (cancelled) return;
       if (result) setUser((prev) => ({ ...prev, ...result.profile }));
-      // Ready even on failure — a read error must not lock the user out of
-      // the app behind a permanent loading state.
-      setProfileReady(true);
+      // Marked hydrated even on failure — a read error must not lock the user
+      // out of the app behind a permanent loading state.
+      setHydratedFor(authUserId);
     });
     return () => {
       cancelled = true;

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppProvider, useApp } from "./context/AppContext";
 import { Layout } from "./components/navigation/Layout";
@@ -41,6 +41,12 @@ import ClientCalendarTab from "./pages/profile/ClientCalendarTab";
 import ForumTab from "./pages/profile/ForumTab";
 import Settings from "./pages/settings/Settings";
 
+const RouteLoading: React.FC = () => (
+  <div className="min-h-screen flex items-center justify-center bg-cream">
+    <p className="text-sm text-charcoal-faint">Loading…</p>
+  </div>
+);
+
 const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, authReady, profileReady } = useApp();
 
@@ -50,15 +56,39 @@ const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children })
   // onboarding after a sign-out or on a second account in the same browser.
   // Once profileReady is true, `user.onboarded` has been overwritten by
   // profiles.onboarded, so it is the server's answer rather than the cache's.
-  if (!authReady || !profileReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-cream">
-        <p className="text-sm text-charcoal-faint">Loading…</p>
-      </div>
-    );
-  }
+  if (!authReady || !profileReady) return <RouteLoading />;
 
   if (!user.onboarded) return <Navigate to="/app/onboarding" replace />;
+  return <>{children}</>;
+};
+
+/**
+ * The inverse guard, and the one that was missing.
+ *
+ * RequireOnboarded stops an un-onboarded user getting INTO the app. Nothing
+ * stopped an already-onboarded user getting back into onboarding — and the
+ * onboarding route is where a signed-out user lands, so signing in there as
+ * an existing account walked them through the whole flow again. AuthStep only
+ * knows "a session arrived, advance a step"; it never asked whether this
+ * person had already finished.
+ */
+const RedirectIfOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user, authReady, profileReady } = useApp();
+
+  // Decided once, when readiness first settles, then held.
+  //
+  // Onboarding's own finish() sets `onboarded` locally before it navigates,
+  // and re-evaluating on every render would fire this redirect mid-completion
+  // — bouncing the user to /app while finish() was still awaiting its profile
+  // write, and sending professionals to the wrong landing page. The question
+  // this guard answers is "were you already onboarded when you arrived?", so
+  // the answer is taken on arrival.
+  const decided = useRef<boolean | null>(null);
+
+  if (!authReady || !profileReady) return <RouteLoading />;
+  if (decided.current === null) decided.current = user.onboarded;
+
+  if (decided.current) return <Navigate to="/app" replace />;
   return <>{children}</>;
 };
 
@@ -87,7 +117,14 @@ function AppRoutes() {
       </Route>
 
       {/* Customer portal (authenticated app shell) */}
-      <Route path="/app/onboarding" element={<Onboarding />} />
+      <Route
+        path="/app/onboarding"
+        element={
+          <RedirectIfOnboarded>
+            <Onboarding />
+          </RedirectIfOnboarded>
+        }
+      />
       <Route
         element={
           <RequireOnboarded>
