@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { TablesInsert, TablesUpdate } from "../../../lib/supabase/database.types";
+import { ageFromDateOfBirth } from "../../utils/date";
 import type {
   AccountType,
   ActivityLevel,
@@ -45,18 +46,6 @@ export async function ensureProfileRow(userId: string, email: string | null): Pr
     // because there is no user action that would fix it.
     console.error("[profile] Could not ensure profiles row:", error.message);
   }
-}
-
-/** Inverse of approximateDateOfBirth — carries the same imprecision. */
-function ageFromDateOfBirth(dob: string | null): number | undefined {
-  if (!dob) return undefined;
-  const born = new Date(dob);
-  if (Number.isNaN(born.getTime())) return undefined;
-  const now = new Date();
-  let age = now.getUTCFullYear() - born.getUTCFullYear();
-  const monthDiff = now.getUTCMonth() - born.getUTCMonth();
-  if (monthDiff < 0 || (monthDiff === 0 && now.getUTCDate() < born.getUTCDate())) age -= 1;
-  return age >= 0 ? age : undefined;
 }
 
 export interface FetchedProfile {
@@ -122,6 +111,9 @@ export async function fetchProfile(userId: string): Promise<FetchedProfile | nul
           : (data.professional_subtype as ProfessionalSubtype);
     }
     if (data.avatar_url) profile.avatarUrl = data.avatar_url;
+    // The date is the stored truth; age is recomputed from it on every
+    // hydration, so it stays correct as birthdays pass.
+    if (data.date_of_birth) profile.dateOfBirth = data.date_of_birth;
     const age = ageFromDateOfBirth(data.date_of_birth);
     if (age !== undefined) profile.age = age;
 
@@ -135,7 +127,9 @@ export async function fetchProfile(userId: string): Promise<FetchedProfile | nul
 export interface OnboardingProfileData {
   email: string;
   firstName: string;
-  age: number;
+  // A real collected date now, not derived from an age. Written straight to
+  // profiles.date_of_birth. Optional because a user can skip the field.
+  dateOfBirth?: string;
   sex: Sex;
   heightCm: number;
   weightKg: number;
@@ -148,27 +142,31 @@ export interface OnboardingProfileData {
 }
 
 /**
- * Turns the age collected in onboarding into the `date_of_birth` DATE the
- * profiles table stores.
+ * Updates just the date of birth, for the Profile tab's editor.
  *
- * ⚠ THIS IS AN APPROXIMATION, AND IT IS A REAL PRODUCT GAP — not a detail
- * to wave through. Onboarding never asks for a birth date; AboutYouStep
- * collects a whole-number age and nothing else. So the best this can do is
- * pin January 1st of the implied birth year, which is wrong by up to ~364
- * days for every single user, and drifts further out of date every year the
- * row is not touched (a stored age of 29 silently means "29 as of whenever
- * they signed up", not "29 today").
+ * Narrow on purpose. The onboarding writer sets fifteen columns at once,
+ * which is right at the end of a flow that collected all of them — but wrong
+ * for editing one field later, where sending the rest would overwrite server
+ * values with whatever the local cache happened to hold.
  *
- * Anything that needs real precision — age-gating, medical or clinical
- * calculations, cohort analytics, birthday features — must NOT trust this
- * column until onboarding collects an actual date of birth. Doing that is
- * the correct fix; this function exists only so the column is populated
- * with something coherent in the meantime.
+ * Unlike onboarding's best-effort write, this one reports failure: the user
+ * is deliberately changing one value and watching for it to stick, so a
+ * silent no-op would be worse than an error.
  */
-function approximateDateOfBirth(age: number): string | null {
-  if (!Number.isFinite(age) || age <= 0 || age > 130) return null;
-  const birthYear = new Date().getUTCFullYear() - Math.floor(age);
-  return `${birthYear}-01-01`;
+export async function updateDateOfBirth(
+  userId: string,
+  dateOfBirth: string
+): Promise<{ ok: boolean; message?: string }> {
+  const { error } = await supabase
+    .from("profiles")
+    .update({ date_of_birth: dateOfBirth || null })
+    .eq("id", userId);
+
+  if (error) {
+    console.error("[profile] Could not save date of birth:", error.message);
+    return { ok: false, message: error.message };
+  }
+  return { ok: true };
 }
 
 /**
@@ -183,7 +181,7 @@ export async function updateProfileFromOnboarding(
   const patch: TablesUpdate<"profiles"> = {
     email: data.email || null,
     first_name: data.firstName,
-    date_of_birth: approximateDateOfBirth(data.age),
+    date_of_birth: data.dateOfBirth || null,
     sex: data.sex,
     height_cm: data.heightCm,
     weight_kg: data.weightKg,

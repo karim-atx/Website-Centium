@@ -5,6 +5,13 @@ import type { OnboardingDraft } from "./Onboarding";
 import type { Sex } from "../../types";
 import clsx from "clsx";
 import { Camera, FileText, Check, Venus, Mars, VenusAndMars } from "lucide-react";
+import {
+  ageFromDateOfBirth,
+  isoDateYearsAgo,
+  validateDateOfBirth,
+  MIN_AGE,
+  MAX_AGE,
+} from "../../utils/date";
 
 interface Props {
   draft: OnboardingDraft;
@@ -19,12 +26,16 @@ const sexOptions: { value: Sex; label: string; icon: typeof Venus }[] = [
   { value: "other", label: "Other", icon: VenusAndMars },
 ];
 
-// V7 (QA 7.0): reject exaggerated age/height/weight instead of silently
+// V7 (QA 7.0): reject exaggerated height/weight instead of silently
 // accepting them — wide enough to allow any real person, narrow enough to
 // catch fat-fingered or joke values.
-const AGE_RANGE = [10, 100] as const;
 const HEIGHT_RANGE = [100, 250] as const;
 const WEIGHT_RANGE = [25, 300] as const;
+
+// Date of birth replaced a free-typed age. The bounds are on the DATE, so a
+// birthday passing never invalidates a profile the way an age bound would.
+// MIN_AGE/MAX_AGE and the validation rule live in utils/date so the Profile
+// tab's editor enforces exactly the same thing.
 
 export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
   const isProfessional = draft.accountType === "professional";
@@ -42,12 +53,15 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
 
   const handleContinue = () => {
     if (!isProfessional) {
-      const age = Number(draft.age);
       const height = Number(draft.heightCm);
       const weight = Number(draft.weightKg);
-      if (draft.age && (age < AGE_RANGE[0] || age > AGE_RANGE[1])) {
-        setError(`Age should be between ${AGE_RANGE[0]} and ${AGE_RANGE[1]}.`);
-        return;
+
+      if (draft.dateOfBirth) {
+        const dobError = validateDateOfBirth(draft.dateOfBirth);
+        if (dobError) {
+          setError(dobError);
+          return;
+        }
       }
       if (draft.heightCm && (height < HEIGHT_RANGE[0] || height > HEIGHT_RANGE[1])) {
         setError(`Height should be between ${HEIGHT_RANGE[0]} and ${HEIGHT_RANGE[1]}cm.`);
@@ -138,17 +152,31 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
           </div>
         ) : (
           <>
+            {/* A real date, not an age. The native date input is the pattern
+                already used across this app (medical records, calendars,
+                metric detail), so no new dependency. min/max stop the picker
+                offering out-of-range years at all; handleContinue still
+                validates, since the field can also be typed into. */}
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
+                Date of birth
+              </span>
+              <input
+                type="date"
+                value={draft.dateOfBirth}
+                min={isoDateYearsAgo(MAX_AGE)}
+                max={isoDateYearsAgo(MIN_AGE)}
+                onChange={(e) => setDraft((d) => ({ ...d, dateOfBirth: e.target.value }))}
+                className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+              />
+              {draft.dateOfBirth && ageFromDateOfBirth(draft.dateOfBirth) !== undefined && (
+                <p className="text-[11px] text-charcoal-faint mt-1.5">
+                  {ageFromDateOfBirth(draft.dateOfBirth)} years old
+                </p>
+              )}
+            </label>
+
             <div className="grid grid-cols-2 gap-4">
-              <label className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Age</span>
-                <input
-                  value={draft.age}
-                  onChange={(e) => setDraft((d) => ({ ...d, age: e.target.value.replace(/\D/g, "") }))}
-                  placeholder="29"
-                  inputMode="numeric"
-                  className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
-                />
-              </label>
               <label className="block">
                 <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Height (cm)</span>
                 <input
@@ -161,18 +189,19 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
                   className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
                 />
               </label>
+              {/* Weight moves up beside Height, taking the slot Age used to
+                  occupy — date of birth needs the full width for the picker. */}
+              <label className="block">
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Weight (kg)</span>
+                <input
+                  value={draft.weightKg}
+                  onChange={(e) => setDraft((d) => ({ ...d, weightKg: e.target.value.replace(/[^\d.]/g, "") }))}
+                  placeholder="106.4"
+                  inputMode="decimal"
+                  className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+                />
+              </label>
             </div>
-
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Weight (kg)</span>
-              <input
-                value={draft.weightKg}
-                onChange={(e) => setDraft((d) => ({ ...d, weightKg: e.target.value.replace(/[^\d.]/g, "") }))}
-                placeholder="106.4"
-                inputMode="decimal"
-                className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
-              />
-            </label>
 
             <div>
               <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Sex</span>

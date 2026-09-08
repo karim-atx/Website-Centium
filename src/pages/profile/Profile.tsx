@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
+import { Button } from "../../components/ui/Button";
 import { GoalsEditSheet } from "../../components/profile/GoalsEditSheet";
 import { ActivityLevelSheet } from "../../components/profile/ActivityLevelSheet";
 import { CertificationSheet } from "../../components/profile/CertificationSheet";
@@ -9,6 +10,14 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
 import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
+import { updateDateOfBirth } from "../../services/profile";
+import {
+  ageFromDateOfBirth,
+  isoDateYearsAgo,
+  validateDateOfBirth,
+  MIN_AGE,
+  MAX_AGE,
+} from "../../utils/date";
 import { PERSON_ICON } from "../../utils/icons";
 import { LINKED_PROFESSIONAL_REVIEW_ID } from "../professionals/Professionals";
 import {
@@ -65,8 +74,14 @@ export default function Profile() {
   // height and weight is editable if pressed on separately. When you click
   // away from the edited box, the new value gets set. Do not include a
   // checkmark logo." — replaces the single shared edit-sheet affordance.
-  const [editingField, setEditingField] = useState<"weightKg" | "heightCm" | "age" | null>(null);
+  // "age" is no longer one of these. It is derived from date of birth, so it
+  // isn't directly editable — tapping the card opens the date editor below.
+  const [editingField, setEditingField] = useState<"weightKg" | "heightCm" | null>(null);
   const [fieldDraft, setFieldDraft] = useState("");
+  const [dobOpen, setDobOpen] = useState(false);
+  const [dobDraft, setDobDraft] = useState("");
+  const [dobError, setDobError] = useState<string | null>(null);
+  const [savingDob, setSavingDob] = useState(false);
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
   const [credentialsOpen, setCredentialsOpen] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
@@ -81,9 +96,38 @@ export default function Profile() {
     reader.readAsDataURL(file);
   };
 
-  const startEditing = (field: "weightKg" | "heightCm" | "age") => {
+  const startEditing = (field: "weightKg" | "heightCm") => {
     setEditingField(field);
     setFieldDraft(String(user[field]));
+  };
+
+  const openDobEditor = () => {
+    setDobDraft(user.dateOfBirth ?? "");
+    setDobError(null);
+    setDobOpen(true);
+  };
+
+  const saveDob = async () => {
+    const message = validateDateOfBirth(dobDraft);
+    if (message) {
+      setDobError(message);
+      return;
+    }
+    if (!authUserId) {
+      setDobError("You need to be signed in to change this.");
+      return;
+    }
+    setSavingDob(true);
+    const result = await updateDateOfBirth(authUserId, dobDraft);
+    setSavingDob(false);
+    if (!result.ok) {
+      setDobError(result.message ?? "Could not save that. Try again.");
+      return;
+    }
+    // Mirror into local state so the card updates immediately; the next
+    // profile hydration will read the same value back from the server.
+    updateProfile({ dateOfBirth: dobDraft, age: ageFromDateOfBirth(dobDraft) ?? user.age });
+    setDobOpen(false);
   };
 
   const commitEditing = () => {
@@ -263,7 +307,6 @@ export default function Profile() {
             [
               { field: "weightKg" as const, value: user.weightKg, unit: "kg" },
               { field: "heightCm" as const, value: user.heightCm, unit: "cm" },
-              { field: "age" as const, value: user.age, unit: "years" },
             ]
           ).map((f) => (
             <Card
@@ -288,6 +331,19 @@ export default function Profile() {
               <p className="text-[11px] text-charcoal-faint">{f.unit}</p>
             </Card>
           ))}
+
+          {/* Age keeps its place in the row but is no longer typed into — it
+              is derived from date of birth, so editing the number directly
+              would be editing a calculation. Tapping opens the date editor,
+              which is also too wide to sit inside a third-of-a-row card. */}
+          <Card
+            interactive
+            onClick={openDobEditor}
+            className="text-center animate-fade-slide-up"
+          >
+            <p className="text-lg font-bold text-charcoal">{user.age}</p>
+            <p className="text-[11px] text-charcoal-faint">years</p>
+          </Card>
         </div>
       )}
 
@@ -551,6 +607,41 @@ export default function Profile() {
         className="hidden"
         onChange={(e) => e.target.files?.[0] && handleAvatarFile(e.target.files[0])}
       />
+      {/* Date of birth, not age. Writes straight to profiles.date_of_birth —
+          the only field on this row that persists server-side today. */}
+      <BottomSheet open={dobOpen} onClose={() => setDobOpen(false)} title="Date of birth">
+        <div className="space-y-4 animate-fade-slide-up">
+          <input
+            type="date"
+            value={dobDraft}
+            min={isoDateYearsAgo(MAX_AGE)}
+            max={isoDateYearsAgo(MIN_AGE)}
+            onChange={(e) => {
+              setDobDraft(e.target.value);
+              setDobError(null);
+            }}
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-charcoal focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
+          />
+
+          {dobDraft && ageFromDateOfBirth(dobDraft) !== undefined && (
+            <p className="text-xs text-charcoal-faint">
+              {ageFromDateOfBirth(dobDraft)} years old
+            </p>
+          )}
+
+          <p className="text-[11px] text-charcoal-faint">
+            Your age is calculated from this, and is used for calorie targets and health
+            recommendations.
+          </p>
+
+          {dobError && <p className="text-xs font-semibold text-status-high">{dobError}</p>}
+
+          <Button fullWidth size="lg" disabled={!dobDraft || savingDob} onClick={saveDob}>
+            {savingDob ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      </BottomSheet>
+
       {/* Second entry point to the same controls the Professionals tab shows.
           Reuses DataSharingSection narrowed to one professional rather than
           duplicating the toggles, so both paths read and write the same

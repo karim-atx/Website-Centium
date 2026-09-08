@@ -56,6 +56,11 @@ export interface UserProfile {
   // V10 (QA 10.0): collected on the new sign-in/sign-up step before account
   // type selection.
   email: string;
+  // Collected as a real date in onboarding and stored in
+  // profiles.date_of_birth. `age` below is DERIVED from it (see
+  // ageFromDateOfBirth) — the date is the source of truth, the number is a
+  // convenience for the calculations that want one.
+  dateOfBirth?: string;
   age: number;
   sex: Sex;
   heightCm: number;

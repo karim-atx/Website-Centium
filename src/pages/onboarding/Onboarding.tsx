@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { updateProfileFromOnboarding } from "../../services/profile";
 import { redeemClientCode } from "../../services/redemption";
+import { ageFromDateOfBirth } from "../../utils/date";
 import type {
   AccountType,
   ActivityLevel,
@@ -42,7 +43,7 @@ export interface OnboardingDraft {
   businessName: string;
   businessType: BusinessType | null;
   firstName: string;
-  age: string;
+  dateOfBirth: string;
   sex: Sex;
   heightCm: string;
   weightKg: string;
@@ -65,7 +66,7 @@ const initialDraft: OnboardingDraft = {
   businessName: "",
   businessType: null,
   firstName: "",
-  age: "",
+  dateOfBirth: "",
   sex: "female",
   heightCm: "",
   weightKg: "",
@@ -220,7 +221,12 @@ export default function Onboarding() {
           ? draft.professionalSubtype || ("other" as ProfessionalSubtype)
           : undefined,
       firstName: draft.firstName || "Friend",
-      age: Number(draft.age) || 28,
+      dateOfBirth: draft.dateOfBirth || undefined,
+      // Derived, not entered. Kept on the local profile because TDEE and the
+      // biomarker screening recommendations take a number — but the date is
+      // what's stored, so this recomputes correctly on every hydration
+      // instead of freezing at signup.
+      age: ageFromDateOfBirth(draft.dateOfBirth) ?? 28,
       sex: draft.sex,
       heightCm: Number(draft.heightCm) || 170,
       weightKg: Number(draft.weightKg) || 70,

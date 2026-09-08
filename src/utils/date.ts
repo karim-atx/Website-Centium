@@ -27,3 +27,71 @@ export function formatDisplayDate(value: string | null | undefined): string {
     timeZone: "UTC",
   });
 }
+
+/**
+ * Whole years elapsed since a date of birth, or undefined if unparseable.
+ *
+ * Age is still needed as a number — TDEE (Mifflin-St Jeor), the age-banded
+ * biomarker screening recommendations, and the profile display all take it —
+ * but it is now DERIVED from the stored date rather than being the stored
+ * value. That is the whole point of collecting a real birth date: the number
+ * stays correct as time passes instead of freezing at whatever the user typed
+ * when they signed up.
+ *
+ * Computed in UTC to match how the date is stored and displayed.
+ */
+export function ageFromDateOfBirth(dob: string | null | undefined): number | undefined {
+  if (!dob) return undefined;
+  const born = new Date(dob);
+  if (Number.isNaN(born.getTime())) return undefined;
+  const now = new Date();
+  let age = now.getUTCFullYear() - born.getUTCFullYear();
+  const monthDiff = now.getUTCMonth() - born.getUTCMonth();
+  // Not had this year's birthday yet.
+  if (monthDiff < 0 || (monthDiff === 0 && now.getUTCDate() < born.getUTCDate())) age -= 1;
+  return age >= 0 ? age : undefined;
+}
+
+/** yyyy-mm-dd for `n` years before today, in UTC. Used for date-input bounds. */
+export function isoDateYearsAgo(years: number): string {
+  const d = new Date();
+  d.setUTCFullYear(d.getUTCFullYear() - years);
+  return d.toISOString().slice(0, 10);
+}
+
+// Bounds live here rather than in one screen because date of birth is
+// editable in two places — onboarding's About You step and the Profile tab —
+// and a minimum age enforced in one but not the other is not a minimum age.
+//
+// MIN_AGE = 16 is a product and legal decision, not a technical one. It is
+// GDPR Article 8's default age of digital consent (member states may lower it
+// to 13; COPPA's US floor is 13). Health data is special-category under
+// Article 9, so the conservative end of that range is the right default, and
+// the app has no verifiable-parental-consent mechanism to support anyone
+// below it. It is deliberately stricter than the 10 the old free-typed age
+// field allowed, which was too low for an app collecting body metrics and
+// biomarkers.
+//
+// MAX_AGE = 120 rejects typos and impossible dates without excluding a real
+// person; the oldest verified human reached 122.
+export const MIN_AGE = 16;
+export const MAX_AGE = 120;
+
+/**
+ * Validates a date of birth. Returns a message to show the user, or null when
+ * the date is acceptable.
+ *
+ * Shared so both editors enforce the same rule. The bounds are also applied
+ * as min/max on the date inputs, but those only constrain the picker — the
+ * field can still be typed into, so this is the check that actually holds.
+ */
+export function validateDateOfBirth(dob: string): string | null {
+  const age = ageFromDateOfBirth(dob);
+  // Undefined covers both an unparseable date and one in the future, since a
+  // future date yields a negative age.
+  if (age === undefined) return "Enter a valid date of birth.";
+  if (new Date(dob) > new Date()) return "Date of birth must be in the past.";
+  if (age < MIN_AGE) return `You need to be at least ${MIN_AGE} to use Centium.`;
+  if (age > MAX_AGE) return "Check the date of birth — that doesn't look right.";
+  return null;
+}
