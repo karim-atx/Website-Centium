@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
-import { DataSharingSection } from "../../components/professionals/DataSharingSection";
+import { DataSharingSummary } from "../../components/professionals/DataSharingSummary";
 import { Chip } from "../../components/ui/Chip";
 import { Button } from "../../components/ui/Button";
 import { mockProfessionals } from "../../data/mockProfessionals";
@@ -60,8 +60,12 @@ export default function Professionals() {
 
       {/* Real data-sharing controls. These hang off the client's actual
           relationships, not the browse directory below — the directory's
-          entries are mock listings, not accounts that can hold a grant. */}
-      <DataSharingSection />
+          entries are mock listings, not accounts that can hold a grant.
+
+          Summarised rather than inline: the full toggle list grew to seven
+          categories and took the whole first screen, pushing the roster and
+          directory below the fold. See DataSharingSummary. */}
+      <DataSharingSummary />
 
       {/* V7 (QA 7.0): a professional who added this client via a client code
           shows up here automatically — a separate identity from the static
