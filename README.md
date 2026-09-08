@@ -149,23 +149,38 @@ Deliberate gaps carried by the current code. Each is a real correctness or
 compliance issue rather than a style preference, and each is flagged in the
 source at the point it matters.
 
-### `date_of_birth` is a derived approximation, not a collected date
+### `date_of_birth` is real going forward, but old rows are still approximate
 
-Onboarding never asks for a birth date — `AboutYouStep` collects a
-whole-number **age** and nothing else. `updateProfileFromOnboarding`
-(`src/services/profile/index.ts`) therefore derives `profiles.date_of_birth`
-as **January 1st of the implied birth year**.
+**Resolved for new data.** Onboarding's `AboutYouStep` now collects an actual
+date via a native date picker, and it can be corrected later from the Profile
+tab, which writes `profiles.date_of_birth` directly through
+`updateDateOfBirth()`. `approximateDateOfBirth()` — which used to derive the
+column as January 1st of the implied birth year — is **deleted**. `age` is no
+longer stored as the source of truth: it is derived from the date on every
+profile hydration (`ageFromDateOfBirth` in `src/utils/date.ts`), so it stays
+correct as birthdays pass instead of freezing at whatever was typed at
+sign-up. Both editors share one bound and one validation rule, so a minimum
+age enforced in one is enforced in the other.
 
-That value is wrong by up to ~364 days for every user, and it goes stale:
-an age of 29 captured at sign-up means "29 as of that day", not "29 today",
-so the derived date drifts further from the truth every year the row is not
-rewritten.
+**The caveat, and it matters: nothing backfills historical rows.** Any
+profile created before this change still holds the old approximation —
+January 1st of the implied birth year, wrong by up to ~364 days. Every
+account from today's testing is in that state; one of them stores
+`1998-01-01`, which is the artifact, not a real birthday.
 
-**Nothing that needs date precision may trust this column** — age-gating,
+There is no marker distinguishing an approximated date from a collected one.
+A `01-01` date is *suggestive* but proves nothing — people are born on
+January 1st. So **anything precision-sensitive reading this column on an
+older account must treat the value as possibly approximate**: age-gating,
 clinical or medical calculations, cohort analytics, and birthday features
-all included. The fix is to collect a real date of birth during onboarding
-and backfill; until then the column exists only so it is populated with
-something coherent.
+all included. Same caution as before, now scoped to old rows rather than all
+of them.
+
+Two ways to close it properly, neither done: prompt existing users to confirm
+their date of birth (the Profile editor already exists, so this is a nudge
+rather than new UI), or add a column recording whether the value was
+collected or derived, so consumers can tell the difference instead of
+guessing.
 
 ### `deleteAccount` does not delete the account
 
