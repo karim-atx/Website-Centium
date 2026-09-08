@@ -55,6 +55,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   const [checkEmailReason, setCheckEmailReason] = useState<"signup" | "unconfirmed">("signup");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [confirmBlurred, setConfirmBlurred] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
@@ -88,6 +89,28 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
     if (sessionEmail) setDraft((d) => ({ ...d, email: sessionEmail }));
     onNext();
   }, [session, setDraft, onNext]);
+
+  /**
+   * Live mismatch warning for the confirm-password field.
+   *
+   * The awkward part of this pattern is the first few keystrokes: "abc" is
+   * not yet "abcdef", but the user is mid-way through typing it correctly and
+   * telling them off for that is noise. So the warning waits for one of two
+   * signals that they are actually done:
+   *
+   *   - the confirmation has reached the password's length, so it can no
+   *     longer become correct by typing more, or
+   *   - they have left the field, so they consider it finished.
+   *
+   * It clears the instant the two match, including mid-keystroke, and an
+   * empty confirmation is never an error — that is what the submit guard and
+   * the disabled button are for.
+   */
+  const confirmMismatch =
+    mode === "signUp" &&
+    confirmPassword.length > 0 &&
+    confirmPassword !== password &&
+    (confirmBlurred || confirmPassword.length >= password.length);
 
   const passedChecks = passwordChecks.filter((c) => c.test(password)).length;
   const strengthLabel = passedChecks <= 1 ? "Weak" : passedChecks <= 3 ? "Medium" : "Strong";
@@ -397,11 +420,18 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
               <input
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                onBlur={() => setConfirmBlurred(true)}
                 placeholder="Confirm password"
                 type={showPassword ? "text" : "password"}
                 className={inputClass}
               />
             </label>
+
+            {confirmMismatch && (
+              <p className="text-[11px] font-semibold text-status-high -mt-1.5 pl-1">
+                Passwords don't match
+              </p>
+            )}
 
             {password && (
               <div className="rounded-2xl bg-cream-card px-4 py-3.5">
@@ -462,6 +492,9 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
         <button
           onClick={() => {
             setError(null);
+            // Otherwise leaving sign-up mid-mismatch and coming back shows the
+            // warning again before they have typed anything.
+            setConfirmBlurred(false);
             setMode(mode === "signIn" ? "signUp" : "signIn");
           }}
           className="tap w-full text-center text-sm font-semibold text-charcoal-soft mt-5"
