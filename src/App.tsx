@@ -73,22 +73,41 @@ const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children })
  * person had already finished.
  */
 const RedirectIfOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, authReady, profileReady } = useApp();
+  const { user, authUserId, authReady, profileReady } = useApp();
 
-  // Decided once, when readiness first settles, then held.
+  // Decided once PER ACCOUNT, then held.
   //
-  // Onboarding's own finish() sets `onboarded` locally before it navigates,
-  // and re-evaluating on every render would fire this redirect mid-completion
-  // — bouncing the user to /app while finish() was still awaiting its profile
-  // write, and sending professionals to the wrong landing page. The question
-  // this guard answers is "were you already onboarded when you arrived?", so
-  // the answer is taken on arrival.
-  const decided = useRef<boolean | null>(null);
+  // Holding matters because onboarding's own finish() sets `onboarded`
+  // locally before it navigates: re-evaluating every render would fire this
+  // redirect mid-completion, bouncing the user to /app while finish() was
+  // still awaiting its profile write and sending professionals to the wrong
+  // landing page.
+  //
+  // Keying it to the account matters because the first version held a single
+  // boolean, latched on the first settled render — which, on the signed-out
+  // onboarding screen, is a render with no account at all. Readiness settles
+  // immediately when signed out (hydratedFor and authUserId are both null),
+  // and signOut() resets `user` to defaultUser, whose `onboarded` is false.
+  // So the guard answered "not onboarded" before anyone had signed in, and
+  // never looked again — sending returning users through the whole flow, the
+  // exact bug this guard exists to prevent.
+  const decidedFor = useRef<{ userId: string; onboarded: boolean } | null>(null);
 
   if (!authReady || !profileReady) return <RouteLoading />;
-  if (decided.current === null) decided.current = user.onboarded;
 
-  if (decided.current) return <Navigate to="/app" replace />;
+  // Signed out: onboarding is where they belong — AuthStep is its first step.
+  // Deliberately no latch, because there is no account to latch an answer
+  // about, and latching here is what broke it before.
+  if (!authUserId) return <>{children}</>;
+
+  // A different account (or the first one) resets the answer. profileReady
+  // guarantees `user` has been hydrated for THIS authUserId, so `onboarded`
+  // is the server's value rather than the previous account's leftovers.
+  if (decidedFor.current?.userId !== authUserId) {
+    decidedFor.current = { userId: authUserId, onboarded: user.onboarded };
+  }
+
+  if (decidedFor.current.onboarded) return <Navigate to="/app" replace />;
   return <>{children}</>;
 };
 
