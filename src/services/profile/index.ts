@@ -51,6 +51,13 @@ export async function ensureProfileRow(userId: string, email: string | null): Pr
 export interface FetchedProfile {
   onboarded: boolean;
   profile: Partial<UserProfile>;
+  /**
+   * Set when this account is inside its 30-day deletion grace period. Read on
+   * every hydration so a returning user is told, rather than having to
+   * remember they asked -- and deliberately NOT cleared by signing in, which
+   * would silently revive an account someone asked to delete.
+   */
+  deletionRequestedAt: string | null;
 }
 
 /**
@@ -70,7 +77,7 @@ export async function fetchProfile(userId: string): Promise<FetchedProfile | nul
     const { data, error } = await supabase
       .from("profiles")
       .select(
-        "id, first_name, email, phone, date_of_birth, sex, height_cm, weight_kg, goals, tracking_preferences, activity_level, account_type, customer_subtype, professional_subtype, avatar_url, onboarded"
+        "id, first_name, email, phone, date_of_birth, sex, height_cm, weight_kg, goals, tracking_preferences, activity_level, account_type, customer_subtype, professional_subtype, avatar_url, onboarded, deletion_requested_at"
       )
       .eq("id", userId)
       .maybeSingle();
@@ -117,7 +124,11 @@ export async function fetchProfile(userId: string): Promise<FetchedProfile | nul
     const age = ageFromDateOfBirth(data.date_of_birth);
     if (age !== undefined) profile.age = age;
 
-    return { onboarded: data.onboarded, profile };
+    return {
+      onboarded: data.onboarded,
+      profile,
+      deletionRequestedAt: data.deletion_requested_at,
+    };
   } catch (e) {
     console.error("[profile] Could not read profile:", e);
     return null;

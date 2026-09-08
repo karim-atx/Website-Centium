@@ -200,6 +200,60 @@ export async function updatePassword(newPassword: string): Promise<{ ok: boolean
   return { ok: true };
 }
 
+export interface AccountDeletionResult {
+  ok: boolean;
+  message?: string;
+  /** ISO timestamp when deletion was requested, or null once cancelled. */
+  deletionRequestedAt?: string | null;
+}
+
+/**
+ * Schedules the signed-in account for deletion after a 30-day grace period.
+ *
+ * Sets profiles.deletion_requested_at and nothing else — the actual deletion
+ * is a `delete from auth.users` performed by a pg_cron sweep once the grace
+ * period elapses, which then cascades through all 57 foreign keys pointing at
+ * profiles. That work is entirely server-side: the client never needs, and
+ * never has, the service-role key required to touch auth.users.
+ *
+ * Reversible until the sweep runs. Nothing is destroyed by calling this.
+ */
+export async function requestAccountDeletion(): Promise<AccountDeletionResult> {
+  const { data, error } = await supabase.rpc("request_account_deletion");
+
+  if (error || !data) {
+    console.error("[auth] Could not request account deletion:", error?.message);
+    return {
+      ok: false,
+      message: error?.message
+        ? "Could not schedule your account for deletion. Please try again."
+        : "Could not schedule your account for deletion.",
+    };
+  }
+
+  const row = data as unknown as { deletion_requested_at: string | null };
+  return { ok: true, deletionRequestedAt: row.deletion_requested_at };
+}
+
+/**
+ * Cancels a pending deletion.
+ *
+ * Idempotent by design on the database side — cancelling when nothing is
+ * pending is a no-op rather than an error, because "make sure my account is
+ * not scheduled for deletion" is already satisfied in that state.
+ */
+export async function cancelAccountDeletion(): Promise<AccountDeletionResult> {
+  const { data, error } = await supabase.rpc("cancel_account_deletion");
+
+  if (error || !data) {
+    console.error("[auth] Could not cancel account deletion:", error?.message);
+    return { ok: false, message: "Could not cancel the deletion. Please try again." };
+  }
+
+  const row = data as unknown as { deletion_requested_at: string | null };
+  return { ok: true, deletionRequestedAt: row.deletion_requested_at };
+}
+
 /** Clears the Supabase session. Local cached state is cleared by AppContext. */
 export async function signOutRemote(): Promise<void> {
   const { error } = await supabase.auth.signOut();

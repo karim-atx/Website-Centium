@@ -36,6 +36,8 @@ export default function Settings() {
   // big." Settings.tsx is already the one shared page for every account
   // type, so this covers Client/Professional/Business at once.
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const [micAllowed, setMicAllowed] = useState<boolean | null>(null);
   const [cameraAllowed, setCameraAllowed] = useState<boolean | null>(null);
   const [locationAllowed, setLocationAllowed] = useState<boolean | null>(null);
@@ -300,19 +302,42 @@ export default function Settings() {
 
       <BottomSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete account">
         <div className="space-y-4 animate-fade-slide-up">
+          {/* The old copy claimed this was permanent and could not be undone.
+              Neither was true: nothing was deleted at all, and now that
+              deletion is real it runs after a 30-day grace period during which
+              it can be cancelled. Saying so is the point. */}
           <p className="text-sm text-charcoal-soft leading-relaxed">
-            This permanently deletes your account and all of its data — food logs, workouts, health
-            metrics, and connections. This can't be undone.
+            Your account will be scheduled for deletion in 30 days. After that your food
+            logs, workouts, health metrics and connections are permanently removed.
           </p>
+          <p className="text-sm text-charcoal-soft leading-relaxed">
+            You can change your mind at any point in those 30 days — sign back in and choose
+            “Cancel deletion”.
+          </p>
+          {deleteError && (
+            <p className="text-xs font-semibold text-status-high text-center">{deleteError}</p>
+          )}
           <button
-            onClick={() => {
-              deleteAccount();
+            onClick={async () => {
+              if (deleting) return;
+              setDeleteError(null);
+              setDeleting(true);
+              const result = await deleteAccount();
+              setDeleting(false);
+              // Only leave on a confirmed success. A failed request keeps the
+              // user signed in with their data intact and says what happened,
+              // rather than navigating away as though it had worked.
+              if (!result.ok) {
+                setDeleteError(result.message ?? "Could not schedule deletion.");
+                return;
+              }
               setDeleteOpen(false);
-              navigate("/onboarding");
+              navigate("/app/onboarding");
             }}
-            className="tap w-full rounded-2xl bg-status-high text-white text-sm font-semibold py-3.5"
+            disabled={deleting}
+            className="tap w-full rounded-2xl bg-status-high text-white text-sm font-semibold py-3.5 disabled:opacity-60"
           >
-            Yes, delete my account
+            {deleting ? "Scheduling…" : "Schedule my account for deletion"}
           </button>
           <button
             onClick={() => setDeleteOpen(false)}

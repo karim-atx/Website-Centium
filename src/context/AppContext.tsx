@@ -62,7 +62,11 @@ import { translations, type Language } from "../i18n/translations";
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, onAuthChange, signOutRemote } from "../services/auth";
-import { onPasswordRecovery } from "../services/auth";
+import {
+  cancelAccountDeletion as cancelAccountDeletionRemote,
+  onPasswordRecovery,
+  requestAccountDeletion,
+} from "../services/auth";
 import {
   copyDiaryEntry,
   createCustomFood,
@@ -582,7 +586,15 @@ interface AppState {
   ) => void;
 
   signOut: () => Promise<void>;
-  deleteAccount: () => void;
+  /**
+   * Schedules deletion after a 30-day grace period. Returns the outcome
+   * rather than assuming it: nothing local is cleared and the user is not
+   * signed out unless the request actually succeeded.
+   */
+  deleteAccount: () => Promise<{ ok: boolean; message?: string }>;
+  cancelDeletion: () => Promise<{ ok: boolean; message?: string }>;
+  /** ISO timestamp while a deletion is pending, else null. */
+  deletionRequestedAt: string | null;
 
   businessListing: {
     perk: string;
@@ -723,6 +735,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   //
   // A recovery session is a real session, so nothing stops it reaching the
   // app on its own. These two pieces of state are what refuse it.
+  // Set from profile hydration and from the deletion RPCs themselves, so a
+  // returning user inside the grace period is shown their pending deletion
+  // rather than having to remember they asked for it.
+  const [deletionRequestedAt, setDeletionRequestedAt] = useState<string | null>(null);
+
   const [recoveryUserId, setRecoveryUserId] = useState<string | null>(() =>
     getRecoveryPendingUserId()
   );
@@ -801,7 +818,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let cancelled = false;
     void fetchProfile(authUserId).then((result) => {
       if (cancelled) return;
-      if (result) setUser((prev) => ({ ...prev, ...result.profile }));
+      if (result) {
+        setUser((prev) => ({ ...prev, ...result.profile }));
+        // Deliberately NOT cleared on sign-in. Reviving an account because
+        // someone happened to log in would undo a deliberate request without
+        // them asking; cancelling is an explicit action.
+        setDeletionRequestedAt(result.deletionRequestedAt);
+      }
       // Marked hydrated even on failure — a read error must not lock the user
       // out of the app behind a permanent loading state.
       setHydratedFor(authUserId);
@@ -2039,11 +2062,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // path — an RPC or edge function running the cascade server-side, since
   // auth.users cannot be deleted with an anon key — before this ships to
   // anyone with a real account.
-  const deleteAccount = () => {
-    Object.keys(localStorage)
-      .filter((k) => k.startsWith(STORAGE_KEY))
-      .forEach((k) => localStorage.removeItem(k));
-    setUser({ ...defaultUser });
+  // Previously this cleared localStorage, reset the in-memory user, and told
+  // the user their account was permanently deleted. It made no network call at
+  // all -- not even a sign-out -- so the account, and every row of health data
+  // attached to it, remained entirely intact. For an app holding PHI-tier data
+  // behind a screen promising permanent erasure, that was a compliance problem
+  // rather than a rough edge.
+  //
+  // The real work is server-side and already existed: request_account_deletion()
+  // stamps profiles.deletion_requested_at, and a pg_cron sweep deletes the
+  // auth.users row once 30 days elapse, cascading through every table that
+  // references profiles. Nothing here needs elevated privileges.
+  const deleteAccount: AppState["deleteAccount"] = async () => {
+    const result = await requestAccountDeletion();
+    if (!result.ok) {
+      // Nothing is cleared and the session is untouched: claiming success on a
+      // failed request is the exact bug being fixed.
+      return { ok: false, message: result.message ?? "Could not schedule deletion." };
+    }
+
+    setDeletionRequestedAt(result.deletionRequestedAt ?? null);
+    await signOut();
+    return { ok: true };
+  };
+
+  const cancelDeletion: AppState["cancelDeletion"] = async () => {
+    const result = await cancelAccountDeletionRemote();
+    if (!result.ok) return { ok: false, message: result.message ?? "Could not cancel." };
+    setDeletionRequestedAt(result.deletionRequestedAt ?? null);
+    return { ok: true };
   };
 
   const value = useMemo<AppState>(
@@ -2242,6 +2289,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sendProfessionalMessage,
       signOut,
       deleteAccount,
+      cancelDeletion,
+      deletionRequestedAt,
       businessListing,
       updateBusinessListing,
       addMembershipPlan,
@@ -2268,6 +2317,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearRecovery,
       diaryLoading,
       diaryError,
+      deletionRequestedAt,
       authReady,
       profileReady,
       theme,
