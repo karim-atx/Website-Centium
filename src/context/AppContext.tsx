@@ -529,7 +529,7 @@ interface AppState {
   // the client appears on the roster only after redeeming.
   generateClientCode: () => Promise<{ ok: boolean; code?: string; message?: string }>;
 
-  // Real, from active_professional_clients + public_profile_summary +
+  // Real, from active_professional_clients + related_profile_summary +
   // client_access_grants. Refetched via refreshRoster().
   professionalClients: ProfessionalClient[];
   rosterLoading: boolean;

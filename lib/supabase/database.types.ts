@@ -73,6 +73,13 @@ export type Database = {
             foreignKeyName: "app_preferences_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: true
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_preferences_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: true
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -141,6 +148,13 @@ export type Database = {
             foreignKeyName: "blood_markers_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blood_markers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -181,6 +195,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blood_panels_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -231,6 +252,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_class_bookings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -311,6 +339,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_classes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -411,6 +446,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_employees_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -534,6 +576,13 @@ export type Database = {
             foreignKeyName: "business_profiles_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: true
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -613,6 +662,13 @@ export type Database = {
             foreignKeyName: "calendar_events_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -669,6 +725,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -737,6 +800,13 @@ export type Database = {
             foreignKeyName: "client_access_grants_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_access_grants_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -752,6 +822,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_access_grants_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -813,6 +890,13 @@ export type Database = {
             foreignKeyName: "client_codes_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_codes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -828,6 +912,13 @@ export type Database = {
             columns: ["redeemed_by"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_codes_redeemed_by_fkey"
+            columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -895,6 +986,13 @@ export type Database = {
             foreignKeyName: "client_health_notes_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_health_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -910,6 +1008,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_health_notes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -953,6 +1058,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comorbidities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1014,6 +1126,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_exercise_library_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1107,6 +1226,13 @@ export type Database = {
             foreignKeyName: "custom_foods_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_foods_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -1122,6 +1248,13 @@ export type Database = {
             columns: ["scoped_to_client_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_foods_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1235,6 +1368,13 @@ export type Database = {
             foreignKeyName: "custom_meals_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_meals_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -1250,6 +1390,13 @@ export type Database = {
             columns: ["scoped_to_client_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_meals_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1314,6 +1461,13 @@ export type Database = {
             foreignKeyName: "device_presentation_settings_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_presentation_settings_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -1351,6 +1505,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dietary_restrictions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1445,6 +1606,13 @@ export type Database = {
             foreignKeyName: "extracted_biomarkers_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracted_biomarkers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -1529,6 +1697,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1683,6 +1858,13 @@ export type Database = {
             foreignKeyName: "gym_purchases_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_purchases_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -1800,6 +1982,13 @@ export type Database = {
             foreignKeyName: "habit_items_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -1849,6 +2038,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_integrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -1907,6 +2103,13 @@ export type Database = {
             foreignKeyName: "health_metrics_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -1953,6 +2156,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imaging_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -2037,6 +2247,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_folders_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -2199,6 +2416,13 @@ export type Database = {
             foreignKeyName: "medications_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -2283,6 +2507,13 @@ export type Database = {
             foreignKeyName: "message_threads_participant_one_id_fkey"
             columns: ["participant_one_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_one_id_fkey"
+            columns: ["participant_one_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -2298,6 +2529,13 @@ export type Database = {
             columns: ["participant_two_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_two_id_fkey"
+            columns: ["participant_two_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -2356,6 +2594,13 @@ export type Database = {
             columns: ["sender_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -2469,6 +2714,13 @@ export type Database = {
             foreignKeyName: "nutrition_goals_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -2531,6 +2783,13 @@ export type Database = {
             foreignKeyName: "paused_workout_sessions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paused_workout_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -2580,6 +2839,13 @@ export type Database = {
             foreignKeyName: "pending_client_requests_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_client_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -2595,6 +2861,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_client_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -2667,6 +2940,13 @@ export type Database = {
             foreignKeyName: "personal_records_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -2710,6 +2990,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -2786,6 +3073,13 @@ export type Database = {
             foreignKeyName: "professional_clients_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -2801,6 +3095,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_clients_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -2884,6 +3185,13 @@ export type Database = {
             columns: ["profile_id"]
             isOneToOne: true
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -3014,6 +3322,13 @@ export type Database = {
             foreignKeyName: "rate_limit_attempts_actor_id_fkey"
             columns: ["actor_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rate_limit_attempts_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -3057,6 +3372,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: true
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovery_mode_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -3127,6 +3449,13 @@ export type Database = {
             foreignKeyName: "referrals_referee_id_fkey"
             columns: ["referee_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referee_id_fkey"
+            columns: ["referee_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -3142,6 +3471,13 @@ export type Database = {
             columns: ["referrer_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -3312,6 +3648,13 @@ export type Database = {
             foreignKeyName: "routine_folders_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_folders_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -3383,6 +3726,13 @@ export type Database = {
             foreignKeyName: "routines_assigned_by_professional_id_fkey"
             columns: ["assigned_by_professional_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routines_assigned_by_professional_id_fkey"
+            columns: ["assigned_by_professional_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -3405,6 +3755,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routines_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -3473,6 +3830,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sleep_details_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -3582,6 +3946,13 @@ export type Database = {
             foreignKeyName: "store_listings_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "store_listings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -3647,6 +4018,13 @@ export type Database = {
             foreignKeyName: "streaks_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streaks_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -3699,6 +4077,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: true
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_states_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: true
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -3788,6 +4173,13 @@ export type Database = {
             foreignKeyName: "surgeries_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surgeries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -3840,6 +4232,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "widget_configs_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -3914,6 +4313,13 @@ export type Database = {
             foreignKeyName: "workout_sessions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -3957,6 +4363,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_template_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -4141,6 +4554,13 @@ export type Database = {
             foreignKeyName: "workout_template_folders_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_template_folders_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -4222,6 +4642,13 @@ export type Database = {
             foreignKeyName: "workout_templates_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_templates_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -4294,6 +4721,13 @@ export type Database = {
             foreignKeyName: "professional_clients_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -4309,6 +4743,13 @@ export type Database = {
             columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_clients_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -4343,6 +4784,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -4397,6 +4845,13 @@ export type Database = {
             foreignKeyName: "personal_records_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -4422,6 +4877,13 @@ export type Database = {
             columns: ["owner_id"]
             isOneToOne: false
             referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
@@ -4514,12 +4976,40 @@ export type Database = {
             foreignKeyName: "professional_profiles_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: true
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
         ]
       }
       public_profile_summary: {
+        Row: {
+          account_type: Database["public"]["Enums"]["account_type"] | null
+          avatar_url: string | null
+          first_name: string | null
+          id: string | null
+        }
+        Insert: {
+          account_type?: Database["public"]["Enums"]["account_type"] | null
+          avatar_url?: string | null
+          first_name?: string | null
+          id?: string | null
+        }
+        Update: {
+          account_type?: Database["public"]["Enums"]["account_type"] | null
+          avatar_url?: string | null
+          first_name?: string | null
+          id?: string | null
+        }
+        Relationships: []
+      }
+      related_profile_summary: {
         Row: {
           account_type: Database["public"]["Enums"]["account_type"] | null
           avatar_url: string | null

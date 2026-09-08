@@ -107,8 +107,16 @@ export async function fetchLinkedProfessionals(): Promise<LinkedProfessionalsRes
     if (!rels?.length) return { status: "ok", professionals: [] };
 
     const professionalIds = rels.map((r) => r.professional_id).filter((id): id is string => !!id);
+    // `related_profile_summary`, not `public_profile_summary`. The old view
+    // did return these rows — professionals are in the discovery data — so
+    // this read worked, but only by coincidence: it resolved a name the client
+    // is entitled to BECAUSE THEY ARE CONNECTED from a view that answers a
+    // different question, whether the person is publicly discoverable. Those
+    // can diverge (an unlisted or deactivated professional), and when they do
+    // a client would lose the name of someone they are actively sharing health
+    // data with. Reading the relationship-scoped view removes the coincidence.
     const { data: profiles } = await supabase
-      .from("public_profile_summary")
+      .from("related_profile_summary")
       .select("id, first_name, avatar_url")
       .in("id", professionalIds);
 

@@ -106,8 +106,17 @@ export type RosterResult =
  * The professional's active clients.
  *
  * Three reads rather than one: the view carries no profile data, so display
- * info comes from `public_profile_summary` and consent from
+ * info comes from `related_profile_summary` and consent from
  * `client_access_grants`.
+ *
+ * NOT `public_profile_summary`, which this used to read and which could never
+ * work here. That view is anon-readable discovery data and is filtered to
+ * `account_type in ('professional', 'business')` precisely so customers are
+ * not publicly enumerable — but a professional's clients ARE customers, so it
+ * returned zero rows for every one of them and the whole roster rendered as
+ * the fallback string. `related_profile_summary` is scoped to the caller's own
+ * relationships instead, which is the correct basis for reading a name you are
+ * entitled to because of who you are to that person.
  *
  * RLS already scopes all three to the caller (`security_invoker = true` on
  * the view), but the grants read ALSO filters on professional_id explicitly.
@@ -131,7 +140,7 @@ export async function fetchRoster(professionalId: string): Promise<RosterResult>
     const clientIds = rels.map((r) => r.client_id).filter((id): id is string => !!id);
 
     const [{ data: profiles }, { data: grants }] = await Promise.all([
-      supabase.from("public_profile_summary").select("id, first_name, avatar_url").in("id", clientIds),
+      supabase.from("related_profile_summary").select("id, first_name, avatar_url").in("id", clientIds),
       supabase
         .from("client_access_grants")
         .select("client_id, category, granted")
@@ -156,9 +165,18 @@ export async function fetchRoster(professionalId: string): Promise<RosterResult>
         return {
           id: r.id!,
           clientId: r.client_id!,
-          // A client who hasn't set a name yet still has to render as
-          // something clickable in the roster.
-          name: profile?.first_name?.trim() || "Client",
+          // Load-bearing for exactly two cases now: a client who has not set a
+          // name yet, and a lookup that unexpectedly resolved nothing.
+          //
+          // Deliberately NOT "Former client", which the database-side note
+          // suggested. This query reads `active_professional_clients`, which
+          // already filters `disconnected_at is null`, so a disconnected
+          // relationship never reaches here at all — every row that does is a
+          // CURRENT client. Labelling one "Former client" would assert a
+          // history that is not true, which is worse than the vague string it
+          // replaced, not better. If a historical-roster surface is ever
+          // built, that is where "Former client" belongs.
+          name: profile?.first_name?.trim() || "Name unavailable",
           avatarUrl: profile?.avatar_url ?? null,
           joinedAt: r.joined_at ?? "",
           prefix: r.prefix ?? null,
