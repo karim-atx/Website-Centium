@@ -429,6 +429,33 @@ right answer for the case it does cover, and removing it would leave the
 partial-consent client with nothing. This entry exists only so the next reader
 does not assume the string appears wherever a diary is unshared.
 
+### The app's hardcoded `TODAY` disagrees with the database's real timestamps
+
+`AppContext` defines `const TODAY = "2026-08-20"`, and `AddMetricSheet` keeps
+its own copy of the same literal. It seeds `selectedDate`, bounds the diary
+window, and `WorkoutSessionSheet` stamps it onto every session it saves.
+
+The database does not know about it. `workout_sessions.started_at` defaults to
+`now()`, `food_log_entries.logged_date` to `current_date`, and every consent
+timestamp is real. So a session logged today is written with the app's date in
+local state and the real date in Postgres — two different days for one event.
+
+**This is already visible.** The professional-side workout read computes
+"trained today" against the real calendar date, because the rows only carry
+real dates; the client's own diary computes it against `2026-08-20`. The two
+views of the same session disagree about which day it happened, and today the
+gap is about three weeks.
+
+Anywhere a locally-derived date is compared against a server-derived one is
+suspect for the same reason. The diary window (`shiftDate(TODAY, …)` against
+`logged_date`) is the most likely next place to show it, since a wide enough
+gap silently excludes rows the user just wrote.
+
+Not fixed while wiring the professional read path — it is unrelated to that
+work and touches the client's whole date model. The fix is to derive today
+from the clock and let the seeded demo data age out, rather than pinning the
+app to a date that the server has never agreed with.
+
 ### `ProfessionalType` and `professional_subtype` are unreconciled
 
 The app's `ProfessionalType` has four values — trainer, dietitian,
