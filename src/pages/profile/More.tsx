@@ -5,7 +5,8 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { useApp } from "../../context/AppContext";
 import { ReferralSheet } from "../../components/profile/ReferralSheet";
 import { PaymentsSheet } from "../../components/profile/PaymentsSheet";
-import { Sparkles, Users, Store, User as UserIcon, Crown, ChevronRight, Settings, HeartPulse, MessageCircle, MessageSquare, CalendarDays, Building2, Gift, Banknote } from "lucide-react";
+import { PublicListingSheet } from "../../components/profile/PublicListingSheet";
+import { Sparkles, Users, Store, User as UserIcon, Crown, ChevronRight, Settings, HeartPulse, MessageCircle, MessageSquare, CalendarDays, Building2, Gift, Banknote, Globe2 } from "lucide-react";
 
 export default function More() {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ export default function More() {
   const isBusiness = user.accountType === "business";
   const [referralOpen, setReferralOpen] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
+  const [listingOpen, setListingOpen] = useState(false);
 
   // Profile shifted to the top per QA — first widget in the More list.
   // V6 (QA 6.0): Mind and the client-facing "browse professionals" directory
@@ -49,6 +51,10 @@ export default function More() {
     // what his monthly rate is to be hired, alongside other types like
     // consultations... payment modality (cash, card or whish)."
     isProfessional && { icon: Banknote, label: "Payments", desc: "Your rates & accepted payment methods", onClick: () => setPaymentsOpen(true) },
+    // The listing content and the switch that publishes it live together, so
+    // nobody can turn on public visibility without seeing what becomes
+    // visible. See PublicListingSheet.
+    isProfessional && { icon: Globe2, label: "Your public listing", desc: "Specialty, bio & whether clients can find you", onClick: () => setListingOpen(true) },
     isBusiness && { icon: Building2, label: "Business Profile", desc: "Name, bio, location & reviews", to: "/app/business/profile" },
     // V9 (QA 9.0): "Add the messages tab in the More tab" + "Copy the
     // calendar tab... in a button found in the More's page" — Messages
@@ -116,6 +122,7 @@ export default function More() {
 
       <ReferralSheet open={referralOpen} onClose={() => setReferralOpen(false)} />
       {isProfessional && <PaymentsSheet open={paymentsOpen} onClose={() => setPaymentsOpen(false)} />}
+      {isProfessional && <PublicListingSheet open={listingOpen} onClose={() => setListingOpen(false)} />}
     </div>
   );
 }

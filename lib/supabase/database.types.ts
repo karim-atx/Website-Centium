@@ -437,28 +437,28 @@ export type Database = {
           {
             foreignKeyName: "business_employees_professional_id_fkey"
             columns: ["professional_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "business_employees_professional_id_fkey"
             columns: ["professional_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "public_profile_summary"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "business_employees_professional_id_fkey"
             columns: ["professional_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "related_profile_summary"
             referencedColumns: ["id"]
           },
           {
             foreignKeyName: "business_employees_professional_id_fkey"
             columns: ["professional_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
@@ -3123,10 +3123,13 @@ export type Database = {
           facebook: string | null
           id: string
           instagram: string | null
+          listed_publicly: boolean
+          location: string | null
           monthly_rate: number | null
           payment_modalities: Database["public"]["Enums"]["payment_modality"][]
           phone: string | null
           profile_id: string
+          specialty: string | null
           updated_at: string
           website: string | null
           x: string | null
@@ -3140,10 +3143,13 @@ export type Database = {
           facebook?: string | null
           id?: string
           instagram?: string | null
+          listed_publicly?: boolean
+          location?: string | null
           monthly_rate?: number | null
           payment_modalities?: Database["public"]["Enums"]["payment_modality"][]
           phone?: string | null
           profile_id: string
+          specialty?: string | null
           updated_at?: string
           website?: string | null
           x?: string | null
@@ -3157,10 +3163,13 @@ export type Database = {
           facebook?: string | null
           id?: string
           instagram?: string | null
+          listed_publicly?: boolean
+          location?: string | null
           monthly_rate?: number | null
           payment_modalities?: Database["public"]["Enums"]["payment_modality"][]
           phone?: string | null
           profile_id?: string
+          specialty?: string | null
           updated_at?: string
           website?: string | null
           x?: string | null
@@ -4897,67 +4906,29 @@ export type Database = {
       }
       public_professional_directory: {
         Row: {
-          affiliated_business_id: string | null
+          avatar_url: string | null
           bio: string | null
           consultation_rate: number | null
           created_at: string | null
           facebook: string | null
+          first_name: string | null
           id: string | null
           instagram: string | null
+          location: string | null
           monthly_rate: number | null
           payment_modalities:
             | Database["public"]["Enums"]["payment_modality"][]
             | null
-          phone: string | null
+          professional_subtype:
+            | Database["public"]["Enums"]["professional_subtype"]
+            | null
           profile_id: string | null
+          specialty: string | null
           updated_at: string | null
           website: string | null
           x: string | null
         }
-        Insert: {
-          affiliated_business_id?: string | null
-          bio?: string | null
-          consultation_rate?: number | null
-          created_at?: string | null
-          facebook?: string | null
-          id?: string | null
-          instagram?: string | null
-          monthly_rate?: number | null
-          payment_modalities?:
-            | Database["public"]["Enums"]["payment_modality"][]
-            | null
-          phone?: string | null
-          profile_id?: string | null
-          updated_at?: string | null
-          website?: string | null
-          x?: string | null
-        }
-        Update: {
-          affiliated_business_id?: string | null
-          bio?: string | null
-          consultation_rate?: number | null
-          created_at?: string | null
-          facebook?: string | null
-          id?: string | null
-          instagram?: string | null
-          monthly_rate?: number | null
-          payment_modalities?:
-            | Database["public"]["Enums"]["payment_modality"][]
-            | null
-          phone?: string | null
-          profile_id?: string | null
-          updated_at?: string | null
-          website?: string | null
-          x?: string | null
-        }
         Relationships: [
-          {
-            foreignKeyName: "professional_profiles_affiliated_business_id_fkey"
-            columns: ["affiliated_business_id"]
-            isOneToOne: false
-            referencedRelation: "business_profiles"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "professional_profiles_profile_id_fkey"
             columns: ["profile_id"]
@@ -5290,6 +5261,10 @@ export type Database = {
         }[]
       }
       process_scheduled_account_deletions: { Args: never; Returns: number }
+      professional_is_affiliated: {
+        Args: { p_professional_id: string }
+        Returns: boolean
+      }
       redeem_client_code: {
         Args: { p_code: string }
         Returns: Database["public"]["CompositeTypes"]["redeem_client_code_result"]
@@ -5358,6 +5333,35 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_public_listing: {
+        Args: { p_listed: boolean }
+        Returns: {
+          affiliated_business_id: string | null
+          bio: string | null
+          certification_url: string | null
+          consultation_rate: number | null
+          created_at: string
+          facebook: string | null
+          id: string
+          instagram: string | null
+          listed_publicly: boolean
+          location: string | null
+          monthly_rate: number | null
+          payment_modalities: Database["public"]["Enums"]["payment_modality"][]
+          phone: string | null
+          profile_id: string
+          specialty: string | null
+          updated_at: string
+          website: string | null
+          x: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "professional_profiles"
           isOneToOne: true
           isSetofReturn: false
         }

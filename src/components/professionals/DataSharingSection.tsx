@@ -80,8 +80,9 @@ export const DataSharingSection: React.FC<{
   const toggle = async (professionalId: string, category: AccessCategory, next: boolean) => {
     if (!authUserId) return;
     const key = `${professionalId}:${category}`;
-    // Toggle has no disabled state, so re-entry is guarded here instead of
-    // changing the shared component.
+    // Guarded here rather than by disabling the switch: a consent toggle that
+    // greys out mid-write reads as "you may not change this", which is the
+    // wrong message for a control the client owns outright.
     if (saving === key) return;
     setSaving(key);
     setError(null);

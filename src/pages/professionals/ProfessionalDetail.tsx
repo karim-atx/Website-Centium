@@ -4,6 +4,8 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { mockProfessionals } from "../../data/mockProfessionals";
+import { fetchListing, type DirectoryListing } from "../../services/directory";
+import type { ProfessionalType } from "../../types";
 import { useApp } from "../../context/AppContext";
 import {
   ChevronLeft,
@@ -27,6 +29,12 @@ import {
 } from "lucide-react";
 import clsx from "clsx";
 import { professionalTypeIcon } from "../../utils/icons";
+import { UserCheck } from "lucide-react";
+
+// professional_subtype has five values; professionalTypeIcon has four. A real
+// listing can hold 'other', and indexing the map with it yields undefined —
+// which React renders as "Element type is invalid" and blanks the whole page.
+const iconFor = (t: string) => (t in professionalTypeIcon ? professionalTypeIcon[t as ProfessionalType] : UserCheck);
 
 // V8 (QA 8.0): "pressing on the grey review text would open to all the
 // reviews written by the clients" — this app only ever stores the current
@@ -93,7 +101,52 @@ export default function ProfessionalDetail() {
     submitClientRequest,
   } = useApp();
   const [removeConfirm, setRemoveConfirm] = useState(false);
-  const professional = mockProfessionals.find((p) => p.id === id);
+
+  // Real listings arrive from public_professional_directory keyed by account
+  // uuid; the seeded mockProfessionals entries are keyed "pr1". Both routes
+  // land here, so both have to resolve — before this, a real listing's
+  // "View Profile" hit the mock lookup, missed, and rendered "Professional
+  // not found."
+  const [listing, setListing] = useState<DirectoryListing | null>(null);
+  const [listingLoading, setListingLoading] = useState(true);
+  const mockProfessional = mockProfessionals.find((p) => p.id === id);
+
+  useEffect(() => {
+    if (!id || mockProfessional) {
+      setListingLoading(false);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const found = await fetchListing(id);
+      if (cancelled) return;
+      setListing(found);
+      setListingLoading(false);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id, mockProfessional]);
+
+  // One shape for the page, whichever source it came from. `isReal` gates the
+  // things only a real account can do.
+  const professional = mockProfessional
+    ? mockProfessional
+    : listing
+    ? {
+        id: listing.profileId,
+        name: listing.name,
+        type: (listing.subtype ?? "trainer") as ProfessionalType,
+        specialty: listing.specialty ?? "",
+        location: listing.location ?? "",
+        rating: 0,
+        reviews: 0,
+        bio: listing.bio ?? "",
+        monthlyRate: listing.monthlyRate ?? 0,
+        connected: undefined as boolean | undefined,
+      }
+    : undefined;
+  const isReal = !mockProfessional && !!listing;
   const isConnected = !!professional && (professional.connected || connectedProfessionalIds.includes(professional.id));
   const [messageOpen, setMessageOpen] = useState(false);
   const [messageText, setMessageText] = useState("");
@@ -134,7 +187,7 @@ export default function ProfessionalDetail() {
   if (!professional) {
     return (
       <div className="text-center py-20 text-charcoal-soft">
-        Professional not found.
+        {listingLoading ? "Loading…" : "Professional not found."}
         <div className="mt-4">
           <Button onClick={() => navigate("/app/professionals")}>Back</Button>
         </div>
@@ -203,7 +256,7 @@ export default function ProfessionalDetail() {
       <div className="flex items-center gap-4 mb-5 animate-fade-slide-up">
         <span className="w-16 h-16 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
           {(() => {
-            const Icon = professionalTypeIcon[professional.type];
+            const Icon = iconFor(professional.type);
             return <Icon size={28} className="text-primary-dark" />;
           })()}
         </span>
@@ -215,12 +268,22 @@ export default function ProfessionalDetail() {
       </div>
 
       <div className="flex items-center gap-4 mb-6 animate-fade-slide-up">
-        <span className="flex items-center gap-1 text-sm font-bold text-gold">
-          <Star size={14} className="fill-gold" /> {displayRating}
-        </span>
-        <button onClick={() => setAllReviewsOpen(true)} className="tap text-xs text-charcoal-faint underline">
-          {totalReviews} reviews
-        </button>
+        {/* Ratings exist only for the seeded mock entries. A real listing has
+            no review schema behind it, so it shows none rather than a 0.0 that
+            looks like a verdict. */}
+        {!isReal && (
+          <>
+            <span className="flex items-center gap-1 text-sm font-bold text-gold">
+              <Star size={14} className="fill-gold" /> {displayRating}
+            </span>
+            <button onClick={() => setAllReviewsOpen(true)} className="tap text-xs text-charcoal-faint underline">
+              {totalReviews} reviews
+            </button>
+          </>
+        )}
+        {isReal && professional.location && (
+          <span className="text-xs text-charcoal-faint">{professional.location}</span>
+        )}
         {isConnected && (
           <span className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1">
             Client since August 2026
@@ -298,6 +361,21 @@ export default function ProfessionalDetail() {
           </Button>
         </>
       ) : (
+        isReal ? (
+          /* No Hire on a real listing. Hiring here is local-only state -- a
+             real relationship can still only come from a redeemed client
+             code -- so the button would take a payment method, say "Hired",
+             and connect nothing. A button that silently does nothing is the
+             same lie as a figure that was never measured; say what actually
+             works instead. */
+          <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center">
+            <p className="text-sm font-semibold text-charcoal">Ask them for a client code</p>
+            <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
+              {professional.name.split(" ")[0]} can generate a code for you. Redeem it from your
+              profile to connect and start sharing data.
+            </p>
+          </div>
+        ) : (
         <div className="grid grid-cols-2 gap-3">
           <Button variant="outline" onClick={() => setMessageOpen(true)}>
             <MessageCircle size={15} /> Message
@@ -305,6 +383,7 @@ export default function ProfessionalDetail() {
           {/* V9 (QA 9.0): "connect should be replaced with hire" */}
           <Button onClick={() => setHireOpen(true)}>Hire</Button>
         </div>
+        )
       )}
 
       {messageOpen && (
@@ -314,7 +393,7 @@ export default function ProfessionalDetail() {
             <div className="flex items-center gap-3 px-5 py-4 border-b border-charcoal/5">
               <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
                 {(() => {
-                  const Icon = professionalTypeIcon[professional.type];
+                  const Icon = iconFor(professional.type);
                   return <Icon size={16} className="text-primary-dark" />;
                 })()}
               </span>
@@ -425,7 +504,7 @@ export default function ProfessionalDetail() {
         <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-charcoal text-cream">
           <span className="w-24 h-24 rounded-full bg-primary/30 flex items-center justify-center mb-6 animate-pulse-ring">
             {(() => {
-              const Icon = professionalTypeIcon[professional.type];
+              const Icon = iconFor(professional.type);
               return <Icon size={36} className="text-white" />;
             })()}
           </span>

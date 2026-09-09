@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { DataSharingSummary } from "../../components/professionals/DataSharingSummary";
 import { Chip } from "../../components/ui/Chip";
 import { Button } from "../../components/ui/Button";
-import { mockProfessionals } from "../../data/mockProfessionals";
+import { fetchPublicDirectory, type DirectoryListing } from "../../services/directory";
 import { useApp } from "../../context/AppContext";
 import type { ProfessionalType } from "../../types";
+import type { Enums } from "../../../lib/supabase/database.types";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { Star, ShieldCheck, UserCheck, Pencil, BadgeCheck, AtSign, Globe2, XIcon } from "lucide-react";
 import ProfessionalDashboard from "./ProfessionalDashboard";
@@ -23,30 +24,61 @@ export const LINKED_PROFESSIONAL_REVIEW_ID = "me";
 const linkedIcon = (subtype?: string) =>
   subtype && subtype in professionalTypeIcon ? professionalTypeIcon[subtype as ProfessionalType] : UserCheck;
 
-const typeLabels: Record<ProfessionalType, string> = {
+// Keyed on the DATABASE enum, not the app's four-value ProfessionalType. The
+// two nearly agree, except professional_subtype also has 'other' — a real
+// account can hold it, so a directory that only knew four would silently drop
+// those professionals from every filter.
+type Subtype = Enums<"professional_subtype">;
+
+const subtypeLabels: Record<Subtype, string> = {
   trainer: "Personal Trainers",
   dietitian: "Dietitians",
   physiotherapist: "Physiotherapists",
   doctor: "Doctors / GPs",
+  other: "Other",
 };
+
+const subtypeLabel = (s: Subtype | null): string => (s ? subtypeLabels[s] : "Professional");
+
+const listingIcon = (s: Subtype | null) =>
+  s && s in professionalTypeIcon ? professionalTypeIcon[s as ProfessionalType] : UserCheck;
 
 export default function Professionals() {
   const navigate = useNavigate();
-  const { user, connectedProfessionalIds, professionalReviews, submitProfessionalReview } = useApp();
-  const [type, setType] = useState<ProfessionalType | null>(null);
+  const { user, professionalReviews, submitProfessionalReview } = useApp();
+  const [type, setType] = useState<Subtype | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [linkedProfileOpen, setLinkedProfileOpen] = useState(false);
   const myLinkedReview = professionalReviews.find((r) => r.professionalId === LINKED_PROFESSIONAL_REVIEW_ID);
   const [reviewRating, setReviewRating] = useState(myLinkedReview?.rating ?? 5);
   const [reviewText, setReviewText] = useState(myLinkedReview?.text ?? "");
 
-  const isConnected = (p: { id: string; connected?: boolean }) =>
-    p.connected || connectedProfessionalIds.includes(p.id);
-  // V10 (QA 10.0): "hired professionals should get updated every time the
-  // client hires a professional" — show every currently hired professional
-  // (up to one per specialty), not just the first match in array order.
-  const connectedList = mockProfessionals.filter(isConnected);
-  const filtered = type ? mockProfessionals.filter((p) => p.type === type) : mockProfessionals;
+  // The real directory, replacing the static mockProfessionals array this
+  // page browsed until now. Those entries were not accounts — their ids
+  // ("pr1") could never hold a relationship — so every listing was a
+  // dead end dressed as a profile. See services/directory.
+  const [listings, setListings] = useState<DirectoryListing[] | null>(null);
+  const [directoryError, setDirectoryError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const result = await fetchPublicDirectory();
+      if (cancelled) return;
+      if (!result.ok) {
+        setDirectoryError(result.message);
+        setListings([]);
+        return;
+      }
+      setDirectoryError(null);
+      setListings(result.listings);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filtered = (listings ?? []).filter((l) => (type ? l.subtype === type : true));
 
   // Professionals get an entirely different dashboard here (client roster,
   // not a directory to browse) — separate UI per QA, not just a banner.
@@ -59,8 +91,9 @@ export default function Professionals() {
       <PageHeader title="Professionals" subtitle="Trainers, dietitians, physiotherapists & doctors" showBack />
 
       {/* Real data-sharing controls. These hang off the client's actual
-          relationships, not the browse directory below — the directory's
-          entries are mock listings, not accounts that can hold a grant.
+          relationships, not the browse directory below — appearing in the
+          directory is a professional advertising themselves, which grants
+          them nothing until a client redeems their code.
 
           Summarised rather than inline: the full toggle list grew to seven
           categories and took the whole first screen, pushing the roster and
@@ -112,69 +145,89 @@ export default function Professionals() {
         </Card>
       )}
 
-      {connectedList.map((connected) => (
-        <Card
-          key={connected.id}
-          interactive
-          onClick={() => navigate(`/app/professionals/${connected.id}`)}
-          className="mb-6 bg-gradient-to-br from-primary to-primary-dark !text-white animate-fade-slide-up"
-        >
-          <div className="flex items-center gap-3 mb-3">
-            <span className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center shrink-0">
-              {(() => {
-                const Icon = professionalTypeIcon[connected.type];
-                return <Icon size={22} className="text-white" />;
-              })()}
-            </span>
-            <div>
-              <p className="text-xs text-white/70 font-semibold uppercase tracking-wide">My {typeLabels[connected.type].replace(/s$/, "")}</p>
-              <p className="font-display font-semibold text-lg">{connected.name}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 text-xs text-white/80">
-            <ShieldCheck size={13} /> Client since August 2026
-          </div>
-        </Card>
-      ))}
+      {/* The mock "My Dietitian" card that used to sit here is gone with
+          mockProfessionals. It rendered a hired relationship with a person who
+          had no account, beside the real linked-professional card directly
+          above — two cards that looked alike where one was true. The real one
+          covers this case. */}
 
       <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-5">
         <Chip active={type === null} onClick={() => setType(null)}>
           All
         </Chip>
-        {(Object.keys(typeLabels) as ProfessionalType[]).map((t) => (
+        {(Object.keys(subtypeLabels) as Subtype[]).map((t) => (
           <Chip key={t} active={type === t} onClick={() => setType(t)}>
-            {typeLabels[t]}
+            {subtypeLabels[t]}
           </Chip>
         ))}
       </div>
 
       <div className="space-y-3">
+        {/* No rating or review count: no such schema exists, and inventing one
+            from nothing is the same class of error as a measured-looking
+            zero. Rates are shown instead, which are real. */}
         {filtered.map((p) => (
-          <Card key={p.id} className="animate-fade-slide-up">
+          <Card key={p.profileId} className="animate-fade-slide-up">
             <div className="flex items-start gap-3.5 mb-3">
-              <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
-                {(() => {
-                  const Icon = professionalTypeIcon[p.type];
-                  return <Icon size={19} className="text-primary-dark" />;
-                })()}
+              <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
+                {p.avatarUrl ? (
+                  <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" />
+                ) : (
+                  (() => {
+                    const Icon = listingIcon(p.subtype);
+                    return <Icon size={19} className="text-primary-dark" />;
+                  })()
+                )}
               </span>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="font-semibold text-charcoal text-sm">{p.name}</p>
-                  <span className="flex items-center gap-1 text-xs font-bold text-gold shrink-0">
-                    <Star size={12} className="fill-gold" /> {p.rating}
-                  </span>
-                </div>
-                <p className="text-xs text-primary-dark font-medium">{p.specialty}</p>
-                <p className="text-xs text-charcoal-faint">{p.location} · {p.reviews} reviews</p>
+                <p className="font-semibold text-charcoal text-sm truncate">{p.name}</p>
+                {(p.specialty || p.subtype) && (
+                  <p className="text-xs text-primary-dark font-medium truncate">
+                    {p.specialty ?? subtypeLabel(p.subtype)}
+                  </p>
+                )}
+                {(p.location || p.monthlyRate != null) && (
+                  <p className="text-xs text-charcoal-faint truncate">
+                    {[p.location, p.monthlyRate != null ? `$${p.monthlyRate}/mo` : null]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </p>
+                )}
               </div>
             </div>
-            <p className="text-xs text-charcoal-soft mb-3.5 leading-relaxed">{p.bio}</p>
-            <Button size="sm" fullWidth variant={isConnected(p) ? "secondary" : "primary"} onClick={() => navigate(`/app/professionals/${p.id}`)}>
+            {p.bio && <p className="text-xs text-charcoal-soft mb-3.5 leading-relaxed">{p.bio}</p>}
+            <Button size="sm" fullWidth onClick={() => navigate(`/app/professionals/${p.profileId}`)}>
               View Profile
             </Button>
           </Card>
         ))}
+
+        {/* Three outcomes, deliberately distinct. An empty directory is the
+            expected steady state until professionals opt in, and saying so
+            plainly beats a blank screen; a failed request is not the same
+            thing and must not borrow that wording. */}
+        {listings === null && !directoryError && (
+          <Card className="text-center py-8">
+            <p className="text-sm text-charcoal-faint">Loading professionals…</p>
+          </Card>
+        )}
+        {directoryError && (
+          <Card className="text-center py-8">
+            <p className="text-sm text-charcoal-faint">{directoryError}</p>
+          </Card>
+        )}
+        {listings !== null && !directoryError && filtered.length === 0 && (
+          <Card className="text-center py-8">
+            <p className="text-sm font-semibold text-charcoal">
+              {listings.length === 0 ? "No professionals listed yet" : "None in this category"}
+            </p>
+            <p className="text-xs text-charcoal-faint mt-1 leading-relaxed">
+              {listings.length === 0
+                ? "Professionals choose whether to appear here. If you already work with one, ask them for their client code to connect."
+                : "Try a different category."}
+            </p>
+          </Card>
+        )}
       </div>
 
       <BottomSheet
