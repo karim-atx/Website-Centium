@@ -541,6 +541,28 @@ categories' labels — which was deliberately not done up front, because the
 approved copy is specific on purpose and a generic version reads worse for the
 case that actually exists.
 
+### The meal-plan builder still interpolates a client's weight history
+
+Weight is now stored in `health_metrics` and the roster tiles read it for
+real, but `MealPlanBuilderTab.weightHistoryFor` was not converted with them.
+It still builds a seven-point series by interpolating between
+`lastWeightKg - weightTrend` and `lastWeightKg`, which is a straight line
+through two real endpoints rather than the readings that actually exist. Its
+own comment — "a professional's client has no real logged weight-history in
+this prototype" — is now out of date.
+
+Deliberately left, because it is a different query rather than a different
+mapping. The roster needs one latest value per client and gets it in a single
+batched read; this chart needs the whole series for ONE client, which is a
+per-client read with its own loading and not-shared states, and it belongs
+with the professional-side charting work rather than bolted onto the client
+write path.
+
+Nothing is misreported in the meantime: both endpoints are real, so the chart
+starts and ends in the right place. Only the shape between them is invented,
+and it will read as a smooth trend even for a client whose weight moved
+unevenly.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
