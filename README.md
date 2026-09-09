@@ -210,53 +210,63 @@ those values before they are committed, what happens when they disagree
 with them, and how that interacts with the health data the profile feeds.
 Design that before touching the table.
 
-### The professional dashboard's client-health tiles are partly wired
+### The professional's client tiles are wired; two things behind them are not
 
-**Nutrition is done** (`2c0ed52`). A professional who has been granted
-`food_diary` sees their client's real food logs — totals for the client's
-most recently logged day, with the date, across the roster row and all four
-client-sheet surfaces. `services/professional-client` batches one query for
-the whole roster; `utils/nutritionDisplay` owns the wording so the surfaces
-cannot drift apart. Client identity on the roster is real too (`299523a`,
-via `related_profile_summary` — not `public_profile_summary`, which excludes
-customers by design and is why every client used to render as "Client").
+**The data is real now.** Nutrition, weight, workouts, medical history, blood
+work and imaging all reach the professional from the client's own account,
+each gated on its own consent category and each read in one batched query per
+roster rather than one per client. `workoutLoggedToday` is gone, replaced by a
+`workout` object carrying the session date so an absence can be stated as a
+fact rather than a verdict. Client identity is real too (via
+`related_profile_summary`, not `public_profile_summary`, which excludes
+customers by design).
 
-**Weight, workouts and medical history are not.** Still optional on
-`ProfessionalClient` and `undefined` on every real row: `lastWeightKg`,
-`weightTrend`, `workoutLoggedToday`, `healthSummary`, `medicalHistory`,
-plus the demographics `activityLevel`, `activityType`, `age`, `sex`,
-`heightCm` and `weightKg`. Three surfaces still render `HealthDataPending`
-("coming soon") in their place: the dashboard's "N of M trained" hero, the
-meal planner's weight-trend card, and the client sheet's activity summary —
-that last one now only when the client shares nothing renderable at all.
+What made that possible was the client-side write path, which is what the
+original tile investigation split out as its task 4 and which is now complete:
+`workout_sessions`, `health_metrics`, `medications`, `surgeries`,
+`comorbidities`, `blood_panels`, `blood_markers` and `imaging_records` are all
+written by the app rather than held in `localStorage`.
 
-**What blocks them is the client's own write path, not the professional's
-read path.** `workout_sessions`, `health_metrics`, `medications`,
-`surgeries`, `comorbidities` and the rest already carry
-`*_select_granted_professional` policies built on `has_client_access()`, so
-the professional side is waiting on data that does not exist: the client's
-app still keeps weight, workouts, sleep and steps in `localStorage` and
-never writes those tables. Wiring them is a client-side project of its own —
-much larger than these tiles — and it is what the original tile
-investigation split out as its task 4.
+**`HealthDataPending` still renders in three places, and that is now correct
+rather than a placeholder.** The dashboard's training summary, the meal
+planner's weight-trend card and the client sheet's activity summary each show
+it only when the client genuinely shares nothing renderable — not because the
+plumbing is missing. Its meaning inverted: it used to stand in for data the app
+could not fetch, and now states an absence of consent, which is what the rule
+below asks for.
+
+**What genuinely remains:**
+
+- **`healthSummary` is never assigned.** Body fat, sleep average and steps
+  average are still optional on `ProfessionalClient` and `undefined` on every
+  real row — `HealthMetricsTab`'s "Auto-synced" grid and the client sheet's
+  equivalent are the surfaces waiting on it. Unlike the fields above, these
+  are device-synced metrics the app has no write path for at all, so this is
+  blocked on health-integration work rather than on a read.
+- **The demographics are undefined too:** `activityLevel`, `activityType`,
+  `age`, `sex`, `heightCm` and `weightKg` on `ProfessionalClient`. `fetchRoster`
+  does not select them, and `profiles` holds them — so unlike `healthSummary`
+  this one is reachable today, and it is a question of whether a professional
+  should see them rather than whether they exist.
+- **Professional-side mutations are still in-memory only.**
+  `updateProfessionalClientAccess`, `updateProfessionalClient`,
+  `assignProgramToClient`, `assignFoodTemplateToClient` and
+  `updateClientHealthNote` all call `setState` and nothing else. They update
+  the UI and are lost on the next roster refetch. `client_health_notes` exists
+  as a table with authoring-professional-only policies and is not written.
 
 Consent is not a blocker and has not been for some time. `client_access_grants`
-is real and enforced, and since the consent split `has_client_access()`
-requires both an active grant for the category *and* an undisconnected
-relationship.
+is real and enforced, and `has_client_access()` requires both an active grant
+for the category *and* an undisconnected relationship.
 
-The governing rule for whatever gets wired next: **an absence must never
-render as a measurement.** "0 of 5 trained" reads as a finding a
-professional could act on, not as missing data, and mock numbers beside a
-real roster read as the client's own. This is not hypothetical — the Food
-Diary card shipped printing a confident "0 kcal" for clients whose intake
-had never been fetched, which is exactly what `2c0ed52` removed.
-
-Related: professional-side mutations (`updateProfessionalClientAccess`,
-`updateProfessionalClient`, `assignProgramToClient`,
-`assignFoodTemplateToClient`, and `clientHealthNotes`) still write to
-in-memory state only. They update the UI and are lost on the next roster
-refetch.
+The governing rule, which earned its keep repeatedly while the above was
+built: **an absence must never render as a measurement.** "0 of 5 trained"
+reads as a finding a professional could act on, not as missing data, and mock
+numbers beside a real roster read as the client's own. This is not
+hypothetical — the Food Diary card shipped printing a confident "0 kcal" for
+clients whose intake had never been fetched, and the same instinct later caught
+a trained-today denominator counting clients who had never shared a workout at
+all.
 
 ### RLS rejects UPDATEs silently — `if (error)` is not a security check
 
