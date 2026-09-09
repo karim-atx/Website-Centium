@@ -429,32 +429,32 @@ right answer for the case it does cover, and removing it would leave the
 partial-consent client with nothing. This entry exists only so the next reader
 does not assume the string appears wherever a diary is unshared.
 
-### The app's hardcoded `TODAY` disagrees with the database's real timestamps
+### "Trained today" is approximate across timezones
 
-`AppContext` defines `const TODAY = "2026-08-20"`, and `AddMetricSheet` keeps
-its own copy of the same literal. It seeds `selectedDate`, bounds the diary
-window, and `WorkoutSessionSheet` stamps it onto every session it saves.
+The hardcoded `TODAY` this entry used to describe is gone: `todayLocal()`
+derives the current day from the clock, in the user's own timezone, and every
+date-keyed feature reduces instants to days the same way. What remains is
+narrower, and is a data problem rather than a code one.
 
-The database does not know about it. `workout_sessions.started_at` defaults to
-`now()`, `food_log_entries.logged_date` to `current_date`, and every consent
-timestamp is real. So a session logged today is written with the app's date in
-local state and the real date in Postgres — two different days for one event.
+`workout_sessions.started_at` is a `timestamptz` — an instant, not a day — so
+something has to decide which calendar day it fell on. `fetchClientWorkoutActivity`
+uses the **reading professional's** local day, on both sides of the
+comparison. That is exactly right when professional and client share a
+timezone, which is the ordinary case, and it is strictly better than the UTC
+day it replaced, which disagreed with the client's own app for every session
+either side of a UTC midnight.
 
-**This is already visible.** The professional-side workout read computes
-"trained today" against the real calendar date, because the rows only carry
-real dates; the client's own diary computes it against `2026-08-20`. The two
-views of the same session disagree about which day it happened, and today the
-gap is about three weeks.
+It is still an approximation when they do not. A client in Tokyo who trains at
+09:00 their Thursday is at 00:00 UTC Thursday, and their trainer in Los
+Angeles reads that as Wednesday evening — so "trained today" answers the
+professional's question about their own day, not the client's. Nothing stores
+the client's timezone, so nothing can currently do better.
 
-Anywhere a locally-derived date is compared against a server-derived one is
-suspect for the same reason. The diary window (`shiftDate(TODAY, …)` against
-`logged_date`) is the most likely next place to show it, since a wide enough
-gap silently excludes rows the user just wrote.
-
-Not fixed while wiring the professional read path — it is unrelated to that
-work and touches the client's whole date model. The fix is to derive today
-from the clock and let the seeded demo data age out, rather than pinning the
-app to a date that the server has never agreed with.
+The fix, if this ever matters, is a timezone on the profile (IANA name, not an
+offset — offsets change twice a year) written from `Intl.DateTimeFormat().resolvedOptions().timeZone`
+at sign-up, and reducing `started_at` in that zone rather than the reader's.
+That is a Database change, so it is recorded here rather than worked around in
+the client.
 
 ### `ProfessionalType` and `professional_subtype` are unreconciled
 
