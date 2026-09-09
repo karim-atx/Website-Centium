@@ -563,6 +563,67 @@ starts and ends in the right place. Only the shape between them is invented,
 and it will read as a smooth trend even for a client whose weight moved
 unevenly.
 
+### `surgeries.surgery_date` cannot say "I don't remember exactly when"
+
+**Database repo change, requested.** `surgery_date` is `date NOT NULL`, so a
+surgery with no known date has nowhere to be stored. The app used to keep a
+`"Not dated"` sentinel string locally; that could not be written, and the three
+alternatives were worse — a placeholder date writes a false fact into a medical
+record, keeping undated entries local-only rebuilds the two-id-space problem
+the workout log refused, and dropping them silently is not an option.
+
+So the form now requires a date and explains why. That is a workaround, not a
+fix. "Sometime in 2019" is an ordinary and honest answer about a surgery, and
+`<input type="date">` demands day precision, so requiring it pressures a user
+into inventing a specific day — moving the fabrication from the code to the
+person, which is not an improvement.
+
+The fix is to make `surgery_date` nullable. When it lands, the guard in
+`addSurgeryRemote` and the `disabled` on the form relax, and nothing else
+changes. A precision flag (`day` / `month` / `year`) would be better still, but
+nullable alone would remove the pressure to guess.
+
+### A consent toggle has twice failed to persist, cause still unknown
+
+Two sightings now, both on this repo's staging, both unexplained.
+
+The first was investigated at the time and closed as *"not reproducible,
+mechanism verified sound, cause unproven"*. The second happened while verifying
+medical history: the `medical_history` toggle was switched on, and the row
+afterwards read `granted: false` with **`granted_at: null`** — never stamped at
+all, still carrying the previous day's `revoked_at`. A second attempt minutes
+later wrote correctly and survived a reload.
+
+What is known: the write path is sound when it runs, `stamp_client_access_grant`
+stamps correctly, and the professional side reads the result accurately in both
+states. What is not known is why the first write produced no row change and no
+visible error.
+
+This matters more than a normal flake. The failure is silent and the toggle is
+the client's only control over disclosure, so the shape of the bug is a client
+believing they have shared something they have not — or, if it can fail in the
+other direction, believing they have revoked something still visible. Only the
+first direction has been observed.
+
+Not fixable from the aftermath: `granted_at` being null means there is nothing
+to inspect. It needs a reproduction with the network tab open, or an
+instrumented write that logs the PostgREST response alongside the row count.
+
+### `HealthMetricsTab`'s row summary names only what it renders
+
+The collapsed client row read "Not sharing health data" from
+`access.healthMetrics` alone, which became wrong once medical history carried
+real data: a client sharing their medications appeared to be sharing nothing,
+with the medications one tap away. It now says "Sharing medical history" when
+that is what is shared.
+
+`lab_results` is deliberately **not** named there, even though it is a
+health-data category the client can grant. This row renders vitals, medical
+history and clinical notes — no lab content at all — so naming lab results
+would send someone to open a row that shows them nothing, which is the same
+mismatch this fixed, pointing the other way. If task 4 gives lab results a
+block here, add the branch at the same time and not before.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
