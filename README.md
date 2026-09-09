@@ -594,6 +594,9 @@ guess.
 
 - The client's imaging list shows type, date and note. A record with a file
   looks identical to one typed by hand; the scan is stored and unreachable.
+- The same is now true of lab reports. A captured panel stores the report under
+  `lab-reports/<uid>/panels/`, and `blood_panels.source_image_url` holds the
+  path, but no surface offers to open it.
 - The professional side has no lab or imaging surface at all — that is task 4c,
   and `ProfessionalClient` carries no field for either.
 
@@ -608,6 +611,37 @@ holds the object path for exactly that reason.
 
 One more thing that viewer must not assume: `medical-imaging` accepts PDFs as
 well as images, so it cannot simply render an `<img>`.
+
+### There is no manual biomarker entry, and three things are waiting on it
+
+Blood markers can only arrive through `BiomarkerCaptureFlow`, whose
+`ExtractedBiomarker` is `{name, value, unit, selected}` — no reference range,
+no date. The Biomarkers tab is read-only: tap to open, tap to share. So the app
+has no way to type in a result, and no way to supply a range for one.
+
+Three consequences, all currently unreachable and all reachable the moment that
+entry path is built:
+
+**`parseRange` has no producer.** It is the correct mapping layer for
+`range_low`/`range_high`, and it is tested — en, em and figure dashes, `<`,
+`<=`, `>`, `>=`, negatives on both bounds, reversed ranges refused rather than
+silently swapped. But every write this app makes today stores both bounds null,
+so only `formatRange`, the read direction, has a live caller. Its own doc
+comment says so; this entry exists so the gap is findable from outside the file.
+
+**Newest-wins applies to range and status, not just value.** `getBloodMarkers`
+groups by marker name across panels and lets the newest panel set the headline
+figures. A marker measured in an older panel *with* a range and again in a
+newer one *without* loses the range — HbA1c went from `4 – 5.6` to `—` in
+testing. That is defensible: a reference range belongs to the lab that issued
+it, and pairing an old range with a new value from a different lab would be
+worse than showing none. Recorded because a test surfaced it rather than the
+design anticipating it, and because manual entry is what makes it happen.
+
+**The display string is normalised, not preserved.** `"< 1.90"` round-trips to
+`"< 1.9"`. `numeric(12,4)` stores `1.9000` but nothing can recover the trailing
+zero as *display* precision, and in lab reporting significant figures carry
+meaning. Preserving it would need a column for the original string.
 
 ### A consent toggle has twice failed to persist, cause still unknown
 
