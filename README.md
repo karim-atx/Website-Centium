@@ -627,31 +627,52 @@ design anticipating it, and because manual entry is what makes it happen.
 zero as *display* precision, and in lab reporting significant figures carry
 meaning. Preserving it would need a column for the original string.
 
-### A consent toggle has twice failed to persist, cause still unknown
+### A consent toggle has three times failed to persist, cause still unknown
 
-Two sightings now, both on this repo's staging, both unexplained.
+Three sightings now, all on this repo's staging, all unexplained.
 
 The first was investigated at the time and closed as *"not reproducible,
 mechanism verified sound, cause unproven"*. The second happened while verifying
 medical history: the `medical_history` toggle was switched on, and the row
 afterwards read `granted: false` with **`granted_at: null`** — never stamped at
-all, still carrying the previous day's `revoked_at`. A second attempt minutes
-later wrote correctly and survived a reload.
+all, still carrying the previous day's `revoked_at`.
+
+**The third failed in the opposite direction, which this entry previously said
+had never been seen.** `lab_results` was switched OFF to set up a Storage
+consent test; the row afterwards still read `granted: true`. A retry minutes
+later wrote correctly — `granted: false`, `revoked_at` stamped, and `granted_at`
+preserved from the original grant, which is exactly the withdrawal behaviour
+`stamp_client_access_grant` is supposed to produce.
+
+So the failure is not specific to granting. A client can believe they have
+shared something they have not, **and** believe they have revoked something a
+professional can still see. The second is much the worse of the two: a grant
+that silently fails to apply leaks nothing, while a revocation that silently
+fails to apply leaves clinical data readable by someone the client has decided
+should no longer see it.
 
 What is known: the write path is sound when it runs, `stamp_client_access_grant`
 stamps correctly, and the professional side reads the result accurately in both
-states. What is not known is why the first write produced no row change and no
-visible error.
+states. Every failure has been silent — no error text, no thrown exception, and
+the row simply unchanged.
 
-This matters more than a normal flake. The failure is silent and the toggle is
-the client's only control over disclosure, so the shape of the bug is a client
-believing they have shared something they have not — or, if it can fail in the
-other direction, believing they have revoked something still visible. Only the
-first direction has been observed.
+**The cheapest useful observation is whether the "Saved" checkmark appears
+during a failure**, and it has not been captured in any of the three. The
+dedicated investigation established that the checkmark cannot appear without a
+successful write: forcing every consent `PATCH` to `403` produced no checkmark,
+a reverted switch and a visible error, sampled across 2.8 seconds. That makes it
+a real discriminator —
 
-Not fixable from the aftermath: `granted_at` being null means there is nothing
-to inspect. It needs a reproduction with the network tab open, or an
-instrumented write that logs the PostgREST response alongside the row count.
+- **checkmark seen during a failure** → the confirmation is lying, which would
+  be a serious regression on a security-relevant control and a genuinely new
+  finding;
+- **no checkmark** → the click never reached the handler, which matches what
+  earlier instrumentation suggested and points away from the write path
+  entirely.
+
+Not fixable from the aftermath: an unchanged row leaves nothing to inspect. It
+needs a reproduction with the network tab open, or an instrumented write that
+logs the PostgREST response alongside the affected row count.
 
 ### `HealthMetricsTab`'s row summary names only what it renders
 
