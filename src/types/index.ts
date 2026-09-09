@@ -306,6 +306,21 @@ export interface ProfessionalClient {
   // directly on the client row as a stand-in for a real sync of the
   // client's own `comorbidities`/`surgeries`/`medications` state.
   medicalHistory?: { comorbidities: string[]; surgeries: Surgery[]; medications: Medication[] };
+  /**
+   * Blood work, gated on lab_results — its OWN category, not the one
+   * covering medications and surgeries. Undefined means not shared or not
+   * loaded; null means shared with no panels recorded. Those are different
+   * answers and the surfaces render them differently.
+   */
+  labs?: ClientLabsSummary | null;
+  /**
+   * Imaging and other tests, gated on medical_history — the same category
+   * as medications and surgeries, deliberately not lab_results.
+   *
+   * An empty array is a real answer here ("nothing recorded"), so absence is
+   * carried by undefined alone.
+   */
+  imaging?: ImagingRecord[];
 }
 
 // V4 (QA 4.0): a professional's own rating + written review for a professional,
@@ -709,6 +724,14 @@ export interface BloodMarker {
 export interface BloodPanel {
   date: string;
   markers: BloodMarker[];
+}
+
+/** A professional's view of one client's blood work. */
+export interface ClientLabsSummary {
+  markers: BloodMarker[];
+  /** yyyy-mm-dd of the most recent panel. */
+  latestPanelDate: string;
+  panelCount: number;
 }
 
 // QA 12.0: "I would like the biomarker widget to be inside a tab that not

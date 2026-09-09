@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
-import type { ClientNutrition, ClientWorkoutActivity } from "../../types";
+import type { BloodMarker, ClientNutrition, ClientWorkoutActivity, ImagingRecord } from "../../types";
+import { groupPanelsByMarkerName, type PanelRow } from "../labs";
 import { localDayOf, todayLocal } from "../../utils/date";
 
 // A professional's read of their clients' own data.
@@ -358,6 +359,128 @@ export async function fetchClientMedicalHistory(
       times: (row.times ?? []).map((t) => t.slice(0, 5)),
       notifyEnabled: row.notify_enabled,
       ...(row.notes ? { notes: row.notes } : {}),
+    });
+  }
+
+  return { ok: true, byClient };
+}
+
+export interface ClientLabs {
+  /** Markers grouped by name across every panel, newest reading first-class. */
+  markers: BloodMarker[];
+  /** yyyy-mm-dd of the most recent panel. */
+  latestPanelDate: string;
+  panelCount: number;
+}
+
+export type ClientLabsResult =
+  | { ok: true; byClient: Record<string, ClientLabs | null> }
+  | { ok: false; message: string };
+
+/**
+ * A client's blood work, for clients who have granted `lab_results`.
+ *
+ * ITS OWN CATEGORY, AND ITS OWN QUERY. lab_results is separate from both
+ * health_metrics (vitals) and medical_history (medications, surgeries,
+ * imaging) — a client can share any one without the others, so this list is
+ * built independently and nothing here is inferred from another grant.
+ *
+ * Reuses groupPanelsByMarkerName rather than reimplementing the inversion:
+ * the professional sees the same marker-with-history shape the client's own
+ * Health tab shows, because it is the same data answered from the same
+ * grouping. Panels are ordered oldest-first for that reason — the helper
+ * depends on it.
+ *
+ * Same rules as every read above: one batched query for the roster, every
+ * requested client present as `null` when they have no panels, and ok:false
+ * rather than an empty map on failure, because "no blood work" and "could not
+ * read blood work" are opposite claims about a person's health.
+ */
+export async function fetchClientLabs(clientIds: string[]): Promise<ClientLabsResult> {
+  if (clientIds.length === 0) return { ok: true, byClient: {} };
+
+  const { data, error } = await supabase
+    .from("blood_panels")
+    .select("id, user_id, panel_date, blood_markers(id, name, value, unit, range_low, range_high, status)")
+    .in("user_id", clientIds)
+    .order("panel_date", { ascending: true });
+
+  if (error) {
+    console.error("[professional-client] Could not read client labs:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+
+  const byClient: Record<string, ClientLabs | null> = {};
+  for (const id of clientIds) byClient[id] = null;
+
+  // Panels arrive oldest-first across every client at once, so bucket them per
+  // client BEFORE grouping — the helper's chronological contract is per person.
+  const panelsFor: Record<string, PanelRow[]> = {};
+  for (const row of data ?? []) {
+    if (!(row.user_id in byClient)) continue;
+    (panelsFor[row.user_id] ??= []).push({
+      panel_date: row.panel_date,
+      blood_markers: row.blood_markers ?? [],
+    });
+  }
+
+  for (const [id, panels] of Object.entries(panelsFor)) {
+    if (panels.length === 0) continue;
+    byClient[id] = {
+      markers: groupPanelsByMarkerName(panels),
+      latestPanelDate: panels[panels.length - 1].panel_date,
+      panelCount: panels.length,
+    };
+  }
+
+  return { ok: true, byClient };
+}
+
+export type ClientImagingResult =
+  | { ok: true; byClient: Record<string, ImagingRecord[]> }
+  | { ok: false; message: string };
+
+/**
+ * A client's imaging and other tests, for clients who have granted
+ * `medical_history` — the SAME category as medications and surgeries, not
+ * lab_results. Diagnostic blood work and clinical records are different
+ * disclosures and the schema splits them that way.
+ *
+ * Returns an empty array rather than null for a consented client with nothing
+ * recorded: unlike labs, where null distinguishes "no panels at all", every
+ * caller here renders a list, and an empty list says "nothing recorded"
+ * without implying the read failed.
+ *
+ * filePath is the stored object path, not a URL. Signing happens when someone
+ * asks to open a file, never at list render — a link minted here would spend
+ * its short life unused and be dead by the time anyone tapped it.
+ */
+export async function fetchClientImaging(clientIds: string[]): Promise<ClientImagingResult> {
+  if (clientIds.length === 0) return { ok: true, byClient: {} };
+
+  const { data, error } = await supabase
+    .from("imaging_records")
+    .select("id, user_id, imaging_type, imaging_date, note, file_url")
+    .in("user_id", clientIds)
+    .order("imaging_date", { ascending: false });
+
+  if (error) {
+    console.error("[professional-client] Could not read client imaging:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+
+  const byClient: Record<string, ImagingRecord[]> = {};
+  for (const id of clientIds) byClient[id] = [];
+
+  for (const row of data ?? []) {
+    const list = byClient[row.user_id];
+    if (!list) continue;
+    list.push({
+      id: row.id,
+      type: row.imaging_type,
+      date: row.imaging_date,
+      ...(row.note ? { note: row.note } : {}),
+      ...(row.file_url ? { filePath: row.file_url } : {}),
     });
   }
 

@@ -289,20 +289,38 @@ export type BloodMarkerResult =
  * Reports ok:false rather than an empty list on failure — an empty lab history
  * and an unreadable one are opposite claims.
  */
-export async function getBloodMarkers(userId: string): Promise<BloodMarkerResult> {
-  const { data, error } = await supabase
-    .from("blood_panels")
-    .select("id, panel_date, blood_markers(id, name, value, unit, range_low, range_high, status)")
-    .eq("user_id", userId)
-    .order("panel_date", { ascending: true });
+/** One panel's worth of rows, as both callers select them. */
+export interface PanelRow {
+  panel_date: string;
+  blood_markers: {
+    id: string;
+    name: string;
+    value: number;
+    unit: string;
+    range_low: number | null;
+    range_high: number | null;
+    status: "low" | "normal" | "high" | null;
+  }[];
+}
 
-  if (error) {
-    console.error("[labs] Could not load lab results:", error.message);
-    return { ok: false, message: "Could not load your lab results." };
-  }
-
+/**
+ * THE INVERSION ITSELF, extracted so it has exactly one definition.
+ *
+ * Two callers need it and they read different rows: getBloodMarkers reads the
+ * signed-in user's own panels, and the professional-side fetchClientLabs reads
+ * a whole roster's in one batched query. Writing the grouping twice would mean
+ * getting "newest wins" right twice, which is the same trap recordBiomarkers
+ * avoided by re-reading rather than merging.
+ *
+ * PANELS MUST ARRIVE OLDEST-FIRST. Appending as we go then builds each
+ * marker's history in chronological order and leaves the newest reading as the
+ * one that overwrites value/unit/range/status — so "current" means the most
+ * recent panel that measured it, per marker, and a marker absent from the
+ * latest panel keeps the last value that did measure it rather than vanishing.
+ */
+export function groupPanelsByMarkerName(panels: PanelRow[]): BloodMarker[] {
   const byName = new Map<string, BloodMarker>();
-  for (const panel of data ?? []) {
+  for (const panel of panels) {
     for (const m of panel.blood_markers ?? []) {
       const key = m.name.toLowerCase();
       const value = Number(m.value);
@@ -311,7 +329,6 @@ export async function getBloodMarkers(userId: string): Promise<BloodMarkerResult
       const existing = byName.get(key);
       if (existing) {
         existing.history.push({ date: panel.panel_date, value });
-        // Newest panel wins for the headline figures.
         existing.value = value;
         existing.unit = m.unit;
         existing.range = formatRange(low, high);
@@ -330,6 +347,20 @@ export async function getBloodMarkers(userId: string): Promise<BloodMarkerResult
       }
     }
   }
+  return [...byName.values()];
+}
 
-  return { ok: true, markers: [...byName.values()] };
+export async function getBloodMarkers(userId: string): Promise<BloodMarkerResult> {
+  const { data, error } = await supabase
+    .from("blood_panels")
+    .select("id, panel_date, blood_markers(id, name, value, unit, range_low, range_high, status)")
+    .eq("user_id", userId)
+    .order("panel_date", { ascending: true });
+
+  if (error) {
+    console.error("[labs] Could not load lab results:", error.message);
+    return { ok: false, message: "Could not load your lab results." };
+  }
+
+  return { ok: true, markers: groupPanelsByMarkerName(data ?? []) };
 }

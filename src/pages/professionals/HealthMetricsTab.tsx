@@ -3,6 +3,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import { HeartPulse, ChevronDown, ChevronUp, Scale, Moon, Footprints } from "lucide-react";
+import { ClientClinicalRecords } from "../../components/professionals/ClientClinicalRecords";
 
 // QA 13.0: comorbidities/previous surgeries/medications are no longer
 // typed by the professional here — they're synced read-only from what the
@@ -42,17 +43,24 @@ export default function HealthMetricsTab() {
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-charcoal truncate">{c.name}</p>
                     {/* The row has to say whether there is a reason to open it.
-                        This read off access.healthMetrics alone, which went wrong
-                        the moment medical history became real: a client sharing
-                        their medications showed as sharing nothing, with the
-                        medications sitting one tap away. Lab results are
-                        deliberately not named here -- this row renders none, so
-                        promising them would repeat the same mismatch. */}
+                        This read off access.healthMetrics alone, which went
+                        wrong the moment medical history became real: a client
+                        sharing their medications showed as sharing nothing,
+                        with the medications one tap away.
+
+                        Lab results join the list now that this row actually
+                        renders them -- the previous note said they were left
+                        out precisely because it did not. Still four branches
+                        rather than a taxonomy of combinations: the headline
+                        names the broadest thing shared, and opening the row
+                        shows everything. */}
                     <p className="text-xs text-charcoal-faint">
                       {c.access.healthMetrics
                         ? "Sharing health data"
                         : c.access.medicalHistory
                         ? "Sharing medical history"
+                        : c.access.labResults
+                        ? "Sharing lab results"
                         : "Not sharing health data"}
                     </p>
                   </div>
@@ -95,46 +103,10 @@ export default function HealthMetricsTab() {
                   {/* QA 13.0: "Anything added by the client in the health
                       tab from past comorbidities, previous surgeries,
                       medications in the Client UI health tab should also
-                      appear here." */}
-                  <div>
-                    <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-                      Synced from client's Health tab
-                    </p>
-                    {c.medicalHistory &&
-                    (c.medicalHistory.comorbidities.length ||
-                      c.medicalHistory.surgeries.length ||
-                      c.medicalHistory.medications.length) ? (
-                      <div className="space-y-2.5">
-                        {c.medicalHistory.comorbidities.length > 0 && (
-                          <div className="flex flex-wrap gap-1.5">
-                            {c.medicalHistory.comorbidities.map((cm) => (
-                              <span key={cm} className="text-[11px] font-semibold rounded-full px-2.5 py-1 bg-teal-pale text-teal-dark">
-                                {cm}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-                        {c.medicalHistory.surgeries.map((s) => (
-                          <div key={s.id} className="rounded-xl px-3 py-2 bg-berry/10 text-berry">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide opacity-80">Surgery</p>
-                            <p className="text-sm font-medium">
-                              {s.name} <span className="text-xs font-normal opacity-80">· {s.date}</span>
-                            </p>
-                          </div>
-                        ))}
-                        {c.medicalHistory.medications.map((m) => (
-                          <div key={m.id} className="rounded-xl px-3 py-2 bg-primary-pale text-primary-dark">
-                            <p className="text-[10px] font-semibold uppercase tracking-wide opacity-80">Medication</p>
-                            <p className="text-sm font-medium">
-                              {m.name} <span className="text-xs font-normal opacity-80">· {m.dose} · {m.route}</span>
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    ) : (
-                      <p className="text-xs text-charcoal-faint">Nothing shared from the client's Health tab yet.</p>
-                    )}
-                  </div>
+                      appear here." Blood work and imaging joined it; all
+                      three live in one component shared with
+                      ClientDetailSheet rather than copied into both. */}
+                  <ClientClinicalRecords client={c} />
 
                   <div>
                     <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">

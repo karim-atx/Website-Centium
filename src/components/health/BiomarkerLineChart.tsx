@@ -43,7 +43,14 @@ export const BiomarkerLineChart: React.FC<{
 
       <path d={path} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
       {history.map((h, i) => (
-        <circle key={h.date} cx={x(i)} cy={y(h.value)} r={2.5} fill={color} />
+        /* Keyed by POSITION, not by date. Two readings can share a date now
+           that a panel is created per capture -- a client uploading two lab
+           reports on one day produces two history points with identical
+           dates, which React rejects as duplicate keys. The seeded history
+           this was written against had one point per month, so the collision
+           was unreachable until blood work became real. The series is a fixed
+           positional line, never reordered, so the index IS the identity. */
+        <circle key={i} cx={x(i)} cy={y(h.value)} r={2.5} fill={color} />
       ))}
 
       <text x={x(0)} y={height - 4} fontSize={9} fill="#9C9284" textAnchor="start">

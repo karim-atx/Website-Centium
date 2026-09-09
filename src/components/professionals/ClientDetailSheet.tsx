@@ -27,6 +27,7 @@ import { ACCESS_CATEGORIES, accessKeyFor } from "../../services/consent";
 import { PERSON_ICON } from "../../utils/icons";
 import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "./HealthDataPending";
+import { ClientClinicalRecords } from "./ClientClinicalRecords";
 import { nutritionLine, nutritionLineRecoverySensitive } from "../../utils/nutritionDisplay";
 
 const activityTypeLabel: Record<string, string> = {
@@ -427,12 +428,15 @@ export const ClientDetailSheet: React.FC<{
             controls the client's own auto-synced tracking data; the
             professional's private clinical notes aren't something the client
             shares or withholds, so they render unconditionally below. */}
+        {/* Opens for ANY of the four reasons independently. It previously
+            keyed off healthMetrics, notes, or a non-empty medical history --
+            so a client sharing only their bloods, or sharing medical history
+            with nothing yet recorded in it, would have had the whole section
+            hidden and no way to tell it existed. Each grant stands alone. */}
         {(client.access.healthMetrics ||
-          activeNotes.length > 0 ||
-          (client.medicalHistory &&
-            (client.medicalHistory.comorbidities.length > 0 ||
-              client.medicalHistory.surgeries.length > 0 ||
-              client.medicalHistory.medications.length > 0))) && (
+          client.access.medicalHistory ||
+          client.access.labResults ||
+          activeNotes.length > 0) && (
           <div className="bg-cream-soft rounded-2xl p-4">
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
               <HeartPulse size={13} /> Health Metrics
@@ -468,42 +472,14 @@ export const ClientDetailSheet: React.FC<{
 
             {/* QA 13.0: "Anything added by the client in the health tab
                 from past comorbidities, previous surgeries, medications...
-                should also appear here." */}
-            {client.medicalHistory &&
-              (client.medicalHistory.comorbidities.length > 0 ||
-                client.medicalHistory.surgeries.length > 0 ||
-                client.medicalHistory.medications.length > 0) && (
-                <div className="mt-3 pt-3 border-t border-charcoal/[0.06] space-y-2">
-                  <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">
-                    Synced from client's Health tab
-                  </p>
-                  {client.medicalHistory.comorbidities.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {client.medicalHistory.comorbidities.map((cm) => (
-                        <span key={cm} className="text-[11px] font-semibold rounded-full px-2.5 py-1 bg-teal-pale text-teal-dark">
-                          {cm}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-                  {client.medicalHistory.surgeries.map((s) => (
-                    <div key={s.id} className="rounded-xl px-3 py-2 bg-berry/10 text-berry">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide opacity-80">Surgery</p>
-                      <p className="text-sm font-medium">
-                        {s.name} <span className="text-xs font-normal opacity-80">· {s.date}</span>
-                      </p>
-                    </div>
-                  ))}
-                  {client.medicalHistory.medications.map((m) => (
-                    <div key={m.id} className="rounded-xl px-3 py-2 bg-primary-pale text-primary-dark">
-                      <p className="text-[10px] font-semibold uppercase tracking-wide opacity-80">Medication</p>
-                      <p className="text-sm font-medium">
-                        {m.name} <span className="text-xs font-normal opacity-80">· {m.dose} · {m.route}</span>
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
+                should also appear here." Blood work and imaging now sit
+                alongside it, all three from one component shared with
+                HealthMetricsTab rather than copied into both. */}
+            {(client.access.medicalHistory || client.access.labResults) && (
+              <div className="mt-3 pt-3 border-t border-charcoal/[0.06]">
+                <ClientClinicalRecords client={client} />
+              </div>
+            )}
 
             {activeNotes.length > 0 && (
               <div className="mt-3 pt-3 border-t border-charcoal/[0.06] space-y-2">

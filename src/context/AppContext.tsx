@@ -86,6 +86,8 @@ import {
 import { getMyReferrerReward } from "../services/redemption";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
 import {
+  fetchClientImaging,
+  fetchClientLabs,
   fetchClientMedicalHistory,
   fetchClientNutrition,
   fetchClientWeight,
@@ -1663,15 +1665,25 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const medicalIds = mapped
       .filter((c) => c.access.medicalHistory && c.clientId)
       .map((c) => c.clientId!);
+    // Imaging rides on medical_history, the same grant as medications and
+    // surgeries. Blood work does NOT -- lab_results is its own category, so a
+    // client can share their medication list while withholding their bloods,
+    // or the reverse, and each list is built from its own flag.
+    const imagingIds = medicalIds;
+    const labIds = mapped
+      .filter((c) => c.access.labResults && c.clientId)
+      .map((c) => c.clientId!);
 
     // Both reads are issued together rather than in sequence — they are
     // independent, and a professional opening the dashboard should not wait
     // for one before the other starts.
-    const [nutrition, workouts, weights, medical] = await Promise.all([
+    const [nutrition, workouts, weights, medical, labs, imaging] = await Promise.all([
       consentedIds.length > 0 ? fetchClientNutrition(consentedIds) : null,
       workoutIds.length > 0 ? fetchClientWorkoutActivity(workoutIds) : null,
       weightIds.length > 0 ? fetchClientWeight(weightIds) : null,
       medicalIds.length > 0 ? fetchClientMedicalHistory(medicalIds) : null,
+      labIds.length > 0 ? fetchClientLabs(labIds) : null,
+      imagingIds.length > 0 ? fetchClientImaging(imagingIds) : null,
     ]);
 
     // On failure each field is left undefined, which renders as "loading"
@@ -1695,6 +1707,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // guard against and no four-state encoding to carry.
           const w = weights.byClient[c.clientId];
           if (w) next = { ...next, lastWeightKg: w.lastWeightKg, weightTrend: w.weightTrend };
+        }
+        if (labs?.ok && c.clientId in labs.byClient) {
+          next = { ...next, labs: labs.byClient[c.clientId] };
+        }
+        if (imaging?.ok && c.clientId in imaging.byClient) {
+          next = { ...next, imaging: imaging.byClient[c.clientId] };
         }
         if (medical?.ok && c.clientId in medical.byClient) {
           const h = medical.byClient[c.clientId];
