@@ -711,6 +711,15 @@ export interface ImagingRecord {
   type: string;
   date: string;
   note?: string;
+  /**
+   * Object path in the private medical-imaging bucket, not a URL.
+   *
+   * Signed links are minted at the moment of viewing and live for minutes,
+   * because Storage authorises a signed URL once rather than per request —
+   * so a URL stored here would be both stale and a standing grant. Absent
+   * when the record was typed in by hand rather than captured from a file.
+   */
+  filePath?: string;
 }
 
 export interface Surgery {

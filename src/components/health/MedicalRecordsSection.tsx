@@ -230,6 +230,9 @@ export const MedicalRecordsSection: React.FC<{
 
       {tab === "imaging" && (
         <div className="mb-6 space-y-2.5">
+          {recordError && (
+            <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{recordError}</p>
+          )}
           {imagingRecords.length === 0 && (
             <Card className="text-center py-8">
               <ScanLine size={22} className="text-charcoal-faint mx-auto mb-2" />
@@ -252,9 +255,10 @@ export const MedicalRecordsSection: React.FC<{
                   <Share2 size={12} />
                 </button>
                 <button
-                  onClick={() => removeImagingRecord(r.id)}
+                  onClick={() => void run(() => removeImagingRecord(r.id))}
+                  disabled={busy}
                   aria-label={`Remove ${r.type}`}
-                  className="tap text-charcoal-faint"
+                  className="tap text-charcoal-faint disabled:opacity-40"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -413,9 +417,16 @@ export const MedicalRecordsSection: React.FC<{
             <input
               type="date"
               value={imagingDate}
+              max={today}
               onChange={(e) => setImagingDate(e.target.value)}
               className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
+            {/* Required for the same reason as a surgery date: imaging_date is
+                NOT NULL, so an undated record has nowhere to be stored, and a
+                placeholder date would be a false fact in a medical record. */}
+            <span className="text-[11px] text-charcoal-faint mt-1.5 block">
+              Required. If you're not sure of the exact day, your best estimate is fine.
+            </span>
           </label>
           <label className="block">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Note (optional)</span>
@@ -426,16 +437,26 @@ export const MedicalRecordsSection: React.FC<{
               className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
           </label>
+          {recordError && <p className="text-[11px] text-status-high">{recordError}</p>}
           <button
-            onClick={() => {
-              addImagingRecord({ type: imagingType, date: imagingDate || "Not dated", note: imagingNote || undefined });
+            onClick={async () => {
+              if (!imagingDate) return;
+              const ok = await run(() =>
+                addImagingRecord({
+                  type: imagingType,
+                  date: imagingDate,
+                  note: imagingNote || undefined,
+                })
+              );
+              if (!ok) return;
               setImagingDate("");
               setImagingNote("");
               setAddImagingOpen(false);
             }}
-            className="tap w-full rounded-2xl bg-primary text-white text-sm font-semibold py-3.5"
+            disabled={!imagingDate || busy}
+            className="tap w-full rounded-2xl bg-primary text-white text-sm font-semibold py-3.5 disabled:opacity-50"
           >
-            Save
+            {busy ? "Saving…" : "Save"}
           </button>
         </div>
       </BottomSheet>

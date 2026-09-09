@@ -20,6 +20,13 @@ export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }
   const [source, setSource] = useState<Source>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [results, setResults] = useState<ExtractedImagingRecord[]>([]);
+  // THE FILE ITSELF, kept alongside the preview. The data URL is for showing
+  // a thumbnail and feeding the mock parser; the File is what actually gets
+  // uploaded. Sending the data URL to Storage would upload a base64 string
+  // roughly a third larger than the original for no reason.
+  const [file, setFile] = useState<File | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -28,6 +35,9 @@ export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }
     setSource(null);
     setPhoto(null);
     setResults([]);
+    setFile(null);
+    setSaveError(null);
+    setSaving(false);
   };
 
   const handleClose = () => {
@@ -35,8 +45,10 @@ export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }
     onClose();
   };
 
-  const handleFile = (file: File, via: Source) => {
+  const handleFile = (picked: File, via: Source) => {
     setSource(via);
+    setFile(picked);
+    setSaveError(null);
     const reader = new FileReader();
     reader.onload = () => {
       if (via === "camera") setPhoto(reader.result as string);
@@ -46,16 +58,44 @@ export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }
         setStage("results");
       });
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(picked);
   };
 
   const toggleResult = (idx: number) =>
     setResults((prev) => prev.map((r, i) => (i === idx ? { ...r, selected: !r.selected } : r)));
 
-  const addSelected = () => {
-    results
-      .filter((r) => r.selected)
-      .forEach((r) => addImagingRecord({ type: r.type, date: r.date, note: r.note }));
+  /**
+   * Saves the selected findings, attaching the captured file to the FIRST of
+   * them only.
+   *
+   * One upload, not one per finding. The file is a single scan or report that
+   * happens to have produced several findings, so uploading it once per
+   * selected row would put identical copies in the bucket and leave the client
+   * deleting one record without freeing the storage the others still hold.
+   * Attaching it to the first record keeps exactly one object per capture, and
+   * one row owning it.
+   *
+   * Sequential rather than parallel: each insert reports its own failure, and
+   * stopping at the first one avoids reporting a single error for a batch
+   * that partly succeeded.
+   */
+  const addSelected = async () => {
+    const selected = results.filter((r) => r.selected);
+    if (selected.length === 0) return;
+    setSaving(true);
+    setSaveError(null);
+    for (const [index, r] of selected.entries()) {
+      const result = await addImagingRecord(
+        { type: r.type, date: r.date, note: r.note },
+        index === 0 ? file ?? undefined : undefined
+      );
+      if (!result.ok) {
+        setSaving(false);
+        setSaveError(result.message ?? "That couldn't be saved.");
+        return;
+      }
+    }
+    setSaving(false);
     setStage("done");
     setTimeout(handleClose, 900);
   };
@@ -154,8 +194,14 @@ export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }
                 </button>
               ))}
             </div>
-            <Button fullWidth size="lg" onClick={addSelected} disabled={!results.some((r) => r.selected)}>
-              Add selected results
+            {saveError && <p className="text-[11px] text-status-high mb-2 text-center">{saveError}</p>}
+            <Button
+              fullWidth
+              size="lg"
+              onClick={() => void addSelected()}
+              disabled={!results.some((r) => r.selected) || saving}
+            >
+              {saving ? "Saving…" : "Add selected results"}
             </Button>
           </div>
         )}

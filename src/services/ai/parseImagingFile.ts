@@ -1,4 +1,5 @@
 import type { ImagingRecord } from "../../types";
+import { todayLocal } from "../../utils/date";
 
 export interface ExtractedImagingRecord extends Omit<ImagingRecord, "id"> {
   selected: boolean;
@@ -11,7 +12,9 @@ export interface ExtractedImagingRecord extends Omit<ImagingRecord, "id"> {
  * user confirmation -> ImagingRecord history.
  */
 export function parseImagingFile(_fileDataUrl: string): Promise<ExtractedImagingRecord[]> {
-  const today = new Date().toISOString().slice(0, 10);
+  // The user's local day, not the UTC one. Everything date-keyed in this app
+  // has agreed on that since the hardcoded TODAY constant went.
+  const today = todayLocal();
   const found: ExtractedImagingRecord[] = [
     { type: "X-Ray", date: today, note: "No acute findings noted on the report.", selected: true },
     { type: "Follow-up recommended", date: today, note: "Report suggests a follow-up review in 6 weeks.", selected: false },

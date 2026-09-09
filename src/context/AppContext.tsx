@@ -102,6 +102,11 @@ import {
   updateMedicationRemote,
 } from "../services/medical-history";
 import { getHealthMetrics, logHealthMetric } from "../services/health-metrics";
+import {
+  addImagingRecordRemote,
+  deleteImagingRecordRemote,
+  getImagingRecords,
+} from "../services/imaging";
 import { getWorkoutSessions, saveWorkoutSession as saveWorkoutSessionRemote } from "../services/workout/log";
 import { todayLocal } from "../utils/date";
 
@@ -236,6 +241,8 @@ interface AppState {
   metricsError: string | null;
   /** Set when medical records could not be read. Never means "none". */
   medicalError: string | null;
+  /** Set when imaging records could not be read. Never means "none". */
+  imagingError: string | null;
   // Ends the recovery block. Must be used instead of clearRecoveryPending():
   // the guards read React state, not localStorage, so clearing only storage
   // leaves the app redirecting for the rest of the page session.
@@ -433,8 +440,15 @@ interface AppState {
   // tab" ask. Also surfaced read-only in the Professional UI's Health
   // Metrics tab for clients sharing health data.
   imagingRecords: ImagingRecord[];
-  addImagingRecord: (r: Omit<ImagingRecord, "id">) => void;
-  removeImagingRecord: (id: string) => void;
+  // REMOTE-REQUIRED, and the first writer in this app that also puts a FILE
+  // somewhere. The optional File is uploaded to the private medical-imaging
+  // bucket before the row is written; see services/imaging for the ordering
+  // and why nothing here is transactional.
+  addImagingRecord: (
+    r: Omit<ImagingRecord, "id" | "filePath">,
+    file?: File
+  ) => Promise<{ ok: boolean; message?: string }>;
+  removeImagingRecord: (id: string) => Promise<{ ok: boolean; message?: string }>;
   comorbidities: string[];
   // REMOTE-REQUIRED, like the workout and metric writers before them. A
   // medical record that exists only in one browser is worse than no record:
@@ -1021,6 +1035,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [workoutHistoryError, setWorkoutHistoryError] = useState<string | null>(null);
   const [metricsError, setMetricsError] = useState<string | null>(null);
   const [medicalError, setMedicalError] = useState<string | null>(null);
+  const [imagingError, setImagingError] = useState<string | null>(null);
   const [personalRecords, setPersonalRecords] = usePersistentState<Record<string, number>>(
     "personalRecords",
     {}
@@ -1094,9 +1109,52 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 
   const [imagingRecords, setImagingRecords] = usePersistentState<ImagingRecord[]>("imagingRecords", []);
-  const addImagingRecord: AppState["addImagingRecord"] = (r) =>
-    setImagingRecords((prev) => [...prev, { ...r, id: `img${Date.now()}` }]);
-  const removeImagingRecord = (id: string) => setImagingRecords((prev) => prev.filter((r) => r.id !== id));
+
+  // Hydrated from imaging_records. A PLAIN REPLACE, like the other
+  // remote-required lists: every entry came from the server, so the server's
+  // answer is the truth. Left alone on failure rather than emptied — an empty
+  // imaging history and an unreadable one are different claims.
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    void getImagingRecords(authUserId).then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setImagingError(result.message);
+        return;
+      }
+      setImagingError(null);
+      setImagingRecords(result.records);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId, profileReady]);
+
+  const addImagingRecord = async (
+    r: Omit<ImagingRecord, "id" | "filePath">,
+    file?: File
+  ): Promise<{ ok: boolean; message?: string }> => {
+    if (!authUserId) return { ok: false, message: "You need to be signed in to save this." };
+    const result = await addImagingRecordRemote(authUserId, r, file);
+    if (!result.ok) return { ok: false, message: result.message };
+    setImagingRecords((prev) => [
+      ...prev,
+      { ...r, id: result.id!, ...(result.filePath ? { filePath: result.filePath } : {}) },
+    ]);
+    return { ok: true };
+  };
+
+  const removeImagingRecord = async (id: string): Promise<{ ok: boolean; message?: string }> => {
+    // The path has to be read BEFORE the row goes: it is the only handle on
+    // the object, and Storage does not cascade.
+    const existing = imagingRecords.find((r) => r.id === id);
+    const result = await deleteImagingRecordRemote(id, existing?.filePath);
+    if (!result.ok) return result;
+    setImagingRecords((prev) => prev.filter((r) => r.id !== id));
+    return { ok: true };
+  };
 
   const [comorbidities, setComorbidities_] = usePersistentState<string[]>("comorbidities", []);
   const [surgeries, setSurgeries] = usePersistentState<Surgery[]>("surgeries", []);
@@ -2537,6 +2595,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       workoutHistoryError,
       metricsError,
       medicalError,
+      imagingError,
       authReady,
       profileReady,
       theme,
@@ -2752,6 +2811,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       workoutHistoryError,
       metricsError,
       medicalError,
+      imagingError,
       deletionRequestedAt,
       authReady,
       profileReady,
