@@ -9,6 +9,7 @@ import { ChevronRight, Plus, Search, HeartPulse, TrendingDown, TrendingUp, Inbox
 import { PERSON_ICON } from "../../utils/icons";
 import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "../../components/professionals/HealthDataPending";
+import { nutritionLine, nutritionLineRecoverySensitive } from "../../utils/nutritionDisplay";
 import clsx from "clsx";
 
 const activityLevelLabel: Record<string, string> = {
@@ -176,47 +177,69 @@ export default function ProfessionalDashboard() {
                 </div>
                 <ChevronRight size={16} className="text-charcoal-faint shrink-0" />
               </div>
-              {/* QA 12.0: "remove from the nutritionist's primary
-                  dashboard: Large calorie totals... Weight-loss progress...
-                  Red/green compliance colors, punitive missed-log
-                  indicators" for a recovery-sensitive client — replaced
-                  with a neutral meal-logged/not-yet line, no numbers. */}
-              {c.lastWeightKg === undefined ? (
-                // Real roster row: no health data available yet. Show the
-                // consent state, which IS real, and nothing else.
-                <div className="pt-2.5 border-t border-charcoal/[0.06] text-[11px] text-charcoal-faint">
-                  {Object.values(c.access).some(Boolean)
-                    ? "Sharing data with you"
-                    : "Not sharing any data yet"}
-                </div>
-              ) : c.recoverySensitive ? (
-                <div className="pt-2.5 border-t border-charcoal/[0.06] text-[11px] text-charcoal-faint">
-                  {c.access.foodDiary ? "Meals logged today" : "Not sharing food diary"}
-                </div>
-              ) : (
-                <div className="flex items-center justify-between pt-2.5 border-t border-charcoal/[0.06]">
-                  <div className="flex items-center gap-3.5 text-[11px] text-charcoal-faint">
-                    <span className="flex items-center gap-1">
-                      {c.lastWeightKg}kg
-                      {(c.weightTrend ?? 0) !== 0 && (
-                        <span className={clsx("flex items-center", (c.weightTrend ?? 0) <= 0 ? "text-primary-dark" : "text-teal-dark")}>
-                          {(c.weightTrend ?? 0) <= 0 ? <TrendingDown size={11} /> : <TrendingUp size={11} />}
-                          {Math.abs(c.weightTrend ?? 0)}kg
+              {/* One footer, assembled per datum, rather than three
+                  whole-row branches selected by `lastWeightKg`.
+
+                  That gating was the reason real nutrition could not surface
+                  here at all: weight comes from `health_metrics`, which has
+                  no client-side write path, so the row always took the
+                  "nothing available" branch no matter what the food diary
+                  held. Forcing the other branch was not an option either —
+                  it renders weight, calories and training together, so two
+                  absent figures would have been printed beside the one real
+                  one. Each datum now appears only when it exists.
+
+                  QA 12.0: "remove from the nutritionist's primary dashboard:
+                  Large calorie totals... Weight-loss progress... Red/green
+                  compliance colors, punitive missed-log indicators" for a
+                  recovery-sensitive client — hence the wordier, numberless
+                  line for them, and no weight at all. */}
+              {(() => {
+                const sharesNothing = !Object.values(c.access).some(Boolean);
+                const showWeight = !c.recoverySensitive && c.lastWeightKg !== undefined;
+                const showWorkout = c.workoutLoggedToday !== undefined;
+
+                if (sharesNothing) {
+                  return (
+                    <div className="pt-2.5 border-t border-charcoal/[0.06] text-[11px] text-charcoal-faint">
+                      Not sharing any data yet
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-charcoal/[0.06]">
+                    <div className="flex items-center gap-3.5 text-[11px] text-charcoal-faint min-w-0">
+                      <span className="truncate">
+                        {c.recoverySensitive
+                          ? nutritionLineRecoverySensitive(c.access, c.nutrition)
+                          : nutritionLine(c.access, c.nutrition)}
+                      </span>
+                      {showWeight && (
+                        <span className="flex items-center gap-1 shrink-0">
+                          {c.lastWeightKg}kg
+                          {(c.weightTrend ?? 0) !== 0 && (
+                            <span className={clsx("flex items-center", (c.weightTrend ?? 0) <= 0 ? "text-primary-dark" : "text-teal-dark")}>
+                              {(c.weightTrend ?? 0) <= 0 ? <TrendingDown size={11} /> : <TrendingUp size={11} />}
+                              {Math.abs(c.weightTrend ?? 0)}kg
+                            </span>
+                          )}
                         </span>
                       )}
-                    </span>
-                    <span>{(c.lastCaloriesKcal ?? 0).toLocaleString()} kcal yesterday</span>
-                  </div>
-                  <span
-                    className={clsx(
-                      "text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 shrink-0",
-                      c.workoutLoggedToday ? "bg-primary-pale text-primary-deep-text" : "bg-cream-soft text-charcoal-faint"
+                    </div>
+                    {showWorkout && (
+                      <span
+                        className={clsx(
+                          "text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 shrink-0",
+                          c.workoutLoggedToday ? "bg-primary-pale text-primary-deep-text" : "bg-cream-soft text-charcoal-faint"
+                        )}
+                      >
+                        {c.workoutLoggedToday ? "Trained" : "No workout"}
+                      </span>
                     )}
-                  >
-                    {c.workoutLoggedToday ? "Trained" : "No workout"}
-                  </span>
-                </div>
-              )}
+                  </div>
+                );
+              })()}
             </Card>
           );
         })}

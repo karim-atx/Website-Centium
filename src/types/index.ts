@@ -173,6 +173,18 @@ export interface ClientCode {
 // V3: a professional's view of one client — mocked data standing in for
 // what a real client-sharing permission model would sync from that client's
 // own account.
+/** Nutrition totals for a single day of a client's food diary. */
+export interface ClientNutrition {
+  /** yyyy-mm-dd of the most recent day the client logged anything. */
+  lastLoggedDate: string;
+  /** Totals for that day only — food_log_entries stores resolved totals. */
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  entryCount: number;
+}
+
 export interface ProfessionalClient {
   id: string;
   name: string;
@@ -200,7 +212,30 @@ export interface ProfessionalClient {
   workoutLoggedToday?: boolean;
   lastWeightKg?: number;
   weightTrend?: number;
-  lastCaloriesKcal?: number;
+  /**
+   * Totals for the client's most recently logged day — NOT for yesterday,
+   * and not a running average.
+   *
+   * "Yesterday" was the old framing and it was quietly dishonest: a client
+   * who logs three times a week would show 0 kcal on four days out of seven,
+   * which reads as "ate nothing" rather than "logged nothing". Reporting the
+   * last day they actually logged, with that date attached, degrades to an
+   * absence rather than to a false zero.
+   *
+   * FOUR STATES, and conflating any two of them misleads a professional. The
+   * first is read from `access.foodDiary`, not from this field:
+   *
+   *   access.foodDiary false   not shared. Say nothing about logging — see
+   *                            the note on `nutrition` absence below.
+   *   undefined                shared, not loaded yet.
+   *   null                     shared, nothing logged in the lookback window.
+   *   object                   shared, with figures for `lastLoggedDate`.
+   *
+   * The not-shared case must never render as "no meals logged": that would
+   * report the client's behaviour to someone who has not been given access to
+   * it, and would be a guess presented as a fact.
+   */
+  nutrition?: ClientNutrition | null;
   // Real, from client_access_grants. `healthMetrics` is vitals only — steps,
   // sleep, heart rate, water, calories burned. Lab work and clinical records
   // are separate grants, because one switch covering both was not a question

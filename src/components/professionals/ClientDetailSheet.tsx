@@ -24,6 +24,7 @@ import {
 import { PERSON_ICON } from "../../utils/icons";
 import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "./HealthDataPending";
+import { nutritionLine, nutritionLineRecoverySensitive } from "../../utils/nutritionDisplay";
 
 const activityTypeLabel: Record<string, string> = {
   cardio: "Cardio",
@@ -147,19 +148,39 @@ export const ClientDetailSheet: React.FC<{
             feedback generated from calories, food quantity, or body
             metrics." Calories and weight move to the restricted Clinical
             data panel further down instead of showing here by default. */}
-        {client.lastWeightKg === undefined && (
-          <HealthDataPending label="Client activity & nutrition" />
-        )}
+        {/* Only when there is genuinely nothing to show. Previously gated on
+            `lastWeightKg`, which meant a client actively sharing their food
+            diary was still told their data was "coming soon". */}
+        {!client.access.foodDiary &&
+          client.lastWeightKg === undefined &&
+          client.workoutLoggedToday === undefined && (
+            <HealthDataPending label="Client activity & nutrition" />
+          )}
 
         <div className={client.recoverySensitive ? "grid grid-cols-1 gap-2.5" : "grid grid-cols-2 gap-2.5"}>
-          {!client.recoverySensitive && client.lastCaloriesKcal !== undefined && (
+          {!client.recoverySensitive && client.access.foodDiary && (
             <div className="bg-cream-soft rounded-2xl p-3.5">
+              {/* Kept as "Calories consumed", not renamed to "Food diary":
+                  the standalone Food Diary card below already owns that
+                  heading, and the two showing the same title read as a
+                  duplicate rather than a summary and a detail. They do show
+                  the same figure — that redundancy predates this change and
+                  is left alone rather than redesigned here. */}
               <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
                 Calories consumed
               </p>
+              {/* Was `(lastCaloriesKcal ?? 0).toLocaleString()` — a confident
+                  zero for a client whose intake was simply unknown. */}
               <p className="text-lg font-bold text-charcoal">
-                {client.access.foodDiary ? `${(client.lastCaloriesKcal ?? 0).toLocaleString()} kcal` : "—"}
+                {client.nutrition
+                  ? `${client.nutrition.calories.toLocaleString()} kcal`
+                  : nutritionLine(client.access, client.nutrition)}
               </p>
+              {client.nutrition && (
+                <p className="text-[11px] text-charcoal-faint mt-0.5">
+                  {formatDisplayDate(client.nutrition.lastLoggedDate)}
+                </p>
+              )}
             </div>
           )}
           {client.workoutLoggedToday !== undefined && (
@@ -194,8 +215,28 @@ export const ClientDetailSheet: React.FC<{
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
               Food Diary
             </p>
-            <p className="text-xl font-bold text-charcoal">{(client.lastCaloriesKcal ?? 0).toLocaleString()} kcal</p>
-            <p className="text-xs text-charcoal-faint">Last logged day</p>
+            {client.nutrition ? (
+              <>
+                <p className="text-xl font-bold text-charcoal">
+                  {client.nutrition.calories.toLocaleString()} kcal
+                </p>
+                <p className="text-xs text-charcoal-faint">
+                  {formatDisplayDate(client.nutrition.lastLoggedDate)} ·{" "}
+                  {client.nutrition.entryCount} item
+                  {client.nutrition.entryCount === 1 ? "" : "s"}
+                </p>
+                <p className="text-xs text-charcoal-faint mt-1">
+                  {Math.round(client.nutrition.protein)}g protein · {Math.round(client.nutrition.carbs)}g carbs ·{" "}
+                  {Math.round(client.nutrition.fat)}g fat
+                </p>
+              </>
+            ) : (
+              // The old markup printed "0 kcal / Last logged day" here
+              // unconditionally, so an unknown diary read as a measured zero.
+              <p className="text-sm font-semibold text-charcoal-soft">
+                {nutritionLine(client.access, client.nutrition)}
+              </p>
+            )}
           </div>
         )}
         {client.access.foodDiary && client.recoverySensitive && (
@@ -203,7 +244,14 @@ export const ClientDetailSheet: React.FC<{
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
               Meal rhythm
             </p>
-            <p className="text-sm font-semibold text-charcoal">Meals logged on schedule</p>
+            {/* Was the hardcoded sentence "Meals logged on schedule", which
+                asserted adherence for every recovery-sensitive client
+                regardless of what they had logged — a clinical claim with no
+                data behind it, on exactly the client group where QA 12.0 is
+                most careful about inference. */}
+            <p className="text-sm font-semibold text-charcoal">
+              {nutritionLineRecoverySensitive(client.access, client.nutrition)}
+            </p>
             <p className="text-xs text-charcoal-faint">Neutral view — no calorie totals shown</p>
           </div>
         )}
@@ -467,7 +515,27 @@ export const ClientDetailSheet: React.FC<{
                     <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
                       Calories consumed
                     </p>
-                    <p className="text-sm font-bold text-charcoal">{(client.lastCaloriesKcal ?? 0).toLocaleString()} kcal</p>
+                    {/* The one surface where a recovery-sensitive client's
+                        actual figure is allowed, per QA 12.0's "if genuinely
+                        clinically required, move them to a restricted
+                        Clinical data panel" — and it is behind a deliberate
+                        tap. Stating a plain absence is acceptable here for
+                        the same reason: this panel is opened on purpose, not
+                        encountered in passing. */}
+                    {client.nutrition ? (
+                      <>
+                        <p className="text-sm font-bold text-charcoal">
+                          {client.nutrition.calories.toLocaleString()} kcal
+                        </p>
+                        <p className="text-[10px] text-charcoal-faint">
+                          {formatDisplayDate(client.nutrition.lastLoggedDate)}
+                        </p>
+                      </>
+                    ) : (
+                      <p className="text-sm font-semibold text-charcoal-soft">
+                        {nutritionLine(client.access, client.nutrition)}
+                      </p>
+                    )}
                   </div>
                 )}
                 {client.access.weight && (

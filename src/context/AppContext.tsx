@@ -85,6 +85,7 @@ import {
 } from "../../lib/supabase/recovery";
 import { getMyReferrerReward } from "../services/redemption";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
+import { fetchClientNutrition } from "../services/professional-client";
 
 const TODAY = "2026-08-20";
 
@@ -1252,22 +1253,45 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       return;
     }
     setRosterError(null);
-    setProfessionalClients(
-      result.clients.map((c) => ({
-        id: c.id,
-        clientId: c.clientId,
-        name: c.name,
-        avatarUrl: c.avatarUrl,
-        prefix: c.prefix ?? undefined,
-        joinedAt: c.joinedAt,
-        pronouns: c.pronouns ?? undefined,
-        contactStyle: c.contactStyle ?? undefined,
-        reminderPreference: c.reminderPreference ?? undefined,
-        communicationBoundaries: c.communicationBoundaries ?? undefined,
-        access: c.access,
-        // Health/training fields intentionally left undefined — see the
-        // ProfessionalClient type comment.
-      }))
+    const mapped: ProfessionalClient[] = result.clients.map((c) => ({
+      id: c.id,
+      clientId: c.clientId,
+      name: c.name,
+      avatarUrl: c.avatarUrl,
+      prefix: c.prefix ?? undefined,
+      joinedAt: c.joinedAt,
+      pronouns: c.pronouns ?? undefined,
+      contactStyle: c.contactStyle ?? undefined,
+      reminderPreference: c.reminderPreference ?? undefined,
+      communicationBoundaries: c.communicationBoundaries ?? undefined,
+      access: c.access,
+      // Weight and training fields stay undefined — those tables have no
+      // client-side write path yet. `nutrition` is filled in below.
+    }));
+    setProfessionalClients(mapped);
+
+    // Nutrition is a second, dependent read: it needs the consent flags the
+    // roster just resolved. Only clients who have actually granted
+    // `food_diary` are asked about — querying the rest would return zero rows
+    // whether they had logged nothing or simply not shared, and those two must
+    // never be conflated. See services/professional-client.
+    const consentedIds = mapped
+      .filter((c) => c.access.foodDiary && c.clientId)
+      .map((c) => c.clientId!);
+    if (consentedIds.length === 0) return;
+
+    const nutrition = await fetchClientNutrition(consentedIds);
+    // On failure the field is left undefined, which renders as "loading"
+    // rather than as an absence. Showing "no meals logged" because a request
+    // failed would be a fabricated clinical observation.
+    if (!nutrition.ok) return;
+
+    setProfessionalClients((prev) =>
+      prev.map((c) =>
+        c.clientId && c.clientId in nutrition.byClient
+          ? { ...c, nutrition: nutrition.byClient[c.clientId] }
+          : c
+      )
     );
   }, [authUserId, user.accountType]);
 
