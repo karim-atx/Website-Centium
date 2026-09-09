@@ -208,9 +208,16 @@ export const MedicalRecordsSection: React.FC<{
                   <p className="text-[15px] font-extrabold text-charcoal tabular-nums">
                     {m.value} <span className="text-[11px] font-semibold text-charcoal-tertiary">{m.unit}</span>
                   </p>
-                  <span className={clsx("text-[10px] font-bold uppercase rounded-full px-2 py-0.5", statusColor[m.status])}>
-                    {m.status}
-                  </span>
+                  {/* Nothing at all when the status is unknown. Rendering the
+                      pill with an undefined colour and no text left a bare
+                      grey capsule that looked like a control, and a status
+                      chip is a claim -- absent is the honest form of "we have
+                      no reference range for this". */}
+                  {m.status && (
+                    <span className={clsx("text-[10px] font-bold uppercase rounded-full px-2 py-0.5", statusColor[m.status])}>
+                      {m.status}
+                    </span>
+                  )}
                 </div>
                 <button
                   onClick={(e) => {

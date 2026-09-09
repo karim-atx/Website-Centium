@@ -18,6 +18,13 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
   const [source, setSource] = useState<Source>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [results, setResults] = useState<ExtractedBiomarker[]>([]);
+  // THE FILE ITSELF, kept alongside the preview. The data URL feeds the mock
+  // parser and the thumbnail; the File is what gets uploaded. Sending the data
+  // URL to Storage would upload a base64 string a third larger than the
+  // original for no benefit.
+  const [file, setFile] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
@@ -26,6 +33,9 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
     setSource(null);
     setPhoto(null);
     setResults([]);
+    setFile(null);
+    setSaving(false);
+    setSaveError(null);
   };
 
   const handleClose = () => {
@@ -33,8 +43,10 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
     onClose();
   };
 
-  const handleFile = (file: File, via: Source) => {
+  const handleFile = (picked: File, via: Source) => {
     setSource(via);
+    setFile(picked);
+    setSaveError(null);
     const reader = new FileReader();
     reader.onload = () => {
       // PDFs aren't rendered to a preview thumbnail here — the mock "AI"
@@ -46,15 +58,35 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
         setStage("results");
       });
     };
-    reader.readAsDataURL(file);
+    reader.readAsDataURL(picked);
   };
 
   const toggleResult = (name: string) =>
     setResults((prev) => prev.map((r) => (r.name === name ? { ...r, selected: !r.selected } : r)));
 
-  const addSelected = () => {
+  /**
+   * Saves the confirmed results as ONE panel, with the report attached.
+   *
+   * A panel is one lab report, so every selected marker belongs to a single
+   * panel and a single upload — not one panel per marker, which would scatter
+   * one report's results across several and break the grouping the history
+   * view depends on.
+   *
+   * These values are CONFIRMED, not raw machine output: the user has just
+   * ticked each one. That is what makes panels/ the right prefix and keeps
+   * extracted_biomarkers out of this entirely.
+   */
+  const addSelected = async () => {
     const selected = results.filter((r) => r.selected);
-    recordBiomarkers(selected);
+    if (selected.length === 0) return;
+    setSaving(true);
+    setSaveError(null);
+    const result = await recordBiomarkers(selected, file ?? undefined);
+    setSaving(false);
+    if (!result.ok) {
+      setSaveError(result.message ?? "Couldn't save these results.");
+      return;
+    }
     setStage("done");
     setTimeout(handleClose, 900);
   };
@@ -156,8 +188,14 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
                 </button>
               ))}
             </div>
-            <Button fullWidth size="lg" onClick={addSelected} disabled={!results.some((r) => r.selected)}>
-              Add selected results
+            {saveError && <p className="text-[11px] text-status-high mb-2 text-center">{saveError}</p>}
+            <Button
+              fullWidth
+              size="lg"
+              onClick={() => void addSelected()}
+              disabled={!results.some((r) => r.selected) || saving}
+            >
+              {saving ? "Saving…" : "Add selected results"}
             </Button>
           </div>
         )}

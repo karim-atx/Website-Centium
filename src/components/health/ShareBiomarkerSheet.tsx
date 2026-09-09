@@ -11,11 +11,16 @@ const CARD_H = 800;
 // marker's status instead of a flat brand purple — green for normal, red
 // for high, blue for low, so the shared image itself communicates the
 // reading at a glance.
-const statusGradient: Record<BloodMarker["status"], [string, string]> = {
+const statusGradient: Record<"low" | "normal" | "high", [string, string]> = {
   normal: ["#3F9165", "#1F5C3D"],
   high: ["#E9736A", "#A9291B"],
   low: ["#6FA8DC", "#2E5F8A"],
 };
+
+// A marker with no reference range has no status, so it gets a neutral card
+// rather than borrowing one of the three verdict colours. Indexing the map
+// with null used to destructure undefined and throw before the card drew.
+const NEUTRAL_GRADIENT: [string, string] = ["#6E6A66", "#3A3735"];
 
 // V10 (QA 10.0): "The title for share all and the specific biomarkers
 // should be bigger and more readable. For the specific biomarker the title
@@ -38,7 +43,7 @@ function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
   canvas.height = CARD_H;
 
   // background — gradient keyed to normal/high/low status
-  const [from, to] = statusGradient[marker.status];
+  const [from, to] = marker.status ? statusGradient[marker.status] : NEUTRAL_GRADIENT;
   const grad = ctx.createLinearGradient(0, 0, 0, CARD_H);
   grad.addColorStop(0, from);
   grad.addColorStop(1, to);
@@ -70,15 +75,18 @@ function drawCard(canvas: HTMLCanvasElement, marker: BloodMarker) {
   ctx.fillStyle = "rgba(255,255,255,0.8)";
   ctx.fillText(marker.unit, 48, 340);
 
-  // status pill
-  ctx.fillStyle = "rgba(255,255,255,0.15)";
+  // status pill — omitted entirely when there is no status to state, rather
+  // than drawn empty. marker.status.toUpperCase() also threw on null here.
   const pillY = 380;
-  ctx.beginPath();
-  ctx.roundRect(48, pillY, 160, 44, 22);
-  ctx.fill();
-  ctx.fillStyle = "#FFFFFF";
-  ctx.font = "700 18px Manrope, sans-serif";
-  ctx.fillText(marker.status.toUpperCase(), 78, pillY + 29);
+  if (marker.status) {
+    ctx.fillStyle = "rgba(255,255,255,0.15)";
+    ctx.beginPath();
+    ctx.roundRect(48, pillY, 160, 44, 22);
+    ctx.fill();
+    ctx.fillStyle = "#FFFFFF";
+    ctx.font = "700 18px Manrope, sans-serif";
+    ctx.fillText(marker.status.toUpperCase(), 78, pillY + 29);
+  }
 
   // history
   ctx.fillStyle = "rgba(255,255,255,0.65)";
@@ -141,11 +149,14 @@ function drawSummaryCard(canvas: HTMLCanvasElement, markers: BloodMarker[]) {
   ctx.font = "700 44px Manrope, sans-serif";
   ctx.fillText("BIOMARKER SUMMARY", 48, 80);
 
-  const statusDot: Record<BloodMarker["status"], string> = {
+  const statusDot: Record<"low" | "normal" | "high", string> = {
     normal: "#7ED6A5",
     high: "#F0958C",
     low: "#8FC1F0",
   };
+  // Grey rather than no fill: an undefined fillStyle is ignored by canvas, so
+  // the dot silently inherited whatever colour was set last.
+  const NO_STATUS_DOT = "#B8B2AB";
 
   markers.forEach((m, i) => {
     const y = headerH + i * rowH;
@@ -156,7 +167,7 @@ function drawSummaryCard(canvas: HTMLCanvasElement, markers: BloodMarker[]) {
     ctx.lineTo(CARD_W - 48, y);
     ctx.stroke();
 
-    ctx.fillStyle = statusDot[m.status];
+    ctx.fillStyle = m.status ? statusDot[m.status] : NO_STATUS_DOT;
     ctx.beginPath();
     ctx.arc(58, y + rowH / 2, 6, 0, Math.PI * 2);
     ctx.fill();

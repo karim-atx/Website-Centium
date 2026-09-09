@@ -693,8 +693,16 @@ export interface BloodMarker {
   name: string;
   value: number;
   unit: string;
+  /** Display string rebuilt from range_low/range_high; "—" when unknown. */
   range: string;
-  status: "low" | "normal" | "high";
+  /**
+   * NULL WHEN THERE IS NO REFERENCE RANGE TO COMPUTE AGAINST, which is the
+   * ordinary case for a captured marker rather than an edge case. This used to
+   * default to "normal", which asserted a clinical finding nobody had
+   * calculated. Every surface that renders a status must handle absence by
+   * showing nothing.
+   */
+  status: "low" | "normal" | "high" | null;
   history: HealthMetricPoint[];
 }
 

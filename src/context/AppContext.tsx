@@ -48,7 +48,7 @@ import type {
   ForumCategory,
 } from "../types";
 import { mockForumPosts } from "../data/mockForum";
-import { defaultHabits, streaks as seedStreaks, bloodPanel } from "../data/mockHealthData";
+import { defaultHabits, streaks as seedStreaks } from "../data/mockHealthData";
 import { todaysWorkout, workoutPrograms, exerciseLibrary } from "../data/mockWorkouts";
 import { estimate1RM } from "../services/workout";
 import { ONE_RM_CLASSIFICATIONS } from "../types";
@@ -107,6 +107,7 @@ import {
   deleteImagingRecordRemote,
   getImagingRecords,
 } from "../services/imaging";
+import { getBloodMarkers, recordPanel } from "../services/labs";
 import { getWorkoutSessions, saveWorkoutSession as saveWorkoutSessionRemote } from "../services/workout/log";
 import { todayLocal } from "../utils/date";
 
@@ -243,6 +244,8 @@ interface AppState {
   medicalError: string | null;
   /** Set when imaging records could not be read. Never means "none". */
   imagingError: string | null;
+  /** Set when lab results could not be read. Never means "no bloodwork". */
+  labsError: string | null;
   // Ends the recovery block. Must be used instead of clearRecoveryPending():
   // the guards read React state, not localStorage, so clearing only storage
   // leaves the app redirecting for the rest of the page session.
@@ -433,7 +436,14 @@ interface AppState {
   addJournalFolder: (name: string) => void;
 
   bloodMarkers: BloodMarker[];
-  recordBiomarkers: (entries: ExtractedBiomarker[]) => void;
+  // REMOTE-REQUIRED, and it writes a PANEL rather than loose markers: the
+  // schema models blood work as one report carrying several results, and the
+  // composite foreign key means the panel has to exist before any marker can
+  // reference it. The optional File is the lab report itself.
+  recordBiomarkers: (
+    entries: ExtractedBiomarker[],
+    file?: File
+  ) => Promise<{ ok: boolean; message?: string }>;
 
   // QA 12.0: imaging/other tests, medical history (comorbidities/surgeries),
   // and medications — the "biomarker widget lives inside a wider records
@@ -1036,6 +1046,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [metricsError, setMetricsError] = useState<string | null>(null);
   const [medicalError, setMedicalError] = useState<string | null>(null);
   const [imagingError, setImagingError] = useState<string | null>(null);
+  const [labsError, setLabsError] = useState<string | null>(null);
   const [personalRecords, setPersonalRecords] = usePersistentState<Record<string, number>>(
     "personalRecords",
     {}
@@ -1103,10 +1114,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     []
   );
 
-  const [bloodMarkers, setBloodMarkers] = usePersistentState<BloodMarker[]>(
-    "bloodMarkers",
-    bloodPanel.markers
-  );
+  // NO LONGER SEEDED FROM THE MOCK PANEL. Those five markers carried invented
+  // values, ranges, statuses and three-point histories that the server has
+  // never held, and hydration would overwrite them on the first read anyway.
+  // The Biomarkers tab is empty until a real capture, which is the honest
+  // state for an account that has never uploaded blood work.
+  const [bloodMarkers, setBloodMarkers] = usePersistentState<BloodMarker[]>("bloodMarkers", []);
+
+  // Lab results, hydrated from blood_panels + blood_markers and inverted back
+  // into the name-keyed shape the UI consumes. A PLAIN REPLACE, like the other
+  // remote-required lists; left alone on failure rather than emptied, since an
+  // empty lab history and an unreadable one are opposite claims.
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    void getBloodMarkers(authUserId).then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setLabsError(result.message);
+        return;
+      }
+      setLabsError(null);
+      setBloodMarkers(result.markers);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId, profileReady]);
 
   const [imagingRecords, setImagingRecords] = usePersistentState<ImagingRecord[]>("imagingRecords", []);
 
@@ -2256,32 +2291,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addJournalFolder = (name: string) =>
     setJournalFolders((prev) => [...prev, { id: `jf${Date.now()}`, name }]);
 
-  const recordBiomarkers: AppState["recordBiomarkers"] = (entries) => {
-    setBloodMarkers((prev) => {
-      const next = [...prev];
-      entries.forEach((entry) => {
-        const idx = next.findIndex((m) => m.name.toLowerCase() === entry.name.toLowerCase());
-        if (idx >= 0) {
-          next[idx] = {
-            ...next[idx],
-            value: entry.value,
-            unit: entry.unit || next[idx].unit,
-            history: [...next[idx].history, { date: today, value: entry.value }],
-          };
-        } else {
-          next.push({
-            id: `bm${Date.now()}${Math.random().toString(16).slice(2)}`,
-            name: entry.name,
-            value: entry.value,
-            unit: entry.unit,
-            range: "—",
-            status: "normal",
-            history: [{ date: today, value: entry.value }],
-          });
-        }
-      });
-      return next;
+  const recordBiomarkers: AppState["recordBiomarkers"] = async (entries, file) => {
+    if (!authUserId) return { ok: false, message: "You need to be signed in to save results." };
+
+    const result = await recordPanel(authUserId, {
+      markers: entries.map((e) => ({ name: e.name, value: e.value, unit: e.unit })),
+      file,
     });
+    if (!result.ok) return { ok: false, message: result.message };
+
+    // RE-READ RATHER THAN MERGE LOCALLY. The list the UI wants is grouped by
+    // marker name across every panel, so appending this panel's markers by
+    // hand would mean reimplementing the inversion in a second place and
+    // getting "newest wins" right twice. One extra round trip buys a single
+    // definition of that shape, in the service that owns it.
+    const refreshed = await getBloodMarkers(authUserId);
+    if (refreshed.ok) {
+      setLabsError(null);
+      setBloodMarkers(refreshed.markers);
+    }
+    return { ok: true };
   };
 
   const goToPrevDate = () => setSelectedDate((d) => shiftDate(d, -1));
@@ -2596,6 +2625,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       metricsError,
       medicalError,
       imagingError,
+      labsError,
       authReady,
       profileReady,
       theme,
@@ -2812,6 +2842,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       metricsError,
       medicalError,
       imagingError,
+      labsError,
       deletionRequestedAt,
       authReady,
       profileReady,
