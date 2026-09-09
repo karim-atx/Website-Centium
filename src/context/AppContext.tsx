@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type {
   UserProfile,
   FoodLogEntry,
@@ -731,6 +731,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const authUserId = session?.user?.id ?? null;
+
+  // A session ending must clear the local cache, however it ended.
+  //
+  // signOut() clears `centium-state:*` itself, so the deliberate path was
+  // always safe. Every other way a session ends was not: an expired token, a
+  // session revoked elsewhere, or closing the browser with "Remember me" off
+  // all leave the cache fully populated with no session behind it. The route
+  // guard now refuses to render in that state, but refusing to render is not
+  // the same as not holding the data — the previous account's name, email and
+  // hydrated server data would still be sitting in localStorage for the next
+  // person to open the browser, or for any script on the origin to read.
+  //
+  // A TRANSITION IS NOT ENOUGH, and this is the case that nearly got missed.
+  //
+  // Watching only for non-null → null catches a session expiring while the
+  // tab is open, and misses the commonest way this happens by far: the
+  // browser is closed and reopened. That is a fresh page load which never
+  // sees a session at all, so there is no transition to observe — and the
+  // cache from the previous run is sitting right there.
+  //
+  // So the test is "is there cached account data with no session to justify
+  // it", not "did I watch a session end". A never-signed-in visitor is
+  // excluded by looking at whether the cached profile belongs to a real
+  // account: defaultUser ships with an empty email and onboarded false, while
+  // a hydrated one carries the account's own address. That keeps an anonymous
+  // visitor's theme and language alone.
+  const seenSession = useRef<string | null>(null);
+  useEffect(() => {
+    if (!authReady) return;
+    if (authUserId) {
+      seenSession.current = authUserId;
+      return;
+    }
+
+    let cacheBelongsToAnAccount = false;
+    try {
+      const raw = localStorage.getItem(`${STORAGE_KEY}:user`);
+      const cached = raw ? (JSON.parse(raw) as Partial<UserProfile>) : null;
+      cacheBelongsToAnAccount = !!cached && (!!cached.email || cached.onboarded === true);
+    } catch {
+      // Unparseable cache is not worth keeping either way.
+      cacheBelongsToAnAccount = true;
+    }
+
+    if (!seenSession.current && !cacheBelongsToAnAccount) return;
+    seenSession.current = null;
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith(STORAGE_KEY))
+      .forEach((k) => localStorage.removeItem(k));
+    setUser({ ...defaultUser });
+  }, [authUserId, authReady, setUser]);
 
   // --- password recovery scoping ------------------------------------------
   //

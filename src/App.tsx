@@ -49,7 +49,7 @@ const RouteLoading: React.FC = () => (
 );
 
 const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, authReady, profileReady, recoveryPending } = useApp();
+  const { user, authUserId, authReady, profileReady, recoveryPending } = useApp();
 
   // Wait for the server profile before deciding. `user.onboarded` starts from
   // localStorage, which is per-browser and not keyed by account — redirecting
@@ -58,6 +58,26 @@ const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children })
   // Once profileReady is true, `user.onboarded` has been overwritten by
   // profiles.onboarded, so it is the server's answer rather than the cache's.
   if (!authReady || !profileReady) return <RouteLoading />;
+
+  // THE SESSION CHECK, AND IT HAS TO COME BEFORE `user.onboarded`.
+  //
+  // This guard used to have no session check at all. `user.onboarded` is
+  // seeded from localStorage, which outlives a session: sign-out only looked
+  // safe because it happens to wipe that key. Any other way a session ends —
+  // an expired token, a revoked session, or simply closing the browser with
+  // "Remember me" off, which leaves a session cookie behind but not a
+  // persistent one — left `onboarded: true` in storage with no session, and
+  // this guard waved it straight through to the dashboard. Verified: with the
+  // Supabase cookie cleared and localStorage intact, /app rendered the
+  // professional dashboard and /app/health rendered body metrics, to a
+  // caller the server would not answer a single query for.
+  //
+  // Nothing server-side was ever at risk — every table returns 42501 without
+  // a JWT — but the cached shell, the account's name and email, and whatever
+  // the app had hydrated into localStorage were all on screen. That last part
+  // grows every time a feature moves from local state to Supabase, since
+  // hydration writes the server's answer back into the same storage.
+  if (!authUserId) return <Navigate to="/app/onboarding" replace />;
 
   // A recovery session may do exactly one thing: set a new password. It is a
   // real session, so without this it would sail straight through — which is
