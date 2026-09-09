@@ -429,6 +429,48 @@ right answer for the case it does cover, and removing it would leave the
 partial-consent client with nothing. This entry exists only so the next reader
 does not assume the string appears wherever a diary is unshared.
 
+### `ProfessionalType` and `professional_subtype` are unreconciled
+
+The app's `ProfessionalType` has four values — trainer, dietitian,
+physiotherapist, doctor. The database's `professional_subtype` has five: the
+same four plus **`other`**, and a real account can hold it.
+
+This already caused one crash. A listed professional whose subtype was `other`
+reached `ProfessionalDetail`, which indexed `professionalTypeIcon` — a
+four-entry map — got `undefined`, and rendered it as a component. React
+answered with *"Element type is invalid"* and blanked the page. The cast
+`as ProfessionalType` is what kept the compiler quiet about it.
+
+That site is now guarded by `iconFor()`, and the Explore filters were keyed on
+the database enum from the start, so an `other` professional is reachable
+there. **The mismatch itself is untouched.** The remaining consumers of
+`professional.type` on that page survive it by accident rather than design:
+
+- `specialtyLimited.has(type)` — a `Set` lookup, so an unknown value is simply
+  false
+- `specialtyLabel[type]` — an index returning `undefined`, which renders as
+  nothing
+
+Both are one refactor away from being a crash, and the next field keyed on
+`professional.type` gets no such luck. Two ways out, either fine: widen
+`ProfessionalType` to five values so the compiler enforces exhaustiveness, or
+add an explicit mapping layer at the service boundary that narrows the DB enum
+to the app's vocabulary and decides once what `other` becomes. What should not
+continue is a cast that asserts an equivalence which does not hold.
+
+### `iconFor` and `listingIcon` duplicate the same fallback
+
+`ProfessionalDetail.tsx` has `iconFor` and `Professionals.tsx` has
+`listingIcon`. Same three lines: look the subtype up in `professionalTypeIcon`,
+fall back to `UserCheck` when it is missing. They exist separately because the
+second was written while fixing the crash above, after the first had already
+been reviewed, and widening that change into a shared module was not worth
+doing unreviewed.
+
+Worth hoisting into `utils/icons` next to the map it guards — that is where a
+reader would look for it, and one copy cannot drift from the other. Not urgent:
+both are correct today, and the mismatch entry above is the more useful fix.
+
 ### The hire-request inbox is a local mock, so requesters have no names
 
 A professional reviewing incoming hire requests sees whatever the mock put
