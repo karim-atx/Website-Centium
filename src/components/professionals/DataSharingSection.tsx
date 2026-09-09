@@ -1,8 +1,8 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { Card } from "../ui/Card";
 import { Toggle } from "../ui/Toggle";
 import { useApp } from "../../context/AppContext";
-import { ShieldCheck, Info } from "lucide-react";
+import { ShieldCheck, Info, Check } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
 import { formatDisplayDate } from "../../utils/date";
 import {
@@ -47,6 +47,23 @@ export const DataSharingSection: React.FC<{
   // Which (professional, category) pair is mid-write, so a toggle can't be
   // double-fired while the round trip is in flight.
   const [saving, setSaving] = useState<string | null>(null);
+  // Which switch just saved, so a successful write has a visible outcome.
+  //
+  // Without it the only signal is the switch staying where it was put — and
+  // that looks identical whether the write landed or was reverted, since a
+  // revert also leaves the switch in a plausible-looking position. Telling
+  // the two apart meant noticing the error text specifically, which on a
+  // control that gates PHI is too easy to miss. Deliberately says nothing on
+  // failure: the error message already owns that case, and two signals for
+  // one outcome is noise.
+  const [savedKey, setSavedKey] = useState<string | null>(null);
+  const savedTimer = useRef<number | null>(null);
+  useEffect(
+    () => () => {
+      if (savedTimer.current) window.clearTimeout(savedTimer.current);
+    },
+    []
+  );
 
   useEffect(() => {
     if (!authUserId) {
@@ -108,6 +125,10 @@ export const DataSharingSection: React.FC<{
       ...u,
       [professionalId]: (u[professionalId] ?? []).filter((c) => c !== category),
     }));
+
+    setSavedKey(key);
+    if (savedTimer.current) window.clearTimeout(savedTimer.current);
+    savedTimer.current = window.setTimeout(() => setSavedKey(null), 2000);
   };
 
   /**
@@ -242,7 +263,14 @@ export const DataSharingSection: React.FC<{
               return (
                 <div key={category} className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-sm text-charcoal">{label}</p>
+                    <p className="text-sm text-charcoal flex items-center gap-1.5">
+                      {label}
+                      {savedKey === `${pro.professionalId}:${category}` && (
+                        <span className="inline-flex items-center gap-0.5 text-[10px] font-semibold text-status-good">
+                          <Check size={11} /> Saved
+                        </span>
+                      )}
+                    </p>
                     <p className="text-[11px] text-charcoal-faint">{description}</p>
                   </div>
                   <Toggle
