@@ -563,14 +563,16 @@ starts and ends in the right place. Only the shape between them is invented,
 and it will read as a smooth trend even for a client whose weight moved
 unevenly.
 
-### `surgeries.surgery_date` cannot say "I don't remember exactly when"
+### `surgery_date` and `imaging_date` cannot say "I don't remember exactly when"
 
-**Database repo change, requested.** `surgery_date` is `date NOT NULL`, so a
-surgery with no known date has nowhere to be stored. The app used to keep a
-`"Not dated"` sentinel string locally; that could not be written, and the three
-alternatives were worse — a placeholder date writes a false fact into a medical
-record, keeping undated entries local-only rebuilds the two-id-space problem
-the workout log refused, and dropping them silently is not an option.
+**Database repo change, requested — two columns, one request.**
+`surgeries.surgery_date` and `imaging_records.imaging_date` are both
+`date NOT NULL`, so a surgery or a scan with no known date has nowhere to be
+stored. The app used to keep a `"Not dated"` sentinel string locally at both
+sites; that could not be written, and the three alternatives were worse — a
+placeholder date writes a false fact into a medical record, keeping undated
+entries local-only rebuilds the two-id-space problem the workout log refused,
+and dropping them silently is not an option.
 
 So the form now requires a date and explains why. That is a workaround, not a
 fix. "Sometime in 2019" is an ordinary and honest answer about a surgery, and
@@ -578,10 +580,34 @@ fix. "Sometime in 2019" is an ordinary and honest answer about a surgery, and
 into inventing a specific day — moving the fabrication from the code to the
 person, which is not an improvement.
 
-The fix is to make `surgery_date` nullable. When it lands, the guard in
-`addSurgeryRemote` and the `disabled` on the form relax, and nothing else
-changes. A precision flag (`day` / `month` / `year`) would be better still, but
-nullable alone would remove the pressure to guess.
+The fix is to make both columns nullable. When it lands, the guards in
+`addSurgeryRemote` and `addImagingRecordRemote` and the `disabled` on both
+forms relax, and nothing else changes. A precision flag (`day` / `month` /
+`year`) would be better still, but nullable alone would remove the pressure to
+guess.
+
+### Files can be uploaded but not opened
+
+`services/storage` uploads to `lab-reports` and `medical-imaging`, and
+`signedUrlFor` mints working short-lived links — verified by fetching one. But
+**nothing calls it.** There is no view affordance anywhere:
+
+- The client's imaging list shows type, date and note. A record with a file
+  looks identical to one typed by hand; the scan is stored and unreachable.
+- The professional side has no lab or imaging surface at all — that is task 4c,
+  and `ProfessionalClient` carries no field for either.
+
+So a user can attach a scan to a record and then never see it again from
+inside the app. That is a real gap rather than a deferred nicety, and it is
+listed here because "the upload works" reads as finished and is not.
+
+Whatever adds the viewer has to sign at the moment of opening rather than at
+load: a URL minted when the list renders would spend most of its short life
+unused and be dead by the time anyone tapped it. `filePath` on `ImagingRecord`
+holds the object path for exactly that reason.
+
+One more thing that viewer must not assume: `medical-imaging` accepts PDFs as
+well as images, so it cannot simply render an `<img>`.
 
 ### A consent toggle has twice failed to persist, cause still unknown
 
