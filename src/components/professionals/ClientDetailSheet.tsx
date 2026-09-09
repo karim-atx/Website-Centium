@@ -20,7 +20,10 @@ import {
   ChevronDown,
   ChevronUp,
   MessageCircle,
+  Droplet,
+  Stethoscope,
 } from "lucide-react";
+import { ACCESS_CATEGORIES, accessKeyFor } from "../../services/consent";
 import { PERSON_ICON } from "../../utils/icons";
 import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "./HealthDataPending";
@@ -92,13 +95,30 @@ export const ClientDetailSheet: React.FC<{
 
   const isDietitian = professionalSubtype === "dietitian";
 
-  const accessRows: { key: keyof ProfessionalClient["access"]; label: string; icon: typeof UtensilsCrossed }[] = [
-    { key: "foodDiary", label: "Food Diary", icon: UtensilsCrossed },
-    { key: "workoutActivity", label: "Workout Activity", icon: Dumbbell },
-    { key: "weight", label: "Weight", icon: Scale },
-    { key: "progress", label: "Progress", icon: TrendingUp },
-    { key: "healthMetrics", label: "Health Metrics", icon: HeartPulse },
-  ];
+  // DERIVED FROM ACCESS_CATEGORIES, not restated here. This list was written
+  // out by hand and went stale the moment the consent split added lab_results
+  // and medical_history: it showed five of the seven categories, so a
+  // professional checking what they were allowed to see got an answer missing
+  // the two most sensitive entries -- and once medical history is actually
+  // rendered above, an unlisted category would be shown without ever being
+  // named. Deriving it means the next category to be added cannot be
+  // forgotten here, and the labels stay identical to the ones the client
+  // agreed to rather than drifting into a second wording.
+  const accessIcons: Record<string, typeof UtensilsCrossed> = {
+    foodDiary: UtensilsCrossed,
+    workoutActivity: Dumbbell,
+    weight: Scale,
+    progress: TrendingUp,
+    healthMetrics: HeartPulse,
+    labResults: Droplet,
+    medicalHistory: Stethoscope,
+  };
+  const accessRows: { key: keyof ProfessionalClient["access"]; label: string; icon: typeof UtensilsCrossed }[] =
+    ACCESS_CATEGORIES.map((c) => ({
+      key: accessKeyFor[c.category] as keyof ProfessionalClient["access"],
+      label: c.label,
+      icon: accessIcons[accessKeyFor[c.category]] ?? ClipboardList,
+    }));
 
   const note = clientHealthNotes[client.id] ?? {};
   const activeNotes = noteFields.filter((f) => note[f.key]?.trim());

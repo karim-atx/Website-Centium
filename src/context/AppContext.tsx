@@ -86,10 +86,21 @@ import {
 import { getMyReferrerReward } from "../services/redemption";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
 import {
+  fetchClientMedicalHistory,
   fetchClientNutrition,
   fetchClientWeight,
   fetchClientWorkoutActivity,
 } from "../services/professional-client";
+import {
+  addComorbidityRemote,
+  addMedicationRemote,
+  addSurgeryRemote,
+  deleteMedicationRemote,
+  deleteSurgeryRemote,
+  getMedicalHistory,
+  removeComorbidityRemote,
+  updateMedicationRemote,
+} from "../services/medical-history";
 import { getHealthMetrics, logHealthMetric } from "../services/health-metrics";
 import { getWorkoutSessions, saveWorkoutSession as saveWorkoutSessionRemote } from "../services/workout/log";
 import { todayLocal } from "../utils/date";
@@ -223,6 +234,8 @@ interface AppState {
   workoutHistoryError: string | null;
   /** Set when weight/water history could not be read. Never means "empty". */
   metricsError: string | null;
+  /** Set when medical records could not be read. Never means "none". */
+  medicalError: string | null;
   // Ends the recovery block. Must be used instead of clearRecoveryPending():
   // the guards read React state, not localStorage, so clearing only storage
   // leaves the app redirecting for the rest of the page session.
@@ -423,14 +436,19 @@ interface AppState {
   addImagingRecord: (r: Omit<ImagingRecord, "id">) => void;
   removeImagingRecord: (id: string) => void;
   comorbidities: string[];
-  setComorbidities: (list: string[]) => void;
+  // REMOTE-REQUIRED, like the workout and metric writers before them. A
+  // medical record that exists only in one browser is worse than no record:
+  // it reads as saved, and the professional it was shared with never sees it.
+  // Every one of these reports failure rather than keeping a value the server
+  // never accepted.
+  setComorbidities: (list: string[]) => Promise<{ ok: boolean; message?: string }>;
   surgeries: Surgery[];
-  addSurgery: (s: Omit<Surgery, "id">) => void;
-  removeSurgery: (id: string) => void;
+  addSurgery: (s: Omit<Surgery, "id">) => Promise<{ ok: boolean; message?: string }>;
+  removeSurgery: (id: string) => Promise<{ ok: boolean; message?: string }>;
   medications: Medication[];
-  addMedication: (m: Omit<Medication, "id">) => void;
-  updateMedication: (id: string, patch: Partial<Medication>) => void;
-  removeMedication: (id: string) => void;
+  addMedication: (m: Omit<Medication, "id">) => Promise<{ ok: boolean; message?: string }>;
+  updateMedication: (id: string, patch: Partial<Medication>) => Promise<{ ok: boolean; message?: string }>;
+  removeMedication: (id: string) => Promise<{ ok: boolean; message?: string }>;
 
   selectedDate: string;
   goToPrevDate: () => void;
@@ -1002,6 +1020,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   const [workoutHistoryError, setWorkoutHistoryError] = useState<string | null>(null);
   const [metricsError, setMetricsError] = useState<string | null>(null);
+  const [medicalError, setMedicalError] = useState<string | null>(null);
   const [personalRecords, setPersonalRecords] = usePersistentState<Record<string, number>>(
     "personalRecords",
     {}
@@ -1079,19 +1098,125 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setImagingRecords((prev) => [...prev, { ...r, id: `img${Date.now()}` }]);
   const removeImagingRecord = (id: string) => setImagingRecords((prev) => prev.filter((r) => r.id !== id));
 
-  const [comorbidities, setComorbidities] = usePersistentState<string[]>("comorbidities", []);
-
+  const [comorbidities, setComorbidities_] = usePersistentState<string[]>("comorbidities", []);
   const [surgeries, setSurgeries] = usePersistentState<Surgery[]>("surgeries", []);
-  const addSurgery: AppState["addSurgery"] = (s) =>
-    setSurgeries((prev) => [...prev, { ...s, id: `surg${Date.now()}` }]);
-  const removeSurgery = (id: string) => setSurgeries((prev) => prev.filter((s) => s.id !== id));
-
   const [medications, setMedications] = usePersistentState<Medication[]>("medications", []);
-  const addMedication: AppState["addMedication"] = (m) =>
-    setMedications((prev) => [...prev, { ...m, id: `med${Date.now()}` }]);
-  const updateMedication = (id: string, patch: Partial<Medication>) =>
+
+  // --- medical history: remote-first ---------------------------------------
+  //
+  // Local ids are gone from all three. Every row here carries the id Postgres
+  // minted, because nothing is added to these lists until the insert has
+  // landed — which is what keeps deletes addressable and stops a second id
+  // space forming the way it did in the food diary.
+
+  const requireSession = () => (authUserId ? null : "You need to be signed in to save this.");
+
+  /**
+   * Diffs the requested list against what is held, then applies the
+   * difference one row at a time.
+   *
+   * A LIST SETTER OVER A ROW TABLE. The UI toggles chips and hands back a
+   * whole array, while the database holds one row per condition, so this has
+   * to work out what actually changed. Removals delete every row carrying
+   * that condition, not one — the table has no unique index, deliberately, so
+   * a condition can be present twice and deleting a single row would leave
+   * the chip to reappear on the next read.
+   *
+   * The local list is only updated for the writes that succeeded, so a
+   * half-failed batch leaves the UI showing exactly what the server holds.
+   */
+  const setComorbidities: AppState["setComorbidities"] = async (list) => {
+    const missing = requireSession();
+    if (missing) return { ok: false, message: missing };
+
+    const wanted = [...new Set(list)];
+    const added = wanted.filter((c) => !comorbidities.includes(c));
+    const removed = comorbidities.filter((c) => !wanted.includes(c));
+
+    const applied = new Set(comorbidities);
+    let failure: string | undefined;
+
+    for (const condition of added) {
+      const result = await addComorbidityRemote(authUserId!, condition);
+      if (result.ok) applied.add(condition);
+      else failure ??= result.message;
+    }
+    for (const condition of removed) {
+      const result = await removeComorbidityRemote(authUserId!, condition);
+      if (result.ok) applied.delete(condition);
+      else failure ??= result.message;
+    }
+
+    // Preserve the requested order for what survived, so chips do not jump.
+    setComorbidities_([...wanted.filter((c) => applied.has(c)), ...[...applied].filter((c) => !wanted.includes(c))]);
+    return failure ? { ok: false, message: failure } : { ok: true };
+  };
+
+  const addSurgery: AppState["addSurgery"] = async (s) => {
+    const missing = requireSession();
+    if (missing) return { ok: false, message: missing };
+    const result = await addSurgeryRemote(authUserId!, s);
+    if (!result.ok) return { ok: false, message: result.message };
+    setSurgeries((prev) => [...prev, { ...s, id: result.id! }]);
+    return { ok: true };
+  };
+
+  const removeSurgery: AppState["removeSurgery"] = async (id) => {
+    const result = await deleteSurgeryRemote(id);
+    if (!result.ok) return result;
+    setSurgeries((prev) => prev.filter((s) => s.id !== id));
+    return { ok: true };
+  };
+
+  const addMedication: AppState["addMedication"] = async (m) => {
+    const missing = requireSession();
+    if (missing) return { ok: false, message: missing };
+    const result = await addMedicationRemote(authUserId!, m);
+    if (!result.ok) return { ok: false, message: result.message };
+    setMedications((prev) => [...prev, { ...m, id: result.id! }]);
+    return { ok: true };
+  };
+
+  const updateMedication: AppState["updateMedication"] = async (id, patch) => {
+    const result = await updateMedicationRemote(id, patch);
+    if (!result.ok) return result;
     setMedications((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
-  const removeMedication = (id: string) => setMedications((prev) => prev.filter((m) => m.id !== id));
+    return { ok: true };
+  };
+
+  const removeMedication: AppState["removeMedication"] = async (id) => {
+    const result = await deleteMedicationRemote(id);
+    if (!result.ok) return result;
+    setMedications((prev) => prev.filter((m) => m.id !== id));
+    return { ok: true };
+  };
+
+  // Medical history, hydrated from its three tables.
+  //
+  // A PLAIN REPLACE, like the workout and metric histories: these lists are
+  // remote-required, so every entry came from the server and the server's
+  // answer is the truth. On failure the existing lists are left alone rather
+  // than emptied — showing someone an empty medication list because a request
+  // failed is a clinical claim nobody made.
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    void getMedicalHistory(authUserId).then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setMedicalError(result.message);
+        return;
+      }
+      setMedicalError(null);
+      setComorbidities_(result.history.comorbidities);
+      setSurgeries(result.history.surgeries);
+      setMedications(result.history.medications);
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId, profileReady]);
 
   // NOT PERSISTED, unlike nearly everything else here. Which day you are
   // looking at is view state, not a preference: restoring it meant leaving
@@ -1438,14 +1563,22 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const weightIds = mapped
       .filter((c) => c.access.weight && c.clientId)
       .map((c) => c.clientId!);
+    // The most sensitive grant in the app, and gated entirely on its own.
+    // medical_history was split out of health_metrics precisely so that
+    // sharing step counts would stop implying sharing a medication list, so
+    // nothing about this list is derived from any other consent.
+    const medicalIds = mapped
+      .filter((c) => c.access.medicalHistory && c.clientId)
+      .map((c) => c.clientId!);
 
     // Both reads are issued together rather than in sequence — they are
     // independent, and a professional opening the dashboard should not wait
     // for one before the other starts.
-    const [nutrition, workouts, weights] = await Promise.all([
+    const [nutrition, workouts, weights, medical] = await Promise.all([
       consentedIds.length > 0 ? fetchClientNutrition(consentedIds) : null,
       workoutIds.length > 0 ? fetchClientWorkoutActivity(workoutIds) : null,
       weightIds.length > 0 ? fetchClientWeight(weightIds) : null,
+      medicalIds.length > 0 ? fetchClientMedicalHistory(medicalIds) : null,
     ]);
 
     // On failure each field is left undefined, which renders as "loading"
@@ -1469,6 +1602,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           // guard against and no four-state encoding to carry.
           const w = weights.byClient[c.clientId];
           if (w) next = { ...next, lastWeightKg: w.lastWeightKg, weightTrend: w.weightTrend };
+        }
+        if (medical?.ok && c.clientId in medical.byClient) {
+          const h = medical.byClient[c.clientId];
+          // Assigned even when all three lists are empty. Both surfaces
+          // reading this already branch on the lists being non-empty, so an
+          // empty object renders as "nothing recorded" while undefined keeps
+          // meaning "not shared, or not loaded" — which are different answers.
+          if (h) next = { ...next, medicalHistory: h };
         }
         return next;
       })
@@ -2395,6 +2536,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       diaryError,
       workoutHistoryError,
       metricsError,
+      medicalError,
       authReady,
       profileReady,
       theme,
@@ -2609,6 +2751,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       diaryError,
       workoutHistoryError,
       metricsError,
+      medicalError,
       deletionRequestedAt,
       authReady,
       profileReady,

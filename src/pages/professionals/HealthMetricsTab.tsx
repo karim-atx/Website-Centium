@@ -41,8 +41,19 @@ export default function HealthMetricsTab() {
                   </span>
                   <div className="min-w-0">
                     <p className="text-sm font-semibold text-charcoal truncate">{c.name}</p>
+                    {/* The row has to say whether there is a reason to open it.
+                        This read off access.healthMetrics alone, which went wrong
+                        the moment medical history became real: a client sharing
+                        their medications showed as sharing nothing, with the
+                        medications sitting one tap away. Lab results are
+                        deliberately not named here -- this row renders none, so
+                        promising them would repeat the same mismatch. */}
                     <p className="text-xs text-charcoal-faint">
-                      {c.access.healthMetrics ? "Sharing health data" : "Not sharing health data"}
+                      {c.access.healthMetrics
+                        ? "Sharing health data"
+                        : c.access.medicalHistory
+                        ? "Sharing medical history"
+                        : "Not sharing health data"}
                     </p>
                   </div>
                 </div>

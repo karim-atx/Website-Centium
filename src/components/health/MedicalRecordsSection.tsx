@@ -92,7 +92,23 @@ export const MedicalRecordsSection: React.FC<{
     addMedication,
     updateMedication,
     removeMedication,
+    today,
   } = useApp();
+  // Every write in this section now goes to Supabase and can fail. One slot
+  // rather than one per control: only one write is ever in flight, and a
+  // medical record that silently failed to save is the thing worth shouting
+  // about, so it is shown wherever the user was working.
+  const [recordError, setRecordError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  const run = async (action: () => Promise<{ ok: boolean; message?: string }>) => {
+    setBusy(true);
+    setRecordError(null);
+    const result = await action();
+    setBusy(false);
+    if (!result.ok) setRecordError(result.message ?? "That couldn't be saved.");
+    return result.ok;
+  };
   const [tab, setTab] = useState<RecordsTab>("biomarkers");
   const [addImagingOpen, setAddImagingOpen] = useState(false);
   const [imagingType, setImagingType] = useState(imagingTypes[0]);
@@ -110,8 +126,10 @@ export const MedicalRecordsSection: React.FC<{
   const [medNotify, setMedNotify] = useState(true);
 
   const toggleComorbidity = (label: string) =>
-    setComorbidities(
-      comorbidities.includes(label) ? comorbidities.filter((c) => c !== label) : [...comorbidities, label]
+    void run(() =>
+      setComorbidities(
+        comorbidities.includes(label) ? comorbidities.filter((c) => c !== label) : [...comorbidities, label]
+      )
     );
 
   const resetMedForm = () => {
@@ -265,6 +283,9 @@ export const MedicalRecordsSection: React.FC<{
 
       {tab === "history" && (
         <div className="mb-6 space-y-5">
+          {recordError && (
+            <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{recordError}</p>
+          )}
           <Card>
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">Comorbidities</p>
             <div className="flex flex-wrap gap-2">
@@ -311,7 +332,7 @@ export const MedicalRecordsSection: React.FC<{
                     <p className="text-sm font-semibold text-charcoal">{s.name}</p>
                     <p className="text-xs text-charcoal-faint">{s.date}</p>
                   </div>
-                  <button onClick={() => removeSurgery(s.id)} aria-label={`Remove ${s.name}`} className="tap text-charcoal-faint">
+                  <button onClick={() => void run(() => removeSurgery(s.id))} disabled={busy} aria-label={`Remove ${s.name}`} className="tap text-charcoal-faint disabled:opacity-40">
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -341,7 +362,7 @@ export const MedicalRecordsSection: React.FC<{
                 <p className="text-sm font-bold text-charcoal">
                   {m.name} <span className="text-xs font-medium text-charcoal-faint">· {m.dose}</span>
                 </p>
-                <button onClick={() => removeMedication(m.id)} aria-label={`Remove ${m.name}`} className="tap text-charcoal-faint">
+                <button onClick={() => void run(() => removeMedication(m.id))} disabled={busy} aria-label={`Remove ${m.name}`} className="tap text-charcoal-faint disabled:opacity-40">
                   <Trash2 size={14} />
                 </button>
               </div>
@@ -359,7 +380,7 @@ export const MedicalRecordsSection: React.FC<{
                 </span>
                 <Toggle
                   checked={m.notifyEnabled}
-                  onChange={(v) => updateMedication(m.id, { notifyEnabled: v })}
+                  onChange={(v) => void run(() => updateMedication(m.id, { notifyEnabled: v }))}
                   label={`Notifications for ${m.name}`}
                 />
               </div>
@@ -436,22 +457,32 @@ export const MedicalRecordsSection: React.FC<{
             <input
               type="date"
               value={surgeryDate}
+              max={today}
               onChange={(e) => setSurgeryDate(e.target.value)}
               className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
             />
+            {/* The date is required because surgery_date is NOT NULL, so an
+                undated entry has nowhere to be stored. Said plainly rather
+                than left as a disabled button with no explanation — and an
+                approximate date is better than a record that cannot save. */}
+            <span className="text-[11px] text-charcoal-faint mt-1.5 block">
+              Required. If you're not sure of the exact day, your best estimate is fine.
+            </span>
           </label>
+          {recordError && <p className="text-[11px] text-status-high">{recordError}</p>}
           <button
-            onClick={() => {
-              if (!surgeryName.trim()) return;
-              addSurgery({ name: surgeryName.trim(), date: surgeryDate || "Not dated" });
+            onClick={async () => {
+              if (!surgeryName.trim() || !surgeryDate) return;
+              const ok = await run(() => addSurgery({ name: surgeryName.trim(), date: surgeryDate }));
+              if (!ok) return;
               setSurgeryName("");
               setSurgeryDate("");
               setAddSurgeryOpen(false);
             }}
-            disabled={!surgeryName.trim()}
+            disabled={!surgeryName.trim() || !surgeryDate || busy}
             className="tap w-full rounded-2xl bg-primary text-white text-sm font-semibold py-3.5 disabled:opacity-50"
           >
-            Save
+            {busy ? "Saving…" : "Save"}
           </button>
         </div>
       </BottomSheet>
@@ -532,23 +563,27 @@ export const MedicalRecordsSection: React.FC<{
             </span>
             <Toggle checked={medNotify} onChange={setMedNotify} label="Medication reminder" />
           </div>
+          {recordError && <p className="text-[11px] text-status-high">{recordError}</p>}
           <button
-            onClick={() => {
+            onClick={async () => {
               if (!medName.trim() || !medDose.trim()) return;
-              addMedication({
-                name: medName.trim(),
-                dose: medDose.trim(),
-                route: medRoute,
-                times: medTimes,
-                notifyEnabled: medNotify,
-              });
+              const ok = await run(() =>
+                addMedication({
+                  name: medName.trim(),
+                  dose: medDose.trim(),
+                  route: medRoute,
+                  times: medTimes,
+                  notifyEnabled: medNotify,
+                })
+              );
+              if (!ok) return;
               resetMedForm();
               setAddMedOpen(false);
             }}
-            disabled={!medName.trim() || !medDose.trim()}
+            disabled={!medName.trim() || !medDose.trim() || busy}
             className="tap w-full rounded-2xl bg-primary text-white text-sm font-semibold py-3.5 disabled:opacity-50"
           >
-            Save
+            {busy ? "Saving…" : "Save"}
           </button>
         </div>
       </BottomSheet>

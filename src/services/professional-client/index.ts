@@ -248,3 +248,118 @@ export async function fetchClientWeight(clientIds: string[]): Promise<ClientWeig
 
   return { ok: true, byClient };
 }
+
+export type ClientMedicalHistory = {
+  comorbidities: string[];
+  surgeries: { id: string; name: string; date: string }[];
+  medications: {
+    id: string;
+    name: string;
+    dose: string;
+    route: "oral" | "injectable" | "topical" | "inhaled" | "other";
+    times: string[];
+    notifyEnabled: boolean;
+    notes?: string;
+  }[];
+};
+
+export type ClientMedicalHistoryResult =
+  | { ok: true; byClient: Record<string, ClientMedicalHistory | null> }
+  | { ok: false; message: string };
+
+/**
+ * Medications, surgeries and comorbidities per client, for clients who have
+ * granted `medical_history`.
+ *
+ * THE MOST SENSITIVE READ IN THIS FILE. `medical_history` exists as its own
+ * category precisely because bundling surgical and medication history with
+ * step counts made consent uninformed, so this is deliberately a separate
+ * function with a separate caller-side filter and no shared query with the
+ * vitals or weight reads. Nothing here is inferred from another grant.
+ *
+ * Same rules as the reads above: batched across the roster rather than one
+ * round trip per client, every requested client present in the result — as
+ * `null` when they have recorded nothing — and `ok: false` rather than an
+ * empty map on failure, because "no medications" and "could not read
+ * medications" are opposite statements about a person's health.
+ *
+ * A client with a grant but an empty history returns an object with three
+ * empty lists, NOT null. Null means "asked, nothing there at all"; the
+ * distinction lets a surface say "nothing recorded" without implying it
+ * failed to look.
+ */
+export async function fetchClientMedicalHistory(
+  clientIds: string[]
+): Promise<ClientMedicalHistoryResult> {
+  if (clientIds.length === 0) return { ok: true, byClient: {} };
+
+  const [cond, surg, meds] = await Promise.all([
+    supabase
+      .from("comorbidities")
+      .select("user_id, condition, created_at")
+      .in("user_id", clientIds)
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("surgeries")
+      .select("id, user_id, name, surgery_date")
+      .in("user_id", clientIds)
+      .order("surgery_date", { ascending: false }),
+    supabase
+      .from("medications")
+      .select("id, user_id, name, dose, route, times, notify_enabled, notes")
+      .in("user_id", clientIds)
+      .order("created_at", { ascending: true }),
+  ]);
+
+  const failure = cond.error ?? surg.error ?? meds.error;
+  if (failure) {
+    console.error("[professional-client] Could not read medical history:", failure.message);
+    return { ok: false, message: describe(failure) };
+  }
+
+  // Seeded first, so a consented client with nothing recorded is an empty
+  // history rather than a missing key.
+  const byClient: Record<string, ClientMedicalHistory | null> = {};
+  for (const id of clientIds) {
+    byClient[id] = { comorbidities: [], surgeries: [], medications: [] };
+  }
+
+  const seenCondition = new Map<string, Set<string>>();
+  for (const row of cond.data ?? []) {
+    const entry = byClient[row.user_id];
+    if (!entry) continue;
+    // Distinct per client: the table has no unique index, by design, so two
+    // rows can carry the same condition and must collapse to one chip.
+    let seen = seenCondition.get(row.user_id);
+    if (!seen) {
+      seen = new Set<string>();
+      seenCondition.set(row.user_id, seen);
+    }
+    if (seen.has(row.condition)) continue;
+    seen.add(row.condition);
+    entry.comorbidities.push(row.condition);
+  }
+
+  for (const row of surg.data ?? []) {
+    const entry = byClient[row.user_id];
+    if (!entry) continue;
+    entry.surgeries.push({ id: row.id, name: row.name, date: row.surgery_date });
+  }
+
+  for (const row of meds.data ?? []) {
+    const entry = byClient[row.user_id];
+    if (!entry) continue;
+    entry.medications.push({
+      id: row.id,
+      name: row.name,
+      dose: row.dose,
+      route: row.route,
+      // Postgres `time` returns "08:00:00"; the UI shows "08:00".
+      times: (row.times ?? []).map((t) => t.slice(0, 5)),
+      notifyEnabled: row.notify_enabled,
+      ...(row.notes ? { notes: row.notes } : {}),
+    });
+  }
+
+  return { ok: true, byClient };
+}
