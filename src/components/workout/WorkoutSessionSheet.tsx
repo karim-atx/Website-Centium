@@ -59,6 +59,12 @@ export const WorkoutSessionSheet: React.FC<{
   const [started, setStarted] = useState(false);
   const [quitConfirmOpen, setQuitConfirmOpen] = useState(false);
   const [emptyFinishOpen, setEmptyFinishOpen] = useState(false);
+  // The workout is not saved anywhere until the write lands: there is no local
+  // fallback for training data, so a failure has to be shown and retryable
+  // rather than absorbed. Losing a finished session silently is the one
+  // outcome worth designing against here.
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [coachNoteOpen, setCoachNoteOpen] = useState(false);
   // §7.1: which set just animated a completion tick — a per-tap nonce so
   // re-checking the same set re-fires the (CSS-animation, remount-only)
@@ -162,7 +168,7 @@ export const WorkoutSessionSheet: React.FC<{
 
   const hasCompletedSet = logged.some((ex) => ex.sets.some((s) => s.completed));
 
-  const finishWorkout = () => {
+  const finishWorkout = async () => {
     // V10 (QA 10.0): "If you press finish workout and no set is checked,
     // it prompts you that nothing has been added and will instead exit
     // out of the routine without logging it."
@@ -171,7 +177,9 @@ export const WorkoutSessionSheet: React.FC<{
       return;
     }
     const endedAt = new Date();
-    saveWorkoutSession({
+    setSaving(true);
+    setSaveError(null);
+    const result = await saveWorkoutSession({
       routineId,
       routineName,
       date: "2026-08-20",
@@ -181,6 +189,11 @@ export const WorkoutSessionSheet: React.FC<{
       totalVolumeKg: totalVolume,
       exercises: logged,
     });
+    setSaving(false);
+    if (!result.ok) {
+      setSaveError(result.message ?? "Couldn't save this workout.");
+      return;
+    }
     logWorkout({
       workoutId: routineId ?? "custom",
       workoutName: routineName,
@@ -415,9 +428,18 @@ export const WorkoutSessionSheet: React.FC<{
             </button>
           </div>
         </div>
-        <Button fullWidth size="lg" onClick={finishWorkout} disabled={finished}>
+        {saveError && (
+          <p className="text-[11.5px] font-semibold text-status-high text-center mb-2">{saveError}</p>
+        )}
+        <Button fullWidth size="lg" onClick={() => void finishWorkout()} disabled={finished || saving}>
           {finished ? (
             "Workout Saved ✓"
+          ) : saving ? (
+            "Saving…"
+          ) : saveError ? (
+            <>
+              <Square size={14} /> Try again
+            </>
           ) : (
             <>
               <Square size={14} /> Finish Workout

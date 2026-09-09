@@ -86,6 +86,7 @@ import {
 import { getMyReferrerReward } from "../services/redemption";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
 import { fetchClientNutrition } from "../services/professional-client";
+import { getWorkoutSessions, saveWorkoutSession as saveWorkoutSessionRemote } from "../services/workout/log";
 
 const TODAY = "2026-08-20";
 
@@ -214,6 +215,8 @@ interface AppState {
   // visible — and an error keeps them rather than replacing them with nothing.
   diaryLoading: boolean;
   diaryError: string | null;
+  /** Set when workout history could not be refreshed from the server. */
+  workoutHistoryError: string | null;
   // Ends the recovery block. Must be used instead of clearRecoveryPending():
   // the guards read React state, not localStorage, so clearing only storage
   // leaves the app redirecting for the rest of the page session.
@@ -265,7 +268,9 @@ interface AppState {
   logWorkout: (entry: Omit<WorkoutLogEntry, "id" | "date">) => void;
 
   workoutSessions: WorkoutSession[];
-  saveWorkoutSession: (session: Omit<WorkoutSession, "id">) => void;
+  saveWorkoutSession: (
+    session: Omit<WorkoutSession, "id">
+  ) => Promise<{ ok: boolean; message?: string }>;
 
   // V6 (QA 6.0): quitting a started routine (instead of finishing it)
   // preserves logged sets + elapsed time, keyed by routine, so reopening it
@@ -954,6 +959,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "workoutSessions",
     []
   );
+  const [workoutHistoryError, setWorkoutHistoryError] = useState<string | null>(null);
   const [personalRecords, setPersonalRecords] = usePersistentState<Record<string, number>>(
     "personalRecords",
     {}
@@ -1103,6 +1109,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cancelled = true;
     };
   }, [authUserId, profileReady, diaryStart, diaryEnd, setFoodLog]);
+
+  // Workout history, hydrated from workout_sessions.
+  //
+  // A PLAIN REPLACE, not the diary's merge. The diary has to preserve
+  // local-only entries because logFoodEntry can fall back to local state;
+  // saveWorkoutSession cannot — a session that failed to write was never
+  // added — so every row in this list came from the server and the server's
+  // answer is simply the truth. That is what keeps a second id space from
+  // existing here.
+  //
+  // On failure the existing list is left alone rather than cleared: an empty
+  // result and a failed request mean opposite things, and rendering "you have
+  // never trained" over a dropped connection would be a fabrication.
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    void getWorkoutSessions(authUserId).then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setWorkoutHistoryError(result.message);
+        return;
+      }
+      setWorkoutHistoryError(null);
+      setWorkoutSessions(result.sessions);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, profileReady, setWorkoutSessions]);
 
   // V10 (QA 10.0): "logging... metrics in a day that is not today should
   // add and log values pertaining to that mentioned day" — water is now
@@ -1541,11 +1576,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
   };
 
-  const saveWorkoutSession: AppState["saveWorkoutSession"] = (session) => {
-    setWorkoutSessions((prev) => [
-      ...prev,
-      { ...session, id: `ws${Date.now()}${Math.random().toString(16).slice(2)}` },
-    ]);
+  // REMOTE-REQUIRED, with no local fallback. Deliberately unlike the food
+  // diary, which keeps local-only entries and reconciles them.
+  //
+  // Two reasons. The session guard now redirects any unauthenticated render,
+  // so a workout cannot be completed without a session — the case the food
+  // fallback existed for cannot arise here. And a fallback would mean a second
+  // id space alongside the remote one, which is exactly the `isRemoteEntryId`
+  // shim the diary carries and has an open follow-up to remove; adding a
+  // second instance of it to a domain that does not need one is backwards.
+  //
+  // So a failed save is reported, not silently absorbed. The caller shows it
+  // and offers a retry; nothing is added to history until the write lands.
+  const saveWorkoutSession: AppState["saveWorkoutSession"] = async (session) => {
+    if (!authUserId) {
+      return { ok: false, message: "You need to be signed in to save a workout." };
+    }
+
+    const result = await saveWorkoutSessionRemote(authUserId, session);
+    if (!result.ok) return { ok: false, message: result.message };
+
+    setWorkoutSessions((prev) => [...prev, { ...session, id: result.id! }]);
 
     // Auto-update estimated 1RMs for barbell/dumbbell/weighted-bodyweight
     // exercises from this session's heaviest completed set.
@@ -1561,6 +1612,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       return next;
     });
+
+    return { ok: true };
   };
   const setPersonalRecord = (exerciseName: string, kg: number) =>
     setPersonalRecords((prev) => ({ ...prev, [exerciseName]: kg }));
@@ -2180,6 +2233,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearRecovery,
       diaryLoading,
       diaryError,
+      workoutHistoryError,
       authReady,
       profileReady,
       theme,
@@ -2392,6 +2446,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearRecovery,
       diaryLoading,
       diaryError,
+      workoutHistoryError,
       deletionRequestedAt,
       authReady,
       profileReady,
