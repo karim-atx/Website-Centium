@@ -70,6 +70,14 @@ export const AddFoodSheet: React.FC<{
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null);
+  // Initialised from the prop, then RE-SYNCED on every open by the effect
+  // below. The initialiser alone is not enough: this sheet is mounted
+  // permanently by its parents (`<AddFoodSheet open={...} />` sits in the
+  // tree unconditionally; only the inner BottomSheet returns null when
+  // closed), so useState captures the first `defaultMeal` it ever sees and
+  // ignores every later one. That is why tapping "+" on the Breakfast row
+  // opened a sheet with Lunch selected, and why entries logged that way were
+  // written as lunch.
   const [meal, setMeal] = useState<MealType>(defaultMeal);
   const [quantity, setQuantityRaw] = useState(1);
   const [quantityDraft, setQuantityDraft] = useState("1");
@@ -207,7 +215,19 @@ export const AddFoodSheet: React.FC<{
     return category ? all.filter((f) => f.category === category) : all;
   }, [localCustom, results, category]);
 
+  // Takes the meal from the row the user actually tapped, each time the sheet
+  // opens. Deliberately here rather than in resetAndClose below: that runs on
+  // CLOSE, so it would capture the defaultMeal of the sheet being dismissed,
+  // and the next open from a different row would still show the previous
+  // row's meal. Guarded on `open` so it never overwrites a choice the user
+  // makes with the chips while the sheet is up.
+  useEffect(() => {
+    if (open) setMeal(defaultMeal);
+  }, [open, defaultMeal]);
+
   const resetAndClose = useCallback(() => {
+    // `meal` is intentionally absent from this reset — the effect above owns
+    // it, for the reason given there. Everything else is cleared here.
     setQuery("");
     setCategory(null);
     setSelectedFood(null);
