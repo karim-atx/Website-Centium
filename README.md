@@ -210,46 +210,53 @@ those values before they are committed, what happens when they disagree
 with them, and how that interacts with the health data the profile feeds.
 Design that before touching the table.
 
-### The professional dashboard's client-health tiles are not wired
+### The professional dashboard's client-health tiles are partly wired
 
-The roster is real — `active_professional_clients` joined to
-`public_profile_summary`, with consent from `client_access_grants`. The
-**client health and training figures are not**, and are deliberately hidden
-rather than shown empty or left on mock data.
+**Nutrition is done** (`2c0ed52`). A professional who has been granted
+`food_diary` sees their client's real food logs — totals for the client's
+most recently logged day, with the date, across the roster row and all four
+client-sheet surfaces. `services/professional-client` batches one query for
+the whole roster; `utils/nutritionDisplay` owns the wording so the surfaces
+cannot drift apart. Client identity on the roster is real too (`299523a`,
+via `related_profile_summary` — not `public_profile_summary`, which excludes
+customers by design and is why every client used to render as "Client").
 
-Affected: `workoutLoggedToday`, `lastWeightKg`, `weightTrend`,
-`lastCaloriesKcal`, `healthSummary`, `medicalHistory`, `activityLevel` and
-`activityType`. They are optional on `ProfessionalClient` and `undefined`
-on every real row. Where a panel depends on them it renders
-`HealthDataPending` ("coming soon") instead — the dashboard's "N of M
-trained" hero, the client sheet's activity/nutrition summary, and the meal
-planner's weight-trend card.
+**Weight, workouts and medical history are not.** Still optional on
+`ProfessionalClient` and `undefined` on every real row: `lastWeightKg`,
+`weightTrend`, `workoutLoggedToday`, `healthSummary`, `medicalHistory`,
+plus the demographics `activityLevel`, `activityType`, `age`, `sex`,
+`heightCm` and `weightKg`. Three surfaces still render `HealthDataPending`
+("coming soon") in their place: the dashboard's "N of M trained" hero, the
+meal planner's weight-trend card, and the client sheet's activity summary —
+that last one now only when the client shares nothing renderable at all.
 
-This was a deliberate call. Zeros would have been worse than blanks: "0 of
-5 trained" reads as a measurement, not an absence, and a professional could
-act on it. Leaving the old mock numbers beside a real roster would be worse
-still — a professional would read demo figures as their own client's.
+**What blocks them is the client's own write path, not the professional's
+read path.** `workout_sessions`, `health_metrics`, `medications`,
+`surgeries`, `comorbidities` and the rest already carry
+`*_select_granted_professional` policies built on `has_client_access()`, so
+the professional side is waiting on data that does not exist: the client's
+app still keeps weight, workouts, sleep and steps in `localStorage` and
+never writes those tables. Wiring them is a client-side project of its own —
+much larger than these tiles — and it is what the original tile
+investigation split out as its task 4.
 
-**Consent is no longer the blocker.** `client_access_grants` is real and
-enforced: the client grants and revokes per category from either the
-Professionals tab or the Profile tab, the professional reads those rows,
-and RLS was verified against staging — a professional attempting to write
-another party's grant affects zero rows (see the RLS failure-signature
-note below for why that shows up as silence rather than an error).
+Consent is not a blocker and has not been for some time. `client_access_grants`
+is real and enforced, and since the consent split `has_client_access()`
+requires both an active grant for the category *and* an undisconnected
+relationship.
 
-**One thing gates fixing this now: the health tables are still mock.**
-Weight, nutrition, workout and biomarker data all live in `localStorage`,
-so a granted toggle has nothing real to unlock. Wiring one of those tables
-end-to-end — food logs being the obvious first — is what turns the first
-of these tiles on, and `has_client_access()` is already there to gate it.
+The governing rule for whatever gets wired next: **an absence must never
+render as a measurement.** "0 of 5 trained" reads as a finding a
+professional could act on, not as missing data, and mock numbers beside a
+real roster read as the client's own. This is not hypothetical — the Food
+Diary card shipped printing a confident "0 kcal" for clients whose intake
+had never been fetched, which is exactly what `2c0ed52` removed.
 
 Related: professional-side mutations (`updateProfessionalClientAccess`,
 `updateProfessionalClient`, `assignProgramToClient`,
 `assignFoodTemplateToClient`, and `clientHealthNotes`) still write to
 in-memory state only. They update the UI and are lost on the next roster
-refetch. The hire inbox (`pendingClientRequests`) is also still a local
-simulation; accepting a request now only clears it, since a real
-relationship can only come from a redeemed code.
+refetch.
 
 ### RLS rejects UPDATEs silently — `if (error)` is not a security check
 
