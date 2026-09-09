@@ -1,6 +1,12 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
-import type { BloodMarker, ClientNutrition, ClientWorkoutActivity, ImagingRecord } from "../../types";
+import type {
+  BloodMarker,
+  ClientNutrition,
+  ClientWorkoutActivity,
+  ImagingRecord,
+  LabReport,
+} from "../../types";
 import { groupPanelsByMarkerName, type PanelRow } from "../labs";
 import { localDayOf, todayLocal } from "../../utils/date";
 
@@ -371,6 +377,8 @@ export interface ClientLabs {
   /** yyyy-mm-dd of the most recent panel. */
   latestPanelDate: string;
   panelCount: number;
+  /** Panels carrying an uploaded report, newest first. */
+  reports: LabReport[];
 }
 
 export type ClientLabsResult =
@@ -401,7 +409,7 @@ export async function fetchClientLabs(clientIds: string[]): Promise<ClientLabsRe
 
   const { data, error } = await supabase
     .from("blood_panels")
-    .select("id, user_id, panel_date, blood_markers(id, name, value, unit, range_low, range_high, status)")
+    .select("id, user_id, panel_date, source_image_url, blood_markers(id, name, value, unit, range_low, range_high, status)")
     .in("user_id", clientIds)
     .order("panel_date", { ascending: true });
 
@@ -416,12 +424,20 @@ export async function fetchClientLabs(clientIds: string[]): Promise<ClientLabsRe
   // Panels arrive oldest-first across every client at once, so bucket them per
   // client BEFORE grouping — the helper's chronological contract is per person.
   const panelsFor: Record<string, PanelRow[]> = {};
+  const reportsFor: Record<string, LabReport[]> = {};
   for (const row of data ?? []) {
     if (!(row.user_id in byClient)) continue;
     (panelsFor[row.user_id] ??= []).push({
       panel_date: row.panel_date,
       blood_markers: row.blood_markers ?? [],
     });
+    if (row.source_image_url) {
+      (reportsFor[row.user_id] ??= []).push({
+        id: row.id,
+        date: row.panel_date,
+        filePath: row.source_image_url,
+      });
+    }
   }
 
   for (const [id, panels] of Object.entries(panelsFor)) {
@@ -430,6 +446,9 @@ export async function fetchClientLabs(clientIds: string[]): Promise<ClientLabsRe
       markers: groupPanelsByMarkerName(panels),
       latestPanelDate: panels[panels.length - 1].panel_date,
       panelCount: panels.length,
+      // Panels arrive oldest-first for the grouping's sake; reports read
+      // better newest-first, like every other record list.
+      reports: (reportsFor[id] ?? []).slice().reverse(),
     };
   }
 

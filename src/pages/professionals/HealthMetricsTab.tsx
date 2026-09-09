@@ -3,7 +3,11 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import { HeartPulse, ChevronDown, ChevronUp, Scale, Moon, Footprints } from "lucide-react";
-import { ClientClinicalRecords } from "../../components/professionals/ClientClinicalRecords";
+import {
+  ClientClinicalRecords,
+  type ClinicalFileRequest,
+} from "../../components/professionals/ClientClinicalRecords";
+import { FileViewerSheet } from "../../components/health/FileViewerSheet";
 
 // QA 13.0: comorbidities/previous surgeries/medications are no longer
 // typed by the professional here — they're synced read-only from what the
@@ -21,6 +25,7 @@ const noteFields: { key: "currentInjuries" | "personalityType"; label: string; p
 export default function HealthMetricsTab() {
   const { professionalClients, clientHealthNotes, updateClientHealthNote } = useApp();
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [viewing, setViewing] = useState<ClinicalFileRequest | null>(null);
 
   return (
     <div>
@@ -106,7 +111,7 @@ export default function HealthMetricsTab() {
                       appear here." Blood work and imaging joined it; all
                       three live in one component shared with
                       ClientDetailSheet rather than copied into both. */}
-                  <ClientClinicalRecords client={c} />
+                  <ClientClinicalRecords client={c} onOpenFile={setViewing} />
 
                   <div>
                     <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
@@ -137,6 +142,17 @@ export default function HealthMetricsTab() {
           </Card>
         )}
       </div>
+
+      {/* One viewer for the page rather than one per client card: only one
+          file is ever open, and mounting it per row would sign nothing but
+          would still build a sheet for every client. */}
+      <FileViewerSheet
+        open={viewing !== null}
+        onClose={() => setViewing(null)}
+        path={viewing?.path ?? null}
+        bucket={viewing?.bucket ?? "medical-imaging"}
+        label={viewing?.label ?? "File"}
+      />
     </div>
   );
 }

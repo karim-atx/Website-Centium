@@ -4,6 +4,8 @@ import { Chip } from "../ui/Chip";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Toggle } from "../ui/Toggle";
 import { useApp } from "../../context/AppContext";
+import { FileViewerSheet } from "./FileViewerSheet";
+import type { PrivateBucket } from "../../services/storage";
 import type { BloodMarker, ImagingRecord, MedicationRoute } from "../../types";
 import {
   Share2,
@@ -15,6 +17,7 @@ import {
   Pill,
   Bell,
   Clock,
+  FileText,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -92,8 +95,12 @@ export const MedicalRecordsSection: React.FC<{
     addMedication,
     updateMedication,
     removeMedication,
+    labReports,
     today,
   } = useApp();
+  // The file currently being viewed, if any. Signing happens inside the
+  // viewer on open, never here -- see FileViewerSheet.
+  const [viewing, setViewing] = useState<{ path: string; label: string; bucket: PrivateBucket } | null>(null);
   // Every write in this section now goes to Supabase and can fail. One slot
   // rather than one per control: only one write is ever in flight, and a
   // medical record that silently failed to save is the thing worth shouting
@@ -181,6 +188,36 @@ export const MedicalRecordsSection: React.FC<{
         </Chip>
       </div>
 
+      {/* THE UPLOADED REPORTS THEMSELVES. blood_panels.source_image_url has
+          been written since the capture flow existed and read by nothing --
+          the biomarker list is grouped by marker name, so a panel's own
+          identity had nowhere to appear. Without this the client could upload
+          a lab report and never see it again. */}
+      {tab === "biomarkers" && labReports.length > 0 && (
+        <Card className="mb-3">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+            Lab reports
+          </p>
+          <div className="flex flex-wrap gap-1.5">
+            {labReports.map((rep) => (
+              <button
+                key={rep.id}
+                onClick={() =>
+                  setViewing({
+                    path: rep.filePath,
+                    label: `Lab report · ${rep.date}`,
+                    bucket: "lab-reports",
+                  })
+                }
+                className="tap flex items-center gap-1 text-[11px] font-semibold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1"
+              >
+                <FileText size={11} /> {rep.date}
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+
       {tab === "biomarkers" && (
         <Card padded={false} className="mb-6 divide-y divide-charcoal/[0.04]">
           {bloodMarkers.map((m) => (
@@ -254,6 +291,20 @@ export const MedicalRecordsSection: React.FC<{
                 {r.note && <p className="text-xs text-charcoal-soft mt-0.5">{r.note}</p>}
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                {/* Only for records that actually carry a file. One typed by
+                    hand has nothing to open, and a View control on it would
+                    promise a document that does not exist. */}
+                {r.filePath && (
+                  <button
+                    onClick={() =>
+                      setViewing({ path: r.filePath!, label: r.type, bucket: "medical-imaging" })
+                    }
+                    aria-label={`View ${r.type}`}
+                    className="tap text-[11px] font-semibold text-primary-dark"
+                  >
+                    View
+                  </button>
+                )}
                 <button
                   onClick={() => onShareImagingRecord(r)}
                   aria-label={`Share ${r.type}`}
@@ -615,6 +666,17 @@ export const MedicalRecordsSection: React.FC<{
           </button>
         </div>
       </BottomSheet>
+
+      {/* Sibling of the sheets, not nested inside one: BottomSheet portals
+          to <body>, so nesting would tie the viewer to whichever sheet
+          happened to be open. */}
+      <FileViewerSheet
+        open={viewing !== null}
+        onClose={() => setViewing(null)}
+        path={viewing?.path ?? null}
+        bucket={viewing?.bucket ?? "medical-imaging"}
+        label={viewing?.label ?? "File"}
+      />
     </>
   );
 };

@@ -27,7 +27,8 @@ import { ACCESS_CATEGORIES, accessKeyFor } from "../../services/consent";
 import { PERSON_ICON } from "../../utils/icons";
 import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "./HealthDataPending";
-import { ClientClinicalRecords } from "./ClientClinicalRecords";
+import { ClientClinicalRecords, type ClinicalFileRequest } from "./ClientClinicalRecords";
+import { FileViewerSheet } from "../health/FileViewerSheet";
 import { nutritionLine, nutritionLineRecoverySensitive } from "../../utils/nutritionDisplay";
 
 const activityTypeLabel: Record<string, string> = {
@@ -71,6 +72,7 @@ export const ClientDetailSheet: React.FC<{
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [clinicalOpen, setClinicalOpen] = useState(false);
+  const [viewing, setViewing] = useState<ClinicalFileRequest | null>(null);
   const [editingPrefs, setEditingPrefs] = useState(false);
 
   if (!client) return null;
@@ -125,6 +127,7 @@ export const ClientDetailSheet: React.FC<{
   const activeNotes = noteFields.filter((f) => note[f.key]?.trim());
 
   return (
+    <>
     <BottomSheet open={open} onClose={onClose} hideHeader>
       <div className="space-y-5 animate-fade-slide-up">
         <div className="flex items-center gap-3">
@@ -477,7 +480,7 @@ export const ClientDetailSheet: React.FC<{
                 HealthMetricsTab rather than copied into both. */}
             {(client.access.medicalHistory || client.access.labResults) && (
               <div className="mt-3 pt-3 border-t border-charcoal/[0.06]">
-                <ClientClinicalRecords client={client} />
+                <ClientClinicalRecords client={client} onOpenFile={setViewing} />
               </div>
             )}
 
@@ -653,5 +656,17 @@ export const ClientDetailSheet: React.FC<{
         </Button>
       </div>
     </BottomSheet>
+
+    {/* Sibling of the sheet, not a child: a BottomSheet portals to <body>,
+        so nesting one inside another would tie the viewer to the parent
+        sheet unmounting. */}
+    <FileViewerSheet
+      open={viewing !== null}
+      onClose={() => setViewing(null)}
+      path={viewing?.path ?? null}
+      bucket={viewing?.bucket ?? "medical-imaging"}
+      label={viewing?.label ?? "File"}
+    />
+    </>
   );
 };

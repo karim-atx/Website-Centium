@@ -726,12 +726,30 @@ export interface BloodPanel {
   markers: BloodMarker[];
 }
 
+/**
+ * A lab report that was uploaded with a panel.
+ *
+ * Only panels that actually carry a file appear as one — a panel recorded by
+ * hand has nothing to open, and offering a control for it would promise a
+ * document that does not exist.
+ */
+export interface LabReport {
+  /** blood_panels.id */
+  id: string;
+  /** yyyy-mm-dd */
+  date: string;
+  /** Object path in the private lab-reports bucket, not a URL. */
+  filePath: string;
+}
+
 /** A professional's view of one client's blood work. */
 export interface ClientLabsSummary {
   markers: BloodMarker[];
   /** yyyy-mm-dd of the most recent panel. */
   latestPanelDate: string;
   panelCount: number;
+  /** Panels with an attached report, newest first. */
+  reports: LabReport[];
 }
 
 // QA 12.0: "I would like the biomarker widget to be inside a tab that not

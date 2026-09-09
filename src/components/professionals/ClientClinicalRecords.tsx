@@ -2,6 +2,14 @@ import React from "react";
 import type { ProfessionalClient } from "../../types";
 import { formatDisplayDate } from "../../utils/date";
 import { FileText, FlaskConical, Stethoscope } from "lucide-react";
+import type { PrivateBucket } from "../../services/storage";
+
+/** A file the professional asked to open, with the bucket it lives in. */
+export interface ClinicalFileRequest {
+  path: string;
+  label: string;
+  bucket: PrivateBucket;
+}
 
 // The client's own clinical records, as a professional sees them: medical
 // history, blood work, and imaging.
@@ -40,12 +48,14 @@ const SectionLabel: React.FC<{ icon: typeof FileText; children: React.ReactNode 
 export const ClientClinicalRecords: React.FC<{
   client: ProfessionalClient;
   /**
-   * Called when the professional taps a record that has a file. Left
-   * undefined until the viewer exists (task 4c-ii) — until then a record with
-   * an attachment simply does not offer to open it, rather than offering a
-   * control that does nothing.
+   * Called when the professional taps a record that has a file.
+   *
+   * Optional still: a surface that cannot open files renders no control at
+   * all, rather than offering a button that does nothing. The bucket is part
+   * of the request because lab reports and imaging live in different ones and
+   * only this component knows which section a given file came from.
    */
-  onOpenFile?: (filePath: string, label: string) => void;
+  onOpenFile?: (file: ClinicalFileRequest) => void;
 }> = ({ client, onOpenFile }) => {
   const history = client.medicalHistory;
   const hasHistory =
@@ -116,6 +126,27 @@ export const ClientClinicalRecords: React.FC<{
                 {labs.panelCount} {labs.panelCount === 1 ? "panel" : "panels"} · latest{" "}
                 {formatDisplayDate(labs.latestPanelDate)}
               </p>
+              {/* The uploaded reports themselves. Only panels carrying a file
+                  appear, and only when something can open them. */}
+              {labs.reports.length > 0 && onOpenFile && (
+                <div className="flex flex-wrap gap-1.5">
+                  {labs.reports.map((rep) => (
+                    <button
+                      key={rep.id}
+                      onClick={() =>
+                        onOpenFile({
+                          path: rep.filePath,
+                          label: `Lab report · ${formatDisplayDate(rep.date)}`,
+                          bucket: "lab-reports",
+                        })
+                      }
+                      className="tap flex items-center gap-1 text-[11px] font-semibold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1"
+                    >
+                      <FileText size={11} /> Report · {formatDisplayDate(rep.date)}
+                    </button>
+                  ))}
+                </div>
+              )}
               <div className="rounded-xl overflow-hidden divide-y divide-charcoal/[0.05] bg-cream-soft">
                 {labs.markers.map((m) => (
                   <div key={m.id} className="flex items-center justify-between px-3 py-2 gap-3">
@@ -175,7 +206,13 @@ export const ClientClinicalRecords: React.FC<{
                       promise a document that does not exist. */}
                   {r.filePath && onOpenFile && (
                     <button
-                      onClick={() => onOpenFile(r.filePath!, r.type)}
+                      onClick={() =>
+                        onOpenFile({
+                          path: r.filePath!,
+                          label: r.type,
+                          bucket: "medical-imaging",
+                        })
+                      }
                       className="tap text-[11px] font-semibold text-primary-dark shrink-0"
                     >
                       View

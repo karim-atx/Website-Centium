@@ -21,6 +21,7 @@ import type {
   JournalFolder,
   JournalEntry,
   BloodMarker,
+  LabReport,
   ExtractedBiomarker,
   ImagingRecord,
   Surgery,
@@ -109,7 +110,7 @@ import {
   deleteImagingRecordRemote,
   getImagingRecords,
 } from "../services/imaging";
-import { getBloodMarkers, recordPanel } from "../services/labs";
+import { getBloodMarkers, getLabReports, recordPanel } from "../services/labs";
 import { getWorkoutSessions, saveWorkoutSession as saveWorkoutSessionRemote } from "../services/workout/log";
 import { todayLocal } from "../utils/date";
 
@@ -438,6 +439,8 @@ interface AppState {
   addJournalFolder: (name: string) => void;
 
   bloodMarkers: BloodMarker[];
+  /** Panels carrying an uploaded report, newest first. Empty when none do. */
+  labReports: LabReport[];
   // REMOTE-REQUIRED, and it writes a PANEL rather than loose markers: the
   // schema models blood work as one report carrying several results, and the
   // composite foreign key means the panel has to exist before any marker can
@@ -1122,6 +1125,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // The Biomarkers tab is empty until a real capture, which is the honest
   // state for an account that has never uploaded blood work.
   const [bloodMarkers, setBloodMarkers] = usePersistentState<BloodMarker[]>("bloodMarkers", []);
+  // Not persisted: these are just paths into a private bucket, and the list is
+  // cheap to re-read. Caching object paths locally would also outlive the
+  // objects themselves, since Storage does not cascade on row deletion.
+  const [labReports, setLabReports] = useState<LabReport[]>([]);
 
   // Lab results, hydrated from blood_panels + blood_markers and inverted back
   // into the name-keyed shape the UI consumes. A PLAIN REPLACE, like the other
@@ -1138,6 +1145,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       setLabsError(null);
       setBloodMarkers(result.markers);
+    });
+    // Reports are their own read: grouped by panel rather than by marker name,
+    // so they cannot ride along on a query shaped for the other question.
+    void getLabReports(authUserId).then((result) => {
+      if (cancelled) return;
+      if (result.ok) setLabReports(result.reports);
     });
     return () => {
       cancelled = true;
@@ -2328,6 +2341,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setLabsError(null);
       setBloodMarkers(refreshed.markers);
     }
+    const reports = await getLabReports(authUserId);
+    if (reports.ok) setLabReports(reports.reports);
     return { ok: true };
   };
 
@@ -2735,6 +2750,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       removeJournalEntry,
       addJournalFolder,
       bloodMarkers,
+      labReports,
       recordBiomarkers,
       imagingRecords,
       addImagingRecord,

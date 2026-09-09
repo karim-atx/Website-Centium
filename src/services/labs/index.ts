@@ -1,6 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
-import type { BloodMarker, ExtractedBiomarker } from "../../types";
+import type { BloodMarker, ExtractedBiomarker, LabReport } from "../../types";
 import { deletePrivateFile, uploadPrivateFile } from "../storage";
 import { todayLocal } from "../../utils/date";
 
@@ -348,6 +348,45 @@ export function groupPanelsByMarkerName(panels: PanelRow[]): BloodMarker[] {
     }
   }
   return [...byName.values()];
+}
+
+export type LabReportResult =
+  | { ok: true; reports: LabReport[] }
+  | { ok: false; message: string };
+
+/**
+ * The lab reports a user has uploaded, newest first.
+ *
+ * SEPARATE FROM getBloodMarkers ON PURPOSE. That function answers "what are my
+ * numbers over time", which is grouped by marker name and has no room for a
+ * panel's identity; this answers "which reports do I have", which is grouped
+ * by panel. Folding the second into the first would have meant changing its
+ * return contract for every caller to serve one surface.
+ *
+ * Filters to panels that actually carry a file: a panel recorded without one
+ * has nothing to open.
+ */
+export async function getLabReports(userId: string): Promise<LabReportResult> {
+  const { data, error } = await supabase
+    .from("blood_panels")
+    .select("id, panel_date, source_image_url")
+    .eq("user_id", userId)
+    .not("source_image_url", "is", null)
+    .order("panel_date", { ascending: false });
+
+  if (error) {
+    console.error("[labs] Could not load lab reports:", error.message);
+    return { ok: false, message: "Could not load your lab reports." };
+  }
+
+  return {
+    ok: true,
+    reports: (data ?? []).map((p) => ({
+      id: p.id,
+      date: p.panel_date,
+      filePath: p.source_image_url!,
+    })),
+  };
 }
 
 export async function getBloodMarkers(userId: string): Promise<BloodMarkerResult> {
