@@ -393,6 +393,35 @@ professional's browser only. The client cannot see it, and
 `custom_foods_select_scoped_client` — the policy that exists precisely to let
 them — has no row to select.
 
+### `nutritionLine`'s not-shared branch is narrower than it reads
+
+`utils/nutritionDisplay` documents four states, and its `not_shared` case
+returns "Not sharing food diary". That string is far harder to reach than the
+code suggests, and anyone reasoning about the four states from the source
+alone will overestimate how often it renders.
+
+When a client revokes their food diary, the surfaces that would show it
+mostly do not render at all:
+
+- The roster row checks whether the client shares **anything** first, so a
+  client whose only grant was the food diary falls into "Not sharing any data
+  yet" before `nutritionLine` is consulted.
+- The client sheet's four nutrition surfaces — the Calories consumed card,
+  the Food Diary card, the recovery-sensitive Meal rhythm card and the
+  clinical panel — are each gated on `access.foodDiary` at the card level, so
+  they disappear rather than render a message.
+
+So `not_shared` only actually surfaces on the roster row, and only for a
+client who shares some other category but specifically not their food diary.
+
+**Not a defect.** Absence is the strongest possible form of "implies nothing
+about whether they logged", which is the property that branch exists to
+protect — verified on staging by revoking the grant and confirming no surface
+mentions logging either way. The branch is also correct to keep: it is the
+right answer for the case it does cover, and removing it would leave the
+partial-consent client with nothing. This entry exists only so the next reader
+does not assume the string appears wherever a diary is unshared.
+
 ### The hire-request inbox is a local mock, so requesters have no names
 
 A professional reviewing incoming hire requests sees whatever the mock put
