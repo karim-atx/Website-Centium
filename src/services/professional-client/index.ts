@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { ClientNutrition, ClientWorkoutActivity } from "../../types";
+import { localDayOf, todayLocal } from "../../utils/date";
 
 // A professional's read of their clients' own data.
 //
@@ -128,11 +129,16 @@ export type ClientWorkoutResult =
  * `null` when they have never logged — and `ok: false` rather than an empty
  * map on failure, so a network error is never rendered as "nobody trained".
  *
- * WHICH DAY "TODAY" IS. This compares against the real calendar date, not the
- * app's hardcoded TODAY constant ("2026-08-20"). The database stamps
- * started_at with now(), so real dates are the only ones the rows actually
- * carry. That does mean the client's own diary and this view disagree about
- * the date until that mock constant goes — see the README follow-up.
+ * WHICH DAY "TODAY" IS, and whose. Sessions are stored as timestamptz, so
+ * reducing one to a day is a timezone decision rather than a lookup. Both
+ * sides of the comparison use the READING PROFESSIONAL's local day: taking
+ * the UTC day off started_at instead would disagree with the client's own
+ * app, which files a session under the day it started locally, for every
+ * session either side of a UTC midnight.
+ *
+ * For a professional and client in the same timezone — the ordinary case —
+ * that is exactly right. Across timezones it stays an approximation, since
+ * nothing stores the client's own zone; see the README follow-up.
  */
 export async function fetchClientWorkoutActivity(
   clientIds: string[]
@@ -151,7 +157,7 @@ export async function fetchClientWorkoutActivity(
     return { ok: false, message: describe(error) };
   }
 
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayLocal();
   const byClient: Record<string, ClientWorkoutActivity | null> = {};
   for (const id of clientIds) byClient[id] = null;
 
@@ -161,7 +167,7 @@ export async function fetchClientWorkoutActivity(
     // Rows arrive newest-first, so the first one seen for a client is their
     // most recent session; later rows are older days and are skipped.
     if (byClient[id]) continue;
-    const day = row.started_at.slice(0, 10);
+    const day = localDayOf(row.started_at);
     byClient[id] = { lastSessionDate: day, trainedToday: day === today };
   }
 

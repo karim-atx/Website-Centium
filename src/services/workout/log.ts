@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { LoggedExercise, LoggedSet, WorkoutSession } from "../../types";
+import { localDayOf } from "../../utils/date";
 
 // A client's own training log: workout_sessions, and the logged_exercises /
 // logged_sets hanging off it.
@@ -231,8 +232,11 @@ export async function getWorkoutSessions(
       id: r.id,
       routineId: null,
       routineName: r.routine_name,
-      // The table has no date column; the day is whatever started_at fell on.
-      date: r.started_at.slice(0, 10),
+      // The table has no date column; the day is whatever started_at fell on
+      // LOCALLY. Slicing the ISO string instead would give the UTC day, which
+      // is a different day for part of every night and would not match what
+      // WorkoutSessionSheet wrote or what the streak anchors compare against.
+      date: localDayOf(r.started_at),
       startedAt: r.started_at,
       endedAt: r.ended_at ?? undefined,
       durationSec: r.duration_sec ?? 0,

@@ -5,21 +5,29 @@ import { WaterFillContainer } from "../dashboard/WaterFillContainer";
 import { Droplet, Scale, Check } from "lucide-react";
 
 const quickAmounts = [100, 250, 500];
-const TODAY = "2026-08-20";
 
 // V4: weight/body fat/steps/sleep/calories burned are now auto-sourced from
 // Apple/Android Health and no longer manually loggable — Water is the only
 // metric left to quickly add from here (Home's "Add Metric" quick action).
 // V8 (QA 8.0): "should not only log water but be able to add weight of that
 // day. It should reset if it is a new day" — weight gets its own section,
-// pre-filled only if already logged today (weightLoggedDate === TODAY).
+// pre-filled only if already logged today (weightLoggedDate === today).
 // V10 (QA 10.0): both water and weight now log against whichever day is
 // selected on Home, not always literal "today".
 export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { water, waterGoalMl, addWater, metricValues, weightLoggedDate, weightByDate, logWeightForToday, selectedDate } =
-    useApp();
+  const {
+    water,
+    waterGoalMl,
+    addWater,
+    metricValues,
+    weightLoggedDate,
+    weightByDate,
+    logWeightForToday,
+    selectedDate,
+    today,
+  } = useApp();
   const pct = water / waterGoalMl;
-  const isToday = selectedDate === TODAY;
+  const isToday = selectedDate === today;
   const loggedForDay = weightLoggedDate === selectedDate;
   const dayWeight = weightByDate[selectedDate] ?? (isToday ? metricValues.weight : undefined);
   const [weightDraft, setWeightDraft] = useState(loggedForDay && dayWeight !== undefined ? String(dayWeight) : "");

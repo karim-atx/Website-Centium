@@ -25,9 +25,11 @@ function hash(input: string) {
   return h;
 }
 
-const TODAY = "2026-08-20";
+// Mock postings, but their deadlines are generated forward from the real
+// date rather than a fixed one, so a demo run never shows a job closing in
+// the past.
 const deadlineFor = (h: number) => {
-  const d = new Date(`${TODAY}T00:00:00`);
+  const d = new Date();
   d.setDate(d.getDate() + (7 + (h % 21)));
   return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
 };

@@ -178,8 +178,10 @@ export interface ClientWorkoutActivity {
   /** yyyy-mm-dd of the most recent session, from workout_sessions.started_at. */
   lastSessionDate: string;
   /**
-   * Whether that session was today — the REAL calendar date, not the app's
-   * hardcoded TODAY constant. See the README follow-up on that mismatch.
+   * Whether that session started on the reading professional's local day.
+   * Both sides of that comparison are local days; see
+   * fetchClientWorkoutActivity for why, and for what it still cannot do
+   * across timezones.
    */
   trainedToday: boolean;
 }

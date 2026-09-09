@@ -1,8 +1,11 @@
 import type { HealthMetric, BloodPanel, Streak, HabitItem } from "../types";
 
+// Still demo data — these values are invented. Only the DATES are real, so
+// a chart labelled as the last n days is actually the last n days; every
+// consumer reads this history positionally, never by date key.
 const days = (n: number) => {
   const arr: string[] = [];
-  const today = new Date("2026-08-20");
+  const today = new Date();
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);

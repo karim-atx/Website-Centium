@@ -95,3 +95,36 @@ export function validateDateOfBirth(dob: string): string | null {
   if (age > MAX_AGE) return "Check the date of birth — that doesn't look right.";
   return null;
 }
+
+/**
+ * Today's calendar date in the user's LOCAL timezone, as yyyy-mm-dd.
+ *
+ * Deliberately NOT `new Date().toISOString().slice(0, 10)`, which gives the
+ * UTC day. The two disagree for part of every day, and the disagreement lands
+ * exactly where date-keyed logging is most fragile: a user in Beirut (UTC+3)
+ * logging a snack at 01:30 local is at 22:30 UTC *the previous day*, so the
+ * UTC answer would file it under yesterday and it would not show up under
+ * "Today". A day means the user's day.
+ *
+ * This is the opposite choice from formatDisplayDate above, and both are
+ * right. That one renders an instant the server already stored, so it has to
+ * agree with the stored value. This one decides which day the user is
+ * currently living in, which only the browser knows.
+ */
+export function todayLocal(): string {
+  return localDayOf(new Date());
+}
+
+/**
+ * The local calendar day an instant fell on, as yyyy-mm-dd.
+ *
+ * Used where a real timestamp has to be reduced to the day it belongs to —
+ * a finished workout's `started_at`, say — so that day matches what
+ * todayLocal() would have said at the time.
+ */
+export function localDayOf(instant: string | Date): string {
+  const d = typeof instant === "string" ? new Date(instant) : instant;
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${d.getFullYear()}-${month}-${day}`;
+}

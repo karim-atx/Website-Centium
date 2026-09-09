@@ -11,6 +11,7 @@ import { SetOptionsSheet } from "./SetOptionsSheet";
 import { Confetti } from "./Confetti";
 import { Button } from "../ui/Button";
 import { formatDuration, volumeForSession, estimate1RM } from "../../services/workout";
+import { localDayOf } from "../../utils/date";
 import { exerciseLibrary } from "../../data/mockWorkouts";
 import clsx from "clsx";
 
@@ -182,7 +183,13 @@ export const WorkoutSessionSheet: React.FC<{
     const result = await saveWorkoutSession({
       routineId,
       routineName,
-      date: "2026-08-20",
+      // DERIVED FROM startedAt, not from "what day is it now". A session begun
+      // at 23:40 and finished at 00:10 belongs to the day it started, which is
+      // also the day the professional dashboard will read off started_at —
+      // the column this same object writes. Taking today's date here instead
+      // would make the two disagree for exactly the sessions that straddle
+      // midnight.
+      date: localDayOf(startedAt),
       startedAt: startedAt.toISOString(),
       endedAt: endedAt.toISOString(),
       durationSec: elapsed,

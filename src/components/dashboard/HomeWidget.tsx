@@ -34,7 +34,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
   onGymPassesClick,
 }) => {
   const navigate = useNavigate();
-  const { metricValues, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries, gymPurchases, streaks } =
+  const { metricValues, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries, gymPurchases, streaks, today, selectedDate } =
     useApp();
   const isLarge = widget.size === "large";
 
@@ -50,7 +50,12 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
   ).toFixed(1);
   const sleepMeta = healthMetrics.find((m) => m.type === "sleep")!;
 
-  const totals = sumNutrition(foodLog);
+  // THE DAY BEING VIEWED, not the whole diary. This summed every entry
+  // ever logged, which was invisible while the app believed in a single
+  // hardcoded date and every entry carried it — with real dates it would
+  // have shown Home a running lifetime total against a daily target, and
+  // disagreed with the Food tab, which has always filtered by day.
+  const totals = sumNutrition(foodLog.filter((e) => e.date === selectedDate));
   const targets = targetsFromGoal(nutritionGoal);
   const todaysWorkoutLog = workoutLog[workoutLog.length - 1];
 
@@ -127,7 +132,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
         const rate = nutritionGoal.weeklyRateKg || 0.5;
         const weeksToGoal = rate > 0 ? Math.abs(nutritionGoal.desiredWeightKg! - metricValues.weight) / rate : 0;
         if (weeksToGoal > 0) {
-          const reachDateObj = new Date(Date.UTC(2026, 7, 20) + weeksToGoal * 7 * 86400000);
+          const reachDateObj = new Date(Date.parse(`${today}T00:00:00Z`) + weeksToGoal * 7 * 86400000);
           reachDate = reachDateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
         }
       }
@@ -387,7 +392,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
     }
 
     case "journal": {
-      const todaysEntry = journalEntries.some((e) => e.date === "2026-08-20");
+      const todaysEntry = journalEntries.some((e) => e.date === today);
       const onClick = () => navigate("/app/mind");
       if (!isLarge) {
         return wrap(

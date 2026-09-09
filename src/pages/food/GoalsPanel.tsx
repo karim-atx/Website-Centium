@@ -28,7 +28,7 @@ const existingPlanPreset = {
 };
 
 export default function GoalsPanel() {
-  const { user, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, dietaryRestriction, setDietaryRestriction } =
+  const { user, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, dietaryRestriction, setDietaryRestriction, today } =
     useApp();
   const [calorieDraft, setCalorieDraft] = useState(String(nutritionGoal.targetCalories));
   const [planError, setPlanError] = useState<string | null>(null);
@@ -102,7 +102,11 @@ export default function GoalsPanel() {
     nutritionGoal.weightGoal !== "maintain" && rate > 0
       ? Math.abs(desiredWeightKg - weight.current) / rate
       : 0;
-  const reachDateObj = weeksToGoal > 0 ? new Date(Date.UTC(2026, 7, 20) + weeksToGoal * 7 * 86400000) : null;
+  // Projected forward from today, which the provider re-derives rather than
+  // freezing at import — so this stays a real projection instead of drifting
+  // further into the past every day the app runs.
+  const reachDateObj =
+    weeksToGoal > 0 ? new Date(Date.parse(`${today}T00:00:00Z`) + weeksToGoal * 7 * 86400000) : null;
   const reachDateIso = reachDateObj ? reachDateObj.toISOString().slice(0, 10) : null;
   const reachDate = reachDateObj
     ? reachDateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })

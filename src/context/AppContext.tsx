@@ -87,8 +87,7 @@ import { getMyReferrerReward } from "../services/redemption";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
 import { fetchClientNutrition, fetchClientWorkoutActivity } from "../services/professional-client";
 import { getWorkoutSessions, saveWorkoutSession as saveWorkoutSessionRemote } from "../services/workout/log";
-
-const TODAY = "2026-08-20";
+import { todayLocal } from "../utils/date";
 
 // How much history the diary loads from Supabase in one read. Chosen so the
 // auto-streaks (which walk backwards through every dated entry) and
@@ -118,7 +117,7 @@ function seedWorkoutLog(): WorkoutLogEntry[] {
       id: "wseed1",
       workoutId: todaysWorkout.id,
       workoutName: todaysWorkout.name,
-      date: TODAY,
+      date: todayLocal(),
       durationMin: todaysWorkout.durationMin,
       completed: true,
       exercises: todaysWorkout.exercises,
@@ -698,6 +697,36 @@ function shiftDate(date: string, days: number): string {
 }
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // WHICH DAY IT IS, for everything date-keyed: the diary, weight, water,
+  // streaks, journal entries. This was a hardcoded "2026-08-20" for as long
+  // as the app had no backend, which was harmless while every date was
+  // invented and stopped being harmless the moment Postgres began stamping
+  // real ones. A workout written with a real started_at did not match the day
+  // the app thought it was, and the streak anchors sat three weeks in the
+  // past, so a genuine logging streak counted zero.
+  //
+  // STATE RATHER THAN A CONSTANT, because a constant evaluated once at import
+  // is the same bug with a shorter fuse: an app left open across midnight
+  // would go on stamping yesterday. It re-checks on a timer and whenever the
+  // tab comes back, so the rollover lands within a minute either way.
+  const [today, setToday] = useState(todayLocal);
+
+  useEffect(() => {
+    const tick = () =>
+      setToday((prev) => {
+        const now = todayLocal();
+        return prev === now ? prev : now;
+      });
+    const id = window.setInterval(tick, 60_000);
+    document.addEventListener("visibilitychange", tick);
+    window.addEventListener("focus", tick);
+    return () => {
+      window.clearInterval(id);
+      document.removeEventListener("visibilitychange", tick);
+      window.removeEventListener("focus", tick);
+    };
+  }, []);
+
   const [user, setUser] = usePersistentState<UserProfile>("user", defaultUser);
 
   // --- Supabase session ----------------------------------------------------
@@ -1051,7 +1080,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setMedications((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)));
   const removeMedication = (id: string) => setMedications((prev) => prev.filter((m) => m.id !== id));
 
-  const [selectedDate, setSelectedDate] = usePersistentState<string>("selectedDate", TODAY);
+  // NOT PERSISTED, unlike nearly everything else here. Which day you are
+  // looking at is view state, not a preference: restoring it meant leaving
+  // the app on Tuesday and opening it on Wednesday put you on Tuesday's
+  // diary, labelled as though nothing were stale. It also means the
+  // "2026-08-20" the old constant left in every existing browser simply stops
+  // being read.
+  const [selectedDate, setSelectedDate] = useState<string>(today);
+
+  // Someone sitting on Today when the day turns should stay on today rather
+  // than silently start viewing yesterday. Anyone who has navigated
+  // elsewhere is left where they are.
+  const dayShownAsToday = useRef(today);
+  useEffect(() => {
+    const was = dayShownAsToday.current;
+    if (was === today) return;
+    dayShownAsToday.current = today;
+    setSelectedDate((current) => (current === was ? today : current));
+  }, [today]);
 
   // --- diary hydration -----------------------------------------------------
   //
@@ -1060,13 +1106,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // them, not because anything read them back, so the same account on another
   // device showed nothing.
   //
-  // The window always covers TODAY and, if the user has navigated outside it,
+  // The window always covers today and, if the user has navigated outside it,
   // selectedDate — so these two strings only change when someone actually
   // leaves the loaded range, and the effect below does not refetch on ordinary
   // day-to-day navigation.
-  const diaryWindowStart = shiftDate(TODAY, -(DIARY_WINDOW_DAYS - 1));
+  const diaryWindowStart = shiftDate(today, -(DIARY_WINDOW_DAYS - 1));
   const diaryStart = selectedDate < diaryWindowStart ? selectedDate : diaryWindowStart;
-  const diaryEnd = selectedDate > TODAY ? selectedDate : TODAY;
+  const diaryEnd = selectedDate > today ? selectedDate : today;
 
   const [diaryLoading, setDiaryLoading] = useState(false);
   const [diaryError, setDiaryError] = useState<string | null>(null);
@@ -1144,7 +1190,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // keyed by date instead of a single running total, so viewing a past day
   // via the Home date selector shows (and logs to) that day's own amount.
   const [waterByDate, setWaterByDate] = usePersistentState<Record<string, number>>("waterByDate", {
-    [TODAY]: 1800,
+    [todayLocal()]: 1800,
   });
   const water = waterByDate[selectedDate] ?? 0;
 
@@ -1472,7 +1518,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const addWorkoutTemplate: AppState["addWorkoutTemplate"] = (t) => {
-    const template: WorkoutTemplateAssignment = { ...t, id: `wt-${Date.now()}`, createdAt: TODAY };
+    const template: WorkoutTemplateAssignment = { ...t, id: `wt-${Date.now()}`, createdAt: today };
     setWorkoutTemplates((prev) => [...prev, template]);
     syncTemplateToClientView(template);
   };
@@ -1584,7 +1630,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const logWorkout: AppState["logWorkout"] = (entry) => {
     // V10 (QA 10.0): "logging... workout... in a day that is not today
     // should add and log values pertaining to that mentioned day" — was
-    // hardcoded to TODAY regardless of the Home date selector.
+    // hardcoded to a fixed date regardless of the Home date selector.
     setWorkoutLog((prev) => [
       ...prev,
       { ...entry, id: `w${Date.now()}${Math.random().toString(16).slice(2)}`, date: selectedDate },
@@ -1756,9 +1802,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const foodDates = new Set(foodLog.map((e) => e.date));
     const workoutDates = new Set(workoutSessions.map((s) => s.date));
     const anyDates = new Set([...foodDates, ...workoutDates]);
-    const loggingDays = countConsecutiveDays(anyDates, TODAY);
-    const nutritionDays = countConsecutiveDays(foodDates, TODAY);
-    const movementDays = countConsecutiveDays(workoutDates, TODAY);
+    const loggingDays = countConsecutiveDays(anyDates, today);
+    const nutritionDays = countConsecutiveDays(foodDates, today);
+    const movementDays = countConsecutiveDays(workoutDates, today);
     const workoutTotal = workoutSessions.length;
     setStreaks((prev) =>
       prev.map((s) => {
@@ -1771,7 +1817,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       })
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [foodLog, workoutSessions]);
+  }, [foodLog, workoutSessions, today]);
 
   const updateMetricValue: AppState["updateMetricValue"] = (type, value) => {
     setMetricValues((prev) => ({ ...prev, [type]: value }));
@@ -1784,7 +1830,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   // V10 (QA 10.0): "logging... metrics in a day that is not today should
   // add and log values pertaining to that mentioned day" — logs against
-  // whatever day is currently selected on Home, not always TODAY. The
+  // whatever day is currently selected on Home, not always today. The
   // live "current weight" (used for BMI, widgets, etc.) still only updates
   // when logging for today, same as before.
   const [weightByDate, setWeightByDate] = usePersistentState<Record<string, number>>(
@@ -1793,7 +1839,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   const logWeightForToday: AppState["logWeightForToday"] = (value) => {
     setWeightByDate((prev) => ({ ...prev, [selectedDate]: value }));
-    if (selectedDate === TODAY) updateMetricValue("weight", value);
+    if (selectedDate === today) updateMetricValue("weight", value);
     setWeightLoggedDate(selectedDate);
   };
 
@@ -1900,7 +1946,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         folderId,
         title,
         text,
-        date: TODAY,
+        date: today,
         createdAt: now.toISOString(),
       },
     ]);
@@ -1922,7 +1968,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             ...next[idx],
             value: entry.value,
             unit: entry.unit || next[idx].unit,
-            history: [...next[idx].history, { date: TODAY, value: entry.value }],
+            history: [...next[idx].history, { date: today, value: entry.value }],
           };
         } else {
           next.push({
@@ -1932,7 +1978,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
             unit: entry.unit,
             range: "—",
             status: "normal",
-            history: [{ date: TODAY, value: entry.value }],
+            history: [{ date: today, value: entry.value }],
           });
         }
       });
@@ -1942,7 +1988,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const goToPrevDate = () => setSelectedDate((d) => shiftDate(d, -1));
   const goToNextDate = () => setSelectedDate((d) => shiftDate(d, 1));
-  const goToToday = () => setSelectedDate(TODAY);
+  const goToToday = () => setSelectedDate(today);
   const goToDate = (date: string) => setSelectedDate(date);
 
   // Copies rather than re-logs. An existing entry holds TOTALS, so putting it
@@ -2048,7 +2094,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const submitProfessionalReview: AppState["submitProfessionalReview"] = (professionalId, rating, text) =>
     setProfessionalReviews((prev) => {
       const next = prev.filter((r) => r.professionalId !== professionalId);
-      return [...next, { professionalId, rating, text, date: TODAY }];
+      return [...next, { professionalId, rating, text, date: today }];
     });
 
   const [forumPosts, setForumPosts] = usePersistentState<ForumPost[]>("forumPosts", mockForumPosts);
@@ -2097,7 +2143,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const submitClientRequest: AppState["submitClientRequest"] = (name) =>
-    setPendingClientRequests((prev) => [...prev, { id: `req${Date.now()}`, name, requestedAt: TODAY }]);
+    setPendingClientRequests((prev) => [...prev, { id: `req${Date.now()}`, name, requestedAt: today }]);
   const acceptClientRequest: AppState["acceptClientRequest"] = (id) => {
     // The hire inbox is still a local simulation, and accepting can no longer
     // conjure a relationship: a real one only exists once the client redeems
@@ -2123,7 +2169,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const client = professionalClients.find((c) => c.id === clientId);
     addCalendarEvent({
       title: `Assigned "${programName}" to ${client?.name ?? "client"}`,
-      date: TODAY,
+      date: today,
       allDay: true,
       repeat: "none",
       invitees: client ? [client.name] : undefined,
@@ -2136,7 +2182,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const client = professionalClients.find((c) => c.id === clientId);
     addCalendarEvent({
       title: `Assigned "${templateName}" to ${client?.name ?? "client"}`,
-      date: TODAY,
+      date: today,
       allDay: true,
       repeat: "none",
       invitees: client ? [client.name] : undefined,
@@ -2360,7 +2406,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       goToDate,
       copyYesterdayFood,
       copyYesterdayMeal,
-      today: TODAY,
+      today,
       colorTheme,
       setColorTheme,
       customFoods,
