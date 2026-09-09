@@ -173,3 +173,78 @@ export async function fetchClientWorkoutActivity(
 
   return { ok: true, byClient };
 }
+
+export interface ClientWeight {
+  /** The most recent reading in the window, in kg. */
+  lastWeightKg: number;
+  /** Latest minus earliest in the window. Negative means weight came down. */
+  weightTrend: number;
+}
+
+export type ClientWeightResult =
+  | { ok: true; byClient: Record<string, ClientWeight | null> }
+  | { ok: false; message: string };
+
+/**
+ * Current weight and its recent direction, per client, for clients who have
+ * granted `weight`.
+ *
+ * A SEPARATE GRANT FROM EVERYTHING ELSE IN health_metrics, which is why this
+ * is its own function and its own caller-side filter rather than a branch
+ * inside a general vitals read. The split policies are
+ * `metric_type = 'weight' and has_client_access(user_id, 'weight')` against
+ * `metric_type <> 'weight' and has_client_access(user_id, 'health_metrics')`,
+ * so a client can share their weight while hiding their water and steps, or
+ * the reverse. Asking one question for both would silently return whichever
+ * subset RLS allowed and present it as the whole answer.
+ *
+ * Same rules as the two reads above: one batched query for the roster, every
+ * requested client present in the result — as `null` when they have logged
+ * nothing — and `ok: false` rather than an empty map on failure.
+ *
+ * The trend is computed over the readings that exist, not over a fixed span:
+ * with a single reading it is 0, which renders as no arrow rather than as an
+ * invented gain or loss.
+ */
+export async function fetchClientWeight(clientIds: string[]): Promise<ClientWeightResult> {
+  if (clientIds.length === 0) return { ok: true, byClient: {} };
+
+  const { data, error } = await supabase
+    .from("health_metrics")
+    .select("user_id, value, recorded_at")
+    .in("user_id", clientIds)
+    .eq("metric_type", "weight")
+    .gte("recorded_at", `${isoDaysAgo(LOOKBACK_DAYS)}T00:00:00Z`)
+    .order("recorded_at", { ascending: true });
+
+  if (error) {
+    console.error("[professional-client] Could not read client weight:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+
+  // Seeded first so every requested client is present in the result, and so
+  // membership is a map lookup rather than a scan of clientIds per row --
+  // the same shape the two reads above use.
+  const byClient: Record<string, ClientWeight | null> = {};
+  for (const id of clientIds) byClient[id] = null;
+
+  // Oldest-first, so the first reading seen for a client is the window's
+  // start and the last one to overwrite `latest` is its end.
+  const firstSeen: Record<string, number> = {};
+  const latest: Record<string, number> = {};
+  for (const row of data ?? []) {
+    const id = row.user_id;
+    if (!(id in byClient)) continue;
+    if (!(id in firstSeen)) firstSeen[id] = Number(row.value);
+    latest[id] = Number(row.value);
+  }
+
+  for (const id of Object.keys(latest)) {
+    byClient[id] = {
+      lastWeightKg: latest[id],
+      weightTrend: +(latest[id] - firstSeen[id]).toFixed(1),
+    };
+  }
+
+  return { ok: true, byClient };
+}

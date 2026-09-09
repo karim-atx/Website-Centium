@@ -85,7 +85,12 @@ import {
 } from "../../lib/supabase/recovery";
 import { getMyReferrerReward } from "../services/redemption";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
-import { fetchClientNutrition, fetchClientWorkoutActivity } from "../services/professional-client";
+import {
+  fetchClientNutrition,
+  fetchClientWeight,
+  fetchClientWorkoutActivity,
+} from "../services/professional-client";
+import { getHealthMetrics, logHealthMetric } from "../services/health-metrics";
 import { getWorkoutSessions, saveWorkoutSession as saveWorkoutSessionRemote } from "../services/workout/log";
 import { todayLocal } from "../utils/date";
 
@@ -216,6 +221,8 @@ interface AppState {
   diaryError: string | null;
   /** Set when workout history could not be refreshed from the server. */
   workoutHistoryError: string | null;
+  /** Set when weight/water history could not be read. Never means "empty". */
+  metricsError: string | null;
   // Ends the recovery block. Must be used instead of clearRecoveryPending():
   // the guards read React state, not localStorage, so clearing only storage
   // leaves the app redirecting for the rest of the page session.
@@ -298,8 +305,13 @@ interface AppState {
   deleteRoutine: (id: string) => void;
 
   water: number;
-  addWater: (ml: number) => void;
-  setWaterAmount: (ml: number) => void;
+  // REMOTE-REQUIRED, like saveWorkoutSession and for the same reason: the
+  // session guard makes an unauthenticated render impossible, so the offline
+  // case these used to cover cannot arise, and a local fallback would mean a
+  // value on screen that no other device will ever see. Both report failure
+  // instead of silently keeping a number that was never stored.
+  addWater: (ml: number) => Promise<{ ok: boolean; message?: string }>;
+  setWaterAmount: (ml: number) => Promise<{ ok: boolean; message?: string }>;
   waterGoalMl: number;
   setWaterGoal: (ml: number) => void;
 
@@ -326,7 +338,7 @@ interface AppState {
   // a new day starts instead of staying pre-filled forever.
   weightLoggedDate: string | null;
   weightByDate: Record<string, number>;
-  logWeightForToday: (value: number) => void;
+  logWeightForToday: (value: number) => Promise<{ ok: boolean; message?: string }>;
   // V8 (QA 8.0): "Pressing the edit feature only prompts you to edit daily
   // step count goal" — the goal is user-configurable; the count itself
   // stays auto-synced.
@@ -989,6 +1001,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     []
   );
   const [workoutHistoryError, setWorkoutHistoryError] = useState<string | null>(null);
+  const [metricsError, setMetricsError] = useState<string | null>(null);
   const [personalRecords, setPersonalRecords] = usePersistentState<Record<string, number>>(
     "personalRecords",
     {}
@@ -1189,9 +1202,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // add and log values pertaining to that mentioned day" — water is now
   // keyed by date instead of a single running total, so viewing a past day
   // via the Home date selector shows (and logs to) that day's own amount.
-  const [waterByDate, setWaterByDate] = usePersistentState<Record<string, number>>("waterByDate", {
-    [todayLocal()]: 1800,
-  });
+  // NO LONGER SEEDED WITH 1,800 ml. That seed predated water being stored
+  // anywhere: it put a day's hydration on screen that the user had not logged
+  // and the server has never heard of, and hydration below would now overwrite
+  // it on the first read anyway — so it would flash a number and then drop to
+  // the truth.
+  const [waterByDate, setWaterByDate] = usePersistentState<Record<string, number>>("waterByDate", {});
   const water = waterByDate[selectedDate] ?? 0;
 
   const [colorTheme, setColorThemeState] = usePersistentState<ColorTheme>("colorTheme", "centium");
@@ -1397,8 +1413,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       reminderPreference: c.reminderPreference ?? undefined,
       communicationBoundaries: c.communicationBoundaries ?? undefined,
       access: c.access,
-      // Weight and training fields stay undefined — those tables have no
-      // client-side write path yet. `nutrition` is filled in below.
+      // Every data field stays undefined here and is filled in below, so an
+      // unanswered read renders as loading rather than as an absence.
     }));
     setProfessionalClients(mapped);
 
@@ -1415,13 +1431,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const workoutIds = mapped
       .filter((c) => c.access.workoutActivity && c.clientId)
       .map((c) => c.clientId!);
+    // Weight has its OWN consent category, separate from the health_metrics
+    // one covering the rest of the table — the RLS policies split on
+    // metric_type. A client sharing vitals but not weight, or the reverse, is
+    // an ordinary state, so this list is built independently of the others.
+    const weightIds = mapped
+      .filter((c) => c.access.weight && c.clientId)
+      .map((c) => c.clientId!);
 
     // Both reads are issued together rather than in sequence — they are
     // independent, and a professional opening the dashboard should not wait
     // for one before the other starts.
-    const [nutrition, workouts] = await Promise.all([
+    const [nutrition, workouts, weights] = await Promise.all([
       consentedIds.length > 0 ? fetchClientNutrition(consentedIds) : null,
       workoutIds.length > 0 ? fetchClientWorkoutActivity(workoutIds) : null,
+      weightIds.length > 0 ? fetchClientWeight(weightIds) : null,
     ]);
 
     // On failure each field is left undefined, which renders as "loading"
@@ -1436,6 +1460,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         if (workouts?.ok && c.clientId in workouts.byClient) {
           next = { ...next, workout: workouts.byClient[c.clientId] };
+        }
+        if (weights?.ok && c.clientId in weights.byClient) {
+          // Left undefined when the client has a grant but no readings, which
+          // is what the tiles already treat as "nothing to show". Unlike the
+          // workout badge, no surface here states an absence as a finding —
+          // they render a number or nothing at all — so there is no verdict to
+          // guard against and no four-state encoding to carry.
+          const w = weights.byClient[c.clientId];
+          if (w) next = { ...next, lastWeightKg: w.lastWeightKg, weightTrend: w.weightTrend };
         }
         return next;
       })
@@ -1732,13 +1765,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
   const deleteRoutine = (id: string) => setRoutines((prev) => prev.filter((r) => r.id !== id));
 
-  const addWater = (ml: number) =>
-    setWaterByDate((prev) => ({
-      ...prev,
-      [selectedDate]: Math.max(0, Math.min((prev[selectedDate] ?? 0) + ml, 5000)),
-    }));
-  const setWaterAmount = (ml: number) =>
-    setWaterByDate((prev) => ({ ...prev, [selectedDate]: Math.max(0, Math.min(ml, 5000)) }));
+  // Both water setters funnel through one write. A water row is the day's
+  // running total AS OF that moment, not an increment, so a delta has to be
+  // resolved against the current total before it is sent — see the header of
+  // services/health-metrics for why the table cannot hold increments.
+  const writeWater = async (ml: number) => {
+    if (!authUserId) return { ok: false, message: "You need to be signed in to log water." };
+    const clamped = Math.max(0, Math.min(ml, 5000));
+    const result = await logHealthMetric({
+      userId: authUserId,
+      kind: "water",
+      value: clamped,
+      day: selectedDate,
+      today,
+    });
+    if (!result.ok) return result;
+    setWaterByDate((prev) => ({ ...prev, [selectedDate]: clamped }));
+    return { ok: true };
+  };
+  const addWater: AppState["addWater"] = (ml) => writeWater((waterByDate[selectedDate] ?? 0) + ml);
+  const setWaterAmount: AppState["setWaterAmount"] = (ml) => writeWater(ml);
   const setWaterGoal = (ml: number) => setWaterGoalState(Math.max(500, Math.min(ml, 6000)));
 
   const toggleHabit = (id: string) =>
@@ -1837,10 +1883,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "weightByDate",
     {}
   );
-  const logWeightForToday: AppState["logWeightForToday"] = (value) => {
+
+  // Weight and water history, hydrated from health_metrics.
+  //
+  // A PLAIN REPLACE, like the workout history and for the same reason: both
+  // series are remote-required, so every value in them came from the server
+  // and the server's answer is simply the truth. There are no local-only
+  // entries to preserve the way the diary has.
+  //
+  // On failure the existing maps are left alone rather than cleared: an empty
+  // result and a failed request mean opposite things, and blanking someone's
+  // weight history over a dropped connection would read as data loss.
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    void getHealthMetrics(authUserId, diaryWindowStart).then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setMetricsError(result.message);
+        return;
+      }
+      setMetricsError(null);
+      setWeightByDate(result.history.weightByDate);
+      setWaterByDate(result.history.waterByDate);
+      setWeightLoggedDate(result.history.weightLoggedDate);
+      // The live "current weight" that BMI, the Home widget and user.weightKg
+      // all read is the latest reading, not a separately stored number.
+      const latest = result.history.weightLoggedDate;
+      if (latest !== null) {
+        const kg = result.history.weightByDate[latest];
+        if (kg !== undefined) {
+          setMetricValues((prev) => ({ ...prev, weight: kg }));
+          setUser((prev) => ({ ...prev, weightKg: kg }));
+        }
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId, profileReady, diaryWindowStart]);
+
+  const logWeightForToday: AppState["logWeightForToday"] = async (value) => {
+    if (!authUserId) return { ok: false, message: "You need to be signed in to log your weight." };
+    const result = await logHealthMetric({
+      userId: authUserId,
+      kind: "weight",
+      value,
+      day: selectedDate,
+      today,
+    });
+    if (!result.ok) return result;
     setWeightByDate((prev) => ({ ...prev, [selectedDate]: value }));
+    // The live current weight still only moves when logging for today —
+    // backfilling last Tuesday should not rewrite what the user weighs now.
     if (selectedDate === today) updateMetricValue("weight", value);
     setWeightLoggedDate(selectedDate);
+    return { ok: true };
   };
 
   const [stepsGoal, setStepsGoal] = usePersistentState<number>("stepsGoal", 10000);
@@ -2295,6 +2394,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       diaryLoading,
       diaryError,
       workoutHistoryError,
+      metricsError,
       authReady,
       profileReady,
       theme,
@@ -2508,6 +2608,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       diaryLoading,
       diaryError,
       workoutHistoryError,
+      metricsError,
       deletionRequestedAt,
       authReady,
       profileReady,

@@ -32,18 +32,40 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   const dayWeight = weightByDate[selectedDate] ?? (isToday ? metricValues.weight : undefined);
   const [weightDraft, setWeightDraft] = useState(loggedForDay && dayWeight !== undefined ? String(dayWeight) : "");
   const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+  // Both halves of this sheet now write to Supabase, so both can fail. One
+  // slot rather than two: only one write is ever in flight at a time.
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (open) setWeightDraft(loggedForDay && dayWeight !== undefined ? String(dayWeight) : "");
+    if (open) {
+      setWeightDraft(loggedForDay && dayWeight !== undefined ? String(dayWeight) : "");
+      setError(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, selectedDate]);
 
-  const saveWeight = () => {
+  const saveWeight = async () => {
     const n = Number(weightDraft);
     if (!n || n <= 0) return;
-    logWeightForToday(n);
+    setSaving(true);
+    setError(null);
+    const result = await logWeightForToday(n);
+    setSaving(false);
+    if (!result.ok) {
+      setError(result.message ?? "Couldn't save that weight.");
+      return;
+    }
     setSaved(true);
     setTimeout(() => setSaved(false), 1200);
+  };
+
+  const quickAddWater = async (ml: number) => {
+    setSaving(true);
+    setError(null);
+    const result = await addWater(ml);
+    setSaving(false);
+    if (!result.ok) setError(result.message ?? "Couldn't save that.");
   };
 
   return (
@@ -62,8 +84,9 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
           {quickAmounts.map((ml) => (
             <button
               key={ml}
-              onClick={() => addWater(ml)}
-              className="tap flex flex-col items-center gap-1.5 rounded-2xl py-4 bg-sky-pale text-sky"
+              onClick={() => void quickAddWater(ml)}
+              disabled={saving}
+              className="tap flex flex-col items-center gap-1.5 rounded-2xl py-4 bg-sky-pale text-sky disabled:opacity-50"
             >
               <Droplet size={18} />
               <span className="text-xs font-semibold">+{ml}ml</span>
@@ -87,16 +110,20 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             <span className="text-xs text-charcoal-faint shrink-0">kg</span>
           </div>
           <button
-            onClick={saveWeight}
-            disabled={!weightDraft}
+            onClick={() => void saveWeight()}
+            disabled={!weightDraft || saving}
             aria-label="Save today's weight"
             className="tap w-11 h-11 rounded-full bg-primary text-white flex items-center justify-center shrink-0 disabled:opacity-40"
           >
             <Check size={16} strokeWidth={3} />
           </button>
         </div>
-        <p className="text-[11px] text-charcoal-faint">
-          {saved
+        <p className={`text-[11px] ${error ? "text-status-high" : "text-charcoal-faint"}`}>
+          {error
+            ? error
+            : saving
+            ? "Saving…"
+            : saved
             ? "Saved — updated in Health."
             : loggedForDay
             ? `Already logged ${isToday ? "today" : "for this day"} — edit and save to update it.`
