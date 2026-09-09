@@ -1,6 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
-import type { ClientNutrition } from "../../types";
+import type { ClientNutrition, ClientWorkoutActivity } from "../../types";
 
 // A professional's read of their clients' own data.
 //
@@ -31,9 +31,9 @@ export type ClientNutritionResult =
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   if (code === "PGRST301" || /jwt|not authenticated/i.test(error.message ?? "")) {
-    return "Your session expired. Sign in again to see your clients' diaries.";
+    return "Your session expired. Sign in again to see your clients' data.";
   }
-  return "Could not load your clients' food diaries.";
+  return "Could not load your clients' data.";
 }
 
 function isoDaysAgo(days: number): string {
@@ -106,6 +106,63 @@ export async function fetchClientNutrition(clientIds: string[]): Promise<ClientN
       current.fat += Number(row.fat_g);
       current.entryCount += 1;
     }
+  }
+
+  return { ok: true, byClient };
+}
+
+// ---------------------------------------------------------------------------
+// Workout activity
+// ---------------------------------------------------------------------------
+
+export type ClientWorkoutResult =
+  | { ok: true; byClient: Record<string, ClientWorkoutActivity | null> }
+  | { ok: false; message: string };
+
+/**
+ * The most recent session per client, for clients who have granted
+ * `workout_activity`.
+ *
+ * Same shape and same rules as fetchClientNutrition above: one batched query
+ * for the whole roster, every requested client present in the result — as
+ * `null` when they have never logged — and `ok: false` rather than an empty
+ * map on failure, so a network error is never rendered as "nobody trained".
+ *
+ * WHICH DAY "TODAY" IS. This compares against the real calendar date, not the
+ * app's hardcoded TODAY constant ("2026-08-20"). The database stamps
+ * started_at with now(), so real dates are the only ones the rows actually
+ * carry. That does mean the client's own diary and this view disagree about
+ * the date until that mock constant goes — see the README follow-up.
+ */
+export async function fetchClientWorkoutActivity(
+  clientIds: string[]
+): Promise<ClientWorkoutResult> {
+  if (clientIds.length === 0) return { ok: true, byClient: {} };
+
+  const { data, error } = await supabase
+    .from("workout_sessions")
+    .select("user_id, started_at")
+    .in("user_id", clientIds)
+    .gte("started_at", `${isoDaysAgo(LOOKBACK_DAYS)}T00:00:00Z`)
+    .order("started_at", { ascending: false });
+
+  if (error) {
+    console.error("[professional-client] Could not read client workouts:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+  const byClient: Record<string, ClientWorkoutActivity | null> = {};
+  for (const id of clientIds) byClient[id] = null;
+
+  for (const row of data ?? []) {
+    const id = row.user_id;
+    if (!(id in byClient)) continue;
+    // Rows arrive newest-first, so the first one seen for a client is their
+    // most recent session; later rows are older days and are skipped.
+    if (byClient[id]) continue;
+    const day = row.started_at.slice(0, 10);
+    byClient[id] = { lastSessionDate: day, trainedToday: day === today };
   }
 
   return { ok: true, byClient };

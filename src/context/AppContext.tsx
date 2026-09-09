@@ -85,7 +85,7 @@ import {
 } from "../../lib/supabase/recovery";
 import { getMyReferrerReward } from "../services/redemption";
 import { createClientCode, disconnectClient, fetchRoster } from "../services/roster";
-import { fetchClientNutrition } from "../services/professional-client";
+import { fetchClientNutrition, fetchClientWorkoutActivity } from "../services/professional-client";
 import { getWorkoutSessions, saveWorkoutSession as saveWorkoutSessionRemote } from "../services/workout/log";
 
 const TODAY = "2026-08-20";
@@ -1364,20 +1364,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const consentedIds = mapped
       .filter((c) => c.access.foodDiary && c.clientId)
       .map((c) => c.clientId!);
-    if (consentedIds.length === 0) return;
+    // Gated separately: the two categories are granted independently, and a
+    // client sharing one but not the other must not be queried for both.
+    const workoutIds = mapped
+      .filter((c) => c.access.workoutActivity && c.clientId)
+      .map((c) => c.clientId!);
 
-    const nutrition = await fetchClientNutrition(consentedIds);
-    // On failure the field is left undefined, which renders as "loading"
-    // rather than as an absence. Showing "no meals logged" because a request
-    // failed would be a fabricated clinical observation.
-    if (!nutrition.ok) return;
+    // Both reads are issued together rather than in sequence — they are
+    // independent, and a professional opening the dashboard should not wait
+    // for one before the other starts.
+    const [nutrition, workouts] = await Promise.all([
+      consentedIds.length > 0 ? fetchClientNutrition(consentedIds) : null,
+      workoutIds.length > 0 ? fetchClientWorkoutActivity(workoutIds) : null,
+    ]);
 
+    // On failure each field is left undefined, which renders as "loading"
+    // rather than as an absence. Showing "no meals logged" or "no sessions"
+    // because a request failed would be a fabricated clinical observation.
     setProfessionalClients((prev) =>
-      prev.map((c) =>
-        c.clientId && c.clientId in nutrition.byClient
-          ? { ...c, nutrition: nutrition.byClient[c.clientId] }
-          : c
-      )
+      prev.map((c) => {
+        if (!c.clientId) return c;
+        let next = c;
+        if (nutrition?.ok && c.clientId in nutrition.byClient) {
+          next = { ...next, nutrition: nutrition.byClient[c.clientId] };
+        }
+        if (workouts?.ok && c.clientId in workouts.byClient) {
+          next = { ...next, workout: workouts.byClient[c.clientId] };
+        }
+        return next;
+      })
     );
   }, [authUserId, user.accountType]);
 

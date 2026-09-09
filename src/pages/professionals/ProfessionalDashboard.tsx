@@ -10,6 +10,7 @@ import { PERSON_ICON } from "../../utils/icons";
 import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "../../components/professionals/HealthDataPending";
 import { nutritionLine, nutritionLineRecoverySensitive } from "../../utils/nutritionDisplay";
+import { countsTowardTrainedTally, workoutBadge } from "../../utils/workoutDisplay";
 import clsx from "clsx";
 
 const activityLevelLabel: Record<string, string> = {
@@ -43,23 +44,39 @@ export default function ProfessionalDashboard() {
   );
 
   // Design refinement §6.10: the hero answers "who needs me today" instead
-  // of just restating the roster size. `workoutLoggedToday` is a tri-state
-  // (true/false/undefined) — trained, didn't train, or no data yet — which
-  // maps directly onto the doc's 3-segment roster track.
+  // of just restating the roster size, and the 3-segment track below maps
+  // onto trained / not yet / not counted.
   const total = professionalClients.length;
-  const trained = professionalClients.filter((c) => c.workoutLoggedToday === true).length;
-  const notTrained = professionalClients.filter((c) => c.workoutLoggedToday === false).length;
-  const noData = total - trained - notTrained;
-  const missingClient = professionalClients.find((c) => c.workoutLoggedToday === false);
+
+  // THE DENOMINATOR IS TRACKED CLIENTS, NOT THE WHOLE ROSTER.
+  //
+  // It used to be professionalClients.length, so "1 of 5 trained" told a
+  // professional that four people had not trained when three of them had
+  // simply never shared their workouts. That is an absence rendered as a
+  // measurement, about exactly the people who withheld consent — the same
+  // error as the "0 kcal" card, and worse for being about a withholding.
+  //
+  // Recovery-sensitive clients are excluded too, per QA 12.0: a roster-wide
+  // adherence tally is a compliance score, which is what that constraint keeps
+  // off routine surfaces. Both groups still occupy the grey segment of the
+  // track below, so the roster size is not misrepresented — they are just
+  // never counted as having failed to do something.
+  const tracked = professionalClients.filter((c) =>
+    countsTowardTrainedTally(c.access, c.workout, c.recoverySensitive)
+  );
+  const trained = tracked.filter((c) => c.workout?.trainedToday === true).length;
+  const notTrained = tracked.length - trained;
+  const noData = total - tracked.length;
+  const missingClient = tracked.find((c) => c.workout?.trainedToday !== true);
   // `access` is real (client_access_grants); the rest of the hero's figures
   // are not, so the hero is suppressed entirely rather than rendered against
   // absent data — see HealthDataPending.
   const sharedCount = professionalClients.filter((c) => Object.values(c.access).some(Boolean)).length;
   const programCount = professionalClients.filter((c) => c.assignedProgramName).length;
-  // The hero is entirely built on training data. With none available every
-  // figure collapses to zero, and "0 of 5 trained" reads as a measurement
-  // rather than an absence — so the hero is replaced outright instead.
-  const hasTrainingData = professionalClients.some((c) => c.workoutLoggedToday !== undefined);
+  // The hero needs at least one client it can honestly count. Without that
+  // every figure collapses to zero, and "0 of 0 trained" reads as a
+  // measurement rather than an absence — so it is replaced outright.
+  const hasTrainingData = tracked.length > 0;
 
   return (
     <div>
@@ -121,15 +138,23 @@ export default function ProfessionalDashboard() {
             Today
           </p>
           <p className="text-[44px] font-extrabold leading-none tracking-[-0.03em] tabular-nums mb-1">
-            {trained} <span className="text-base font-semibold text-white/70">of {total} trained</span>
+            {trained}{" "}
+            <span className="text-base font-semibold text-white/70">of {tracked.length} trained</span>
           </p>
           <p className="text-xs text-white/80 mb-3.5">
-            {missingClient
+            {trained === tracked.length
+              ? "Everyone sharing has trained today"
+              : missingClient
               ? `${missingClient.prefix ? `${missingClient.prefix} ` : ""}${missingClient.name} hasn't logged a workout today`
-              : total === trained
-              ? "Everyone has trained today"
               : "No workouts logged yet today"}
           </p>
+          {noData > 0 && (
+            // Says plainly why the denominator is smaller than the roster,
+            // instead of leaving a professional to wonder who is missing.
+            <p className="text-[11px] text-white/60 -mt-2.5 mb-3">
+              {noData} not shown — not sharing workouts
+            </p>
+          )}
           <div className="flex h-1.5 rounded-full overflow-hidden mb-3">
             <div className="h-full bg-white" style={{ flex: trained || 0.0001 }} />
             <div className="h-full bg-white/40" style={{ flex: notTrained || 0.0001 }} />
@@ -197,7 +222,7 @@ export default function ProfessionalDashboard() {
               {(() => {
                 const sharesNothing = !Object.values(c.access).some(Boolean);
                 const showWeight = !c.recoverySensitive && c.lastWeightKg !== undefined;
-                const showWorkout = c.workoutLoggedToday !== undefined;
+                const badge = workoutBadge(c.access, c.workout, c.recoverySensitive);
 
                 if (sharesNothing) {
                   return (
@@ -227,14 +252,14 @@ export default function ProfessionalDashboard() {
                         </span>
                       )}
                     </div>
-                    {showWorkout && (
+                    {badge && (
                       <span
                         className={clsx(
                           "text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 shrink-0",
-                          c.workoutLoggedToday ? "bg-primary-pale text-primary-deep-text" : "bg-cream-soft text-charcoal-faint"
+                          badge.trained ? "bg-primary-pale text-primary-deep-text" : "bg-cream-soft text-charcoal-faint"
                         )}
                       >
-                        {c.workoutLoggedToday ? "Trained" : "No workout"}
+                        {badge.label}
                       </span>
                     )}
                   </div>

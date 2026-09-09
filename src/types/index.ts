@@ -173,6 +173,17 @@ export interface ClientCode {
 // V3: a professional's view of one client — mocked data standing in for
 // what a real client-sharing permission model would sync from that client's
 // own account.
+/** A client's most recent logged training session. */
+export interface ClientWorkoutActivity {
+  /** yyyy-mm-dd of the most recent session, from workout_sessions.started_at. */
+  lastSessionDate: string;
+  /**
+   * Whether that session was today — the REAL calendar date, not the app's
+   * hardcoded TODAY constant. See the README follow-up on that mismatch.
+   */
+  trainedToday: boolean;
+}
+
 /** Nutrition totals for a single day of a client's food diary. */
 export interface ClientNutrition {
   /** yyyy-mm-dd of the most recent day the client logged anything. */
@@ -209,7 +220,24 @@ export interface ProfessionalClient {
   sex?: Sex;
   heightCm?: number;
   weightKg?: number;
-  workoutLoggedToday?: boolean;
+  /**
+   * The client's most recent training session.
+   *
+   * Replaces a bare `workoutLoggedToday` boolean, which could say "did they
+   * train today" and nothing else — so a client who trained yesterday was
+   * indistinguishable from one who has never trained, and both rendered as
+   * "No workout". Carrying the date lets an absence be stated as a fact
+   * ("last trained 3 Sep") rather than as a verdict.
+   *
+   * FOUR STATES, read the same way as `nutrition`. The first comes from
+   * `access.workoutActivity`, not from this field:
+   *
+   *   access.workoutActivity false   not shared. Say nothing about training.
+   *   undefined                      shared, not loaded yet.
+   *   null                           shared, nothing logged in the window.
+   *   object                         shared, with a real session.
+   */
+  workout?: ClientWorkoutActivity | null;
   lastWeightKg?: number;
   weightTrend?: number;
   /**

@@ -153,7 +153,7 @@ export const ClientDetailSheet: React.FC<{
             diary was still told their data was "coming soon". */}
         {!client.access.foodDiary &&
           client.lastWeightKg === undefined &&
-          client.workoutLoggedToday === undefined && (
+          !client.access.workoutActivity && (
             <HealthDataPending label="Client activity & nutrition" />
           )}
 
@@ -183,19 +183,35 @@ export const ClientDetailSheet: React.FC<{
               )}
             </div>
           )}
-          {client.workoutLoggedToday !== undefined && (
+          {client.access.workoutActivity && (
             <div className="bg-cream-soft rounded-2xl p-3.5">
               <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
                 Workout logged
               </p>
-              <p
-                className={`text-lg font-bold flex items-center gap-1 ${
-                  client.workoutLoggedToday ? "text-primary-dark" : "text-charcoal-faint"
-                }`}
-              >
-                {client.workoutLoggedToday ? <Check size={16} /> : <XIcon size={16} />}
-                {client.workoutLoggedToday ? "Today" : "Not yet"}
-              </p>
+              {/* Was a bare Today / "Not yet" with a cross icon. "Not yet"
+                  read as a verdict on someone who might simply have trained
+                  yesterday, and the cross made it a scolding. The date states
+                  the same fact without either. */}
+              {client.workout ? (
+                <p
+                  className={`text-lg font-bold flex items-center gap-1 ${
+                    client.workout.trainedToday ? "text-primary-dark" : "text-charcoal"
+                  }`}
+                >
+                  {client.workout.trainedToday && <Check size={16} />}
+                  {client.workout.trainedToday
+                    ? "Today"
+                    : formatDisplayDate(client.workout.lastSessionDate)}
+                </p>
+              ) : (
+                <p className="text-sm font-semibold text-charcoal-soft">
+                  {client.workout === null
+                    ? client.recoverySensitive
+                      ? "Sharing workouts"
+                      : "No sessions yet"
+                    : "Loading workouts…"}
+                </p>
+              )}
             </div>
           )}
           {!client.recoverySensitive && client.lastWeightKg !== undefined && (
