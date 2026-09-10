@@ -257,6 +257,50 @@ export async function recordPanel(
   return { ok: true, panelId: panel.id };
 }
 
+/**
+ * Removes a panel, the markers it recorded, and the report file behind it.
+ *
+ * SAME ORDER AS deleteImagingRecordRemote, for the same reason: the row goes
+ * first, then the object, because Storage does not cascade. An orphan left
+ * under `panels/` stays readable by any professional holding lab_results
+ * consent — a file the client believes they deleted. Deleting the object first
+ * would risk the opposite, a report still listed and pointing at nothing.
+ *
+ * WHAT MAKES THIS BIGGER THAN AN IMAGING DELETE, and the reason it is worth
+ * reading before calling: blood_markers is tied to its panel by ON DELETE
+ * CASCADE, so this single row takes every marker the panel recorded with it.
+ * That is the correct behaviour — a panel IS the lab report, and keeping its
+ * readings after deleting the document they came from would leave measurements
+ * whose provenance the user just asked to remove — but it means a caller
+ * cannot patch local state by filtering one id out of a list. See
+ * removeLabReport, which re-reads instead.
+ */
+export async function deleteLabPanel(id: string, filePath?: string): Promise<LabWriteResult> {
+  // Row count, not absence of error: a policy refusal on DELETE returns zero
+  // rows with error === null.
+  const { data, error } = await supabase
+    .from("blood_panels")
+    .delete()
+    .eq("id", id)
+    .select("id");
+
+  if (error) {
+    console.error("[labs] Could not remove panel:", error.message);
+    return { ok: false, message: "That lab report couldn't be removed." };
+  }
+  if (!data || data.length === 0) {
+    return { ok: false, message: "That lab report couldn't be removed." };
+  }
+
+  if (filePath) {
+    const cleanup = await deletePrivateFile("lab-reports", filePath);
+    if (!cleanup.ok) {
+      console.error("[labs] ORPHANED OBJECT: panel deleted, file remains:", filePath);
+    }
+  }
+  return { ok: true };
+}
+
 // ---------------------------------------------------------------------------
 // Read — the shape inversion
 // ---------------------------------------------------------------------------

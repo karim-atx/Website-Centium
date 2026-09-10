@@ -110,7 +110,7 @@ import {
   deleteImagingRecordRemote,
   getImagingRecords,
 } from "../services/imaging";
-import { getBloodMarkers, getLabReports, recordPanel } from "../services/labs";
+import { deleteLabPanel, getBloodMarkers, getLabReports, recordPanel } from "../services/labs";
 import { getWorkoutSessions, saveWorkoutSession as saveWorkoutSessionRemote } from "../services/workout/log";
 import { todayLocal } from "../utils/date";
 
@@ -449,6 +449,10 @@ interface AppState {
     entries: ExtractedBiomarker[],
     file?: File
   ) => Promise<{ ok: boolean; message?: string }>;
+  // Deletes the PANEL, not just the report: the markers it recorded go with
+  // it via ON DELETE CASCADE. The only way a client can remove blood work they
+  // uploaded — until this existed, a lab report was permanent.
+  removeLabReport: (id: string) => Promise<{ ok: boolean; message?: string }>;
 
   // QA 12.0: imaging/other tests, medical history (comorbidities/surgeries),
   // and medications — the "biomarker widget lives inside a wider records
@@ -2346,6 +2350,30 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  const removeLabReport = async (id: string): Promise<{ ok: boolean; message?: string }> => {
+    if (!authUserId) return { ok: false, message: "You need to be signed in to remove this." };
+    // The path has to be read BEFORE the row goes: it is the only handle on
+    // the object, and Storage does not cascade.
+    const existing = labReports.find((r) => r.id === id);
+    const result = await deleteLabPanel(id, existing?.filePath);
+    if (!result.ok) return result;
+
+    // RE-READ RATHER THAN FILTER, for the reason recordBiomarkers re-reads and
+    // then one more: the marker list is grouped by name across every panel, so
+    // the cascade changes it in ways no local filter can reproduce. A marker
+    // only this panel measured disappears entirely; one measured by several
+    // reverts to the previous panel's value, unit, range and status. Dropping
+    // the panel's id from a list would leave its readings on screen as current.
+    const refreshed = await getBloodMarkers(authUserId);
+    if (refreshed.ok) {
+      setLabsError(null);
+      setBloodMarkers(refreshed.markers);
+    }
+    const reports = await getLabReports(authUserId);
+    if (reports.ok) setLabReports(reports.reports);
+    return { ok: true };
+  };
+
   const goToPrevDate = () => setSelectedDate((d) => shiftDate(d, -1));
   const goToNextDate = () => setSelectedDate((d) => shiftDate(d, 1));
   const goToToday = () => setSelectedDate(today);
@@ -2752,6 +2780,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       bloodMarkers,
       labReports,
       recordBiomarkers,
+      removeLabReport,
       imagingRecords,
       addImagingRecord,
       removeImagingRecord,
@@ -2914,6 +2943,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       journalFolders,
       journalEntries,
       bloodMarkers,
+      // Was missing since labReports was added to the context, which made the
+      // Lab reports list update only on hydration: both writers set it AFTER
+      // an await, so the memo had already recomputed on the bloodMarkers
+      // change and cached a value still holding the previous list. Adding a
+      // report never showed one; removing a report left a chip pointing at a
+      // panel that no longer existed.
+      labReports,
       imagingRecords,
       comorbidities,
       surgeries,

@@ -2,11 +2,12 @@ import { useState } from "react";
 import { Card } from "../ui/Card";
 import { Chip } from "../ui/Chip";
 import { BottomSheet } from "../ui/BottomSheet";
+import { Button } from "../ui/Button";
 import { Toggle } from "../ui/Toggle";
 import { useApp } from "../../context/AppContext";
 import { FileViewerSheet } from "./FileViewerSheet";
 import type { PrivateBucket } from "../../services/storage";
-import type { BloodMarker, ImagingRecord, MedicationRoute } from "../../types";
+import type { BloodMarker, ImagingRecord, LabReport, MedicationRoute } from "../../types";
 import {
   Share2,
   Camera,
@@ -96,6 +97,7 @@ export const MedicalRecordsSection: React.FC<{
     updateMedication,
     removeMedication,
     labReports,
+    removeLabReport,
     today,
   } = useApp();
   // The file currently being viewed, if any. Signing happens inside the
@@ -107,6 +109,10 @@ export const MedicalRecordsSection: React.FC<{
   // about, so it is shown wherever the user was working.
   const [recordError, setRecordError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // The report awaiting confirmation, if any. Holds the whole record rather
+  // than an id so the sheet can name the date after the list behind it has
+  // already been re-read.
+  const [confirmRemoveReport, setConfirmRemoveReport] = useState<LabReport | null>(null);
 
   const run = async (action: () => Promise<{ ok: boolean; message?: string }>) => {
     setBusy(true);
@@ -200,19 +206,38 @@ export const MedicalRecordsSection: React.FC<{
           </p>
           <div className="flex flex-wrap gap-1.5">
             {labReports.map((rep) => (
-              <button
+              <div
                 key={rep.id}
-                onClick={() =>
-                  setViewing({
-                    path: rep.filePath,
-                    label: `Lab report · ${rep.date}`,
-                    bucket: "lab-reports",
-                  })
-                }
-                className="tap flex items-center gap-1 text-[11px] font-semibold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1"
+                className="flex items-center gap-0.5 text-[11px] font-semibold text-primary-dark bg-primary-pale rounded-full pl-2.5 pr-1 py-1"
               >
-                <FileText size={11} /> {rep.date}
-              </button>
+                <button
+                  onClick={() =>
+                    setViewing({
+                      path: rep.filePath,
+                      label: `Lab report · ${rep.date}`,
+                      bucket: "lab-reports",
+                    })
+                  }
+                  className="tap flex items-center gap-1"
+                >
+                  <FileText size={11} /> {rep.date}
+                </button>
+                <button
+                  onClick={() => {
+                    // Cleared on open, not just by run(): recordError is shared
+                    // across this whole section, so a message left over from an
+                    // earlier action would otherwise greet the sheet as if this
+                    // removal had already failed.
+                    setRecordError(null);
+                    setConfirmRemoveReport(rep);
+                  }}
+                  disabled={busy}
+                  aria-label={`Remove lab report from ${rep.date}`}
+                  className="tap w-5 h-5 rounded-full flex items-center justify-center text-primary-dark/55 disabled:opacity-40"
+                >
+                  <Trash2 size={11} />
+                </button>
+              </div>
             ))}
           </div>
         </Card>
@@ -677,6 +702,57 @@ export const MedicalRecordsSection: React.FC<{
         bucket={viewing?.bucket ?? "medical-imaging"}
         label={viewing?.label ?? "File"}
       />
+
+      {/* CONFIRMED IN A SHEET, not with the "tap again" pattern this app uses
+          for its lighter deletes, because the consequence is not visible from
+          the control. A lab report IS its panel, so removing it also removes
+          every result that panel recorded — a marker measured only there
+          disappears from the biomarker list entirely. Saying that in words
+          beforehand is the difference between a decision and a surprise.
+
+          The error renders HERE rather than through recordError's usual
+          placement: that is printed on the imaging, history and medications
+          tabs, and the biomarkers tab prints it nowhere, so a failed removal
+          would otherwise be silent. The sheet also stays open on failure,
+          which is what keeps the message on screen next to the control that
+          produced it. */}
+      <BottomSheet
+        open={confirmRemoveReport !== null}
+        onClose={() => setConfirmRemoveReport(null)}
+        title="Remove lab report?"
+      >
+        <div className="space-y-4 animate-fade-slide-up">
+          <p className="text-sm text-charcoal-soft">
+            The report from {confirmRemoveReport?.date} will be deleted, along with the
+            results it recorded — those readings will no longer appear in your biomarker
+            history. This can&rsquo;t be undone.
+          </p>
+          {recordError && (
+            <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
+              {recordError}
+            </p>
+          )}
+          <div className="flex gap-2.5">
+            <Button variant="secondary" fullWidth onClick={() => setConfirmRemoveReport(null)}>
+              Keep
+            </Button>
+            <Button
+              variant="primary"
+              fullWidth
+              disabled={busy}
+              onClick={() => {
+                const report = confirmRemoveReport;
+                if (!report) return;
+                void run(() => removeLabReport(report.id)).then((ok) => {
+                  if (ok) setConfirmRemoveReport(null);
+                });
+              }}
+            >
+              {busy ? "Removing…" : "Remove"}
+            </Button>
+          </div>
+        </div>
+      </BottomSheet>
     </>
   );
 };
