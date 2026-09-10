@@ -887,39 +887,52 @@ in the table until someone queries it. The sheet's copy is written to match
 that, saying the team reads reports rather than promising a reply, and it
 should keep saying so until something actually delivers them.
 
-### Losing connectivity is handled; starting offline has never been tested
+### Offline is handled, and the sign-in screen it can still show is not a bug
 
-An audit covered what happens when the network drops **mid-session** and the
-result was better than expected: reads keep working from already-hydrated
-state, nothing crashed across 52 blocked requests, and **no write path gives
-false success** — every one is remote-first, and consent's optimistic toggle
-correctly reverts. The gaps found were copy, not architecture, and are fixed:
-an offline banner, and two services that were showing users
-`TypeError: Failed to fetch`.
+**Losing connectivity mid-session was audited and is sound.** Reads keep
+working from already-hydrated state, nothing crashed across 52 blocked
+requests, and **no write path gives false success** — every one is remote-first,
+and consent's optimistic toggle correctly reverts. The gaps were copy, not
+architecture: an offline banner and four raw `TypeError: Failed to fetch`
+messages, all fixed.
 
-**The untested case is the opposite one: opening the app while already
-offline.** Everything above began from a loaded, authenticated session and
-took the network away. A cold start exercises entirely different code — session
-restore from the auth cookie, `ensureProfileRow`, and every hydration effect —
-all of which fail at once, before any of the state the mid-session case relies
-on exists.
+**Starting offline was the untested case, and it was hiding a real bug.** This
+entry used to describe that as a guess. It was tested, the guess was right, and
+the cause has been fixed — the detail is kept because the shape of it is worth
+knowing.
 
-**The specific worry is the route guard.** `RequireOnboarded` renders on
-`authReady` and a session. If restoring the session needs a network call that
-fails, the app may conclude there is no session and show the sign-in screen to
-someone who is signed in — who then cannot sign in either, because that also
-needs the network. The cache-clearing effect is the sharper end of the same
-question: it wipes `centium-state:*` when it finds cached account data with no
-session to justify it, and a failed restore looks exactly like that from the
-inside. **If it fires on a cold offline start, a user loses their local cache
-for being on a train.** That is a guess about a code path, not an observation —
-which is the reason this entry exists.
+Two cases, and only one was broken. With a **valid** access token a cold
+offline start works correctly: the session restores from the cookie with no
+network at all, and the cache survives. With an **expired** one, `getSession()`
+attempts a refresh, fails, and returns `null` — indistinguishable, from the
+cache-clearing effect, from a signed-out visitor. It wiped all 63
+`centium-state:*` keys and the route guard showed the sign-in screen to someone
+who had never signed out.
 
-It could not be tested with the method used for the rest: that simulation
-installs itself after the app boots, so it cannot cover the boot. Testing it
-properly means real devtools offline mode, or a device with the network off,
-loading the app cold. Worth doing before assuming offline is handled, because
-the mid-session result says nothing about it.
+That is the ordinary case, not an edge one: access tokens last an hour, so any
+offline open more than an hour after last use hit it.
+
+`hasStoredSessionToken()` now answers the question the effect actually needed —
+whether there is a token to restore, rather than whether it can be verified
+right now. It withholds a destructive action and never grants access: it cannot
+tell a valid refresh token from a revoked one, so it is not evidence of
+authorisation, and the worst it can do is keep a cache one page load too long.
+A genuinely signed-out browser is still wiped, which was re-tested rather than
+assumed.
+
+**What remains is deliberate.** Opening the app offline with an expired token
+still shows the sign-in screen, and that is not being papered over. The route
+guard genuinely has no session; manufacturing one to hide it would cross an
+authorisation boundary to fix a display problem. The data now survives and the
+account signs itself back in on reconnect, which was the part doing harm. An
+offline-aware guard state is a real design decision and would need its own.
+
+**One thing about reconnection worth not misreading.** It restores the session
+and rehydrates the cache, so it looks like full recovery — but rehydration
+comes *from the server*. Habits, streaks, journal, routines, calendar events,
+custom foods and widgets have no server copy, so in the original bug they were
+gone for good. Any future change in this area should assume "it recovers on
+reconnect" is true only of server-backed data.
 
 ## Version history
 
