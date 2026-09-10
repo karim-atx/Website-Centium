@@ -457,3 +457,39 @@ export async function sendVoiceNote(
   }
   return sent;
 }
+
+/**
+ * Marks every unread message from the OTHER participant as read.
+ *
+ * THE SERVER DECIDES THE TIMESTAMP, not this call. `messages_stamp_read_at`
+ * ignores whatever value arrives and writes `now()` on the first transition
+ * out of null, then freezes it — so the value sent here is a placeholder whose
+ * only job is being non-null. A receipt either party could backdate would be
+ * worse than no receipt at all, which is why the column is trigger-controlled
+ * rather than merely grant-limited.
+ *
+ * NO `sender_id` FILTER, DELIBERATELY. `messages_mark_read_by_recipient`
+ * already requires `auth.uid() <> sender_id`, and duplicating a policy in a
+ * filter is how the two quietly drift apart. The `read_at is null` filter is a
+ * different thing — it is functional, keeping the update off rows that are
+ * already read and making the returned count mean "newly marked".
+ *
+ * ROW COUNT IS THE RESULT, NOT `error`. Verified against staging: updating a
+ * message you sent yourself matches zero rows and returns `error: null`. A
+ * caller checking only for an error would read a total refusal as success,
+ * which is the same silent-rejection trap this project has hit before.
+ */
+export async function markThreadRead(threadId: string): Promise<number> {
+  const { data, error } = await supabase
+    .from("messages")
+    .update({ read_at: new Date().toISOString() })
+    .eq("thread_id", threadId)
+    .is("read_at", null)
+    .select("id");
+
+  if (error) {
+    console.error("[messaging] Could not mark read:", error.message);
+    return 0;
+  }
+  return data?.length ?? 0;
+}

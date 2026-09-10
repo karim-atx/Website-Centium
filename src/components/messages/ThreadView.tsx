@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ImageIcon, Mic, Paperclip, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, ImageIcon, Mic, Paperclip, Send, Trash2 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { usePoll } from "../../hooks/usePoll";
 import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
@@ -8,6 +8,7 @@ import { VoiceNoteBubble } from "./VoiceNoteBubble";
 import { acceptFor } from "../../services/storage";
 import {
   fetchMessages,
+  markThreadRead,
   sendImageAttachment,
   sendMessage,
   sendVoiceNote,
@@ -75,6 +76,27 @@ export const ThreadView: React.FC<{
     }
     setMessages(result.messages);
     setLoaded(true);
+
+    // MARKED AFTER EVERY LOAD, NOT JUST ON OPEN. A message arriving while the
+    // thread is already open is just as read as one that was here when it
+    // opened, and marking only on mount would leave it unread forever.
+    //
+    // Guarded on there being something to mark, so an idle open conversation
+    // does not spend a write every eight seconds saying nothing changed. The
+    // check is client-side on rows already fetched, so it costs no round trip.
+    const hasUnreadFromThem = result.messages.some(
+      (m) => m.senderId !== authUserId && !m.readAt
+    );
+    if (!hasUnreadFromThem) return;
+
+    const marked = await markThreadRead(thread.id);
+    // Re-read rather than patching local state: the timestamp is the server's,
+    // and inventing one here to avoid a round trip would put a value on screen
+    // that never existed in the database.
+    if (marked > 0) {
+      const after = await fetchMessages(thread.id);
+      if (after.ok) setMessages(after.messages);
+    }
   };
 
   useEffect(() => {
@@ -258,6 +280,25 @@ export const ThreadView: React.FC<{
                       <span className="text-[12.5px] font-semibold">Photo</span>
                     </button>
                   )
+                )}
+                {/* SENDER SIDE ONLY. A tick answers "did it reach them", which
+                    is a question only the person who sent it has — showing one
+                    on a message you received would be telling you that you
+                    read it.
+
+                    TWO STATES, NOT THREE. "Delivered" would need a
+                    delivered_at column and a write path of its own, since
+                    nothing in a polling system records that a client fetched a
+                    row; read_at cannot stand in for it without conflating two
+                    different facts. Deferred to its own task rather than
+                    faked here. */}
+                {mine && (
+                  <span
+                    className="flex items-center justify-end gap-1 mt-1 opacity-70"
+                    title={m.readAt ? "Read" : "Sent"}
+                  >
+                    {m.readAt ? <CheckCheck size={13} /> : <Check size={13} />}
+                  </span>
                 )}
               </div>
             </div>
