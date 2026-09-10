@@ -63,7 +63,15 @@ export interface Message {
    * and rendering nothing at all.
    */
   attachmentPurgedAt: string | null;
-  /** Duration of a voice note. Nothing sends these yet — see 6c. */
+  /**
+   * Duration in whole seconds when this message is a voice note.
+   *
+   * Present TOGETHER with `attachmentPath`, never alone — that pairing is what
+   * distinguishes a voice note from a photo, since both occupy the same
+   * column. Nullable because the column is, and because a row could predate
+   * this feature; the player says "Voice note" rather than printing 0:00 when
+   * it is missing.
+   */
   voiceNoteSeconds: number | null;
 }
 
@@ -148,7 +156,7 @@ export async function fetchThreads(): Promise<ThreadsResult> {
   // Newest-first so the first row seen for a thread is its latest message.
   const recent = await supabase
     .from("messages")
-    .select("thread_id, text, created_at, attachment_url, attachment_purged_at")
+    .select("thread_id, text, created_at, attachment_url, attachment_purged_at, voice_note_seconds")
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -164,8 +172,11 @@ export async function fetchThreads(): Promise<ThreadsResult> {
       // must never imply it does not — the constraint messages_has_content_check
       // guarantees at least one of these is present (or that it was purged),
       // so the final fallback is unreachable rather than a guess.
+      // Voice note before photo: both carry attachment_url, and only
+      // voice_note_seconds tells them apart.
       const preview =
         m.text?.trim() ||
+        (m.attachment_url && m.voice_note_seconds ? "Voice note" : "") ||
         (m.attachment_url ? "Photo" : "") ||
         (m.attachment_purged_at ? "Attachment removed" : "") ||
         "Message";
@@ -292,6 +303,7 @@ async function insertMessage(row: {
   sender_id: string;
   text?: string | null;
   attachment_url?: string | null;
+  voice_note_seconds?: number | null;
 }): Promise<SendResult> {
   const { data, error } = await supabase
     .from("messages")
@@ -383,6 +395,62 @@ export async function sendImageAttachment(
   if (!sent.ok) {
     // Named plainly so it is greppable if these ever need sweeping. See the
     // README follow-up; there is no cleanup call that would work here.
+    console.error(
+      `[messaging] ORPHANED OBJECT message-attachments/${upload.path} — upload succeeded, message insert did not.`
+    );
+  }
+  return sent;
+}
+
+/**
+ * Uploads a recording and sends it as a voice note.
+ *
+ * THE SAME SHAPE AS sendImageAttachment, DELIBERATELY, because it is the same
+ * two writes with the same forced ordering and the same unreclaimable orphan
+ * if the second one fails. Everything said there applies here; what differs is
+ * one column.
+ *
+ * BOTH COLUMNS ARE SET TOGETHER. `attachment_url` alone would render as a
+ * photo, and `voice_note_seconds` alone would be a duration pointing at
+ * nothing — and would still satisfy messages_has_content_check, so the
+ * database would accept a message that no surface can display. The pair is
+ * what makes the row mean "voice note".
+ *
+ * The duration is the recorder's wall-clock count, clamped to at least one
+ * second by the hook, which is what messages_voice_note_seconds_check requires.
+ */
+export async function sendVoiceNote(
+  threadId: string,
+  senderId: string,
+  file: File,
+  seconds: number
+): Promise<SendResult> {
+  const check = validateFileFor("message-attachments", file);
+  if (!check.ok) return { ok: false, message: check.message ?? "That recording can't be sent." };
+
+  const upload = await uploadPrivateFile({
+    bucket: "message-attachments",
+    userId: senderId,
+    file,
+    threadId,
+  });
+  if (!upload.ok || !upload.path) {
+    if (upload.reason === "refused") {
+      return {
+        ok: false,
+        message: "You can only send voice notes to someone you're actively working with.",
+      };
+    }
+    return { ok: false, message: upload.message ?? "That recording couldn't be sent." };
+  }
+
+  const sent = await insertMessage({
+    thread_id: threadId,
+    sender_id: senderId,
+    attachment_url: upload.path,
+    voice_note_seconds: Math.max(1, Math.round(seconds)),
+  });
+  if (!sent.ok) {
     console.error(
       `[messaging] ORPHANED OBJECT message-attachments/${upload.path} — upload succeeded, message insert did not.`
     );

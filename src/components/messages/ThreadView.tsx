@@ -1,17 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, ImageIcon, Paperclip, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, ImageIcon, Mic, Paperclip, Send, Trash2 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { usePoll } from "../../hooks/usePoll";
+import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
 import { FileViewerSheet } from "../health/FileViewerSheet";
+import { VoiceNoteBubble } from "./VoiceNoteBubble";
 import { acceptFor } from "../../services/storage";
 import {
   fetchMessages,
   sendImageAttachment,
   sendMessage,
+  sendVoiceNote,
   threadAllowsAttachments,
   type Message,
   type MessageThread,
 } from "../../services/messaging";
+
+/** How far the finger must travel from the mic before a release cancels. */
+const CANCEL_DISTANCE = 60;
 
 /** How often an open conversation re-reads. See usePoll for why polling at all. */
 const POLL_MS = 8000;
@@ -56,6 +62,7 @@ export const ThreadView: React.FC<{
   // Re-checking on every 8s poll would spend a round trip to tidy up a
   // cosmetic edge nobody is standing on.
   const [canAttach, setCanAttach] = useState(false);
+  const recorder = useVoiceRecorder();
 
   const load = async () => {
     const result = await fetchMessages(thread.id);
@@ -130,6 +137,64 @@ export const ThreadView: React.FC<{
     setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
   };
 
+  /**
+   * PRESS AND HOLD, with slide-away to cancel.
+   *
+   * Pointer events rather than touch, so one code path covers finger, mouse
+   * and stylus. `setPointerCapture` is what makes the release reliable: without
+   * it, lifting a finger outside the button fires pointerup somewhere else and
+   * the recorder keeps running with the microphone live.
+   *
+   * A press shorter than a second is discarded as a mis-tap rather than sent —
+   * see MIN_SECONDS — and so is a release past CANCEL_DISTANCE.
+   */
+  const pressOrigin = useRef<{ x: number; y: number } | null>(null);
+  const [willCancel, setWillCancel] = useState(false);
+
+  const onRecordDown = async (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (sending) return;
+    // Capture is an optimisation, not a requirement: it throws if the pointer
+    // is already gone, and letting that propagate would abort the handler
+    // before recording starts — turning a rare race into a dead button.
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      /* fall through — release is still handled by pointerup/pointercancel */
+    }
+    pressOrigin.current = { x: e.clientX, y: e.clientY };
+    setWillCancel(false);
+    await recorder.start();
+  };
+
+  const onRecordMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!recorder.recording || !pressOrigin.current) return;
+    const dx = e.clientX - pressOrigin.current.x;
+    const dy = e.clientY - pressOrigin.current.y;
+    setWillCancel(Math.hypot(dx, dy) > CANCEL_DISTANCE);
+  };
+
+  const onRecordUp = async () => {
+    if (!recorder.recording) {
+      pressOrigin.current = null;
+      return;
+    }
+    const discard = willCancel;
+    pressOrigin.current = null;
+    setWillCancel(false);
+    const capture = await recorder.stop({ discard });
+    if (!capture || !authUserId) return;
+
+    setSending(true);
+    setError(null);
+    const result = await sendVoiceNote(thread.id, authUserId, capture.file, capture.seconds);
+    setSending(false);
+    if (!result.ok) {
+      setError(result.message);
+      return;
+    }
+    setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
+  };
+
   return (
     <div className="flex flex-col min-h-[60vh]">
       <div className="flex items-center gap-2.5 mb-4">
@@ -167,6 +232,14 @@ export const ThreadView: React.FC<{
                   <span className="flex items-center gap-1.5 opacity-70 italic">
                     <Trash2 size={13} className="shrink-0" /> Attachment removed
                   </span>
+                ) : m.attachmentPath && m.voiceNoteSeconds ? (
+                  // Voice note before photo: both are attachment_url, and the
+                  // duration column is the only thing distinguishing them.
+                  <VoiceNoteBubble
+                    path={m.attachmentPath}
+                    seconds={m.voiceNoteSeconds}
+                    mine={mine}
+                  />
                 ) : (
                   m.attachmentPath && (
                     // A TILE, NOT A THUMBNAIL. Rendering the image inline needs
@@ -193,9 +266,13 @@ export const ThreadView: React.FC<{
         <div ref={endRef} />
       </div>
 
-      {error && (
+      {/* A recorder failure gets the same treatment as a send failure, because
+          from the user's side they are the same event: the voice note they
+          tried to make did not happen. A denied microphone in particular must
+          say so — a hold that silently does nothing reads as a broken app. */}
+      {(error || recorder.error) && (
         <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5 mb-2">
-          {error}
+          {error ?? recorder.error?.message}
         </p>
       )}
 
@@ -233,15 +310,55 @@ export const ThreadView: React.FC<{
             </button>
           </>
         )}
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void send();
-          }}
-          placeholder="Message…"
-          className="flex-1 rounded-full bg-cream-soft border border-charcoal/10 px-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-        />
+        {recorder.recording ? (
+          // Replaces the text field while recording, so the elapsed count and
+          // the cancel hint occupy the space the user is already looking at.
+          <div
+            className={`flex-1 flex items-center gap-2 rounded-full px-4 py-2.5 ${
+              willCancel ? "bg-status-high-bg" : "bg-cream-soft"
+            }`}
+          >
+            <span className="w-2 h-2 rounded-full bg-status-high animate-pulse shrink-0" />
+            <span className="text-sm font-semibold tabular-nums text-charcoal">
+              {Math.floor(recorder.seconds / 60)}:{String(recorder.seconds % 60).padStart(2, "0")}
+            </span>
+            <span className="text-[11px] text-charcoal-faint truncate">
+              {willCancel ? "Release to cancel" : `Slide away to cancel · max ${MAX_SECONDS / 60} min`}
+            </span>
+          </div>
+        ) : (
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") void send();
+            }}
+            placeholder="Message…"
+            className="flex-1 rounded-full bg-cream-soft border border-charcoal/10 px-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        )}
+
+        {/* Same gate as the paperclip: thread_allows_attachments covers
+            voice_note_seconds at both server doors, so one check governs both.
+            Shown only when the draft is empty — a typed message wants Send,
+            and putting the two side by side makes the primary action ambiguous. */}
+        {canAttach && recorder.supported && !draft.trim() && (
+          <button
+            onPointerDown={(e) => void onRecordDown(e)}
+            onPointerMove={onRecordMove}
+            onPointerUp={() => void onRecordUp()}
+            onPointerCancel={() => void onRecordUp()}
+            disabled={sending}
+            aria-label="Hold to record a voice note"
+            className={`tap w-10 h-10 rounded-full flex items-center justify-center shrink-0 touch-none disabled:opacity-40 ${
+              recorder.recording
+                ? "bg-status-high text-white scale-110"
+                : "text-charcoal-soft hover:bg-cream-soft"
+            } transition-transform`}
+          >
+            <Mic size={17} />
+          </button>
+        )}
         <button
           onClick={() => void send()}
           disabled={sending || !draft.trim()}
