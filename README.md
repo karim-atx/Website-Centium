@@ -857,6 +857,36 @@ its objects are served over an unauthenticated URL to anyone holding the link,
 policy or no policy — so a replaced avatar that is merely unreferenced rather
 than deleted stays world-readable indefinitely.
 
+### Settings now offers a working support control and a fake one, side by side
+
+**Report a bug writes to `bug_reports` and works.** Directly above it in the
+same card, **Contact us does nothing at all** — `ContactUsSheet` is three
+buttons with no handlers (Live Chat, Call us, Email at `support@centium.app`)
+and a footer reading *"Prototype only — these don't connect to a real support
+channel yet."*
+
+The mock predates the bug report and was harmless while nothing near it worked.
+It is less harmless now: two adjacent rows in one card, both looking like ways
+to reach the team, one of which silently is not. A user who tries Contact us
+first has no way to tell the difference, and the footer only appears after they
+have opened it.
+
+This was left alone deliberately rather than overlooked. Fixing it means
+answering product questions that belong to whoever runs support — is there a
+phone line, is there a chat provider, does `support@centium.app` receive mail
+— and deleting the rows would discard intent someone may still act on. The
+options are roughly: make the channels real, remove the ones that are not, or
+fold support into the bug report, and each is a different product decision.
+
+**Two things to know before deciding.** `support@centium.app` has never been
+verified to exist; it appears only in mock content, so anything built on it
+(a `mailto:` in particular) could route real reports into nothing, which is
+worse than an obviously dead button. And **a filed bug report notifies nobody**
+— there is no mail provider, queue or webhook in this project, so reports wait
+in the table until someone queries it. The sheet's copy is written to match
+that, saying the team reads reports rather than promising a reply, and it
+should keep saying so until something actually delivers them.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
