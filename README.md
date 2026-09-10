@@ -1017,6 +1017,82 @@ returns zero rows with `error: null` and the INSERT fall-through then surfaces
 `42501` visibly. Nothing was failing. The write went exactly where the code
 sent it, which was nowhere.
 
+### Five `navigate()` calls missed the `/app` prefix, and nothing can catch the next one
+
+**Fixed.** Every category on the client Explore page 404'd — all eight of them,
+confirmed by clicking each one: Gyms, Classes, Stores, Clothing, Equipment,
+Supplements, Wellness Services, Meal Prepping. So did three other buttons
+elsewhere in the app.
+
+The mechanism was entirely client-side, and worth stating precisely because the
+symptom invites the wrong diagnosis. No HTTP request was made at all — nothing
+reached the network, let alone Supabase, and no server returned 404.
+`navigate()` pushed a path with no `/app` segment, React Router matched nothing,
+fell through to the marketing group's `path="*"`, and rendered
+`MarketingNotFound`. A branded 404 page, produced without a single request.
+Checking the network tab is what rules out the other readings; the visible
+error looks identical either way.
+
+`MarketplaceCategoryPage` was never broken. It renders correctly at
+`/app/marketplace/gyms` and always did — it was simply unreachable, which is a
+different bug from a broken page and has a different fix.
+
+**Root cause: navigation defined as data was migrated, navigation written
+inline was not.** `1a3135e` moved every app route under `/app` when the
+marketing site landed. It rewrote all thirty-odd `<Route path>` values and
+every entry in `navItems.ts` — and not one `navigate()` call site. It was a
+95-file rename pass (`sohati` → `primary`, 488 insertions against 488
+deletions), and the single `navigate()` line it touched was touched for the
+colour class, carrying its stale `/professionals` target straight through.
+`<Link>` and `NavLink` survived because their targets live in an array that
+somebody thought to update. Calls buried in component bodies did not.
+
+The four surfaces, and what each cost:
+
+| Call site | Went to | Consequence |
+|---|---|---|
+| `Marketplace.tsx` ×2 | `/marketplace/:id` | all 8 Explore categories dead |
+| `Profile.tsx` | `/professionals` | see below |
+| `ProfessionalDetail.tsx` | `/professionals` | 404 immediately after `disconnectProfessional()` — no confirmation the removal worked |
+| `BusinessProfileTab.tsx` | `/onboarding` | 404 immediately after `signOut()`, instead of the sign-in screen |
+
+The `Profile.tsx` one deserves naming on its own. It is the link in *"if
+tracking feels unhelpful right now, consider discussing it with a
+professional"* — an off-ramp for someone the app has just judged might be
+struggling with tracking. It dead-ended on a 404. Whatever the routing bug cost
+elsewhere, it cost most there.
+
+Two of the four sit immediately after a destructive action, which is why they
+survived so long: reaching them means signing out or severing a relationship,
+so nobody hits them casually, and anybody who does has no way to tell whether
+the destructive part succeeded before the 404 appeared.
+
+**What is NOT the cause, checked rather than assumed.** Not the
+`professional_subtype` enum mismatch: the Dietitians/Trainers/Other filter
+chips navigate nowhere at all — they are `useState`, the URL never changes, and
+all five subtypes including `other` were exercised. `subtypeLabels` is a total
+`Record<Subtype, string>`, so a missing value fails to compile rather than at
+runtime. Not that day's discovery-toggle, identity or messaging work either;
+the blame dates predate all of it.
+
+**The follow-up: an `oxlint` `no-restricted-syntax` rule for un-prefixed
+`navigate()` calls.** Nothing prevents this recurring. A route target is a bare
+string with no type, so the sixth missing prefix will compile, lint clean, pass
+`tsc`, and ship exactly as these five did — and land on a branded 404 that
+looks deliberate. A rule rejecting `navigate("/…")` where the path is not
+`/app`, `/legal` or a known marketing route would catch the class rather than
+the instances.
+
+Deliberately not done in the same change as the fix, so a user-visible bug
+was not held up by a config discussion. It needs one real decision: marketing
+pages legitimately navigate to bare paths, so the rule needs an allowlist, and
+an allowlist that drifts out of date is a rule people learn to suppress. Worth
+doing, small, and worth doing properly.
+
+The stronger version — a `routes.ts` of typed constants, so a wrong path cannot
+be spelled — is the real fix and a much larger change. The lint rule is what
+buys most of the safety for a fraction of the churn.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
