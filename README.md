@@ -785,7 +785,42 @@ remains is telling the truth about it.
 
 *Recorded first as "nothing caps how much one user can store", which was
 accurate when written and stopped being so about an hour later when the cap
-landed in the Database repo.*
+landed in the Database repo. Both halves above are now built — the accurate
+message and the Settings reading — leaving only the verification gap below.*
+
+### A real ATX04 has never been triggered, only simulated
+
+The out-of-space message is built and behaves correctly against a simulated
+failure. **No cap violation has ever actually occurred**, here or anywhere, so
+the path has not been exercised end to end.
+
+Nothing convenient makes one happen. `storage_cap_bytes()` is a hardcoded 2 GiB
+with no per-user override, and `storage_bytes_used` is deliberately absent from
+every client UPDATE grant — that inaccessibility is what makes the counter
+trustworthy, and it is also what makes the error unreachable from a test. The
+only genuine triggers are uploading 2 GB or changing the cap in the database.
+
+**What the simulation does and does not stand on.** It is not invented: the
+shape was taken from a real Postgres error observed through the real Storage
+API, by uploading to a path the user does not own. That returned
+`code: "AccessDenied"` — the Storage API's own vocabulary, not the SQLSTATE,
+which appeared nowhere — with the Postgres message forwarded verbatim. So the
+assumption being relied on, that ATX04 arrives with its message intact and a
+generic code, is grounded rather than guessed.
+
+It is still not identical. The untested possibility is narrow and specific: an
+*unrecognised* SQLSTATE might be handled differently from an RLS violation,
+with the Storage API swallowing the message rather than forwarding it. If it
+did, detection would find neither the code nor the prefix and would fall
+through to the generic connection sentence — the exact behaviour this work
+removed.
+
+**Cheapest way to close it**, when someone wants to: temporarily lower
+`storage_cap_bytes()` in a Database-repo branch, upload one small file past it,
+read the error the client actually receives, and restore the cap. That is a few
+minutes of work and settles it properly. Not urgent — the failure mode is a
+message reverting to a less specific one, not data loss or a wrong write — but
+worth doing before anyone relies on the specific message being what users see.
 
 ### Two Storage cleanup gaps, both waiting on surfaces that are not wired
 
