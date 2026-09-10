@@ -62,7 +62,7 @@ import { businessTiers } from "../data/businessTiers";
 import { translations, type Language } from "../i18n/translations";
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
-import { getCurrentSession, onAuthChange, signOutRemote } from "../services/auth";
+import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
 import {
   cancelAccountDeletion as cancelAccountDeletionRemote,
   onPasswordRecovery,
@@ -862,6 +862,24 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       seenSession.current = authUserId;
       return;
     }
+
+    // A STORED TOKEN MEANS "COULD NOT VERIFY", NOT "SIGNED OUT", and the
+    // difference is the whole reason this guard exists.
+    //
+    // Reproduced rather than theorised: opening the app offline with an
+    // expired access token makes getSession() attempt a refresh, fail, and
+    // return null — identical, from here, to having no session. This effect
+    // then wiped all 63 `centium-state:*` keys and the route guard showed the
+    // sign-in screen to someone who had never signed out. Server-backed data
+    // came back on reconnect; habits, streaks, journal, routines, calendar
+    // events and custom foods have no server copy and did not.
+    //
+    // The cookie is still present through all of that, carrying a refresh
+    // token that works the moment there is a network. So the presence of a
+    // stored token is treated as reason enough to keep the cache — the
+    // security case this guard was built for is a session that genuinely
+    // ended, and sign-out removes the cookie.
+    if (hasStoredSessionToken()) return;
 
     let cacheBelongsToAnAccount = false;
     try {

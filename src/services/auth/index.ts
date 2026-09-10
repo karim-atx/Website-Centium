@@ -160,6 +160,44 @@ export async function getCurrentSession(): Promise<Session | null> {
 }
 
 /**
+ * Whether a session token is STORED, regardless of whether it can be verified.
+ *
+ * NOT THE SAME QUESTION AS getCurrentSession(), and conflating the two wiped
+ * real users' local data. Offline with an expired access token, getSession()
+ * tries to refresh, the request fails, and it returns null with "Failed to
+ * fetch" — indistinguishable from a signed-out visitor to any caller reading
+ * only the session. It is not the same thing at all: the cookie is still
+ * there, the refresh token in it is still valid, and the account signs itself
+ * back in the moment there is a network.
+ *
+ * So this reads the stored token directly and answers only "is there
+ * something to restore". It says nothing about whether that token is still
+ * accepted by the server — an expired refresh token or a revoked session both
+ * still leave a cookie behind — which is exactly why it is used to withhold a
+ * DESTRUCTIVE action rather than to grant access. Nothing is unlocked by it;
+ * the worst it can do is keep a cache one page load longer than necessary,
+ * and the next load with a real answer clears it.
+ *
+ * Reads cookies rather than localStorage because createBrowserClient manages
+ * the session in cookies here and ignores `auth.storage` outright — see the
+ * note in lib/supabase/client.ts. Chunked names (`…auth-token.0`) count too.
+ */
+export function hasStoredSessionToken(): boolean {
+  if (typeof document === "undefined") return false;
+  return document.cookie
+    .split("; ")
+    .some((entry) => {
+      const separator = entry.indexOf("=");
+      if (separator < 1) return false;
+      const name = entry.slice(0, separator);
+      const value = entry.slice(separator + 1);
+      // A cleared cookie is often left behind as an empty value rather than
+      // removed, so presence of the name alone is not enough.
+      return /^sb-.+-auth-token(\.\d+)?$/.test(name) && value.length > 0;
+    });
+}
+
+/**
  * Subscribes to every session change — sign-in, sign-out, token refresh, and
  * the INITIAL_SESSION event fired on load. Returns an unsubscribe function.
  *
