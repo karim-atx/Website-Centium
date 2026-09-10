@@ -1206,6 +1206,38 @@ also [`ProfessionalType` and `professional_subtype` are
 unreconciled](#professionaltype-and-professional_subtype-are-unreconciled) for
 the other place this page holds two models of the same thing.
 
+### No repo-wide line-ending policy
+
+**Minor, low priority, no action needed.** There is no `.gitattributes`, so
+line-ending behaviour comes from whatever `core.autocrlf` each machine happens
+to have set rather than from the repo.
+
+**Nothing is broken today, and it is worth being precise about why.** Every
+tracked text file is stored **LF in the index** — 280 of them, zero CRLF — so
+what is committed is already uniform and diffs carry no line-ending noise. The
+current machine has `core.autocrlf=true`, which converts LF to CRLF on checkout
+and back to LF on commit, so the normalization happens correctly in both
+directions.
+
+**What the gap actually costs.** The working tree ends up mixed: files git
+checks out get CRLF, files a tool writes directly keep LF. That is invisible in
+diffs but it does mean a single file can end up internally mixed — `README.md`
+reached 1117 CRLF lines and 189 LF ones purely from entries being appended by
+scripts into a checked-out file. Harmless, since it commits as LF regardless,
+and repaired by deleting the file and checking it out again. Note that
+`git checkout -- <file>` alone does **not** fix it: git compares
+post-normalization, sees no change, and skips the rewrite.
+
+The real exposure is a contributor whose `core.autocrlf` is `false` or `input`.
+They would commit CRLF into an all-LF repo, and *that* would produce a
+whole-file diff — the noisy outcome this entry is about preventing.
+
+**The fix, when someone wants it:** a `.gitattributes` with `* text=auto`, or
+`eol=lf` on source globs, so the policy lives in the repo instead of in each
+machine's config. It carries a one-time renormalization commit that touches
+every file, which is exactly why it should be done deliberately and on its own
+rather than folded into unrelated work.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
