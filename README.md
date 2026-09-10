@@ -743,39 +743,44 @@ would send someone to open a row that shows them nothing, which is the same
 mismatch this fixed, pointing the other way. If task 4 gives lab results a
 block here, add the branch at the same time and not before.
 
-### Two chat surfaces offer video attachments nothing can store
+### Chat attachments: video removed, and nothing is uploaded either way
 
-`MessagesTab` and `ProfessionalDetail` both carry
-`accept="image/*,video/*"` on their attachment input, and both re-check with
-`/^(image|video)\//` before sending. **No bucket accepts any video type.**
-`message-attachments` allows JPEG, PNG and WebP plus five audio types, and the
-word "video" does not appear anywhere in the migrations. A user who picks a
-video today gets it accepted by the picker, accepted by the re-check, and
-attached to a message — which is harmless only because these two surfaces are
-not wired to Storage at all (see the cleanup entry below); the moment they are,
-it becomes a rejection at upload.
+**Resolved.** `MessagesTab` and `ProfessionalDetail` both offered
+`accept="image/*,video/*"` and re-checked with `/^(image|video)\//`, admitting
+a type no bucket accepts — `message-attachments` allows JPEG, PNG and WebP plus
+five audio types, and the word "video" appears in no migration. Both now offer
+the bucket's three image types and check `/^image\//`. Verified by exercising
+the predicate directly: every image type still passes, both video types are
+refused, audio and PDF are unchanged.
 
-**This is a product question, and the evidence is worth reading before someone
-answers it from the attribute alone.** The QA line these surfaces were built
-from is *"the client should be able to send voice notes and attach
-files/pictures as well as video/voice call"* — where **video/voice *call*** is
-about calling, which is separately implemented as `setCallMode`, not about
-attaching a video file. The only other relevant instruction points the other
-way: *"By no means should you be able to upload anything besides that which
-might compromise security."* And the audio types in the bucket line up exactly
-with `voice_note_seconds`, so audio has a clear origin that video does not.
+**The evidence that settled it**, since "remove it" and "build it" were both
+live options. The QA line these surfaces came from asks for *"voice notes and
+attach files/pictures as well as video/voice call"* — where **video/voice
+*call*** is calling, implemented separately as `setCallMode`, not attaching a
+video file. The instruction directly above the input says the opposite
+outright: *"By no means should you be able to upload anything besides that."*
+And the bucket's audio types line up exactly with `voice_note_seconds`, so
+audio has an origin video never had.
 
-So the likeliest reading is that `video/*` came from a clause about video
-calls rather than a decision to support video uploads. That is not the same as
-knowing, which is why nothing here has been changed. Answering it means either
-adding a video MIME type and a much larger `file_size_limit` to
-`message-attachments` — 10 MB stores very little video, so that is a real
-sizing decision and not a one-line array edit — or dropping `video/*` from both
-attributes and the two regexes.
+**This was a UI promise, not a security hole, and the difference matters for
+what to do next.** Neither surface uploads anything today: both
+`sendAttachment` functions store `file.name` and nothing else, and
+`sendProfessionalMessage` is a `setState` into `localStorage`. A video produced
+no error, graceful or otherwise — just a message bubble showing a filename.
+There was no server call to refuse it and none to secure.
 
-The equivalent mismatch in the two capture flows is resolved: as of `5d32baf`
-their inputs derive `accept` from the bucket's own MIME list, so no `image/*`
-or `video/*` remains there. These two are what is left.
+So the regex is not a guard and should not be mistaken for one. It still
+matches any `image/` type, including a GIF the bucket rejects, and tightening
+it was deliberately skipped — it would guard nothing while implying the surface
+is validated. **When these get wired to real Storage, the check belongs in the
+upload path**, the way `validateFileFor` covers `lab-reports` and
+`medical-imaging`: called once at pick time for a fast answer and again inside
+the upload, where no caller can skip it. Audio will need adding there too if
+voice notes ever become picked files rather than recorded durations.
+
+Audio is still not offered in the picker for that reason — `toggleRecording`
+stores a duration, not a file, so listing the bucket's audio types would invent
+a path that does not exist.
 
 ### The storage cap is real, and the app calls it a connection problem
 
