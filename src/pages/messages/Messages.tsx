@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { ThreadList } from "../../components/messages/ThreadList";
@@ -24,16 +25,38 @@ import { MessageCircle } from "lucide-react";
  */
 export default function Messages() {
   const { authUserId } = useApp();
+  const location = useLocation();
   const [threads, setThreads] = useState<MessageThread[]>([]);
   const [open, setOpen] = useState<MessageThread | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Set by MessageProfessionalButton, which cannot navigate straight to a
+  // conversation: the thread id it gets back from the RPC is not enough to
+  // render one — ThreadView needs the participant's name and avatar, which
+  // only this page's fetch has. So the id travels in navigation state and is
+  // resolved against the threads once they arrive.
+  //
+  // CONSUMED EXACTLY ONCE. `load()` also runs on the way back from a thread,
+  // and without the ref that return would re-open the conversation the user
+  // just left — a Back button that goes nowhere.
+  const requestedThreadId = (location.state as { threadId?: string } | null)?.threadId ?? null;
+  const deepLinkConsumed = useRef(false);
 
   const load = async () => {
     const result = await fetchThreads();
     if (result.ok) {
       setThreads(result.threads);
       setError(null);
+      if (requestedThreadId && !deepLinkConsumed.current) {
+        deepLinkConsumed.current = true;
+        // A miss is silent and lands on the list. The thread was created
+        // moments ago and will be here; if it somehow is not, the list is a
+        // truthful thing to show and an error about a conversation the user
+        // never knew failed to open is not.
+        const target = result.threads.find((t) => t.id === requestedThreadId);
+        if (target) setOpen(target);
+      }
     } else {
       setError(result.message);
     }

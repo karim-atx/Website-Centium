@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
+import { MessageProfessionalButton } from "../../components/messages/MessageProfessionalButton";
 import { mockProfessionals } from "../../data/mockProfessionals";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
 import type { ProfessionalType } from "../../types";
@@ -10,21 +11,12 @@ import { useApp } from "../../context/AppContext";
 import {
   ChevronLeft,
   Star,
-  MessageCircle,
   Lock,
-  Send,
   Pencil,
   CreditCard,
   Wallet,
   Banknote,
   Check,
-  Paperclip,
-  Mic,
-  Phone,
-  Video,
-  Square,
-  X,
-  FileText,
   Trash2,
 } from "lucide-react";
 import clsx from "clsx";
@@ -86,8 +78,6 @@ const specialtyLabel: Record<string, string> = {
   dietitian: "Dietitian",
 };
 
-type ChatMessage = { from: "me" | "them"; text?: string; attachment?: string; voiceNoteSec?: number };
-
 export default function ProfessionalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -148,15 +138,6 @@ export default function ProfessionalDetail() {
     : undefined;
   const isReal = !mockProfessional && !!listing;
   const isConnected = !!professional && (professional.connected || connectedProfessionalIds.includes(professional.id));
-  const [messageOpen, setMessageOpen] = useState(false);
-  const [messageText, setMessageText] = useState("");
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { from: "them", text: "Hi! How's the new meal plan working for you? 🥗" },
-  ]);
-  const [recording, setRecording] = useState(false);
-  const [recordSec, setRecordSec] = useState(0);
-  const [callMode, setCallMode] = useState<"voice" | "video" | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [hireOpen, setHireOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0].value);
   const [paid, setPaid] = useState(false);
@@ -165,14 +146,6 @@ export default function ProfessionalDetail() {
   const myReview = professionalReviews.find((r) => r.professionalId === id);
   const [reviewRating, setReviewRating] = useState(myReview?.rating ?? 5);
   const [reviewText, setReviewText] = useState(myReview?.text ?? "");
-
-  // Hooks must run unconditionally, so this sits above the "not found"
-  // early return below rather than next to toggleRecording.
-  useEffect(() => {
-    if (!recording) return;
-    const interval = setInterval(() => setRecordSec((s) => s + 1), 1000);
-    return () => clearInterval(interval);
-  }, [recording]);
 
   // V7 (QA 7.0): "Your rating should influence the professional's overall
   // rating based on the total rating by all people" — blend the user's own
@@ -204,30 +177,6 @@ export default function ProfessionalDetail() {
           (p.connected || connectedProfessionalIds.includes(p.id))
       )
     : undefined;
-
-  const sendMessage = () => {
-    if (!messageText.trim()) return;
-    setMessages((m) => [...m, { from: "me", text: messageText }]);
-    setMessageText("");
-    setTimeout(() => {
-      setMessages((m) => [...m, { from: "them", text: "Got it — thanks for the update! 👍" }]);
-    }, 1000);
-  };
-
-  const sendAttachment = (file: File) => {
-    setMessages((m) => [...m, { from: "me", attachment: file.name }]);
-  };
-
-  const toggleRecording = () => {
-    if (recording) {
-      setRecording(false);
-      setMessages((m) => [...m, { from: "me", voiceNoteSec: recordSec }]);
-      setRecordSec(0);
-      return;
-    }
-    setRecordSec(0);
-    setRecording(true);
-  };
 
   const confirmHire = () => {
     setPaid(true);
@@ -336,9 +285,16 @@ export default function ProfessionalDetail() {
             sharing.
           </p>
 
-          <Button fullWidth variant="outline" onClick={() => setMessageOpen(true)}>
-            <MessageCircle size={15} /> Message
-          </Button>
+          {/* Only for a real account. This branch is also reachable for a
+              seeded mockProfessionals entry, whose id ("pr1") is not a uuid
+              and could never hold a thread — offering Message there would
+              fail on the RPC rather than at the button. */}
+          {isReal && (
+            <MessageProfessionalButton
+              professionalId={professional.id}
+              firstName={professional.name.split(" ")[0]}
+            />
+          )}
           {/* V10 (QA 10.0): "a hired professional should have a remove
               professional button under message... prompt you to make sure
               you want to remove" — tap-again-to-confirm, same pattern used
@@ -374,159 +330,27 @@ export default function ProfessionalDetail() {
               {professional.name.split(" ")[0]} can generate a code for you. Redeem it from your
               profile to connect and start sharing data.
             </p>
+            {/* THE PRE-HIRE ENTRY POINT, and the reason it belongs here.
+                start_message_thread requires no relationship precisely so a
+                client can ask a question before committing money, and this
+                card is that moment — someone reading a listing, deciding.
+                Until now the card said "ask them for a code" and offered no
+                way to ask them anything. */}
+            <MessageProfessionalButton
+              professionalId={professional.id}
+              firstName={professional.name.split(" ")[0]}
+              className="mt-3.5"
+            />
           </div>
         ) : (
-        <div className="grid grid-cols-2 gap-3">
-          <Button variant="outline" onClick={() => setMessageOpen(true)}>
-            <MessageCircle size={15} /> Message
-          </Button>
+        // No Message on a seeded mock professional: there is no account behind
+        // it to message, and the mock chat that used to sit here answered
+        // itself rather than admitting that.
+        <div>
           {/* V9 (QA 9.0): "connect should be replaced with hire" */}
-          <Button onClick={() => setHireOpen(true)}>Hire</Button>
+          <Button fullWidth onClick={() => setHireOpen(true)}>Hire</Button>
         </div>
         )
-      )}
-
-      {messageOpen && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center">
-          <div className="absolute inset-0 bg-charcoal/40" onClick={() => setMessageOpen(false)} />
-          <div className="relative w-full sm:max-w-md h-[70vh] sm:h-[60vh] bg-cream rounded-t-4xl sm:rounded-4xl shadow-lift flex flex-col animate-sheet-up">
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-charcoal/5">
-              <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
-                {(() => {
-                  const Icon = iconFor(professional.type);
-                  return <Icon size={16} className="text-primary-dark" />;
-                })()}
-              </span>
-              <p className="font-semibold text-charcoal flex-1">{professional.name}</p>
-              {/* V9 (QA 9.0): "alongside sending texts, the client should be
-                  able to send voice notes and attach files/pictures as well
-                  as video/voice call" */}
-              <button
-                onClick={() => setCallMode("voice")}
-                aria-label="Voice call"
-                className="tap w-8 h-8 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft"
-              >
-                <Phone size={16} />
-              </button>
-              <button
-                onClick={() => setCallMode("video")}
-                aria-label="Video call"
-                className="tap w-8 h-8 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft"
-              >
-                <Video size={17} />
-              </button>
-            </div>
-            <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3">
-              {messages.map((m, i) => (
-                <div key={i} className={clsx("flex", m.from === "me" ? "justify-end" : "justify-start")}>
-                  <div
-                    className={clsx(
-                      "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm flex items-center gap-2",
-                      m.from === "me" ? "bg-primary text-white" : "bg-cream-card text-charcoal"
-                    )}
-                  >
-                    {m.text}
-                    {m.attachment && (
-                      <>
-                        <FileText size={15} className="shrink-0" /> {m.attachment}
-                      </>
-                    )}
-                    {m.voiceNoteSec !== undefined && (
-                      <>
-                        <Mic size={15} className="shrink-0" /> Voice note · 0:
-                        {String(m.voiceNoteSec).padStart(2, "0")}
-                      </>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="flex items-center gap-2 px-4 py-3 border-t border-charcoal/5">
-              {/* QA 12.0: "attach files should be contextual... for the
-                  sake of fitness related content. By no means should you
-                  be able to upload anything besides that."
-
-                  IMAGES ONLY, matching `message-attachments` — see the fuller
-                  note on the same input in MessagesTab. This offered
-                  `video/*`, which no bucket accepts; the QA line it came from
-                  is about video CALLING, implemented separately as
-                  `setCallMode`. Audio stays off the list because voice notes
-                  are recorded rather than picked as a file. */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp,.jpg,.png,.webp"
-                className="hidden"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file && /^image\//.test(file.type)) sendAttachment(file);
-                  e.target.value = "";
-                }}
-              />
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                aria-label="Attach file or picture"
-                className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 hover:bg-cream-soft"
-              >
-                <Paperclip size={16} />
-              </button>
-              {recording ? (
-                <div className="flex-1 flex items-center gap-2 rounded-full bg-teal-pale px-4 py-2.5">
-                  <span className="w-2 h-2 rounded-full bg-teal animate-pulse" />
-                  <span className="text-sm font-semibold text-teal-dark">Recording… 0:{String(recordSec).padStart(2, "0")}</span>
-                </div>
-              ) : (
-                <input
-                  value={messageText}
-                  onChange={(e) => setMessageText(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && sendMessage()}
-                  placeholder="Message…"
-                  className="flex-1 rounded-full bg-cream-card border border-charcoal/10 px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/15"
-                />
-              )}
-              <button
-                onClick={toggleRecording}
-                aria-label={recording ? "Stop recording" : "Record voice note"}
-                className={clsx(
-                  "tap w-10 h-10 rounded-full flex items-center justify-center shrink-0",
-                  recording ? "bg-teal text-white" : "text-charcoal-soft hover:bg-cream-soft"
-                )}
-              >
-                {recording ? <Square size={14} /> : <Mic size={16} />}
-              </button>
-              {!recording && (
-                <button
-                  onClick={sendMessage}
-                  className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shrink-0"
-                >
-                  <Send size={15} />
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {callMode && (
-        <div className="fixed inset-0 z-[60] flex flex-col items-center justify-center bg-charcoal text-cream">
-          <span className="w-24 h-24 rounded-full bg-primary/30 flex items-center justify-center mb-6 animate-pulse-ring">
-            {(() => {
-              const Icon = iconFor(professional.type);
-              return <Icon size={36} className="text-white" />;
-            })()}
-          </span>
-          <p className="font-display text-xl font-semibold mb-1">{professional.name}</p>
-          <p className="text-sm text-cream/60 mb-10">
-            {callMode === "video" ? "Video calling…" : "Calling…"} (prototype — no real call)
-          </p>
-          <button
-            onClick={() => setCallMode(null)}
-            aria-label="End call"
-            className="tap w-14 h-14 rounded-full bg-[#C0392B] flex items-center justify-center"
-          >
-            <X size={22} />
-          </button>
-        </div>
       )}
 
       <BottomSheet open={hireOpen} onClose={() => setHireOpen(false)} title={`Hire ${professional.name.split(" ")[0]}`}>

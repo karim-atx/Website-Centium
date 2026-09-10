@@ -6,6 +6,7 @@ import { ChevronRight, ShieldCheck } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
 import { ConnectedProfessionalDetail } from "./ConnectedProfessionalDetail";
 import { DataSharingSection } from "./DataSharingSection";
+import { MessageProfessionalButton } from "../messages/MessageProfessionalButton";
 import {
   ACCESS_CATEGORIES,
   fetchLinkedProfessionals,
@@ -137,6 +138,24 @@ export const DataSharingSummary: React.FC = () => {
             at all when the professional has written no bio, which is the
             common case today. */}
         {openFor && <ConnectedProfessionalDetail professionalId={openFor.professionalId} />}
+        {/* THE ACTIVE-RELATIONSHIP ENTRY POINT, and it sits here rather than
+            inside ConnectedProfessionalDetail on purpose: that component
+            renders null when the professional has written no bio, which is the
+            common case, and whether a client can message the person they have
+            hired must not depend on whether that person filled in a profile
+            field.
+
+            No button existed here until now, and the reason was explicit —
+            real messaging did not exist, and a button opening a local-only
+            mock is a promise with no delivery behind it (see 56014ab). That
+            condition is gone. */}
+        {openFor && (
+          <MessageProfessionalButton
+            professionalId={openFor.professionalId}
+            firstName={openFor.name.split(" ")[0]}
+            className="mb-5"
+          />
+        )}
         {openFor && <DataSharingSection professionalId={openFor.professionalId} />}
       </BottomSheet>
     </div>
