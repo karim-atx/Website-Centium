@@ -62,6 +62,7 @@ export default {
         status: {
           good: "rgb(var(--c-status-good) / <alpha-value>)",
           "good-bg": "rgb(var(--c-status-good-bg) / <alpha-value>)",
+          "good-deep": "rgb(var(--c-status-good-deep) / <alpha-value>)",
           high: "rgb(var(--c-status-high) / <alpha-value>)",
           "high-bg": "rgb(var(--c-status-high-bg) / <alpha-value>)",
           low: "rgb(var(--c-status-low) / <alpha-value>)",

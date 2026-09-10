@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, CheckCheck, ImageIcon, Mic, Paperclip, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, Clock, ImageIcon, Mic, Paperclip, Send, Trash2 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useUnread } from "../../context/UnreadContext";
 import { usePoll } from "../../hooks/usePoll";
@@ -53,6 +53,21 @@ export const ThreadView: React.FC<{
   const endRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [viewing, setViewing] = useState<string | null>(null);
+  /**
+   * The message currently in flight, as a rendering concern only.
+   *
+   * NO ID, AND NEVER IN `messages`. An optimistic entry with a fabricated id
+   * is the dual-id-space problem this messaging work has avoided since the
+   * first commit — the next poll either duplicates it or cannot recognise it.
+   * This is a separate value rendered after the list and discarded either way,
+   * so there is nothing to reconcile.
+   *
+   * It matters most for attachments and voice notes, where an upload can take
+   * seconds and the composer would otherwise sit silent.
+   */
+  const [pending, setPending] = useState<{ kind: "text" | "photo" | "voice"; text?: string } | null>(
+    null
+  );
 
   // Whether these two may exchange files at all. Asked once, when the thread
   // opens, via the same database function both server-side guards use.
@@ -125,36 +140,51 @@ export const ThreadView: React.FC<{
   usePoll(() => void load(), POLL_MS);
 
   // Only when the count changes, so a poll returning the same history does not
-  // yank the view down while someone is reading back through it.
+  // yank the view down while someone is reading back through it. `pending` is
+  // in here as a boolean rather than the object: it flips exactly twice per
+  // send, so the in-flight bubble scrolls into view when it appears, and a
+  // poll returning identical history still moves nothing.
+  const isSending = !!pending;
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length]);
+  }, [messages.length, isSending]);
 
   const send = async () => {
     const body = draft.trim();
     if (!body || !authUserId || sending) return;
     setSending(true);
     setError(null);
+    // Optimistic, and deliberately NOT a message. `pending` is a rendering
+    // state with no id: it never enters `messages`, so it cannot collide with
+    // a real row, cannot be matched by a poll, and cannot survive a failure as
+    // a phantom. The composer is freed immediately because that is what makes
+    // the send feel finished, and the draft is put back if it was not.
+    setPending({ kind: "text", text: body });
+    setDraft("");
     const result = await sendMessage(thread.id, authUserId, body);
     setSending(false);
+    setPending(null);
     if (!result.ok) {
-      // The draft is deliberately kept. Losing what someone typed because the
-      // network blinked is worse than the failure itself.
+      // The draft is deliberately restored. Losing what someone typed because
+      // the network blinked is worse than the failure itself — clearing it
+      // above is an optimism this has to pay back when the optimism was wrong.
+      setDraft(body);
       setError(result.message);
       return;
     }
     // Appending the returned ROW, not the draft — the id and timestamp are the
     // database's, so the next poll recognises it instead of duplicating it.
     setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
-    setDraft("");
   };
 
   const attach = async (file: File) => {
     if (!authUserId || sending) return;
     setSending(true);
     setError(null);
+    setPending({ kind: "photo" });
     const result = await sendImageAttachment(thread.id, authUserId, file);
     setSending(false);
+    setPending(null);
     if (!result.ok) {
       // Covers a refusal from either door and an ordinary upload failure
       // alike. What matters is that nothing is appended: an image that did not
@@ -215,8 +245,10 @@ export const ThreadView: React.FC<{
 
     setSending(true);
     setError(null);
+    setPending({ kind: "voice" });
     const result = await sendVoiceNote(thread.id, authUserId, capture.file, capture.seconds);
     setSending(false);
+    setPending(null);
     if (!result.ok) {
       setError(result.message);
       return;
@@ -293,15 +325,42 @@ export const ThreadView: React.FC<{
                     on a message you received would be telling you that you
                     read it.
 
-                    TWO STATES, NOT THREE. "Delivered" would need a
-                    delivered_at column and a write path of its own, since
-                    nothing in a polling system records that a client fetched a
-                    row; read_at cannot stand in for it without conflating two
-                    different facts. Deferred to its own task rather than
-                    faked here. */}
+                    SENT AND READ, WITH NO "DELIVERED" BETWEEN THEM. A delivered
+                    state was scoped and deliberately dropped: the only place a
+                    recipient's client reliably touches the server on every page
+                    is the 30s unread poll, so "delivered" would mean "their
+                    client fetched this row within the last half minute" — not
+                    that their device received it, and not that anyone was
+                    there. RLS would at least keep the sender from stamping
+                    their own message, so it would not be a lie about WHO, but
+                    it would be a weak claim wearing a confident icon. It is
+                    worth building on real Realtime events and not before.
+
+                    NOT BLUE, AND THE COLOUR WAS MEASURED RATHER THAN CHOSEN. A
+                    blue read-tick belongs to apps whose sent bubble is white or
+                    pale green; this one is `primary`, a mid-toned lavender, and
+                    every accent in this palette was designed for light grounds
+                    and therefore vanishes on it — sky 1.45:1, teal 1.30, gold
+                    1.05, and status-good, the app's OWN confirmation colour,
+                    only 1.64. None clear the 3:1 WCAG asks of a graphical
+                    object, and most are fainter than the body text beside them.
+
+                    So `status-good-deep` exists: the same hue as status-good,
+                    darkened until it works on a saturated ground. 4.02:1 in
+                    light and 3.67:1 in dark, which is why it needs no per-theme
+                    variant. It keeps the confirmation meaning the palette
+                    already assigns to that green instead of inventing a
+                    signal.
+
+                    SHAPE CARRIES IT ANYWAY — one tick against two — so the
+                    state survives greyscale, colour blindness, and a 13px
+                    icon where hue is barely perceptible. The colour is
+                    reinforcement, not the message. */}
                 {mine && (
                   <span
-                    className="flex items-center justify-end gap-1 mt-1 opacity-70"
+                    className={`flex items-center justify-end gap-1 mt-1 ${
+                      m.readAt ? "text-status-good-deep" : "opacity-60"
+                    }`}
                     title={m.readAt ? "Read" : "Sent"}
                   >
                     {m.readAt ? <CheckCheck size={13} /> : <Check size={13} />}
@@ -311,6 +370,26 @@ export const ThreadView: React.FC<{
             </div>
           );
         })}
+        {/* The in-flight message, rendered after the real ones and outside the
+            list. Dimmed and clock-ticked so it reads as not-yet-landed rather
+            than as a message that arrived looking odd. */}
+        {pending && (
+          <div className="flex justify-end">
+            <div className="max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words bg-primary text-white dark:text-[#0D0B1A] opacity-60">
+              {pending.kind === "text" ? (
+                pending.text
+              ) : (
+                <span className="flex items-center gap-2">
+                  {pending.kind === "photo" ? <ImageIcon size={15} /> : <Mic size={15} />}
+                  {pending.kind === "photo" ? "Photo" : "Voice note"}
+                </span>
+              )}
+              <span className="flex items-center justify-end gap-1 mt-1 opacity-70" title="Sending">
+                <Clock size={13} />
+              </span>
+            </div>
+          </div>
+        )}
         <div ref={endRef} />
       </div>
 

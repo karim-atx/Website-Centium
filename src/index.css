@@ -52,6 +52,13 @@
      status colour actually adapts in dark mode. */
   --c-status-good: 63 145 101;
   --c-status-good-bg: 227 243 233;
+  /* A read receipt sits INSIDE a bg-primary bubble, and every accent in this
+     palette is mid-toned like that surface, so all of them vanish on it:
+     status-good measures 1.64:1 there, teal 1.30, gold 1.05. This is the same
+     hue as status-good, darkened until it clears 3:1 — 4.02:1 in light, 3.67:1
+     in dark, so it needs no per-theme variant. Confirmation semantics that are
+     actually legible on a saturated ground. */
+  --c-status-good-deep: 20 80 50;
   --c-status-high: 192 57 43;
   --c-status-high-bg: 251 231 228;
   --c-status-low: 58 118 176;
