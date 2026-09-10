@@ -701,6 +701,33 @@ Not fixable from the aftermath: an unchanged row leaves nothing to inspect. It
 needs a reproduction with the network tab open, or an instrumented write that
 logs the PostgREST response alongside the affected row count.
 
+**The toggle path is now instrumented, so the next sighting leaves evidence.**
+Every attempt logs to the console under `[consent-toggle]` — an `attempt` line
+and a matching `outcome` line paired by id, plus `skipped` when the in-flight
+guard declines one. Between them they carry the timestamp, category, requested
+and previous values, the write's status and message, whether the checkmark was
+shown, and timing: milliseconds since the sheet opened, since the previous
+attempt, and for the write itself.
+
+**What to look for if it happens again:**
+
+- **No `[consent-toggle]` line at all** — the click never reached the handler.
+  That is the leading hypothesis and nothing else in the log would say so;
+  success is logged precisely so that an absence is readable.
+- **Two attempts about 1ms apart with DIVERGENT outcomes** — the first real
+  evidence of an actual bug. Worth capturing in full.
+- **Two attempts about 1ms apart with MATCHING outcomes** — the already-known
+  same-tick race, and harmless. It happens because `saving` is React state and
+  `setSaving` has not updated the closure by the time the second click runs, so
+  the guard does not catch it. Confirmed still present and still idempotent
+  when the logging was added; not a lead.
+- **An `attempt` with no `outcome`** — the request never settled, which is a
+  different fault from one that resolved with an error.
+
+`console.info` rather than warn or error, and rather than debug: a successful
+toggle is not a problem, and debug is hidden by default in most consoles, which
+would defeat the point. It logs nothing until a toggle is actually used.
+
 ### `HealthMetricsTab`'s row summary names only what it renders
 
 The collapsed client row read "Not sharing health data" from
