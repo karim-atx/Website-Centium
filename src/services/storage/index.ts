@@ -143,26 +143,46 @@ export async function getStorageUsage(): Promise<StorageUsageResult> {
 }
 
 /**
- * SQLSTATE raised by the cap trigger, and the stable head of its message.
+ * SQLSTATE raised by the cap trigger, and a message prefix kept for later.
  *
- * BOTH ARE NEEDED, AND THE REASON IS WORTH READING BEFORE SIMPLIFYING THIS.
- * The convention elsewhere is to match the code and never the text —
- * `error.code === "ATX03"` in professional-profile, for instance. That works
- * because those errors come back through PostgREST, which puts the SQLSTATE on
+ * FOUR BRANCHES, AND A REAL CAP VIOLATION CHANGED WHICH ONE MATTERS. The
+ * convention elsewhere is to match the code and never the text —
+ * `error.code === "ATX03"` in professional-profile — which works because those
+ * errors come back through PostgREST, and PostgREST puts the SQLSTATE on
  * `PostgrestError.code`.
  *
  * An upload does not go through PostgREST. It goes to the Storage API, whose
- * client returns a `StorageError` carrying `message`, `status` and
- * `statusCode` — there is no `code` field at all. And in Postgres the SQLSTATE
- * is separate from the message, so `using errcode = 'ATX04'` does not put the
- * string "ATX04" into the text either.
+ * client returns a `StorageError` whose `code` holds the Storage API's own
+ * vocabulary ("AccessDenied" and the like) and never the Postgres SQLSTATE.
  *
- * So the code is checked wherever it might appear, in case the Storage API
- * propagates it now or later, and the message is checked for the fixed leading
- * phrase as the fallback that actually fires today. What is NOT matched is any
- * of the numbers: the message ends in byte counts that change on every call,
- * and only the constant prefix is treated as a contract. `redemption` already
- * does the same belt-and-braces for ATX02.
+ * WHAT ACTUALLY FIRES IS `message.includes("ATX04")`. Verified against a real
+ * violation triggered on staging: the Storage API discards the trigger's
+ * message and substitutes its own — "database error, code: ATX04" — which
+ * carries the code as plain text. So the SQLSTATE does reach this function,
+ * just in the message rather than on a field named for it.
+ *
+ * `CAP_MESSAGE_PREFIX` IS UNREACHABLE TODAY AND KEPT DELIBERATELY. The
+ * trigger's own wording ("storage cap exceeded: this upload needs N bytes…")
+ * does not survive that substitution, so this branch never runs — which is
+ * intent, not oversight, and not dead code to be tidied away. It costs one
+ * comparison on a path that has already failed, and it starts working the day
+ * the Storage API stops rewriting messages: precisely the change nobody would
+ * notice until a user was shown the wrong error. The `code` and `statusCode`
+ * checks are the same hedge pointing the other way — unreachable now, correct
+ * the moment a SQLSTATE is propagated properly.
+ *
+ * What no branch matches is the byte counts, which change on every call. Only
+ * the constant code string is treated as a contract. `redemption` does the
+ * same belt-and-braces for ATX02.
+ *
+ * FOR ANYONE RE-DERIVING THIS FROM A PROBE: an RLS violation through this same
+ * API forwards its Postgres message verbatim ("new row violates row-level
+ * security policy"), which makes it look as though messages are passed
+ * through. They are not, uniformly — errors the Storage API recognises and
+ * errors it does not are handled differently, and ATX04 is in the second
+ * group. An earlier version of this comment reasoned from that probe and got
+ * the conclusion backwards, arguing against the branch that turned out to be
+ * the working one.
  */
 const CAP_ERRCODE = "ATX04";
 const CAP_MESSAGE_PREFIX = "storage cap exceeded";
