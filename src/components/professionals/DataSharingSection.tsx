@@ -6,6 +6,12 @@ import { ShieldCheck, Info, Check } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
 import { formatDisplayDate } from "../../utils/date";
 import {
+  beginToggleAttempt,
+  elapsedSince,
+  logToggle,
+  markSharingOpened,
+} from "../../services/consent/diagnostics";
+import {
   ACCESS_CATEGORIES,
   fetchLinkedProfessionals,
   fetchMyGrants,
@@ -65,6 +71,10 @@ export const DataSharingSection: React.FC<{
     []
   );
 
+  // Timing baseline for the toggle diagnostics — see services/consent/
+  // diagnostics.ts for what this is chasing and why success is logged too.
+  useEffect(markSharingOpened, []);
+
   useEffect(() => {
     if (!authUserId) {
       setLoading(false);
@@ -95,12 +105,29 @@ export const DataSharingSection: React.FC<{
   }, [authUserId]);
 
   const toggle = async (professionalId: string, category: AccessCategory, next: boolean) => {
-    if (!authUserId) return;
+    // Allocated before the first early return, so "the handler ran" is
+    // recorded even when it then declines to do anything.
+    const probe = beginToggleAttempt();
+
+    if (!authUserId) {
+      logToggle("skipped", { attempt: probe.id, category, reason: "no session" });
+      return;
+    }
     const key = `${professionalId}:${category}`;
     // Guarded here rather than by disabling the switch: a consent toggle that
     // greys out mid-write reads as "you may not change this", which is the
     // wrong message for a control the client owns outright.
-    if (saving === key) return;
+    if (saving === key) {
+      // Worth its own line: a suppressed attempt is what a rapid double-click
+      // looks like from in here, and that was a real hypothesis once.
+      logToggle("skipped", {
+        attempt: probe.id,
+        category,
+        reason: "write already in flight",
+        msSinceLastAttempt: probe.msSinceLastAttempt,
+      });
+      return;
+    }
     setSaving(key);
     setError(null);
 
@@ -108,9 +135,31 @@ export const DataSharingSection: React.FC<{
     // consent change must never leave the switch showing the state the user
     // asked for but the database refused.
     const previous = grants[professionalId]?.[category];
+    logToggle("attempt", {
+      attempt: probe.id,
+      at: new Date(probe.startedAt).toISOString(),
+      category,
+      requested: next,
+      previous,
+      msSinceOpened: probe.msSinceOpened,
+      msSinceLastAttempt: probe.msSinceLastAttempt,
+    });
     setGrants((g) => ({ ...g, [professionalId]: { ...g[professionalId], [category]: next } }));
 
     const result = await setGrant(authUserId, professionalId, category, next);
+    // Paired with the line above by `attempt`. `checkmark` is the handler's
+    // own decision rather than an observation of the rendered UI — it is the
+    // only thing that sets savedKey, so a checkmark appearing when this says
+    // false would mean a second code path exists, which is itself the finding.
+    logToggle("outcome", {
+      attempt: probe.id,
+      category,
+      requested: next,
+      status: result.status,
+      message: result.status === "error" ? result.message : undefined,
+      checkmark: result.status === "ok",
+      ms: elapsedSince(probe),
+    });
     setSaving(null);
     if (result.status === "error") {
       setGrants((g) => ({ ...g, [professionalId]: { ...g[professionalId], [category]: previous } }));
