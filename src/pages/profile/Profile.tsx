@@ -4,6 +4,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { GoalsEditSheet } from "../../components/profile/GoalsEditSheet";
+import { ProfessionalBioCard } from "../../components/profile/ProfessionalBioCard";
 import { ActivityLevelSheet } from "../../components/profile/ActivityLevelSheet";
 import { CertificationSheet } from "../../components/profile/CertificationSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -252,18 +253,7 @@ export default function Profile() {
 
       {/* QA 12.0: "Reorganize the profile tab, The bio should be first
           followed by rating/reviews then certification. then credentials." */}
-      {user.accountType === "professional" && (
-        <Card className="mb-6 mt-4 animate-fade-slide-up">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Bio</p>
-          <textarea
-            value={user.professionalBio ?? ""}
-            onChange={(e) => updateProfile({ professionalBio: e.target.value })}
-            placeholder="This will appear to clients on your Explore listing."
-            rows={3}
-            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-          />
-        </Card>
-      )}
+      {user.accountType === "professional" && <ProfessionalBioCard />}
 
       {/* V7 (QA 7.0): surfaces ratings/reviews clients have left for this
           professional — the same review a client submits from the "Your

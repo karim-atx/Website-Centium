@@ -186,20 +186,30 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
         {fields.map((f) => (
           <label key={f.key} className="block">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{f.label}</span>
+            {/* DISABLED WHILE LOADING, and this is about losing work rather
+                than polish. The fields render before the read completes, and
+                the effect finishes by calling setDraft(draftFrom(profile)) —
+                so anything typed in that window is silently overwritten by
+                what the server had. The typing looked accepted, and the save
+                that followed would write whatever the reset left behind.
+                Nothing may be typed into a form that is about to be
+                replaced. */}
             {f.multiline ? (
               <textarea
                 rows={3}
                 value={draft[f.key]}
+                disabled={loading}
                 onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
-                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none disabled:opacity-60"
               />
             ) : (
               <input
                 value={draft[f.key]}
+                disabled={loading}
                 onChange={(e) => setDraft((d) => ({ ...d, [f.key]: e.target.value }))}
                 placeholder={f.placeholder}
-                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
               />
             )}
           </label>
@@ -207,8 +217,12 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
 
         {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
 
+        {/* The label names every disabled state. A disabled button gives no
+            feedback when pressed, so "Save details" sitting inert during the
+            initial read reads as a broken control rather than a busy one —
+            someone taps it, nothing happens, and nothing explains why. */}
         <Button fullWidth onClick={() => void save()} disabled={saving || loading}>
-          {saving ? "Saving…" : saved ? "Saved" : "Save details"}
+          {loading ? "Loading…" : saving ? "Saving…" : saved ? "Saved" : "Save details"}
         </Button>
 
         <div className="pt-4 border-t border-charcoal/[0.08]">
