@@ -967,6 +967,50 @@ custom foods and widgets have no server copy, so in the original bug they were
 gone for good. Any future change in this area should assume "it recovers on
 reconnect" is true only of server-backed data.
 
+### `professionalBio` is a dead field, and a landmine for the next bio surface
+
+**There are two things called "bio" and only one of them is real.**
+
+| | `user.professionalBio` | `professional_profiles.bio` |
+| --- | --- | --- |
+| Lives in | `localStorage`, via `updateProfile` (`setUser`) | The database |
+| Written by | **nothing, as of `a317522`** | `saveMyProfile` |
+| Read by | **nothing, ever** | Explore listing, `connected_professional_summary` |
+
+The Profile tab's bio field used to write the first one. It saved on every
+keystroke, had no save control, and its placeholder said *"This will appear to
+clients on your Explore listing"* — which it could not, because nothing has
+ever read `professionalBio`. A professional could write a bio, watch it survive
+reloads, and have no client ever see it. That field now writes
+`professional_profiles.bio` like the public listing sheet does, so the two are
+one bio with two entry points.
+
+**Why the type wasn't deleted.** `professionalBio` is still declared on
+`UserProfile`, unread and unwritten. Removing it is tempting and would be
+wrong: it is persisted inside `centium-state:user`, so real values may sit in
+the browsers of anyone who used the old field. Deleting the declaration
+orphans that text — still on disk, no longer reachable by any code that could
+migrate or display it. It stays as an inert field until either someone writes
+a migration that reads it into `professional_profiles.bio` on next sign-in, or
+enough time passes that nobody's local copy matters.
+
+**The landmine, stated plainly for whoever adds the next bio-editing
+surface:** `professionalBio` is still there, still typed, still autocompletes,
+and binding a new textarea to it through `updateProfile` will look exactly like
+the surrounding code and work perfectly in local testing. It will persist
+across reloads. It will simply never reach the database or any reader. **A bio
+editor must call `saveMyProfile`**, and the same applies to specialty and
+location, which live on the same row.
+
+Worth knowing how this was found, because the symptom pointed somewhere else
+entirely: a bio edit "silently failed to save", which read as a write failure
+and sent an investigation into `saveMyProfile` looking for a missing row-count
+check. There wasn't one — `saveMyProfile` uses update-then-insert and checks
+the row count, verified against the database, including that a non-owner UPDATE
+returns zero rows with `error: null` and the INSERT fall-through then surfaces
+`42501` visibly. Nothing was failing. The write went exactly where the code
+sent it, which was nowhere.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
