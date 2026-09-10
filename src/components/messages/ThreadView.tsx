@@ -320,10 +320,22 @@ export const ThreadView: React.FC<{
                     </button>
                   )
                 )}
-                {/* SENDER SIDE ONLY. A tick answers "did it reach them", which
-                    is a question only the person who sent it has — showing one
-                    on a message you received would be telling you that you
-                    read it.
+                {/* ON EVERY BUBBLE, NOT ONLY YOUR OWN — a deliberate departure
+                    from the usual convention, which puts ticks sender-side
+                    because "did it reach them" is the sender's question. Here
+                    each message reports its OWN state to whoever is looking, so
+                    one you received shows as read the moment opening the thread
+                    marks it. That is the honest reading of the data rather than
+                    a glitch: mark-as-read runs on load, so by the time the tick
+                    is on screen it is telling the truth.
+
+                    THE COLOURS ONLY SURVIVE THIS MOVE BECAUSE THE SENT TICK
+                    SETS NO COLOUR OF ITS OWN. It inherits currentColor — white
+                    inside your `primary` bubble, charcoal inside a received
+                    `cream-soft` one — measuring 1.72:1 and 4.20:1. Hard-coding
+                    it white to "match the design" would drop the received side
+                    to 1.05:1 and make it disappear. The read green is explicit
+                    and works on both grounds: 4.02:1 and 8.67:1.
 
                     SENT AND READ, WITH NO "DELIVERED" BETWEEN THEM. A delivered
                     state was scoped and deliberately dropped: the only place a
@@ -356,16 +368,14 @@ export const ThreadView: React.FC<{
                     state survives greyscale, colour blindness, and a 13px
                     icon where hue is barely perceptible. The colour is
                     reinforcement, not the message. */}
-                {mine && (
-                  <span
-                    className={`flex items-center justify-end gap-1 mt-1 ${
-                      m.readAt ? "text-status-good-deep" : "opacity-60"
-                    }`}
-                    title={m.readAt ? "Read" : "Sent"}
-                  >
-                    {m.readAt ? <CheckCheck size={13} /> : <Check size={13} />}
-                  </span>
-                )}
+                <span
+                  className={`flex items-center justify-end gap-1 mt-1 ${
+                    m.readAt ? "text-status-good-deep" : "opacity-60"
+                  }`}
+                  title={m.readAt ? "Read" : "Sent"}
+                >
+                  {m.readAt ? <CheckCheck size={13} /> : <Check size={13} />}
+                </span>
               </div>
             </div>
           );
