@@ -8,6 +8,7 @@ import { ContactUsSheet } from "../../components/profile/ContactUsSheet";
 import { NotificationsSheet } from "../../components/profile/NotificationsSheet";
 import { AccessibilitySheet } from "../../components/profile/AccessibilitySheet";
 import { PrivacySheet } from "../../components/profile/PrivacySheet";
+import { StorageUsageCard } from "../../components/profile/StorageUsageCard";
 import { TermsOfServiceSheet } from "../../components/profile/TermsOfServiceSheet";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
@@ -194,6 +195,10 @@ export default function Settings() {
           </div>
         </>
       )}
+
+      {/* Above General rather than inside it: the rows below are all controls
+          that open something, and this opens nothing — it is a reading. */}
+      <StorageUsageCard />
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         {t("General")}

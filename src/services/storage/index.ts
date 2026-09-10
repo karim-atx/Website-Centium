@@ -84,9 +84,113 @@ export interface UploadResult {
 }
 
 function humanSize(bytes: number): string {
-  return bytes >= 1024 * 1024
-    ? `${Math.round(bytes / (1024 * 1024))} MB`
-    : `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  const mb = bytes / (1024 * 1024);
+  // GB only above a gigabyte, so every existing per-file message is unchanged.
+  // One decimal under 10 GB, because the cap is 2 GB and rounding whole would
+  // report "2 GB used of 2 GB" to someone with 300 MB of headroom left.
+  if (mb >= 1024) {
+    const gb = mb / 1024;
+    return `${gb >= 10 ? Math.round(gb) : Math.round(gb * 10) / 10} GB`;
+  }
+  if (bytes >= 1024 * 1024) return `${Math.round(mb)} MB`;
+  return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+}
+
+// ---------------------------------------------------------------------------
+// The aggregate cap
+// ---------------------------------------------------------------------------
+
+export interface StorageUsage {
+  usedBytes: number;
+  capBytes: number;
+  remainingBytes: number;
+  /** 0–1. Convenience for a meter; derived here so callers agree on it. */
+  fraction: number;
+}
+
+export type StorageUsageResult =
+  | { ok: true; usage: StorageUsage }
+  | { ok: false; message: string };
+
+/**
+ * How much Storage this account holds, against its cap.
+ *
+ * Reads `storage_usage()`, which resolves the caller from auth.uid() and
+ * returns used, cap and headroom. Nothing else in the app can compute this:
+ * `profiles.storage_bytes_used` is maintained by a trigger on storage.objects
+ * and is in no client UPDATE grant, which is what makes it trustworthy.
+ */
+export async function getStorageUsage(): Promise<StorageUsageResult> {
+  const { data, error } = await supabase.rpc("storage_usage");
+  if (error) {
+    console.error("[storage] Could not read usage:", error.message);
+    return { ok: false, message: "Couldn't load your storage usage." };
+  }
+  const row = data?.[0];
+  if (!row) return { ok: false, message: "Couldn't load your storage usage." };
+
+  const usedBytes = Number(row.used_bytes);
+  const capBytes = Number(row.cap_bytes);
+  return {
+    ok: true,
+    usage: {
+      usedBytes,
+      capBytes,
+      remainingBytes: Number(row.remaining_bytes),
+      fraction: capBytes > 0 ? Math.min(1, usedBytes / capBytes) : 0,
+    },
+  };
+}
+
+/**
+ * SQLSTATE raised by the cap trigger, and the stable head of its message.
+ *
+ * BOTH ARE NEEDED, AND THE REASON IS WORTH READING BEFORE SIMPLIFYING THIS.
+ * The convention elsewhere is to match the code and never the text —
+ * `error.code === "ATX03"` in professional-profile, for instance. That works
+ * because those errors come back through PostgREST, which puts the SQLSTATE on
+ * `PostgrestError.code`.
+ *
+ * An upload does not go through PostgREST. It goes to the Storage API, whose
+ * client returns a `StorageError` carrying `message`, `status` and
+ * `statusCode` — there is no `code` field at all. And in Postgres the SQLSTATE
+ * is separate from the message, so `using errcode = 'ATX04'` does not put the
+ * string "ATX04" into the text either.
+ *
+ * So the code is checked wherever it might appear, in case the Storage API
+ * propagates it now or later, and the message is checked for the fixed leading
+ * phrase as the fallback that actually fires today. What is NOT matched is any
+ * of the numbers: the message ends in byte counts that change on every call,
+ * and only the constant prefix is treated as a contract. `redemption` already
+ * does the same belt-and-braces for ATX02.
+ */
+const CAP_ERRCODE = "ATX04";
+const CAP_MESSAGE_PREFIX = "storage cap exceeded";
+
+function isCapViolation(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const e = error as { code?: unknown; statusCode?: unknown; message?: unknown };
+  if (e.code === CAP_ERRCODE || e.statusCode === CAP_ERRCODE) return true;
+  const message = typeof e.message === "string" ? e.message : "";
+  return message.includes(CAP_ERRCODE) || message.toLowerCase().includes(CAP_MESSAGE_PREFIX);
+}
+
+/**
+ * The sentence shown when an upload is refused for want of space.
+ *
+ * The figures come from `storage_usage()` rather than from the error text.
+ * The error does carry them, but parsing numbers out of a message is exactly
+ * the coupling the SQLSTATE convention exists to avoid, and a second round
+ * trip on a path that has already failed costs nothing.
+ */
+async function capExceededMessage(): Promise<string> {
+  const usage = await getStorageUsage();
+  if (!usage.ok) {
+    return "You're out of storage space. Remove a file you no longer need, then try again.";
+  }
+  return `You're out of storage space — ${humanSize(usage.usage.usedBytes)} of ${humanSize(
+    usage.usage.capBytes
+  )} used. Remove a file you no longer need, then try again.`;
 }
 
 /**
@@ -203,6 +307,13 @@ export async function uploadPrivateFile(params: {
 
   if (error) {
     console.error("[storage] Upload failed:", error.message);
+    // Being out of space is not a network problem, and saying it is makes the
+    // failure permanent from the user's side: the generic message asks them to
+    // retry, and every retry fails identically because nothing about their
+    // connection was ever wrong.
+    if (isCapViolation(error)) {
+      return { ok: false, message: await capExceededMessage() };
+    }
     return { ok: false, message: "That file couldn't be uploaded. Check your connection and try again." };
   }
   return { ok: true, path };
