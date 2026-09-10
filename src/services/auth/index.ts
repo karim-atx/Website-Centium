@@ -127,11 +127,37 @@ export type OAuthResult = { status: "redirecting" } | { status: "error"; message
  * Google needs no email-confirmation step — Google itself is the
  * verification. This navigates away from the page; the session lands on the
  * return trip and is picked up by the auth listener.
+ *
+ * ALWAYS ASKS WHICH ACCOUNT, and that is deliberate friction. Without
+ * `prompt`, Google silently reuses the browser's remembered account and skips
+ * its own chooser — so signing out of Centium and pressing this button again
+ * lands straight back on the dashboard, and there is no way to reach a
+ * different Google account from inside the app at all.
+ *
+ * OUR SIGN-OUT IS NOT THE PROBLEM, and was checked before this was written:
+ * it clears the session, deletes the `sb-*` auth cookie and wipes the local
+ * cache. Google's session lives on accounts.google.com, a different origin,
+ * so no amount of correctness here can end it.
+ *
+ * WHY EVERY TIME rather than only after an app sign-out. Forcing the chooser
+ * only after someone signs out covers the careful case and misses the real
+ * one: with "Remember me" off, closing the browser ends our session without
+ * any sign-out happening, so the next person to open the app and press this
+ * button would be signed straight into the previous person's account. That is
+ * the configuration a cautious user on a shared machine actually picks.
+ *
+ * The cost is one tap; `select_account` shows the chooser without
+ * re-requesting scopes (that would be `prompt=consent`). The thing it
+ * prevents is a stranger reading someone's lab results and editing who they
+ * are shared with.
  */
 export async function signInWithGoogle(): Promise<OAuthResult> {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: authRedirectUrl() },
+    options: {
+      redirectTo: authRedirectUrl(),
+      queryParams: { prompt: "select_account" },
+    },
   });
 
   if (error) return { status: "error", message: describeAuthError(error) };
