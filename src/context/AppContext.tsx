@@ -111,6 +111,7 @@ import {
   getImagingRecords,
 } from "../services/imaging";
 import { deleteLabPanel, getBloodMarkers, getLabReports, recordPanel } from "../services/labs";
+import { touchLastActive } from "../services/activity";
 import { getWorkoutSessions, saveWorkoutSession as saveWorkoutSessionRemote } from "../services/workout/log";
 import { todayLocal } from "../utils/date";
 
@@ -956,6 +957,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // re-render; a ref would update silently and readiness would never become
   // visible to the guards.
   const profileReady = authReady && hydratedFor === authUserId;
+
+  // --- activity stamping ---------------------------------------------------
+  //
+  // Records the account as in use, on open and on every foreground-resume.
+  // Nothing reads last_active_at yet; this ships first so that when the
+  // inactive-account work lands there is real history behind it rather than a
+  // column that only starts meaning something from that day onward.
+  //
+  // RESUME MATTERS AS MUCH AS OPEN, and arguably more. A phone that keeps this
+  // tab alive for weeks produces exactly one cold open, so an app-open-only
+  // signal would show someone as inactive throughout genuine daily use — which
+  // is precisely the population an inactivity sweep would then act on.
+  //
+  // GATED ON profileReady, NOT JUST ON A SESSION. The RPC raises 'profile not
+  // found' rather than creating a row, so firing it in the window between a
+  // session appearing and ensureProfileRow finishing would throw on a first
+  // sign-up. profileReady already means "this user's profile has been read",
+  // which is the same condition every other loader here waits for.
+  //
+  // Its own listeners rather than the day-rollover ones above: that effect is
+  // deliberately auth-agnostic with an empty dependency array, and giving it a
+  // session dependency to carry this would make a well-understood piece of
+  // date handling re-subscribe on every auth change to serve an unrelated
+  // concern. Two cheap listeners are worth less coupling than one.
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    const uid = authUserId;
+
+    touchLastActive(uid);
+    // visibilitychange also fires on the way OUT. Stamping then would record
+    // the moment someone left as activity, which is the opposite of the
+    // signal, so only the visible edge counts.
+    const onWake = () => {
+      if (document.visibilityState === "visible") touchLastActive(uid);
+    };
+    document.addEventListener("visibilitychange", onWake);
+    window.addEventListener("focus", onWake);
+    return () => {
+      document.removeEventListener("visibilitychange", onWake);
+      window.removeEventListener("focus", onWake);
+    };
+  }, [authUserId, profileReady]);
 
   useEffect(() => {
     if (!authReady) return;

@@ -3228,12 +3228,14 @@ export type Database = {
           goals: string[]
           height_cm: number | null
           id: string
+          last_active_at: string
           onboarded: boolean
           phone: string | null
           professional_subtype:
             | Database["public"]["Enums"]["professional_subtype"]
             | null
           sex: Database["public"]["Enums"]["sex"] | null
+          storage_bytes_used: number
           storage_purged_at: string | null
           tracking_preferences: string[]
           updated_at: string
@@ -3254,12 +3256,14 @@ export type Database = {
           goals?: string[]
           height_cm?: number | null
           id: string
+          last_active_at?: string
           onboarded?: boolean
           phone?: string | null
           professional_subtype?:
             | Database["public"]["Enums"]["professional_subtype"]
             | null
           sex?: Database["public"]["Enums"]["sex"] | null
+          storage_bytes_used?: number
           storage_purged_at?: string | null
           tracking_preferences?: string[]
           updated_at?: string
@@ -3280,12 +3284,14 @@ export type Database = {
           goals?: string[]
           height_cm?: number | null
           id?: string
+          last_active_at?: string
           onboarded?: boolean
           phone?: string | null
           professional_subtype?:
             | Database["public"]["Enums"]["professional_subtype"]
             | null
           sex?: Database["public"]["Enums"]["sex"] | null
+          storage_bytes_used?: number
           storage_purged_at?: string | null
           tracking_preferences?: string[]
           updated_at?: string
@@ -5091,12 +5097,14 @@ export type Database = {
           goals: string[]
           height_cm: number | null
           id: string
+          last_active_at: string
           onboarded: boolean
           phone: string | null
           professional_subtype:
             | Database["public"]["Enums"]["professional_subtype"]
             | null
           sex: Database["public"]["Enums"]["sex"] | null
+          storage_bytes_used: number
           storage_purged_at: string | null
           tracking_preferences: string[]
           updated_at: string
@@ -5265,6 +5273,15 @@ export type Database = {
         Args: { p_professional_id: string }
         Returns: boolean
       }
+      reconcile_storage_usage: {
+        Args: { p_user_id?: string }
+        Returns: {
+          actual_bytes: number
+          corrected: boolean
+          stored_bytes: number
+          user_id: string
+        }[]
+      }
       redeem_client_code: {
         Args: { p_code: string }
         Returns: Database["public"]["CompositeTypes"]["redeem_client_code_result"]
@@ -5319,12 +5336,14 @@ export type Database = {
           goals: string[]
           height_cm: number | null
           id: string
+          last_active_at: string
           onboarded: boolean
           phone: string | null
           professional_subtype:
             | Database["public"]["Enums"]["professional_subtype"]
             | null
           sex: Database["public"]["Enums"]["sex"] | null
+          storage_bytes_used: number
           storage_purged_at: string | null
           tracking_preferences: string[]
           updated_at: string
@@ -5381,6 +5400,11 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      storage_cap_bytes: { Args: { p_user_id: string }; Returns: number }
+      storage_object_owner: {
+        Args: { p_bucket: string; p_name: string }
+        Returns: string
+      }
       storage_path_token: {
         Args: { p_index: number; p_name: string }
         Returns: string
@@ -5389,6 +5413,15 @@ export type Database = {
         Args: { p_index: number; p_name: string }
         Returns: string
       }
+      storage_usage: {
+        Args: never
+        Returns: {
+          cap_bytes: number
+          remaining_bytes: number
+          used_bytes: number
+        }[]
+      }
+      touch_last_active: { Args: never; Returns: string }
       trigger_storage_purge: { Args: never; Returns: number }
     }
     Enums: {
