@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { Outlet, useLocation } from "react-router-dom";
+import { OfflineBanner } from "./OfflineBanner";
 import { PendingDeletionBanner } from "./PendingDeletionBanner";
 import { ConsentReviewBanner } from "../professionals/ConsentReviewBanner";
 import { Sidebar } from "./Sidebar";
@@ -23,6 +24,11 @@ export const Layout: React.FC = () => {
       <Sidebar />
       <div className="flex-1 min-w-0">
         <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-28 lg:pb-12">
+          {/* First, because it explains why the other two might not be able to
+              act. A pending deletion cannot be cancelled and consent cannot be
+              answered without a connection, so the reason belongs above the
+              controls it affects. */}
+          <OfflineBanner />
           <PendingDeletionBanner />
           <ConsentReviewBanner />
           <Outlet />

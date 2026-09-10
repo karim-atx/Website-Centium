@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 import type { FoodLogEntry, MealType, ServingUnit } from "../../types";
@@ -124,7 +125,15 @@ function describe(error: PostgrestError): string {
   // failure — reporting it as "sign in again" is what sent the consent bug
   // chasing the wrong cause for an afternoon.
   if (error.code === "42501") return "You don't have permission to do that.";
-  return error.message || "Something went wrong. Please try again.";
+  // NEVER THE RAW MESSAGE. This used to end `return error.message`, which
+  // offline puts "TypeError: Failed to fetch" in front of a user trying to
+  // delete a meal. A network failure arrives here with no code at all — that
+  // absence is the signal, since PostgREST populates one for anything the
+  // database actually rejected.
+  if (isOffline(error)) {
+    return OFFLINE_MESSAGE;
+  }
+  return "Something went wrong. Please try again.";
 }
 
 /**

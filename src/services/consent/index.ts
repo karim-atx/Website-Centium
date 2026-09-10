@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 
@@ -80,7 +81,12 @@ function describe(error: PostgrestError): string {
   if (code === "42501" || /permission denied|row-level security/i.test(message)) {
     return `Data sharing couldn't be saved — the database refused the change. ${message}`;
   }
-  return message || "Could not update data sharing. Try again.";
+  // The 42501 branch above deliberately passes the database's own words
+  // through; this fallback must not. A dropped connection arrives with no code
+  // and produced "TypeError: Failed to fetch" on the app's most
+  // security-sensitive control.
+  if (isOffline(error)) return OFFLINE_MESSAGE;
+  return "Could not update data sharing. Try again.";
 }
 
 export type LinkedProfessionalsResult =
@@ -137,7 +143,9 @@ export async function fetchLinkedProfessionals(): Promise<LinkedProfessionalsRes
   } catch (e) {
     return {
       status: "error",
-      message: e instanceof Error ? e.message : "Could not load your professionals.",
+      // A thrown fetch failure used to surface as "TypeError: Failed to
+      // fetch". Its own text is never shown now -- see isOffline.
+      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load your professionals.",
     };
   }
 }
@@ -221,7 +229,10 @@ export async function fetchMyGrants(clientId: string): Promise<GrantsResult> {
     }
     return { status: "ok", grants, unanswered };
   } catch (e) {
-    return { status: "error", message: e instanceof Error ? e.message : "Could not load your settings." };
+    return {
+      status: "error",
+      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load your settings.",
+    };
   }
 }
 
@@ -288,6 +299,9 @@ export async function setGrant(
     }
     return { status: "error", message: describe(insertError) };
   } catch (e) {
-    return { status: "error", message: e instanceof Error ? e.message : "Could not save that change." };
+    return {
+      status: "error",
+      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not save that change.",
+    };
   }
 }
