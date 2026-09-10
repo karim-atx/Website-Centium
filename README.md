@@ -887,6 +887,40 @@ in the table until someone queries it. The sheet's copy is written to match
 that, saying the team reads reports rather than promising a reply, and it
 should keep saying so until something actually delivers them.
 
+### Losing connectivity is handled; starting offline has never been tested
+
+An audit covered what happens when the network drops **mid-session** and the
+result was better than expected: reads keep working from already-hydrated
+state, nothing crashed across 52 blocked requests, and **no write path gives
+false success** — every one is remote-first, and consent's optimistic toggle
+correctly reverts. The gaps found were copy, not architecture, and are fixed:
+an offline banner, and two services that were showing users
+`TypeError: Failed to fetch`.
+
+**The untested case is the opposite one: opening the app while already
+offline.** Everything above began from a loaded, authenticated session and
+took the network away. A cold start exercises entirely different code — session
+restore from the auth cookie, `ensureProfileRow`, and every hydration effect —
+all of which fail at once, before any of the state the mid-session case relies
+on exists.
+
+**The specific worry is the route guard.** `RequireOnboarded` renders on
+`authReady` and a session. If restoring the session needs a network call that
+fails, the app may conclude there is no session and show the sign-in screen to
+someone who is signed in — who then cannot sign in either, because that also
+needs the network. The cache-clearing effect is the sharper end of the same
+question: it wipes `centium-state:*` when it finds cached account data with no
+session to justify it, and a failed restore looks exactly like that from the
+inside. **If it fires on a cold offline start, a user loses their local cache
+for being on a train.** That is a guess about a code path, not an observation —
+which is the reason this entry exists.
+
+It could not be tested with the method used for the rest: that simulation
+installs itself after the app boots, so it cannot cover the boot. Testing it
+properly means real devtools offline mode, or a device with the network off,
+loading the app cold. Worth doing before assuming offline is handled, because
+the mid-session result says nothing about it.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
