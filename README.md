@@ -750,29 +750,42 @@ The equivalent mismatch in the two capture flows is resolved: as of `5d32baf`
 their inputs derive `accept` from the bucket's own MIME list, so no `image/*`
 or `video/*` remains there. These two are what is left.
 
-### Nothing caps how much one user can store
+### The storage cap is real, and the app calls it a connection problem
 
-Per-object limits are real and server-enforced: every bucket carries a
-`file_size_limit`, so an oversized upload is refused whatever the client does.
-**Aggregate size is entirely unbounded.** No migration contains any size
-accounting — no total-bytes column, no object count, no quota check — and the
-`rate_limiting` migration covers RPC attempts, not uploads or Storage.
+**The aggregate cap now exists**, so the gap this entry originally described is
+closed. `20260910110653_storage_usage_cap.sql` adds
+`profiles.storage_bytes_used`, keeps it in step with `storage.objects` by
+trigger, and rejects an upload that would take the account past
+`storage_cap_bytes()` — 2 GiB for everyone today. Per-object
+`file_size_limit`s still bound any single file on top of that.
 
-Concretely: one client can save unlimited imaging records at up to 25 MB each
-and unlimited lab reports at up to 10 MB each, and nothing anywhere notices.
+**What is left is on this side, and it is a wrong message rather than a missing
+bound.** `uploadPrivateFile` maps every failed upload to the same sentence:
 
-**This needs a number decided rather than guessed, which is why it is written
-down instead of fixed.** A cap is a product and cost decision, and picking one
-unilaterally would either strangle a legitimate user — someone with a genuine
-imaging history can exceed any figure invented casually — or be so high it
-provides no protection. It also needs a decision about what happens when the
-cap is reached: refusing a medical upload is not the same class of action as
-refusing a profile picture, and the answer may differ per bucket.
+> That file couldn't be uploaded. Check your connection and try again.
 
-Worth noting the shape of the risk honestly: this is an abuse and cost ceiling,
-not a live problem. Every object is reachable only by its owner and a consented
-professional, and account deletion now purges all of it (migration
-`20260908175534`). What is missing is a bound, not correctness.
+The cap raises `storage cap exceeded: this upload needs N bytes, M of C are
+already used`. A user who is out of space is therefore told to check their
+connection, and retrying — which is what that sentence asks for — fails
+identically every time with no hint why. Distinguishing the two means matching
+on the raised message, since it arrives as a generic storage error rather than
+a typed code.
+
+**Nothing shows remaining space either.** The migration ships
+`storage_usage()`, returning `used_bytes`, `cap_bytes` and `remaining_bytes`
+for the caller, and no code in this repo calls it. So there is no surface where
+someone can see they are near the limit before an upload fails, which is what
+would make the failure comprehensible rather than surprising.
+
+Worth keeping the shape of the risk in view: this was never a correctness
+problem. Every object is reachable only by its owner and a consented
+professional, and account deletion purges all of it (migration
+`20260908175534`). It was a missing bound, the bound is now there, and what
+remains is telling the truth about it.
+
+*Recorded first as "nothing caps how much one user can store", which was
+accurate when written and stopped being so about an hour later when the cap
+landed in the Database repo.*
 
 ### Two Storage cleanup gaps, both waiting on surfaces that are not wired
 
