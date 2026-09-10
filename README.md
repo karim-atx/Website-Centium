@@ -994,6 +994,12 @@ migrate or display it. It stays as an inert field until either someone writes
 a migration that reads it into `professional_profiles.bio` on next sign-in, or
 enough time passes that nobody's local copy matters.
 
+**Decided: let it lapse.** No real user population exists yet to recover for —
+pre-promotion, no production data — so client-side recovery logic would be
+ongoing complexity for a value almost certainly empty or placeholder across the
+realistic population. Revisit only if real evidence surfaces that a genuine
+professional used this field before the fix.
+
 **The landmine, stated plainly for whoever adds the next bio-editing
 surface:** `professionalBio` is still there, still typed, still autocompletes,
 and binding a new textarea to it through `updateProfile` will look exactly like
