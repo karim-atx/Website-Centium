@@ -85,6 +85,20 @@ export interface Message {
    * states plainly rather than papering over.
    */
   replyToId: string | null;
+  /**
+   * True when this message was passed along rather than written.
+   *
+   * PROVENANCE, NOT PLUMBING. Mechanically a forward is an ordinary message;
+   * this exists so the recipient knows the words are second-hand. That matters
+   * more here than in a general chat app — advice about a dose or a symptom
+   * reads differently depending on whether the person you hired wrote it or
+   * relayed it, and without this the two are indistinguishable.
+   *
+   * IT CARRIES NO LINK TO THE ORIGINAL, deliberately. A pointer would name a
+   * message in a thread the recipient is not in, which they could not read and
+   * should not learn the existence of.
+   */
+  forwarded: boolean;
 }
 
 /**
@@ -255,7 +269,7 @@ export async function fetchMessages(threadId: string): Promise<MessagesResult> {
   const { data, error } = await supabase
     .from("messages")
     .select(
-      "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, voice_note_seconds, reply_to_id"
+      "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, voice_note_seconds, reply_to_id, forwarded"
     )
     .eq("thread_id", threadId)
     .order("created_at", { ascending: true });
@@ -288,6 +302,7 @@ export async function fetchMessages(threadId: string): Promise<MessagesResult> {
       attachmentPurgedAt: m.attachment_purged_at,
       voiceNoteSeconds: m.voice_note_seconds,
       replyToId: m.reply_to_id,
+      forwarded: m.forwarded,
     })),
   };
 }
@@ -366,12 +381,13 @@ async function insertMessage(row: {
   attachment_url?: string | null;
   voice_note_seconds?: number | null;
   reply_to_id?: string | null;
+  forwarded?: boolean;
 }): Promise<SendResult> {
   const { data, error } = await supabase
     .from("messages")
     .insert(row)
     .select(
-      "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, voice_note_seconds, reply_to_id"
+      "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, voice_note_seconds, reply_to_id, forwarded"
     )
     .single();
 
@@ -394,6 +410,7 @@ async function insertMessage(row: {
       attachmentPurgedAt: data.attachment_purged_at,
       voiceNoteSeconds: data.voice_note_seconds,
       replyToId: data.reply_to_id,
+      forwarded: data.forwarded,
     },
   };
 }
@@ -605,4 +622,42 @@ export async function fetchUnreadCounts(currentUserId: string): Promise<UnreadCo
     if (row.thread_id) byThread[row.thread_id] = (byThread[row.thread_id] ?? 0) + 1;
   }
   return { byThread, total: data?.length ?? 0 };
+}
+
+/**
+ * Sends the text of one message into a different conversation.
+ *
+ * ROUTES THROUGH THE ORDINARY SEND PATH, which for text is all that is needed.
+ * `messages_require_relationship_for_attachments` returns early when
+ * attachment_url and voice_note_seconds are both null, so a text forward is
+ * ungated — there is no guard here to inherit or to bypass, only the normal
+ * insert. Attachments are a different matter and are deliberately not
+ * forwardable yet: the row would point at the ORIGINAL object path, and the
+ * Storage policy grants read by the ORIGINAL thread's participants, so the
+ * recipient would receive a tile they cannot open. Doing it properly means
+ * re-uploading a copy into the destination, which is its own task.
+ *
+ * A GENUINELY NEW MESSAGE, not a reference. New id, new timestamp, sent by
+ * whoever forwarded it. The only thing carried across is the text.
+ *
+ * reply_to_id IS NOT CARRIED, and the database would refuse it anyway.
+ * `messages_validate_reply_target` raises ATX06 when the target is outside the
+ * destination thread, which is exactly what an inherited pointer would be — so
+ * dropping it is not politeness, it is the only shape that inserts at all.
+ */
+export async function forwardMessage(
+  destinationThreadId: string,
+  senderId: string,
+  source: Message
+): Promise<SendResult> {
+  const body = source.text?.trim();
+  if (!body) {
+    return { ok: false, message: "Only text messages can be forwarded for now." };
+  }
+  return insertMessage({
+    thread_id: destinationThreadId,
+    sender_id: senderId,
+    text: body,
+    forwarded: true,
+  });
 }

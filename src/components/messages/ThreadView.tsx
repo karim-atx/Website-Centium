@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, ImageIcon, Mic, Paperclip, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, Forward, ImageIcon, Mic, Paperclip, Send, Trash2 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useUnread } from "../../context/UnreadContext";
 import { usePoll } from "../../hooks/usePoll";
 import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
 import { BottomSheet } from "../ui/BottomSheet";
 import { FileViewerSheet } from "../health/FileViewerSheet";
+import { ForwardSheet } from "./ForwardSheet";
 import { QuotedMessage } from "./QuotedMessage";
 import { VoiceNoteBubble } from "./VoiceNoteBubble";
 import { acceptFor } from "../../services/storage";
@@ -78,6 +79,8 @@ export const ThreadView: React.FC<{
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   /** The message whose action sheet is open. */
   const [actionsFor, setActionsFor] = useState<Message | null>(null);
+  /** The message being forwarded, once a destination is being chosen. */
+  const [forwarding, setForwarding] = useState<Message | null>(null);
   /** Briefly outlined after a jump, so the eye lands somewhere. */
   const [highlighted, setHighlighted] = useState<string | null>(null);
   const bubbleRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -407,6 +410,14 @@ export const ThreadView: React.FC<{
                     onJump={() => m.replyToId && jumpTo(m.replyToId)}
                   />
                 )}
+                {/* Above the text, because it qualifies everything below it.
+                    A reader who sees the words first and the provenance second
+                    has already taken them as the sender's own. */}
+                {m.forwarded && (
+                  <span className="flex items-center gap-1 text-[11px] italic opacity-70 mb-0.5">
+                    <Forward size={11} className="shrink-0" /> Forwarded
+                  </span>
+                )}
                 {m.text}
                 {/* Purged first: both content columns are null, so testing
                     attachmentPath alone would render nothing at all and the
@@ -677,8 +688,34 @@ export const ThreadView: React.FC<{
               <span className="text-sm font-medium text-charcoal">Copy</span>
             </button>
           )}
+          {/* Same text-present condition as Copy. Attachments and voice notes
+              are not forwardable yet: the copy would point at the original
+              object path, which the destination thread's participants have no
+              Storage grant to read. */}
+          {actionsFor?.text?.trim() && (
+            <button
+              onClick={() => {
+                // The action sheet closes first — two BottomSheets open at
+                // once would stack overlays and fight over the backdrop.
+                setForwarding(actionsFor);
+                setActionsFor(null);
+              }}
+              className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
+            >
+              <Forward size={17} className="text-charcoal-soft shrink-0" />
+              <span className="text-sm font-medium text-charcoal">Forward</span>
+            </button>
+          )}
         </div>
       </BottomSheet>
+
+      <ForwardSheet
+        open={!!forwarding}
+        onClose={() => setForwarding(null)}
+        message={forwarding}
+        currentThreadId={thread.id}
+        senderId={authUserId}
+      />
     </div>
   );
 };

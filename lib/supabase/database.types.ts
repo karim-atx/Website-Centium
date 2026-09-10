@@ -2625,6 +2625,7 @@ export type Database = {
           attachment_purged_at: string | null
           attachment_url: string | null
           created_at: string
+          forwarded: boolean
           id: string
           read_at: string | null
           reply_to_id: string | null
@@ -2637,6 +2638,7 @@ export type Database = {
           attachment_purged_at?: string | null
           attachment_url?: string | null
           created_at?: string
+          forwarded?: boolean
           id?: string
           read_at?: string | null
           reply_to_id?: string | null
@@ -2649,6 +2651,7 @@ export type Database = {
           attachment_purged_at?: string | null
           attachment_url?: string | null
           created_at?: string
+          forwarded?: boolean
           id?: string
           read_at?: string | null
           reply_to_id?: string | null
