@@ -61,6 +61,12 @@ export const sidebarNavItems: NavItem[] = [
   { to: "/app/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/app/professionals", label: "Professionals", icon: Users },
   { to: "/app/forum", label: "Forum", icon: MessageSquare },
+  // The sidebar is the only navigation at lg and above — the bottom nav is
+  // `lg:hidden`, and More is reachable only from it. So a missing entry here
+  // is not a longer route to a screen, it is no route at all: until this was
+  // added, a signed-in client on a desktop viewport could not reach their own
+  // conversations from anywhere in the UI.
+  { to: "/app/messages", label: "Messages", icon: MessageCircle },
   { to: "/app/marketplace", label: "Explore", icon: Store },
   { to: "/app/profile", label: "Profile", icon: UserIcon },
 ];
@@ -70,7 +76,13 @@ export const professionalSidebarNavItems: NavItem[] = [
   { to: "/app/professionals/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/app/professionals/templates", label: "Training", icon: ClipboardList },
   { to: "/app/professionals/meal-plans", label: "Nutrition", icon: UtensilsCrossed },
-  { to: "/app/professionals/messages", label: "Messages", icon: MessageCircle },
+  // "Messages" used to point at /app/professionals/messages, which since the
+  // messaging rebuild is the business-only thread — still a mock, and not what
+  // a professional means by Messages. More.tsx already drew this distinction;
+  // the sidebar did not, so one route carried two different names depending on
+  // which surface you arrived from.
+  { to: "/app/messages", label: "Messages", icon: MessageCircle },
+  { to: "/app/professionals/messages", label: "Business messages", icon: Store },
   { to: "/app/professionals/health-metrics", label: "Health Metrics", icon: HeartPulse },
   { to: "/app/marketplace", label: "Explore", icon: Store },
   { to: "/app/profile", label: "Profile", icon: UserIcon },
