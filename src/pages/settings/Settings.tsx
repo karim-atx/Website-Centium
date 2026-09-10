@@ -9,6 +9,7 @@ import { NotificationsSheet } from "../../components/profile/NotificationsSheet"
 import { AccessibilitySheet } from "../../components/profile/AccessibilitySheet";
 import { PrivacySheet } from "../../components/profile/PrivacySheet";
 import { ReportBugSheet } from "../../components/profile/ReportBugSheet";
+import { RateAppSheet } from "../../components/profile/RateAppSheet";
 import { StorageUsageCard } from "../../components/profile/StorageUsageCard";
 import { TermsOfServiceSheet } from "../../components/profile/TermsOfServiceSheet";
 import { useApp } from "../../context/AppContext";
@@ -28,6 +29,7 @@ import {
   Check,
   Accessibility,
   Bug,
+  Star,
   FileText,
 } from "lucide-react";
 
@@ -51,6 +53,7 @@ export default function Settings() {
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [tosOpen, setTosOpen] = useState(false);
   const [reportBugOpen, setReportBugOpen] = useState(false);
+  const [rateAppOpen, setRateAppOpen] = useState(false);
 
   const requestMic = async () => {
     try {
@@ -288,6 +291,20 @@ export default function Settings() {
           </div>
           <ChevronRight size={15} className="text-charcoal-faint" />
         </button>
+        {/* Beside Report a bug because they are the same kind of thing: both
+            write to a write-only table nobody is notified about, and both say
+            so in their own copy. Kept below it so the two working options sit
+            together, under the Contact us mock. */}
+        <button
+          onClick={() => setRateAppOpen(true)}
+          className="tap w-full flex items-center justify-between px-4 py-3.5"
+        >
+          <div className="flex items-center gap-3">
+            <Star size={16} className="text-charcoal-soft" />
+            <span className="text-sm font-medium text-charcoal">Rate this app</span>
+          </div>
+          <ChevronRight size={15} className="text-charcoal-faint" />
+        </button>
       </Card>
 
       <button
@@ -305,6 +322,14 @@ export default function Settings() {
         key={reportBugOpen ? "open" : "closed"}
         open={reportBugOpen}
         onClose={() => setReportBugOpen(false)}
+      />
+      {/* Keyed for the same reason, and it matters more here: a rating left
+          over from a previous visit would be a number the user never chose
+          this time, sitting one tap from being submitted. */}
+      <RateAppSheet
+        key={rateAppOpen ? "review-open" : "review-closed"}
+        open={rateAppOpen}
+        onClose={() => setRateAppOpen(false)}
       />
       <NotificationsSheet open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
       <AccessibilitySheet open={accessibilityOpen} onClose={() => setAccessibilityOpen(false)} />
