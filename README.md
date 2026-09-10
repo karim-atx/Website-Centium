@@ -716,6 +716,99 @@ would send someone to open a row that shows them nothing, which is the same
 mismatch this fixed, pointing the other way. If task 4 gives lab results a
 block here, add the branch at the same time and not before.
 
+### Two chat surfaces offer video attachments nothing can store
+
+`MessagesTab` and `ProfessionalDetail` both carry
+`accept="image/*,video/*"` on their attachment input, and both re-check with
+`/^(image|video)\//` before sending. **No bucket accepts any video type.**
+`message-attachments` allows JPEG, PNG and WebP plus five audio types, and the
+word "video" does not appear anywhere in the migrations. A user who picks a
+video today gets it accepted by the picker, accepted by the re-check, and
+attached to a message — which is harmless only because these two surfaces are
+not wired to Storage at all (see the cleanup entry below); the moment they are,
+it becomes a rejection at upload.
+
+**This is a product question, and the evidence is worth reading before someone
+answers it from the attribute alone.** The QA line these surfaces were built
+from is *"the client should be able to send voice notes and attach
+files/pictures as well as video/voice call"* — where **video/voice *call*** is
+about calling, which is separately implemented as `setCallMode`, not about
+attaching a video file. The only other relevant instruction points the other
+way: *"By no means should you be able to upload anything besides that which
+might compromise security."* And the audio types in the bucket line up exactly
+with `voice_note_seconds`, so audio has a clear origin that video does not.
+
+So the likeliest reading is that `video/*` came from a clause about video
+calls rather than a decision to support video uploads. That is not the same as
+knowing, which is why nothing here has been changed. Answering it means either
+adding a video MIME type and a much larger `file_size_limit` to
+`message-attachments` — 10 MB stores very little video, so that is a real
+sizing decision and not a one-line array edit — or dropping `video/*` from both
+attributes and the two regexes.
+
+The equivalent mismatch in the two capture flows is resolved: as of `5d32baf`
+their inputs derive `accept` from the bucket's own MIME list, so no `image/*`
+or `video/*` remains there. These two are what is left.
+
+### Nothing caps how much one user can store
+
+Per-object limits are real and server-enforced: every bucket carries a
+`file_size_limit`, so an oversized upload is refused whatever the client does.
+**Aggregate size is entirely unbounded.** No migration contains any size
+accounting — no total-bytes column, no object count, no quota check — and the
+`rate_limiting` migration covers RPC attempts, not uploads or Storage.
+
+Concretely: one client can save unlimited imaging records at up to 25 MB each
+and unlimited lab reports at up to 10 MB each, and nothing anywhere notices.
+
+**This needs a number decided rather than guessed, which is why it is written
+down instead of fixed.** A cap is a product and cost decision, and picking one
+unilaterally would either strangle a legitimate user — someone with a genuine
+imaging history can exceed any figure invented casually — or be so high it
+provides no protection. It also needs a decision about what happens when the
+cap is reached: refusing a medical upload is not the same class of action as
+refusing a profile picture, and the answer may differ per bucket.
+
+Worth noting the shape of the risk honestly: this is an abuse and cost ceiling,
+not a live problem. Every object is reachable only by its owner and a consented
+professional, and account deletion now purges all of it (migration
+`20260908175534`). What is missing is a bound, not correctness.
+
+### Two Storage cleanup gaps, both waiting on surfaces that are not wired
+
+Neither is a live defect today, and both become one the moment the surfaces
+behind them start writing real files. Recorded now because that wiring is the
+point at which they are cheapest to handle and easiest to forget.
+
+**Abandoned message-attachment uploads have no sweeper.** The storage migration
+gives `message-attachments` no UPDATE or DELETE policy at all, deliberately,
+matching `messages` itself — a sent attachment is meant to be as permanent as
+the message carrying it. Its own comment names the cost: a failed or abandoned
+upload is *orphaned until something sweeps it up*. Nothing sweeps it up. Any
+such job must go through the Storage API rather than SQL, because Supabase's
+`protect_objects_delete` trigger rejects direct DELETE against
+`storage.objects` for every role including `service_role`.
+
+**Avatar and certification replacement has no old-object deletion.** Both use
+a stable `<uid>/<file>` path, so replacing one either overwrites the previous
+object or strands it depending on the filename chosen — and no code decides
+which, because no code uploads them yet.
+
+That is the precondition both share: **`avatars`, `certifications` and
+`message-attachments` are not wired to Storage.** Avatars and certifications
+read the file with `readAsDataURL` and hand the data URL to `updateProfile`,
+which is `setUser` and nothing more — no code anywhere writes `avatar_url` or
+`certification_url`. Message attachments store `file.name` and never read the
+bytes at all. So there is nothing in any of those three buckets to orphan.
+
+Two things to carry into that work when it happens. The data URLs are held in
+React state today; pointing them at a column instead of at Storage would put
+base64 roughly a third larger than the original into Postgres, which is the
+wrong fix reached for by accident. And `avatars` is the one **public** bucket —
+its objects are served over an unauthenticated URL to anyone holding the link,
+policy or no policy — so a replaced avatar that is merely unreferenced rather
+than deleted stays world-readable indefinitely.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
