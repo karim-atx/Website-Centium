@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { stripPrivateExif } from "./exif";
 
 // Uploads and reads for the private Storage buckets.
 //
@@ -316,8 +317,23 @@ export async function uploadPrivateFile(params: {
   const check = validateFileFor(bucket, file);
   if (!check.ok) return { ok: false, message: check.message };
 
+  // HERE RATHER THAN IN THE CAPTURE FLOWS, for the same reason validateFileFor
+  // is called here: both live upload paths — BiomarkerCaptureFlow and
+  // ImagingCaptureFlow — get it without knowing about it, and no future caller
+  // can forget to. Doing it at the two call sites would mean writing it twice
+  // and leaving a third one able to skip it.
+  //
+  // AFTER validation and BEFORE the upload. Validating first means an
+  // oversized or wrong-typed file is refused without paying to parse it, and
+  // stripping before the upload is the only ordering that works at all —
+  // Storage has no in-place rewrite, so anything sent unstripped stays that
+  // way until it is re-uploaded and its row re-pointed.
+  //
+  // Never throws and never blocks: see stripPrivateExif.
+  const toUpload = await stripPrivateExif(file);
+
   const path = objectPath(bucket, userId, file.type);
-  const { error } = await supabase.storage.from(bucket).upload(path, file, {
+  const { error } = await supabase.storage.from(bucket).upload(path, toUpload, {
     contentType: file.type,
     // Never overwrite. The path carries a fresh uuid, so a collision would
     // mean something is very wrong, and silently replacing a medical file is
