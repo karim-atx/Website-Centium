@@ -2627,6 +2627,7 @@ export type Database = {
           created_at: string
           id: string
           read_at: string | null
+          reply_to_id: string | null
           sender_id: string | null
           text: string | null
           thread_id: string
@@ -2638,6 +2639,7 @@ export type Database = {
           created_at?: string
           id?: string
           read_at?: string | null
+          reply_to_id?: string | null
           sender_id?: string | null
           text?: string | null
           thread_id: string
@@ -2649,12 +2651,20 @@ export type Database = {
           created_at?: string
           id?: string
           read_at?: string | null
+          reply_to_id?: string | null
           sender_id?: string | null
           text?: string | null
           thread_id?: string
           voice_note_seconds?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "messages_sender_id_fkey"
             columns: ["sender_id"]

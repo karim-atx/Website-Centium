@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, CheckCheck, Clock, ImageIcon, Mic, Paperclip, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, ImageIcon, Mic, Paperclip, Send, Trash2 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useUnread } from "../../context/UnreadContext";
 import { usePoll } from "../../hooks/usePoll";
 import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
+import { BottomSheet } from "../ui/BottomSheet";
 import { FileViewerSheet } from "../health/FileViewerSheet";
+import { QuotedMessage } from "./QuotedMessage";
 import { VoiceNoteBubble } from "./VoiceNoteBubble";
 import { acceptFor } from "../../services/storage";
 import {
@@ -20,6 +22,9 @@ import {
 
 /** How far the finger must travel from the mic before a release cancels. */
 const CANCEL_DISTANCE = 60;
+
+/** Rightward travel that counts as swipe-to-reply. Matches Food and JournalTab. */
+const SWIPE_THRESHOLD = 60;
 
 /** How often an open conversation re-reads. See usePoll for why polling at all. */
 const POLL_MS = 8000;
@@ -68,6 +73,14 @@ export const ThreadView: React.FC<{
   const [pending, setPending] = useState<{ kind: "text" | "photo" | "voice"; text?: string } | null>(
     null
   );
+
+  /** The message being replied to, if any. Cleared on send and on cancel. */
+  const [replyTo, setReplyTo] = useState<Message | null>(null);
+  /** The message whose action sheet is open. */
+  const [actionsFor, setActionsFor] = useState<Message | null>(null);
+  /** Briefly outlined after a jump, so the eye lands somewhere. */
+  const [highlighted, setHighlighted] = useState<string | null>(null);
+  const bubbleRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   // Whether these two may exchange files at all. Asked once, when the thread
   // opens, via the same database function both server-side guards use.
@@ -161,7 +174,12 @@ export const ThreadView: React.FC<{
     // the send feel finished, and the draft is put back if it was not.
     setPending({ kind: "text", text: body });
     setDraft("");
-    const result = await sendMessage(thread.id, authUserId, body);
+    // Captured before the await: the reply banner is cleared optimistically
+    // alongside the draft, so the target has to be held rather than read back
+    // from state that may already be gone.
+    const target = replyTo;
+    setReplyTo(null);
+    const result = await sendMessage(thread.id, authUserId, body, target?.id ?? null);
     setSending(false);
     setPending(null);
     if (!result.ok) {
@@ -169,12 +187,89 @@ export const ThreadView: React.FC<{
       // the network blinked is worse than the failure itself — clearing it
       // above is an optimism this has to pay back when the optimism was wrong.
       setDraft(body);
+      // The reply target comes back too. A restored draft that has lost what
+      // it was answering would be re-sent as an ordinary message without the
+      // user noticing the quote had gone.
+      setReplyTo(target);
       setError(result.message);
       return;
     }
     // Appending the returned ROW, not the draft — the id and timestamp are the
     // database's, so the next poll recognises it instead of duplicating it.
     setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
+  };
+
+  /**
+   * One gesture handler for both long-press and swipe-right, because they
+   * start identically and only diverge on what the finger does next.
+   *
+   * Pointer events rather than touch, so a mouse gets the same behaviour — a
+   * right-click opens the same sheet via onContextMenu, which is the desktop
+   * equivalent of a long press.
+   *
+   * MOVEMENT CANCELS THE LONG PRESS. Without that, a swipe would fire the
+   * sheet halfway through and the two gestures would fight; 10px is enough to
+   * distinguish a deliberate drag from the wobble of holding still.
+   *
+   * ACCESSIBILITY GAP, STATED RATHER THAN HIDDEN: a long press has no keyboard
+   * or screen-reader equivalent, and neither does a swipe. Every action here is
+   * reachable another way today — copy from the OS, reply by typing — so
+   * nothing is exclusively behind a gesture, but a visible per-message control
+   * is the honest fix and is not in this change.
+   */
+  const pressTimer = useRef<number | null>(null);
+  const pressOriginRef = useRef<{ x: number; y: number } | null>(null);
+
+  const clearPress = () => {
+    if (pressTimer.current !== null) {
+      window.clearTimeout(pressTimer.current);
+      pressTimer.current = null;
+    }
+  };
+
+  const onBubbleDown = (e: React.PointerEvent, m: Message) => {
+    pressOriginRef.current = { x: e.clientX, y: e.clientY };
+    clearPress();
+    pressTimer.current = window.setTimeout(() => setActionsFor(m), 500);
+  };
+
+  const onBubbleMove = (e: React.PointerEvent) => {
+    const origin = pressOriginRef.current;
+    if (!origin) return;
+    if (Math.hypot(e.clientX - origin.x, e.clientY - origin.y) > 10) clearPress();
+  };
+
+  const onBubbleUp = (e: React.PointerEvent, m: Message) => {
+    clearPress();
+    const origin = pressOriginRef.current;
+    pressOriginRef.current = null;
+    if (!origin) return;
+    const dx = e.clientX - origin.x;
+    const dy = e.clientY - origin.y;
+    // Same shape as the swipe already used in Food and JournalTab: rightward
+    // past the threshold, and near-horizontal so a scroll is never mistaken
+    // for it.
+    if (dx > SWIPE_THRESHOLD && Math.abs(dy) < 40) setReplyTo(m);
+  };
+
+  /** Scrolls to a quoted message and marks it, so the jump is visible. */
+  const jumpTo = (id: string) => {
+    const el = bubbleRefs.current[id];
+    if (!el) return;
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    setHighlighted(id);
+    window.setTimeout(() => setHighlighted((cur) => (cur === id ? null : cur)), 1600);
+  };
+
+  const copyMessage = async (m: Message) => {
+    const body = m.text?.trim();
+    if (!body) return;
+    try {
+      await navigator.clipboard?.writeText(body);
+    } catch {
+      /* Clipboard can be refused by permissions policy; nothing to recover. */
+    }
+    setActionsFor(null);
   };
 
   const attach = async (file: File) => {
@@ -280,10 +375,38 @@ export const ThreadView: React.FC<{
           return (
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div
-                className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words ${
+                ref={(el) => {
+                  bubbleRefs.current[m.id] = el;
+                }}
+                onPointerDown={(e) => onBubbleDown(e, m)}
+                onPointerMove={onBubbleMove}
+                onPointerUp={(e) => onBubbleUp(e, m)}
+                onPointerCancel={clearPress}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setActionsFor(m);
+                }}
+                className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words select-none transition-shadow ${
                   mine ? "bg-primary text-white dark:text-[#0D0B1A]" : "bg-cream-soft text-charcoal"
-                }`}
+                } ${highlighted === m.id ? "ring-2 ring-primary-dark" : ""}`}
               >
+                {/* The quote sits above the message body, as it reads: what
+                    is being answered, then the answer. The parent is looked up
+                    among the loaded messages rather than stored, so a reply to
+                    something scrolled out of the window renders as unavailable
+                    instead of a stale copy. */}
+                {m.replyToId && (
+                  <QuotedMessage
+                    inBubble
+                    message={messages.find((x) => x.id === m.replyToId) ?? null}
+                    authorLabel={
+                      messages.find((x) => x.id === m.replyToId)?.senderId === authUserId
+                        ? "You"
+                        : thread.participantName
+                    }
+                    onJump={() => m.replyToId && jumpTo(m.replyToId)}
+                  />
+                )}
                 {m.text}
                 {/* Purged first: both content columns are null, so testing
                     attachmentPath alone would render nothing at all and the
@@ -413,6 +536,18 @@ export const ThreadView: React.FC<{
         </p>
       )}
 
+      {/* Above the composer, inside the sticky footer, so it travels with the
+          input rather than scrolling away from what it belongs to. */}
+      {replyTo && (
+        <div className="sticky bottom-0 bg-cream">
+          <QuotedMessage
+            message={replyTo}
+            authorLabel={replyTo.senderId === authUserId ? "You" : thread.participantName}
+            onCancel={() => setReplyTo(null)}
+          />
+        </div>
+      )}
+
       <div className="flex items-center gap-2 sticky bottom-0 bg-cream pt-2">
         {/* Shown only for a live relationship. This is convenience, not
             security — the server refuses independently at both doors, so
@@ -513,6 +648,37 @@ export const ThreadView: React.FC<{
         bucket="message-attachments"
         label="Photo"
       />
+
+      {/* A sheet rather than a floating menu, matching every other choice in
+          this app. Only the actions that exist are listed: forward, star, pin
+          and delete are separate tasks, and stubbing them here as disabled
+          rows would advertise features that do nothing. */}
+      <BottomSheet open={!!actionsFor} onClose={() => setActionsFor(null)} title="Message">
+        <div className="space-y-1 animate-fade-slide-up">
+          <button
+            onClick={() => {
+              if (actionsFor) setReplyTo(actionsFor);
+              setActionsFor(null);
+            }}
+            className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
+          >
+            <CornerUpLeft size={17} className="text-charcoal-soft shrink-0" />
+            <span className="text-sm font-medium text-charcoal">Reply</span>
+          </button>
+          {/* Only for a message with words. Copying an image or a voice note
+              would put an empty string on the clipboard and look like it
+              worked. */}
+          {actionsFor?.text?.trim() && (
+            <button
+              onClick={() => void copyMessage(actionsFor)}
+              className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
+            >
+              <Copy size={17} className="text-charcoal-soft shrink-0" />
+              <span className="text-sm font-medium text-charcoal">Copy</span>
+            </button>
+          )}
+        </div>
+      </BottomSheet>
     </div>
   );
 };

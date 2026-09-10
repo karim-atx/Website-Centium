@@ -73,6 +73,43 @@ export interface Message {
    * it is missing.
    */
   voiceNoteSeconds: number | null;
+  /**
+   * The message this one replies to, in the same thread. Null on an ordinary
+   * message.
+   *
+   * AN ID, NOT A COPY OF THE QUOTED TEXT. The preview is rendered by finding
+   * the parent among the messages already loaded, so a parent whose attachment
+   * is later purged stops quoting a file that no longer exists — where an
+   * inlined copy would keep showing it forever. The trade is that a reply to
+   * something outside the loaded window has nothing to render, which the UI
+   * states plainly rather than papering over.
+   */
+  replyToId: string | null;
+}
+
+/**
+ * One line describing a message, for anywhere it appears as a reference
+ * rather than in full.
+ *
+ * ONE FUNCTION SO THE THREAD LIST AND THE QUOTED PREVIEW CANNOT DISAGREE.
+ * These are the same question asked twice — "what is this message, in a few
+ * words" — and two implementations would drift the moment a content type is
+ * added. Voice note is tested before photo because both carry attachmentPath
+ * and only the duration distinguishes them.
+ */
+export function describeMessage(m: {
+  text: string | null;
+  attachmentPath: string | null;
+  attachmentPurgedAt: string | null;
+  voiceNoteSeconds: number | null;
+}): string {
+  return (
+    m.text?.trim() ||
+    (m.attachmentPath && m.voiceNoteSeconds ? "Voice note" : "") ||
+    (m.attachmentPath ? "Photo" : "") ||
+    (m.attachmentPurgedAt ? "Attachment removed" : "") ||
+    "Message"
+  );
 }
 
 export type ThreadsResult =
@@ -96,6 +133,14 @@ function describe(error: PostgrestError): string {
   // wording explains the rule rather than blaming the file.
   if (code === "ATX05") {
     return "You can only send files to someone you're actively working with.";
+  }
+  // ATX06: messages_validate_reply_target. The composer only ever offers a
+  // message from the open thread as a reply target, so reaching this means the
+  // client and the trigger disagree about which thread it is in — worth its
+  // own sentence rather than a generic failure, because retrying will not fix
+  // it.
+  if (code === "ATX06") {
+    return "That message isn't part of this conversation any more.";
   }
   // 23514 is messages_has_content_check — an empty message. The composer
   // refuses those first, so reaching this means the two disagree.
@@ -172,14 +217,14 @@ export async function fetchThreads(): Promise<ThreadsResult> {
       // must never imply it does not — the constraint messages_has_content_check
       // guarantees at least one of these is present (or that it was purged),
       // so the final fallback is unreachable rather than a guess.
-      // Voice note before photo: both carry attachment_url, and only
-      // voice_note_seconds tells them apart.
-      const preview =
-        m.text?.trim() ||
-        (m.attachment_url && m.voice_note_seconds ? "Voice note" : "") ||
-        (m.attachment_url ? "Photo" : "") ||
-        (m.attachment_purged_at ? "Attachment removed" : "") ||
-        "Message";
+      // Through the shared describer, so this list and the quoted preview in
+      // a reply always say the same thing about the same message.
+      const preview = describeMessage({
+        text: m.text,
+        attachmentPath: m.attachment_url,
+        attachmentPurgedAt: m.attachment_purged_at,
+        voiceNoteSeconds: m.voice_note_seconds,
+      });
       latest.set(m.thread_id, { preview, created_at: m.created_at });
     }
   }
@@ -210,7 +255,7 @@ export async function fetchMessages(threadId: string): Promise<MessagesResult> {
   const { data, error } = await supabase
     .from("messages")
     .select(
-      "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, voice_note_seconds"
+      "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, voice_note_seconds, reply_to_id"
     )
     .eq("thread_id", threadId)
     .order("created_at", { ascending: true });
@@ -242,6 +287,7 @@ export async function fetchMessages(threadId: string): Promise<MessagesResult> {
       attachmentPath: m.attachment_url,
       attachmentPurgedAt: m.attachment_purged_at,
       voiceNoteSeconds: m.voice_note_seconds,
+      replyToId: m.reply_to_id,
     })),
   };
 }
@@ -289,12 +335,27 @@ export async function threadAllowsAttachments(threadId: string): Promise<boolean
 export async function sendMessage(
   threadId: string,
   senderId: string,
-  text: string
+  text: string,
+  /**
+   * The message being replied to, when this is a reply.
+   *
+   * NOT VALIDATED HERE. `messages_validate_reply_target` checks it belongs to
+   * the same thread and raises ATX06 otherwise; repeating that client-side
+   * would be a second copy of a rule that already has one authority, and the
+   * copy is what goes stale. The composer only offers targets from the open
+   * thread, so this is a defence against a bug rather than a user.
+   */
+  replyToId?: string | null
 ): Promise<SendResult> {
   const body = text.trim();
   if (!body) return { ok: false, message: "A message can't be empty." };
 
-  return insertMessage({ thread_id: threadId, sender_id: senderId, text: body });
+  return insertMessage({
+    thread_id: threadId,
+    sender_id: senderId,
+    text: body,
+    reply_to_id: replyToId ?? null,
+  });
 }
 
 /** The one place a message row is written, so every path returns the same shape. */
@@ -304,12 +365,13 @@ async function insertMessage(row: {
   text?: string | null;
   attachment_url?: string | null;
   voice_note_seconds?: number | null;
+  reply_to_id?: string | null;
 }): Promise<SendResult> {
   const { data, error } = await supabase
     .from("messages")
     .insert(row)
     .select(
-      "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, voice_note_seconds"
+      "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, voice_note_seconds, reply_to_id"
     )
     .single();
 
@@ -331,6 +393,7 @@ async function insertMessage(row: {
       attachmentPath: data.attachment_url,
       attachmentPurgedAt: data.attachment_purged_at,
       voiceNoteSeconds: data.voice_note_seconds,
+      replyToId: data.reply_to_id,
     },
   };
 }
