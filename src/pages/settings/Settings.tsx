@@ -8,6 +8,7 @@ import { ContactUsSheet } from "../../components/profile/ContactUsSheet";
 import { NotificationsSheet } from "../../components/profile/NotificationsSheet";
 import { AccessibilitySheet } from "../../components/profile/AccessibilitySheet";
 import { PrivacySheet } from "../../components/profile/PrivacySheet";
+import { ReportBugSheet } from "../../components/profile/ReportBugSheet";
 import { StorageUsageCard } from "../../components/profile/StorageUsageCard";
 import { TermsOfServiceSheet } from "../../components/profile/TermsOfServiceSheet";
 import { useApp } from "../../context/AppContext";
@@ -26,6 +27,7 @@ import {
   ChevronRight,
   Check,
   Accessibility,
+  Bug,
   FileText,
 } from "lucide-react";
 
@@ -48,6 +50,7 @@ export default function Settings() {
   const [accessibilityOpen, setAccessibilityOpen] = useState(false);
   const [privacyOpen, setPrivacyOpen] = useState(false);
   const [tosOpen, setTosOpen] = useState(false);
+  const [reportBugOpen, setReportBugOpen] = useState(false);
 
   const requestMic = async () => {
     try {
@@ -270,6 +273,21 @@ export default function Settings() {
           </div>
           <ChevronRight size={15} className="text-charcoal-faint" />
         </button>
+        {/* Below Contact us, which is still the prototype mock it has always
+            been — three controls that connect to nothing. This one does write
+            somewhere, so it goes last rather than above and reads as the
+            working option. Reconciling the two is a product question, left
+            alone here and recorded as a follow-up. */}
+        <button
+          onClick={() => setReportBugOpen(true)}
+          className="tap w-full flex items-center justify-between px-4 py-3.5"
+        >
+          <div className="flex items-center gap-3">
+            <Bug size={16} className="text-charcoal-soft" />
+            <span className="text-sm font-medium text-charcoal">Report a bug</span>
+          </div>
+          <ChevronRight size={15} className="text-charcoal-faint" />
+        </button>
       </Card>
 
       <button
@@ -280,6 +298,14 @@ export default function Settings() {
       </button>
 
       <ContactUsSheet open={contactOpen} onClose={() => setContactOpen(false)} />
+      {/* Keyed on open so each opening mounts a fresh sheet: that is what
+          clears the previous report text and any stale error, without an
+          effect setting state on open. */}
+      <ReportBugSheet
+        key={reportBugOpen ? "open" : "closed"}
+        open={reportBugOpen}
+        onClose={() => setReportBugOpen(false)}
+      />
       <NotificationsSheet open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
       <AccessibilitySheet open={accessibilityOpen} onClose={() => setAccessibilityOpen(false)} />
       <PrivacySheet open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
