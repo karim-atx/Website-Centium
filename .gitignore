@@ -3,10 +3,13 @@ dist
 *.tsbuildinfo
 .DS_Store
 
-# environment variables — never commit real values
+# environment variables — never commit real values.
+# .env.* deliberately covers every suffix (.production, .staging, .development
+# and anything else someone invents) rather than listing them; .env itself
+# needs its own line because the glob requires a dot after "env".
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 
 # editor/OS cruft
 .vscode/*
