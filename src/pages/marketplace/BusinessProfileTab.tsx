@@ -39,7 +39,7 @@ export default function BusinessProfileTab() {
       return;
     }
     signOut();
-    navigate("/onboarding");
+    navigate("/app/onboarding");
   };
 
   return (

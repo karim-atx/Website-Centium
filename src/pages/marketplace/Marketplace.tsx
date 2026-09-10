@@ -137,7 +137,7 @@ export default function Marketplace() {
           return (
             <button
               key={c.id}
-              onClick={() => navigate(`/marketplace/${c.id}`)}
+              onClick={() => navigate(`/app/marketplace/${c.id}`)}
               className="tap w-full flex items-center justify-between gap-3.5 px-4 py-3.5 text-left"
             >
               <div className="flex items-center gap-3.5">
@@ -170,7 +170,7 @@ export default function Marketplace() {
             return (
               <button
                 key={c.id}
-                onClick={() => navigate(`/marketplace/${c.id}`)}
+                onClick={() => navigate(`/app/marketplace/${c.id}`)}
                 className="tap flex flex-col items-center gap-1.5 bg-cream-card border border-charcoal/[0.11] rounded-2xl py-4"
               >
                 <Icon size={20} className="text-primary" />

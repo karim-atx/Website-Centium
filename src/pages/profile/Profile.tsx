@@ -494,7 +494,7 @@ export default function Profile() {
           )}
           <p className="text-[11px] text-charcoal-faint leading-relaxed mt-3 pt-3 border-t border-charcoal/[0.06]">
             This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a{" "}
-            <button onClick={() => navigate("/professionals")} className="tap text-primary-dark font-semibold underline">
+            <button onClick={() => navigate("/app/professionals")} className="tap text-primary-dark font-semibold underline">
               professional
             </button>
             .

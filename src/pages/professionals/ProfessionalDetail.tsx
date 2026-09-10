@@ -350,7 +350,7 @@ export default function ProfessionalDetail() {
             onClick={() => {
               if (removeConfirm) {
                 disconnectProfessional(professional.id);
-                navigate("/professionals");
+                navigate("/app/professionals");
               } else {
                 setRemoveConfirm(true);
                 setTimeout(() => setRemoveConfirm(false), 3000);
