@@ -4706,6 +4706,27 @@ export type Database = {
       }
     }
     Views: {
+      thread_participant_summary: {
+        Row: {
+          avatar_url: string | null
+          first_name: string | null
+          participant_id: string | null
+          thread_id: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          first_name?: string | null
+          participant_id?: string | null
+          thread_id?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          first_name?: string | null
+          participant_id?: string | null
+          thread_id?: string | null
+        }
+        Relationships: []
+      }
       connected_professional_summary: {
         Row: {
           avatar_url: string | null

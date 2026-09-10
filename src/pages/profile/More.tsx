@@ -45,7 +45,10 @@ export default function More() {
     // QA 11.0: renamed from "Forum" — the destination now has two tabs,
     // Forum and Courses.
     !isProfessional && !isBusiness && { icon: MessageSquare, label: "Community", desc: "Forum discussions & fitness courses", to: "/app/forum" },
-    isProfessional && { icon: MessageCircle, label: "Messages", desc: "Chat with your clients", to: "/app/professionals/messages" },
+    // Both account types: a thread is two people, and the client half had no
+    // destination at all before this.
+    { icon: MessageCircle, label: "Messages", desc: isProfessional ? "Chat with your clients" : "Chat with your professionals", to: "/app/messages" },
+    isProfessional && { icon: Store, label: "Business messages", desc: "Your affiliated business thread", to: "/app/professionals/messages" },
     isProfessional && { icon: HeartPulse, label: "Health Metrics", desc: "Client health data & clinical notes", to: "/app/professionals/health-metrics" },
     // QA 12.0: "a button called payments, whereby the professional can add
     // what his monthly rate is to be hired, alongside other types like

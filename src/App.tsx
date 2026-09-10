@@ -22,6 +22,7 @@ import CalendarTab from "./pages/professionals/CalendarTab";
 import WorkoutTemplateBuilderTab from "./pages/professionals/WorkoutTemplateBuilderTab";
 import MealPlanBuilderTab from "./pages/professionals/MealPlanBuilderTab";
 import MessagesTab from "./pages/professionals/MessagesTab";
+import Messages from "./pages/messages/Messages";
 import HealthMetricsTab from "./pages/professionals/HealthMetricsTab";
 import Marketplace from "./pages/marketplace/Marketplace";
 import MarketplaceCategoryPage from "./pages/marketplace/MarketplaceCategoryPage";
@@ -196,6 +197,7 @@ function AppRoutes() {
         <Route path="/app/professionals/templates" element={<WorkoutTemplateBuilderTab />} />
         <Route path="/app/professionals/meal-plans" element={<MealPlanBuilderTab />} />
         <Route path="/app/professionals/messages" element={<MessagesTab />} />
+        <Route path="/app/messages" element={<Messages />} />
         <Route path="/app/professionals/health-metrics" element={<HealthMetricsTab />} />
         <Route path="/app/professionals/:id" element={<ProfessionalDetail />} />
         <Route path="/app/marketplace" element={<Marketplace />} />

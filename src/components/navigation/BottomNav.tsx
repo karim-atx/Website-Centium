@@ -29,6 +29,7 @@ export const BottomNav: React.FC = () => {
           "/app/subscription",
           "/app/settings",
           "/app/professionals/messages",
+          "/app/messages",
           "/app/professionals/health-metrics",
         ]
       : isBusiness
