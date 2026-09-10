@@ -30,7 +30,29 @@ import { stripPrivateExif } from "./exif";
 //      thing keeping unreviewed machine output away from a professional. This
 //      module will not write to `extracted/` at all -- see PREFIXES.
 
-export type PrivateBucket = "lab-reports" | "medical-imaging";
+/**
+ * Buckets whose path starts with the owner's id: `<uid>/...`.
+ *
+ * The distinction below is not filing, it is which policy shape applies, and
+ * the type system is used to enforce it because a path built for the wrong
+ * shape fails at the server with a generic error — or worse, succeeds at a
+ * path whose segment 1 is not who the policy expects.
+ */
+type OwnerScopedBucket = "lab-reports" | "medical-imaging";
+
+/**
+ * Buckets whose path starts with a THREAD id: `<thread_id>/<uploader_id>/...`.
+ *
+ * The extra segment exists because a Storage policy cannot verify "this file
+ * belongs to a message I am about to send" — the message row does not exist
+ * yet at upload time. Gating only on thread membership would let either
+ * participant write anywhere in the shared folder, overwriting a name the
+ * other party is using or planting a file they appear to have sent. See the
+ * policy notes in the storage migration.
+ */
+type ThreadScopedBucket = "message-attachments";
+
+export type PrivateBucket = OwnerScopedBucket | ThreadScopedBucket;
 
 /**
  * Mirrors the bucket definitions in the storage migration.
@@ -39,20 +61,45 @@ export type PrivateBucket = "lab-reports" | "medical-imaging";
  * rejects an oversized or wrong-typed upload either way; the point of checking
  * first is that the server's rejection arrives as a generic storage error,
  * while this one can say which file and which limit.
+ *
+ * `accepts` is written per bucket rather than derived from `mimeTypes`,
+ * because the list a user should be told about is not always the list the
+ * bucket takes — message-attachments accepts audio that no file picker ever
+ * offers, since voice notes are recorded rather than chosen.
  */
 const BUCKETS: Record<
   PrivateBucket,
-  { maxBytes: number; mimeTypes: string[]; label: string }
+  { maxBytes: number; mimeTypes: string[]; label: string; accepts: string }
 > = {
   "lab-reports": {
     maxBytes: 10 * 1024 * 1024,
     mimeTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
     label: "lab report",
+    accepts: "a JPEG, PNG, WebP or PDF",
   },
   "medical-imaging": {
     maxBytes: 25 * 1024 * 1024,
     mimeTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
     label: "imaging file",
+    accepts: "a JPEG, PNG, WebP or PDF",
+  },
+  // 10 MB, matching the migration. Audio is here because a recorded voice
+  // note arrives through this same function as an audio/* blob; it is NOT
+  // offered by acceptFor, which see.
+  "message-attachments": {
+    maxBytes: 10 * 1024 * 1024,
+    mimeTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "audio/mpeg",
+      "audio/mp4",
+      "audio/aac",
+      "audio/ogg",
+      "audio/webm",
+    ],
+    label: "attachment",
+    accepts: "an image or a voice note",
   },
 };
 
@@ -65,7 +112,7 @@ const BUCKETS: Record<
  * map is not a one-line change -- it moves files out of consent reach by
  * convention alone, and the decision belongs with whoever builds extraction.
  */
-const PREFIXES: Record<PrivateBucket, string | null> = {
+const PREFIXES: Record<OwnerScopedBucket, string | null> = {
   "lab-reports": "panels",
   "medical-imaging": null,
 };
@@ -75,6 +122,16 @@ const EXTENSIONS: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
   "application/pdf": "pdf",
+  "audio/mpeg": "mp3",
+  "audio/mp4": "m4a",
+  "audio/aac": "aac",
+  "audio/ogg": "ogg",
+  // `.weba` rather than `.webm`, deliberately. Anything deciding how to render
+  // a stored file reads the extension — FileViewerSheet already does — and
+  // `webm` sits one letter from the `webp` in this same map, so an audio-only
+  // WebM would be a single typo away from being treated as an image. `.weba`
+  // is the registered audio-only convention and cannot be confused with it.
+  "audio/webm": "weba",
 };
 
 export interface UploadResult {
@@ -230,7 +287,15 @@ async function capExceededMessage(): Promise<string> {
  * the common path pleasant; validateFileFor is what actually decides.
  */
 export function acceptFor(bucket: PrivateBucket, imagesOnly = false): string {
-  const types = BUCKETS[bucket].mimeTypes.filter((t) => !imagesOnly || t.startsWith("image/"));
+  const types = BUCKETS[bucket].mimeTypes.filter(
+    (t) =>
+      // Audio is never offered by a picker, on any bucket. message-attachments
+      // accepts it so a RECORDED voice note can be uploaded; there is no flow
+      // anywhere that picks an audio file off disk, and listing the types here
+      // would invent one. This is the same call MessagesTab's own file input
+      // already made before it was deleted.
+      !t.startsWith("audio/") && (!imagesOnly || t.startsWith("image/"))
+  );
   // Extension hints alongside the MIME types: some pickers match one and not
   // the other. Derived from the same map that names the uploaded file.
   return [...types, ...types.map((t) => `.${EXTENSIONS[t]}`)].join(",");
@@ -262,7 +327,11 @@ export function validateFileFor(bucket: PrivateBucket, file: File): FileCheckRes
   if (!config.mimeTypes.includes(file.type)) {
     return {
       ok: false,
-      message: "That file type isn't supported. Use a JPEG, PNG, WebP or PDF.",
+      // Named per bucket rather than hardcoded. This sentence used to say
+      // "JPEG, PNG, WebP or PDF" for every bucket, which was true while there
+      // were only two and both took the same set — and became wrong the
+      // moment a bucket took audio and no PDF.
+      message: `That file type isn't supported. Use ${config.accepts}.`,
     };
   }
   if (file.size > config.maxBytes) {
@@ -292,24 +361,51 @@ export function validateFileFor(bucket: PrivateBucket, file: File): FileCheckRes
  * The extension comes from the MIME type for the same reason: it is the value
  * the bucket already validated, rather than whatever the filename claimed.
  */
-function objectPath(bucket: PrivateBucket, userId: string, mimeType: string): string {
-  const prefix = PREFIXES[bucket];
+function objectPath(params: UploadParams, mimeType: string): string {
   const ext = EXTENSIONS[mimeType] ?? "bin";
   const name = `${crypto.randomUUID()}.${ext}`;
-  return prefix ? `${userId}/${prefix}/${name}` : `${userId}/${name}`;
+
+  // Thread-scoped: `<thread_id>/<uploader_id>/<name>`. The uploader is at
+  // segment 2 here, not segment 1 — message_attachments_insert_own checks
+  // exactly that, so building this with the owner shape would be refused by
+  // the server rather than silently misfiled.
+  if (params.bucket === "message-attachments") {
+    return `${params.threadId}/${params.userId}/${name}`;
+  }
+
+  const prefix = PREFIXES[params.bucket];
+  return prefix ? `${params.userId}/${prefix}/${name}` : `${params.userId}/${name}`;
 }
+
+/**
+ * What an upload needs, which is not the same for every bucket.
+ *
+ * A UNION RATHER THAN AN OPTIONAL `threadId`, so the compiler refuses both
+ * mistakes instead of one: omitting the thread id for message-attachments,
+ * and passing one to a bucket whose policy reads segment 1 as the owner. With
+ * an optional field, forgetting it would build `<uid>/<name>` for a bucket
+ * whose policy expects the uploader at segment 2 — an upload that fails at
+ * the server with a message that explains none of this.
+ */
+export type UploadParams =
+  | { bucket: OwnerScopedBucket; userId: string; file: File }
+  | { bucket: ThreadScopedBucket; userId: string; file: File; threadId: string };
 
 /**
  * Uploads one file and returns the path to store on the row that references
  * it. The caller owns that row, and owns deleting this object if the row
  * write then fails — nothing cascades.
+ *
+ * EXCEPT ON message-attachments, WHERE IT CANNOT. That bucket has no DELETE
+ * policy, matching `messages` having none: a sent attachment is as permanent
+ * as the message carrying it. So the compensating delete every other caller
+ * performs after a failed row write is impossible there, and a failed insert
+ * leaves an orphan for good. Accepted deliberately — the object is unreferenced
+ * and unreachable by anyone who does not already share the thread. See
+ * deletePrivateFile, which will not accept that bucket at all.
  */
-export async function uploadPrivateFile(params: {
-  bucket: PrivateBucket;
-  userId: string;
-  file: File;
-}): Promise<UploadResult> {
-  const { bucket, userId, file } = params;
+export async function uploadPrivateFile(params: UploadParams): Promise<UploadResult> {
+  const { bucket, file } = params;
 
   // Kept even though the capture flows now check at pick time. That check is a
   // UX convenience on one path; this one covers every caller, including any
@@ -332,7 +428,7 @@ export async function uploadPrivateFile(params: {
   // Never throws and never blocks: see stripPrivateExif.
   const toUpload = await stripPrivateExif(file);
 
-  const path = objectPath(bucket, userId, file.type);
+  const path = objectPath(params, file.type);
   const { error } = await supabase.storage.from(bucket).upload(path, toUpload, {
     contentType: file.type,
     // Never overwrite. The path carries a fresh uuid, so a collision would
@@ -400,7 +496,12 @@ export async function signedUrlFor(
  * orphan behind, so it is not `void`.
  */
 export async function deletePrivateFile(
-  bucket: PrivateBucket,
+  // OwnerScopedBucket, not PrivateBucket, and the narrowing is the point:
+  // message-attachments has no DELETE policy, so this would fail there every
+  // time. Compensation logic that silently never works is worse than none —
+  // it reads as cleanup while leaving the orphan behind. Refusing it at the
+  // type level says so at the call site instead of at runtime.
+  bucket: OwnerScopedBucket,
   path: string
 ): Promise<{ ok: boolean; message?: string }> {
   const { error } = await supabase.storage.from(bucket).remove([path]);
