@@ -788,39 +788,40 @@ accurate when written and stopped being so about an hour later when the cap
 landed in the Database repo. Both halves above are now built — the accurate
 message and the Settings reading — leaving only the verification gap below.*
 
-### A real ATX04 has never been triggered, only simulated
+### ATX04 has now been triggered for real, and the named risk is what happened
 
-The out-of-space message is built and behaves correctly against a simulated
-failure. **No cap violation has ever actually occurred**, here or anywhere, so
-the path has not been exercised end to end.
+**Closed.** This entry used to say no cap violation had ever occurred and that
+detection rested on a simulation. One has since been triggered on staging, and
+the out-of-space message is confirmed end to end.
 
-Nothing convenient makes one happen. `storage_cap_bytes()` is a hardcoded 2 GiB
-with no per-user override, and `storage_bytes_used` is deliberately absent from
-every client UPDATE grant — that inaccessibility is what makes the counter
-trustworthy, and it is also what makes the error unreachable from a test. The
-only genuine triggers are uploading 2 GB or changing the cap in the database.
+**The specific risk this entry named is exactly what the real error did.** It
+warned that an *unrecognised* SQLSTATE might be handled differently from an RLS
+violation, with the Storage API swallowing the Postgres message rather than
+forwarding it — and that if so, detection would find neither the code nor the
+prefix. The first half happened: the Storage API **discards** the trigger's
+message and substitutes its own, `database error, code: ATX04`.
 
-**What the simulation does and does not stand on.** It is not invented: the
-shape was taken from a real Postgres error observed through the real Storage
-API, by uploading to a path the user does not own. That returned
-`code: "AccessDenied"` — the Storage API's own vocabulary, not the SQLSTATE,
-which appeared nowhere — with the Postgres message forwarded verbatim. So the
-assumption being relied on, that ATX04 arrives with its message intact and a
-generic code, is grounded rather than guessed.
+The second half did not, and only because of a hedge. That substituted text
+carries the code as plain text, so `message.includes("ATX04")` matched — a
+branch added on the reasoning that a code might turn up somewhere unanticipated,
+not because anyone predicted this particular shape. Had detection been narrowed
+to the two branches that looked most principled at the time — the `code` field
+and the message prefix — it would have failed, and a user out of space would
+have been told to check their connection.
 
-It is still not identical. The untested possibility is narrow and specific: an
-*unrecognised* SQLSTATE might be handled differently from an RLS violation,
-with the Storage API swallowing the message rather than forwarding it. If it
-did, detection would find neither the code nor the prefix and would fall
-through to the generic connection sentence — the exact behaviour this work
-removed.
+**Two things this corrects for anyone reading the surrounding code.** The
+message prefix `storage cap exceeded` is unreachable: the trigger's own wording
+never survives the substitution. And the earlier reasoning that the SQLSTATE
+cannot appear in the message was right about Postgres and wrong about the
+result, because the Storage API writes the code into its own text. Both are now
+described accurately in `isCapViolation`'s comment, which previously argued
+against the branch that turned out to be load-bearing.
 
-**Cheapest way to close it**, when someone wants to: temporarily lower
-`storage_cap_bytes()` in a Database-repo branch, upload one small file past it,
-read the error the client actually receives, and restore the cap. That is a few
-minutes of work and settles it properly. Not urgent — the failure mode is a
-message reverting to a less specific one, not data loss or a wrong write — but
-worth doing before anyone relies on the specific message being what users see.
+The general lesson is worth more than the specific fix: an RLS violation
+through this same API forwards its Postgres message verbatim, so probing that
+case suggests messages pass through unchanged. They do not, uniformly.
+Recognised and unrecognised errors take different paths, and probing one tells
+you little about the other.
 
 ### Two Storage cleanup gaps, both waiting on surfaces that are not wired
 
