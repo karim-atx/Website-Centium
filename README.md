@@ -1093,6 +1093,119 @@ The stronger version — a `routes.ts` of typed constants, so a wrong path canno
 be spelled — is the real fix and a much larger change. The lint rule is what
 buys most of the safety for a fraction of the churn.
 
+### Messaging has two tiers, and the tier is a property of the pair
+
+**Nothing gates anything yet, and that is the point of writing this down.** The
+model: a **pre-hire** thread — two people with no active `professional_clients`
+row between them — is text-only and deliberately basic, because its whole
+purpose is deciding whether to hire. An **active-relationship** thread earns the
+full set as those features get built: attachments, voice notes, delivery ticks,
+eventually calling.
+
+None of those exist today. `ThreadView` has no attachment, voice or call
+affordance, and `read_at` is granted and entirely unused. So there is currently
+nothing to gate, and building a gate now would mean a query nothing consumes
+and a prop nothing reads. **This entry is a constraint on the attachments,
+voice-note and ticks tasks, not a task of its own.**
+
+**How the tier is determined, decided and verified rather than assumed.** Read
+time, from `active_professional_clients`. That view already exists, is
+`security_invoker = true`, is granted to `authenticated`, and
+`professional_clients_select_involved` scopes it to rows where the caller is
+either party. So one unfiltered query returns exactly the caller's own
+relationships in both directions — no `.eq()` needed, and adding one would
+duplicate the policy rather than defend it. Build a Set of counterpart ids and
+test each thread's `participantId` against it: **zero per-thread queries.**
+
+```
+select professional_id, client_id from active_professional_clients
+→ counterpart = the id that is not mine
+→ tier = counterparts.has(thread.participantId) ? "active" : "pre-hire"
+```
+
+Verified against staging: one row, ~249 ms network-dominated, correctly
+classifying the one existing thread as active-relationship. Indexing is already
+right for it — `professional_clients_professional_id_idx`, `_client_id_idx`,
+and the partial unique `professional_clients_active_unique_idx … where
+disconnected_at is null`.
+
+**Do not store the tier on the thread.** It is a property of the *pair*, not of
+the conversation, and it changes in both directions: a pre-hire thread becomes
+an active one when the client hires, and reverts when the relationship is
+disconnected. A denormalized column would need maintaining at both of those
+moments and would be wrong precisely when it mattered most — at the end of a
+relationship, still advertising attachments to someone who is no longer a
+client. This is the same reasoning as `has_client_access` and
+`related_profile_summary`: derive from the live relationship, never snapshot
+it. It also means the gate must be evaluated per render rather than captured
+once when a thread opens.
+
+**What was built alongside this**, because it is the tier model's entry points
+rather than the gate: `MessageProfessionalButton`, used from a public listing
+(pre-hire) and from the connected-professional sheet (active). One component
+for both, because `start_message_thread` requires no relationship and is
+idempotent per pair, so neither case needs a branch.
+
+**And what it replaced.** `ProfessionalDetail` carried a mock chat with
+attachments that stored a filename, voice notes that stored an integer, voice
+and video call modals captioned "prototype — no real call", and a composer that
+answered *"Got it — thanks for the update! 👍"* one second after you sent
+anything — held in component state that reached neither the database nor
+localStorage. A fabricated reply from a health professional is the same class
+of error as a measurement that was never taken. It is gone.
+
+**Deep-linking is by navigation state, not by URL.** The button has a thread id
+but `ThreadView` needs the participant's name and avatar, which only the
+Messages page's own fetch has — so the id travels in `location.state` and is
+resolved against the threads once they load, consumed exactly once so that
+returning from a conversation lands on the list instead of bouncing back in. A
+real `/app/messages/:threadId` route would survive a reload and give a correct
+Back button, and is the better long-term shape; it was not done here because
+route changes are what produced this repo's most recent user-visible bug class
+and this one buys a refresh case nobody is asking for yet.
+
+### `ProfessionalDetail` decides "are we connected" from localStorage
+
+**Pre-existing, not introduced by the messaging work, and not fixed there.**
+Found while wiring that page's Message button; recorded rather than fixed
+because the fix is a behaviour change to the hire flow, not a one-liner.
+
+`isConnected` reads `connectedProfessionalIds`, which is `usePersistentState`
+— per-browser localStorage, written by exactly one caller: `confirmHire()`, the
+seeded mock hire flow. It never consults `active_professional_clients`, which
+is the actual roster.
+
+Three consequences, in rising order of how wrong they are:
+
+1. **A genuinely connected professional reads as unconnected.** A real
+   relationship comes from redeeming a client code, which writes a
+   `professional_clients` row and touches no localStorage. So the page routes
+   that pair into the `isReal` branch and tells them *"Ask them for a client
+   code"* — advice to establish a connection they already have.
+2. **It is per-browser.** The same account on a second device, or after
+   clearing site data, answers differently about the same relationship.
+3. **It never expires.** Disconnecting through the real roster leaves the
+   localStorage id in place, so the page can keep showing a connected
+   professional's controls after the relationship has ended. That is the same
+   failure the consent work removed elsewhere: state that outlives the
+   relationship it describes.
+
+**Why the Message button is unaffected either way**, which is why this did not
+have to be fixed first: it is gated on `isReal`, not on `isConnected`, and is
+rendered in both branches. Whichever way the stale flag falls, a real
+professional gets a real button. The wrong branch shows the wrong *copy*, not
+the wrong action.
+
+**The fix is not just swapping the data source.** `connectedProfessionalIds`
+also drives `conflictingProfessional` (one hired professional per specialty)
+and the mock `Hire` flow, both of which are local-only prototype behaviour with
+no server equivalent. Reading the real roster would leave those two consulting
+different notions of "connected" — so this needs deciding what the mock hire
+flow is for now that real relationships exist, rather than a substitution. See
+also [`ProfessionalType` and `professional_subtype` are
+unreconciled](#professionaltype-and-professional_subtype-are-unreconciled) for
+the other place this page holds two models of the same thing.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
