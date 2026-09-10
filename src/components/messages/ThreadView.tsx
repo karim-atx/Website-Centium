@@ -1,8 +1,17 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Send } from "lucide-react";
+import { ArrowLeft, ImageIcon, Paperclip, Send, Trash2 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { usePoll } from "../../hooks/usePoll";
-import { fetchMessages, sendMessage, type Message, type MessageThread } from "../../services/messaging";
+import { FileViewerSheet } from "../health/FileViewerSheet";
+import { acceptFor } from "../../services/storage";
+import {
+  fetchMessages,
+  sendImageAttachment,
+  sendMessage,
+  threadAllowsAttachments,
+  type Message,
+  type MessageThread,
+} from "../../services/messaging";
 
 /** How often an open conversation re-reads. See usePoll for why polling at all. */
 const POLL_MS = 8000;
@@ -33,6 +42,20 @@ export const ThreadView: React.FC<{
   const [error, setError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [viewing, setViewing] = useState<string | null>(null);
+
+  // Whether these two may exchange files at all. Asked once, when the thread
+  // opens, via the same database function both server-side guards use.
+  //
+  // NOT RE-ASKED WHILE OPEN, deliberately. If the relationship ends
+  // mid-conversation the button lingers until the thread is reopened — and
+  // that is harmless, because this is not the enforcement. The Storage policy
+  // and the messages trigger both refuse independently, so a stale button
+  // produces a clear refusal rather than an attachment that should not exist.
+  // Re-checking on every 8s poll would spend a round trip to tidy up a
+  // cosmetic edge nobody is standing on.
+  const [canAttach, setCanAttach] = useState(false);
 
   const load = async () => {
     const result = await fetchMessages(thread.id);
@@ -50,6 +73,17 @@ export const ThreadView: React.FC<{
   useEffect(() => {
     void load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [thread.id]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCanAttach(false);
+    void threadAllowsAttachments(thread.id).then((allowed) => {
+      if (!cancelled) setCanAttach(allowed);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [thread.id]);
 
   usePoll(() => void load(), POLL_MS);
@@ -77,6 +111,23 @@ export const ThreadView: React.FC<{
     // database's, so the next poll recognises it instead of duplicating it.
     setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
     setDraft("");
+  };
+
+  const attach = async (file: File) => {
+    if (!authUserId || sending) return;
+    setSending(true);
+    setError(null);
+    const result = await sendImageAttachment(thread.id, authUserId, file);
+    setSending(false);
+    if (!result.ok) {
+      // Covers a refusal from either door and an ordinary upload failure
+      // alike. What matters is that nothing is appended: an image that did not
+      // send must not appear to have sent, even when the file did reach the
+      // bucket. See sendImageAttachment on why that object cannot be reclaimed.
+      setError(result.message);
+      return;
+    }
+    setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
   };
 
   return (
@@ -108,6 +159,33 @@ export const ThreadView: React.FC<{
                 }`}
               >
                 {m.text}
+                {/* Purged first: both content columns are null, so testing
+                    attachmentPath alone would render nothing at all and the
+                    message would look like an empty bubble rather than one
+                    whose file was deliberately removed. */}
+                {m.attachmentPurgedAt ? (
+                  <span className="flex items-center gap-1.5 opacity-70 italic">
+                    <Trash2 size={13} className="shrink-0" /> Attachment removed
+                  </span>
+                ) : (
+                  m.attachmentPath && (
+                    // A TILE, NOT A THUMBNAIL. Rendering the image inline needs
+                    // a signed URL per attachment at list render, and
+                    // signedUrlFor caps its TTL at ten minutes — so an open
+                    // thread would fill with broken images, and the 8s poll
+                    // would re-sign every one of them on every tick. Signing on
+                    // tap is what FileViewerSheet already does everywhere else.
+                    <button
+                      onClick={() => setViewing(m.attachmentPath)}
+                      className={`tap flex items-center gap-2 rounded-xl bg-black/10 px-3 py-2 text-left ${
+                        m.text ? "mt-1.5" : ""
+                      }`}
+                    >
+                      <ImageIcon size={15} className="shrink-0" />
+                      <span className="text-[12.5px] font-semibold">Photo</span>
+                    </button>
+                  )
+                )}
               </div>
             </div>
           );
@@ -122,6 +200,39 @@ export const ThreadView: React.FC<{
       )}
 
       <div className="flex items-center gap-2 sticky bottom-0 bg-cream pt-2">
+        {/* Shown only for a live relationship. This is convenience, not
+            security — the server refuses independently at both doors, so
+            hiding the button spares someone an upload that was always going to
+            be rejected rather than being the thing that stops them. */}
+        {canAttach && (
+          <>
+            <input
+              ref={fileInputRef}
+              type="file"
+              // Images only. The bucket also accepts audio so a recorded voice
+              // note can go up (6c), but nothing picks audio off disk and
+              // acceptFor excludes it on every bucket.
+              accept={acceptFor("message-attachments", true)}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                // Reset first: picking the same file twice in a row fires no
+                // change event otherwise, so a failed send could not be retried
+                // with the same image.
+                e.target.value = "";
+                if (file) void attach(file);
+              }}
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              disabled={sending}
+              aria-label="Attach a photo"
+              className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 hover:bg-cream-soft disabled:opacity-40"
+            >
+              <Paperclip size={16} />
+            </button>
+          </>
+        )}
         <input
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -140,6 +251,14 @@ export const ThreadView: React.FC<{
           <Send size={16} />
         </button>
       </div>
+
+      <FileViewerSheet
+        open={!!viewing}
+        onClose={() => setViewing(null)}
+        path={viewing}
+        bucket="message-attachments"
+        label="Photo"
+      />
     </div>
   );
 };

@@ -37,9 +37,15 @@ export const ThreadList: React.FC<{
             <p className="text-sm font-semibold text-charcoal truncate">{t.participantName}</p>
             {/* A thread with no messages says so rather than rendering an
                 empty line, which would read as a message that failed to
-                load. Someone can open a conversation and not write in it. */}
+                load. Someone can open a conversation and not write in it.
+
+                The service decides the wording, and `null` now means the
+                thread is genuinely empty — nothing else. Falling back on a
+                falsy TEXT column, as this did, made an image-only message
+                render as "No messages yet" on a thread with five messages
+                in it. */}
             <p className="text-xs text-charcoal-faint truncate">
-              {t.lastMessageText?.trim() || "No messages yet"}
+              {t.lastMessagePreview ?? "No messages yet"}
             </p>
           </div>
           <ChevronRight size={16} className="text-charcoal-faint shrink-0" />

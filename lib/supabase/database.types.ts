@@ -5513,6 +5513,10 @@ export type Database = {
           used_bytes: number
         }[]
       }
+      thread_allows_attachments: {
+        Args: { p_thread_id: string }
+        Returns: boolean
+      }
       touch_last_active: { Args: never; Returns: string }
       trigger_storage_purge: { Args: never; Returns: number }
     }

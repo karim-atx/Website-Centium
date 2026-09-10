@@ -139,6 +139,18 @@ export interface UploadResult {
   /** Object path within the bucket, to store on the owning row. */
   path?: string;
   message?: string;
+  /**
+   * Why it failed, for callers that need to say something specific.
+   *
+   * `refused` means a policy rejected the write — on message-attachments that
+   * is `thread_allows_attachments()` saying the participants have no live
+   * relationship. It exists because that failure is otherwise indistinguishable
+   * from a network problem at this layer, and telling someone to check their
+   * connection when the server has made a permanent decision is the ATX04
+   * mistake repeated: every retry fails identically and nothing about their
+   * connection was ever wrong.
+   */
+  reason?: "cap" | "refused" | "unknown";
 }
 
 function humanSize(bytes: number): string {
@@ -251,6 +263,40 @@ function isCapViolation(error: unknown): boolean {
   if (e.code === CAP_ERRCODE || e.statusCode === CAP_ERRCODE) return true;
   const message = typeof e.message === "string" ? e.message : "";
   return message.includes(CAP_ERRCODE) || message.toLowerCase().includes(CAP_MESSAGE_PREFIX);
+}
+
+/**
+ * Whether Storage refused this write on policy grounds.
+ *
+ * DELIBERATELY BROAD, AND THE BREADTH IS THE POINT. The Storage API does not
+ * surface a SQLSTATE for an RLS `with check` failure the way PostgREST does —
+ * there is no ATX05 to match on, only an HTTP status and prose. So this keys
+ * on the status first, which is structural, and treats the wording as
+ * corroboration rather than the test.
+ *
+ * Being broad is the safe direction here. A false positive says "you can't
+ * attach to this conversation" when the real cause was something else; a false
+ * negative says "check your connection" about a permanent refusal, sending
+ * someone into a retry loop that cannot succeed. The first is a worse
+ * sentence, the second is a worse experience, and only the second is
+ * unrecoverable from the user's side.
+ *
+ * Ordering matters: capacity is checked first by the caller, because ATX04
+ * also arrives as a 4xx and is a different, actionable problem.
+ */
+function isPolicyRefusal(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+  const e = error as { status?: unknown; statusCode?: unknown; message?: unknown };
+  const status = String(e.status ?? e.statusCode ?? "");
+  const message = (typeof e.message === "string" ? e.message : "").toLowerCase();
+  const refusedStatus = status === "400" || status === "401" || status === "403";
+  const refusedWording =
+    message.includes("row-level security") ||
+    message.includes("row level security") ||
+    message.includes("violates") ||
+    message.includes("unauthorized") ||
+    message.includes("access denied");
+  return refusedStatus || refusedWording;
 }
 
 /**
@@ -444,9 +490,23 @@ export async function uploadPrivateFile(params: UploadParams): Promise<UploadRes
     // retry, and every retry fails identically because nothing about their
     // connection was ever wrong.
     if (isCapViolation(error)) {
-      return { ok: false, message: await capExceededMessage() };
+      return { ok: false, reason: "cap", message: await capExceededMessage() };
     }
-    return { ok: false, message: "That file couldn't be uploaded. Check your connection and try again." };
+    // Checked AFTER the cap, because ATX04 also arrives as a 4xx and has its
+    // own, actionable answer. Whoever calls this owns the wording — Storage
+    // has no idea a "policy refusal" here means "you have not hired them".
+    if (isPolicyRefusal(error)) {
+      return {
+        ok: false,
+        reason: "refused",
+        message: "That file couldn't be attached to this conversation.",
+      };
+    }
+    return {
+      ok: false,
+      reason: "unknown",
+      message: "That file couldn't be uploaded. Check your connection and try again.",
+    };
   }
   return { ok: true, path };
 }
