@@ -148,15 +148,35 @@ export default function MessagesTab() {
               compromise security." `accept` is just a picker hint (some
               OS file dialogs let a user bypass it via "All files"), so the
               onChange handler below re-checks the actual MIME type before
-              ever calling sendAttachment. */}
+              ever calling sendAttachment.
+
+              IMAGES ONLY, MATCHING THE BUCKET. This offered `video/*` and the
+              re-check admitted video to match, which nothing could ever store:
+              `message-attachments` allows JPEG, PNG and WebP plus five audio
+              types, and no bucket anywhere accepts a video. The likeliest
+              origin was the QA line asking for "voice notes and attach
+              files/pictures as well as video/voice call" — where the video is
+              about CALLING, which `setCallMode` implements separately.
+
+              Audio is deliberately not offered either. Those bucket types
+              exist for voice notes, which are recorded through
+              `toggleRecording` and stored as a duration rather than picked as
+              a file, so listing them here would invent a path that does not
+              exist.
+
+              Typed out rather than derived from services/storage's BUCKETS
+              because message-attachments is not in that map: its path
+              convention is `<thread_id>/<uploader_id>/<file>` rather than the
+              owner-prefixed one uploadPrivateFile builds, and nothing writes
+              to it yet. */}
           <input
             ref={fileInputRef}
             type="file"
-            accept="image/*,video/*"
+            accept="image/jpeg,image/png,image/webp,.jpg,.png,.webp"
             className="hidden"
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file && /^(image|video)\//.test(file.type)) sendAttachment(file);
+              if (file && /^image\//.test(file.type)) sendAttachment(file);
               e.target.value = "";
             }}
           />

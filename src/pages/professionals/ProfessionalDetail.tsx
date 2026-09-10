@@ -444,15 +444,22 @@ export default function ProfessionalDetail() {
             <div className="flex items-center gap-2 px-4 py-3 border-t border-charcoal/5">
               {/* QA 12.0: "attach files should be contextual... for the
                   sake of fitness related content. By no means should you
-                  be able to upload anything besides that." */}
+                  be able to upload anything besides that."
+
+                  IMAGES ONLY, matching `message-attachments` — see the fuller
+                  note on the same input in MessagesTab. This offered
+                  `video/*`, which no bucket accepts; the QA line it came from
+                  is about video CALLING, implemented separately as
+                  `setCallMode`. Audio stays off the list because voice notes
+                  are recorded rather than picked as a file. */}
               <input
                 ref={fileInputRef}
                 type="file"
-                accept="image/*,video/*"
+                accept="image/jpeg,image/png,image/webp,.jpg,.png,.webp"
                 className="hidden"
                 onChange={(e) => {
                   const file = e.target.files?.[0];
-                  if (file && /^(image|video)\//.test(file.type)) sendAttachment(file);
+                  if (file && /^image\//.test(file.type)) sendAttachment(file);
                   e.target.value = "";
                 }}
               />
