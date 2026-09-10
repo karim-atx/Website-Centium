@@ -627,6 +627,33 @@ design anticipating it, and because manual entry is what makes it happen.
 zero as *display* precision, and in lab reporting significant figures carry
 meaning. Preserving it would need a column for the original string.
 
+### A panel saved without a report file cannot be deleted
+
+Blood panels are now deletable, which closes the gap where a client could
+upload a lab report and never remove it. `deleteLabPanel` takes the panel row
+first and the object second — markers follow the panel by `ON DELETE CASCADE`,
+and the file is removed explicitly because Storage does not cascade. The
+control lives on each entry in the Lab reports list.
+
+**That list is the whole delete surface, and it does not hold every panel.**
+`getLabReports` filters to panels whose `source_image_url` is non-null, because
+a panel with no file has nothing to open and a View control on it would promise
+a document that does not exist. A panel saved from a capture where no file was
+attached is therefore invisible there — and the Biomarkers tab beneath it
+cannot host the control either, because those rows are grouped by marker name
+across every panel, so a row does not correspond to a panel and often draws its
+history from several.
+
+So the missing piece is a listing of panels *as panels*, independent of whether
+one carries a file — which is a feature rather than an addition to this one. It
+is also what manual biomarker entry would need, and manual entry is what will
+make fileless panels common: today they only appear when someone completes a
+capture without attaching anything, which is the uncommon path. The two are
+worth building together.
+
+Nothing is orphaned in the meantime. A fileless panel holds no Storage object
+by definition, so what persists is table rows, not bucket growth.
+
 ### A consent toggle has three times failed to persist, cause still unknown
 
 Three sightings now, all on this repo's staging, all unexplained.
