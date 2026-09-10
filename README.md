@@ -1238,6 +1238,41 @@ machine's config. It carries a one-time renormalization commit that touches
 every file, which is exactly why it should be done deliberately and on its own
 rather than folded into unrelated work.
 
+### The "Forwarded" label is unreadable on the sender's own bubble
+
+**Minor, real, and measured rather than suspected.** The provenance label added
+with message forwarding renders white at 70% opacity over the sent bubble's
+`rgb(174,161,220)` ground. Measured from the DOM with `getComputedStyle`,
+compositing the opacity by hand:
+
+| context | effective colour | contrast |
+| --- | --- | --- |
+| own bubble (white @ 70% on `rgb(174,161,220)`) | `rgb(231,227,245)` | **1.87:1** |
+| received bubble (charcoal @ 70% on `rgb(245,245,246)`) | `rgb(99,95,93)` | 5.79:1 |
+
+WCAG AA wants 4.5:1 for text this size. The received case passes comfortably,
+and that is the case that matters most: the reader the label exists for is the
+recipient, and they can read it. The sender cannot reliably see which of their
+own messages carry it.
+
+**The ceiling is the bubble, not the opacity.** The sent bubble's own body text
+is white on the same ground at **2.35:1** — already below AA, independently of
+the forwarding work. So no opacity value can bring the label to AA there:
+removing `opacity-70` entirely reaches 2.35:1 and no further, and it would also
+flatten the label into the text it exists to qualify.
+
+**Which is why it was left alone rather than patched.** Anything that actually
+fixes this is a decision about the sent-bubble palette generally, affecting
+every message in the app rather than one label. Two shapes it could take: a
+dedicated token that reads on both grounds, the way `--c-status-good-deep` was
+added when the message ticks turned out to sit at 1.45:1 against this same
+mid-tone; or a darker sent-bubble ground, which repairs the body text at the
+same time and is the larger change.
+
+Worth doing as its own piece of work, with the whole palette in front of you,
+rather than folded into whichever feature next happens to put small text on a
+purple bubble.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
