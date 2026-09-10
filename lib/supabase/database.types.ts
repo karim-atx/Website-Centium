@@ -4706,6 +4706,42 @@ export type Database = {
       }
     }
     Views: {
+      connected_professional_summary: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          first_name: string | null
+          id: string | null
+          location: string | null
+          professional_subtype:
+            | Database["public"]["Enums"]["professional_subtype"]
+            | null
+          specialty: string | null
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          first_name?: string | null
+          id?: string | null
+          location?: string | null
+          professional_subtype?:
+            | Database["public"]["Enums"]["professional_subtype"]
+            | null
+          specialty?: string | null
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          first_name?: string | null
+          id?: string | null
+          location?: string | null
+          professional_subtype?:
+            | Database["public"]["Enums"]["professional_subtype"]
+            | null
+          specialty?: string | null
+        }
+        Relationships: []
+      }
       active_professional_clients: {
         Row: {
           assigned_food_template_id: string | null

@@ -4,6 +4,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { ChevronRight, ShieldCheck } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
+import { ConnectedProfessionalDetail } from "./ConnectedProfessionalDetail";
 import { DataSharingSection } from "./DataSharingSection";
 import {
   ACCESS_CATEGORIES,
@@ -131,6 +132,11 @@ export const DataSharingSummary: React.FC = () => {
         }}
         title={openFor?.name ?? "Data sharing"}
       >
+        {/* Above the controls, because it is context for the decision being
+            made below it rather than a separate destination. Renders nothing
+            at all when the professional has written no bio, which is the
+            common case today. */}
+        {openFor && <ConnectedProfessionalDetail professionalId={openFor.professionalId} />}
         {openFor && <DataSharingSection professionalId={openFor.professionalId} />}
       </BottomSheet>
     </div>
