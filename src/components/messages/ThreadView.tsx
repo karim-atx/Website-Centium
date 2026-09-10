@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, Check, CheckCheck, ImageIcon, Mic, Paperclip, Send, Trash2 } from "lucide-react";
 import { useApp } from "../../context/AppContext";
+import { useUnread } from "../../context/UnreadContext";
 import { usePoll } from "../../hooks/usePoll";
 import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
 import { FileViewerSheet } from "../health/FileViewerSheet";
@@ -43,6 +44,7 @@ export const ThreadView: React.FC<{
   onBack: () => void;
 }> = ({ thread, onBack }) => {
   const { authUserId } = useApp();
+  const unread = useUnread();
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -96,6 +98,11 @@ export const ThreadView: React.FC<{
     if (marked > 0) {
       const after = await fetchMessages(thread.id);
       if (after.ok) setMessages(after.messages);
+      // The badge polls every thirty seconds, which is fine for noticing a new
+      // message and far too slow for clearing one you are looking at. Nudged
+      // only when something was actually marked, so this stays off the poll
+      // path that changes nothing.
+      unread.refresh();
     }
   };
 

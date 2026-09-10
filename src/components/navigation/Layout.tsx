@@ -5,6 +5,7 @@ import { PendingDeletionBanner } from "./PendingDeletionBanner";
 import { ConsentReviewBanner } from "../professionals/ConsentReviewBanner";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
+import { UnreadProvider } from "../../context/UnreadContext";
 
 export const Layout: React.FC = () => {
   // This app uses plain BrowserRouter, which — unlike the newer data
@@ -20,21 +21,27 @@ export const Layout: React.FC = () => {
   }, [pathname]);
 
   return (
-    <div className="min-h-screen bg-cream flex">
-      <Sidebar />
-      <div className="flex-1 min-w-0">
-        <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-28 lg:pb-12">
-          {/* First, because it explains why the other two might not be able to
-              act. A pending deletion cannot be cancelled and consent cannot be
-              answered without a connection, so the reason belongs above the
-              controls it affects. */}
-          <OfflineBanner />
-          <PendingDeletionBanner />
-          <ConsentReviewBanner />
-          <Outlet />
-        </main>
+    // Wrapping the shell rather than the app: this is the smallest scope that
+    // covers both navs AND every route, which is what a badge visible from the
+    // dashboard requires. Outside RequireOnboarded there is no session to count
+    // for anyway.
+    <UnreadProvider>
+      <div className="min-h-screen bg-cream flex">
+        <Sidebar />
+        <div className="flex-1 min-w-0">
+          <main className="max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-28 lg:pb-12">
+            {/* First, because it explains why the other two might not be able to
+                act. A pending deletion cannot be cancelled and consent cannot be
+                answered without a connection, so the reason belongs above the
+                controls it affects. */}
+            <OfflineBanner />
+            <PendingDeletionBanner />
+            <ConsentReviewBanner />
+            <Outlet />
+          </main>
+        </div>
+        <BottomNav />
       </div>
-      <BottomNav />
-    </div>
+    </UnreadProvider>
   );
 };

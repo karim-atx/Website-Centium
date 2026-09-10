@@ -3,6 +3,8 @@ import { NavLink, useLocation } from "react-router-dom";
 import clsx from "clsx";
 import { primaryNavItems, professionalPrimaryNavItems, businessPrimaryNavItems } from "./navItems";
 import { useApp } from "../../context/AppContext";
+import { useUnread } from "../../context/UnreadContext";
+import { UnreadDot } from "../messages/UnreadBadge";
 
 const gridColsForCount: Record<number, string> = {
   2: "grid-cols-2",
@@ -13,6 +15,7 @@ const gridColsForCount: Record<number, string> = {
 export const BottomNav: React.FC = () => {
   const location = useLocation();
   const { user, t } = useApp();
+  const unread = useUnread();
   const isProfessional = user.accountType === "professional";
   const isBusiness = user.accountType === "business";
   const items = isProfessional ? professionalPrimaryNavItems : isBusiness ? businessPrimaryNavItems : primaryNavItems;
@@ -47,8 +50,14 @@ export const BottomNav: React.FC = () => {
             <NavLink
               key={item.to}
               to={item.to}
-              className="tap flex flex-col items-center justify-center gap-1 py-2.5"
+              className="tap relative flex flex-col items-center justify-center gap-1 py-2.5"
             >
+              {/* On More, and only More. There is no Messages item in this bar
+                  for any account type, so More is the sole route to a
+                  conversation on the platform this app is built for — a badge
+                  living only inside the menu would be seen by nobody who had
+                  not already gone looking for it. */}
+              {item.to === "/app/more" && <UnreadDot show={unread.total > 0} />}
               <Icon
                 size={22}
                 strokeWidth={active ? 2.4 : 2}

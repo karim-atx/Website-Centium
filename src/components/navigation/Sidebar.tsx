@@ -4,9 +4,12 @@ import clsx from "clsx";
 import { sidebarNavItems, professionalSidebarNavItems, businessSidebarNavItems } from "./navItems";
 import { useApp } from "../../context/AppContext";
 import { Flame } from "lucide-react";
+import { useUnread } from "../../context/UnreadContext";
+import { UnreadBadge } from "../messages/UnreadBadge";
 
 export const Sidebar: React.FC = () => {
   const { user, t } = useApp();
+  const unread = useUnread();
   const isBusiness = user.accountType === "business";
   // V7 (QA 7.0): Employees/Classes only apply to gym-type businesses.
   const items =
@@ -47,7 +50,10 @@ export const Sidebar: React.FC = () => {
               }
             >
               <Icon size={19} />
-              {t(item.label)}
+              <span className="flex-1 min-w-0 truncate">{t(item.label)}</span>
+              {/* Keyed on the route, not the label: the label is translated
+                  and would stop matching in another language. */}
+              {item.to === "/app/messages" && <UnreadBadge count={unread.total} />}
             </NavLink>
           );
         })}

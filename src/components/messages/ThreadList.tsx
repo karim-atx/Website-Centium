@@ -1,6 +1,8 @@
 import { Card } from "../ui/Card";
 import { PERSON_ICON } from "../../utils/icons";
 import { ChevronRight } from "lucide-react";
+import { useUnread } from "../../context/UnreadContext";
+import { UnreadBadge } from "./UnreadBadge";
 import type { MessageThread } from "../../services/messaging";
 
 /**
@@ -16,7 +18,9 @@ import type { MessageThread } from "../../services/messaging";
 export const ThreadList: React.FC<{
   threads: MessageThread[];
   onOpen: (thread: MessageThread) => void;
-}> = ({ threads, onOpen }) => (
+}> = ({ threads, onOpen }) => {
+  const unread = useUnread();
+  return (
   <div>
     {threads.map((t) => (
       <Card
@@ -44,13 +48,22 @@ export const ThreadList: React.FC<{
                 falsy TEXT column, as this did, made an image-only message
                 render as "No messages yet" on a thread with five messages
                 in it. */}
-            <p className="text-xs text-charcoal-faint truncate">
+            <p
+              className={`text-xs truncate ${
+                // An unread conversation earns weight in the preview too, not
+                // only a number — the badge says how many, the emphasis says
+                // which row to look at when several are stacked.
+                unread.byThread[t.id] ? "text-charcoal font-semibold" : "text-charcoal-faint"
+              }`}
+            >
               {t.lastMessagePreview ?? "No messages yet"}
             </p>
           </div>
+          <UnreadBadge count={unread.byThread[t.id] ?? 0} />
           <ChevronRight size={16} className="text-charcoal-faint shrink-0" />
         </div>
       </Card>
     ))}
   </div>
-);
+  );
+};

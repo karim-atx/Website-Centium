@@ -6,11 +6,14 @@ import { useApp } from "../../context/AppContext";
 import { ReferralSheet } from "../../components/profile/ReferralSheet";
 import { PaymentsSheet } from "../../components/profile/PaymentsSheet";
 import { PublicListingSheet } from "../../components/profile/PublicListingSheet";
+import { useUnread } from "../../context/UnreadContext";
+import { UnreadBadge } from "../../components/messages/UnreadBadge";
 import { Sparkles, Users, Store, User as UserIcon, Crown, ChevronRight, Settings, HeartPulse, MessageCircle, MessageSquare, CalendarDays, Building2, Gift, Banknote, Globe2 } from "lucide-react";
 
 export default function More() {
   const navigate = useNavigate();
   const { user } = useApp();
+  const unread = useUnread();
   const isProfessional = user.accountType === "professional";
   const isBusiness = user.accountType === "business";
   const [referralOpen, setReferralOpen] = useState(false);
@@ -95,7 +98,10 @@ export default function More() {
                 <p className="text-xs text-charcoal-faint">{item.desc}</p>
               </div>
             </div>
-            <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
+            <span className="flex items-center gap-2 shrink-0">
+              {item.to === "/app/messages" && <UnreadBadge count={unread.total} />}
+              <ChevronRight size={15} className="text-charcoal-faint" />
+            </span>
           </button>
         ))}
       </Card>

@@ -493,3 +493,53 @@ export async function markThreadRead(threadId: string): Promise<number> {
   }
   return data?.length ?? 0;
 }
+
+export interface UnreadCounts {
+  /** Unread messages received, keyed by thread id. Threads with none are absent. */
+  byThread: Record<string, number>;
+  total: number;
+}
+
+/**
+ * How many messages the caller has received and not read, per thread.
+ *
+ * ONE QUERY FOR BOTH ANSWERS. Selecting the thread ids of unread rows and
+ * counting them here gives the per-thread badge and the nav total together;
+ * asking the database for grouped counts is not expressible through PostgREST,
+ * and a `head: true` count per thread would be one round trip each for strictly
+ * less information.
+ *
+ * WHAT KEEPS IT CHEAP is that the row set is unread messages, which is small by
+ * nature — an inbox nobody has read is a product problem long before it is a
+ * query problem. `messages_thread_unread_idx` is a partial index on
+ * `(thread_id) where read_at is null`, matching this predicate exactly, and RLS
+ * narrows to the caller's own threads before `sender_id` is considered.
+ *
+ * `sender_id` IS FILTERED HERE, AND THAT IS NOT A DUPLICATED POLICY.
+ * `messages_select_participant` deliberately returns both sides of a
+ * conversation, so excluding the caller's own messages is a functional
+ * requirement — an unread count that included what you had just sent would
+ * count your own words back at you.
+ *
+ * FAILS TO ZERO, NOT TO A GUESS. An error returns empty counts, so a badge
+ * disappears rather than freezing at a stale number. Claiming unread messages
+ * that cannot be confirmed is worse than showing none.
+ */
+export async function fetchUnreadCounts(currentUserId: string): Promise<UnreadCounts> {
+  const { data, error } = await supabase
+    .from("messages")
+    .select("thread_id")
+    .is("read_at", null)
+    .neq("sender_id", currentUserId);
+
+  if (error) {
+    console.error("[messaging] Could not count unread:", error.message);
+    return { byThread: {}, total: 0 };
+  }
+
+  const byThread: Record<string, number> = {};
+  for (const row of data ?? []) {
+    if (row.thread_id) byThread[row.thread_id] = (byThread[row.thread_id] ?? 0) + 1;
+  }
+  return { byThread, total: data?.length ?? 0 };
+}
