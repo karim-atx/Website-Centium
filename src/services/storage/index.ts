@@ -90,6 +90,69 @@ function humanSize(bytes: number): string {
 }
 
 /**
+ * The `accept` attribute for a file input feeding this bucket.
+ *
+ * DERIVED FROM BUCKETS RATHER THAN TYPED OUT, because the two drifted. Both
+ * capture flows used `accept="image/*"`, which offers the user HEIC, GIF, SVG,
+ * BMP, TIFF and AVIF — none of which any bucket accepts. The picker said yes
+ * and the upload said no, which is the worst order to learn it in.
+ *
+ * `imagesOnly` is for camera inputs, which are narrower than the bucket by
+ * nature: a camera cannot produce a PDF, so offering one is noise.
+ *
+ * NOT A CONTROL. `accept` is a picker hint — most OS dialogs offer a way past
+ * it, and a file's reported type can be wrong regardless. It exists to make
+ * the common path pleasant; validateFileFor is what actually decides.
+ */
+export function acceptFor(bucket: PrivateBucket, imagesOnly = false): string {
+  const types = BUCKETS[bucket].mimeTypes.filter((t) => !imagesOnly || t.startsWith("image/"));
+  // Extension hints alongside the MIME types: some pickers match one and not
+  // the other. Derived from the same map that names the uploaded file.
+  return [...types, ...types.map((t) => `.${EXTENSIONS[t]}`)].join(",");
+}
+
+export interface FileCheckResult {
+  ok: boolean;
+  message?: string;
+}
+
+/**
+ * Whether this file may go in this bucket, by type and size.
+ *
+ * DELIBERATELY CALLED TWICE. The capture flows call it the moment a file is
+ * picked, so a file that cannot be uploaded never enters the review flow —
+ * previously the only check ran inside uploadPrivateFile, at the END of
+ * capture, data-URL read, parse and results review, so the user did all of
+ * that work before being told the type was wrong.
+ *
+ * uploadPrivateFile still calls it too, and that call is the one that matters.
+ * The early check is a convenience and can be skipped by anything that does
+ * not go through the UI; the upload-time check cannot. Neither is the security
+ * boundary — the bucket's own file_size_limit and allowed_mime_types are, and
+ * they reject on the server no matter what any of this says.
+ */
+export function validateFileFor(bucket: PrivateBucket, file: File): FileCheckResult {
+  const config = BUCKETS[bucket];
+
+  if (!config.mimeTypes.includes(file.type)) {
+    return {
+      ok: false,
+      message: "That file type isn't supported. Use a JPEG, PNG, WebP or PDF.",
+    };
+  }
+  if (file.size > config.maxBytes) {
+    return {
+      ok: false,
+      message: `That ${config.label} is ${humanSize(file.size)}. The limit is ${humanSize(config.maxBytes)}.`,
+    };
+  }
+  if (file.size === 0) {
+    return { ok: false, message: "That file is empty." };
+  }
+  return { ok: true };
+}
+
+/**
  * Builds the object path for a file.
  *
  * THE FILENAME IS GENERATED, NEVER TAKEN FROM THE FILE. This is a security
@@ -122,23 +185,12 @@ export async function uploadPrivateFile(params: {
   file: File;
 }): Promise<UploadResult> {
   const { bucket, userId, file } = params;
-  const config = BUCKETS[bucket];
 
-  if (!config.mimeTypes.includes(file.type)) {
-    return {
-      ok: false,
-      message: "That file type isn't supported. Use a JPEG, PNG, WebP or PDF.",
-    };
-  }
-  if (file.size > config.maxBytes) {
-    return {
-      ok: false,
-      message: `That ${config.label} is ${humanSize(file.size)}. The limit is ${humanSize(config.maxBytes)}.`,
-    };
-  }
-  if (file.size === 0) {
-    return { ok: false, message: "That file is empty." };
-  }
+  // Kept even though the capture flows now check at pick time. That check is a
+  // UX convenience on one path; this one covers every caller, including any
+  // future one that never touches a file input.
+  const check = validateFileFor(bucket, file);
+  if (!check.ok) return { ok: false, message: check.message };
 
   const path = objectPath(bucket, userId, file.type);
   const { error } = await supabase.storage.from(bucket).upload(path, file, {

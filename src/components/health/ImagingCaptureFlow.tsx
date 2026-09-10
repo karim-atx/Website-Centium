@@ -3,6 +3,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Camera, Check, FileText, Sparkles } from "lucide-react";
 import { parseImagingFile, type ExtractedImagingRecord } from "../../services/ai/parseImagingFile";
+import { acceptFor, validateFileFor } from "../../services/storage";
 import { useApp } from "../../context/AppContext";
 
 type Stage = "capture" | "analyzing" | "results" | "done";
@@ -46,6 +47,16 @@ export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }
   };
 
   const handleFile = (picked: File, via: Source) => {
+    // CHECKED BEFORE ANYTHING ELSE HAPPENS TO IT — see the same guard in
+    // BiomarkerCaptureFlow. Running the check only inside uploadPrivateFile
+    // meant an unusable file was read, parsed and reviewed before the
+    // rejection arrived. Nothing here advances the stage, so the sheet stays
+    // on capture with the message beside the buttons.
+    const check = validateFileFor("medical-imaging", picked);
+    if (!check.ok) {
+      setSaveError(check.message ?? "That file can't be used.");
+      return;
+    }
     setSource(via);
     setFile(picked);
     setSaveError(null);
@@ -108,17 +119,28 @@ export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }
             <input
               ref={cameraInputRef}
               type="file"
-              accept="image/*"
+              accept={acceptFor("medical-imaging", true)}
               capture="environment"
               className="hidden"
-              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0], "camera")}
+              // Cleared after every pick so choosing the SAME file again still
+              // fires onChange — otherwise a rejected file cannot be retried
+              // without picking something else first.
+              onChange={(e) => {
+                const picked = e.target.files?.[0];
+                e.target.value = "";
+                if (picked) handleFile(picked, "camera");
+              }}
             />
             <input
               ref={fileInputRef}
               type="file"
-              accept="application/pdf,.pdf,image/*"
+              accept={acceptFor("medical-imaging")}
               className="hidden"
-              onChange={(e) => e.target.files?.[0] && handleFile(e.target.files[0], "pdf")}
+              onChange={(e) => {
+                const picked = e.target.files?.[0];
+                e.target.value = "";
+                if (picked) handleFile(picked, "pdf");
+              }}
             />
             <div className="flex items-center gap-4 mb-6">
               <button
@@ -143,6 +165,13 @@ export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }
               Photograph a scan report or attach it as a file — Centium's AI will read it so you can
               confirm what to add.
             </p>
+            {/* saveError renders in the results stage too. It has to render
+                here as well now that a file can be rejected at pick time:
+                without this the sheet would simply sit there having silently
+                discarded what the user chose. */}
+            {saveError && (
+              <p className="text-[11px] text-status-high mt-3 text-center max-w-xs">{saveError}</p>
+            )}
           </div>
         )}
 
