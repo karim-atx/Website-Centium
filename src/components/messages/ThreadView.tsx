@@ -3,6 +3,7 @@ import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, EyeOff, Forwar
 import { useApp } from "../../context/AppContext";
 import { useUnread } from "../../context/UnreadContext";
 import { usePoll } from "../../hooks/usePoll";
+import { usePinRealtime } from "../../hooks/usePinRealtime";
 import { useThreadRealtime } from "../../hooks/useThreadRealtime";
 import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
 import { BottomSheet } from "../ui/BottomSheet";
@@ -229,15 +230,19 @@ export const ThreadView: React.FC<{
     };
   }, [thread.id]);
 
-  // Stars and the pin, loaded once per thread rather than on the 8s poll.
+  // Stars and the pin, read once when the thread opens.
   //
-  // OFF THE POLL PATH DELIBERATELY. A star is this viewer's own action, so it
-  // cannot change behind their back and re-reading it every eight seconds would
-  // spend a request to confirm what the last tap already established. The pin
-  // CAN change behind their back — the other participant may move it — and that
-  // is the honest cost of leaving it here: a pin moved mid-conversation appears
-  // on the next open. Polling it would be a third request every tick to catch a
-  // change that happens rarely, and the banner is not a thing being watched.
+  // A STAR STAYS OFF EVERY LIVE PATH, deliberately. It is this viewer's own
+  // action and cannot change behind their back, so there is nothing to be
+  // notified about: message_flags is not in the realtime publication, and the
+  // toggle already updates state itself. Re-reading it on a timer would spend
+  // requests confirming what the last tap established.
+  //
+  // THE PIN IS THE OPPOSITE CASE, because the other participant can move it.
+  // This fetch is now the ON-OPEN read only; usePinRealtime below keeps it
+  // current while the thread stays open. It used to be the only read, which is
+  // why a pin moved mid-conversation did not appear until the thread was
+  // reopened.
   const refreshPin = async () => setPinState(await fetchPin(thread.id));
   useEffect(() => {
     let cancelled = false;
@@ -264,6 +269,14 @@ export const ThreadView: React.FC<{
   // a subscription that is not delivering.
   usePoll(() => void load(), FALLBACK_POLL_MS, realtime !== "live");
   usePoll(() => void load(), SAFETY_POLL_MS, realtime === "live");
+
+  // The pin, live. Its own subscription rather than a second table on the one
+  // above, because the two have different failure budgets: messages fall back
+  // to polling when the socket is quiet, and a pin deliberately does not — see
+  // usePinRealtime. Re-reads through the same refreshPin the viewer's own
+  // pin/unpin uses, so a change arriving from the other participant and one
+  // made here take the identical path.
+  usePinRealtime(thread.id, () => void refreshPin());
 
   // Only when the count changes, so a poll returning the same history does not
   // yank the view down while someone is reading back through it. `pending` is
