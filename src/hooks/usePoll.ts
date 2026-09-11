@@ -3,15 +3,19 @@ import { useEffect, useRef } from "react";
 /**
  * Runs `task` on an interval, only while the tab is visible.
  *
- * POLLING BECAUSE REALTIME DOES NOT DELIVER, not because it is simpler.
- * Subscribing to `postgres_changes` on this project reports `SUBSCRIBED` and
- * then delivers nothing — proven by subscribing, performing a real insert and
- * receiving zero events. The tables are not in the `supabase_realtime`
- * publication. That failure is invisible from the client: the subscription
- * status says success, so messaging built on it would look correct in review
- * and silently never arrive. Moving to Realtime needs a Database migration
- * first; until then this is the delivery mechanism rather than a placeholder
- * for one.
+ * NO LONGER THE PRIMARY DELIVERY MECHANISM FOR MESSAGES, and the history is
+ * worth keeping because the failure was invisible. Subscribing to
+ * `postgres_changes` used to report `SUBSCRIBED` and then deliver nothing:
+ * `public.messages` was not a member of the `supabase_realtime` publication,
+ * so no change was ever published. The subscription status said success, which
+ * is why messaging built on it would have looked correct in review and silently
+ * never arrived. The Database migration `realtime_message_publication` fixed
+ * it, and ThreadView now subscribes — see useThreadRealtime.
+ *
+ * THIS HOOK REMAINS, IN TWO ROLES. It is the fallback when a subscription is
+ * not delivering, and a slow safety re-read that runs even when one is, because
+ * a socket that reports SUBSCRIBED and stays silent is indistinguishable from a
+ * quiet conversation. Other callers — the unread badge — still poll outright.
  *
  * PAUSED WHILE HIDDEN, which is most of the point. A background tab left open
  * overnight would otherwise issue thousands of requests nobody is waiting for.

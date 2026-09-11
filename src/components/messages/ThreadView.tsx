@@ -3,6 +3,7 @@ import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, EyeOff, Forwar
 import { useApp } from "../../context/AppContext";
 import { useUnread } from "../../context/UnreadContext";
 import { usePoll } from "../../hooks/usePoll";
+import { useThreadRealtime } from "../../hooks/useThreadRealtime";
 import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
 import { BottomSheet } from "../ui/BottomSheet";
 import { FileViewerSheet } from "../health/FileViewerSheet";
@@ -35,8 +36,30 @@ const CANCEL_DISTANCE = 60;
 /** Rightward travel that counts as swipe-to-reply. Matches Food and JournalTab. */
 const SWIPE_THRESHOLD = 60;
 
-/** How often an open conversation re-reads. See usePoll for why polling at all. */
-const POLL_MS = 8000;
+/**
+ * How often an open conversation re-reads WHEN REALTIME IS NOT DELIVERING.
+ *
+ * This is the fallback interval, not the normal one. It runs only while the
+ * subscription is not live — a failed handshake, a dropped socket, a browser
+ * that will not open one — and is the value the thread used to poll at
+ * unconditionally.
+ */
+const FALLBACK_POLL_MS = 8000;
+
+/**
+ * A slow re-read that runs EVEN WHILE REALTIME IS LIVE, and it is deliberate
+ * belt-and-braces rather than distrust of the subscription.
+ *
+ * The failure this covers is specific and has already happened once on this
+ * project: a socket that reports SUBSCRIBED and then delivers nothing. From the
+ * client that is indistinguishable from a quiet conversation, so a fallback
+ * keyed on subscription STATUS cannot catch it — the status says everything is
+ * fine. One request a minute bounds how long a conversation can be silently
+ * stale, and costs less than the 8s poll it replaces by a factor of seven.
+ *
+ * Worth removing once Realtime has a track record here. Not before.
+ */
+const SAFETY_POLL_MS = 60000;
 
 /**
  * One conversation: history, and a composer.
@@ -48,10 +71,18 @@ const POLL_MS = 8000;
  * and could not describe a thread between people whose roles the viewer does
  * not know.
  *
- * POLLING RUNS ONLY WHILE THIS IS MOUNTED, so it stops when the thread closes
- * — the list does not poll. An open conversation is the one place latency is
- * felt; an inbox refreshing on its own is requests spent on something nobody
- * is reading.
+ * LIVE OVER REALTIME, WITH POLLING AS THE FALLBACK. Message changes arrive on
+ * a postgres_changes subscription scoped to this thread; the 8s poll now runs
+ * only when that subscription is not delivering, plus a slow 60s safety re-read
+ * that runs regardless. See useThreadRealtime for why the event is treated as a
+ * trigger to re-read rather than as data — the short version is that the app
+ * reads through messages_visible and Realtime publishes the raw table, so
+ * applying a payload directly would walk round this viewer's hidden messages.
+ *
+ * EITHER WAY IT RUNS ONLY WHILE THIS IS MOUNTED, so it stops when the thread
+ * closes — the list does not poll and does not subscribe. An open conversation
+ * is the one place latency is felt; an inbox refreshing on its own is requests
+ * spent on something nobody is reading.
  */
 export const ThreadView: React.FC<{
   thread: MessageThread;
@@ -223,7 +254,16 @@ export const ThreadView: React.FC<{
     };
   }, [thread.id]);
 
-  usePoll(() => void load(), POLL_MS);
+  // The subscription re-reads through load(), so everything downstream of it —
+  // read receipts, the unread badge nudge, the hidden-message filter — behaves
+  // identically whether a change arrived live or on a poll. There is no second
+  // code path to keep in step.
+  const realtime = useThreadRealtime(thread.id, () => void load());
+
+  // Mutually exclusive with the line below: the fast poll exists only to cover
+  // a subscription that is not delivering.
+  usePoll(() => void load(), FALLBACK_POLL_MS, realtime !== "live");
+  usePoll(() => void load(), SAFETY_POLL_MS, realtime === "live");
 
   // Only when the count changes, so a poll returning the same history does not
   // yank the view down while someone is reading back through it. `pending` is
