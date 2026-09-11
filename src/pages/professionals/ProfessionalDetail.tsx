@@ -7,6 +7,11 @@ import { MessageProfessionalButton } from "../../components/messages/MessageProf
 import { mockProfessionals } from "../../data/mockProfessionals";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
 import { isActiveClientOf } from "../../services/connected-professional";
+import {
+  fetchMyHireRequest,
+  sendHireRequest,
+  type HireRequestState,
+} from "../../services/hire-request";
 import type { ProfessionalType } from "../../types";
 import { useApp } from "../../context/AppContext";
 import {
@@ -90,6 +95,7 @@ export default function ProfessionalDetail() {
     disconnectProfessional,
     user,
     submitClientRequest,
+    authUserId,
   } = useApp();
   const [removeConfirm, setRemoveConfirm] = useState(false);
 
@@ -174,6 +180,59 @@ export default function ProfessionalDetail() {
       cancelled = true;
     };
   }, [realProfessionalId]);
+
+  /**
+   * Whether this client already has a hire request with this professional.
+   *
+   * Stamped by professional id for the same reason the connection check is —
+   * so switching between two listings cannot show the previous one's answer.
+   * On-demand, because pending_client_requests is not in the realtime
+   * publication; an acceptance therefore appears on the next visit rather than
+   * live, which is the same trade the pin banner made before it got a
+   * subscription.
+   */
+  const [requestState, setRequestState] = useState<{
+    id: string | null;
+    state: HireRequestState;
+  }>({ id: null, state: "none" });
+  const hireState: HireRequestState =
+    realProfessionalId !== null && requestState.id === realProfessionalId
+      ? requestState.state
+      : "none";
+  const [sending, setSending] = useState(false);
+  const [requestError, setRequestError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!realProfessionalId) return;
+    let cancelled = false;
+    void fetchMyHireRequest(realProfessionalId).then((res) => {
+      if (cancelled || res.status !== "ok") return;
+      setRequestState({ id: realProfessionalId, state: res.state });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [realProfessionalId]);
+
+  const requestHire = async () => {
+    if (!realProfessionalId || !authUserId || sending) return;
+    setSending(true);
+    const res = await sendHireRequest(realProfessionalId, authUserId);
+    setSending(false);
+    // Both refusals are states rather than errors, so each moves the card to
+    // the state it describes rather than surfacing a code. 23505 means a
+    // request is already open — reachable from a stale page or a double tap —
+    // and landing on "pending" is exactly right, because one is.
+    if (res.status === "ok" || res.status === "already_pending") {
+      setRequestState({ id: realProfessionalId, state: "pending" });
+      return;
+    }
+    if (res.status === "cooling_down") {
+      setRequestState({ id: realProfessionalId, state: "cooling_down" });
+      return;
+    }
+    setRequestError(res.message);
+  };
 
   /**
    * TWO SOURCES, BECAUSE THIS PAGE SERVES TWO KINDS OF PROFESSIONAL.
@@ -418,12 +477,68 @@ export default function ProfessionalDetail() {
         </>
       ) : (
         isReal ? (
-          /* No Hire on a real listing. Hiring here is local-only state -- a
+          <>
+          {/* ASKING DIRECTLY, THE OTHER REAL ROUTE ONTO A ROSTER. The card
+              below still explains client codes, which the professional starts;
+              this one is the request the CLIENT can start. Both are real and
+              both end in a professional_clients row — by redeem_client_code
+              and accept_client_request respectively — so neither replaces the
+              other and they sit together.
+
+              THREE STATES, AND ALL THREE ARE FACTS RATHER THAN GUESSES. The
+              row is read on mount from pending_client_requests, which RLS
+              scopes to this caller. There is no cancel, because the client has
+              no UPDATE or DELETE grant on that table — offering one would be a
+              button that cannot work. */}
+          {hireState === "pending" ? (
+            <div className="rounded-2xl bg-primary-pale border border-primary/20 px-4 py-3.5 text-center mb-2.5">
+              <p className="text-sm font-semibold text-primary-dark">Request sent</p>
+              <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
+                Waiting for {professional.name.split(" ")[0]} to respond. You'll see them in your
+                professionals once they accept.
+              </p>
+            </div>
+          ) : hireState === "cooling_down" ? (
+            /* DELIBERATELY VAGUE, AND THE VAGUENESS IS THE POINT. The
+               mechanism is a rejection plus a 24-hour cooldown, and saying
+               either out loud would tell someone they were turned down and
+               invite them to count the hours. Neither helps them. This says
+               the professional is not taking people on, which is true, and
+               leaves the door open without naming a date. */
+            <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center mb-2.5">
+              <p className="text-sm font-semibold text-charcoal">Not taking new clients</p>
+              <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
+                {professional.name.split(" ")[0]} isn't accepting new clients at the moment. You can
+                still message them, or ask for a client code.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center mb-2.5">
+              <p className="text-sm font-semibold text-charcoal">
+                Ask {professional.name.split(" ")[0]} to take you on
+              </p>
+              <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
+                They'll see your request and can accept it from their dashboard.
+              </p>
+              {requestError && (
+                <p className="text-[11.5px] text-status-high mt-2">{requestError}</p>
+              )}
+              <Button
+                fullWidth
+                className="mt-3.5"
+                disabled={sending || !authUserId}
+                onClick={() => void requestHire()}
+              >
+                {sending ? "Sending…" : "Request to hire"}
+              </Button>
+            </div>
+          )}
+          {/* No Hire on a real listing. Hiring here is local-only state -- a
              real relationship can still only come from a redeemed client
              code -- so the button would take a payment method, say "Hired",
              and connect nothing. A button that silently does nothing is the
              same lie as a figure that was never measured; say what actually
-             works instead. */
+             works instead. */}
           <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center">
             <p className="text-sm font-semibold text-charcoal">Ask them for a client code</p>
             <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
@@ -442,6 +557,7 @@ export default function ProfessionalDetail() {
               className="mt-3.5"
             />
           </div>
+          </>
         ) : (
         // No Message on a seeded mock professional: there is no account behind
         // it to message, and the mock chat that used to sit here answered
