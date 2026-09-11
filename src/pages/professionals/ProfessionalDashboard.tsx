@@ -1,7 +1,13 @@
-import { useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
+import {
+  acceptHireRequest,
+  fetchHireInbox,
+  rejectHireRequest,
+  type HireRequestRow,
+} from "../../services/hire-inbox";
 import { AddClientSheet } from "../../components/professionals/AddClientSheet";
 import { ClientDetailSheet } from "../../components/professionals/ClientDetailSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -22,8 +28,101 @@ const activityLevelLabel: Record<string, string> = {
 };
 
 export default function ProfessionalDashboard() {
-  const { user, professionalClients, pendingClientRequests, acceptClientRequest, rejectClientRequest } = useApp();
+  // pendingClientRequests / acceptClientRequest / rejectClientRequest are
+  // deliberately NOT read here any more. They are a localStorage array that
+  // nothing real ever wrote to, and answering one cleared a local row while
+  // the database knew nothing about it. The inbox below now reads
+  // pending_client_requests and answers through accept_client_request and
+  // reject_client_request.
+  //
+  // They stay in AppContext because submitClientRequest still writes to that
+  // array from ProfessionalDetail's mock hire flow, which is out of scope
+  // here. So the array is now written by the mock path and read by nobody.
+  const { user, professionalClients, authUserId, refreshRoster } = useApp();
   const [addOpen, setAddOpen] = useState(false);
+
+  /**
+   * Incoming hire requests, read on mount and after every answer.
+   *
+   * ON DEMAND, NOT LIVE. pending_client_requests is not in the realtime
+   * publication, so a request that arrives while this page is open shows up on
+   * the next load rather than immediately — the same trade the pin banner made
+   * before it got a subscription.
+   *
+   * REFRESHED AFTER AN ANSWER AS WELL AS REMOVED LOCALLY. The optimistic
+   * removal is what makes the row disappear under the finger; the refresh is
+   * what catches the case where it was already resolved elsewhere, or where
+   * accepting failed on the tier limit and the row is still waiting.
+   */
+  const [requests, setRequests] = useState<HireRequestRow[]>([]);
+  const [inboxError, setInboxError] = useState<string | null>(null);
+  const [answering, setAnswering] = useState<string | null>(null);
+
+  const loadInbox = useCallback(async () => {
+    // Returns rather than clearing, so there is no synchronous setState on the
+    // effect's first pass. Signing out unmounts this page, so there is no
+    // stale list left behind to worry about.
+    if (!authUserId) return;
+    const res = await fetchHireInbox(authUserId);
+    if (res.status === "ok") {
+      setRequests(res.requests);
+      setInboxError(null);
+    } else {
+      setInboxError(res.message);
+    }
+  }, [authUserId]);
+
+  // The mount read is its own effect rather than a call to loadInbox, for two
+  // reasons: it carries a cancelled guard, so a fast unmount cannot set state
+  // on a gone component; and calling a callback that closes over setState is
+  // indistinguishable from a synchronous setState to the linter, which is a
+  // real distinction here — the writes below happen after an await.
+  useEffect(() => {
+    if (!authUserId) return;
+    let cancelled = false;
+    void (async () => {
+      const res = await fetchHireInbox(authUserId);
+      if (cancelled) return;
+      if (res.status === "ok") setRequests(res.requests);
+      else setInboxError(res.message);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId]);
+
+  const answer = async (id: string, action: "accept" | "reject") => {
+    if (answering) return;
+    setAnswering(id);
+    setInboxError(null);
+    const res = action === "accept" ? await acceptHireRequest(id) : await rejectHireRequest(id);
+    setAnswering(null);
+
+    if (res.status === "ok") {
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+      // Accepting creates a roster row, so the client list behind this page is
+      // now out of date as well as the inbox.
+      if (action === "accept") await refreshRoster();
+      await loadInbox();
+      return;
+    }
+    if (res.status === "already_resolved") {
+      // Someone answered it elsewhere. Not an error worth a red message —
+      // the refresh below makes the list agree with the database.
+      setRequests((prev) => prev.filter((r) => r.id !== id));
+      await loadInbox();
+      return;
+    }
+    if (res.status === "tier_limit_reached") {
+      // An expected outcome, not a fault: the request is still pending and
+      // still answerable once they have room, so the row stays.
+      setInboxError(
+        "You've reached your plan's client limit. Upgrade, or remove a client, to accept this one."
+      );
+      return;
+    }
+    setInboxError(res.message);
+  };
   // Holds just the id, not a snapshot of the whole client object — a
   // snapshot would go stale the moment anything about the client (e.g.
   // the recovery-sensitive toggle) changes while the sheet is still open,
@@ -98,9 +197,9 @@ export default function ProfessionalDashboard() {
               className="tap relative w-10 h-10 rounded-full bg-cream-card border border-charcoal/[0.11] text-charcoal-soft flex items-center justify-center"
             >
               <Inbox size={16} />
-              {pendingClientRequests.length > 0 && (
+              {requests.length > 0 && (
                 <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-status-high text-white text-[9px] font-bold flex items-center justify-center">
-                  {pendingClientRequests.length}
+                  {requests.length}
                 </span>
               )}
             </button>
@@ -287,29 +386,42 @@ export default function ProfessionalDashboard() {
 
       <BottomSheet open={inboxOpen} onClose={() => setInboxOpen(false)} title="New client requests">
         <div className="space-y-3 animate-fade-slide-up">
-          {pendingClientRequests.length === 0 && (
+          {requests.length === 0 && !inboxError && (
             <p className="text-sm text-charcoal-faint text-center py-6">
-              No new requests. Clients who hire you after paying will show up here.
+              {/* "after paying" is gone: nothing here involves a payment. A
+                  request is someone asking, and this is where you answer. */}
+              No new requests. Clients who ask to work with you will show up here.
             </p>
           )}
-          {pendingClientRequests.map((req) => (
+          {inboxError && (
+            <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
+              {inboxError}
+            </p>
+          )}
+          {requests.map((req) => (
             <Card key={req.id} className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-bold text-charcoal">{req.name}</p>
-                <p className="text-xs text-charcoal-faint">Hired you · {req.requestedAt}</p>
+                {/* "Hired you" was never true — accepting is what starts the
+                    relationship, and this row is the moment before that. */}
+                <p className="text-xs text-charcoal-faint">
+                  Asked to work with you · {formatDisplayDate(req.requestedAt)}
+                </p>
               </div>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => rejectClientRequest(req.id)}
+                  onClick={() => void answer(req.id, "reject")}
+                  disabled={!!answering}
                   aria-label={`Reject ${req.name}`}
-                  className="tap w-9 h-9 rounded-full bg-cream-soft text-charcoal-faint flex items-center justify-center"
+                  className="tap w-9 h-9 rounded-full bg-cream-soft text-charcoal-faint flex items-center justify-center disabled:opacity-40"
                 >
                   <X size={15} />
                 </button>
                 <button
-                  onClick={() => acceptClientRequest(req.id)}
+                  onClick={() => void answer(req.id, "accept")}
+                  disabled={!!answering}
                   aria-label={`Accept ${req.name}`}
-                  className="tap w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center"
+                  className="tap w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center disabled:opacity-40"
                 >
                   <Check size={15} />
                 </button>
