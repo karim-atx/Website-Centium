@@ -2594,9 +2594,33 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const submitClientRequest: AppState["submitClientRequest"] = (name) =>
     setPendingClientRequests((prev) => [...prev, { id: `req${Date.now()}`, name, requestedAt: today }]);
   const acceptClientRequest: AppState["acceptClientRequest"] = (id) => {
-    // The hire inbox is still a local simulation, and accepting can no longer
-    // conjure a relationship: a real one only exists once the client redeems
-    // an invite code. Accepting therefore just clears the request.
+    // The hire inbox is still a local simulation: these requests live in
+    // localStorage, so accepting one here clears a local row and creates
+    // nothing.
+    //
+    // THIS USED TO SAY a real relationship "only exists once the client
+    // redeems an invite code", which is wrong and has been since migration
+    // 20260905220059. There are TWO real paths into professional_clients, both
+    // SECURITY DEFINER functions because the table grants clients SELECT only:
+    //
+    //   redeem_client_code(p_code)        the client redeems a code the
+    //                                     professional generated
+    //   accept_client_request(p_request)  the professional accepts a row in
+    //                                     public.pending_client_requests
+    //
+    // The second is the real version of THIS function, and it already works:
+    // it locks the request, checks the caller is the professional named on it,
+    // refuses one already resolved, and reuses an existing active roster row
+    // rather than failing. pending_client_requests even grants clients INSERT
+    // on (customer_id, professional_id), so a request can be raised without an
+    // RPC at all.
+    //
+    // What is missing is on this side, not the database's: nothing in the app
+    // reads pending_client_requests or calls either RPC, so the inbox shows
+    // local rows and this accept cannot reach the real one. Wiring it up is
+    // its own piece of work — recorded here so the next reader does not
+    // conclude, as this comment previously implied, that the backend cannot
+    // do it.
     setPendingClientRequests((prev) => prev.filter((r) => r.id !== id));
   };
   const rejectClientRequest = (id: string) =>

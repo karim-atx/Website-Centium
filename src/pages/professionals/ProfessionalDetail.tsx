@@ -238,6 +238,31 @@ export default function ProfessionalDetail() {
       )
     : undefined;
 
+  /**
+   * MOCK PROFESSIONALS ONLY. THIS CANNOT RUN FOR A REAL LISTING.
+   *
+   * The one `setHireOpen(true)` sits in the `isReal` FALSE branch below — a
+   * real listing gets the "Ask them for a client code" card instead, and never
+   * shows a Hire button. So there is no route from a real professional's page
+   * into this function.
+   *
+   * Worth stating outright because a729f35's message claimed that "completing
+   * that flow for a real listing correctly shows not-connected afterward".
+   * That overstates it: the flow is not completable there at all. The change
+   * that commit actually made — isConnected reading professional_clients for
+   * real listings — is unaffected and correct; only that sentence was wrong.
+   *
+   * WHAT "PAYMENT" MEANS HERE IS A setTimeout AND A BOOLEAN. `paymentMethod`
+   * is held in state and never read again: not sent, not stored, not passed on.
+   * There is no payment provider in this repo — no dependency, no env var, no
+   * stub. The payment-shaped vocabulary elsewhere (payment_modality, the
+   * method lists) records what a professional ACCEPTS, not a transaction.
+   *
+   * Both real routes into professional_clients live in the database and
+   * neither passes through here: redeem_client_code, and
+   * accept_client_request against a pending_client_requests row. See the note
+   * on acceptClientRequest in AppContext.
+   */
   const confirmHire = () => {
     setPaid(true);
     setTimeout(() => {
