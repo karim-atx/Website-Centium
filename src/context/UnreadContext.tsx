@@ -1,10 +1,33 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { useApp } from "./AppContext";
 import { usePoll } from "../hooks/usePoll";
+import { useUnreadRealtime } from "../hooks/useUnreadRealtime";
 import { fetchUnreadCounts, type UnreadCounts } from "../services/messaging";
 
-/** Background badge, so a slower cadence than an open conversation's 8s. */
-const POLL_MS = 30000;
+/**
+ * How often the badge re-counts WHEN REALTIME IS NOT DELIVERING.
+ *
+ * The fallback interval, not the normal one, and the value this context polled
+ * at unconditionally before it subscribed. Slower than an open conversation's
+ * 8s because a badge is background: nobody is waiting on it the way they wait
+ * on a reply.
+ */
+const FALLBACK_POLL_MS = 30000;
+
+/**
+ * A slow re-count that runs EVEN WHILE REALTIME IS LIVE.
+ *
+ * Same belt-and-braces as ThreadView's, for the same reason and at the same
+ * value: a socket can report SUBSCRIBED and then deliver nothing, which from
+ * the client is indistinguishable from nobody having written to you. A fallback
+ * keyed on subscription STATUS cannot catch that, because the status says
+ * everything is fine.
+ *
+ * Note this is SLOWER than the fallback, which reads backwards until you see
+ * why: 30s is what the badge costs when it is the only mechanism, 60s is what
+ * it costs as insurance behind one that works.
+ */
+const SAFETY_POLL_MS = 60000;
 
 interface UnreadState extends UnreadCounts {
   /** Re-reads immediately. Called after marking a thread read. */
@@ -56,7 +79,20 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     void load();
   }, [load]);
 
-  usePoll(() => void load(), POLL_MS, !!authUserId);
+  // Live arrivals across every conversation. The subscription re-reads through
+  // the same load() the poll and refresh() use, so there is no second path to
+  // keep in step — a message arriving live and one found by a poll produce the
+  // identical count.
+  const realtime = useUnreadRealtime(authUserId, () => void load());
+
+  // One poll, two speeds. The interval changes with the subscription's status
+  // rather than the poll being switched off, because a socket that reports
+  // SUBSCRIBED and then goes quiet would leave no mechanism at all.
+  usePoll(
+    () => void load(),
+    realtime === "live" ? SAFETY_POLL_MS : FALLBACK_POLL_MS,
+    !!authUserId
+  );
 
   return (
     <UnreadCtx.Provider value={{ ...counts, refresh: () => void load() }}>
