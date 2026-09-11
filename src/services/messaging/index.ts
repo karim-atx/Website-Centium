@@ -281,21 +281,32 @@ export async function fetchThreads(): Promise<ThreadsResult> {
       // `string` and every reader inherited the lie silently. Correcting the
       // type changes no behaviour; it stops the next reader trusting it.
       participantId: r.participant_id,
-      // TWO DIFFERENT ABSENCES, NAMED DIFFERENTLY, NEITHER EXPLAINED.
+      // TWO DIFFERENT ABSENCES, AND THE DIFFERENCE IS KNOWABLE.
       //
       // A present id with no first_name is a real person whose profile has no
       // name yet — "Someone" is right, because there is someone and the name
       // may still arrive.
       //
-      // A null id is a conversation with no resolvable counterpart at all, and
-      // "Unnamed conversation" says exactly that much. It deliberately stops
-      // short of WHY: the obvious cause is a deleted account, and that is very
-      // likely what it is, but this line cannot prove it and a label that
-      // asserted it would be a guess rendered as a fact. Naming the cause waits
-      // on an explicit signal from the database — see the follow-up.
+      // A null id means no profiles row exists, and that is a deleted account.
+      // The claim rests on two things, both checked rather than assumed:
+      //
+      //   IN SQL, the view LEFT JOINs profiles and the foreign key guarantees a
+      //   row cannot be missing for any other reason, so participant_id is null
+      //   if and only if the counterpart deleted (migration 20260911200000).
+      //
+      //   IN THIS CLIENT, there is no half-loaded row that could imitate it.
+      //   fetchThreads is the only place a MessageThread is built and the only
+      //   place the view is queried; both awaits complete before any row
+      //   exists; a failed query returns ok:false rather than rows; and every
+      //   consumer — Messages, ThreadList, ForwardSheet — renders nothing at
+      //   all while loading rather than a placeholder row. "Not fetched yet" is
+      //   the absence of a row, never a row with an absent field.
+      //
+      // So this names the cause. It was briefly "Unnamed conversation", which
+      // was the honest label while the second half of that was unverified.
       participantName:
         r.participant_id === null
-          ? "Unnamed conversation"
+          ? "Deleted account"
           : r.first_name?.trim() || "Someone",
       participantAvatarUrl: r.avatar_url,
       lastMessagePreview: last?.preview ?? null,

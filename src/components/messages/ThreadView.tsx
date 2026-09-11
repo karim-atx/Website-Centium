@@ -59,6 +59,20 @@ export const ThreadView: React.FC<{
 }> = ({ thread, onBack }) => {
   const { authUserId } = useApp();
   const unread = useUnread();
+  /**
+   * The other participant has deleted their account.
+   *
+   * DERIVED FROM THE NULL RATHER THAN FROM THE LABEL. Testing
+   * `participantName === "Deleted account"` would work today and break the
+   * moment that string is reworded or translated — the identity is the fact,
+   * and the name is a rendering of it.
+   *
+   * The null is unambiguous in both halves: in SQL because the view LEFT JOINs
+   * profiles and the foreign key admits no other cause, and in this client
+   * because a thread object only exists after fetchThreads has fully resolved.
+   * See the note in fetchThreads.
+   */
+  const departed = thread.participantId === null;
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -510,7 +524,11 @@ export const ThreadView: React.FC<{
       <div className="flex-1 space-y-2 mb-3">
         {loaded && messages.length === 0 && (
           <p className="text-sm text-charcoal-faint text-center py-8">
-            No messages yet — say hello to {thread.participantName}.
+            {/* "Say hello to Deleted account" invites something impossible.
+                An empty thread whose other side has gone is simply empty. */}
+            {departed
+              ? "This conversation is empty."
+              : `No messages yet — say hello to ${thread.participantName}.`}
           </p>
         )}
         {messages.map((m) => {
@@ -932,9 +950,16 @@ export const ThreadView: React.FC<{
           <p className="text-sm text-charcoal-soft mb-1">
             This removes the message from your view of the conversation.
           </p>
+          {/* THE FALSE VERSION OF THIS WAS A REAL BUG, not just clumsy copy.
+              "Deleted account will still see it" asserts that a person who no
+              longer exists retains a view of the conversation — reassurance
+              about someone who cannot be reassured. What stays true either way
+              is that hiding is not deleting, so that is what is said when
+              there is nobody left to name. */}
           <p className="text-xs text-charcoal-faint mb-4">
-            {thread.participantName} will still see it, and it stays part of the conversation for
-            them. You won't be able to undo this here.
+            {departed
+              ? "The message isn't deleted — it stays part of the conversation. You won't be able to undo this here."
+              : `${thread.participantName} will still see it, and it stays part of the conversation for them. You won't be able to undo this here.`}
           </p>
           <button
             onClick={() => void confirmHide()}

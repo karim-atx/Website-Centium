@@ -20,10 +20,27 @@ import {
  *
  * THE LIST IS WHATEVER RLS ALLOWS, WHICH IS THE POINT. fetchThreads is scoped
  * to the caller's own conversations, so forwarding cannot reach a stranger --
- * you can only pass something to someone you are already talking to. A thread
- * whose other participant has deleted their account is absent for free too,
- * since thread_participant_summary inner-joins profiles and a null side yields
- * no row.
+ * you can only pass something to someone you are already talking to.
+ *
+ * DELETED PARTICIPANTS ARE EXCLUDED EXPLICITLY, AND USED NOT TO NEED TO BE.
+ * This comment previously said such threads were "absent for free, since
+ * thread_participant_summary inner-joins profiles and a null side yields no
+ * row" -- true when written, and false since Database migration 20260911200000
+ * changed that join to a LEFT JOIN so the survivor could still reach the
+ * conversation. The free exclusion went with it, and the filter below replaces
+ * it deliberately.
+ *
+ * WHY EXCLUDE RATHER THAN ALLOW. A forward into such a thread would insert
+ * successfully -- messages_insert_by_sender only asks whether the sender is a
+ * participant -- and this sheet would then report "Forwarded / Sent to Deleted
+ * account", naming a recipient who does not exist and implying the message
+ * arrived somewhere. Passing something along is an act aimed at a person; when
+ * there is no person, the action has no meaning to offer.
+ *
+ * Composing directly into such a thread is still allowed, and that is not a
+ * contradiction: writing a note in a conversation nobody will read is the
+ * sender's own business, while choosing it from a list of recipients is the
+ * app asserting someone is there to receive it.
  *
  * THE CURRENT THREAD IS EXCLUDED. Forwarding into the conversation you are
  * reading looks like a duplicate rather than an action; copy exists for that.
@@ -50,7 +67,11 @@ export const ForwardSheet: React.FC<{
     let cancelled = false;
     void fetchThreads().then((result) => {
       if (cancelled) return;
-      setThreads(result.ok ? result.threads.filter((t) => t.id !== currentThreadId) : []);
+      setThreads(
+        result.ok
+          ? result.threads.filter((t) => t.id !== currentThreadId && t.participantId !== null)
+          : []
+      );
       if (!result.ok) setError(result.message);
     });
     return () => {
