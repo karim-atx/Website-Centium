@@ -492,18 +492,10 @@
       @keyframes loaderOut { 0%, 68% { opacity: 1; pointer-events: auto; } 100% { opacity: 0; pointer-events: none; } }
       @keyframes markIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
       @keyframes ringIn { from { opacity: 0; transform: scale(0.75); } to { opacity: 1; transform: scale(1); } }
-      @keyframes orbitFloat { 0%, 100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-0.8%, 1.6%, 0) scale(1.015); } }
-      @keyframes breathe { 0%, 100% { opacity: .85; transform: scale(1); } 50% { opacity: 1; transform: scale(1.045); } }
-      @keyframes texDrift { from { transform: translateX(0); } to { transform: translateX(-428px); } }
-      @keyframes ringWobble { 0%, 100% { transform: rotate(0deg) scaleY(1); } 50% { transform: rotate(1.4deg) scaleY(1.06); } }
-      @keyframes haloDrift { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
       @keyframes nodePulse { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
       @keyframes nebulaDrift { 0%, 100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(-2.5%, 3%, 0) scale(1.08); } }
       @keyframes shootA { 0%, 92% { opacity: 0; transform: translate3d(0,0,0) rotate(24deg); } 93% { opacity: .9; } 99.4% { opacity: 0; transform: translate3d(420px,187px,0) rotate(24deg); } 100% { opacity: 0; transform: translate3d(0,0,0) rotate(24deg); } }
       @keyframes shootB { 0%, 94% { opacity: 0; transform: translate3d(0,0,0) rotate(31deg); } 95% { opacity: .75; } 99.5% { opacity: 0; transform: translate3d(300px,180px,0) rotate(31deg); } 100% { opacity: 0; transform: translate3d(0,0,0) rotate(31deg); } }
-      @keyframes liquidA { 0%, 100% { transform: translate(0,0) scale(1); opacity: .38; } 33% { transform: translate(46px,34px) scale(1.18); opacity: .26; } 66% { transform: translate(-30px,52px) scale(.9); opacity: .44; } }
-      @keyframes liquidB { 0%, 100% { transform: translate(0,0) scale(1); opacity: .42; } 40% { transform: translate(-54px,-30px) scale(1.22); opacity: .3; } 70% { transform: translate(24px,-56px) scale(.94); opacity: .46; } }
-      @keyframes liquidC { 0%, 100% { transform: translate(0,0) scale(1); opacity: .4; } 45% { transform: translate(38px,-44px) scale(1.14); opacity: .24; } 75% { transform: translate(-42px,-10px) scale(1.02); opacity: .38; } }
       @keyframes twinkle { 0%, 100% { filter: opacity(0.16); transform: scale(0.72); } 50% { filter: opacity(1); transform: scale(1.16); } }
       @keyframes sparkle { 0%, 100% { filter: opacity(0.05); transform: scale(0.4); } 12% { filter: opacity(0.95); transform: scale(1.3); } 30% { filter: opacity(0.3); transform: scale(0.85); } 55% { filter: opacity(1); transform: scale(1.2); } 80% { filter: opacity(0.18); transform: scale(0.8); } }
 
@@ -517,7 +509,7 @@
          and the JS easing fought each other. That fight was the jitter on
          cursor movement. Never put a transition on a property a rAF loop
          writes per-frame; will-change is the correct hint here instead. */
-      .star-layer, .orbit-wrap { will-change: transform; }
+      .star-layer { will-change: transform; }
       .star-field { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
       .star-layer { position: absolute; inset: -6% 0; will-change: transform; }
       .star-layer span { position: absolute; border-radius: 50%; }
@@ -600,16 +592,22 @@
       .btn:focus-visible { outline: 2px solid rgb(var(--teal)); outline-offset: 3px; }
 
       /* ---------- hero ---------- */
-      .hero { position: relative; padding: 4.5rem 0 5rem; overflow: hidden; isolation: isolate; }
-      .orbit-wrap { position: absolute; z-index: -1; top: -56px; right: -13%; width: 900px; height: 900px; opacity: .95; will-change: transform; }
-      .orbit-float { width: 100%; height: 100%; animation: orbitFloat 40s ease-in-out infinite; }
-      .orbit-wrap svg { width: 100%; height: 100%; display: block; overflow: visible; }
+      /* v17 "living galaxy": the hero's own layout rule, consolidated (was
+         split between this base declaration and a second `.hero` rule far
+         below under "hero cosmic scene (v2)" that only patched padding-top —
+         merged into one so the hero's box model lives in exactly one place). */
+      .hero {
+        position: relative; isolation: isolate; overflow: hidden;
+        display: flex; align-items: center;
+        min-height: min(94vh, 980px);
+        padding: calc(var(--navh, 159px) + 3rem) 0 9.5rem;
+        background: #02050A;
+      }
+      .hero > .wrap { width: 100%; flex: 1 1 auto; min-width: 0; }
 
       .eyebrow-rule { display: flex; align-items: center; gap: 0.9rem; margin-bottom: 1.75rem; }
       .eyebrow-rule .rule { width: 30px; height: 1px; background: #B7C7CB; display: block; }
       .eyebrow-rule .label { font-weight: 700; font-size: 0.7rem; letter-spacing: 0.2em; color: #7C8F95; }
-      .hero-h1 { font-size: 57.6px; line-height: 1.03; font-weight: 800; letter-spacing: -0.035em; margin: 0 0 1.75rem; max-width: 16ch; }
-      .hero-lede { font-size: 19.2px; color: #55696F; max-width: 46ch; margin: 0 0 3rem; line-height: 1.65; }
       .hero-actions { display: flex; flex-wrap: wrap; gap: 1.5rem; align-items: center; }
 
       /* ---------- sections ---------- */
@@ -767,17 +765,13 @@
 
       /* ---------- responsive: tablet ---------- */
       @media (max-width: 1024px) {
-        .orbit-wrap { width: 600px !important; height: 600px !important; top: -30px !important; right: -20% !important; }
         .founders-grid { grid-template-columns: 1fr !important; }
-        .hero-h1 { font-size: 43.4px !important; }
         .mission-statement { font-size: 42px !important; }
         .mission-prose { max-width: 100% !important; }
       }
 
       /* ---------- responsive: mobile ---------- */
       @media (max-width: 760px) {
-        .hero { padding-top: 3rem !important; }
-        .orbit-wrap { width: 340px !important; height: 340px !important; top: -10px !important; right: -30% !important; opacity: .7 !important; }
         .hero-backdrop { width: 88vw !important; }
         /* v11d: back to the desktop's row arrangement. Stacking forced the
            photo to card width, and a full-width window can only stay short by
@@ -833,8 +827,6 @@
         .founder-card.founder-face--back { padding: 0.85rem 1rem !important; }
         .founder-face--back p { font-size: 0.875rem !important; line-height: 1.45 !important; }
         .founders-grid { gap: 0.7rem !important; }
-        .hero-h1 { font-size: 35.2px !important; }
-        .hero-lede { font-size: 16.3px !important; }
         .mission { padding: 4.5rem 0 !important; }
         .mission-statement { font-size: 32px !important; }
         .mission-prose { grid-template-columns: 1fr !important; gap: 1.25rem !important; max-width: 100% !important; }
@@ -918,42 +910,164 @@
       @media (prefers-reduced-motion: reduce) {
         .loader { animation: loaderOut 0.6s linear forwards !important; }
         .loader-logo, .loader-orbits { animation: none !important; opacity: 1 !important; }
-        .orbit-float, .atmos, .dust circle, .orbit-wrap svg g, .nebula, .hero-star, .shooting, .halo-arc, .ring-sys { animation: none !important; }
+        .nebula, .hero-star, .shooting { animation: none !important; }
         .shooting { display: none !important; }
         .lattice { opacity: .3 !important; }
-        .orbit-dot, .dust { display: none !important; }
-        .star-layer, .orbit-wrap { transition: none !important; transform: none !important; }
+        .star-layer { transition: none !important; transform: none !important; }
         .star-field span { animation: none !important; opacity: 0.5 !important; }
       }
 
-      /* ---------- hero cosmic scene (v2) ---------- */
-      .hero-sky { position: absolute; inset: 0; z-index: -2; pointer-events: none; overflow: hidden; }
-      .sky-tint { position: absolute; inset: 0; background: linear-gradient(168deg, #0d1424 0%, #080c17 44%, #05060c 100%); }
-      .hero-sky .star-layer { inset: -8% 0; }
-      .hero-sky .nebula { mix-blend-mode: screen; }
-      .neb-a { left: 36%; top: -20%; width: 72%; height: 86%; filter: blur(30px); background: radial-gradient(closest-side, rgb(79 178 196 / 0.34), rgb(60 150 170 / 0.11) 50%, transparent 76%); animation: nebulaDrift 150s ease-in-out infinite; }
-      .neb-b { left: 4%; top: 10%; width: 64%; height: 82%; filter: blur(38px); background: radial-gradient(closest-side, rgb(126 94 200 / 0.30), rgb(104 78 176 / 0.09) 48%, transparent 74%); animation: nebulaDrift 190s ease-in-out -60s infinite; }
-      .neb-c { left: 50%; top: 42%; width: 56%; height: 66%; filter: blur(42px); background: radial-gradient(closest-side, rgb(222 142 96 / 0.20), rgb(200 120 88 / 0.06) 46%, transparent 72%); animation: nebulaDrift 236s ease-in-out -110s infinite; }
-      .gas-giant {
-        position: absolute; left: -5%; bottom: -13%; width: 300px; height: 300px; border-radius: 50%;
-        background: radial-gradient(circle at 38% 26%, #E7CDFF 0%, #B486E8 22%, #8451BC 50%, #47276E 78%, #1D0F38 100%);
-        filter: blur(5px) saturate(1.05); opacity: .46;
-        box-shadow: 0 0 90px rgb(140 92 205 / 0.2);
+      /* ---------- hero: v17 "living galaxy" ----------
+         Replaces the old "hero cosmic scene (v2)" static planet/nebula/meteor
+         scene entirely: .hero-sky, .sky-tint, .neb-a/b/c, .gas-giant, .meteor
+         (+.m-a/b/c), .orbit-wrap (+.orbit-float and its whole planet SVG) are
+         gone from the markup, so their CSS is removed here too rather than
+         left dormant. hero-stage.js (a canvas-driven procedural starfield +
+         spiral galaxy + jets, baked once at load) now owns the whole hero
+         background via .hs-stage and its children below. */
+      .hs-stage { position: absolute; inset: 0; z-index: -1; pointer-events: none; overflow: hidden; }
+
+      .hs-void {
+        position: absolute; inset: 0;
+        background:
+          radial-gradient(88% 64% at 60% 46%, #081A26 0%, #051119 34%, transparent 72%),
+          radial-gradient(80% 60% at 12% 92%, #0F0C28 0%, #08081A 38%, transparent 74%),
+          linear-gradient(172deg, #040A12 0%, #02060C 60%, #010408 100%);
       }
-      .meteor { position: absolute; height: 1.5px; border-radius: 2px; opacity: 0; transform-origin: left center; }
-      .m-a { left: 5%; top: 5%; width: 190px; background: linear-gradient(90deg, transparent, #FFF6E2); animation: meteorA 9s ease-in 4s infinite; }
-      .m-b { left: 42%; top: -2%; width: 148px; background: linear-gradient(90deg, transparent, #CFE8F0); animation: meteorB 13s ease-in 7.5s infinite; }
-      .m-c { left: 64%; top: 24%; width: 116px; background: linear-gradient(90deg, transparent, #E6D9FF); animation: meteorC 17s ease-in 12s infinite; }
-      .orbit-wrap { top: -40px; right: -2%; }
-      .sky-fade-bot {
-        position: absolute; left: 0; right: 0; bottom: 0; height: 78px;
+
+      .hs-bleed { position: absolute; will-change: transform; }
+      .hs-bloom-drift { position: absolute; inset: 0; border-radius: 50%; }
+      .hs-bleed--violet { left: -20%; bottom: -34%; width: min(80vw, 1000px); height: min(64vw, 800px); }
+      .hs-bleed--violet .hs-bloom-drift {
+        background: radial-gradient(closest-side, rgb(104 84 178 / 0.20), rgb(70 58 132 / 0.07) 52%, transparent 78%);
+        filter: blur(96px);
+        animation: hsDrift 280s ease-in-out infinite;
+      }
+      .hs-bleed--teal { right: -16%; top: -26%; width: min(76vw, 960px); height: min(62vw, 780px); }
+      .hs-bleed--teal .hs-bloom-drift {
+        background: radial-gradient(closest-side, rgb(36 134 158 / 0.17), rgb(24 90 112 / 0.06) 52%, transparent 78%);
+        filter: blur(90px);
+        animation: hsDrift 220s ease-in-out -80s infinite;
+      }
+      @keyframes hsDrift {
+        0%, 100% { transform: translate3d(0, 0, 0) scale(1); }
+        50% { transform: translate3d(1.2%, -1.6%, 0) scale(1.04); }
+      }
+
+      .hs-stars, .hs-galaxy { position: absolute; display: block; }
+      .hs-stars { inset: -7% -5%; width: 110%; height: 114%; }
+      .hs-stars--far { filter: blur(1.2px); opacity: .58; }
+      .hs-stars--near { opacity: 1; }
+      /* the galaxy plane is inset so its internal shell slides never expose
+         an edge; it is deliberately NOT a .parx layer */
+      .hs-galaxy { inset: -6% -4%; width: 108%; height: 112%; opacity: 0; transition: opacity 1.4s ease 0.1s; }
+      .hero.hs-ready .hs-galaxy { opacity: 1; }
+
+      /* legibility scrim — a directional darkening under the copy column only,
+         so the galaxy keeps its brightness on the open right side */
+      .hs-scrim {
+        position: absolute; inset: 0;
+        background:
+          linear-gradient(96deg, rgb(1 4 9 / 0.9) 0%, rgb(1 4 9 / 0.8) 22%, rgb(1 4 9 / 0.5) 44%, rgb(1 4 9 / 0.16) 62%, transparent 78%),
+          radial-gradient(58% 52% at 22% 52%, rgb(1 4 9 / 0.55) 0%, transparent 72%);
+      }
+
+      .hs-grain {
+        position: absolute; inset: 0; opacity: .05; mix-blend-mode: overlay;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+      }
+      .hs-vignette {
+        position: absolute; inset: 0;
+        background: radial-gradient(118% 88% at 56% 46%, transparent 40%, rgb(1 4 8 / 0.42) 80%, rgb(1 3 7 / 0.7) 100%);
+      }
+      .hs-fade {
+        position: absolute; left: 0; right: 0; bottom: 0; height: 150px;
         background: linear-gradient(180deg,
-          rgb(219 235 241 / 0) 0%,
-          rgb(150 178 194 / 0.16) 22%,
-          rgb(186 210 222 / 0.54) 50%,
-          rgb(204 226 233 / 0.88) 74%,
+          rgb(2 5 10 / 0) 0%,
+          rgb(54 86 104 / 0.13) 34%,
+          rgb(146 182 198 / 0.42) 66%,
+          rgb(196 222 230 / 0.85) 88%,
           rgb(210 229 234) 100%);
       }
+
+      /* ---- hero copy ---- */
+      .hs-copy { max-width: 44rem; }
+      .hero .eyebrow-rule { gap: 1rem; margin-bottom: 2rem; }
+      .hero .eyebrow-rule .rule {
+        width: 38px; height: 1px;
+        background: linear-gradient(90deg, rgb(143 216 232 / 0.1), rgb(143 216 232 / 0.75));
+      }
+      .hero .eyebrow-rule .label { font-size: 0.69rem; font-weight: 700; letter-spacing: 0.24em; color: #A6CDD8; }
+      .hero-h1 {
+        font-size: clamp(2.7rem, 5.3vw, 4.1rem);
+        line-height: 1.04; font-weight: 800; letter-spacing: -0.036em;
+        color: #F4FAFC; margin: 0 0 1.6rem; max-width: 15ch;
+        text-shadow: 0 2px 46px rgb(1 5 10 / 0.78);
+        text-wrap: pretty;
+      }
+      .hero-lede {
+        font-size: 1.16rem; line-height: 1.7; color: #A5C0CA;
+        max-width: 43ch; margin: 0 0 3.25rem;
+        text-shadow: 0 1px 22px rgb(1 5 10 / 0.7);
+      }
+      .hero-actions { gap: 1.9rem; }
+
+      /* the old .btn--primary hero override and the standalone
+         .btn--hero-cta block (with its sheen/ramp-drift animation and own
+         reduced-motion carve-out) are both gone — this is the only rule for
+         the hero CTA now, so the two treatments can no longer cascade
+         against each other. */
+      .hero .btn--hero-cta {
+        font-size: 1rem; font-weight: 800; padding: 0.88rem 1.7rem; white-space: nowrap;
+        border: 1px solid transparent; border-radius: 999px;
+        color: rgb(var(--navy));
+        background:
+          linear-gradient(180deg, #FCFEFE 0%, #ECF6F9 100%) padding-box,
+          linear-gradient(118deg, rgb(142 109 224 / 0.42) 0%, rgb(79 176 196 / 0.95) 44%, rgb(79 192 140 / 0.45) 100%) border-box;
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 0.85),
+          0 16px 34px -16px rgb(1 6 11 / 0.85),
+          0 2px 8px -4px rgb(1 6 11 / 0.6);
+        transition: transform 0.34s cubic-bezier(.22,1,.36,1), box-shadow 0.4s ease;
+      }
+      .hero .btn--hero-cta::after { display: none; }
+      .hero .btn--hero-cta:hover, .hero .btn--hero-cta:focus-visible {
+        transform: translateY(-1px); animation: none;
+        box-shadow:
+          inset 0 1px 0 rgb(255 255 255 / 0.9),
+          0 20px 40px -18px rgb(1 6 11 / 0.9),
+          0 0 34px -10px rgb(96 190 212 / 0.6);
+      }
+      .hero .btn--hero-cta:active { transform: translateY(0); }
+      .hero .btn--ghost {
+        font-size: 0.95rem; color: #BFDBE3; white-space: nowrap;
+        border-bottom: 1px solid rgb(191 219 227 / 0.26);
+        transition: color 0.25s ease, border-color 0.25s ease;
+      }
+      .hero .btn--ghost:hover, .hero .btn--ghost:focus-visible { color: #EAF7FA; border-bottom-color: #8FD8E8; }
+
+      @media (max-width: 1080px) { .hs-copy { max-width: 38rem; } }
+      @media (max-width: 760px) {
+        .hero { min-height: 88vh; padding-bottom: 8rem; }
+        /* on a narrow screen the disc sits lower and the scrim turns vertical,
+           so the copy keeps its contrast over the brighter core */
+        .hs-scrim {
+          background:
+            linear-gradient(184deg, rgb(1 4 9 / 0.88) 0%, rgb(1 4 9 / 0.72) 34%, rgb(1 4 9 / 0.34) 62%, transparent 86%),
+            radial-gradient(76% 44% at 30% 34%, rgb(1 4 9 / 0.6) 0%, transparent 74%);
+        }
+        .hs-bleed--violet .hs-bloom-drift { filter: blur(66px); }
+        .hs-bleed--teal .hs-bloom-drift { filter: blur(62px); }
+        .hs-stars--far { filter: blur(0.9px); }
+        .hs-fade { height: 120px; }
+        .hero-lede { font-size: 1.06rem; margin-bottom: 2.5rem; }
+        .hero-actions { gap: 1.4rem; }
+      }
+      @media (max-width: 520px) {
+        .hero { min-height: 84vh; padding-bottom: 7rem; }
+        .hs-grain { opacity: .035; }
+      }
+
       /* the hard line under the hero was this hairline plus a colour step;
          the mission's first 240px now carries the haze the hero fade ends on. */
       .mission {
@@ -983,7 +1097,6 @@
         box-shadow: 0 1px 0 rgb(var(--border) / 0.05), 0 14px 34px -22px rgb(var(--border) / 0.22);
       }
       main { margin-top: calc(var(--navh, 159px) * -1); }
-      .hero { padding-top: calc(var(--navh, 159px) + 1.5rem); }
       section[id], header.hero { scroll-margin-top: calc(var(--navh, 159px) + 14px); }
       .nav .wrap.nav-top { padding-block: 1.5rem; }
       .nav .mark, .nav .wordmark { transition: filter 0.3s ease; }
@@ -1014,37 +1127,12 @@
         transition: transform 0.42s cubic-bezier(.22,1,.36,1), width 0.42s cubic-bezier(.22,1,.36,1), opacity 0.28s ease;
       }
 
-      .hero .eyebrow-rule .rule { background: rgb(159 196 206 / 0.5); }
-      .hero .eyebrow-rule .label { color: #9FC4CE; }
-      .hero-h1 { color: #F4FBFC; text-shadow: 0 1px 34px rgb(5 6 12 / 0.55); }
-      .hero-lede { color: #A8C3CB; }
-      .hero .btn--primary { background: rgb(242 251 252); color: rgb(var(--navy)); box-shadow: 0 12px 34px rgb(5 6 12 / 0.45); }
-      .hero .btn--primary:hover, .hero .btn--primary:focus-visible { background: #ffffff; }
-      .hero .btn--ghost { color: #CFE8F0; border-bottom-color: rgb(207 232 240 / 0.35); }
-      .hero .btn--ghost:hover, .hero .btn--ghost:focus-visible { border-bottom-color: #CFE8F0; }
-
-      @keyframes ringWobbleB { 0%, 100% { transform: rotate(0deg) scaleY(1); } 50% { transform: rotate(-1.8deg) scaleY(0.94); } }
-      @keyframes meteorA { 0%, 88% { opacity: 0; transform: translate3d(0,0,0) rotate(27deg); } 89% { opacity: .95; } 97.5% { opacity: 0; transform: translate3d(540px,275px,0) rotate(27deg); } 100% { opacity: 0; transform: translate3d(0,0,0) rotate(27deg); } }
-      @keyframes meteorB { 0%, 91% { opacity: 0; transform: translate3d(0,0,0) rotate(34deg); } 92% { opacity: .8; } 98.5% { opacity: 0; transform: translate3d(400px,270px,0) rotate(34deg); } 100% { opacity: 0; transform: translate3d(0,0,0) rotate(34deg); } }
-      @keyframes meteorC { 0%, 94% { opacity: 0; transform: translate3d(0,0,0) rotate(21deg); } 95% { opacity: .7; } 99.2% { opacity: 0; transform: translate3d(330px,127px,0) rotate(21deg); } 100% { opacity: 0; transform: translate3d(0,0,0) rotate(21deg); } }
-
-      @media (max-width: 1024px) {
-        .gas-giant { width: 220px !important; height: 220px !important; bottom: -11% !important; }
-        .orbit-wrap { right: -6% !important; top: -24px !important; }
-      }
-      @media (max-width: 760px) {
-        .hero { padding-top: calc(var(--navh, 140px) + 1rem) !important; }
-        .gas-giant { width: 150px !important; height: 150px !important; left: -8% !important; bottom: -9% !important; opacity: .4 !important; }
-        .sky-fade-bot { height: 110px !important; }
-        .orbit-wrap { right: -14% !important; top: -8px !important; }
-      }
-
       @media (prefers-reduced-motion: reduce) {
-        .hero-sky .nebula, .hero-sky .star-layer span, .hero-sky .hero-star,
-        .cloud-deck, .surface-deck, .ring-inner, .ring-outer { animation: none !important; }
-        .meteor { display: none !important; }
-        .hero-sky .star-layer span { opacity: .55 !important; filter: none !important; transform: none !important; }
-        .hero-sky .hero-star { filter: none !important; transform: none !important; }
+        .hs-bloom-drift { animation: none !important; }
+        .hs-galaxy { transition: none !important; }
+        .parx { transform: none !important; }
+        .hero .btn--hero-cta { transition: none !important; }
+        .hero .btn--hero-cta:hover, .hero .btn--hero-cta:focus-visible { transform: none !important; }
         .tab-pill { transition: none !important; }
       }
 
@@ -1616,71 +1704,14 @@
       @property --pf-mid { syntax: "<color>"; inherits: true; initial-value: #6EA6A6; }
       @property --pf-to { syntax: "<color>"; inherits: true; initial-value: #35B37D; }
       @property --pf-mid-pos { syntax: "<percentage>"; inherits: true; initial-value: 50%; }
-      /* v12: hero primary CTA. A light surface keeps 4.5:1+ navy-on-near-white
-         over the dark hero, with the brand's purple→teal→green ramp moved to a
-         gradient BORDER (two-layer background: padding-box surface over
-         border-box ramp) so the colour language is referenced without shouting.
-         The ramp drifts slowly at rest; hover adds a teal glow, a one-pass
-         sheen and a lift. Nothing moves for reduced-motion users. */
-      .hero .btn--hero-cta {
-        /* clearly larger than the adjacent ghost link (0.9rem) so the primary
-           reads as primary; padding grows with it to stay proportionate. */
-        font-size: 1.06rem;
-        font-weight: 800;
-        padding: 0.82rem 1.6rem;
-        gap: 0;
-        position: relative;
-        overflow: hidden;
-        isolation: isolate;
-        border: 1.6px solid transparent;
-        border-radius: 999px;
-        color: rgb(var(--navy));
-        background:
-          linear-gradient(180deg, rgb(247 252 253) 0%, rgb(231 244 248) 100%) padding-box,
-          linear-gradient(100deg, #8E6DE0 0%, rgb(var(--teal)) 34%, #4FC08C 62%, rgb(var(--teal)) 100%) border-box;
-        background-size: auto, 240% 100%;
-        background-position: 0 0, 0% 50%;
-        box-shadow:
-          0 1px 0 rgb(255 255 255 / 0.7) inset,
-          0 10px 26px -10px rgb(5 6 12 / 0.5),
-          0 0 0 rgb(var(--teal) / 0);
-        transition: transform 0.24s cubic-bezier(.22,1,.36,1),
-                    box-shadow 0.28s ease,
-                    background-position 0.4s ease;
-      }
-      /* the sheen sits above the surface but below the label */
-      .hero .btn--hero-cta::after {
-        content: ""; position: absolute; top: 0; bottom: 0; left: -60%;
-        width: 45%; z-index: -1; pointer-events: none;
-        background: linear-gradient(100deg, rgb(255 255 255 / 0) 0%, rgb(255 255 255 / 0.85) 50%, rgb(255 255 255 / 0) 100%);
-        transform: skewX(-18deg);
-        opacity: 0;
-      }
-      .hero .btn--hero-cta:hover, .hero .btn--hero-cta:focus-visible {
-        transform: translateY(-2px);
-        animation: atxCtaRamp 9s linear infinite;
-        box-shadow:
-          0 1px 0 rgb(255 255 255 / 0.8) inset,
-          0 16px 34px -12px rgb(5 6 12 / 0.55),
-          0 0 26px -2px rgb(var(--teal) / 0.55);
-      }
-      .hero .btn--hero-cta:hover::after, .hero .btn--hero-cta:focus-visible::after {
-        animation: atxCtaSheen 0.72s cubic-bezier(.4,0,.2,1) 1;
-      }
-      .hero .btn--hero-cta:active { transform: translateY(0); }
-      @keyframes atxCtaRamp { from { background-position: 0 0, 0% 50%; } to { background-position: 0 0, 200% 50%; } }
-      @keyframes atxCtaSheen {
-        0% { opacity: 0; left: -60%; }
-        18% { opacity: 1; }
-        100% { opacity: 0; left: 115%; }
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .hero .btn--hero-cta,
-        .hero .btn--hero-cta:hover,
-        .hero .btn--hero-cta:focus-visible { animation: none !important; transition: none !important; }
-        .hero .btn--hero-cta::after { animation: none !important; opacity: 0 !important; }
-        .hero .btn--hero-cta:hover, .hero .btn--hero-cta:focus-visible { transform: none !important; }
-      }
+      /* v12's hero primary CTA (sheen sweep + background-position ramp drift)
+         lived here as its own late-added block, on top of the .btn--hero-cta
+         rule already defined earlier under "hero: v17 living galaxy" plus a
+         much older, fully-overridden-anyway .hero .btn--primary rule before
+         that — three competing definitions for the same button. v17
+         intentionally drops the sheen/ramp animation (`.btn--hero-cta::after
+         { display: none; }` in that earlier rule), so this whole block is
+         gone rather than left to cascade against the one that's now current. */
     </style>
     <script>
       (function () {
@@ -1698,7 +1729,7 @@
            listener; skip writes whose value hasn't changed via a WeakMap of
            last-written values (during pure scrolling mx/my are static, so
            this eliminates the backdrop repaint entirely). */
-        var cache = null, cacheAge = 0, orbEl = null, wmEl = null, lastWrite = new WeakMap();
+        var cache = null, cacheAge = 0, wmEl = null, lastWrite = new WeakMap();
         function buildCache() {
           var nodes = document.querySelectorAll('.star-layer, .parx');
           cache = [];
@@ -1706,7 +1737,6 @@
             var d = parseFloat(nodes[i].getAttribute('data-depth')) || 0;
             cache.push({ el: nodes[i], d: d, f: parseFloat(nodes[i].getAttribute('data-mx')) || d * 24 });
           }
-          orbEl = document.querySelector('.orbit-wrap');
           wmEl = document.querySelector('.hero-backdrop');
           cacheAge = 0;
         }
@@ -1725,7 +1755,6 @@
             var L = cache[i];
             put(L.el, 'translate3d(' + (mx * L.f).toFixed(2) + 'px,' + (y * L.d + my * L.f).toFixed(2) + 'px,0)');
           }
-          put(orbEl, 'translate3d(' + (mx * -8).toFixed(2) + 'px,' + (y * -0.16 + my * -8).toFixed(2) + 'px,0) scale(' + (1 + Math.min(y, 900) * 0.00006).toFixed(4) + ')');
           put(wmEl, 'translate(-50%,-50%) translate3d(' + (mx * 5).toFixed(2) + 'px,' + (my * 5).toFixed(2) + 'px,0)');
           if (Math.abs(tx - mx) > 0.002 || Math.abs(ty - my) > 0.002) tick();
         }
@@ -2036,432 +2065,37 @@
 
       <main>
         <header class="hero" data-nav-dark>
-          <div class="hero-sky" aria-hidden="true">
-            <div class="sky-tint"></div>
-            <div class="nebula neb-a"></div>
-            <div class="nebula neb-b"></div>
-            <div class="nebula neb-c"></div>
-            <div class="star-layer" data-depth="0.04" data-mx="6">
-              <span style="left:41.51%;top:65.15%;width:1.5px;height:1.5px;background:#FFFFFF;opacity:0.34;box-shadow:0 0 3.7px #FFFFFF66;animation:sparkle 10.6s ease-in-out 2.2s infinite"></span>
-              <span style="left:37.32%;top:24.27%;width:1.0px;height:1.0px;background:#A9C4DD;opacity:0.31;box-shadow:0 0 2.5px #A9C4DD66;animation:sparkle 5.3s ease-in-out 7.7s infinite"></span>
-              <span style="left:92.41%;top:55.69%;width:1.3px;height:1.3px;background:#CFE0F0;opacity:0.34;box-shadow:0 0 3.1px #CFE0F066;animation:twinkle 9.6s ease-in-out 7.4s infinite"></span>
-              <span style="left:70.20%;top:31.31%;width:1.2px;height:1.2px;background:#B8D4EA;opacity:0.28;box-shadow:0 0 3.0px #B8D4EA66;animation:twinkle 8.5s ease-in-out 4.8s infinite"></span>
-              <span style="left:17.70%;top:67.99%;width:1.5px;height:1.5px;background:#FFFFFF;opacity:0.32;box-shadow:0 0 3.7px #FFFFFF66;animation:sparkle 4.6s ease-in-out 1.8s infinite"></span>
-              <span style="left:96.27%;top:40.23%;width:1.0px;height:1.0px;background:#CFE0F0;opacity:0.32;box-shadow:0 0 2.4px #CFE0F066;animation:sparkle 7.2s ease-in-out 0.6s infinite"></span>
-              <span style="left:43.19%;top:75.24%;width:1.3px;height:1.3px;background:#A9C4DD;opacity:0.30;box-shadow:0 0 3.2px #A9C4DD66;animation:twinkle 9.8s ease-in-out 2.2s infinite"></span>
-              <span style="left:10.92%;top:96.66%;width:1.3px;height:1.3px;background:#B8D4EA;opacity:0.24;box-shadow:0 0 3.2px #B8D4EA66;animation:twinkle 7.7s ease-in-out 3.6s infinite"></span>
-              <span style="left:72.19%;top:78.47%;width:1.1px;height:1.1px;background:#A9C4DD;opacity:0.42;box-shadow:0 0 2.7px #A9C4DD66;animation:twinkle 7.7s ease-in-out 3.6s infinite"></span>
-              <span style="left:89.28%;top:56.72%;width:1.6px;height:1.6px;background:#FFFFFF;opacity:0.38;box-shadow:0 0 3.9px #FFFFFF66;animation:sparkle 10.7s ease-in-out 6.5s infinite"></span>
-              <span style="left:55.75%;top:22.02%;width:0.8px;height:0.8px;background:#FFFFFF;opacity:0.48;box-shadow:0 0 2.0px #FFFFFF66;animation:twinkle 10.0s ease-in-out 2.0s infinite"></span>
-              <span style="left:89.11%;top:63.45%;width:1.6px;height:1.6px;background:#CFE0F0;opacity:0.41;box-shadow:0 0 3.7px #CFE0F066;animation:sparkle 11.3s ease-in-out 3.4s infinite"></span>
-              <span style="left:4.42%;top:67.36%;width:1.1px;height:1.1px;background:#CFE0F0;opacity:0.24;box-shadow:0 0 2.6px #CFE0F066;animation:sparkle 5.7s ease-in-out 1.2s infinite"></span>
-              <span style="left:64.48%;top:68.09%;width:1.2px;height:1.2px;background:#CFE0F0;opacity:0.42;box-shadow:0 0 2.9px #CFE0F066;animation:sparkle 9.0s ease-in-out 0.8s infinite"></span>
-              <span style="left:12.63%;top:99.46%;width:1.1px;height:1.1px;background:#A9C4DD;opacity:0.38;box-shadow:0 0 2.6px #A9C4DD66;animation:twinkle 11.6s ease-in-out 2.4s infinite"></span>
-              <span style="left:13.55%;top:31.70%;width:1.4px;height:1.4px;background:#B8D4EA;opacity:0.25;box-shadow:0 0 3.4px #B8D4EA66;animation:twinkle 11.2s ease-in-out 0.3s infinite"></span>
-              <span style="left:31.91%;top:42.45%;width:1.4px;height:1.4px;background:#CFE0F0;opacity:0.36;box-shadow:0 0 3.3px #CFE0F066;animation:sparkle 11.8s ease-in-out 6.9s infinite"></span>
-              <span style="left:80.47%;top:7.58%;width:0.9px;height:0.9px;background:#CFE0F0;opacity:0.38;box-shadow:0 0 2.2px #CFE0F066;animation:sparkle 12.6s ease-in-out 2.5s infinite"></span>
-              <span style="left:86.53%;top:85.16%;width:0.7px;height:0.7px;background:#CFE0F0;opacity:0.23;box-shadow:0 0 1.7px #CFE0F066;animation:twinkle 7.5s ease-in-out 0.0s infinite"></span>
-              <span style="left:27.66%;top:54.71%;width:1.1px;height:1.1px;background:#FFFFFF;opacity:0.49;box-shadow:0 0 2.6px #FFFFFF66;animation:twinkle 10.3s ease-in-out 5.1s infinite"></span>
-              <span style="left:58.36%;top:91.16%;width:1.5px;height:1.5px;background:#B8D4EA;opacity:0.41;box-shadow:0 0 3.7px #B8D4EA66;animation:twinkle 4.6s ease-in-out 4.6s infinite"></span>
-              <span style="left:30.93%;top:86.33%;width:0.7px;height:0.7px;background:#A9C4DD;opacity:0.18;box-shadow:0 0 1.7px #A9C4DD66;animation:sparkle 12.2s ease-in-out 0.1s infinite"></span>
-              <span style="left:77.82%;top:85.49%;width:1.7px;height:1.7px;background:#B8D4EA;opacity:0.17;box-shadow:0 0 4.0px #B8D4EA66;animation:sparkle 9.5s ease-in-out 4.6s infinite"></span>
-              <span style="left:85.40%;top:64.62%;width:1.1px;height:1.1px;background:#CFE0F0;opacity:0.16;box-shadow:0 0 2.5px #CFE0F066;animation:twinkle 6.2s ease-in-out 3.8s infinite"></span>
-              <span style="left:4.51%;top:35.32%;width:1.5px;height:1.5px;background:#FFFFFF;opacity:0.37;box-shadow:0 0 3.6px #FFFFFF66;animation:twinkle 4.6s ease-in-out 4.5s infinite"></span>
-              <span style="left:16.19%;top:43.08%;width:1.1px;height:1.1px;background:#B8D4EA;opacity:0.44;box-shadow:0 0 2.7px #B8D4EA66;animation:twinkle 8.6s ease-in-out 6.7s infinite"></span>
-              <span style="left:61.65%;top:34.52%;width:1.3px;height:1.3px;background:#FFFFFF;opacity:0.28;box-shadow:0 0 3.2px #FFFFFF66;animation:twinkle 7.7s ease-in-out 4.3s infinite"></span>
-              <span style="left:71.58%;top:92.25%;width:1.6px;height:1.6px;background:#FFFFFF;opacity:0.49;box-shadow:0 0 3.7px #FFFFFF66;animation:sparkle 8.8s ease-in-out 6.2s infinite"></span>
-              <span style="left:13.52%;top:51.21%;width:1.0px;height:1.0px;background:#FFFFFF;opacity:0.42;box-shadow:0 0 2.3px #FFFFFF66;animation:sparkle 11.1s ease-in-out 4.9s infinite"></span>
-              <span style="left:78.11%;top:42.15%;width:1.0px;height:1.0px;background:#CFE0F0;opacity:0.27;box-shadow:0 0 2.4px #CFE0F066;animation:sparkle 12.9s ease-in-out 3.2s infinite"></span>
-              <span style="left:24.36%;top:27.25%;width:1.2px;height:1.2px;background:#B8D4EA;opacity:0.16;box-shadow:0 0 2.8px #B8D4EA66;animation:twinkle 9.3s ease-in-out 6.0s infinite"></span>
-              <span style="left:28.36%;top:25.96%;width:1.4px;height:1.4px;background:#B8D4EA;opacity:0.41;box-shadow:0 0 3.5px #B8D4EA66;animation:sparkle 7.8s ease-in-out 6.2s infinite"></span>
-              <span style="left:89.22%;top:15.81%;width:1.3px;height:1.3px;background:#A9C4DD;opacity:0.42;box-shadow:0 0 3.1px #A9C4DD66;animation:twinkle 5.1s ease-in-out 4.3s infinite"></span>
-              <span style="left:17.55%;top:41.51%;width:1.1px;height:1.1px;background:#A9C4DD;opacity:0.34;box-shadow:0 0 2.6px #A9C4DD66;animation:twinkle 6.8s ease-in-out 0.4s infinite"></span>
-              <span style="left:46.38%;top:81.42%;width:0.8px;height:0.8px;background:#FFFFFF;opacity:0.45;box-shadow:0 0 1.8px #FFFFFF66;animation:sparkle 6.8s ease-in-out 1.0s infinite"></span>
-              <span style="left:37.71%;top:79.24%;width:0.9px;height:0.9px;background:#B8D4EA;opacity:0.21;box-shadow:0 0 2.2px #B8D4EA66;animation:twinkle 10.5s ease-in-out 8.5s infinite"></span>
-              <span style="left:20.83%;top:10.67%;width:1.3px;height:1.3px;background:#CFE0F0;opacity:0.46;box-shadow:0 0 3.0px #CFE0F066;animation:twinkle 11.7s ease-in-out 3.3s infinite"></span>
-              <span style="left:37.10%;top:92.63%;width:1.2px;height:1.2px;background:#FFFFFF;opacity:0.42;box-shadow:0 0 2.9px #FFFFFF66;animation:twinkle 12.5s ease-in-out 4.5s infinite"></span>
-              <span style="left:27.91%;top:78.08%;width:1.1px;height:1.1px;background:#CFE0F0;opacity:0.27;box-shadow:0 0 2.7px #CFE0F066;animation:twinkle 6.5s ease-in-out 1.0s infinite"></span>
-              <span style="left:41.14%;top:15.46%;width:0.7px;height:0.7px;background:#CFE0F0;opacity:0.43;box-shadow:0 0 1.8px #CFE0F066;animation:twinkle 8.9s ease-in-out 5.3s infinite"></span>
-              <span style="left:15.24%;top:93.72%;width:1.5px;height:1.5px;background:#A9C4DD;opacity:0.40;box-shadow:0 0 3.5px #A9C4DD66;animation:twinkle 11.1s ease-in-out 6.7s infinite"></span>
-              <span style="left:29.89%;top:30.11%;width:1.0px;height:1.0px;background:#FFFFFF;opacity:0.43;box-shadow:0 0 2.4px #FFFFFF66;animation:sparkle 5.3s ease-in-out 6.6s infinite"></span>
-              <span style="left:45.48%;top:53.22%;width:0.7px;height:0.7px;background:#B8D4EA;opacity:0.33;box-shadow:0 0 1.8px #B8D4EA66;animation:sparkle 7.7s ease-in-out 2.2s infinite"></span>
-              <span style="left:85.85%;top:92.21%;width:1.1px;height:1.1px;background:#CFE0F0;opacity:0.23;box-shadow:0 0 2.7px #CFE0F066;animation:sparkle 5.4s ease-in-out 0.7s infinite"></span>
-              <span style="left:96.34%;top:28.52%;width:1.7px;height:1.7px;background:#CFE0F0;opacity:0.45;box-shadow:0 0 4.1px #CFE0F066;animation:twinkle 8.8s ease-in-out 4.2s infinite"></span>
-              <span style="left:68.22%;top:9.43%;width:1.5px;height:1.5px;background:#FFFFFF;opacity:0.31;box-shadow:0 0 3.6px #FFFFFF66;animation:twinkle 10.2s ease-in-out 5.0s infinite"></span>
-              <span style="left:35.36%;top:21.23%;width:0.9px;height:0.9px;background:#B8D4EA;opacity:0.27;box-shadow:0 0 2.1px #B8D4EA66;animation:twinkle 10.7s ease-in-out 3.8s infinite"></span>
-              <span style="left:97.95%;top:98.95%;width:0.7px;height:0.7px;background:#B8D4EA;opacity:0.21;box-shadow:0 0 1.7px #B8D4EA66;animation:twinkle 8.8s ease-in-out 2.8s infinite"></span>
-              <span style="left:91.57%;top:58.02%;width:1.3px;height:1.3px;background:#A9C4DD;opacity:0.32;box-shadow:0 0 3.1px #A9C4DD66;animation:sparkle 12.3s ease-in-out 8.1s infinite"></span>
-              <span style="left:72.83%;top:36.81%;width:1.6px;height:1.6px;background:#A9C4DD;opacity:0.27;box-shadow:0 0 3.8px #A9C4DD66;animation:twinkle 9.3s ease-in-out 5.7s infinite"></span>
-              <span style="left:42.38%;top:76.29%;width:1.6px;height:1.6px;background:#CFE0F0;opacity:0.16;box-shadow:0 0 3.8px #CFE0F066;animation:twinkle 5.5s ease-in-out 0.8s infinite"></span>
-              <span style="left:59.55%;top:87.10%;width:1.3px;height:1.3px;background:#B8D4EA;opacity:0.23;box-shadow:0 0 3.2px #B8D4EA66;animation:twinkle 11.1s ease-in-out 5.9s infinite"></span>
-              <span style="left:40.73%;top:5.46%;width:1.4px;height:1.4px;background:#FFFFFF;opacity:0.33;box-shadow:0 0 3.4px #FFFFFF66;animation:twinkle 6.7s ease-in-out 3.6s infinite"></span>
-              <span style="left:49.49%;top:47.64%;width:1.2px;height:1.2px;background:#FFFFFF;opacity:0.37;box-shadow:0 0 2.8px #FFFFFF66;animation:sparkle 8.3s ease-in-out 2.3s infinite"></span>
-              <span style="left:63.96%;top:32.21%;width:1.5px;height:1.5px;background:#B8D4EA;opacity:0.25;box-shadow:0 0 3.6px #B8D4EA66;animation:twinkle 6.7s ease-in-out 1.3s infinite"></span>
-              <span style="left:65.96%;top:85.42%;width:1.0px;height:1.0px;background:#FFFFFF;opacity:0.24;box-shadow:0 0 2.3px #FFFFFF66;animation:twinkle 7.2s ease-in-out 2.4s infinite"></span>
-              <span style="left:76.37%;top:31.64%;width:1.7px;height:1.7px;background:#FFFFFF;opacity:0.31;box-shadow:0 0 4.0px #FFFFFF66;animation:twinkle 7.8s ease-in-out 3.4s infinite"></span>
-              <span style="left:91.50%;top:26.36%;width:0.9px;height:0.9px;background:#FFFFFF;opacity:0.49;box-shadow:0 0 2.1px #FFFFFF66;animation:twinkle 6.9s ease-in-out 6.9s infinite"></span>
-              <span style="left:39.70%;top:99.26%;width:1.3px;height:1.3px;background:#B8D4EA;opacity:0.24;box-shadow:0 0 3.1px #B8D4EA66;animation:twinkle 8.7s ease-in-out 0.2s infinite"></span>
-              <span style="left:46.52%;top:64.48%;width:1.7px;height:1.7px;background:#B8D4EA;opacity:0.36;box-shadow:0 0 4.0px #B8D4EA66;animation:twinkle 5.6s ease-in-out 6.6s infinite"></span>
-              <span style="left:27.43%;top:81.40%;width:0.9px;height:0.9px;background:#FFFFFF;opacity:0.41;box-shadow:0 0 2.1px #FFFFFF66;animation:sparkle 6.3s ease-in-out 2.3s infinite"></span>
-              <span style="left:47.02%;top:56.78%;width:1.3px;height:1.3px;background:#CFE0F0;opacity:0.30;box-shadow:0 0 3.1px #CFE0F066;animation:twinkle 12.7s ease-in-out 2.8s infinite"></span>
-              <span style="left:78.27%;top:54.33%;width:0.8px;height:0.8px;background:#CFE0F0;opacity:0.27;box-shadow:0 0 2.0px #CFE0F066;animation:twinkle 13.0s ease-in-out 0.1s infinite"></span>
-              <span style="left:72.85%;top:39.06%;width:1.7px;height:1.7px;background:#FFFFFF;opacity:0.25;box-shadow:0 0 4.1px #FFFFFF66;animation:twinkle 10.8s ease-in-out 6.3s infinite"></span>
-              <span style="left:78.40%;top:59.50%;width:0.7px;height:0.7px;background:#B8D4EA;opacity:0.42;box-shadow:0 0 1.7px #B8D4EA66;animation:twinkle 9.4s ease-in-out 3.7s infinite"></span>
-              <span style="left:99.12%;top:12.74%;width:1.0px;height:1.0px;background:#A9C4DD;opacity:0.48;box-shadow:0 0 2.5px #A9C4DD66;animation:twinkle 5.7s ease-in-out 7.4s infinite"></span>
-              <span style="left:89.55%;top:98.84%;width:1.1px;height:1.1px;background:#CFE0F0;opacity:0.30;box-shadow:0 0 2.6px #CFE0F066;animation:twinkle 10.6s ease-in-out 2.6s infinite"></span>
-              <span style="left:70.54%;top:81.18%;width:1.7px;height:1.7px;background:#A9C4DD;opacity:0.18;box-shadow:0 0 4.0px #A9C4DD66;animation:twinkle 12.1s ease-in-out 8.9s infinite"></span>
-              <span style="left:85.39%;top:68.51%;width:1.5px;height:1.5px;background:#A9C4DD;opacity:0.37;box-shadow:0 0 3.6px #A9C4DD66;animation:twinkle 13.1s ease-in-out 4.6s infinite"></span>
-              <span style="left:88.07%;top:55.60%;width:1.6px;height:1.6px;background:#FFFFFF;opacity:0.30;box-shadow:0 0 3.9px #FFFFFF66;animation:twinkle 9.6s ease-in-out 8.4s infinite"></span>
-              <span style="left:90.77%;top:40.16%;width:1.2px;height:1.2px;background:#FFFFFF;opacity:0.42;box-shadow:0 0 3.0px #FFFFFF66;animation:twinkle 4.9s ease-in-out 3.3s infinite"></span>
-              <span style="left:86.45%;top:54.77%;width:1.6px;height:1.6px;background:#A9C4DD;opacity:0.34;box-shadow:0 0 3.7px #A9C4DD66;animation:twinkle 7.4s ease-in-out 0.8s infinite"></span>
-              <span style="left:47.95%;top:26.81%;width:1.1px;height:1.1px;background:#B8D4EA;opacity:0.19;box-shadow:0 0 2.6px #B8D4EA66;animation:sparkle 10.8s ease-in-out 6.2s infinite"></span>
-              <span style="left:91.33%;top:59.33%;width:1.5px;height:1.5px;background:#FFFFFF;opacity:0.33;box-shadow:0 0 3.6px #FFFFFF66;animation:twinkle 7.1s ease-in-out 6.1s infinite"></span>
-              <span style="left:93.78%;top:70.53%;width:1.3px;height:1.3px;background:#B8D4EA;opacity:0.42;box-shadow:0 0 3.2px #B8D4EA66;animation:sparkle 10.7s ease-in-out 0.8s infinite"></span>
-              <span style="left:0.36%;top:58.75%;width:1.1px;height:1.1px;background:#A9C4DD;opacity:0.21;box-shadow:0 0 2.6px #A9C4DD66;animation:twinkle 5.0s ease-in-out 7.3s infinite"></span>
-              <span style="left:62.94%;top:60.33%;width:0.8px;height:0.8px;background:#B8D4EA;opacity:0.18;box-shadow:0 0 1.9px #B8D4EA66;animation:twinkle 8.4s ease-in-out 2.1s infinite"></span>
-              <span style="left:75.16%;top:32.42%;width:0.7px;height:0.7px;background:#FFFFFF;opacity:0.44;box-shadow:0 0 1.7px #FFFFFF66;animation:sparkle 9.5s ease-in-out 1.2s infinite"></span>
-              <span style="left:62.81%;top:85.55%;width:1.4px;height:1.4px;background:#CFE0F0;opacity:0.42;box-shadow:0 0 3.3px #CFE0F066;animation:twinkle 11.9s ease-in-out 0.2s infinite"></span>
-              <span style="left:82.71%;top:18.64%;width:1.6px;height:1.6px;background:#CFE0F0;opacity:0.49;box-shadow:0 0 3.9px #CFE0F066;animation:twinkle 11.2s ease-in-out 1.2s infinite"></span>
-              <span style="left:0.18%;top:78.65%;width:1.6px;height:1.6px;background:#FFFFFF;opacity:0.24;box-shadow:0 0 3.9px #FFFFFF66;animation:twinkle 5.3s ease-in-out 3.1s infinite"></span>
-              <span style="left:73.60%;top:90.39%;width:1.6px;height:1.6px;background:#B8D4EA;opacity:0.25;box-shadow:0 0 3.7px #B8D4EA66;animation:twinkle 13.4s ease-in-out 1.7s infinite"></span>
-              <span style="left:98.50%;top:31.29%;width:1.4px;height:1.4px;background:#FFFFFF;opacity:0.35;box-shadow:0 0 3.3px #FFFFFF66;animation:sparkle 9.1s ease-in-out 4.8s infinite"></span>
-              <span style="left:20.10%;top:94.13%;width:1.5px;height:1.5px;background:#FFFFFF;opacity:0.29;box-shadow:0 0 3.7px #FFFFFF66;animation:sparkle 9.6s ease-in-out 3.6s infinite"></span>
-            </div>
-            <div class="star-layer" data-depth="0.11" data-mx="15">
-              <span style="left:11.86%;top:60.41%;width:1.4px;height:1.4px;background:#FFFFFF;opacity:0.35;box-shadow:0 0 3.4px #FFFFFF66;animation:twinkle 13.4s ease-in-out 0.5s infinite"></span>
-              <span style="left:55.61%;top:69.98%;width:2.3px;height:2.3px;background:#FFE7BC;opacity:0.74;box-shadow:0 0 5.5px #FFE7BC66;animation:sparkle 7.9s ease-in-out 8.6s infinite"></span>
-              <span style="left:99.56%;top:97.88%;width:1.9px;height:1.9px;background:#BCD6F5;opacity:0.71;box-shadow:0 0 4.7px #BCD6F566;animation:twinkle 12.3s ease-in-out 4.3s infinite"></span>
-              <span style="left:41.98%;top:34.36%;width:2.4px;height:2.4px;background:#FFE7BC;opacity:0.50;box-shadow:0 0 5.9px #FFE7BC66;animation:twinkle 7.6s ease-in-out 1.2s infinite"></span>
-              <span style="left:82.25%;top:95.98%;width:1.4px;height:1.4px;background:#DBE9FF;opacity:0.55;box-shadow:0 0 3.4px #DBE9FF66;animation:sparkle 11.6s ease-in-out 5.0s infinite"></span>
-              <span style="left:75.71%;top:23.92%;width:2.1px;height:2.1px;background:#FFE7BC;opacity:0.51;box-shadow:0 0 5.0px #FFE7BC66;animation:sparkle 6.2s ease-in-out 1.7s infinite"></span>
-              <span style="left:27.28%;top:88.38%;width:2.7px;height:2.7px;background:#DBE9FF;opacity:0.68;box-shadow:0 0 6.4px #DBE9FF66;animation:twinkle 8.6s ease-in-out 0.7s infinite"></span>
-              <span style="left:26.17%;top:80.34%;width:1.6px;height:1.6px;background:#FFFFFF;opacity:0.61;box-shadow:0 0 3.8px #FFFFFF66;animation:twinkle 5.2s ease-in-out 2.3s infinite"></span>
-              <span style="left:71.42%;top:21.42%;width:1.5px;height:1.5px;background:#DBE9FF;opacity:0.51;box-shadow:0 0 3.7px #DBE9FF66;animation:twinkle 5.4s ease-in-out 4.9s infinite"></span>
-              <span style="left:72.18%;top:24.12%;width:2.4px;height:2.4px;background:#DBE9FF;opacity:0.75;box-shadow:0 0 5.8px #DBE9FF66;animation:twinkle 11.7s ease-in-out 5.1s infinite"></span>
-              <span style="left:15.16%;top:48.89%;width:2.1px;height:2.1px;background:#DBE9FF;opacity:0.54;box-shadow:0 0 5.1px #DBE9FF66;animation:sparkle 5.8s ease-in-out 5.5s infinite"></span>
-              <span style="left:87.89%;top:77.93%;width:2.6px;height:2.6px;background:#FFFFFF;opacity:0.78;box-shadow:0 0 6.2px #FFFFFF66;animation:twinkle 7.2s ease-in-out 5.8s infinite"></span>
-              <span style="left:54.66%;top:90.19%;width:2.3px;height:2.3px;background:#FFFFFF;opacity:0.35;box-shadow:0 0 5.6px #FFFFFF66;animation:twinkle 5.6s ease-in-out 8.9s infinite"></span>
-              <span style="left:20.81%;top:26.95%;width:2.2px;height:2.2px;background:#DBE9FF;opacity:0.42;box-shadow:0 0 5.3px #DBE9FF66;animation:twinkle 5.2s ease-in-out 1.0s infinite"></span>
-              <span style="left:0.09%;top:81.91%;width:1.8px;height:1.8px;background:#FFFFFF;opacity:0.60;box-shadow:0 0 4.3px #FFFFFF66;animation:sparkle 9.7s ease-in-out 8.3s infinite"></span>
-              <span style="left:31.04%;top:52.71%;width:2.3px;height:2.3px;background:#FFE7BC;opacity:0.33;box-shadow:0 0 5.5px #FFE7BC66;animation:twinkle 5.8s ease-in-out 0.4s infinite"></span>
-              <span style="left:72.81%;top:72.80%;width:2.4px;height:2.4px;background:#BCD6F5;opacity:0.57;box-shadow:0 0 5.7px #BCD6F566;animation:sparkle 9.3s ease-in-out 8.7s infinite"></span>
-              <span style="left:49.77%;top:29.57%;width:1.4px;height:1.4px;background:#BCD6F5;opacity:0.66;box-shadow:0 0 3.4px #BCD6F566;animation:twinkle 5.7s ease-in-out 3.2s infinite"></span>
-              <span style="left:32.08%;top:74.85%;width:1.9px;height:1.9px;background:#FFFFFF;opacity:0.75;box-shadow:0 0 4.6px #FFFFFF66;animation:twinkle 10.3s ease-in-out 7.5s infinite"></span>
-              <span style="left:2.01%;top:8.88%;width:2.5px;height:2.5px;background:#FFFFFF;opacity:0.61;box-shadow:0 0 6.0px #FFFFFF66;animation:twinkle 13.2s ease-in-out 1.8s infinite"></span>
-              <span style="left:21.34%;top:48.93%;width:2.5px;height:2.5px;background:#BCD6F5;opacity:0.46;box-shadow:0 0 6.0px #BCD6F566;animation:sparkle 12.2s ease-in-out 9.0s infinite"></span>
-              <span style="left:64.25%;top:28.00%;width:1.6px;height:1.6px;background:#BCD6F5;opacity:0.76;box-shadow:0 0 3.7px #BCD6F566;animation:sparkle 10.8s ease-in-out 5.9s infinite"></span>
-              <span style="left:3.44%;top:97.01%;width:2.0px;height:2.0px;background:#BCD6F5;opacity:0.54;box-shadow:0 0 4.8px #BCD6F566;animation:twinkle 6.9s ease-in-out 8.9s infinite"></span>
-              <span style="left:10.32%;top:31.67%;width:1.8px;height:1.8px;background:#FFFFFF;opacity:0.30;box-shadow:0 0 4.4px #FFFFFF66;animation:twinkle 9.6s ease-in-out 1.1s infinite"></span>
-              <span style="left:65.97%;top:11.29%;width:1.9px;height:1.9px;background:#BCD6F5;opacity:0.41;box-shadow:0 0 4.5px #BCD6F566;animation:twinkle 11.4s ease-in-out 3.6s infinite"></span>
-              <span style="left:79.56%;top:98.15%;width:2.5px;height:2.5px;background:#FFE7BC;opacity:0.43;box-shadow:0 0 6.1px #FFE7BC66;animation:twinkle 11.3s ease-in-out 8.1s infinite"></span>
-              <span style="left:0.12%;top:25.34%;width:2.5px;height:2.5px;background:#BCD6F5;opacity:0.49;box-shadow:0 0 5.9px #BCD6F566;animation:twinkle 13.3s ease-in-out 2.4s infinite"></span>
-              <span style="left:91.97%;top:36.00%;width:2.2px;height:2.2px;background:#FFFFFF;opacity:0.41;box-shadow:0 0 5.3px #FFFFFF66;animation:sparkle 7.1s ease-in-out 0.2s infinite"></span>
-              <span style="left:52.10%;top:70.98%;width:1.9px;height:1.9px;background:#FFFFFF;opacity:0.35;box-shadow:0 0 4.6px #FFFFFF66;animation:twinkle 9.3s ease-in-out 6.0s infinite"></span>
-              <span style="left:21.58%;top:82.39%;width:1.3px;height:1.3px;background:#FFE7BC;opacity:0.42;box-shadow:0 0 3.2px #FFE7BC66;animation:twinkle 8.5s ease-in-out 1.1s infinite"></span>
-              <span style="left:31.70%;top:25.65%;width:2.2px;height:2.2px;background:#FFE7BC;opacity:0.32;box-shadow:0 0 5.2px #FFE7BC66;animation:twinkle 6.1s ease-in-out 6.1s infinite"></span>
-              <span style="left:50.40%;top:34.24%;width:2.1px;height:2.1px;background:#BCD6F5;opacity:0.57;box-shadow:0 0 5.2px #BCD6F566;animation:twinkle 6.2s ease-in-out 3.7s infinite"></span>
-              <span style="left:8.04%;top:57.36%;width:2.2px;height:2.2px;background:#FFFFFF;opacity:0.41;box-shadow:0 0 5.3px #FFFFFF66;animation:sparkle 10.8s ease-in-out 4.2s infinite"></span>
-              <span style="left:99.07%;top:66.17%;width:2.4px;height:2.4px;background:#BCD6F5;opacity:0.76;box-shadow:0 0 5.7px #BCD6F566;animation:twinkle 5.6s ease-in-out 0.0s infinite"></span>
-              <span style="left:95.14%;top:6.91%;width:1.3px;height:1.3px;background:#FFFFFF;opacity:0.64;box-shadow:0 0 3.1px #FFFFFF66;animation:sparkle 12.6s ease-in-out 3.3s infinite"></span>
-              <span style="left:33.64%;top:78.67%;width:1.6px;height:1.6px;background:#DBE9FF;opacity:0.45;box-shadow:0 0 3.7px #DBE9FF66;animation:twinkle 11.4s ease-in-out 2.2s infinite"></span>
-              <span style="left:45.46%;top:58.37%;width:2.4px;height:2.4px;background:#BCD6F5;opacity:0.57;box-shadow:0 0 5.9px #BCD6F566;animation:twinkle 8.8s ease-in-out 8.8s infinite"></span>
-              <span style="left:60.31%;top:0.83%;width:2.4px;height:2.4px;background:#BCD6F5;opacity:0.64;box-shadow:0 0 5.7px #BCD6F566;animation:sparkle 5.4s ease-in-out 4.9s infinite"></span>
-              <span style="left:43.62%;top:23.21%;width:2.4px;height:2.4px;background:#FFE7BC;opacity:0.70;box-shadow:0 0 5.8px #FFE7BC66;animation:sparkle 13.2s ease-in-out 2.5s infinite"></span>
-              <span style="left:45.94%;top:9.98%;width:1.6px;height:1.6px;background:#DBE9FF;opacity:0.74;box-shadow:0 0 3.8px #DBE9FF66;animation:twinkle 9.3s ease-in-out 3.7s infinite"></span>
-              <span style="left:19.06%;top:5.01%;width:2.4px;height:2.4px;background:#DBE9FF;opacity:0.67;box-shadow:0 0 5.7px #DBE9FF66;animation:sparkle 12.8s ease-in-out 3.6s infinite"></span>
-              <span style="left:19.11%;top:38.60%;width:2.3px;height:2.3px;background:#FFFFFF;opacity:0.41;box-shadow:0 0 5.4px #FFFFFF66;animation:sparkle 13.3s ease-in-out 4.1s infinite"></span>
-              <span style="left:15.42%;top:85.00%;width:2.5px;height:2.5px;background:#DBE9FF;opacity:0.32;box-shadow:0 0 6.1px #DBE9FF66;animation:sparkle 13.0s ease-in-out 1.7s infinite"></span>
-              <span style="left:0.34%;top:90.74%;width:1.3px;height:1.3px;background:#FFE7BC;opacity:0.48;box-shadow:0 0 3.1px #FFE7BC66;animation:twinkle 7.0s ease-in-out 6.8s infinite"></span>
-            </div>
-            <div class="star-layer" data-depth="0.22" data-mx="26">
-              <svg class="hero-star" viewBox="0 0 40 40" style="left:93.4%;top:4.2%;width:20px;height:20px;animation-duration:6.0s;animation-delay:0.0s"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="#FFFFFF" fill-opacity=".9" /><circle cx="20" cy="20" r="9" fill="#CFE8F0" fill-opacity=".22" /></svg>
-              <svg class="hero-star" viewBox="0 0 40 40" style="left:70.6%;top:11.8%;width:14px;height:14px;animation-duration:6.7s;animation-delay:0.9s"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="#FFE7BC" fill-opacity=".9" /><circle cx="20" cy="20" r="9" fill="#FFD79A" fill-opacity=".22" /></svg>
-              <svg class="hero-star" viewBox="0 0 40 40" style="left:83.1%;top:22.4%;width:16px;height:16px;animation-duration:7.4s;animation-delay:1.8s"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="#FFFFFF" fill-opacity=".9" /><circle cx="20" cy="20" r="9" fill="#CFE8F0" fill-opacity=".22" /></svg>
-              <svg class="hero-star" viewBox="0 0 40 40" style="left:55.2%;top:6.6%;width:12px;height:12px;animation-duration:8.1s;animation-delay:2.7s"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="#EAF6F8" fill-opacity=".9" /><circle cx="20" cy="20" r="9" fill="#CFE8F0" fill-opacity=".22" /></svg>
-              <svg class="hero-star" viewBox="0 0 40 40" style="left:31.5%;top:18.9%;width:13px;height:13px;animation-duration:8.8s;animation-delay:3.6s"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="#FFE7BC" fill-opacity=".9" /><circle cx="20" cy="20" r="9" fill="#FFD79A" fill-opacity=".22" /></svg>
-              <svg class="hero-star" viewBox="0 0 40 40" style="left:12.4%;top:8.4%;width:11px;height:11px;animation-duration:9.5s;animation-delay:4.5s"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="#FFFFFF" fill-opacity=".9" /><circle cx="20" cy="20" r="9" fill="#CFE8F0" fill-opacity=".22" /></svg>
-              <svg class="hero-star" viewBox="0 0 40 40" style="left:46.8%;top:34.6%;width:10px;height:10px;animation-duration:10.2s;animation-delay:5.4s"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="#EAF6F8" fill-opacity=".9" /><circle cx="20" cy="20" r="9" fill="#CFE8F0" fill-opacity=".22" /></svg>
-              <svg class="hero-star" viewBox="0 0 40 40" style="left:64.3%;top:52.1%;width:15px;height:15px;animation-duration:10.9s;animation-delay:6.3s"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="#FFFFFF" fill-opacity=".9" /><circle cx="20" cy="20" r="9" fill="#CFE8F0" fill-opacity=".22" /></svg>
-              <svg class="hero-star" viewBox="0 0 40 40" style="left:22.8%;top:47.3%;width:12px;height:12px;animation-duration:11.6s;animation-delay:7.2s"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="#FFE7BC" fill-opacity=".9" /><circle cx="20" cy="20" r="9" fill="#FFD79A" fill-opacity=".22" /></svg>
-            </div>
-            <div class="gas-giant parx" data-depth="0.07" data-mx="11"></div>
-            <div class="meteor m-a"></div>
-            <div class="meteor m-b"></div>
-            <div class="meteor m-c"></div>
-            <div class="sky-fade-bot"></div>
-          </div>
-          <div class="orbit-wrap" aria-hidden="true" data-mx="-8">
-            <div class="orbit-float">
-              <svg viewBox="0 0 900 900" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <defs>
-                  <radialGradient id="atxAtmos" cx="50%" cy="50%" r="50%">
-                    <stop offset="52%" stop-color="#4FA3B0" stop-opacity=".2" />
-                    <stop offset="72%" stop-color="#1E5F6E" stop-opacity=".08" />
-                    <stop offset="100%" stop-color="#1E5F6E" stop-opacity="0" />
-                  </radialGradient>
-                  <radialGradient id="atxBody" cx="33%" cy="27%" r="92%">
-                    <stop offset="0%" stop-color="#DFF6FA" />
-                    <stop offset="22%" stop-color="#8FDCE8" />
-                    <stop offset="50%" stop-color="#3FA7BC" />
-                    <stop offset="76%" stop-color="#1A5A6C" />
-                    <stop offset="100%" stop-color="#08161F" />
-                  </radialGradient>
-                  <linearGradient id="atxTermLin" x1="0.16" y1="0.1" x2="0.94" y2="0.9">
-                    <stop offset="36%" stop-color="#0A1F2B" stop-opacity="0" />
-                    <stop offset="54%" stop-color="#0A1F2B" stop-opacity=".2" />
-                    <stop offset="66%" stop-color="#071823" stop-opacity=".58" />
-                    <stop offset="100%" stop-color="#030D14" stop-opacity=".88" />
-                  </linearGradient>
-                  <radialGradient id="atxLimb" cx="50%" cy="50%" r="50%">
-                    <stop offset="76%" stop-color="#04121A" stop-opacity="0" />
-                    <stop offset="94%" stop-color="#04121A" stop-opacity=".24" />
-                    <stop offset="100%" stop-color="#04121A" stop-opacity=".5" />
-                  </radialGradient>
-                  <radialGradient id="atxSpec" cx="50%" cy="50%" r="50%">
-                    <stop offset="0%" stop-color="#FFFFFF" stop-opacity=".46" />
-                    <stop offset="58%" stop-color="#FFFFFF" stop-opacity=".1" />
-                    <stop offset="100%" stop-color="#FFFFFF" stop-opacity="0" />
-                  </radialGradient>
-                  <linearGradient id="atxRim" x1="0.1" y1="0.06" x2="0.92" y2="0.96">
-                    <stop offset="0%" stop-color="#EAF6F8" stop-opacity=".78" />
-                    <stop offset="34%" stop-color="#CFE8F0" stop-opacity=".14" />
-                    <stop offset="70%" stop-color="#4FA3B0" stop-opacity=".1" />
-                    <stop offset="100%" stop-color="#7FD4E4" stop-opacity=".42" />
-                  </linearGradient>
-                  <linearGradient id="atxGold" x1="0.14" y1="0.08" x2="0.9" y2="0.96">
-                    <stop offset="42%" stop-color="#FFD9A0" stop-opacity="0" />
-                    <stop offset="74%" stop-color="#FFC97A" stop-opacity=".5" />
-                    <stop offset="100%" stop-color="#FFB347" stop-opacity=".82" />
-                  </linearGradient>
-                  <linearGradient id="atxRing" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stop-color="#F0D9A8" stop-opacity="0" />
-                    <stop offset="20%" stop-color="#F7E8C6" stop-opacity=".62" />
-                    <stop offset="44%" stop-color="#9FE2EF" stop-opacity=".34" />
-                    <stop offset="72%" stop-color="#F7E8C6" stop-opacity=".56" />
-                    <stop offset="100%" stop-color="#F0D9A8" stop-opacity="0" />
-                  </linearGradient>
-                  <linearGradient id="atxRingDust" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stop-color="#E8D3A6" stop-opacity="0" />
-                    <stop offset="34%" stop-color="#E8D3A6" stop-opacity=".26" />
-                    <stop offset="62%" stop-color="#BFE6F0" stop-opacity=".2" />
-                    <stop offset="100%" stop-color="#E8D3A6" stop-opacity="0" />
-                  </linearGradient>
-                  <linearGradient id="atxOrbit" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stop-color="#4FA3B0" stop-opacity="0" />
-                    <stop offset="30%" stop-color="#4FA3B0" stop-opacity=".2" />
-                    <stop offset="70%" stop-color="#4FA3B0" stop-opacity=".2" />
-                    <stop offset="100%" stop-color="#4FA3B0" stop-opacity="0" />
-                  </linearGradient>
-                  <linearGradient id="atxTail" x1="1" y1="0" x2="0" y2="0">
-                    <stop offset="0%" stop-color="#CFE8F0" stop-opacity=".5" />
-                    <stop offset="100%" stop-color="#CFE8F0" stop-opacity="0" />
-                  </linearGradient>
-                  <radialGradient id="atxMoon" cx="34%" cy="30%" r="74%">
-                    <stop offset="0%" stop-color="#F6FBFC" />
-                    <stop offset="58%" stop-color="#A9C2CC" />
-                    <stop offset="100%" stop-color="#3C5C67" />
-                  </radialGradient>
-                  <radialGradient id="atxMoonWarm" cx="34%" cy="30%" r="74%">
-                    <stop offset="0%" stop-color="#FFF3DE" />
-                    <stop offset="58%" stop-color="#D9BB92" />
-                    <stop offset="100%" stop-color="#6B5238" />
-                  </radialGradient>
-                  <linearGradient id="atxMoonTerm" x1="0.1" y1="0.1" x2="0.95" y2="0.9">
-                    <stop offset="40%" stop-color="#04121A" stop-opacity="0" />
-                    <stop offset="100%" stop-color="#04121A" stop-opacity=".72" />
-                  </linearGradient>
-                  <radialGradient id="atxLitFade" cx="32%" cy="28%" r="62%">
-                    <stop offset="0%" stop-color="#fff" stop-opacity="1" />
-                    <stop offset="58%" stop-color="#fff" stop-opacity=".55" />
-                    <stop offset="100%" stop-color="#fff" stop-opacity="0" />
-                  </radialGradient>
-                  <mask id="atxLit"><circle cx="560" cy="300" r="128" fill="url(#atxLitFade)" /></mask>
-                  <filter id="atxLiquid" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="22" /></filter>
-                  <filter id="atxTex" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
-                    <feTurbulence type="fractalNoise" baseFrequency="0.0042 0.0092" numOctaves="5" seed="17" result="n" />
-                    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.78  0 0 0 0 0.93  0 0 0 0 0.96  0 0 0 -0.85 0.44" />
-                    <feGaussianBlur stdDeviation="1.8" />
-                  </filter>
-                  <filter id="atxTex2" x="-10%" y="-10%" width="120%" height="120%" color-interpolation-filters="sRGB">
-                    <feTurbulence type="turbulence" baseFrequency="0.008 0.017" numOctaves="4" seed="29" result="n" />
-                    <feColorMatrix in="n" type="matrix" values="0 0 0 0 0.02  0 0 0 0 0.12  0 0 0 0 0.18  0 0 0 -0.7 0.36" />
-                    <feGaussianBlur stdDeviation="1.3" />
-                  </filter>
-                  <clipPath id="atxClip"><circle cx="560" cy="300" r="128" /></clipPath>
-                  <clipPath id="atxMoonClip"><circle cx="0" cy="0" r="10" /></clipPath>
-                  <mask id="atxFar" maskUnits="userSpaceOnUse" x="-400" y="-600" width="1700" height="900"><rect x="-400" y="-600" width="1700" height="900" fill="#fff" /></mask>
-                  <mask id="atxNear" maskUnits="userSpaceOnUse" x="-400" y="300" width="1700" height="1200"><rect x="-400" y="300" width="1700" height="1200" fill="#fff" /></mask>
-                </defs>
-
-                <circle class="halo-arc" cx="560" cy="300" r="330" fill="none" stroke="#4FA3B0" stroke-opacity=".09" stroke-width="1" style="animation:haloDrift 140s linear infinite;transform-origin:560px 300px" />
-                <circle class="atmos" cx="560" cy="300" r="212" fill="url(#atxAtmos)" style="animation:breathe 26s ease-in-out infinite" />
-
-                <g transform="rotate(-17 560 300)">
-                  <ellipse cx="560" cy="300" rx="200" ry="58" fill="none" stroke="url(#atxOrbit)" stroke-width=".8" opacity=".5" />
-                  <ellipse cx="560" cy="300" rx="262" ry="76" fill="none" stroke="url(#atxOrbit)" stroke-width=".7" opacity=".38" />
-                  <ellipse cx="560" cy="300" rx="330" ry="96" fill="none" stroke="url(#atxOrbit)" stroke-width=".6" opacity=".28" />
-                  <path id="atxPath" d="M360,300 a200,58 0 1,0 400,0 a200,58 0 1,0 -400,0" fill="none" stroke="none" />
-                  <path id="atxPath2" d="M298,300 a262,76 0 1,0 524,0 a262,76 0 1,0 -524,0" fill="none" stroke="none" />
-                  <path id="atxPath3" d="M230,300 a330,96 0 1,0 660,0 a330,96 0 1,0 -660,0" fill="none" stroke="none" />
-                </g>
-
-                <g class="ring-sys ring-outer" style="animation:ringWobbleB 168s ease-in-out infinite;transform-origin:560px 300px">
-                  <g transform="rotate(-14 560 300)">
-                    <path d="M314,300 A246,73 0 0 1 806,300" fill="none" stroke="url(#atxRingDust)" stroke-width="13" />
-                  </g>
-                </g>
-                <g class="ring-sys ring-inner" style="animation:ringWobble 104s ease-in-out infinite;transform-origin:560px 300px">
-                  <g transform="rotate(-17 560 300)">
-                    <path d="M364,300 A196,58 0 0 1 756,300" fill="none" stroke="url(#atxRing)" stroke-width="1.6" />
-                    <path d="M344,300 A216,64 0 0 1 776,300" fill="none" stroke="url(#atxRing)" stroke-width="4.5" opacity=".3" />
-                  </g>
-                </g>
-
-                <g transform="rotate(-17 560 300)" class="orbit-dot">
-                  <g mask="url(#atxFar)">
-                    <g>
-                      <g>
-                        <circle r="10" fill="url(#atxMoon)" />
-                        <circle cx="2.8" cy="-2.4" r="2.4" fill="#3C5C67" opacity=".34" />
-                        <circle cx="-3.4" cy="2.6" r="1.6" fill="#3C5C67" opacity=".26" />
-                        <circle cx="3.6" cy="4.2" r="1.1" fill="#3C5C67" opacity=".22" />
-                        <circle r="10" fill="url(#atxMoonTerm)" />
-                        <g clip-path="url(#atxMoonClip)"><circle cx="8.4" cy="-1.2" r="10" fill="#04121A" opacity=".62" /></g>
-                      </g>
-                      <animateMotion dur="38s" begin="0s" repeatCount="indefinite"><mpath href="#atxPath" /></animateMotion>
-                    </g>
-                  </g>
-                  <g mask="url(#atxFar)">
-                    <g>
-                      <g>
-                        <circle r="6" fill="url(#atxMoonWarm)" />
-                        <circle cx="1.8" cy="-1.6" r="1.5" fill="#6B5238" opacity=".32" />
-                        <circle cx="-2" cy="1.8" r="1" fill="#6B5238" opacity=".26" />
-                        <circle r="6" fill="url(#atxMoonTerm)" />
-                      </g>
-                      <animateMotion dur="64s" begin="-24s" repeatCount="indefinite"><mpath href="#atxPath2" /></animateMotion>
-                    </g>
-                  </g>
-                  <g mask="url(#atxFar)">
-                    <g>
-                      <g>
-                        <line x1="0" y1="0" x2="14" y2="0" stroke="url(#atxTail)" stroke-width="2.6" stroke-linecap="round" />
-                        <circle r="3.2" fill="#CFE8F0" />
-                        <circle cx="1" cy="-0.9" r="0.9" fill="#3C5C67" opacity=".3" />
-                      </g>
-                      <animateMotion dur="96s" begin="-40s" rotate="auto" repeatCount="indefinite"><mpath href="#atxPath3" /></animateMotion>
-                    </g>
-                  </g>
-                </g>
-
-                <circle cx="560" cy="300" r="128" fill="url(#atxBody)" />
-                <g clip-path="url(#atxClip)">
-                  <g style="filter:url(#atxLiquid)" opacity=".85">
-                    <ellipse cx="516" cy="256" rx="98" ry="72" fill="#CFE8F0" opacity=".34" style="animation:liquidA 74s ease-in-out infinite" />
-                    <ellipse cx="612" cy="330" rx="86" ry="66" fill="#06333F" opacity=".42" style="animation:liquidB 92s ease-in-out infinite" />
-                    <ellipse cx="540" cy="372" rx="76" ry="54" fill="#4FA3B0" opacity=".36" style="animation:liquidC 82s ease-in-out infinite" />
-                  </g>
-                  <g class="cloud-deck" style="animation:texDrift 82s linear infinite" opacity=".5">
-                    <rect x="346" y="90" width="428" height="428" filter="url(#atxTex)" />
-                    <rect x="774" y="90" width="428" height="428" filter="url(#atxTex)" />
-                  </g>
-                  <g class="surface-deck" style="animation:texDrift 55s linear infinite" opacity=".42">
-                    <rect x="346" y="90" width="428" height="428" filter="url(#atxTex2)" />
-                    <rect x="774" y="90" width="428" height="428" filter="url(#atxTex2)" />
-                  </g>
-                  <g transform="rotate(-17 560 300)" opacity=".34">
-                    <ellipse cx="560" cy="224" rx="148" ry="9" fill="#DFF6FA" opacity=".16" />
-                    <ellipse cx="560" cy="276" rx="148" ry="6" fill="#04121A" opacity=".15" />
-                    <ellipse cx="560" cy="338" rx="148" ry="12" fill="#04121A" opacity=".14" />
-                    <ellipse cx="560" cy="390" rx="148" ry="7" fill="#DFF6FA" opacity=".11" />
-                  </g>
-                  <g mask="url(#atxLit)">
-                    <g transform="rotate(-17 560 300)" opacity=".4">
-                      <ellipse cx="560" cy="300" rx="127" ry="37" fill="none" stroke="#CFE8F0" stroke-opacity=".3" stroke-width=".6" />
-                      <ellipse cx="560" cy="243" rx="112" ry="25" fill="none" stroke="#CFE8F0" stroke-opacity=".22" stroke-width=".6" />
-                      <ellipse cx="560" cy="357" rx="112" ry="25" fill="none" stroke="#CFE8F0" stroke-opacity=".22" stroke-width=".6" />
-                    </g>
-                  </g>
-                  <circle cx="560" cy="300" r="128" fill="url(#atxTermLin)" />
-                  <circle cx="560" cy="300" r="128" fill="url(#atxLimb)" />
-                  <ellipse cx="507" cy="240" rx="54" ry="38" fill="url(#atxSpec)" transform="rotate(-24 507 240)" />
-                </g>
-                <circle cx="560" cy="300" r="128" fill="none" stroke="url(#atxRim)" stroke-width="1.8" />
-                <circle cx="560" cy="300" r="129" fill="none" stroke="url(#atxGold)" stroke-width="2.6" />
-                <circle cx="560" cy="300" r="134" fill="none" stroke="#FFC97A" stroke-opacity=".1" stroke-width="9" />
-                <circle cx="560" cy="300" r="134" fill="none" stroke="#7FD4E4" stroke-opacity=".09" stroke-width="11" />
-
-                <g class="ring-sys ring-inner" style="animation:ringWobble 104s ease-in-out infinite;transform-origin:560px 300px">
-                  <g transform="rotate(-17 560 300)">
-                    <path d="M364,300 A196,58 0 0 0 756,300" fill="none" stroke="url(#atxRing)" stroke-width="1.8" />
-                    <path d="M344,300 A216,64 0 0 0 776,300" fill="none" stroke="url(#atxRing)" stroke-width="4.5" opacity=".34" />
-                  </g>
-                </g>
-                <g class="ring-sys ring-outer" style="animation:ringWobbleB 168s ease-in-out infinite;transform-origin:560px 300px">
-                  <g transform="rotate(-14 560 300)">
-                    <path d="M314,300 A246,73 0 0 0 806,300" fill="none" stroke="url(#atxRingDust)" stroke-width="13" />
-                  </g>
-                </g>
-
-                <g transform="rotate(-17 560 300)" class="orbit-dot">
-                  <g mask="url(#atxNear)">
-                    <g>
-                      <g>
-                        <circle r="10" fill="url(#atxMoon)" />
-                        <circle cx="2.8" cy="-2.4" r="2.4" fill="#3C5C67" opacity=".34" />
-                        <circle cx="-3.4" cy="2.6" r="1.6" fill="#3C5C67" opacity=".26" />
-                        <circle cx="3.6" cy="4.2" r="1.1" fill="#3C5C67" opacity=".22" />
-                        <circle r="10" fill="url(#atxMoonTerm)" />
-                        <g clip-path="url(#atxMoonClip)"><circle cx="8.4" cy="-1.2" r="10" fill="#04121A" opacity=".62" /></g>
-                      </g>
-                      <animateMotion dur="38s" begin="0s" repeatCount="indefinite"><mpath href="#atxPath" /></animateMotion>
-                    </g>
-                  </g>
-                  <g mask="url(#atxNear)">
-                    <g>
-                      <g>
-                        <circle r="6" fill="url(#atxMoonWarm)" />
-                        <circle cx="1.8" cy="-1.6" r="1.5" fill="#6B5238" opacity=".32" />
-                        <circle cx="-2" cy="1.8" r="1" fill="#6B5238" opacity=".26" />
-                        <circle r="6" fill="url(#atxMoonTerm)" />
-                      </g>
-                      <animateMotion dur="64s" begin="-24s" repeatCount="indefinite"><mpath href="#atxPath2" /></animateMotion>
-                    </g>
-                  </g>
-                  <g mask="url(#atxNear)">
-                    <g>
-                      <g>
-                        <line x1="0" y1="0" x2="14" y2="0" stroke="url(#atxTail)" stroke-width="2.6" stroke-linecap="round" />
-                        <circle r="3.2" fill="#CFE8F0" />
-                        <circle cx="1" cy="-0.9" r="0.9" fill="#3C5C67" opacity=".3" />
-                      </g>
-                      <animateMotion dur="96s" begin="-40s" rotate="auto" repeatCount="indefinite"><mpath href="#atxPath3" /></animateMotion>
-                    </g>
-                  </g>
-                </g>
-
-                <g class="dust" opacity=".45">
-                  <circle r="1.9" fill="#7FD4E4"><animateMotion dur="96s" repeatCount="indefinite" path="M140,180 C320,90 660,110 840,240" /></circle>
-                  <circle r="1.4" fill="#C6B0F0"><animateMotion dur="118s" begin="-30s" repeatCount="indefinite" path="M860,520 C680,640 320,660 130,540" /></circle>
-                  <circle r="1.6" fill="#FFD9A0"><animateMotion dur="84s" begin="-48s" repeatCount="indefinite" path="M90,380 C240,220 660,180 850,340" /></circle>
-                  <circle r="1.2" fill="#EAF6F8"><animateMotion dur="132s" begin="-15s" repeatCount="indefinite" path="M500,60 C670,180 660,600 460,740" /></circle>
-                </g>
-              </svg>
-            </div>
+          <div class="hs-stage" aria-hidden="true">
+            <div class="hs-void"></div>
+            <div class="hs-bleed hs-bleed--violet"><div class="hs-bloom-drift"></div></div>
+            <div class="hs-bleed hs-bleed--teal"><div class="hs-bloom-drift"></div></div>
+            <!-- Deliberately NOT .parx layers: the background stays fixed so
+                  only the nebula responds to cursor/scroll. -->
+            <canvas class="hs-stars hs-stars--far"></canvas>
+            <!-- no .parx: the galaxy is not panned with the scene. It owns the
+                 pointer itself and animates its own shells internally. -->
+            <canvas class="hs-galaxy"></canvas>
+            <canvas class="hs-stars hs-stars--near"></canvas>
+            <div class="hs-scrim"></div>
+            <div class="hs-grain"></div>
+            <div class="hs-vignette"></div>
+            <div class="hs-fade"></div>
           </div>
           <div class="wrap">
-            <div class="eyebrow-rule">
-              <span class="rule"></span>
-              <span class="label">LED BY CURIOSITY</span>
-            </div>
-            <h1 class="hero-h1">Beyond the obvious.<br />Toward what&rsquo;s next.</h1>
-            <p class="hero-lede">
-              We explore ideas worth pursuing, rethink complex problems, and turn
-              possibilities into solutions designed to move things forward.
-            </p>
-            <div class="hero-actions">
-              <a class="btn btn--primary btn--hero-cta" href="#portfolio"><span class="cta-label">See the portfolio</span></a>
-              <a class="btn btn--ghost" href="#founders">Meet the founders →</a>
+            <div class="hs-copy">
+              <div class="eyebrow-rule">
+                <span class="rule"></span>
+                <span class="label">LED BY CURIOSITY</span>
+              </div>
+              <h1 class="hero-h1">Beyond the obvious.<br />Toward what&rsquo;s next.</h1>
+              <p class="hero-lede">
+                We explore ideas worth pursuing, rethink complex problems, and turn
+                possibilities into solutions designed to move things forward.
+              </p>
+              <div class="hero-actions">
+                <a class="btn btn--primary btn--hero-cta" href="#portfolio"><span class="cta-label">See the portfolio</span></a>
+                <a class="btn btn--ghost" href="#founders">Meet the founders →</a>
+              </div>
             </div>
           </div>
         </header>
@@ -2821,6 +2455,1452 @@
         </div>
       </footer>
     </div>
+
+    <script>
+/* Hero stage — v17 "living galaxy".
+   ------------------------------------------------------------------
+   WHAT CHANGED FROM v16
+   The galaxy used to be two baked layers moved as a unit by the page's
+   scene-wide parallax. It is now baked into THREE radial shells (inner /
+   mid / outer) plus a dust layer, and this module owns the pointer itself.
+   Each shell gets its own differential spin and its own translation offset
+   in response to the cursor, so the arms shear and swirl and the clusters
+   drift against each other — depth INSIDE the nebula, not a camera pan. The
+   core's brightness and light-falloff centre also track the pointer, so the
+   cursor reads as influencing the galaxy's energy.
+
+   On touch there is no cursor, so the same two drive values are produced
+   from scroll progress through the hero instead. The ambient rotation runs
+   underneath both, always.
+
+   PERFORMANCE
+   All particle detail (~40k points, clusters, spurs, dust lanes) is baked
+   ONCE at load into offscreen canvases. A frame is four drawImage calls plus
+   two gradient fills, regardless of particle count — which is what keeps it
+   smooth on a phone. The loop runs at ~30fps and only while the hero is on
+   screen and the tab is visible. */
+(function () {
+  if (window.__atxHeroStage) return; window.__atxHeroStage = true;
+
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+  var coarse = window.matchMedia('(max-width: 760px), (pointer: coarse)');
+
+  var hero, farC, galC, nearC, farX, galX, nearX;
+  var sprite, flare, shells = [], dust = null, lensCv = null, occCv = null, maskCv = null;
+  var stars = { far: [], near: [], smudge: [], planet: [], debris: [] };
+  var w = 0, h = 0, dpr = 1, raf = 0, running = false, last = 0, t0 = 0, prevT = 0, onScreen = true, farTick = false;
+
+  /* ---- ambient parallax drive ----
+     The cursor only sets a TARGET offset; the actual offset eases toward it
+     each frame inside the rAF loop, so the motion is ambient rather than
+     bound 1:1 to raw pointer coordinates, and no layout is written from an
+     event listener (which is what caused the earlier jitter). Applied to
+     the background star canvases ONLY — never the galaxy, jets or copy —
+     in the opposite direction to the cursor, capped at a few pixels. */
+  var PARALLAX_MAX = 6;
+  var pTargetX = 0, pTargetY = 0, pX = 0, pY = 0;
+  /* Ambient rotation is CONSTANT — the pointer never influences it. */
+
+  function rnd(a, b) { return a + Math.random() * (b - a); }
+  function bell() { return (Math.random() + Math.random() - 1); }
+  function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
+
+  function makeSprite(size, hardness) {
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    var x = c.getContext('2d'), m = size / 2;
+    var g = x.createRadialGradient(m, m, 0, m, m, m);
+    g.addColorStop(0, 'rgba(255,255,255,1)');
+    g.addColorStop(hardness, 'rgba(255,255,255,0.75)');
+    g.addColorStop(hardness * 2.4, 'rgba(255,255,255,0.16)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    x.fillStyle = g; x.fillRect(0, 0, size, size);
+    return c;
+  }
+
+  function makeFlare() {
+    var s = 128, c = document.createElement('canvas');
+    c.width = c.height = s;
+    var x = c.getContext('2d'), m = s / 2;
+    function spike(halfLen, halfThick) {
+      var g = x.createLinearGradient(m - halfLen, 0, m + halfLen, 0);
+      g.addColorStop(0, 'rgba(255,255,255,0)');
+      g.addColorStop(0.5, 'rgba(255,255,255,0.55)');
+      g.addColorStop(1, 'rgba(255,255,255,0)');
+      x.fillStyle = g; x.fillRect(m - halfLen, m - halfThick, halfLen * 2, halfThick * 2);
+    }
+    spike(m, 0.7);
+    x.save(); x.translate(m, m); x.rotate(Math.PI / 2); x.translate(-m, -m);
+    spike(m * 0.62, 0.6); x.restore();
+    return c;
+  }
+
+  /* ================= the galaxy bake ================= */
+
+  var ARMS = 2, TURNS = 2.25;
+  /* shell boundaries in normalised disc radius, with overlap so the shells
+     cross-fade into each other instead of showing a seam when they shear */
+  var SHELL = [[0.00, 0.36], [0.26, 0.70], [0.58, 1.05]];
+
+  function ridgeAt(t, armIndex, m, R) {
+    var th = armIndex * (Math.PI * 2 / ARMS) + t * TURNS * Math.PI * 2;
+    return { th: th, x: m + Math.cos(th) * R * t, y: m + Math.sin(th) * R * t };
+  }
+  /* two out-of-phase waves: arms clump and thin along their length rather
+     than carrying an even spray of stars */
+  function band(t) {
+    /* three out-of-phase waves: long swells, mid clumping and a fine
+       flicker, so density along an arm never settles into a pattern */
+    return 0.46
+      + 0.34 * Math.sin(t * 15.0 + 0.7)
+      + 0.22 * Math.sin(t * 6.3 - 1.9)
+      + 0.13 * Math.sin(t * 31.0 + 2.4);
+  }
+  /* which shell a given radius belongs to, with a probabilistic blend in the
+     overlap so the boundary is invisible */
+  function pickShell(d) {
+    for (var i = 0; i < SHELL.length; i++) {
+      var lo = SHELL[i][0], hi = SHELL[i][1];
+      if (d < lo || d > hi) continue;
+      var next = SHELL[i + 1];
+      if (next && d > next[0]) {
+        var f = (d - next[0]) / (hi - next[0]);
+        return Math.random() < f ? i + 1 : i;
+      }
+      return i;
+    }
+    return SHELL.length - 1;
+  }
+
+  function bakeShells(size) {
+    var out = [], ctxs = [], i;
+    for (i = 0; i < SHELL.length; i++) {
+      var c = document.createElement('canvas');
+      c.width = c.height = size;
+      var cx = c.getContext('2d');
+      cx.globalCompositeOperation = 'lighter';
+      out.push(c); ctxs.push(cx);
+    }
+    var m = size / 2, R = m * 0.94;
+    var star = makeSprite(16, 0.16);
+    var big = size > 800;
+
+    function put(px, py, s, a) {
+      var d = Math.hypot(px - m, py - m) / R;
+      if (d > 1.04) return;
+      var cx = ctxs[pickShell(d)];
+      cx.globalAlpha = Math.max(a, 0.012);
+      cx.drawImage(star, px - s, py - s, s * 2, s * 2);
+    }
+
+    /* --- base arm population --- */
+    var N = big ? 26000 : 13000;
+    for (i = 0; i < N; i++) {
+      var t = Math.pow(Math.random(), 0.5);
+      var p = ridgeAt(t, i % ARMS, m, R);
+      var spread = (0.022 + t * 0.135) * R;
+      var px = p.x + bell() * spread, py = p.y + bell() * spread;
+      var d0 = Math.hypot(px - m, py - m) / R;
+      put(px, py, rnd(0.45, 1.7) * (1 + (1 - d0) * 1.4),
+          (0.52 - d0 * 0.36) * rnd(0.22, 1) * Math.max(band(t), 0.22));
+    }
+
+    /* --- spurs: short feathers branching off the main arms, the thing that
+           stops a two-arm spiral looking like two painted stripes --- */
+    var SPURS = big ? 44 : 22;
+    for (i = 0; i < SPURS; i++) {
+      var st = rnd(0.22, 0.95);
+      var sp = ridgeAt(st, i % ARMS, m, R);
+      var dir = sp.th + Math.PI / 2 * (Math.random() < 0.5 ? 1 : -1) + rnd(-0.5, 0.5);
+      var len = R * rnd(0.05, 0.16);
+      var members = Math.round(rnd(180, 460) * (big ? 1 : 0.5));
+      for (var k = 0; k < members; k++) {
+        var f = Math.random();
+        var sx = sp.x + Math.cos(dir) * len * f + bell() * R * 0.016;
+        var sy = sp.y + Math.sin(dir) * len * f + bell() * R * 0.016;
+        put(sx, sy, rnd(0.4, 1.4), (0.3 - st * 0.14) * rnd(0.15, 0.9) * (1 - f * 0.6));
+      }
+    }
+
+    /* --- star-forming clumps strung along the arms --- */
+    var CLUMPS = big ? 240 : 120;
+    for (i = 0; i < CLUMPS; i++) {
+      var ct = Math.pow(rnd(0.08, 1), 0.72);
+      var cp = ridgeAt(ct, i % ARMS, m, R);
+      var jitter = (0.014 + ct * 0.075) * R;
+      var cx0 = cp.x + bell() * jitter, cy0 = cp.y + bell() * jitter;
+      var crad = R * (Math.random() < 0.18 ? rnd(0.05, 0.095) : rnd(0.008, 0.038)) * (0.5 + ct);
+      var cd = Math.hypot(cx0 - m, cy0 - m) / R;
+      if (cd > 1.0) continue;
+      var bright = rnd(0.5, 1) * (0.9 - cd * 0.35);
+      var count = Math.round(rnd(60, 320) * (big ? 1 : 0.55));
+      for (k = 0; k < count; k++) {
+        put(cx0 + bell() * crad, cy0 + bell() * crad, rnd(0.4, 1.6), bright * rnd(0.12, 0.8));
+      }
+      if (crad > R * 0.03) {
+        var kc = ctxs[pickShell(cd)];
+        var kg = kc.createRadialGradient(cx0, cy0, 0, cx0, cy0, crad * 2.4);
+        kg.addColorStop(0, 'rgba(255,255,255,' + (0.055 * bright).toFixed(3) + ')');
+        kg.addColorStop(1, 'rgba(255,255,255,0)');
+        kc.globalAlpha = 1; kc.fillStyle = kg;
+        kc.beginPath(); kc.arc(cx0, cy0, crad * 2.4, 0, Math.PI * 2); kc.fill();
+      }
+    }
+
+    /* --- inter-arm bridges: faint strands crossing between the arms, which
+           is what gives the disc layered depth instead of two clean lanes --- */
+    var BRIDGE = big ? 5200 : 2400;
+    for (i = 0; i < BRIDGE; i++) {
+      var bt2 = Math.pow(Math.random(), 0.6);
+      var bp = ridgeAt(bt2, i % ARMS, m, R);
+      /* push well off the ridge, into the gap */
+      var lat = (0.12 + bt2 * 0.24) * R * (Math.random() < 0.5 ? 1 : -1) * rnd(0.5, 1.3);
+      var perp = bp.th + Math.PI / 2;
+      put(bp.x + Math.cos(perp) * lat + bell() * R * 0.03,
+          bp.y + Math.sin(perp) * lat + bell() * R * 0.03,
+          rnd(0.35, 1.1), (0.14 - bt2 * 0.07) * rnd(0.15, 0.8));
+    }
+
+    /* --- halo --- */
+    var H = big ? 6500 : 3200;
+    for (i = 0; i < H; i++) {
+      var hr = R * (0.25 + Math.pow(Math.random(), 0.5) * 0.9);
+      var ht = Math.random() * Math.PI * 2;
+      put(m + Math.cos(ht) * hr, m + Math.sin(ht) * hr, rnd(0.4, 1.3),
+          (0.17 - (hr / R) * 0.13) * Math.random());
+    }
+
+    /* --- bulge --- */
+    var B = big ? 6000 : 3200;
+    for (i = 0; i < B; i++) {
+      var br = Math.abs(bell()) * R * 0.085;
+      var bt = Math.random() * Math.PI * 2;
+      put(m + Math.cos(bt) * br, m + Math.sin(bt) * br * 0.92, rnd(0.45, 1.3), rnd(0.07, 0.34));
+    }
+
+    /* --- colour: one shared radial ramp so the shells agree, warm white at
+           the centre through amber, brand teal across the arms, the faintest
+           violet at the rim. Then local hue pockets for variation. --- */
+    for (i = 0; i < ctxs.length; i++) {
+      var x = ctxs[i];
+      x.globalCompositeOperation = 'source-atop';
+      x.globalAlpha = 1;
+      var ramp = x.createRadialGradient(m, m, 0, m, m, R);
+      ramp.addColorStop(0.000, '#FFFDF6');
+      ramp.addColorStop(0.035, '#FFF2D8');
+      ramp.addColorStop(0.080, '#F2E2C2');
+      ramp.addColorStop(0.120, '#D4ECF2');
+      ramp.addColorStop(0.175, '#AEE6F4');
+      ramp.addColorStop(0.295, '#72C8DC');
+      ramp.addColorStop(0.470, '#3E96B0');
+      ramp.addColorStop(0.680, '#3D6E97');
+      ramp.addColorStop(0.840, '#48589F');
+      ramp.addColorStop(0.940, '#5842AC');
+      ramp.addColorStop(1.000, '#6134B4');
+      x.fillStyle = ramp; x.fillRect(0, 0, size, size);
+
+      /* local hue pockets — cooler blue and warmer amber patches laid over
+         the ramp, so the arms are not one flat colour sweep */
+      for (k = 0; k < 38; k++) {
+        var pt = Math.pow(Math.random(), 0.6);
+        var pp = ridgeAt(pt, k % ARMS, m, R);
+        var pxp = pp.x + bell() * R * 0.1, pyp = pp.y + bell() * R * 0.1;
+        var prad = R * rnd(0.06, 0.18);
+        var warm = pt < 0.32 ? Math.random() < 0.66 : Math.random() < 0.12;
+        var violet = !warm && pt > 0.66 && Math.random() < 0.34;
+        var tone = warm ? '236,186,112' : violet ? '120,44,214' : '96,158,214';
+        var pg = x.createRadialGradient(pxp, pyp, 0, pxp, pyp, prad);
+        pg.addColorStop(0, 'rgba(' + tone + ',0.5)');
+        pg.addColorStop(1, 'rgba(' + tone + ',0)');
+        x.globalAlpha = 0.55;
+        x.fillStyle = pg;
+        x.beginPath(); x.arc(pxp, pyp, prad, 0, Math.PI * 2); x.fill();
+      }
+      x.globalAlpha = 1;
+      x.globalCompositeOperation = 'source-over';
+    }
+
+    /* --- layered core glow, on the inner shell only --- */
+    var ic = ctxs[0];
+    ic.globalCompositeOperation = 'lighter';
+    function glow(rad, stops) {
+      var g = ic.createRadialGradient(m, m, 0, m, m, rad);
+      for (var j = 0; j < stops.length; j++) g.addColorStop(stops[j][0], stops[j][1]);
+      ic.fillStyle = g; ic.fillRect(0, 0, size, size);
+    }
+    glow(R * 0.030, [[0, 'rgba(255,253,248,0.40)'], [1, 'rgba(255,246,224,0)']]);
+    glow(R * 0.062, [[0, 'rgba(255,250,238,0.26)'], [0.45, 'rgba(255,236,200,0.13)'], [1, 'rgba(250,222,176,0)']]);
+    glow(R * 0.135, [[0, 'rgba(255,244,222,0.13)'], [0.32, 'rgba(214,240,246,0.075)'], [0.7, 'rgba(126,206,226,0.036)'], [1, 'rgba(90,170,196,0)']]);
+    glow(R * 0.34, [[0, 'rgba(196,238,248,0.062)'], [0.42, 'rgba(96,186,210,0.03)'], [1, 'rgba(56,132,160,0)']]);
+    ic.globalCompositeOperation = 'source-over';
+
+    return out;
+  }
+
+  function bakeDust(size) {
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    var x = c.getContext('2d');
+    var m = size / 2, R = m * 0.94;
+    var canBlur = false;
+    try { x.filter = 'blur(2px)'; canBlur = x.filter === 'blur(2px)'; x.filter = 'none'; } catch (e) {}
+    function blur(px) { if (canBlur) x.filter = 'blur(' + px.toFixed(1) + 'px)'; }
+    function noblur() { if (canBlur) x.filter = 'none'; }
+
+    function spiralPath(armIndex, offset, from, to, steps) {
+      x.beginPath();
+      for (var i = 0; i <= steps; i++) {
+        var t = from + (to - from) * (i / steps);
+        var th = armIndex * (Math.PI * 2 / ARMS) + t * TURNS * Math.PI * 2;
+        var r = R * t * (1 + offset);
+        var px = m + Math.cos(th) * r, py = m + Math.sin(th) * r;
+        i ? x.lineTo(px, py) : x.moveTo(px, py);
+      }
+    }
+
+    /* emission clouds riding the arms, with restrained hue variety */
+    x.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < 160; i++) {
+      var t = Math.pow(Math.random(), 0.55);
+      var th0 = (i % ARMS) * (Math.PI * 2 / ARMS) + t * TURNS * Math.PI * 2 + rnd(-0.22, 0.22);
+      var r0 = R * t;
+      var px = m + Math.cos(th0) * r0 + bell() * R * 0.09;
+      var py = m + Math.sin(th0) * r0 + bell() * R * 0.09;
+      var rad = R * rnd(0.035, 0.105);
+      var d = Math.hypot(px - m, py - m) / R;
+      var roll = Math.random();
+      var g = x.createRadialGradient(px, py, 0, px, py, rad);
+      if (d < 0.26 && roll < 0.5) {
+        g.addColorStop(0, 'rgba(214,172,110,0.17)'); g.addColorStop(0.5, 'rgba(176,140,92,0.058)');
+      } else if (d > 0.62 && roll < 0.42) {
+        /* Violet in the OUTER dust. Additive blending adds green as much as
+           blue, so a "pretty" violet just re-reads as teal on top of the
+           arms — these deliberately run a very low green channel so the sum
+           lands in 260-280deg rather than sliding back to 190deg. */
+        g.addColorStop(0, 'rgba(104,34,208,0.16)'); g.addColorStop(0.45, 'rgba(78,26,158,0.06)');
+      } else if (roll < 0.18) {
+        g.addColorStop(0, 'rgba(96,40,190,0.10)'); g.addColorStop(0.5, 'rgba(72,30,146,0.035)');
+      } else if (roll < 0.45) {
+        g.addColorStop(0, 'rgba(78,138,200,0.13)'); g.addColorStop(0.5, 'rgba(52,98,152,0.044)');
+      } else {
+        g.addColorStop(0, 'rgba(70,168,192,0.16)'); g.addColorStop(0.5, 'rgba(44,120,146,0.058)');
+      }
+      g.addColorStop(1, 'rgba(30,80,100,0)');
+      blur(rad * 0.16);
+      x.fillStyle = g;
+      x.beginPath(); x.arc(px, py, rad, 0, Math.PI * 2); x.fill();
+    }
+    noblur();
+
+    /* dust lanes: dark striations tracking just inboard of each arm */
+    x.globalCompositeOperation = 'source-over';
+    x.lineCap = 'round';
+    for (var arm = 0; arm < ARMS; arm++) {
+      for (var L = 0; L < 3; L++) {
+        x.strokeStyle = 'rgba(2,7,13,' + rnd(0.22, 0.38).toFixed(2) + ')';
+        x.lineWidth = R * rnd(0.006, 0.015);
+        blur(R * 0.006);
+        spiralPath(arm, -0.055 - L * 0.035 + rnd(-0.012, 0.012), rnd(0.14, 0.26), rnd(0.82, 1.0), 90);
+        x.stroke();
+      }
+      for (L = 0; L < 5; L++) {
+        var f2 = rnd(0.2, 0.72);
+        x.strokeStyle = 'rgba(2,7,13,' + rnd(0.16, 0.30).toFixed(2) + ')';
+        x.lineWidth = R * rnd(0.005, 0.011);
+        blur(R * 0.005);
+        spiralPath(arm, -0.02 + rnd(-0.05, 0.05), f2, f2 + rnd(0.1, 0.26), 40);
+        x.stroke();
+      }
+    }
+    noblur();
+
+    for (i = 0; i < 12; i++) {
+      var lt = Math.random() * Math.PI * 2, lr = R * rnd(0.2, 0.85);
+      var lx = m + Math.cos(lt) * lr, ly = m + Math.sin(lt) * lr;
+      var lrad = R * rnd(0.04, 0.10);
+      var lg = x.createRadialGradient(lx, ly, 0, lx, ly, lrad);
+      lg.addColorStop(0, 'rgba(2,7,13,0.32)');
+      lg.addColorStop(1, 'rgba(2,7,13,0)');
+      blur(lrad * 0.2);
+      x.fillStyle = lg;
+      x.beginPath(); x.arc(lx, ly, lrad, 0, Math.PI * 2); x.fill();
+    }
+    noblur();
+
+    /* --- outer violet veil: large, soft, and placed in the rim annulus and
+           inter-arm gaps where the shells are dim, so it is not fighting a
+           brighter teal underlay. This is what actually carries the colour. --- */
+    x.globalCompositeOperation = 'lighter';
+    for (i = 0; i < 22; i++) {
+      var vt = rnd(0.60, 1.02);
+      var vth = Math.random() * Math.PI * 2;
+      var vx = m + Math.cos(vth) * R * vt, vy = m + Math.sin(vth) * R * vt;
+      var vrad = R * rnd(0.12, 0.30);
+      var vg = x.createRadialGradient(vx, vy, 0, vx, vy, vrad);
+      vg.addColorStop(0, 'rgba(116,38,214,' + rnd(0.05, 0.10).toFixed(3) + ')');
+      vg.addColorStop(0.5, 'rgba(86,28,168,0.026)');
+      vg.addColorStop(1, 'rgba(64,22,124,0)');
+      blur(vrad * 0.2);
+      x.fillStyle = vg;
+      x.beginPath(); x.arc(vx, vy, vrad, 0, Math.PI * 2); x.fill();
+    }
+    noblur();
+    x.globalCompositeOperation = 'source-over';
+    return c;
+  }
+
+  /* ================= surrounding scene ================= */
+
+  /* Returns how much a point should twinkle: 0 over the dense, visibly
+     drifting part of the disc, 1 in open sky, smoothly feathered between.
+     A hard boolean keyed to the disc's GEOMETRIC radius excluded ~81% of
+     the hero — the disc's footprint is far larger than the region where it
+     actually reads as nebula. Measured mean disc alpha by normalised
+     elliptical radius u: 77 at u=0.1, 55 at 0.3, 40 at 0.5, 24 at 1.0 — so
+     past u~0.5 it is faint haze, not moving nebula. The ramp runs 0.26 to
+     0.58, which also means there is no visible line where twinkle switches
+     on. */
+  function twinkleFactor(nx, ny) {
+    var g = galaxyGeom();
+    var dx = nx - g.cx, dy = ny - g.cy;
+    var ca = Math.cos(-TILT), sa = Math.sin(-TILT);
+    var rx = dx * ca - dy * sa;
+    var ry = (dx * sa + dy * ca) / FLATTEN;
+    var u = Math.hypot(rx, ry) / (g.d * 0.5);
+    var f = (u - 0.26) / 0.32;
+    f = f < 0 ? 0 : f > 1 ? 1 : f;
+    return f * f * (3 - 2 * f);          // smoothstep
+  }
+
+  function seedScene() {
+    var area = Math.min(Math.max(w * h, 1) / (1440 * 820), 1.6);
+    stars.far = []; stars.near = []; stars.smudge = []; stars.planet = []; stars.debris = [];
+    var i, n;
+
+    /* ph = independent phase, sp = independent rate: every star fades on
+       its own staggered timer, so the field never pulses in sync. Rates are
+       randomised across a wide range (periods roughly 13s to 90s) so the
+       result reads as organic rather than mechanical. */
+    function farStar(rMin, rMax, aMin, aMax) {
+      var sx2 = Math.random(), sy2 = Math.random();
+      return { x: sx2, y: sy2, r: rnd(rMin, rMax), a: rnd(aMin, aMax),
+               ph: Math.random() * 6.28, sp: rnd(0.07, 0.48),
+               tw: twinkleFactor(sx2 * w, sy2 * h) };
+    }
+    n = Math.round(280 * area);
+    for (i = 0; i < n; i++) stars.far.push(farStar(1.0, 2.2, 0.05, 0.16));
+    n = Math.round(140 * area);
+    for (i = 0; i < n; i++) stars.far.push(farStar(2.0, 3.6, 0.12, 0.3));
+    n = Math.round(40 * area);
+    for (i = 0; i < n; i++) stars.far.push(farStar(3.2, 5.4, 0.2, 0.4));
+
+    /* distant companions: small soft-focus galaxies and loose clusters */
+    n = Math.max(4, Math.round(7 * Math.min(area, 1.2)));
+    for (i = 0; i < n; i++) {
+      var sm = {
+        x: rnd(0.03, 0.97), y: rnd(0.04, 0.94),
+        r: rnd(8, 26), sq: rnd(0.28, 0.62), rot: rnd(0, Math.PI),
+        a: rnd(0.05, 0.13), cluster: Math.random() < 0.45,
+        hue: Math.random() < 0.3 ? 'rgba(168,158,206,' : 'rgba(196,228,240,'
+      };
+      /* Member stars are generated ONCE here, not per draw. drawExtras used
+         to call bell()/rnd() inline, which was harmless while the far layer
+         painted once per layout — but the twinkle loop now repaints it
+         ~15x/sec, so every member was teleporting each frame. That is
+         positional jitter, not opacity. Freezing them keeps the companions
+         still while their layer fades. */
+      if (sm.cluster) {
+        sm.members = [];
+        for (var mk = 0; mk < 14; mk++) {
+          sm.members.push({
+            dx: bell() * sm.r * 0.7, dy: bell() * sm.r * 0.7,
+            r: rnd(0.4, 1.0), a: sm.a * rnd(1.2, 3)
+          });
+        }
+      }
+      stars.smudge.push(sm);
+    }
+
+    /* two faint planet silhouettes — deliberately tiny, lit from the galaxy */
+    stars.planet.push({ x: rnd(0.06, 0.18), y: rnd(0.62, 0.82), r: rnd(9, 14), a: 0.5 });
+    stars.planet.push({ x: rnd(0.82, 0.95), y: rnd(0.1, 0.26), r: rnd(6, 10), a: 0.4 });
+
+    /* an unobtrusive debris drift in the lower right, away from the copy */
+    n = Math.round(90 * Math.min(area, 1.3));
+    for (i = 0; i < n; i++) {
+      var u = Math.random();
+      stars.debris.push({
+        x: 0.62 + u * 0.42 + bell() * 0.05,
+        y: 0.70 + u * 0.24 + bell() * 0.06,
+        len: rnd(1.4, 4.6), thick: rnd(0.5, 1.1),
+        rot: rnd(-0.5, 0.3), a: rnd(0.08, 0.3)
+      });
+    }
+
+    /* near plane: fine dust, mid stars, sharp accents */
+    function nearStar(rMin, rMax, aMin, aMax, spMin, spMax) {
+      var sx3 = Math.random(), sy3 = Math.random();
+      return { x: sx3, y: sy3, r: rnd(rMin, rMax), a: rnd(aMin, aMax),
+               ph: Math.random() * 6.28, sp: rnd(spMin, spMax),
+               tw: twinkleFactor(sx3 * w, sy3 * h) };
+    }
+    n = Math.round(62 * area);
+    for (i = 0; i < n; i++) stars.near.push(nearStar(1.6, 3.4, 0.14, 0.42, 0.10, 0.30));
+    n = Math.round(38 * area);
+    for (i = 0; i < n; i++) stars.near.push(nearStar(3.4, 6.6, 0.3, 0.68, 0.09, 0.26));
+    n = Math.max(7, Math.round(12 * Math.min(area, 1.2)));
+    for (i = 0; i < n; i++) {
+      var ax = rnd(0.03, 0.97), ay = rnd(0.03, 0.93);
+      stars.near.push({
+        x: ax, y: ay, r: rnd(5.5, 11), a: rnd(0.5, 0.92),
+        ph: Math.random() * 6.28, sp: rnd(0.06, 0.15), fl: rnd(22, 54),
+        tw: twinkleFactor(ax * w, ay * h)
+      });
+    }
+  }
+
+  function paintStars(ctx, list, time, amp) {
+    var swing = (amp === undefined ? 0.62 : amp);
+    var base = 1 - swing;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, w, h);
+    for (var i = 0; i < list.length; i++) {
+      var s = list[i], a = s.a, r = s.r;
+      /* s.tw is a 0..1 weight: 0 over the drifting nebula (star holds a
+         constant alpha and size), 1 in open sky, feathered between — so
+         there is no boundary where the effect visibly switches off. */
+      var tw = s.tw === undefined ? 1 : s.tw;
+      if (time !== null && tw > 0.01) {
+        /* --- twinkle pulse (fast timer) --- */
+        var k = Math.sin(time * s.sp + s.ph) * tw;
+        a *= base + swing * k;
+        r *= 1 + 0.22 * k;
+
+        /* --- slow appear / hold / disappear (separate, much slower timer) ---
+           Built from an explicit phase, not a clamped sine: a clamped sine
+           spends its whole negative half at zero, so the star was invisible
+           50% of the cycle and fully visible only 32% — that halved the
+           field's density. The cycle is now segmented so the star holds at
+           full for most of it and only dips briefly to nothing:
+             0.00-0.62  hold visible
+             0.62-0.76  ease out to fully invisible
+             0.76-0.84  hold invisible
+             0.84-1.00  ease back in
+           Rate 0.008-0.022 cycles/s => 45-125s per cycle, against the
+           twinkle's 13-90s, so the two never read as one animation. Phase
+           and rate come from the star's own randoms, so nothing syncs.
+           Weighted by tw, so stars over the drifting nebula are untouched. */
+        var cyc = time * (0.008 + (s.sp % 0.014)) + s.ph * 0.159;
+        var u2 = cyc - Math.floor(cyc);
+        var env;
+        if (u2 < 0.62) env = 1;
+        else if (u2 < 0.76) env = 1 - (u2 - 0.62) / 0.14;
+        else if (u2 < 0.84) env = 0;
+        else env = (u2 - 0.84) / 0.16;
+        env = env * env * (3 - 2 * env);
+        a *= 1 - tw * (1 - env);
+      }
+      if (a <= 0.004) continue;
+      ctx.globalAlpha = a;
+      ctx.drawImage(sprite, s.x * w - r, s.y * h - r, r * 2, r * 2);
+      if (s.fl) {
+        ctx.globalAlpha = a * 0.45;
+        ctx.drawImage(flare, s.x * w - s.fl, s.y * h - s.fl, s.fl * 2, s.fl * 2);
+      }
+    }
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = 'source-atop';
+    var g = ctx.createLinearGradient(0, 0, w, h);
+    g.addColorStop(0, 'rgba(226,243,250,1)');
+    g.addColorStop(0.55, 'rgba(203,231,241,1)');
+    g.addColorStop(1, 'rgba(184,214,229,1)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'source-over';
+  }
+
+  /* drawn after the tint pass so they keep their own colour */
+  function drawExtras(ctx) {
+    var i, k;
+    for (i = 0; i < stars.smudge.length; i++) {
+      var s = stars.smudge[i];
+      ctx.save();
+      ctx.translate(s.x * w, s.y * h);
+      ctx.rotate(s.rot);
+      ctx.scale(1, s.sq);
+      var g = ctx.createRadialGradient(0, 0, 0, 0, 0, s.r);
+      g.addColorStop(0, s.hue + s.a.toFixed(3) + ')');
+      g.addColorStop(0.34, s.hue + (s.a * 0.4).toFixed(3) + ')');
+      g.addColorStop(1, s.hue + '0)');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(0, 0, s.r, 0, Math.PI * 2); ctx.fill();
+      if (s.members) {
+        for (k = 0; k < s.members.length; k++) {
+          var mb = s.members[k];
+          ctx.globalAlpha = mb.a;
+          ctx.drawImage(sprite, mb.dx - mb.r, mb.dy - mb.r, mb.r * 2, mb.r * 2);
+        }
+        ctx.globalAlpha = 1;
+      }
+      ctx.restore();
+    }
+
+    for (i = 0; i < stars.planet.length; i++) {
+      var p = stars.planet[i];
+      var cx = p.x * w, cy = p.y * h;
+      ctx.save();
+      var pg = ctx.createRadialGradient(cx - p.r * 0.35, cy - p.r * 0.35, 0, cx, cy, p.r);
+      pg.addColorStop(0, 'rgba(150,186,202,' + p.a.toFixed(2) + ')');
+      pg.addColorStop(0.45, 'rgba(74,104,122,' + (p.a * 0.7).toFixed(2) + ')');
+      pg.addColorStop(0.82, 'rgba(18,30,42,' + (p.a * 0.8).toFixed(2) + ')');
+      pg.addColorStop(1, 'rgba(8,14,22,' + (p.a * 0.85).toFixed(2) + ')');
+      ctx.fillStyle = pg;
+      ctx.beginPath(); ctx.arc(cx, cy, p.r, 0, Math.PI * 2); ctx.fill();
+      /* the faintest rim catch on the galaxy-facing side */
+      ctx.strokeStyle = 'rgba(190,224,238,' + (p.a * 0.30).toFixed(2) + ')';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath(); ctx.arc(cx, cy, p.r - 0.4, -2.5, -0.5); ctx.stroke();
+      ctx.restore();
+    }
+
+    for (i = 0; i < stars.debris.length; i++) {
+      var d = stars.debris[i];
+      ctx.save();
+      ctx.translate(d.x * w, d.y * h);
+      ctx.rotate(d.rot);
+      ctx.globalAlpha = d.a;
+      ctx.fillStyle = 'rgba(186,212,226,1)';
+      ctx.beginPath();
+      ctx.ellipse(0, 0, d.len, d.thick, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  /* Pure opacity animation, driven only by the clock — no cursor input, and
+     it never writes a transform, so it cannot interfere with the parallax
+     drift (which only sets translate3d on the canvas element itself). */
+  function drawFarPlane(time) {
+    paintStars(farX, stars.far, time === undefined ? null : time, 0.5);
+    drawExtras(farX);
+  }
+
+
+  /* ================= meteors ================= */
+  /* An occasional shooting star across the starfield: glowing head, fading
+     tail, eased in and out so it never pops. One at a time, long gaps, and
+     paths biased away from the galaxy core so it stays a background
+     flourish rather than competing with the nebula. Drawn on the near plane
+     after the tint pass, so it keeps its own warm-white colour. */
+  var meteor = null, nextMeteor = 0;
+
+  function spawnMeteor(t) {
+    var fromLeft = Math.random() < 0.5;
+    /* shallow diagonals only — steep streaks read as glitches */
+    var ang = (fromLeft ? 0 : Math.PI) + (fromLeft ? 1 : -1) * rnd(0.16, 0.44);
+    meteor = {
+      x: fromLeft ? rnd(-0.12, 0.18) : rnd(0.82, 1.12),
+      y: rnd(0.04, 0.52),
+      ang: ang,
+      len: rnd(0.10, 0.20),          // tail length, fraction of width
+      speed: rnd(0.16, 0.28),        // screens per second
+      life: 0,
+      dur: rnd(1.5, 2.4),
+      size: rnd(1.3, 2.2)
+    };
+    nextMeteor = t + rnd(7, 15);
+  }
+
+  function drawMeteor(ctx, t, dt) {
+    if (!meteor) {
+      if (t >= nextMeteor) spawnMeteor(t);
+      return;
+    }
+    meteor.life += dt;
+    var p = meteor.life / meteor.dur;
+    if (p >= 1) { meteor = null; return; }
+
+    meteor.x += Math.cos(meteor.ang) * meteor.speed * dt;
+    meteor.y += Math.sin(meteor.ang) * meteor.speed * dt;
+
+    /* fade in over the first fifth, out over the last third */
+    var fade = Math.min(p / 0.2, 1) * (1 - Math.max((p - 0.67) / 0.33, 0));
+    if (fade <= 0.01) return;
+
+    var hx = meteor.x * w, hy = meteor.y * h;
+    var tlen = meteor.len * w;
+    var txp = hx - Math.cos(meteor.ang) * tlen;
+    var typ = hy - Math.sin(meteor.ang) * tlen;
+
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    var g = ctx.createLinearGradient(hx, hy, txp, typ);
+    g.addColorStop(0, 'rgba(244,252,255,' + (0.85 * fade).toFixed(3) + ')');
+    g.addColorStop(0.18, 'rgba(198,236,248,' + (0.42 * fade).toFixed(3) + ')');
+    g.addColorStop(0.55, 'rgba(150,206,228,' + (0.12 * fade).toFixed(3) + ')');
+    g.addColorStop(1, 'rgba(120,180,210,0)');
+    ctx.strokeStyle = g;
+    ctx.lineWidth = meteor.size;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(hx, hy); ctx.lineTo(txp, typ); ctx.stroke();
+
+    /* head bloom + hot core */
+    var hg = ctx.createRadialGradient(hx, hy, 0, hx, hy, meteor.size * 7);
+    hg.addColorStop(0, 'rgba(255,255,255,' + (0.7 * fade).toFixed(3) + ')');
+    hg.addColorStop(0.3, 'rgba(206,240,250,' + (0.26 * fade).toFixed(3) + ')');
+    hg.addColorStop(1, 'rgba(140,200,224,0)');
+    ctx.fillStyle = hg;
+    ctx.beginPath(); ctx.arc(hx, hy, meteor.size * 7, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
+
+
+  /* ================= relativistic jets ================= */
+  /* REBUILT. The previous implementation filled the cone with a bitmap
+     texture containing 120 STROKED filaments, baked at 512x128 and then
+     stretched ~4.7x vertically to fill the layer — every wisp smeared into
+     a long streak, which is why each attempt to widen the cone produced
+     more thin lines instead of a wider shape. A line-based texture cannot
+     be asked to behave like a solid tapered form.
+
+     Now: each jet is a SINGLE FILLED WEDGE POLYGON — apex pinned on the
+     core, flaring outward — filled with gradients. No strokes anywhere, no
+     stretched texture. Grain comes from soft round dots drawn at their
+     native scale (never stretched along an axis, so they cannot form
+     lines). Everything else rides on top of that one correct shape. */
+  var JET_ANGLE = 0.80;
+  var jetCv = null, grainCv = null;
+
+  /* isotropic grain: round dots only, no directionality */
+  function bakeGrain(size) {
+    var c = document.createElement('canvas');
+    c.width = c.height = size;
+    var x = c.getContext('2d');
+    var soft = makeSprite(24, 0.2);
+    x.globalCompositeOperation = 'lighter';
+    for (var i = 0; i < 1500; i++) {
+      var r = rnd(0.8, 3.6);
+      x.globalAlpha = rnd(0.05, 0.3);
+      x.drawImage(soft, Math.random() * size - r, Math.random() * size - r, r * 2, r * 2);
+    }
+    /* a few larger soft clumps for clumpiness — still round, still no lines */
+    for (i = 0; i < 60; i++) {
+      var R = rnd(6, 22);
+      x.globalAlpha = rnd(0.03, 0.12);
+      x.drawImage(soft, Math.random() * size - R, Math.random() * size - R, R * 2, R * 2);
+    }
+    x.globalAlpha = 1;
+    return c;
+  }
+
+  /* The centreline is DEAD STRAIGHT — there is no centre-offset function at
+     all. Curving each jet independently meant the pair were never collinear.
+     Precession is applied as a rotation of the whole axis instead (identical
+     for both jets), so the two remain exact opposite ends of one straight
+     line through the core while the axis swings. */
+  /* half-width of the wedge at f, front-loaded so the flare lands where the
+     opacity mask still has real alpha; noise keeps the edge hazy */
+  /* RIGID by construction: no time term anywhere. The edge noise used to
+     include t, so the outline was regenerated every frame — the wedge
+     deformed and writhed in place while it rotated, which read as the jet
+     spinning on its own axis. The silhouette is now fixed; only the
+     rotation about the core animates it. */
+  function jetHalf(len, f, wOut, side) {
+    var base = (0.0015 + wOut * Math.pow(f, 0.45)) * len;
+    var n = 1
+      + 0.22 * Math.sin(f * 8.0 + side * 2.1)
+      + 0.13 * Math.sin(f * 17.0 - side * 1.3);
+    return base * n;
+  }
+
+  function drawJets(ctx, g, len, boost, t, which) {
+    if (!grainCv) grainCv = bakeGrain(256);
+    if (!jetCv) jetCv = document.createElement('canvas');
+
+    var pulse = 0.87 + 0.13 * Math.sin(t * 0.2);
+    var STEPS = 40;
+    /* Collimated. W_OUT is the tip half-width as a fraction of jet LENGTH,
+       so 0.42 (with the 1.25 halo scale and ~1.35 noise peak) gave a
+       half-width ~71% of length — an ~80 degree cone by construction, which
+       is what swallowed the nebula. 0.085 gives ~12-14 degrees total. */
+    var W_OUT = 0.085;
+    /* layer must contain the full wedge plus its precession swing, or the
+       wide end is clipped and the clip edge reads as a hard streak */
+    var maxHalf = len * W_OUT * 1.6, maxSwing = len * 0.02;
+    var LW = Math.ceil(len * 1.02);
+    var LH = Math.ceil((maxHalf + maxSwing + len * 0.05) * 2);
+    if (jetCv.width !== LW || jetCv.height !== LH) { jetCv.width = LW; jetCv.height = LH; }
+    var jc = jetCv.getContext('2d');
+    var midY = LH / 2;
+    var canBlur = false;
+    try { jc.filter = 'blur(2px)'; canBlur = jc.filter === 'blur(2px)'; jc.filter = 'none'; } catch (e) {}
+
+    for (var dir = 0; dir < 2; dir++) {
+      if (which !== undefined && dir !== which) continue;
+      /* Orbit CANCELLED. The jets no longer sweep around the core; their
+         angle is essentially fixed, with only a slight left-right rock
+         (+/-0.03 rad, ~1.7 degrees, ~105s period). The motion now lives
+         INSIDE the beam — see the axial spin in the striation block. */
+      var precess = Math.sin(t * 0.06) * 0.03;
+      var i, f;
+
+      jc.setTransform(1, 0, 0, 1, 0, 0);
+      jc.clearRect(0, 0, LW, LH);
+      jc.globalCompositeOperation = 'source-over';
+      jc.globalAlpha = 1;
+      if (canBlur) jc.filter = 'none';
+
+      /* ---- THE shape: one filled wedge polygon ---- */
+      function wedge(scale) {
+        jc.beginPath();
+        for (i = 0; i <= STEPS; i++) {
+          f = i / STEPS;
+          var y = midY - jetHalf(len, f, W_OUT, 1) * scale;
+          i ? jc.lineTo(f * len, y) : jc.moveTo(f * len, y);
+        }
+        for (i = STEPS; i >= 0; i--) {
+          f = i / STEPS;
+          jc.lineTo(f * len, midY + jetHalf(len, f, W_OUT, -1) * scale);
+        }
+        jc.closePath();
+      }
+
+      /* outer halo: the same wedge, wider and soft */
+      if (canBlur) jc.filter = 'blur(' + (len * 0.014).toFixed(1) + 'px)';
+      wedge(1.14);
+      var hg = jc.createLinearGradient(0, 0, len, 0);
+      hg.addColorStop(0.00, 'rgba(148,206,240,0.15)');
+      hg.addColorStop(0.30, 'rgba(112,178,224,0.085)');
+      hg.addColorStop(0.65, 'rgba(90,148,212,0.035)');
+      hg.addColorStop(1.00, 'rgba(80,130,200,0)');
+      jc.fillStyle = hg;
+      jc.fill();
+      if (canBlur) jc.filter = 'none';
+
+      /* body: the wedge proper */
+      if (canBlur) jc.filter = 'blur(' + (len * 0.005).toFixed(1) + 'px)';
+      wedge(1.0);
+      var bgd = jc.createLinearGradient(0, 0, len, 0);
+      bgd.addColorStop(0.00, 'rgba(238,250,255,' + '0.380' + ')');
+      bgd.addColorStop(0.14, 'rgba(196,234,252,' + '0.260' + ')');
+      bgd.addColorStop(0.40, 'rgba(146,208,240,' + '0.145' + ')');
+      bgd.addColorStop(0.70, 'rgba(112,172,222,0.055)');
+      bgd.addColorStop(1.00, 'rgba(100,150,210,0)');
+      jc.fillStyle = bgd;
+      jc.fill();
+      if (canBlur) jc.filter = 'none';
+
+      /* hot inner wedge, same geometry scaled down — layered luminosity */
+      wedge(0.40);
+      var ig = jc.createLinearGradient(0, 0, len, 0);
+      ig.addColorStop(0.00, 'rgba(255,255,255,' + '0.420' + ')');
+      ig.addColorStop(0.16, 'rgba(226,246,255,' + '0.240' + ')');
+      ig.addColorStop(0.44, 'rgba(176,226,248,0.09)');
+      ig.addColorStop(0.75, 'rgba(140,200,236,0.02)');
+      ig.addColorStop(1.00, 'rgba(140,200,236,0)');
+      jc.fillStyle = ig;
+      jc.fill();
+
+      /* ---- grain, clipped to the wedge. Drawn as square tiles at native
+             scale so dots stay round and can never smear into lines. ---- */
+      jc.save();
+      wedge(1.05);
+      jc.clip();
+      jc.globalCompositeOperation = 'lighter';
+      jc.globalAlpha = 0.24;
+      var TS = 256;
+      for (var gx0 = 0; gx0 < LW; gx0 += TS) {
+        for (var gy0 = 0; gy0 < LH; gy0 += TS) {
+          jc.drawImage(grainCv, gx0, gy0, TS, TS);
+        }
+      }
+      jc.globalAlpha = 1;
+      jc.restore();
+
+      /* ---- internal striations: nested sub-wedges at varying scale and
+             alpha, so brightness varies ACROSS the width instead of being a
+             flat gradient. Filled shapes only — no strokes, which is what
+             produced streaks in the old implementation. ---- */
+      jc.save();
+      wedge(1.0);
+      jc.clip();
+      jc.globalCompositeOperation = 'lighter';
+      /* AXIAL SPIN. Each band is treated as a stripe running along a
+         spinning cone: its angle about the beam's long axis advances with
+         time, its lateral position is sin(angle) and its apparent width is
+         |cos(angle)| — the standard cylinder projection, so bands are
+         widest crossing the centre and compress to nothing at the
+         silhouette edges. A per-length twist term makes the stripes
+         helical, so the whole thing reads as a beam rotating about itself
+         (a drill / barber-pole) while its outline stays perfectly still.
+         The two jets spin in opposite directions. */
+      /* Rate is set by the PERCEIVED period, not the full revolution: with
+         N evenly spaced bands the pattern repeats every 2*pi/N radians, so
+         0.5 rad/s over 9 bands repeated every 1.4s — a shimmer, ~19x faster
+         than the nebula's own 0.026 rad/s. Six bands at 0.11 rad/s repeat
+         every 9.5s, which sits with the scene's motion language and keeps
+         the individual stripes readable. */
+      var SPIN_RATE = 0.11 * (dir ? -1 : 1);
+      var BANDS = 6;
+      for (var si = 0; si < BANDS; si++) {
+        var a0 = (si / BANDS) * Math.PI * 2 + t * SPIN_RATE;
+        var twist = 2.1;                       // helix turns over the length
+        var sA0 = 0.075;
+        jc.beginPath();
+        for (i = 0; i <= STEPS; i++) {
+          f = i / STEPS;
+          var ang1 = a0 + f * twist;
+          var hwS = jetHalf(len, f, W_OUT, 1);
+          var proj = Math.sin(ang1);
+          var bw = Math.abs(Math.cos(ang1)) * 0.3 + 0.05;
+          var yc = midY + proj * hwS * 0.82;
+          i ? jc.lineTo(f * len, yc - hwS * bw) : jc.moveTo(f * len, yc - hwS * bw);
+        }
+        for (i = STEPS; i >= 0; i--) {
+          f = i / STEPS;
+          var ang2 = a0 + f * twist;
+          var hwS2 = jetHalf(len, f, W_OUT, -1);
+          var proj2 = Math.sin(ang2);
+          var bw2 = Math.abs(Math.cos(ang2)) * 0.3 + 0.05;
+          jc.lineTo(f * len, midY + proj2 * hwS2 * 0.82 + hwS2 * bw2);
+        }
+        jc.closePath();
+        /* bands on the near side of the cone read brighter than the far side */
+        var facing = 0.45 + 0.55 * (0.5 + 0.5 * Math.cos(a0));
+        var stg = jc.createLinearGradient(0, 0, len, 0);
+        stg.addColorStop(0, 'rgba(230,248,255,' + (sA0 * facing).toFixed(3) + ')');
+        stg.addColorStop(0.45, 'rgba(160,214,244,' + (sA0 * facing * 0.55).toFixed(3) + ')');
+        stg.addColorStop(1, 'rgba(120,180,226,0)');
+        jc.fillStyle = stg;
+        jc.fill();
+      }
+      /* ---- fine secondary striations: twice the band count, opposite
+             helix, much lower alpha. Beating against the primary set gives
+             small-scale variation along both length and width without
+             adding any new silhouette. ---- */
+      var FINE = 13;
+      for (var fi = 0; fi < FINE; fi++) {
+        var fa0 = (fi / FINE) * Math.PI * 2 - t * SPIN_RATE * 0.6;
+        var ftw = -3.4;
+        jc.beginPath();
+        for (i = 0; i <= STEPS; i++) {
+          f = i / STEPS;
+          var fang = fa0 + f * ftw;
+          var fhw = jetHalf(len, f, W_OUT, 1);
+          var fbw = Math.abs(Math.cos(fang)) * 0.13 + 0.02;
+          var fyc = midY + Math.sin(fang) * fhw * 0.88;
+          i ? jc.lineTo(f * len, fyc - fhw * fbw) : jc.moveTo(f * len, fyc - fhw * fbw);
+        }
+        for (i = STEPS; i >= 0; i--) {
+          f = i / STEPS;
+          var fang2 = fa0 + f * ftw;
+          var fhw2 = jetHalf(len, f, W_OUT, -1);
+          var fbw2 = Math.abs(Math.cos(fang2)) * 0.13 + 0.02;
+          jc.lineTo(f * len, midY + Math.sin(fang2) * fhw2 * 0.88 + fhw2 * fbw2);
+        }
+        jc.closePath();
+        var ffac = 0.4 + 0.6 * (0.5 + 0.5 * Math.cos(fa0));
+        var ffg = jc.createLinearGradient(0, 0, len, 0);
+        ffg.addColorStop(0, 'rgba(236,250,255,' + (0.032 * ffac).toFixed(4) + ')');
+        ffg.addColorStop(0.5, 'rgba(168,220,246,' + (0.018 * ffac).toFixed(4) + ')');
+        ffg.addColorStop(1, 'rgba(130,190,230,0)');
+        jc.fillStyle = ffg;
+        jc.fill();
+      }
+
+      /* ---- interior dust: soft round particles through the beam body, the
+             same sprite as the starfield, so the jet's interior carries the
+             nebula's grain rather than reading as flat fill ---- */
+      var IN_DUST = 110;
+      for (var idi = 0; idi < IN_DUST; idi++) {
+        var idf = 0.05 + Math.pow(idi / IN_DUST, 0.75) * 0.9;
+        var idhw = jetHalf(len, idf, W_OUT, idi % 2 ? 1 : -1);
+        var lat = Math.sin(idi * 9.73) * idhw * 0.9;
+        var idx = idf * len + Math.cos(idi * 5.31) * len * 0.015;
+        var idy = midY + lat;
+        var idr = 0.6 + Math.abs(Math.cos(idi * 6.1)) * 1.9;
+        var ida = (0.26 - idf * 0.2) * (0.35 + Math.abs(Math.sin(idi * 2.7)) * 0.65);
+        if (ida <= 0.004) continue;
+        jc.globalAlpha = ida;
+        jc.drawImage(sprite, idx - idr * 3, idy - idr * 3, idr * 6, idr * 6);
+      }
+      jc.globalAlpha = 1;
+
+      jc.restore();
+
+      /* ---- edge dust: soft round particles scattered along the boundary,
+             the same vocabulary as the nebula's starfield, so the jet does
+             not end at a clean silhouette ---- */
+      jc.globalCompositeOperation = 'lighter';
+      var DUST = 170;
+      for (var di = 0; di < DUST; di++) {
+        var df = 0.06 + Math.pow(di / DUST, 0.8) * 0.9;
+        var side = di % 2 ? 1 : -1;
+        var dhw = jetHalf(len, df, W_OUT, side);
+        var jitter = dhw * (0.72 + Math.abs(Math.sin(di * 12.9898)) * 0.75);
+        var dx = df * len + Math.sin(di * 7.13) * len * 0.02;
+        var dy = midY + side * jitter;
+        var dr = 0.7 + Math.abs(Math.sin(di * 4.7)) * 2.4;
+        var da = (0.3 - df * 0.26) * (0.4 + Math.abs(Math.sin(di * 3.1)) * 0.6);
+        if (da <= 0.004) continue;
+        jc.globalAlpha = da;
+        jc.drawImage(sprite, dx - dr * 3, dy - dr * 3, dr * 6, dr * 6);
+      }
+      jc.globalAlpha = 1;
+
+      /* knots: round soft bulges along the flow */
+      jc.globalCompositeOperation = 'lighter';
+      var knots = [0.12, 0.26, 0.42, 0.62];
+      for (var ki = 0; ki < knots.length; ki++) {
+        var kf = knots[ki];
+        var kb = 0.6 + 0.4 * Math.sin(t * 0.17 + ki * 2.1);
+        var kx = kf * len, ky = midY;
+        var kr = jetHalf(len, kf, W_OUT, 1) * 0.9;
+        /* knots on the occluded jet are damped too — an undimmed knot in
+           the near-core stretch was re-introducing a bright patch right
+           where the disc is thinnest */
+        var ka = (0.23 - kf * 0.16) * kb;
+        if (ka <= 0.004) continue;
+        var kg = jc.createRadialGradient(kx, ky, 0, kx, ky, kr);
+        kg.addColorStop(0, 'rgba(236,250,255,' + ka.toFixed(3) + ')');
+        kg.addColorStop(0.4, 'rgba(168,222,246,' + (ka * 0.4).toFixed(3) + ')');
+        kg.addColorStop(1, 'rgba(110,180,224,0)');
+        jc.fillStyle = kg;
+        jc.beginPath(); jc.arc(kx, ky, kr, 0, Math.PI * 2); jc.fill();
+      }
+
+      /* ---- opacity fade along the length, as a mask ---- */
+      jc.globalCompositeOperation = 'destination-in';
+      var fg = jc.createLinearGradient(0, 0, len, 0);
+      fg.addColorStop(0.00, 'rgba(0,0,0,1)');
+      fg.addColorStop(0.18, 'rgba(0,0,0,0.9)');
+      fg.addColorStop(0.36, 'rgba(0,0,0,0.66)');
+      fg.addColorStop(0.54, 'rgba(0,0,0,0.38)');
+      fg.addColorStop(0.70, 'rgba(0,0,0,0.17)');
+      fg.addColorStop(0.85, 'rgba(0,0,0,0.05)');
+      fg.addColorStop(1.00, 'rgba(0,0,0,0)');
+      jc.fillStyle = fg;
+      jc.fillRect(0, 0, LW, LH);
+      jc.globalCompositeOperation = 'source-over';
+
+      /* ---- composite onto the scene, mirrored for the opposite jet ---- */
+      ctx.save();
+      ctx.translate(g.cx, g.cy);
+      ctx.rotate(JET_ANGLE + precess + (dir ? Math.PI : 0));
+      ctx.globalCompositeOperation = 'lighter';
+      ctx.globalAlpha = boost * pulse;
+      ctx.drawImage(jetCv, 0, -midY);
+
+      /* launch bloom pins the apex to the core with no seam */
+      var lb = ctx.createRadialGradient(0, 0, 0, 0, 0, g.d * 0.045);
+      lb.addColorStop(0, 'rgba(240,251,255,' + (0.10 * pulse).toFixed(3) + ')');
+      lb.addColorStop(0.4, 'rgba(224,182,116,0.04)');
+      lb.addColorStop(1, 'rgba(110,170,220,0)');
+      ctx.globalAlpha = boost;
+      ctx.fillStyle = lb;
+      ctx.beginPath(); ctx.arc(0, 0, g.d * 0.045, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  /* ================= galaxy compositing ================= */
+
+  var TILT = -0.28, FLATTEN = 0.46;
+
+  /* 0 → 1 as the drive point approaches the galaxy core */
+  /* Cursor-driven brightness ("glow following") is removed. Kept as a
+     constant 0 so call sites read as fixed values rather than silently
+     re-introducing pointer coupling. */
+  function coreNear() { return 0; }
+
+  function galaxyGeom() {
+    return {
+      cx: w * (coarse.matches ? 0.56 : 0.63),
+      cy: h * (coarse.matches ? 0.40 : 0.45),
+      d: Math.max(w, h) * (coarse.matches ? 1.9 : 1.5)
+    };
+  }
+
+  /* per-shell response to the drive value. Differential spin shears the arms
+     (outer lags/leads the core) and the offsets slide the shells against each
+     other — together they read as the nebula swirling, not the view panning. */
+
+
+  function drawGalaxy(time) {
+    if (!shells.length) return;
+    var g = galaxyGeom();
+    galX.setTransform(dpr, 0, 0, dpr, 0, 0);
+    galX.clearRect(0, 0, w, h);
+    galX.globalCompositeOperation = 'lighter';
+
+    /* Ambient rotation: ~85s per turn for the arms, with the dust halo
+        lagging at ~120s so the disc keeps reading as a rotating volume
+        rather than one spinning bitmap. Clearly alive within a couple of
+        seconds of watching, still unhurried. */
+    /* Ambient rotation: ~240s per turn for the arms, dust halo lagging at
+        ~340s. Slow and deliberate — still clearly turning if you watch it
+        for a few seconds, but never energetic. */
+    var spin = time * 0.0262;
+    var spinDust = time * 0.0185;
+
+    /* how close the pointer is to the core, 1 at the core → used to bring the
+       core up as the cursor approaches it */
+    var near = coreNear();
+
+    function layerTo(tc, img, angle, scale, alpha, ox, oy) {
+      var s = g.d * scale;
+      tc.save();
+      tc.translate(g.cx + ox, g.cy + oy);
+      tc.rotate(TILT);
+      tc.scale(1, FLATTEN);
+      tc.rotate(angle);
+      tc.globalAlpha = alpha;
+      tc.drawImage(img, -s / 2, -s / 2, s, s);
+      tc.restore();
+    }
+    function layer(img, angle, scale, alpha, ox, oy) {
+      layerTo(galX, img, angle, scale, alpha, ox, oy);
+    }
+    /* The occlusion mask must contain the DISC ONLY. Building it from galC
+       was the bug: drawGalaxy paints a full-canvas atmospheric haze before
+       the punch, so no pixel was actually empty (0% of galC is alpha 0) and
+       the gamma boost turned even background haze into a 70-92% occluder —
+       which wiped the back jet along its whole length instead of only where
+       the nebula's mass is. Replaying just dust + shells means empty space
+       is genuinely empty and the jet re-emerges past the disc edge. */
+    function paintDiscTo(tc) {
+      tc.globalCompositeOperation = 'lighter';
+      layerTo(tc, dust, spinDust, 1.18, 0.66, 0, 0);
+      for (var di2 = 0; di2 < shells.length; di2++) {
+        layerTo(tc, shells[di2], spin, 1.0, 1, 0, 0);
+      }
+      tc.globalCompositeOperation = 'source-over';
+      tc.globalAlpha = 1;
+    }
+
+    /* atmospheric haze, un-rotated, breathing very slightly with the pointer */
+    galX.save();
+    galX.translate(g.cx, g.cy);
+    galX.rotate(TILT);
+    galX.scale(1, FLATTEN * 1.5);
+    var hr = g.d * (0.78 + near * 0.04);
+    var hg = galX.createRadialGradient(0, 0, 0, 0, 0, hr);
+    hg.addColorStop(0.00, 'rgba(126,206,226,' + (0.085 + near * 0.03).toFixed(3) + ')');
+    hg.addColorStop(0.22, 'rgba(86,176,200,0.055)');
+    hg.addColorStop(0.50, 'rgba(58,132,166,0.026)');
+    hg.addColorStop(0.78, 'rgba(104,88,166,0.020)');
+    hg.addColorStop(1.00, 'rgba(60,80,130,0)');
+    galX.globalAlpha = 1;
+    galX.fillStyle = hg;
+    galX.beginPath(); galX.arc(0, 0, hr, 0, Math.PI * 2); galX.fill();
+    galX.restore();
+
+    layer(dust, spinDust, 1.18, 0.66, 0, 0);
+
+    for (var i = 0; i < shells.length; i++) {
+      layer(shells[i], spin, 1.0, 1, 0, 0);
+    }
+
+    /* core: falloff centre leans toward the pointer and brightens near it, so
+       the galaxy reads as responding to the cursor's energy */
+    /* ---- back jet, genuinely occluded by the nebula ----
+       drawGalaxy composites in 'lighter', and additive blending is
+       commutative: drawing the back jet earlier in the order produced a
+       pixel-identical result, so the previous "behind" pass was a no-op.
+       Real occlusion needs a non-additive step — the jet is rendered into
+       its own layer, the disc's accumulated coverage is punched out of it
+       with destination-out, and only what survives is added. Where the
+       arms and dust are dense the jet is removed; where the disc is thin
+       it shows through, which is exactly the depth cue. */
+    if (occCv) {
+      if (occCv.width !== galC.width || occCv.height !== galC.height) {
+        occCv.width = galC.width; occCv.height = galC.height;
+      }
+      var oc = occCv.getContext('2d');
+      oc.setTransform(dpr, 0, 0, dpr, 0, 0);
+      oc.globalCompositeOperation = 'source-over';
+      oc.globalAlpha = 1;
+      oc.clearRect(0, 0, w, h);
+      /* Atmospheric perspective: the far jet is rendered softer and very
+         slightly smaller than the near one, because it is further from the
+         camera — distance reads as loss of sharpness and scale, not just
+         reduced opacity. */
+      var farBlur = 'blur(' + (Math.max(w, h) * 0.0016).toFixed(2) + 'px)';
+      try { oc.filter = farBlur; } catch (e) {}
+      /* TASK 1: intensity only — position, angle, length and trajectory are
+         untouched. Raised from 0.78 so the far trail reads as an intentional
+         second beam, while staying below the near trail's 1.0 so that one
+         remains dominant. */
+      drawJets(oc, g, g.d * 0.26 * 0.93, 1.35, time, 0);
+      try { oc.filter = 'none'; } catch (e) {}
+      /* punch: remove the jet wherever the disc already has substance */
+      /* Punch harder: a single pass only removes the jet in proportion to
+         the disc's own alpha, so thin-but-present arm texture left the jet
+         mostly intact and it still read as "in front". Three passes drive
+         moderately covered regions to full removal while genuinely empty
+         gaps still let the jet through. */
+      /* GAMMA-BOOSTED MASK. Repeating the raw punch scales badly: each
+         pass leaves (1 - discAlpha), so the near-core annulus where the
+         disc sits at only 0.15-0.27 alpha would need ~20 full-canvas blits
+         to fall below 5% — and 8 was already the expensive part of the
+         frame. Instead the disc's coverage is compounded ONCE into a
+         scratch mask: drawing it onto itself with source-over drives any
+         non-zero alpha toward 1 (a = 1-(1-a)^n) while leaving true zeros
+         at exactly zero. Three compounding steps take 0.15 -> 0.55 and
+         0.27 -> 0.81, so faint arm texture masks almost fully, empty space
+         still masks not at all, and the jet keeps re-emerging past the
+         disc edge. Two punches with the boosted mask then finish it. */
+      if (!maskCv) maskCv = document.createElement('canvas');
+      if (maskCv.width !== galC.width || maskCv.height !== galC.height) {
+        maskCv.width = galC.width; maskCv.height = galC.height;
+      }
+      var mc = maskCv.getContext('2d');
+      mc.setTransform(dpr, 0, 0, dpr, 0, 0);
+      mc.globalCompositeOperation = 'source-over';
+      mc.globalAlpha = 1;
+      mc.clearRect(0, 0, w, h);
+      paintDiscTo(mc);                       // disc only — no haze
+      /* compound twice: a -> 1-(1-a)^3, lifting faint arm texture toward
+         opaque while true zeros stay exactly zero */
+      /* DEPTH, NOT OPACITY. The mask is the nebula's OWN per-pixel density
+         with no flat cap and no artificial collar: where dust and star
+         clusters are dense the jet is strongly obscured, where the disc is
+         thin or between arms it shows through, and in empty space it is
+         untouched. Two compounding steps give the volume enough optical
+         depth to read as a physical medium without flattening the
+         variation into a uniform percentage. */
+      mc.setTransform(1, 0, 0, 1, 0, 0);
+      mc.drawImage(maskCv, 0, 0);
+      mc.drawImage(maskCv, 0, 0);
+      mc.drawImage(maskCv, 0, 0);
+      mc.drawImage(maskCv, 0, 0);
+
+      oc.globalCompositeOperation = 'destination-out';
+      oc.setTransform(1, 0, 0, 1, 0, 0);
+      oc.drawImage(maskCv, 0, 0);
+      oc.globalCompositeOperation = 'source-over';
+      oc.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+      galX.globalCompositeOperation = 'lighter';
+      galX.globalAlpha = 1;
+      galX.setTransform(1, 0, 0, 1, 0, 0);
+      galX.drawImage(occCv, 0, 0);
+      galX.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
+    /* front jet: open space, nothing to occlude it */
+    drawJets(galX, g, g.d * 0.26, 1.0 + near * 0.45, time, 1);
+
+    /* Warm accent ring. The core's own glow stack drives the centre to pure
+        white, so warmth can only read just OUTSIDE it — an annulus of soft
+        gold between the core and the inner arms. Core glow itself unchanged. */
+    galX.save();
+    galX.translate(g.cx, g.cy);
+    galX.rotate(TILT);
+    galX.scale(1, FLATTEN);
+    var wr = g.d * 0.19;
+    var wg = galX.createRadialGradient(0, 0, wr * 0.34, 0, 0, wr);
+    wg.addColorStop(0, 'rgba(0,0,0,0)');
+    wg.addColorStop(0.30, 'rgba(226,166,74,' + (0.115 + near * 0.04).toFixed(3) + ')');
+    wg.addColorStop(0.62, 'rgba(196,138,58,0.052)');
+    wg.addColorStop(1, 'rgba(150,102,44,0)');
+    galX.globalAlpha = 1;
+    galX.fillStyle = wg;
+    galX.beginPath(); galX.arc(0, 0, wr, 0, Math.PI * 2); galX.fill();
+    galX.restore();
+
+    galX.save();
+    galX.translate(g.cx, g.cy);
+    galX.rotate(TILT);
+    galX.scale(1, FLATTEN);
+    var cr = g.d * 0.13;
+    var cg = galX.createRadialGradient(0, 0, 0, 0, 0, cr);
+    cg.addColorStop(0, 'rgba(255,250,240,' + (0.20 + near * 0.16).toFixed(3) + ')');
+    cg.addColorStop(0.10, 'rgba(238,250,255,' + (0.14 + near * 0.10).toFixed(3) + ')');
+    cg.addColorStop(0.30, 'rgba(174,234,246,' + (0.09 + near * 0.05).toFixed(3) + ')');
+    cg.addColorStop(0.62, 'rgba(74,166,192,0.04)');
+    cg.addColorStop(1, 'rgba(50,120,150,0)');
+    galX.globalAlpha = 1;
+    galX.fillStyle = cg;
+    galX.beginPath(); galX.arc(0, 0, cr, 0, Math.PI * 2); galX.fill();
+    galX.restore();
+
+    galX.globalCompositeOperation = 'source-over';
+    galX.globalAlpha = 1;
+  }
+
+  /* ================= drive: pointer / scroll ================= */
+
+  function scrollDrive() {
+    if (!coarse.matches || !hero) return;
+    var r = hero.getBoundingClientRect(), hh = r.height || 1;
+    var p = clamp(-r.top / hh, 0, 1);
+    /* a full sweep across, and a gentle rise, as the hero passes */
+    /* touch equivalent: scroll progress supplies the same target offset */
+    pTargetX = (p - 0.5) * 1.2;
+    pTargetY = (p - 0.5) * 2;
+  }
+
+  function bindDrive() {
+    window.addEventListener('pointermove', function (e) {
+      if (coarse.matches) return;
+      pTargetX = (e.clientX / window.innerWidth - 0.5) * 2;
+      pTargetY = (e.clientY / window.innerHeight - 0.5) * 2;
+    }, { passive: true });
+    window.addEventListener('scroll', scrollDrive, { passive: true });
+    scrollDrive();
+  }
+
+  /* ================= lifecycle ================= */
+
+  /* Baked lazily from resize(), so the shells are always generated against a
+     real viewport size rather than a pre-layout 0x0 rect. */
+  function bake() {
+    var size = coarse.matches ? 640 : 1024;
+    shells = bakeShells(size);
+    dust = bakeDust(size);
+  }
+
+
+  var sizeRetry = 0, retryTimer = 0, poller = 0;
+  /* An independent bounded poller. The scheduleResize timer is cleared on
+     every call, so a burst of ResizeObserver/resize events can starve it
+     indefinitely in a hidden document; this one is never cleared by anything
+     except its own success condition. */
+  function startPoll() {
+    if (poller) return;
+    var tries = 0;
+    poller = setInterval(function () {
+      resize();
+      if ((w && shells.length) || ++tries > 40) { clearInterval(poller); poller = 0; }
+    }, 300);
+  }
+  /* rAF does not fire while the document is hidden (new background tab,
+     session restore, prerender), so every re-measure path is paired with a
+     setTimeout twin, which still fires when hidden (throttled to ~1s). */
+  function scheduleResize(delay) {
+    requestAnimationFrame(resize);
+    clearTimeout(retryTimer);
+    retryTimer = setTimeout(resize, delay || 250);
+  }
+  function resize() {
+    if (!hero) return;
+    /* Measure the STAGE, not a canvas: measuring an element whose backing
+       store this same callback then writes can starve the ResizeObserver.
+       A rect under 2px means layout has not settled — treat that as "not
+       ready" and retry on the next frame rather than clamping it to 1,
+       which would cache a 1x1 canvas and bake a 1px galaxy. */
+    var box = hero.querySelector('.hs-stage') || hero;
+    var r = box.getBoundingClientRect();
+    if (r.width < 2 || r.height < 2) {
+      if (sizeRetry++ < 240) { scheduleResize(250); startPoll(); }
+      return;
+    }
+    sizeRetry = 0;
+    var nw = Math.round(r.width), nh = Math.round(r.height);
+    /* Also repair if a canvas lost its backing store (bfcache restore, a
+       context loss, or a never-assigned 300x150 default) even when the
+       measured size has not changed. */
+    var want = Math.round(nw * Math.min(window.devicePixelRatio || 1, 2));
+    var intact = shells.length && farC.width === want && galC.width === want && nearC.width === want;
+    if (nw === w && nh === h && intact) return;
+    w = nw; h = nh;
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    [farC, galC, nearC].forEach(function (c) {
+      c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+    });
+    if (!shells.length) bake();
+    seedScene();
+    var t = reduce.matches ? 0 : (performance.now() - t0) / 1000;
+    drawFarPlane(reduce.matches ? undefined : t);
+    paintStars(nearX, stars.near, t);
+    drawGalaxy(t);
+  }
+
+  function frame(now) {
+    raf = 0;
+    if (!running) return;
+    if (now - last >= 33) {
+      last = now;
+      if (!w || !shells.length) { resize(); if (!w || !shells.length) { raf = requestAnimationFrame(frame); return; } }
+      pX += (pTargetX - pX) * 0.055;
+      pY += (pTargetY - pY) * 0.055;
+      if (farC && nearC) {
+        var ox = -pX * PARALLAX_MAX, oy = -pY * PARALLAX_MAX;
+        farC.style.transform = 'translate3d(' + ox.toFixed(2) + 'px,' + oy.toFixed(2) + 'px,0)';
+        nearC.style.transform = 'translate3d(' + (ox * 1.7).toFixed(2) + 'px,' + (oy * 1.7).toFixed(2) + 'px,0)';
+      }
+      var t = (now - t0) / 1000;
+      var dt = Math.min(t - prevT, 0.1);   // clamp so a stalled tab cannot jump the meteor
+      prevT = t;
+      drawGalaxy(t);
+      farTick = !farTick;
+      if (farTick) drawFarPlane(t);
+      paintStars(nearX, stars.near, t);
+      drawMeteor(nearX, t, dt);
+    }
+    raf = requestAnimationFrame(frame);
+  }
+  function start() {
+    if (running || reduce.matches || !onScreen || document.hidden) return;
+    /* never spin a loop against a stage that was never measured or baked */
+    if (!w || !shells.length) { resize(); if (!w || !shells.length) { scheduleResize(250); return; } }
+    running = true; last = 0;
+    if (!raf) raf = requestAnimationFrame(frame);
+  }
+  function stop() { running = false; if (raf) { cancelAnimationFrame(raf); raf = 0; } }
+
+  function init() {
+    hero = document.querySelector('.hero');
+    farC = document.querySelector('.hs-stars--far');
+    galC = document.querySelector('.hs-galaxy');
+    nearC = document.querySelector('.hs-stars--near');
+    if (!hero || !farC || !galC || !nearC) return;
+    farX = farC.getContext('2d');
+    galX = galC.getContext('2d');
+    nearX = nearC.getContext('2d');
+    lensCv = document.createElement('canvas');
+    occCv = document.createElement('canvas');
+    sprite = makeSprite(64, 0.14);
+    flare = makeFlare();
+    t0 = performance.now();
+
+    nextMeteor = 4;
+    resize();
+    if (!w || !shells.length) startPoll();
+    bindDrive();
+    hero.classList.add('hs-ready');
+
+    /* Observe the hero, but defer the measure a frame so the callback never
+       measures inside the same tick it resizes canvases in. */
+    if (window.ResizeObserver) {
+      new ResizeObserver(function () { scheduleResize(120); }).observe(hero);
+    }
+    window.addEventListener('resize', function () { scheduleResize(120); }, { passive: true });
+    window.addEventListener('load', function () { scheduleResize(60); });
+
+    if (window.IntersectionObserver) {
+      new IntersectionObserver(function (es) {
+        onScreen = es[0].isIntersecting;
+        onScreen ? start() : stop();
+      }, { rootMargin: '80px' }).observe(hero);
+    } else start();
+
+    document.addEventListener('visibilitychange', function () {
+      if (document.hidden) { stop(); return; }
+      resize();          // synchronous: a hidden-at-init page repairs on focus
+      start();
+    });
+    if (reduce.addEventListener) reduce.addEventListener('change', function () {
+      if (reduce.matches) { stop(); meteor = null; drawGalaxy(0); } else start();
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+    </script>
 
     <script>
       // Nav: animated active/hover pill, the --navh overlay measurement, and
