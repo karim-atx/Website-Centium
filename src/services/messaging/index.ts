@@ -214,7 +214,7 @@ export async function fetchThreads(): Promise<ThreadsResult> {
 
   // Newest-first so the first row seen for a thread is its latest message.
   const recent = await supabase
-    .from("messages")
+    .from("messages_visible")
     .select("thread_id, text, created_at, attachment_url, attachment_purged_at, voice_note_seconds")
     .order("created_at", { ascending: false })
     .limit(500);
@@ -226,7 +226,11 @@ export async function fetchThreads(): Promise<ThreadsResult> {
 
   const latest = new Map<string, { preview: string; created_at: string }>();
   for (const m of recent.data ?? []) {
-    if (m.thread_id && !latest.has(m.thread_id)) {
+    // created_at is NOT NULL on public.messages; the view widens every column
+    // to nullable, so it is guarded here rather than asserted. A row without a
+    // timestamp could not be placed in the ordering anyway, and skipping it
+    // costs one preview rather than an exception.
+    if (m.thread_id && m.created_at && !latest.has(m.thread_id)) {
       // Every message describes itself as SOMETHING. A row exists, so the list
       // must never imply it does not — the constraint messages_has_content_check
       // guarantees at least one of these is present (or that it was purged),
@@ -267,7 +271,7 @@ export async function fetchThreads(): Promise<ThreadsResult> {
 /** Oldest-first, which is the order a conversation is read in. */
 export async function fetchMessages(threadId: string): Promise<MessagesResult> {
   const { data, error } = await supabase
-    .from("messages")
+    .from("messages_visible")
     .select(
       "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, voice_note_seconds, reply_to_id, forwarded"
     )
@@ -280,10 +284,18 @@ export async function fetchMessages(threadId: string): Promise<MessagesResult> {
   }
   return {
     ok: true,
-    // sender_id is NOT NULL in the schema; the generated types widen it to
-    // nullable, and a row without a sender cannot exist. Dropping any such
-    // row rather than asserting keeps the "is this mine" comparison from
-    // silently matching on a null.
+    // READ THROUGH messages_visible, so a message this viewer hid is simply
+    // absent. The other participant is unaffected -- the view filters on
+    // auth.uid(), and the row itself is untouched.
+    //
+    // EVERY COLUMN OF A VIEW IS TYPED NULLABLE, because Postgres cannot promise
+    // a view's output is NOT NULL even when its source column is. The asserted
+    // ones below are NOT NULL on public.messages and cannot arrive null; the
+    // same widening is why thread_participant_summary needs `!` on thread_id.
+    //
+    // sender_id is the exception, and it is FILTERED rather than asserted: it
+    // is genuinely nullable (account deletion nulls it), and a row without a
+    // sender would make the "is this mine" comparison match on a null.
     //
     // A PURGED ROW IS KEPT, not filtered. sender_id survives the purge — only
     // the content columns are cleared — so these rows still pass the filter,
@@ -292,17 +304,17 @@ export async function fetchMessages(threadId: string): Promise<MessagesResult> {
     messages: (data ?? [])
       .filter((m) => !!m.sender_id)
       .map((m) => ({
-      id: m.id,
-      threadId: m.thread_id,
+      id: m.id!,
+      threadId: m.thread_id!,
       senderId: m.sender_id!,
       text: m.text,
-      createdAt: m.created_at,
+      createdAt: m.created_at!,
       readAt: m.read_at,
       attachmentPath: m.attachment_url,
       attachmentPurgedAt: m.attachment_purged_at,
       voiceNoteSeconds: m.voice_note_seconds,
       replyToId: m.reply_to_id,
-      forwarded: m.forwarded,
+      forwarded: m.forwarded ?? false,
     })),
   };
 }
@@ -558,12 +570,24 @@ export async function sendVoiceNote(
  * message you sent yourself matches zero rows and returns `error: null`. A
  * caller checking only for an error would read a total refusal as success,
  * which is the same silent-rejection trap this project has hit before.
+ *
+ * IT TAKES IDS RATHER THAN A THREAD, BECAUSE THE WRITE CANNOT GO THROUGH
+ * messages_visible. That view carries SELECT and nothing else, so marking read
+ * still targets public.messages directly — and a bare thread_id filter there
+ * would mark messages this viewer has HIDDEN, which is precisely what the view
+ * exists to keep out of their reading. The caller passes the ids it actually
+ * rendered, so what is marked read is exactly what was on screen.
+ *
+ * An empty list is a no-op rather than a round trip: `in ()` matches nothing,
+ * and asking the database to confirm that costs a request to learn something
+ * already known here.
  */
-export async function markThreadRead(threadId: string): Promise<number> {
+export async function markThreadRead(messageIds: string[]): Promise<number> {
+  if (messageIds.length === 0) return 0;
   const { data, error } = await supabase
     .from("messages")
     .update({ read_at: new Date().toISOString() })
-    .eq("thread_id", threadId)
+    .in("id", messageIds)
     .is("read_at", null)
     .select("id");
 
@@ -607,7 +631,7 @@ export interface UnreadCounts {
  */
 export async function fetchUnreadCounts(currentUserId: string): Promise<UnreadCounts> {
   const { data, error } = await supabase
-    .from("messages")
+    .from("messages_visible")
     .select("thread_id")
     .is("read_at", null)
     .neq("sender_id", currentUserId);
@@ -660,4 +684,177 @@ export async function forwardMessage(
     text: body,
     forwarded: true,
   });
+}
+
+/**
+ * The ids this viewer has starred, as a set for O(1) lookup at render.
+ *
+ * ONLY STARRED IS FETCHED, AND THAT IS THE POINT OF messages_visible. Hidden
+ * flags are enforced in the database, so the client never needs to know which
+ * messages it is not being shown — asking for them would mean holding a list of
+ * things to filter out, which is the duplicate-enforcement shape the view was
+ * introduced to remove.
+ *
+ * NOT SCOPED TO A THREAD. The flags table has no thread column, and joining
+ * through messages to add one would cost a round trip to narrow a set that is
+ * already small — a person's stars across every conversation is a handful of
+ * rows, and RLS has already limited it to their own.
+ *
+ * FAILS TO EMPTY. A star that cannot be read renders as un-starred, which
+ * understates rather than invents: the alternative is claiming a mark the
+ * database did not confirm.
+ */
+export async function fetchStarred(): Promise<Set<string>> {
+  const { data, error } = await supabase
+    .from("message_flags")
+    .select("message_id")
+    .eq("flag", "starred");
+
+  if (error) {
+    console.error("[messaging] Could not load stars:", error.message);
+    return new Set();
+  }
+  return new Set((data ?? []).map((r) => r.message_id));
+}
+
+/**
+ * Adds or removes this viewer's star on one message.
+ *
+ * ON CONFLICT DO NOTHING ON THE WAY IN, because (user_id, message_id, flag) is
+ * the primary key and a double tap would otherwise raise 23505 for doing
+ * nothing wrong. Tested directly: the plain insert errors, the ignoring one
+ * returns zero rows and no error.
+ *
+ * NO RPC, AND NOTHING TO MAKE ATOMIC. One row appears or one row goes; nothing
+ * else in the schema reads this table, so there is no second write to keep in
+ * step.
+ */
+export async function setStarred(
+  messageId: string,
+  userId: string,
+  starred: boolean
+): Promise<boolean> {
+  if (starred) {
+    const { error } = await supabase
+      .from("message_flags")
+      .upsert({ user_id: userId, message_id: messageId, flag: "starred" }, { ignoreDuplicates: true });
+    if (error) {
+      console.error("[messaging] Could not star:", error.message);
+      return false;
+    }
+    return true;
+  }
+  const { error } = await supabase
+    .from("message_flags")
+    .delete()
+    .eq("user_id", userId)
+    .eq("message_id", messageId)
+    .eq("flag", "starred");
+  if (error) {
+    console.error("[messaging] Could not unstar:", error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Hides one message from this viewer, and from nobody else.
+ *
+ * THIS IS NOT A DELETE, AND THE SCHEMA WILL NOT LET IT BECOME ONE. public
+ * .messages has no DELETE grant and no DELETE policy; the row, its text, its
+ * read_at and its place in the other participant's conversation are all
+ * untouched. What changes is that messages_visible stops returning it to this
+ * caller — verified cross-user: the other participant's history, counts and
+ * read state were all unchanged after both messages were hidden.
+ *
+ * IT IS ONE INSERT, so there is nothing a function would add. The unread count
+ * following along is not a second write — fetchUnreadCounts reads the same
+ * view, so one row changes both answers at once.
+ */
+export async function hideMessage(messageId: string, userId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("message_flags")
+    .upsert({ user_id: userId, message_id: messageId, flag: "hidden" }, { ignoreDuplicates: true });
+  if (error) {
+    console.error("[messaging] Could not hide message:", error.message);
+    return false;
+  }
+  return true;
+}
+
+/** The pinned message of a thread, or null. Shared by both participants. */
+export interface Pin {
+  messageId: string;
+  pinnedBy: string | null;
+}
+
+/**
+ * Reads the one pin on a thread.
+ *
+ * `maybeSingle` RATHER THAN `single`, because no pin is the ordinary case and
+ * `single` treats zero rows as an error. A thread with nothing pinned is not a
+ * failure to report.
+ */
+export async function fetchPin(threadId: string): Promise<Pin | null> {
+  const { data, error } = await supabase
+    .from("pinned_messages")
+    .select("message_id, pinned_by")
+    .eq("thread_id", threadId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[messaging] Could not load pin:", error.message);
+    return null;
+  }
+  if (!data) return null;
+  return { messageId: data.message_id, pinnedBy: data.pinned_by };
+}
+
+/**
+ * Pins a message, replacing whatever was pinned before.
+ *
+ * ONE UPSERT, NEVER DELETE-THEN-INSERT. thread_id is the primary key, so
+ * `on conflict (thread_id) do update` swaps the pin in a single statement —
+ * the thread is never briefly pinless and never briefly holds two. Verified
+ * concurrently: two sessions pinning different messages at once serialise on
+ * the row lock and leave exactly one row, and 24 simultaneous writers produced
+ * no errors and never a count other than one.
+ *
+ * pinned_by IS SENT AND ALSO CHECKED. The policy requires it to equal
+ * auth.uid(), so a forged value is refused rather than stored — the column
+ * says who, and cannot be made to say someone else.
+ */
+export async function setPin(
+  threadId: string,
+  messageId: string,
+  userId: string
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("pinned_messages")
+    .upsert(
+      { thread_id: threadId, message_id: messageId, pinned_by: userId },
+      { onConflict: "thread_id" }
+    );
+  if (error) {
+    console.error("[messaging] Could not pin:", error.message);
+    return false;
+  }
+  return true;
+}
+
+/**
+ * Removes a thread's pin, whoever set it.
+ *
+ * EITHER PARTICIPANT MAY CLEAR IT, which is what makes this shared rather than
+ * personal state. The delete policy asks only whether the caller is in the
+ * thread, so unpinning someone else's pin is allowed by design — verified both
+ * directions, and refused for a non-participant.
+ */
+export async function clearPin(threadId: string): Promise<boolean> {
+  const { error } = await supabase.from("pinned_messages").delete().eq("thread_id", threadId);
+  if (error) {
+    console.error("[messaging] Could not unpin:", error.message);
+    return false;
+  }
+  return true;
 }

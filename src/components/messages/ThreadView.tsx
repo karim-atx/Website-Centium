@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, Forward, ImageIcon, Mic, Paperclip, Send, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, EyeOff, Forward, ImageIcon, Mic, Paperclip, Pin, PinOff, Send, Star, Trash2, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useUnread } from "../../context/UnreadContext";
 import { usePoll } from "../../hooks/usePoll";
@@ -11,14 +11,22 @@ import { QuotedMessage } from "./QuotedMessage";
 import { VoiceNoteBubble } from "./VoiceNoteBubble";
 import { acceptFor } from "../../services/storage";
 import {
+  clearPin,
+  describeMessage,
   fetchMessages,
+  fetchPin,
+  fetchStarred,
+  hideMessage,
   markThreadRead,
   sendImageAttachment,
   sendMessage,
   sendVoiceNote,
+  setPin,
+  setStarred,
   threadAllowsAttachments,
   type Message,
   type MessageThread,
+  type Pin as ThreadPin,
 } from "../../services/messaging";
 
 /** How far the finger must travel from the mic before a release cancels. */
@@ -81,6 +89,24 @@ export const ThreadView: React.FC<{
   const [actionsFor, setActionsFor] = useState<Message | null>(null);
   /** The message being forwarded, once a destination is being chosen. */
   const [forwarding, setForwarding] = useState<Message | null>(null);
+  /**
+   * The message awaiting a hide confirmation.
+   *
+   * CONFIRMED RATHER THAN INSTANT, because there is no un-hide surface to find
+   * afterwards. The row can be deleted and the message would come back, but
+   * nothing in the app offers that today, so from where the user stands the
+   * action does not come back — and an action that does not come back gets
+   * asked about first.
+   */
+  const [hiding, setHiding] = useState<Message | null>(null);
+  /**
+   * Ids this viewer has starred. A set rather than a field on Message, because
+   * stars live in their own table and are fetched separately — folding them
+   * into the message rows would mean re-fetching the conversation to toggle one.
+   */
+  const [starred, setStarredIds] = useState<Set<string>>(new Set());
+  /** The thread's one pin, shared with the other participant. */
+  const [pin, setPinState] = useState<ThreadPin | null>(null);
   /** Briefly outlined after a jump, so the eye lands somewhere. */
   const [highlighted, setHighlighted] = useState<string | null>(null);
   const bubbleRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -117,12 +143,17 @@ export const ThreadView: React.FC<{
     // Guarded on there being something to mark, so an idle open conversation
     // does not spend a write every eight seconds saying nothing changed. The
     // check is client-side on rows already fetched, so it costs no round trip.
-    const hasUnreadFromThem = result.messages.some(
-      (m) => m.senderId !== authUserId && !m.readAt
-    );
-    if (!hasUnreadFromThem) return;
+    // THE IDS COME FROM WHAT WAS JUST RENDERED, which is what makes hiding and
+    // reading independent decisions. `result.messages` came through
+    // messages_visible, so a message this viewer hid is not in the list and is
+    // therefore never marked read — hiding is not a read action, and marking by
+    // thread_id would have quietly made it one.
+    const unreadFromThem = result.messages
+      .filter((m) => m.senderId !== authUserId && !m.readAt)
+      .map((m) => m.id);
+    if (unreadFromThem.length === 0) return;
 
-    const marked = await markThreadRead(thread.id);
+    const marked = await markThreadRead(unreadFromThem);
     // Re-read rather than patching local state: the timestamp is the server's,
     // and inventing one here to avoid a round trip would put a value on screen
     // that never existed in the database.
@@ -147,6 +178,31 @@ export const ThreadView: React.FC<{
     setCanAttach(false);
     void threadAllowsAttachments(thread.id).then((allowed) => {
       if (!cancelled) setCanAttach(allowed);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [thread.id]);
+
+  // Stars and the pin, loaded once per thread rather than on the 8s poll.
+  //
+  // OFF THE POLL PATH DELIBERATELY. A star is this viewer's own action, so it
+  // cannot change behind their back and re-reading it every eight seconds would
+  // spend a request to confirm what the last tap already established. The pin
+  // CAN change behind their back — the other participant may move it — and that
+  // is the honest cost of leaving it here: a pin moved mid-conversation appears
+  // on the next open. Polling it would be a third request every tick to catch a
+  // change that happens rarely, and the banner is not a thing being watched.
+  const refreshPin = async () => setPinState(await fetchPin(thread.id));
+  useEffect(() => {
+    let cancelled = false;
+    setStarredIds(new Set());
+    setPinState(null);
+    void fetchStarred().then((s) => {
+      if (!cancelled) setStarredIds(s);
+    });
+    void fetchPin(thread.id).then((p) => {
+      if (!cancelled) setPinState(p);
     });
     return () => {
       cancelled = true;
@@ -264,6 +320,56 @@ export const ThreadView: React.FC<{
     window.setTimeout(() => setHighlighted((cur) => (cur === id ? null : cur)), 1600);
   };
 
+  const toggleStar = async (m: Message) => {
+    if (!authUserId) return;
+    const on = !starred.has(m.id);
+    // Optimistic, and safe to be: the only writer of this row is this user, so
+    // there is no other party whose action could contradict it. On failure it
+    // is put back rather than left showing a mark the database refused.
+    setStarredIds((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(m.id);
+      else next.delete(m.id);
+      return next;
+    });
+    const ok = await setStarred(m.id, authUserId, on);
+    if (!ok) {
+      setStarredIds((prev) => {
+        const next = new Set(prev);
+        if (on) next.delete(m.id);
+        else next.add(m.id);
+        return next;
+      });
+    }
+  };
+
+  const pinMessage = async (m: Message) => {
+    if (!authUserId) return;
+    // NOT OPTIMISTIC, unlike the star. This row is shared — the other
+    // participant can move or clear it — so the truth is whatever the database
+    // holds after the write, and re-reading is one request to avoid showing a
+    // pin that lost a race.
+    const ok = await setPin(thread.id, m.id, authUserId);
+    if (ok) await refreshPin();
+  };
+
+  const unpinMessage = async () => {
+    const ok = await clearPin(thread.id);
+    if (ok) await refreshPin();
+  };
+
+  const confirmHide = async () => {
+    if (!hiding || !authUserId) return;
+    const ok = await hideMessage(hiding.id, authUserId);
+    setHiding(null);
+    if (!ok) return;
+    // Re-read rather than splicing it out locally: messages_visible is what
+    // decides, and the unread badge is counted from the same view, so one
+    // reload keeps the list and the count telling the same story.
+    await load();
+    unread.refresh();
+  };
+
   const copyMessage = async (m: Message) => {
     const body = m.text?.trim();
     if (!body) return;
@@ -367,6 +473,40 @@ export const ThreadView: React.FC<{
         <p className="font-semibold text-charcoal truncate">{thread.participantName}</p>
       </div>
 
+      {/* THE PINNED BANNER, and it renders only when the pinned message is one
+          this viewer can actually see. A pin is shared, but hiding is not: if
+          they hid the message someone pinned, the banner would otherwise be a
+          reference to something absent from their conversation — so it is
+          suppressed rather than shown as unavailable, which would state that a
+          message is gone when it is merely hidden by choice.
+
+          Tapping reuses jumpTo, the same scroll-and-highlight the reply quote
+          uses, so the two behave identically rather than similarly. */}
+      {pin &&
+        (() => {
+          const target = messages.find((m) => m.id === pin.messageId);
+          if (!target) return null;
+          return (
+            <div className="flex items-center gap-2 rounded-xl bg-primary-pale px-3 py-2 mb-2">
+              <Pin size={13} className="text-primary-dark shrink-0" />
+              <button
+                onClick={() => jumpTo(pin.messageId)}
+                className="tap flex-1 min-w-0 text-left"
+              >
+                <p className="text-[11px] font-semibold text-primary-dark">Pinned</p>
+                <p className="text-xs text-charcoal truncate">{describeMessage(target)}</p>
+              </button>
+              <button
+                onClick={() => void unpinMessage()}
+                aria-label="Unpin message"
+                className="tap w-7 h-7 rounded-full flex items-center justify-center text-charcoal-faint shrink-0"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          );
+        })()}
+
       <div className="flex-1 space-y-2 mb-3">
         {loaded && messages.length === 0 && (
           <p className="text-sm text-charcoal-faint text-center py-8">
@@ -408,6 +548,18 @@ export const ThreadView: React.FC<{
                         : thread.participantName
                     }
                     onJump={() => m.replyToId && jumpTo(m.replyToId)}
+                  />
+                )}
+                {/* A star is the viewer's own mark, so it sits with the tick
+                    rather than above the text: it says something about their
+                    relationship to the message, not about the message. Filled
+                    rather than outlined, because an outline at this size reads
+                    as a tappable affordance and this is a state. */}
+                {starred.has(m.id) && (
+                  <Star
+                    size={11}
+                    aria-label="Starred"
+                    className="float-right ml-1.5 mt-1 shrink-0 fill-current opacity-80"
                   />
                 )}
                 {/* Above the text, because it qualifies everything below it.
@@ -706,6 +858,96 @@ export const ThreadView: React.FC<{
               <span className="text-sm font-medium text-charcoal">Forward</span>
             </button>
           )}
+          {/* Star works on any message, unlike Copy and Forward — there is
+              nothing text-specific about keeping a voice note for later. */}
+          <button
+            onClick={() => {
+              if (actionsFor) void toggleStar(actionsFor);
+              setActionsFor(null);
+            }}
+            className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
+          >
+            <Star
+              size={17}
+              className={`shrink-0 ${
+                actionsFor && starred.has(actionsFor.id)
+                  ? "text-primary-dark fill-current"
+                  : "text-charcoal-soft"
+              }`}
+            />
+            <span className="text-sm font-medium text-charcoal">
+              {actionsFor && starred.has(actionsFor.id) ? "Unstar" : "Star"}
+            </span>
+          </button>
+          {/* One entry that reads the current state rather than two that both
+              always show: pinning the already-pinned message is a no-op worth
+              not offering. */}
+          <button
+            onClick={() => {
+              if (!actionsFor) return;
+              if (pin?.messageId === actionsFor.id) void unpinMessage();
+              else void pinMessage(actionsFor);
+              setActionsFor(null);
+            }}
+            className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
+          >
+            {pin && actionsFor && pin.messageId === actionsFor.id ? (
+              <PinOff size={17} className="text-charcoal-soft shrink-0" />
+            ) : (
+              <Pin size={17} className="text-charcoal-soft shrink-0" />
+            )}
+            <span className="text-sm font-medium text-charcoal">
+              {pin && actionsFor && pin.messageId === actionsFor.id ? "Unpin" : "Pin"}
+            </span>
+          </button>
+          {/* Last, and the only one that leads to a confirmation. It is styled
+              as a caution rather than a destruction: nothing is destroyed, and
+              colouring it like a delete would claim otherwise. */}
+          <button
+            onClick={() => {
+              setHiding(actionsFor);
+              setActionsFor(null);
+            }}
+            className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
+          >
+            <EyeOff size={17} className="text-charcoal-soft shrink-0" />
+            <span className="text-sm font-medium text-charcoal">Delete for me</span>
+          </button>
+        </div>
+      </BottomSheet>
+
+      {/* A SEPARATE SHEET, opened after the action sheet closes, matching how
+          Forward already works — two BottomSheets alive at once would stack
+          overlays and fight over the same dismiss. */}
+      <BottomSheet open={!!hiding} onClose={() => setHiding(null)} title="Delete for me">
+        <div className="animate-fade-slide-up">
+          {hiding && (
+            <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3 py-2 mb-3 truncate">
+              {describeMessage(hiding)}
+            </p>
+          )}
+          {/* SAYS WHAT IT ACTUALLY DOES. "Delete" is the word people look for,
+              so it is the label — but the message is not deleted, and the one
+              sentence that matters is that the other person still has it. */}
+          <p className="text-sm text-charcoal-soft mb-1">
+            This removes the message from your view of the conversation.
+          </p>
+          <p className="text-xs text-charcoal-faint mb-4">
+            {thread.participantName} will still see it, and it stays part of the conversation for
+            them. You won't be able to undo this here.
+          </p>
+          <button
+            onClick={() => void confirmHide()}
+            className="tap w-full rounded-xl bg-primary text-white dark:text-[#0D0B1A] font-semibold text-sm py-3"
+          >
+            Delete for me
+          </button>
+          <button
+            onClick={() => setHiding(null)}
+            className="tap w-full text-sm font-medium text-charcoal-soft py-3"
+          >
+            Cancel
+          </button>
         </div>
       </BottomSheet>
 

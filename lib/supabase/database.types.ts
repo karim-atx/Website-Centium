@@ -4755,8 +4755,66 @@ export type Database = {
           },
         ]
       }
+      message_flags: {
+        Row: {
+          created_at: string
+          flag: Database["public"]["Enums"]["message_flag"]
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          flag: Database["public"]["Enums"]["message_flag"]
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          flag?: Database["public"]["Enums"]["message_flag"]
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      pinned_messages: {
+        Row: {
+          message_id: string
+          pinned_at: string
+          pinned_by: string | null
+          thread_id: string
+        }
+        Insert: {
+          message_id: string
+          pinned_at?: string
+          pinned_by?: string | null
+          thread_id: string
+        }
+        Update: {
+          message_id?: string
+          pinned_at?: string
+          pinned_by?: string | null
+          thread_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
+      messages_visible: {
+        Row: {
+          attachment_purged_at: string | null
+          attachment_url: string | null
+          created_at: string | null
+          forwarded: boolean | null
+          id: string | null
+          read_at: string | null
+          reply_to_id: string | null
+          sender_id: string | null
+          text: string | null
+          thread_id: string | null
+          voice_note_seconds: number | null
+        }
+        Relationships: []
+      }
       thread_participant_summary: {
         Row: {
           avatar_url: string | null
@@ -5572,6 +5630,7 @@ export type Database = {
       trigger_storage_purge: { Args: never; Returns: number }
     }
     Enums: {
+      message_flag: "starred" | "hidden"
       access_category:
         | "food_diary"
         | "workout_activity"
