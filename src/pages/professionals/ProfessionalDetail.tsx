@@ -6,6 +6,7 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { MessageProfessionalButton } from "../../components/messages/MessageProfessionalButton";
 import { mockProfessionals } from "../../data/mockProfessionals";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
+import { isActiveClientOf } from "../../services/connected-professional";
 import type { ProfessionalType } from "../../types";
 import { useApp } from "../../context/AppContext";
 import {
@@ -137,7 +138,66 @@ export default function ProfessionalDetail() {
       }
     : undefined;
   const isReal = !mockProfessional && !!listing;
-  const isConnected = !!professional && (professional.connected || connectedProfessionalIds.includes(professional.id));
+
+  // Null for a mock entry, whose id ("pr1") is not an account and so can never
+  // appear in professional_clients. One value to depend on, rather than two.
+  const realProfessionalId = isReal ? professional?.id ?? null : null;
+
+  /**
+   * Whether the caller is actually this professional's client.
+   *
+   * STAMPED WITH THE PROFESSIONAL IT DESCRIBES, and read back by comparison —
+   * the same shape useThreadRealtime uses for its status, for the same two
+   * reasons. Resetting to "unknown" inside the effect would be a synchronous
+   * setState in an effect, and in the window before that effect runs it would
+   * report the PREVIOUS professional's answer as though it were this one's.
+   *
+   * NULL MEANS NOT ANSWERED YET, and is distinct from false. Rendering the
+   * unconnected layout while the check is in flight would flash a "Hire"
+   * call-to-action at someone who is already a client, so the connected-only
+   * sections wait rather than guess.
+   */
+  const [checked, setChecked] = useState<{ id: string | null; active: boolean }>({
+    id: null,
+    active: false,
+  });
+  const activeClient: boolean | null =
+    realProfessionalId !== null && checked.id === realProfessionalId ? checked.active : null;
+
+  useEffect(() => {
+    if (!realProfessionalId) return;
+    let cancelled = false;
+    void isActiveClientOf(realProfessionalId).then((yes) => {
+      if (!cancelled) setChecked({ id: realProfessionalId, active: yes });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [realProfessionalId]);
+
+  /**
+   * TWO SOURCES, BECAUSE THIS PAGE SERVES TWO KINDS OF PROFESSIONAL.
+   *
+   * A real listing asks the database: `professional_clients` with
+   * `disconnected_at is null` is the only thing that decides whether someone
+   * is a client, and it is the thing the roster and the consent screen already
+   * read.
+   *
+   * A mock entry keeps the local array, unchanged. Its ids are not accounts,
+   * so no query could answer for them, and the seeded directory is prototype
+   * behaviour that this fix deliberately leaves alone.
+   *
+   * WHAT THIS REPLACES, FOR REAL LISTINGS, IS A VALUE THE DATABASE NEVER SAW.
+   * `connectedProfessionalIds` lives in this browser's localStorage and is
+   * written only by this page's own hire and remove buttons. It went stale in
+   * both directions: a relationship created through the real flow never
+   * reached it, and one ended from the professional's roster never cleared it.
+   * It is also per-device, so the same account disagreed with itself across
+   * two browsers.
+   */
+  const isConnected = isReal
+    ? activeClient === true
+    : !!professional && (professional.connected || connectedProfessionalIds.includes(professional.id));
   const [hireOpen, setHireOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0].value);
   const [paid, setPaid] = useState(false);
@@ -298,7 +358,21 @@ export default function ProfessionalDetail() {
           {/* V10 (QA 10.0): "a hired professional should have a remove
               professional button under message... prompt you to make sure
               you want to remove" — tap-again-to-confirm, same pattern used
-              for other destructive actions in this app. */}
+              for other destructive actions in this app.
+
+              MOCK ONLY, NOW THAT REAL CONNECTION COMES FROM THE DATABASE.
+              disconnectProfessional edits the local array and nothing else, so
+              on a real listing this button ended a relationship only in this
+              browser's opinion of it: the professional_clients row stayed
+              active, the roster still listed the client, and reopening the
+              page would have shown them connected again the moment the page
+              read the database instead of localStorage.
+              Hidden rather than shown-and-explained, because a disabled
+              control still advertises an action this page cannot perform.
+              Ending a real relationship belongs on a write path
+              (disconnect_client_relationship), which is deliberately out of
+              scope here — see the commit message. */}
+          {!isReal && (
           <Button
             fullWidth
             variant="outline"
@@ -315,6 +389,7 @@ export default function ProfessionalDetail() {
           >
             <Trash2 size={14} /> {removeConfirm ? "Tap again to confirm" : "Remove professional"}
           </Button>
+          )}
         </>
       ) : (
         isReal ? (

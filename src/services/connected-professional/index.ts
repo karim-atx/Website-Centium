@@ -31,6 +31,49 @@ export type ConnectedProfessionalResult =
   | { ok: false; message: string };
 
 /**
+ * Whether the caller is currently an active client of this professional.
+ *
+ * A STRICT BOOLEAN, WHICH IS WHY IT DOES NOT REUSE fetchConnectedProfessional.
+ * That one reads `connected_professional_summary`, whose null result means
+ * either "not connected" OR "connected, but they have no professional_profiles
+ * row" — the view inner-joins it. For rendering a profile that ambiguity is
+ * harmless, because both cases render the same sheet. For deciding whether
+ * someone is a client it is exactly the wrong shape: it would report an active
+ * relationship as absent whenever the professional had never filled anything
+ * in.
+ *
+ * `active_professional_clients` has no such join. It is
+ * `professional_clients WHERE disconnected_at IS NULL`, so a row means active
+ * and no row means not, with nothing else able to remove one.
+ *
+ * SCOPED BY RLS, NOT BY A client_id FILTER. The view is already restricted to
+ * the caller's own relationships, which is why this filters on
+ * professional_id alone — adding `client_id = auth.uid()` here would duplicate
+ * a policy in a predicate and quietly diverge from it later.
+ *
+ * `head: true` WITH AN EXACT COUNT, because the row's contents are not wanted.
+ * The unique partial index on (professional_id, client_id) where
+ * disconnected_at is null means the answer is 0 or 1.
+ *
+ * FAILS TO FALSE, AND THAT DIRECTION IS DELIBERATE. A failed check renders the
+ * page as not-connected, which understates the relationship rather than
+ * asserting one that may not exist — showing "Client since" or a review card
+ * on the strength of a request that did not answer is the worse error.
+ */
+export async function isActiveClientOf(professionalId: string): Promise<boolean> {
+  const { count, error } = await supabase
+    .from("active_professional_clients")
+    .select("id", { count: "exact", head: true })
+    .eq("professional_id", professionalId);
+
+  if (error) {
+    console.error("[connected-professional] Could not check relationship:", error.message);
+    return false;
+  }
+  return (count ?? 0) > 0;
+}
+
+/**
  * Profile detail for one professional the caller is an active client of.
  *
  * `professional: null` MEANS "NO ROW", NOT "FAILED". The view returns nothing
