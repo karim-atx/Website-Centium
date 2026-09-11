@@ -24,8 +24,21 @@ import type { PostgrestError } from "@supabase/supabase-js";
 
 export interface MessageThread {
   id: string;
-  /** The OTHER participant. `thread_participant_summary` never returns the caller. */
-  participantId: string;
+  /**
+   * The OTHER participant. `thread_participant_summary` never returns the
+   * caller.
+   *
+   * GENUINELY NULLABLE SINCE Database migration 20260911200000, which changed
+   * the view's INNER JOIN to a LEFT JOIN. Before that a thread with no
+   * resolvable counterpart simply vanished from the view, so this could be
+   * asserted; now the row comes back with a null identity instead.
+   *
+   * NOTHING HERE INTERPRETS THE NULL. Deciding what it means — and what to
+   * render for it — is deferred to a Database-side signal rather than guessed
+   * at in the client. The type is corrected so the null cannot be laundered
+   * into a `string` by an assertion; that is all.
+   */
+  participantId: string | null;
   participantName: string;
   participantAvatarUrl: string | null;
   /**
@@ -46,7 +59,19 @@ export interface MessageThread {
 export interface Message {
   id: string;
   threadId: string;
-  senderId: string;
+  /**
+   * Who sent it, or null once they have deleted their account.
+   *
+   * NULLABLE BECAUSE account_deletion SET NULLs IT, deliberately: a thread
+   * survives one participant leaving, and the departed side's messages stay so
+   * the survivor keeps their whole conversation rather than half of it.
+   *
+   * SAFE TO COMPARE, NEVER TO DEREFERENCE. Every reader asks only
+   * `senderId === authUserId`, and null is never equal to a signed-in user's
+   * id — so a departed sender's message falls to the "not mine" side and
+   * renders as received, which is exactly what it is.
+   */
+  senderId: string | null;
   text: string | null;
   createdAt: string;
   readAt: string | null;
@@ -251,11 +276,27 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     const last = r.thread_id ? latest.get(r.thread_id) : undefined;
     return {
       id: r.thread_id!,
-      participantId: r.participant_id!,
-      // A profile with no first_name is possible — onboarding can be
-      // incomplete — and "" would render as a nameless row rather than an
-      // obviously unfinished one.
-      participantName: r.first_name?.trim() || "Someone",
+      // NO ASSERTION HERE ANY MORE. It was never a runtime guard — a `!` is
+      // erased at compile time, so a null arrived as a null in a field typed
+      // `string` and every reader inherited the lie silently. Correcting the
+      // type changes no behaviour; it stops the next reader trusting it.
+      participantId: r.participant_id,
+      // TWO DIFFERENT ABSENCES, NAMED DIFFERENTLY, NEITHER EXPLAINED.
+      //
+      // A present id with no first_name is a real person whose profile has no
+      // name yet — "Someone" is right, because there is someone and the name
+      // may still arrive.
+      //
+      // A null id is a conversation with no resolvable counterpart at all, and
+      // "Unnamed conversation" says exactly that much. It deliberately stops
+      // short of WHY: the obvious cause is a deleted account, and that is very
+      // likely what it is, but this line cannot prove it and a label that
+      // asserted it would be a guess rendered as a fact. Naming the cause waits
+      // on an explicit signal from the database — see the follow-up.
+      participantName:
+        r.participant_id === null
+          ? "Unnamed conversation"
+          : r.first_name?.trim() || "Someone",
       participantAvatarUrl: r.avatar_url,
       lastMessagePreview: last?.preview ?? null,
       lastMessageAt: last?.created_at ?? null,
@@ -293,20 +334,28 @@ export async function fetchMessages(threadId: string): Promise<MessagesResult> {
     // ones below are NOT NULL on public.messages and cannot arrive null; the
     // same widening is why thread_participant_summary needs `!` on thread_id.
     //
-    // sender_id is the exception, and it is FILTERED rather than asserted: it
-    // is genuinely nullable (account deletion nulls it), and a row without a
-    // sender would make the "is this mine" comparison match on a null.
+    // sender_id IS KEPT WHEN NULL, AND USED TO BE DROPPED. The filter here read
+    // `.filter((m) => !!m.sender_id)`, on the reasoning that a row without a
+    // sender would make the "is this mine" comparison match on a null. It does
+    // not: `null === authUserId` is false for any signed-in user, so such a row
+    // simply renders as received, which is correct.
     //
-    // A PURGED ROW IS KEPT, not filtered. sender_id survives the purge — only
-    // the content columns are cleared — so these rows still pass the filter,
-    // and they must: dropping them would silently shorten a conversation
-    // rather than showing that something was there and is gone.
+    // What the filter actually did was delete the departed participant's half
+    // of the conversation from the survivor's screen. account_deletion SET
+    // NULLs sender_id precisely so those messages survive, and
+    // 20260911200000 then made the thread reachable again — and this line threw
+    // the contents away after both. Verified against a real local deletion: the
+    // view returned two messages, and the client rendered none.
+    //
+    // A PURGED ROW IS KEPT for a different reason — sender_id survives an
+    // attachment purge, only the content columns are cleared — and it must be,
+    // since dropping it would shorten a conversation rather than showing that
+    // something was there and is gone. Same principle, two causes.
     messages: (data ?? [])
-      .filter((m) => !!m.sender_id)
       .map((m) => ({
       id: m.id!,
       threadId: m.thread_id!,
-      senderId: m.sender_id!,
+      senderId: m.sender_id,
       text: m.text,
       createdAt: m.created_at!,
       readAt: m.read_at,
@@ -414,7 +463,7 @@ async function insertMessage(row: {
       threadId: data.thread_id,
       // As above: NOT NULL in the schema, widened by the generated types. This
       // row was just inserted with sender_id set, so it cannot be null here.
-      senderId: data.sender_id!,
+      senderId: data.sender_id,
       text: data.text,
       createdAt: data.created_at,
       readAt: data.read_at,
@@ -634,7 +683,16 @@ export async function fetchUnreadCounts(currentUserId: string): Promise<UnreadCo
     .from("messages_visible")
     .select("thread_id")
     .is("read_at", null)
-    .neq("sender_id", currentUserId);
+    // NOT `.neq("sender_id", currentUserId)`, WHICH SILENTLY DROPPED ROWS.
+    // `sender_id <> uuid` is NULL — not true — when sender_id is null, so every
+    // unread message from someone who has since deleted their account fell out
+    // of the count. Measured against a real local deletion: four unread
+    // messages, and the neq predicate returned zero.
+    //
+    // The null branch is spelled out because three-valued logic will not infer
+    // it. A departed sender is by definition not the caller, so their messages
+    // belong in the caller's unread count exactly as they did the day before.
+    .or(`sender_id.is.null,sender_id.neq.${currentUserId}`);
 
   if (error) {
     console.error("[messaging] Could not count unread:", error.message);
