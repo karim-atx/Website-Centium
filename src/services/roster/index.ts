@@ -59,14 +59,40 @@ const accessKeyFor: Record<Enums<"access_category">, keyof RosterClient["access"
   medical_history: "medicalHistory",
 };
 
+/**
+ * THE SQLSTATES THESE RPCs RAISE, since migration 6360dc2.
+ *
+ *   ATX02  rate limit, from check_rate_limit inside create_client_code
+ *   ATX08  the target row was not found
+ *   ATX09  the caller is not a party to the relationship
+ *   ATX10  the relationship has already been ended
+ *   ATX11  the caller's ACCOUNT TYPE is not eligible — distinct from ATX09,
+ *          because no choice of row fixes it
+ */
+const CODE = {
+  RATE_LIMIT: "ATX02",
+  NOT_FOUND: "ATX08",
+  NOT_ENTITLED: "ATX09",
+  ALREADY_ENDED: "ATX10",
+  WRONG_ACCOUNT_TYPE: "ATX11",
+} as const;
+
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   const message = error.message ?? "";
 
   // Migration 9 rate-limits code creation to 10/hour.
-  if (code === "ATX02" || /ATX02|rate limit/i.test(message)) return message;
-  // create_client_code requires account_type = 'professional'.
-  if (/not a professional|account_type|professional account/i.test(message)) {
+  if (code === CODE.RATE_LIMIT || /ATX02|rate limit/i.test(message)) return message;
+  /* create_client_code requires account_type = 'professional'.
+   *
+   * THE REGEX THIS REPLACES WAS PARTLY DEAD, which is its own argument against
+   * keeping it as a fallback: it matched /not a professional|account_type|
+   * professional account/i, and the first two alternatives appear nowhere in
+   * the schema — nothing raises either phrase. Only "professional account"
+   * ever fired, against "only professional accounts can issue client codes".
+   * A fallback that is two-thirds unreachable does not add safety, it adds the
+   * appearance of it. */
+  if (code === CODE.WRONG_ACCOUNT_TYPE) {
     return "Only professional accounts can generate client codes.";
   }
   if (
@@ -196,7 +222,30 @@ export async function fetchRoster(professionalId: string): Promise<RosterResult>
   }
 }
 
-export type DisconnectResult = { status: "ok" } | { status: "error"; message: string };
+/**
+ * Ending a relationship can fail in ways that are not faults, which is why
+ * this is a union rather than a boolean.
+ *
+ * "not_found" AND "already_ended" ARE SEPARATE CODES BUT ONE OUTCOME to the
+ * person who pressed the button: the relationship is over, and the roster
+ * needs to catch up. They are kept apart here anyway, because the database can
+ * now tell them apart and collapsing them at this boundary would throw that
+ * away — the caller decides whether it cares. Before 6360dc2 both arrived as
+ * P0001 and were rendered verbatim as errors, so ending an already-ended
+ * relationship reported a failure for having succeeded already.
+ *
+ * "permission_denied" SHOULD BE UNREACHABLE. The roster only ever shows a
+ * professional their own relationships, and disconnect takes the relationship
+ * id from the row that was rendered — so reaching ATX09 means the list is
+ * showing something it should not. It gets a real message rather than a silent
+ * refresh precisely so that is visible.
+ */
+export type DisconnectResult =
+  | { status: "ok" }
+  | { status: "not_found" }
+  | { status: "already_ended" }
+  | { status: "permission_denied" }
+  | { status: "error"; message: string };
 
 /**
  * Ends a relationship. Either party may call it; when the caller is the
@@ -207,8 +256,12 @@ export async function disconnectClient(relationshipId: string): Promise<Disconne
     const { error } = await supabase.rpc("disconnect_client_relationship", {
       p_relationship_id: relationshipId,
     });
-    if (error) return { status: "error", message: describe(error) };
-    return { status: "ok" };
+    if (!error) return { status: "ok" };
+    if (error.code === CODE.NOT_FOUND) return { status: "not_found" };
+    if (error.code === CODE.ALREADY_ENDED) return { status: "already_ended" };
+    if (error.code === CODE.NOT_ENTITLED) return { status: "permission_denied" };
+    console.error("[roster] Could not end relationship:", error.code, error.message);
+    return { status: "error", message: describe(error) };
   } catch (e) {
     return { status: "error", message: e instanceof Error ? e.message : "Could not remove that client." };
   }

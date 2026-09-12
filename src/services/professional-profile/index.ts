@@ -235,10 +235,12 @@ export async function setPublicListing(listed: boolean): Promise<SetListingResul
 
   if (error) {
     if (error.code === "ATX03") return { status: "affiliated" };
-    if (/professional profile not found/i.test(error.message ?? "")) {
-      return { status: "no_profile" };
-    }
-    console.error("[professional-profile] Could not set listing:", error.message);
+    // ATX08 since migration 6360dc2. This used to match the message text, which
+    // was the only signal there was; the code is the signal now and the regex is
+    // gone rather than kept beside it, because that migration changed no wording
+    // — so a fallback would only ever match what the code already matches.
+    if (error.code === "ATX08") return { status: "no_profile" };
+    console.error("[professional-profile] Could not set listing:", error.code, error.message);
     return { status: "error", message: "Could not update your listing. Try again." };
   }
 

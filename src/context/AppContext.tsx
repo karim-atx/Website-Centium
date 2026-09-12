@@ -2582,7 +2582,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const removeProfessionalClient: AppState["removeProfessionalClient"] = async (id) => {
     const result = await disconnectClient(id);
+    if (result.status === "permission_denied") {
+      // Should be unreachable: the roster only lists this professional's own
+      // relationships. Said plainly rather than swallowed, because reaching it
+      // means the list is showing something it should not.
+      return { ok: false, message: "You don't have permission to end this relationship." };
+    }
     if (result.status === "error") return { ok: false, message: result.message };
+    // "ok", "not_found" and "already_ended" are one outcome here: the
+    // relationship is over. Reporting a failure for a row that is already gone
+    // would be telling someone their action failed for having already worked.
     // The view filters on disconnected_at, so a refetch drops the row.
     await refreshRoster();
     return { ok: true };
