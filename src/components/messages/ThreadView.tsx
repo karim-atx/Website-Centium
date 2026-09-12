@@ -703,19 +703,30 @@ export const ThreadView: React.FC<{
                     and make it disappear. At 75% it now measures 4.02-4.09:1
                     sent and 6.80:1 received; it was 60%, and 1.72:1 sent.
 
-                    THE READ TICK HAS TO BRANCH, THOUGH, and that is new. A
-                    fixed colour cannot serve both grounds once the sent bubble
-                    is dark: `status-good-deep` is a DARK green, so it reads
-                    8.67:1 on the pale received bubble and 1.62-1.64:1 on the
-                    new sent ones, while `bubble-read` is a LIGHT green and
-                    inverts exactly — 3.69-3.74:1 sent, 1.43:1 received. So
-                    each side takes the one built for its ground.
+                    THE READ TICK HAS TO BRANCH, THOUGH. No single colour can
+                    serve both grounds, and that is provable rather than a
+                    matter of taste: clearing 3:1 on the darker of the two
+                    bubbles requires one luminance bound and clearing it on the
+                    lighter requires the opposite one, and the window between
+                    them is empty. So there are two tokens, named for the
+                    bubble each belongs to.
 
-                    The old comment here claimed one green covered both at
-                    4.02:1 and 8.67:1. That was measured on the default accent
-                    in light mode only; on a sent bubble it was already 2.77:1
-                    on ocean and 1.72:1 on berry. Four themes, two modes — the
-                    numbers above are the worst case across all of them.
+                    AND THE ASSIGNMENT FLIPS WITH THE MODE, because both
+                    grounds flip. In light mode the sent bubble is the dark
+                    surface and the received one is pale; in dark mode it is
+                    exactly reversed. `tick-read-sent` is therefore the light
+                    green in light mode and the dark one in dark mode, and
+                    `tick-read-received` is the other way round — which is why
+                    neither can be named for its shade.
+
+                    Every combination, four themes x two sides x two modes:
+                    sent 3.69-3.74:1 light and 3.21-4.04:1 dark, received
+                    8.67:1 light and 9.02:1 dark. An earlier version of this
+                    comment claimed one green covered both sides at 4.02:1 and
+                    8.67:1 and needed no per-theme variant. That was measured
+                    on the default accent in light mode alone — on a sent
+                    bubble it was already 2.77:1 on ocean and 1.72:1 on berry,
+                    and on a received bubble in dark mode 1.90:1.
 
                     SENT AND READ, WITH NO "DELIVERED" BETWEEN THEM. A delivered
                     state was scoped and deliberately dropped: the only place a
@@ -737,12 +748,13 @@ export const ThreadView: React.FC<{
                     only 1.64. None clear the 3:1 WCAG asks of a graphical
                     object, and most are fainter than the body text beside them.
 
-                    So `status-good-deep` exists: the same hue as status-good,
-                    darkened until it works on a saturated ground. 4.02:1 in
-                    light and 3.67:1 in dark, which is why it needs no per-theme
-                    variant. It keeps the confirmation meaning the palette
-                    already assigns to that green instead of inventing a
-                    signal.
+                    So the tick tokens exist: the same hue as status-good, moved
+                    away from it in whichever direction the ground demands. They
+                    keep the confirmation meaning the palette already assigns to
+                    that green instead of inventing a signal — and on a
+                    near-black bubble, where nothing is swallowed, the received
+                    tick is literally var(--c-status-good) rather than a value
+                    of its own.
 
                     SHAPE CARRIES IT ANYWAY — one tick against two — so the
                     state survives greyscale, colour blindness, and a 13px
@@ -752,8 +764,8 @@ export const ThreadView: React.FC<{
                   className={`flex items-center justify-end gap-1 mt-1 ${
                     m.readAt
                       ? mine
-                        ? "text-bubble-read"
-                        : "text-status-good-deep"
+                        ? "text-tick-read-sent"
+                        : "text-tick-read-received"
                       : "opacity-75"
                   }`}
                   title={m.readAt ? "Read" : "Sent"}

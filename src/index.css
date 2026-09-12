@@ -52,12 +52,34 @@
      the dark bubble paints NEAR-BLACK ink (`dark:text-[#0D0B1A]`) on a lighter
      lavender and already measures 3.5:1-7.6:1. */
   --c-bubble-sent: 104 97 132;
-  /* The read tick inside a SENT bubble only. --c-status-good-deep is a dark
-     green tuned for the old mid-toned ground; on these darker ones it collapses
-     (1.62-1.64:1 across the four), so the sent side needs a LIGHT green and the
-     received side keeps the dark one. One value covers all four themes:
-     3.69-3.74:1. See the note on the tick in ThreadView. */
-  --c-bubble-read: 143 224 176;
+
+  /* THE READ TICK, KEYED TO WHICH BUBBLE IT SITS IN RATHER THAN TO A COLOUR.
+     One element, two grounds that sit on opposite sides of mid-tone, so no
+     single value can serve both: whichever green clears one swallows itself on
+     the other. Solved as a constraint rather than guessed -- for a tick to
+     clear 3:1 on the dark received bubble it needs luminance >= 0.1255, and to
+     clear 3:1 on the lightest sent bubble it needs <= 0.0690. That window is
+     empty, in both modes, which is why this is two tokens.
+
+     AND WHICH GREEN EACH SIDE WANTS FLIPS WITH THE MODE, which is the whole
+     reason the old names (`--c-status-good-deep`, `--c-bubble-read`) had to go.
+     "Deep" described a visual property that inverts: dark on a pale ground in
+     light mode, light on a dark ground in dark mode. A name that is wrong in
+     half the cases is how the last wrong assumption about this token survived
+     unnoticed. These name the BUBBLE, which never inverts.
+
+     AN ORDINARY PALETTE ACCENT CANNOT DO THIS JOB, which is why these are
+     their own values rather than a reuse: against a sent bubble, status-good
+     measures 1.64:1, teal 1.30, gold 1.05. Every one of them is mid-toned,
+     like the surface.
+
+     Measured on all four themes in both modes, 16 combinations:
+       sent      light  3.69-3.74:1     dark  3.21-4.04:1
+       received  light  8.67:1          dark  9.02:1
+     The received ground and both tick values are theme-independent, so the
+     received numbers are one measurement rather than four. */
+  --c-tick-read-sent: 143 224 176;
+  --c-tick-read-received: 20 80 50;
 
   --c-teal: 162 200 194;
   --c-teal-light: 193 219 214;
@@ -79,23 +101,12 @@
      status colour actually adapts in dark mode. */
   --c-status-good: 63 145 101;
   --c-status-good-bg: 227 243 233;
-  /* A read receipt sits inside a message bubble, and every ordinary accent in
-     this palette is mid-toned like those surfaces, so all of them vanish there:
-     status-good measures 1.64:1, teal 1.30, gold 1.05. This is the same hue as
-     status-good, darkened until it clears 3:1.
-
-     NOW THE RECEIVED SIDE ONLY. It was the tick on both, and the claim above it
-     used to read "no per-theme variant needed" — measured on the default
-     lavender alone, which was the error. On the other accents it did not clear
-     3:1 on a sent bubble at all: ocean 2.77:1, berry 1.72:1. The sent side has
-     its own light green now (--c-bubble-read); this stays where it works, on
-     the cream-soft received bubble: 8.67:1.
-
-     ONE GAP REMAINS AND IS NOT FIXED HERE: on a received bubble in DARK mode
-     this dark green sits on a dark surface and measures 1.90:1. Found while
-     measuring the sent-bubble fix, left alone because fixing it means changing
-     dark mode, which that change deliberately did not touch. */
-  --c-status-good-deep: 20 80 50;
+  /* The message read tick used to live here, as --c-status-good-deep: this
+     hue darkened until it survived a mid-toned bubble. It is now the
+     --c-tick-read-* pair above, keyed to the bubble rather than to a shade,
+     and DARK MODE REUSES THIS VARIABLE DIRECTLY -- see `.dark` below, where
+     the received tick is var(--c-status-good). A near-black bubble needs no
+     deepening; that was only ever a light-mode problem. */
   --c-status-high: 192 57 43;
   --c-status-high-bg: 251 231 228;
   --c-status-low: 58 118 176;
@@ -124,13 +135,29 @@
   --c-primary-dark: 125 103 217;
   --c-primary-deep-text: 195 179 251;
 
-  /* Dark mode is unchanged, only renamed at the point of use: the bubble keeps
-     today's primary as its ground and today's dark green as its read tick.
-     Indirection rather than repeated literals, so these cannot drift from the
-     tokens they mirror. Repeated in each .dark[data-accent] block below because
-     a bare [data-accent] rule would otherwise win on source order. */
+  /* The sent bubble keeps today's primary as its ground -- indirection rather
+     than a repeated literal, so it cannot drift from the token it mirrors.
+     Repeated in each .dark[data-accent] block below because a bare
+     [data-accent] rule would otherwise win on source order. */
   --c-bubble-sent: var(--c-primary);
-  --c-bubble-read: var(--c-status-good-deep);
+
+  /* BOTH TICKS SWAP SIDES HERE, because both grounds do. In light mode the
+     sent bubble is the dark surface and the received one is pale; in dark mode
+     that is exactly reversed -- the sent bubble is a light lavender and the
+     received one is near-black. So each side takes the other green.
+
+     THE SENT VALUE IS A LITERAL AND MUST STAY ONE. It used to read
+     var(--c-status-good-deep), which was harmless only while that token never
+     had a dark value. Giving the received tick the dark value it needs, with
+     that indirection still in place, would have dragged the SENT tick to the
+     light green too and dropped it from 3.21-4.04:1 to 1.50-1.88:1 across the
+     four themes -- fixing one side by silently breaking the other.
+
+     The received value stays indirect on purpose, though: a near-black bubble
+     needs no deepened green, so the palette's own dark-mode status-good is
+     exactly right and should follow it if it ever moves. 9.02:1. */
+  --c-tick-read-sent: 20 80 50;
+  --c-tick-read-received: var(--c-status-good);
 
   --c-teal: 162 200 194;
   --c-teal-light: 184 216 210;

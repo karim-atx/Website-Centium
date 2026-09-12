@@ -41,9 +41,14 @@ export default {
         // button, FAB, toggle and chip, where nothing does. See index.css.
         bubble: {
           sent: "rgb(var(--c-bubble-sent) / <alpha-value>)",
-          // The read tick inside a sent bubble. The received bubble keeps
-          // `status-good-deep`, which is dark and needs a pale ground.
-          read: "rgb(var(--c-bubble-read) / <alpha-value>)",
+        },
+        // The read tick, named for the bubble it sits in. Which of the two is
+        // the light green and which the dark one swaps between light and dark
+        // mode, because both grounds swap with it — so these cannot be named
+        // for their shade. See index.css.
+        tick: {
+          "read-sent": "rgb(var(--c-tick-read-sent) / <alpha-value>)",
+          "read-received": "rgb(var(--c-tick-read-received) / <alpha-value>)",
         },
         teal: {
           DEFAULT: "rgb(var(--c-teal) / <alpha-value>)",
@@ -71,7 +76,9 @@ export default {
         status: {
           good: "rgb(var(--c-status-good) / <alpha-value>)",
           "good-bg": "rgb(var(--c-status-good-bg) / <alpha-value>)",
-          "good-deep": "rgb(var(--c-status-good-deep) / <alpha-value>)",
+          // "good-deep" is gone with --c-status-good-deep: it was the message
+          // read tick under a name that described a shade, and the shade
+          // inverts between light and dark mode. It lives as tick.read-* now.
           high: "rgb(var(--c-status-high) / <alpha-value>)",
           "high-bg": "rgb(var(--c-status-high-bg) / <alpha-value>)",
           low: "rgb(var(--c-status-low) / <alpha-value>)",
