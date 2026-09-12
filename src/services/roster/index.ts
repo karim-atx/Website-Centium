@@ -81,8 +81,16 @@ function describe(error: PostgrestError): string {
   const code = error.code ?? "";
   const message = error.message ?? "";
 
-  // Migration 9 rate-limits code creation to 10/hour.
-  if (code === CODE.RATE_LIMIT || /ATX02|rate limit/i.test(message)) return message;
+  /* Migration 9 rate-limits code creation to 10/hour.
+   *
+   * THE MESSAGE FALLBACK THAT USED TO SIT HERE WAS NEVER A BRIDGE. The other
+   * regexes removed this session matched conditions that had no code yet, and
+   * went when one arrived. This one matched /ATX02|rate limit/i beside a check
+   * for a code that check_rate_limit has raised since migration
+   * 20260907193614 -- it was redundant on the day it was written, not left
+   * behind by anything. create_client_code calls that function with `perform`
+   * and does not catch it, so ATX02 reaches the client unchanged. */
+  if (code === CODE.RATE_LIMIT) return message;
   /* create_client_code requires account_type = 'professional'.
    *
    * THE REGEX THIS REPLACES WAS PARTLY DEAD, which is its own argument against
