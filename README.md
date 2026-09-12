@@ -508,31 +508,27 @@ Worth hoisting into `utils/icons` next to the map it guards — that is where a
 reader would look for it, and one copy cannot drift from the other. Not urgent:
 both are correct today, and the mismatch entry above is the more useful fix.
 
-### The hire-request inbox is a local mock, so requesters have no names
+### The hire-request inbox is real, and refreshes on demand rather than live
 
-A professional reviewing incoming hire requests sees whatever the mock put
-there, because the inbox never touches the database. `pendingClientRequests`
-is `usePersistentState` in `AppContext`, and `acceptClientRequest` /
-`rejectClientRequest` mutate that local array — they do not call the
-`accept_client_request` / `reject_client_request` RPCs, which exist and work.
-Nothing in the repo queries `pending_client_requests` at all.
+**Built, not outstanding — kept as a record of the shape.** The inbox reads
+real `pending_client_requests` rows for the signed-in professional, resolves
+requester names through `related_profile_summary`, and answers through
+`accept_client_request` / `reject_client_request` (143cb51). The localStorage
+simulation that used to back it went with its only writer, the mock hire flow
+(7e5fbdf), so no mock is kept alongside the real path.
 
-This was deliberately **not** folded into the `related_profile_summary` swap.
-That change moved two existing lookups onto the right view; this is a surface
-that has to be built rather than repointed:
+Failures are told apart by SQLSTATE rather than message wording: ATX01 tier
+cap, ATX08 not found, ATX09 caller is not the named professional, ATX10 already
+resolved — Database `680b3ff`, consumed by 48a6d8b, with all four forced live
+first.
 
-- Fetch real `pending_client_requests` rows for the signed-in professional.
-- Resolve requester names through `related_profile_summary`, which already
-  covers pending relationships and not only active ones.
-- Wire accept and reject to `accept_client_request` /
-  `reject_client_request`, which promote a request to a roster row in one
-  transaction rather than leaving the client to redeem a code.
-- Delete the local simulation once the real path works, rather than leaving
-  both — a mock kept alongside a real implementation is how a professional
-  ends up accepting a request that never existed.
-
-Until then a real hire request is invisible to the professional it was sent
-to, and the only route onto a roster is a redeemed client code.
+**What is still worth knowing.** `pending_client_requests` is not in the
+realtime publication, so a request that arrives while the dashboard is open
+shows up on the next load rather than immediately — the same trade the pin
+banner made before it got a subscription. And a request whose profile cannot be
+resolved still renders, named "Name unavailable", rather than being dropped:
+hiding it would leave the professional a badge count they could not reconcile
+against the list.
 
 ### The re-consent notice names its categories in hardcoded prose
 
@@ -1164,45 +1160,30 @@ Back button, and is the better long-term shape; it was not done here because
 route changes are what produced this repo's most recent user-visible bug class
 and this one buys a refresh case nobody is asking for yet.
 
-### `ProfessionalDetail` decides "are we connected" from localStorage
+### `ProfessionalDetail` asks the database "are we connected", and the mock branch asks nothing
 
-**Pre-existing, not introduced by the messaging work, and not fixed there.**
-Found while wiring that page's Message button; recorded rather than fixed
-because the fix is a behaviour change to the hire flow, not a one-liner.
+**Closed. Kept as the record of a decision, not as an open question.** A real
+listing answers from `professional_clients` through `active_professional_clients`
+(a729f35), so the per-browser localStorage flag that used to decide it — stale
+in both directions, and disagreeing with itself across devices — has no say for
+a real account any more.
 
-`isConnected` reads `connectedProfessionalIds`, which is `usePersistentState`
-— per-browser localStorage, written by exactly one caller: `confirmHire()`, the
-seeded mock hire flow. It never consults `active_professional_clients`, which
-is the actual roster.
+**What the seeded mock branch was *for* was the harder half, and 7e5fbdf
+decided it: nothing.** `confirmHire` took a payment method, said "Hired" after
+a 900ms `setTimeout`, and connected nobody, so it and its sheet were removed
+rather than repointed — a page that implies a third route into
+`professional_clients` is a lie, when the only two are `redeem_client_code` and
+the request/accept flow. A seeded entry's not-connected state is now a static
+"Sample listing" note with no call to action, because every action the page
+could offer one is a dead end.
 
-Three consequences, in rising order of how wrong they are:
-
-1. **A genuinely connected professional reads as unconnected.** A real
-   relationship comes from redeeming a client code, which writes a
-   `professional_clients` row and touches no localStorage. So the page routes
-   that pair into the `isReal` branch and tells them *"Ask them for a client
-   code"* — advice to establish a connection they already have.
-2. **It is per-browser.** The same account on a second device, or after
-   clearing site data, answers differently about the same relationship.
-3. **It never expires.** Disconnecting through the real roster leaves the
-   localStorage id in place, so the page can keep showing a connected
-   professional's controls after the relationship has ended. That is the same
-   failure the consent work removed elsewhere: state that outlives the
-   relationship it describes.
-
-**Why the Message button is unaffected either way**, which is why this did not
-have to be fixed first: it is gated on `isReal`, not on `isConnected`, and is
-rendered in both branches. Whichever way the stale flag falls, a real
-professional gets a real button. The wrong branch shows the wrong *copy*, not
-the wrong action.
-
-**The fix is not just swapping the data source.** `connectedProfessionalIds`
-also drives `conflictingProfessional` (one hired professional per specialty)
-and the mock `Hire` flow, both of which are local-only prototype behaviour with
-no server equivalent. Reading the real roster would leave those two consulting
-different notions of "connected" — so this needs deciding what the mock hire
-flow is for now that real relationships exist, rather than a substitution. See
-also [`ProfessionalType` and `professional_subtype` are
+`connectedProfessionalIds` survived the cull inverted: it is
+`dismissedMockProfessionalIds`, a subtract-list rather than an add-list, which
+is what finally made Remove work on `pr1` — the one seeded entry shipped
+`connected: true`, whose id the old filter-it-out version could never clear
+because the flag lives in the seed data. `conflictingProfessional` (one hired
+professional per specialty) went with the sheet that was its only consumer.
+See also [`ProfessionalType` and `professional_subtype` are
 unreconciled](#professionaltype-and-professional_subtype-are-unreconciled) for
 the other place this page holds two models of the same thing.
 
