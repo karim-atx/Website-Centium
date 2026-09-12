@@ -242,8 +242,15 @@ export async function getStorageUsage(): Promise<StorageUsageResult> {
  * the moment a SQLSTATE is propagated properly.
  *
  * What no branch matches is the byte counts, which change on every call. Only
- * the constant code string is treated as a contract. `redemption` does the
- * same belt-and-braces for ATX02.
+ * the constant code string is treated as a contract.
+ *
+ * THIS IS NOW THE ONLY PLACE IN src/services THAT READS AN ATX CODE OUT OF A
+ * MESSAGE, and that is worth stating because it used to be one of a pair: this
+ * note cited `redemption` doing the same for ATX02, which it stopped doing in
+ * f530aee. Every other ATX code in the app is read from `error.code` alone,
+ * because every other one arrives through PostgREST. The exception here is not
+ * a leftover that the next tidy-up should sweep along with the others — it is
+ * the one path where the SQLSTATE genuinely does not reach `code`.
  *
  * FOR ANYONE RE-DERIVING THIS FROM A PROBE: an RLS violation through this same
  * API forwards its Postgres message verbatim ("new row violates row-level
