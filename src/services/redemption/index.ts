@@ -61,9 +61,17 @@ function describeRedemptionError(error: PostgrestError): string {
   const code = error.code ?? "";
   const message = error.message ?? "";
 
-  // ATX02 = the 5-attempts-per-15-minutes limiter. Its message includes the
-  // retry-time hint, so surface it verbatim.
-  if (code === "ATX02" || /ATX02/.test(message)) return message;
+  /* ATX02 = the 5-attempts-per-15-minutes limiter. Its message includes the
+   * retry-time hint, so surface it verbatim.
+   *
+   * THE CODE ALONE, because a message match beside it was only ever redundant
+   * here — not a bridge from before the code existed, which is what the
+   * regexes removed in 48a6d8b and 0d6ca50 were. check_rate_limit has raised
+   * `using errcode = 'ATX02'` since migration 20260907193614, and neither
+   * caller swallows it: redeem_client_code calls it with `perform` and catches
+   * only `sqlstate 'ATX01'`, preview_client_code calls it with `select` and
+   * catches nothing. So the code reaches PostgrestError.code intact. */
+  if (code === "ATX02") return message;
 
   // Verified against staging: an unauthenticated redeem_* raises P0001
   // "authentication required", while the preview_* functions are not granted
