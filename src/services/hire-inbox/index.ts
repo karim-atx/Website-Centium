@@ -28,47 +28,72 @@ export type HireInboxResult =
 
 /**
  * Accepting can fail in a way that is not a bug, which is why this is a union
- * rather than a boolean.
+ * rather than a boolean. Each named variant is one SQLSTATE the function
+ * raises; see the code table below.
  *
  * "tier_limit_reached" IS AN EXPECTED OUTCOME. accept_client_request catches
  * ATX01 from the professional_clients insert and re-raises it in plainer
- * words; a professional at their plan's client limit meets it by using the
- * product as intended, and the inbox owes them that sentence rather than
- * "something went wrong".
+ * words — keeping the code — and a professional at their plan's client limit
+ * meets it by using the product as intended, so the inbox owes them that
+ * sentence rather than "something went wrong".
+ *
+ * "not_found" AND "already_resolved" ARE SEPARATE CODES BUT ONE OUTCOME to the
+ * person reading the inbox: the request in front of them is not answerable and
+ * the list needs to catch up. They stay apart here anyway, because the database
+ * can now tell them apart and collapsing them at this boundary would throw that
+ * away — the caller decides whether it cares.
+ *
+ * "permission_denied" SHOULD BE UNREACHABLE. The inbox only ever shows a
+ * professional rows already filtered to their own id, so answering one they are
+ * not named on means the list is showing something it should not. It gets a
+ * real message rather than a silent refresh precisely so that is visible.
  */
 export type AcceptResult =
   | { status: "ok" }
   | { status: "tier_limit_reached" }
   | { status: "already_resolved" }
+  | { status: "not_found" }
+  | { status: "permission_denied" }
   | { status: "error"; message: string };
 
 export type RejectResult =
   | { status: "ok" }
   | { status: "already_resolved" }
+  | { status: "not_found" }
+  | { status: "permission_denied" }
   | { status: "error"; message: string };
 
 /**
- * WHY THESE ARE MATCHED ON MESSAGE TEXT AND NOT ON A CODE.
+ * THE SQLSTATES BOTH RPCs RAISE. Migration 20260912100000 gave every guard in
+ * accept_client_request and reject_client_request a code of its own; until it
+ * landed they all arrived as the default P0001, and this module matched on the
+ * message text instead.
  *
- * accept_client_request does not propagate ATX01. It CATCHES it and re-raises
- * with `raise exception`, which carries the default SQLSTATE P0001 — and every
- * one of the function's own guards does the same. Verified against the live
- * function: "only the professional named on this request may accept it" and
- * "request not found" both come back as P0001, so the code cannot tell any of
- * these apart and the wording is the only signal there is.
+ * THE REGEXES ARE GONE RATHER THAN KEPT AS A FALLBACK. That migration changed
+ * no message text — deliberately, so the two mechanisms could overlap for as
+ * long as anyone wanted — which is precisely why keeping them buys nothing:
+ * they would match the same errors the codes already match, raised by the same
+ * function bodies. They could only ever fire if the codes stopped arriving, and
+ * a silent fallback there is worse than a visible failure, because it would
+ * mask a rolled-back migration instead of surfacing one. Every code below was
+ * forced live through a signed-in user before this was written, and staging is
+ * the only configured environment (the PROD entries in .env.local are empty),
+ * so there is no deployment where the wording is still the only signal.
  *
- * That makes this fragile in a specific, bounded way: reword the message in
- * the migration and the match silently stops working, falling through to the
- * generic branch. The patterns below are deliberately loose (matching the
- * distinctive middle of each sentence rather than the whole string) so a small
- * edit does not break them, and the failure mode is a vaguer message rather
- * than a wrong action.
- *
- * Giving those two raises their own SQLSTATEs would remove the guesswork, and
- * would be the better fix — it belongs in the migration, not here.
+ * The codes name conditions rather than functions, which is why the same three
+ * serve both calls: the caller always knows which RPC it invoked.
  */
-const TIER_LIMIT = /client limit has been reached/i;
-const ALREADY_RESOLVED = /already been resolved/i;
+const CODE = {
+  /** Tier cap. Raised by professional_clients_enforce_tier_cap, caught by
+   *  accept_client_request and re-raised without the raw usage counts. */
+  TIER_LIMIT: "ATX01",
+  /** No row with that id. */
+  NOT_FOUND: "ATX08",
+  /** The caller is not the professional named on the request. */
+  NOT_ENTITLED: "ATX09",
+  /** The row is no longer pending. */
+  ALREADY_RESOLVED: "ATX10",
+} as const;
 
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
@@ -82,9 +107,8 @@ function describe(error: PostgrestError): string {
   ) {
     return "Your session expired. Sign in again to answer this request.";
   }
-  // The function's own guards are already written for a person to read, so
-  // they pass through rather than being replaced with something vaguer.
-  if (/only the professional named|request not found/i.test(message)) return message;
+  // Every guard these two functions raise is a named outcome above, so nothing
+  // reaching here is a sentence written for this professional to read.
   return "Could not answer that request. Try again.";
 }
 
@@ -168,9 +192,11 @@ export async function acceptHireRequest(requestId: string): Promise<AcceptResult
       p_request_id: requestId,
     });
     if (!error) return { status: "ok" };
-    if (TIER_LIMIT.test(error.message ?? "")) return { status: "tier_limit_reached" };
-    if (ALREADY_RESOLVED.test(error.message ?? "")) return { status: "already_resolved" };
-    console.error("[hire-inbox] Could not accept request:", error.message);
+    if (error.code === CODE.TIER_LIMIT) return { status: "tier_limit_reached" };
+    if (error.code === CODE.ALREADY_RESOLVED) return { status: "already_resolved" };
+    if (error.code === CODE.NOT_FOUND) return { status: "not_found" };
+    if (error.code === CODE.NOT_ENTITLED) return { status: "permission_denied" };
+    console.error("[hire-inbox] Could not accept request:", error.code, error.message);
     return { status: "error", message: describe(error) };
   } catch (e) {
     return {
@@ -194,8 +220,10 @@ export async function rejectHireRequest(requestId: string): Promise<RejectResult
       p_request_id: requestId,
     });
     if (!error) return { status: "ok" };
-    if (ALREADY_RESOLVED.test(error.message ?? "")) return { status: "already_resolved" };
-    console.error("[hire-inbox] Could not reject request:", error.message);
+    if (error.code === CODE.ALREADY_RESOLVED) return { status: "already_resolved" };
+    if (error.code === CODE.NOT_FOUND) return { status: "not_found" };
+    if (error.code === CODE.NOT_ENTITLED) return { status: "permission_denied" };
+    console.error("[hire-inbox] Could not reject request:", error.code, error.message);
     return { status: "error", message: describe(error) };
   } catch (e) {
     return {

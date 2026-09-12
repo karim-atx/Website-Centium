@@ -106,11 +106,21 @@ export default function ProfessionalDashboard() {
       await loadInbox();
       return;
     }
-    if (res.status === "already_resolved") {
-      // Someone answered it elsewhere. Not an error worth a red message —
-      // the refresh below makes the list agree with the database.
+    if (res.status === "already_resolved" || res.status === "not_found") {
+      // Someone answered it elsewhere, or the row is gone entirely. The
+      // database tells these apart; a professional looking at a row that is no
+      // longer theirs to answer does not need to. Neither is worth a red
+      // message — the refresh below makes the list agree with the database.
       setRequests((prev) => prev.filter((r) => r.id !== id));
       await loadInbox();
+      return;
+    }
+    if (res.status === "permission_denied") {
+      // Should be unreachable: the inbox is filtered to this professional's own
+      // id, so a request they are not named on should never be on screen. Said
+      // plainly rather than swallowed, because reaching it means the list is
+      // showing something it should not.
+      setInboxError("You don't have permission to answer that request.");
       return;
     }
     if (res.status === "tier_limit_reached") {
