@@ -706,10 +706,10 @@ export const ThreadView: React.FC<{
                     THE READ TICK HAS TO BRANCH, THOUGH, and that is new. A
                     fixed colour cannot serve both grounds once the sent bubble
                     is dark: `status-good-deep` is a DARK green, so it reads
-                    8.67:1 on the pale received bubble and 2.09:1 on the new
-                    sent one, while `bubble-read` is a LIGHT green and inverts
-                    exactly — 3.69-3.74:1 sent, 1.43:1 received. So each side
-                    takes the one built for its ground.
+                    8.67:1 on the pale received bubble and 1.62-1.64:1 on the
+                    new sent ones, while `bubble-read` is a LIGHT green and
+                    inverts exactly — 3.69-3.74:1 sent, 1.43:1 received. So
+                    each side takes the one built for its ground.
 
                     The old comment here claimed one green covered both at
                     4.02:1 and 8.67:1. That was measured on the default accent

@@ -54,7 +54,7 @@
   --c-bubble-sent: 104 97 132;
   /* The read tick inside a SENT bubble only. --c-status-good-deep is a dark
      green tuned for the old mid-toned ground; on these darker ones it collapses
-     (2.09:1 on the new default), so the sent side needs a LIGHT green and the
+     (1.62-1.64:1 across the four), so the sent side needs a LIGHT green and the
      received side keeps the dark one. One value covers all four themes:
      3.69-3.74:1. See the note on the tick in ThreadView. */
   --c-bubble-read: 143 224 176;
