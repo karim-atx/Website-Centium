@@ -1265,7 +1265,9 @@ tuned for the old mid-toned ground; on the new darker ones it collapses to
 are pale, where a light green measures 1.43:1. No single colour serves both
 once the two grounds sit on opposite sides of mid-tone, so the sent side takes
 a new `--c-bubble-read` and the received side keeps the dark one, chosen by
-`mine`.
+`mine`. Both of those names are historical: b86d611 renamed them to
+`--c-tick-read-sent` / `--c-tick-read-received`, for the reason in the entry
+below.
 
 *The pending bubble was not a ground problem at all.* A parent `opacity` fades
 the whole subtree toward the page behind it, so the ink and the ground converge
@@ -1279,26 +1281,49 @@ because it is the reason this was not patched at the label: it predicted "a
 darker sent-bubble ground, which repairs the body text at the same time and is
 the larger change", and that is exactly what it turned out to be.
 
-### The read tick on a received bubble is invisible in dark mode
+### The read tick reads on both bubbles now, in both modes
 
-**Found while measuring ea7ed88, and deliberately left there.**
-`--c-status-good-deep` is `rgb(20,80,50)`, a dark green. On a received bubble
-it sits on `cream-soft` — `rgb(245,245,246)` in light mode, where it measures
-8.67:1 and is fine, and `rgb(23,20,42)` in dark, where it measures **1.90:1**.
-A dark green on a dark surface.
+**Fixed in b86d611.** Opened while measuring ea7ed88: the read tick was a dark
+green, `rgb(20,80,50)`, and on a received bubble it sits on `cream-soft` —
+`rgb(245,245,246)` in light mode, 8.67:1 and fine, but `rgb(23,20,42)` in dark,
+where it measured **1.90:1**. A dark green on a dark surface, identical on all
+four themes, because neither the tick nor that ground varies by theme.
 
-**Same root cause as the accent-theme failures ea7ed88 fixed:** a token checked
-against one surface and then assumed to work on every other. The assumption was
-written down rather than merely implied — the token's own comment claimed it
-needed no per-theme variant — and it held only for the ground it was actually
-measured on. Every surface a colour lands on is its own measurement.
+**The received side reuses the palette rather than adding to it.** Under
+`.dark` it is `var(--c-status-good)` — the app's own dark-mode confirmation
+green, `rgb(127,199,156)` — at **9.02:1**. No new value was invented, because
+none was needed: deepening a green to survive a mid-toned surface was only ever
+a light-mode problem, and a near-black bubble swallows nothing.
 
-**Why it was not folded into ea7ed88.** Fixing it means giving the token a
-`.dark` value, and that changes dark mode, which that change was explicitly
-scoped to leave alone so it could be verified as unchanged there. So this wants
-its own scoped fix: a dark-mode value for the received tick clearing 3:1
-against `cream-soft`, checked in both modes rather than one — and, given the
-history, checked on the sent bubble too rather than assumed.
+**The sent side's dark value had to become a literal, and that is the part
+worth knowing.** `.dark` held `--c-bubble-read: var(--c-status-good-deep)`,
+harmless only while that token had no dark value. Adding the one the received
+tick needed, with the indirection still in place, would have dragged the *sent*
+tick to the light green as well and dropped it from 3.21–4.04:1 to
+**1.50–1.88:1** across the four themes — fixing one side by silently breaking
+the other, on cells that were already correct. Decoupling it first is what made
+this safe, and the sent value is now a literal with a comment saying why it has
+to stay one.
+
+**Both tokens were renamed, and that is the durable half of the fix.**
+`--c-status-good-deep` and `--c-bubble-read` named shades, and *which side wants
+which shade inverts with the mode*: in light mode the sent bubble is the dark
+surface and the received one is pale, and in dark mode that is exactly
+reversed. A name that is wrong in half the cases is precisely how the original
+assumption survived unexamined. They are `--c-tick-read-sent` and
+`--c-tick-read-received` now, keyed to the bubble, which never inverts.
+`status.good-deep` was deleted from the Tailwind config rather than left
+pointing at a variable that no longer exists.
+
+All sixteen combinations — four themes × sent/received × light/dark — were
+measured, not just the one being fixed: sent 3.69–3.74:1 light and 3.21–4.04:1
+dark, received 8.67:1 light and 9.02:1 dark. The twelve that already passed
+came back identical to the digit.
+
+**The lesson, since this is the second entry to record it:** every surface a
+colour lands on is its own measurement, and a token whose name describes how it
+looks rather than where it goes will eventually be wrong somewhere nobody
+checked.
 
 ## Version history
 
