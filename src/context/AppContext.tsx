@@ -530,13 +530,20 @@ interface AppState {
   toggleForumLike: (postId: string) => void;
   addForumComment: (postId: string, text: string) => void;
 
-  // V7 (QA 7.0): "When pressing connect on a professional, it becomes part
-  // of the connected professionals with the same privileges" — mock
-  // professionals are static seed data, so which ones the user has
-  // connected to lives here instead.
-  connectedProfessionalIds: string[];
-  connectProfessional: (id: string) => void;
-  disconnectProfessional: (id: string) => void;
+  // WHICH SEEDED MOCK PROFESSIONALS THE USER HAS DISMISSED.
+  //
+  // This was an ADDED list — ids the mock hire flow had "connected" — until
+  // that flow was removed for creating no state a server ever saw. Inverted
+  // rather than deleted, because `mockProfessionals` ships one entry already
+  // flagged `connected: true` and Remove had no way to turn it off: it
+  // filtered an array the seed flag never appeared in, so the button
+  // navigated away and the entry was connected again on the next visit.
+  //
+  // ONLY MOCK IDS EVER LAND HERE. Whether a real professional is connected is
+  // decided by `professional_clients`, which this browser cannot edit; the
+  // page reads that separately and never consults this list.
+  dismissedMockProfessionalIds: string[];
+  dismissMockProfessional: (id: string) => void;
 
   // V7 (QA 7.0): Professional UI — Explore reframes categories as job
   // postings for hiring the professional, gated by a unique-ID affiliation
@@ -606,18 +613,10 @@ interface AppState {
   refreshRoster: () => Promise<void>;
   removeProfessionalClient: (id: string) => Promise<{ ok: boolean; message?: string }>;
 
-  // QA 12.0: "Between the search and plus logo should be an inbox logo
-  // that shows new clients that hire the professional upon successful
-  // payment... the professional has the ability to accept or reject the
-  // client which later becomes part of his clients." This prototype has
-  // no real multi-account backend linking a specific client's hire to a
-  // specific professional's own account, so a hire simulates a pending
-  // request on this same account for the professional-side inbox to
-  // review, the same simulation approach already used for referrals.
-  pendingClientRequests: { id: string; name: string; requestedAt: string }[];
-  submitClientRequest: (name: string) => void;
-  acceptClientRequest: (id: string) => void;
-  rejectClientRequest: (id: string) => void;
+  // The hire inbox that used to be simulated here is real: ProfessionalDashboard
+  // reads `pending_client_requests` and answers through accept_client_request /
+  // reject_client_request. The localStorage array and its three functions are
+  // gone with the mock hire flow that was its only writer.
   updateProfessionalClientAccess: (
     id: string,
     access: Partial<ProfessionalClient["access"]>
@@ -1523,16 +1522,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     []
   );
 
-  const [connectedProfessionalIds, setConnectedProfessionalIds] = usePersistentState<string[]>(
-    "connectedProfessionalIds",
-    []
-  );
-  const connectProfessional: AppState["connectProfessional"] = (id) =>
-    setConnectedProfessionalIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+  // A NEW KEY, NOT A MIGRATION OF THE OLD ONE. The previous
+  // "connectedProfessionalIds" key held the opposite meaning, so carrying its
+  // contents over would mark exactly the wrong entries as dismissed. Anything
+  // still in the old key is abandoned, which costs nothing: its only writer
+  // was the mock hire flow, and the ids in it were never accounts.
+  const [dismissedMockProfessionalIds, setDismissedMockProfessionalIds] = usePersistentState<
+    string[]
+  >("dismissedMockProfessionalIds", []);
   // V10 (QA 10.0): "a hired professional should have a remove professional
   // button... should prompt you to make sure you want to remove."
-  const disconnectProfessional: AppState["disconnectProfessional"] = (id) =>
-    setConnectedProfessionalIds((prev) => prev.filter((p) => p !== id));
+  const dismissMockProfessional: AppState["dismissMockProfessional"] = (id) =>
+    setDismissedMockProfessionalIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
 
   const [businessDirectory, setBusinessDirectory] = usePersistentState<BusinessDirectoryEntry[]>(
     "businessDirectory",
@@ -1808,10 +1809,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     void refreshRoster();
   }, [refreshRoster]);
-  const [pendingClientRequests, setPendingClientRequests] = usePersistentState<
-    { id: string; name: string; requestedAt: string }[]
-  >("pendingClientRequests", []);
-
   const [calendarEvents, setCalendarEvents] = usePersistentState<CalendarEvent[]>("calendarEvents", []);
   const addCalendarEvent: AppState["addCalendarEvent"] = (event) =>
     setCalendarEvents((prev) => [...prev, { ...event, id: `cal-${Date.now()}-${prev.length}` }]);
@@ -2591,40 +2588,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
-  const submitClientRequest: AppState["submitClientRequest"] = (name) =>
-    setPendingClientRequests((prev) => [...prev, { id: `req${Date.now()}`, name, requestedAt: today }]);
-  const acceptClientRequest: AppState["acceptClientRequest"] = (id) => {
-    // The hire inbox is still a local simulation: these requests live in
-    // localStorage, so accepting one here clears a local row and creates
-    // nothing.
-    //
-    // THIS USED TO SAY a real relationship "only exists once the client
-    // redeems an invite code", which is wrong and has been since migration
-    // 20260905220059. There are TWO real paths into professional_clients, both
-    // SECURITY DEFINER functions because the table grants clients SELECT only:
-    //
-    //   redeem_client_code(p_code)        the client redeems a code the
-    //                                     professional generated
-    //   accept_client_request(p_request)  the professional accepts a row in
-    //                                     public.pending_client_requests
-    //
-    // The second is the real version of THIS function, and it already works:
-    // it locks the request, checks the caller is the professional named on it,
-    // refuses one already resolved, and reuses an existing active roster row
-    // rather than failing. pending_client_requests even grants clients INSERT
-    // on (customer_id, professional_id), so a request can be raised without an
-    // RPC at all.
-    //
-    // What is missing is on this side, not the database's: nothing in the app
-    // reads pending_client_requests or calls either RPC, so the inbox shows
-    // local rows and this accept cannot reach the real one. Wiring it up is
-    // its own piece of work — recorded here so the next reader does not
-    // conclude, as this comment previously implied, that the backend cannot
-    // do it.
-    setPendingClientRequests((prev) => prev.filter((r) => r.id !== id));
-  };
-  const rejectClientRequest = (id: string) =>
-    setPendingClientRequests((prev) => prev.filter((r) => r.id !== id));
   const updateProfessionalClientAccess = (id: string, access: Partial<ProfessionalClient["access"]>) =>
     setProfessionalClients((prev) =>
       prev.map((c) => (c.id === id ? { ...c, access: { ...c.access, ...access } } : c))
@@ -2901,9 +2864,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addForumPost,
       toggleForumLike,
       addForumComment,
-      connectedProfessionalIds,
-      connectProfessional,
-      disconnectProfessional,
+      dismissedMockProfessionalIds,
+      dismissMockProfessional,
       businessDirectory,
       affiliateWithBusiness,
       removeAffiliation,
@@ -2932,10 +2894,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       refreshRoster,
       professionalClients,
       removeProfessionalClient,
-      pendingClientRequests,
-      submitClientRequest,
-      acceptClientRequest,
-      rejectClientRequest,
       updateProfessionalClientAccess,
       updateProfessionalClient,
       assignProgramToClient,
@@ -3046,7 +3004,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customExercises,
       professionalReviews,
       forumPosts,
-      connectedProfessionalIds,
+      dismissedMockProfessionalIds,
       businessDirectory,
       professionalTier,
       bonusPoints,
@@ -3054,7 +3012,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       gymPurchases,
       cart,
       professionalClients,
-      pendingClientRequests,
       calendarEvents,
       workoutTemplates,
       workoutTemplateFolders,

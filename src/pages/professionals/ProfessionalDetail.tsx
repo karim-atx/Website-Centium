@@ -14,18 +14,7 @@ import {
 } from "../../services/hire-request";
 import type { ProfessionalType } from "../../types";
 import { useApp } from "../../context/AppContext";
-import {
-  ChevronLeft,
-  Star,
-  Lock,
-  Pencil,
-  CreditCard,
-  Wallet,
-  Banknote,
-  Check,
-  Trash2,
-} from "lucide-react";
-import clsx from "clsx";
+import { ChevronLeft, Star, Lock, Pencil, Trash2 } from "lucide-react";
 import { professionalTypeIcon } from "../../utils/icons";
 import { UserCheck } from "lucide-react";
 
@@ -66,35 +55,14 @@ function mockReviewsFor(professionalId: string, count: number) {
   });
 }
 
-// V9 (QA 9.0): "connect should be replaced with hire that when pressed
-// shows you how much they charge alongside methods of payment"
-const paymentMethods = [
-  { value: "card", label: "Card", icon: CreditCard },
-  { value: "whish", label: "Whish Money", icon: Wallet },
-  { value: "cash", label: "Cash", icon: Banknote },
-];
-
-// V9 (QA 9.0): "The client can only hire one professional from each
-// specialty at a particular time" — trainer/physiotherapist/dietitian, per
-// the QA text; doctor isn't mentioned so stays unrestricted.
-const specialtyLimited = new Set(["trainer", "physiotherapist", "dietitian"]);
-const specialtyLabel: Record<string, string> = {
-  trainer: "Personal Trainer",
-  physiotherapist: "Physiotherapist",
-  dietitian: "Dietitian",
-};
-
 export default function ProfessionalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const {
     professionalReviews,
     submitProfessionalReview,
-    connectedProfessionalIds,
-    connectProfessional,
-    disconnectProfessional,
-    user,
-    submitClientRequest,
+    dismissedMockProfessionalIds,
+    dismissMockProfessional,
     authUserId,
   } = useApp();
   const [removeConfirm, setRemoveConfirm] = useState(false);
@@ -242,24 +210,23 @@ export default function ProfessionalDetail() {
    * is a client, and it is the thing the roster and the consent screen already
    * read.
    *
-   * A mock entry keeps the local array, unchanged. Its ids are not accounts,
-   * so no query could answer for them, and the seeded directory is prototype
-   * behaviour that this fix deliberately leaves alone.
+   * A mock entry has only its seed flag to go on. Its ids are not accounts, so
+   * no query could answer for them.
    *
-   * WHAT THIS REPLACES, FOR REAL LISTINGS, IS A VALUE THE DATABASE NEVER SAW.
-   * `connectedProfessionalIds` lives in this browser's localStorage and is
-   * written only by this page's own hire and remove buttons. It went stale in
-   * both directions: a relationship created through the real flow never
-   * reached it, and one ended from the professional's roster never cleared it.
-   * It is also per-device, so the same account disagreed with itself across
-   * two browsers.
+   * THE LOCAL LIST NOW SUBTRACTS RATHER THAN ADDS. It used to be an "added"
+   * list written by the mock hire flow, which is gone — so the only thing left
+   * for it to record is which seeded entries the user has dismissed. That
+   * inversion is what makes Remove work on `pr1`, the one entry shipped with
+   * `connected: true`: filtering an id out of an added list could never clear a
+   * flag that lives in the seed data, so the button used to navigate away and
+   * leave the entry connected.
+   *
+   * REAL LISTINGS DO NOT CONSULT IT AT ALL. `activeClient` comes from
+   * `professional_clients`, and this branch never runs for them.
    */
-  const isConnected = isReal
+  const isConnected: boolean = isReal
     ? activeClient === true
-    : !!professional && (professional.connected || connectedProfessionalIds.includes(professional.id));
-  const [hireOpen, setHireOpen] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState(paymentMethods[0].value);
-  const [paid, setPaid] = useState(false);
+    : !!professional?.connected && !dismissedMockProfessionalIds.includes(professional.id);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [allReviewsOpen, setAllReviewsOpen] = useState(false);
   const myReview = professionalReviews.find((r) => r.professionalId === id);
@@ -286,56 +253,6 @@ export default function ProfessionalDetail() {
       </div>
     );
   }
-
-  // V9 (QA 9.0): only one hired professional per specialty at a time.
-  const conflictingProfessional = specialtyLimited.has(professional.type)
-    ? mockProfessionals.find(
-        (p) =>
-          p.id !== professional.id &&
-          p.type === professional.type &&
-          (p.connected || connectedProfessionalIds.includes(p.id))
-      )
-    : undefined;
-
-  /**
-   * MOCK PROFESSIONALS ONLY. THIS CANNOT RUN FOR A REAL LISTING.
-   *
-   * The one `setHireOpen(true)` sits in the `isReal` FALSE branch below — a
-   * real listing gets the "Ask them for a client code" card instead, and never
-   * shows a Hire button. So there is no route from a real professional's page
-   * into this function.
-   *
-   * Worth stating outright because a729f35's message claimed that "completing
-   * that flow for a real listing correctly shows not-connected afterward".
-   * That overstates it: the flow is not completable there at all. The change
-   * that commit actually made — isConnected reading professional_clients for
-   * real listings — is unaffected and correct; only that sentence was wrong.
-   *
-   * WHAT "PAYMENT" MEANS HERE IS A setTimeout AND A BOOLEAN. `paymentMethod`
-   * is held in state and never read again: not sent, not stored, not passed on.
-   * There is no payment provider in this repo — no dependency, no env var, no
-   * stub. The payment-shaped vocabulary elsewhere (payment_modality, the
-   * method lists) records what a professional ACCEPTS, not a transaction.
-   *
-   * Both real routes into professional_clients live in the database and
-   * neither passes through here: redeem_client_code, and
-   * accept_client_request against a pending_client_requests row. See the note
-   * on acceptClientRequest in AppContext.
-   */
-  const confirmHire = () => {
-    setPaid(true);
-    setTimeout(() => {
-      connectProfessional(professional.id);
-      // QA 12.0: "Between the search and plus logo should be an inbox
-      // logo that shows new clients that hire the professional upon
-      // successful payment... The professional has the ability to accept
-      // or reject the client." Simulated on this same account — see the
-      // pendingClientRequests comment in AppContext for why.
-      submitClientRequest(user.firstName || user.businessName || "New client");
-      setHireOpen(false);
-      setPaid(false);
-    }, 900);
-  };
 
   return (
     <div>
@@ -445,7 +362,7 @@ export default function ProfessionalDetail() {
               for other destructive actions in this app.
 
               MOCK ONLY, NOW THAT REAL CONNECTION COMES FROM THE DATABASE.
-              disconnectProfessional edits the local array and nothing else, so
+              dismissMockProfessional edits a local list and nothing else, so
               on a real listing this button ended a relationship only in this
               browser's opinion of it: the professional_clients row stayed
               active, the roster still listed the client, and reopening the
@@ -463,7 +380,11 @@ export default function ProfessionalDetail() {
             className="!border-teal/30 !text-teal-dark mt-2.5"
             onClick={() => {
               if (removeConfirm) {
-                disconnectProfessional(professional.id);
+                // ADDS to the dismissed list. isConnected reads this as a
+                // subtraction from the seed flag, so adding the id is what
+                // turns the connected layout off — and, unlike the old
+                // filter-it-out version, it survives a reload.
+                dismissMockProfessional(professional.id);
                 navigate("/app/professionals");
               } else {
                 setRemoveConfirm(true);
@@ -559,68 +480,21 @@ export default function ProfessionalDetail() {
           </div>
           </>
         ) : (
-        // No Message on a seeded mock professional: there is no account behind
-        // it to message, and the mock chat that used to sit here answered
-        // itself rather than admitting that.
-        <div>
-          {/* V9 (QA 9.0): "connect should be replaced with hire" */}
-          <Button fullWidth onClick={() => setHireOpen(true)}>Hire</Button>
+        // A SEEDED SAMPLE, AND IT SAYS SO. There is no account behind a
+        // mockProfessionals entry, so every action this page could offer is a
+        // dead end: Message has no thread to open ("pr1" is not a uuid), and
+        // the Hire button that used to sit here took a payment method, said
+        // "Hired", and connected nothing. A note is the honest thing to put in
+        // the space a call-to-action cannot fill.
+        <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center">
+          <p className="text-sm font-semibold text-charcoal">Sample listing</p>
+          <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
+            There's no real account behind this profile, so it can't be hired or
+            messaged. Browse professionals to find one you can work with.
+          </p>
         </div>
         )
       )}
-
-      <BottomSheet open={hireOpen} onClose={() => setHireOpen(false)} title={`Hire ${professional.name.split(" ")[0]}`}>
-        <div className="space-y-5 animate-fade-slide-up">
-          {conflictingProfessional ? (
-            <div className="text-center py-4">
-              <p className="text-sm text-charcoal-soft mb-1">
-                You already have a {specialtyLabel[professional.type]} —{" "}
-                <strong>{conflictingProfessional.name}</strong>.
-              </p>
-              <p className="text-xs text-charcoal-faint">
-                Remove that professional before hiring a new one in the same specialty.
-              </p>
-            </div>
-          ) : (
-            <>
-              <div className="text-center">
-                <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1">Rate</p>
-                <p className="text-3xl font-bold text-charcoal">
-                  ${professional.monthlyRate}
-                  <span className="text-sm font-normal text-charcoal-faint">/month</span>
-                </p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-charcoal-soft mb-2">Payment method</p>
-                <div className="grid grid-cols-3 gap-2">
-                  {paymentMethods.map((pm) => (
-                    <button
-                      key={pm.value}
-                      onClick={() => setPaymentMethod(pm.value)}
-                      className={clsx(
-                        "tap flex flex-col items-center justify-center gap-1.5 rounded-2xl py-3.5 border-2 transition-colors",
-                        paymentMethod === pm.value
-                          ? "bg-primary-pale border-primary text-primary-dark"
-                          : "bg-cream-soft border-transparent text-charcoal-soft"
-                      )}
-                    >
-                      <pm.icon size={18} />
-                      <span className="text-[11px] font-semibold">{pm.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <Button fullWidth size="lg" onClick={confirmHire} disabled={paid}>
-                {paid ? <><Check size={16} /> Hired</> : `Pay $${professional.monthlyRate} & hire`}
-              </Button>
-              <p className="text-[11px] text-charcoal-faint text-center">
-                Prototype checkout — no real payment is processed. You're only connected once payment
-                completes.
-              </p>
-            </>
-          )}
-        </div>
-      </BottomSheet>
 
       <BottomSheet open={reviewOpen} onClose={() => setReviewOpen(false)} title={`Rate ${professional.name.split(" ")[0]}`}>
         <div className="space-y-5 animate-fade-slide-up">
