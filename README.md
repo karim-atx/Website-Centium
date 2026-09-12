@@ -1187,37 +1187,44 @@ See also [`ProfessionalType` and `professional_subtype` are
 unreconciled](#professionaltype-and-professional_subtype-are-unreconciled) for
 the other place this page holds two models of the same thing.
 
-### No repo-wide line-ending policy
+### The line-ending policy lives in the repo now, and adopting it cost nothing
 
-**Minor, low priority, no action needed.** There is no `.gitattributes`, so
-line-ending behaviour comes from whatever `core.autocrlf` each machine happens
-to have set rather than from the repo.
+**Done in cab844c**, which added a `.gitattributes` holding exactly what this
+entry used to propose: `* text=auto`.
 
-**Nothing is broken today, and it is worth being precise about why.** Every
-tracked text file is stored **LF in the index** — 280 of them, zero CRLF — so
-what is committed is already uniform and diffs carry no line-ending noise. The
-current machine has `core.autocrlf=true`, which converts LF to CRLF on checkout
-and back to LF on commit, so the normalization happens correctly in both
-directions.
+**Why it was worth doing when nothing was broken.** Every tracked text file is
+stored **LF in the index** — 295 of them, 294 before `.gitattributes` itself,
+zero CRLF — and that has held since the first commit, macOS and Linux
+contributors included. But it held only because Git for Windows sets
+`core.autocrlf=true` by default in its *system* config, on the one machine
+doing most of the committing. The repo asserted nothing of its own. The real
+exposure was always a contributor whose `core.autocrlf` is `false` or `input`:
+they would commit CRLF into an all-LF repo, and *that* produces the whole-file
+diff this entry was about preventing.
 
-**What the gap actually costs.** The working tree ends up mixed: files git
-checks out get CRLF, files a tool writes directly keep LF. That is invisible in
-diffs but it does mean a single file can end up internally mixed — `README.md`
-reached 1117 CRLF lines and 189 LF ones purely from entries being appended by
-scripts into a checked-out file. Harmless, since it commits as LF regardless,
-and repaired by deleting the file and checking it out again. Note that
-`git checkout -- <file>` alone does **not** fix it: git compares
-post-normalization, sees no change, and skips the rewrite.
+**The renormalization commit this entry warned about did not exist.**
+`git add --renormalize .` produced **zero** index changes — run twice, once
+with the file untracked and once staged — because the index was already
+entirely LF, so `text=auto` made the existing state explicit rather than
+converting anything. That is the opposite of "touches every file", and it is
+why this was the cheapest possible moment to adopt: the renormalization cost
+only appears once a CRLF blob has actually landed.
 
-The real exposure is a contributor whose `core.autocrlf` is `false` or `input`.
-They would commit CRLF into an all-LF repo, and *that* would produce a
-whole-file diff — the noisy outcome this entry is about preventing.
+**The working tree is still mixed, and that is not what `.gitattributes`
+governs.** Files git checks out get CRLF, files a tool writes directly keep LF
+— currently 147 CRLF, 146 LF and 2 internally mixed across the tracked set. It
+decides what is *stored*, not what sits on disk. `README.md` used to be the
+example here, at 1117 CRLF lines against 189 LF; every line of it is CRLF now,
+having been re-checked-out since — no count quoted, because editing this file
+changes it. Note that `git checkout -- <file>` alone does **not** repair a
+mixed file: git compares post-normalization, sees no change, and skips the
+rewrite.
 
-**The fix, when someone wants it:** a `.gitattributes` with `* text=auto`, or
-`eol=lf` on source globs, so the policy lives in the repo instead of in each
-machine's config. It carries a one-time renormalization commit that touches
-every file, which is exactly why it should be done deliberately and on its own
-rather than folded into unrelated work.
+**No `binary` declarations were included, deliberately.** Git already detects
+all 27 tracked images from their content, and keeps doing so *under*
+`text=auto` — checked after adoption, `git ls-files --eol` still reports
+`i/-text w/-text` for them. `*.png binary` would have guarded a case that
+cannot arise with the assets actually present.
 
 ### The "Forwarded" label is unreadable on the sender's own bubble
 
