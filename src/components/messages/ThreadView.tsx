@@ -601,7 +601,7 @@ export const ThreadView: React.FC<{
                   setActionsFor(m);
                 }}
                 className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words select-none transition-shadow ${
-                  mine ? "bg-primary text-white dark:text-[#0D0B1A]" : "bg-cream-soft text-charcoal"
+                  mine ? "bg-bubble-sent text-white dark:text-[#0D0B1A]" : "bg-cream-soft text-charcoal"
                 } ${highlighted === m.id ? "ring-2 ring-primary-dark" : ""}`}
               >
                 {/* The quote sits above the message body, as it reads: what
@@ -626,6 +626,10 @@ export const ThreadView: React.FC<{
                     relationship to the message, not about the message. Filled
                     rather than outlined, because an outline at this size reads
                     as a tappable affordance and this is a state. */}
+                {/* 80% stays: on the darkened sent ground it now measures
+                    4.32-4.40:1 across the four themes, well past the 3:1 a
+                    non-text indicator needs, while still reading as quieter
+                    than the message itself. */}
                 {starred.has(m.id) && (
                   <Star
                     size={11}
@@ -636,8 +640,13 @@ export const ThreadView: React.FC<{
                 {/* Above the text, because it qualifies everything below it.
                     A reader who sees the words first and the provenance second
                     has already taken them as the sender's own. */}
+                {/* 85%, not 70%. At 11px this is NORMAL text by WCAG's
+                    measure — "large" starts at 18.66px bold or 24px — so it
+                    needs 4.5:1, not 3:1. 85% is the most de-emphasis the
+                    darkened ground affords while clearing it: 4.65-4.72:1
+                    across the four themes, against 1.87:1 before. */}
                 {m.forwarded && (
-                  <span className="flex items-center gap-1 text-[11px] italic opacity-70 mb-0.5">
+                  <span className="flex items-center gap-1 text-[11px] italic opacity-85 mb-0.5">
                     <Forward size={11} className="shrink-0" /> Forwarded
                   </span>
                 )}
@@ -647,7 +656,7 @@ export const ThreadView: React.FC<{
                     message would look like an empty bubble rather than one
                     whose file was deliberately removed. */}
                 {m.attachmentPurgedAt ? (
-                  <span className="flex items-center gap-1.5 opacity-70 italic">
+                  <span className="flex items-center gap-1.5 opacity-85 italic">
                     <Trash2 size={13} className="shrink-0" /> Attachment removed
                   </span>
                 ) : m.attachmentPath && m.voiceNoteSeconds ? (
@@ -686,13 +695,27 @@ export const ThreadView: React.FC<{
                     a glitch: mark-as-read runs on load, so by the time the tick
                     is on screen it is telling the truth.
 
-                    THE COLOURS ONLY SURVIVE THIS MOVE BECAUSE THE SENT TICK
-                    SETS NO COLOUR OF ITS OWN. It inherits currentColor — white
-                    inside your `primary` bubble, charcoal inside a received
-                    `cream-soft` one — measuring 1.72:1 and 4.20:1. Hard-coding
-                    it white to "match the design" would drop the received side
-                    to 1.05:1 and make it disappear. The read green is explicit
-                    and works on both grounds: 4.02:1 and 8.67:1.
+                    THE UNSENT TICK SETS NO COLOUR OF ITS OWN, which is what
+                    lets one element serve both bubbles. It inherits
+                    currentColor — white inside your own bubble, charcoal
+                    inside a received `cream-soft` one. Hard-coding it white to
+                    "match the design" would drop the received side to 1.05:1
+                    and make it disappear. At 75% it now measures 4.02-4.09:1
+                    sent and 6.80:1 received; it was 60%, and 1.72:1 sent.
+
+                    THE READ TICK HAS TO BRANCH, THOUGH, and that is new. A
+                    fixed colour cannot serve both grounds once the sent bubble
+                    is dark: `status-good-deep` is a DARK green, so it reads
+                    8.67:1 on the pale received bubble and 2.09:1 on the new
+                    sent one, while `bubble-read` is a LIGHT green and inverts
+                    exactly — 3.69-3.74:1 sent, 1.43:1 received. So each side
+                    takes the one built for its ground.
+
+                    The old comment here claimed one green covered both at
+                    4.02:1 and 8.67:1. That was measured on the default accent
+                    in light mode only; on a sent bubble it was already 2.77:1
+                    on ocean and 1.72:1 on berry. Four themes, two modes — the
+                    numbers above are the worst case across all of them.
 
                     SENT AND READ, WITH NO "DELIVERED" BETWEEN THEM. A delivered
                     state was scoped and deliberately dropped: the only place a
@@ -727,7 +750,11 @@ export const ThreadView: React.FC<{
                     reinforcement, not the message. */}
                 <span
                   className={`flex items-center justify-end gap-1 mt-1 ${
-                    m.readAt ? "text-status-good-deep" : "opacity-60"
+                    m.readAt
+                      ? mine
+                        ? "text-bubble-read"
+                        : "text-status-good-deep"
+                      : "opacity-75"
                   }`}
                   title={m.readAt ? "Read" : "Sent"}
                 >
@@ -742,7 +769,13 @@ export const ThreadView: React.FC<{
             than as a message that arrived looking odd. */}
         {pending && (
           <div className="flex justify-end">
-            <div className="max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words bg-primary text-white dark:text-[#0D0B1A] opacity-60">
+            {/* 90%, NOT 60%. A parent opacity fades the whole subtree toward
+                the page behind it, so the ink and the ground converge: at 60%
+                over a white page this bubble's own text measured 1.62:1, worse
+                than the un-faded bubble it imitates. 90% keeps it at 4.62:1
+                and still reads as tentative, and the clock below — which this
+                bubble has always carried — is what actually says "not yet". */}
+            <div className="max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words bg-bubble-sent text-white dark:text-[#0D0B1A] opacity-90">
               {pending.kind === "text" ? (
                 pending.text
               ) : (
@@ -751,7 +784,9 @@ export const ThreadView: React.FC<{
                   {pending.kind === "photo" ? "Photo" : "Voice note"}
                 </span>
               )}
-              <span className="flex items-center justify-end gap-1 mt-1 opacity-70" title="Sending">
+              {/* Compounds with the 90% above, so this is 0.8 x 0.9 in
+                  practice: 3.59-3.66:1, past the 3:1 an icon needs. */}
+              <span className="flex items-center justify-end gap-1 mt-1 opacity-80" title="Sending">
                 <Clock size={13} />
               </span>
             </div>

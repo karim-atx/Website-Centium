@@ -32,6 +32,33 @@
   --c-primary-dark: 125 107 181;
   --c-primary-deep-text: 95 80 147;
 
+  /* THE SENT MESSAGE BUBBLE'S GROUND, AND THE READ TICK THAT SITS ON IT.
+     Bubble-scoped on purpose: `--c-primary` is the ground for 126 other
+     surfaces (buttons, FABs, toggles, chips) where nothing white sits on top
+     at 13px, so it is not the thing to darken.
+
+     WHY IT HAD TO MOVE. The sent bubble paints white ink on this ground, and
+     in light mode every layer failed: message text 2.35:1, the star 2.02:1,
+     the "Forwarded" label 1.87:1. Opacity could not save any of them --
+     opaque white on the old lavender is 2.35:1, so that was the ceiling.
+
+     EACH THEME'S OWN HUE, SCALED DOWN until opaque white clears 5.7:1. Scaling
+     preserves hue exactly, so this reads as a darker shade of the same brand
+     colour rather than a different one, and 5.7 is chosen so white at 85%
+     still clears 4.5:1 on all four -- which is what lets the secondary layers
+     stay visibly secondary instead of being forced to full white.
+
+     Light only. Under .dark these resolve to today's values unchanged, because
+     the dark bubble paints NEAR-BLACK ink (`dark:text-[#0D0B1A]`) on a lighter
+     lavender and already measures 3.5:1-7.6:1. */
+  --c-bubble-sent: 104 97 132;
+  /* The read tick inside a SENT bubble only. --c-status-good-deep is a dark
+     green tuned for the old mid-toned ground; on these darker ones it collapses
+     (2.09:1 on the new default), so the sent side needs a LIGHT green and the
+     received side keeps the dark one. One value covers all four themes:
+     3.69-3.74:1. See the note on the tick in ThreadView. */
+  --c-bubble-read: 143 224 176;
+
   --c-teal: 162 200 194;
   --c-teal-light: 193 219 214;
   --c-teal-pale: 234 244 242;
@@ -52,12 +79,22 @@
      status colour actually adapts in dark mode. */
   --c-status-good: 63 145 101;
   --c-status-good-bg: 227 243 233;
-  /* A read receipt sits INSIDE a bg-primary bubble, and every accent in this
-     palette is mid-toned like that surface, so all of them vanish on it:
-     status-good measures 1.64:1 there, teal 1.30, gold 1.05. This is the same
-     hue as status-good, darkened until it clears 3:1 — 4.02:1 in light, 3.67:1
-     in dark, so it needs no per-theme variant. Confirmation semantics that are
-     actually legible on a saturated ground. */
+  /* A read receipt sits inside a message bubble, and every ordinary accent in
+     this palette is mid-toned like those surfaces, so all of them vanish there:
+     status-good measures 1.64:1, teal 1.30, gold 1.05. This is the same hue as
+     status-good, darkened until it clears 3:1.
+
+     NOW THE RECEIVED SIDE ONLY. It was the tick on both, and the claim above it
+     used to read "no per-theme variant needed" — measured on the default
+     lavender alone, which was the error. On the other accents it did not clear
+     3:1 on a sent bubble at all: ocean 2.77:1, berry 1.72:1. The sent side has
+     its own light green now (--c-bubble-read); this stays where it works, on
+     the cream-soft received bubble: 8.67:1.
+
+     ONE GAP REMAINS AND IS NOT FIXED HERE: on a received bubble in DARK mode
+     this dark green sits on a dark surface and measures 1.90:1. Found while
+     measuring the sent-bubble fix, left alone because fixing it means changing
+     dark mode, which that change deliberately did not touch. */
   --c-status-good-deep: 20 80 50;
   --c-status-high: 192 57 43;
   --c-status-high-bg: 251 231 228;
@@ -86,6 +123,14 @@
   --c-primary-pale: 52 45 84;
   --c-primary-dark: 125 103 217;
   --c-primary-deep-text: 195 179 251;
+
+  /* Dark mode is unchanged, only renamed at the point of use: the bubble keeps
+     today's primary as its ground and today's dark green as its read tick.
+     Indirection rather than repeated literals, so these cannot drift from the
+     tokens they mirror. Repeated in each .dark[data-accent] block below because
+     a bare [data-accent] rule would otherwise win on source order. */
+  --c-bubble-sent: var(--c-primary);
+  --c-bubble-read: var(--c-status-good-deep);
 
   --c-teal: 162 200 194;
   --c-teal-light: 184 216 210;
@@ -121,12 +166,14 @@
    everything else in the palette stays put. */
 [data-accent="ocean"] {
   --c-primary: 76 143 209;
+  --c-bubble-sent: 55 104 153;
   --c-primary-light: 116 175 227;
   --c-primary-pale: 220 234 248;
   --c-primary-dark: 30 74 110;
 }
 .dark[data-accent="ocean"] {
   --c-primary: 116 175 227;
+  --c-bubble-sent: var(--c-primary);
   --c-primary-light: 150 197 237;
   --c-primary-pale: 26 41 57;
   --c-primary-dark: 209 230 247;
@@ -134,12 +181,14 @@
 
 [data-accent="sunset"] {
   --c-primary: 233 116 82;
+  --c-bubble-sent: 158 79 56;
   --c-primary-light: 242 164 136;
   --c-primary-pale: 252 230 221;
   --c-primary-dark: 165 66 36;
 }
 .dark[data-accent="sunset"] {
   --c-primary: 240 140 108;
+  --c-bubble-sent: var(--c-primary);
   --c-primary-light: 247 178 152;
   --c-primary-pale: 57 37 30;
   --c-primary-dark: 250 199 176;
@@ -147,12 +196,14 @@
 
 [data-accent="berry"] {
   --c-primary: 156 79 124;
+  --c-bubble-sent: 151 77 120;
   --c-primary-light: 184 118 156;
   --c-primary-pale: 241 224 235;
   --c-primary-dark: 107 48 84;
 }
 .dark[data-accent="berry"] {
   --c-primary: 200 128 172;
+  --c-bubble-sent: var(--c-primary);
   --c-primary-light: 216 158 194;
   --c-primary-pale: 46 30 40;
   --c-primary-dark: 240 214 231;

@@ -36,6 +36,15 @@ export default {
           // Text/glyph colour when sitting on a `primary-pale` wash.
           "deep-text": "rgb(var(--c-primary-deep-text) / <alpha-value>)",
         },
+        // The sent message bubble only. Darker than `primary` because white ink
+        // sits on it at 13px and below; `primary` stays the ground for every
+        // button, FAB, toggle and chip, where nothing does. See index.css.
+        bubble: {
+          sent: "rgb(var(--c-bubble-sent) / <alpha-value>)",
+          // The read tick inside a sent bubble. The received bubble keeps
+          // `status-good-deep`, which is dark and needs a pale ground.
+          read: "rgb(var(--c-bubble-read) / <alpha-value>)",
+        },
         teal: {
           DEFAULT: "rgb(var(--c-teal) / <alpha-value>)",
           light: "rgb(var(--c-teal-light) / <alpha-value>)",

@@ -69,7 +69,7 @@ export default function MessagesTab() {
                   <div
                     className={clsx(
                       "max-w-[75%] rounded-2xl px-4 py-2.5 text-sm",
-                      m.from === "customer" ? "bg-primary text-white" : "bg-cream-card text-charcoal"
+                      m.from === "customer" ? "bg-bubble-sent text-white" : "bg-cream-card text-charcoal"
                     )}
                   >
                     {m.text}

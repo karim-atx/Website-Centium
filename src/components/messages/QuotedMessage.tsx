@@ -32,16 +32,28 @@ export const QuotedMessage: React.FC<{
 
   const content = (
     <>
+      {/* THE inBubble OPACITIES ARE CONTRAST FLOORS, NOT TASTE. This renders
+          inside BOTH bubbles — a sent one, whose ground darkened so white ink
+          could clear 4.5:1, and a received `cream-soft` one — and it sits on a
+          `bg-black/10` tile inside either, which darkens the local ground
+          again. Worst case across four themes and both modes: rail 3.12:1
+          (needs 3:1, decorative divider), author 5.43:1 and body 4.59:1 (both
+          needing 4.5:1 as normal text at 11px and 11.5px).
+
+          The author carries the hierarchy now by WEIGHT rather than by being
+          dimmed — it was 80% against the body's 70%, which on the old ground
+          measured 2.40:1 and 2.18:1. Neither was readable, so the difference
+          between them was not hierarchy, it was two illegible greys. */}
       <span
         className={`w-0.5 self-stretch rounded-full shrink-0 ${
-          inBubble ? "bg-current opacity-50" : "bg-primary"
+          inBubble ? "bg-current opacity-65" : "bg-primary"
         }`}
       />
       <span className="min-w-0 flex-1">
-        <span className={`block text-[11px] font-semibold truncate ${inBubble ? "opacity-80" : "text-primary-dark"}`}>
+        <span className={`block text-[11px] font-semibold truncate ${inBubble ? "" : "text-primary-dark"}`}>
           {authorLabel}
         </span>
-        <span className={`block text-[11.5px] truncate ${inBubble ? "opacity-70" : "text-charcoal-soft"}`}>
+        <span className={`block text-[11.5px] truncate ${inBubble ? "opacity-85" : "text-charcoal-soft"}`}>
           {body}
         </span>
       </span>
