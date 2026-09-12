@@ -1,0 +1,7 @@
+# Line endings are normalised to LF in the repository regardless of the
+# platform a contributor works on. Windows checkouts still get CRLF in the
+# working tree; only what is stored is fixed. This repo has been LF-clean
+# since its first commit and currently stays that way only because Git for
+# Windows sets core.autocrlf=true by default -- this makes it the repo's rule
+# rather than one machine's setting.
+* text=auto
