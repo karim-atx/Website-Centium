@@ -1226,40 +1226,79 @@ all 27 tracked images from their content, and keeps doing so *under*
 `i/-text w/-text` for them. `*.png binary` would have guarded a case that
 cannot arise with the assets actually present.
 
-### The "Forwarded" label is unreadable on the sender's own bubble
+### The sent bubble was unreadable in light mode, and is not any more
 
-**Minor, real, and measured rather than suspected.** The provenance label added
-with message forwarding renders white at 70% opacity over the sent bubble's
-`rgb(174,161,220)` ground. Measured from the DOM with `getComputedStyle`,
-compositing the opacity by hand:
+**Fixed in ea7ed88.** This opened as one label — the forwarding provenance tag,
+white at 70% over `rgb(174,161,220)`, measured at **1.87:1**. Measuring the
+rest of the bubble before touching it showed the label was not an outlier: in
+light mode on the default theme *every* layer failed, the message body text
+included, at **2.35:1**. Opaque white on that ground is 2.35:1, so that was the
+ceiling and not the setting — no opacity value was ever going to reach AA.
 
-| context | effective colour | contrast |
+**A new token, not a new `--c-primary`.** That variable is the ground for 126
+other surfaces — buttons, FABs, toggles, chips — where nothing white sits on
+top at 13px. `--c-bubble-sent` is scoped to the four bubbles that do. Each
+theme's own hue is scaled down until opaque white clears 5.7:1, which preserves
+hue exactly, so each stays a darker shade of its own colour rather than
+becoming a different one:
+
+| theme | before | after |
 | --- | --- | --- |
-| own bubble (white @ 70% on `rgb(174,161,220)`) | `rgb(231,227,245)` | **1.87:1** |
-| received bubble (charcoal @ 70% on `rgb(245,245,246)`) | `rgb(99,95,93)` | 5.79:1 |
+| centium | `#AEA1DC` | `#686184` |
+| ocean | `#4C8FD1` | `#376899` |
+| sunset | `#E97452` | `#9E4F38` |
+| berry | `#9C4F7C` | `#974D78` |
 
-WCAG AA wants 4.5:1 for text this size. The received case passes comfortably,
-and that is the case that matters most: the reader the label exists for is the
-recipient, and they can read it. The sender cannot reliably see which of their
-own messages carry it.
+Light mode only. Under `.dark` the token resolves to `var(--c-primary)`, so the
+dark bubble is unchanged — it paints near-black ink on a lighter lavender and
+already measured 3.5:1–7.6:1.
 
-**The ceiling is the bubble, not the opacity.** The sent bubble's own body text
-is white on the same ground at **2.35:1** — already below AA, independently of
-the forwarding work. So no opacity value can bring the label to AA there:
-removing `opacity-70` entirely reaches 2.35:1 and no further, and it would also
-flatten the label into the text it exists to qualify.
+Worst case across the four themes, before → after: message text 2.35 → 5.76,
+"Forwarded" 1.87 → 4.65, star 2.02 → 4.32, unread tick 1.72 → 4.02, quote body
+2.18 → 5.38, quote rail 1.78 → 3.54.
 
-**Which is why it was left alone rather than patched.** Anything that actually
-fixes this is a decision about the sent-bubble palette generally, affecting
-every message in the app rather than one label. Two shapes it could take: a
-dedicated token that reads on both grounds, the way `--c-status-good-deep` was
-added when the message ticks turned out to sit at 1.45:1 against this same
-mid-tone; or a darker sent-bubble ground, which repairs the body text at the
-same time and is the larger change.
+**Two things the ground change alone did not solve.**
 
-Worth doing as its own piece of work, with the whole palette in front of you,
-rather than folded into whichever feature next happens to put small text on a
-purple bubble.
+*The read tick had to split in two.* `--c-status-good-deep` is a dark green
+tuned for the old mid-toned ground; on the new darker ones it collapses to
+1.62–1.64:1. But the same element renders inside *received* bubbles too, which
+are pale, where a light green measures 1.43:1. No single colour serves both
+once the two grounds sit on opposite sides of mid-tone, so the sent side takes
+a new `--c-bubble-read` and the received side keeps the dark one, chosen by
+`mine`.
+
+*The pending bubble was not a ground problem at all.* A parent `opacity` fades
+the whole subtree toward the page behind it, so the ink and the ground converge
+rather than the ink staying put: at 60% over a white page, the in-flight
+bubble's own text measured **1.62:1** — worse than the un-faded bubble it was
+supposed to be a dimmed copy of. It is 90% now, at 4.62:1, and the clock icon
+it always carried is what actually says "not yet".
+
+**The original entry called the shape correctly**, which is worth recording
+because it is the reason this was not patched at the label: it predicted "a
+darker sent-bubble ground, which repairs the body text at the same time and is
+the larger change", and that is exactly what it turned out to be.
+
+### The read tick on a received bubble is invisible in dark mode
+
+**Found while measuring ea7ed88, and deliberately left there.**
+`--c-status-good-deep` is `rgb(20,80,50)`, a dark green. On a received bubble
+it sits on `cream-soft` — `rgb(245,245,246)` in light mode, where it measures
+8.67:1 and is fine, and `rgb(23,20,42)` in dark, where it measures **1.90:1**.
+A dark green on a dark surface.
+
+**Same root cause as the accent-theme failures ea7ed88 fixed:** a token checked
+against one surface and then assumed to work on every other. The assumption was
+written down rather than merely implied — the token's own comment claimed it
+needed no per-theme variant — and it held only for the ground it was actually
+measured on. Every surface a colour lands on is its own measurement.
+
+**Why it was not folded into ea7ed88.** Fixing it means giving the token a
+`.dark` value, and that changes dark mode, which that change was explicitly
+scoped to leave alone so it could be verified as unchanged there. So this wants
+its own scoped fix: a dark-mode value for the received tick clearing 3:1
+against `cream-soft`, checked in both modes rather than one — and, given the
+history, checked on the sent bubble too rather than assumed.
 
 ## Version history
 
