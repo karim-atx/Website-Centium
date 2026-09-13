@@ -40,6 +40,12 @@ export const translations: Record<Language, Record<string, string>> = {
     Allow: "السماح",
     Camera: "الكاميرا",
     "Needed for scanning biomarkers & photos": "مطلوب لمسح المؤشرات الحيوية والصور",
+    "Push notifications": "الإشعارات الفورية",
+    "Needed for calls & messages when Centium is closed":
+      "مطلوب للمكالمات والرسائل عند إغلاق التطبيق",
+    "Not available in this browser": "غير متاح في هذا المتصفح",
+    "Add Centium to your Home Screen to receive call notifications when the app is closed":
+      "أضف Centium إلى الشاشة الرئيسية لتلقي إشعارات المكالمات عند إغلاق التطبيق",
     "Connected devices": "الأجهزة المتصلة",
     General: "عام",
     Notifications: "الإشعارات",

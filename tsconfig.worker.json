@@ -1,0 +1,32 @@
+{
+  // A third project, purely because the service worker runs in a different
+  // global. src/sw.ts needs ServiceWorkerGlobalScope from the WebWorker lib,
+  // and tsconfig.app.json cannot simply add it: WebWorker and DOM both declare
+  // `self`, `fetch`, `caches` and more with incompatible types, so loading them
+  // together produces conflicting-declaration errors across the whole app.
+  // Splitting is the supported way to have one file compiled against a
+  // different lib set, and `tsc -b` still checks it as part of the build.
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.worker.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023", "WebWorker"],
+    "module": "esnext",
+    "types": [],
+    "skipLibCheck": true,
+
+    /* Bundler mode — matches tsconfig.app.json, since vite-plugin-pwa
+       compiles this file through the same bundler. */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    /* Linting — same rules as the app. */
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src/sw.ts"]
+}

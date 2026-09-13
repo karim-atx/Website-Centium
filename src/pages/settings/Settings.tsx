@@ -25,6 +25,7 @@ import {
   Mic,
   Camera,
   MapPin,
+  BellRing,
   ChevronRight,
   Check,
   Accessibility,
@@ -32,6 +33,71 @@ import {
   Star,
   FileText,
 } from "lucide-react";
+
+/**
+ * Whether this browser can receive a push notification at all.
+ *
+ * FEATURE DETECTION, NEVER PLATFORM DETECTION, and the distinction is the
+ * entire design of this row. `detectPlatform()` in IntegrationsCard answers
+ * this shape of question with `/android/i.test(userAgent) ? "android" : "ios"`
+ * — every desktop browser is "ios" to it. That is fine for choosing between
+ * two integration logos and wrong here, where the question is whether three
+ * specific APIs exist. A user-agent test would have told a Chrome-on-Windows
+ * user to add the app to their Home Screen.
+ *
+ * ALL THREE ARE REQUIRED, and the third is the one that is easy to miss.
+ * `Notification` is what actually displays the thing; iOS shipped
+ * `serviceWorker` years before a web app there could show a notification, so
+ * checking only the first two reports success on exactly the platform most
+ * likely to fail.
+ */
+function pushSupported(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    typeof window !== "undefined" &&
+    "serviceWorker" in navigator &&
+    "PushManager" in window &&
+    "Notification" in window
+  );
+}
+
+/**
+ * Whether the app is running installed rather than in a browser tab.
+ *
+ * Two checks because they cover different engines: the display-mode media
+ * query is the standard, and `navigator.standalone` is Safari's own
+ * non-standard predecessor, which is still what iOS reports.
+ */
+function isInstalled(): boolean {
+  if (typeof window === "undefined") return false;
+  if (window.matchMedia("(display-mode: standalone)").matches) return true;
+  return (navigator as Navigator & { standalone?: boolean }).standalone === true;
+}
+
+/**
+ * Whether this is iOS or iPadOS.
+ *
+ * USED ONLY TO PICK A MESSAGE, NEVER TO GATE ANYTHING. `pushSupported()`
+ * decides what the row can do; this decides which sentence explains a `false`,
+ * because "add it to your Home Screen" is actionable on iOS and misleading
+ * everywhere else. If this function is ever wrong, the cost is showing the
+ * wrong explanation, not blocking a browser that works.
+ *
+ * The second clause is iPadOS 13+, which reports itself as a Mac. A real Mac
+ * has no touch points, so maxTouchPoints separates them.
+ */
+function isIosLike(): boolean {
+  if (typeof navigator === "undefined") return false;
+  if (/iPad|iPhone|iPod/.test(navigator.userAgent)) return true;
+  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+}
+
+/** Notification.permission's three states in this card's boolean|null shape. */
+function permissionTriState(p: NotificationPermission): boolean | null {
+  if (p === "granted") return true;
+  if (p === "denied") return false;
+  return null;
+}
 
 export default function Settings() {
   const { theme, toggleTheme, language, setLanguage, t, user, deleteAccount } = useApp();
@@ -46,6 +112,17 @@ export default function Settings() {
   const [micAllowed, setMicAllowed] = useState<boolean | null>(null);
   const [cameraAllowed, setCameraAllowed] = useState<boolean | null>(null);
   const [locationAllowed, setLocationAllowed] = useState<boolean | null>(null);
+  // Resolved once. Neither answer can change while the page is mounted —
+  // installing the app or switching browser reloads it either way.
+  const [pushAvailable] = useState(pushSupported);
+  // THE ONLY ROW THAT CAN READ ITS TRUE STATE WITHOUT ASKING. The three above
+  // start at null because the only way to learn a camera or mic permission is
+  // to request it, which prompts. `Notification.permission` is readable
+  // synchronously and prompts nobody, so this row shows what is actually the
+  // case on arrival rather than "unknown until you press Allow".
+  const [notificationsAllowed, setNotificationsAllowed] = useState<boolean | null>(() =>
+    pushSupported() ? permissionTriState(Notification.permission) : null
+  );
   const [contactOpen, setContactOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -72,6 +149,28 @@ export default function Settings() {
       setCameraAllowed(true);
     } catch {
       setCameraAllowed(false);
+    }
+  };
+
+  /**
+   * Asks the OS for permission to show notifications.
+   *
+   * THIS IS AS FAR AS IT GOES TODAY. Granting permission is necessary for push
+   * but not sufficient: a push also needs a PushManager subscription, and a
+   * subscription needs a VAPID key that does not exist yet. So this
+   * deliberately does NOT call `pushManager.subscribe()` — doing that with no
+   * key would fail, and doing it with a placeholder would register a
+   * subscription nothing could ever send to. Permission first; the
+   * subscription lands with the key.
+   */
+  const requestNotifications = async () => {
+    if (!pushAvailable) return;
+    try {
+      setNotificationsAllowed(permissionTriState(await Notification.requestPermission()));
+    } catch {
+      // Some engines reject rather than resolve when called outside a user
+      // gesture or in a context where notifications are disallowed outright.
+      setNotificationsAllowed(false);
     }
   };
 
@@ -185,6 +284,48 @@ export default function Settings() {
           >
             {t(locationAllowed === true ? "Re-check" : "Allow")}
           </button>
+        </div>
+        {/* "Push notifications", not "Notifications", because the General card
+            below already has a Notifications row — that one opens preference
+            toggles for which alerts you want, this one is the OS permission
+            that decides whether any of them can be delivered at all. Two rows
+            with the same name on one page would read as a duplicate. */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
+              <BellRing size={16} />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-charcoal">{t("Push notifications")}</p>
+              <p className="text-[11px] text-charcoal-faint">
+                {!pushAvailable
+                  ? isIosLike() && !isInstalled()
+                    ? // The honest instruction rather than a flat "unsupported":
+                      // on iOS the APIs genuinely do appear once the app is
+                      // installed to the Home Screen, so this is a step the
+                      // user can take, not a dead end.
+                      t("Add Centium to your Home Screen to receive call notifications when the app is closed")
+                    : t("Not available in this browser")
+                  : t(
+                      notificationsAllowed === true
+                        ? "Granted"
+                        : notificationsAllowed === false
+                        ? "Denied"
+                        : "Needed for calls & messages when Centium is closed"
+                    )}
+              </p>
+            </div>
+          </div>
+          {/* No button when the APIs are absent: there is nothing to request,
+              and an Allow that cannot do anything is worse than no control. */}
+          {pushAvailable && (
+            <button
+              onClick={() => void requestNotifications()}
+              className="tap text-xs font-semibold text-primary bg-primary-pale rounded-full px-3 py-1.5"
+            >
+              {t(notificationsAllowed === true ? "Re-check" : "Allow")}
+            </button>
+          )}
         </div>
       </Card>
 

@@ -4,7 +4,9 @@
     "target": "es2023",
     "lib": ["ES2023", "DOM"],
     "module": "esnext",
-    "types": ["vite/client"],
+    // vite-plugin-pwa/client declares the `virtual:pwa-register` module that
+    // main.tsx imports the registration helper from.
+    "types": ["vite/client", "vite-plugin-pwa/client"],
     "allowArbitraryExtensions": true,
     "skipLibCheck": true,
 
@@ -22,5 +24,8 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "lib"]
+  "include": ["src", "lib"],
+  // Compiled by tsconfig.worker.json instead — it runs in a worker global, not
+  // the DOM one this project describes.
+  "exclude": ["src/sw.ts"]
 }
