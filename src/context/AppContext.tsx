@@ -63,6 +63,7 @@ import { translations, type Language } from "../i18n/translations";
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
+import { unsubscribeFromPush } from "../services/push";
 import {
   cancelAccountDeletion as cancelAccountDeletionRemote,
   onPasswordRecovery,
@@ -2681,6 +2682,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       .forEach((k) => localStorage.removeItem(k));
     setUser({ ...defaultUser });
     setSession(null);
+
+    // BEFORE signOutRemote(), and the order is the whole point.
+    // push_subscriptions_delete_own is an own-row policy, so once the session
+    // is gone the row is unreachable and would sit there forever — holding the
+    // globally-unique endpoint and locking the next account on this browser out
+    // of notifications entirely. This is the documented resolution to that
+    // collision, not tidying up.
+    //
+    // setSession(null) above is React state; the supabase client keeps its own
+    // session until signOutRemote() takes it, so this call is still authorised.
+    //
+    // BEST EFFORT, NEVER BLOCKING. unsubscribeFromPush returns a Result and
+    // does not throw, and its failure is logged rather than surfaced: a user
+    // who has asked to sign out must always end up signed out. The cost of a
+    // failure is a stale row, which the next sign-in on this browser reports
+    // honestly as a claimed endpoint rather than silently ignoring.
+    const removal = await unsubscribeFromPush();
+    if (removal.status === "error") {
+      console.error("[auth] Could not remove this device's push subscription:", removal.message);
+    }
+
     await signOutRemote();
   };
 

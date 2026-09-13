@@ -13,6 +13,7 @@ import { RateAppSheet } from "../../components/profile/RateAppSheet";
 import { StorageUsageCard } from "../../components/profile/StorageUsageCard";
 import { TermsOfServiceSheet } from "../../components/profile/TermsOfServiceSheet";
 import { useApp } from "../../context/AppContext";
+import { subscribeToPush } from "../../services/push";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import {
@@ -100,7 +101,7 @@ function permissionTriState(p: NotificationPermission): boolean | null {
 }
 
 export default function Settings() {
-  const { theme, toggleTheme, language, setLanguage, t, user, deleteAccount } = useApp();
+  const { theme, toggleTheme, language, setLanguage, t, user, deleteAccount, authUserId } = useApp();
   const navigate = useNavigate();
   // QA 12.0: "For all UIs put the ability to delete account which when
   // pressed will prompt you to make sure... Make it not that obvious or
@@ -123,6 +124,11 @@ export default function Settings() {
   const [notificationsAllowed, setNotificationsAllowed] = useState<boolean | null>(() =>
     pushSupported() ? permissionTriState(Notification.permission) : null
   );
+  // Kept apart from notificationsAllowed on purpose: permission granted with a
+  // failed subscription is a real state, and collapsing it into "Denied" would
+  // blame the user for something the browser or the server did.
+  const [pushError, setPushError] = useState<string | null>(null);
+  const [subscribing, setSubscribing] = useState(false);
   const [contactOpen, setContactOpen] = useState(false);
   const [languageOpen, setLanguageOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
@@ -153,25 +159,47 @@ export default function Settings() {
   };
 
   /**
-   * Asks the OS for permission to show notifications.
+   * Asks the OS for permission, then registers this browser to receive push.
    *
-   * THIS IS AS FAR AS IT GOES TODAY. Granting permission is necessary for push
-   * but not sufficient: a push also needs a PushManager subscription, and a
-   * subscription needs a VAPID key that does not exist yet. So this
-   * deliberately does NOT call `pushManager.subscribe()` — doing that with no
-   * key would fail, and doing it with a placeholder would register a
-   * subscription nothing could ever send to. Permission first; the
-   * subscription lands with the key.
+   * TWO STEPS, AND THEY FAIL DIFFERENTLY. Permission is the browser's answer
+   * about notifications; the subscription is a record in push_subscriptions
+   * that lets the server address this specific browser. Granting the first and
+   * failing the second leaves someone who has seen "Granted" and will never be
+   * rung — so the subscribe failure gets its own message rather than being
+   * folded into the permission state, which would either lie or show "Denied"
+   * for something the user did allow.
+   *
+   * SUBSCRIBE ONLY AFTER "granted". Calling subscribe() with userVisibleOnly
+   * on an undecided permission raises the prompt itself, from a service layer,
+   * with nothing on screen explaining it.
    */
   const requestNotifications = async () => {
     if (!pushAvailable) return;
+
+    let permission: NotificationPermission;
     try {
-      setNotificationsAllowed(permissionTriState(await Notification.requestPermission()));
+      permission = await Notification.requestPermission();
     } catch {
       // Some engines reject rather than resolve when called outside a user
       // gesture or in a context where notifications are disallowed outright.
       setNotificationsAllowed(false);
+      return;
     }
+
+    setNotificationsAllowed(permissionTriState(permission));
+    setPushError(null);
+    if (permission !== "granted") return;
+
+    if (!authUserId) {
+      setPushError("Sign in to receive notifications on this device.");
+      return;
+    }
+
+    setSubscribing(true);
+    const result = await subscribeToPush(authUserId);
+    setSubscribing(false);
+    // "ok" is the only outcome that leaves the row reading plain "Granted".
+    if (result.status !== "ok") setPushError(result.message);
   };
 
   // QA 11.0: "Besides microphone and camera, the app should also ask for
@@ -306,6 +334,12 @@ export default function Settings() {
                       // user can take, not a dead end.
                       t("Add Centium to your Home Screen to receive call notifications when the app is closed")
                     : t("Not available in this browser")
+                  : subscribing
+                  ? t("Registering this device…")
+                  : pushError
+                  ? // The permission answer is still shown by the button; this
+                    // line carries why nothing will arrive despite it.
+                    pushError
                   : t(
                       notificationsAllowed === true
                         ? "Granted"
@@ -321,7 +355,8 @@ export default function Settings() {
           {pushAvailable && (
             <button
               onClick={() => void requestNotifications()}
-              className="tap text-xs font-semibold text-primary bg-primary-pale rounded-full px-3 py-1.5"
+              disabled={subscribing}
+              className="tap text-xs font-semibold text-primary bg-primary-pale rounded-full px-3 py-1.5 disabled:opacity-60"
             >
               {t(notificationsAllowed === true ? "Re-check" : "Allow")}
             </button>
