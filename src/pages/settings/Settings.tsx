@@ -333,7 +333,18 @@ export default function Settings() {
       />
       <NotificationsSheet open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
       <AccessibilitySheet open={accessibilityOpen} onClose={() => setAccessibilityOpen(false)} />
-      <PrivacySheet open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
+      {/* Closing Privacy before opening Delete rather than stacking them: two
+          bottom sheets open at once would leave the user dismissing one to
+          find another underneath. Settings owns both flags, which is why the
+          handoff lives here and not inside either sheet. */}
+      <PrivacySheet
+        open={privacyOpen}
+        onClose={() => setPrivacyOpen(false)}
+        onDeleteAccount={() => {
+          setPrivacyOpen(false);
+          setDeleteOpen(true);
+        }}
+      />
       <TermsOfServiceSheet open={tosOpen} onClose={() => setTosOpen(false)} />
 
       <BottomSheet open={languageOpen} onClose={() => setLanguageOpen(false)} title={t("Language")}>

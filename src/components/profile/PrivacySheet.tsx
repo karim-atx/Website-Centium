@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Toggle } from "../ui/Toggle";
-import { ShieldCheck, Download, Trash2, Users, ChevronRight } from "lucide-react";
+import { ShieldCheck, Trash2, Users, ChevronRight } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { fetchHideReadReceipts, setHideReadReceipts } from "../../services/preferences";
 
@@ -22,10 +22,26 @@ import { fetchHideReadReceipts, setHideReadReceipts } from "../../services/prefe
 // stronger and more specific promise than "no server", so the copy names it
 // rather than softening to something vague.
 //
-// DOWNLOAD / DELETE MY DATA ARE STILL NOT WIRED — neither button carries an
-// onClick, so they act on nothing at all rather than "on local data only" as
-// this note used to say. Real account deletion is in Settings, not here.
-export const PrivacySheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+// THE TWO DEAD BUTTONS AT THE BOTTOM ARE RESOLVED, in opposite directions.
+// Neither carried an onClick, so both acted on nothing at all — not "on local
+// data only" as an earlier version of this note claimed. "Delete my data" now
+// opens the real deletion flow and is named for what that flow does; "Download
+// my data" is gone, because no export exists for it to open. See the notes at
+// each site.
+/**
+ * `onDeleteAccount` is handed down rather than resolved here, because the real
+ * deletion sheet is this one's SIBLING in Settings — the parent owns both
+ * `privacyOpen` and `deleteOpen`, so closing one and opening the other is its
+ * decision to make. The alternative shapes are worse: navigating away would
+ * leave Settings for a sheet that is already on the page, and importing the
+ * delete sheet here would duplicate a flow that has a cancel path, an error
+ * path and an app-wide banner behind it.
+ */
+export const PrivacySheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  onDeleteAccount: () => void;
+}> = ({ open, onClose, onDeleteAccount }) => {
   /**
    * THE ONLY TOGGLE ON THIS SHEET, now that the other three are gone. It was
    * kept visually apart from them while they existed, because a row that
@@ -147,14 +163,37 @@ export const PrivacySheet: React.FC<{ open: boolean; onClose: () => void }> = ({
           </div>
         )}
 
-        <div className="border-t border-charcoal/[0.06] pt-4 space-y-2">
-          <button className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left">
-            <Download size={17} className="text-primary" />
-            <span className="text-sm font-semibold text-charcoal">Download my data</span>
-          </button>
-          <button className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left">
-            <Trash2 size={17} className="text-[#C0392B]" />
-            <span className="text-sm font-semibold text-charcoal">Delete my data</span>
+        {/* "Download my data" USED TO SIT ABOVE THIS and is gone rather than
+            deferred. It had no onClick and nothing to acquire one: there is no
+            export anywhere — no portability RPC, no server-side assembler.
+            BusinessAnalyticsTab's CSV is a business owner's own listing stats
+            and the Share sheets render one record to an image; neither is a
+            user-data export. A real one would have to walk the same 55 tables
+            deletion does and answer format, attachment and delivery questions
+            that have no answer yet, so it needs its own piece of work rather
+            than a button kept warm in the meantime.
+
+            THIS ONE SAYS "ACCOUNT" NOW, BECAUSE THAT IS WHAT IT DOES. It read
+            "Delete my data", which names something the system cannot do —
+            there is no wipe-but-keep-the-login path, and deletion is
+            all-or-nothing at auth.users. Pointing the old label at the real
+            flow would have replaced a dead button with a misleading one. The
+            grace period is named for the same reason: the destination is
+            reversible for 30 days, and a row implying instant erasure would
+            misdescribe it in the other direction. */}
+        <div className="border-t border-charcoal/[0.06] pt-4">
+          <button
+            onClick={onDeleteAccount}
+            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
+          >
+            <Trash2 size={17} className="text-[#C0392B] shrink-0" />
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-semibold text-charcoal">Delete my account</span>
+              <span className="block text-[11px] text-charcoal-faint">
+                Schedules deletion after a 30-day grace period
+              </span>
+            </span>
+            <ChevronRight size={17} className="text-charcoal-faint shrink-0" />
           </button>
         </div>
       </div>
