@@ -1471,6 +1471,103 @@ for nothing. If an orphan is ever observed, re-run the query first — as
 `postgres` or `service_role`, or the answer will be narrower than it looks — and
 size the real problem before building anything.
 
+### Video and voice calling: nothing exists, and the hard part is signaling
+
+**Investigated on 2026-09-13 and written down so the starting point does not
+have to be re-derived. This records where the ground is, not a decision to
+build.**
+
+**There is no code — not a stub, not a flag, not a disabled button.**
+`package.json` carries nine runtime dependencies and none of them is a calling
+SDK: no Twilio, Agora, Daily, LiveKit, Jitsi, Vonage, 100ms or anything else. A
+repo-wide grep for `RTCPeerConnection`, `webrtc`, `stun:` and TURN returns
+nothing at all. `getUserMedia` does appear, in four places, none of them
+transport — `useVoiceRecorder` and `AIVoiceLogger` capture audio to a local
+blob, and Settings' two calls acquire a stream only to `stop()` every track
+immediately, which is how the mic and camera permission rows raise a prompt.
+`Database-Atraxia` is as empty: across 49 migrations there is no call, session,
+participant, signaling or recording table.
+
+**The prototype was deleted rather than left as scaffolding, and the
+distinction is worth stating.** `ProfessionalDetail` once carried voice and
+video call modals captioned *"prototype — no real call"*, alongside the mock
+chat that replied *"Got it — thanks for the update! 👍"* a second after
+anything was sent. All of it went in `ac51e91`, when real messaging replaced
+the mock. `setCallMode` is gone; the phrase survives in this file only because
+it disambiguates the QA line *"attach files/pictures as well as video/voice
+call"* — that is **calling**, not attaching a video file, which is what settled
+the attachment-picker question in `991fc5e`. So there is no half-built surface
+to find and finish.
+
+**One question is already answered: who may call whom.**
+`thread_allows_attachments()` (`20260910200928_attachment_relationship_guard`)
+is `security definer` and `stable`, and returns true when both participants are
+present and either an active `professional_clients` row or a
+`business_employees` → `business_profiles` employment joins them, in either
+direction. That is exactly the predicate a call entitlement needs, it already
+gates attachments, and `active_professional_clients` is the read-side
+equivalent the client already queries. No new schema is needed to decide
+permission.
+
+**And the trap under it: a shared thread is not a relationship.**
+`start_message_thread` checks four things — caller authenticated, recipient
+supplied, not yourself, that profile exists — and **no relationship of any
+kind**. Any authenticated account can open a thread with any other profile, and
+the call is idempotent per pair. So thread membership answers *may these two
+exchange text* and nothing stronger; gating a call on it would let any account
+ring any other account in the system. This is the same two-tier model recorded
+above, where calling is named as a future member of the active-relationship
+tier.
+
+**The real gap is signaling, and the app's proven real-time mechanism is the
+wrong shape for it.** Everything live here is `postgres_changes` —
+`useThreadRealtime`, `usePinRealtime`, `useUnreadRealtime` — which is driven by
+database writes. Every SDP offer, answer and ICE candidate would have to become
+a row before it could become a message on the wire, and this app deliberately
+*discards the payload and re-reads through `messages_visible`* on every event,
+adding a round trip by design. Signaling wants the opposite: ephemeral,
+low-latency, fan-out-to-one, never persisted. Supabase Realtime does offer
+`broadcast` and `presence` channels for precisely that, and **neither is used
+anywhere in this codebase today**. So the socket and the client library are
+already here and already authenticated, but the channel type would be new, with
+an authorization model that is not the RLS story `postgres_changes` has —
+new infrastructure, not an extension of something proven.
+
+Worth carrying across from messaging: a subscription that reports `SUBSCRIBED`
+and delivers nothing is indistinguishable from silence, which is why `usePoll`
+still runs as a slow safety re-read. A call has no equivalent mitigation — there
+is no polling your way out of a failed negotiation.
+
+**What else does not exist.** *No call-record schema*: a call is an event with a
+lifecycle — start, end, duration, outcome (missed, declined, completed) — and
+needs its own table whatever the transport turns out to be. *No consent or
+recording model*: whether a call may be recorded, by whom, with whose
+agreement, where the file lives and how long it survives are all open, though
+`client_access_grants` is a reusable precedent if one is needed — per-category,
+client-owned, and explicitly *"not a UI preference"* (note that adding an
+`access_category` value costs two migrations, since Postgres refuses to use a
+new enum value in the transaction that added it). *No transport decision*:
+third-party provider versus self-hosted WebRTC with STUN/TURN is a vendor,
+cost and data-processing question before it is an engineering one, and more so
+for a health app, where a provider would be handling a client talking to a
+clinician about their body.
+
+**Size calibration, against two things in this file rather than in the
+abstract.** Larger than `hide_read_receipts`, which was a single boolean and
+still needed a view change, a `thread_shows_read_receipts()` function, a
+decision about which direction of suppression is even correct, and a proof that
+upsert was refused under the column-scoped grant. Comparable in kind to
+"Download my data", which was scoped and **declined** partly because
+`signedUrlFor` clamps Storage links to 600 seconds so consent stays
+re-checkable per query — a recorded video consultation is a larger and more
+sensitive artifact than either, and collides with that rule harder.
+
+**Status: investigated, not scoped further.** What remains is a
+provider and vendor decision that needs business input — cost, contract, data
+processing — not more code archaeology. When it is picked up, the entitlement
+check is already written and the transport, signaling channel, call records,
+consent model and UI are not.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
