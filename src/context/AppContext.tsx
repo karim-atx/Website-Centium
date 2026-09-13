@@ -64,6 +64,7 @@ import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
 import { unsubscribeFromPush } from "../services/push";
+import { usePushSubscriptionSync } from "../hooks/usePushSubscriptionSync";
 import {
   cancelAccountDeletion as cancelAccountDeletionRemote,
   onPasswordRecovery,
@@ -829,6 +830,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, []);
 
   const authUserId = session?.user?.id ?? null;
+
+  // Re-registers this browser for push when a session begins, if — and only if
+  // — the browser already holds a permission grant. Never prompts.
+  //
+  // MOUNTED HERE RATHER THAN IN Layout, and the difference is not cosmetic.
+  // UnreadProvider lives in Layout because its work is continuous and belongs
+  // to the authenticated shell; Layout unmounts whenever someone visits a
+  // marketing route, so a once-per-session guard held there would reset on
+  // every trip to the landing page and re-fire on the way back. AppProvider
+  // wraps the router and never unmounts, so "once per sign-in" means exactly
+  // that. See src/hooks/usePushSubscriptionSync.ts.
+  usePushSubscriptionSync(authUserId);
 
   // A session ending must clear the local cache, however it ended.
   //
