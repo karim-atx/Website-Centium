@@ -6,10 +6,24 @@ import { useApp } from "../../context/AppContext";
 import { fetchHideReadReceipts, setHideReadReceipts } from "../../services/preferences";
 
 // V7 (QA 7.0): "take inspiration from Apple Health and Google Health for
-// the privacy button" — both frame health data as private-by-default,
-// stored on-device unless the user explicitly shares it, with clear
-// controls to export or delete it. This prototype has no backend, so
-// export/delete act on local data only.
+// the privacy button" — both frame health data as private-by-default, with
+// clear controls over who may see it.
+//
+// THE "STAYS ON THIS DEVICE" FRAMING IS GONE, BECAUSE IT STOPPED BEING TRUE.
+// It was written when this had no backend, and said so. health-metrics, food,
+// labs, imaging and medical-history all read and write Supabase now, so the
+// sentence had become a claim about data handling that was wrong in the
+// direction that understates what the app does — on a screen titled Privacy.
+//
+// Private-by-default still holds; only the mechanism changed. It is
+// client_access_grants: a row per category per professional, granting nothing
+// until the client turns something on, revocable afterwards. That is a
+// stronger and more specific promise than "no server", so the copy names it
+// rather than softening to something vague.
+//
+// DOWNLOAD / DELETE MY DATA ARE STILL NOT WIRED — neither button carries an
+// onClick, so they act on nothing at all rather than "on local data only" as
+// this note used to say. Real account deletion is in Settings, not here.
 export const PrivacySheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const [shareWithProfessionals, setShareWithProfessionals] = useState(true);
   const [analytics, setAnalytics] = useState(true);
@@ -78,9 +92,10 @@ export const PrivacySheet: React.FC<{ open: boolean; onClose: () => void }> = ({
         <div className="flex items-start gap-3 bg-primary-pale rounded-2xl p-4">
           <ShieldCheck size={18} className="text-primary-dark shrink-0 mt-0.5" />
           <p className="text-xs text-primary-dark leading-relaxed">
-            Your health data stays on this device by default. It's only shared with a professional or
-            business when you explicitly connect with them — you control that per connection in
-            Professionals and Explore.
+            Your health data is stored securely on Centium's servers, and connecting with a
+            professional doesn't give them access to it. You choose what each one can see, category
+            by category, and can change or withdraw it any time — in Profile or the Professionals
+            tab.
           </p>
         </div>
 
