@@ -1474,17 +1474,20 @@ size the real problem before building anything.
 ### Video and voice calling: nothing exists, and the hard part is signaling
 
 **Investigated on 2026-09-13 and written down so the starting point does not
-have to be re-derived. This records where the ground is, not a decision to
-build.**
+have to be re-derived. A vendor has since been chosen — LiveKit, recorded at
+the bottom — but not a line has been written: this entry is the ground plus one
+procurement decision, and neither is a decision to build.**
 
 **There is no code — not a stub, not a flag, not a disabled button.**
 `package.json` carries nine runtime dependencies and none of them is a calling
-SDK: no Twilio, Agora, Daily, LiveKit, Jitsi, Vonage, 100ms or anything else. A
-repo-wide grep for `RTCPeerConnection`, `webrtc`, `stun:` and TURN returns
-nothing at all. `getUserMedia` does appear, in four places, none of them
-transport — `useVoiceRecorder` and `AIVoiceLogger` capture audio to a local
-blob, and Settings' two calls acquire a stream only to `stop()` every track
-immediately, which is how the mic and camera permission rows raise a prompt.
+SDK: no Twilio, Agora, Daily, LiveKit, Jitsi, Vonage, 100ms or anything else —
+still true after the vendor decision below, which added no dependency here and
+no package to install. A repo-wide grep for `RTCPeerConnection`, `webrtc`,
+`stun:` and TURN returns nothing at all. `getUserMedia` does appear, in four
+places, none of them transport — `useVoiceRecorder` and `AIVoiceLogger`
+capture audio to a local blob, and Settings' two calls acquire a stream only
+to `stop()` every track immediately, which is how the mic and camera
+permission rows raise a prompt.
 `Database-Atraxia` is as empty: across 49 migrations there is no call, session,
 participant, signaling or recording table.
 
@@ -1546,11 +1549,11 @@ agreement, where the file lives and how long it survives are all open, though
 `client_access_grants` is a reusable precedent if one is needed — per-category,
 client-owned, and explicitly *"not a UI preference"* (note that adding an
 `access_category` value costs two migrations, since Postgres refuses to use a
-new enum value in the transaction that added it). *No transport decision*:
-third-party provider versus self-hosted WebRTC with STUN/TURN is a vendor,
-cost and data-processing question before it is an engineering one, and more so
-for a health app, where a provider would be handling a client talking to a
-clinician about their body.
+new enum value in the transaction that added it). *Transport was the fourth
+gap and is the one that has since closed* — see the vendor decision below —
+but picking a provider settles none of the rest. The call table, the consent
+model and the signaling integration are all still unwritten, and a vendor does
+not write them.
 
 **Size calibration, against two things in this file rather than in the
 abstract.** Larger than `hide_read_receipts`, which was a single boolean and
@@ -1562,11 +1565,74 @@ upsert was refused under the column-scoped grant. Comparable in kind to
 re-checkable per query — a recorded video consultation is a larger and more
 sensitive artifact than either, and collides with that rule harder.
 
-**Status: investigated, not scoped further.** What remains is a
-provider and vendor decision that needs business input — cost, contract, data
-processing — not more code archaeology. When it is picked up, the entitlement
-check is already written and the transport, signaling channel, call records,
-consent model and UI are not.
+**The vendor decision, taken 2026-09-14: LiveKit.** Chosen over Daily.co,
+Agora, the Vonage Video API, Twilio Video, and self-hosting on Mediasoup, Janus
+or Jitsi. Three reasons, written down so the comparison does not get re-run
+from scratch:
+
+*Published terms instead of a sales call.* LiveKit offers HIPAA coverage and a
+BAA on a fixed, self-serve tier — $500/month on Scale — where Agora and Vonage
+route the same question through a negotiation with no public pricing. For a
+feature whose compliance story eventually rests on a BAA, a term you can read
+before committing is worth more than one you have to ask for — and it is what
+makes the upgrade described below something the founders can trigger on their
+own schedule rather than a negotiation they have to open first.
+
+*A steadier product history.* Twilio announced Programmable Video for sunset,
+then pushed the end-of-life date out by two years, then reversed the
+deprecation entirely. Whatever that says about the product, it is a volatility
+signal, and this is the wrong feature to absorb one — a clinical conversation
+is not where anyone wants to find out the transport has been rescheduled for
+removal.
+
+*An exit that stays open.* LiveKit is open-source at the core, so starting on
+LiveKit Cloud does not foreclose self-hosting later. Self-hosting is understood
+to pay off only above roughly 1.5M minutes a month, far beyond this app's
+current or near-term scale — so the managed tier is the right starting point,
+and the option to leave is kept rather than spent.
+
+Those three are procurement facts as of the decision date, not measurements
+taken from this repo like everything above them. Vendor pricing and tier
+contents move. Re-read the terms before anyone signs rather than trusting this
+paragraph.
+
+**THE ROLLOUT, AND IT IS AN ACCEPTED TRADEOFF RATHER THAN A PLACEHOLDER.** v1
+launches on LiveKit Cloud's free Build tier — 5,000 WebRTC minutes a month, no
+credit card — and that tier serves **both development and real users**. The
+Build tier carries no BAA, and a call between a client and a professional may
+involve health information being discussed. So this is a real compliance
+tradeoff, taken knowingly at launch rather than missed. It is written plainly
+here for one reason: so that nobody later reads it as an oversight and quietly
+"corrects" it without knowing it was chosen, and so that whoever revisits it is
+revisiting a decision rather than discovering a mistake.
+
+**The mitigation is hard duration caps, on the pattern of Zoom's free tier:**
+one hour maximum for a video call, two hours maximum for a voice-only call.
+Enforced client-side at minimum. A server-side backstop is preferable and may
+be available — a room TTL or a token expiry are the obvious shapes — but
+whether LiveKit offers one that behaves sensibly mid-call is pending the
+technical investigation, so a client-side cap is what v1 can actually promise
+today.
+
+Be exact about what a client-side cap is, because the distinction matters when
+the backstop question is finally settled: it is a product behavior, not an
+enforcement boundary. It ends calls for ordinary users on ordinary clients,
+which is what the mitigation is for. It does not bind anyone who controls their
+own client. That is the argument for settling the server-side backstop during
+the build rather than after it.
+
+**The upgrade to Scale ($500/month, BAA included) is a later founder-level
+decision, not a precondition for launch.** The trigger is real subscriber and
+usage volume rather than a date. The free tier's 5,000 minutes a month is the
+mechanical form that trigger takes — sustained real usage meets that ceiling
+before it meets anything else — so the ceiling is worth watching as the signal,
+not just as a quota.
+
+**Status: vendor decided, build not scoped.** Settled: the provider, and the
+order of the rollout. Not settled: the schema for call records, the LiveKit
+signaling integration, the consent and recording model, and every piece of UI.
+The entitlement check is still the only part already written, which is where
+this entry started — one decision further along, and no closer to shipping.
 
 ## Version history
 
