@@ -1325,6 +1325,68 @@ colour lands on is its own measurement, and a token whose name describes how it
 looks rather than where it goes will eventually be wrong somewhere nobody
 checked.
 
+### "Download my data" was considered and declined, not deferred
+
+**A decision, not a gap.** This entry exists so the feature is not quietly
+re-proposed as an oversight. A GDPR-style "export everything I have" was scoped
+in full and turned down on security grounds; if it is revisited, the same risk
+has to be argued again rather than skipped.
+
+**What it would have to cover — three different numbers, and the gap between
+them is the point.** Measured against the live schema:
+
+| figure | count |
+| --- | --- |
+| FK constraints referencing `profiles` | 65 |
+| distinct tables carrying those constraints | 55 |
+| **tables holding user-attributable data** | **67** |
+
+The 67 is 55 direct + `profiles` itself + 10 second-order tables + 1
+third-order. The second-order ten have a foreign key to one of the 55 rather
+than to `profiles`: `journal_entries`, `logged_exercises`,
+`routine_exercises`, `custom_meal_items`, `habit_completions`, `store_items`,
+`business_offerings`, `business_discounts`, `membership_plans`,
+`workout_template_exercises`. The third-order one is `logged_sets`, three hops
+out via `logged_exercises` → `workout_sessions`.
+
+**THE TWELVE-TABLE GAP IS THE TRAP.** "Tables with a `profiles` foreign key"
+is the obvious way to scope this, returns 55, and silently omits the rest.
+Two of the omissions are the ones that matter: `journal_entries` is the entire
+contents of a user's journal, and `logged_sets` is every set of every workout
+they have ever recorded. An export scoped from the 55-table view would be
+legally incomplete and would look complete — nothing errors, nothing is empty,
+the missing rows simply never appear.
+
+Much of the covered data is special-category besides: `blood_markers`,
+`imaging_records`, `medications`, `comorbidities`, `surgeries`, plus two
+private Storage buckets, `lab-reports` and `medical-imaging`.
+`client_health_notes` is a further question of its own rather than a line item:
+those are a professional's notes *about* a client, and whether they belong in
+that client's export is unresolved — the web client does not even read the
+table yet, keeping notes in localStorage.
+
+**The finding that decided it.** An export concentrates into one artifact
+everything a compromised account could otherwise reach only query by query.
+That is a materially worse risk profile than the access pattern the app has
+today, and it is a new one: not "the same data, more conveniently", but a
+single file whose loss is total rather than partial.
+
+**And it would have to break a rule this codebase already made deliberately.**
+`signedUrlFor` clamps Storage links to 600 seconds, defaulting to 120, and says
+why: table consent is re-checked on every query so revocation is immediate, but
+a signed URL is authorised once at signing and keeps working until it expires —
+so on `lab-reports` and `medical-imaging` *the TTL is the revocation delay*. A
+bulk export either hands out longer-lived links, or copies the files into an
+archive and leaves that archive outside the consent system entirely. Both
+defeat the rule rather than satisfy it.
+
+**Status.** Not built, and not planned. The PrivacySheet button that used to
+promise it was removed in 0d71c18 — but that commit removed a *non-functional
+placeholder*, which is a smaller statement than this one. The feature behind it
+is what was declined. A future revisit would need a different shape than
+"assemble it all and send it", and the burden is on that shape to answer the
+concentration risk and the signed-URL rule before anything is built.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
