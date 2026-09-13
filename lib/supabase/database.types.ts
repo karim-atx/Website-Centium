@@ -17,6 +17,7 @@ export type Database = {
       app_preferences: {
         Row: {
           created_at: string
+          hide_read_receipts: boolean
           id: string
           language: Database["public"]["Enums"]["app_language"]
           notification_meal_reminders: boolean
@@ -30,6 +31,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          hide_read_receipts?: boolean
           id?: string
           language?: Database["public"]["Enums"]["app_language"]
           notification_meal_reminders?: boolean
@@ -43,6 +45,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          hide_read_receipts?: boolean
           id?: string
           language?: Database["public"]["Enums"]["app_language"]
           notification_meal_reminders?: boolean
