@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Toggle } from "../ui/Toggle";
-import { ShieldCheck, Download, Trash2 } from "lucide-react";
+import { ShieldCheck, Download, Trash2, Users, ChevronRight } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { fetchHideReadReceipts, setHideReadReceipts } from "../../services/preferences";
 
@@ -25,23 +26,20 @@ import { fetchHideReadReceipts, setHideReadReceipts } from "../../services/prefe
 // onClick, so they act on nothing at all rather than "on local data only" as
 // this note used to say. Real account deletion is in Settings, not here.
 export const PrivacySheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const [shareWithProfessionals, setShareWithProfessionals] = useState(true);
-  const [analytics, setAnalytics] = useState(true);
-  const [personalization, setPersonalization] = useState(true);
-
   /**
-   * READ RECEIPTS ARE THE ONE REAL CONTROL ON THIS SHEET. The three toggles
-   * above hold `useState` and nothing else — they do not even reach
-   * localStorage — so this is deliberately kept visually apart rather than
-   * sitting in that group, where a row that genuinely writes to the server
-   * would be indistinguishable from three that write nowhere.
+   * THE ONLY TOGGLE ON THIS SHEET, now that the other three are gone. It was
+   * kept visually apart from them while they existed, because a row that
+   * genuinely writes to the server should not sit indistinguishably beside
+   * three that wrote nowhere. That separation is no longer load-bearing, but
+   * the ordering it produced is kept: navigation first, then the switch.
    *
    * `null` UNTIL THE SERVER ANSWERS, so the switch is not rendered in a
    * position it might have to jump out of. Defaulting it to false on the way
    * in would show "receipts on" to someone who had turned them off, for as
    * long as the read takes.
    */
-  const { authUserId } = useApp();
+  const { authUserId, user } = useApp();
+  const navigate = useNavigate();
   const [hideReceipts, setHideReceipts] = useState<boolean | null>(null);
   const [savingReceipts, setSavingReceipts] = useState(false);
   const [receiptsError, setReceiptsError] = useState<string | null>(null);
@@ -99,29 +97,31 @@ export const PrivacySheet: React.FC<{ open: boolean; onClose: () => void }> = ({
           </p>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-charcoal">Share with connected professionals</p>
-              <p className="text-[11px] text-charcoal-faint">Controlled per-professional in their detail page</p>
-            </div>
-            <Toggle checked={shareWithProfessionals} onChange={setShareWithProfessionals} label="Share with professionals" />
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-charcoal">Analytics & diagnostics</p>
-              <p className="text-[11px] text-charcoal-faint">Helps improve Centium — never sold to third parties</p>
-            </div>
-            <Toggle checked={analytics} onChange={setAnalytics} label="Analytics" />
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <p className="text-sm font-semibold text-charcoal">Personalized recommendations</p>
-              <p className="text-[11px] text-charcoal-faint">Uses your logs to tailor goals and insights</p>
-            </div>
-            <Toggle checked={personalization} onChange={setPersonalization} label="Personalization" />
-          </div>
-        </div>
+        {/* CUSTOMER ONLY, matching how Settings and Profile gate their other
+            client-side sections. A professional has no professionals of their
+            own to share with, and the Professionals tab renders their client
+            roster instead of the directory — so for them this row would both
+            read oddly and navigate somewhere unrelated. */}
+        {user.accountType === "customer" && (
+          <button
+            onClick={() => {
+              onClose();
+              navigate("/app/professionals");
+            }}
+            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
+          >
+            <Users size={17} className="text-primary shrink-0" />
+            <span className="flex-1 min-w-0">
+              <span className="block text-sm font-semibold text-charcoal">
+                Sharing with professionals
+              </span>
+              <span className="block text-[11px] text-charcoal-faint">
+                Manage what each professional can see
+              </span>
+            </span>
+            <ChevronRight size={17} className="text-charcoal-faint shrink-0" />
+          </button>
+        )}
 
         {/* Only rendered once the server has answered, and only for a signed-in
             account — there is no local fallback for this one, by design. */}
