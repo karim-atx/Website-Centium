@@ -547,6 +547,18 @@ export async function sendImageAttachment(
   if (!sent.ok) {
     // Named plainly so it is greppable if these ever need sweeping. See the
     // README follow-up; there is no cleanup call that would work here.
+    //
+    // IT UNDERCOUNTS, AND MUST NOT BE READ AS A TALLY. This fires only when the
+    // insert RETURNS a failure. The likelier way an object is orphaned leaves no
+    // line at all: a dropped connection, a closed tab, an aborted request — the
+    // await never resolves, so nothing below it runs. Counting these logs
+    // therefore measures the rarest cause and misses the common one.
+    //
+    // The relationship race this was first written for is close to impossible
+    // now anyway: the Storage INSERT policy and the messages trigger both call
+    // thread_allows_attachments(), one function rather than two equivalent
+    // predicates, so passing at upload and failing at insert needs the
+    // relationship revoked inside that window. Transport is what is left.
     console.error(
       `[messaging] ORPHANED OBJECT message-attachments/${upload.path} — upload succeeded, message insert did not.`
     );
@@ -603,6 +615,8 @@ export async function sendVoiceNote(
     voice_note_seconds: Math.max(1, Math.round(seconds)),
   });
   if (!sent.ok) {
+    // Same undercount as the image path — see the note there. This line is not
+    // a count of orphans, only of the orphans that reported themselves.
     console.error(
       `[messaging] ORPHANED OBJECT message-attachments/${upload.path} — upload succeeded, message insert did not.`
     );
