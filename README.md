@@ -1387,6 +1387,90 @@ is what was declined. A future revisit would need a different shape than
 "assemble it all and send it", and the burden is on that shape to answer the
 concentration risk and the signed-URL rule before anything is built.
 
+### The message-attachment orphan sweeper was investigated and not built
+
+**Traced in full on 2026-09-13 and left unbuilt for want of a problem, not for
+want of a mechanism.** The tracked note called this "gated on Storage wiring";
+that gate is gone, and what the note described is no longer the risk that is
+actually live.
+
+**The upload order is forced, so the exposure is real.** `sendImageAttachment`
+and `sendVoiceNote` upload to Storage and then insert the row. It cannot be the
+other way round: the client's UPDATE grant on `messages` is `read_at` alone, so
+a row cannot be created first and pointed at the file afterwards.
+
+**But the original concern is structurally near-impossible.** It was written for
+a relationship race — the check passing at upload, then failing at insert. The
+Storage INSERT policy and the `messages` trigger both call
+`thread_allows_attachments()`. Not two equivalent predicates that could drift:
+one function, invoked at two doors. Passing one and failing the other requires
+the relationship to be revoked inside the window between two requests. **What is
+actually left is transport** — a dropped connection, a closed tab, an aborted
+request. Note the consequence: those leave no `ORPHANED OBJECT` log either,
+because the await never resolves, so that log undercounts (see the note at the
+call site).
+
+**No client-side cleanup is possible, by design.** `message-attachments` carries
+INSERT and SELECT policies only — no DELETE, no UPDATE — while every other
+bucket has all four. `deletePrivateFile` refuses the bucket at the *type* level
+for that reason: *"compensation logic that silently never works is worse than
+none."* The bucket mirrors `messages` itself, which is deliberately permanent.
+
+**The machinery it would need already exists and already runs.** `pg_cron`,
+`pg_net` and `supabase_vault` are installed; two jobs are scheduled
+(`atraxia-process-account-deletions`, `atraxia-purge-deleted-user-storage`); and
+`supabase/functions/purge-deleted-user-storage/` is a working 188-line
+precedent. A sweeper must take that shape rather than plain SQL, because
+Supabase's `protect_objects_delete` trigger rejects direct DELETE against
+`storage.objects` **for every role, `service_role` included** — it insists on
+the Storage API. And that existing purge already covers this bucket for deleted
+users, so the gap is only orphans belonging to *live* users.
+
+**Detection is cheap, which is the part worth keeping.** `attachment_url` stores
+exactly the object path (`<thread>/<user>/<uuid>.<ext>`), so
+`storage.objects.name` and `messages.attachment_url` are the same value space:
+
+```sql
+select o.name, o.created_at
+  from storage.objects o
+  left join public.messages m on m.attachment_url = o.name
+ where o.bucket_id = 'message-attachments'
+   and m.id is null
+   and o.created_at < now() - interval '1 hour'
+ order by o.created_at;
+```
+
+The age filter is not tuning — without it the query sweeps files whose insert is
+still in flight, turning a rare orphan into routine data loss on a
+permanent-by-design bucket.
+
+**Decision: not built, because there is nothing to sweep.** Run against staging
+on 2026-09-13, the query above returned **zero rows for the entire
+`message-attachments` bucket** — not a sample, not a scoped subset.
+
+**Why that count is unbounded, since the distinction is the whole point.** It
+ran in the SQL editor, where `current_user` and `session_user` are both
+`postgres` with no `role` set — checked rather than assumed, via
+`select current_user, session_user, current_setting('role', true)`. `postgres`
+is not a superuser on Supabase (`rolsuper` is false), but it carries
+**`rolbypassrls`**, and `storage.objects` has RLS enabled without `FORCE`. So
+the policies did not narrow the result: every object in the bucket was
+considered, including objects in threads no single account can see. A query run
+as `authenticated` would have looked almost identical and answered a quieter
+question, which is the trap worth naming here.
+
+Independently corroborated from the other direction the same day: an RLS-scoped
+read from a signed-in account, walking `<thread>/<user>/<file>` across both
+threads it participates in, found **2 objects, 2 referenced, 0 orphans**. That
+one *is* bounded by `message_attachments_select_participant` and proves less —
+it agrees with the unbounded count rather than substituting for it.
+
+So the population is zero, and nightly cron plus an edge function against a
+permanent bucket carries its own failure mode. That is not a trade worth making
+for nothing. If an orphan is ever observed, re-run the query first — as
+`postgres` or `service_role`, or the answer will be narrower than it looks — and
+size the real problem before building anything.
+
 ## Version history
 
 This repo carries forward a prototype originally built under the working
