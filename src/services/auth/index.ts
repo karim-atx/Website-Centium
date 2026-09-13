@@ -276,9 +276,27 @@ export interface AccountDeletionResult {
  *
  * Sets profiles.deletion_requested_at and nothing else — the actual deletion
  * is a `delete from auth.users` performed by a pg_cron sweep once the grace
- * period elapses, which then cascades through all 57 foreign keys pointing at
- * profiles. That work is entirely server-side: the client never needs, and
- * never has, the service-role key required to touch auth.users.
+ * period elapses. That work is entirely server-side: the client never needs,
+ * and never has, the service-role key required to touch auth.users.
+ *
+ * WHAT THE SWEEP REACHES, AND WHY IT IS NOT ALL ONE THING. 65 foreign keys
+ * across 55 tables point at profiles, and they do not behave alike:
+ *
+ *   56 are ON DELETE CASCADE — the row goes with the account.
+ *    9 are ON DELETE SET NULL — the ROW SURVIVES with the person removed
+ *      from it. messages.sender_id and message_threads.participant_one_id /
+ *      _two_id are the ones felt in the product: a conversation outlives a
+ *      departed participant, which is why the UI renders "Deleted account"
+ *      rather than losing half a thread. app_reviews.user_id and
+ *      bug_reports.user_id anonymise feedback the same way; the rest are
+ *      client_codes.redeemed_by, referrals.referee_id,
+ *      business_classes.professional_id and
+ *      routines.assigned_by_professional_id.
+ *
+ * This used to read "cascades through all 57 foreign keys", which was wrong
+ * on the count and, more importantly, flattened that split — it implied
+ * deletion removes everything, when the surviving-row half is the surprising
+ * part and the one other code depends on.
  *
  * Reversible until the sweep runs. Nothing is destroyed by calling this.
  */
