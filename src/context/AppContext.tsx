@@ -58,7 +58,6 @@ import {
   normalizeMacroSplit,
   rescaleEntry,
 } from "../services/nutrition";
-import { businessTiers } from "../data/businessTiers";
 import { translations, type Language } from "../i18n/translations";
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
@@ -551,8 +550,6 @@ interface AppState {
   // postings for hiring the professional, gated by a unique-ID affiliation
   // with a business (mirrors the client<->professional code system).
   businessDirectory: BusinessDirectoryEntry[];
-  affiliateWithBusiness: (id: string) => boolean;
-  removeAffiliation: () => void;
   updateMyBusinessTier: (tier: string) => void;
 
   professionalTier: string;
@@ -1553,42 +1550,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "businessDirectory",
     []
   );
-  const affiliateWithBusiness: AppState["affiliateWithBusiness"] = (id) => {
-    const trimmed = id.trim().toUpperCase();
-    const match = businessDirectory.find((b) => b.id.toUpperCase() === trimmed);
-    if (!match) return false;
-    // V7 (QA 7.0): a business's own tier caps how many professionals can
-    // affiliate with it — same client-count-cap concept as the professional
-    // tiers, just from the business's side.
-    const tier = businessTiers.find((t) => t.id === match.tier) ?? businessTiers[0];
-    const currentCount = businessEmployees[match.id]?.length ?? 0;
-    if (tier.maxEmployees !== null && currentCount >= tier.maxEmployees && !businessEmployees[match.id]?.some((e) => e.professionalId === "me")) {
-      return false;
-    }
-    setUser((prev) => ({ ...prev, affiliatedBusinessId: match.id, affiliatedBusinessName: match.businessName }));
-    setBusinessEmployees((prev) => {
-      const existing = prev[match.id] ?? [];
-      if (existing.some((e) => e.professionalId === "me")) return prev;
-      return {
-        ...prev,
-        [match.id]: [
-          ...existing,
-          { professionalId: "me", professionalName: user.firstName, professionalSubtype: user.professionalSubtype },
-        ],
-      };
-    });
-    return true;
-  };
-  const removeAffiliation: AppState["removeAffiliation"] = () => {
-    if (user.affiliatedBusinessId) {
-      const businessId = user.affiliatedBusinessId;
-      setBusinessEmployees((prev) => ({
-        ...prev,
-        [businessId]: (prev[businessId] ?? []).filter((e) => e.professionalId !== "me"),
-      }));
-    }
-    setUser((prev) => ({ ...prev, affiliatedBusinessId: undefined, affiliatedBusinessName: undefined }));
-  };
+  // affiliateWithBusiness() and removeAffiliation() USED TO LIVE HERE, and
+  // they were a fabricated capability rather than an unfinished one.
+  //
+  // affiliateWithBusiness matched a typed id against `businessDirectory` --
+  // itself localStorage -- and on a hit set a local flag plus a local
+  // employee row. Nothing reached the database. Meanwhile PublicListingSheet
+  // read the real `professional_profiles.affiliated_business_id`, so the two
+  // surfaces disagreed and the authoritative one was the one the professional
+  // could not see: affiliation is what gates `listed_publicly`.
+  //
+  // THE WRITE THEY IMPLIED CANNOT EXIST FROM THIS SIDE.
+  // business_employees_insert_business_owner requires auth.uid() to be the
+  // BUSINESS's profile_id, so a professional cannot add themselves to a team
+  // however the id is collected. Leaving is the half that is permitted --
+  // business_employees_delete_professional is auth.uid() = professional_id --
+  // and now lives in services/professional-profile as leaveAffiliation(),
+  // reading and writing the real rows.
   const updateMyBusinessTier: AppState["updateMyBusinessTier"] = (tier) => {
     if (!user.businessId) return;
     setBusinessDirectory((prev) => prev.map((b) => (b.id === user.businessId ? { ...b, tier } : b)));
@@ -2902,8 +2880,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       dismissedMockProfessionalIds,
       dismissMockProfessional,
       businessDirectory,
-      affiliateWithBusiness,
-      removeAffiliation,
       updateMyBusinessTier,
       professionalTier,
       setProfessionalTier,

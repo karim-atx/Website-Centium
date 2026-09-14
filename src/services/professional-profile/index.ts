@@ -211,6 +211,49 @@ export async function fetchMyAffiliation(businessId: string | null): Promise<Aff
   return { businessId: data.id, businessName: data.business_name };
 }
 
+export type LeaveAffiliationResult = { ok: true } | { ok: false; message: string };
+
+/**
+ * Leaves the business the caller is affiliated with.
+ *
+ * LEAVING IS POSSIBLE FROM HERE; JOINING IS NOT, and the asymmetry is the
+ * schema's, not a gap in this file. `business_employees_insert_business_owner`
+ * requires `auth.uid()` to be the BUSINESS's `profile_id`, so a professional
+ * cannot add themselves to a team — the business does it. But
+ * `business_employees_delete_professional` is `auth.uid() = professional_id`,
+ * so they can always walk away from one. Any UI offering a professional a way
+ * to "enter a business ID and join" is describing a write the database will
+ * never accept.
+ *
+ * WRITES THE SOURCE, NOT THE MIRROR. `professional_profiles.affiliated_
+ * business_id` is maintained by `business_employees_sync_affiliation` and is
+ * not in that table's update grant — `grant update (specialty, location)` is
+ * the whole of it. So the row is deleted from `business_employees` and the
+ * trigger clears the mirror. Trying to null the mirror directly earns a 42501.
+ *
+ * NO owner_id FILTER, because `business_employees_delete_professional` already
+ * scopes this to the caller's own rows — a filter would restate the policy
+ * rather than narrow it, the same reasoning fetchHideReadReceipts records.
+ *
+ * ZERO ROWS IS NOT AN ERROR. Leaving a business you are not in is the state
+ * the caller wanted either way, and a stale button is the likeliest cause.
+ */
+export async function leaveAffiliation(): Promise<LeaveAffiliationResult> {
+  try {
+    const { error } = await supabase.from("business_employees").delete().not("id", "is", null);
+    if (error) {
+      console.error("[professional-profile] Could not leave business:", error.code, error.message);
+      return { ok: false, message: describe(error) };
+    }
+    return { ok: true };
+  } catch (e) {
+    return {
+      ok: false,
+      message: e instanceof Error ? e.message : "Could not leave that business.",
+    };
+  }
+}
+
 export type SetListingResult =
   | { status: "ok"; listed: boolean }
   | { status: "affiliated" }
