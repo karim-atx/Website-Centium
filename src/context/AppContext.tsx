@@ -1462,11 +1462,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // merging would show an entry twice once it exists under both a local
         // and a remote id.
         //
-        // Two things are deliberately preserved. Entries that exist ONLY
-        // locally — AI Voice, custom meals and copy-yesterday still write
-        // nowhere else — would otherwise vanish on every hydration. And
-        // remote-sourced entries outside the fetched range are kept, because
-        // this read says nothing about them.
+        // Two things are deliberately preserved.
+        //
+        // Entries carrying a local id would otherwise vanish on every
+        // hydration. NOT because anything still creates them: AI Voice
+        // resolves each parsed item and calls logFoodEntry, logCustomMeal
+        // calls it per item, and copy-yesterday goes through copyDiaryEntry,
+        // so every path has written real rows with real uuids for a while
+        // now. The reason is the ones already out there — entries logged
+        // before those writes existed are still sitting in real browsers'
+        // localStorage, and this filter is what stops a hydration deleting
+        // someone's older diary from under them. It stays until those are
+        // gone; see the isRemoteEntryId follow-up in the README.
+        //
+        // And remote-sourced entries outside the fetched range are kept,
+        // because this read says nothing about them.
         const kept = prev.filter((e) => !isRemoteEntryId(e.id) || !inRange(e.date));
         return [...kept, ...result.entries];
       });
