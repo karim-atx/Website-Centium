@@ -203,7 +203,10 @@ export default function Health() {
               {metricValues.weight} <span className="text-[13px] font-semibold text-charcoal-tertiary tracking-normal">kg</span>
             </p>
             <span className="mt-2 inline-flex items-center gap-0.5 text-[11px] font-semibold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5">
-              <ArrowDown size={10} /> 0.6 kg this week
+              {/* The same field MetricDetailSheet reads, so this card and the
+                  sheet it opens cannot disagree about which way the week went. */}
+              {weightMeta.trend < 0 ? <ArrowDown size={10} /> : <ArrowUp size={10} />}{" "}
+              {Math.abs(weightMeta.trend)} kg this week
             </span>
           </Card>
         )}

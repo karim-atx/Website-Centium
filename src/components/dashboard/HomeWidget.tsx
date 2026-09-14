@@ -145,7 +145,12 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
               {metricValues.weight} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">kg</span>
             </p>
             <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5 mb-2">
-              <ArrowDown size={10} /> 0.6 kg this week
+              {/* READ, NOT WRITTEN DOWN. This said "0.6 kg" as a literal, which
+                  matched healthMetrics only by coincidence and would have gone on
+                  asserting a loss through any change to the data -- including
+                  while weeklyTrendPct on the next line said the opposite. */}
+              {weightMeta.trend < 0 ? <ArrowDown size={10} /> : <ArrowUp size={10} />}{" "}
+              {Math.abs(weightMeta.trend)} kg this week
             </span>
             <p className="text-[11px] text-charcoal-faint">Weekly trend: {weeklyTrendPct}%</p>
           </div>
