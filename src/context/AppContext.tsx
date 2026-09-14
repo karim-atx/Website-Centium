@@ -2719,18 +2719,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     await signOutRemote();
   };
 
-  // QA 12.0: "put the ability to delete account" — this prototype has no
-  // real backend account to delete, so the closest honest equivalent is
-  // wiping every bit of locally-persisted state, same as signing out fresh.
+  // QA 12.0: "put the ability to delete account". This schedules a real
+  // server-side deletion; nothing about it is local-only.
   //
-  // TODO: now that accounts are real, this is misleading — it is a local
-  // wipe wearing a "Delete account" label. It leaves the auth.users entry,
-  // the profiles row, and every other row owned by that user fully intact,
-  // so a user who taps it believing their data is gone is being misinformed
-  // (a GDPR/CCPA erasure problem, not just a UX one). Needs a real deletion
-  // path — an RPC or edge function running the cascade server-side, since
-  // auth.users cannot be deleted with an anon key — before this ships to
-  // anyone with a real account.
   // Previously this cleared localStorage, reset the in-memory user, and told
   // the user their account was permanently deleted. It made no network call at
   // all -- not even a sign-out -- so the account, and every row of health data
