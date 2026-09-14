@@ -1091,18 +1091,29 @@ buys most of the safety for a fraction of the churn.
 
 ### Messaging has two tiers, and the tier is a property of the pair
 
-**Nothing gates anything yet, and that is the point of writing this down.** The
-model: a **pre-hire** thread — two people with no active `professional_clients`
-row between them — is text-only and deliberately basic, because its whole
-purpose is deciding whether to hire. An **active-relationship** thread earns the
-full set as those features get built: attachments, voice notes, delivery ticks,
-eventually calling.
+**Both tiers are real now, and the gate is live.** The model: a **pre-hire**
+thread — two people with no active `professional_clients` row between them — is
+text-only and deliberately basic, because its whole purpose is deciding whether
+to hire. An **active-relationship** thread earns the full set.
 
-None of those exist today. `ThreadView` has no attachment, voice or call
-affordance, and `read_at` is granted and entirely unused. So there is currently
-nothing to gate, and building a gate now would mean a query nothing consumes
-and a prop nothing reads. **This entry is a constraint on the attachments,
-voice-note and ticks tasks, not a task of its own.**
+This entry opened saying "nothing gates anything yet" and that `ThreadView` had
+no attachment, voice or call affordance with `read_at` granted and unused. Every
+clause of that is now false. Attachments and voice notes are gated server-side
+by `thread_allows_attachments()` — one function called at two doors, the Storage
+INSERT policy and the `messages` trigger — and mirrored in the client as
+`canAttach`. Calls are gated by `thread_allows_calls()`, which delegates the
+relationship rule to that same function rather than restating it and adds the
+one condition it deliberately omits: the caller must be a participant. `read_at`
+drives delivery ticks and the unread badge.
+
+**The client-side gate is not the enforcement, and both mirrors say so.**
+`canAttach` and `canCall` are asked once when a thread opens and deliberately
+not re-asked, so a relationship ending mid-conversation leaves a stale button
+until the thread is reopened. That is harmless because the server refuses
+independently — the Storage policy, the trigger, and `mint-call-token`'s own
+re-check of `thread_allows_calls`. A stale `true` costs a refused action, never
+an unauthorised one; a stale `false` costs a hidden button. Re-checking on every
+poll would spend a round trip to tidy a cosmetic edge nobody is standing on.
 
 **How the tier is determined, decided and verified rather than assumed.** Read
 time, from `active_professional_clients`. That view already exists, is
@@ -1471,168 +1482,101 @@ for nothing. If an orphan is ever observed, re-run the query first — as
 `postgres` or `service_role`, or the answer will be narrower than it looks — and
 size the real problem before building anything.
 
-### Video and voice calling: nothing exists, and the hard part is signaling
+### Video and voice calling is built, and what is left is call history
 
-**Investigated on 2026-09-13 and written down so the starting point does not
-have to be re-derived. A vendor has since been chosen — LiveKit, recorded at
-the bottom — but not a line has been written: this entry is the ground plus one
-procurement decision, and neither is a decision to build.**
+**Built on 2026-09-14, across both repos.** This entry opened as an
+investigation that concluded "nothing exists — not a stub, not a flag, not a
+disabled button." That is no longer true of anything below it, and the entry is
+rewritten as a record of what shipped rather than left contradicting the code.
 
-**There is no code — not a stub, not a flag, not a disabled button.**
-`package.json` carries nine runtime dependencies and none of them is a calling
-SDK: no Twilio, Agora, Daily, LiveKit, Jitsi, Vonage, 100ms or anything else —
-still true after the vendor decision below, which added no dependency here and
-no package to install. A repo-wide grep for `RTCPeerConnection`, `webrtc`,
-`stun:` and TURN returns nothing at all. `getUserMedia` does appear, in four
-places, none of them transport — `useVoiceRecorder` and `AIVoiceLogger`
-capture audio to a local blob, and Settings' two calls acquire a stream only
-to `stop()` every track immediately, which is how the mic and camera
-permission rows raise a prompt.
-`Database-Atraxia` is as empty: across 49 migrations there is no call, session,
-participant, signaling or recording table.
+**LiveKit, chosen over Daily.co, Agora, the Vonage Video API, Twilio Video, and
+self-hosting on Mediasoup, Janus or Jitsi.** Three reasons, kept because the
+comparison is expensive to redo. Published self-serve HIPAA terms with a BAA on
+a fixed tier, where Agora and Vonage route the same question through a
+negotiation with no public pricing. A steadier product history than Twilio,
+which announced Programmable Video for sunset, pushed the end-of-life out two
+years, then reversed the deprecation — a volatility signal a clinical
+conversation should not carry. And an open-source core, so starting on LiveKit
+Cloud does not foreclose self-hosting later; the break-even is understood to sit
+far above this app's scale, so the option is kept rather than spent. Those are
+procurement facts as of the decision date, not measurements from this repo —
+re-read the vendor's terms before anyone signs.
 
-**The prototype was deleted rather than left as scaffolding, and the
-distinction is worth stating.** `ProfessionalDetail` once carried voice and
-video call modals captioned *"prototype — no real call"*, alongside the mock
-chat that replied *"Got it — thanks for the update! 👍"* a second after
-anything was sent. All of it went in `ac51e91`, when real messaging replaced
-the mock. `setCallMode` is gone; the phrase survives in this file only because
-it disambiguates the QA line *"attach files/pictures as well as video/voice
-call"* — that is **calling**, not attaching a video file, which is what settled
-the attachment-picker question in `991fc5e`. So there is no half-built surface
-to find and finish.
+**v1 RUNS ON THE FREE BUILD TIER, FOR REAL USERS, AND THAT IS AN ACCEPTED
+TRADEOFF RATHER THAN AN OVERSIGHT.** The Build tier carries no BAA, and a call
+between a client and a professional may involve health information being
+discussed. It is written plainly here so nobody later reads it as a mistake and
+quietly "corrects" it without knowing it was chosen. The mitigation is hard
+duration caps on the pattern of Zoom's free tier: **one hour for video, two for
+voice**, recorded per call in `calls.cap_seconds` so the sweep and any later
+audit agree on what the rule was at the time. The upgrade to Scale
+($500/month, BAA included) is a founder-level decision triggered by real
+subscriber volume, not a precondition for launch.
 
-**One question is already answered: who may call whom.**
-`thread_allows_attachments()` (`20260910200928_attachment_relationship_guard`)
-is `security definer` and `stable`, and returns true when both participants are
-present and either an active `professional_clients` row or a
-`business_employees` → `business_profiles` employment joins them, in either
-direction. That is exactly the predicate a call entitlement needs, it already
-gates attachments, and `active_professional_clients` is the read-side
-equivalent the client already queries. No new schema is needed to decide
-permission.
+**The schema.** `calls` is both the audit record and the signalling channel: a
+`ringing` row is what the callee's client sees arrive over Realtime. It grants
+`select` to `authenticated` and **nothing else** — no insert, no update, no
+delete, and no security-definer RPC writes it — so every state change goes
+through an Edge Function running as `service_role`. `push_subscriptions` holds
+one row per browser, keyed on the globally-unique endpoint.
+`thread_allows_calls(thread_id, caller_id)` is the entitlement predicate; it
+delegates the relationship rule to `thread_allows_attachments()` rather than
+copying it, and adds the participant check that function deliberately omits.
 
-**And the trap under it: a shared thread is not a relationship.**
-`start_message_thread` checks four things — caller authenticated, recipient
-supplied, not yourself, that profile exists — and **no relationship of any
-kind**. Any authenticated account can open a thread with any other profile, and
-the call is idempotent per pair. So thread membership answers *may these two
-exchange text* and nothing stronger; gating a call on it would let any account
-ring any other account in the system. This is the same two-tier model recorded
-above, where calling is named as a future member of the active-relationship
-tier.
+**Five Edge Functions.** `mint-call-token` opens a call — it derives the callee
+from the thread rather than trusting the body, writes the ringing row before
+minting so no usable token exists for a call nobody was told about, and grants
+join/publish/subscribe and nothing more. `join-call-token` is the answer: it
+mints for the **same existing room** and stamps `started_at` in the same
+transition that flips the row to `answered`. `end-call` stops a call from either
+side and **derives the terminal status from state and actor, never from the
+request** — answered becomes `completed`, a ringing call ended by the callee
+becomes `declined`, by the caller becomes `missed` — and is idempotent.
+`send-push` delivers Web Push; `enforce-call-caps` deletes rooms that outlive
+their cap. A trigger on `calls` fires the ring push when a row appears.
 
-**The real gap is signaling, and the app's proven real-time mechanism is the
-wrong shape for it.** Everything live here is `postgres_changes` —
-`useThreadRealtime`, `usePinRealtime`, `useUnreadRealtime` — which is driven by
-database writes. Every SDP offer, answer and ICE candidate would have to become
-a row before it could become a message on the wire, and this app deliberately
-*discards the payload and re-reads through `messages_visible`* on every event,
-adding a round trip by design. Signaling wants the opposite: ephemeral,
-low-latency, fan-out-to-one, never persisted. Supabase Realtime does offer
-`broadcast` and `presence` channels for precisely that, and **neither is used
-anywhere in this codebase today**. So the socket and the client library are
-already here and already authenticated, but the channel type would be new, with
-an authorization model that is not the RLS story `postgres_changes` has —
-new infrastructure, not an extension of something proven.
+**The client keeps LiveKit out of the main bundle.** `CallScreen` is the only
+module importing `livekit-client` or `@livekit/components-react`, reached
+through `React.lazy`, so the 147 KB gzip lands in its own chunk fetched the
+first time a call connects. Measured: the main chunk grew 1,655 bytes gzip for
+the whole feature. Adding a LiveKit import anywhere else silently undoes that
+and nothing in the build will say so.
 
-Worth carrying across from messaging: a subscription that reports `SUBSCRIBED`
-and delivers nothing is indistinguishable from silence, which is why `usePoll`
-still runs as a slow safety re-read. A call has no equivalent mitigation — there
-is no polling your way out of a failed negotiation.
+**A BUG THIS FEATURE'S OWN VERIFICATION FOUND, fixed in 89340f8.** The
+post-call notice's display timer also returned `CallContext` to `idle`, and
+`idle` is what makes the app able to take a call. So how long a message stayed
+readable and how long the user was unreachable were the same number. A ring
+arriving in that 2.6s was dropped in silence — nothing retries and nothing marks
+it missed. Redialling straight after a call, which is when people redial, was
+the case it broke. The phase now returns to idle on the server-confirmed
+terminal status and the notice is a separate, tappable concern. Verified by
+cancelling a call and placing another one millisecond later.
 
-**What else does not exist.** *No call-record schema*: a call is an event with a
-lifecycle — start, end, duration, outcome (missed, declined, completed) — and
-needs its own table whatever the transport turns out to be. *No consent or
-recording model*: whether a call may be recorded, by whom, with whose
-agreement, where the file lives and how long it survives are all open, though
-`client_access_grants` is a reusable precedent if one is needed — per-category,
-client-owned, and explicitly *"not a UI preference"* (note that adding an
-`access_category` value costs two migrations, since Postgres refuses to use a
-new enum value in the transaction that added it). *Transport was the fourth
-gap and is the one that has since closed* — see the vendor decision below —
-but picking a provider settles none of the rest. The call table, the consent
-model and the signaling integration are all still unwritten, and a vendor does
-not write them.
+**Verified end to end between two real accounts**, not reasoned about: ring
+delivered over Realtime with no reload, answered, both sides connected with
+LiveKit reporting `Connected` and each subscribed to the other's live audio
+track, hangup from either side recording a true `duration_sec`, and decline
+attributed to the callee. What could not be verified in that environment is
+whether a human would see or hear anything — one side's microphone was a
+synthetic stream, and nothing there can confirm playback.
 
-**Size calibration, against two things in this file rather than in the
-abstract.** Larger than `hide_read_receipts`, which was a single boolean and
-still needed a view change, a `thread_shows_read_receipts()` function, a
-decision about which direction of suppression is even correct, and a proof that
-upsert was refused under the column-scoped grant. Comparable in kind to
-"Download my data", which was scoped and **declined** partly because
-`signedUrlFor` clamps Storage links to 600 seconds so consent stays
-re-checkable per query — a recorded video consultation is a larger and more
-sensitive artifact than either, and collides with that rule harder.
+**WHAT IS GENUINELY OPEN: accurate call history.** Terminal statuses are derived
+from who called `end-call` and what the row said at the time, with no
+confirmation from the media layer that anyone ever connected. A LiveKit webhook
+receiver is what would close that — participant-joined and room-finished events
+are the only source that cannot be suppressed by a party who benefits from the
+record being wrong. Until then `missed` versus `declined` is a reasonable
+inference rather than an observation.
 
-**The vendor decision, taken 2026-09-14: LiveKit.** Chosen over Daily.co,
-Agora, the Vonage Video API, Twilio Video, and self-hosting on Mediasoup, Janus
-or Jitsi. Three reasons, written down so the comparison does not get re-run
-from scratch:
-
-*Published terms instead of a sales call.* LiveKit offers HIPAA coverage and a
-BAA on a fixed, self-serve tier — $500/month on Scale — where Agora and Vonage
-route the same question through a negotiation with no public pricing. For a
-feature whose compliance story eventually rests on a BAA, a term you can read
-before committing is worth more than one you have to ask for — and it is what
-makes the upgrade described below something the founders can trigger on their
-own schedule rather than a negotiation they have to open first.
-
-*A steadier product history.* Twilio announced Programmable Video for sunset,
-then pushed the end-of-life date out by two years, then reversed the
-deprecation entirely. Whatever that says about the product, it is a volatility
-signal, and this is the wrong feature to absorb one — a clinical conversation
-is not where anyone wants to find out the transport has been rescheduled for
-removal.
-
-*An exit that stays open.* LiveKit is open-source at the core, so starting on
-LiveKit Cloud does not foreclose self-hosting later. Self-hosting is understood
-to pay off only above roughly 1.5M minutes a month, far beyond this app's
-current or near-term scale — so the managed tier is the right starting point,
-and the option to leave is kept rather than spent.
-
-Those three are procurement facts as of the decision date, not measurements
-taken from this repo like everything above them. Vendor pricing and tier
-contents move. Re-read the terms before anyone signs rather than trusting this
-paragraph.
-
-**THE ROLLOUT, AND IT IS AN ACCEPTED TRADEOFF RATHER THAN A PLACEHOLDER.** v1
-launches on LiveKit Cloud's free Build tier — 5,000 WebRTC minutes a month, no
-credit card — and that tier serves **both development and real users**. The
-Build tier carries no BAA, and a call between a client and a professional may
-involve health information being discussed. So this is a real compliance
-tradeoff, taken knowingly at launch rather than missed. It is written plainly
-here for one reason: so that nobody later reads it as an oversight and quietly
-"corrects" it without knowing it was chosen, and so that whoever revisits it is
-revisiting a decision rather than discovering a mistake.
-
-**The mitigation is hard duration caps, on the pattern of Zoom's free tier:**
-one hour maximum for a video call, two hours maximum for a voice-only call.
-Enforced client-side at minimum. A server-side backstop is preferable and may
-be available — a room TTL or a token expiry are the obvious shapes — but
-whether LiveKit offers one that behaves sensibly mid-call is pending the
-technical investigation, so a client-side cap is what v1 can actually promise
-today.
-
-Be exact about what a client-side cap is, because the distinction matters when
-the backstop question is finally settled: it is a product behavior, not an
-enforcement boundary. It ends calls for ordinary users on ordinary clients,
-which is what the mitigation is for. It does not bind anyone who controls their
-own client. That is the argument for settling the server-side backstop during
-the build rather than after it.
-
-**The upgrade to Scale ($500/month, BAA included) is a later founder-level
-decision, not a precondition for launch.** The trigger is real subscriber and
-usage volume rather than a date. The free tier's 5,000 minutes a month is the
-mechanical form that trigger takes — sustained real usage meets that ceiling
-before it meets anything else — so the ceiling is worth watching as the signal,
-not just as a quota.
-
-**Status: vendor decided, build not scoped.** Settled: the provider, and the
-order of the rollout. Not settled: the schema for call records, the LiveKit
-signaling integration, the consent and recording model, and every piece of UI.
-The entitlement check is still the only part already written, which is where
-this entry started — one decision further along, and no closer to shipping.
+Two further gaps were found by the 2026-09-14 audit and **are being fixed
+immediately after this, in `Database-Atraxia` rather than here**, so they are
+recorded as history rather than listed as outstanding — look for them in that
+repo, not this one: nothing times out a `ringing` call, so a caller who
+closes their tab mid-ring leaves a row ringing forever and a callee stuck on an
+incoming overlay they must dismiss before they can be reached again; and
+`enforce-call-caps` still carries its pre-answer-signal reasoning, stating that
+nothing observes whether a callee answered, which `join-call-token` has since
+made false.
 
 ## Version history
 
