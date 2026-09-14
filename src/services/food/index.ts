@@ -395,6 +395,18 @@ export async function logFoodEntry(params: LogFoodEntryParams): Promise<LogFoodE
       meal,
       logged_date: date,
       logged_via: loggedVia,
+      // Snapshotted at log time from the food in hand, exactly like the macros
+      // above. Without these the row would still depend on its source for how
+      // it reads, which is what the FK can never guarantee: both provenance
+      // columns are ON DELETE SET NULL.
+      //
+      // isLebanese is a property of the shared catalog only. A custom food has
+      // no such classification, so claiming false about one would be an
+      // assertion rather than a copy -- null says "never classified", which is
+      // what the read above turns back into false for display.
+      serving_label: food.servingLabel,
+      category: food.category,
+      is_lebanese: food.source === "catalog" ? food.isLebanese : null,
     })
     .select("id")
     .single();
@@ -441,26 +453,32 @@ interface DiaryRow {
   meal: MealType;
   logged_date: string;
   logged_via: Enums<"food_log_source"> | null;
-  foods: { category: Enums<"food_category">; serving_label: string; is_lebanese: boolean } | null;
-  custom_foods: { category: Enums<"food_category">; serving_label: string } | null;
+  // All three nullable, and each null means something specific rather than
+  // "missing": no serving_label for a hand-typed entry, no category for the
+  // same, and no is_lebanese for anything logged from custom_foods -- that
+  // table has no such column, so the snapshot cannot invent one.
+  serving_label: string | null;
+  category: Enums<"food_category"> | null;
+  is_lebanese: boolean | null;
 }
 
 /**
  * Reads the diary for a date range — the 90-day rolling window the app
  * hydrates on sign-in.
  *
- * The join is display metadata ONLY: category for the row icon, is_lebanese
- * for the star, serving_label for the text under the name. food_log_entries
- * carries none of the three. Macros are never taken from it.
+ * NO JOIN ANY MORE, which is the whole point. category for the row icon,
+ * is_lebanese for the star and serving_label for the text under the name used
+ * to be read live from foods/custom_foods, so editing a catalog row rewrote
+ * how entries logged months earlier read, and deleting one made an entry
+ * silently present as "homemade" while keeping macros that were nothing of
+ * the kind. That is the same mistake this file's header calls a bug about
+ * name and macros; these three were simply the last fields still making it.
  *
- * It can legitimately come back null — a manual entry has no source row, and
- * ON DELETE SET NULL means a deleted catalog row leaves the pointer empty.
- * Both cases fall back to a neutral presentation rather than failing, because
- * the entry itself is still perfectly valid.
- *
- * NOTE: joining serving_label rather than snapshotting it means a future edit
- * to a catalog row's label would change how an old entry reads. See the
- * README follow-up — the honest fix is a column on food_log_entries.
+ * They are columns on food_log_entries now (Database 20260916050000), so this
+ * reads them off the row like everything else. The fallbacks below are
+ * unchanged, and still earn their place: all three are nullable, because a
+ * hand-typed entry has no label or category to snapshot and custom_foods has
+ * no is_lebanese to copy.
  */
 export interface DiaryFetchResult {
   /**
@@ -485,7 +503,7 @@ export async function getDiaryEntries(
     .from("food_log_entries")
     .select(
       "id, food_id, custom_food_id, name, calories, protein_g, carbs_g, fat_g, quantity, unit, meal, logged_date, logged_via, " +
-        "foods(category, serving_label, is_lebanese), custom_foods(category, serving_label)"
+        "serving_label, category, is_lebanese"
     )
     .eq("user_id", userId)
     .gte("logged_date", startDate)
@@ -500,7 +518,6 @@ export async function getDiaryEntries(
 
   const entries = (data ?? []).map((row) => {
     const r = row as unknown as DiaryRow;
-    const meta = r.foods ?? r.custom_foods ?? null;
     return {
       id: r.id,
       foodId: r.food_id,
@@ -516,9 +533,11 @@ export async function getDiaryEntries(
       date: r.logged_date,
       loggedVia: r.logged_via ?? undefined,
       display: {
-        category: meta?.category ?? "homemade",
-        serving: meta?.serving_label ?? "",
-        isLebanese: r.foods?.is_lebanese ?? false,
+        // Same defaults the join fell back to, for the same rows: a null here
+        // is a hand-typed entry or a custom food, not a lost value.
+        category: r.category ?? "homemade",
+        serving: r.serving_label ?? "",
+        isLebanese: r.is_lebanese ?? false,
       },
     };
   });

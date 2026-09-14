@@ -1807,51 +1807,60 @@ export type Database = {
         Row: {
           calories: number
           carbs_g: number
+          category: Database["public"]["Enums"]["food_category"] | null
           created_at: string
           custom_food_id: string | null
           fat_g: number
           food_id: string | null
           id: string
+          is_lebanese: boolean | null
           logged_date: string
           logged_via: Database["public"]["Enums"]["food_log_source"] | null
           meal: Database["public"]["Enums"]["meal_slot"]
           name: string
           protein_g: number
           quantity: number
+          serving_label: string | null
           unit: Database["public"]["Enums"]["food_unit"]
           user_id: string
         }
         Insert: {
           calories: number
           carbs_g: number
+          category?: Database["public"]["Enums"]["food_category"] | null
           created_at?: string
           custom_food_id?: string | null
           fat_g: number
           food_id?: string | null
           id?: string
+          is_lebanese?: boolean | null
           logged_date?: string
           logged_via?: Database["public"]["Enums"]["food_log_source"] | null
           meal: Database["public"]["Enums"]["meal_slot"]
           name: string
           protein_g: number
           quantity: number
+          serving_label?: string | null
           unit: Database["public"]["Enums"]["food_unit"]
           user_id: string
         }
         Update: {
           calories?: number
           carbs_g?: number
+          category?: Database["public"]["Enums"]["food_category"] | null
           created_at?: string
           custom_food_id?: string | null
           fat_g?: number
           food_id?: string | null
           id?: string
+          is_lebanese?: boolean | null
           logged_date?: string
           logged_via?: Database["public"]["Enums"]["food_log_source"] | null
           meal?: Database["public"]["Enums"]["meal_slot"]
           name?: string
           protein_g?: number
           quantity?: number
+          serving_label?: string | null
           unit?: Database["public"]["Enums"]["food_unit"]
           user_id?: string
         }
