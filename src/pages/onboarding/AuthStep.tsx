@@ -5,6 +5,8 @@ import { Mail, Lock, Eye, EyeOff, Check, X, MailCheck } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import type { Session } from "@supabase/supabase-js";
 import {
+  SUSPENDED_MESSAGE,
+  consumeAccountSuspended,
   sendPasswordReset,
   signInWithEmail,
   signInWithGoogle,
@@ -65,7 +67,19 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   const [showPassword, setShowPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  /**
+   * A suspension that took effect mid-session lands here as the opening state.
+   *
+   * The forced sign-out is auth-js's own doing — it drops the session when the
+   * refresh is refused — so by the time this screen mounts there is no error
+   * left to read. The reason was captured from the HTTP response and is
+   * consumed once here, which turns an unexplained logout into a sentence.
+   * Without it the user would simply reappear at sign-in and fail again with
+   * the same code.
+   */
+  const [error, setError] = useState<string | null>(() =>
+    consumeAccountSuspended() ? SUSPENDED_MESSAGE : null
+  );
   const [busy, setBusy] = useState(false);
 
   const email = draft.email;

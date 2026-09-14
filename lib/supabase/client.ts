@@ -2,6 +2,7 @@ import { createBrowserClient, parseCookieHeader, serializeCookieHeader } from '@
 import { getSupabaseConfig } from './config'
 import { getRememberMe } from './rememberMe'
 import { isPkceVerifierCookie } from './recovery'
+import { suspensionAwareFetch } from './suspension'
 import type { Database } from './database.types'
 
 // Single browser client for the whole app. createBrowserClient memoises
@@ -28,6 +29,12 @@ const { url, anonKey } = getSupabaseConfig()
 // helpers, used so this encodes cookies identically to the default path rather
 // than hand-rolling a parser.
 export const supabase = createBrowserClient<Database>(url, anonKey, {
+  // A suspended account is only knowable from the HTTP response. auth-js
+  // removes the session itself when a refresh fails and hands subscribers a
+  // bare SIGNED_OUT with no error, so this wrapper is the last point at which
+  // the reason still exists. It inspects nothing but failed /auth/v1/ calls.
+  // See ./suspension.
+  global: { fetch: suspensionAwareFetch() },
   cookies: {
     getAll() {
       return parseCookieHeader(document.cookie)

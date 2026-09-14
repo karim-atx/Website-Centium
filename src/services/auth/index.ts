@@ -1,5 +1,14 @@
 import { supabase } from "../../../lib/supabase/client";
+import {
+  SUSPENDED_MESSAGE,
+  USER_BANNED_CODE,
+  consumeAccountSuspended,
+} from "../../../lib/supabase/suspension";
 import type { AuthError, Session } from "@supabase/supabase-js";
+
+// Re-exported so the auth UI has one import for everything auth-shaped, and
+// so nothing outside this layer needs to know the detection lives in lib/.
+export { SUSPENDED_MESSAGE, consumeAccountSuspended };
 
 // Real Supabase auth, replacing the format-validation-only "prototype auth"
 // this screen used to run on. Everything here is a thin wrapper whose job is
@@ -55,6 +64,15 @@ function describeAuthError(error: AuthError): string {
   }
   if (error.status === 429 || code.startsWith("over_")) {
     return "Too many attempts. Wait a minute and try again.";
+  }
+  // BEFORE invalid_credentials, and the order is the point. A suspended user
+  // supplying the right password gets `user_banned`, not a credentials error —
+  // telling them their password is wrong would send them to reset a password
+  // that was never the problem, and the reset would succeed while sign-in kept
+  // failing. Matched on the code only: `user_banned` is a member of auth-js's
+  // own ErrorCode union, so there is no message text worth guessing at.
+  if (code === USER_BANNED_CODE) {
+    return SUSPENDED_MESSAGE;
   }
   if (code === "invalid_credentials" || /invalid login credentials/i.test(message)) {
     return "Email or password is incorrect.";
