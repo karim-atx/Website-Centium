@@ -80,7 +80,7 @@ export const ClientClinicalRecords: React.FC<{
                   {history!.comorbidities.map((cm) => (
                     <span
                       key={cm}
-                      className="text-[11px] font-semibold rounded-full px-2.5 py-1 bg-teal-pale text-teal-dark"
+                      className="text-[11px] font-semibold rounded-full px-2.5 py-1 bg-teal-pale text-charcoal-soft dark:text-teal-deep-text"
                     >
                       {cm}
                     </span>

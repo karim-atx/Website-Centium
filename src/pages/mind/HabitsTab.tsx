@@ -72,7 +72,7 @@ export default function HabitsTab() {
                     {h.label}
                   </span>
                   {h.streakDays > 0 && (
-                    <span className="flex items-center gap-0.5 text-[11px] font-bold text-teal-dark bg-teal-pale rounded-full px-1.5 py-0.5 shrink-0">
+                    <span className="flex items-center gap-0.5 text-[11px] font-bold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-1.5 py-0.5 shrink-0">
                       <Flame size={10} /> {h.streakDays}
                     </span>
                   )}

@@ -247,7 +247,7 @@ export default function RoutinesTab() {
                         deleteRoutineFolder(folder.id);
                         closeMenu();
                       }}
-                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-teal-dark hover:bg-teal-pale"
+                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-status-high hover:bg-cream-soft"
                     >
                       <Trash2 size={13} /> Delete
                     </button>

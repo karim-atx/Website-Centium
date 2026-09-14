@@ -304,7 +304,7 @@ export default function BusinessAnalyticsTab() {
                 <p className="text-sm font-bold text-charcoal">{c.name}</p>
                 <span
                   className={`text-[10px] font-bold uppercase tracking-wide rounded-full px-2 py-0.5 ${
-                    c.concern === "High" ? "bg-teal-pale text-teal-dark" : "bg-gold-pale text-charcoal"
+                    c.concern === "High" ? "bg-teal-pale text-charcoal" : "bg-gold-pale text-charcoal"
                   }`}
                 >
                   {c.concern} concern

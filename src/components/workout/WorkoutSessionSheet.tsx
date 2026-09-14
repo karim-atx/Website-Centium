@@ -311,7 +311,7 @@ export const WorkoutSessionSheet: React.FC<{
                   <span className="text-sm font-bold text-charcoal-faint w-5 flex items-center gap-1">
                     {s.setNumber}
                     {s.setType && s.setType !== "normal" && (
-                      <span className="text-[9px] font-bold text-teal-dark bg-teal-pale rounded-full w-4 h-4 flex items-center justify-center">
+                      <span className="text-[9px] font-bold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full w-4 h-4 flex items-center justify-center">
                         {setTypeBadge[s.setType]}
                       </span>
                     )}

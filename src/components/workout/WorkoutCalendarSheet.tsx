@@ -119,7 +119,7 @@ export const WorkoutCalendarSheet: React.FC<{ open: boolean; onClose: () => void
                         </p>
                       </div>
                       {personalRecords[ex.name] && (
-                        <span className="flex items-center gap-1 text-[11px] font-semibold text-teal-dark bg-teal-pale rounded-full px-2 py-0.5">
+                        <span className="flex items-center gap-1 text-[11px] font-semibold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5">
                           <Dumbbell size={10} /> 1RM {personalRecords[ex.name]}kg
                         </span>
                       )}

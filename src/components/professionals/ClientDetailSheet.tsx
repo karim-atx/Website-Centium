@@ -418,7 +418,9 @@ export const ClientDetailSheet: React.FC<{
             </div>
             <span
               className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
-                (client.weightTrend ?? 0) <= 0 ? "text-primary-dark bg-primary-pale" : "text-teal-dark bg-teal-pale"
+                (client.weightTrend ?? 0) <= 0
+                  ? "text-primary-deep-text bg-primary-pale"
+                  : "text-charcoal-soft dark:text-teal-deep-text bg-teal-pale"
               }`}
             >
               {(client.weightTrend ?? 0) <= 0 ? "↓" : "↑"} {Math.abs(client.weightTrend ?? 0)} kg
