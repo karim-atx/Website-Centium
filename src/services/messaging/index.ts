@@ -291,7 +291,9 @@ export async function fetchThreads(): Promise<ThreadsResult> {
   // Newest-first so the first row seen for a thread is its latest message.
   const recent = await supabase
     .from("messages_visible")
-    .select("thread_id, text, created_at, attachment_url, attachment_purged_at, voice_note_seconds")
+    .select(
+      "thread_id, text, created_at, attachment_url, attachment_purged_at, redacted_at, voice_note_seconds"
+    )
     .order("created_at", { ascending: false })
     .limit(500);
 
@@ -317,14 +319,7 @@ export async function fetchThreads(): Promise<ThreadsResult> {
         text: m.text,
         attachmentPath: m.attachment_url,
         attachmentPurgedAt: m.attachment_purged_at,
-        // NULL UNTIL messages_visible EXPOSES THE COLUMN. admin_redact_message
-        // (Database 20260915130000) added messages.redacted_at but did not add it
-        // to this view, and both message reads go through the view because that is
-        // what applies the per-viewer hidden filter. Requesting a column the view
-        // does not select makes PostgREST reject the whole query, which would take
-        // every message down rather than one notice. One line in the view turns
-        // this on: read m.redacted_at here instead.
-        redactedAt: null,
+        redactedAt: m.redacted_at,
         voiceNoteSeconds: m.voice_note_seconds,
       });
       latest.set(m.thread_id, { preview, created_at: m.created_at });
@@ -384,7 +379,7 @@ export async function fetchMessages(threadId: string): Promise<MessagesResult> {
   const { data, error } = await supabase
     .from("messages_visible")
     .select(
-      "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, voice_note_seconds, reply_to_id, forwarded"
+      "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, redacted_at, voice_note_seconds, reply_to_id, forwarded"
     )
     .eq("thread_id", threadId)
     .order("created_at", { ascending: true });
@@ -431,15 +426,7 @@ export async function fetchMessages(threadId: string): Promise<MessagesResult> {
       readAt: m.read_at,
       attachmentPath: m.attachment_url,
       attachmentPurgedAt: m.attachment_purged_at,
-
-      // NULL UNTIL messages_visible EXPOSES THE COLUMN. admin_redact_message
-      // (Database 20260915130000) added messages.redacted_at but did not add it
-      // to this view, and both message reads go through the view because that is
-      // what applies the per-viewer hidden filter. Requesting a column the view
-      // does not select makes PostgREST reject the whole query, which would take
-      // every message down rather than one notice. One line in the view turns
-      // this on: read m.redacted_at here instead.
-      redactedAt: null,
+      redactedAt: m.redacted_at,
       voiceNoteSeconds: m.voice_note_seconds,
       replyToId: m.reply_to_id,
       forwarded: m.forwarded ?? false,

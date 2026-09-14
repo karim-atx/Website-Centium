@@ -4981,6 +4981,7 @@ export type Database = {
           forwarded: boolean | null
           id: string | null
           read_at: string | null
+          redacted_at: string | null
           reply_to_id: string | null
           sender_id: string | null
           text: string | null
