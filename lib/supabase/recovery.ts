@@ -24,8 +24,18 @@
 //      locked an account out of the app permanently, with no way for the user
 //      to clear it, had the password update ever failed.
 //   2. The recovery session is written as a session cookie regardless of the
-//      "Remember me" preference (see client.ts), so an abandoned recovery
-//      dies when the browser closes rather than lingering for 400 days.
+//      "Remember me" preference (see the cookie adapter in client.ts), so an
+//      abandoned recovery dies when the browser closes rather than lingering
+//      for 400 days.
+//
+//      This claim was false for a while, which is worth leaving written down.
+//      The adapter only stripped persistence when the preference said so, and
+//      the preference defaults to true on a tab that has never shown the
+//      checkbox -- which is every tab opened from an emailed link. So the one
+//      session this was meant to bound was the one getting the full 400 days.
+//      The adapter now keys on the recovery state itself: the in-flight check
+//      for the exchange, and the flag above for everything after it, since a
+//      later token refresh would otherwise rewrite the cookie as persistent.
 //
 // WHAT THIS DOES NOT DO. Neither layer is server-side. The refresh token
 // stays valid for its natural lifetime, so someone who lifts it out of

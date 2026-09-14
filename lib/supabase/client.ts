@@ -1,7 +1,11 @@
 import { createBrowserClient, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr'
 import { getSupabaseConfig } from './config'
 import { getRememberMe } from './rememberMe'
-import { isPkceVerifierCookie } from './recovery'
+import {
+  getRecoveryPendingUserId,
+  isPkceVerifierCookie,
+  isRecoveryExchangeInFlight,
+} from './recovery'
 import { suspensionAwareFetch } from './suspension'
 import type { Database } from './database.types'
 
@@ -42,6 +46,26 @@ export const supabase = createBrowserClient<Database>(url, anonKey, {
     setAll(cookiesToSet) {
       const remember = getRememberMe()
 
+      // A RECOVERY SESSION IS NEVER PERSISTED, whatever the preference says.
+      //
+      // getRememberMe() defaults to true when unset, and sessionStorage is
+      // per-tab -- so a reset link opened from an email, which is always a new
+      // tab, reads true and used to get the library's 400-day cookie. The
+      // preference was never the user's answer there: they never saw the
+      // checkbox on that visit.
+      //
+      // BOTH SIGNALS, because neither covers the whole window. The in-flight
+      // check needs ?code= in the URL and so only catches the exchange itself;
+      // once auth-js strips the code, an automatic token refresh -- or the
+      // updateUser() call that ends the flow -- would write the cookie again
+      // with remember still true and quietly restore the 400 days. The pending
+      // flag covers exactly the rest: set when PASSWORD_RECOVERY arrives,
+      // cleared only once the password has actually changed.
+      //
+      // Read per call rather than hoisted: setAll runs on refreshes minutes
+      // apart, and the flag can be cleared between two of them.
+      const recovering = isRecoveryExchangeInFlight() || getRecoveryPendingUserId() !== null
+
       for (const { name, value, options } of cookiesToSet) {
         // maxAge: 0 is a DELETION, not a persistence setting — it is how the
         // library expires a cookie on sign-out and when replacing stale
@@ -57,10 +81,16 @@ export const supabase = createBrowserClient<Database>(url, anonKey, {
         // who had unticked "Remember me".
         const isVerifier = isPkceVerifierCookie(name)
 
-        const finalOptions =
-          remember || isRemoval || isVerifier
-            ? options
-            : { ...options, maxAge: undefined, expires: undefined }
+        // Removals and verifiers win over everything: the first would become
+        // a write rather than a delete, and the second has to outlive the
+        // browser even here -- the exchange rewrites the verifier it is
+        // consuming. Only then does persistence become a question, and it is
+        // answered no if either the user said so or this is a recovery.
+        const keepAsIs = isRemoval || isVerifier || (remember && !recovering)
+
+        const finalOptions = keepAsIs
+          ? options
+          : { ...options, maxAge: undefined, expires: undefined }
 
         document.cookie = serializeCookieHeader(name, value, finalOptions)
       }
