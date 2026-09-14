@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, EyeOff, Forward, ImageIcon, Mic, Paperclip, Pin, PinOff, Send, Star, Trash2, X } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, EyeOff, Forward, ImageIcon, Mic, Paperclip, Phone, Pin, PinOff, Send, Star, Trash2, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
+import { useCall } from "../../context/CallContext";
+import { threadAllowsCalls, type CallKind } from "../../services/calling";
+import { checkCallMedia } from "../../utils/mediaPermissions";
 import { useUnread } from "../../context/UnreadContext";
 import { usePoll } from "../../hooks/usePoll";
 import { usePinRealtime } from "../../hooks/usePinRealtime";
@@ -168,7 +171,39 @@ export const ThreadView: React.FC<{
   // Re-checking on every 8s poll would spend a round trip to tidy up a
   // cosmetic edge nobody is standing on.
   const [canAttach, setCanAttach] = useState(false);
+  // Same shape and same reasoning as canAttach above, against the call
+  // predicate instead. thread_allows_calls delegates the relationship rule to
+  // thread_allows_attachments and adds "and the caller is a participant", so
+  // these two are asked separately rather than one being derived from the other.
+  const [canCall, setCanCall] = useState(false);
+  const [mediaNotice, setMediaNotice] = useState<string | null>(null);
+  const { placeCall: placeCallRemote, busy: callBusy } = useCall();
   const recorder = useVoiceRecorder();
+
+  /**
+   * Checks devices, then opens the call.
+   *
+   * PERMISSION BEFORE THE SERVER, deliberately. Minting a token and writing a
+   * ringing row for a caller whose microphone is blocked would ring the other
+   * person for a call that cannot carry audio — and end-call would have to
+   * clean it up. Asking first costs nothing when permission is already granted,
+   * since the browser resolves it without a prompt.
+   *
+   * A REFUSED CAMERA DOWNGRADES RATHER THAN FAILS: checkCallMedia asks audio
+   * and video separately for exactly this, so a blocked camera places a voice
+   * call and says so instead of stopping someone who can still talk.
+   */
+  const placeCall = async (kind: CallKind) => {
+    if (!thread.participantId) return;
+    setMediaNotice(null);
+    const media = await checkCallMedia(kind);
+    if (!media.canCall) {
+      setMediaNotice(media.message);
+      return;
+    }
+    if (media.message) setMediaNotice(media.message);
+    await placeCallRemote(thread.id, thread.participantId, media.degradedToVoice ? "voice" : kind);
+  };
 
   const load = async () => {
     const result = await fetchMessages(thread.id);
@@ -222,13 +257,20 @@ export const ThreadView: React.FC<{
   useEffect(() => {
     let cancelled = false;
     setCanAttach(false);
+    setCanCall(false);
+    setMediaNotice(null);
     void threadAllowsAttachments(thread.id).then((allowed) => {
       if (!cancelled) setCanAttach(allowed);
     });
+    if (authUserId) {
+      void threadAllowsCalls(thread.id, authUserId).then((allowed) => {
+        if (!cancelled) setCanCall(allowed);
+      });
+    }
     return () => {
       cancelled = true;
     };
-  }, [thread.id]);
+  }, [thread.id, authUserId]);
 
   // Stars and the pin, read once when the thread opens.
   //
@@ -537,8 +579,50 @@ export const ThreadView: React.FC<{
         >
           <ArrowLeft size={16} />
         </button>
-        <p className="font-semibold text-charcoal truncate">{thread.participantName}</p>
+        {/* flex-1 min-w-0 so `truncate` has a width to truncate against once a
+            trailing control shares the row — without it a long name pushes the
+            call buttons off the edge instead of ellipsing. */}
+        <p className="font-semibold text-charcoal truncate flex-1 min-w-0">
+          {thread.participantName}
+        </p>
+
+        {/* CALL CONTROLS. Two buttons rather than one with a menu: voice and
+            video are different decisions, not a setting on one action, and a
+            menu would put an extra tap in front of the commoner of the two.
+            Gated on canCall, which mirrors canAttach exactly — asked once on
+            open, failing closed, and NOT the enforcement. mint-call-token
+            re-checks thread_allows_calls server-side, so a stale true costs a
+            refused call rather than an unauthorised one. */}
+        {canCall && thread.participantId && (
+          <>
+            <button
+              onClick={() => void placeCall("voice")}
+              disabled={callBusy}
+              aria-label={`Voice call ${thread.participantName}`}
+              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0 ml-auto disabled:opacity-50"
+            >
+              <Phone size={15} />
+            </button>
+            <button
+              onClick={() => void placeCall("video")}
+              disabled={callBusy}
+              aria-label={`Video call ${thread.participantName}`}
+              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
+            >
+              <Video size={15} />
+            </button>
+          </>
+        )}
       </div>
+
+      {/* A permission refusal that stopped the call, or a camera refusal that
+          turned a video call into a voice one. Shown here rather than as a
+          toast because it explains a button the user just pressed. */}
+      {mediaNotice && (
+        <p className="text-[11px] text-charcoal-faint bg-cream-soft rounded-xl px-3 py-2 mb-2">
+          {mediaNotice}
+        </p>
+      )}
 
       {/* THE PINNED BANNER, and it renders only when the pinned message is one
           this viewer can actually see. A pin is shared, but hiding is not: if
