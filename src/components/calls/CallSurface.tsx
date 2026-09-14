@@ -49,6 +49,39 @@ const CallOverlay: React.FC<{ children: React.ReactNode; dim?: boolean }> = ({
   );
 };
 
+/**
+ * How long a transient notice stays readable.
+ *
+ * One constant for both toasts, which are the same element rendered with the
+ * same classes; they previously used 2600 and 4000 for no stated reason. 4000
+ * is the figure the error toast already used, chosen over inventing a third
+ * number. Neither value gates anything any more — see the notice effect.
+ */
+const NOTICE_MS = 4000;
+
+/**
+ * A transient message, tappable to dismiss.
+ *
+ * TAPPABLE BECAUSE THE TIMER IS OTHERWISE THE ONLY EXIT. There is no call
+ * history in this app, so a missed "Call declined." is unrecoverable — the
+ * timeout has to suit someone who glanced away, which is long for someone who
+ * did not. A tap target resolves that both ways rather than trading one off
+ * against the other.
+ */
+const Toast: React.FC<{ text: string; onDismiss: () => void; label: string }> = ({
+  text,
+  onDismiss,
+  label,
+}) => (
+  <button
+    onClick={onDismiss}
+    aria-label={label}
+    className="tap fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] max-w-[92vw] rounded-2xl bg-charcoal text-cream text-xs font-semibold px-4 py-3 shadow-lift text-left"
+  >
+    {text}
+  </button>
+);
+
 /** The spinner shown while the LiveKit chunk is being fetched. */
 const Connecting: React.FC<{ name: string }> = ({ name }) => (
   <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/75">
@@ -61,42 +94,52 @@ export const CallSurface: React.FC = () => {
   const { phase, call, endedReason, busy, error, answer, decline, hangUp, dismissError, dismissEnded } =
     useCall();
 
-  // The brief post-call notice clears itself; a call that has ended should not
-  // need dismissing before the app is usable again.
+  // KEYED ON THE MESSAGE, NOT ON A PHASE. The app returns to idle the instant
+  // a call ends, so this timer governs how long the notice is READABLE and
+  // nothing else — it cannot delay a redial or swallow an incoming ring.
+  //
+  // 4000 matches the error toast below, which is the same element with the
+  // same styling; the two previously differed for no reason. The notice is
+  // also tappable, so an attentive reader clears it immediately and only
+  // someone who looked away waits out the timer.
   useEffect(() => {
-    if (phase !== "ended") return;
-    const id = window.setTimeout(dismissEnded, 2600);
+    if (!endedReason) return;
+    const id = window.setTimeout(dismissEnded, NOTICE_MS);
     return () => window.clearTimeout(id);
-  }, [phase, dismissEnded]);
+  }, [endedReason, dismissEnded]);
 
   // A failure to place or answer is reported where it happened rather than as
   // an overlay, but there is no other surface for it while nothing is on
   // screen, so it gets a toast.
+  //
+  // This one never gated `phase` even before the decoupling — dismissError
+  // only ever cleared the message — so it carried no equivalent deaf window.
   useEffect(() => {
     if (!error) return;
-    const id = window.setTimeout(dismissError, 4000);
+    const id = window.setTimeout(dismissError, NOTICE_MS);
     return () => window.clearTimeout(id);
   }, [error, dismissError]);
 
-  if (error && phase === "idle") {
-    return createPortal(
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] max-w-[92vw] rounded-2xl bg-charcoal text-cream text-xs font-semibold px-4 py-3 shadow-lift">
-        {error}
-      </div>,
-      document.body
-    );
+  // TOASTS ONLY WHEN NOTHING IS LIVE, and the call overlays take precedence
+  // below. Since a call ending now returns to idle at once, an incoming ring
+  // can arrive while a notice is still on screen — CallContext clears
+  // endedReason when it does, so the ring is never hidden behind a message
+  // about the previous call.
+  if (!call) {
+    if (endedReason) {
+      return createPortal(
+        <Toast text={endedReason} onDismiss={dismissEnded} label="Dismiss call notice" />,
+        document.body
+      );
+    }
+    if (error) {
+      return createPortal(
+        <Toast text={error} onDismiss={dismissError} label="Dismiss message" />,
+        document.body
+      );
+    }
+    return null;
   }
-
-  if (phase === "ended" && endedReason) {
-    return createPortal(
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] max-w-[92vw] rounded-2xl bg-charcoal text-cream text-xs font-semibold px-4 py-3 shadow-lift">
-        {endedReason}
-      </div>,
-      document.body
-    );
-  }
-
-  if (!call) return null;
   const name = call.row.caller_id && call.role === "callee" ? "your professional" : "them";
 
   // INCOMING: deliberately not full-screen. Until it is answered this is an

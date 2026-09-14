@@ -30,7 +30,25 @@ import {
  * made. The ignored row still ends up `missed` through the server's own path.
  */
 
-export type CallPhase = "idle" | "outgoing" | "incoming" | "connected" | "ended";
+/**
+ * THERE IS NO "ended" PHASE, and its absence is deliberate.
+ *
+ * There used to be one, and it was a bug rather than a state. `phase` governs
+ * whether this app can receive or place a call — `onCall` accepts a ring only
+ * while idle, and `placeCall` refuses otherwise — so any phase that lingered
+ * after a call was over was a window in which the user was uncontactable. The
+ * "ended" phase was cleared by the post-call notice's DISPLAY timer, which
+ * meant a notice's readability and the app's ability to take a call were the
+ * same number. A ring arriving in that window was dropped silently: no retry,
+ * and nothing marks it missed, so the row sat `ringing` until the caller gave
+ * up. Redialling straight after a call — exactly when people do — was the case
+ * it broke.
+ *
+ * A call that has ended returns to `idle` immediately. Whether a notice is
+ * still on screen is `endedReason`, which is a rendering concern and gates
+ * nothing.
+ */
+export type CallPhase = "idle" | "outgoing" | "incoming" | "connected";
 
 export interface ActiveCall {
   row: CallRow;
@@ -121,8 +139,10 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       if (current && row.id === current.row.id) {
         if (TERMINAL.has(row.status)) {
+          // IDLE IMMEDIATELY, on the server-confirmed terminal status. The
+          // notice that follows is set separately and holds nothing open.
           setEndedReason(endedMessage(row.status, role));
-          setCallState(null, "ended");
+          setCallState(null, "idle");
           return;
         }
         // answered: the caller learns the callee picked up. The callee already
@@ -233,8 +253,11 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (result.status === "error") {
         console.error("[calling] Could not end the call cleanly:", result.message);
       }
+      // Idle the moment the call is over, not when the notice times out — the
+      // user may want to call straight back, and until this is idle they
+      // cannot, nor can anyone reach them.
       setEndedReason(reason === "declined" ? "Call declined." : "Call ended.");
-      setCallState(null, "ended");
+      setCallState(null, "idle");
     },
     [setCallState]
   );
@@ -243,10 +266,13 @@ export const CallProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const hangUp = useCallback(() => finish("hangup"), [finish]);
 
   const dismissError = useCallback(() => setError(null), []);
-  const dismissEnded = useCallback(() => {
-    setEndedReason(null);
-    setCallState(null, "idle");
-  }, [setCallState]);
+  /**
+   * Clears the post-call notice. PURELY VISUAL — it no longer touches `phase`,
+   * because the call was already over and the app already idle by the time
+   * this runs. That separation is the fix: a notice's lifetime and the user's
+   * reachability were one number, and they are unrelated concerns.
+   */
+  const dismissEnded = useCallback(() => setEndedReason(null), []);
 
   return (
     <CallCtx.Provider
