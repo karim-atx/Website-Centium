@@ -6,6 +6,7 @@ import { ConsentReviewBanner } from "../professionals/ConsentReviewBanner";
 import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
 import { UnreadProvider } from "../../context/UnreadContext";
+import { CallProvider } from "../../context/CallContext";
 
 export const Layout: React.FC = () => {
   // This app uses plain BrowserRouter, which — unlike the newer data
@@ -26,6 +27,12 @@ export const Layout: React.FC = () => {
     // dashboard requires. Outside RequireOnboarded there is no session to count
     // for anyway.
     <UnreadProvider>
+      {/* Nested inside rather than beside: a call belongs to the same
+          authenticated shell UnreadProvider already scopes itself to, and
+          nesting leaves one provider order to reason about rather than two
+          independent mounts. It holds call state only; nothing is rendered
+          for it yet. */}
+      <CallProvider>
       <div className="min-h-screen bg-cream flex">
         <Sidebar />
         <div className="flex-1 min-w-0">
@@ -42,6 +49,7 @@ export const Layout: React.FC = () => {
         </div>
         <BottomNav />
       </div>
+      </CallProvider>
     </UnreadProvider>
   );
 };

@@ -826,6 +826,115 @@ export type Database = {
           },
         ]
       }
+      calls: {
+        Row: {
+          callee_id: string | null
+          caller_id: string | null
+          cap_seconds: number
+          created_at: string
+          duration_sec: number | null
+          ended_at: string | null
+          id: string
+          kind: Database["public"]["Enums"]["call_kind"]
+          livekit_room_name: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["call_status"]
+          thread_id: string
+        }
+        Insert: {
+          callee_id?: string | null
+          caller_id?: string | null
+          cap_seconds: number
+          created_at?: string
+          duration_sec?: number | null
+          ended_at?: string | null
+          id?: string
+          kind: Database["public"]["Enums"]["call_kind"]
+          livekit_room_name: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["call_status"]
+          thread_id: string
+        }
+        Update: {
+          callee_id?: string | null
+          caller_id?: string | null
+          cap_seconds?: number
+          created_at?: string
+          duration_sec?: number | null
+          ended_at?: string | null
+          id?: string
+          kind?: Database["public"]["Enums"]["call_kind"]
+          livekit_room_name?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["call_status"]
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calls_callee_id_fkey"
+            columns: ["callee_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_callee_id_fkey"
+            columns: ["callee_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_callee_id_fkey"
+            columns: ["callee_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_callee_id_fkey"
+            columns: ["callee_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "calls_caller_id_fkey"
+            columns: ["caller_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_caller_id_fkey"
+            columns: ["caller_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_caller_id_fkey"
+            columns: ["caller_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_caller_id_fkey"
+            columns: ["caller_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "calls_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_access_grants: {
         Row: {
           category: Database["public"]["Enums"]["access_category"]
@@ -5688,11 +5797,24 @@ export type Database = {
         Args: { p_thread_id: string }
         Returns: boolean
       }
+      thread_allows_calls: {
+        Args: { p_thread_id: string; p_caller_id: string }
+        Returns: boolean
+      }
       touch_last_active: { Args: never; Returns: string }
       trigger_storage_purge: { Args: never; Returns: number }
     }
     Enums: {
       message_flag: "starred" | "hidden"
+      call_kind: "video" | "voice"
+      call_status:
+        | "ringing"
+        | "answered"
+        | "declined"
+        | "missed"
+        | "completed"
+        | "cap_ended"
+        | "failed"
       access_category:
         | "food_diary"
         | "workout_activity"
