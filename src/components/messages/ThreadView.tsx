@@ -623,14 +623,22 @@ export const ThreadView: React.FC<{
           app is the only party that can tell the difference, so it says so.
 
           Above the messages and outside the scroll, because it qualifies the
-          whole conversation rather than any one message in it. */}
+          whole conversation rather than any one message in it.
+
+          THE SECOND SENTENCE IS THE USEFUL HALF. Saying "this really is us"
+          helps only against an impostor the app can already see; it does
+          nothing about a message somewhere else that claims to be support.
+          Naming what support will never ask for travels with the reader --
+          it is the sentence that is still true in an email, a DM or a phone
+          call, none of which this app can vouch for. */}
       {thread.kind === "official_support" && (
         <div className="flex items-start gap-2 rounded-xl bg-teal-pale text-teal-deep-text px-3 py-2.5 mb-2">
           <ShieldCheck size={15} className="shrink-0 mt-px" />
           <p className="text-[11px] leading-relaxed">
             <span className="font-semibold">You're talking with Centium Support.</span>{" "}
             Centium started this conversation — it is not a message from
-            another member.
+            another member. Centium Support will never ask for your password
+            or payment details in a message.
           </p>
         </div>
       )}
