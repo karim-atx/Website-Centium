@@ -411,6 +411,18 @@ interface AppState {
   setRecoverySensitive: (on: boolean) => void;
   recoverySensitiveIntroSeen: boolean;
   setRecoverySensitiveIntroSeen: (seen: boolean) => void;
+  /**
+   * Whether the voice-logging privacy notice has been acknowledged.
+   *
+   * Voice is the first feature that sends anything a user produces to a
+   * company other than Supabase, and a microphone permission prompt says
+   * "this page wants your mic" -- not "this audio leaves for a third party".
+   * Nobody should learn the second part from a network tab, so it is said once
+   * before the first recording. Same shape as recoverySensitiveIntroSeen: a
+   * persisted boolean gating a dismissible notice, not a blocking modal.
+   */
+  voiceDisclosureSeen: boolean;
+  setVoiceDisclosureSeen: (seen: boolean) => void;
   // "Let users pause reminders, summaries, and notifications with one
   // tap." No real notification engine exists in this prototype to hook
   // into, so this is the user-facing flag that would gate it.
@@ -1200,6 +1212,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 
   const [recoverySensitive, setRecoverySensitive] = usePersistentState<boolean>("recoverySensitive", false);
+  const [voiceDisclosureSeen, setVoiceDisclosureSeen] = usePersistentState<boolean>(
+    "voiceDisclosureSeen",
+    false
+  );
   const [recoverySensitiveIntroSeen, setRecoverySensitiveIntroSeen] = usePersistentState<boolean>(
     "recoverySensitiveIntroSeen",
     false
@@ -2960,6 +2976,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recoverySensitive,
       setRecoverySensitive,
       recoverySensitiveIntroSeen,
+      voiceDisclosureSeen,
+      setVoiceDisclosureSeen,
       setRecoverySensitiveIntroSeen,
       remindersPaused,
       setRemindersPaused,
@@ -3132,6 +3150,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       dietaryRestriction,
       recoverySensitive,
       recoverySensitiveIntroSeen,
+      voiceDisclosureSeen,
+      setVoiceDisclosureSeen,
       remindersPaused,
       referralRedeemed,
       referralDiscountPct,

@@ -1,133 +1,328 @@
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Mic, Sparkles, Pencil, MicOff, UtensilsCrossed } from "lucide-react";
-import { parseFoodInput, type ParsedFoodResult } from "../../services/ai/parseFoodInput";
+import { Mic, Sparkles, MicOff, Square, ShieldCheck, UtensilsCrossed, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
+import { logFoodEntry, manualFood } from "../../services/food";
 import {
-  findCatalogFoodByName,
-  logFoodEntry,
-  manualFood,
-} from "../../services/food";
+  AUDIO_BITS_PER_SECOND,
+  MAX_RECORDING_SECONDS,
+  pickRecordingMimeType,
+  transcribeAndParse,
+  type VoiceFoodItem,
+} from "../../services/ai/voiceFood";
 import { foodCategoryIcon } from "../../utils/icons";
 
+// Voice logging, end to end: record, transcribe, parse, confirm, log.
+//
+// WHAT THIS REPLACED. Until now none of the middle existed. getUserMedia was
+// called for the permission grant and the stream stopped immediately;
+// "Listening…" was a 1800ms timer under a hardcoded sentence the user was shown
+// as though it were their own words; and the parser was a canned response that
+// ignored its input. Only the logging was real, which is the worst half to have
+// working — it put four specific foods in the diary no matter what was said.
+//
+// THE REVIEW STEP IS NOT OPTIONAL. Nothing reaches the diary without the user
+// seeing it and pressing Add; parse-voice-food cannot write even if it wanted
+// to. The per-item editing controls are Phase C — this pass shows what was
+// heard, marks what did not match, and keeps the confirm.
+
 type Stage = "idle" | "requesting" | "denied" | "recording" | "processing" | "result";
+
+/** Everything that can come back other than items, shown on the idle screen. */
+interface Notice {
+  tone: "info" | "error";
+  text: string;
+}
 
 export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = ({
   open,
   onClose,
 }) => {
+  const {
+    addFoodEntryRecord,
+    authUserId,
+    selectedDate,
+    voiceDisclosureSeen,
+    setVoiceDisclosureSeen,
+  } = useApp();
+
   const [stage, setStage] = useState<Stage>("idle");
-  const [result, setResult] = useState<ParsedFoodResult | null>(null);
-  const { addFoodEntryRecord, authUserId, selectedDate } = useApp();
-  const [saving, setSaving] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const [items, setItems] = useState<VoiceFoodItem[]>([]);
+  const [transcript, setTranscript] = useState("");
+  const [notice, setNotice] = useState<Notice | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [added, setAdded] = useState(false);
+  const [elapsed, setElapsed] = useState(0);
+
+  // Held across renders because stopping has to reach the same objects that
+  // starting created, and neither belongs in render output.
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+  const capTimerRef = useRef<number | null>(null);
+  const tickRef = useRef<number | null>(null);
+
+  /**
+   * Releases the microphone and every timer, whatever state we were in.
+   *
+   * THE STREAM IS THE PART THAT MATTERS. A live MediaStream keeps the browser's
+   * recording indicator lit and the mic held open; leaving one behind after the
+   * sheet closes is the kind of thing users notice and do not forgive.
+   */
+  const teardown = () => {
+    if (capTimerRef.current !== null) { clearTimeout(capTimerRef.current); capTimerRef.current = null; }
+    if (tickRef.current !== null) { clearInterval(tickRef.current); tickRef.current = null; }
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state !== "inactive") {
+      // onstop is cleared first: this is an abandonment, not a finished
+      // recording, and the upload must not fire behind a closing sheet.
+      recorder.onstop = null;
+      try { recorder.stop(); } catch { /* already stopping */ }
+    }
+    recorderRef.current = null;
+    streamRef.current?.getTracks().forEach((t) => t.stop());
+    streamRef.current = null;
+    chunksRef.current = [];
+  };
+
+  // Covers every way this component can go away: the sheet closing, a route
+  // change, a hot reload. Without it an unmounted recorder keeps the mic.
+  useEffect(() => teardown, []);
+  useEffect(() => {
+    if (!open) teardown();
+  }, [open]);
 
   const reset = () => {
+    teardown();
     setStage("idle");
-    setResult(null);
+    setItems([]);
+    setTranscript("");
     setAdded(false);
+    setSaveError(null);
+    setElapsed(0);
   };
 
   const handleClose = () => {
     reset();
+    setNotice(null);
     onClose();
   };
 
-  const beginRecording = () => {
+  /** Uploads what was recorded and routes every outcome the function can send. */
+  const finish = async (blob: Blob) => {
+    setStage("processing");
+    const outcome = await transcribeAndParse(blob);
+
+    if (outcome.ok) {
+      setTranscript(outcome.transcript);
+      setItems(outcome.items);
+      setStage("result");
+      return;
+    }
+
+    // Everything else lands back on idle with a reason, so the mic is one tap
+    // away and the user is never left on a dead screen.
+    setStage("idle");
+    switch (outcome.kind) {
+      case "no_speech":
+        setNotice({ tone: "info", text: "Didn't catch anything. Try again a bit closer to the mic." });
+        break;
+      case "no_items":
+        setNotice({
+          tone: "info",
+          text: outcome.transcript
+            ? `Heard "${outcome.transcript}" — but no food in it. Try again, or add it manually.`
+            : "No food in that one. Try again, or add it manually.",
+        });
+        break;
+      case "rate_limited":
+        setNotice({
+          tone: "error",
+          text: outcome.retryAfterSeconds
+            ? `Voice logging is busy. Try again in about ${outcome.retryAfterSeconds}s, or add the food manually.`
+            : outcome.message,
+        });
+        break;
+      default:
+        setNotice({ tone: "error", text: outcome.message });
+    }
+  };
+
+  /** Ends the recording. The upload happens in onstop, once chunks are flushed. */
+  const stopRecording = () => {
+    if (capTimerRef.current !== null) { clearTimeout(capTimerRef.current); capTimerRef.current = null; }
+    if (tickRef.current !== null) { clearInterval(tickRef.current); tickRef.current = null; }
+    const recorder = recorderRef.current;
+    if (recorder && recorder.state === "recording") recorder.stop();
+  };
+
+  const beginRecording = (stream: MediaStream) => {
+    const mimeType = pickRecordingMimeType();
+    if (!mimeType) {
+      setStage("idle");
+      setNotice({ tone: "error", text: "This browser can't record audio. Add the food manually for now." });
+      stream.getTracks().forEach((t) => t.stop());
+      return;
+    }
+
+    chunksRef.current = [];
+    const recorder = new MediaRecorder(stream, { mimeType, audioBitsPerSecond: AUDIO_BITS_PER_SECOND });
+    recorderRef.current = recorder;
+
+    recorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunksRef.current.push(e.data);
+    };
+    recorder.onstop = () => {
+      // The mic is released the moment recording ends, not when the upload
+      // finishes: there is nothing left to capture and the indicator should go
+      // out immediately.
+      streamRef.current?.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+
+      const blob = new Blob(chunksRef.current, { type: mimeType });
+      chunksRef.current = [];
+      if (blob.size === 0) {
+        setStage("idle");
+        setNotice({ tone: "error", text: "That recording didn't capture any audio. Try again." });
+        return;
+      }
+      void finish(blob);
+    };
+
+    setElapsed(0);
     setStage("recording");
-    // Simulate a short recording window, then move to AI processing.
-    setTimeout(() => setStage("processing"), 1800);
+    recorder.start();
+
+    tickRef.current = window.setInterval(() => setElapsed((s) => s + 1), 1000);
+    // THE CAP IS ENFORCED HERE, where the clock is. The function also refuses
+    // oversized audio, but only after it has been uploaded — on a phone that is
+    // the user's data spent to be told no.
+    capTimerRef.current = window.setTimeout(stopRecording, MAX_RECORDING_SECONDS * 1000);
   };
 
   const requestMicAndStart = async () => {
+    setNotice(null);
     setStage("requesting");
     try {
-      if (navigator.mediaDevices?.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // We don't process real audio in this prototype — just needed the
-        // permission grant. Release the mic immediately.
-        stream.getTracks().forEach((t) => t.stop());
-      }
-      beginRecording();
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      // KEPT OPEN, which is the whole difference from before. The old code
+      // stopped every track here and recorded nothing.
+      streamRef.current = stream;
+      beginRecording(stream);
     } catch {
       setStage("denied");
     }
   };
 
-  React.useEffect(() => {
-    if (stage === "processing") {
-      parseFoodInput("").then((res) => {
-        setResult(res);
-        setStage("result");
-      });
-    }
-  }, [stage]);
-
   /**
-   * Writes each parsed item to food_log_entries.
+   * Logs the matched items.
    *
-   * The parser returns prototype foods whose ids ("f7", "f12") are not
-   * database ids, so each one is resolved to a real catalog row by name
-   * first — those names were seeded, so most match, and an entry that points
-   * at a real food is worth more than one pointing at nothing. Anything with
-   * no match is written as a manual entry with null provenance rather than
-   * being dropped or failing the insert.
+   * An unmatched item still logs, as a manual entry with no provenance — the
+   * user said they ate it, and the catalog not knowing the name is not a reason
+   * to drop it. Its macros are unknown, which is exactly what Phase C's editing
+   * step exists to let them fix.
    */
   const handleAddAll = async () => {
-    if (!result || !authUserId || saving) return;
+    if (!authUserId || saving) return;
     setSaving(true);
-    setError(null);
+    setSaveError(null);
 
     let failed = 0;
-    for (const item of result.items) {
-      const quantity = item.food.name === "Toum" ? item.quantity : 1;
-      const resolved = (await findCatalogFoodByName(item.food.name)) ?? manualFood(item.food);
+    for (const item of items) {
+      const food =
+        item.food ??
+        manualFood({
+          id: item.spokenName,
+          name: item.spokenName,
+          category: "homemade",
+          serving: item.unit ?? "1 serving",
+          calories: 0, protein: 0, carbs: 0, fat: 0,
+        });
 
       const written = await logFoodEntry({
         userId: authUserId,
-        food: resolved,
-        quantity,
+        food,
+        quantity: item.quantity,
         unit: "serving",
         meal: "lunch",
         date: selectedDate,
         loggedVia: "ai",
       });
-
       if (written.ok && written.entry) addFoodEntryRecord(written.entry);
       else failed += 1;
     }
 
     setSaving(false);
     if (failed > 0) {
-      setError(
-        failed === result.items.length
+      setSaveError(
+        failed === items.length
           ? "Couldn't save those items. Please try again."
           : `Saved, but ${failed} item${failed === 1 ? "" : "s"} couldn't be added.`
       );
-      if (failed === result.items.length) return;
+      if (failed === items.length) return;
     }
     setAdded(true);
     setTimeout(handleClose, 900);
   };
+
+  const remaining = Math.max(0, MAX_RECORDING_SECONDS - elapsed);
 
   return (
     <BottomSheet open={open} onClose={handleClose} title="Tell Centium what you ate">
       <div className="min-h-[280px] flex flex-col items-center justify-center text-center py-4">
         {stage === "idle" && (
           <>
+            {/* SAID ONCE, BEFORE THE FIRST RECORDING. The mic prompt asks to
+                listen; it does not say the audio leaves for another company,
+                and that is the part worth knowing in advance. Dismissible
+                rather than blocking — the same shape as the recovery-sensitive
+                intro on Home. */}
+            {!voiceDisclosureSeen && (
+              <div className="w-full flex items-start gap-3 bg-teal-pale rounded-2xl px-4 py-3.5 mb-5 text-left animate-fade-slide-up">
+                <ShieldCheck size={17} className="text-charcoal-soft dark:text-teal-deep-text shrink-0 mt-0.5" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-charcoal-soft dark:text-teal-deep-text mb-0.5">
+                    Your recording is sent for transcription
+                  </p>
+                  <p className="text-xs text-charcoal-soft leading-relaxed">
+                    Centium sends voice recordings to Groq, a third-party service, to turn them into
+                    text and find the foods. Nothing is logged until you confirm it.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setVoiceDisclosureSeen(true)}
+                  aria-label="Dismiss"
+                  className="tap text-charcoal-faint shrink-0"
+                >
+                  <X size={15} />
+                </button>
+              </div>
+            )}
+
+            {notice && (
+              <p
+                className={`w-full text-xs rounded-xl px-3.5 py-2.5 mb-5 ${
+                  notice.tone === "error"
+                    ? "text-status-high bg-status-high-bg"
+                    : "text-charcoal-soft bg-cream-soft"
+                }`}
+              >
+                {notice.text}
+              </p>
+            )}
+
             <button
-              onClick={requestMicAndStart}
+              onClick={() => void requestMicAndStart()}
               className="tap relative w-24 h-24 rounded-full bg-teal flex items-center justify-center shadow-lift mb-6"
             >
               <Mic size={32} className="text-white" />
             </button>
-            <p className="font-display text-xl font-semibold text-charcoal mb-2">
-              What did you eat?
-            </p>
+            <p className="font-display text-xl font-semibold text-charcoal mb-2">What did you eat?</p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Tap the mic and describe your meal naturally — Centium's AI will find the foods and estimate the nutrition for you to confirm.
+              Tap the mic and describe your meal naturally — Centium will find the foods for you to
+              confirm.
             </p>
           </>
         )}
@@ -154,11 +349,16 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
             <p className="font-display text-xl font-semibold text-charcoal mb-2">
               Microphone access denied
             </p>
+            {/* The "Try a sample instead" button that used to sit here replayed
+                the canned response. With real transcription it would be the one
+                remaining way to put four foods nobody mentioned into a diary. */}
             <p className="text-sm text-charcoal-soft max-w-xs mb-6">
-              Enable microphone access in your browser/device settings to use voice logging. You
-              can still see how it works with a sample below.
+              Enable microphone access in your browser or device settings to use voice logging. You
+              can still add foods manually from the search tab.
             </p>
-            <Button onClick={beginRecording}>Try a sample instead</Button>
+            <Button variant="outline" onClick={reset}>
+              Back
+            </Button>
           </>
         )}
 
@@ -171,10 +371,15 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                 <Mic size={32} className="text-white" />
               </div>
             </div>
-            <p className="font-display text-xl font-semibold text-charcoal mb-2">Listening…</p>
-            <p className="text-sm text-charcoal-soft max-w-xs">
-              "I had a chicken shawarma with extra toum, some fries and a Diet Pepsi."
+            <p className="font-display text-xl font-semibold text-charcoal mb-1">Listening…</p>
+            <p className="text-sm text-charcoal-soft mb-6 tabular-nums">
+              {elapsed}s · {remaining}s left
             </p>
+            {/* THE CONTROL THE MOCK NEVER NEEDED. A fixed 1800ms timer ended
+                the old "recording"; a real one ends when the speaker decides. */}
+            <Button size="lg" onClick={stopRecording}>
+              <Square size={14} /> Stop & process
+            </Button>
           </>
         )}
 
@@ -187,67 +392,77 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               Centium is processing…
             </p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Matching what you said against the food database.
+              Transcribing what you said and matching it against the food database.
             </p>
           </>
         )}
 
-        {stage === "result" && result && (
+        {stage === "result" && (
           <div className="w-full text-left animate-fade-slide-up">
+            {/* WHAT WAS ACTUALLY HEARD, not a script. Shown because a wrong
+                match usually has an obvious cause once you can see the words
+                the transcriber produced. */}
+            {transcript && (
+              <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3.5 py-2.5 mb-4 italic">
+                "{transcript}"
+              </p>
+            )}
+
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
               We found
             </p>
             <div className="space-y-2 mb-4">
-              {result.items.map((item, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-lg bg-cream-card flex items-center justify-center shrink-0">
-                      {(() => {
-                        const Icon = foodCategoryIcon[item.food.category] ?? UtensilsCrossed;
-                        return <Icon size={15} className="text-primary-dark" />;
-                      })()}
+              {items.map((item, i) => {
+                const Icon = item.food
+                  ? foodCategoryIcon[item.food.category] ?? UtensilsCrossed
+                  : UtensilsCrossed;
+                return (
+                  <div
+                    key={`${item.spokenName}-${i}`}
+                    className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-8 h-8 rounded-lg bg-cream-card flex items-center justify-center shrink-0">
+                        <Icon size={15} className="text-primary-dark" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-charcoal truncate">
+                          {item.food?.name ?? item.spokenName}
+                        </p>
+                        {/* NOT SILENTLY DROPPED. An unmatched name still logs,
+                            without macros, and saying so here is the only place
+                            the user can tell. */}
+                        {!item.food && (
+                          <p className="text-[11px] text-charcoal-faint">
+                            Not in the food database — no nutrition info
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <span className="text-xs text-charcoal-soft shrink-0 tabular-nums">
+                      {item.quantity}
+                      {item.unit ? ` ${item.unit}` : ""}
                     </span>
-                    <span className="text-sm font-semibold text-charcoal">{item.food.name}</span>
                   </div>
-                  <span className="text-xs text-charcoal-soft">{item.quantityLabel}</span>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            <div className="bg-primary-pale rounded-2xl p-4 mb-5">
-              <p className="text-xs font-semibold text-primary-dark uppercase tracking-wide mb-2">
-                Estimated nutrition
-              </p>
-              <div className="flex items-baseline gap-1.5 mb-2">
-                <span className="text-2xl font-bold text-primary-dark">
-                  {result.totals.calories.toLocaleString()}
-                </span>
-                <span className="text-sm text-primary-dark/70">kcal</span>
-              </div>
-              <div className="flex gap-4 text-xs text-primary-dark/80 font-medium">
-                <span>Protein: {result.totals.protein}g</span>
-                <span>Carbs: {result.totals.carbs}g</span>
-                <span>Fat: {result.totals.fat}g</span>
-              </div>
-            </div>
-
-            {error && (
-              <p className="text-xs font-semibold text-status-high text-center mb-3">{error}</p>
+            {saveError && (
+              <p className="text-xs font-semibold text-status-high text-center mb-3">{saveError}</p>
             )}
 
             <div className="flex gap-2.5">
               <Button variant="outline" size="md" className="!px-4" onClick={reset}>
-                <Pencil size={14} /> Edit
+                <Mic size={14} /> Redo
               </Button>
-              <Button fullWidth size="md" onClick={handleAddAll} disabled={added || saving}>
+              <Button fullWidth size="md" onClick={() => void handleAddAll()} disabled={added || saving}>
                 {added ? "Added ✓" : saving ? "Saving…" : "Add to Diary"}
               </Button>
             </div>
             <p className="text-[11px] text-charcoal-faint mt-4 text-center">
-              AI-identified from your description — review before adding. Prototype estimate, not medical-grade data.
+              AI-identified from your description — review before adding. Estimates, not
+              medical-grade data.
             </p>
           </div>
         )}
