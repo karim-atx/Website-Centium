@@ -2740,6 +2740,7 @@ export type Database = {
           forwarded: boolean
           id: string
           read_at: string | null
+          redacted_at: string | null
           reply_to_id: string | null
           sender_id: string | null
           text: string | null
@@ -2753,6 +2754,7 @@ export type Database = {
           forwarded?: boolean
           id?: string
           read_at?: string | null
+          redacted_at?: string | null
           reply_to_id?: string | null
           sender_id?: string | null
           text?: string | null
@@ -2766,6 +2768,7 @@ export type Database = {
           forwarded?: boolean
           id?: string
           read_at?: string | null
+          redacted_at?: string | null
           reply_to_id?: string | null
           sender_id?: string | null
           text?: string | null

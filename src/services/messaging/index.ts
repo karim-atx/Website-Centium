@@ -89,6 +89,23 @@ export interface Message {
    */
   attachmentPurgedAt: string | null;
   /**
+   * Set when an admin removed this message's content through
+   * `admin_redact_message`.
+   *
+   * IT DOES NOT MEAN THE TEXT IS GONE, and that is the trap worth naming. The
+   * function takes `clear_text` and `clear_attachment` as INDEPENDENT booleans
+   * and stamps `redacted_at = now()` whichever ran — an attachment-only
+   * redaction leaves the text intact and still sets this. So it says "a
+   * moderator acted here", not "this message is empty", and anything rendering
+   * a removal notice has to check what is actually absent rather than trust
+   * this flag alone.
+   *
+   * Distinct from `attachmentPurgedAt`, which means the SENDER's account was
+   * deleted and their file swept. The difference is what a dispute about a
+   * takedown turns on, which is why the schema keeps two columns.
+   */
+  redactedAt: string | null;
+  /**
    * Duration in whole seconds when this message is a voice note.
    *
    * Present TOGETHER with `attachmentPath`, never alone — that pairing is what
@@ -140,15 +157,49 @@ export function describeMessage(m: {
   text: string | null;
   attachmentPath: string | null;
   attachmentPurgedAt: string | null;
+  redactedAt: string | null;
   voiceNoteSeconds: number | null;
 }): string {
   return (
     m.text?.trim() ||
     (m.attachmentPath && m.voiceNoteSeconds ? "Voice note" : "") ||
     (m.attachmentPath ? "Photo" : "") ||
-    (m.attachmentPurgedAt ? "Attachment removed" : "") ||
+    describeRemoval(m) ||
     "Message"
   );
+}
+
+/**
+ * What was taken off this message, as one sentence, or null when nothing was.
+ *
+ * DERIVED FROM WHAT IS ABSENT, NEVER FROM THE FLAG ALONE. `redactedAt` is
+ * stamped whenever an admin acted, including an attachment-only redaction that
+ * leaves the text in place — so keying "Message removed" off the flag would
+ * accuse a still-readable message of being gone. The test is redacted AND no
+ * text left.
+ *
+ * ONE LINE FOR THE COMBINED CASE. Both can be true at once: an admin clearing
+ * text and attachment together, or clearing text on a message whose sender was
+ * later purged. Two stacked notices would read as two separate events rather
+ * than one, so they collapse into a single sentence.
+ *
+ * SHARED WITH ThreadView on purpose, for the reason describeMessage's own
+ * comment already gives about itself: two implementations of the same sentence
+ * drift the moment a case is added, and the list preview and the bubble must
+ * not disagree about whether a message still exists.
+ */
+export function describeRemoval(m: {
+  text: string | null;
+  attachmentPurgedAt: string | null;
+  redactedAt: string | null;
+}): string | null {
+  const textRemoved = m.redactedAt !== null && !m.text?.trim();
+  const attachmentRemoved = m.attachmentPurgedAt !== null;
+
+  if (textRemoved && attachmentRemoved) return "Message and attachment removed";
+  if (textRemoved) return "Message removed";
+  if (attachmentRemoved) return "Attachment removed";
+  return null;
 }
 
 export type ThreadsResult =
@@ -266,6 +317,14 @@ export async function fetchThreads(): Promise<ThreadsResult> {
         text: m.text,
         attachmentPath: m.attachment_url,
         attachmentPurgedAt: m.attachment_purged_at,
+        // NULL UNTIL messages_visible EXPOSES THE COLUMN. admin_redact_message
+        // (Database 20260915130000) added messages.redacted_at but did not add it
+        // to this view, and both message reads go through the view because that is
+        // what applies the per-viewer hidden filter. Requesting a column the view
+        // does not select makes PostgREST reject the whole query, which would take
+        // every message down rather than one notice. One line in the view turns
+        // this on: read m.redacted_at here instead.
+        redactedAt: null,
         voiceNoteSeconds: m.voice_note_seconds,
       });
       latest.set(m.thread_id, { preview, created_at: m.created_at });
@@ -372,6 +431,15 @@ export async function fetchMessages(threadId: string): Promise<MessagesResult> {
       readAt: m.read_at,
       attachmentPath: m.attachment_url,
       attachmentPurgedAt: m.attachment_purged_at,
+
+      // NULL UNTIL messages_visible EXPOSES THE COLUMN. admin_redact_message
+      // (Database 20260915130000) added messages.redacted_at but did not add it
+      // to this view, and both message reads go through the view because that is
+      // what applies the per-viewer hidden filter. Requesting a column the view
+      // does not select makes PostgREST reject the whole query, which would take
+      // every message down rather than one notice. One line in the view turns
+      // this on: read m.redacted_at here instead.
+      redactedAt: null,
       voiceNoteSeconds: m.voice_note_seconds,
       replyToId: m.reply_to_id,
       forwarded: m.forwarded ?? false,
@@ -480,6 +548,9 @@ async function insertMessage(row: {
       readAt: data.read_at,
       attachmentPath: data.attachment_url,
       attachmentPurgedAt: data.attachment_purged_at,
+      // The row this returns is the one just inserted, so it cannot have been
+      // redacted; not selected rather than read back as a certain null.
+      redactedAt: null,
       voiceNoteSeconds: data.voice_note_seconds,
       replyToId: data.reply_to_id,
       forwarded: data.forwarded,

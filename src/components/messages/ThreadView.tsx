@@ -18,6 +18,7 @@ import { acceptFor } from "../../services/storage";
 import {
   clearPin,
   describeMessage,
+  describeRemoval,
   fetchMessages,
   fetchPin,
   fetchStarred,
@@ -670,6 +671,10 @@ export const ThreadView: React.FC<{
         )}
         {messages.map((m) => {
           const mine = m.senderId === authUserId;
+          // GLOBAL, NOT PER-VIEWER. Both columns are on the row itself, so
+          // both participants see the same notice — unlike message_flags,
+          // which is the viewer's own and is why hiding is not rendered here.
+          const removal = describeRemoval(m);
           return (
             <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
               <div
@@ -735,15 +740,27 @@ export const ThreadView: React.FC<{
                   </span>
                 )}
                 {m.text}
-                {/* Purged first: both content columns are null, so testing
-                    attachmentPath alone would render nothing at all and the
-                    message would look like an empty bubble rather than one
-                    whose file was deliberately removed. */}
-                {m.attachmentPurgedAt ? (
+                {/* WHAT WAS TAKEN OFF THIS MESSAGE, as one line.
+                    Without it a message whose content is gone renders as an
+                    empty bubble rather than one that was deliberately emptied.
+                    describeRemoval is shared with the thread list so the
+                    preview and the bubble cannot disagree about whether a
+                    message still exists, and it collapses the both-removed
+                    case into a single sentence instead of stacking two.
+
+                    It is NOT keyed on redactedAt alone: an attachment-only
+                    redaction stamps that flag and leaves the text readable, so
+                    the notice is derived from what is actually absent. */}
+                {removal && (
                   <span className="flex items-center gap-1.5 opacity-85 italic">
-                    <Trash2 size={13} className="shrink-0" /> Attachment removed
+                    <Trash2 size={13} className="shrink-0" /> {removal}
                   </span>
-                ) : m.attachmentPath && m.voiceNoteSeconds ? (
+                )}
+                {/* Suppressed only when the FILE is gone. A message whose text
+                    was redacted but whose attachment survives still renders the
+                    attachment below the notice — the photo is still there and
+                    hiding it would be its own small lie. */}
+                {m.attachmentPurgedAt ? null : m.attachmentPath && m.voiceNoteSeconds ? (
                   // Voice note before photo: both are attachment_url, and the
                   // duration column is the only thing distinguishing them.
                   <VoiceNoteBubble
