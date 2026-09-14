@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { describeMediaDenial, type MediaDenialKind } from "../utils/mediaPermissions";
 
 /**
  * Microphone capture for voice notes. No dependency — MediaRecorder is native.
@@ -26,11 +27,7 @@ export const MAX_SECONDS = 180;
 /** Below this a press reads as a mis-tap rather than a message. */
 export const MIN_SECONDS = 1;
 
-export type RecorderError =
-  | { kind: "denied"; message: string }
-  | { kind: "no-device"; message: string }
-  | { kind: "unsupported"; message: string }
-  | { kind: "failed"; message: string };
+export type RecorderError = { kind: MediaDenialKind; message: string };
 
 export interface VoiceCapture {
   file: File;
@@ -45,24 +42,23 @@ function pickMimeType(): string | null {
 /**
  * Turns a getUserMedia rejection into a sentence worth showing.
  *
- * The names are the spec's, and they mean genuinely different things: a denial
- * is a decision the user can revisit in settings, a missing device is not.
- * `AIVoiceLogger` collapses every failure into one "denied" screen, which
- * tells someone with no microphone to go and grant a permission that was never
- * the problem.
+ * NOW DELEGATED to src/utils/mediaPermissions, which the call screen shares.
+ * This used to carry its own three-branch version, and it was missing the
+ * failure that actually happens most: NotReadableError, raised when the
+ * microphone exists and is permitted but another program is holding it. That
+ * fell through to "Couldn't start recording. Try again." — advice that cannot
+ * work, since retrying changes nothing until the other program releases the
+ * device. OverconstrainedError was unhandled here too.
+ *
+ * The original distinction this function was written for survives in the
+ * shared version: a denial is a decision the user can revisit in settings, a
+ * missing device is not. `AIVoiceLogger` still collapses every failure into one
+ * "denied" screen, which tells someone with no microphone to go and grant a
+ * permission that was never the problem.
  */
 function describeMediaError(err: unknown): RecorderError {
-  const name = (err as { name?: string })?.name ?? "";
-  if (name === "NotAllowedError" || name === "SecurityError") {
-    return {
-      kind: "denied",
-      message: "Microphone access is blocked. Allow it in your browser settings to record.",
-    };
-  }
-  if (name === "NotFoundError" || name === "DevicesNotFoundError") {
-    return { kind: "no-device", message: "No microphone found on this device." };
-  }
-  return { kind: "failed", message: "Couldn't start recording. Try again." };
+  const denial = describeMediaDenial(err, "microphone");
+  return { kind: denial.kind, message: denial.message };
 }
 
 export function useVoiceRecorder() {
