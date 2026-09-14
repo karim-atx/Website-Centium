@@ -52,7 +52,7 @@ export default function BusinessProfileTab() {
         <button
           onClick={() => setAvatarSheetOpen(true)}
           aria-label="Change profile picture"
-          className="tap relative w-16 h-16 rounded-full bg-teal-pale flex items-center justify-center text-2xl font-bold text-teal-dark overflow-hidden shrink-0"
+          className="tap relative w-16 h-16 rounded-full bg-teal-pale flex items-center justify-center text-2xl font-bold text-charcoal-soft dark:text-teal-deep-text overflow-hidden shrink-0"
         >
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />

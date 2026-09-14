@@ -61,7 +61,7 @@ export default function Home() {
         </div>
         <button
           onClick={() => navigate("/app/profile")}
-          className="tap w-11 h-11 rounded-full bg-teal-pale flex items-center justify-center text-teal-dark font-bold shrink-0 overflow-hidden"
+          className="tap w-11 h-11 rounded-full bg-teal-pale flex items-center justify-center text-charcoal-soft dark:text-teal-deep-text font-bold shrink-0 overflow-hidden"
         >
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />

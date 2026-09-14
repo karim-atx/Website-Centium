@@ -87,6 +87,22 @@
   --c-teal-dark: 111 153 147;
   --c-teal-deep-text: 95 127 122;
 
+  /* NEITHER OF THE TWO ABOVE IS THE TEXT COLOUR FOR A teal-pale SURFACE,
+     which is worth stating here because both names suggest otherwise and
+     both have been used that way and failed:
+
+       teal-dark       2.81:1 light, 3.13:1 dark  -- fails in BOTH modes
+       teal-deep-text  3.90:1 light, 7.34:1 dark  -- fails light only
+
+     What text on teal-pale actually uses is
+     "text-charcoal-soft dark:text-teal-deep-text": 6.74:1 and 7.34:1, the
+     pairing every such site in the app now shares. teal-deep-text earns its
+     name in dark and only there; in light the ground is too close to it.
+
+     These two stay as they are because they are correct on the grounds they
+     were tuned for -- teal-dark on cream, teal-deep-text in dark mode -- and
+     a dozen places outside this problem depend on exactly those values. */
+
   --c-gold: 217 164 65;
   --c-gold-pale: 246 233 201;
 

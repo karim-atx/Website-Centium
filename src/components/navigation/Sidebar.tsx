@@ -70,7 +70,7 @@ export const Sidebar: React.FC = () => {
       )}
 
       <div className="flex items-center gap-2.5 mt-4 px-2">
-        <div className="w-9 h-9 rounded-full bg-teal-pale flex items-center justify-center text-sm font-bold text-teal-dark">
+        <div className="w-9 h-9 rounded-full bg-teal-pale flex items-center justify-center text-sm font-bold text-charcoal-soft dark:text-teal-deep-text">
           {user.firstName.charAt(0)}
         </div>
         <div className="text-sm">
