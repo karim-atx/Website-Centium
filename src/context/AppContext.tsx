@@ -48,6 +48,12 @@ import type {
   ForumPost,
   ForumCategory,
 } from "../types";
+import {
+  createCustomMeal as createCustomMealRemote,
+  deleteCustomMeal as deleteCustomMealRemote,
+  getCustomMeals,
+  updateCustomMeal as updateCustomMealRemote,
+} from "../services/custom-meals";
 import { mockForumPosts } from "../data/mockForum";
 import { defaultHabits, streaks as seedStreaks } from "../data/mockHealthData";
 import { todaysWorkout, workoutPrograms, exerciseLibrary } from "../data/mockWorkouts";
@@ -414,13 +420,30 @@ interface AppState {
   // V4: Meal Prep reworked into "Create Meal" — group existing foods under
   // one title; logging the meal logs every item individually.
   customMeals: CustomMeal[];
-  addCustomMeal: (title: string, items: CustomMeal["items"], mealType?: MealType) => void;
-  updateCustomMeal: (id: string, title: string, items: CustomMeal["items"], mealType?: MealType) => void;
-  removeCustomMeal: (id: string) => void;
+  // Promise-returning since these reach custom_meals. They resolve to a
+  // message when the write failed and undefined when it did not, so a caller
+  // can surface the reason -- an item the food database does not know about
+  // is refused rather than silently dropped. See services/custom-meals.
+  addCustomMeal: (title: string, items: CustomMeal["items"], mealType?: MealType) => Promise<string | undefined>;
+  updateCustomMeal: (
+    id: string,
+    title: string,
+    items: CustomMeal["items"],
+    mealType?: MealType
+  ) => Promise<string | undefined>;
+  removeCustomMeal: (id: string) => Promise<void>;
+  /** Null until the first hydration finishes or fails. */
+  customMealsError: string | null;
   // QA 11.0: "Meal plans created by the professional should ONLY appear
   // for the assigned client and not everyone" — a professional-authored
   // plan now lives in its own per-client store instead of the single
   // shared `customMeals` list every client's Meal Prep tab read from.
+  //
+  // STILL LOCAL, AND NOT FOR WANT OF A TABLE. custom_meals.scoped_to_client_id
+  // is exactly this, and its RLS already lets the scoped client read the meal.
+  // What is missing is the id: `clientId` here is a RELATIONSHIP id, and that
+  // column references profiles(id). Writing one into the other would point at
+  // nothing. addClientCustomFood is local for the same reason and says so.
   clientCustomMeals: Record<string, CustomMeal[]>;
   addClientCustomMeal: (clientId: string, title: string, items: CustomMeal["items"], mealType?: MealType) => void;
   updateClientCustomMeal: (
@@ -1487,6 +1510,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [authUserId, profileReady, diaryStart, diaryEnd, setFoodLog]);
 
+  // --- custom meal hydration ----------------------------------------------
+  //
+  // Same reliability shape as the diary above: a failed read keeps whatever is
+  // already on screen, because an empty list and a broken connection mean
+  // opposite things and one of them must not delete a user's saved meals.
+  const [customMealsError, setCustomMealsError] = useState<string | null>(null);
+  // One attempt per signed-in account per page load. A ref, not state, so
+  // starting the upload cannot itself re-run the effect that started it.
+  const mealUploadAttempted = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+
+    void getCustomMeals(authUserId).then(async (result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setCustomMealsError(result.message ?? "Could not load your meals.");
+        return;
+      }
+      setCustomMealsError(null);
+
+      // MEALS SAVED BEFORE THIS EXISTED ARE UPLOADED ONCE, then live remotely
+      // like any other. Without this they would sit in localStorage forever,
+      // invisible on every other device, and the replace below would make them
+      // look deleted the first time it ran.
+      //
+      // Identified by their local id, so a meal that has ever reached the
+      // server is never a candidate and this cannot duplicate one. Failures
+      // are kept rather than retried in a loop: the meal stays local, stays
+      // visible, and the attempt is not repeated until the next load.
+      const pending = mealUploadAttempted.current !== authUserId
+        ? customMeals.filter((m) => !isRemoteMealId(m.id))
+        : [];
+      mealUploadAttempted.current = authUserId;
+
+      const uploaded: CustomMeal[] = [];
+      const keptLocal: CustomMeal[] = [];
+      for (const meal of pending) {
+        const written = await createCustomMealRemote(authUserId, meal.title, meal.items, meal.mealType);
+        if (written.ok && written.meal) uploaded.push(written.meal);
+        else {
+          console.error("[custom-meals] Could not upload a local meal:", written.message);
+          keptLocal.push(meal);
+        }
+      }
+      if (cancelled) return;
+
+      // Replace rather than merge, for the reason the diary gives: these rows
+      // carry real ids and merging would show one meal twice. Local meals that
+      // could not be uploaded are preserved -- dropping them would delete the
+      // very data this migration exists to rescue.
+      setCustomMeals(() => [...result.meals, ...uploaded, ...keptLocal]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // customMeals is read for the one-time upload and must not re-trigger this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId, profileReady]);
+
   // Workout history, hydrated from workout_sessions.
   //
   // A PLAIN REPLACE, not the diary's merge. The diary has to preserve
@@ -2314,12 +2399,48 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setMacroSplit = (split: MacroSplit) =>
     setNutritionGoalState((prev) => ({ ...prev, macroSplit: normalizeMacroSplit(split) }));
 
-  const addCustomMeal: AppState["addCustomMeal"] = (title, items, mealType) =>
-    setCustomMeals((prev) => [...prev, { id: `cm${Date.now()}`, title: title.trim(), items, mealType }]);
+  // A LOCAL ID MEANS NEVER SYNCED, the same shape isRemoteEntryId gives the
+  // diary. Meals written before this reached Supabase carry `cm<timestamp>`;
+  // every meal the server knows about carries a uuid.
+  const isRemoteMealId = (id: string) => isUuid(id);
+
+  const addCustomMeal: AppState["addCustomMeal"] = async (title, items, mealType) => {
+    // Signed out, behave exactly as before rather than refusing: the meal is
+    // still useful locally and the upload below will take it on next sign-in.
+    if (!authUserId) {
+      setCustomMeals((prev) => [...prev, { id: `cm${Date.now()}`, title: title.trim(), items, mealType }]);
+      return undefined;
+    }
+    const result = await createCustomMealRemote(authUserId, title, items, mealType);
+    if (!result.ok || !result.meal) return result.message ?? "Could not save that meal.";
+    setCustomMeals((prev) => [...prev, result.meal!]);
+    return undefined;
+  };
+
   // V10 (QA 10.0): "Creating a meal prep should also allow you to edit and delete it."
-  const updateCustomMeal: AppState["updateCustomMeal"] = (id, title, items, mealType) =>
-    setCustomMeals((prev) => prev.map((m) => (m.id === id ? { ...m, title: title.trim(), items, mealType } : m)));
-  const removeCustomMeal = (id: string) => setCustomMeals((prev) => prev.filter((m) => m.id !== id));
+  const updateCustomMeal: AppState["updateCustomMeal"] = async (id, title, items, mealType) => {
+    const applyLocal = () =>
+      setCustomMeals((prev) => prev.map((m) => (m.id === id ? { ...m, title: title.trim(), items, mealType } : m)));
+
+    // An unsynced meal has nothing to update remotely; editing it keeps it
+    // local, and the upload below will carry the edited version up.
+    if (!authUserId || !isRemoteMealId(id)) {
+      applyLocal();
+      return undefined;
+    }
+    const result = await updateCustomMealRemote(id, title, items, mealType);
+    if (!result.ok) return result.message ?? "Could not save that meal.";
+    applyLocal();
+    return undefined;
+  };
+
+  const removeCustomMeal: AppState["removeCustomMeal"] = async (id) => {
+    // Removed locally either way: a delete the server refused should not leave
+    // the row on screen pretending the tap did nothing, and the next hydration
+    // will bring it back if it really survived.
+    if (authUserId && isRemoteMealId(id)) await deleteCustomMealRemote(id);
+    setCustomMeals((prev) => prev.filter((m) => m.id !== id));
+  };
 
   const addClientCustomMeal: AppState["addClientCustomMeal"] = (clientId, title, items, mealType) =>
     setClientCustomMeals((prev) => ({
@@ -2345,11 +2466,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!custom || !authUserId) return;
 
     for (const item of custom.items) {
-      // A food that made it into custom_foods can carry real provenance; one
-      // created before those writes existed still has a local id and has to be
-      // logged as a manual entry.
+      // WHICH TABLE, NOT MERELY WHETHER IT IS A UUID. A hydrated meal carries
+      // real ids for BOTH kinds of food, so the old isUuid test would send a
+      // catalog id to custom_food_id and fail the foreign key. getCustomMeals
+      // marks custom-sourced items with isCustom; isUuid still answers for
+      // items that never went through it -- a locally built meal, where a uuid
+      // can only have come from the user's own foods.
       const base = manualFood(item.food);
-      const food = isUuid(item.food.id) ? { ...base, source: "custom" as const } : base;
+      const fromCustom = (item.food as Partial<CustomFood>).isCustom === true;
+      const food =
+        fromCustom || (!("isCustom" in item.food) && isUuid(item.food.id))
+          ? { ...base, source: "custom" as const }
+          : isUuid(item.food.id)
+            ? { ...base, source: "catalog" as const }
+            : base;
 
       const result = await logFoodEntry({
         userId: authUserId,
@@ -2834,6 +2964,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       remindersPaused,
       setRemindersPaused,
       customMeals,
+      customMealsError,
       addCustomMeal,
       updateCustomMeal,
       removeCustomMeal,
@@ -2996,6 +3127,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       widgets,
       nutritionGoal,
       customMeals,
+      customMealsError,
       clientCustomMeals,
       dietaryRestriction,
       recoverySensitive,

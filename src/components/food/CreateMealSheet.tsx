@@ -46,6 +46,8 @@ export const CreateMealSheet: React.FC<{
   const [title, setTitle] = useState(editMeal?.title ?? "");
   const [mealType, setMealType] = useState<MealType | null>(editMeal?.mealType ?? null);
   const [creatingFood, setCreatingFood] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [foodDraft, setFoodDraft] = useState({ name: "", serving: "1 serving", calories: "", protein: "", carbs: "", fat: "" });
 
   React.useEffect(() => {
@@ -111,14 +113,28 @@ export const CreateMealSheet: React.FC<{
   // for the assigned client and not everyone" — a `clientId` routes the
   // plan itself (not just foods created while building it) into that
   // client's own store instead of the shared personal one.
-  const save = () => {
-    if (!title.trim() || items.length === 0) return;
+  // AWAITED NOW, BECAUSE THE PERSONAL PATH REACHES SUPABASE. Closing on a
+  // refused save would drop the meal with nothing said -- and the one refusal
+  // that actually happens is specific and worth reading: an item whose food
+  // the database does not know, which custom_meal_items cannot reference.
+  // The client path stays synchronous; it is still local (see AppContext).
+  const save = async () => {
+    if (!title.trim() || items.length === 0 || saving) return;
+    setSaveError(null);
+
     if (clientId) {
       if (editMeal) updateClientCustomMeal(clientId, editMeal.id, title, items, mealType ?? undefined);
       else addClientCustomMeal(clientId, title, items, mealType ?? undefined);
     } else {
-      if (editMeal) updateCustomMeal(editMeal.id, title, items, mealType ?? undefined);
-      else addCustomMeal(title, items, mealType ?? undefined);
+      setSaving(true);
+      const message = editMeal
+        ? await updateCustomMeal(editMeal.id, title, items, mealType ?? undefined)
+        : await addCustomMeal(title, items, mealType ?? undefined);
+      setSaving(false);
+      if (message) {
+        setSaveError(message);
+        return;
+      }
     }
     reset();
     onClose();
@@ -296,8 +312,16 @@ export const CreateMealSheet: React.FC<{
           )}
         </div>
 
-        <Button fullWidth size="lg" onClick={save} disabled={!title.trim() || items.length === 0}>
-          {editMeal ? "Save changes" : "Save meal"}
+        {saveError && (
+          <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5 mb-3">{saveError}</p>
+        )}
+        <Button
+          fullWidth
+          size="lg"
+          onClick={() => void save()}
+          disabled={!title.trim() || items.length === 0 || saving}
+        >
+          {saving ? "Saving…" : editMeal ? "Save changes" : "Save meal"}
         </Button>
         <p className="text-[11px] text-charcoal-faint text-center">
           Search "{title || "this meal's title"}" from Add Food to log every item at once.

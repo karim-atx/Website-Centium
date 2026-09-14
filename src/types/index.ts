@@ -940,6 +940,19 @@ export interface CustomMealItem {
   food: Food;
   quantity: number;
   unit?: ServingUnit;
+  /**
+   * Which table `food.id` points at, set by hydration and absent on an item
+   * the user has just picked in the builder.
+   *
+   * It exists because the id alone stopped being enough. A meal used to hold
+   * either a prototype id ("f1") or one of the user's own foods, so "looks
+   * like a uuid" meant custom_foods. Once meals are read back from the
+   * database a catalog food arrives with a real uuid too, and guessing wrong
+   * puts a foods id in a custom_food_id column -- foreign key 23503, on both
+   * custom_meal_items and food_log_entries. Absent still means "decide from
+   * the id", which is correct for a locally built item.
+   */
+  source?: "catalog" | "custom";
 }
 
 export interface CustomMeal {

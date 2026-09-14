@@ -52,7 +52,7 @@ export default function MealPrepPanel() {
                     <Pencil size={12} />
                   </button>
                   <button
-                    onClick={() => removeCustomMeal(m.id)}
+                    onClick={() => void removeCustomMeal(m.id)}
                     className="tap w-7 h-7 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-faint"
                     aria-label={`Remove ${m.title}`}
                   >
