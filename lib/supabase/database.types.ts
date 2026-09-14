@@ -2658,18 +2658,21 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          kind: Database["public"]["Enums"]["thread_kind"]
           participant_one_id: string | null
           participant_two_id: string | null
         }
         Insert: {
           created_at?: string
           id?: string
+          kind?: Database["public"]["Enums"]["thread_kind"]
           participant_one_id?: string | null
           participant_two_id?: string | null
         }
         Update: {
           created_at?: string
           id?: string
+          kind?: Database["public"]["Enums"]["thread_kind"]
           participant_one_id?: string | null
           participant_two_id?: string | null
         }
@@ -4994,18 +4997,21 @@ export type Database = {
         Row: {
           avatar_url: string | null
           first_name: string | null
+          kind: Database["public"]["Enums"]["thread_kind"] | null
           participant_id: string | null
           thread_id: string | null
         }
         Insert: {
           avatar_url?: string | null
           first_name?: string | null
+          kind?: Database["public"]["Enums"]["thread_kind"] | null
           participant_id?: string | null
           thread_id?: string | null
         }
         Update: {
           avatar_url?: string | null
           first_name?: string | null
+          kind?: Database["public"]["Enums"]["thread_kind"] | null
           participant_id?: string | null
           thread_id?: string | null
         }
@@ -5951,6 +5957,7 @@ export type Database = {
       subscription_tier_type: "professional" | "business"
       template_level: "beginner" | "intermediate" | "advanced"
       theme_mode: "light" | "dark" | "auto"
+      thread_kind: "peer" | "official_support"
       weight_goal: "lose" | "gain" | "maintain"
       widget_size: "small" | "large"
       widget_type:
@@ -6248,6 +6255,7 @@ export const Constants = {
       subscription_tier_type: ["professional", "business"],
       template_level: ["beginner", "intermediate", "advanced"],
       theme_mode: ["light", "dark", "auto"],
+      thread_kind: ["peer", "official_support"],
       weight_goal: ["lose", "gain", "maintain"],
       widget_size: ["small", "large"],
       widget_type: [

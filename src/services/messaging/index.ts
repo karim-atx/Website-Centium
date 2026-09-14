@@ -22,6 +22,24 @@ import type { PostgrestError } from "@supabase/supabase-js";
 // as the thread carrying it, matching `messages` having no DELETE policy. There
 // is deliberately no unsend here to imply otherwise.
 
+/**
+ * What a conversation IS, as the database classifies it.
+ *
+ * "peer" is every thread anyone opened by messaging someone: the default, the
+ * shape the whole feature was built around, and what every existing thread
+ * still is. "official_support" is a thread Centium started with the user
+ * through the admin console, where the other side is an official identity
+ * rather than a person the user chose to talk to.
+ *
+ * WHY THE CLIENT IS TOLD AT ALL. The recipient did not ask for the official
+ * thread and did not pick who is in it. Arriving as an unexplained stranger
+ * who happens to be called "Centium Support" is exactly the shape of a
+ * phishing message, so the app has to be able to say which threads it
+ * genuinely opened itself. The view projects the column for this reason; see
+ * its comment in Database 20260915210000.
+ */
+export type ThreadKind = "peer" | "official_support";
+
 export interface MessageThread {
   id: string;
   /**
@@ -41,6 +59,17 @@ export interface MessageThread {
   participantId: string | null;
   participantName: string;
   participantAvatarUrl: string | null;
+  /**
+   * Peer unless the database says otherwise, and deliberately narrowed rather
+   * than passed through.
+   *
+   * The view widens every column to nullable, and the enum can gain values
+   * this build has never heard of. Both fall to "peer", so an unrecognised
+   * thread renders exactly as every thread renders today rather than as a
+   * half-applied official treatment — the failure mode of a wrong guess here
+   * is claiming something is official when it is not.
+   */
+  kind: ThreadKind;
   /**
    * One line describing the newest message, for the list.
    *
@@ -279,7 +308,7 @@ export async function startThread(otherUserId: string): Promise<StartThreadResul
 export async function fetchThreads(): Promise<ThreadsResult> {
   const participants = await supabase
     .from("thread_participant_summary")
-    .select("thread_id, participant_id, first_name, avatar_url");
+    .select("thread_id, participant_id, first_name, avatar_url, kind");
 
   if (participants.error) {
     console.error("[messaging] Could not load threads:", participants.error.message);
@@ -363,6 +392,10 @@ export async function fetchThreads(): Promise<ThreadsResult> {
           ? "Deleted account"
           : r.first_name?.trim() || "Someone",
       participantAvatarUrl: r.avatar_url,
+      // COMPARED, NOT CAST. A cast would launder a null -- or a value added to
+      // the enum after this build shipped -- into a ThreadKind the renderer
+      // then trusts. Only the exact string earns the official treatment.
+      kind: r.kind === "official_support" ? "official_support" : "peer",
       lastMessagePreview: last?.preview ?? null,
       lastMessageAt: last?.created_at ?? null,
     };

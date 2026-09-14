@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, EyeOff, Forward, ImageIcon, Mic, Paperclip, Phone, Pin, PinOff, Send, Star, Trash2, Video, X } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, EyeOff, Forward, ImageIcon, Mic, Paperclip, Phone, Pin, PinOff, Send, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useCall } from "../../context/CallContext";
 import { threadAllowsCalls, type CallKind } from "../../services/calling";
@@ -616,6 +616,25 @@ export const ThreadView: React.FC<{
         )}
       </div>
 
+      {/* WHO THIS IS, stated rather than implied by a name in the header.
+          Centium opened this conversation; the user did not choose to talk
+          to whoever is on the other side, and a stranger calling themselves
+          "Centium Support" is exactly the shape of a phishing message. The
+          app is the only party that can tell the difference, so it says so.
+
+          Above the messages and outside the scroll, because it qualifies the
+          whole conversation rather than any one message in it. */}
+      {thread.kind === "official_support" && (
+        <div className="flex items-start gap-2 rounded-xl bg-teal-pale text-teal-deep-text px-3 py-2.5 mb-2">
+          <ShieldCheck size={15} className="shrink-0 mt-px" />
+          <p className="text-[11px] leading-relaxed">
+            <span className="font-semibold">You're talking with Centium Support.</span>{" "}
+            Centium started this conversation — it is not a message from
+            another member.
+          </p>
+        </div>
+      )}
+
       {/* A permission refusal that stopped the call, or a camera refusal that
           turned a video call into a voice one. Shown here rather than as a
           toast because it explains a button the user just pressed. */}
@@ -671,6 +690,11 @@ export const ThreadView: React.FC<{
         )}
         {messages.map((m) => {
           const mine = m.senderId === authUserId;
+          // NO LOOKUP NEEDED, AND NONE IS POSSIBLE. system_support_identity() is
+          // revoked from authenticated, so a client cannot ask which profile id
+          // support posts as. It does not have to: an official thread has exactly
+          // two sides, so anything that is not the viewer's own is support.
+          const fromSupport = !mine && thread.kind === "official_support";
           // GLOBAL, NOT PER-VIEWER. Both columns are on the row itself, so
           // both participants see the same notice — unlike message_flags,
           // which is the viewer's own and is why hiding is not rendered here.
@@ -690,7 +714,16 @@ export const ThreadView: React.FC<{
                   setActionsFor(m);
                 }}
                 className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words select-none transition-shadow ${
-                  mine ? "bg-bubble-sent text-white dark:text-[#0D0B1A]" : "bg-cream-soft text-charcoal"
+                  mine
+                    ? "bg-bubble-sent text-white dark:text-[#0D0B1A]"
+                    : // Matching the teal the Admin console already gives support
+                      // messages, so one conversation reads the same way to the
+                      // person answering it and the person receiving it. Both
+                      // tokens are defined for dark mode here, so this needs no
+                      // variant of its own.
+                      fromSupport
+                      ? "bg-teal-pale text-teal-deep-text"
+                      : "bg-cream-soft text-charcoal"
                 } ${highlighted === m.id ? "ring-2 ring-primary-dark" : ""}`}
               >
                 {/* The quote sits above the message body, as it reads: what
