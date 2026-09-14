@@ -7,6 +7,7 @@ import { Sidebar } from "./Sidebar";
 import { BottomNav } from "./BottomNav";
 import { UnreadProvider } from "../../context/UnreadContext";
 import { CallProvider } from "../../context/CallContext";
+import { CallSurface } from "../calls/CallSurface";
 
 export const Layout: React.FC = () => {
   // This app uses plain BrowserRouter, which — unlike the newer data
@@ -49,6 +50,9 @@ export const Layout: React.FC = () => {
         </div>
         <BottomNav />
       </div>
+      {/* Outside the layout div and portaled from there: a call must cover the
+          navs too, and must not be clipped by any transformed ancestor. */}
+      <CallSurface />
       </CallProvider>
     </UnreadProvider>
   );
