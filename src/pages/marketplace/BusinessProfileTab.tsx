@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
@@ -45,6 +46,7 @@ export default function BusinessProfileTab() {
   return (
     <div>
       <PageHeader title="Business Profile" subtitle="How clients see you on Explore" showBack />
+      <BusinessPrototypeNotice />
 
       <div className="flex items-center gap-4 mb-6 animate-fade-slide-up">
         <button

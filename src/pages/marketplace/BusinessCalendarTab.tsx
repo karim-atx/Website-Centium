@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -147,6 +148,7 @@ export default function BusinessCalendarTab() {
           </button>
         }
       />
+      <BusinessPrototypeNotice />
 
       <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit mb-4">
         {(["year", "month", "week", "day"] as View[]).map((v) => (

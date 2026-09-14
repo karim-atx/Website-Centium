@@ -1,4 +1,5 @@
 import { PageHeader } from "../../components/ui/PageHeader";
+import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import { professionalTypeIcon } from "../../utils/icons";
@@ -25,6 +26,7 @@ export default function BusinessEmployeesTab() {
   return (
     <div>
       <PageHeader title="Employees" subtitle="Affiliate professionals with your business" showBack />
+      <BusinessPrototypeNotice />
 
       <Card className="mb-6">
         <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -63,6 +64,7 @@ export default function BusinessGymTab() {
   return (
     <div>
       <PageHeader title="Gym" subtitle="Membership plans clients can buy on Explore" showBack />
+      <BusinessPrototypeNotice />
 
       <div className="space-y-2.5">
         {businessListing.membershipPlans.map((p) => (

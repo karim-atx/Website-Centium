@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { useApp } from "../../context/AppContext";
@@ -33,6 +34,7 @@ export default function BusinessMarketplaceTab() {
   return (
     <div>
       <PageHeader title="Marketplace" subtitle="List your products or services for clients to discover" />
+      <BusinessPrototypeNotice />
 
       <Card className="mb-6">
         <label className="block mb-3">

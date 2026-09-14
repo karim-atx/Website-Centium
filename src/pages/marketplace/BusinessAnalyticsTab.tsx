@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { Chip } from "../../components/ui/Chip";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -122,6 +123,7 @@ export default function BusinessAnalyticsTab() {
   return (
     <div>
       <PageHeader title="Analytics" subtitle="Business performance and client outcomes" />
+      <BusinessPrototypeNotice />
 
       <div className="flex gap-2 mb-4">
         <Chip active={section === "insights"} onClick={() => setSection("insights")}>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import { mockBusinessCustomers } from "../../data/mockBusinessCustomers";
@@ -108,6 +109,7 @@ export default function BusinessMessagesTab() {
   return (
     <div>
       <PageHeader title="Messages" showBack />
+      <BusinessPrototypeNotice />
 
       <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit mb-4">
         {(["clients", "professionals"] as const).map((a) => (

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { Toggle } from "../../components/ui/Toggle";
 import { useApp } from "../../context/AppContext";
@@ -23,6 +24,7 @@ export default function BusinessDashboard() {
   return (
     <div>
       <PageHeader title="Business Dashboard" subtitle="Manage your Centium marketplace listing" />
+      <BusinessPrototypeNotice />
 
       {/* Design refinement §6.11: gradient hero flattens to one solid fill,
           with a LIVE pill standing in for the gradient's implied "active"
