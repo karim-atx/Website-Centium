@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Mic, Sparkles, MicOff, Square, ShieldCheck, UtensilsCrossed, X } from "lucide-react";
+import { Check, Mic, Minus, Plus, Sparkles, MicOff, Square, ShieldCheck, UtensilsCrossed, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { logFoodEntry, manualFood } from "../../services/food";
 import {
@@ -29,6 +29,22 @@ import { foodCategoryIcon } from "../../utils/icons";
 
 type Stage = "idle" | "requesting" | "denied" | "recording" | "processing" | "result";
 
+/**
+ * A parsed item plus the two things the user controls before anything is
+ * logged: whether to keep it, and how much.
+ *
+ * SELECTION DEFAULTS TO WHETHER IT MATCHED, and that is the one judgement call
+ * on this screen. A matched item has a catalog row behind it, so logging it
+ * records real nutrition and ticking it by default saves a tap on the common
+ * path. An unmatched one has no macros at all -- logging it would put
+ * "0 kcal" beside a real meal and quietly under-count the day, which is worse
+ * than not logging it. So it arrives off, stays visible, and says what will
+ * happen if it is turned on. Neither silently vanishing nor silently lying.
+ */
+interface ReviewItem extends VoiceFoodItem {
+  selected: boolean;
+}
+
 /** Everything that can come back other than items, shown on the idle screen. */
 interface Notice {
   tone: "info" | "error";
@@ -48,7 +64,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
   } = useApp();
 
   const [stage, setStage] = useState<Stage>("idle");
-  const [items, setItems] = useState<VoiceFoodItem[]>([]);
+  const [items, setItems] = useState<ReviewItem[]>([]);
   const [transcript, setTranscript] = useState("");
   const [notice, setNotice] = useState<Notice | null>(null);
   const [saving, setSaving] = useState(false);
@@ -117,7 +133,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
     if (outcome.ok) {
       setTranscript(outcome.transcript);
-      setItems(outcome.items);
+      setItems(outcome.items.map((i) => ({ ...i, selected: i.food !== null })));
       setStage("result");
       return;
     }
@@ -216,6 +232,29 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     }
   };
 
+  // Keyed by index, not name: the same food can legitimately appear twice --
+   // "a coffee now and another coffee later" -- and keying by name would tie
+   // the two rows together so toggling one toggled both.
+  const toggleItem = (index: number) =>
+    setItems((prev) => prev.map((it, i) => (i === index ? { ...it, selected: !it.selected } : it)));
+
+  /**
+   * Adjusts one item's quantity.
+   *
+   * Steps of one, floored at one. A parsed fraction is kept as it came -- "half
+   * a cup" is a real thing to have said -- so decrementing at or below 1 does
+   * nothing rather than rounding it away. toFixed(2) exists because 0.5 + 1 in
+   * binary floating point is not always what it looks like.
+   */
+  const stepQuantity = (index: number, delta: number) =>
+    setItems((prev) =>
+      prev.map((it, i) => {
+        if (i !== index) return it;
+        if (delta < 0 && it.quantity <= 1) return it;
+        return { ...it, quantity: Math.max(1, +(it.quantity + delta).toFixed(2)) };
+      })
+    );
+
   /**
    * Logs the matched items.
    *
@@ -225,12 +264,13 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
    * step exists to let them fix.
    */
   const handleAddAll = async () => {
-    if (!authUserId || saving) return;
+    const chosen = items.filter((i) => i.selected);
+    if (!authUserId || saving || chosen.length === 0) return;
     setSaving(true);
     setSaveError(null);
 
     let failed = 0;
-    for (const item of items) {
+    for (const item of chosen) {
       const food =
         item.food ??
         manualFood({
@@ -257,17 +297,18 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     setSaving(false);
     if (failed > 0) {
       setSaveError(
-        failed === items.length
+        failed === chosen.length
           ? "Couldn't save those items. Please try again."
           : `Saved, but ${failed} item${failed === 1 ? "" : "s"} couldn't be added.`
       );
-      if (failed === items.length) return;
+      if (failed === chosen.length) return;
     }
     setAdded(true);
     setTimeout(handleClose, 900);
   };
 
   const remaining = Math.max(0, MAX_RECORDING_SECONDS - elapsed);
+  const selectedCount = items.filter((i) => i.selected).length;
 
   return (
     <BottomSheet open={open} onClose={handleClose} title="Tell Centium what you ate">
@@ -409,7 +450,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
             )}
 
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-              We found
+              We found — select what to add
             </p>
             <div className="space-y-2 mb-4">
               {items.map((item, i) => {
@@ -419,30 +460,92 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                 return (
                   <div
                     key={`${item.spokenName}-${i}`}
-                    className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3"
+                    className={`rounded-2xl px-4 py-3 border transition-colors ${
+                      item.selected ? "bg-primary-pale border-primary" : "bg-cream-soft border-transparent"
+                    }`}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <span className="w-8 h-8 rounded-lg bg-cream-card flex items-center justify-center shrink-0">
-                        <Icon size={15} className="text-primary-dark" />
-                      </span>
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-charcoal truncate">
-                          {item.food?.name ?? item.spokenName}
-                        </p>
-                        {/* NOT SILENTLY DROPPED. An unmatched name still logs,
-                            without macros, and saying so here is the only place
-                            the user can tell. */}
-                        {!item.food && (
-                          <p className="text-[11px] text-charcoal-faint">
-                            Not in the food database — no nutrition info
+                    <div className="flex items-center justify-between gap-3">
+                      {/* The row toggles, the way a scanned blood panel is
+                          confirmed. The stepper below stops its own clicks, so
+                          changing an amount is not also a deselect. */}
+                      <button
+                        onClick={() => toggleItem(i)}
+                        className="tap flex items-center gap-3 min-w-0 flex-1 text-left"
+                        aria-pressed={item.selected}
+                      >
+                        <span className="w-8 h-8 rounded-lg bg-cream-card flex items-center justify-center shrink-0">
+                          <Icon size={15} className="text-primary-dark" />
+                        </span>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-charcoal truncate">
+                            {item.food?.name ?? item.spokenName}
                           </p>
-                        )}
+                          {/* WHAT WAS HEARD, when it differs from what matched.
+                              A wrong match is usually obvious the moment the
+                              spoken words sit next to it. */}
+                          {item.food &&
+                            item.food.name.toLowerCase() !== item.spokenName.toLowerCase() && (
+                              <p className="text-[11px] text-charcoal-faint truncate">
+                                heard “{item.spokenName}”
+                              </p>
+                            )}
+                          {/* NEITHER DROPPED NOR PRETENDED OTHERWISE. An
+                              unmatched name has no macros behind it, so the row
+                              says what logging it would actually record. */}
+                          {!item.food && (
+                            <p className="text-[11px] text-charcoal-faint">
+                              {item.selected
+                                ? "Not in the food database — logs with no nutrition"
+                                : "Not in the food database"}
+                            </p>
+                          )}
+                        </div>
+                      </button>
+
+                      <div
+                        className={`w-5 h-5 rounded-full flex items-center justify-center border-2 shrink-0 ${
+                          item.selected ? "bg-primary border-primary" : "border-charcoal/20"
+                        }`}
+                      >
+                        {item.selected && <Check size={11} className="text-white" strokeWidth={3} />}
                       </div>
                     </div>
-                    <span className="text-xs text-charcoal-soft shrink-0 tabular-nums">
-                      {item.quantity}
-                      {item.unit ? ` ${item.unit}` : ""}
-                    </span>
+
+                    {/* EDITING, WHICH IS WHAT "EDIT" NOW MEANS HERE. The button
+                        that used to carry that name threw the recording away
+                        and started over; that action still exists below, under
+                        a name that says so. */}
+                    <div className="flex items-center justify-between gap-3 mt-2.5 pl-11">
+                      <span className="text-[11px] text-charcoal-faint">
+                        {item.unit ? `per ${item.unit}` : "servings"}
+                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            stepQuantity(i, -1);
+                          }}
+                          disabled={item.quantity <= 1}
+                          aria-label={`Less ${item.food?.name ?? item.spokenName}`}
+                          className="tap w-7 h-7 rounded-full bg-cream-card flex items-center justify-center text-charcoal-soft disabled:opacity-40"
+                        >
+                          <Minus size={13} />
+                        </button>
+                        <span className="text-sm font-bold text-charcoal tabular-nums min-w-[2ch] text-center">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            stepQuantity(i, 1);
+                          }}
+                          aria-label={`More ${item.food?.name ?? item.spokenName}`}
+                          className="tap w-7 h-7 rounded-full bg-cream-card flex items-center justify-center text-charcoal-soft"
+                        >
+                          <Plus size={13} />
+                        </button>
+                      </div>
+                    </div>
                   </div>
                 );
               })}
@@ -453,11 +556,26 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
             )}
 
             <div className="flex gap-2.5">
+              {/* Deliberately distinct from editing. This throws the recording
+                  away and listens again, which is a different intent from
+                  changing an amount on something already heard — and it used to
+                  be the ONLY thing the button called "Edit" did. */}
               <Button variant="outline" size="md" className="!px-4" onClick={reset}>
-                <Mic size={14} /> Redo
+                <Mic size={14} /> Record again
               </Button>
-              <Button fullWidth size="md" onClick={() => void handleAddAll()} disabled={added || saving}>
-                {added ? "Added ✓" : saving ? "Saving…" : "Add to Diary"}
+              <Button
+                fullWidth
+                size="md"
+                onClick={() => void handleAddAll()}
+                disabled={added || saving || selectedCount === 0}
+              >
+                {added
+                  ? "Added ✓"
+                  : saving
+                    ? "Saving…"
+                    : selectedCount === 0
+                      ? "Select something to add"
+                      : `Add ${selectedCount} to diary`}
               </Button>
             </div>
             <p className="text-[11px] text-charcoal-faint mt-4 text-center">
