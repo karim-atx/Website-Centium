@@ -104,7 +104,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
           <ProgressBar progress={metricValues.steps / stepsGoal} color="#4C8FD1" height={6} />
           <div className="flex justify-between mt-2.5 text-[11px] text-charcoal-faint">
             <span>Weekly avg: {weeklyStepsAvg.toLocaleString()}</span>
-            <span className="text-teal-deep-text font-semibold">↑ 6%</span>
+            <span className="text-charcoal-soft dark:text-teal-deep-text font-semibold">↑ 6%</span>
           </div>
         </div>
       );

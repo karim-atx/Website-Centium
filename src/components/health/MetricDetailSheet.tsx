@@ -298,8 +298,8 @@ export const MetricDetailSheet: React.FC<{
               <div className="mb-4">
                 <PeriodBarChart values={view.values} labels={view.labels} color="#7D6BB5" />
                 <div className="flex justify-center gap-4 text-xs mt-2">
-                  <span className="text-teal-dark font-semibold">↑ High {high.toFixed(1)}kg</span>
-                  <span className="text-sky font-semibold">↓ Low {low.toFixed(1)}kg</span>
+                  <span className="text-trend-high-text font-semibold">↑ High {high.toFixed(1)}kg</span>
+                  <span className="text-trend-low-text font-semibold">↓ Low {low.toFixed(1)}kg</span>
                 </div>
               </div>
             );

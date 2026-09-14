@@ -66,6 +66,13 @@ export default {
           DEFAULT: "rgb(var(--c-sky) / <alpha-value>)",
           pale: "rgb(var(--c-sky-pale) / <alpha-value>)",
         },
+        // Chart High/Low markers, which sit on the page rather than on a
+        // pale wash. Their own values because teal-dark and sky are too
+        // light on cream to clear AA; see the note in index.css.
+        trend: {
+          "high-text": "rgb(var(--c-trend-high-text) / <alpha-value>)",
+          "low-text": "rgb(var(--c-trend-low-text) / <alpha-value>)",
+        },
         berry: {
           DEFAULT: "rgb(var(--c-berry) / <alpha-value>)",
           pale: "rgb(var(--c-berry-pale) / <alpha-value>)",

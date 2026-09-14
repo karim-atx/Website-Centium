@@ -93,6 +93,23 @@
   --c-sky: 76 143 209;
   --c-sky-pale: 220 234 248;
 
+  /* Trend markers that sit on the PAGE, not on a pale wash, which is the
+     whole reason these exist as their own values. teal-dark and sky are
+     tuned to read as accents against a coloured ground; on cream they
+     measure 3.16:1 and 3.41:1, under AA for the 12px labels that use them.
+
+     LIGHT ONLY IS THE ACTUAL CHANGE. Both hues already clear AA on the dark
+     ground (5.21:1 and 8.32:1), so the dark values below are the ones they
+     already had -- byte-identical to --c-teal-dark and --c-sky in this block.
+     Darkening a shared accent for a problem it only has in one mode would
+     have moved every other use of it.
+
+     NAMED FOR THE MARKER, NOT THE HUE, for the reason the tick tokens above
+     record: a name describing how a colour looks inverts with the mode and
+     goes stale. High and Low do not. */
+  --c-trend-high-text: 84 116 112;
+  --c-trend-low-text: 61 114 167;
+
   --c-berry: 156 79 124;
   --c-berry-pale: 241 224 235;
 
@@ -170,6 +187,11 @@
 
   --c-sky: 116 175 227;
   --c-sky-pale: 26 41 57;
+
+  /* The values teal-dark and sky already have in this block; see the note
+     in the light block. Dark was never the failing mode. */
+  --c-trend-high-text: 79 143 138;
+  --c-trend-low-text: 116 175 227;
 
   --c-berry: 200 128 172;
   --c-berry-pale: 46 30 40;
