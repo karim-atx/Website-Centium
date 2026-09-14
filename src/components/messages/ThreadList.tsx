@@ -63,7 +63,7 @@ export const ThreadList: React.FC<{
               {official ? (
                 <div className="flex items-center gap-1.5 min-w-0">
                   {name}
-                  <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-teal-pale text-teal-deep-text text-[10px] font-semibold px-1.5 py-0.5">
+                  <span className="shrink-0 inline-flex items-center gap-1 rounded-full bg-teal-pale text-charcoal-soft dark:text-teal-deep-text text-[10px] font-semibold px-1.5 py-0.5">
                     <ShieldCheck size={10} />
                     Official
                   </span>

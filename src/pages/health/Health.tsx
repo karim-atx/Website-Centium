@@ -202,7 +202,7 @@ export default function Health() {
             <p className="text-[24px] font-extrabold text-charcoal tracking-[-0.03em] tabular-nums">
               {metricValues.weight} <span className="text-[13px] font-semibold text-charcoal-tertiary tracking-normal">kg</span>
             </p>
-            <span className="mt-2 inline-flex items-center gap-0.5 text-[11px] font-semibold text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5">
+            <span className="mt-2 inline-flex items-center gap-0.5 text-[11px] font-semibold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5">
               <ArrowDown size={10} /> 0.6 kg this week
             </span>
           </Card>

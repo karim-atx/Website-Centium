@@ -632,7 +632,7 @@ export const ThreadView: React.FC<{
           it is the sentence that is still true in an email, a DM or a phone
           call, none of which this app can vouch for. */}
       {thread.kind === "official_support" && (
-        <div className="flex items-start gap-2 rounded-xl bg-teal-pale text-teal-deep-text px-3 py-2.5 mb-2">
+        <div className="flex items-start gap-2 rounded-xl bg-teal-pale text-charcoal-soft dark:text-teal-deep-text px-3 py-2.5 mb-2">
           <ShieldCheck size={15} className="shrink-0 mt-px" />
           <p className="text-[11px] leading-relaxed">
             <span className="font-semibold">You're talking with Centium Support.</span>{" "}
@@ -726,11 +726,18 @@ export const ThreadView: React.FC<{
                     ? "bg-bubble-sent text-white dark:text-[#0D0B1A]"
                     : // Matching the teal the Admin console already gives support
                       // messages, so one conversation reads the same way to the
-                      // person answering it and the person receiving it. Both
-                      // tokens are defined for dark mode here, so this needs no
-                      // variant of its own.
+                      // person answering it and the person receiving it.
+                      //
+                      // THE GROUND IS THEMED, THE TEXT IS NOT, and the asymmetry
+                      // is the point. teal-pale carries its own dark value, so
+                      // the bubble follows the mode on its own. teal-deep-text
+                      // does too, but its LIGHT value only reaches 3.90:1 on that
+                      // ground -- under AA for text this size -- while its dark
+                      // value is a comfortable 7.34:1. So light is corrected and
+                      // dark is left exactly as it was, rather than one token
+                      // being retuned for a problem it only has in half the cases.
                       fromSupport
-                      ? "bg-teal-pale text-teal-deep-text"
+                      ? "bg-teal-pale text-charcoal-soft dark:text-teal-deep-text"
                       : "bg-cream-soft text-charcoal"
                 } ${highlighted === m.id ? "ring-2 ring-primary-dark" : ""}`}
               >

@@ -144,7 +144,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
             <p className={`${numeral} mb-1.5`}>
               {metricValues.weight} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">kg</span>
             </p>
-            <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5 mb-2">
+            <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5 mb-2">
               <ArrowDown size={10} /> 0.6 kg this week
             </span>
             <p className="text-[11px] text-charcoal-faint">Weekly trend: {weeklyTrendPct}%</p>
@@ -185,7 +185,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
             {metricValues.heartRate} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">bpm</span>
           </p>
           <p className="text-[11px] text-charcoal-faint mb-1.5">Resting · avg {heartRateDetail.average} bpm</p>
-          <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5">
+          <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5">
             Range {heartRateDetail.low}–{heartRateDetail.high} bpm today
           </span>
         </div>
@@ -340,7 +340,7 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
           <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] mb-1.5">{todaysWorkout.name}</p>
           <span
             className={`inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5 ${
-              done ? "text-primary-deep-text bg-primary-pale" : "text-teal-deep-text bg-teal-pale"
+              done ? "text-primary-deep-text bg-primary-pale" : "text-charcoal-soft dark:text-teal-deep-text bg-teal-pale"
             }`}
           >
             {done ? "Completed ✓" : "Not started yet"}
