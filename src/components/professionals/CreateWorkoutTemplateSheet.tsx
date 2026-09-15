@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import type { Exercise, WorkoutTemplateAssignment } from "../../types";
+import type { Exercise, WorkoutTemplate } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { ExerciseLibrarySheet, type ExercisePick } from "../workout/ExerciseLibrarySheet";
 import { ExerciseSettingsSheet } from "../workout/ExerciseSettingsSheet";
@@ -35,28 +35,27 @@ export const CreateWorkoutTemplateSheet: React.FC<{
   // V10 (QA 10.0): "Created templates have a 3 dot logo... gives the
   // option to duplicate, rename, edit template, and delete template" —
   // passing an existing template pre-fills the form and saves update it.
-  editTemplate?: WorkoutTemplateAssignment | null;
+  editTemplate?: WorkoutTemplate | null;
 }> = ({ open, onClose, defaultFolderId = null, editTemplate }) => {
-  const { addWorkoutTemplate, updateWorkoutTemplate, customExercises, exerciseCatalog, professionalClients, workoutTemplateFolders } = useApp();
+  const { addWorkoutTemplate, updateWorkoutTemplate, customExercises, exerciseCatalog, workoutTemplateFolders } = useApp();
   const [name, setName] = useState(editTemplate?.name ?? "");
   const [exercises, setExercises] = useState<Exercise[]>(editTemplate?.exercises ?? []);
-  const [assignedClientIds, setAssignedClientIds] = useState<string[]>(editTemplate?.assignedClientIds ?? []);
   const [notes, setNotes] = useState(editTemplate?.coachNote ?? "");
-  const [assignedDay, setAssignedDay] = useState(editTemplate?.assignedDay ?? "");
   const [searchQuery, setSearchQuery] = useState("");
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [settingsIndex, setSettingsIndex] = useState<number | null>(null);
   const [folderId, setFolderId] = useState<string | null>(editTemplate?.folderId ?? defaultFolderId);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (open) {
       setName(editTemplate?.name ?? "");
       setExercises(editTemplate?.exercises ?? []);
-      setAssignedClientIds(editTemplate?.assignedClientIds ?? []);
       setNotes(editTemplate?.coachNote ?? "");
-      setAssignedDay(editTemplate?.assignedDay ?? "");
       setFolderId(editTemplate?.folderId ?? defaultFolderId);
+      setError(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, editTemplate]);
@@ -64,9 +63,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{
   const reset = () => {
     setName("");
     setExercises([]);
-    setAssignedClientIds([]);
     setNotes("");
-    setAssignedDay("");
     setSearchQuery("");
     setFolderId(defaultFolderId);
   };
@@ -90,9 +87,6 @@ export const CreateWorkoutTemplateSheet: React.FC<{
     setDragIndex(null);
   };
 
-  const toggleClient = (id: string) =>
-    setAssignedClientIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
-
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return [];
     const q = searchQuery.toLowerCase();
@@ -105,18 +99,34 @@ export const CreateWorkoutTemplateSheet: React.FC<{
     return [...fromCustom, ...fromLibrary].slice(0, 6);
   }, [searchQuery, customExercises, exerciseCatalog]);
 
-  const save = () => {
+  /**
+   * THIS SHEET AUTHORS A TEMPLATE AND NOTHING ELSE.
+   *
+   * It used to pick clients and a day here too, writing them onto the same
+   * object — which is exactly the conflation the split removed: an assignment
+   * is per client, with that client's own day, and pushing one is a separate
+   * act that can destroy work and therefore asks first. The "Assign" action in
+   * the builder does that.
+   */
+  const save = async () => {
     if (!name.trim() || exercises.length === 0) return;
     const payload = {
       name: name.trim(),
       exercises,
-      assignedClientIds,
       folderId,
       coachNote: notes.trim() || undefined,
-      assignedDay: assignedDay || undefined,
     };
-    if (editTemplate) updateWorkoutTemplate(editTemplate.id, payload);
-    else addWorkoutTemplate(payload);
+    setSaving(true);
+    setError(null);
+    const message = editTemplate
+      ? await updateWorkoutTemplate(editTemplate.id, payload)
+      : await addWorkoutTemplate(payload);
+    setSaving(false);
+    // The sheet stays open on failure, holding everything typed into it.
+    if (message) {
+      setError(message);
+      return;
+    }
     reset();
     onClose();
   };
@@ -237,44 +247,6 @@ export const CreateWorkoutTemplateSheet: React.FC<{
             </div>
           )}
 
-          {professionalClients.length > 0 && (
-            <div>
-              <span className="text-xs font-semibold text-charcoal-soft mb-2 block">
-                Assign to <span className="text-charcoal-faint font-normal">(all your current clients)</span>
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {professionalClients.map((c) => (
-                  <button
-                    key={c.id}
-                    onClick={() => toggleClient(c.id)}
-                    className={clsx(
-                      "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
-                      assignedClientIds.includes(c.id)
-                        ? "bg-primary text-white border-primary"
-                        : "bg-cream-soft border-transparent text-charcoal-soft"
-                    )}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* V10 (QA 10.0): "the ability to select a day to assign the
-              workout to, it would also appear at the assigned clients
-              calendar." */}
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-              Assign to a day <span className="text-charcoal-faint font-normal">(optional)</span>
-            </span>
-            <input
-              type="date"
-              value={assignedDay}
-              onChange={(e) => setAssignedDay(e.target.value)}
-              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
-            />
-          </label>
 
           {/* V10 (QA 10.0): "Add a note section where anything the
               professional writes will be shown on the client UI in the
@@ -292,8 +264,17 @@ export const CreateWorkoutTemplateSheet: React.FC<{
             />
           </label>
 
-          <Button fullWidth size="lg" onClick={save} disabled={!name.trim() || exercises.length === 0}>
-            {editTemplate ? "Save changes" : "Save template"}
+          {error && (
+            <p className="text-[11.5px] font-semibold text-status-high text-center">{error}</p>
+          )}
+
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => void save()}
+            disabled={saving || !name.trim() || exercises.length === 0}
+          >
+            {saving ? "Saving…" : editTemplate ? "Save changes" : "Save template"}
           </Button>
         </div>
       </BottomSheet>

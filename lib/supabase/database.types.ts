@@ -4626,6 +4626,7 @@ export type Database = {
       }
       workout_template_assignments: {
         Row: {
+          assigned_at: string
           assigned_day: string | null
           client_id: string
           created_at: string
@@ -4634,6 +4635,7 @@ export type Database = {
           workout_template_id: string
         }
         Insert: {
+          assigned_at?: string
           assigned_day?: string | null
           client_id: string
           created_at?: string
@@ -4642,6 +4644,7 @@ export type Database = {
           workout_template_id: string
         }
         Update: {
+          assigned_at?: string
           assigned_day?: string | null
           client_id?: string
           created_at?: string
@@ -5460,8 +5463,9 @@ export type Database = {
       }
       assign_template_to_client: {
         Args: {
-          p_assigned_day?: string
+          p_assigned_day?: string | null
           p_client_id: string
+          p_confirm_overwrite?: boolean
           p_template_id: string
         }
         Returns: {

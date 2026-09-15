@@ -360,22 +360,69 @@ export interface CalendarEvent {
 // V6 (QA 6.0): a professional-built workout template — same routine-builder
 // UI as the client's Workout tab, but assignable to one or more clients
 // instead of run by the professional themselves.
-export interface WorkoutTemplateAssignment {
+/**
+ * A plan a professional authors, or a curated starter program.
+ *
+ * A TEMPLATE IS NOT AN ASSIGNMENT, and this type used to be both. It carried
+ * `assignedClientIds: string[]` and ONE `assignedDay` shared by all of them,
+ * which cannot express what the schema stores or what the feature means: every
+ * (template, client) pair is its own row in workout_template_assignments with
+ * its OWN day, because two clients doing the same program on different days is
+ * the normal case, not an edge one. See WorkoutTemplateAssignment below.
+ *
+ * TWO POPULATIONS, ONE TABLE, separated by is_public — and the schema's
+ * ownership check makes them the only two shapes there are:
+ *
+ *   is_public = false, owner_id set   a professional's own template
+ *   is_public = true,  owner_id null  a curated starter program
+ *
+ * A curated one is service-role-only: readable by everyone, writable by no
+ * client role, and not assignable (assign_template_to_client raises ATX09
+ * because `owner_id is distinct from auth.uid()` holds for null).
+ */
+export interface WorkoutTemplate {
   id: string;
   name: string;
+  /** The same 25-column prescription a routine carries. */
   exercises: Exercise[];
-  assignedClientIds: string[];
   createdAt: string;
   // V7 (QA 7.0): organize templates into folders/subfolders, mirroring the
   // client UI's routine-folder system.
   folderId?: string | null;
   // V10 (QA 10.0): "Add a note section where anything the professional
   // writes will be shown on the client UI in the coach note section" —
-  // copied onto the synced Routine's `coachNote` for each assigned client.
+  // copied onto the Routine's `coachNote` when the template is assigned.
   coachNote?: string;
-  // V10 (QA 10.0): "the ability to select a day to assign the workout to,
-  // it would also appear at the assigned clients calendar."
-  assignedDay?: string;
+  category?: string;
+  description?: string;
+  durationMin?: number;
+  level?: TemplateLevel;
+  /** True only for curated programs, which no client role can write or assign. */
+  isPublic: boolean;
+  ownerId?: string | null;
+}
+
+export type TemplateLevel = "beginner" | "intermediate" | "advanced";
+
+/**
+ * One template pushed to one client, with the day THAT client does it.
+ *
+ * `routineId` is the routine the assignment produced, stored rather than
+ * inferred so a re-assignment refreshes exactly the right one. It goes null if
+ * the client deletes that routine, which makes the next assignment create a
+ * fresh one instead of resurrecting a deleted plan.
+ *
+ * `assignedAt` is what ATX18 compares against: a re-assignment over a routine
+ * the client has edited since this timestamp is refused unless the
+ * professional confirms the overwrite.
+ */
+export interface WorkoutTemplateAssignment {
+  id: string;
+  templateId: string;
+  clientId: string;
+  routineId: string | null;
+  assignedDay?: string | null;
+  assignedAt: string;
 }
 
 // V7 (QA 7.0): same shape as RoutineFolder, kept as its own store since
@@ -621,14 +668,19 @@ export interface CustomExerciseLibraryItem {
   classification: ExerciseClassification;
 }
 
-export interface WorkoutTemplate {
+// The prototype seed programs (todaysWorkout, workoutPrograms). RENAMED FROM
+// WorkoutTemplate, which now means a real workout_templates row: these are
+// bundled demo content with no owner, no folder and no assignment, and having
+// both answer to one name made the mock data typecheck against the table.
+
+export interface WorkoutProgram {
   id: string;
   name: string;
   category: string;
   description: string;
   exercises: Exercise[];
   durationMin: number;
-  level: "beginner" | "intermediate" | "advanced";
+  level: TemplateLevel;
 }
 
 export interface WorkoutLogEntry {

@@ -1,4 +1,4 @@
-import type { WorkoutTemplate, Exercise } from "../types";
+import type { WorkoutProgram, Exercise } from "../types";
 
 let exId = 0;
 const ex = (partial: Omit<Exercise, "id">): Exercise => ({
@@ -6,7 +6,7 @@ const ex = (partial: Omit<Exercise, "id">): Exercise => ({
   ...partial,
 });
 
-export const todaysWorkout: WorkoutTemplate = {
+export const todaysWorkout: WorkoutProgram = {
   id: "w-today",
   name: "Upper Body",
   category: "Strength",
@@ -21,7 +21,7 @@ export const todaysWorkout: WorkoutTemplate = {
   ],
 };
 
-export const workoutPrograms: WorkoutTemplate[] = [
+export const workoutPrograms: WorkoutProgram[] = [
   {
     id: "p1",
     name: "Beginner Full Body",

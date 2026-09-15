@@ -7,8 +7,14 @@ import type {
   MuscleGroup,
   RepMaxUpdateMode,
   Routine,
-  RoutineFolder,
 } from "../../types";
+import {
+  createFolder,
+  deleteFolder,
+  getFolders,
+  setFolderPositions as setFolderPositionsFor,
+  updateFolder,
+} from "../folders";
 
 // Routines, their folders, and the prescriptions inside them.
 //
@@ -75,28 +81,18 @@ export function resolveExerciseRef(ex: Exercise, lookup: ExerciseLookup): Exerci
 }
 
 /**
- * ATX16 AND ATX17 ARE REAL ANSWERS, not failures to report as "something went
- * wrong". Both come from folder_validate_parent(), a BEFORE INSERT OR UPDATE
- * trigger on the folder tables, and both describe a specific thing the user
- * asked for that cannot be done:
+ * Routine-write failures.
  *
- *   ATX17  the named parent belongs to a different account
- *   ATX16  the write would close a loop — a folder inside itself, or inside
- *          one of its own descendants
- *
- * Neither is retryable and neither is a bug to hide. The raised message names
- * folder uuids, which is why it is replaced here rather than shown.
+ * ATX16 AND ATX17 ARE NOT HANDLED HERE ANY MORE. They come from
+ * folder_validate_parent(), which is attached to BOTH folder tables and
+ * dispatches on TG_TABLE_NAME; the wording for them lives in ../folders
+ * alongside the one implementation of folder CRUD, so template folders and
+ * routine folders cannot word the same refusal two different ways.
  */
 function describe(error: PostgrestError): string {
   const code = error.code ?? "";
-  if (code === "ATX16") {
-    return "A folder can't be filed inside itself or one of its own subfolders.";
-  }
-  if (code === "ATX17") {
-    return "That folder belongs to a different account, so it can't be used as a parent.";
-  }
   if (code === "42501") return "You don't have permission to do that.";
-  // 23503 is the foreign key: a parent folder or exercise that is not there.
+  // 23503 is the foreign key: a folder or exercise that is not there.
   if (code === "23503") return "Something this refers to no longer exists. Try again.";
   if (code === "23514" || code === "22003") {
     return "One of those numbers is outside the range this can store.";
@@ -105,22 +101,27 @@ function describe(error: PostgrestError): string {
   return "Something went wrong. Please try again.";
 }
 
-export interface FoldersResult {
-  /**
-   * False means the read FAILED, not "this account has no folders" — the
-   * distinction every hydration in this app draws, because the caller replaces
-   * state with the result and a dropped connection must not empty a screen.
-   */
-  ok: boolean;
-  folders: RoutineFolder[];
-  message?: string;
-}
-
-export interface FolderResult {
-  ok: boolean;
-  folder?: RoutineFolder;
-  message?: string;
-}
+/**
+ * Folder CRUD lives in ../folders, parameterised by table.
+ *
+ * routine_folders and workout_template_folders are the same columns, the same
+ * grants, the same policies and the same trigger — the migration attaches
+ * folder_validate_parent to both precisely so they cannot drift. These
+ * re-exports keep every existing caller working while there is only one
+ * implementation to keep correct.
+ */
+export const getRoutineFolders = (userId: string) => getFolders("routine_folders", userId);
+export const createRoutineFolder = (
+  userId: string,
+  folder: { name: string; parentId: string | null; color?: string; position: number }
+) => createFolder("routine_folders", userId, folder);
+export const updateRoutineFolder = (
+  id: string,
+  patch: { name?: string; color?: string | null; parentId?: string | null; position?: number }
+) => updateFolder("routine_folders", id, patch);
+export const setFolderPositions = (positions: { id: string; position: number }[]) =>
+  setFolderPositionsFor("routine_folders", positions);
+export const deleteRoutineFolder = (id: string) => deleteFolder("routine_folders", id);
 
 export interface RoutinesResult {
   ok: boolean;
@@ -137,157 +138,6 @@ export interface RoutineResult {
 export interface WriteResult {
   ok: boolean;
   message?: string;
-}
-
-// --- folders ---------------------------------------------------------------
-
-const FOLDER_COLUMNS = "id, name, parent_id, color, position";
-
-interface FolderRow {
-  id: string;
-  name: string;
-  parent_id: string | null;
-  color: string | null;
-  position: number;
-}
-
-const toFolder = (r: FolderRow): RoutineFolder => ({
-  id: r.id,
-  name: r.name,
-  parentId: r.parent_id,
-  color: r.color ?? undefined,
-});
-
-/**
- * Ordered by position, which is what the reorder controls write.
- *
- * Position is per sibling group in the client's model — "move up" swaps two
- * folders sharing a parent — but a single ascending sort still reproduces the
- * tree correctly, because the UI renders each parent's children in the order
- * they appear in this flat list.
- */
-export async function getRoutineFolders(userId: string): Promise<FoldersResult> {
-  const { data, error } = await supabase
-    .from("routine_folders")
-    .select(FOLDER_COLUMNS)
-    .eq("owner_id", userId)
-    .order("position", { ascending: true })
-    .order("created_at", { ascending: true });
-
-  if (error) {
-    console.error("[routines] Could not read folders:", error.message);
-    return { ok: false, folders: [], message: describe(error) };
-  }
-  return { ok: true, folders: (data ?? []).map((r) => toFolder(r as FolderRow)) };
-}
-
-export async function createRoutineFolder(
-  userId: string,
-  folder: { name: string; parentId: string | null; color?: string; position: number }
-): Promise<FolderResult> {
-  const { data, error } = await supabase
-    .from("routine_folders")
-    .insert({
-      owner_id: userId,
-      name: folder.name.trim(),
-      parent_id: folder.parentId,
-      color: folder.color ?? null,
-      position: folder.position,
-    })
-    .select(FOLDER_COLUMNS)
-    .single();
-
-  if (error || !data) {
-    console.error("[routines] Could not create folder:", error?.message);
-    return {
-      ok: false,
-      message: error ? describe(error) : "Something went wrong. Please try again.",
-    };
-  }
-  return { ok: true, folder: toFolder(data as FolderRow) };
-}
-
-/**
- * Name, colour, parent and position — every column the UPDATE grant covers.
- *
- * owner_id is deliberately not among them, on the table or in this payload: it
- * is not updatable, and naming it would be refused with 42501 for an identical
- * value. `parentId` is the one that can raise ATX16 or ATX17.
- */
-export async function updateRoutineFolder(
-  id: string,
-  patch: { name?: string; color?: string | null; parentId?: string | null; position?: number }
-): Promise<WriteResult> {
-  // Typed rather than a loose record: the generated Update type rejects an
-  // index signature outright, which is the schema refusing a payload it cannot
-  // check column by column.
-  const payload: {
-    name?: string;
-    color?: string | null;
-    parent_id?: string | null;
-    position?: number;
-  } = {};
-  if (patch.name !== undefined) payload.name = patch.name.trim();
-  if (patch.color !== undefined) payload.color = patch.color;
-  if (patch.parentId !== undefined) payload.parent_id = patch.parentId;
-  if (patch.position !== undefined) payload.position = patch.position;
-  if (Object.keys(payload).length === 0) return { ok: true };
-
-  const { error } = await supabase.from("routine_folders").update(payload).eq("id", id);
-  if (error) {
-    console.error("[routines] Could not update folder:", error.message);
-    return { ok: false, message: describe(error) };
-  }
-  return { ok: true };
-}
-
-/** Reorders siblings. Separate calls because PostgREST cannot write two different values in one statement. */
-export async function setFolderPositions(
-  positions: { id: string; position: number }[]
-): Promise<WriteResult> {
-  for (const p of positions) {
-    const { error } = await supabase
-      .from("routine_folders")
-      .update({ position: p.position })
-      .eq("id", p.id);
-    if (error) {
-      console.error("[routines] Could not reorder folders:", error.message);
-      return { ok: false, message: describe(error) };
-    }
-  }
-  return { ok: true };
-}
-
-/**
- * Deletes one folder, and ONLY that folder.
- *
- * parent_id is ON DELETE CASCADE, so a plain delete would take the whole
- * subtree with it — which is not what this app does. Subfolders of a deleted
- * folder have always been promoted to the top level, and routines inside it
- * unfiled; the local comment calls that "never silently deletes a routine", and
- * it stays true here. So the children are re-parented FIRST and the folder is
- * deleted second.
- *
- * The routines need no such step: routines.folder_id is ON DELETE SET NULL, so
- * the database unfiles them itself, which is exactly the old local behaviour.
- */
-export async function deleteRoutineFolder(id: string): Promise<WriteResult> {
-  const { error: promoteError } = await supabase
-    .from("routine_folders")
-    .update({ parent_id: null })
-    .eq("parent_id", id);
-
-  if (promoteError) {
-    console.error("[routines] Could not promote subfolders:", promoteError.message);
-    return { ok: false, message: describe(promoteError) };
-  }
-
-  const { error } = await supabase.from("routine_folders").delete().eq("id", id);
-  if (error) {
-    console.error("[routines] Could not delete folder:", error.message);
-    return { ok: false, message: describe(error) };
-  }
-  return { ok: true };
 }
 
 // --- routines --------------------------------------------------------------

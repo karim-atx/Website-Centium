@@ -37,6 +37,7 @@ import type {
   CustomExerciseLibraryItem,
   ProfessionalReview,
   CalendarEvent,
+  WorkoutTemplate,
   WorkoutTemplateAssignment,
   ClientHealthNote,
   ProfessionalMessage,
@@ -62,6 +63,20 @@ import {
   updateCustomExercise as updateCustomExerciseRemote,
   type CatalogExercise,
 } from "../services/exercises";
+import {
+  assignTemplate as assignTemplateRemote,
+  createTemplate as createTemplateRemote,
+  createTemplateFolder,
+  deleteTemplate as deleteTemplateRemote,
+  deleteTemplateFolder,
+  getTemplateAssignments,
+  getTemplateFolders,
+  getTemplates,
+  unassignTemplate as unassignTemplateRemote,
+  updateTemplate as updateTemplateRemote,
+  updateTemplateFolder,
+  type AssignResult,
+} from "../services/templates";
 import {
   createRoutine as createRoutineRemote,
   createRoutineFolder as createRoutineFolderRemote,
@@ -768,15 +783,52 @@ interface AppState {
   updateCalendarEvent: (id: string, patch: Partial<CalendarEvent>) => void;
   removeCalendarEvent: (id: string) => void;
 
-  workoutTemplates: WorkoutTemplateAssignment[];
-  addWorkoutTemplate: (t: Omit<WorkoutTemplateAssignment, "id" | "createdAt">) => void;
-  updateWorkoutTemplate: (id: string, patch: Partial<Omit<WorkoutTemplateAssignment, "id" | "createdAt">>) => void;
-  removeWorkoutTemplate: (id: string) => void;
+  /**
+   * The professional's own templates, plus every curated one.
+   *
+   * A curated template carries `isPublic: true` and no owner. It is readable
+   * by everyone and writable by no client role, so the UI must offer neither
+   * editing nor assignment for it — the database refuses both anyway (ATX09
+   * from the assign function, and no policy permits the write).
+   */
+  workoutTemplates: WorkoutTemplate[];
+  addWorkoutTemplate: (
+    t: Omit<WorkoutTemplate, "id" | "createdAt" | "isPublic" | "ownerId">
+  ) => Promise<string | undefined>;
+  updateWorkoutTemplate: (
+    id: string,
+    patch: Partial<Omit<WorkoutTemplate, "id" | "createdAt" | "isPublic" | "ownerId">>
+  ) => Promise<string | undefined>;
+  removeWorkoutTemplate: (id: string) => Promise<string | undefined>;
+
+  /**
+   * One row per (template, client), each with its own day.
+   *
+   * WRITTEN ONLY BY THE DATABASE FUNCTION. No client role holds INSERT or
+   * UPDATE on workout_template_assignments; `assignTemplate` calls
+   * assign_template_to_client, which also creates or refreshes the client's
+   * routine and syncs their calendar event. Deleting is the one thing a
+   * professional may do directly, and it deliberately leaves the routine.
+   */
+  templateAssignments: WorkoutTemplateAssignment[];
+  assignTemplate: (
+    templateId: string,
+    clientId: string,
+    assignedDay: string | null,
+    confirmOverwrite?: boolean
+  ) => Promise<AssignResult>;
+  unassignTemplate: (assignmentId: string) => Promise<string | undefined>;
+  /** Null until the first template hydration finishes or fails. */
+  templatesError: string | null;
 
   workoutTemplateFolders: WorkoutTemplateFolder[];
-  addWorkoutTemplateFolder: (name: string, parentId?: string | null, color?: string) => void;
-  renameWorkoutTemplateFolder: (id: string, name: string) => void;
-  deleteWorkoutTemplateFolder: (id: string) => void;
+  addWorkoutTemplateFolder: (
+    name: string,
+    parentId?: string | null,
+    color?: string
+  ) => Promise<string | undefined>;
+  renameWorkoutTemplateFolder: (id: string, name: string) => Promise<string | undefined>;
+  deleteWorkoutTemplateFolder: (id: string) => Promise<string | undefined>;
 
   clientHealthNotes: Record<string, ClientHealthNote>;
   updateClientHealthNote: (clientId: string, patch: Partial<ClientHealthNote>) => void;
@@ -2444,98 +2496,197 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeCalendarEvent: AppState["removeCalendarEvent"] = (id) =>
     setCalendarEvents((prev) => prev.filter((e) => e.id !== id));
 
-  const [workoutTemplates, setWorkoutTemplates] = usePersistentState<WorkoutTemplateAssignment[]>(
+  const [workoutTemplates, setWorkoutTemplates] = usePersistentState<WorkoutTemplate[]>(
     "workoutTemplates",
     []
   );
-  // V10 (QA 10.0): "Templates Created for the assigned clients shows up in
-  // their client UI in the routines tab. If professional add/removes
-  // client from template, automatically do that as well in the client UI"
-  // + "the ability to select a day to assign the workout to, it would also
-  // appear at the assigned clients calendar."
-  // This prototype has exactly one real account behind every mock
-  // client/professional view (the "me" sentinel used elsewhere, e.g.
-  // addProfessionalClient/businessEmployees) — so "the assigned client's"
-  // Routines tab and Calendar are literally the current account's own
-  // routines/calendarEvents. Assigning a template to any mock client
-  // mirrors it into that one real Routine; unassigning removes it again.
-  const syncTemplateToClientView = (template: WorkoutTemplateAssignment) => {
-    setRoutines((prev) => {
-      const existing = prev.find((r) => r.sourceTemplateId === template.id);
-      if (template.assignedClientIds.length === 0) {
-        return existing ? prev.filter((r) => r.sourceTemplateId !== template.id) : prev;
+  const [templateAssignments, setTemplateAssignments] = usePersistentState<
+    WorkoutTemplateAssignment[]
+  >("templateAssignments", []);
+  const [templatesError, setTemplatesError] = useState<string | null>(null);
+
+  // THE LOCAL MIRROR IS GONE. What used to live here — syncTemplateToClientView
+  // — wrote a fake Routine and a fake calendar event into THIS account's state
+  // whenever a template was "assigned", because the prototype had one real
+  // account standing behind every mock client. assign_template_to_client does
+  // all of that for real now, in the client's own account: it creates or
+  // refreshes their routine, copies the prescription, re-points a private
+  // custom movement at a copy they can read, records the assignment and writes
+  // their calendar event. None of it is reachable from this side, and none of
+  // it should be.
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+
+    void Promise.all([getTemplates(authUserId), getTemplateAssignments()]).then(
+      ([templateResult, assignmentResult]) => {
+        if (cancelled) return;
+        if (!templateResult.ok) {
+          setTemplatesError(templateResult.message ?? "Couldn't load your templates.");
+          return;
+        }
+        setTemplatesError(null);
+        setWorkoutTemplates(templateResult.templates);
+        // A client sees the rows naming them and a professional sees the rows
+        // for templates they own; both come from the same query and the same
+        // two policies, so neither side asks for the other's.
+        if (assignmentResult.ok) setTemplateAssignments(assignmentResult.assignments);
       }
-      if (existing) {
-        return prev.map((r) =>
-          r.sourceTemplateId === template.id
-            ? { ...r, name: template.name, exercises: template.exercises, coachNote: template.coachNote }
-            : r
-        );
-      }
-      return [
-        ...prev,
-        {
-          id: `routine-${template.id}`,
-          folderId: null,
-          name: template.name,
-          color: "#7D6BB5",
-          estimatedDurationMin: 45,
-          exercises: template.exercises,
-          coachNote: template.coachNote,
-          assignedByProfessional: true,
-          sourceTemplateId: template.id,
-        },
-      ];
-    });
-    setCalendarEvents((prev) => {
-      const withoutOld = prev.filter((e) => e.sourceTemplateId !== template.id);
-      if (template.assignedClientIds.length === 0 || !template.assignedDay) return withoutOld;
-      return [
-        ...withoutOld,
-        {
-          id: `cal-tpl-${template.id}`,
-          title: template.name,
-          date: template.assignedDay,
-          allDay: true,
-          repeat: "none",
-          sourceTemplateId: template.id,
-        },
-      ];
-    });
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, profileReady, setWorkoutTemplates, setTemplateAssignments]);
+
+  const addWorkoutTemplate: AppState["addWorkoutTemplate"] = async (t) => {
+    if (!authUserId) return "You need to be signed in to save a template.";
+    const result = await createTemplateRemote(authUserId, t, exerciseLookupRef.current);
+    if (!result.ok || !result.template) return result.message ?? "Could not save that template.";
+    setWorkoutTemplates((prev) => [...prev, result.template!]);
+    return undefined;
   };
 
-  const addWorkoutTemplate: AppState["addWorkoutTemplate"] = (t) => {
-    const template: WorkoutTemplateAssignment = { ...t, id: `wt-${Date.now()}`, createdAt: today };
-    setWorkoutTemplates((prev) => [...prev, template]);
-    syncTemplateToClientView(template);
+  const updateWorkoutTemplate: AppState["updateWorkoutTemplate"] = async (id, patch) => {
+    // A curated template belongs to nobody and is writable by no client role.
+    // Refused here with a sentence rather than sent to be refused with a 42501.
+    const existing = workoutTemplates.find((t) => t.id === id);
+    if (existing?.isPublic) return "Starter programs can't be edited.";
+    if (!authUserId) return "You need to be signed in to edit a template.";
+
+    const result = await updateTemplateRemote(
+      id,
+      patch,
+      patch.exercises,
+      exerciseLookupRef.current
+    );
+    if (!result.ok) return result.message ?? "Could not save that template.";
+    setWorkoutTemplates((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    return undefined;
   };
-  const updateWorkoutTemplate: AppState["updateWorkoutTemplate"] = (id, patch) => {
-    setWorkoutTemplates((prev) => {
-      const next = prev.map((t) => (t.id === id ? { ...t, ...patch } : t));
-      const updated = next.find((t) => t.id === id);
-      if (updated) syncTemplateToClientView(updated);
-      return next;
-    });
-  };
-  const removeWorkoutTemplate: AppState["removeWorkoutTemplate"] = (id) => {
+
+  const removeWorkoutTemplate: AppState["removeWorkoutTemplate"] = async (id) => {
+    const existing = workoutTemplates.find((t) => t.id === id);
+    if (existing?.isPublic) return "Starter programs can't be deleted.";
+    if (!authUserId) return "You need to be signed in to delete a template.";
+
+    const result = await deleteTemplateRemote(id);
+    if (!result.ok) return result.message ?? "Could not delete that template.";
     setWorkoutTemplates((prev) => prev.filter((t) => t.id !== id));
-    setRoutines((prev) => prev.filter((r) => r.sourceTemplateId !== id));
-    setCalendarEvents((prev) => prev.filter((e) => e.sourceTemplateId !== id));
+    // The assignment rows went with it (ON DELETE CASCADE). The clients'
+    // ROUTINES did not, and must not: source_template_id is provenance, and
+    // someone who was given a plan keeps it.
+    setTemplateAssignments((prev) => prev.filter((a) => a.templateId !== id));
+    return undefined;
+  };
+
+  /**
+   * Pushes a template to one client, and refreshes what came back.
+   *
+   * THE REFUSAL IS NOT A FAILURE. ATX18 means the client has edited the
+   * routine since the last push; the caller shows them what would change and
+   * calls again with confirmOverwrite. Nothing is written on a refusal —
+   * not the routine, not the assignment, not the calendar event.
+   */
+  const assignTemplate: AppState["assignTemplate"] = async (
+    templateId,
+    clientId,
+    assignedDay,
+    confirmOverwrite = false
+  ) => {
+    const result = await assignTemplateRemote(
+      templateId,
+      clientId,
+      assignedDay,
+      confirmOverwrite
+    );
+    if (!result.ok) return result;
+
+    // Re-read rather than patch: the function decides the routine id, the
+    // assigned_at stamp and whether a row was created or refreshed.
+    const refreshed = await getTemplateAssignments();
+    if (refreshed.ok) setTemplateAssignments(refreshed.assignments);
+    return result;
+  };
+
+  const unassignTemplate: AppState["unassignTemplate"] = async (assignmentId) => {
+    const result = await unassignTemplateRemote(assignmentId);
+    if (!result.ok) return result.message ?? "Could not remove that assignment.";
+    setTemplateAssignments((prev) => prev.filter((a) => a.id !== assignmentId));
+    return undefined;
   };
 
   const [workoutTemplateFolders, setWorkoutTemplateFolders] = usePersistentState<WorkoutTemplateFolder[]>(
     "workoutTemplateFolders",
     []
   );
-  const addWorkoutTemplateFolder: AppState["addWorkoutTemplateFolder"] = (name, parentId = null, color) =>
-    setWorkoutTemplateFolders((prev) => [...prev, { id: `wtf${Date.now()}`, name, parentId, color }]);
-  const renameWorkoutTemplateFolder: AppState["renameWorkoutTemplateFolder"] = (id, name) =>
-    setWorkoutTemplateFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
-  const deleteWorkoutTemplateFolder: AppState["deleteWorkoutTemplateFolder"] = (id) => {
-    setWorkoutTemplateFolders((prev) =>
-      prev.filter((f) => f.id !== id).map((f) => (f.parentId === id ? { ...f, parentId: null } : f))
-    );
-    setWorkoutTemplates((prev) => prev.map((t) => (t.folderId === id ? { ...t, folderId: null } : t)));
+  // Template folders hydrate and write through the SAME service the routine
+  // folders use, pointed at the other table — see services/folders. The two
+  // tables share folder_validate_parent, so ATX16 and ATX17 already apply here
+  // with no new code and no second wording of either.
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    void getTemplateFolders(authUserId).then((result) => {
+      if (cancelled || !result.ok) return;
+      setWorkoutTemplateFolders(result.folders);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, profileReady, setWorkoutTemplateFolders]);
+
+  const addWorkoutTemplateFolder: AppState["addWorkoutTemplateFolder"] = async (
+    name,
+    parentId = null,
+    color
+  ) => {
+    const position = workoutTemplateFolders.filter(
+      (f) => (f.parentId ?? null) === (parentId ?? null)
+    ).length;
+    if (!authUserId) return "You need to be signed in to create a folder.";
+    const result = await createTemplateFolder(authUserId, { name, parentId, color, position });
+    if (!result.ok || !result.folder) return result.message ?? "Could not create that folder.";
+    setWorkoutTemplateFolders((prev) => [...prev, result.folder!]);
+    return undefined;
+  };
+
+  const renameWorkoutTemplateFolder: AppState["renameWorkoutTemplateFolder"] = async (id, name) => {
+    const applyLocal = () =>
+      setWorkoutTemplateFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
+    if (!authUserId || !isUuid(id)) {
+      applyLocal();
+      return undefined;
+    }
+    const result = await updateTemplateFolder(id, { name });
+    if (!result.ok) return result.message ?? "Could not rename that folder.";
+    applyLocal();
+    return undefined;
+  };
+
+  const deleteWorkoutTemplateFolder: AppState["deleteWorkoutTemplateFolder"] = async (id) => {
+    // Subfolders are promoted rather than destroyed and the templates inside
+    // are unfiled — the same promise routine folders keep, against a parent_id
+    // that cascades. The service does the re-parenting; folder_id on
+    // workout_templates is ON DELETE SET NULL, so the database unfiles.
+    const applyLocal = () => {
+      setWorkoutTemplateFolders((prev) =>
+        prev
+          .filter((f) => f.id !== id)
+          .map((f) => (f.parentId === id ? { ...f, parentId: null } : f))
+      );
+      setWorkoutTemplates((prev) =>
+        prev.map((t) => (t.folderId === id ? { ...t, folderId: null } : t))
+      );
+    };
+    if (!authUserId || !isUuid(id)) {
+      applyLocal();
+      return undefined;
+    }
+    const result = await deleteTemplateFolder(id);
+    if (!result.ok) return result.message ?? "Could not delete that folder.";
+    applyLocal();
+    return undefined;
   };
 
   const [clientHealthNotes, setClientHealthNotes] = usePersistentState<Record<string, ClientHealthNote>>(
@@ -3948,6 +4099,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addWorkoutTemplate,
       updateWorkoutTemplate,
       removeWorkoutTemplate,
+      templateAssignments,
+      assignTemplate,
+      unassignTemplate,
+      templatesError,
       workoutTemplateFolders,
       addWorkoutTemplateFolder,
       renameWorkoutTemplateFolder,
@@ -4067,6 +4222,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       professionalClients,
       calendarEvents,
       workoutTemplates,
+      templateAssignments,
+      templatesError,
       workoutTemplateFolders,
       clientHealthNotes,
       professionalMessages,

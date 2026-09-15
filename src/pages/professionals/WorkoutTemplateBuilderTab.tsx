@@ -5,8 +5,9 @@ import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { CreateWorkoutTemplateSheet } from "../../components/professionals/CreateWorkoutTemplateSheet";
-import type { WorkoutTemplateAssignment } from "../../types";
-import { Plus, Trash2, ChevronDown, ChevronUp, Folder, FolderPlus, MoreVertical, Copy, Pencil, Settings2 } from "lucide-react";
+import type { WorkoutTemplate } from "../../types";
+import { AssignTemplateSheet } from "../../components/professionals/AssignTemplateSheet";
+import { Plus, Trash2, ChevronDown, ChevronUp, Folder, FolderPlus, MoreVertical, Copy, Pencil, Settings2, Send } from "lucide-react";
 import clsx from "clsx";
 
 // Deterministic small hash so each template+client pairing gets a stable
@@ -23,8 +24,10 @@ export default function WorkoutTemplateBuilderTab() {
   const {
     workoutTemplates,
     addWorkoutTemplate,
-    updateWorkoutTemplate,
     removeWorkoutTemplate,
+    updateWorkoutTemplate,
+    templateAssignments,
+    templatesError,
     professionalClients,
     workoutTemplateFolders,
     addWorkoutTemplateFolder,
@@ -32,9 +35,11 @@ export default function WorkoutTemplateBuilderTab() {
   } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
   const [createFolderId, setCreateFolderId] = useState<string | null>(null);
-  const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplateAssignment | null>(null);
+  const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null);
+  const [assigningTemplate, setAssigningTemplate] = useState<WorkoutTemplate | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [menuTemplateId, setMenuTemplateId] = useState<string | null>(null);
-  const [renamingTemplate, setRenamingTemplate] = useState<WorkoutTemplateAssignment | null>(null);
+  const [renamingTemplate, setRenamingTemplate] = useState<WorkoutTemplate | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
@@ -70,7 +75,11 @@ export default function WorkoutTemplateBuilderTab() {
 
   const templateCard = (t: (typeof workoutTemplates)[number]) => {
           const expanded = expandedId === t.id;
-          const clients = professionalClients.filter((c) => t.assignedClientIds.includes(c.id));
+          // Assignments are rows now, one per client, each with its own day.
+          const assignments = templateAssignments.filter((a) => a.templateId === t.id);
+          const clients = professionalClients.filter((c) =>
+            assignments.some((a) => a.clientId === c.id)
+          );
           return (
             <div key={t.id} className="relative">
             <Card padded={false} className="overflow-hidden">
@@ -109,8 +118,20 @@ export default function WorkoutTemplateBuilderTab() {
                       Note to client: {t.coachNote}
                     </p>
                   )}
-                  {t.assignedDay && (
-                    <p className="text-xs text-charcoal-faint">Assigned for {t.assignedDay}</p>
+                  {/* ONE LINE PER ASSIGNMENT, because the day belongs to the
+                      client and not to the template. */}
+                  {assignments.length > 0 && (
+                    <div className="space-y-0.5">
+                      {assignments.map((a) => {
+                        const who = professionalClients.find((c) => c.id === a.clientId);
+                        return (
+                          <p key={a.id} className="text-xs text-charcoal-faint">
+                            {who?.name ?? "A client"}
+                            {a.assignedDay ? ` — ${a.assignedDay}` : " — no day set"}
+                          </p>
+                        );
+                      })}
+                    </div>
                   )}
                   <div>
                     <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">
@@ -198,49 +219,79 @@ export default function WorkoutTemplateBuilderTab() {
                 onClick={(e) => e.stopPropagation()}
                 className="absolute right-4 top-14 z-10 w-40 bg-cream-card rounded-2xl shadow-lift overflow-hidden border border-charcoal/5"
               >
+                {/* A CURATED PROGRAM OFFERS ONLY "DUPLICATE", because that is
+                    the only one of these a professional can actually do.
+                    workout_templates has no policy permitting anyone to write
+                    a public row — a rename or a delete affects ZERO ROWS and
+                    reports no error, measured — and the assign function
+                    refuses a template whose owner is not the caller (ATX09,
+                    which holds for a curated one because its owner is null).
+                    Offering buttons that quietly do nothing is worse than not
+                    offering them. */}
+                {!t.isPublic && (
+                  <>
+                    <button
+                      onClick={() => {
+                        setRenamingTemplate(t);
+                        setRenameDraft(t.name);
+                        setMenuTemplateId(null);
+                      }}
+                      className="tap w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-charcoal hover:bg-cream-soft text-left"
+                    >
+                      <Pencil size={13} /> Rename
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingTemplate(t);
+                        setMenuTemplateId(null);
+                      }}
+                      className="tap w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-charcoal hover:bg-cream-soft text-left"
+                    >
+                      <Settings2 size={13} /> Edit template
+                    </button>
+                    <button
+                      onClick={() => {
+                        setAssigningTemplate(t);
+                        setMenuTemplateId(null);
+                      }}
+                      className="tap w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-charcoal hover:bg-cream-soft text-left"
+                    >
+                      <Send size={13} /> Assign to clients
+                    </button>
+                  </>
+                )}
+                {/* DUPLICATING A CURATED PROGRAM IS ALLOWED, and is how a
+                    professional starts from one: the copy is created with
+                    their own owner_id and is_public false, which is the only
+                    shape they may write. Assignments are not copied — they
+                    belong to the original, not to the plan. */}
                 <button
                   onClick={() => {
-                    setRenamingTemplate(t);
-                    setRenameDraft(t.name);
-                    setMenuTemplateId(null);
-                  }}
-                  className="tap w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-charcoal hover:bg-cream-soft text-left"
-                >
-                  <Pencil size={13} /> Rename
-                </button>
-                <button
-                  onClick={() => {
-                    setEditingTemplate(t);
-                    setMenuTemplateId(null);
-                  }}
-                  className="tap w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-charcoal hover:bg-cream-soft text-left"
-                >
-                  <Settings2 size={13} /> Edit template
-                </button>
-                <button
-                  onClick={() => {
-                    addWorkoutTemplate({
+                    void addWorkoutTemplate({
                       name: `${t.name} (copy)`,
                       exercises: t.exercises,
-                      assignedClientIds: [],
                       folderId: t.folderId,
                       coachNote: t.coachNote,
-                    });
+                    }).then((message) => setActionError(message ?? null));
                     setMenuTemplateId(null);
                   }}
                   className="tap w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-charcoal hover:bg-cream-soft text-left"
                 >
                   <Copy size={13} /> Duplicate
                 </button>
-                <button
-                  onClick={() => {
-                    removeWorkoutTemplate(t.id);
-                    setMenuTemplateId(null);
-                  }}
-                  className="tap w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-ember-dark hover:bg-cream-soft text-left"
-                >
-                  <Trash2 size={13} /> Delete
-                </button>
+                {!t.isPublic && (
+                  <button
+                    onClick={() => {
+                      void removeWorkoutTemplate(t.id).then((message) =>
+                        setActionError(message ?? null)
+                      );
+                      setMenuTemplateId(null);
+                    }}
+                    className="tap w-full flex items-center gap-2 px-3.5 py-2.5 text-xs font-semibold text-ember-dark hover:bg-cream-soft text-left"
+                  >
+                    <Trash2 size={13} /> Delete
+                  </button>
+                )}
               </div>
             )}
             </div>
@@ -327,6 +378,18 @@ export default function WorkoutTemplateBuilderTab() {
         }
       />
 
+      {/* A refused write the professional just asked for, and separately a
+          list that could not be refreshed — different failures, said
+          differently. */}
+      {actionError && (
+        <p className="text-[11.5px] font-semibold text-status-high mb-3">{actionError}</p>
+      )}
+      {templatesError && !actionError && (
+        <p className="text-[11.5px] font-semibold text-status-high mb-3">
+          Couldn't refresh your templates — showing what was saved on this device.
+        </p>
+      )}
+
       <div className="space-y-2.5">
         {topFolders.map((f) => folderCard(f.id))}
         {unfiledTemplates.map(templateCard)}
@@ -350,6 +413,12 @@ export default function WorkoutTemplateBuilderTab() {
         editTemplate={editingTemplate}
       />
 
+      <AssignTemplateSheet
+        open={!!assigningTemplate}
+        onClose={() => setAssigningTemplate(null)}
+        template={assigningTemplate}
+      />
+
       <BottomSheet open={!!renamingTemplate} onClose={() => setRenamingTemplate(null)} title="Rename Template">
         <div className="space-y-4 animate-fade-slide-up">
           <input
@@ -362,7 +431,11 @@ export default function WorkoutTemplateBuilderTab() {
             size="lg"
             disabled={!renameDraft.trim()}
             onClick={() => {
-              if (renamingTemplate) updateWorkoutTemplate(renamingTemplate.id, { name: renameDraft.trim() });
+              if (renamingTemplate) {
+                void updateWorkoutTemplate(renamingTemplate.id, { name: renameDraft.trim() }).then(
+                  (message) => setActionError(message ?? null)
+                );
+              }
               setRenamingTemplate(null);
             }}
           >
