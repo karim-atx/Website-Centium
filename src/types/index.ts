@@ -877,7 +877,19 @@ export interface Streak {
   id: string;
   label: string;
   days: number;
-  goalDays: number;
+  /**
+   * Absent on an auto streak, and the schema insists on it.
+   *
+   * `streaks_auto_no_goal_check` is `check (not auto or goal_days is null)`,
+   * and the insert policy refuses an auto row unless goal_days is null too. So
+   * this being required was not merely loose typing — it described rows the
+   * database will not accept, and every consumer that divides by it was doing
+   * arithmetic on a value the four real streaks can never have.
+   *
+   * A user-created streak still carries one; those are the rows with a habit
+   * behind them and a goal worth showing progress against.
+   */
+  goalDays?: number;
   // V4: the four core streaks (logging/movement/workout/nutrition) are
   // auto-derived from real activity and can't be edited or given a goal.
   auto?: boolean;

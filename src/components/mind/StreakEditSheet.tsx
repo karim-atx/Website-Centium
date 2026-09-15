@@ -17,14 +17,17 @@ export const StreakEditSheet: React.FC<{
   useEffect(() => {
     if (streak) {
       setLabel(streak.label);
-      setGoalDays(String(streak.goalDays));
+      // Defensive: this sheet only opens for a user streak (Mind gates the
+      // edit button on !s.auto), but an auto row has no goal and String(undefined)
+      // would put the literal text "undefined" in the field.
+      setGoalDays(String(streak.goalDays ?? 30));
     }
   }, [streak]);
 
   if (!streak) return null;
 
   const save = () => {
-    updateStreak(streak.id, { label, goalDays: Number(goalDays) || streak.goalDays });
+    updateStreak(streak.id, { label, goalDays: Number(goalDays) || streak.goalDays || 30 });
     onClose();
   };
 

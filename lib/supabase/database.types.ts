@@ -4539,6 +4539,7 @@ export type Database = {
       }
       workout_sessions: {
         Row: {
+          activity_date: string | null
           created_at: string
           duration_sec: number | null
           ended_at: string | null
@@ -4551,6 +4552,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          activity_date?: string | null
           created_at?: string
           duration_sec?: number | null
           ended_at?: string | null
@@ -4563,6 +4565,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          activity_date?: string | null
           created_at?: string
           duration_sec?: number | null
           ended_at?: string | null

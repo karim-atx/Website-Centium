@@ -138,10 +138,18 @@ export const bloodPanel: BloodPanel = {
 // V4: these four are auto-derived from real logging activity (see
 // recomputeAutoStreaks in AppContext) — no goal, not user-editable.
 export const streaks: Streak[] = [
-  { id: "s1", label: "Logging streak", days: 7, goalDays: 30, auto: true },
-  { id: "s2", label: "Movement streak", days: 12, goalDays: 30, auto: true },
-  { id: "s3", label: "Workout streak", days: 4, goalDays: 8, auto: true },
-  { id: "s4", label: "Nutrition streak", days: 21, goalDays: 30, auto: true },
+  // NO goalDays, because a real auto row cannot have one: the schema's
+  // streaks_auto_no_goal_check refuses it and the insert policy refuses it
+  // again. These four used to carry 30/30/8/30, which meant local state looked
+  // nothing like the rows the database would actually hold — and every goal
+  // string the UI rendered from them described a target that cannot exist.
+  //
+  // The labels are the ones services/streaks seeds, so what renders here and
+  // what the nightly sweep advances are the same four things.
+  { id: "s1", label: "Logging streak", days: 7, auto: true },
+  { id: "s2", label: "Movement streak", days: 12, auto: true },
+  { id: "s3", label: "Workout streak", days: 4, auto: true },
+  { id: "s4", label: "Nutrition streak", days: 21, auto: true },
 ];
 
 export const defaultHabits: HabitItem[] = [

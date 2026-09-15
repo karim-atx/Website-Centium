@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { ChevronRight, Flame } from "lucide-react";
 import { flameColor } from "../../utils/flameColor";
+import { streakProgress } from "../../utils/streakProgress";
 
 // Design refinement §6.1: "the one gradient retained in the app" — the
 // sage bar becomes a lavender panel that's the screen's focal point
@@ -17,8 +18,12 @@ export const StreaksBar: React.FC = () => {
   if (!lead) return null;
 
   const leadLabel = lead.label.replace(/\s*streak$/i, "");
-  const remaining = Math.max(0, lead.goalDays - lead.days);
-  const filledSegments = Math.max(0, Math.min(10, Math.round((lead.days / lead.goalDays) * 10)));
+  // GOAL COPY ONLY WHEN THERE IS A GOAL. The four auto streaks carry none —
+  // the schema forbids it — so "3 to your 30-day goal" would be inventing a
+  // target the user never set. The track below still fills, against the
+  // goalless scale, because it reads as momentum rather than as a promise.
+  const remaining = lead.goalDays ? Math.max(0, lead.goalDays - lead.days) : null;
+  const filledSegments = Math.round(streakProgress(lead) * 10);
 
   return (
     <button
@@ -34,7 +39,7 @@ export const StreaksBar: React.FC = () => {
       </div>
 
       <div className="flex items-center gap-2 mb-2">
-        <Flame size={28} style={{ color: flameColor(lead.days / lead.goalDays) }} fill="currentColor" fillOpacity={0.35} />
+        <Flame size={28} style={{ color: flameColor(streakProgress(lead)) }} fill="currentColor" fillOpacity={0.35} />
         <div>
           <p className="text-[38px] font-extrabold text-white leading-none tracking-[-0.03em] tabular-nums">
             {lead.days}
@@ -45,7 +50,11 @@ export const StreaksBar: React.FC = () => {
         </div>
       </div>
       <p className="text-[11px] font-medium text-white/70 mb-2.5">
-        {remaining > 0 ? `${remaining} to your ${lead.goalDays}-day goal` : "Goal reached — keep it going"}
+        {remaining === null
+          ? "Tracked automatically — keep it going"
+          : remaining > 0
+            ? `${remaining} to your ${lead.goalDays}-day goal`
+            : "Goal reached — keep it going"}
       </p>
 
       <div className="flex gap-1 mb-3">
@@ -62,7 +71,7 @@ export const StreaksBar: React.FC = () => {
         <div className="flex items-center justify-between gap-3 pt-3 border-t border-white/[0.22]">
           {rest.map((s) => (
             <div key={s.id} className="flex items-center gap-1.5 min-w-0">
-              <Flame size={12} style={{ color: flameColor(s.days / s.goalDays) }} fill="currentColor" fillOpacity={0.3} className="shrink-0" />
+              <Flame size={12} style={{ color: flameColor(streakProgress(s)) }} fill="currentColor" fillOpacity={0.3} className="shrink-0" />
               <div className="min-w-0">
                 <span className="text-[15px] font-extrabold text-white tabular-nums">{s.days}</span>
                 <p className="text-[9.5px] font-medium text-white/70 truncate">{s.label.replace(/\s*streak$/i, "")}</p>

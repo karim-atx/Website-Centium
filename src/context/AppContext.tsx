@@ -85,6 +85,7 @@ import {
   manualFood,
 } from "../services/food";
 import { ensureProfileRow, fetchProfile } from "../services/profile";
+import { ensureAutoStreaks } from "../services/streaks";
 import {
   getRecoveryPendingUserId,
   markRecoveryPending,
@@ -851,7 +852,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setSession(next);
       setAuthReady(true);
       if (next?.user) {
-        void ensureProfileRow(next.user.id, next.user.email ?? null);
+        // SEQUENCED, NOT FIRED TOGETHER. streaks.owner_id references
+        // profiles(id), so seeding before the profile row exists fails the
+        // foreign key on a brand-new account — the one case this is for.
+        //
+        // Both are idempotent and both swallow their own failures, so this
+        // runs on every auth event rather than only on sign-up: an account
+        // created before the four streaks existed gets them on its next visit
+        // without a migration.
+        void ensureProfileRow(next.user.id, next.user.email ?? null).then(() =>
+          ensureAutoStreaks(next.user.id)
+        );
       }
     });
 

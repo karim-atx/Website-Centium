@@ -156,7 +156,11 @@ export default function MetricsTab() {
             </div>
             <div>
               <p className="text-sm font-bold text-charcoal">
-                {workoutStreak.days} / {workoutStreak.goalDays} days
+                {/* An auto streak has no goal to count toward, so it states
+                    the run instead of a fraction with nothing under it. */}
+                {workoutStreak.goalDays
+                  ? `${workoutStreak.days} / ${workoutStreak.goalDays} days`
+                  : `${workoutStreak.days} days`}
               </p>
               <p className="text-[11px] text-charcoal-faint">Adherence · from your Workout streak</p>
             </div>

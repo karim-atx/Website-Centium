@@ -74,6 +74,20 @@ export async function saveWorkoutSession(
       routine_id: null,
       routine_name: session.routineName,
       started_at: session.startedAt,
+      // THE DAY THE USER TRAINED, as their own calendar saw it — the same
+      // thing food_log_entries.logged_date is, and for the same reason.
+      //
+      // The workout streak counts unbroken activity days from this column
+      // (Database 20260916070000). started_at alone cannot answer it: the
+      // sweep would have to pick a timezone, and the only one available
+      // server-side is UTC, which puts a 9pm session in Beirut on tomorrow's
+      // date and breaks the run. The migration's own backfill had to do
+      // exactly that and says so.
+      //
+      // Derived from started_at rather than "now": a session saved after
+      // midnight belongs to the day it began, which is how the person who
+      // trained would count it.
+      activity_date: localDayOf(session.startedAt),
       ended_at: session.endedAt ?? null,
       duration_sec: Math.max(0, Math.round(session.durationSec)),
       total_volume_kg: round2(Math.max(0, session.totalVolumeKg)),

@@ -11,6 +11,7 @@ import JournalTab from "./JournalTab";
 import { Flame, Plus, CheckSquare, BookOpen, Pencil } from "lucide-react";
 import type { Streak } from "../../types";
 import { flameColor } from "../../utils/flameColor";
+import { streakProgress } from "../../utils/streakProgress";
 import clsx from "clsx";
 
 type Tab = "overview" | "habits" | "journal";
@@ -83,7 +84,7 @@ export default function Mind() {
           <div className="grid grid-cols-2 gap-3 mb-6">
             {streaks.map((s) => {
               const bursting = burstKey?.startsWith(`${s.id}-b`);
-              const color = flameColor(s.days / s.goalDays);
+              const color = flameColor(streakProgress(s));
               return (
               <Card
                 key={s.id}
@@ -141,7 +142,7 @@ export default function Mind() {
                   <div
                     className="h-full rounded-full transition-all duration-[620ms]"
                     style={{
-                      width: `${Math.min((s.days / s.goalDays) * 100, 100)}%`,
+                      width: `${streakProgress(s) * 100}%`,
                       background: color,
                     }}
                   />
