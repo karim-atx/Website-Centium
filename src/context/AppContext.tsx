@@ -128,6 +128,7 @@ import {
   logFoodEntry,
   manualFood,
 } from "../services/food";
+import { isAdminAccount } from "../services/admin";
 import { ensureProfileRow, fetchProfile } from "../services/profile";
 import {
   AUTO_STREAK_CATEGORIES,
@@ -319,6 +320,19 @@ interface AppState {
   // localStorage, and acting on it early sends an onboarded user through
   // onboarding again.
   profileReady: boolean;
+  // Whether this account is an administrator, or null while the answer is
+  // still outstanding. Administrators have no place in the consumer app —
+  // the route guards stop them at a notice rather than walking them into
+  // onboarding as if they were a new customer.
+  isAdmin: boolean | null;
+  // False until the admin check has settled for the current session. Separate
+  // from isAdmin for the same reason profileReady is separate from `user`: a
+  // guard must be able to tell "not an admin" from "not asked yet".
+  adminReady: boolean;
+  // Lets an administrator past that notice for this browser session only.
+  // Nothing persists across a new tab or a new sign-in.
+  continueAsConsumer: () => void;
+  adminConsumerOptIn: boolean;
 
   theme: "light" | "dark";
   toggleTheme: () => void;
@@ -925,6 +939,26 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
+/**
+ * Where an administrator's "let me into the consumer app anyway" lives.
+ *
+ * DELIBERATELY OUTSIDE `centium-state:`. Everything under that prefix is
+ * localStorage and is the app's persisted cache; this is sessionStorage and
+ * holds an account id, not a preference. Signing out wipes the cache but not
+ * this key — it does not need to, because a stored id that no longer matches
+ * the session simply never matches again.
+ */
+const ADMIN_CONSUMER_KEY = "centium-admin-consumer";
+
+function readAdminConsumerOptIn(userId: string | null): boolean {
+  if (!userId) return false;
+  try {
+    return window.sessionStorage.getItem(ADMIN_CONSUMER_KEY) === userId;
+  } catch {
+    return false;
+  }
+}
+
 function usePersistentState<T>(key: string, initial: T) {
   const [state, setState] = useState<T>(() => {
     const loaded = loadPersisted(key, initial);
@@ -1022,9 +1056,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // runs on every auth event rather than only on sign-up: an account
         // created before the four streaks existed gets them on its next visit
         // without a migration.
-        void ensureProfileRow(next.user.id, next.user.email ?? null).then(() =>
-          ensureAutoStreaks(next.user.id)
-        );
+        //
+        // AND THE SAME REFERENCE IS WHY THE CHAIN CAN STOP. An administrator
+        // gets no profiles row (see ensureProfileRow), so seeding streaks for
+        // one would fail that foreign key on every single auth event. The
+        // reported flag is what says which case this is.
+        void ensureProfileRow(next.user.id, next.user.email ?? null).then(({ profileEnsured }) => {
+          if (!profileEnsured) return;
+          return ensureAutoStreaks(next.user.id);
+        });
       }
     });
 
@@ -1194,6 +1234,98 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // visible to the guards.
   const profileReady = authReady && hydratedFor === authUserId;
 
+  // --- admin detection -----------------------------------------------------
+  //
+  // WHY THE CONSUMER APP ASKS THIS AT ALL. An admin account signing in here
+  // was routed straight into onboarding like a brand-new user, because nothing
+  // on this side knew what it was looking at. is_admin() is the only way to
+  // find out: admin_users has no grants and no policies, so the table itself
+  // is unreadable, and the function is SECURITY DEFINER over auth.uid().
+  //
+  // ONLY WITH A SESSION. The EXECUTE grant covers authenticated and
+  // service_role and deliberately excludes anon, so calling this signed out
+  // returns 42501 rather than false — measured. The guard below is what keeps
+  // that out of the console on every signed-out render.
+  //
+  // Keyed the same way hydratedFor is, and for the same reason: a stored
+  // boolean stays stale for one render after the account changes, which is
+  // exactly the window a route guard reads it in.
+  const [adminFor, setAdminFor] = useState<{ userId: string | null; isAdmin: boolean } | null>(null);
+
+  useEffect(() => {
+    if (!authReady) return;
+    if (!authUserId) {
+      // Signed out: not an admin, and nobody to ask about. Answered rather
+      // than left pending, so the guards never hold a signed-out render on a
+      // question with no subject.
+      setAdminFor({ userId: null, isAdmin: false });
+      return;
+    }
+    let cancelled = false;
+    void isAdminAccount().then((result) => {
+      if (cancelled) return;
+      // isAdminAccount() already turns a failed check into false. An admin
+      // seeing the consumer app because a round trip failed is where they
+      // were already; every user stuck on a loading screen is not.
+      setAdminFor({ userId: authUserId, isAdmin: result });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, authReady]);
+
+  const adminReady = authReady && adminFor?.userId === authUserId;
+  const isAdmin = adminReady ? (adminFor?.isAdmin ?? false) : null;
+
+  // The same answer, readable from inside an async continuation.
+  //
+  // Three hydration effects below carry local seed data up to the server once
+  // per account — custom meals, custom exercises, routines and their folders.
+  // Every one of those inserts references profiles(id), so for an
+  // administrator they fail their foreign key in a burst of 409s on every
+  // page load, writing nothing. Measured after this change went in, with an
+  // admin who had reached the app through the interstitial's escape hatch.
+  //
+  // A REF RATHER THAN A DEPENDENCY, because the uploads run inside a .then()
+  // after a network read: by then the current value is the right one, and
+  // adding a dependency would re-run three effects on an answer that only
+  // ever matters to a handful of lines inside them. Read as `!== true`, never
+  // `=== false`, so an answer still in flight behaves exactly as it did
+  // before this existed — the admin case is worth tidying, not worth putting
+  // a real user's one-time upload behind another round trip.
+  const isAdminRef = useRef<boolean | null>(null);
+  isAdminRef.current = isAdmin;
+
+  // The admin's way past the interstitial, for this browser session only.
+  //
+  // SESSION STORAGE, NOT LOCAL STORAGE, and the difference is the whole
+  // point. "Let me through today" must not quietly become "never show me
+  // this again" on a machine somebody keeps signed in — the notice exists to
+  // say the admin console is elsewhere, and a permanent dismissal would
+  // erase that for good. sessionStorage dies with the tab.
+  //
+  // Keyed by account id so it cannot carry to whoever signs in next, which
+  // also makes clearing it on sign-out unnecessary: a stored id that no
+  // longer matches the session is already inert.
+  const [adminConsumerOptIn, setAdminConsumerOptIn] = useState(false);
+
+  useEffect(() => {
+    setAdminConsumerOptIn(readAdminConsumerOptIn(authUserId));
+  }, [authUserId]);
+
+  const continueAsConsumer = useCallback(() => {
+    if (!authUserId) return;
+    try {
+      window.sessionStorage.setItem(ADMIN_CONSUMER_KEY, authUserId);
+    } catch {
+      // Storage refused (private mode, or a browser with it disabled). The
+      // state below still flips, so the admin gets through on this page life
+      // and only a reload asks again — worse than remembering, better than a
+      // button that does nothing.
+    }
+    setAdminConsumerOptIn(true);
+  }, [authUserId]);
+
   // --- activity stamping ---------------------------------------------------
   //
   // Records the account as in use, on open and on every foreground-resume.
@@ -1217,8 +1349,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // session dependency to carry this would make a well-understood piece of
   // date handling re-subscribe on every auth change to serve an unrelated
   // concern. Two cheap listeners are worth less coupling than one.
+  //
+  // AND NOT FOR AN ADMINISTRATOR, for the same reason. They have no profiles
+  // row at all, so every stamp would raise 'profile not found' — a warning on
+  // each tab focus, describing a state that is correct.
   useEffect(() => {
-    if (!profileReady || !authUserId) return;
+    if (!profileReady || !authUserId || isAdmin !== false) return;
     const uid = authUserId;
 
     touchLastActive(uid);
@@ -1234,7 +1370,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       document.removeEventListener("visibilitychange", onWake);
       window.removeEventListener("focus", onWake);
     };
-  }, [authUserId, profileReady]);
+  }, [authUserId, profileReady, isAdmin]);
 
   useEffect(() => {
     if (!authReady) return;
@@ -1794,7 +1930,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // server is never a candidate and this cannot duplicate one. Failures
       // are kept rather than retried in a loop: the meal stays local, stays
       // visible, and the attempt is not repeated until the next load.
-      const pending = mealUploadAttempted.current !== authUserId
+      const pending = mealUploadAttempted.current !== authUserId && isAdminRef.current !== true
         ? customMeals.filter((m) => !isRemoteMealId(m.id))
         : [];
       mealUploadAttempted.current = authUserId;
@@ -1944,7 +2080,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // movement rather than uploaded into a second row.
       const remoteNames = new Set(result.exercises.map((e) => e.name.trim().toLowerCase()));
       const pending =
-        exerciseUploadAttempted.current !== authUserId
+        exerciseUploadAttempted.current !== authUserId && isAdminRef.current !== true
           ? customExercises.filter((e) => !isUuid(e.id ?? ""))
           : [];
       exerciseUploadAttempted.current = authUserId;
@@ -2034,7 +2170,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         // has folders but has never had a routine should still get its local
         // routines carried up, and those simply land unfiled because there are
         // no local folder ids left to map.
-        const firstAttempt = routineUploadAttempted.current !== authUserId;
+        // ...AND NOT FOR AN ADMINISTRATOR, who has no profiles row for any of
+        // this to reference. See isAdminRef.
+        const firstAttempt =
+          routineUploadAttempted.current !== authUserId && isAdminRef.current !== true;
         const pendingFolders =
           firstAttempt && folderResult.folders.length === 0
             ? routineFolders.filter((f) => !isUuid(f.id))
@@ -3251,13 +3390,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [streaksError, setStreaksError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!profileReady || !authUserId) return;
+    if (!profileReady || !authUserId || isAdmin !== false) return;
     let cancelled = false;
 
     // SEEDS FIRST, THEN READS. An account created before the rows existed has
     // none, and reading before seeding would show four zeroes on this visit
     // and only self-heal on the next one. ensureAutoStreaks is memoised, so
     // sharing it with the auth listener costs one call, not two.
+    //
+    // Never for an administrator: streaks.owner_id references profiles(id)
+    // and they have no row there, so this is the second half of the skip the
+    // auth listener already makes. `isAdmin !== false` rather than `=== true`
+    // waits for the answer instead of guessing while it is still null.
     void ensureAutoStreaks(authUserId)
       .then(() => getAutoStreaks(authUserId))
       .then((result) => {
@@ -3295,7 +3439,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       cancelled = true;
     };
-  }, [authUserId, profileReady, setStreaks]);
+  }, [authUserId, profileReady, isAdmin, setStreaks]);
 
   const updateMetricValue: AppState["updateMetricValue"] = (type, value) => {
     setMetricValues((prev) => ({ ...prev, [type]: value }));
@@ -3951,6 +4095,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       labsError,
       authReady,
       profileReady,
+      isAdmin,
+      adminReady,
+      continueAsConsumer,
+      adminConsumerOptIn,
       theme,
       toggleTheme,
       language,
@@ -4182,6 +4330,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deletionRequestedAt,
       authReady,
       profileReady,
+      isAdmin,
+      adminReady,
+      continueAsConsumer,
+      adminConsumerOptIn,
       theme,
       language,
       notificationPrefs,

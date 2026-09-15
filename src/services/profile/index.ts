@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { TablesInsert, TablesUpdate } from "../../../lib/supabase/database.types";
+import { isAdminAccount } from "../admin";
 import { ageFromDateOfBirth } from "../../utils/date";
 import type {
   AccountType,
@@ -15,7 +16,9 @@ import type {
 // Writes to public.profiles. Split in two deliberately:
 //
 //   1. ensureProfileRow() runs the moment a session exists, inserting the
-//      bare minimum (just the id, which is all the table requires).
+//      bare minimum (just the id, which is all the table requires) — for
+//      everyone except administrators, who are not customers of this app and
+//      whose identity does not live in this table at all.
 //   2. updateProfileFromOnboarding() fills in the rest at the end of the
 //      flow, once accountType/subtype/goals/etc. actually exist.
 //
@@ -33,8 +36,29 @@ import type {
  * makes this safe to call on every single auth event — a returning user
  * signing in for the hundredth time will not have their onboarding data
  * overwritten by a blank row.
+ *
+ * ADMINS ARE NOT GIVEN ONE, and this is the one case where "every session
+ * gets a profile" is wrong. `admin_users.owner_id` references `auth.users`,
+ * not `profiles` — migration 20260914150000 moved it there on purpose, and
+ * its header asks whoever comes next not to reintroduce a stub profile for
+ * new admins. An admin signing in here is not a customer of this app, and a
+ * blank consumer profile for them is a row nobody wants: it makes an admin
+ * account look like an abandoned half-onboarded user in every count that
+ * reads `profiles`.
+ *
+ * Returns whether this account has a consumer profile, so a caller chaining
+ * work that depends on one — `streaks.owner_id` references `profiles(id)` —
+ * can skip it rather than watch a foreign key fail.
  */
-export async function ensureProfileRow(userId: string, email: string | null): Promise<void> {
+export async function ensureProfileRow(
+  userId: string,
+  email: string | null
+): Promise<{ profileEnsured: boolean }> {
+  // Fails toward the old behaviour on purpose: isAdminAccount() answers false
+  // when the check itself fails, so a bad round trip creates a profile the
+  // way it always did rather than leaving a real user without one.
+  if (await isAdminAccount()) return { profileEnsured: false };
+
   const row: TablesInsert<"profiles"> = { id: userId, email };
   const { error } = await supabase
     .from("profiles")
@@ -46,6 +70,9 @@ export async function ensureProfileRow(userId: string, email: string | null): Pr
     // because there is no user action that would fix it.
     console.error("[profile] Could not ensure profiles row:", error.message);
   }
+  // `!error` rather than a flat true: a write that failed leaves no row, and
+  // a caller chaining a foreign key onto it should not be told otherwise.
+  return { profileEnsured: !error };
 }
 
 export interface FetchedProfile {

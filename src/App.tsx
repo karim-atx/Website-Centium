@@ -1,6 +1,8 @@
 import React, { useRef } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ShieldCheck } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
+import { Button } from "./components/ui/Button";
 import { Layout } from "./components/navigation/Layout";
 import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
 import { Home as MarketingHome } from "./marketing/pages/Home";
@@ -49,8 +51,55 @@ const RouteLoading: React.FC = () => (
   </div>
 );
 
+/**
+ * What an administrator sees instead of onboarding.
+ *
+ * An admin account signing in here was indistinguishable from a brand-new
+ * customer: no profiles row, `onboarded` false, straight into the onboarding
+ * flow. Nothing was broken — it just answered the wrong question, because
+ * this app has no admin features and never asked whether the person in front
+ * of it wanted any.
+ *
+ * IT SAYS WHAT IS TRUE TODAY. The admin console is a separate application at
+ * a separate address, and this one cannot send anyone to it — so the notice
+ * states where things stand rather than offering a link that would 404.
+ *
+ * AND IT IS NOT A WALL. An admin with a real reason to use the consumer app —
+ * reproducing something a user reported, most obviously — gets through with
+ * one click, for this browser session only. A permanent dismissal would mean
+ * the notice silently never appears again on a machine somebody stays signed
+ * in on, which is exactly the machine it matters on.
+ */
+const AdminInterstitial: React.FC = () => {
+  const { continueAsConsumer } = useApp();
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-cream px-6">
+      <div className="w-full max-w-sm text-center space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-primary-pale flex items-center justify-center mx-auto">
+          <ShieldCheck size={22} className="text-primary-dark" />
+        </div>
+        <h1 className="text-lg font-semibold text-charcoal">Administrator account</h1>
+        <p className="text-[13px] text-charcoal-soft leading-relaxed">
+          You're signed in as an administrator. The admin console isn't available at this address
+          yet.
+        </p>
+        {/* No account email here on purpose. An admin has no profiles row, so
+            `user` still holds whatever the local cache had — which, in a
+            browser a customer signed into earlier, is somebody else's address.
+            The one honest source would be the session, and naming the account
+            is not what this screen is for. */}
+        <Button variant="secondary" fullWidth onClick={continueAsConsumer}>
+          Continue to the consumer app
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, authUserId, authReady, profileReady, recoveryPending } = useApp();
+  const { user, authUserId, authReady, profileReady, recoveryPending, adminReady, isAdmin, adminConsumerOptIn } =
+    useApp();
 
   // Wait for the server profile before deciding. `user.onboarded` starts from
   // localStorage, which is per-browser and not keyed by account — redirecting
@@ -85,6 +134,14 @@ const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children })
   // how an emailed link, or a forwarded one, handed over a working account.
   if (recoveryPending) return <Navigate to="/app/reset-password" replace />;
 
+  // ABOVE THE ONBOARDING CHECK, AND THAT ORDER IS THE POINT. An admin has no
+  // profiles row, so `user.onboarded` is false for them and the line below
+  // would send them into the customer onboarding flow — the exact behaviour
+  // this exists to replace. Below recoveryPending because a password reset
+  // outranks everything: an admin mid-recovery still has to finish it.
+  if (!adminReady) return <RouteLoading />;
+  if (isAdmin && !adminConsumerOptIn) return <AdminInterstitial />;
+
   if (!user.onboarded) return <Navigate to="/app/onboarding" replace />;
   return <>{children}</>;
 };
@@ -100,7 +157,8 @@ const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children })
  * person had already finished.
  */
 const RedirectIfOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, authUserId, authReady, profileReady, recoveryPending } = useApp();
+  const { user, authUserId, authReady, profileReady, recoveryPending, adminReady, isAdmin, adminConsumerOptIn } =
+    useApp();
 
   // Decided once PER ACCOUNT, then held.
   //
@@ -130,6 +188,15 @@ const RedirectIfOnboarded: React.FC<{ children: React.ReactNode }> = ({ children
   // Deliberately no latch, because there is no account to latch an answer
   // about, and latching here is what broke it before.
   if (!authUserId) return <>{children}</>;
+
+  // THIS IS THE ONE THAT ACTUALLY FIRES. Signing in happens on the onboarding
+  // route, so an admin arriving through Google lands here — under the old
+  // order, on step two of a flow asking their height and their goals. Placed
+  // after the session check because there is nobody to ask about without one,
+  // and before the latch below so the answer is never cached as "not
+  // onboarded, carry on".
+  if (!adminReady) return <RouteLoading />;
+  if (isAdmin && !adminConsumerOptIn) return <AdminInterstitial />;
 
   // A different account (or the first one) resets the answer. profileReady
   // guarantees `user` has been hydrated for THIS authUserId, so `onboarded`
