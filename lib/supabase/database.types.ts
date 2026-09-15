@@ -5464,6 +5464,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      adopt_workout_template: {
+        Args: {
+          p_template_id: string
+        }
+        Returns: {
+          assigned_by_professional_id: string | null
+          coach_note: string | null
+          color: string | null
+          created_at: string
+          estimated_duration_min: number | null
+          folder_id: string | null
+          id: string
+          name: string
+          owner_id: string
+          source_template_id: string | null
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "routines"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       assign_template_to_client: {
         Args: {
           p_assigned_day?: string | null

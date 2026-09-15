@@ -8,6 +8,7 @@ import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet"
 import { ExerciseSettingsSheet } from "../../components/workout/ExerciseSettingsSheet";
 import { ExerciseLibrarySheet, type ExercisePick } from "../../components/workout/ExerciseLibrarySheet";
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
+import { BrowseProgramsSheet } from "../../components/workout/BrowseProgramsSheet";
 import type { Exercise, Routine, RoutineFolder } from "../../types";
 import {
   ChevronDown,
@@ -27,6 +28,7 @@ import {
   Palette,
   ArrowUp,
   ArrowDown,
+  Library,
 } from "lucide-react";
 
 const SWIPE_THRESHOLD = 50;
@@ -81,6 +83,7 @@ export default function RoutinesTab() {
     void action.then((message) => setActionError(message ?? null));
   };
   const [createOpen, setCreateOpen] = useState(false);
+  const [browseOpen, setBrowseOpen] = useState(false);
   const [createFolder, setCreateFolder] = useState<string | null>(null);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
@@ -510,18 +513,44 @@ export default function RoutinesTab() {
         )}
       </div>
 
-      <Button
-        fullWidth
-        size="lg"
-        onClick={() => {
-          setCreateFolder(null);
-          setCreateOpen(true);
-        }}
-      >
-        + Create Routine
-      </Button>
+      {/* NOTHING HERE YET, AND SOMEWHERE TO START. An empty routines list used
+          to offer one door — build a routine from scratch — which is the
+          harder of the two for someone who has never written a training
+          program. The nine curated programs existed but had no way in. */}
+      {routines.length === 0 && (
+        <Card className="text-center py-7 mb-4">
+          <p className="text-sm font-semibold text-charcoal mb-1">No routines yet</p>
+          <p className="text-[12.5px] text-charcoal-soft mb-4 px-4 leading-relaxed">
+            Start from a ready-made program and change whatever you like, or build your own from
+            scratch.
+          </p>
+          <Button size="sm" onClick={() => setBrowseOpen(true)}>
+            <Library size={14} /> Browse starter programs
+          </Button>
+        </Card>
+      )}
+
+      <div className="space-y-2.5">
+        <Button
+          fullWidth
+          size="lg"
+          onClick={() => {
+            setCreateFolder(null);
+            setCreateOpen(true);
+          }}
+        >
+          + Create Routine
+        </Button>
+        {routines.length > 0 && (
+          <Button variant="outline" fullWidth onClick={() => setBrowseOpen(true)}>
+            <Library size={14} /> Browse starter programs
+          </Button>
+        )}
+      </div>
 
       <CreateRoutineSheet open={createOpen} onClose={() => setCreateOpen(false)} folderId={createFolder} />
+
+      <BrowseProgramsSheet open={browseOpen} onClose={() => setBrowseOpen(false)} />
 
       <ExerciseSettingsSheet
         open={!!settingsExercise}

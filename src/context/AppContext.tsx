@@ -64,6 +64,7 @@ import {
   type CatalogExercise,
 } from "../services/exercises";
 import {
+  adoptTemplate as adoptTemplateRemote,
   assignTemplate as assignTemplateRemote,
   createTemplate as createTemplateRemote,
   createTemplateFolder,
@@ -818,6 +819,14 @@ interface AppState {
     confirmOverwrite?: boolean
   ) => Promise<AssignResult>;
   unassignTemplate: (assignmentId: string) => Promise<string | undefined>;
+  /**
+   * Copies a curated starter program into a routine of the user's own.
+   *
+   * Resolves to an error sentence, or undefined when the routine landed. Every
+   * call creates a FRESH routine — adopting the same program twice is two
+   * independent routines, which is what "it's mine now" has to mean.
+   */
+  adoptTemplate: (templateId: string) => Promise<string | undefined>;
   /** Null until the first template hydration finishes or fails. */
   templatesError: string | null;
 
@@ -2616,6 +2625,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return undefined;
   };
 
+  const adoptTemplate: AppState["adoptTemplate"] = async (templateId) => {
+    if (!authUserId) return "You need to be signed in to add a program.";
+    const result = await adoptTemplateRemote(templateId);
+    if (!result.ok) return result.message ?? "Could not add that program.";
+
+    // RE-READ RATHER THAN BUILD THE ROUTINE HERE. The function decides the id,
+    // the colour, the provenance columns and the prescription rows, and it
+    // re-reads the routine itself because the touch trigger restamps
+    // updated_at during the copy. Reconstructing that on this side would be
+    // guessing at values the database just settled.
+    const refreshed = await getRoutines(authUserId);
+    if (refreshed.ok) {
+      // Merged rather than replaced, for the reason the hydration gives:
+      // routines this device holds that the server does not — a template
+      // mirror, an unsynced local one — must survive a refresh.
+      setRoutines((prev) => [
+        ...refreshed.routines,
+        ...prev.filter((r) => !refreshed.routines.some((s) => s.id === r.id) && !isUuid(r.id)),
+      ]);
+    }
+    return undefined;
+  };
+
   const [workoutTemplateFolders, setWorkoutTemplateFolders] = usePersistentState<WorkoutTemplateFolder[]>(
     "workoutTemplateFolders",
     []
@@ -4102,6 +4134,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       templateAssignments,
       assignTemplate,
       unassignTemplate,
+      adoptTemplate,
       templatesError,
       workoutTemplateFolders,
       addWorkoutTemplateFolder,

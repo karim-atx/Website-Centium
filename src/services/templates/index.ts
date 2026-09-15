@@ -600,6 +600,72 @@ export async function assignTemplate(
   return { ok: true, routineId: routine?.id };
 }
 
+export interface AdoptResult {
+  ok: boolean;
+  routineId?: string;
+  message?: string;
+}
+
+/**
+ * Adoption's own failures, because TWO OF THE CODES MEAN SOMETHING DIFFERENT
+ * HERE than they do when assigning.
+ *
+ * ATX09 is raised by both doors for opposite reasons — assigning refuses a
+ * template you do NOT own, adopting refuses one that is not curated — so
+ * "only the template's owner can assign it" would be exactly backwards on this
+ * path. The browse screen only ever lists curated programs, so a user who sees
+ * this has hit something genuinely wrong rather than a rule they could have
+ * anticipated; the wording says that without blaming them.
+ *
+ * ATX10 belongs to adoption alone: a curated template referencing a private
+ * custom movement. There is no owner to copy that movement from, and
+ * routine_exercises_single_source_check forbids a row naming neither source,
+ * so the function refuses rather than hand over a program quietly missing an
+ * exercise. Nothing seeded can produce it — if it appears, the content is
+ * wrong, not the person reading it.
+ */
+function describeAdoption(error: PostgrestError): string {
+  const code = error.code ?? "";
+  if (code === "ATX08") return "That program is no longer available.";
+  if (code === "ATX09") return "That program can't be added this way.";
+  if (code === "ATX10") {
+    return "This program can't be copied — one of its exercises isn't available.";
+  }
+  return describe(error);
+}
+
+/**
+ * Takes a curated program for yourself.
+ *
+ * THE OTHER DOOR. assign_template_to_client deliberately refuses curated
+ * content — nobody owns it, so nobody may push it at somebody else — which
+ * left the nine starter programs with no way to be used at all. This is how
+ * an ordinary user uses one.
+ *
+ * A FRESH ROUTINE EVERY TIME: no upsert, no assignment row, no calendar event.
+ * An adopted program is the user's own from the moment it lands, and a later
+ * edit to the curated template never reaches it. Adopting the same program
+ * twice is therefore two independent routines, which is the intended answer
+ * rather than an oversight.
+ *
+ * THE FUNCTION SETS THE PROVENANCE ITSELF. source_template_id comes from the
+ * row it actually read and assigned_by_professional_id is forced null, so an
+ * adopted routine cannot claim a coach it never had — which the client could
+ * otherwise write about itself, since both columns are in its INSERT grant.
+ */
+export async function adoptTemplate(templateId: string): Promise<AdoptResult> {
+  const { data, error } = await supabase.rpc("adopt_workout_template", {
+    p_template_id: templateId,
+  });
+
+  if (error) {
+    console.error("[templates] Could not adopt template:", error.message);
+    return { ok: false, message: describeAdoption(error as unknown as PostgrestError) };
+  }
+  const routine = data as { id?: string } | null;
+  return { ok: true, routineId: routine?.id };
+}
+
 /** Un-records an assignment. Deliberately leaves the client's routine alone —
  *  the table comment is explicit that the client keeps what they have. */
 export async function unassignTemplate(assignmentId: string): Promise<WriteResult> {
