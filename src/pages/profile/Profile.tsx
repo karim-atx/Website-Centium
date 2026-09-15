@@ -9,6 +9,7 @@ import { ActivityLevelSheet } from "../../components/profile/ActivityLevelSheet"
 import { CertificationSheet } from "../../components/profile/CertificationSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
+import { useIsAmbassador } from "../../hooks/useIsAmbassador";
 import { removeAvatar, uploadAvatar } from "../../services/avatar";
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
 import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
@@ -60,13 +61,13 @@ export default function Profile() {
     authUserId,
     professionalReviews,
     premiumPlan,
-    referralNextMonthDiscountPct,
     recoverySensitive,
     setRecoverySensitive,
     setRecoverySensitiveIntroSeen,
     remindersPaused,
     setRemindersPaused,
   } = useApp();
+  const isAmbassador = useIsAmbassador();
   const navigate = useNavigate();
   const [justToggledRecovery, setJustToggledRecovery] = useState(false);
   const [goalsOpen, setGoalsOpen] = useState(false);
@@ -267,11 +268,15 @@ export default function Profile() {
             {premiumPlan && <Crown size={15} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
             {/* QA 11.0: "Similar to the logo that appears... if the client has
                 a subscription, have another minimalistic logo that indicates
-                they are an ambassador." This prototype has no real
-                multi-account backend to detect someone else redeeming your
-                code, so a successful referral is simulated on this same
-                account (see ReferralSheet) and reused here as the trigger. */}
-            {referralNextMonthDiscountPct > 0 && (
+                they are an ambassador."
+                THE PREDICATE USED TO BE referralNextMonthDiscountPct > 0 — the
+                referrer-side reward, set the first time anyone redeemed this
+                user's code. One successful referral is not an ambassador, and
+                that number only ever goes up, so nothing could take the badge
+                back. Ambassador is a granted status now, held in
+                ambassador_grants with a reason and a revocation, and read
+                through is_ambassador(). */}
+            {isAmbassador && (
               <Award size={15} className="text-primary-dark shrink-0" aria-label="Centium Ambassador" />
             )}
           </h2>
