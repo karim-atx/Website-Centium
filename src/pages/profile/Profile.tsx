@@ -9,6 +9,7 @@ import { ActivityLevelSheet } from "../../components/profile/ActivityLevelSheet"
 import { CertificationSheet } from "../../components/profile/CertificationSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
+import { removeAvatar, uploadAvatar } from "../../services/avatar";
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
 import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
 import { updateBodyMetric, updateDateOfBirth } from "../../services/profile";
@@ -87,17 +88,48 @@ export default function Profile() {
   const [dobError, setDobError] = useState<string | null>(null);
   const [savingDob, setSavingDob] = useState(false);
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [credentialsOpen, setCredentialsOpen] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAvatarFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      updateProfile({ avatarUrl: reader.result as string });
-      setAvatarSheetOpen(false);
-    };
-    reader.readAsDataURL(file);
+  // A REAL UPLOAD NOW, not a FileReader. What this used to do was read the
+  // file into a base64 `data:` URL and put it in local state — so the picture
+  // lived in one browser's localStorage, profiles.avatar_url stayed empty,
+  // and nobody else ever saw it: not a coach looking at their client list,
+  // not the other side of a message thread, not the same person on a second
+  // device. See services/avatar.
+  //
+  // LOCAL STATE IS UPDATED LAST, from the URL the server gave back, so what
+  // is on screen is what is actually stored rather than an optimistic guess
+  // that a failed upload would leave standing.
+  const handleAvatarFile = async (file: File) => {
+    if (!authUserId || avatarBusy) return;
+    setAvatarBusy(true);
+    setAvatarError(null);
+    const result = await uploadAvatar(authUserId, file, user.avatarUrl);
+    setAvatarBusy(false);
+    if (!result.ok) {
+      setAvatarError(result.message);
+      return;
+    }
+    updateProfile({ avatarUrl: result.url });
+    setAvatarSheetOpen(false);
+  };
+
+  const handleAvatarRemove = async () => {
+    if (!authUserId || avatarBusy) return;
+    setAvatarBusy(true);
+    setAvatarError(null);
+    const result = await removeAvatar(authUserId, user.avatarUrl);
+    setAvatarBusy(false);
+    if (!result.ok) {
+      setAvatarError(result.message ?? "Couldn't remove your picture.");
+      return;
+    }
+    updateProfile({ avatarUrl: undefined });
+    setAvatarSheetOpen(false);
   };
 
   const openMetricEditor = (field: "weightKg" | "heightCm") => {
@@ -603,14 +635,14 @@ export default function Profile() {
         accept="image/*"
         capture="user"
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && handleAvatarFile(e.target.files[0])}
+        onChange={(e) => e.target.files?.[0] && void handleAvatarFile(e.target.files[0])}
       />
       <input
         ref={galleryInputRef}
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && handleAvatarFile(e.target.files[0])}
+        onChange={(e) => e.target.files?.[0] && void handleAvatarFile(e.target.files[0])}
       />
       {/* Weight and height. One sheet for both — the fields differ only by
           label, unit and bound, and two near-identical sheets would drift. */}
@@ -701,29 +733,38 @@ export default function Profile() {
         <div className="space-y-2.5 animate-fade-slide-up">
           <button
             onClick={() => cameraInputRef.current?.click()}
-            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
+            disabled={avatarBusy}
+            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left disabled:opacity-40"
           >
             <Camera size={18} className="text-primary" />
             <span className="text-sm font-semibold text-charcoal">Take a photo</span>
           </button>
           <button
             onClick={() => galleryInputRef.current?.click()}
-            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
+            disabled={avatarBusy}
+            className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left disabled:opacity-40"
           >
             <Image size={18} className="text-primary" />
             <span className="text-sm font-semibold text-charcoal">Choose from library</span>
           </button>
           <button
-            onClick={() => {
-              updateProfile({ avatarUrl: undefined });
-              setAvatarSheetOpen(false);
-            }}
-            disabled={!user.avatarUrl}
+            onClick={() => void handleAvatarRemove()}
+            disabled={!user.avatarUrl || avatarBusy}
             className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left disabled:opacity-40"
           >
             <Trash2 size={18} className="text-[#C0392B]" />
             <span className="text-sm font-semibold text-charcoal">Remove photo</span>
           </button>
+
+          {/* The sheet stays open while this runs, so there is somewhere for
+              both states to land. Uploading a picture is a round trip now
+              rather than a local read, and it can genuinely fail. */}
+          {avatarBusy && (
+            <p className="text-center text-xs font-semibold text-charcoal-faint">Saving…</p>
+          )}
+          {avatarError && (
+            <p className="text-center text-xs font-semibold text-status-high">{avatarError}</p>
+          )}
         </div>
       </BottomSheet>
     </div>

@@ -130,6 +130,7 @@ import {
 } from "../services/food";
 import { isAdminAccount } from "../services/admin";
 import { isMfaChallengePending } from "../services/mfa";
+import { isLocalOnlyAvatar, migrateLocalAvatar } from "../services/avatar";
 import { ensureProfileRow, fetchProfile } from "../services/profile";
 import {
   AUTO_STREAK_CATEGORIES,
@@ -983,7 +984,24 @@ function usePersistentState<T>(key: string, initial: T) {
     return loaded;
   });
   useEffect(() => {
-    localStorage.setItem(`${STORAGE_KEY}:${key}`, JSON.stringify(state));
+    try {
+      localStorage.setItem(`${STORAGE_KEY}:${key}`, JSON.stringify(state));
+    } catch (e) {
+      // AN UNCAUGHT THROW HERE WOULD TAKE THE APP DOWN, not just lose a
+      // write: this runs inside a React effect, on every persisted key in the
+      // file, so whatever React does with a thrown effect it does to the
+      // whole tree. The realistic trigger is QuotaExceededError — a private
+      // window where storage is refused outright, or an origin that has
+      // filled its quota. Profile pictures used to be stored here as base64
+      // (a 7.5 MB photo became a 10 MB string), which is exactly how an
+      // origin fills a 5 MB Safari quota; that is fixed separately, but the
+      // hole it exposed is this line.
+      //
+      // Losing the write is survivable on its own terms: React state is
+      // already correct, so the session continues with the right values and
+      // only a reload would forget them.
+      console.warn(`[state] Could not persist "${key}":`, e);
+    }
   }, [key, state]);
   return [state, setState] as const;
 }
@@ -1461,6 +1479,49 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cancelled = true;
     };
   }, [authUserId, authReady, setUser]);
+
+  // --- rescuing profile pictures that never reached the server -------------
+  //
+  // WHAT THESE PEOPLE HAVE. Before services/avatar existed, picking a profile
+  // picture read the file into a base64 `data:` URL and put it in local
+  // state. Nothing was uploaded and profiles.avatar_url was never written, so
+  // the picture exists in exactly one browser's localStorage — invisible to
+  // their coach, to the other side of every message thread, and to themselves
+  // on any other device. It also dies the first time they sign out, since
+  // signOut clears `centium-state:*`. This gets it to the server first.
+  //
+  // THE CANDIDATE TEST IS THE VALUE'S OWN SHAPE, the same trick the custom
+  // meal, custom exercise and routine uploads use rather than a migration
+  // flag that can drift: `data:` means local-only, anything else came from
+  // the server. A successful migration replaces the value with an https URL,
+  // so the same picture cannot qualify twice — and the ref below stops a
+  // FAILED attempt retrying in a loop, with the next page load as the retry.
+  //
+  // AFTER profileReady, WHICH IS WHAT MAKES IT SAFE. fetchProfile overwrites
+  // the local value whenever the server holds one, so a `data:` URL surviving
+  // hydration is proof the column is empty — there is no round trip needed to
+  // ask, and no chance of overwriting a picture set on another device.
+  const avatarMigrationAttempted = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    if (avatarMigrationAttempted.current === authUserId) return;
+    const local = user.avatarUrl;
+    if (!isLocalOnlyAvatar(local)) return;
+
+    avatarMigrationAttempted.current = authUserId;
+    let cancelled = false;
+    void migrateLocalAvatar(authUserId, local!).then((result) => {
+      if (cancelled || !result.ok) return;
+      // Only if it is still the same picture. Someone who picked a new one
+      // while this was in flight has already written a real URL, and the
+      // migration must not put the old face back.
+      setUser((prev) => (prev.avatarUrl === local ? { ...prev, avatarUrl: result.url } : prev));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, profileReady, user.avatarUrl, setUser]);
 
   const [theme, setTheme] = usePersistentState<"light" | "dark">("theme", "light");
   useEffect(() => {

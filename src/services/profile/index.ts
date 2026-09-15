@@ -180,6 +180,36 @@ export interface OnboardingProfileData {
 }
 
 /**
+ * Points the account at a stored profile picture, or clears it.
+ *
+ * Narrow for the reason the two editors below are narrow: this writes one
+ * column, named literally so the compiler confirms it. Sending the whole
+ * profile to change a picture would push whatever the local cache happened to
+ * hold over the server's values.
+ *
+ * TAKES A URL, NOT A PATH, unlike every private-bucket column in this schema.
+ * `avatars` is the one public bucket, so what belongs here is the permanent
+ * public URL that any surface can render directly — there is nothing to sign
+ * and no reader that needs a session. See services/avatar.
+ *
+ * Reports failure: services/avatar deletes the object it just uploaded when
+ * this fails, so a silent no-op would leave a file with nothing pointing at
+ * it and a user whose picture quietly did not change.
+ */
+export async function updateAvatarUrl(
+  userId: string,
+  url: string | null
+): Promise<{ ok: boolean; message?: string }> {
+  const { error } = await supabase.from("profiles").update({ avatar_url: url }).eq("id", userId);
+
+  if (error) {
+    console.error("[profile] Could not save the profile picture:", error.message);
+    return { ok: false, message: error.message };
+  }
+  return { ok: true };
+}
+
+/**
  * Updates just the date of birth, for the Profile tab's editor.
  *
  * Narrow on purpose. The onboarding writer sets fifteen columns at once,

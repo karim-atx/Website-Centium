@@ -5,6 +5,7 @@ import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPr
 import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
+import { removeAvatar, uploadAvatar } from "../../services/avatar";
 import { Star, MapPin, Camera, Image, Trash2, LogOut, Store, Mail, Phone, Globe } from "lucide-react";
 
 // V8 (QA 8.0): "Move Profile fields and Ratings & Reviews out of the
@@ -16,21 +17,46 @@ import { Star, MapPin, Camera, Image, Trash2, LogOut, Store, Mail, Phone, Globe 
 // to live on the shared My Profile page move in here for business accounts,
 // which no longer have a separate "/profile" entry point in More.
 export default function BusinessProfileTab() {
-  const { user, updateProfile, businessListing, updateBusinessListing, professionalReviews, signOut } = useApp();
+  const { user, updateProfile, businessListing, updateBusinessListing, professionalReviews, signOut, authUserId } =
+    useApp();
   const navigate = useNavigate();
   const myBusinessReview = professionalReviews.find((r) => r.professionalId === "my-business");
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
+  const [avatarBusy, setAvatarBusy] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
   const [confirmSignOut, setConfirmSignOut] = useState(false);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const galleryInputRef = useRef<HTMLInputElement>(null);
 
-  const handleAvatarFile = (file: File) => {
-    const reader = new FileReader();
-    reader.onload = () => {
-      updateProfile({ avatarUrl: reader.result as string });
-      setAvatarSheetOpen(false);
-    };
-    reader.readAsDataURL(file);
+  // The same real upload the personal profile now does. A business account's
+  // picture is the one that shows in the marketplace listing, so it was the
+  // most visible instance of the old bug: chosen here, seen nowhere.
+  const handleAvatarFile = async (file: File) => {
+    if (!authUserId || avatarBusy) return;
+    setAvatarBusy(true);
+    setAvatarError(null);
+    const result = await uploadAvatar(authUserId, file, user.avatarUrl);
+    setAvatarBusy(false);
+    if (!result.ok) {
+      setAvatarError(result.message);
+      return;
+    }
+    updateProfile({ avatarUrl: result.url });
+    setAvatarSheetOpen(false);
+  };
+
+  const handleAvatarRemove = async () => {
+    if (!authUserId || avatarBusy) return;
+    setAvatarBusy(true);
+    setAvatarError(null);
+    const result = await removeAvatar(authUserId, user.avatarUrl);
+    setAvatarBusy(false);
+    if (!result.ok) {
+      setAvatarError(result.message ?? "Couldn't remove your picture.");
+      return;
+    }
+    updateProfile({ avatarUrl: undefined });
+    setAvatarSheetOpen(false);
   };
 
   const handleSignOut = () => {
@@ -206,19 +232,20 @@ export default function BusinessProfileTab() {
         accept="image/*"
         capture="user"
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && handleAvatarFile(e.target.files[0])}
+        onChange={(e) => e.target.files?.[0] && void handleAvatarFile(e.target.files[0])}
       />
       <input
         ref={galleryInputRef}
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && handleAvatarFile(e.target.files[0])}
+        onChange={(e) => e.target.files?.[0] && void handleAvatarFile(e.target.files[0])}
       />
       <BottomSheet open={avatarSheetOpen} onClose={() => setAvatarSheetOpen(false)} hideHeader>
         <div className="space-y-2.5 animate-fade-slide-up">
           <button
             onClick={() => cameraInputRef.current?.click()}
+            disabled={avatarBusy}
             className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
           >
             <Camera size={18} className="text-primary" />
@@ -226,22 +253,26 @@ export default function BusinessProfileTab() {
           </button>
           <button
             onClick={() => galleryInputRef.current?.click()}
+            disabled={avatarBusy}
             className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
           >
             <Image size={18} className="text-primary" />
             <span className="text-sm font-semibold text-charcoal">Choose from library</span>
           </button>
           <button
-            onClick={() => {
-              updateProfile({ avatarUrl: undefined });
-              setAvatarSheetOpen(false);
-            }}
-            disabled={!user.avatarUrl}
+            onClick={() => void handleAvatarRemove()}
+            disabled={!user.avatarUrl || avatarBusy}
             className="tap w-full flex items-center gap-3 rounded-2xl bg-cream-soft px-4 py-3.5 text-left disabled:opacity-40"
           >
             <Trash2 size={18} className="text-[#C0392B]" />
             <span className="text-sm font-semibold text-charcoal">Remove photo</span>
           </button>
+          {avatarBusy && (
+            <p className="text-center text-xs font-semibold text-charcoal-faint">Saving…</p>
+          )}
+          {avatarError && (
+            <p className="text-center text-xs font-semibold text-status-high">{avatarError}</p>
+          )}
         </div>
       </BottomSheet>
     </div>
