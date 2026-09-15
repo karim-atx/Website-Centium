@@ -1,4 +1,4 @@
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
@@ -51,6 +51,20 @@ const RouteLoading: React.FC = () => (
   </div>
 );
 
+/** Admin-Centium, behind Cloudflare Access. A different origin, not a route. */
+const ADMIN_CONSOLE_URL = "https://admin-centium.pages.dev";
+
+/**
+ * How long an administrator gets to change their mind.
+ *
+ * Long enough to read one sentence and reach for a button, short enough that
+ * the admin who wanted the console is not sitting here wondering whether
+ * something is broken. An instant redirect would be the wrong trade: it makes
+ * the escape hatch below unreachable in practice, which is the same as not
+ * having one for the admin who came here on purpose to reproduce a bug.
+ */
+const ADMIN_REDIRECT_SECONDS = 5;
+
 /**
  * What an administrator sees instead of onboarding.
  *
@@ -60,18 +74,42 @@ const RouteLoading: React.FC = () => (
  * this app has no admin features and never asked whether the person in front
  * of it wanted any.
  *
- * IT SAYS WHAT IS TRUE TODAY. The admin console is a separate application at
- * a separate address, and this one cannot send anyone to it — so the notice
- * states where things stand rather than offering a link that would 404.
+ * NOW IT SENDS THEM WHERE THEY MEANT TO GO. Admin-Centium is live, so this
+ * hands over to it rather than explaining that it does not exist yet.
  *
- * AND IT IS NOT A WALL. An admin with a real reason to use the consumer app —
- * reproducing something a user reported, most obviously — gets through with
- * one click, for this browser session only. A permanent dismissal would mean
- * the notice silently never appears again on a machine somebody stays signed
- * in on, which is exactly the machine it matters on.
+ * window.location, NOT THE ROUTER. react-router only resolves paths inside
+ * this origin; the console is a separate deployment at a separate host, so
+ * <Navigate> or useNavigate would look for "/https:/admin-centium..." as an
+ * app route and land on the 404 page. A whole-document navigation is the only
+ * thing that leaves the origin, and it is also what makes the handover honest
+ * — the consumer app's session and cache stay behind rather than being
+ * carried into the console's tab history as a client-side push.
+ *
+ * AND IT IS STILL NOT A WALL. The countdown is a handover, not a lock: an
+ * admin with a real reason to use the consumer app — reproducing something a
+ * user reported, most obviously — stops it with one click, for this browser
+ * session only. Both escape-hatch actions cancel the timer synchronously, so
+ * neither races it: a sign-out in particular is a round trip, and this screen
+ * stays mounted for the whole of it.
  */
 const AdminInterstitial: React.FC = () => {
   const { continueAsConsumer, signOut } = useApp();
+
+  // `stayed` is set by either action the instant it is clicked, before the
+  // work behind it finishes. Unmounting would clear the timeout too, but only
+  // continueAsConsumer unmounts this immediately.
+  const [stayed, setStayed] = useState(false);
+  const [secondsLeft, setSecondsLeft] = useState(ADMIN_REDIRECT_SECONDS);
+
+  useEffect(() => {
+    if (stayed) return;
+    if (secondsLeft <= 0) {
+      window.location.href = ADMIN_CONSOLE_URL;
+      return;
+    }
+    const timer = window.setTimeout(() => setSecondsLeft((s) => s - 1), 1000);
+    return () => window.clearTimeout(timer);
+  }, [secondsLeft, stayed]);
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-cream px-6">
@@ -81,15 +119,26 @@ const AdminInterstitial: React.FC = () => {
         </div>
         <h1 className="text-lg font-semibold text-charcoal">Administrator account</h1>
         <p className="text-[13px] text-charcoal-soft leading-relaxed">
-          You're signed in as an administrator. The admin console isn't available at this address
-          yet.
+          You're signed in as an administrator.
+          {stayed
+            ? ""
+            : ` Taking you to the admin console in ${secondsLeft} second${
+                secondsLeft === 1 ? "" : "s"
+              }…`}
         </p>
         {/* No account email here on purpose. An admin has no profiles row, so
             `user` still holds whatever the local cache had — which, in a
             browser a customer signed into earlier, is somebody else's address.
             The one honest source would be the session, and naming the account
             is not what this screen is for. */}
-        <Button variant="secondary" fullWidth onClick={continueAsConsumer}>
+        <Button
+          variant="secondary"
+          fullWidth
+          onClick={() => {
+            setStayed(true);
+            continueAsConsumer();
+          }}
+        >
           Continue to the consumer app
         </Button>
         {/* The other way out, so this screen is never a dead end for an admin
@@ -100,7 +149,10 @@ const AdminInterstitial: React.FC = () => {
             which clears the local cache and the push subscription before it
             takes the session. */}
         <button
-          onClick={() => void signOut()}
+          onClick={() => {
+            setStayed(true);
+            void signOut();
+          }}
           className="tap w-full text-center text-sm font-semibold text-charcoal-soft"
         >
           Not you? <span className="text-primary">Sign out</span>
