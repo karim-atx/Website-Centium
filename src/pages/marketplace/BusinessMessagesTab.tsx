@@ -3,6 +3,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
+import { useBusinessTeam } from "../../hooks/useBusinessTeam";
 import { mockBusinessCustomers } from "../../data/mockBusinessCustomers";
 import { ChevronLeft, MessageCircle, Send, Store } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
@@ -19,16 +20,21 @@ const PROFESSIONAL_THREAD_ID = "me";
 // V8 (QA 8.0): "Add separate tabs within BusinessMessagesTab.tsx for
 // 'Professionals' vs 'Clients'" — split the previously flat customer list.
 export default function BusinessMessagesTab() {
-  const { businessMessages, sendBusinessMessage, businessEmployees, user } = useApp();
+  const { businessMessages, sendBusinessMessage } = useApp();
   const [audience, setAudience] = useState<"clients" | "professionals">("clients");
   const [activeCustomerId, setActiveCustomerId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
 
-  const employees = user.businessId ? businessEmployees[user.businessId] ?? [] : [];
+  // Real affiliated professionals. The local map this read was never written
+  // to, so the Professionals tab was always empty.
+  const { team: employees } = useBusinessTeam();
   const activeCustomer =
     mockBusinessCustomers.find((c) => c.id === activeCustomerId) ??
     (activeCustomerId === PROFESSIONAL_THREAD_ID
-      ? { id: PROFESSIONAL_THREAD_ID, name: employees.find((e) => e.professionalId === PROFESSIONAL_THREAD_ID)?.professionalName ?? "Professional" }
+      ? {
+          id: PROFESSIONAL_THREAD_ID,
+          name: employees.find((e) => e.professionalId === PROFESSIONAL_THREAD_ID)?.name ?? "Professional",
+        }
       : undefined);
 
   const lastMessageFor = (customerId: string) => {
@@ -158,6 +164,15 @@ export default function BusinessMessagesTab() {
             // messageable account in this backend-free prototype — other
             // affiliated professionals are mock names with nothing to reply
             // from, so their row is shown but not clickable.
+            //
+            // THAT BRANCH CANNOT FIRE ANY MORE, and saying so beats leaving it
+            // to be discovered. PROFESSIONAL_THREAD_ID is the string "me", the
+            // stand-in the local affiliation system used; these rows now carry
+            // real account uuids, so no professional matches it. The effect is
+            // that every row is correctly non-clickable — which is the honest
+            // state, because `businessMessages` is still local with nothing on
+            // the other end. Wiring business messaging to real threads is its
+            // own piece of work; this only changed where the names come from.
             const isMe = e.professionalId === PROFESSIONAL_THREAD_ID;
             const last = isMe ? lastMessageFor(PROFESSIONAL_THREAD_ID) : undefined;
             return (
@@ -171,7 +186,7 @@ export default function BusinessMessagesTab() {
                   <PERSON_ICON size={18} className="text-primary-dark" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-charcoal">{e.professionalName}</p>
+                  <p className="text-sm font-semibold text-charcoal">{e.name}</p>
                   <p className="text-xs text-charcoal-faint truncate">
                     {isMe
                       ? last

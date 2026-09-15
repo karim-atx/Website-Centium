@@ -5,6 +5,7 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
+import { useBusinessTeam } from "../../hooks/useBusinessTeam";
 import { Plus, Trash2, Users, Clock } from "lucide-react";
 import { QrPattern } from "../../components/marketplace/GymDetailSheet";
 
@@ -28,8 +29,13 @@ const blankDraft = (date: string) => ({
 // classes linked to affiliated professionals, with time/max-capacity/class-
 // type fields)" — gym-type businesses only.
 export default function BusinessClassesTab() {
-  const { user, businessClasses, addBusinessClass, removeBusinessClass, businessEmployees } = useApp();
-  const employees = user.businessId ? businessEmployees[user.businessId] ?? [] : [];
+  const { user, businessClasses, addBusinessClass, removeBusinessClass } = useApp();
+  // THE TEAM COMES FROM THE SERVER; THE CLASSES DO NOT. businessClasses stays
+  // local by decision — converting it is its own piece of work — and this only
+  // changes where the "Run by" picker gets its names. The local map it used to
+  // read was never written to, so the picker was always empty and no class
+  // could be assigned to anyone.
+  const { team: employees } = useBusinessTeam();
   const today = new Date().toISOString().slice(0, 10);
   const [composeOpen, setComposeOpen] = useState(false);
   const [draft, setDraft] = useState(blankDraft(today));
@@ -86,7 +92,7 @@ export default function BusinessClassesTab() {
                 </p>
                 <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
                   <Users size={11} /> Max {c.maxCapacity}
-                  {professional ? ` · ${professional.professionalName}` : ""}
+                  {professional ? ` · ${professional.name}` : ""}
                 </p>
                 {c.price && (
                   <p className="text-xs font-semibold text-charcoal mt-0.5">
@@ -226,7 +232,7 @@ export default function BusinessClassesTab() {
                         : "bg-cream-soft border-transparent text-charcoal-soft"
                     }`}
                   >
-                    {e.professionalName}
+                    {e.name}
                   </button>
                 ))}
               </div>

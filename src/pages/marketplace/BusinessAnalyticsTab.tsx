@@ -5,6 +5,7 @@ import { Card } from "../../components/ui/Card";
 import { Chip } from "../../components/ui/Chip";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
+import { useBusinessTeam } from "../../hooks/useBusinessTeam";
 import {
   Eye,
   MousePointerClick,
@@ -83,9 +84,11 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
 }
 
 export default function BusinessAnalyticsTab() {
-  const { businessListing, businessOfferings, businessEmployees, businessClasses, professionalReviews, user } = useApp();
+  const { businessListing, businessOfferings, businessClasses, professionalReviews, user } = useApp();
+  // Real rows now: the local businessEmployees map was never written to, so
+  // this tile reported zero affiliated professionals to every business.
+  const { team: myEmployees } = useBusinessTeam();
   const isGym = user.businessType === "gym";
-  const myEmployees = user.businessId ? businessEmployees[user.businessId] ?? [] : [];
 
   const [section, setSection] = useState<"insights" | "outcomes">("insights");
   const [period, setPeriod] = useState<Period>("This month");

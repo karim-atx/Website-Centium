@@ -41,7 +41,6 @@ import type {
   WorkoutTemplateAssignment,
   ClientHealthNote,
   ProfessionalMessage,
-  BusinessEmployee,
   BusinessClass,
   BusinessMessage,
   GymPurchase,
@@ -923,9 +922,9 @@ interface AppState {
 
   // V7 (QA 7.0): Business UI — Employees (affiliated professionals),
   // Classes (gym-type businesses) and a customer messaging board.
-  businessEmployees: Record<string, BusinessEmployee[]>;
-  removeBusinessEmployee: (businessId: string, professionalId: string) => void;
-
+  //
+  // The affiliated professionals are no longer here: they are real
+  // business_employees rows, read through services/business-team.
   businessClasses: BusinessClass[];
   addBusinessClass: (c: Omit<BusinessClass, "id">) => void;
   removeBusinessClass: (id: string) => void;
@@ -4109,21 +4108,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeBusinessOffering = (id: string) =>
     setBusinessOfferings((prev) => prev.filter((o) => o.id !== id));
 
-  const [businessEmployees, setBusinessEmployees] = usePersistentState<Record<string, BusinessEmployee[]>>(
-    "businessEmployees",
-    {}
-  );
-  const removeBusinessEmployee: AppState["removeBusinessEmployee"] = (businessId, professionalId) => {
-    setBusinessEmployees((prev) => ({
-      ...prev,
-      [businessId]: (prev[businessId] ?? []).filter((e) => e.professionalId !== professionalId),
-    }));
-    // Same-session convenience: if the professional being removed is this
-    // very session's own account, also clear its affiliation immediately.
-    if (professionalId === "me" && user.affiliatedBusinessId === businessId) {
-      setUser((prev) => ({ ...prev, affiliatedBusinessId: undefined, affiliatedBusinessName: undefined }));
-    }
-  };
+  // `businessEmployees` and `removeBusinessEmployee` used to live here: a
+  // Record<businessId, BusinessEmployee[]> in localStorage that nothing in
+  // the app ever wrote to, so every screen reading it showed an empty team,
+  // and the remove action filtered a map no row had ever entered. All five
+  // consumers now read business_employees through services/business-team, so
+  // this is gone rather than left as state nobody can fill.
 
   const [businessClasses, setBusinessClasses] = usePersistentState<BusinessClass[]>("businessClasses", []);
   const addBusinessClass: AppState["addBusinessClass"] = (c) =>
@@ -4454,8 +4444,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       businessOfferings,
       addBusinessOffering,
       removeBusinessOffering,
-      businessEmployees,
-      removeBusinessEmployee,
       businessClasses,
       addBusinessClass,
       removeBusinessClass,
@@ -4565,7 +4553,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       professionalMessages,
       businessListing,
       businessOfferings,
-      businessEmployees,
       businessClasses,
       businessMessages,
     ]

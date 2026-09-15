@@ -8,6 +8,7 @@ import { useApp } from "../../context/AppContext";
 import { mockBusinessCustomers } from "../../data/mockBusinessCustomers";
 import type { BusinessClass } from "../../types";
 import { useServerCalendar } from "../../hooks/useServerCalendar";
+import { useBusinessTeam } from "../../hooks/useBusinessTeam";
 import { respondToInvite } from "../../services/calendar";
 import { ChevronLeft, ChevronRight, Plus, Clock, Users, Trash2, Check, X, CalendarDays } from "lucide-react";
 import clsx from "clsx";
@@ -64,11 +65,15 @@ const blankDraft = (date: string) => ({
 // class, and giving it a second, parallel "real event" mode would reproduce
 // exactly the two-features-in-one-costume problem the assignment note had.
 export default function BusinessCalendarTab() {
-  const { user, businessClasses, addBusinessClass, removeBusinessClass, businessEmployees, authUserId, profileReady } =
-    useApp();
+  const { businessClasses, addBusinessClass, removeBusinessClass, authUserId, profileReady } = useApp();
   const { events, loadError, reload } = useServerCalendar(authUserId, profileReady);
   const [responding, setResponding] = useState<string | null>(null);
-  const employees = user.businessId ? businessEmployees[user.businessId] ?? [] : [];
+  // ONLY THE TEAM LIST CHANGED HERE. businessClasses, the class composer and
+  // everything the calendar does with them are untouched and stay local by
+  // decision. What moved is where the "Affiliated professional" picker gets
+  // its names: the local map it read was never written to, so the picker was
+  // always empty and no class could be attached to a professional at all.
+  const { team: employees } = useBusinessTeam();
 
   const respond = async (inviteId: string, accepted: boolean) => {
     setResponding(inviteId);
@@ -151,7 +156,7 @@ export default function BusinessCalendarTab() {
           <p className="text-xs text-primary-dark font-medium">{c.classType}</p>
           <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
             <Clock size={11} /> {c.startTime}–{c.endTime}
-            {professional ? ` · ${professional.professionalName}` : ""}
+            {professional ? ` · ${professional.name}` : ""}
           </p>
           {clients.length > 0 && (
             <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
@@ -479,7 +484,7 @@ export default function BusinessCalendarTab() {
                       draft.professionalId === e.professionalId ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
                     )}
                   >
-                    {e.professionalName}
+                    {e.name}
                   </button>
                 ))}
               </div>
