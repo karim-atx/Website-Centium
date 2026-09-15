@@ -16,11 +16,14 @@ const blankExercise = (pick: ExercisePick): Exercise => ({
   sets: 3,
   reps: 10,
   weightKg: 20,
-  category: "full_body",
   muscleGroups: pick.muscleGroups,
   secondaryMuscleGroups: pick.secondaryMuscleGroups,
   classification: pick.classification,
   isCustom: pick.isCustom,
+  // Carried from the pick so the save knows which library row this
+  // prescribes â routine_exercises stores the reference, not the name.
+  exerciseId: pick.exerciseId,
+  customExerciseId: pick.customExerciseId,
 });
 
 export const CreateRoutineSheet: React.FC<{
@@ -37,6 +40,8 @@ export const CreateRoutineSheet: React.FC<{
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [settingsIndex, setSettingsIndex] = useState<number | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const reset = () => {
     setName("");
@@ -44,6 +49,7 @@ export const CreateRoutineSheet: React.FC<{
     setColor(colorOptions[0]);
     setExercises([]);
     setSearchQuery("");
+    setError(null);
   };
 
   const addExercise = (pick: ExercisePick) => {
@@ -70,14 +76,14 @@ export const CreateRoutineSheet: React.FC<{
     const q = searchQuery.toLowerCase();
     const fromCustom = customExercises
       .filter((e) => e.name.toLowerCase().includes(q))
-      .map((e) => ({ name: e.name, classification: e.classification, isCustom: true as const }));
+      .map((e) => ({ name: e.name, classification: e.classification, isCustom: true as const, customExerciseId: e.id }));
     const fromLibrary = exerciseCatalog
       .filter((e) => e.name.toLowerCase().includes(q))
-      .map((e) => ({ name: e.name, classification: e.classification, isCustom: false as const }));
+      .map((e) => ({ name: e.name, classification: e.classification, isCustom: false as const, exerciseId: e.id }));
     return [...fromCustom, ...fromLibrary].slice(0, 6);
   }, [searchQuery, customExercises, exerciseCatalog]);
 
-  const save = () => {
+  const save = async () => {
     if (!name.trim() || exercises.length === 0) return;
     const routine: Omit<Routine, "id"> = {
       folderId,
@@ -86,7 +92,18 @@ export const CreateRoutineSheet: React.FC<{
       estimatedDurationMin: Number(duration) || 30,
       exercises,
     };
-    addRoutine(routine);
+    setSaving(true);
+    setError(null);
+    const id = await addRoutine(routine);
+    setSaving(false);
+    // THE SHEET STAYS OPEN ON FAILURE, holding everything the user typed. It
+    // used to close unconditionally, which was harmless while this was local
+    // state and is not now that the save can be refused â closing would throw
+    // away a routine that was never stored.
+    if (!id) {
+      setError("Couldn't save that routine. Check your connection and try again.");
+      return;
+    }
     reset();
     onClose();
   };
@@ -172,7 +189,7 @@ export const CreateRoutineSheet: React.FC<{
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search for exercise…"
+                placeholder="Search for exerciseâ¦"
                 className="w-full rounded-xl bg-cream-soft border border-charcoal/10 pl-9 pr-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
@@ -199,8 +216,17 @@ export const CreateRoutineSheet: React.FC<{
             </button>
           </div>
 
-          <Button fullWidth size="lg" onClick={save} disabled={!name.trim() || exercises.length === 0}>
-            Save routine
+          {error && (
+            <p className="text-[11.5px] font-semibold text-status-high text-center">{error}</p>
+          )}
+
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => void save()}
+            disabled={saving || !name.trim() || exercises.length === 0}
+          >
+            {saving ? "Saving…" : "Save routine"}
           </Button>
         </div>
       </BottomSheet>

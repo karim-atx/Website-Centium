@@ -62,6 +62,18 @@ import {
   updateCustomExercise as updateCustomExerciseRemote,
   type CatalogExercise,
 } from "../services/exercises";
+import {
+  createRoutine as createRoutineRemote,
+  createRoutineFolder as createRoutineFolderRemote,
+  deleteRoutine as deleteRoutineRemote,
+  deleteRoutineFolder as deleteRoutineFolderRemote,
+  getRoutineFolders,
+  getRoutines,
+  setFolderPositions,
+  updateRoutine as updateRoutineRemote,
+  updateRoutineFolder as updateRoutineFolderRemote,
+  type ExerciseLookup,
+} from "../services/routines";
 import { mockForumPosts } from "../data/mockForum";
 import { defaultHabits, streaks as seedStreaks } from "../data/mockHealthData";
 import { todaysWorkout, workoutPrograms } from "../data/mockWorkouts";
@@ -338,19 +350,35 @@ interface AppState {
   personalRecords: Record<string, number>;
   setPersonalRecord: (exerciseName: string, kg: number) => void;
 
+  /**
+   * Folders and routines, held in public.routine_folders / public.routines.
+   *
+   * EVERY WRITE RESOLVES TO AN ERROR SENTENCE OR undefined, the shape custom
+   * meals established. Two of them can fail for reasons the user can act on
+   * rather than merely retry — a folder cannot be filed inside its own subtree
+   * (ATX16) or under another account's folder (ATX17) — so the caller is given
+   * something worth showing rather than a boolean.
+   */
   routineFolders: RoutineFolder[];
-  addRoutineFolder: (name: string, parentId?: string | null, color?: string) => void;
-  renameRoutineFolder: (id: string, name: string) => void;
-  deleteRoutineFolder: (id: string) => void;
+  addRoutineFolder: (
+    name: string,
+    parentId?: string | null,
+    color?: string
+  ) => Promise<string | undefined>;
+  renameRoutineFolder: (id: string, name: string) => Promise<string | undefined>;
+  deleteRoutineFolder: (id: string) => Promise<string | undefined>;
   // QA 11.0: "The folders in routines should be given the option to
   // shuffle and re-order them" + the "⋮" menu should have an Edit option
   // for things like folder color.
-  updateRoutineFolder: (id: string, patch: Partial<RoutineFolder>) => void;
-  moveRoutineFolder: (id: string, direction: "up" | "down") => void;
+  updateRoutineFolder: (id: string, patch: Partial<RoutineFolder>) => Promise<string | undefined>;
+  moveRoutineFolder: (id: string, direction: "up" | "down") => Promise<string | undefined>;
+  /** Null until the first folder/routine hydration finishes or fails. */
+  routinesError: string | null;
   routines: Routine[];
-  addRoutine: (routine: Omit<Routine, "id">) => string;
-  updateRoutine: (id: string, patch: Partial<Routine>) => void;
-  deleteRoutine: (id: string) => void;
+  /** Resolves to the new routine's id, or null when the write failed. */
+  addRoutine: (routine: Omit<Routine, "id">) => Promise<string | null>;
+  updateRoutine: (id: string, patch: Partial<Routine>) => Promise<string | undefined>;
+  deleteRoutine: (id: string) => Promise<string | undefined>;
 
   water: number;
   // REMOTE-REQUIRED, like saveWorkoutSession and for the same reason: the
@@ -1785,6 +1813,151 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUserId, profileReady]);
 
+  // --- routines and their folders -----------------------------------------
+  //
+  // WHAT A ROUTINE LOOKS UP. routine_exercises holds a reference and no name,
+  // so both writing and reading a routine needs the two libraries. The catalog
+  // and the user's own movements are hydrated above; this passes them down as
+  // the lookup every write resolves names against.
+  const [routinesError, setRoutinesError] = useState<string | null>(null);
+  const routineUploadAttempted = useRef<string | null>(null);
+
+  // A ref, not a dependency: every routine write needs the current libraries,
+  // and threading them through the dependency array would rebuild each of
+  // these callbacks whenever a custom exercise changed.
+  const exerciseLookupRef = useRef<ExerciseLookup>({ catalog: [], custom: [] });
+  exerciseLookupRef.current = { catalog: exerciseCatalog, custom: customExercises };
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+
+    void Promise.all([getRoutineFolders(authUserId), getRoutines(authUserId)]).then(
+      async ([folderResult, routineResult]) => {
+        if (cancelled) return;
+        if (!folderResult.ok || !routineResult.ok) {
+          setRoutinesError(
+            folderResult.message ?? routineResult.message ?? "Couldn't load your routines."
+          );
+          return;
+        }
+        setRoutinesError(null);
+
+        // ROUTINES SAVED BEFORE THIS EXISTED ARE UPLOADED ONCE, folders first
+        // so the routines have somewhere to land. Identified by an id that is
+        // not a uuid, the same test custom meals and custom exercises use.
+        //
+        // TEMPLATE MIRRORS ARE LEFT ALONE, and that is the one exclusion.
+        // A routine carrying sourceTemplateId is a projection of a workout
+        // template, which is still local state — syncTemplateToClientView
+        // rewrites it whenever the template changes. Uploading it would create
+        // a second copy that the next local edit silently diverges from, so it
+        // stays local until templates themselves are real.
+        // ONLY WHEN THE ACCOUNT HAS NOTHING HERE YET, and this guard is the
+        // difference between routines and every other one-time upload in this
+        // file. Custom meals and custom exercises default to an EMPTY list, so
+        // a device with no local data has nothing to send. Routines default to
+        // four seeded example programs in two example folders — prototype
+        // content, not the user's work.
+        //
+        // Measured: clearing this browser's storage restored those defaults and
+        // the upload sent them again, leaving a second "Strength", a second
+        // "Hypertrophy" and four duplicate routines on an account that already
+        // had them. A second device would have done the same thing. The seeds
+        // are only worth keeping for the account that has never had a routine
+        // row — which is exactly the migration this exists for.
+        // PER COLLECTION, not one decision for both: an account that already
+        // has folders but has never had a routine should still get its local
+        // routines carried up, and those simply land unfiled because there are
+        // no local folder ids left to map.
+        const firstAttempt = routineUploadAttempted.current !== authUserId;
+        const pendingFolders =
+          firstAttempt && folderResult.folders.length === 0
+            ? routineFolders.filter((f) => !isUuid(f.id))
+            : [];
+        const pendingRoutines =
+          firstAttempt && routineResult.routines.length === 0
+            ? routines.filter((r) => !isUuid(r.id) && !r.sourceTemplateId)
+            : [];
+        routineUploadAttempted.current = authUserId;
+
+        // Local folder id -> real row id, so an uploaded routine keeps its
+        // filing and a subfolder keeps its parent.
+        const folderIdMap = new Map<string, string>();
+        const uploadedFolders: RoutineFolder[] = [];
+        const keptFolders: RoutineFolder[] = [];
+        let position = folderResult.folders.length;
+
+        // Parents before children: a subfolder's parent_id has to be a real
+        // row by the time it is written, and the trigger checks it.
+        const ordered = [
+          ...pendingFolders.filter((f) => !f.parentId),
+          ...pendingFolders.filter((f) => f.parentId),
+        ];
+        for (const folder of ordered) {
+          const parentId = folder.parentId
+            ? folderIdMap.get(folder.parentId) ?? (isUuid(folder.parentId) ? folder.parentId : null)
+            : null;
+          const written = await createRoutineFolderRemote(authUserId, {
+            name: folder.name,
+            parentId,
+            color: folder.color,
+            position: position++,
+          });
+          if (written.ok && written.folder) {
+            folderIdMap.set(folder.id, written.folder.id);
+            uploadedFolders.push(written.folder);
+          } else {
+            console.error("[routines] Could not upload a local folder:", written.message);
+            keptFolders.push(folder);
+          }
+        }
+
+        const uploadedRoutines: Routine[] = [];
+        const keptRoutines: Routine[] = [];
+        for (const routine of pendingRoutines) {
+          const folderId = routine.folderId
+            ? folderIdMap.get(routine.folderId) ??
+              (isUuid(routine.folderId) ? routine.folderId : null)
+            : null;
+          const { id: _ignored, ...rest } = routine;
+          const written = await createRoutineRemote(
+            authUserId,
+            { ...rest, folderId },
+            exerciseLookupRef.current
+          );
+          if (written.ok && written.routine) uploadedRoutines.push(written.routine);
+          else {
+            // Kept local and kept visible, not retried in a loop. A seeded
+            // routine naming a movement the catalog does not have lands here.
+            console.error("[routines] Could not upload a local routine:", written.message);
+            keptRoutines.push(routine);
+          }
+        }
+        if (cancelled) return;
+
+        setRoutineFolders(() => [...folderResult.folders, ...uploadedFolders, ...keptFolders]);
+        // Template mirrors are preserved for the same reason they are not
+        // uploaded: they are local state that nothing on the server knows
+        // about, and dropping them here would delete a hired professional's
+        // assigned work from the client's screen.
+        setRoutines((prev) => [
+          ...routineResult.routines,
+          ...uploadedRoutines,
+          ...keptRoutines,
+          ...prev.filter((r) => r.sourceTemplateId),
+        ]);
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+    // routines/routineFolders are read for the one-time upload and must not
+    // re-trigger this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId, profileReady]);
+
   const [professionalReviews, setProfessionalReviews] = usePersistentState<ProfessionalReview[]>(
     "professionalReviews",
     []
@@ -2290,58 +2463,185 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setPersonalRecord = (exerciseName: string, kg: number) =>
     setPersonalRecords((prev) => ({ ...prev, [exerciseName]: kg }));
 
-  const addRoutineFolder = (name: string, parentId: string | null = null, color?: string) =>
-    setRoutineFolders((prev) => [...prev, { id: `rf${Date.now()}`, name, parentId, color }]);
-  const renameRoutineFolder = (id: string, name: string) =>
-    setRoutineFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
-  const deleteRoutineFolder = (id: string) => {
-    // Cascade: subfolders of a deleted folder become top-level, and any
-    // routines directly in it are unfiled — keeps things simple and never
-    // silently deletes a routine.
-    setRoutineFolders((prev) =>
-      prev.filter((f) => f.id !== id).map((f) => (f.parentId === id ? { ...f, parentId: null } : f))
-    );
-    setRoutines((prev) => prev.map((r) => (r.folderId === id ? { ...r, folderId: null } : r)));
-  };
-  const updateRoutineFolder = (id: string, patch: Partial<RoutineFolder>) =>
-    setRoutineFolders((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
-  // Reorders among siblings sharing the same parentId — top-level folders
-  // and each folder's own subfolders each keep their own independent order.
-  const moveRoutineFolder = (id: string, direction: "up" | "down") => {
-    setRoutineFolders((prev) => {
-      const folder = prev.find((f) => f.id === id);
-      if (!folder) return prev;
-      const siblingIds = prev.filter((f) => f.parentId === folder.parentId).map((f) => f.id);
-      const from = siblingIds.indexOf(id);
-      const to = direction === "up" ? from - 1 : from + 1;
-      if (to < 0 || to >= siblingIds.length) return prev;
-      const reorderedSiblingIds = [...siblingIds];
-      [reorderedSiblingIds[from], reorderedSiblingIds[to]] = [reorderedSiblingIds[to], reorderedSiblingIds[from]];
-      // Rebuild the full array in the new sibling order, preserving the
-      // relative position of every other (non-sibling) folder. A lookup
-      // map (not a nested `.find` re-run per outer iteration, which was
-      // the original bug here — `.find`'s own internal iteration bumped a
-      // shared `cursor` far past where the outer `.map` intended) makes
-      // each slot resolve independently and correctly.
-      const byId = new Map(prev.map((f) => [f.id, f]));
-      let cursor = 0;
-      return prev.map((f) => {
-        if (f.parentId !== folder.parentId) return f;
-        const nextId = reorderedSiblingIds[cursor];
-        cursor += 1;
-        return byId.get(nextId) ?? f;
-      });
-    });
+  // A LOCAL ID MEANS NEVER SYNCED, the same test isRemoteMealId gives meals.
+  // Folders and routines written before this reached Supabase carry `rf…` and
+  // `routine…`; one created while signed out carries the same shape.
+  const isRemoteRoutineId = (id: string) => isUuid(id);
+
+  const addRoutineFolder: AppState["addRoutineFolder"] = async (
+    name,
+    parentId = null,
+    color
+  ) => {
+    // Position is the count of existing siblings, which is where the UI
+    // appends it. The column is NOT NULL and has no default.
+    const position = routineFolders.filter((f) => (f.parentId ?? null) === (parentId ?? null)).length;
+
+    if (!authUserId) {
+      setRoutineFolders((prev) => [...prev, { id: `rf${Date.now()}`, name, parentId, color }]);
+      return undefined;
+    }
+    const result = await createRoutineFolderRemote(authUserId, { name, parentId, color, position });
+    if (!result.ok || !result.folder) return result.message ?? "Could not create that folder.";
+    setRoutineFolders((prev) => [...prev, result.folder!]);
+    return undefined;
   };
 
-  const addRoutine: AppState["addRoutine"] = (routine) => {
-    const id = `routine${Date.now()}${Math.random().toString(16).slice(2)}`;
-    setRoutines((prev) => [...prev, { ...routine, id }]);
-    return id;
+  const renameRoutineFolder: AppState["renameRoutineFolder"] = async (id, name) => {
+    const applyLocal = () =>
+      setRoutineFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name } : f)));
+    if (!authUserId || !isRemoteRoutineId(id)) {
+      applyLocal();
+      return undefined;
+    }
+    const result = await updateRoutineFolderRemote(id, { name });
+    if (!result.ok) return result.message ?? "Could not rename that folder.";
+    applyLocal();
+    return undefined;
   };
-  const updateRoutine = (id: string, patch: Partial<Routine>) =>
-    setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
-  const deleteRoutine = (id: string) => setRoutines((prev) => prev.filter((r) => r.id !== id));
+
+  const deleteRoutineFolder: AppState["deleteRoutineFolder"] = async (id) => {
+    // Subfolders of a deleted folder become top-level, and any routines
+    // directly in it are unfiled — never silently deleting a routine, which is
+    // what this has always promised. The service keeps that promise against a
+    // parent_id that is ON DELETE CASCADE by re-parenting the children first;
+    // the routines are unfiled by the database itself (ON DELETE SET NULL).
+    const applyLocal = () => {
+      setRoutineFolders((prev) =>
+        prev
+          .filter((f) => f.id !== id)
+          .map((f) => (f.parentId === id ? { ...f, parentId: null } : f))
+      );
+      setRoutines((prev) => prev.map((r) => (r.folderId === id ? { ...r, folderId: null } : r)));
+    };
+    if (!authUserId || !isRemoteRoutineId(id)) {
+      applyLocal();
+      return undefined;
+    }
+    const result = await deleteRoutineFolderRemote(id);
+    if (!result.ok) return result.message ?? "Could not delete that folder.";
+    applyLocal();
+    return undefined;
+  };
+
+  const updateRoutineFolder: AppState["updateRoutineFolder"] = async (id, patch) => {
+    const applyLocal = () =>
+      setRoutineFolders((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
+    if (!authUserId || !isRemoteRoutineId(id)) {
+      applyLocal();
+      return undefined;
+    }
+    // parentId is the one that can come back ATX16 or ATX17. Local state is
+    // left untouched when it does, so the tree on screen still matches the
+    // tree in the database.
+    const result = await updateRoutineFolderRemote(id, {
+      name: patch.name,
+      color: patch.color,
+      parentId: patch.parentId,
+    });
+    if (!result.ok) return result.message ?? "Could not update that folder.";
+    applyLocal();
+    return undefined;
+  };
+  // Reorders among siblings sharing the same parentId — top-level folders
+  // and each folder's own subfolders each keep their own independent order.
+  const moveRoutineFolder: AppState["moveRoutineFolder"] = async (id, direction) => {
+    const folder = routineFolders.find((f) => f.id === id);
+    if (!folder) return undefined;
+    const siblings = routineFolders.filter((f) => f.parentId === folder.parentId);
+    const siblingIds = siblings.map((f) => f.id);
+    const from = siblingIds.indexOf(id);
+    const to = direction === "up" ? from - 1 : from + 1;
+    if (to < 0 || to >= siblingIds.length) return undefined;
+
+    const reorderedSiblingIds = [...siblingIds];
+    [reorderedSiblingIds[from], reorderedSiblingIds[to]] = [
+      reorderedSiblingIds[to],
+      reorderedSiblingIds[from],
+    ];
+
+    const applyLocal = () =>
+      setRoutineFolders((prev) => {
+        // Rebuild the full array in the new sibling order, preserving the
+        // relative position of every other (non-sibling) folder. A lookup
+        // map (not a nested `.find` re-run per outer iteration, which was
+        // the original bug here — `.find`'s own internal iteration bumped a
+        // shared `cursor` far past where the outer `.map` intended) makes
+        // each slot resolve independently and correctly.
+        const byId = new Map(prev.map((f) => [f.id, f]));
+        let cursor = 0;
+        return prev.map((f) => {
+          if (f.parentId !== folder.parentId) return f;
+          const nextId = reorderedSiblingIds[cursor];
+          cursor += 1;
+          return byId.get(nextId) ?? f;
+        });
+      });
+
+    // ORDER IS A COLUMN NOW, not just an array index, and THE WHOLE SIBLING
+    // GROUP IS REWRITTEN rather than just the two that swapped.
+    //
+    // Writing only the pair leaves the others holding whatever position they
+    // were created with, which is not a dense 0..n-1 sequence — a folder
+    // created as a subfolder and later moved to the root keeps a position its
+    // new siblings already use. Measured: one "move up" produced two folders
+    // both at position 2, and the order the user had just arranged came back
+    // differently on the next load, because ties break by created_at. Renumber
+    // the group and there are no ties to break.
+    const renumbered = reorderedSiblingIds
+      .map((sid, index) => ({ id: sid, position: index }))
+      .filter((s) => isRemoteRoutineId(s.id));
+
+    if (!authUserId || renumbered.length === 0) {
+      applyLocal();
+      return undefined;
+    }
+    const result = await setFolderPositions(renumbered);
+    if (!result.ok) return result.message ?? "Could not reorder those folders.";
+    applyLocal();
+    return undefined;
+  };
+
+  const addRoutine: AppState["addRoutine"] = async (routine) => {
+    if (!authUserId) {
+      const id = `routine${Date.now()}${Math.random().toString(16).slice(2)}`;
+      setRoutines((prev) => [...prev, { ...routine, id }]);
+      return id;
+    }
+    const result = await createRoutineRemote(authUserId, routine, exerciseLookupRef.current);
+    // Null rather than a local id: a routine that failed to save must not sit
+    // in the list looking saved, the same call saveWorkoutSession makes.
+    if (!result.ok || !result.routine) return null;
+    setRoutines((prev) => [...prev, result.routine!]);
+    return result.routine.id;
+  };
+
+  const updateRoutine: AppState["updateRoutine"] = async (id, patch) => {
+    const applyLocal = () =>
+      setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, ...patch } : r)));
+
+    // A template mirror has no row of its own — see the hydration — and an
+    // unsynced routine has nothing to update remotely.
+    const routine = routines.find((r) => r.id === id);
+    if (!authUserId || !isRemoteRoutineId(id) || routine?.sourceTemplateId) {
+      applyLocal();
+      return undefined;
+    }
+    const result = await updateRoutineRemote(id, patch, patch.exercises, exerciseLookupRef.current);
+    if (!result.ok) return result.message ?? "Could not save that routine.";
+    applyLocal();
+    return undefined;
+  };
+
+  const deleteRoutine: AppState["deleteRoutine"] = async (id) => {
+    const routine = routines.find((r) => r.id === id);
+    if (authUserId && isRemoteRoutineId(id) && !routine?.sourceTemplateId) {
+      const result = await deleteRoutineRemote(id);
+      if (!result.ok) return result.message ?? "Could not delete that routine.";
+    }
+    setRoutines((prev) => prev.filter((r) => r.id !== id));
+    return undefined;
+  };
 
   // Both water setters funnel through one write. A water row is the day's
   // running total AS OF that moment, not an increment, so a delta has to be
@@ -3162,6 +3462,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearPausedSession,
       personalRecords,
       setPersonalRecord,
+      routinesError,
       routineFolders,
       addRoutineFolder,
       renameRoutineFolder,
@@ -3370,6 +3671,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       personalRecords,
       pausedSessions,
       routineFolders,
+      routinesError,
       routines,
       water,
       waterGoalMl,

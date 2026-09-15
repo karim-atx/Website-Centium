@@ -15,10 +15,13 @@ const blankExercise = (pick: ExercisePick): Exercise => ({
   sets: 3,
   reps: 10,
   weightKg: 20,
-  category: "full_body",
   muscleGroups: pick.muscleGroups,
   classification: pick.classification,
   isCustom: pick.isCustom,
+  // Carried from the pick so the save knows which library row this
+  // prescribes — routine_exercises stores the reference, not the name.
+  exerciseId: pick.exerciseId,
+  customExerciseId: pick.customExerciseId,
 });
 
 // V6 (QA 6.0): the professional's Workout Template Builder — same
@@ -95,10 +98,10 @@ export const CreateWorkoutTemplateSheet: React.FC<{
     const q = searchQuery.toLowerCase();
     const fromCustom = customExercises
       .filter((e) => e.name.toLowerCase().includes(q))
-      .map((e) => ({ name: e.name, classification: e.classification, isCustom: true as const }));
+      .map((e) => ({ name: e.name, classification: e.classification, isCustom: true as const, customExerciseId: e.id }));
     const fromLibrary = exerciseCatalog
       .filter((e) => e.name.toLowerCase().includes(q))
-      .map((e) => ({ name: e.name, classification: e.classification, isCustom: false as const }));
+      .map((e) => ({ name: e.name, classification: e.classification, isCustom: false as const, exerciseId: e.id }));
     return [...fromCustom, ...fromLibrary].slice(0, 6);
   }, [searchQuery, customExercises, exerciseCatalog]);
 

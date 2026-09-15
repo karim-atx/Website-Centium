@@ -6,6 +6,7 @@ import { muscleGroupIcon } from "../../utils/icons";
 import { MUSCLE_GROUP_LABEL } from "../../utils/muscleGroups";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "./CreateCustomExerciseSheet";
 import { useApp } from "../../context/AppContext";
+import { isUuid } from "../../services/food";
 import type { MuscleGroup } from "../../types";
 
 export interface ExercisePick {
@@ -14,6 +15,19 @@ export interface ExercisePick {
   secondaryMuscleGroups?: CustomExerciseData["secondaryMuscleGroups"];
   classification?: CustomExerciseData["classification"];
   isCustom?: boolean;
+  /**
+   * THE PICK CARRIES ITS ROW ID NOW, which Phase 1 deliberately did not do
+   * because nothing could store it yet. routine_exercises points at exactly
+   * one of two tables and holds no name, so a routine has to record which row
+   * a pick meant — and resolving that by name at save time would re-guess
+   * something this list already knows for certain.
+   *
+   * Still absent for a custom exercise that has never reached the server (it
+   * has no row id to carry), and the name fallback in services/routines covers
+   * that as well as routines built before any of this existed.
+   */
+  exerciseId?: string;
+  customExerciseId?: string;
 }
 
 export const ExerciseLibrarySheet: React.FC<{
@@ -122,6 +136,8 @@ export const ExerciseLibrarySheet: React.FC<{
                       muscleGroups: e.muscleGroups,
                       secondaryMuscleGroups: e.secondaryMuscleGroups,
                       isCustom: true,
+                      // Undefined while this one is still queued for upload.
+                      customExerciseId: isUuid(e.id ?? "") ? e.id : undefined,
                     })
                   }
                   disabled={added}
@@ -139,7 +155,7 @@ export const ExerciseLibrarySheet: React.FC<{
               return (
                 <button
                   key={e.id}
-                  onClick={() => !added && onPick({ name: e.name, classification: e.classification, muscleGroups: e.muscleGroups, secondaryMuscleGroups: e.secondaryMuscleGroups })}
+                  onClick={() => !added && onPick({ name: e.name, classification: e.classification, muscleGroups: e.muscleGroups, secondaryMuscleGroups: e.secondaryMuscleGroups, exerciseId: e.id })}
                   disabled={added}
                   className="tap w-full flex items-center justify-between rounded-2xl px-3.5 py-3 hover:bg-cream-soft text-left disabled:opacity-40"
                 >

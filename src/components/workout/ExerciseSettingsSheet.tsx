@@ -104,6 +104,11 @@ export const ExerciseSettingsSheet: React.FC<{
       secondaryMuscleGroups: pick.secondaryMuscleGroups,
       classification: pick.classification,
       isCustom: pick.isCustom,
+      // THE REFERENCE MOVES WITH THE NAME. Leaving these behind would save a
+      // prescription pointing at the movement that was replaced, which reads
+      // back under the old name and silently undoes the swap.
+      exerciseId: pick.exerciseId,
+      customExerciseId: pick.customExerciseId,
     });
     setReplaceOpen(false);
     onClose();

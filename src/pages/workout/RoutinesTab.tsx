@@ -38,11 +38,14 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
   sets: 3,
   reps: 10,
   weightKg: 20,
-  category: "full_body",
   muscleGroups: pick.muscleGroups,
   secondaryMuscleGroups: pick.secondaryMuscleGroups,
   classification: pick.classification,
   isCustom: pick.isCustom,
+  // Carried from the pick so the save knows which library row this
+  // prescribes — routine_exercises stores the reference, not the name.
+  exerciseId: pick.exerciseId,
+  customExerciseId: pick.customExerciseId,
 });
 
 const folderColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
@@ -58,9 +61,25 @@ export default function RoutinesTab() {
     moveRoutineFolder,
     updateRoutine,
     deleteRoutine,
+    routinesError,
     pausedSessions,
     clearPausedSession,
   } = useApp();
+  /**
+   * The last thing a folder or routine write refused to do.
+   *
+   * ONE SLOT, because only one of these is ever in flight: every control here
+   * is a tap that completes before the next is possible. It carries the real
+   * sentence from the service — including the two the folder trigger raises,
+   * ATX16 for a folder filed inside its own subtree and ATX17 for one filed
+   * under another account's folder — rather than a generic failure, because
+   * both describe something the user asked for that cannot be done.
+   */
+  const [actionError, setActionError] = useState<string | null>(null);
+  // Every write goes through here, so no call site can forget to report one.
+  const run = (action: Promise<string | undefined>) => {
+    void action.then((message) => setActionError(message ?? null));
+  };
   const [createOpen, setCreateOpen] = useState(false);
   const [createFolder, setCreateFolder] = useState<string | null>(null);
   const [newFolderOpen, setNewFolderOpen] = useState(false);
@@ -139,7 +158,7 @@ export default function RoutinesTab() {
                 onChange={(e) => setRenameDraft(e.target.value)}
                 onKeyDown={(e) => {
                   if (e.key === "Enter" && renameDraft.trim()) {
-                    renameRoutineFolder(folder.id, renameDraft.trim());
+                    run(renameRoutineFolder(folder.id, renameDraft.trim()));
                     setRenamingId(null);
                   }
                 }}
@@ -147,7 +166,7 @@ export default function RoutinesTab() {
               />
               <button
                 onClick={() => {
-                  if (renameDraft.trim()) renameRoutineFolder(folder.id, renameDraft.trim());
+                  if (renameDraft.trim()) run(renameRoutineFolder(folder.id, renameDraft.trim()));
                   setRenamingId(null);
                 }}
                 className="text-xs font-semibold text-primary"
@@ -206,7 +225,7 @@ export default function RoutinesTab() {
                         option to shuffle and re-order them." */}
                     <button
                       onClick={() => {
-                        moveRoutineFolder(folder.id, "up");
+                        run(moveRoutineFolder(folder.id, "up"));
                         closeMenu();
                       }}
                       className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-charcoal hover:bg-cream-soft"
@@ -215,7 +234,7 @@ export default function RoutinesTab() {
                     </button>
                     <button
                       onClick={() => {
-                        moveRoutineFolder(folder.id, "down");
+                        run(moveRoutineFolder(folder.id, "down"));
                         closeMenu();
                       }}
                       className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-charcoal hover:bg-cream-soft"
@@ -244,7 +263,7 @@ export default function RoutinesTab() {
                     </button>
                     <button
                       onClick={() => {
-                        deleteRoutineFolder(folder.id);
+                        run(deleteRoutineFolder(folder.id));
                         closeMenu();
                       }}
                       className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-status-high hover:bg-cream-soft"
@@ -261,7 +280,7 @@ export default function RoutinesTab() {
                           key={c}
                           onClick={(ev) => {
                             ev.stopPropagation();
-                            updateRoutineFolder(folder.id, { color: c });
+                            run(updateRoutineFolder(folder.id, { color: c }));
                           }}
                           aria-label={`Color ${c}`}
                           className="tap w-7 h-7 rounded-full"
@@ -300,21 +319,21 @@ export default function RoutinesTab() {
                 onDelete={() => setPendingDeleteRoutine(r)}
                 onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
                 onDeleteExercise={(exId) =>
-                  updateRoutine(r.id, { exercises: r.exercises.filter((e) => e.id !== exId) })
+                  run(updateRoutine(r.id, { exercises: r.exercises.filter((e) => e.id !== exId) }))
                 }
                 onReplaceExercise={(exId, pick) =>
-                  updateRoutine(r.id, {
+                  run(updateRoutine(r.id, {
                     exercises: r.exercises.map((e) =>
                       e.id === exId
-                        ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, secondaryMuscleGroups: pick.secondaryMuscleGroups, classification: pick.classification, isCustom: pick.isCustom }
+                        ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, secondaryMuscleGroups: pick.secondaryMuscleGroups, classification: pick.classification, isCustom: pick.isCustom, exerciseId: pick.exerciseId, customExerciseId: pick.customExerciseId }
                         : e
                     ),
-                  })
+                  }))
                 }
                 onAddExercise={(pick) =>
-                  updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] })
+                  run(updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] }))
                 }
-                onColorChange={(color) => updateRoutine(r.id, { color })}
+                onColorChange={(color) => run(updateRoutine(r.id, { color }))}
               />
             ))}
 
@@ -327,7 +346,7 @@ export default function RoutinesTab() {
                     onChange={(e) => setSubfolderName(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === "Enter" && subfolderName.trim()) {
-                        addRoutineFolder(subfolderName.trim(), folder.id, subfolderColor);
+                        run(addRoutineFolder(subfolderName.trim(), folder.id, subfolderColor));
                         setAddingSubfolderTo(null);
                       }
                     }}
@@ -336,7 +355,7 @@ export default function RoutinesTab() {
                   />
                   <button
                     onClick={() => {
-                      if (subfolderName.trim()) addRoutineFolder(subfolderName.trim(), folder.id, subfolderColor);
+                      if (subfolderName.trim()) run(addRoutineFolder(subfolderName.trim(), folder.id, subfolderColor));
                       setAddingSubfolderTo(null);
                     }}
                     className="tap px-3 rounded-xl bg-primary text-white text-sm font-semibold"
@@ -389,6 +408,22 @@ export default function RoutinesTab() {
         </button>
       </div>
 
+      {/* TWO DIFFERENT FAILURES, SAID DIFFERENTLY. actionError is something
+          the user just asked for being refused — including a folder that
+          cannot go where they put it — and is worth their attention.
+          routinesError means the list itself could not be refreshed, so what
+          is on screen is whatever this device had saved. */}
+      <div className="space-y-1.5">
+        {actionError && (
+          <p className="text-[11.5px] font-semibold text-status-high mb-3">{actionError}</p>
+        )}
+        {routinesError && !actionError && (
+          <p className="text-[11.5px] font-semibold text-status-high mb-3">
+            Couldn't refresh your routines — showing what was saved on this device.
+          </p>
+        )}
+      </div>
+
       {newFolderOpen && (
         <div className="mb-4">
           <div className="flex gap-2 mb-2">
@@ -398,7 +433,7 @@ export default function RoutinesTab() {
               onChange={(e) => setNewFolderName(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === "Enter" && newFolderName.trim()) {
-                  addRoutineFolder(newFolderName.trim(), null, newFolderColor);
+                  run(addRoutineFolder(newFolderName.trim(), null, newFolderColor));
                   setNewFolderName("");
                   setNewFolderOpen(false);
                 }
@@ -408,7 +443,7 @@ export default function RoutinesTab() {
             />
             <button
               onClick={() => {
-                if (newFolderName.trim()) addRoutineFolder(newFolderName.trim(), null, newFolderColor);
+                if (newFolderName.trim()) run(addRoutineFolder(newFolderName.trim(), null, newFolderColor));
                 setNewFolderName("");
                 setNewFolderOpen(false);
               }}
@@ -453,21 +488,21 @@ export default function RoutinesTab() {
                   onDelete={() => setPendingDeleteRoutine(r)}
                   onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
                   onDeleteExercise={(exId) =>
-                    updateRoutine(r.id, { exercises: r.exercises.filter((e) => e.id !== exId) })
+                    run(updateRoutine(r.id, { exercises: r.exercises.filter((e) => e.id !== exId) }))
                   }
                   onReplaceExercise={(exId, pick) =>
-                    updateRoutine(r.id, {
+                    run(updateRoutine(r.id, {
                       exercises: r.exercises.map((e) =>
                         e.id === exId
-                          ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, secondaryMuscleGroups: pick.secondaryMuscleGroups, classification: pick.classification, isCustom: pick.isCustom }
+                          ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, secondaryMuscleGroups: pick.secondaryMuscleGroups, classification: pick.classification, isCustom: pick.isCustom, exerciseId: pick.exerciseId, customExerciseId: pick.customExerciseId }
                           : e
                       ),
-                    })
+                    }))
                   }
                   onAddExercise={(pick) =>
-                    updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] })
+                    run(updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] }))
                   }
-                  onColorChange={(color) => updateRoutine(r.id, { color })}
+                  onColorChange={(color) => run(updateRoutine(r.id, { color }))}
                 />
               ))}
             </div>
@@ -497,19 +532,19 @@ export default function RoutinesTab() {
           if (!settingsExercise) return;
           const routine = routines.find((r) => r.id === settingsExercise.routineId);
           if (!routine) return;
-          updateRoutine(routine.id, {
+          run(updateRoutine(routine.id, {
             exercises: routine.exercises.map((e) =>
               e.id === settingsExercise.exercise.id ? { ...e, ...patch } : e
             ),
-          });
+          }));
         }}
         onDelete={() => {
           if (!settingsExercise) return;
           const routine = routines.find((r) => r.id === settingsExercise.routineId);
           if (!routine) return;
-          updateRoutine(routine.id, {
+          run(updateRoutine(routine.id, {
             exercises: routine.exercises.filter((e) => e.id !== settingsExercise.exercise.id),
-          });
+          }));
         }}
       />
 
@@ -579,7 +614,7 @@ export default function RoutinesTab() {
                   fullWidth
                   variant="teal"
                   onClick={() => {
-                    deleteRoutine(pendingDeleteRoutine.id);
+                    run(deleteRoutine(pendingDeleteRoutine.id));
                     setPendingDeleteRoutine(null);
                   }}
                 >

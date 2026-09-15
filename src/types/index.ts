@@ -539,7 +539,26 @@ export interface Exercise {
   sets: number;
   reps: number;
   weightKg: number;
-  category:
+  /**
+   * WHICH LIBRARY ROW THIS PRESCRIBES, carried explicitly rather than guessed.
+   *
+   * routine_exercises stores exactly one of exercise_id / custom_exercise_id
+   * and no name, so a saved routine has to say which table it means. Once
+   * hydrated both kinds carry a uuid and the id alone cannot say — the same
+   * ambiguity that sent a foods.id into custom_food_id and produced a foreign
+   * key failure when custom meals guessed. Absent on routines built before
+   * this existed, which is what the name fallback in services/routines is for.
+   */
+  exerciseId?: string;
+  customExerciseId?: string;
+  /**
+   * The prototype's browse grouping. OPTIONAL AND UNREAD: its only consumer
+   * was the exercise-library icon lookup, which now keys off muscle groups,
+   * and no column stores it — exercises.category is a muscle_group, and
+   * `arms`, `legs` and `full_body` are not members of that enum. Kept on the
+   * type because the seeded prototype programs still set it.
+   */
+  category?:
     | "chest"
     | "back"
     | "shoulders"
