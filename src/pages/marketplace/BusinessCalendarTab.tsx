@@ -7,7 +7,9 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { mockBusinessCustomers } from "../../data/mockBusinessCustomers";
 import type { BusinessClass } from "../../types";
-import { ChevronLeft, ChevronRight, Plus, Clock, Users, Trash2 } from "lucide-react";
+import { useServerCalendar } from "../../hooks/useServerCalendar";
+import { respondToInvite } from "../../services/calendar";
+import { ChevronLeft, ChevronRight, Plus, Clock, Users, Trash2, Check, X, CalendarDays } from "lucide-react";
 import clsx from "clsx";
 
 type View = "year" | "month" | "week" | "day";
@@ -46,9 +48,34 @@ const blankDraft = (date: string) => ({
 // Month/Week/Day shell as the Professional/Client calendars, built on top
 // of the existing businessClasses store (which already syncs into the
 // affiliated professional's own calendar — see CalendarTab.tsx).
+// PHASE 2 (2026-09): THIS SCREEN'S EVENTS ARE CLASSES, NOT CALENDAR EVENTS,
+// which is the thing to understand before changing it. Everything above reads
+// `businessClasses` — a different entity, with its own table and its own
+// professional/client assignment model — and that store stays local this pass
+// by decision: converting it is its own phase, and duplicating each class as a
+// calendar_events row as well would mean two records of one thing with nothing
+// keeping them in step.
+//
+// What a business account nonetheless has is an ordinary calendar: events it
+// owns, and invitations other people have sent it. Those are real
+// calendar_events rows and they now appear here, alongside the class overlay
+// and clearly separated from it. Creating a calendar event WITH invitees from
+// this screen is deliberately not built — the compose sheet below creates a
+// class, and giving it a second, parallel "real event" mode would reproduce
+// exactly the two-features-in-one-costume problem the assignment note had.
 export default function BusinessCalendarTab() {
-  const { user, businessClasses, addBusinessClass, removeBusinessClass, businessEmployees } = useApp();
+  const { user, businessClasses, addBusinessClass, removeBusinessClass, businessEmployees, authUserId, profileReady } =
+    useApp();
+  const { events, loadError, reload } = useServerCalendar(authUserId, profileReady);
+  const [responding, setResponding] = useState<string | null>(null);
   const employees = user.businessId ? businessEmployees[user.businessId] ?? [] : [];
+
+  const respond = async (inviteId: string, accepted: boolean) => {
+    setResponding(inviteId);
+    await respondToInvite(inviteId, accepted);
+    setResponding(null);
+    await reload();
+  };
   const today = new Date();
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
@@ -106,6 +133,8 @@ export default function BusinessCalendarTab() {
   };
 
   const selectedEvents = eventsByDate[selectedDate] ?? [];
+  /** This account's real calendar_events rows falling on the selected day. */
+  const calendarForDay = events.filter((e) => e.date === selectedDate);
   const selectedDateLabel = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
@@ -139,6 +168,11 @@ export default function BusinessCalendarTab() {
 
   return (
     <div>
+      {loadError && (
+        <p className="mb-3 rounded-xl bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-status-high">
+          {loadError}
+        </p>
+      )}
       <PageHeader
         title="Calendar"
         showBack
@@ -299,13 +333,77 @@ export default function BusinessCalendarTab() {
             </button>
           </div>
           <div className="space-y-2.5">
-            {selectedEvents.length === 0 ? (
+            {selectedEvents.length === 0 && calendarForDay.length === 0 ? (
               <Card className="text-center py-8">
                 <p className="text-sm text-charcoal-faint">No events this day.</p>
               </Card>
             ) : (
               selectedEvents.map(eventCard)
             )}
+
+            {/* REAL CALENDAR EVENTS, KEPT VISIBLY APART from the classes
+                above. A class is a business_classes row with a professional
+                and a roster; these are calendar_events — this account's own
+                events and the invitations it has received. Mixing them into
+                one list would suggest they are the same kind of thing and
+                that the actions on one work on the other. */}
+            {calendarForDay.map((e) => (
+              <Card key={e.id} className="space-y-2" style={{ borderLeft: `4px solid ${e.color ?? "#7D6BB5"}` }}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
+                      <CalendarDays size={12} className="shrink-0 text-charcoal-faint" />
+                      {e.title}
+                    </p>
+                    <p className="text-xs text-charcoal-faint">
+                      {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
+                      {e.location ? ` · ${e.location}` : ""}
+                    </p>
+                    {e.notes && <p className="text-xs text-charcoal-faint mt-1">{e.notes}</p>}
+                  </div>
+                  {e.invite && (
+                    <span
+                      className={clsx(
+                        "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
+                        e.invite.status === "accepted"
+                          ? "bg-primary-pale text-primary-dark"
+                          : e.invite.status === "declined"
+                          ? "bg-cream-soft text-charcoal-faint"
+                          : "bg-gold/15 text-gold"
+                      )}
+                    >
+                      {e.invite.status === "accepted"
+                        ? "Going"
+                        : e.invite.status === "declined"
+                        ? "Declined"
+                        : "Invitation"}
+                    </span>
+                  )}
+                </div>
+                {e.invite && (
+                  <div className="flex gap-2">
+                    <Button
+                      size="sm"
+                      fullWidth
+                      variant={e.invite.status === "accepted" ? "primary" : "secondary"}
+                      disabled={responding === e.invite.id || e.invite.status === "accepted"}
+                      onClick={() => void respond(e.invite!.id, true)}
+                    >
+                      <Check size={13} /> Accept
+                    </Button>
+                    <Button
+                      size="sm"
+                      fullWidth
+                      variant="outline"
+                      disabled={responding === e.invite.id || e.invite.status === "declined"}
+                      onClick={() => void respond(e.invite!.id, false)}
+                    >
+                      <X size={13} /> Decline
+                    </Button>
+                  </div>
+                )}
+              </Card>
+            ))}
           </div>
         </>
       )}

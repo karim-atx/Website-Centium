@@ -4065,35 +4065,40 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     );
   const updateProfessionalClient: AppState["updateProfessionalClient"] = (id, patch) =>
     setProfessionalClients((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } : c)));
-  // V6 (QA 6.0): "The calendar app should update automatically when the
-  // professional assigns a workout and/or food template for the client on
-  // a specific day" — both assign actions also drop a same-day calendar
-  // event.
+  // V6 (QA 6.0) asked that "the calendar app should update automatically when
+  // the professional assigns a workout and/or food template for the client on
+  // a specific day", and both assign actions used to drop a same-day event
+  // titled `Assigned "X" to Y` onto the PROFESSIONAL's own calendar.
+  //
+  // RETIRED IN CALENDAR PHASE 2, because it was never the thing V6 asked for
+  // and it is now actively wrong in three ways:
+  //
+  //   1. IT IS A LOG ENTRY, NOT AN EVENT. It was dated the day the assignment
+  //      was made rather than the day of the session, so it never moved when
+  //      the session did and accumulated one permanent row per assignment.
+  //   2. THE REAL THING NOW EXISTS. assign_template_to_client writes a real
+  //      calendar_events row onto the CLIENT's calendar, on the assigned day,
+  //      which the professional reads through
+  //      calendar_events_select_assigning_professional. That is what V6
+  //      described; this was a stand-in from before it was built.
+  //   3. ITS invitees: [client.name] WAS THE LEAK. Under the old name-matching
+  //      filter, a professional's private note about assigning a program
+  //      appeared on the client's own calendar — and on the calendar of every
+  //      other client sharing that first name.
+  //
+  // The underlying record is not lost: workout_template_assignments.assigned_at
+  // already holds exactly "who was assigned what, when". If a professional
+  // activity feed is wanted, that is its source, and a feed is a different
+  // surface from a calendar.
   const assignProgramToClient = (clientId: string, programName: string) => {
     setProfessionalClients((prev) =>
       prev.map((c) => (c.id === clientId ? { ...c, assignedProgramName: programName } : c))
     );
-    const client = professionalClients.find((c) => c.id === clientId);
-    addCalendarEvent({
-      title: `Assigned "${programName}" to ${client?.name ?? "client"}`,
-      date: today,
-      allDay: true,
-      repeat: "none",
-      invitees: client ? [client.name] : undefined,
-    });
   };
   const assignFoodTemplateToClient = (clientId: string, templateName: string) => {
     setProfessionalClients((prev) =>
       prev.map((c) => (c.id === clientId ? { ...c, assignedFoodTemplateName: templateName } : c))
     );
-    const client = professionalClients.find((c) => c.id === clientId);
-    addCalendarEvent({
-      title: `Assigned "${templateName}" to ${client?.name ?? "client"}`,
-      date: today,
-      allDay: true,
-      repeat: "none",
-      invitees: client ? [client.name] : undefined,
-    });
   };
 
   const updateBusinessListing = (patch: Partial<AppState["businessListing"]>) =>

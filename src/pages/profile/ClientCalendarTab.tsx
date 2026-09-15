@@ -8,14 +8,33 @@ import type { CalendarEvent } from "../../types";
 import {
   createEvent,
   deleteEvent,
-  getClientCalendar,
+  attachmentUrl,
+  getCalendar,
   respondToInvite,
   updateEvent,
   type ClientCalendarEvent,
 } from "../../services/calendar";
 import { isUuid } from "../../services/food";
-import { ChevronLeft, ChevronRight, Plus, MapPin, FileText, Trash2, Repeat, Check, X, Dumbbell } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  MapPin,
+  FileText,
+  Trash2,
+  Repeat,
+  Check,
+  X,
+  Dumbbell,
+  Paperclip,
+} from "lucide-react";
 import clsx from "clsx";
+
+/** Opens an attachment in a new tab. Signed at the click — the TTL is minutes. */
+async function openAttachment(path: string) {
+  const result = await attachmentUrl(path);
+  if (result.ok && result.url) window.open(result.url, "_blank", "noopener");
+}
 
 type View = "year" | "month" | "week" | "day";
 
@@ -111,7 +130,7 @@ export default function ClientCalendarTab() {
   // empty calendar, and blanking one would look exactly like losing data.
   const load = useCallback(async () => {
     if (!authUserId) return;
-    const result = await getClientCalendar(authUserId);
+    const result = await getCalendar(authUserId);
     if (!result.ok) {
       setLoadError(result.message);
       return;
@@ -373,6 +392,18 @@ export default function ClientCalendarTab() {
               </p>
             )}
           </button>
+          {/* AN INVITEE MAY OPEN THE ATTACHMENT, which the bucket's select
+              policy allows and which nothing on this screen offered until
+              Phase 2 put files on events at all. Signed at the click, never
+              held: the TTL is minutes. */}
+          {e.attachmentPath && (
+            <button
+              onClick={() => void openAttachment(e.attachmentPath!)}
+              className="tap flex items-center gap-1 text-xs font-semibold text-primary mt-1"
+            >
+              <Paperclip size={11} /> Open attachment
+            </button>
+          )}
           {status ? (
             <span
               className={clsx(

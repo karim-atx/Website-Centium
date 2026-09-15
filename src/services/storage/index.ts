@@ -52,7 +52,20 @@ type OwnerScopedBucket = "lab-reports" | "medical-imaging" | "certifications";
  */
 type ThreadScopedBucket = "message-attachments";
 
-export type PrivateBucket = OwnerScopedBucket | ThreadScopedBucket;
+/**
+ * Buckets whose path starts with a CALENDAR EVENT id:
+ * `<calendar_event_id>/<uploader_id>/...`.
+ *
+ * The same grammar as a thread-scoped bucket and for the same reason — the
+ * policy has to answer "may this person write here?" from the path alone, and
+ * the answer is about the event, not the uploader. It is kept as its own type
+ * rather than folded into ThreadScopedBucket because the id means something
+ * different: a parameter called `threadId` holding an event id is exactly the
+ * kind of thing that survives review and fails in production.
+ */
+type EventScopedBucket = "calendar-attachments";
+
+export type PrivateBucket = OwnerScopedBucket | ThreadScopedBucket | EventScopedBucket;
 
 /**
  * Mirrors the bucket definitions in the storage migration.
@@ -87,6 +100,22 @@ const BUCKETS: Record<
   // qualification arrives as whatever the awarding body sent, which is as
   // often a .docx as a scan. The migration's mime list is the authority and
   // this mirrors it.
+  // Owner AND invitees may read and write, per the bucket's two policies —
+  // which is why it is here rather than in the owner-scoped group despite
+  // being a single file on a single row.
+  "calendar-attachments": {
+    maxBytes: 10 * 1024 * 1024,
+    mimeTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ],
+    label: "attachment",
+    accepts: "an image, a PDF or a Word document",
+  },
   certifications: {
     maxBytes: 10 * 1024 * 1024,
     mimeTypes: [
@@ -448,6 +477,13 @@ function objectPath(params: UploadParams, mimeType: string): string {
     return `${params.threadId}/${params.userId}/${name}`;
   }
 
+  // Event-scoped: `<calendar_event_id>/<uploader_id>/<name>`, the same two
+  // segments for the same reason — calendar_attachments_insert_participant
+  // reads segment 1 as the event and segment 2 as the uploader.
+  if (params.bucket === "calendar-attachments") {
+    return `${params.eventId}/${params.userId}/${name}`;
+  }
+
   const prefix = PREFIXES[params.bucket];
   return prefix ? `${params.userId}/${prefix}/${name}` : `${params.userId}/${name}`;
 }
@@ -464,7 +500,8 @@ function objectPath(params: UploadParams, mimeType: string): string {
  */
 export type UploadParams =
   | { bucket: OwnerScopedBucket; userId: string; file: File }
-  | { bucket: ThreadScopedBucket; userId: string; file: File; threadId: string };
+  | { bucket: ThreadScopedBucket; userId: string; file: File; threadId: string }
+  | { bucket: EventScopedBucket; userId: string; file: File; eventId: string };
 
 /**
  * Uploads one file and returns the path to store on the row that references

@@ -5,8 +5,34 @@ import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import type { CalendarEvent } from "../../types";
-import { ChevronLeft, ChevronRight, Plus, MapPin, Link2, FileText, Trash2, Repeat, Pencil, Store } from "lucide-react";
+import { useServerCalendar } from "../../hooks/useServerCalendar";
+import { attachmentUrl } from "../../services/calendar";
+import { acceptFor } from "../../services/storage";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Plus,
+  MapPin,
+  Link2,
+  FileText,
+  Trash2,
+  Repeat,
+  Pencil,
+  Store,
+  Paperclip,
+} from "lucide-react";
 import clsx from "clsx";
+
+/**
+ * Opens an attachment in a new tab.
+ *
+ * Signed at the moment of the click and never held: signedUrlFor caps its own
+ * TTL at minutes, so a URL kept in state would expire into a dead link.
+ */
+async function openAttachment(path: string) {
+  const result = await attachmentUrl(path);
+  if (result.ok && result.url) window.open(result.url, "_blank", "noopener");
+}
 
 // V7 (QA 7.0): Year → Month → Day, Month selected by default.
 // V9 (QA 9.0): "Alongside year monthly and daily I would like a weekly
@@ -69,8 +95,21 @@ const blankDraft = (date: string) => ({
 const HOUR_PX = 56;
 
 export default function CalendarTab() {
-  const { calendarEvents, addCalendarEvent, updateCalendarEvent, removeCalendarEvent, professionalClients, businessClasses, businessDirectory, user } = useApp();
+  const { businessClasses, businessDirectory, user, authUserId, profileReady } = useApp();
   const today = new Date();
+  const {
+    events,
+    invitees,
+    candidates,
+    loadError,
+    saving,
+    saveError,
+    setSaveError,
+    reload: _reload,
+    saveEvent: persistEvent,
+    removeEvent: persistDelete,
+    attachFile,
+  } = useServerCalendar(authUserId, profileReady);
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
   const [selectedDate, setSelectedDate] = useState(toISO(today.getFullYear(), today.getMonth(), today.getDate()));
@@ -105,11 +144,22 @@ export default function CalendarTab() {
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
-    [...calendarEvents, ...businessCalendarEvents].forEach((e) => {
+    [...events, ...businessCalendarEvents].forEach((e) => {
       (map[e.date] ??= []).push(e);
     });
     return map;
-  }, [calendarEvents, businessCalendarEvents]);
+  }, [events, businessCalendarEvents]);
+
+  /** A server event, or undefined for a business-class overlay row. */
+  const serverEvent = (id: string) => events.find((e) => e.id === id);
+  // A business class is synthesised in memory from businessClasses and has no
+  // calendar_events row; an assignment-sourced session belongs to the client
+  // and is deleted and re-inserted on every re-assignment. Neither is this
+  // account's to edit here.
+  const isEditable = (e: CalendarEvent) => {
+    const row = serverEvent(e.id);
+    return !!row && row.mine && !row.assignmentSourced;
+  };
 
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
   const firstWeekday = new Date(cursor.year, cursor.month, 1).getDay();
@@ -139,8 +189,10 @@ export default function CalendarTab() {
   };
 
   const openEdit = (e: CalendarEvent) => {
+    if (!isEditable(e)) return;
     setEditingId(e.id);
     setConfirmDelete(false);
+    setSaveError(null);
     setDraft({
       title: e.title,
       date: e.date,
@@ -149,7 +201,8 @@ export default function CalendarTab() {
       endTime: e.endTime ?? "10:00",
       location: e.location ?? "",
       repeat: e.repeat,
-      inviteeIds: professionalClients.filter((c) => e.invitees?.includes(c.name)).map((c) => c.id),
+      // Real invitee rows now, not names matched against the roster.
+      inviteeIds: (invitees[e.id] ?? []).map((i) => i.userId),
       url: e.url ?? "",
       notes: e.notes ?? "",
       attachmentName: "",
@@ -158,44 +211,45 @@ export default function CalendarTab() {
     setComposeOpen(true);
   };
 
-  const saveEvent = () => {
+  const saveEvent = async () => {
     if (!draft.title.trim()) return;
-    const base: Omit<CalendarEvent, "id"> = {
+    const payload = {
       title: draft.title.trim(),
       date: draft.date,
       allDay: draft.allDay,
-      startTime: draft.allDay ? undefined : draft.startTime,
-      endTime: draft.allDay ? undefined : draft.endTime,
-      location: draft.location.trim() || undefined,
+      startTime: draft.startTime,
+      endTime: draft.endTime,
+      location: draft.location,
       repeat: draft.repeat,
-      invitees: draft.inviteeIds
-        .map((id) => professionalClients.find((c) => c.id === id)?.name)
-        .filter((n): n is string => !!n),
-      url: draft.url.trim() || undefined,
-      notes: draft.notes.trim() || (draft.attachmentName ? `Attachment: ${draft.attachmentName}` : undefined),
+      url: draft.url,
+      // THE FAKE ATTACHMENT IS GONE from here. This used to fall back to
+      // `Attachment: <filename>` in the notes when no note was typed — a
+      // sentence about a file that had never been read, let alone stored. The
+      // real upload runs after the event exists, because the object path is
+      // keyed by the event id.
+      notes: draft.notes,
       color: draft.color,
     };
 
-    if (editingId) {
-      updateCalendarEvent(editingId, base);
-    } else {
-      addCalendarEvent(base);
-      // V7 (QA 7.0): a repeat selection now actually generates the
-      // recurring occurrences, each its own editable/deletable event.
-      if (draft.repeat !== "none") {
-        const horizon = draft.repeat === "daily" ? 30 : draft.repeat === "weekly" ? 12 : 12;
-        for (let i = 1; i <= horizon; i++) {
-          const occurrenceDate =
-            draft.repeat === "daily"
-              ? addDaysISO(draft.date, i)
-              : draft.repeat === "weekly"
-              ? addDaysISO(draft.date, i * 7)
-              : addMonthsISO(draft.date, i);
-          addCalendarEvent({ ...base, date: occurrenceDate });
-        }
+    // V7 (QA 7.0): a repeat selection generates the recurring occurrences,
+    // each its own editable/deletable event. Unchanged in intent; the dates
+    // are computed here and the rows are written by the hook.
+    const occurrences: string[] = [];
+    if (!editingId && draft.repeat !== "none") {
+      const horizon = draft.repeat === "daily" ? 30 : 12;
+      for (let i = 1; i <= horizon; i++) {
+        occurrences.push(
+          draft.repeat === "daily"
+            ? addDaysISO(draft.date, i)
+            : draft.repeat === "weekly"
+            ? addDaysISO(draft.date, i * 7)
+            : addMonthsISO(draft.date, i)
+        );
       }
     }
-    setComposeOpen(false);
+
+    const ok = await persistEvent(editingId, payload, draft.inviteeIds, occurrences);
+    if (ok) setComposeOpen(false);
   };
 
   const selectedEvents = eventsByDate[selectedDate] ?? [];
@@ -214,7 +268,7 @@ export default function CalendarTab() {
   const isFromBusiness = (e: CalendarEvent) => e.id.startsWith("bc");
 
   const eventCard = (e: CalendarEvent) => {
-    const readOnly = isFromBusiness(e);
+    const readOnly = isFromBusiness(e) || !isEditable(e);
     return (
       <Card key={e.id} className="flex items-start justify-between gap-3" style={{ borderLeft: `4px solid ${e.color ?? "#7D6BB5"}` }}>
         <button className="min-w-0 text-left flex-1" onClick={() => !readOnly && openEdit(e)} disabled={readOnly}>
@@ -228,8 +282,29 @@ export default function CalendarTab() {
               <MapPin size={11} /> {e.location}
             </p>
           )}
-          {e.invitees && e.invitees.length > 0 && (
-            <p className="text-xs text-charcoal-faint mt-1">With {e.invitees.join(", ")}</p>
+          {/* WHO IS COMING AND WHAT THEY SAID, straight from the join table.
+              This line used to read `e.invitees.join(", ")` — an array of
+              names with no answers in it, because a name cannot reply. */}
+          {(invitees[e.id]?.length ?? 0) > 0 && (
+            <p className="text-xs text-charcoal-faint mt-1">
+              With{" "}
+              {invitees[e.id]
+                .map(
+                  (i) =>
+                    `${i.name}${
+                      i.status === "accepted" ? " ✓" : i.status === "declined" ? " (declined)" : " (no reply)"
+                    }`
+                )
+                .join(", ")}
+            </p>
+          )}
+          {/* A session this account scheduled for a client: read through the
+              assigning-professional policy, owned by the client, and shown
+              here because it is this professional's working day. */}
+          {serverEvent(e.id)?.scheduledForClient && (
+            <span className="inline-flex items-center gap-1 rounded-full bg-teal-pale px-2 py-0.5 text-[10px] font-bold text-teal-dark mt-1">
+              Scheduled for a client
+            </span>
           )}
           {e.url && (
             <p className="flex items-center gap-1 text-xs text-primary mt-1 truncate">
@@ -242,6 +317,18 @@ export default function CalendarTab() {
             </p>
           )}
         </button>
+        {/* OUTSIDE THE CARD'S OWN BUTTON, and it has to be: a <button> inside
+            a <button> is invalid HTML, and React says so at runtime. Caught
+            by the console during verification rather than by a type. */}
+        {serverEvent(e.id)?.attachmentPath && (
+          <button
+            onClick={() => void openAttachment(serverEvent(e.id)!.attachmentPath!)}
+            aria-label={`Open the attachment on ${e.title}`}
+            className="tap shrink-0 self-start text-primary"
+          >
+            <Paperclip size={14} />
+          </button>
+        )}
         <div className="flex items-center gap-2 shrink-0">
           {readOnly ? (
             <span className="flex items-center gap-1 text-[10px] font-semibold text-charcoal-faint" aria-label="From your affiliated business">
@@ -252,7 +339,11 @@ export default function CalendarTab() {
               <button onClick={() => openEdit(e)} aria-label={`Edit ${e.title}`} className="tap text-charcoal-faint">
                 <Pencil size={14} />
               </button>
-              <button onClick={() => removeCalendarEvent(e.id)} aria-label={`Delete ${e.title}`} className="tap text-charcoal-faint">
+              <button
+                onClick={() => void persistDelete(e.id)}
+                aria-label={`Delete ${e.title}`}
+                className="tap text-charcoal-faint"
+              >
                 <Trash2 size={14} />
               </button>
             </>
@@ -264,6 +355,11 @@ export default function CalendarTab() {
 
   return (
     <div>
+      {loadError && (
+        <p className="mb-3 rounded-xl bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-status-high">
+          {loadError}
+        </p>
+      )}
       <PageHeader
         title="Calendar"
         right={
@@ -488,7 +584,7 @@ export default function CalendarTab() {
                 const end = Math.max(minutesOf(e.endTime), start + 20);
                 const top = (start / 60) * HOUR_PX;
                 const height = Math.max(((end - start) / 60) * HOUR_PX, 26);
-                const readOnly = isFromBusiness(e);
+                const readOnly = isFromBusiness(e) || !isEditable(e);
                 return (
                   <button
                     key={e.id}
@@ -628,11 +724,19 @@ export default function CalendarTab() {
             </div>
           )}
 
-          {professionalClients.length > 0 && (
+          {/* V8 (QA 8.0): "Change the invitees UI from toggle-Chip-buttons to
+              an actual dropdown." Native multi-select — cmd/ctrl+click to pick
+              more than one, same as any standard form control.
+
+              THE LIST IS THE ENTITLEMENT, NOT THE ROSTER. It used to be
+              `professionalClients`, local state, and the chosen names were
+              written into an `invitees[]` array of strings. These are real
+              accounts from an active relationship — the same set
+              can_invite_to_calendar computes — so the picker cannot offer
+              somebody the database would refuse. If it somehow does, ATX12
+              comes back with a sentence rather than a constraint name. */}
+          {candidates.length > 0 ? (
             <label className="block">
-              {/* V8 (QA 8.0): "Change the invitees UI from toggle-Chip-buttons
-                  to an actual dropdown." Native multi-select — cmd/ctrl+click
-                  to pick more than one, same as any standard form control. */}
               <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Invitees</span>
               <select
                 multiple
@@ -644,17 +748,51 @@ export default function CalendarTab() {
                   }))
                 }
                 className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
-                size={Math.min(4, professionalClients.length)}
+                size={Math.min(4, candidates.length)}
               >
-                {professionalClients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.prefix ? `${c.prefix} ` : ""}
+                {candidates.map((c) => (
+                  <option key={c.userId} value={c.userId}>
                     {c.name}
                   </option>
                 ))}
               </select>
               <p className="text-[11px] text-charcoal-faint mt-1.5">Hold Ctrl/Cmd to select more than one.</p>
+
+              {/* WHO SAID WHAT, on an event that already has invitations. The
+                  migration kept declines visible for the owner precisely so
+                  this can be shown — hiding them would leave a professional
+                  unable to tell "declined" from "never invited". */}
+              {editingId && (invitees[editingId]?.length ?? 0) > 0 && (
+                <div className="mt-2.5 space-y-1">
+                  {invitees[editingId].map((i) => (
+                    <div key={i.userId} className="flex items-center justify-between gap-2">
+                      <span className="text-xs text-charcoal-soft truncate">{i.name}</span>
+                      <span
+                        className={clsx(
+                          "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
+                          i.status === "accepted"
+                            ? "bg-primary-pale text-primary-dark"
+                            : i.status === "declined"
+                            ? "bg-cream-soft text-charcoal-faint"
+                            : "bg-gold/15 text-gold"
+                        )}
+                      >
+                        {i.status === "accepted"
+                          ? "Accepted"
+                          : i.status === "declined"
+                          ? "Declined"
+                          : "No reply yet"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </label>
+          ) : (
+            <p className="text-[11px] text-charcoal-faint">
+              You can invite clients and colleagues you work with. Once a connection is active,
+              they'll appear here.
+            </p>
           )}
 
           <label className="block">
@@ -667,13 +805,44 @@ export default function CalendarTab() {
             />
           </label>
 
+          {/* A REAL UPLOAD, AND ONLY ONCE THE EVENT EXISTS. This input used to
+              keep `e.target.files?.[0]?.name` and nothing else — the bytes
+              were never read, and the filename was folded into the notes as
+              "Attachment: report.pdf". An event claimed to carry a document
+              that did not exist anywhere.
+
+              The object path is <event_id>/<uploader_id>/<name>, so there is
+              no event id to upload against until the event has been saved.
+              Offering the control before then would mean holding the file
+              through the save and hoping. */}
           <label className="block">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Attachment</span>
-            <input
-              type="file"
-              onChange={(e) => setDraft((d) => ({ ...d, attachmentName: e.target.files?.[0]?.name ?? "" }))}
-              className="w-full text-xs text-charcoal-faint file:mr-3 file:rounded-lg file:border-0 file:bg-cream-soft file:px-3 file:py-2 file:text-xs file:font-semibold file:text-charcoal-soft"
-            />
+            {editingId ? (
+              <>
+                {serverEvent(editingId)?.attachmentPath && (
+                  <button
+                    onClick={() => void openAttachment(serverEvent(editingId)!.attachmentPath!)}
+                    className="tap mb-2 flex items-center gap-1.5 text-xs font-semibold text-primary"
+                  >
+                    <Paperclip size={12} /> Open current attachment
+                  </button>
+                )}
+                <input
+                  type="file"
+                  accept={acceptFor("calendar-attachments")}
+                  disabled={saving}
+                  onChange={(e) => e.target.files?.[0] && void attachFile(editingId, e.target.files[0])}
+                  className="w-full text-xs text-charcoal-faint file:mr-3 file:rounded-lg file:border-0 file:bg-cream-soft file:px-3 file:py-2 file:text-xs file:font-semibold file:text-charcoal-soft"
+                />
+                <p className="text-[11px] text-charcoal-faint mt-1.5">
+                  Invitees can open whatever you attach here.
+                </p>
+              </>
+            ) : (
+              <p className="text-[11px] text-charcoal-faint">
+                Save the event first, then reopen it to attach a file.
+              </p>
+            )}
           </label>
 
           <label className="block">
@@ -687,14 +856,24 @@ export default function CalendarTab() {
             />
           </label>
 
-          <Button fullWidth size="lg" onClick={saveEvent} disabled={!draft.title.trim()}>
-            {editingId ? "Save changes" : "Save event"}
+          {saveError && (
+            <p className="text-xs font-semibold text-status-high text-center">{saveError}</p>
+          )}
+
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => void saveEvent()}
+            disabled={!draft.title.trim() || saving}
+          >
+            {saving ? "Saving…" : editingId ? "Save changes" : "Save event"}
           </Button>
 
           {editingId && (
             <Button
               fullWidth
               variant="outline"
+              disabled={saving}
               className="!border-teal/30 !text-teal-dark"
               onClick={() => {
                 if (!confirmDelete) {
@@ -702,8 +881,9 @@ export default function CalendarTab() {
                   setTimeout(() => setConfirmDelete(false), 3000);
                   return;
                 }
-                removeCalendarEvent(editingId);
-                setComposeOpen(false);
+                void persistDelete(editingId).then((ok) => {
+                  if (ok) setComposeOpen(false);
+                });
               }}
             >
               <Trash2 size={15} /> {confirmDelete ? "Tap again to confirm" : "Delete event"}
