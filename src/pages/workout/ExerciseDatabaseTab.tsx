@@ -101,6 +101,7 @@ export default function ExerciseDatabaseTab() {
     customExercises,
     addCustomExercise,
     updateCustomExercise,
+    removeCustomExercise,
   } = useApp();
   const [view, setView] = useState<ViewMode>("list");
   const [sort, setSort] = useState<SortMode>("alphabetical");
@@ -408,6 +409,16 @@ export default function ExerciseDatabaseTab() {
         onClose={() => setEditingExercise(null)}
         initial={editingExercise ?? undefined}
         duplicateFromStock={!!editingExercise && !editingExercise.isCustom}
+        // Only a custom exercise can be deleted, and only from here: this tab
+        // is the one place the user's own movements are listed and opened.
+        onDelete={
+          editingExercise?.isCustom
+            ? () => {
+                void removeCustomExercise(editingExercise.id);
+                setEditingExercise(null);
+              }
+            : undefined
+        }
         onSave={(data: CustomExerciseData) => {
           if (!editingExercise) return;
           if (editingExercise.isCustom) {

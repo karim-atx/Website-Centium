@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import type { MuscleGroup, ExerciseClassification } from "../../types";
+import { Trash2 } from "lucide-react";
 import clsx from "clsx";
 
 const muscleGroupOptions: { value: MuscleGroup; label: string }[] = [
@@ -56,12 +57,20 @@ export const CreateCustomExerciseSheet: React.FC<{
   // built-in data, so it saves as a new custom exercise instead — this
   // makes that distinction clear instead of implying an in-place edit.
   duplicateFromStock?: boolean;
-}> = ({ open, onClose, onSave, initial, duplicateFromStock }) => {
+  /**
+   * Supplied only when editing one of the user's OWN movements, which is the
+   * only kind that can be deleted: a catalog row is shared reference data and
+   * no client role can write to public.exercises at all. Omitted, no delete
+   * control renders — the same gate ExerciseSettingsSheet's onDelete uses.
+   */
+  onDelete?: () => void;
+}> = ({ open, onClose, onSave, initial, duplicateFromStock, onDelete }) => {
   const [name, setName] = useState("");
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([]);
   const [secondaryMuscleGroups, setSecondaryMuscleGroups] = useState<MuscleGroup[]>([]);
   const [classification, setClassification] = useState<ExerciseClassification>("machine_other");
   const [classificationOpen, setClassificationOpen] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
     if (open) {
@@ -70,6 +79,9 @@ export const CreateCustomExerciseSheet: React.FC<{
       setSecondaryMuscleGroups(initial?.secondaryMuscleGroups ?? []);
       setClassification(initial?.classification ?? "machine_other");
       setClassificationOpen(false);
+      // Armed state never survives the sheet closing, so reopening on a
+      // different exercise cannot inherit a tap meant for the previous one.
+      setConfirmDelete(false);
     }
   }, [open, initial]);
 
@@ -182,6 +194,35 @@ export const CreateCustomExerciseSheet: React.FC<{
         <Button fullWidth size="lg" onClick={save} disabled={!name.trim()}>
           Save exercise
         </Button>
+
+        {/* TAP AGAIN TO CONFIRM, which is this app's convention for a
+            destructive action inside a sheet — copied from
+            ExerciseSettingsSheet rather than reinvented, down to the 3s
+            disarm. The modal confirm used for deleting a ROUTINE is the
+            heavier treatment and is not what a sheet's own actions use.
+
+            "custom" is in the label on purpose: the neighbouring sheet's
+            "Delete exercise" takes a movement out of one routine, while this
+            removes the movement itself from the user's library. */}
+        {onDelete && (
+          <Button
+            fullWidth
+            variant="outline"
+            className="!border-teal/30 !text-teal-dark"
+            onClick={() => {
+              if (!confirmDelete) {
+                setConfirmDelete(true);
+                setTimeout(() => setConfirmDelete(false), 3000);
+                return;
+              }
+              onDelete();
+              onClose();
+            }}
+          >
+            <Trash2 size={14} />
+            {confirmDelete ? "Tap again to confirm" : "Delete custom exercise"}
+          </Button>
+        )}
       </div>
     </BottomSheet>
   );
