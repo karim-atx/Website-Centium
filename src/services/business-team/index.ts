@@ -1,4 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
+import { resolveMyBusinessId } from "../business-profile";
 
 // A business's affiliated professionals: the real business_employees rows.
 //
@@ -24,27 +25,6 @@ export interface TeamMember {
 export type TeamResult =
   | { ok: true; businessId: string | null; members: TeamMember[] }
   | { ok: false; message: string };
-
-/**
- * The business_profiles row this account owns, or null.
- *
- * A business account without one is an ordinary state rather than an error:
- * business_profiles is written when the listing is first edited, and a brand
- * new business has not been there yet. It simply has no team.
- */
-async function myBusinessId(userId: string): Promise<{ ok: boolean; id: string | null }> {
-  const { data, error } = await supabase
-    .from("business_profiles")
-    .select("id")
-    .eq("profile_id", userId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[business-team] Could not read the business profile:", error.message);
-    return { ok: false, id: null };
-  }
-  return { ok: true, id: data?.id ?? null };
-}
 
 /**
  * Everyone affiliated with this account's business.
@@ -73,7 +53,7 @@ async function myBusinessId(userId: string): Promise<{ ok: boolean; id: string |
  * decision rather than something this service can reach for.
  */
 export async function fetchMyTeam(userId: string): Promise<TeamResult> {
-  const business = await myBusinessId(userId);
+  const business = await resolveMyBusinessId(userId);
   if (!business.ok) {
     return { ok: false, message: "Couldn't load your team. Check your connection and try again." };
   }

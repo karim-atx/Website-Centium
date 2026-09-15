@@ -196,3 +196,43 @@ export async function saveMyBusinessProfile(
   }
   return { ok: true, profile: toProfile(inserted.data as Row) };
 }
+
+/**
+ * The business_profiles.id this account owns, or null when it has no row yet.
+ *
+ * THE ONE PIECE EVERY BUSINESS-OWNED TABLE NEEDS. business_classes,
+ * business_offerings, business_discounts and membership_plans each carry a
+ * `business_id` in the payload itself — unlike this table, which is addressed
+ * by `profile_id` in the filter and so never needs the uuid at all. Their RLS
+ * policies all read the same way: the business_id must belong to a
+ * business_profiles row whose profile_id is auth.uid().
+ *
+ * WHICH MAKES THIS THE EXACT SPOT THE BIZ- CODE TRAP LIVES. `user.businessId`
+ * is a four-character display code minted at onboarding
+ * (`BIZ-${Math.random().toString(36).slice(2, 6).toUpperCase()}`) and kept in
+ * local state; it is not this id and never was. Sending it as a business_id
+ * fails the uuid cast, and using it as a filter returns nothing forever while
+ * looking exactly like "you haven't created anything yet" — the shape that
+ * already cost this project two rounds on business_employees. Every caller
+ * goes through here so there is one place to get it wrong.
+ *
+ * NO ROW IS AN ORDINARY STATE, not an error: business_profiles is created the
+ * first time an owner saves their listing, so a brand new business has none —
+ * and therefore cannot own a class, offering, discount or plan yet either.
+ * Callers are expected to say so rather than show an empty list.
+ */
+export async function resolveMyBusinessId(
+  userId: string
+): Promise<{ ok: true; id: string | null } | { ok: false }> {
+  const { data, error } = await supabase
+    .from("business_profiles")
+    .select("id")
+    .eq("profile_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("[business-profile] Could not resolve the business id:", error.message);
+    return { ok: false };
+  }
+  return { ok: true, id: data?.id ?? null };
+}
