@@ -354,7 +354,9 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
             {todaysWorkout.exercises.length} exercises · ~{todaysWorkout.durationMin} min
           </p>
           <p className="text-[11px] text-primary-deep-text font-semibold mt-1">
-            🔥 {streaks.find((s) => s.id === "s3")?.days ?? 0} workout streak
+            {/* Found by category, not by id: "s3" was the mock seed's id and a
+                real row carries a uuid. */}
+            🔥 {streaks.find((s) => s.category === "workout")?.days ?? 0} workout streak
           </p>
         </div>
       );

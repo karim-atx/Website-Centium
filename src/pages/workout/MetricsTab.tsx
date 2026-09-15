@@ -66,7 +66,10 @@ export default function MetricsTab() {
   const topGroup = sortedGroups[0];
   const dominantShare = topGroup && totalSets > 0 ? topGroup[1] / totalSets : 0;
 
-  const workoutStreak = streaks.find((s) => s.id === "s3") ?? streaks.find((s) => /workout/i.test(s.label));
+  // By category first — "s3" was the mock seed's id and a hydrated row carries
+  // a uuid. The label match stays as the fallback for a pre-hydration render.
+  const workoutStreak =
+    streaks.find((s) => s.category === "workout") ?? streaks.find((s) => /workout/i.test(s.label));
 
   const weightSeries = Object.entries(weightByDate)
     .sort(([a], [b]) => a.localeCompare(b))

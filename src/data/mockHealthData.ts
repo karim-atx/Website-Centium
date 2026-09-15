@@ -146,10 +146,13 @@ export const streaks: Streak[] = [
   //
   // The labels are the ones services/streaks seeds, so what renders here and
   // what the nightly sweep advances are the same four things.
-  { id: "s1", label: "Logging streak", days: 7, auto: true },
-  { id: "s2", label: "Movement streak", days: 12, auto: true },
-  { id: "s3", label: "Workout streak", days: 4, auto: true },
-  { id: "s4", label: "Nutrition streak", days: 21, auto: true },
+  // `category` is what consumers look these up by now — the ids below are
+  // this seed's own and a hydrated row carries a uuid instead, so a lookup on
+  // "s3" would find nothing the moment real data arrived.
+  { id: "s1", label: "Logging streak", days: 7, auto: true, category: "logging" },
+  { id: "s2", label: "Movement streak", days: 12, auto: true, category: "movement" },
+  { id: "s3", label: "Workout streak", days: 4, auto: true, category: "workout" },
+  { id: "s4", label: "Nutrition streak", days: 21, auto: true, category: "nutrition" },
 ];
 
 export const defaultHabits: HabitItem[] = [

@@ -85,7 +85,12 @@ import {
   manualFood,
 } from "../services/food";
 import { ensureProfileRow, fetchProfile } from "../services/profile";
-import { ensureAutoStreaks } from "../services/streaks";
+import {
+  AUTO_STREAK_CATEGORIES,
+  AUTO_STREAK_LABEL_BY_CATEGORY,
+  ensureAutoStreaks,
+  getAutoStreaks,
+} from "../services/streaks";
 import {
   getRecoveryPendingUserId,
   markRecoveryPending,
@@ -410,6 +415,8 @@ interface AppState {
   // gates the one-time explainer shown the first time it's active.
   recoverySensitive: boolean;
   setRecoverySensitive: (on: boolean) => void;
+  /** Null until the first streak read finishes or fails. */
+  streaksError: string | null;
   recoverySensitiveIntroSeen: boolean;
   setRecoverySensitiveIntroSeen: (seen: boolean) => void;
   /**
@@ -2273,38 +2280,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [habits]);
 
-  // V4: the four core streaks (logging/movement/workout/nutrition) are
-  // derived from real activity instead of being manually incremented —
-  // recomputed whenever the underlying logs change.
-  const countConsecutiveDays = (dates: Set<string>, anchor: string): number => {
-    let count = 0;
-    let cursor = anchor;
-    while (dates.has(cursor)) {
-      count++;
-      cursor = shiftDate(cursor, -1);
-    }
-    return count;
-  };
+  // --- auto streak hydration ---------------------------------------------
+  //
+  // THE FOUR COUNTS COME FROM THE DATABASE NOW. They used to be recomputed
+  // here from whatever the client happened to hold, and that derivation was
+  // wrong in ways worth recording, because the numbers it produced are the
+  // ones users have been looking at:
+  //
+  //   workout   was `workoutSessions.length` — a LIFETIME COUNT wearing the
+  //             word "streak". Train twice a year and it said 2.
+  //   movement  counted workout days. The sweep counts steps and calories
+  //             burned; those are different questions and only one of them is
+  //             what "movement" means.
+  //   logging   counted food or workouts. The server's umbrella also includes
+  //             health metrics and habit completions, so a day spent logging
+  //             steps counted for nothing here.
+  //   all four  anchored on TODAY, while the sweep measures the run ending
+  //             YESTERDAY — so the client's number jumped the moment you
+  //             logged and the server's never agreed with it.
+  //
+  // WHICH MEANS THIS IS NOT A REFACTOR. The displayed numbers change, and the
+  // new ones are the ones the database will keep.
+  //
+  // THEY ALSO STOP MOVING THE INSTANT YOU LOG, which is the real trade. The
+  // sweep runs nightly, so today's food does not bump the counter until it
+  // does. That is the honest behaviour: a streak is a claim about days, and
+  // the old liveliness was bought by computing a different thing.
+  const [streaksError, setStreaksError] = useState<string | null>(null);
+
   useEffect(() => {
-    const foodDates = new Set(foodLog.map((e) => e.date));
-    const workoutDates = new Set(workoutSessions.map((s) => s.date));
-    const anyDates = new Set([...foodDates, ...workoutDates]);
-    const loggingDays = countConsecutiveDays(anyDates, today);
-    const nutritionDays = countConsecutiveDays(foodDates, today);
-    const movementDays = countConsecutiveDays(workoutDates, today);
-    const workoutTotal = workoutSessions.length;
-    setStreaks((prev) =>
-      prev.map((s) => {
-        if (!s.auto) return s;
-        if (s.id === "s1") return { ...s, days: loggingDays };
-        if (s.id === "s2") return { ...s, days: movementDays };
-        if (s.id === "s3") return { ...s, days: workoutTotal };
-        if (s.id === "s4") return { ...s, days: nutritionDays };
-        return s;
-      })
-    );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [foodLog, workoutSessions, today]);
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+
+    // SEEDS FIRST, THEN READS. An account created before the rows existed has
+    // none, and reading before seeding would show four zeroes on this visit
+    // and only self-heal on the next one. ensureAutoStreaks is memoised, so
+    // sharing it with the auth listener costs one call, not two.
+    void ensureAutoStreaks(authUserId)
+      .then(() => getAutoStreaks(authUserId))
+      .then((result) => {
+        if (cancelled) return;
+        if (!result.ok) {
+          // A failed read is not an empty account. Keep whatever is on screen,
+          // the same rule the diary and custom meals follow.
+          setStreaksError(result.message ?? "Couldn't load your streaks.");
+          return;
+        }
+        setStreaksError(null);
+
+        const byCategory = new Map(result.streaks.map((r) => [r.category, r]));
+        setStreaks((prev) => {
+          // User-created streaks are untouched: they live in local state, are
+          // linked to a habit, and the sweep knows nothing about them.
+          const own = prev.filter((s) => !s.auto);
+          const auto = AUTO_STREAK_CATEGORIES.map((category) => {
+            const row = byCategory.get(category);
+            return {
+              // A category with no row shows zero rather than disappearing.
+              // Seeding above makes that nearly unreachable, but "nearly" is
+              // not a reason to render four tiles as three.
+              id: row?.id ?? `auto-${category}`,
+              label: AUTO_STREAK_LABEL_BY_CATEGORY[category],
+              days: row?.days ?? 0,
+              auto: true as const,
+              category,
+            };
+          });
+          return [...auto, ...own];
+        });
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, profileReady, setStreaks]);
 
   const updateMetricValue: AppState["updateMetricValue"] = (type, value) => {
     setMetricValues((prev) => ({ ...prev, [type]: value }));
@@ -2986,6 +3035,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setDietaryRestriction,
       recoverySensitive,
       setRecoverySensitive,
+      streaksError,
       recoverySensitiveIntroSeen,
       voiceDisclosureSeen,
       setVoiceDisclosureSeen,
@@ -3160,6 +3210,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clientCustomMeals,
       dietaryRestriction,
       recoverySensitive,
+      streaksError,
       recoverySensitiveIntroSeen,
       voiceDisclosureSeen,
       setVoiceDisclosureSeen,

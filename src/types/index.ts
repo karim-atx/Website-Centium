@@ -893,6 +893,15 @@ export interface Streak {
   // V4: the four core streaks (logging/movement/workout/nutrition) are
   // auto-derived from real activity and can't be edited or given a goal.
   auto?: boolean;
+  /**
+   * Which of the four this is, set only on rows that came from the database.
+   *
+   * Consumers used to find a specific streak by hardcoded id ("s3" for
+   * workout). Those ids belonged to the mock seed; a real row carries a uuid,
+   * so the lookups had to key on something that survives hydration. This is
+   * that key, and it is the same token the sweep matches on.
+   */
+  category?: "logging" | "movement" | "workout" | "nutrition";
   // V4 (QA 4.0): a user-added streak is linked to one existing habit — its
   // `days` count tracks that habit's own streakDays automatically.
   habitId?: string;
