@@ -1,11 +1,20 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import type { CalendarEvent } from "../../types";
-import { ChevronLeft, ChevronRight, Plus, MapPin, FileText, Trash2, Repeat, User, Store } from "lucide-react";
+import {
+  createEvent,
+  deleteEvent,
+  getClientCalendar,
+  respondToInvite,
+  updateEvent,
+  type ClientCalendarEvent,
+} from "../../services/calendar";
+import { isUuid } from "../../services/food";
+import { ChevronLeft, ChevronRight, Plus, MapPin, FileText, Trash2, Repeat, Check, X } from "lucide-react";
 import clsx from "clsx";
 
 type View = "year" | "month" | "week" | "day";
@@ -63,9 +72,25 @@ const HOUR_PX = 56;
 // calendarEvents/businessClasses stores the Professional/Business calendars
 // write to, filtered to what actually involves this client, rather than a
 // separate client-only event list.
+//
+// PHASE 1 (2026-09): REAL ROWS, AND THE NAME FILTER IS GONE. This screen used
+// to decide what belonged to you with
+//
+//   calendarEvents.filter((e) => e.createdByClient || e.invitees?.includes(user.firstName))
+//
+// against a local, per-browser store. `invitees` was an array of NAMES, so two
+// accounts whose owner is called Sarah saw each other's events — and an
+// invitation could not be answered, could not survive a rename, and could not
+// be notified. calendar_events has existed since the professional_business
+// migration and calendar_event_invitees was added for exactly this; both were
+// unused by any client code.
+//
+// THE SHARED LOCAL STORE IS LEFT ALONE. The professional's CalendarTab writes
+// the same `calendarEvents` state and is Phase 2. Reading it here as well
+// would put two sources behind one screen; it is used below for one thing
+// only — carrying pre-existing local events up to the server once.
 export default function ClientCalendarTab() {
-  const { calendarEvents, addCalendarEvent, updateCalendarEvent, removeCalendarEvent, user, businessDirectory } =
-    useApp();
+  const { calendarEvents, updateCalendarEvent, authUserId, profileReady } = useApp();
   const today = new Date();
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });
@@ -75,22 +100,105 @@ export default function ClientCalendarTab() {
   const [draft, setDraft] = useState(blankDraft(selectedDate));
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Events that involve this client: their own, or one a connected
-  // professional invited them to by name.
-  const myEvents = useMemo(
-    () => calendarEvents.filter((e) => e.createdByClient || e.invitees?.includes(user.firstName)),
-    [calendarEvents, user.firstName]
-  );
+  const [events, setEvents] = useState<ClientCalendarEvent[]>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [respondingTo, setRespondingTo] = useState<string | null>(null);
 
-  const isMine = (e: CalendarEvent) => !!e.createdByClient;
+  // Populate on launch, and keep whatever is on screen if the read fails —
+  // the rule every hydration in this app follows. A failed read is not an
+  // empty calendar, and blanking one would look exactly like losing data.
+  const load = useCallback(async () => {
+    if (!authUserId) return;
+    const result = await getClientCalendar(authUserId);
+    if (!result.ok) {
+      setLoadError(result.message);
+      return;
+    }
+    setLoadError(null);
+    setEvents(result.events);
+  }, [authUserId]);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    void load();
+  }, [profileReady, authUserId, load]);
+
+  // ONE-TIME UPLOAD OF LOCAL EVENTS, and there is real data to rescue even
+  // though nothing is seeded: `calendarEvents` defaults to [], so every local
+  // row is something a person actually typed, on a device where it was the
+  // only copy.
+  //
+  // The candidate test is the id's own shape — a local id is not a uuid — the
+  // same key custom meals and custom exercises use rather than a migration
+  // flag. A successful upload rewrites the LOCAL id to the server's, so the
+  // same event cannot qualify twice, and the professional's tab keeps showing
+  // it meanwhile. The ref stops a failed attempt retrying in a loop.
+  const uploadAttempted = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    if (uploadAttempted.current === authUserId) return;
+    const pending = calendarEvents.filter((e) => e.createdByClient && !isUuid(e.id));
+    if (pending.length === 0) return;
+    uploadAttempted.current = authUserId;
+
+    let cancelled = false;
+    void (async () => {
+      for (const local of pending) {
+        const result = await createEvent(authUserId, {
+          title: local.title,
+          date: local.date,
+          allDay: local.allDay,
+          startTime: local.startTime,
+          endTime: local.endTime,
+          location: local.location,
+          url: local.url,
+          notes: local.notes,
+          repeat: local.repeat,
+          color: local.color,
+        });
+        if (!result.ok) {
+          // Kept local, kept visible, not retried in a loop: the next visit
+          // is the retry.
+          console.error("[calendar] Could not upload a local event.");
+          continue;
+        }
+        // DELIBERATELY NOT GUARDED BY `cancelled`, and this was measured
+        // rather than reasoned about. The row exists on the server the moment
+        // createEvent returns; rewriting the local id is not a UI update, it
+        // is the record that the upload happened. Guarding it meant
+        // StrictMode's mount/cleanup/mount cycle cancelled the first run
+        // between the insert and the bookkeeping — the event was uploaded and
+        // still looked local, so the next visit uploaded it again. In
+        // production the same window opens any time someone leaves this
+        // screen mid-upload.
+        updateCalendarEvent(local.id, { id: result.event.id });
+      }
+      // Only the refresh cares whether this screen is still mounted.
+      if (!cancelled) await load();
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+    // calendarEvents is read for the one-time upload and must not re-trigger
+    // this every time the professional tab edits something.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profileReady, authUserId]);
+
+  // Editable means owned AND client-created. An invitation is somebody else's
+  // event: the only thing this screen may write about it is the answer.
+  const isMine = (e: ClientCalendarEvent) => e.mine && !!e.createdByClient;
 
   const eventsByDate = useMemo(() => {
-    const map: Record<string, CalendarEvent[]> = {};
-    myEvents.forEach((e) => {
+    const map: Record<string, ClientCalendarEvent[]> = {};
+    events.forEach((e) => {
       (map[e.date] ??= []).push(e);
     });
     return map;
-  }, [myEvents]);
+  }, [events]);
 
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
   const firstWeekday = new Date(cursor.year, cursor.month, 1).getDay();
@@ -119,10 +227,11 @@ export default function ClientCalendarTab() {
     setComposeOpen(true);
   };
 
-  const openEdit = (e: CalendarEvent) => {
+  const openEdit = (e: ClientCalendarEvent) => {
     if (!isMine(e)) return;
     setEditingId(e.id);
     setConfirmDelete(false);
+    setSaveError(null);
     setDraft({
       title: e.title,
       date: e.date,
@@ -137,23 +246,73 @@ export default function ClientCalendarTab() {
     setComposeOpen(true);
   };
 
-  const saveEvent = () => {
-    if (!draft.title.trim()) return;
-    const base: Omit<CalendarEvent, "id"> = {
+  const saveEvent = async () => {
+    if (!draft.title.trim() || !authUserId || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    const payload = {
       title: draft.title.trim(),
       date: draft.date,
       allDay: draft.allDay,
-      startTime: draft.allDay ? undefined : draft.startTime,
-      endTime: draft.allDay ? undefined : draft.endTime,
-      location: draft.location.trim() || undefined,
+      startTime: draft.startTime,
+      endTime: draft.endTime,
+      location: draft.location,
       repeat: draft.repeat,
-      notes: draft.notes.trim() || undefined,
+      notes: draft.notes,
       color: draft.color,
-      createdByClient: true,
     };
-    if (editingId) updateCalendarEvent(editingId, base);
-    else addCalendarEvent(base);
+    const result = editingId
+      ? await updateEvent(authUserId, editingId, payload)
+      : await createEvent(authUserId, payload);
+    setSaving(false);
+    if (!result.ok) {
+      setSaveError(result.message);
+      return;
+    }
+    // The row the server returned, not the draft: what is on screen is then
+    // what is actually stored, including anything the database normalised.
+    setEvents((prev) =>
+      editingId
+        ? prev.map((e) => (e.id === editingId ? result.event : e))
+        : [...prev, result.event]
+    );
     setComposeOpen(false);
+  };
+
+  const removeEvent = async () => {
+    if (!editingId || !authUserId || saving) return;
+    setSaving(true);
+    setSaveError(null);
+    const result = await deleteEvent(authUserId, editingId);
+    setSaving(false);
+    if (!result.ok) {
+      setSaveError(result.message ?? "Couldn't delete that event.");
+      return;
+    }
+    setEvents((prev) => prev.filter((e) => e.id !== editingId));
+    setComposeOpen(false);
+  };
+
+  const respond = async (e: ClientCalendarEvent, accepted: boolean) => {
+    if (!e.invite || respondingTo) return;
+    setRespondingTo(e.invite.id);
+    const result = await respondToInvite(e.invite.id, accepted);
+    setRespondingTo(null);
+    if (!result.ok) {
+      setLoadError(result.message ?? "Couldn't save your response.");
+      return;
+    }
+    setLoadError(null);
+    // Declining keeps the event on the calendar, marked — the invitee keeps
+    // their SELECT on both rows, and an event vanishing with no explanation
+    // would be worse than one that says it was declined.
+    setEvents((prev) =>
+      prev.map((x) =>
+        x.invite && x.invite.id === e.invite!.id
+          ? { ...x, invite: { ...x.invite, status: accepted ? "accepted" : "declined" } }
+          : x
+      )
+    );
   };
 
   const selectedEvents = eventsByDate[selectedDate] ?? [];
@@ -163,39 +322,92 @@ export default function ClientCalendarTab() {
     day: "numeric",
   });
   const timedEvents = selectedEvents.filter((e) => !e.allDay);
-  const allDayEvents = selectedEvents.filter((e) => e.allDay);
+  const allDayEvents = selectedEvents.filter((e) => e.allDay && !e.invite);
+  // Every invitation for the day, timed or not — see the Day view below.
+  const invitedEvents = selectedEvents.filter((e) => !!e.invite);
 
-  const sourceLabel = (e: CalendarEvent) => {
-    if (isMine(e)) return null;
-    const businessName = businessDirectory.find((b) => b.id === user.affiliatedBusinessId)?.businessName;
-    return e.notes?.startsWith("Scheduled by") ? e.notes : `From ${businessName ?? "your professional"}`;
+  const inviteLabel: Record<string, string> = {
+    pending: "Invitation",
+    accepted: "Going",
+    declined: "Declined",
   };
 
-  const eventCard = (e: CalendarEvent) => {
+  const eventCard = (e: ClientCalendarEvent) => {
     const mine = isMine(e);
+    const status = e.invite?.status;
     return (
-      <Card key={e.id} className="flex items-start justify-between gap-3" style={{ borderLeft: `4px solid ${e.color ?? "#7D6BB5"}` }}>
-        <button className="min-w-0 text-left flex-1" onClick={() => openEdit(e)} disabled={!mine}>
-          <p className="text-sm font-semibold text-charcoal">{e.title}</p>
-          <p className="text-xs text-charcoal-faint">
-            {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
-            {e.repeat !== "none" && ` · repeats ${e.repeat}`}
-          </p>
-          {e.location && (
-            <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
-              <MapPin size={11} /> {e.location}
+      <Card
+        key={e.id}
+        className="space-y-2"
+        style={{
+          borderLeft: `4px solid ${e.color ?? "#7D6BB5"}`,
+          // A declined event stays on the calendar, and looking different is
+          // how it says so at a glance rather than only in its badge.
+          opacity: status === "declined" ? 0.6 : undefined,
+        }}
+      >
+        <div className="flex items-start justify-between gap-3">
+          <button className="min-w-0 text-left flex-1" onClick={() => openEdit(e)} disabled={!mine}>
+            <p className="text-sm font-semibold text-charcoal">{e.title}</p>
+            <p className="text-xs text-charcoal-faint">
+              {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
+              {e.repeat !== "none" && ` · repeats ${e.repeat}`}
             </p>
+            {e.location && (
+              <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
+                <MapPin size={11} /> {e.location}
+              </p>
+            )}
+            {/* Notes show on an invitation too. They used to be hidden on
+                anything not yours, which meant the one line explaining why
+                you were invited was the line you could not read. */}
+            {e.notes && (
+              <p className="flex items-start gap-1 text-xs text-charcoal-faint mt-1">
+                <FileText size={11} className="mt-0.5 shrink-0" /> {e.notes}
+              </p>
+            )}
+          </button>
+          {status && (
+            <span
+              className={clsx(
+                "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
+                status === "accepted"
+                  ? "bg-primary-pale text-primary-dark"
+                  : status === "declined"
+                  ? "bg-cream-soft text-charcoal-faint"
+                  : "bg-gold/15 text-gold"
+              )}
+            >
+              {inviteLabel[status]}
+            </span>
           )}
-          {mine && e.notes && (
-            <p className="flex items-start gap-1 text-xs text-charcoal-faint mt-1">
-              <FileText size={11} className="mt-0.5 shrink-0" /> {e.notes}
-            </p>
-          )}
-        </button>
-        {!mine && (
-          <span className="flex items-center gap-1 text-[10px] font-semibold text-charcoal-faint shrink-0" aria-label={sourceLabel(e) ?? undefined}>
-            {e.invitees ? <User size={12} /> : <Store size={12} />}
-          </span>
+        </div>
+
+        {/* THE ONLY THING THIS SCREEN MAY WRITE ABOUT SOMEBODY ELSE'S EVENT.
+            Everything above is read-only for an invitation; the grant is
+            column-scoped to responded_at and accepted, so this is not a UI
+            convention but the shape of what the server will accept. */}
+        {e.invite && (
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              fullWidth
+              variant={status === "accepted" ? "primary" : "secondary"}
+              disabled={respondingTo === e.invite.id || status === "accepted"}
+              onClick={() => void respond(e, true)}
+            >
+              <Check size={13} /> {status === "accepted" ? "Going" : "Accept"}
+            </Button>
+            <Button
+              size="sm"
+              fullWidth
+              variant="outline"
+              disabled={respondingTo === e.invite.id || status === "declined"}
+              onClick={() => void respond(e, false)}
+            >
+              <X size={13} /> {status === "declined" ? "Declined" : "Decline"}
+            </Button>
+          </div>
         )}
       </Card>
     );
@@ -216,6 +428,15 @@ export default function ClientCalendarTab() {
           </button>
         }
       />
+
+      {/* A failed read leaves whatever was already on screen and says so,
+          rather than blanking a calendar — which would be indistinguishable
+          from having lost everything on it. */}
+      {loadError && (
+        <p className="mb-3 rounded-xl bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-status-high">
+          {loadError}
+        </p>
+      )}
 
       <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit mb-4">
         {(["year", "month", "week", "day"] as View[]).map((v) => (
@@ -382,6 +603,22 @@ export default function ClientCalendarTab() {
             </button>
           </div>
 
+          {/* INVITATIONS GET A LIST OF THEIR OWN IN DAY VIEW, above the
+              timeline, because the timeline cannot carry them. A timed event
+              renders there as a positioned block a few pixels tall — no room
+              for a badge, let alone two buttons — and Day is where tapping a
+              date in Month view lands. Without this, an invitation to a 4pm
+              session was visible and unanswerable on the screen most people
+              reach first. */}
+          {invitedEvents.length > 0 && (
+            <div className="space-y-2 mb-4">
+              <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">
+                Invitations
+              </p>
+              {invitedEvents.map(eventCard)}
+            </div>
+          )}
+
           {allDayEvents.length > 0 && (
             <div className="space-y-2 mb-4">
               <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide">All day</p>
@@ -410,11 +647,20 @@ export default function ClientCalendarTab() {
                     onClick={() => openEdit(e)}
                     disabled={!mine}
                     className="tap absolute left-0 right-1 rounded-xl px-2.5 py-1.5 text-left overflow-hidden shadow-soft"
-                    style={{ top, height, background: `${e.color ?? "#7D6BB5"}22`, borderLeft: `3px solid ${e.color ?? "#7D6BB5"}` }}
+                    style={{
+                      top,
+                      height,
+                      background: `${e.color ?? "#7D6BB5"}22`,
+                      borderLeft: `3px solid ${e.color ?? "#7D6BB5"}`,
+                      opacity: e.invite?.status === "declined" ? 0.6 : undefined,
+                    }}
                   >
                     <p className="text-xs font-semibold text-charcoal truncate flex items-center gap-1">
                       {e.title}
-                      {!mine && (e.invitees ? <User size={10} /> : <Store size={10} />)}
+                      {/* The timeline block is too small for the badge and the
+                          buttons; the day list above carries both. This says
+                          only that the event is an invitation. */}
+                      {e.invite && <Check size={10} className="shrink-0" />}
                     </p>
                     <p className="text-[10px] text-charcoal-faint truncate">
                       {e.startTime} – {e.endTime}
@@ -539,14 +785,24 @@ export default function ClientCalendarTab() {
             />
           </label>
 
-          <Button fullWidth size="lg" onClick={saveEvent} disabled={!draft.title.trim()}>
-            {editingId ? "Save changes" : "Save event"}
+          {saveError && (
+            <p className="text-xs font-semibold text-status-high text-center">{saveError}</p>
+          )}
+
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => void saveEvent()}
+            disabled={!draft.title.trim() || saving}
+          >
+            {saving ? "Saving…" : editingId ? "Save changes" : "Save event"}
           </Button>
 
           {editingId && (
             <Button
               fullWidth
               variant="outline"
+              disabled={saving}
               className="!border-teal/30 !text-teal-dark"
               onClick={() => {
                 if (!confirmDelete) {
@@ -554,8 +810,7 @@ export default function ClientCalendarTab() {
                   setTimeout(() => setConfirmDelete(false), 3000);
                   return;
                 }
-                removeCalendarEvent(editingId);
-                setComposeOpen(false);
+                void removeEvent();
               }}
             >
               <Trash2 size={15} /> {confirmDelete ? "Tap again to confirm" : "Delete event"}
