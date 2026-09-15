@@ -10,6 +10,8 @@ import { CertificationSheet } from "../../components/profile/CertificationSheet"
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { useIsAmbassador } from "../../hooks/useIsAmbassador";
+import { useReviewsAboutMe } from "../../hooks/useProfessionalReviews";
+import { ReviewItem } from "../../components/professionals/ReviewItem";
 import { removeAvatar, uploadAvatar } from "../../services/avatar";
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
 import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
@@ -23,7 +25,6 @@ import {
   MAX_AGE,
 } from "../../utils/date";
 import { PERSON_ICON } from "../../utils/icons";
-import { LINKED_PROFESSIONAL_REVIEW_ID } from "../professionals/Professionals";
 import {
   Target,
   ChevronRight,
@@ -32,7 +33,6 @@ import {
   Image,
   Trash2,
   Activity,
-  Star,
   Crown,
   BadgeCheck,
   Mail,
@@ -59,7 +59,6 @@ export default function Profile() {
     updateProfile,
     signOut,
     authUserId,
-    professionalReviews,
     premiumPlan,
     recoverySensitive,
     setRecoverySensitive,
@@ -68,6 +67,7 @@ export default function Profile() {
     setRemindersPaused,
   } = useApp();
   const isAmbassador = useIsAmbassador();
+  const { reviews: myReviews, loading: reviewsLoading, error: reviewsError } = useReviewsAboutMe();
   const navigate = useNavigate();
   const [justToggledRecovery, setJustToggledRecovery] = useState(false);
   const [goalsOpen, setGoalsOpen] = useState(false);
@@ -300,22 +300,24 @@ export default function Profile() {
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
             Ratings & Reviews
           </p>
-          {(() => {
-            const review = professionalReviews.find((r) => r.professionalId === LINKED_PROFESSIONAL_REVIEW_ID);
-            if (!review) {
-              return <p className="text-sm text-charcoal-faint">No reviews from clients yet.</p>;
-            }
-            return (
-              <>
-                <div className="flex items-center gap-1 mb-2">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <Star key={i} size={15} className={i < review.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
-                  ))}
-                </div>
-                {review.text && <p className="text-sm text-charcoal-soft leading-relaxed">{review.text}</p>}
-              </>
-            );
-          })()}
+          {/* REAL ROWS, READ AS THE PROFESSIONAL. This used to look up the
+              string "me" in localStorage — the key a client wrote on THEIR
+              device — so it could only ever show something when the client and
+              the professional were the same browser profile. The SELECT policy
+              admits these through `auth.uid() = professional_id`, a branch that
+              carries no redaction filter: a professional sees that one of their
+              reviews was redacted even though its body is gone. */}
+          {myReviews.length === 0 ? (
+            <p className="text-sm text-charcoal-faint">
+              {reviewsError ?? (reviewsLoading ? "Loading reviews…" : "No reviews from clients yet.")}
+            </p>
+          ) : (
+            <div className="space-y-3">
+              {myReviews.map((r) => (
+                <ReviewItem key={r.id} review={r} starSize={15} />
+              ))}
+            </div>
+          )}
         </Card>
       )}
 

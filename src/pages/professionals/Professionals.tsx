@@ -7,6 +7,8 @@ import { Chip } from "../../components/ui/Chip";
 import { Button } from "../../components/ui/Button";
 import { fetchPublicDirectory, type DirectoryListing } from "../../services/directory";
 import { useApp } from "../../context/AppContext";
+import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
+import { fetchLinkedProfessionals } from "../../services/consent";
 import type { ProfessionalType } from "../../types";
 import type { Enums } from "../../../lib/supabase/database.types";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -14,12 +16,13 @@ import { Star, ShieldCheck, UserCheck, Pencil, BadgeCheck, AtSign, Globe2, XIcon
 import ProfessionalDashboard from "./ProfessionalDashboard";
 import { professionalTypeIcon } from "../../utils/icons";
 
-// V7 (QA 7.0): a professional's own account has no id in the static
-// mockProfessionals directory — reviews for the client's actual linked
-// professional (the code-based relationship, not the browse directory) are
-// stored under this sentinel so the professional's own Profile can read
-// what their clients rated them.
-export const LINKED_PROFESSIONAL_REVIEW_ID = "me";
+// LINKED_PROFESSIONAL_REVIEW_ID USED TO LIVE HERE, and it was the literal
+// string "me": a sentinel key under which a client's review of their linked
+// professional was stored in localStorage, and which the professional's own
+// Profile read back — from their own device, where no client had ever written
+// it. Reviews are professional_reviews rows keyed on the professional's real
+// account uuid now, so the sentinel is gone rather than left as an import
+// nothing can honour.
 
 const linkedIcon = (subtype?: string) =>
   subtype && subtype in professionalTypeIcon ? professionalTypeIcon[subtype as ProfessionalType] : UserCheck;
@@ -45,13 +48,69 @@ const listingIcon = (s: Subtype | null) =>
 
 export default function Professionals() {
   const navigate = useNavigate();
-  const { user, professionalReviews, submitProfessionalReview } = useApp();
+  const { user } = useApp();
   const [type, setType] = useState<Subtype | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [linkedProfileOpen, setLinkedProfileOpen] = useState(false);
-  const myLinkedReview = professionalReviews.find((r) => r.professionalId === LINKED_PROFESSIONAL_REVIEW_ID);
-  const [reviewRating, setReviewRating] = useState(myLinkedReview?.rating ?? 5);
-  const [reviewText, setReviewText] = useState(myLinkedReview?.text ?? "");
+  const [savingReview, setSavingReview] = useState(false);
+
+  // THE REVIEW NEEDS AN ACCOUNT, NOT A CODE. This card is rendered from
+  // `user.linkedProfessionalCode`, local onboarding state — fine for showing a
+  // name, useless for writing a row, because professional_reviews.professional_id
+  // is a uuid. The real relationship comes from professional_clients via
+  // fetchLinkedProfessionals, which is what the review is attached to.
+  const [linkedProfessionalId, setLinkedProfessionalId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void fetchLinkedProfessionals().then((result) => {
+      if (cancelled || result.status !== "ok") return;
+      // One card, one professional: this surface has only ever shown a single
+      // linked professional, so the first active relationship is the subject.
+      setLinkedProfessionalId(result.professionals[0]?.professionalId ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const {
+    mine: myLinkedReview,
+    error: reviewError,
+    save: saveLinkedReview,
+    remove: removeLinkedReview,
+  } = useProfessionalReviews(linkedProfessionalId);
+
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+  const [confirmDeleteReview, setConfirmDeleteReview] = useState(false);
+
+  const openReviewSheet = () => {
+    setReviewRating(myLinkedReview?.rating ?? 5);
+    setReviewText(myLinkedReview?.body ?? "");
+    setConfirmDeleteReview(false);
+    setReviewOpen(true);
+  };
+
+  const submitLinkedReview = async () => {
+    if (savingReview) return;
+    setSavingReview(true);
+    const ok = await saveLinkedReview(reviewRating, reviewText);
+    setSavingReview(false);
+    if (ok) setReviewOpen(false);
+  };
+
+  const deleteLinkedReview = async () => {
+    if (!confirmDeleteReview) {
+      setConfirmDeleteReview(true);
+      setTimeout(() => setConfirmDeleteReview(false), 3000);
+      return;
+    }
+    setSavingReview(true);
+    const ok = await removeLinkedReview();
+    setSavingReview(false);
+    if (ok) setReviewOpen(false);
+  };
 
   // The real directory, replacing the static mockProfessionals array this
   // page browsed until now. Those entries were not accounts — their ids
@@ -125,12 +184,18 @@ export default function Professionals() {
             <div className="flex items-center gap-1.5 text-xs text-white/80">
               <ShieldCheck size={13} /> Linked to your account
             </div>
+            {/* Disabled until the real relationship resolves. The card is
+                rendered from local state, so it can be on screen a moment
+                before professional_clients has answered — and a review sheet
+                with nothing to attach the review to is worse than a button
+                that waits. */}
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                setReviewOpen(true);
+                openReviewSheet();
               }}
-              className="tap flex items-center gap-1 text-xs font-semibold text-white bg-white/15 rounded-full px-2.5 py-1"
+              disabled={!linkedProfessionalId}
+              className="tap flex items-center gap-1 text-xs font-semibold text-white bg-white/15 rounded-full px-2.5 py-1 disabled:opacity-50"
             >
               <Pencil size={11} /> {myLinkedReview ? "Edit review" : "Rate & Review"}
             </button>
@@ -140,6 +205,11 @@ export default function Professionals() {
               {Array.from({ length: 5 }, (_, i) => (
                 <Star key={i} size={13} className={i < myLinkedReview.rating ? "fill-white text-white" : "text-white/25"} />
               ))}
+              {myLinkedReview.editedAt && (
+                <span className="ml-1 text-[10px] font-semibold text-white/70 uppercase tracking-wide">
+                  Edited
+                </span>
+              )}
             </div>
           )}
         </Card>
@@ -261,16 +331,19 @@ export default function Professionals() {
               className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
           </label>
-          <Button
-            fullWidth
-            size="lg"
-            onClick={() => {
-              submitProfessionalReview(LINKED_PROFESSIONAL_REVIEW_ID, reviewRating, reviewText.trim());
-              setReviewOpen(false);
-            }}
-          >
-            Submit review
+          {reviewError && <p className="text-xs font-semibold text-status-high">{reviewError}</p>}
+          <Button fullWidth size="lg" onClick={() => void submitLinkedReview()} disabled={savingReview}>
+            {savingReview ? "Saving…" : myLinkedReview ? "Save changes" : "Submit review"}
           </Button>
+          {myLinkedReview && (
+            <button
+              onClick={() => void deleteLinkedReview()}
+              disabled={savingReview}
+              className="tap w-full text-center text-xs font-semibold text-status-high py-2"
+            >
+              {confirmDeleteReview ? "Tap again to delete your review" : "Delete review"}
+            </button>
+          )}
         </div>
       </BottomSheet>
 

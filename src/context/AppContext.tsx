@@ -33,7 +33,6 @@ import type {
   CustomFood,
   HabitIconKey,
   CustomExerciseLibraryItem,
-  ProfessionalReview,
   CalendarEvent,
   WorkoutTemplate,
   WorkoutTemplateAssignment,
@@ -708,9 +707,12 @@ interface AppState {
   /** Null until the first hydration finishes or fails. */
   customExercisesError: string | null;
 
-  // V4 (QA 4.0): one review per professional, submitted from ProfessionalDetail.
-  professionalReviews: ProfessionalReview[];
-  submitProfessionalReview: (professionalId: string, rating: number, text: string) => void;
+  // `professionalReviews` and `submitProfessionalReview` used to live here: a
+  // localStorage array keyed by whatever string the calling screen chose. The
+  // client rating their linked professional wrote the literal key "me", and
+  // the professional read that same key back on their own device, where no
+  // client had ever written it. They are professional_reviews rows now, read
+  // and written through hooks/useProfessionalReviews.
 
   // V9 (QA 9.0): "a hub for all clients to share information publicly."
   forumPosts: ForumPost[];
@@ -2505,11 +2507,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPendingPersonalRecords,
   ]);
 
-  const [professionalReviews, setProfessionalReviews] = usePersistentState<ProfessionalReview[]>(
-    "professionalReviews",
-    []
-  );
-
   // A NEW KEY, NOT A MIGRATION OF THE OLD ONE. The previous
   // "connectedProfessionalIds" key held the opposite meaning, so carrying its
   // contents over would mark exactly the wrong entries as dismissed. Anything
@@ -3995,12 +3992,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomExercises((prev) => prev.filter((e) => e.id !== id));
   };
 
-  const submitProfessionalReview: AppState["submitProfessionalReview"] = (professionalId, rating, text) =>
-    setProfessionalReviews((prev) => {
-      const next = prev.filter((r) => r.professionalId !== professionalId);
-      return [...next, { professionalId, rating, text, date: today }];
-    });
-
   const [forumPosts, setForumPosts] = usePersistentState<ForumPost[]>("forumPosts", mockForumPosts);
   const addForumPost: AppState["addForumPost"] = (category, title, body) =>
     setForumPosts((prev) => [
@@ -4370,8 +4361,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateCustomExercise,
       removeCustomExercise,
       customExercisesError,
-      professionalReviews,
-      submitProfessionalReview,
       forumPosts,
       addForumPost,
       toggleForumLike,
@@ -4525,7 +4514,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       exerciseCatalogError,
       customExercises,
       customExercisesError,
-      professionalReviews,
       forumPosts,
       dismissedMockProfessionalIds,
       businessDirectory,

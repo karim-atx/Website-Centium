@@ -326,13 +326,6 @@ export interface ProfessionalClient {
 // V4 (QA 4.0): a professional's own rating + written review for a professional,
 // submitted from ProfessionalDetail. One per professional per user — kept in
 // local state, no real backend.
-export interface ProfessionalReview {
-  professionalId: string;
-  rating: number;
-  text: string;
-  date: string;
-}
-
 // V6 (QA 6.0): Professional UI — Calendar tab, Apple-Calendar-inspired.
 export interface CalendarEvent {
   id: string;

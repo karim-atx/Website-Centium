@@ -11,7 +11,7 @@ import {
   saveMyBusinessProfile,
   type BusinessProfilePatch,
 } from "../../services/business-profile";
-import { Star, MapPin, Camera, Image, Trash2, LogOut, Store, Mail, Phone, Globe } from "lucide-react";
+import { MapPin, Camera, Image, Trash2, LogOut, Store, Mail, Phone, Globe } from "lucide-react";
 
 // V8 (QA 8.0): "Move Profile fields and Ratings & Reviews out of the
 // Business Dashboard's main view, into a dedicated Business Profile tab" —
@@ -38,7 +38,7 @@ import { Star, MapPin, Camera, Image, Trash2, LogOut, Store, Mail, Phone, Globe 
 // — a different row, a different table, and nothing below shares a code path
 // with it.
 export default function BusinessProfileTab() {
-  const { user, updateProfile, professionalReviews, signOut, authUserId, profileReady } = useApp();
+  const { user, updateProfile, signOut, authUserId, profileReady } = useApp();
   const navigate = useNavigate();
 
   const [stored, setStored] = useState<BusinessProfilePatch>({});
@@ -117,7 +117,6 @@ export default function BusinessProfileTab() {
     setDraft(saved);
     setSavedListing(true);
   };
-  const myBusinessReview = professionalReviews.find((r) => r.professionalId === "my-business");
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
   const [avatarError, setAvatarError] = useState<string | null>(null);
@@ -296,19 +295,16 @@ export default function BusinessProfileTab() {
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         Ratings & Reviews
       </p>
+      {/* BUSINESSES HAVE NO REVIEWS, and this card has never shown one. It
+          read a localStorage entry keyed "my-business" that nothing in the app
+          has ever written — there is no flow, on any screen, that creates one.
+          professional_reviews is keyed on a professional's account and its
+          gate requires a professional_clients relationship, so a business
+          cannot be its subject. Reviewing businesses is a separate feature
+          with its own table; until it exists this says so plainly instead of
+          waiting on a key that will never arrive. */}
       <Card className="mb-6">
-        {myBusinessReview ? (
-          <>
-            <div className="flex items-center gap-1 mb-2">
-              {Array.from({ length: 5 }, (_, i) => (
-                <Star key={i} size={15} className={i < myBusinessReview.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
-              ))}
-            </div>
-            {myBusinessReview.text && <p className="text-sm text-charcoal-soft leading-relaxed">{myBusinessReview.text}</p>}
-          </>
-        ) : (
-          <p className="text-sm text-charcoal-faint">No client reviews yet.</p>
-        )}
+        <p className="text-sm text-charcoal-faint">Client reviews for businesses aren't available yet.</p>
       </Card>
 
       {/* The preview reads the draft, not what is stored — it is a preview of

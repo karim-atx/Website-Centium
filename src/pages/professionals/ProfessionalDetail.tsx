@@ -14,6 +14,8 @@ import {
 } from "../../services/hire-request";
 import type { ProfessionalType } from "../../types";
 import { useApp } from "../../context/AppContext";
+import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
+import { ReviewItem } from "../../components/professionals/ReviewItem";
 import { ChevronLeft, Star, Lock, Pencil, Trash2 } from "lucide-react";
 import { professionalTypeIcon } from "../../utils/icons";
 import { UserCheck } from "lucide-react";
@@ -24,47 +26,19 @@ import { UserCheck } from "lucide-react";
 const iconFor = (t: string) => (t in professionalTypeIcon ? professionalTypeIcon[t as ProfessionalType] : UserCheck);
 
 // V8 (QA 8.0): "pressing on the grey review text would open to all the
-// reviews written by the clients" — this app only ever stores the current
-// user's own review per professional, so a deterministic (id-seeded) set of
-// plausible reviewer names/ratings/comments fills out the rest of the list,
-// same spirit as this prototype's other seeded-but-fake demo data.
-const reviewerNames = [
-  "Nadine K.", "Sami R.", "Yara B.", "Elie S.", "Rana F.", "Tony K.", "Layal C.", "Karim A.",
-];
-const reviewComments = [
-  "Really helped me stay consistent with my plan.",
-  "Professional, punctual, and knows their stuff.",
-  "Great communication between sessions.",
-  "Made a noticeable difference in a few weeks.",
-  "Would recommend to anyone starting out.",
-  "Explains things clearly and adjusts the plan when needed.",
-];
-function hashSeed(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h;
-}
-function mockReviewsFor(professionalId: string, count: number) {
-  return Array.from({ length: count }, (_, i) => {
-    const h = hashSeed(`${professionalId}-review-${i}`);
-    return {
-      name: reviewerNames[h % reviewerNames.length],
-      rating: 3 + (h % 3),
-      text: reviewComments[h % reviewComments.length],
-    };
-  });
-}
+// reviews written by the clients."
+// THE GENERATED REVIEWS THAT USED TO LIVE HERE ARE GONE. The app could only
+// store the current user's own review per professional, so a hash of the
+// professional's id produced plausible reviewer names, ratings and comments to
+// fill out the rest of the list. That was defensible scaffolding for seeded
+// entries and indefensible the moment a real account had a listing: invented
+// testimony, rendered identically to the real thing, about a real person.
+// The list reads professional_reviews now and shows what is there.
 
 export default function ProfessionalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const {
-    professionalReviews,
-    submitProfessionalReview,
-    dismissedMockProfessionalIds,
-    dismissMockProfessional,
-    authUserId,
-  } = useApp();
+  const { dismissedMockProfessionalIds, dismissMockProfessional, authUserId } = useApp();
   const [removeConfirm, setRemoveConfirm] = useState(false);
 
   // Real listings arrive from public_professional_directory keyed by account
@@ -104,8 +78,11 @@ export default function ProfessionalDetail() {
         type: (listing.subtype ?? "trainer") as ProfessionalType,
         specialty: listing.specialty ?? "",
         location: listing.location ?? "",
-        rating: 0,
-        reviews: 0,
+        // The real aggregate, from professional_rating_summary via the
+        // directory view — the same numbers anon sees, computed over
+        // unredacted rows only.
+        rating: listing.averageRating ?? 0,
+        reviews: listing.reviewCount,
         bio: listing.bio ?? "",
         monthlyRate: listing.monthlyRate ?? 0,
         connected: undefined as boolean | undefined,
@@ -229,19 +206,79 @@ export default function ProfessionalDetail() {
     : !!professional?.connected && !dismissedMockProfessionalIds.includes(professional.id);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [allReviewsOpen, setAllReviewsOpen] = useState(false);
-  const myReview = professionalReviews.find((r) => r.professionalId === id);
-  const [reviewRating, setReviewRating] = useState(myReview?.rating ?? 5);
-  const [reviewText, setReviewText] = useState(myReview?.text ?? "");
+  const [savingReview, setSavingReview] = useState(false);
+  const [confirmDeleteReview, setConfirmDeleteReview] = useState(false);
+
+  // REAL ROWS. This was a localStorage array keyed on the directory id, so a
+  // client's review lived on their own device and the professional it was
+  // about never saw it.
+  const {
+    mine: myReview,
+    others: otherReviews,
+    error: reviewError,
+    canReview,
+    save: saveReview,
+    remove: removeReview,
+  } = useProfessionalReviews(realProfessionalId);
+
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState("");
+
+  // The sheet opens on what is stored, not on whatever was typed last time.
+  const openReviewSheet = () => {
+    setReviewRating(myReview?.rating ?? 5);
+    setReviewText(myReview?.body ?? "");
+    setConfirmDeleteReview(false);
+    setReviewOpen(true);
+  };
+
+  /**
+   * Re-reads the listing so the headline average moves with the write.
+   *
+   * THE AGGREGATE IS NOT THIS SCREEN'S TO COMPUTE. average_rating comes from a
+   * view over every unredacted row, so the only honest way to show the new
+   * number is to ask for it again — adding the new rating into the old average
+   * locally would be a guess that drifts the moment anyone else reviews.
+   */
+  const refreshAggregate = async () => {
+    if (!realProfessionalId) return;
+    const found = await fetchListing(realProfessionalId);
+    if (found) setListing(found);
+  };
+
+  const submitReview = async () => {
+    if (savingReview) return;
+    setSavingReview(true);
+    const ok = await saveReview(reviewRating, reviewText);
+    setSavingReview(false);
+    if (!ok) return;
+    await refreshAggregate();
+    setReviewOpen(false);
+  };
+
+  const deleteMyReview = async () => {
+    if (!confirmDeleteReview) {
+      setConfirmDeleteReview(true);
+      setTimeout(() => setConfirmDeleteReview(false), 3000);
+      return;
+    }
+    setSavingReview(true);
+    const ok = await removeReview();
+    setSavingReview(false);
+    if (!ok) return;
+    await refreshAggregate();
+    setReviewOpen(false);
+  };
 
   // V7 (QA 7.0): "Your rating should influence the professional's overall
-  // rating based on the total rating by all people" — blend the user's own
-  // submitted rating into the mock aggregate instead of showing it
-  // separately with no effect on the headline number.
-  const totalReviews = (professional?.reviews ?? 0) + (myReview ? 1 : 0);
-  const displayRating =
-    professional && totalReviews > 0
-      ? ((professional.rating * professional.reviews + (myReview?.rating ?? 0)) / totalReviews).toFixed(1)
-      : professional?.rating.toFixed(1);
+  // rating based on the total rating by all people."
+  // IT DOES NOW, WITHOUT ARITHMETIC HERE. The old code blended the local
+  // review into the mock aggregate by hand, because there was no shared total
+  // to belong to. professional_rating_summary already counts every unredacted
+  // row including this user's, so the number below IS the blend — and
+  // re-adding the own review on top would double-count it.
+  const aggregateCount = professional?.reviews ?? 0;
+  const displayRating = professional && aggregateCount > 0 ? professional.rating.toFixed(1) : null;
 
   if (!professional) {
     return (
@@ -278,16 +315,18 @@ export default function ProfessionalDetail() {
       </div>
 
       <div className="flex items-center gap-4 mb-6 animate-fade-slide-up">
-        {/* Ratings exist only for the seeded mock entries. A real listing has
-            no review schema behind it, so it shows none rather than a 0.0 that
-            looks like a verdict. */}
-        {!isReal && (
+        {/* REAL LISTINGS HAVE REAL RATINGS NOW. This used to be hidden for
+            them entirely, because there was no review schema behind a real
+            account and a 0.0 would have looked like a verdict. There is one
+            now — so the number shows when somebody has actually left one, and
+            stays hidden when nobody has, which is still not a verdict. */}
+        {displayRating !== null && (
           <>
             <span className="flex items-center gap-1 text-sm font-bold text-gold">
               <Star size={14} className="fill-gold" /> {displayRating}
             </span>
             <button onClick={() => setAllReviewsOpen(true)} className="tap text-xs text-charcoal-faint underline">
-              {totalReviews} reviews
+              {aggregateCount} {aggregateCount === 1 ? "review" : "reviews"}
             </button>
           </>
         )}
@@ -310,27 +349,46 @@ export default function ProfessionalDetail() {
           V6 (QA 6.0): merged into a single box — the same card displays
           "My Review" and swaps its content between the empty prompt and
           the submitted review, instead of a separate rate-box + reviews list. */}
-      {isConnected && (
+      {/* GATED ON THE DATABASE'S ANSWER, not on the connection check beside
+          it. can_review_professional admits anyone with a professional_clients
+          row and deliberately does NOT filter disconnected_at, so somebody who
+          has since left this professional can still review the work they did
+          together — which `isConnected` would have hidden. The card also shows
+          for an existing review regardless, so a past client can still edit or
+          remove what they wrote. */}
+      {(canReview === true || myReview) && (
         <Card className="mb-6 animate-fade-slide-up">
           <div className="flex items-center justify-between mb-1.5">
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">My Review</p>
-            <Button size="sm" variant="outline" onClick={() => setReviewOpen(true)}>
+            <Button size="sm" variant="outline" onClick={openReviewSheet}>
               <Pencil size={13} /> {myReview ? "Edit" : "Rate & Review"}
             </Button>
           </div>
           {myReview ? (
-            <>
-              <div className="flex items-center gap-1 mb-2">
-                {Array.from({ length: 5 }, (_, i) => (
-                  <Star key={i} size={14} className={i < myReview.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
-                ))}
-              </div>
-              {myReview.text && <p className="text-sm text-charcoal-soft leading-relaxed">{myReview.text}</p>}
-            </>
+            <ReviewItem review={myReview} showName={false} starSize={14} />
           ) : (
             <p className="text-sm text-charcoal-faint">You haven't reviewed {professional.name.split(" ")[0]} yet</p>
           )}
         </Card>
+      )}
+
+      {/* Why the review card is absent, said once rather than left as silence.
+          Shown only once the gate has actually answered — `canReview` is null
+          while the check is in flight, and telling somebody they can't review
+          before asking would be a guess. */}
+      {isReal && canReview === false && !myReview && (
+        <Card className="mb-6 animate-fade-slide-up">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">Reviews</p>
+          <p className="text-sm text-charcoal-faint">
+            You can only review a professional you've worked with.
+          </p>
+        </Card>
+      )}
+
+      {reviewError && (
+        <p className="mb-6 rounded-xl bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-status-high">
+          {reviewError}
+        </p>
       )}
 
       {isConnected ? (
@@ -523,48 +581,64 @@ export default function ProfessionalDetail() {
               className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
           </label>
-          <Button
-            fullWidth
-            size="lg"
-            onClick={() => {
-              if (!id) return;
-              submitProfessionalReview(id, reviewRating, reviewText.trim());
-              setReviewOpen(false);
-            }}
-          >
-            Submit review
+          {reviewError && <p className="text-xs font-semibold text-status-high">{reviewError}</p>}
+          <Button fullWidth size="lg" onClick={() => void submitReview()} disabled={savingReview}>
+            {savingReview ? "Saving…" : myReview ? "Save changes" : "Submit review"}
           </Button>
+          {/* Delete is only offered once there is something to delete, and
+              asks twice — the same two-tap confirm the rest of the app uses
+              for destructive actions. */}
+          {myReview && (
+            <button
+              onClick={() => void deleteMyReview()}
+              disabled={savingReview}
+              className="tap w-full text-center text-xs font-semibold text-status-high py-2"
+            >
+              {confirmDeleteReview ? "Tap again to delete your review" : "Delete review"}
+            </button>
+          )}
         </div>
       </BottomSheet>
 
-      <BottomSheet open={allReviewsOpen} onClose={() => setAllReviewsOpen(false)} title={`${totalReviews} Reviews`}>
+      <BottomSheet
+        open={allReviewsOpen}
+        onClose={() => setAllReviewsOpen(false)}
+        title={`${aggregateCount} ${aggregateCount === 1 ? "Review" : "Reviews"}`}
+      >
         <div className="space-y-3 animate-fade-slide-up">
           {myReview && (
             <Card className="!bg-primary-pale">
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-sm font-semibold text-charcoal">You</p>
-                <div className="flex items-center gap-0.5">
-                  {Array.from({ length: 5 }, (_, i) => (
-                    <Star key={i} size={12} className={i < myReview.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
-                  ))}
-                </div>
-              </div>
-              {myReview.text && <p className="text-sm text-charcoal-soft leading-relaxed">{myReview.text}</p>}
+              <p className="text-sm font-semibold text-charcoal mb-1.5">You</p>
+              <ReviewItem review={myReview} showName={false} starSize={12} />
             </Card>
           )}
-          {mockReviewsFor(professional.id, Math.min(professional.reviews, 8)).map((r, i) => (
-            <Card key={i}>
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-sm font-semibold text-charcoal">{r.name}</p>
-                <div className="flex items-center gap-0.5">
-                  {Array.from({ length: 5 }, (_, j) => (
-                    <Star key={j} size={12} className={j < r.rating ? "fill-gold text-gold" : "text-charcoal/15"} />
-                  ))}
-                </div>
-              </div>
-              <p className="text-sm text-charcoal-soft leading-relaxed">{r.text}</p>
+          {/* REAL ROWS, NOT mockReviewsFor(). That helper generated plausible
+              names and sentences from a hash of the professional's id — fine
+              as scaffolding for seeded entries, indistinguishable from real
+              testimony once a real account had a listing. It is gone. */}
+          {otherReviews.map((r) => (
+            <Card key={r.id}>
+              <ReviewItem review={r} starSize={12} />
             </Card>
           ))}
+          {aggregateCount === 0 && (
+            <Card className="text-center py-8">
+              <p className="text-sm text-charcoal-faint">No reviews yet.</p>
+            </Card>
+          )}
+          {/* The count comes from the aggregate, which anon can read; the
+              bodies come from a table anon holds no grant on. Signed out,
+              those two disagree — and saying so beats an empty list under a
+              headline promising several. */}
+          {aggregateCount > 0 && otherReviews.length === 0 && !myReview && (
+            <Card className="text-center py-6">
+              <p className="text-sm text-charcoal-faint">
+                {authUserId
+                  ? "No review text to show yet."
+                  : "Sign in to read what clients wrote."}
+              </p>
+            </Card>
+          )}
         </div>
       </BottomSheet>
     </div>

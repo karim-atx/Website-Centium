@@ -15,7 +15,6 @@ import {
   Users,
   CalendarDays,
   Percent,
-  Star,
   KeyRound,
   Wallet,
   Repeat,
@@ -85,7 +84,7 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
 }
 
 export default function BusinessAnalyticsTab() {
-  const { businessListing, professionalReviews, user } = useApp();
+  const { businessListing, user } = useApp();
   // Real counts. Offerings, classes and plans were three localStorage
   // collections, one of them seeded with two invented plans — so a gym that
   // had never created anything still saw "2 membership plans" here.
@@ -215,11 +214,6 @@ export default function BusinessAnalyticsTab() {
               { icon: MousePointerClick, label: "Listing taps (30d)", value: Math.round((businessListing.membersReached * 6 + 128) * 0.18).toLocaleString() },
               { icon: Gift, label: "Perk redemptions", value: businessListing.membersReached.toLocaleString() },
               { icon: Percent, label: "Tap-to-redeem rate", value: `${conversionPct}%` },
-              {
-                icon: Star,
-                label: "Average rating",
-                value: professionalReviews.find((r) => r.professionalId === "my-business")?.rating.toFixed(1) ?? "—",
-              },
               { icon: Tag, label: "Active listings", value: offerings.length },
               ...(isGym
                 ? [
