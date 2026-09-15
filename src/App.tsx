@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { Button } from "./components/ui/Button";
+import { MfaChallenge } from "./components/auth/MfaChallenge";
 import { Layout } from "./components/navigation/Layout";
 import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
 import { Home as MarketingHome } from "./marketing/pages/Home";
@@ -163,8 +164,18 @@ const AdminInterstitial: React.FC = () => {
 };
 
 const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, authUserId, authReady, profileReady, recoveryPending, adminReady, isAdmin, adminConsumerOptIn } =
-    useApp();
+  const {
+    user,
+    authUserId,
+    authReady,
+    profileReady,
+    recoveryPending,
+    adminReady,
+    isAdmin,
+    adminConsumerOptIn,
+    mfaReady,
+    mfaPending,
+  } = useApp();
 
   // Wait for the server profile before deciding. `user.onboarded` starts from
   // localStorage, which is per-browser and not keyed by account — redirecting
@@ -199,11 +210,18 @@ const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children })
   // how an emailed link, or a forwarded one, handed over a working account.
   if (recoveryPending) return <Navigate to="/app/reset-password" replace />;
 
+  // THE SECOND FACTOR OUTRANKS EVERY QUESTION BELOW IT. Until the session is
+  // at the assurance level the account asks for, nothing else about it is
+  // worth acting on — including whether it is an administrator. Below
+  // recoveryPending only because a reset link has to be finishable, and that
+  // screen now carries its own challenge (see ResetPassword).
+  if (!mfaReady) return <RouteLoading />;
+  if (mfaPending) return <MfaChallenge />;
+
   // ABOVE THE ONBOARDING CHECK, AND THAT ORDER IS THE POINT. An admin has no
   // profiles row, so `user.onboarded` is false for them and the line below
   // would send them into the customer onboarding flow — the exact behaviour
-  // this exists to replace. Below recoveryPending because a password reset
-  // outranks everything: an admin mid-recovery still has to finish it.
+  // this exists to replace.
   if (!adminReady) return <RouteLoading />;
   if (isAdmin && !adminConsumerOptIn) return <AdminInterstitial />;
 
@@ -222,8 +240,18 @@ const RequireOnboarded: React.FC<{ children: React.ReactNode }> = ({ children })
  * person had already finished.
  */
 const RedirectIfOnboarded: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { user, authUserId, authReady, profileReady, recoveryPending, adminReady, isAdmin, adminConsumerOptIn } =
-    useApp();
+  const {
+    user,
+    authUserId,
+    authReady,
+    profileReady,
+    recoveryPending,
+    adminReady,
+    isAdmin,
+    adminConsumerOptIn,
+    mfaReady,
+    mfaPending,
+  } = useApp();
 
   // Decided once PER ACCOUNT, then held.
   //
@@ -254,11 +282,14 @@ const RedirectIfOnboarded: React.FC<{ children: React.ReactNode }> = ({ children
   // about, and latching here is what broke it before.
   if (!authUserId) return <>{children}</>;
 
-  // THIS IS THE ONE THAT ACTUALLY FIRES. Signing in happens on the onboarding
-  // route, so an admin arriving through Google lands here — under the old
-  // order, on step two of a flow asking their height and their goals. Placed
-  // after the session check because there is nobody to ask about without one,
-  // and before the latch below so the answer is never cached as "not
+  // THIS IS WHERE THE CHALLENGE ACTUALLY FIRES for most people, for the same
+  // reason the admin notice does: signing in happens on the onboarding route,
+  // so both the email form and the Google return land here. After the session
+  // check because there is nobody to challenge without one.
+  if (!mfaReady) return <RouteLoading />;
+  if (mfaPending) return <MfaChallenge />;
+
+  // Placed before the latch below so the answer is never cached as "not
   // onboarded, carry on".
   if (!adminReady) return <RouteLoading />;
   if (isAdmin && !adminConsumerOptIn) return <AdminInterstitial />;

@@ -47,10 +47,46 @@ export function passwordResetRedirectUrl(): string {
   return `${window.location.origin}/app/reset-password`;
 }
 
-/** Supabase error -> a sentence worth showing a user. */
-function describeAuthError(error: AuthError): string {
+/**
+ * Supabase error -> a sentence worth showing a user.
+ *
+ * Exported for services/mfa, which needs the same translation for the same
+ * reason: its screens render `message` verbatim.
+ */
+export function describeAuthError(error: AuthError): string {
   const code = error.code ?? "";
   const message = error.message ?? "";
+
+  // --- two-factor -------------------------------------------------------
+  //
+  // FIRST, because these are the ones a user meets under pressure — standing
+  // at a sign-in screen holding a phone, with a code that just stopped
+  // working. Every one of them otherwise renders a raw GoTrue sentence; the
+  // AAL ones are the worst of those, since "AAL2 session is required" names
+  // an internal concept and tells the user nothing they can act on.
+  if (code === "mfa_verification_failed" || code === "invalid_code") {
+    return "That code didn't match. Check your authenticator app and try the current code.";
+  }
+  if (code === "mfa_challenge_expired" || /challenge.*expired|expired.*challenge/i.test(message)) {
+    // GoTrue gives a challenge 300 seconds. A screen left open through a
+    // lock and unlock is the ordinary way to reach this, so it reads as an
+    // instruction rather than a failure.
+    return "That took too long — the code request expired. Enter a fresh code to try again.";
+  }
+  if (code === "insufficient_aal" || /aal2/i.test(message)) {
+    return "Confirm your two-factor code first, then try this again.";
+  }
+  if (code === "mfa_factor_not_found") {
+    return "That two-factor method is no longer on your account. Sign in again to continue.";
+  }
+  if (code === "too_many_enrolled_mfa_factors") {
+    return "This account already has as many authenticator apps as it can hold. Remove one first.";
+  }
+  if (code === "mfa_totp_enroll_not_enabled" || code === "mfa_totp_verify_not_enabled") {
+    // Not the user's doing at all: TOTP is switched off on the project.
+    // Named honestly rather than blamed on the code they just typed.
+    return "Two-factor authentication isn't available right now. Try again later.";
+  }
 
   // Kept separate from the auth-attempt throttle below on purpose. This one
   // is not the user doing anything wrong — it is the project's outbound

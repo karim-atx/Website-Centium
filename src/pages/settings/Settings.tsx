@@ -12,10 +12,12 @@ import { ReportBugSheet } from "../../components/profile/ReportBugSheet";
 import { RateAppSheet } from "../../components/profile/RateAppSheet";
 import { StorageUsageCard } from "../../components/profile/StorageUsageCard";
 import { TermsOfServiceSheet } from "../../components/profile/TermsOfServiceSheet";
+import { TwoFactorSheet } from "../../components/profile/TwoFactorSheet";
 import { useApp } from "../../context/AppContext";
 import { subscribeToPush } from "../../services/push";
+import { getMfaStatus } from "../../services/mfa";
 import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Moon,
   Sun,
@@ -33,6 +35,7 @@ import {
   Bug,
   Star,
   FileText,
+  ShieldCheck,
 } from "lucide-react";
 
 /**
@@ -137,6 +140,29 @@ export default function Settings() {
   const [tosOpen, setTosOpen] = useState(false);
   const [reportBugOpen, setReportBugOpen] = useState(false);
   const [rateAppOpen, setRateAppOpen] = useState(false);
+  const [twoFactorOpen, setTwoFactorOpen] = useState(false);
+
+  // Whether a factor is enrolled, so the row can say which state it is in
+  // rather than making someone open the sheet to find out. Null while unknown
+  // — including when the read fails, where a neutral description is honest
+  // and "Off" would be a claim we cannot make.
+  //
+  // Re-read when the sheet CLOSES, which is the only thing that changes it.
+  // mfaPending from context is a different question (a challenge is
+  // outstanding) and would be false for exactly the enrolled users this row
+  // is describing.
+  const [mfaEnrolled, setMfaEnrolled] = useState<boolean | null>(null);
+  useEffect(() => {
+    if (twoFactorOpen) return;
+    let cancelled = false;
+    void getMfaStatus().then((result) => {
+      if (cancelled || !result.ok) return;
+      setMfaEnrolled(result.data.factors.length > 0);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [twoFactorOpen]);
 
   const requestMic = async () => {
     try {
@@ -382,6 +408,38 @@ export default function Settings() {
           that open something, and this opens nothing — it is a reading. */}
       <StorageUsageCard />
 
+      {/* Security did not exist before two-factor, which is why it is a new
+          section rather than a row under General: the only auth screen this
+          app had was the password-reset page, reachable only from an email.
+          Placed above General because "who can get into my account" outranks
+          "which language is the interface in". */}
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+        Security
+      </p>
+      <Card padded={false} className="mb-6">
+        <button
+          onClick={() => setTwoFactorOpen(true)}
+          className="tap w-full flex items-center justify-between px-4 py-3.5"
+        >
+          <div className="flex items-center gap-3">
+            <ShieldCheck size={16} className="text-charcoal-soft" />
+            <div className="text-left">
+              <span className="text-sm font-medium text-charcoal">
+                Two-factor authentication
+              </span>
+              <p className="text-[11px] text-charcoal-faint">
+                {mfaEnrolled === null
+                  ? "A code from your phone, as well as your password"
+                  : mfaEnrolled
+                  ? "On — a code is required when you sign in"
+                  : "Off — your password alone signs you in"}
+              </p>
+            </div>
+          </div>
+          <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
+        </button>
+      </Card>
+
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         {t("General")}
       </p>
@@ -506,6 +564,11 @@ export default function Settings() {
         key={rateAppOpen ? "review-open" : "review-closed"}
         open={rateAppOpen}
         onClose={() => setRateAppOpen(false)}
+      />
+      <TwoFactorSheet
+        key={twoFactorOpen ? "2fa-open" : "2fa-closed"}
+        open={twoFactorOpen}
+        onClose={() => setTwoFactorOpen(false)}
       />
       <NotificationsSheet open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
       <AccessibilitySheet open={accessibilityOpen} onClose={() => setAccessibilityOpen(false)} />

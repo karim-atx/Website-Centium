@@ -129,6 +129,7 @@ import {
   manualFood,
 } from "../services/food";
 import { isAdminAccount } from "../services/admin";
+import { isMfaChallengePending } from "../services/mfa";
 import { ensureProfileRow, fetchProfile } from "../services/profile";
 import {
   AUTO_STREAK_CATEGORIES,
@@ -333,6 +334,16 @@ interface AppState {
   // Nothing persists across a new tab or a new sign-in.
   continueAsConsumer: () => void;
   adminConsumerOptIn: boolean;
+  // True when this session has authenticated but still owes a second factor.
+  // A password-only sign-in on a 2FA account lands here: the session is real
+  // and reads data, so a route guard is what holds it back.
+  mfaPending: boolean;
+  // False until the assurance level has been read for the current session,
+  // for the same reason profileReady and adminReady exist.
+  mfaReady: boolean;
+  // Re-reads the assurance level after a challenge, an enrolment, or a
+  // turn-off — none of which change the account this is keyed to.
+  refreshMfaState: () => Promise<void>;
 
   theme: "light" | "dark";
   toggleTheme: () => void;
@@ -1275,6 +1286,59 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const adminReady = authReady && adminFor?.userId === authUserId;
   const isAdmin = adminReady ? (adminFor?.isAdmin ?? false) : null;
+
+  // --- two-factor ----------------------------------------------------------
+  //
+  // THE SESSION IS ALREADY REAL BY THE TIME THIS MATTERS. Signing in with a
+  // password alone, on an account with a verified factor, produces a session,
+  // fires SIGNED_IN, and reads data through RLS perfectly happily — measured.
+  // The JWT simply says aal1 while the account can reach aal2. Nothing about
+  // that looks like a failure, which is why the second factor has to be
+  // enforced by a route guard here rather than assumed to be handled.
+  //
+  // Keyed per account exactly like adminFor, for the reason written there: a
+  // bare boolean is stale for one render after the account changes, and that
+  // render is the one a guard reads.
+  const [mfaFor, setMfaFor] = useState<{ userId: string | null; pending: boolean } | null>(null);
+
+  const resolveMfa = useCallback(async (userId: string | null) => {
+    if (!userId) {
+      setMfaFor({ userId: null, pending: false });
+      return;
+    }
+    // A failed check resolves to "not pending", the same direction adminFor
+    // fails in and for the same reason. Holding every signed-in user on a
+    // loading screen because one round trip failed is a worse outcome than a
+    // challenge that does not appear — and the sensitive operations behind
+    // the challenge are refused by the server anyway, which is the layer that
+    // actually enforces this.
+    const pending = await isMfaChallengePending();
+    setMfaFor({ userId, pending });
+  }, []);
+
+  // No cancellation flag, unlike the effects around it, because the key does
+  // that job: a resolve that lands after the account changed writes the OLD
+  // user id, which makes mfaReady false rather than answering the new
+  // account's question with the previous one's answer.
+  useEffect(() => {
+    if (!authReady) return;
+    void resolveMfa(authUserId);
+  }, [authUserId, authReady, resolveMfa]);
+
+  const mfaReady = authReady && mfaFor?.userId === authUserId;
+  const mfaPending = mfaReady ? (mfaFor?.pending ?? false) : false;
+
+  /**
+   * Re-reads the assurance level after something changed it.
+   *
+   * Needed because this is keyed to the ACCOUNT, not the session token, and
+   * passing a challenge changes the token without changing the account. The
+   * alternative — depending on the access token — would re-run a round trip
+   * on every silent refresh, which on this project is every five minutes.
+   */
+  const refreshMfaState = useCallback(async () => {
+    await resolveMfa(authUserId);
+  }, [authUserId, resolveMfa]);
 
   // The same answer, readable from inside an async continuation.
   //
@@ -4114,6 +4178,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       adminReady,
       continueAsConsumer,
       adminConsumerOptIn,
+      mfaPending,
+      mfaReady,
+      refreshMfaState,
       theme,
       toggleTheme,
       language,
@@ -4349,6 +4416,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       adminReady,
       continueAsConsumer,
       adminConsumerOptIn,
+      mfaPending,
+      mfaReady,
+      refreshMfaState,
       theme,
       language,
       notificationPrefs,
