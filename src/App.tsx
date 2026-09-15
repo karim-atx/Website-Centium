@@ -71,7 +71,7 @@ const RouteLoading: React.FC = () => (
  * in on, which is exactly the machine it matters on.
  */
 const AdminInterstitial: React.FC = () => {
-  const { continueAsConsumer } = useApp();
+  const { continueAsConsumer, signOut } = useApp();
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-cream px-6">
@@ -92,6 +92,19 @@ const AdminInterstitial: React.FC = () => {
         <Button variant="secondary" fullWidth onClick={continueAsConsumer}>
           Continue to the consumer app
         </Button>
+        {/* The other way out, so this screen is never a dead end for an admin
+            who signed in here by accident — the alternative was closing the
+            tab. Styled and worded like the sign-out under AuthStep's "You're
+            signed in" panel, which is the same situation: a signed-in screen
+            offering to be the wrong account. Uses the app's own signOut,
+            which clears the local cache and the push subscription before it
+            takes the session. */}
+        <button
+          onClick={() => void signOut()}
+          className="tap w-full text-center text-sm font-semibold text-charcoal-soft"
+        >
+          Not you? <span className="text-primary">Sign out</span>
+        </button>
       </div>
     </div>
   );

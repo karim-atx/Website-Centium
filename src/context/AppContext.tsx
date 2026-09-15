@@ -944,9 +944,8 @@ function isPlainObject(v: unknown): v is Record<string, unknown> {
  *
  * DELIBERATELY OUTSIDE `centium-state:`. Everything under that prefix is
  * localStorage and is the app's persisted cache; this is sessionStorage and
- * holds an account id, not a preference. Signing out wipes the cache but not
- * this key — it does not need to, because a stored id that no longer matches
- * the session simply never matches again.
+ * holds an account id, not a preference. signOut() clears it explicitly
+ * rather than by prefix, for that reason.
  */
 const ADMIN_CONSUMER_KEY = "centium-admin-consumer";
 
@@ -1304,9 +1303,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // say the admin console is elsewhere, and a permanent dismissal would
   // erase that for good. sessionStorage dies with the tab.
   //
-  // Keyed by account id so it cannot carry to whoever signs in next, which
-  // also makes clearing it on sign-out unnecessary: a stored id that no
-  // longer matches the session is already inert.
+  // Keyed by account id so it cannot carry to whoever signs in next, and
+  // cleared outright by signOut() so it does not carry across a sign-out for
+  // the SAME admin either — skipping a notice nobody asked to skip is the
+  // failure mode worth spending a line on.
   const [adminConsumerOptIn, setAdminConsumerOptIn] = useState(false);
 
   useEffect(() => {
@@ -4016,6 +4016,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     Object.keys(localStorage)
       .filter((k) => k.startsWith(STORAGE_KEY))
       .forEach((k) => localStorage.removeItem(k));
+
+    // The administrator escape hatch goes with it, and the boundary is the
+    // sign-out rather than the tab. Keyed by account id, it was never
+    // readable by the next person to sign in — but the same admin signing
+    // back in on this tab would have sailed past the notice without ever
+    // asking to, and a suppression nobody chose is the thing this key exists
+    // not to become.
+    try {
+      window.sessionStorage.removeItem(ADMIN_CONSUMER_KEY);
+    } catch {
+      // Storage can be refused outright (private mode), exactly as on the
+      // write side. Nothing to recover: the state reset below still stands,
+      // and a key that cannot be removed could not have been written either.
+    }
+
     setUser({ ...defaultUser });
     setSession(null);
 
