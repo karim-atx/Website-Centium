@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
@@ -6,6 +6,11 @@ import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { removeAvatar, uploadAvatar } from "../../services/avatar";
+import {
+  fetchMyBusinessProfile,
+  saveMyBusinessProfile,
+  type BusinessProfilePatch,
+} from "../../services/business-profile";
 import { Star, MapPin, Camera, Image, Trash2, LogOut, Store, Mail, Phone, Globe } from "lucide-react";
 
 // V8 (QA 8.0): "Move Profile fields and Ratings & Reviews out of the
@@ -16,10 +21,102 @@ import { Star, MapPin, Camera, Image, Trash2, LogOut, Store, Mail, Phone, Globe 
 // business profile" — the account-level bits (avatar, sign out) that used
 // to live on the shared My Profile page move in here for business accounts,
 // which no longer have a separate "/profile" entry point in More.
+// PHASE (2026-09): THE LISTING IS REAL NOW. Every field below wrote to
+// `businessListing`, a usePersistentState object, on each keystroke — so a
+// gym's bio, location, branch and contact details lived on exactly one device
+// while the columns every client-facing surface reads stayed empty.
+//
+// DRAFT AND STORED, WITH AN EXPLICIT SAVE, copied from ProfessionalBioCard
+// deliberately. Per-keystroke writes are out of the question against a server,
+// and blur-to-save is worse than it looks: blur fires when somebody switches
+// tab or app, so the write lands invisibly at a moment they were not thinking
+// about it. A Save button that appears only when something differs from what
+// is stored makes "you have unsaved changes" a visible state.
+//
+// THE AVATAR IS UNTOUCHED. It was made real in the avatar work and still runs
+// through services/avatar against the `avatars` bucket and profiles.avatar_url
+// — a different row, a different table, and nothing below shares a code path
+// with it.
 export default function BusinessProfileTab() {
-  const { user, updateProfile, businessListing, updateBusinessListing, professionalReviews, signOut, authUserId } =
-    useApp();
+  const { user, updateProfile, professionalReviews, signOut, authUserId, profileReady } = useApp();
   const navigate = useNavigate();
+
+  const [stored, setStored] = useState<BusinessProfilePatch>({});
+  const [draft, setDraft] = useState<BusinessProfilePatch>({});
+  const [loading, setLoading] = useState(true);
+  const [savingListing, setSavingListing] = useState(false);
+  const [savedListing, setSavedListing] = useState(false);
+  const [listingError, setListingError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    void fetchMyBusinessProfile(authUserId).then((result) => {
+      if (cancelled) return;
+      setLoading(false);
+      if (!result.ok) {
+        // Keep the form as it is rather than blanking it: an empty listing
+        // and a failed read look identical, and only one of them is safe to
+        // then save over the top of.
+        setListingError(result.message);
+        return;
+      }
+      setListingError(null);
+      const next: BusinessProfilePatch = {
+        branchType: result.profile?.branchType ?? "",
+        bio: result.profile?.bio ?? "",
+        location: result.profile?.location ?? "",
+        publicEmail: result.profile?.publicEmail ?? "",
+        publicPhone: result.profile?.publicPhone ?? "",
+        publicWebsite: result.profile?.publicWebsite ?? "",
+      };
+      setStored(next);
+      setDraft(next);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, profileReady]);
+
+  const field = (key: keyof BusinessProfilePatch) => draft[key] ?? "";
+  const edit = (key: keyof BusinessProfilePatch, value: string) => {
+    setDraft((d) => ({ ...d, [key]: value }));
+    setSavedListing(false);
+  };
+
+  const dirty = (Object.keys(draft) as (keyof BusinessProfilePatch)[]).some(
+    (k) => (draft[k] ?? "").trim() !== (stored[k] ?? "").trim()
+  );
+
+  const saveListing = async () => {
+    if (!authUserId || savingListing) return;
+    setSavingListing(true);
+    setListingError(null);
+    const result = await saveMyBusinessProfile(authUserId, draft, {
+      // Only used when the row does not exist yet — both columns are NOT NULL
+      // and this is the one place those two values live today.
+      businessName: user.businessName,
+      businessType: user.businessType,
+    });
+    setSavingListing(false);
+    if (!result.ok) {
+      setListingError(result.message);
+      return;
+    }
+    // From the response, not the draft: what the row actually holds is the
+    // only thing that should be treated as saved.
+    const saved: BusinessProfilePatch = {
+      branchType: result.profile.branchType ?? "",
+      bio: result.profile.bio ?? "",
+      location: result.profile.location ?? "",
+      publicEmail: result.profile.publicEmail ?? "",
+      publicPhone: result.profile.publicPhone ?? "",
+      publicWebsite: result.profile.publicWebsite ?? "",
+    };
+    setStored(saved);
+    setDraft(saved);
+    setSavedListing(true);
+  };
   const myBusinessReview = professionalReviews.find((r) => r.professionalId === "my-business");
   const [avatarSheetOpen, setAvatarSheetOpen] = useState(false);
   const [avatarBusy, setAvatarBusy] = useState(false);
@@ -109,8 +206,8 @@ export default function BusinessProfileTab() {
             Branch type — if this business has multiple branches
           </span>
           <input
-            value={businessListing.branchType ?? ""}
-            onChange={(e) => updateBusinessListing({ branchType: e.target.value })}
+            value={field("branchType")}
+            onChange={(e) => edit("branchType", e.target.value)}
             placeholder="e.g. Downtown branch, Main location"
             className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
@@ -120,8 +217,8 @@ export default function BusinessProfileTab() {
             Bio — shown to clients on Explore
           </span>
           <textarea
-            value={businessListing.bio}
-            onChange={(e) => updateBusinessListing({ bio: e.target.value })}
+            value={field("bio")}
+            onChange={(e) => edit("bio", e.target.value)}
             rows={3}
             placeholder="Tell clients what makes your business worth a visit…"
             className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
@@ -132,8 +229,8 @@ export default function BusinessProfileTab() {
             Location — shown to clients on Explore
           </span>
           <input
-            value={businessListing.location}
-            onChange={(e) => updateBusinessListing({ location: e.target.value })}
+            value={field("location")}
+            onChange={(e) => edit("location", e.target.value)}
             placeholder="Midtown"
             className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
@@ -149,8 +246,8 @@ export default function BusinessProfileTab() {
           <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
             <Mail size={15} className="text-charcoal-faint shrink-0" />
             <input
-              value={businessListing.email ?? ""}
-              onChange={(e) => updateBusinessListing({ email: e.target.value })}
+              value={field("publicEmail")}
+              onChange={(e) => edit("publicEmail", e.target.value)}
               placeholder="Business email"
               className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
             />
@@ -158,8 +255,8 @@ export default function BusinessProfileTab() {
           <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
             <Phone size={15} className="text-charcoal-faint shrink-0" />
             <input
-              value={businessListing.phone ?? ""}
-              onChange={(e) => updateBusinessListing({ phone: e.target.value })}
+              value={field("publicPhone")}
+              onChange={(e) => edit("publicPhone", e.target.value)}
               placeholder="Phone number"
               className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
             />
@@ -167,14 +264,34 @@ export default function BusinessProfileTab() {
           <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
             <Globe size={15} className="text-charcoal-faint shrink-0" />
             <input
-              value={businessListing.website ?? ""}
-              onChange={(e) => updateBusinessListing({ website: e.target.value })}
+              value={field("publicWebsite")}
+              onChange={(e) => edit("publicWebsite", e.target.value)}
               placeholder="Website"
               className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
             />
           </div>
         </div>
       </Card>
+
+      {/* ONE SAVE FOR BOTH CARDS. Profile and Credentials edit two halves of a
+          single business_profiles row; two buttons writing one row is how a
+          half-saved listing happens. */}
+      <div className="flex items-center gap-3 mb-6 min-h-[28px]">
+        {loading ? (
+          <p className="text-xs font-semibold text-charcoal-faint">Loading your listing…</p>
+        ) : dirty ? (
+          <button
+            onClick={() => void saveListing()}
+            disabled={savingListing}
+            className="tap rounded-full bg-primary text-white text-xs font-bold px-5 py-2.5 disabled:opacity-50"
+          >
+            {savingListing ? "Saving…" : "Save changes"}
+          </button>
+        ) : savedListing ? (
+          <p className="text-xs font-semibold text-primary-dark">Saved</p>
+        ) : null}
+        {listingError && <p className="text-xs font-semibold text-status-high">{listingError}</p>}
+      </div>
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         Ratings & Reviews
@@ -194,25 +311,28 @@ export default function BusinessProfileTab() {
         )}
       </Card>
 
-      {(businessListing.bio || businessListing.location) && (
+      {/* The preview reads the draft, not what is stored — it is a preview of
+          the edit in progress, which is the only thing it would be useful for.
+          The Save button above is what says whether any of it has landed. */}
+      {(field("bio") || field("location")) && (
         <Card className="mb-6 bg-cream-soft">
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
             Preview — what clients see on Explore
           </p>
-          {businessListing.branchType && (
-            <p className="text-xs font-semibold text-primary-dark mb-1">{businessListing.branchType}</p>
+          {field("branchType") && (
+            <p className="text-xs font-semibold text-primary-dark mb-1">{field("branchType")}</p>
           )}
-          {businessListing.location && (
+          {field("location") && (
             <p className="flex items-center gap-1.5 text-xs text-charcoal-faint mb-1.5">
-              <MapPin size={11} /> {businessListing.location}
+              <MapPin size={11} /> {field("location")}
             </p>
           )}
-          {businessListing.bio && <p className="text-sm text-charcoal-soft leading-relaxed mb-1.5">{businessListing.bio}</p>}
-          {(businessListing.email || businessListing.phone || businessListing.website) && (
+          {field("bio") && <p className="text-sm text-charcoal-soft leading-relaxed mb-1.5">{field("bio")}</p>}
+          {(field("publicEmail") || field("publicPhone") || field("publicWebsite")) && (
             <div className="pt-1.5 mt-1.5 border-t border-charcoal/[0.06] space-y-0.5">
-              {businessListing.email && <p className="text-xs text-charcoal-soft">{businessListing.email}</p>}
-              {businessListing.phone && <p className="text-xs text-charcoal-soft">{businessListing.phone}</p>}
-              {businessListing.website && <p className="text-xs text-charcoal-soft">{businessListing.website}</p>}
+              {field("publicEmail") && <p className="text-xs text-charcoal-soft">{field("publicEmail")}</p>}
+              {field("publicPhone") && <p className="text-xs text-charcoal-soft">{field("publicPhone")}</p>}
+              {field("publicWebsite") && <p className="text-xs text-charcoal-soft">{field("publicWebsite")}</p>}
             </div>
           )}
         </Card>
