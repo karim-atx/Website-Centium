@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -7,6 +7,7 @@ import { useApp } from "../../context/AppContext";
 import type { CalendarEvent } from "../../types";
 import { useServerCalendar } from "../../hooks/useServerCalendar";
 import { attachmentUrl } from "../../services/calendar";
+import { fetchClassesAssignedToMe, type BusinessClassRow } from "../../services/business-classes";
 import { acceptFor } from "../../services/storage";
 import {
   ChevronLeft,
@@ -94,8 +95,17 @@ const blankDraft = (date: string) => ({
 
 const HOUR_PX = 56;
 
+/** A business_classes row assigned to this professional, plus who scheduled it. */
+type AssignedClass = BusinessClassRow & { businessName: string };
+
 export default function CalendarTab() {
-  const { businessClasses, businessDirectory, user, authUserId, profileReady } = useApp();
+  const { authUserId, profileReady } = useApp();
+  // Classes a business scheduled for THIS professional, read from
+  // business_classes by professional_id. They used to come from a localStorage
+  // array a business account filled on its own device, so this overlay could
+  // only ever show something when the business and the professional were the
+  // same browser profile — which is to say, never in real use.
+  const [assignedClasses, setAssignedClasses] = useState<AssignedClass[]>([]);
   const today = new Date();
   const {
     events,
@@ -120,16 +130,35 @@ export default function CalendarTab() {
 
   // V8 (QA 8.0): "business-scheduled events involving an affiliated
   // professional show on BOTH the business's and the professional's
-  // calendars" — classes a business assigned to this professional (via the
-  // "me" stand-in id already used across the affiliation system) are folded
-  // into the same calendar, read-only. The "bc" id prefix (set in
-  // addBusinessClass) is how the rest of this file tells them apart from
-  // events the professional created themselves.
-  const businessCalendarEvents = useMemo<CalendarEvent[]>(() => {
-    const businessName = businessDirectory.find((b) => b.id === user.affiliatedBusinessId)?.businessName;
-    return businessClasses
-      .filter((c) => c.professionalId === "me")
-      .map((c) => ({
+  // calendars" — classes a business assigned to this professional are folded
+  // into the same calendar, read-only.
+  //
+  // FILTERED SERVER-SIDE ON professional_id, NOT ON THE STRING "me". That
+  // stand-in was the local affiliation system's placeholder id; real rows
+  // carry this account's uuid, and comparing a uuid to "me" would have matched
+  // nothing forever while looking exactly like "no classes assigned". The
+  // business's name is embedded in the same read rather than looked up in the
+  // local businessDirectory, which knew nothing about a business on another
+  // device either.
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    void (async () => {
+      const result = await fetchClassesAssignedToMe(authUserId);
+      // A failed read leaves the overlay as it was: an empty calendar is a
+      // claim about somebody's day, and it should not be made on a dropped
+      // connection.
+      if (cancelled || !result.ok) return;
+      setAssignedClasses(result.classes);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, profileReady]);
+
+  const businessCalendarEvents = useMemo<CalendarEvent[]>(
+    () =>
+      assignedClasses.map((c) => ({
         id: c.id,
         title: c.title,
         date: c.date,
@@ -137,10 +166,11 @@ export default function CalendarTab() {
         startTime: c.startTime,
         endTime: c.endTime,
         repeat: "none" as const,
-        notes: `Scheduled by ${businessName ?? "your affiliated business"}${c.notes ? ` — ${c.notes}` : ""}`,
+        notes: `Scheduled by ${c.businessName}${c.notes ? ` — ${c.notes}` : ""}`,
         color: "#D9A441",
-      }));
-  }, [businessClasses, businessDirectory, user.affiliatedBusinessId]);
+      })),
+    [assignedClasses]
+  );
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, CalendarEvent[]> = {};
@@ -149,6 +179,12 @@ export default function CalendarTab() {
     });
     return map;
   }, [events, businessCalendarEvents]);
+
+  // The overlay rows by id. Real business_classes ids are uuids, so the old
+  // `id.startsWith("bc")` test — which keyed off the local store's minted
+  // prefix — would now call every row editable, including the ones a business
+  // scheduled and this professional has no policy to touch.
+  const assignedIds = useMemo(() => new Set(assignedClasses.map((c) => c.id)), [assignedClasses]);
 
   /** A server event, or undefined for a business-class overlay row. */
   const serverEvent = (id: string) => events.find((e) => e.id === id);
@@ -265,7 +301,7 @@ export default function CalendarTab() {
   // (see businessCalendarEvents above) but aren't this professional's to
   // edit or delete — the "bc" id prefix set in addBusinessClass is how they're
   // told apart from events the professional created themselves.
-  const isFromBusiness = (e: CalendarEvent) => e.id.startsWith("bc");
+  const isFromBusiness = (e: CalendarEvent) => assignedIds.has(e.id);
 
   const eventCard = (e: CalendarEvent) => {
     const readOnly = isFromBusiness(e) || !isEditable(e);

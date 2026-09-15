@@ -4,6 +4,7 @@ import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPr
 import { Card } from "../../components/ui/Card";
 import { Toggle } from "../../components/ui/Toggle";
 import { useApp } from "../../context/AppContext";
+import { useBusinessDiscounts, useMembershipPlans } from "../../hooks/useBusinessCatalog";
 import { Store, Tag } from "lucide-react";
 
 // V10 (QA 10.0): "Revamp the entire Business dashboard into something more
@@ -15,6 +16,11 @@ import { Store, Tag } from "lucide-react";
 // Marketplace are already one tap away from the bottom nav.
 export default function BusinessDashboard() {
   const { user, businessListing, updateBusinessListing } = useApp();
+  // Both tiles below counted localStorage. `membershipPlans` shipped seeded
+  // with two plans nobody created, so this card has been reporting "2" to
+  // every gym since onboarding.
+  const { plans } = useMembershipPlans();
+  const { discounts } = useBusinessDiscounts();
   const [editingPerk, setEditingPerk] = useState(false);
   const [perkDraft, setPerkDraft] = useState(businessListing.perk);
   const isGym = user.businessType === "gym";
@@ -61,12 +67,12 @@ export default function BusinessDashboard() {
         </div>
         {isGym ? (
           <div className="flex-1 text-center py-3.5">
-            <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{businessListing.membershipPlans.length}</p>
+            <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{plans.length}</p>
             <p className="text-[10px] text-charcoal-faint mt-1.5">Membership plans</p>
           </div>
         ) : (
           <div className="flex-1 text-center py-3.5">
-            <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{businessListing.discounts.length}</p>
+            <p className="text-lg font-bold text-charcoal leading-none tabular-nums">{discounts.length}</p>
             <p className="text-[10px] text-charcoal-faint mt-1.5">Active discounts</p>
           </div>
         )}

@@ -1,5 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
+import {
+  fetchOfferingsByCategory,
+  type OfferingCategory,
+  type PublicOffering,
+} from "../../services/business-offerings";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -31,7 +36,7 @@ const filterOptions: { value: FilterMode; label: string }[] = [
 // unfiltered "browse everything" list.
 export default function MarketplaceCategoryPage() {
   const { category } = useParams<{ category: string }>();
-  const { businessOfferings, businessListing, cart } = useApp();
+  const { cart } = useApp();
   const id = (category ?? "gyms") as MarketplaceCategoryId;
   const meta = marketplaceCategories.find((c) => c.id === id);
   const Icon = marketplaceCategoryIcon[id] ?? marketplaceCategoryIcon.gyms;
@@ -71,12 +76,34 @@ export default function MarketplaceCategoryPage() {
 
   // V7 (QA 7.0): "adopts a marketplace like approach based on what they
   // provide in their Business UI" — offerings a business account created
-  // (see BusinessDashboard's Marketplace tab) show up here for real,
-  // alongside the mock listings.
-  const businessListingsForCategory = useMemo(
-    () => businessOfferings.filter((o) => o.category === id),
-    [businessOfferings, id]
-  );
+  // (see BusinessDashboard's Marketplace tab) show up here alongside the mock
+  // listings.
+  //
+  // IT READ THE VIEWER'S OWN DEVICE BEFORE, which is why no client has ever
+  // seen this block. `businessOfferings` was a localStorage array written only
+  // by the business screens, so on a client's device it was empty and on a
+  // business's device it showed that business its own listings back to itself.
+  // Now it is a real cross-business read: business_offerings and
+  // business_profiles both carry `SELECT ... USING (true)`, because a
+  // marketplace listing is public by definition, and each card names the
+  // business selling it instead of borrowing whatever bio happened to be in
+  // local state.
+  const [businessListingsForCategory, setBusinessListingsForCategory] = useState<PublicOffering[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const result = await fetchOfferingsByCategory(id as OfferingCategory);
+      // A failed read leaves the section as it was rather than collapsing it:
+      // "no businesses here" and "the request failed" look identical once
+      // rendered, and only one of them is true.
+      if (cancelled || !result.ok) return;
+      setBusinessListingsForCategory(result.offerings);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [id]);
 
   const rankedListings = useMemo(() => {
     const base = mockMarketplaceListings[id as keyof typeof mockMarketplaceListings] ?? [];
@@ -218,19 +245,6 @@ export default function MarketplaceCategoryPage() {
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide pt-2">
               From Centium businesses
             </p>
-            {(businessListing.bio || businessListing.location) && (
-              <Card className="bg-cream-soft animate-fade-slide-up">
-                <div className="flex items-center gap-2 mb-1">
-                  <Building2 size={14} className="text-primary-dark" />
-                  {businessListing.location && (
-                    <span className="flex items-center gap-1 text-xs text-charcoal-faint">
-                      <MapPin size={10} /> {businessListing.location}
-                    </span>
-                  )}
-                </div>
-                {businessListing.bio && <p className="text-xs text-charcoal-soft leading-relaxed">{businessListing.bio}</p>}
-              </Card>
-            )}
             {businessListingsForCategory.map((o) => (
               <Card key={o.id} className="animate-fade-slide-up">
                 <div className="flex items-start gap-3">
@@ -239,6 +253,17 @@ export default function MarketplaceCategoryPage() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-charcoal truncate">{o.title}</p>
+                    {/* Who is actually selling it. The old markup borrowed the
+                        viewer's own local bio for this, which only made sense
+                        while the listing was the viewer's own. */}
+                    <p className="flex items-center gap-1 text-xs text-primary-dark font-medium mt-0.5">
+                      <Building2 size={11} /> {o.businessName}
+                      {o.businessLocation && (
+                        <span className="flex items-center gap-0.5 text-charcoal-faint font-normal">
+                          <MapPin size={10} /> {o.businessLocation}
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-charcoal-faint mt-0.5">{o.description}</p>
                   </div>
                   {o.price && (

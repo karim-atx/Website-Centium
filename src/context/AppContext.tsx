@@ -32,8 +32,6 @@ import type {
   ColorTheme,
   CustomFood,
   HabitIconKey,
-  BusinessOffering,
-  MembershipPlan,
   CustomExerciseLibraryItem,
   ProfessionalReview,
   CalendarEvent,
@@ -41,7 +39,6 @@ import type {
   WorkoutTemplateAssignment,
   ClientHealthNote,
   ProfessionalMessage,
-  BusinessClass,
   BusinessMessage,
   GymPurchase,
   CartItem,
@@ -902,32 +899,20 @@ interface AppState {
     email?: string;
     phone?: string;
     website?: string;
-    // V10 (QA 10.0): gym membership plans the business offers, editable
-    // from Operations > Gym.
-    membershipPlans: MembershipPlan[];
-    // V10 (QA 10.0): "The ability to add/remove discounts in the market place."
-    discounts: { id: string; label: string }[];
   };
   updateBusinessListing: (patch: Partial<AppState["businessListing"]>) => void;
-  addMembershipPlan: (plan: Omit<MembershipPlan, "id">) => void;
-  updateMembershipPlan: (id: string, patch: Partial<Omit<MembershipPlan, "id">>) => void;
-  removeMembershipPlan: (id: string) => void;
-  addDiscount: (label: string) => void;
-  removeDiscount: (id: string) => void;
 
-  // V4: businesses can list their own products/services in the marketplace.
-  businessOfferings: BusinessOffering[];
-  addBusinessOffering: (offering: Omit<BusinessOffering, "id">) => void;
-  removeBusinessOffering: (id: string) => void;
-
-  // V7 (QA 7.0): Business UI — Employees (affiliated professionals),
-  // Classes (gym-type businesses) and a customer messaging board.
+  // The four business-owned catalog collections used to live here:
+  // membershipPlans and discounts nested in businessListing, businessOfferings
+  // and businessClasses as their own arrays. All four are real tables now —
+  // membership_plans, business_discounts, business_offerings, business_classes
+  // — read and written through hooks/useBusinessCatalog. membershipPlans was
+  // the worst of them: it shipped seeded with two invented plans, so every
+  // business account has been showing "Monthly Membership $45" and "Day Pass
+  // $8" to itself since onboarding.
   //
-  // The affiliated professionals are no longer here: they are real
-  // business_employees rows, read through services/business-team.
-  businessClasses: BusinessClass[];
-  addBusinessClass: (c: Omit<BusinessClass, "id">) => void;
-  removeBusinessClass: (id: string) => void;
+  // What stays here is what is still genuinely local: the perk, the active
+  // toggle and the members-reached figure, none of which has a write path yet.
 
   businessMessages: BusinessMessage[];
   sendBusinessMessage: (customerId: string, from: "business" | "customer", text: string) => void;
@@ -2599,38 +2584,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const removeFromCart: AppState["removeFromCart"] = (itemId) =>
     setCart((prev) => prev.filter((c) => c.itemId !== itemId));
   const clearCart: AppState["clearCart"] = () => setCart([]);
+  // `membershipPlans` and `discounts` are gone from here — real
+  // membership_plans and business_discounts rows now. The plans in particular
+  // were not merely unpersisted but INVENTED: two seeded entries every business
+  // account has been shown as its own since onboarding.
   const [businessListing, setBusinessListing] = usePersistentState("businessListing", {
     perk: "10% off with Centium",
     active: true,
     membersReached: 34,
     bio: "",
     location: "",
-    membershipPlans: [
-      { id: "mp1", name: "Monthly Membership", price: "$45", billing: "monthly", paymentType: "Card" },
-      { id: "mp2", name: "Day Pass", price: "$8", billing: "daily", paymentType: "Cash" },
-    ] as MembershipPlan[],
-    discounts: [] as { id: string; label: string }[],
   });
-  const addDiscount: AppState["addDiscount"] = (label) =>
-    setBusinessListing((prev) => ({ ...prev, discounts: [...prev.discounts, { id: `disc${Date.now()}`, label }] }));
-  const removeDiscount: AppState["removeDiscount"] = (id) =>
-    setBusinessListing((prev) => ({ ...prev, discounts: prev.discounts.filter((d) => d.id !== id) }));
-  const addMembershipPlan: AppState["addMembershipPlan"] = (plan) =>
-    setBusinessListing((prev) => ({
-      ...prev,
-      membershipPlans: [...prev.membershipPlans, { ...plan, id: `mp${Date.now()}` }],
-    }));
-  const updateMembershipPlan: AppState["updateMembershipPlan"] = (id, patch) =>
-    setBusinessListing((prev) => ({
-      ...prev,
-      membershipPlans: prev.membershipPlans.map((p) => (p.id === id ? { ...p, ...patch } : p)),
-    }));
-  const removeMembershipPlan: AppState["removeMembershipPlan"] = (id) =>
-    setBusinessListing((prev) => ({ ...prev, membershipPlans: prev.membershipPlans.filter((p) => p.id !== id) }));
-  const [businessOfferings, setBusinessOfferings] = usePersistentState<BusinessOffering[]>(
-    "businessOfferings",
-    []
-  );
   // Real roster. Deliberately NOT persisted: it is server state, and caching
   // it in localStorage is how the old mock ended up showing demo clients to
   // a professional who had none.
@@ -4103,22 +4067,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateBusinessListing = (patch: Partial<AppState["businessListing"]>) =>
     setBusinessListing((prev) => ({ ...prev, ...patch }));
 
-  const addBusinessOffering: AppState["addBusinessOffering"] = (offering) =>
-    setBusinessOfferings((prev) => [...prev, { ...offering, id: `bo${Date.now()}` }]);
-  const removeBusinessOffering = (id: string) =>
-    setBusinessOfferings((prev) => prev.filter((o) => o.id !== id));
-
   // `businessEmployees` and `removeBusinessEmployee` used to live here: a
   // Record<businessId, BusinessEmployee[]> in localStorage that nothing in
   // the app ever wrote to, so every screen reading it showed an empty team,
   // and the remove action filtered a map no row had ever entered. All five
   // consumers now read business_employees through services/business-team, so
   // this is gone rather than left as state nobody can fill.
-
-  const [businessClasses, setBusinessClasses] = usePersistentState<BusinessClass[]>("businessClasses", []);
-  const addBusinessClass: AppState["addBusinessClass"] = (c) =>
-    setBusinessClasses((prev) => [...prev, { ...c, id: `bc${Date.now()}` }]);
-  const removeBusinessClass = (id: string) => setBusinessClasses((prev) => prev.filter((c) => c.id !== id));
+  //
+  // `businessOfferings` and `businessClasses` went the same way, for the same
+  // reason stated differently: they WERE written, but only ever to the writing
+  // device. A business's offerings were read by the client-facing Explore page
+  // from the client's own empty array; a class scheduled for an affiliated
+  // professional was read from the professional's own empty array. Both are
+  // real tables now, through hooks/useBusinessCatalog.
 
   const [businessMessages, setBusinessMessages] = usePersistentState<BusinessMessage[]>("businessMessages", []);
   const sendBusinessMessage: AppState["sendBusinessMessage"] = (customerId, from, text) =>
@@ -4436,17 +4397,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deletionRequestedAt,
       businessListing,
       updateBusinessListing,
-      addMembershipPlan,
-      updateMembershipPlan,
-      removeMembershipPlan,
-      addDiscount,
-      removeDiscount,
-      businessOfferings,
-      addBusinessOffering,
-      removeBusinessOffering,
-      businessClasses,
-      addBusinessClass,
-      removeBusinessClass,
       businessMessages,
       sendBusinessMessage,
     }),
@@ -4552,8 +4502,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clientHealthNotes,
       professionalMessages,
       businessListing,
-      businessOfferings,
-      businessClasses,
       businessMessages,
     ]
   );

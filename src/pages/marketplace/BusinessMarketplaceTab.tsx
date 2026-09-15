@@ -3,7 +3,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { useApp } from "../../context/AppContext";
+import { useBusinessDiscounts, useBusinessOfferings } from "../../hooks/useBusinessCatalog";
 import { marketplaceCategories } from "../../data/mockProfessionals";
 import type { MarketplaceCategoryId } from "../../types";
 import { marketplaceCategoryIcon } from "../../utils/icons";
@@ -15,20 +15,40 @@ import { Plus, Trash2 } from "lucide-react";
 // a business actually creates those listings.
 const listableCategories = marketplaceCategories.filter((c) => c.id !== "gyms" && c.id !== "classes");
 
+// THE ONLY SCREEN THAT OWNS TWO OF THE FOUR CATALOG TABLES, which is why it
+// takes two hooks rather than one. Offerings and discounts were both nested in
+// local state — `businessOfferings` as its own array, `discounts` inside the
+// businessListing object — and sat next to each other here purely because the
+// QA note asked for both on this screen. They are separate tables, separate
+// reads and separate writes, and keeping them separate is what stops a
+// discount ending up in the offerings list.
 export default function BusinessMarketplaceTab() {
-  const { businessOfferings, addBusinessOffering, removeBusinessOffering, businessListing, addDiscount, removeDiscount } = useApp();
+  const offerings = useBusinessOfferings();
+  const discounts = useBusinessDiscounts();
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<MarketplaceCategoryId>(listableCategories[0].id);
   const [price, setPrice] = useState("");
   const [description, setDescription] = useState("");
   const [discountDraft, setDiscountDraft] = useState("");
+  const [publishing, setPublishing] = useState(false);
 
-  const save = () => {
-    if (!title.trim() || !description.trim()) return;
-    addBusinessOffering({ title: title.trim(), category, price: price.trim() || undefined, description: description.trim() });
+  // The form clears only on a write that landed. It used to clear
+  // unconditionally, which against a server would throw away what somebody
+  // typed at the exact moment the save failed.
+  const save = async () => {
+    if (!title.trim() || !description.trim() || publishing) return;
+    setPublishing(true);
+    const ok = await offerings.add({ title: title.trim(), category, price, description: description.trim() });
+    setPublishing(false);
+    if (!ok) return;
     setTitle("");
     setPrice("");
     setDescription("");
+  };
+
+  const addDiscount = async () => {
+    if (!discountDraft.trim()) return;
+    if (await discounts.add(discountDraft)) setDiscountDraft("");
   };
 
   return (
@@ -85,9 +105,25 @@ export default function BusinessMarketplaceTab() {
           />
         </label>
 
-        <Button fullWidth size="lg" onClick={save} disabled={!title.trim() || !description.trim()}>
-          <Plus size={15} /> Publish listing
+        {offerings.error && (
+          <p className="mb-2 text-xs font-semibold text-status-high">{offerings.error}</p>
+        )}
+        <Button
+          fullWidth
+          size="lg"
+          onClick={() => void save()}
+          disabled={!title.trim() || !description.trim() || publishing || !offerings.businessId}
+        >
+          <Plus size={15} /> {publishing ? "Publishing…" : "Publish listing"}
         </Button>
+        {!offerings.businessId && !offerings.loading && (
+          // business_offerings.business_id resolves through business_profiles,
+          // so there is nothing to attach a listing to until the owner has
+          // saved their profile once.
+          <p className="mt-2 text-xs text-charcoal-faint">
+            Save your business profile first — listings are published under it.
+          </p>
+        )}
       </Card>
 
       {/* V10 (QA 10.0): "The ability to add/remove discounts in the market place." */}
@@ -100,26 +136,24 @@ export default function BusinessMarketplaceTab() {
             placeholder="e.g. 15% off first visit"
             className="flex-1 rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
-          <Button
-            onClick={() => {
-              if (!discountDraft.trim()) return;
-              addDiscount(discountDraft.trim());
-              setDiscountDraft("");
-            }}
-            disabled={!discountDraft.trim()}
-          >
+          <Button onClick={() => void addDiscount()} disabled={!discountDraft.trim() || !discounts.businessId}>
             <Plus size={15} />
           </Button>
         </div>
-        {businessListing.discounts.length === 0 ? (
-          <p className="text-sm text-charcoal-faint">No discounts yet — add one to feature it on Explore.</p>
+        {discounts.error && <p className="mb-2 text-xs font-semibold text-status-high">{discounts.error}</p>}
+        {discounts.discounts.length === 0 ? (
+          <p className="text-sm text-charcoal-faint">
+            {discounts.businessId || discounts.loading
+              ? "No discounts yet — add one to feature it on Explore."
+              : "Save your business profile first to start adding discounts."}
+          </p>
         ) : (
           <div className="space-y-2">
-            {businessListing.discounts.map((d) => (
+            {discounts.discounts.map((d) => (
               <div key={d.id} className="flex items-center justify-between bg-cream-soft rounded-xl px-3.5 py-2.5">
                 <span className="text-sm font-medium text-charcoal">{d.label}</span>
                 <button
-                  onClick={() => removeDiscount(d.id)}
+                  onClick={() => void discounts.remove(d.id)}
                   aria-label={`Remove ${d.label}`}
                   className="tap text-charcoal-faint"
                 >
@@ -133,7 +167,7 @@ export default function BusinessMarketplaceTab() {
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Your listings</p>
       <div className="space-y-2.5">
-        {businessOfferings.map((o) => {
+        {offerings.offerings.map((o) => {
           const Icon = marketplaceCategoryIcon[o.category];
           return (
             <Card key={o.id} className="flex items-start gap-3 animate-fade-slide-up">
@@ -146,7 +180,7 @@ export default function BusinessMarketplaceTab() {
                 {o.price && <p className="text-xs font-semibold text-primary-dark mt-1">{o.price}</p>}
               </div>
               <button
-                onClick={() => removeBusinessOffering(o.id)}
+                onClick={() => void offerings.remove(o.id)}
                 aria-label={`Remove ${o.title}`}
                 className="tap text-charcoal-faint shrink-0"
               >
@@ -155,7 +189,7 @@ export default function BusinessMarketplaceTab() {
             </Card>
           );
         })}
-        {businessOfferings.length === 0 && (
+        {offerings.offerings.length === 0 && !offerings.loading && (
           <Card className="text-center py-8">
             <p className="text-sm text-charcoal-faint">No listings yet — publish your first one above.</p>
           </Card>

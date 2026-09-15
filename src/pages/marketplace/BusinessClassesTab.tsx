@@ -6,6 +6,7 @@ import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { useBusinessTeam } from "../../hooks/useBusinessTeam";
+import { useBusinessClasses } from "../../hooks/useBusinessCatalog";
 import { Plus, Trash2, Users, Clock } from "lucide-react";
 import { QrPattern } from "../../components/marketplace/GymDetailSheet";
 
@@ -28,21 +29,28 @@ const blankDraft = (date: string) => ({
 // V7 (QA 7.0): "Classes tab (a professionals-style calendar for creating
 // classes linked to affiliated professionals, with time/max-capacity/class-
 // type fields)" — gym-type businesses only.
+// BOTH HALVES ARE REAL NOW. The team came from the server in an earlier pass;
+// the classes did not, and the "Run by" assignment was the thing that suffered
+// for it — a class stored locally with a professional's uuid on it was a note
+// to self, invisible to the professional it named.
 export default function BusinessClassesTab() {
-  const { user, businessClasses, addBusinessClass, removeBusinessClass } = useApp();
-  // THE TEAM COMES FROM THE SERVER; THE CLASSES DO NOT. businessClasses stays
-  // local by decision — converting it is its own piece of work — and this only
-  // changes where the "Run by" picker gets its names. The local map it used to
-  // read was never written to, so the picker was always empty and no class
-  // could be assigned to anyone.
+  const { user } = useApp();
+  // ONE FETCH FOR THE TEAM, NOT TWO. useBusinessTeam already resolves the real
+  // business_profiles.id on its way to reading business_employees, and
+  // useBusinessClasses resolves it again for its own filter — but the picker's
+  // names come from the team hook that was already here rather than a second
+  // copy of that read.
   const { team: employees } = useBusinessTeam();
+  const { classes, businessId, loading, error, add, remove } = useBusinessClasses();
   const today = new Date().toISOString().slice(0, 10);
   const [composeOpen, setComposeOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [draft, setDraft] = useState(blankDraft(today));
 
-  const save = () => {
-    if (!draft.title.trim()) return;
-    addBusinessClass({
+  const save = async () => {
+    if (!draft.title.trim() || saving) return;
+    setSaving(true);
+    const ok = await add({
       title: draft.title.trim(),
       classType: draft.classType,
       date: draft.date,
@@ -54,11 +62,15 @@ export default function BusinessClassesTab() {
       price: draft.price.trim() || undefined,
       paymentType: draft.price.trim() ? draft.paymentType : undefined,
     });
+    setSaving(false);
+    if (!ok) return;
     setDraft(blankDraft(today));
     setComposeOpen(false);
   };
 
-  const sorted = [...businessClasses].sort((a, b) => a.date.localeCompare(b.date) || a.startTime.localeCompare(b.startTime));
+  // Already ordered by event_date then start_time on the way out of the
+  // database, and re-sorted on insert by the hook.
+  const sorted = classes;
 
   return (
     <div>
@@ -69,7 +81,8 @@ export default function BusinessClassesTab() {
         right={
           <button
             onClick={() => setComposeOpen(true)}
-            className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft"
+            disabled={!businessId}
+            className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft disabled:opacity-40"
             aria-label="New class"
           >
             <Plus size={18} />
@@ -77,6 +90,10 @@ export default function BusinessClassesTab() {
         }
       />
       <BusinessPrototypeNotice />
+
+      {error && (
+        <p className="mb-3 rounded-xl bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-status-high">{error}</p>
+      )}
 
       <div className="space-y-2.5">
         {sorted.map((c) => {
@@ -102,7 +119,7 @@ export default function BusinessClassesTab() {
                 {c.notes && <p className="text-xs text-charcoal-faint mt-1 italic">{c.notes}</p>}
               </div>
               <button
-                onClick={() => removeBusinessClass(c.id)}
+                onClick={() => void remove(c.id)}
                 aria-label={`Delete ${c.title}`}
                 className="tap text-charcoal-faint shrink-0"
               >
@@ -111,9 +128,13 @@ export default function BusinessClassesTab() {
             </Card>
           );
         })}
-        {sorted.length === 0 && (
+        {sorted.length === 0 && !loading && (
           <Card className="text-center py-8">
-            <p className="text-sm text-charcoal-faint">No classes scheduled yet.</p>
+            <p className="text-sm text-charcoal-faint">
+              {businessId
+                ? "No classes scheduled yet."
+                : "Save your business profile first — classes are scheduled under it."}
+            </p>
           </Card>
         )}
       </div>
@@ -250,8 +271,9 @@ export default function BusinessClassesTab() {
             />
           </label>
 
-          <Button fullWidth size="lg" onClick={save} disabled={!draft.title.trim()}>
-            Save class
+          {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
+          <Button fullWidth size="lg" onClick={() => void save()} disabled={!draft.title.trim() || saving}>
+            {saving ? "Saving…" : "Save class"}
           </Button>
         </div>
       </BottomSheet>

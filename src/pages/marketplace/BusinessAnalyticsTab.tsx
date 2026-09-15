@@ -6,6 +6,7 @@ import { Chip } from "../../components/ui/Chip";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { useBusinessTeam } from "../../hooks/useBusinessTeam";
+import { useBusinessClasses, useBusinessOfferings, useMembershipPlans } from "../../hooks/useBusinessCatalog";
 import {
   Eye,
   MousePointerClick,
@@ -84,7 +85,13 @@ function downloadCsv(filename: string, rows: (string | number)[][]) {
 }
 
 export default function BusinessAnalyticsTab() {
-  const { businessListing, businessOfferings, businessClasses, professionalReviews, user } = useApp();
+  const { businessListing, professionalReviews, user } = useApp();
+  // Real counts. Offerings, classes and plans were three localStorage
+  // collections, one of them seeded with two invented plans — so a gym that
+  // had never created anything still saw "2 membership plans" here.
+  const { offerings } = useBusinessOfferings();
+  const { classes } = useBusinessClasses();
+  const { plans } = useMembershipPlans();
   // Real rows now: the local businessEmployees map was never written to, so
   // this tile reported zero affiliated professionals to every business.
   const { team: myEmployees } = useBusinessTeam();
@@ -213,12 +220,12 @@ export default function BusinessAnalyticsTab() {
                 label: "Average rating",
                 value: professionalReviews.find((r) => r.professionalId === "my-business")?.rating.toFixed(1) ?? "—",
               },
-              { icon: Tag, label: "Active listings", value: businessOfferings.length },
+              { icon: Tag, label: "Active listings", value: offerings.length },
               ...(isGym
                 ? [
-                    { icon: KeyRound, label: "Membership plans", value: businessListing.membershipPlans.length },
+                    { icon: KeyRound, label: "Membership plans", value: plans.length },
                     { icon: Users, label: "Affiliated professionals", value: myEmployees.length },
-                    { icon: CalendarDays, label: "Classes scheduled", value: businessClasses.length },
+                    { icon: CalendarDays, label: "Classes scheduled", value: classes.length },
                   ]
                 : []),
             ].map((s) => (

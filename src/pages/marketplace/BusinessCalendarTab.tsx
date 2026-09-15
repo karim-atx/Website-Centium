@@ -5,10 +5,10 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
-import { mockBusinessCustomers } from "../../data/mockBusinessCustomers";
-import type { BusinessClass } from "../../types";
+import type { BusinessClassRow } from "../../services/business-classes";
 import { useServerCalendar } from "../../hooks/useServerCalendar";
 import { useBusinessTeam } from "../../hooks/useBusinessTeam";
+import { useBusinessClasses } from "../../hooks/useBusinessCatalog";
 import { respondToInvite } from "../../services/calendar";
 import { ChevronLeft, ChevronRight, Plus, Clock, Users, Trash2, Check, X, CalendarDays } from "lucide-react";
 import clsx from "clsx";
@@ -38,7 +38,6 @@ const blankDraft = (date: string) => ({
   endTime: "10:00",
   maxCapacity: "10",
   professionalId: "",
-  clientIds: [] as string[],
   notes: "",
 });
 
@@ -50,29 +49,46 @@ const blankDraft = (date: string) => ({
 // of the existing businessClasses store (which already syncs into the
 // affiliated professional's own calendar — see CalendarTab.tsx).
 // PHASE 2 (2026-09): THIS SCREEN'S EVENTS ARE CLASSES, NOT CALENDAR EVENTS,
-// which is the thing to understand before changing it. Everything above reads
-// `businessClasses` — a different entity, with its own table and its own
-// professional/client assignment model — and that store stays local this pass
-// by decision: converting it is its own phase, and duplicating each class as a
-// calendar_events row as well would mean two records of one thing with nothing
-// keeping them in step.
+// which is still the thing to understand before changing it. The class
+// overlay reads a different entity from the calendar below it — its own table,
+// its own assignment model — and the two are deliberately not merged, because
+// duplicating each class as a calendar_events row as well would mean two
+// records of one thing with nothing keeping them in step.
 //
 // What a business account nonetheless has is an ordinary calendar: events it
 // owns, and invitations other people have sent it. Those are real
-// calendar_events rows and they now appear here, alongside the class overlay
-// and clearly separated from it. Creating a calendar event WITH invitees from
-// this screen is deliberately not built — the compose sheet below creates a
-// class, and giving it a second, parallel "real event" mode would reproduce
-// exactly the two-features-in-one-costume problem the assignment note had.
+// calendar_events rows and they appear here alongside the class overlay,
+// clearly separated from it. Creating a calendar event WITH invitees from this
+// screen is deliberately not built — the compose sheet below creates a class,
+// and giving it a second, parallel "real event" mode would reproduce exactly
+// the two-features-in-one-costume problem the assignment note had.
+//
+// CATALOG PHASE (2026-09): the classes half is real now too. It reads and
+// writes business_classes through the same hook BusinessClassesTab uses, so
+// the two screens are two views of one table rather than two views of one
+// localStorage array.
+//
+// THE CLIENT PICKER IS GONE, and the reason is structural rather than a
+// decision about this screen. "Add single or multiple clients at once" wrote
+// BusinessClass.clientIds, which has no column: the table for it is
+// business_class_bookings, whose INSERT policy is `auth.uid() = client_id` and
+// on which `authenticated` holds only DELETE and SELECT — no INSERT grant at
+// all. A booking is a client's own act. A business owner can see and cancel
+// bookings and cannot create one, so the picker could never have persisted
+// from here, and it selected from mockBusinessCustomers besides.
 export default function BusinessCalendarTab() {
-  const { businessClasses, addBusinessClass, removeBusinessClass, authUserId, profileReady } = useApp();
+  const { authUserId, profileReady } = useApp();
+  const {
+    classes: businessClasses,
+    businessId,
+    error: classesError,
+    add: addBusinessClass,
+    remove: removeBusinessClass,
+  } = useBusinessClasses();
   const { events, loadError, reload } = useServerCalendar(authUserId, profileReady);
   const [responding, setResponding] = useState<string | null>(null);
-  // ONLY THE TEAM LIST CHANGED HERE. businessClasses, the class composer and
-  // everything the calendar does with them are untouched and stay local by
-  // decision. What moved is where the "Affiliated professional" picker gets
-  // its names: the local map it read was never written to, so the picker was
-  // always empty and no class could be attached to a professional at all.
+  const [savingClass, setSavingClass] = useState(false);
+  // The picker's names, from the same hook that already fed it.
   const { team: employees } = useBusinessTeam();
 
   const respond = async (inviteId: string, accepted: boolean) => {
@@ -89,7 +105,7 @@ export default function BusinessCalendarTab() {
   const [draft, setDraft] = useState(blankDraft(selectedDate));
 
   const eventsByDate = useMemo(() => {
-    const map: Record<string, BusinessClass[]> = {};
+    const map: Record<string, BusinessClassRow[]> = {};
     businessClasses.forEach((c) => {
       (map[c.date] ??= []).push(c);
     });
@@ -118,12 +134,10 @@ export default function BusinessCalendarTab() {
     setComposeOpen(true);
   };
 
-  const toggleClient = (id: string) =>
-    setDraft((d) => ({ ...d, clientIds: d.clientIds.includes(id) ? d.clientIds.filter((i) => i !== id) : [...d.clientIds, id] }));
-
-  const save = () => {
-    if (!draft.title.trim()) return;
-    addBusinessClass({
+  const save = async () => {
+    if (!draft.title.trim() || savingClass) return;
+    setSavingClass(true);
+    const ok = await addBusinessClass({
       title: draft.title.trim(),
       classType: draft.classType,
       date: draft.date,
@@ -131,10 +145,10 @@ export default function BusinessCalendarTab() {
       endTime: draft.endTime,
       maxCapacity: Number(draft.maxCapacity) || 10,
       professionalId: draft.professionalId || undefined,
-      clientIds: draft.clientIds.length ? draft.clientIds : undefined,
       notes: draft.notes.trim() || undefined,
     });
-    setComposeOpen(false);
+    setSavingClass(false);
+    if (ok) setComposeOpen(false);
   };
 
   const selectedEvents = eventsByDate[selectedDate] ?? [];
@@ -146,9 +160,8 @@ export default function BusinessCalendarTab() {
     day: "numeric",
   });
 
-  const eventCard = (c: BusinessClass) => {
+  const eventCard = (c: BusinessClassRow) => {
     const professional = employees.find((e) => e.professionalId === c.professionalId);
-    const clients = mockBusinessCustomers.filter((cu) => c.clientIds?.includes(cu.id));
     return (
       <Card key={c.id} className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -158,13 +171,11 @@ export default function BusinessCalendarTab() {
             <Clock size={11} /> {c.startTime}–{c.endTime}
             {professional ? ` · ${professional.name}` : ""}
           </p>
-          {clients.length > 0 && (
-            <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
-              <Users size={11} /> {clients.map((cu) => cu.name).join(", ")}
-            </p>
-          )}
+          <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
+            <Users size={11} /> Max {c.maxCapacity}
+          </p>
         </div>
-        <button onClick={() => removeBusinessClass(c.id)} aria-label={`Delete ${c.title}`} className="tap text-charcoal-faint shrink-0">
+        <button onClick={() => void removeBusinessClass(c.id)} aria-label={`Delete ${c.title}`} className="tap text-charcoal-faint shrink-0">
           <Trash2 size={14} />
         </button>
       </Card>
@@ -173,16 +184,16 @@ export default function BusinessCalendarTab() {
 
   return (
     <div>
-      {loadError && (
+      {(loadError || classesError) && (
         <p className="mb-3 rounded-xl bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-status-high">
-          {loadError}
+          {loadError ?? classesError}
         </p>
       )}
       <PageHeader
         title="Calendar"
         showBack
         right={
-          <button onClick={openCompose} className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft" aria-label="New event">
+          <button onClick={openCompose} disabled={!businessId} className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft disabled:opacity-40" aria-label="New event">
             <Plus size={18} />
           </button>
         }
@@ -491,24 +502,6 @@ export default function BusinessCalendarTab() {
             </div>
           )}
 
-          <div>
-            <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Clients (single or multiple)</span>
-            <div className="flex flex-wrap gap-2">
-              {mockBusinessCustomers.map((c) => (
-                <button
-                  key={c.id}
-                  onClick={() => toggleClient(c.id)}
-                  className={clsx(
-                    "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
-                    draft.clientIds.includes(c.id) ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
-                  )}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          </div>
-
           <label className="block">
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Notes</span>
             <textarea
@@ -520,8 +513,8 @@ export default function BusinessCalendarTab() {
             />
           </label>
 
-          <Button fullWidth size="lg" onClick={save} disabled={!draft.title.trim()}>
-            Save event
+          <Button fullWidth size="lg" onClick={() => void save()} disabled={!draft.title.trim() || savingClass}>
+            {savingClass ? "Saving…" : "Save event"}
           </Button>
         </div>
       </BottomSheet>
