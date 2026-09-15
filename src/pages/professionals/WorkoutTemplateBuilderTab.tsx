@@ -7,6 +7,7 @@ import { useApp } from "../../context/AppContext";
 import { CreateWorkoutTemplateSheet } from "../../components/professionals/CreateWorkoutTemplateSheet";
 import type { WorkoutTemplate } from "../../types";
 import { AssignTemplateSheet } from "../../components/professionals/AssignTemplateSheet";
+import { UnverifiedProgramNotice } from "../../components/workout/UnverifiedProgramNotice";
 import { Plus, Trash2, ChevronDown, ChevronUp, Folder, FolderPlus, MoreVertical, Copy, Pencil, Settings2, Send } from "lucide-react";
 import clsx from "clsx";
 
@@ -95,6 +96,15 @@ export default function WorkoutTemplateBuilderTab() {
                   <p className="text-xs text-charcoal-faint">
                     {t.exercises.length} exercises · {clients.length} client{clients.length !== 1 ? "s" : ""} assigned
                   </p>
+                  {/* On the collapsed row too: a professional deciding whether
+                      to build on a starter program should see it here, not
+                      only after expanding. */}
+                  <UnverifiedProgramNotice
+                    isVerified={t.isVerified}
+                    isPublic={t.isPublic}
+                    variant="compact"
+                    className="mt-0.5"
+                  />
                 </div>
                 <div className="flex items-center gap-2 shrink-0 relative">
                   <button
@@ -113,6 +123,7 @@ export default function WorkoutTemplateBuilderTab() {
 
               {expanded && (
                 <div className="border-t border-charcoal/[0.06] px-4 py-3.5 space-y-4">
+                  <UnverifiedProgramNotice isVerified={t.isVerified} isPublic={t.isPublic} />
                   {t.coachNote && (
                     <p className="text-xs text-primary-dark bg-primary-pale rounded-xl px-3 py-2">
                       Note to client: {t.coachNote}

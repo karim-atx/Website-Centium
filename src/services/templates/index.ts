@@ -127,7 +127,7 @@ const PRESCRIPTION_COLUMNS =
 const DEFINITION_COLUMNS = "id, name, classification, muscle_groups, secondary_muscle_groups";
 
 const TEMPLATE_SELECT =
-  "id, owner_id, name, category, description, duration_min, level, folder_id, coach_note, is_public, created_at, " +
+  "id, owner_id, name, category, description, duration_min, level, folder_id, coach_note, is_public, is_verified, created_at, " +
   `workout_template_exercises(${PRESCRIPTION_COLUMNS}, ` +
   `exercises(${DEFINITION_COLUMNS}), ` +
   `custom_exercise_library_items(${DEFINITION_COLUMNS}))`;
@@ -177,6 +177,7 @@ interface TemplateRow {
   folder_id: string | null;
   coach_note: string | null;
   is_public: boolean;
+  is_verified: boolean;
   created_at: string;
   workout_template_exercises: PrescriptionRow[];
 }
@@ -239,6 +240,7 @@ function toTemplate(r: TemplateRow): WorkoutTemplate {
     durationMin: r.duration_min ?? undefined,
     level: r.level ?? undefined,
     isPublic: r.is_public,
+    isVerified: r.is_verified,
     ownerId: r.owner_id,
   };
 }
@@ -265,6 +267,52 @@ export async function getTemplates(userId: string): Promise<TemplatesResult> {
   return {
     ok: true,
     templates: (data ?? []).map((r) => toTemplate(r as unknown as TemplateRow)),
+  };
+}
+
+/**
+ * The curated starter programs, readable WITHOUT A SESSION.
+ *
+ * SEPARATE FROM getTemplates BECAUSE THAT ONE CANNOT BE RUN SIGNED OUT, which
+ * was measured rather than assumed: it embeds custom_exercise_library_items,
+ * and anon holds no grant on that table at all, so the whole query comes back
+ * 42501 — "permission denied for table custom_exercise_library_items" — and a
+ * signed-out visitor sees nothing rather than nine programs.
+ *
+ * Dropping that embed costs nothing here. A curated template is seeded by
+ * service_role from the shared catalog and references no private movement; if
+ * one ever did, the reference would be unreadable to every visitor anyway,
+ * signed in or not, because the row belongs to somebody's own library.
+ *
+ * `is_verified` comes back on this path too, which is the point: the disclaimer
+ * has to reach the people who are not signed in as much as the people who are.
+ */
+export async function getPublicTemplates(): Promise<TemplatesResult> {
+  const { data, error } = await supabase
+    .from("workout_templates")
+    .select(
+      "id, owner_id, name, category, description, duration_min, level, folder_id, coach_note, is_public, is_verified, created_at, " +
+        `workout_template_exercises(${PRESCRIPTION_COLUMNS}, exercises(${DEFINITION_COLUMNS}))`
+    )
+    .eq("is_public", true)
+    .order("name", { ascending: true });
+
+  if (error) {
+    console.error("[templates] Could not read starter programs:", error.message);
+    return { ok: false, templates: [], message: describe(error) };
+  }
+  return {
+    ok: true,
+    templates: (data ?? []).map((r) =>
+      toTemplate({
+        ...(r as unknown as Omit<TemplateRow, "workout_template_exercises">),
+        // The custom embed is absent by design above, so every prescription
+        // here resolves through `exercises`.
+        workout_template_exercises: (
+          r as unknown as { workout_template_exercises: Omit<PrescriptionRow, "custom_exercise_library_items">[] }
+        ).workout_template_exercises.map((p) => ({ ...p, custom_exercise_library_items: null })),
+      })
+    ),
   };
 }
 
@@ -332,7 +380,7 @@ async function writeExercises(
 
 export async function createTemplate(
   userId: string,
-  template: Omit<WorkoutTemplate, "id" | "createdAt" | "isPublic" | "ownerId">,
+  template: Omit<WorkoutTemplate, "id" | "createdAt" | "isPublic" | "isVerified" | "ownerId">,
   lookup: ExerciseLookup
 ): Promise<TemplateResult> {
   const { data, error } = await supabase
@@ -376,6 +424,10 @@ export async function createTemplate(
       id: data.id,
       createdAt: data.created_at.slice(0, 10),
       isPublic: false,
+      // A professional's own template is never verified, and cannot be made
+      // so: the insert policy carries `and not is_verified` and the UPDATE
+      // grant omits the column. Only service_role can vouch for programming.
+      isVerified: false,
       ownerId: userId,
     },
   };
@@ -392,7 +444,7 @@ export async function createTemplate(
  */
 export async function updateTemplate(
   id: string,
-  patch: Partial<Omit<WorkoutTemplate, "id" | "createdAt" | "exercises" | "isPublic" | "ownerId">>,
+  patch: Partial<Omit<WorkoutTemplate, "id" | "createdAt" | "exercises" | "isPublic" | "isVerified" | "ownerId">>,
   exercises: Exercise[] | undefined,
   lookup: ExerciseLookup
 ): Promise<WriteResult> {

@@ -4,6 +4,7 @@ import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import { getOverwriteDiff, type PrescriptionDiff } from "../../services/templates";
 import type { WorkoutTemplate } from "../../types";
+import { UnverifiedProgramNotice } from "../workout/UnverifiedProgramNotice";
 import { ArrowRight, CalendarDays, Check, X } from "lucide-react";
 import clsx from "clsx";
 
@@ -114,10 +115,18 @@ export const AssignTemplateSheet: React.FC<{
             auth.uid()` holds and it raises ATX09. Saying it here beats
             offering a button that always fails. */}
         {template.isPublic ? (
-          <p className="text-[12.5px] text-charcoal-soft leading-relaxed">
-            This is a starter program from Centium. It can't be assigned or edited — duplicate it
-            into a template of your own first.
-          </p>
+          <>
+            {/* Said before the professional decides to build on it, since
+                duplicating is the next thing this screen points them at. */}
+            <UnverifiedProgramNotice
+              isVerified={template.isVerified}
+              isPublic={template.isPublic}
+            />
+            <p className="text-[12.5px] text-charcoal-soft leading-relaxed">
+              This is a starter program from Centium. It can't be assigned or edited — duplicate it
+              into a template of your own first.
+            </p>
+          </>
         ) : (
           <>
             <p className="text-[12.5px] text-charcoal-soft leading-relaxed">

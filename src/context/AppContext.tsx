@@ -793,11 +793,11 @@ interface AppState {
    */
   workoutTemplates: WorkoutTemplate[];
   addWorkoutTemplate: (
-    t: Omit<WorkoutTemplate, "id" | "createdAt" | "isPublic" | "ownerId">
+    t: Omit<WorkoutTemplate, "id" | "createdAt" | "isPublic" | "isVerified" | "ownerId">
   ) => Promise<string | undefined>;
   updateWorkoutTemplate: (
     id: string,
-    patch: Partial<Omit<WorkoutTemplate, "id" | "createdAt" | "isPublic" | "ownerId">>
+    patch: Partial<Omit<WorkoutTemplate, "id" | "createdAt" | "isPublic" | "isVerified" | "ownerId">>
   ) => Promise<string | undefined>;
   removeWorkoutTemplate: (id: string) => Promise<string | undefined>;
 

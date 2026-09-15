@@ -399,6 +399,22 @@ export interface WorkoutTemplate {
   level?: TemplateLevel;
   /** True only for curated programs, which no client role can write or assign. */
   isPublic: boolean;
+  /**
+   * WHO VOUCHED FOR THIS PROGRAMMING — the same question foods.is_verified and
+   * exercises.is_verified answer, deliberately the same shape.
+   *
+   * FALSE IS THE HONEST DEFAULT AND THE ONLY VALUE THAT EXISTS TODAY: all nine
+   * curated starter programs were written by an AI, not by a certified coach,
+   * and they stay false until a qualified human reviews one. No client role can
+   * set it — the insert policy carries `and not is_verified` and the UPDATE
+   * grant omits the column — so a professional cannot mark their own work
+   * verified either.
+   *
+   * The consequence for the UI is that FALSE MUST BE SAID OUT LOUD. A wrong
+   * muscle-group mapping is a taxonomy error; wrong programming is a person
+   * under a loaded barbell.
+   */
+  isVerified: boolean;
   ownerId?: string | null;
 }
 

@@ -4885,6 +4885,7 @@ export type Database = {
           folder_id: string | null
           id: string
           is_public: boolean
+          is_verified: boolean
           level: Database["public"]["Enums"]["template_level"] | null
           name: string
           owner_id: string | null
@@ -4899,6 +4900,7 @@ export type Database = {
           folder_id?: string | null
           id?: string
           is_public?: boolean
+          is_verified?: boolean
           level?: Database["public"]["Enums"]["template_level"] | null
           name: string
           owner_id?: string | null
@@ -4913,6 +4915,7 @@ export type Database = {
           folder_id?: string | null
           id?: string
           is_public?: boolean
+          is_verified?: boolean
           level?: Database["public"]["Enums"]["template_level"] | null
           name?: string
           owner_id?: string | null
