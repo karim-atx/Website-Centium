@@ -38,7 +38,7 @@ import { stripPrivateExif } from "./exif";
  * shape fails at the server with a generic error — or worse, succeeds at a
  * path whose segment 1 is not who the policy expects.
  */
-type OwnerScopedBucket = "lab-reports" | "medical-imaging";
+type OwnerScopedBucket = "lab-reports" | "medical-imaging" | "certifications";
 
 /**
  * Buckets whose path starts with a THREAD id: `<thread_id>/<uploader_id>/...`.
@@ -83,6 +83,23 @@ const BUCKETS: Record<
     label: "imaging file",
     accepts: "a JPEG, PNG, WebP or PDF",
   },
+  // The only bucket taking Word documents, and it is not an oversight: a
+  // qualification arrives as whatever the awarding body sent, which is as
+  // often a .docx as a scan. The migration's mime list is the authority and
+  // this mirrors it.
+  certifications: {
+    maxBytes: 10 * 1024 * 1024,
+    mimeTypes: [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ],
+    label: "certification",
+    accepts: "an image, a PDF or a Word document",
+  },
   // 10 MB, matching the migration. Audio is here because a recorded voice
   // note arrives through this same function as an audio/* blob; it is NOT
   // offered by acceptFor, which see.
@@ -115,6 +132,9 @@ const BUCKETS: Record<
 const PREFIXES: Record<OwnerScopedBucket, string | null> = {
   "lab-reports": "panels",
   "medical-imaging": null,
+  // One file per professional in practice, and no consent split to encode —
+  // the certifications policy gates on the owner segment alone.
+  certifications: null,
 };
 
 const EXTENSIONS: Record<string, string> = {
@@ -122,6 +142,8 @@ const EXTENSIONS: Record<string, string> = {
   "image/png": "png",
   "image/webp": "webp",
   "application/pdf": "pdf",
+  "application/msword": "doc",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
   "audio/mpeg": "mp3",
   "audio/mp4": "m4a",
   "audio/aac": "aac",

@@ -68,7 +68,7 @@ export const ReadyStep: React.FC<{
               </span>
             )}
             <span className="text-xs font-semibold bg-primary-pale text-primary-dark rounded-full px-3 py-1.5">
-              {draft.certificationFile ? "Certification submitted" : "No certification yet"}
+              {draft.certificationFile ? "Certification saved" : "No certification yet"}
             </span>
           </div>
         </div>

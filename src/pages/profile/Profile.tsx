@@ -546,7 +546,11 @@ export default function Profile() {
       <GoalsEditSheet open={goalsOpen} onClose={() => setGoalsOpen(false)} />
       <ActivityLevelSheet open={activityLevelOpen} onClose={() => setActivityLevelOpen(false)} />
       {user.accountType === "professional" && (
-        <CertificationSheet open={certOpen} onClose={() => setCertOpen(false)} />
+        <CertificationSheet
+          key={certOpen ? "cert-open" : "cert-closed"}
+          open={certOpen}
+          onClose={() => setCertOpen(false)}
+        />
       )}
 
       <BottomSheet open={credentialsOpen} onClose={() => setCredentialsOpen(false)} title="Credentials">
