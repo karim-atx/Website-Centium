@@ -5,6 +5,7 @@ import RoutinesTab from "./RoutinesTab";
 import ExerciseDatabaseTab from "./ExerciseDatabaseTab";
 import HistoryTab from "./HistoryTab";
 import MetricsTab from "./MetricsTab";
+import { PersonalRecordReviewSheet } from "../../components/workout/PersonalRecordReviewSheet";
 
 type Tab = "routines" | "database" | "history" | "metrics";
 
@@ -34,6 +35,11 @@ export default function Workout() {
       {tab === "database" && <ExerciseDatabaseTab />}
       {tab === "history" && <HistoryTab />}
       {tab === "metrics" && <MetricsTab />}
+
+      {/* One-time, and rendered here rather than on Home because this is where
+          personal records live and are edited. It shows itself only when this
+          device actually has old local records to review. */}
+      <PersonalRecordReviewSheet />
     </div>
   );
 }

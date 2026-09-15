@@ -7,7 +7,8 @@ import { Pencil, Check, Dumbbell } from "lucide-react";
 // barbell/dumbbell/weighted-bodyweight exercise, editable if the estimate
 // needs a manual correction.
 export const OneRepMaxesSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { personalRecords, setPersonalRecord } = useApp();
+  const { personalRecords, setPersonalRecord, pendingPersonalRecords } = useApp();
+  const pendingNames = new Set(pendingPersonalRecords.map((p) => p.name.trim().toLowerCase()));
   const [editingName, setEditingName] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
 
@@ -25,7 +26,17 @@ export const OneRepMaxesSheet: React.FC<{ open: boolean; onClose: () => void }> 
           <div key={name} className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3">
             <div className="flex items-center gap-2.5">
               <Dumbbell size={15} className="text-primary-dark" />
-              <span className="text-sm font-semibold text-charcoal">{name}</span>
+              <div>
+                <span className="text-sm font-semibold text-charcoal">{name}</span>
+                {/* SAID OUT LOUD RATHER THAN DROPPED. personal_records has to
+                    name a real movement, so a record set against a custom
+                    exercise that has not uploaded yet is held until it has. */}
+                {pendingNames.has(name.trim().toLowerCase()) && (
+                  <p className="text-[10.5px] font-medium text-charcoal-faint">
+                    Saved once this exercise finishes syncing
+                  </p>
+                )}
+              </div>
             </div>
             {editingName === name ? (
               <div className="flex items-center gap-2">

@@ -25,6 +25,10 @@ const setTypeBadge: Record<string, string> = {
 function initLoggedExercises(exercises: Exercise[]): LoggedExercise[] {
   return exercises.map((ex) => ({
     exerciseId: ex.id,
+    // The library reference travels from the routine into the log, which is
+    // what lets logged_exercises name what was actually trained.
+    ...(ex.exerciseId ? { catalogExerciseId: ex.exerciseId } : {}),
+    ...(ex.customExerciseId ? { customExerciseId: ex.customExerciseId } : {}),
     name: ex.name,
     sets: Array.from({ length: ex.sets }).map((_, i) => ({
       setNumber: i + 1,
@@ -45,7 +49,7 @@ export const WorkoutSessionSheet: React.FC<{
   // professional can write his notes to the client" — read-only here.
   coachNote?: string;
 }> = ({ open, onClose, routineId, routineName, exercises, coachNote }) => {
-  const { saveWorkoutSession, logWorkout, pausedSessions, savePausedSession, clearPausedSession, personalRecords, setPersonalRecord, exerciseCatalog } =
+  const { saveWorkoutSession, logWorkout, pausedSessions, savePausedSession, clearPausedSession, personalRecords, setPersonalRecord, exerciseCatalog, customExercises } =
     useApp();
   const [startedAt, setStartedAt] = useState(() => new Date());
   const [elapsed, setElapsed] = useState(0);
@@ -373,10 +377,22 @@ export const WorkoutSessionSheet: React.FC<{
                             // or weighted bodyweight" — immediate, rather
                             // than waiting for saveWorkoutSession at the
                             // end of the whole workout.
-                            const libEntry = exerciseCatalog.find((l) => l.name === ex.name);
+                            // The catalog OR the user's own movements: both
+                            // carry a classification, and personal_records can
+                            // reference either since 20260916210000. Same gate
+                            // as the end-of-session derivation, so marking a
+                            // set PR means the same thing for both kinds.
+                            const libEntry =
+                              exerciseCatalog.find((l) => l.name === ex.name) ??
+                              customExercises.find((l) => l.name === ex.name);
                             if (libEntry && ONE_RM_CLASSIFICATIONS.includes(libEntry.classification) && s.weightKg > 0) {
                               const est = estimate1RM(s.weightKg, s.reps);
-                              if (est > (personalRecords[ex.name] ?? 0)) setPersonalRecord(ex.name, est);
+                              if (est > (personalRecords[ex.name] ?? 0)) {
+                                setPersonalRecord(ex.name, est, {
+                                  catalogExerciseId: ex.catalogExerciseId,
+                                  customExerciseId: ex.customExerciseId,
+                                });
+                              }
                             }
                           }
                         }

@@ -2,6 +2,7 @@ import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { LoggedExercise, LoggedSet, WorkoutSession } from "../../types";
 import { localDayOf } from "../../utils/date";
+import { isUuid } from "../food";
 
 // A client's own training log: workout_sessions, and the logged_exercises /
 // logged_sets hanging off it.
@@ -11,17 +12,27 @@ import { localDayOf } from "../../utils/date";
 // show — the read policies were built long ago and the client app simply
 // never wrote a row.
 //
-// TWO FOREIGN KEYS ARE DELIBERATELY LEFT NULL, and this is not a shortcut.
-// workout_sessions.routine_id references public.routines, and
-// logged_exercises.exercise_id references public.exercises. Neither table is
-// ever read or written by this app: routines are usePersistentState seeded
-// from static data with ids like "routine-p1", and the exercise library is
-// static with ids like "ex1". Writing those strings into a uuid column fails
-// outright — the same way mock food ids like "f7" failed during the diary
-// work. The information is not lost: routine_name and name are both NOT NULL
-// and carry it, which is the resolved-snapshot pattern food_log_entries
-// already uses. If those catalogues ever move server-side, the FKs become
-// fillable and nothing else here has to change.
+// THE FOREIGN KEYS ARE FILLED IN NOW. This file used to write routine_id and
+// exercise_id as null and said why: routines were seeded local state with ids
+// like "routine-p1" and the exercise library was static with ids like "ex1",
+// so a uuid column could not take them. Both catalogues are real tables since
+// Phases 1 and 2, and it closed with "if those catalogues ever move
+// server-side, the FKs become fillable and nothing else here has to change."
+// They did, and this is that change.
+//
+// A NON-UUID ID STILL DEGRADES TO NULL RATHER THAN FAILING THE SAVE. Not
+// every routine on screen is a row: one built while signed out carries
+// `routine1737…`, and a routine mirrored from a workout template carries
+// `routine-<templateId>` because templates are still local. A workout logged
+// against either is a real workout and must be storable. routine_name is NOT
+// NULL and carries the name, which is the same resolved-snapshot arrangement
+// food_log_entries uses for a hand-typed food.
+//
+// NO BACKFILL. Rows written before this carry neither reference and keep only
+// their names; nothing here tries to re-derive them. A name match would be a
+// guess about what someone trained months ago, and
+// logged_exercises_single_source_check permits NEITHER reference precisely so
+// those rows remain valid as they are.
 
 export interface WorkoutSaveResult {
   ok: boolean;
@@ -44,6 +55,35 @@ function describe(error: PostgrestError): string {
 /** Rounds to the scale the column actually stores, so a check constraint
  *  never fails on a value the UI considered fine. */
 const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * A uuid column takes a uuid or nothing.
+ *
+ * Postgres rejects a malformed uuid with 22P02 before any constraint is
+ * consulted, which would lose the whole session over a reference that is
+ * optional anyway. Everything this guards is nullable by design.
+ */
+const asUuid = (value: string | null | undefined): string | null =>
+  value && isUuid(value) ? value : null;
+
+/**
+ * Which library row a logged exercise names, if any.
+ *
+ * `num_nonnulls(exercise_id, custom_exercise_id) <= 1` — never both, and
+ * NEITHER is allowed here unlike on routine_exercises. That is what makes a
+ * custom movement created offline loggable: it has no row id yet, and the
+ * name column carries it until it does.
+ */
+function exerciseRef(ex: LoggedExercise): {
+  exercise_id: string | null;
+  custom_exercise_id: string | null;
+} {
+  const catalogId = asUuid(ex.catalogExerciseId);
+  if (catalogId) return { exercise_id: catalogId, custom_exercise_id: null };
+  const customId = asUuid(ex.customExerciseId);
+  if (customId) return { exercise_id: null, custom_exercise_id: customId };
+  return { exercise_id: null, custom_exercise_id: null };
+}
 
 /**
  * Writes a completed session and everything under it.
@@ -69,9 +109,8 @@ export async function saveWorkoutSession(
     .from("workout_sessions")
     .insert({
       user_id: userId,
-      // See the header: local routine ids are not uuids and public.routines
-      // holds no matching row. routine_name carries it instead.
-      routine_id: null,
+      // Real when the routine is a row, null when it is not — see the header.
+      routine_id: asUuid(session.routineId),
       routine_name: session.routineName,
       started_at: session.startedAt,
       // THE DAY THE USER TRAINED, as their own calendar saw it — the same
@@ -115,7 +154,7 @@ export async function saveWorkoutSession(
     .insert(
       session.exercises.map((ex, i) => ({
         workout_session_id: sessionId,
-        exercise_id: null, // See the header.
+        ...exerciseRef(ex),
         name: ex.name,
         position: i,
       }))
@@ -174,10 +213,13 @@ type SessionRow = {
   duration_sec: number | null;
   total_volume_kg: number | null;
   notes: string | null;
+  routine_id: string | null;
   logged_exercises: {
     id: string;
     name: string;
     position: number;
+    exercise_id: string | null;
+    custom_exercise_id: string | null;
     logged_sets: {
       set_number: number;
       reps: number | null;
@@ -207,7 +249,7 @@ export async function getWorkoutSessions(
   const { data, error } = await supabase
     .from("workout_sessions")
     .select(
-      "id, routine_name, started_at, ended_at, duration_sec, total_volume_kg, notes, logged_exercises(id, name, position, logged_sets(set_number, reps, weight_kg, completed, set_type, notes, rpe, mood, pain))"
+      "id, routine_id, routine_name, started_at, ended_at, duration_sec, total_volume_kg, notes, logged_exercises(id, name, position, exercise_id, custom_exercise_id, logged_sets(set_number, reps, weight_kg, completed, set_type, notes, rpe, mood, pain))"
     )
     .eq("user_id", userId)
     .order("started_at", { ascending: false })
@@ -223,9 +265,12 @@ export async function getWorkoutSessions(
     const exercises: LoggedExercise[] = [...(r.logged_exercises ?? [])]
       .sort((a, b) => a.position - b.position)
       .map((ex) => ({
-        // No exercise_id was written, so the library id cannot be recovered.
-        // The name is what every consumer actually displays.
+        // The logged_exercises row id, as before. The two library references
+        // below are separate, and are both absent on a row written before
+        // they could be filled in — no backfill, per the header.
         exerciseId: ex.id,
+        ...(ex.exercise_id ? { catalogExerciseId: ex.exercise_id } : {}),
+        ...(ex.custom_exercise_id ? { customExerciseId: ex.custom_exercise_id } : {}),
         name: ex.name,
         sets: [...(ex.logged_sets ?? [])]
           .sort((a, b) => a.set_number - b.set_number)
@@ -244,7 +289,7 @@ export async function getWorkoutSessions(
 
     return {
       id: r.id,
-      routineId: null,
+      routineId: r.routine_id,
       routineName: r.routine_name,
       // The table has no date column; the day is whatever started_at fell on
       // LOCALLY. Slicing the ISO string instead would give the UTC day, which

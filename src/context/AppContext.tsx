@@ -78,6 +78,14 @@ import { mockForumPosts } from "../data/mockForum";
 import { defaultHabits, streaks as seedStreaks } from "../data/mockHealthData";
 import { todaysWorkout, workoutPrograms } from "../data/mockWorkouts";
 import { estimate1RM } from "../services/workout";
+import {
+  clearPausedSession as clearPausedSessionRemote,
+  getPausedSessions,
+  getPersonalRecords,
+  recordPersonalRecord,
+  savePausedSession as savePausedSessionRemote,
+  type RecordRef,
+} from "../services/workout/records";
 import { ONE_RM_CLASSIFICATIONS } from "../types";
 import {
   suggestNutritionGoal,
@@ -347,8 +355,39 @@ interface AppState {
 
   // V4: estimated 1RM per exercise name (barbell/dumbbell/weighted-bodyweight
   // only) — auto-updated from logged sets, editable from History/Metrics.
+  /** Best estimated 1RM per movement, read from current_personal_records. */
   personalRecords: Record<string, number>;
-  setPersonalRecord: (exerciseName: string, kg: number) => void;
+  /**
+   * Records the value and writes it to personal_records.
+   *
+   * `ref` is the movement the caller already knows it is talking about; without
+   * it the name is resolved against the catalog and then the user's own
+   * movements. A record for a custom movement that has not synced is QUEUED —
+   * the table requires a real id — and written when that id arrives.
+   */
+  setPersonalRecord: (
+    exerciseName: string,
+    kg: number,
+    ref?: { catalogExerciseId?: string; customExerciseId?: string }
+  ) => void;
+  /** Records waiting on a custom exercise to finish syncing. Never silently dropped. */
+  pendingPersonalRecords: { name: string; kg: number; achievedAt: string }[];
+  /**
+   * The records this device holds that the server has never seen, which is
+   * exactly what the one-time review asks about. Empty once it is dealt with.
+   */
+  personalRecordsReviewItems: Record<string, number>;
+  /**
+   * The one-time review of PRs that only ever lived in this browser.
+   *
+   * Null while it is still loading or not needed. Entries the user confirms
+   * are written with achieved_at = now; anything skipped is simply not
+   * written, and the flag below stops it ever appearing again.
+   */
+  personalRecordsReviewDone: boolean;
+  completePersonalRecordsReview: (
+    confirmed: { name: string; kg: number }[]
+  ) => Promise<{ written: number; queued: number; unresolved: string[] }>;
 
   /**
    * Folders and routines, held in public.routine_folders / public.routines.
@@ -1240,19 +1279,83 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     {}
   );
 
+  /**
+   * PRs still sitting in localStorage that name a movement the server cannot
+   * reference yet — a custom exercise created offline and not yet uploaded.
+   *
+   * personal_records takes `num_nonnulls(...) = 1`, so there is nothing to
+   * write until that movement has a row. Queued rather than dropped, and
+   * flushed by the effect below the moment the id exists. Persisted, because
+   * the sync it is waiting for may not happen in this page's lifetime.
+   */
+  const [pendingPersonalRecords, setPendingPersonalRecords] = usePersistentState<
+    { name: string; kg: number; achievedAt: string }[]
+  >("pendingPersonalRecords", []);
+
+  /**
+   * Whether the one-time PR review has been dealt with on this device.
+   *
+   * PER DEVICE, NOT PER ACCOUNT, and that is the right scope: what it reviews
+   * is this browser's localStorage, which is also per device. A second device
+   * with its own old local records gets its own prompt, and one with none
+   * never sees it at all.
+   */
+  const [personalRecordsReviewDone, setPersonalRecordsReviewDone] = usePersistentState<boolean>(
+    "personalRecordsReviewDone",
+    false
+  );
+
+  /**
+   * Exactly the records that only ever lived in this browser.
+   *
+   * CAPTURED BEFORE THE FIRST SERVER READ REPLACES THE MAP, and persisted,
+   * because that replacement is what would otherwise lose them: the local map
+   * becomes the server's answer, and anything the server never had would be
+   * gone before the user was asked about it.
+   *
+   * It is also what stops the review asking about records it just wrote. A
+   * name the server already returns is not a leftover, so a PR set through
+   * normal logging never appears here.
+   */
+  const [personalRecordsReviewItems, setPersonalRecordsReviewItems] = usePersistentState<
+    Record<string, number>
+  >("personalRecordsReviewItems", {});
+
   const [pausedSessions, setPausedSessions] = usePersistentState<Record<string, PausedWorkoutSession>>(
     "pausedSessions",
     {}
   );
-  const savePausedSession: AppState["savePausedSession"] = (routineId, session) =>
+
+  // A paused session belongs to a ROUTINE ROW. routine_id is NOT NULL on
+  // paused_workout_sessions and a uuid, so a freeform session (no routine at
+  // all) and a routine that has not synced both stay local-only — the sheet
+  // already refuses to pause without a routineId, and this refuses to send one
+  // the table could not accept.
+  const isPausableRoutineId = (routineId: string) => isUuid(routineId);
+
+  const savePausedSession: AppState["savePausedSession"] = (routineId, session) => {
     setPausedSessions((prev) => ({ ...prev, [routineId]: session }));
-  const clearPausedSession: AppState["clearPausedSession"] = (routineId) =>
+    if (!authUserId || !isPausableRoutineId(routineId)) return;
+    void savePausedSessionRemote(authUserId, routineId, {
+      logged: session.logged,
+      elapsedSec: session.elapsedSec,
+      startedAt: session.startedAt,
+      started: session.started,
+    });
+  };
+
+  const clearPausedSession: AppState["clearPausedSession"] = (routineId) => {
     setPausedSessions((prev) => {
       if (!(routineId in prev)) return prev;
       const next = { ...prev };
       delete next[routineId];
       return next;
     });
+    // Cleared remotely even when it was not in local state: finishing a
+    // workout on another device must not leave a resume prompt here.
+    if (!authUserId || !isPausableRoutineId(routineId)) return;
+    void clearPausedSessionRemote(authUserId, routineId);
+  };
 
   const [routineFolders, setRoutineFolders] = usePersistentState<RoutineFolder[]>(
     "routineFolders",
@@ -1958,6 +2061,108 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUserId, profileReady]);
 
+  // --- personal records and paused sessions --------------------------------
+  //
+  // PRs come back NAME-KEYED, which is what every consumer on this side reads
+  // — OneRepMaxesSheet, MetricsTab, the live-set comparison in the session
+  // sheet. The NAME IS RESOLVED THROUGH THE REFERENCE server-side rather than
+  // stored on the record, so renaming a custom movement renames its record
+  // too, which is the whole argument for keying the table by id.
+  //
+  // The map is replaced, not merged: current_personal_records is the best per
+  // movement and local values are what this migration is moving away from. A
+  // failed read leaves the local map alone, as everywhere else.
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+
+    void Promise.all([getPersonalRecords(authUserId), getPausedSessions(authUserId)]).then(
+      ([recordResult, pausedResult]) => {
+        if (cancelled) return;
+        if (recordResult.ok) {
+          const byName: Record<string, number> = {};
+          for (const r of recordResult.records) byName[r.name] = r.estimatedOneRepMaxKg;
+
+          // WHAT THE SERVER DOES NOT HAVE IS WHAT THE REVIEW IS FOR, worked
+          // out here because this is the last moment the local map still holds
+          // it. Decided once per device: if there is nothing left over, the
+          // review is finished before it is ever shown.
+          if (!personalRecordsReviewDone) {
+            const known = new Set(recordResult.records.map((r) => r.name.trim().toLowerCase()));
+            const leftovers = Object.entries(personalRecords).filter(
+              ([name]) => !known.has(name.trim().toLowerCase())
+            );
+            if (leftovers.length === 0) setPersonalRecordsReviewDone(true);
+            else setPersonalRecordsReviewItems(Object.fromEntries(leftovers));
+          }
+
+          setPersonalRecords(byName);
+        }
+        if (pausedResult.ok) {
+          const next: Record<string, PausedWorkoutSession> = {};
+          for (const [routineId, state] of Object.entries(pausedResult.byRoutineId)) {
+            next[routineId] = {
+              logged: state.logged as PausedWorkoutSession["logged"],
+              elapsedSec: state.elapsedSec,
+              startedAt: state.startedAt,
+              started: state.started,
+            };
+          }
+          setPausedSessions(next);
+        }
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+    // personalRecords is read to work out what the server has never seen, and
+    // must not re-trigger this — the read replaces it, which would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId, profileReady, setPersonalRecords, setPausedSessions]);
+
+  // THE QUEUE DRAINS WHEN THE MOVEMENT ARRIVES. A record waiting on a custom
+  // exercise that had no row is written as soon as one exists — which is what
+  // the custom-exercise hydration above produces — and stays queued otherwise.
+  // Runs on every change to that list rather than once, because the id can
+  // appear at any point after this account signed in.
+  useEffect(() => {
+    if (!profileReady || !authUserId || pendingPersonalRecords.length === 0) return;
+    let cancelled = false;
+
+    void (async () => {
+      const stillPending: typeof pendingPersonalRecords = [];
+      for (const entry of pendingPersonalRecords) {
+        const match = customExercises.find(
+          (e) => e.name.trim().toLowerCase() === entry.name.trim().toLowerCase()
+        );
+        if (!match?.id || !isUuid(match.id)) {
+          stillPending.push(entry);
+          continue;
+        }
+        const written = await recordPersonalRecord(
+          authUserId,
+          { exercise_id: null, custom_exercise_id: match.id },
+          entry.kg,
+          entry.achievedAt
+        );
+        if (!written.ok) stillPending.push(entry);
+      }
+      if (cancelled || stillPending.length === pendingPersonalRecords.length) return;
+      setPendingPersonalRecords(stillPending);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    authUserId,
+    profileReady,
+    customExercises,
+    pendingPersonalRecords,
+    setPendingPersonalRecords,
+  ]);
+
   const [professionalReviews, setProfessionalReviews] = usePersistentState<ProfessionalReview[]>(
     "professionalReviews",
     []
@@ -2443,25 +2648,149 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     // Auto-update estimated 1RMs for barbell/dumbbell/weighted-bodyweight
     // exercises from this session's heaviest completed set.
-    setPersonalRecords((prev) => {
-      const next = { ...prev };
-      for (const ex of session.exercises) {
-        // The catalog, not a bundled list — and still the catalog only, as
-        // before: a user's own movement has never driven a 1RM estimate.
-        const libEntry = exerciseCatalog.find((l) => l.name === ex.name);
-        if (!libEntry || !ONE_RM_CLASSIFICATIONS.includes(libEntry.classification)) continue;
-        const best = ex.sets
-          .filter((s) => s.completed && s.weightKg > 0)
-          .reduce((max, s) => Math.max(max, estimate1RM(s.weightKg, s.reps)), 0);
-        if (best > 0 && best > (next[ex.name] ?? 0)) next[ex.name] = best;
+    //
+    // THE DERIVATION AND THE GATE ARE UNCHANGED — Epley, and only the
+    // classifications in ONE_RM_CLASSIFICATIONS. What changed is where the
+    // result goes and what it can be derived FROM: the user's own movements
+    // carry a classification too, and personal_records can finally reference
+    // one, so a custom barbell lift is now eligible on exactly the same test
+    // the catalog has always been judged by.
+    for (const ex of session.exercises) {
+      const definition =
+        exerciseCatalog.find((l) => l.name === ex.name) ??
+        customExercises.find((l) => l.name === ex.name);
+      if (!definition || !ONE_RM_CLASSIFICATIONS.includes(definition.classification)) continue;
+      const best = ex.sets
+        .filter((s) => s.completed && s.weightKg > 0)
+        .reduce((max, s) => Math.max(max, estimate1RM(s.weightKg, s.reps)), 0);
+      if (best > 0 && best > (personalRecords[ex.name] ?? 0)) {
+        // Through the one write path, so the queueing of an unsynced custom
+        // movement happens here too rather than only on the live-set path.
+        setPersonalRecord(ex.name, best, {
+          catalogExerciseId: ex.catalogExerciseId,
+          customExerciseId: ex.customExerciseId,
+        });
       }
-      return next;
-    });
+    }
 
     return { ok: true };
   };
-  const setPersonalRecord = (exerciseName: string, kg: number) =>
+  /**
+   * WHICH MOVEMENT A RECORD BELONGS TO, resolved in the one order that is
+   * safe: the explicit reference the caller already holds, then the catalog by
+   * name, then the user's own movements by name.
+   *
+   * The name lookups exist for the two callers that have nothing else — the
+   * manual 1RM correction in OneRepMaxesSheet, and the one-time review of PRs
+   * that were only ever name-keyed. Explicit ids come first because a custom
+   * movement may legitimately share a name with a catalog one, and guessing
+   * that wrong is the mistake custom meals already paid for.
+   *
+   * `null` means the name resolves to nothing at all; `"pending"` means it
+   * resolves to one of the user's own movements that has not been uploaded
+   * yet, which is the case personal_records cannot store.
+   */
+  const resolveRecordRef = (
+    exerciseName: string,
+    ref?: { catalogExerciseId?: string; customExerciseId?: string }
+  ): RecordRef | "pending" | null => {
+    if (ref?.catalogExerciseId && isUuid(ref.catalogExerciseId)) {
+      return { exercise_id: ref.catalogExerciseId, custom_exercise_id: null };
+    }
+    if (ref?.customExerciseId && isUuid(ref.customExerciseId)) {
+      return { exercise_id: null, custom_exercise_id: ref.customExerciseId };
+    }
+    const wanted = exerciseName.trim().toLowerCase();
+    const catalogMatch = exerciseCatalog.find((e) => e.name.trim().toLowerCase() === wanted);
+    if (catalogMatch) return { exercise_id: catalogMatch.id, custom_exercise_id: null };
+
+    const customMatch = customExercises.find((e) => e.name.trim().toLowerCase() === wanted);
+    if (customMatch) {
+      return customMatch.id && isUuid(customMatch.id)
+        ? { exercise_id: null, custom_exercise_id: customMatch.id }
+        : "pending";
+    }
+    return null;
+  };
+
+  const setPersonalRecord: AppState["setPersonalRecord"] = (exerciseName, kg, ref) => {
     setPersonalRecords((prev) => ({ ...prev, [exerciseName]: kg }));
+    if (!authUserId) return;
+
+    const resolved = resolveRecordRef(exerciseName, ref);
+    const achievedAt = new Date().toISOString();
+
+    // QUEUED, NOT DROPPED. The movement exists, it simply has no row yet; the
+    // flush below writes this the moment it does.
+    if (resolved === "pending") {
+      setPendingPersonalRecords((prev) => [
+        ...prev.filter((p) => p.name.trim().toLowerCase() !== exerciseName.trim().toLowerCase()),
+        { name: exerciseName, kg, achievedAt },
+      ]);
+      return;
+    }
+    // A name in neither library — an old local record for something since
+    // deleted. Nothing can reference it, so it stays the local number it has
+    // always been rather than being queued forever.
+    if (!resolved) return;
+
+    void recordPersonalRecord(authUserId, resolved, kg, achievedAt);
+  };
+
+  /**
+   * Writes the records the user ticked in the one-time review, and closes it.
+   *
+   * ONLY WHAT WAS CONFIRMED. Anything the user skipped is not written and not
+   * queued — it simply stays the local number it already was, which is what
+   * "skipped" has to mean for a migration prompt nobody asked for.
+   *
+   * The flag is set whatever the outcome, including when nothing was
+   * confirmed: this is a one-time screen and re-showing it would make it a
+   * recurring one.
+   */
+  const completePersonalRecordsReview: AppState["completePersonalRecordsReview"] = async (
+    confirmed
+  ) => {
+    let written = 0;
+    let queued = 0;
+    const unresolved: string[] = [];
+    const achievedAt = new Date().toISOString();
+    const stillPending: typeof pendingPersonalRecords = [];
+
+    if (authUserId) {
+      for (const entry of confirmed) {
+        const resolved = resolveRecordRef(entry.name);
+        if (resolved === "pending") {
+          // Same rule as a live PR for an unsynced movement, and the screen
+          // says so rather than implying it was saved.
+          stillPending.push({ name: entry.name, kg: entry.kg, achievedAt });
+          queued += 1;
+          continue;
+        }
+        if (!resolved) {
+          unresolved.push(entry.name);
+          continue;
+        }
+        const result = await recordPersonalRecord(authUserId, resolved, entry.kg, achievedAt);
+        if (result.ok) written += 1;
+        else unresolved.push(entry.name);
+      }
+    }
+
+    // The confirmed values are kept on screen either way: they are what the
+    // user just told us their records are.
+    setPersonalRecords((prev) => {
+      const next = { ...prev };
+      for (const entry of confirmed) next[entry.name] = entry.kg;
+      return next;
+    });
+    if (stillPending.length > 0) {
+      setPendingPersonalRecords((prev) => [...prev, ...stillPending]);
+    }
+    setPersonalRecordsReviewItems({});
+    setPersonalRecordsReviewDone(true);
+    return { written, queued, unresolved };
+  };
 
   // A LOCAL ID MEANS NEVER SYNCED, the same test isRemoteMealId gives meals.
   // Folders and routines written before this reached Supabase carry `rf…` and
@@ -3462,6 +3791,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearPausedSession,
       personalRecords,
       setPersonalRecord,
+      pendingPersonalRecords,
+      personalRecordsReviewItems,
+      personalRecordsReviewDone,
+      completePersonalRecordsReview,
       routinesError,
       routineFolders,
       addRoutineFolder,
@@ -3669,6 +4002,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       workoutLog,
       workoutSessions,
       personalRecords,
+      pendingPersonalRecords,
+      personalRecordsReviewItems,
+      personalRecordsReviewDone,
       pausedSessions,
       routineFolders,
       routinesError,

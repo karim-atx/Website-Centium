@@ -2465,6 +2465,7 @@ export type Database = {
       logged_exercises: {
         Row: {
           created_at: string
+          custom_exercise_id: string | null
           exercise_id: string | null
           id: string
           name: string
@@ -2473,6 +2474,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          custom_exercise_id?: string | null
           exercise_id?: string | null
           id?: string
           name: string
@@ -2481,6 +2483,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          custom_exercise_id?: string | null
           exercise_id?: string | null
           id?: string
           name?: string
@@ -3099,8 +3102,9 @@ export type Database = {
         Row: {
           achieved_at: string
           created_at: string
+          custom_exercise_id: string | null
           estimated_one_rep_max_kg: number
-          exercise_id: string
+          exercise_id: string | null
           id: string
           source_logged_set_id: string | null
           user_id: string
@@ -3108,8 +3112,9 @@ export type Database = {
         Insert: {
           achieved_at: string
           created_at?: string
+          custom_exercise_id?: string | null
           estimated_one_rep_max_kg: number
-          exercise_id: string
+          exercise_id?: string | null
           id?: string
           source_logged_set_id?: string | null
           user_id: string
@@ -3117,8 +3122,9 @@ export type Database = {
         Update: {
           achieved_at?: string
           created_at?: string
+          custom_exercise_id?: string | null
           estimated_one_rep_max_kg?: number
-          exercise_id?: string
+          exercise_id?: string | null
           id?: string
           source_logged_set_id?: string | null
           user_id?: string
@@ -5218,6 +5224,7 @@ export type Database = {
         Row: {
           achieved_at: string | null
           created_at: string | null
+          custom_exercise_id: string | null
           estimated_one_rep_max_kg: number | null
           exercise_id: string | null
           id: string | null

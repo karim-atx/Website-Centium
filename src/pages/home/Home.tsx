@@ -24,8 +24,16 @@ function getGreeting() {
 }
 
 export default function Home() {
-  const { user, t, premiumPlan, recoverySensitive, recoverySensitiveIntroSeen, setRecoverySensitiveIntroSeen } =
-    useApp();
+  const {
+    user,
+    t,
+    premiumPlan,
+    recoverySensitive,
+    recoverySensitiveIntroSeen,
+    setRecoverySensitiveIntroSeen,
+    routines,
+    workoutSessions,
+  } = useApp();
   const navigate = useNavigate();
   const [addFoodOpen, setAddFoodOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
@@ -34,6 +42,29 @@ export default function Home() {
   const [gymPassesOpen, setGymPassesOpen] = useState(false);
 
   const isBusiness = user.accountType === "business";
+
+  /**
+   * What "Log Workout" starts.
+   *
+   * IT USED TO PASS THE MOCK ROUTINE'S ID, "w-today", into a uuid column.
+   * That was harmless only because log.ts wrote routine_id as null regardless;
+   * now that it writes the id for real, a made-up one would either be
+   * discarded or, without the guard there, lose the session.
+   *
+   * THE MOST RECENTLY TRAINED ROUTINE, which is the simplest mapping that is
+   * also usually right: this button is "log the thing I normally log". Falls
+   * back to the first routine, and to a FREEFORM session when there are none
+   * — routine_id is nullable and a workout with no routine is a real workout,
+   * which is exactly why it is nullable.
+   */
+  const lastTrainedRoutine = [...workoutSessions]
+    .reverse()
+    .map((s) => routines.find((r) => r.id === s.routineId))
+    .find((r) => !!r);
+  const suggested = lastTrainedRoutine ?? routines[0];
+  const quickWorkout = suggested
+    ? { routineId: suggested.id, name: suggested.name, exercises: suggested.exercises }
+    : { routineId: null, name: todaysWorkout.name, exercises: todaysWorkout.exercises };
 
   // V5 (QA 5.0): professionals no longer have a Home/Food/Workout/Health
   // dashboard of their own — "My Clients" is their main page instead,
@@ -163,9 +194,9 @@ export default function Home() {
       <WorkoutSessionSheet
         open={workoutOpen}
         onClose={() => setWorkoutOpen(false)}
-        routineId={todaysWorkout.id}
-        routineName={todaysWorkout.name}
-        exercises={todaysWorkout.exercises}
+        routineId={quickWorkout.routineId}
+        routineName={quickWorkout.name}
+        exercises={quickWorkout.exercises}
       />
       <AddMetricSheet open={metricOpen} onClose={() => setMetricOpen(false)} />
       <GymPassesSheet open={gymPassesOpen} onClose={() => setGymPassesOpen(false)} />

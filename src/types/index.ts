@@ -689,7 +689,21 @@ export interface LoggedSet {
 }
 
 export interface LoggedExercise {
+  /**
+   * The routine_exercises row this came from while a session is running, and
+   * the logged_exercises row once it has been read back. NOT a library id —
+   * see the two below, which are.
+   */
   exerciseId: string;
+  /**
+   * WHICH LIBRARY ROW WAS TRAINED, carried from the routine so the log can
+   * record it. logged_exercises takes `num_nonnulls(...) <= 1`: exactly one,
+   * or NEITHER — a custom movement created offline has no row id yet, and
+   * logging against it must still succeed. `name` is NOT NULL and carries it
+   * in that case, the same arrangement a hand-typed food gets.
+   */
+  catalogExerciseId?: string;
+  customExerciseId?: string;
   name: string;
   sets: LoggedSet[];
 }
