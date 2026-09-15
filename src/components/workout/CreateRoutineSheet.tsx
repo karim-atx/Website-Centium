@@ -2,7 +2,6 @@ import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import type { Exercise, Routine } from "../../types";
-import { exerciseLibrary } from "../../data/mockWorkouts";
 import { useApp } from "../../context/AppContext";
 import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet";
 import { ExerciseSettingsSheet } from "./ExerciseSettingsSheet";
@@ -29,7 +28,7 @@ export const CreateRoutineSheet: React.FC<{
   onClose: () => void;
   folderId: string | null;
 }> = ({ open, onClose, folderId }) => {
-  const { addRoutine, customExercises } = useApp();
+  const { addRoutine, customExercises, exerciseCatalog } = useApp();
   const [name, setName] = useState("");
   const [duration, setDuration] = useState("45");
   const [color, setColor] = useState(colorOptions[0]);
@@ -72,11 +71,11 @@ export const CreateRoutineSheet: React.FC<{
     const fromCustom = customExercises
       .filter((e) => e.name.toLowerCase().includes(q))
       .map((e) => ({ name: e.name, classification: e.classification, isCustom: true as const }));
-    const fromLibrary = exerciseLibrary
+    const fromLibrary = exerciseCatalog
       .filter((e) => e.name.toLowerCase().includes(q))
       .map((e) => ({ name: e.name, classification: e.classification, isCustom: false as const }));
     return [...fromCustom, ...fromLibrary].slice(0, 6);
-  }, [searchQuery, customExercises]);
+  }, [searchQuery, customExercises, exerciseCatalog]);
 
   const save = () => {
     if (!name.trim() || exercises.length === 0) return;

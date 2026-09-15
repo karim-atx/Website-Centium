@@ -585,6 +585,17 @@ export interface Exercise {
 // creation — it's only added to a routine when a user explicitly taps it,
 // same as any built-in library exercise.
 export interface CustomExerciseLibraryItem {
+  /**
+   * The row id once this has reached custom_exercise_library_items, and a
+   * locally-minted `cx<timestamp>` before that.
+   *
+   * OPTIONAL BECAUSE OF WHAT IS ALREADY IN REAL BROWSERS. Every one of these
+   * was identified by name until they became rows, so the copies sitting in
+   * localStorage today carry no id at all. Absent and non-uuid mean the same
+   * thing to the one-time upload — never synced — which is why this is
+   * optional rather than backfilled on read.
+   */
+  id?: string;
   name: string;
   muscleGroups?: MuscleGroup[];
   secondaryMuscleGroups?: MuscleGroup[];

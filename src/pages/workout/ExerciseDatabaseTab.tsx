@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Chip } from "../../components/ui/Chip";
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
-import { exerciseLibrary } from "../../data/mockWorkouts";
+import { MUSCLE_GROUP_LABEL } from "../../utils/muscleGroups";
 import type { MuscleGroup, ExerciseClassification } from "../../types";
 import { List, User, Search, RotateCw } from "lucide-react";
 import clsx from "clsx";
@@ -12,29 +12,20 @@ type ViewMode = "list" | "body";
 type SortMode = "alphabetical" | "muscleGroup" | "classification";
 
 interface DbExercise {
+  /**
+   * The row id: a catalog uuid, or a custom exercise's own id — which may
+   * still be a local `cx…` for one that has never reached the server.
+   * Carried so an edit can address the row it is editing; a custom exercise
+   * used to be found again by its name, which the rename it was saving had
+   * just changed.
+   */
+  id: string;
   name: string;
   muscleGroups: MuscleGroup[];
   secondaryMuscleGroups: MuscleGroup[];
   classification: ExerciseClassification;
   isCustom: boolean;
 }
-
-const muscleGroupLabel: Record<MuscleGroup, string> = {
-  back: "Back",
-  bicep: "Bicep",
-  calves: "Calves",
-  cardio: "Cardio",
-  chest: "Chest",
-  core: "Core",
-  forearms: "Forearms",
-  glutes: "Glutes",
-  hamstrings: "Hamstrings",
-  olympic: "Olympic",
-  other: "Other",
-  quads: "Quads",
-  shoulders: "Shoulders",
-  tricep: "Tricep",
-};
 
 const classificationLabel: Record<ExerciseClassification, string> = {
   barbell: "Barbell",
@@ -104,7 +95,13 @@ const backZoneEllipses: ZoneEllipse[] = [
 ];
 
 export default function ExerciseDatabaseTab() {
-  const { customExercises, addCustomExercise, updateCustomExercise } = useApp();
+  const {
+    exerciseCatalog,
+    exerciseCatalogError,
+    customExercises,
+    addCustomExercise,
+    updateCustomExercise,
+  } = useApp();
   const [view, setView] = useState<ViewMode>("list");
   const [sort, setSort] = useState<SortMode>("alphabetical");
   const [query, setQuery] = useState("");
@@ -118,14 +115,18 @@ export default function ExerciseDatabaseTab() {
   const [editingExercise, setEditingExercise] = useState<DbExercise | null>(null);
 
   const all: DbExercise[] = useMemo(() => {
-    const library = exerciseLibrary.map((e) => ({
+    const library = exerciseCatalog.map((e) => ({
+      id: e.id,
       name: e.name,
       muscleGroups: e.muscleGroups,
-      secondaryMuscleGroups: e.secondaryMuscleGroups ?? [],
+      secondaryMuscleGroups: e.secondaryMuscleGroups,
       classification: e.classification,
       isCustom: false,
     }));
     const custom = customExercises.map((e) => ({
+      // An exercise still waiting to be uploaded has no id of its own, so it
+      // falls back to the name it has always been keyed by.
+      id: e.id ?? e.name,
       name: e.name,
       muscleGroups: e.muscleGroups ?? [],
       secondaryMuscleGroups: e.secondaryMuscleGroups ?? [],
@@ -133,7 +134,7 @@ export default function ExerciseDatabaseTab() {
       isCustom: true,
     }));
     return [...custom, ...library];
-  }, [customExercises]);
+  }, [exerciseCatalog, customExercises]);
 
   const searched = useMemo(
     () => all.filter((e) => e.name.toLowerCase().includes(query.toLowerCase())),
@@ -178,9 +179,9 @@ export default function ExerciseDatabaseTab() {
         });
     });
     return Array.from(byGroup.entries())
-      .sort((a, b) => muscleGroupLabel[a[0]].localeCompare(muscleGroupLabel[b[0]]))
+      .sort((a, b) => MUSCLE_GROUP_LABEL[a[0]].localeCompare(MUSCLE_GROUP_LABEL[b[0]]))
       .map(([key, items]) => ({
-        label: muscleGroupLabel[key],
+        label: MUSCLE_GROUP_LABEL[key],
         items: items.sort((a, b) => a.name.localeCompare(b.name)),
       }));
   }, [filteredByGroup, sort]);
@@ -261,7 +262,7 @@ export default function ExerciseDatabaseTab() {
                 <Card padded={false} className="divide-y divide-charcoal/[0.06]">
                   {g.items.map((e) => (
                     <button
-                      key={e.name}
+                      key={e.id}
                       onClick={() => setEditingExercise(e)}
                       className="tap w-full flex items-center justify-between px-4 py-3 text-left"
                     >
@@ -272,7 +273,14 @@ export default function ExerciseDatabaseTab() {
                 </Card>
               </div>
             ))}
-            {groups.every((g) => g.items.length === 0) && (
+            {/* SAID WHENEVER IT HAPPENED, not only when nothing is left to
+                show. A user with three of their own movements and an
+                unreachable catalog would otherwise be looking at a
+                three-exercise library with no hint that 52 are missing. */}
+            {exerciseCatalogError && (
+              <p className="text-center text-sm text-status-high py-4">{exerciseCatalogError}</p>
+            )}
+            {!exerciseCatalogError && groups.every((g) => g.items.length === 0) && (
               <p className="text-center text-sm text-charcoal-faint py-8">No exercises match.</p>
             )}
           </div>
@@ -362,7 +370,7 @@ export default function ExerciseDatabaseTab() {
                     : "bg-cream-soft border-transparent text-charcoal-soft"
                 )}
               >
-                {muscleGroupLabel[mg]}
+                {MUSCLE_GROUP_LABEL[mg]}
               </button>
             ))}
           </div>
@@ -373,14 +381,14 @@ export default function ExerciseDatabaseTab() {
 
           {selectedGroup && (
             <div>
-              <p className="section-label text-charcoal-faint mb-2">{muscleGroupLabel[selectedGroup]}</p>
+              <p className="section-label text-charcoal-faint mb-2">{MUSCLE_GROUP_LABEL[selectedGroup]}</p>
               <Card padded={false} className="divide-y divide-charcoal/[0.06]">
                 {filteredByGroup.length === 0 ? (
                   <p className="text-sm text-charcoal-faint text-center py-6">No exercises for this group.</p>
                 ) : (
                   filteredByGroup.map((e) => (
                     <button
-                      key={e.name}
+                      key={e.id}
                       onClick={() => setEditingExercise(e)}
                       className="tap w-full flex items-center justify-between px-4 py-3 text-left"
                     >
@@ -403,9 +411,11 @@ export default function ExerciseDatabaseTab() {
         onSave={(data: CustomExerciseData) => {
           if (!editingExercise) return;
           if (editingExercise.isCustom) {
-            updateCustomExercise(editingExercise.name, data);
+            void updateCustomExercise(editingExercise.id, data);
           } else {
-            addCustomExercise(data);
+            // A catalog row is shared and no client role can write to it, so
+            // editing one has always saved a new custom exercise instead.
+            void addCustomExercise(data);
           }
         }}
       />

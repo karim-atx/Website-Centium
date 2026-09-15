@@ -12,7 +12,6 @@ import { Confetti } from "./Confetti";
 import { Button } from "../ui/Button";
 import { formatDuration, volumeForSession, estimate1RM } from "../../services/workout";
 import { localDayOf } from "../../utils/date";
-import { exerciseLibrary } from "../../data/mockWorkouts";
 import clsx from "clsx";
 
 const setTypeBadge: Record<string, string> = {
@@ -46,7 +45,7 @@ export const WorkoutSessionSheet: React.FC<{
   // professional can write his notes to the client" — read-only here.
   coachNote?: string;
 }> = ({ open, onClose, routineId, routineName, exercises, coachNote }) => {
-  const { saveWorkoutSession, logWorkout, pausedSessions, savePausedSession, clearPausedSession, personalRecords, setPersonalRecord } =
+  const { saveWorkoutSession, logWorkout, pausedSessions, savePausedSession, clearPausedSession, personalRecords, setPersonalRecord, exerciseCatalog } =
     useApp();
   const [startedAt, setStartedAt] = useState(() => new Date());
   const [elapsed, setElapsed] = useState(0);
@@ -374,7 +373,7 @@ export const WorkoutSessionSheet: React.FC<{
                             // or weighted bodyweight" — immediate, rather
                             // than waiting for saveWorkoutSession at the
                             // end of the whole workout.
-                            const libEntry = exerciseLibrary.find((l) => l.name === ex.name);
+                            const libEntry = exerciseCatalog.find((l) => l.name === ex.name);
                             if (libEntry && ONE_RM_CLASSIFICATIONS.includes(libEntry.classification) && s.weightKg > 0) {
                               const est = estimate1RM(s.weightKg, s.reps);
                               if (est > (personalRecords[ex.name] ?? 0)) setPersonalRecord(ex.name, est);

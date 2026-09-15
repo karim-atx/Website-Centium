@@ -1714,6 +1714,7 @@ export type Database = {
           classification: Database["public"]["Enums"]["exercise_classification"]
           created_at: string
           id: string
+          is_verified: boolean
           muscle_groups: Database["public"]["Enums"]["muscle_group"][]
           name: string
           secondary_muscle_groups: Database["public"]["Enums"]["muscle_group"][]
@@ -1724,6 +1725,7 @@ export type Database = {
           classification: Database["public"]["Enums"]["exercise_classification"]
           created_at?: string
           id?: string
+          is_verified?: boolean
           muscle_groups?: Database["public"]["Enums"]["muscle_group"][]
           name: string
           secondary_muscle_groups?: Database["public"]["Enums"]["muscle_group"][]
@@ -1734,6 +1736,7 @@ export type Database = {
           classification?: Database["public"]["Enums"]["exercise_classification"]
           created_at?: string
           id?: string
+          is_verified?: boolean
           muscle_groups?: Database["public"]["Enums"]["muscle_group"][]
           name?: string
           secondary_muscle_groups?: Database["public"]["Enums"]["muscle_group"][]

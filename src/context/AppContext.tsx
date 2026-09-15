@@ -54,9 +54,17 @@ import {
   getCustomMeals,
   updateCustomMeal as updateCustomMealRemote,
 } from "../services/custom-meals";
+import {
+  createCustomExercise as createCustomExerciseRemote,
+  deleteCustomExercise as deleteCustomExerciseRemote,
+  getCustomExercises,
+  listExercises,
+  updateCustomExercise as updateCustomExerciseRemote,
+  type CatalogExercise,
+} from "../services/exercises";
 import { mockForumPosts } from "../data/mockForum";
 import { defaultHabits, streaks as seedStreaks } from "../data/mockHealthData";
-import { todaysWorkout, workoutPrograms, exerciseLibrary } from "../data/mockWorkouts";
+import { todaysWorkout, workoutPrograms } from "../data/mockWorkouts";
 import { estimate1RM } from "../services/workout";
 import { ONE_RM_CLASSIFICATIONS } from "../types";
 import {
@@ -555,14 +563,33 @@ interface AppState {
   clientCustomFoods: Record<string, CustomFood[]>;
   addClientCustomFood: (clientId: string, food: Omit<CustomFood, "id" | "isCustom">) => CustomFood;
 
+  /**
+   * The public exercise catalog, read from public.exercises.
+   *
+   * EMPTY UNTIL THE FIRST READ RETURNS, and empty again if it failed — there
+   * is no bundled copy to fall back on any more, which is the point: one
+   * source, shared by every client, instead of a list each app ships its own
+   * version of. `exerciseCatalogError` is how a surface tells the two apart.
+   */
+  exerciseCatalog: CatalogExercise[];
+  /** Null until the first catalog read finishes or fails. */
+  exerciseCatalogError: string | null;
+
   // V4 (QA 4.0): custom exercises are saved to a searchable library, not
   // auto-added to whichever routine was open when they were created.
   customExercises: CustomExerciseLibraryItem[];
-  addCustomExercise: (item: CustomExerciseLibraryItem) => void;
+  /** Resolves to an error sentence, or undefined when the write landed. */
+  addCustomExercise: (item: CustomExerciseLibraryItem) => Promise<string | undefined>;
   // V8 (QA 8.0): "ability to edit each exercise if pressed on in the
-  // library" — for a custom exercise, matched and replaced by its current
-  // name (allows renaming too).
-  updateCustomExercise: (originalName: string, item: CustomExerciseLibraryItem) => void;
+  // library" — keyed by id now that these are rows, so a rename is an
+  // ordinary update rather than a lookup that its own result invalidates.
+  updateCustomExercise: (
+    id: string,
+    item: CustomExerciseLibraryItem
+  ) => Promise<string | undefined>;
+  removeCustomExercise: (id: string) => Promise<void>;
+  /** Null until the first hydration finishes or fails. */
+  customExercisesError: string | null;
 
   // V4 (QA 4.0): one review per professional, submitted from ProfessionalDetail.
   professionalReviews: ProfessionalReview[];
@@ -1657,6 +1684,107 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "customExercises",
     []
   );
+
+  // --- the exercise catalog -----------------------------------------------
+  //
+  // NOT PERSISTED, deliberately, and this is the one behaviour the swap costs.
+  // The 52 movements used to be a bundled module, so the library worked with
+  // no network at all; read from public.exercises they do not. That follows
+  // the food catalog exactly — listFoods caches nothing either — and the
+  // alternative is a second copy of reference data that drifts from the table
+  // silently. Offline, the surfaces say so rather than showing a stale list
+  // they cannot date.
+  const [exerciseCatalog, setExerciseCatalog] = useState<CatalogExercise[]>([]);
+  const [exerciseCatalogError, setExerciseCatalogError] = useState<string | null>(null);
+
+  // NO auth GATE. exercises is anon-readable (`exercises_select_public` is
+  // `using (true)`, and the SELECT grant covers anon), so this runs once on
+  // mount for signed-out visitors too — the library is public reference data
+  // and browsing it has never needed an account.
+  useEffect(() => {
+    let cancelled = false;
+    void listExercises().then((result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setExerciseCatalogError(result.message ?? "Couldn't load the exercise library.");
+        return;
+      }
+      setExerciseCatalogError(null);
+      setExerciseCatalog(result.exercises);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // --- custom exercise hydration ------------------------------------------
+  //
+  // The shape custom meals established: a failed read keeps what is already on
+  // screen, because an empty list and a broken connection mean opposite things
+  // and one of them must not delete a user's own movements.
+  const [customExercisesError, setCustomExercisesError] = useState<string | null>(null);
+  // One attempt per signed-in account per page load. A ref, not state, so
+  // starting the upload cannot re-run the effect that started it.
+  const exerciseUploadAttempted = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+
+    void getCustomExercises(authUserId).then(async (result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setCustomExercisesError(result.message ?? "Couldn't load your custom exercises.");
+        return;
+      }
+      setCustomExercisesError(null);
+
+      // EXERCISES SAVED BEFORE THIS EXISTED ARE UPLOADED ONCE. Identified by
+      // an id that is not a uuid — including no id at all, which is what every
+      // copy written before today carries, since these were keyed by name
+      // until they became rows.
+      //
+      // A NAME ALREADY ON THE SERVER IS NOT RE-UPLOADED, and this is the one
+      // place the shape differs from custom meals. Two meals may legitimately
+      // share a title; two exercises may not — addCustomExercise has always
+      // refused a duplicate name, and the library renders one row per name. So
+      // a local copy of something already up there is dropped as the same
+      // movement rather than uploaded into a second row.
+      const remoteNames = new Set(result.exercises.map((e) => e.name.trim().toLowerCase()));
+      const pending =
+        exerciseUploadAttempted.current !== authUserId
+          ? customExercises.filter((e) => !isUuid(e.id ?? ""))
+          : [];
+      exerciseUploadAttempted.current = authUserId;
+
+      const uploaded: CustomExerciseLibraryItem[] = [];
+      const keptLocal: CustomExerciseLibraryItem[] = [];
+      for (const item of pending) {
+        if (remoteNames.has(item.name.trim().toLowerCase())) continue;
+        const written = await createCustomExerciseRemote(authUserId, item);
+        if (written.ok && written.exercise) {
+          uploaded.push(written.exercise);
+          remoteNames.add(written.exercise.name.trim().toLowerCase());
+        } else {
+          // Kept local, kept visible, not retried in a loop: the next page
+          // load is the retry.
+          console.error("[exercises] Could not upload a local exercise:", written.message);
+          keptLocal.push(item);
+        }
+      }
+      if (cancelled) return;
+
+      setCustomExercises(() => [...result.exercises, ...uploaded, ...keptLocal]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // customExercises is read for the one-time upload and must not re-trigger
+    // this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId, profileReady]);
+
   const [professionalReviews, setProfessionalReviews] = usePersistentState<ProfessionalReview[]>(
     "professionalReviews",
     []
@@ -2145,7 +2273,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPersonalRecords((prev) => {
       const next = { ...prev };
       for (const ex of session.exercises) {
-        const libEntry = exerciseLibrary.find((l) => l.name === ex.name);
+        // The catalog, not a bundled list — and still the catalog only, as
+        // before: a user's own movement has never driven a 1RM estimate.
+        const libEntry = exerciseCatalog.find((l) => l.name === ex.name);
         if (!libEntry || !ONE_RM_CLASSIFICATIONS.includes(libEntry.classification)) continue;
         const best = ex.sets
           .filter((s) => s.completed && s.weightKg > 0)
@@ -2736,14 +2866,57 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return custom;
   };
 
-  const addCustomExercise: AppState["addCustomExercise"] = (item) =>
-    setCustomExercises((prev) =>
-      prev.some((e) => e.name.toLowerCase() === item.name.toLowerCase()) ? prev : [...prev, item]
+  // A LOCAL ID MEANS NEVER SYNCED, the same shape isRemoteMealId gives meals.
+  // An exercise saved before this reached Supabase carries no id at all; one
+  // saved while signed out carries `cx<timestamp>`.
+  const isRemoteExerciseId = (id: string | undefined) => isUuid(id ?? "");
+
+  const addCustomExercise: AppState["addCustomExercise"] = async (item) => {
+    // THE DUPLICATE-NAME RULE IS UNCHANGED and is checked before the write, so
+    // a second "Bungees" never reaches the table in the first place.
+    const clash = customExercises.some(
+      (e) => e.name.trim().toLowerCase() === item.name.trim().toLowerCase()
     );
-  const updateCustomExercise: AppState["updateCustomExercise"] = (originalName, item) =>
-    setCustomExercises((prev) =>
-      prev.map((e) => (e.name.toLowerCase() === originalName.toLowerCase() ? item : e))
-    );
+    if (clash) return undefined;
+
+    // Signed out, behave exactly as before rather than refusing: the movement
+    // is still useful locally and the hydration above will carry it up on the
+    // next sign-in.
+    if (!authUserId) {
+      setCustomExercises((prev) => [...prev, { ...item, id: `cx${Date.now()}` }]);
+      return undefined;
+    }
+
+    const result = await createCustomExerciseRemote(authUserId, item);
+    if (!result.ok || !result.exercise) return result.message ?? "Could not save that exercise.";
+    setCustomExercises((prev) => [...prev, result.exercise!]);
+    return undefined;
+  };
+
+  const updateCustomExercise: AppState["updateCustomExercise"] = async (id, item) => {
+    const applyLocal = () =>
+      setCustomExercises((prev) => prev.map((e) => (e.id === id ? { ...item, id } : e)));
+
+    // An unsynced movement has nothing to update remotely; editing it keeps it
+    // local, and the upload carries the edited version up.
+    if (!authUserId || !isRemoteExerciseId(id)) {
+      applyLocal();
+      return undefined;
+    }
+    const result = await updateCustomExerciseRemote(id, item);
+    if (!result.ok) return result.message ?? "Could not save that exercise.";
+    applyLocal();
+    return undefined;
+  };
+
+  const removeCustomExercise: AppState["removeCustomExercise"] = async (id) => {
+    // Removed locally either way, for the reason removeCustomMeal gives: a
+    // delete the server refused should not leave the row on screen pretending
+    // the tap did nothing, and the next hydration brings it back if it really
+    // survived.
+    if (authUserId && isRemoteExerciseId(id)) await deleteCustomExerciseRemote(id);
+    setCustomExercises((prev) => prev.filter((e) => e.id !== id));
+  };
 
   const submitProfessionalReview: AppState["submitProfessionalReview"] = (professionalId, rating, text) =>
     setProfessionalReviews((prev) => {
@@ -3088,9 +3261,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addCustomFood,
       clientCustomFoods,
       addClientCustomFood,
+      exerciseCatalog,
+      exerciseCatalogError,
       customExercises,
       addCustomExercise,
       updateCustomExercise,
+      removeCustomExercise,
+      customExercisesError,
       professionalReviews,
       submitProfessionalReview,
       forumPosts,
@@ -3236,7 +3413,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       colorTheme,
       customFoods,
       clientCustomFoods,
+      exerciseCatalog,
+      exerciseCatalogError,
       customExercises,
+      customExercisesError,
       professionalReviews,
       forumPosts,
       dismissedMockProfessionalIds,

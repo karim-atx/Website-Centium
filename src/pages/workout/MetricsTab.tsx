@@ -5,7 +5,6 @@ import { Button } from "../../components/ui/Button";
 import { Sparkline } from "../../components/health/Sparkline";
 import { OneRepMaxesSheet } from "../../components/workout/OneRepMaxesSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
-import { exerciseLibrary } from "../../data/mockWorkouts";
 import { TrendingUp, Dumbbell, Scale3D, Flame, Scale } from "lucide-react";
 
 // QA 12.0: "Rework the metrics tab... Limiting the default view to 3-5
@@ -33,7 +32,7 @@ const balanceColors: Record<string, string> = {
 };
 
 export default function MetricsTab() {
-  const { workoutSessions, personalRecords, streaks, weightByDate } = useApp();
+  const { workoutSessions, personalRecords, streaks, weightByDate, exerciseCatalog } = useApp();
   const [oneRmOpen, setOneRmOpen] = useState(false);
   const [balanceOpen, setBalanceOpen] = useState(false);
 
@@ -53,14 +52,14 @@ export default function MetricsTab() {
     const tally: Record<string, number> = {};
     for (const session of workoutSessions) {
       for (const ex of session.exercises) {
-        const libEntry = exerciseLibrary.find((l) => l.name === ex.name);
+        const libEntry = exerciseCatalog.find((l) => l.name === ex.name);
         const group = libEntry?.muscleGroups?.[0];
         if (!group) continue;
         tally[group] = (tally[group] ?? 0) + ex.sets.filter((s) => s.completed).length;
       }
     }
     return tally;
-  }, [workoutSessions]);
+  }, [workoutSessions, exerciseCatalog]);
   const totalSets = Object.values(muscleGroupTally).reduce((a, b) => a + b, 0);
   const sortedGroups = Object.entries(muscleGroupTally).sort((a, b) => b[1] - a[1]);
   const topGroup = sortedGroups[0];

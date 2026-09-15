@@ -1,4 +1,4 @@
-import type { WorkoutTemplate, Exercise, ExerciseClassification, MuscleGroup } from "../types";
+import type { WorkoutTemplate, Exercise } from "../types";
 
 let exId = 0;
 const ex = (partial: Omit<Exercise, "id">): Exercise => ({
@@ -135,108 +135,14 @@ export const previousWorkouts = [
   },
 ];
 
-export const workoutCategories = [
-  { id: "chest", label: "Chest" },
-  { id: "back", label: "Back" },
-  { id: "shoulders", label: "Shoulders" },
-  { id: "arms", label: "Arms" },
-  { id: "legs", label: "Legs" },
-  { id: "core", label: "Core" },
-  { id: "full_body", label: "Full Body" },
-  { id: "cardio", label: "Cardio" },
-] as const;
-
-export type ExerciseCategory = (typeof workoutCategories)[number]["id"];
-
-// A searchable/browsable exercise library — the Create Routine flow's
-// "search for exercise" input and library popup both read from this.
-// `classification` drives which exercises track an estimated 1RM (barbell/
-// dumbbell/weighted-bodyweight) per QA App 3.0.
-// V6 (QA 6.0): `muscleGroups` added alongside the older `category` (kept
-// for the exercise-library icon lookup, untouched) so the new Exercise
-// Database tab can filter/highlight by the split bicep/tricep/quads/
-// hamstrings taxonomy — arms/legs exercises reclassified per-movement.
-// V10 (QA 10.0): "reanalyze all preinserted exercises to include multiple
-// muscle groups if the exercise is know to involve multiple muscle groups"
-// — `muscleGroups` stays the primary mover(s) (used for filtering, per QA:
-// "when filtering by muscle group, only go with the main muscle group
-// selection"), `secondaryMuscleGroups` records real secondary movers.
-// Also: "Populate some exercises for glutes" — new glutes-primary entries
-// below, plus glutes added as a secondary mover on the relevant lower-body
-// lifts that already existed.
-export const exerciseLibrary: {
-  name: string;
-  category: ExerciseCategory;
-  classification: ExerciseClassification;
-  muscleGroups: MuscleGroup[];
-  secondaryMuscleGroups?: MuscleGroup[];
-}[] = [
-  { name: "Bench Press", category: "chest", classification: "barbell", muscleGroups: ["chest"], secondaryMuscleGroups: ["shoulders", "tricep"] },
-  { name: "Incline Bench", category: "chest", classification: "barbell", muscleGroups: ["chest"], secondaryMuscleGroups: ["shoulders", "tricep"] },
-  { name: "Push Up", category: "chest", classification: "reps_only", muscleGroups: ["chest"], secondaryMuscleGroups: ["shoulders", "tricep"] },
-  { name: "Dumbbell Fly", category: "chest", classification: "dumbbell", muscleGroups: ["chest"], secondaryMuscleGroups: ["shoulders"] },
-  { name: "Cable Crossover", category: "chest", classification: "machine_other", muscleGroups: ["chest"], secondaryMuscleGroups: ["shoulders"] },
-  { name: "Dips", category: "chest", classification: "weighted_bodyweight", muscleGroups: ["chest"], secondaryMuscleGroups: ["tricep", "shoulders"] },
-
-  { name: "Deadlift", category: "back", classification: "barbell", muscleGroups: ["back"], secondaryMuscleGroups: ["hamstrings", "glutes", "forearms"] },
-  { name: "Barbell Row", category: "back", classification: "barbell", muscleGroups: ["back"], secondaryMuscleGroups: ["bicep", "forearms"] },
-  { name: "Lat Pulldown", category: "back", classification: "machine_other", muscleGroups: ["back"], secondaryMuscleGroups: ["bicep"] },
-  { name: "Seated Row", category: "back", classification: "machine_other", muscleGroups: ["back"], secondaryMuscleGroups: ["bicep"] },
-  { name: "Cable Row", category: "back", classification: "machine_other", muscleGroups: ["back"], secondaryMuscleGroups: ["bicep"] },
-  { name: "Pull Up", category: "back", classification: "weighted_bodyweight", muscleGroups: ["back"], secondaryMuscleGroups: ["bicep", "forearms"] },
-
-  { name: "Overhead Press", category: "shoulders", classification: "barbell", muscleGroups: ["shoulders"], secondaryMuscleGroups: ["tricep"] },
-  { name: "Shoulder Press", category: "shoulders", classification: "dumbbell", muscleGroups: ["shoulders"], secondaryMuscleGroups: ["tricep"] },
-  { name: "Lateral Raise", category: "shoulders", classification: "dumbbell", muscleGroups: ["shoulders"] },
-  { name: "Front Raise", category: "shoulders", classification: "dumbbell", muscleGroups: ["shoulders"] },
-  { name: "Face Pull", category: "shoulders", classification: "machine_other", muscleGroups: ["shoulders"], secondaryMuscleGroups: ["back"] },
-
-  { name: "Bicep Curl", category: "arms", classification: "dumbbell", muscleGroups: ["bicep"] },
-  { name: "Hammer Curl", category: "arms", classification: "dumbbell", muscleGroups: ["bicep"] },
-  { name: "Tricep Pushdown", category: "arms", classification: "machine_other", muscleGroups: ["tricep"] },
-  { name: "Skull Crusher", category: "arms", classification: "barbell", muscleGroups: ["tricep"] },
-  { name: "Preacher Curl", category: "arms", classification: "barbell", muscleGroups: ["bicep"] },
-
-  { name: "Back Squat", category: "legs", classification: "barbell", muscleGroups: ["quads"], secondaryMuscleGroups: ["glutes", "hamstrings", "calves"] },
-  { name: "Goblet Squat", category: "legs", classification: "dumbbell", muscleGroups: ["quads"], secondaryMuscleGroups: ["glutes"] },
-  { name: "Leg Press", category: "legs", classification: "machine_other", muscleGroups: ["quads"], secondaryMuscleGroups: ["glutes"] },
-  { name: "Romanian Deadlift", category: "legs", classification: "barbell", muscleGroups: ["hamstrings"], secondaryMuscleGroups: ["glutes", "back"] },
-  { name: "Walking Lunge", category: "legs", classification: "dumbbell", muscleGroups: ["quads"], secondaryMuscleGroups: ["glutes"] },
-  // Design refinement §6.5: "Calf Raise moves from quads to calves — it is
-  // the one calf movement currently filed under quads."
-  { name: "Calf Raise", category: "legs", classification: "machine_other", muscleGroups: ["calves"] },
-
-  // V10 (QA 10.0): new glutes-primary exercises.
-  { name: "Hip Thrust", category: "legs", classification: "barbell", muscleGroups: ["glutes"], secondaryMuscleGroups: ["hamstrings"] },
-  { name: "Glute Bridge", category: "legs", classification: "weighted_bodyweight", muscleGroups: ["glutes"], secondaryMuscleGroups: ["hamstrings"] },
-  { name: "Cable Kickback", category: "legs", classification: "machine_other", muscleGroups: ["glutes"] },
-  { name: "Hip Abduction Machine", category: "legs", classification: "machine_other", muscleGroups: ["glutes"] },
-  { name: "Bulgarian Split Squat", category: "legs", classification: "dumbbell", muscleGroups: ["glutes"], secondaryMuscleGroups: ["quads", "hamstrings"] },
-
-  // Design refinement §6.5: new calves/forearms entries — two of the
-  // most-trained groups had nowhere to live.
-  { name: "Standing Calf Raise", category: "legs", classification: "machine_other", muscleGroups: ["calves"] },
-  { name: "Seated Calf Raise", category: "legs", classification: "machine_other", muscleGroups: ["calves"] },
-  { name: "Jump Rope", category: "cardio", classification: "cardio", muscleGroups: ["calves"] },
-  { name: "Wrist Curl", category: "arms", classification: "dumbbell", muscleGroups: ["forearms"] },
-  { name: "Reverse Wrist Curl", category: "arms", classification: "dumbbell", muscleGroups: ["forearms"] },
-  { name: "Farmer's Carry", category: "full_body", classification: "dumbbell", muscleGroups: ["forearms"], secondaryMuscleGroups: ["back", "core"] },
-  { name: "Dead Hang", category: "arms", classification: "weighted_bodyweight", muscleGroups: ["forearms"], secondaryMuscleGroups: ["back"] },
-
-  { name: "Plank", category: "core", classification: "duration", muscleGroups: ["core"] },
-  { name: "Hanging Leg Raise", category: "core", classification: "reps_only", muscleGroups: ["core"] },
-  { name: "Cable Woodchop", category: "core", classification: "machine_other", muscleGroups: ["core"] },
-  { name: "Ab Wheel Rollout", category: "core", classification: "reps_only", muscleGroups: ["core"], secondaryMuscleGroups: ["shoulders"] },
-
-  // QA 11.0: "full_body" removed as a muscle-group classification — each
-  // gets a real primary mover instead of the old catch-all.
-  { name: "Kettlebell Swing", category: "full_body", classification: "dumbbell", muscleGroups: ["glutes"], secondaryMuscleGroups: ["hamstrings", "back"] },
-  { name: "Clean and Press", category: "full_body", classification: "barbell", muscleGroups: ["olympic"], secondaryMuscleGroups: ["shoulders", "back"] },
-  { name: "Burpee", category: "full_body", classification: "reps_only", muscleGroups: ["cardio"], secondaryMuscleGroups: ["core", "shoulders"] },
-
-  { name: "Easy Run", category: "cardio", classification: "cardio", muscleGroups: ["cardio"] },
-  { name: "Interval Sprints", category: "cardio", classification: "cardio", muscleGroups: ["cardio"] },
-  { name: "Rowing Machine", category: "cardio", classification: "cardio", muscleGroups: ["cardio"], secondaryMuscleGroups: ["back"] },
-  { name: "Stair Climber", category: "cardio", classification: "cardio", muscleGroups: ["cardio"], secondaryMuscleGroups: ["glutes", "calves"] },
-  { name: "Cycling", category: "cardio", classification: "cardio", muscleGroups: ["cardio"] },
-];
+// The 52-movement `exerciseLibrary`, `workoutCategories` and `ExerciseCategory`
+// that used to live here are gone: the catalog is public.exercises now, read
+// through services/exercises and held in AppContext as `exerciseCatalog`.
+// Every name here matched a seeded row exactly, which is why routines built
+// from the old list still resolve.
+//
+// The browse categories went with it and could not be carried over.
+// exercises.category is typed public.muscle_group, and `arms`, `legs` and
+// `full_body` are not members of that enum — the catalog seed says the same
+// thing at length and derives category as the primary mover instead. The
+// filter chips in ExerciseLibrarySheet are muscle groups for that reason.

@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Chip } from "../ui/Chip";
-import { exerciseLibrary, workoutCategories } from "../../data/mockWorkouts";
 import { Search, Plus, Sparkles } from "lucide-react";
-import { exerciseCategoryIcon } from "../../utils/icons";
+import { muscleGroupIcon } from "../../utils/icons";
+import { MUSCLE_GROUP_LABEL } from "../../utils/muscleGroups";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "./CreateCustomExerciseSheet";
 import { useApp } from "../../context/AppContext";
 import type { MuscleGroup } from "../../types";
@@ -22,18 +22,31 @@ export const ExerciseLibrarySheet: React.FC<{
   onPick: (pick: ExercisePick) => void;
   alreadyAdded: string[];
 }> = ({ open, onClose, onPick, alreadyAdded }) => {
-  const { customExercises, addCustomExercise } = useApp();
+  const { exerciseCatalog, exerciseCatalogError, customExercises, addCustomExercise } = useApp();
   const [query, setQuery] = useState("");
-  const [category, setCategory] = useState<string | null>(null);
+  const [category, setCategory] = useState<MuscleGroup | null>(null);
   const [customOpen, setCustomOpen] = useState(false);
 
+  // THE CHIPS ARE THE CATALOG'S OWN MUSCLE GROUPS, built from what was
+  // actually loaded rather than from a fixed list, so a chip can never offer a
+  // filter that matches nothing. The enum holds 14; the 52 seeded movements
+  // use 13 of them — `other` is unused — and a fixed list would have shown it.
+  const categories = useMemo(() => {
+    const present = new Set<MuscleGroup>();
+    for (const e of exerciseCatalog) for (const mg of e.muscleGroups) present.add(mg);
+    return [...present].sort((a, b) => MUSCLE_GROUP_LABEL[a].localeCompare(MUSCLE_GROUP_LABEL[b]));
+  }, [exerciseCatalog]);
+
+  // Primary movers only, never secondary — the same rule the Exercise
+  // Database tab follows, per QA: "when filtering by muscle group, only go
+  // with the main muscle group selection".
   const filtered = useMemo(() => {
-    return exerciseLibrary.filter((e) => {
+    return exerciseCatalog.filter((e) => {
       const matchesQuery = e.name.toLowerCase().includes(query.toLowerCase());
-      const matchesCategory = category ? e.category === category : true;
+      const matchesCategory = category ? e.muscleGroups.includes(category) : true;
       return matchesQuery && matchesCategory;
     });
-  }, [query, category]);
+  }, [exerciseCatalog, query, category]);
 
   // V4 (QA 4.0): a custom exercise is saved to this searchable library on
   // creation — it's only added to the routine/session if explicitly tapped
@@ -41,7 +54,7 @@ export const ExerciseLibrarySheet: React.FC<{
   const filteredCustom = useMemo(() => {
     return customExercises.filter((e) => {
       const matchesQuery = e.name.toLowerCase().includes(query.toLowerCase());
-      const matchesCategory = category ? (e.muscleGroups ?? []).includes(category as MuscleGroup) : true;
+      const matchesCategory = category ? (e.muscleGroups ?? []).includes(category) : true;
       return matchesQuery && matchesCategory;
     });
   }, [customExercises, query, category]);
@@ -82,11 +95,11 @@ export const ExerciseLibrarySheet: React.FC<{
             <Chip active={category === null} onClick={() => setCategory(null)}>
               All
             </Chip>
-            {workoutCategories.map((c) => {
-              const Icon = exerciseCategoryIcon[c.id];
+            {categories.map((c) => {
+              const Icon = muscleGroupIcon[c];
               return (
-                <Chip key={c.id} active={category === c.id} onClick={() => setCategory(c.id)}>
-                  <Icon size={12} className="inline mr-1 -mt-0.5" /> {c.label}
+                <Chip key={c} active={category === c} onClick={() => setCategory(c)}>
+                  <Icon size={12} className="inline mr-1 -mt-0.5" /> {MUSCLE_GROUP_LABEL[c]}
                 </Chip>
               );
             })}
@@ -97,8 +110,20 @@ export const ExerciseLibrarySheet: React.FC<{
               const added = alreadyAdded.includes(e.name);
               return (
                 <button
-                  key={e.name}
-                  onClick={() => !added && onPick({ ...e, isCustom: true })}
+                  key={e.id ?? e.name}
+                  onClick={() =>
+                    !added &&
+                    onPick({
+                      // Named rather than spread: a hydrated custom exercise
+                      // now carries a row id, and a pick is not where that
+                      // belongs — routines still reference exercises by name.
+                      name: e.name,
+                      classification: e.classification,
+                      muscleGroups: e.muscleGroups,
+                      secondaryMuscleGroups: e.secondaryMuscleGroups,
+                      isCustom: true,
+                    })
+                  }
                   disabled={added}
                   className="tap w-full flex items-center justify-between rounded-2xl px-3.5 py-3 hover:bg-cream-soft text-left disabled:opacity-40"
                 >
@@ -113,7 +138,7 @@ export const ExerciseLibrarySheet: React.FC<{
               const added = alreadyAdded.includes(e.name);
               return (
                 <button
-                  key={e.name}
+                  key={e.id}
                   onClick={() => !added && onPick({ name: e.name, classification: e.classification, muscleGroups: e.muscleGroups, secondaryMuscleGroups: e.secondaryMuscleGroups })}
                   disabled={added}
                   className="tap w-full flex items-center justify-between rounded-2xl px-3.5 py-3 hover:bg-cream-soft text-left disabled:opacity-40"
@@ -123,7 +148,14 @@ export const ExerciseLibrarySheet: React.FC<{
                 </button>
               );
             })}
-            {filtered.length === 0 && filteredCustom.length === 0 && (
+            {/* A FAILED LOAD IS NOT AN EMPTY LIBRARY, and it is worth saying
+                even when the user's own movements are still listed: "no
+                matches" would blame the search for a dropped connection, and
+                a short list would quietly look like the whole catalog. */}
+            {exerciseCatalogError && (
+              <p className="text-center text-sm text-status-high py-4">{exerciseCatalogError}</p>
+            )}
+            {!exerciseCatalogError && filtered.length === 0 && filteredCustom.length === 0 && (
               <p className="text-center text-sm text-charcoal-faint py-8">
                 No matches — use the + button above to add a custom exercise.
               </p>
@@ -135,7 +167,7 @@ export const ExerciseLibrarySheet: React.FC<{
       <CreateCustomExerciseSheet
         open={customOpen}
         onClose={() => setCustomOpen(false)}
-        onSave={(data) => addCustomExercise(data)}
+        onSave={(data) => void addCustomExercise(data)}
       />
     </>
   );
