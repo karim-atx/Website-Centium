@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -340,6 +339,32 @@ export default function ClientCalendarTab() {
     );
   };
 
+  // Iteration 6 "Team" §5 Calendar: a "Next up" hero — the real nearest
+  // upcoming event (today or later), not the mockup's fixed example.
+  const nextUp = useMemo(() => {
+    const nowMinutes = today.getHours() * 60 + today.getMinutes();
+    const todayIso = toISO(today.getFullYear(), today.getMonth(), today.getDate());
+    const candidates = events
+      .filter((e) => e.date > todayIso || (e.date === todayIso && !e.allDay && minutesOf(e.endTime) >= nowMinutes))
+      .sort((a, b) => (a.date === b.date ? minutesOf(a.startTime) - minutesOf(b.startTime) : a.date < b.date ? -1 : 1));
+    const e = candidates[0];
+    if (!e) return null;
+    const isToday = e.date === todayIso;
+    const dayLabel = isToday
+      ? "Today"
+      : new Date(`${e.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "long" });
+    const when = e.allDay ? "All day" : `${dayLabel} ${e.startTime} – ${e.endTime}`;
+    let rel = "";
+    if (isToday && !e.allDay) {
+      const diffH = Math.max(0, Math.round(((minutesOf(e.startTime) - nowMinutes) / 60) * 10) / 10);
+      rel = diffH < 1 ? "soon" : `in ${Math.round(diffH)}h`;
+    } else if (!isToday) {
+      const diffDays = Math.round((new Date(`${e.date}T00:00:00`).getTime() - new Date(`${todayIso}T00:00:00`).getTime()) / 86400000);
+      rel = `in ${diffDays}d`;
+    }
+    return { event: e, when: e.location ? `${when} · ${e.location}` : when, rel };
+  }, [events, today]);
+
   const selectedEvents = eventsByDate[selectedDate] ?? [];
   const selectedDateLabel = new Date(`${selectedDate}T00:00:00`).toLocaleDateString("en-US", {
     weekday: "long",
@@ -460,19 +485,21 @@ export default function ClientCalendarTab() {
 
   return (
     <div>
-      <PageHeader
-        title="Calendar"
-        showBack
-        right={
-          <button
-            onClick={openCompose}
-            className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft"
-            aria-label="New event"
-          >
-            <Plus size={18} />
-          </button>
-        }
-      />
+      {/* Iteration 6 "Team": compact 19px title in place of PageHeader's
+          27px default — see the identical note in Food.tsx. The circular
+          "+" keeps its exact meaning (openCompose), just a gradient chip
+          instead of a flat primary fill. */}
+      <div className="flex items-start justify-between gap-3 mb-[13px]">
+        <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal">Calendar</p>
+        <button
+          onClick={openCompose}
+          aria-label="New event"
+          className="tap w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0"
+          style={{ background: "var(--gradient-lavender-accent)" }}
+        >
+          <Plus size={16} className="text-white" />
+        </button>
+      </div>
 
       {/* A failed read leaves whatever was already on screen and says so,
           rather than blanking a calendar — which would be indistinguishable
@@ -483,14 +510,14 @@ export default function ClientCalendarTab() {
         </p>
       )}
 
-      <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit mb-4">
+      <div className="flex gap-[6px] mb-[13px]">
         {(["year", "month", "week", "day"] as View[]).map((v) => (
           <button
             key={v}
             onClick={() => setView(v)}
             className={clsx(
-              "tap px-4 py-1.5 rounded-full text-xs font-bold capitalize",
-              view === v ? "bg-primary text-white" : "text-charcoal-faint"
+              "tap rounded-full px-[13px] py-[7px] text-[11px] capitalize whitespace-nowrap",
+              view === v ? "font-extrabold bg-team-lavender text-white" : "font-semibold bg-team-lavender/[0.15] text-primary-deep-text"
             )}
           >
             {v}
@@ -498,59 +525,115 @@ export default function ClientCalendarTab() {
         ))}
       </div>
 
+      {/* "Next up": the real nearest event, not the mockup's fixed example
+          — hidden entirely when there is nothing upcoming to show. */}
+      {view === "month" && nextUp && (
+        <div
+          className="relative overflow-hidden rounded-[22px] px-[17px] py-4 mb-[13px]"
+          style={{ background: "var(--gradient-board)" }}
+        >
+          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66]">Next up</p>
+          <div className="flex items-end justify-between gap-3 mt-[9px]">
+            <div className="min-w-0">
+              <p className="text-[19px] font-extrabold leading-[1.1] tracking-[-0.03em] text-white truncate">{nextUp.event.title}</p>
+              <p className="mt-[5px] text-[10.5px] text-white/[0.78]">{nextUp.when}</p>
+            </div>
+            {nextUp.rel && (
+              <span className="text-[9.5px] font-bold text-white bg-white/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">{nextUp.rel}</span>
+            )}
+          </div>
+        </div>
+      )}
+
       {view === "month" && (
         <>
-          <div className="flex items-center justify-between mb-3">
-            <button onClick={() => goMonth(-1)} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <ChevronLeft size={16} />
-            </button>
-            <p className="font-display font-semibold text-charcoal">
-              {monthNames[cursor.month]} {cursor.year}
-            </p>
-            <button onClick={() => goMonth(1)} className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <ChevronRight size={16} />
-            </button>
+          <div className="rounded-[15px] bg-white dark:bg-[#221C2E] border border-team-nav-accent/[0.16] dark:border-team-nav-accent/[0.28] px-3.5 py-[13px] mb-[13px]">
+            <div className="flex items-center justify-between mb-[11px]">
+              <button onClick={() => goMonth(-1)} className="tap w-[26px] h-[26px] rounded-full bg-team-lavender/[0.18] flex items-center justify-center text-primary-deep-text">
+                <ChevronLeft size={13} />
+              </button>
+              <p className="text-[13.5px] font-extrabold tracking-[-0.02em] text-charcoal">
+                {monthNames[cursor.month]} {cursor.year}
+              </p>
+              <button onClick={() => goMonth(1)} className="tap w-[26px] h-[26px] rounded-full bg-team-lavender/[0.18] flex items-center justify-center text-primary-deep-text">
+                <ChevronRight size={13} />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-7 gap-[2px] mb-1">
+              {"SMTWTFS".split("").map((d, i) => (
+                <div key={i} className="text-center text-[8.5px] font-bold tracking-[.1em] text-charcoal/[0.42]">
+                  {d}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7 gap-[2px]">
+              {cells.map((day, i) => {
+                if (day === null) return <div key={i} />;
+                const iso = toISO(cursor.year, cursor.month, day);
+                const hasEvents = !!eventsByDate[iso]?.length;
+                const isSelected = iso === selectedDate;
+                const isToday = iso === toISO(today.getFullYear(), today.getMonth(), today.getDate());
+                return (
+                  <button
+                    key={i}
+                    onClick={() => setSelectedDate(iso)}
+                    className={clsx(
+                      "tap aspect-square rounded-[10px] flex flex-col items-center justify-center gap-0.5 text-[12.5px] font-semibold",
+                      isSelected ? "font-extrabold text-white" : isToday ? "bg-team-lavender/[0.16] text-primary-deep-text font-bold" : "text-charcoal"
+                    )}
+                    style={isSelected ? { background: "var(--gradient-lavender-accent)" } : undefined}
+                  >
+                    {day}
+                    <span className="w-[3.5px] h-[3.5px] rounded-full" style={{ background: hasEvents ? (isSelected ? "#fff" : "#6F9993") : "transparent" }} />
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
-          <div className="grid grid-cols-7 gap-1 mb-1">
-            {"SMTWTFS".split("").map((d, i) => (
-              <div key={i} className="text-center text-[10px] font-semibold text-charcoal-faint py-1">
-                {d}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {cells.map((day, i) => {
-              if (day === null) return <div key={i} />;
-              const iso = toISO(cursor.year, cursor.month, day);
-              const hasEvents = !!eventsByDate[iso]?.length;
-              const isSelected = iso === selectedDate;
-              const isToday = iso === toISO(today.getFullYear(), today.getMonth(), today.getDate());
-              return (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setSelectedDate(iso);
-                    setView("day");
-                  }}
-                  className={clsx(
-                    "tap aspect-square rounded-xl flex flex-col items-center justify-center gap-0.5 text-sm",
-                    isSelected
-                      ? "bg-primary text-white font-bold"
-                      : isToday
-                      ? "bg-primary-pale text-primary-dark font-semibold"
-                      : "text-charcoal hover:bg-cream-soft"
-                  )}
-                >
-                  {day}
-                  {hasEvents && <span className={clsx("w-1 h-1 rounded-full", isSelected ? "bg-white" : "bg-primary")} />}
-                </button>
-              );
-            })}
-          </div>
+          {/* Iteration 6 "Team": a day agenda beneath the grid — the
+              selected day's real events, tinted rows keyed to each
+              event's own colour. Month view no longer jumps to Day on tap
+              (the view pills above still reach the full hour timeline);
+              selecting a date now just updates this list in place. */}
+          <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">{selectedDateLabel}</p>
+          {selectedEvents.length === 0 ? (
+            <p className="text-[11.5px] text-charcoal-faint">No events</p>
+          ) : (
+            <div className="flex flex-col gap-[7px]">
+              {selectedEvents.map((e) => {
+                const mine = isMine(e);
+                const color = e.color ?? "#7D6BB5";
+                return (
+                  <button
+                    key={e.id}
+                    onClick={() => openEdit(e)}
+                    disabled={!mine}
+                    className="tap flex items-center gap-[11px] rounded-[15px] px-3.5 py-3 text-left"
+                    style={{ background: `${color}29`, opacity: e.invite?.status === "declined" ? 0.6 : undefined }}
+                  >
+                    <span className="w-[3px] h-8 rounded-full shrink-0" style={{ background: color }} />
+                    <span className="flex-1 min-w-0">
+                      <span className="block text-[12.5px] font-bold text-charcoal truncate">{e.title}</span>
+                      <span className="block text-[10px] text-charcoal-tertiary truncate">
+                        {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
+                        {e.repeat !== "none" && ` · repeats ${e.repeat}`}
+                        {e.location && ` · ${e.location}`}
+                      </span>
+                    </span>
+                    {e.invite && <Check size={12} className="text-primary-deep-text/60 shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </>
       )}
 
+      {/* Everything below (Week/Year/Day views, the compose sheet) is
+          reached only via the view pills above and is unchanged — the
+          manifest's screen-level pass here is scoped to the Month view. */}
       {view === "week" &&
         (() => {
           const weekStart = startOfWeekISO(selectedDate);

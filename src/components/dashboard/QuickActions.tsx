@@ -1,5 +1,5 @@
 import React from "react";
-import { Plus, Dumbbell, Activity, Mic } from "lucide-react";
+import { Plus, Activity, Mic } from "lucide-react";
 
 interface QuickActionsProps {
   onLogFood: () => void;
@@ -8,39 +8,43 @@ interface QuickActionsProps {
   onVoiceLog: () => void;
 }
 
+// Iteration 6 "Team" §1.3: a QUICK ACTIONS caps label above three pills, all
+// three carrying the same lavender gradient (the dc.html markup gives all
+// three the identical gradient, not the three-way lavender-to-teal
+// progression CHANGE_MANIFEST.md's prose describes — the markup wins per
+// the literal-spec rule). "Log workout" uses the nav's own white barbell
+// glyph rather than a generic dumbbell icon. The voice-log button below
+// isn't part of this handoff's canvas at all — kept as-is, since absence
+// from the design means out of scope, not removed.
 export const QuickActions: React.FC<QuickActionsProps> = ({
   onLogFood,
   onLogWorkout,
   onAddMetric,
   onVoiceLog,
 }) => {
-  const actions = [
-    { label: "Log Food", icon: Plus, onClick: onLogFood, bg: "bg-primary", text: "text-white" },
-    // V9 (QA 9.0): "replace the black Log Workout widget... with a color
-    // that fits more with the overall color palette" — reuses the same
-    // brand-accent family as Log Food, a shade darker to stay distinct.
-    // V10 (QA 10.0): "-dark" tokens flip to a LIGHTER shade in dark theme
-    // (so text stays readable on dark surfaces elsewhere), which made this
-    // button nearly invisible (light-lavender bg + white text) once dark
-    // mode shipped — pin an explicit dark-mode override instead of relying
-    // on the token.
-    { label: "Log Workout", icon: Dumbbell, onClick: onLogWorkout, bg: "bg-primary-dark dark:bg-[#7D6BB5]", text: "text-white" },
-    { label: "Add Metric", icon: Activity, onClick: onAddMetric, bg: "bg-cream-card border border-charcoal/10", text: "text-charcoal" },
-  ];
+  const pillClass =
+    "tap flex-1 flex items-center justify-center gap-[7px] rounded-full py-3 text-white text-[11px] font-bold whitespace-nowrap";
+  const pillStyle = {
+    background: "var(--gradient-quick-action)",
+    boxShadow: "0 5px 14px #A192D63D",
+  };
 
   return (
     <div className="animate-fade-slide-up">
-      <div className="grid grid-cols-3 gap-2.5 mb-2.5">
-        {actions.map((a) => (
-          <button
-            key={a.label}
-            onClick={a.onClick}
-            className={`tap flex flex-col items-center justify-center gap-1.5 rounded-2xl py-4 ${a.bg} ${a.text} shadow-soft`}
-          >
-            <a.icon size={18} />
-            <span className="text-[11px] font-semibold leading-none">{a.label}</span>
-          </button>
-        ))}
+      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Quick actions</p>
+      <div className="flex gap-[7px] mb-3.5">
+        <button onClick={onLogFood} className={pillClass} style={pillStyle}>
+          <Plus size={16} />
+          <span>Log food</span>
+        </button>
+        <button onClick={onLogWorkout} className={pillClass} style={pillStyle}>
+          <img src="/icon-workFilled-white.png" alt="" className="w-[18px] h-[18px] object-contain block" />
+          <span>Log workout</span>
+        </button>
+        <button onClick={onAddMetric} className={pillClass} style={pillStyle}>
+          <Activity size={16} />
+          <span>Add metric</span>
+        </button>
       </div>
       <button
         onClick={onVoiceLog}

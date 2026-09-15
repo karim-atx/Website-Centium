@@ -8,10 +8,12 @@ export interface NavItem {
 }
 
 // Primary items shown in the mobile bottom nav.
+// Iteration 6 "Team": Home moves to the centre slot, where BottomNav
+// renders it as the Centium mark instead of this icon/label pair.
 export const primaryNavItems: NavItem[] = [
-  { to: "/app", label: "Home", icon: Home },
   { to: "/app/food", label: "Food", icon: UtensilsCrossed },
   { to: "/app/workout", label: "Workout", icon: Dumbbell },
+  { to: "/app", label: "Home", icon: Home },
   { to: "/app/health", label: "Health", icon: HeartPulse },
   { to: "/app/more", label: "More", icon: MoreHorizontal },
 ];

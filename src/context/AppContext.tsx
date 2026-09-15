@@ -458,6 +458,11 @@ interface AppState {
   deleteRoutine: (id: string) => Promise<string | undefined>;
 
   water: number;
+  // Iteration 6 "Team" streak board: whether each of the last 7 days met
+  // its water sub-goal needs every day's total, not just the selected
+  // date's — exposed read-only, the same map addWater/setWaterAmount
+  // already keep current.
+  waterByDate: Record<string, number>;
   // REMOTE-REQUIRED, like saveWorkoutSession and for the same reason: the
   // session guard makes an unauthenticated render impossible, so the offline
   // case these used to cover cannot arise, and a local fallback would mean a
@@ -480,6 +485,13 @@ interface AppState {
   // count is kept in sync with that habit's own streakDays.
   addStreak: (habitId: string, goalDays: number) => void;
   removeStreak: (id: string) => void;
+
+  // Iteration 6 "Team" §8: the Home streak board's plant. See the
+  // definitions above AppContext for what each holds and why.
+  plantStage: number;
+  setPlantStage: (stage: number) => void;
+  plantSpecies: PlantSpecies;
+  cyclePlantSpecies: () => void;
 
   metricValues: { weight: number; heartRate: number; steps: number; sleepHours: number; caloriesBurned: number };
   updateMetricValue: (
@@ -921,6 +933,12 @@ interface AppState {
 const AppContext = createContext<AppState | undefined>(undefined);
 
 const STORAGE_KEY = "centium-state";
+
+// Iteration 6 "Team" §8: the five streak-board plant species — tulip is
+// the shipped default, the other four are the tap-to-cycle exploration set
+// (README → Interactions). Purely cosmetic; see plantStage below for the
+// actual growth mechanic.
+export type PlantSpecies = "tulip" | "rose" | "sunflower" | "daisy" | "lily";
 
 function loadPersisted<T>(key: string, fallback: T): T {
   try {
@@ -1672,6 +1690,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [waterGoalMl, setWaterGoalState] = usePersistentState<number>("waterGoalMl", 2500);
   const [habits, setHabits] = usePersistentState<HabitItem[]>("habits", defaultHabits);
   const [streaks, setStreaks] = usePersistentState<Streak[]>("streaks", seedStreaks);
+
+  // Iteration 6 "Team" §8, Home streak board: the plant's growth is a
+  // running high-water mark, not something re-derived from the current
+  // week alone — "a missed week leaves the plant where it stopped; it
+  // resumes rather than resetting" (README → Interactions). StreaksBar
+  // reads this alongside the current week's real earned-day count and
+  // takes whichever is higher; it never writes a value that would move
+  // this backward. Species choice is purely cosmetic and independent of
+  // growth stage.
+  const [plantStage, setPlantStage] = usePersistentState<number>("plantStage", 1);
+  const [plantSpecies, setPlantSpecies] = usePersistentState<PlantSpecies>("plantSpecies", "tulip");
+  const cyclePlantSpecies = () => {
+    const order: PlantSpecies[] = ["tulip", "rose", "sunflower", "daisy", "lily"];
+    setPlantSpecies((s) => order[(order.indexOf(s) + 1) % order.length]);
+  };
 
   const [metricValues, setMetricValues] = usePersistentState("metricValues", {
     weight: 106.4,
@@ -4237,6 +4270,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateRoutine,
       deleteRoutine,
       water,
+      waterByDate,
       addWater,
       setWaterAmount,
       waterGoalMl,
@@ -4250,6 +4284,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateStreak,
       addStreak,
       removeStreak,
+      plantStage,
+      setPlantStage,
+      plantSpecies,
+      cyclePlantSpecies,
       metricValues,
       updateMetricValue,
       weightLoggedDate,
@@ -4439,9 +4477,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       routinesError,
       routines,
       water,
+      waterByDate,
       waterGoalMl,
       habits,
       streaks,
+      plantStage,
+      plantSpecies,
       metricValues,
       weightLoggedDate,
       weightByDate,

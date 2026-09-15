@@ -186,12 +186,15 @@ export function sumNutrition(entries: FoodLogEntry[]): NutritionTotals {
   );
 }
 
-export const mealOrder: MealType[] = ["breakfast", "lunch", "snack", "dinner"];
+// Iteration 6 "Team" §2.2: Breakfast → Lunch → Dinner → Snacks (was
+// Breakfast, Lunch, Snack, Dinner). Shared with AddFoodSheet/CreateMealSheet
+// so the meal picker there stays in the same order as the diary itself.
+export const mealOrder: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
 
 export const mealLabels: Record<MealType, string> = {
   breakfast: "Breakfast",
   lunch: "Lunch",
-  snack: "Snack",
+  snack: "Snacks",
   dinner: "Dinner",
 };
 

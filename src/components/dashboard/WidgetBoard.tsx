@@ -55,27 +55,33 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void; onGymPassesClick
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
-          Your health today
-        </p>
+      {/* Iteration 6 "Team" §1.5: context-only, token restyle — same
+          mechanic, recoloured to the fixed nav-accent lavender (not the
+          theme-reactive `primary`) and the literal "Today" copy. */}
+      <div className="flex items-center justify-between mb-[9px]">
+        <p className="text-[9px] font-bold tracking-[.2em] uppercase text-primary-deep-text/60">Today</p>
         <button
           onClick={() => setEditMode((v) => !v)}
-          className="tap flex items-center gap-1.5 text-xs font-semibold text-primary"
+          className="tap flex items-center gap-[5px] text-[10.5px] font-bold text-team-nav-accent"
         >
           {editMode ? (
             <>
-              <Check size={13} /> Done
+              <Check size={11} /> Done
             </>
           ) : (
             <>
-              <Pencil size={12} /> Edit widgets
+              <Pencil size={11} /> Edit
             </>
           )}
         </button>
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
+      {/* Iteration 6.2: small tiles are a fixed 114px and pack three to a
+          358px-wide row; a large tile takes the full row. flex-wrap (not a
+          2-col grid) is what lets an arbitrary user-chosen mix of
+          small/large widgets — this board is freely reorderable and
+          resizable — flow correctly instead of assuming pairs. */}
+      <div className="flex flex-wrap gap-[7px]">
         {visibleWidgets.map((w, i) => (
           <WidgetShell
             key={w.id}
@@ -99,7 +105,7 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void; onGymPassesClick
           <button
             onClick={() => setPickerOpen(true)}
             disabled={availableToAdd.length === 0}
-            className="tap col-span-1 rounded-3xl border-2 border-dashed border-charcoal/15 flex flex-col items-center justify-center gap-1.5 py-8 text-charcoal-faint disabled:opacity-40"
+            className="tap w-[114px] h-[114px] shrink-0 rounded-[15px] border-2 border-dashed border-charcoal/15 flex flex-col items-center justify-center gap-1.5 text-charcoal-faint disabled:opacity-40"
           >
             <Plus size={20} />
             <span className="text-xs font-semibold">Add widget</span>

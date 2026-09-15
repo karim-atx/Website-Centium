@@ -77,6 +77,22 @@ export default {
           DEFAULT: "rgb(var(--c-berry) / <alpha-value>)",
           pale: "rgb(var(--c-berry-pale) / <alpha-value>)",
         },
+        // Iteration 6 "Team" bottom-nav brand accent — fixed lavender,
+        // independent of the [data-accent] colour-theme picker. See the
+        // comment on --c-team-nav-accent in index.css.
+        team: {
+          "nav-accent": "rgb(var(--c-team-nav-accent) / <alpha-value>)",
+          "nav-idle": "rgb(var(--c-team-nav-idle) / <alpha-value>)",
+          lavender: "rgb(var(--c-team-lavender) / <alpha-value>)",
+          "lavender-deep": "rgb(var(--c-team-lavender-deep) / <alpha-value>)",
+          "teal-ink": "rgb(var(--c-team-teal-ink) / <alpha-value>)",
+          "teal-deep": "rgb(var(--c-team-teal-deep) / <alpha-value>)",
+          "blue-light": "rgb(var(--c-team-blue-light) / <alpha-value>)",
+          "blue-ink": "rgb(var(--c-team-blue-ink) / <alpha-value>)",
+          "rose-ink": "rgb(var(--c-team-rose-ink) / <alpha-value>)",
+          "gold-ink": "rgb(var(--c-team-gold-ink) / <alpha-value>)",
+          "gold-deep": "rgb(var(--c-team-gold-deep) / <alpha-value>)",
+        },
         // Design refinement: theme-aware status hues. An out-of-range
         // reading must not be decorative — these replace ad-hoc literal
         // hex classes so status colour actually adapts in dark mode.
@@ -270,6 +286,18 @@ export default {
           "100%": { transform: "translateY(0)", opacity: 1 },
         },
         // §7.3: idle water-fill crests — alive without asking for attention.
+        // Iteration 6.2 widget library: the small Heart Rate widget's
+        // beating-heart glyph — a lub-dub double pulse, not a plain scale.
+        // Duration is set per-instance via style.animationDuration (60/bpm),
+        // so the beat always matches the real reading rather than a fixed
+        // rate.
+        "cent-heartbeat": {
+          "0%, 100%": { transform: "scale(1)" },
+          "14%": { transform: "scale(1.13)" },
+          "28%": { transform: "scale(1)" },
+          "42%": { transform: "scale(1.05)" },
+          "56%": { transform: "scale(1)" },
+        },
         "water-crest": {
           "0%": { transform: "rotate(0deg)" },
           "100%": { transform: "rotate(360deg)" },
@@ -386,6 +414,9 @@ export default {
         "streak-flame": "streak-flame 0.6s cubic-bezier(0.22,1,0.36,1) both",
         "streak-ember-ring": "streak-ember-ring 0.62s cubic-bezier(0.22,1,0.36,1) both",
         "streak-count-roll": "streak-count-roll 0.5s cubic-bezier(0.22,1,0.36,1) both",
+        // Default duration matches the design's 62bpm example (60/62s); the
+        // Heart Rate widget overrides style.animationDuration to 60/bpm.
+        "cent-heartbeat": "cent-heartbeat 0.97s ease-in-out infinite",
         "water-crest": "water-crest 7s linear infinite",
         "water-crest-reverse": "water-crest-reverse 5s linear infinite",
         "water-crest-fast": "water-crest 2.1s linear infinite",

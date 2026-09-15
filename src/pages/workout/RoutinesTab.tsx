@@ -52,6 +52,29 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
 
 const folderColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
 
+// Iteration 6 "Team" §3.2: folders and routines render as "quiet tinted
+// rows" — the dc.html markup keys each row's light background to which
+// colour family its own solid accent (folder.color / routine.color)
+// belongs to, rather than just lightening that exact hex. Only lavender
+// and teal are shown in the canvas; sky/berry/gold/charcoal extend the
+// same light-tint treatment to the rest of the existing colour picker.
+const rowTint = (color: string): string => {
+  switch (color) {
+    case "#6F9993":
+      return "rgba(162,200,194,.18)"; // teal
+    case "#4C8FD1":
+      return "rgba(76,143,209,.14)"; // sky
+    case "#9C4F7C":
+      return "rgba(156,79,124,.1)"; // berry
+    case "#D9A441":
+      return "rgba(217,164,65,.14)"; // gold
+    case "#241F1B":
+      return "rgba(36,31,27,.06)"; // charcoal
+    default:
+      return "rgba(174,161,220,.14)"; // lavender — #7D6BB5 and any custom colour
+  }
+};
+
 export default function RoutinesTab() {
   const {
     routineFolders,
@@ -145,6 +168,31 @@ export default function RoutinesTab() {
 
   const closeMenu = () => setMenuFolderId(null);
 
+  // Iteration 6 "Team" §3.1: the floating "now playing" tile above the
+  // bottom nav. The dc.html markup for this screen is a compact mini-
+  // player (name, "Exercise N of total · ~M min left", a single
+  // pause/resume control, one thin progress bar) — CHANGE_MANIFEST.md's
+  // prose describes a much larger hero with separate Resume/Discard
+  // buttons and a weekly-completion strip that isn't in the markup at
+  // all, so this follows the markup (the literal-spec rule in CLAUDE.md).
+  const pausedRoutineId = Object.keys(pausedSessions)[0];
+  const pausedRoutine = pausedRoutineId ? routines.find((r) => r.id === pausedRoutineId) : undefined;
+  const pausedSession = pausedRoutineId ? pausedSessions[pausedRoutineId] : undefined;
+  let resumeInfo: { routine: Routine; exerciseIndex: number; minutesLeft: number; progress: number } | null = null;
+  if (pausedRoutine && pausedSession) {
+    const totalExercises = pausedRoutine.exercises.length || 1;
+    const totalSets = pausedRoutine.exercises.reduce((s, e) => s + e.sets, 0) || 1;
+    const completedSets = pausedSession.logged.reduce((s, e) => s + e.sets.filter((set) => set.completed).length, 0);
+    const doneExercises = pausedSession.logged.filter((e) => e.sets.length > 0 && e.sets.every((set) => set.completed)).length;
+    const progress = Math.min(1, completedSets / totalSets);
+    resumeInfo = {
+      routine: pausedRoutine,
+      exerciseIndex: Math.min(totalExercises, doneExercises + 1),
+      minutesLeft: Math.max(1, Math.round(pausedRoutine.estimatedDurationMin * (1 - progress))),
+      progress,
+    };
+  }
+
   const FolderNode: React.FC<{ folder: RoutineFolder; depth: number }> = ({ folder, depth }) => {
     const folderRoutines = routines.filter((r) => r.folderId === folder.id);
     const subfolders = childrenOf(folder.id);
@@ -152,7 +200,10 @@ export default function RoutinesTab() {
 
     return (
       <div style={{ marginLeft: depth * 16 }}>
-        <div className="flex items-center justify-between mb-2">
+        <div
+          className="flex items-center gap-[11px] justify-between mb-2 rounded-[15px] px-3.5 py-3"
+          style={{ background: rowTint(folder.color ?? "#7D6BB5") }}
+        >
           {renamingId === folder.id ? (
             <div className="flex items-center gap-2 flex-1">
               <input
@@ -181,16 +232,25 @@ export default function RoutinesTab() {
             <>
               <button
                 onClick={() => toggleFolderCollapsed(folder.id)}
-                className="tap flex items-center gap-2 flex-1 text-left min-w-0"
+                className="tap flex items-center gap-[11px] flex-1 text-left min-w-0"
               >
+                <span
+                  className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0"
+                  style={{ background: folder.color ?? "rgb(var(--c-charcoal-soft))" }}
+                >
+                  <Folder size={14} className="text-white" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[12.5px] font-bold text-charcoal truncate">{folder.name}</span>
+                  <span className="block text-[10px] text-charcoal-tertiary">
+                    {folderRoutines.length} {folderRoutines.length === 1 ? "routine" : "routines"}
+                  </span>
+                </span>
                 {collapsed ? (
-                  <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
+                  <ChevronRight size={14} className="text-charcoal-tertiary shrink-0" />
                 ) : (
-                  <ChevronDown size={15} className="text-charcoal-faint shrink-0" />
+                  <ChevronDown size={14} className="text-charcoal-tertiary shrink-0" />
                 )}
-                <Folder size={15} className="shrink-0" style={{ color: folder.color ?? "rgb(var(--c-charcoal-soft))" }} />
-                <h3 className="font-display text-base font-semibold text-charcoal truncate">{folder.name}</h3>
-                <span className="text-xs text-charcoal-faint shrink-0">{folderRoutines.length}</span>
               </button>
               <div className="relative">
                 <button
@@ -401,8 +461,8 @@ export default function RoutinesTab() {
         if (editingColorId) setEditingColorId(null);
       }}
     >
-      <div className="flex items-center justify-between mb-4">
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Folders</p>
+      <div className="flex items-center justify-between mb-[9px]">
+        <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Folders</p>
         <button
           onClick={() => setNewFolderOpen(true)}
           className="tap flex items-center gap-1.5 text-xs font-semibold text-primary"
@@ -480,8 +540,8 @@ export default function RoutinesTab() {
 
         {unfiled.length > 0 && (
           <div>
-            <h3 className="font-display text-base font-semibold text-charcoal mb-2">Unfiled</h3>
-            <div className="space-y-2">
+            <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Unfiled</p>
+            <div className="space-y-[7px]">
               {unfiled.map((r) => (
                 <RoutineRow
                   key={r.id}
@@ -531,16 +591,18 @@ export default function RoutinesTab() {
       )}
 
       <div className="space-y-2.5">
-        <Button
-          fullWidth
-          size="lg"
+        {/* Iteration 6 "Team" §3.2: a quiet lavender pill in place of the
+            standard solid Button here — the rest of the tab's actions
+            (Browse starter programs, folder/routine writes) are untouched. */}
+        <button
           onClick={() => {
             setCreateFolder(null);
             setCreateOpen(true);
           }}
+          className="tap w-full flex items-center justify-center gap-2 rounded-[15px] bg-team-lavender/[0.22] text-[12.5px] font-extrabold text-primary-deep-text py-3.5"
         >
-          + Create Routine
-        </Button>
+          <Plus size={14} /> Create routine
+        </button>
         {routines.length > 0 && (
           <Button variant="outline" fullWidth onClick={() => setBrowseOpen(true)}>
             <Library size={14} /> Browse starter programs
@@ -654,6 +716,39 @@ export default function RoutinesTab() {
           </div>,
           document.body
         )}
+
+      {resumeInfo &&
+        createPortal(
+          <button
+            onClick={() => startRoutine(resumeInfo!.routine)}
+            className="tap fixed left-7 right-7 z-30 rounded-2xl bg-[#241F1B] px-[11px] py-[9px] text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)]"
+            style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }}
+          >
+            <div className="flex items-center gap-2.5">
+              <span
+                className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center shrink-0"
+                style={{ background: "var(--gradient-teal-hero)" }}
+              >
+                <img src="/icon-workFilled-white.png" alt="" className="w-[18px] h-[18px] object-contain block" />
+              </span>
+              <span className="flex-1 min-w-0 block">
+                <span className="block text-[12px] font-bold tracking-[-0.01em] text-white whitespace-nowrap overflow-hidden text-ellipsis">
+                  {resumeInfo.routine.name}
+                </span>
+                <span className="block mt-0.5 text-[9.5px] font-medium text-white/[0.58]">
+                  Exercise {resumeInfo.exerciseIndex} of {resumeInfo.routine.exercises.length} · {resumeInfo.minutesLeft} min left
+                </span>
+              </span>
+              <span className="w-[30px] h-[30px] rounded-full bg-teal flex items-center justify-center shrink-0">
+                <Pause size={13} className="text-[#1D3B37]" fill="currentColor" />
+              </span>
+            </div>
+            <div className="mt-2 h-0.5 rounded-full bg-white/[0.18] overflow-hidden">
+              <div className="h-full bg-teal" style={{ width: `${Math.max(4, resumeInfo.progress * 100)}%` }} />
+            </div>
+          </button>,
+          document.body
+        )}
     </div>
   );
 }
@@ -697,8 +792,10 @@ const RoutineRow: React.FC<{
   };
 
   return (
-    <Card padded={false} className="overflow-hidden">
-      <div className="flex items-center gap-3 p-4">
+    // Iteration 6 "Team" §3.2: a quiet tinted row, background keyed to the
+    // routine's own colour the same way a folder's is (see rowTint above).
+    <div className="rounded-[15px] overflow-hidden" style={{ background: rowTint(routine.color) }}>
+      <div className="flex items-center gap-[11px] px-3.5 py-3">
         {/* QA 11.0: "the three dots... edit things like Folder Color, or
             Routine color" — the routine's own colour bar doubles as the
             edit affordance for it. */}
@@ -709,7 +806,7 @@ const RoutineRow: React.FC<{
               setColorPickerOpen((v) => !v);
             }}
             aria-label={`Edit ${routine.name} color`}
-            className={clsx("tap w-2.5 h-10 rounded-full block", isOngoing && "animate-pulse")}
+            className={clsx("tap w-[3px] h-8 rounded-full block", isOngoing && "animate-pulse")}
             style={{ background: isOngoing ? "#E9736A" : routine.color }}
           />
           {colorPickerOpen && (
@@ -737,30 +834,28 @@ const RoutineRow: React.FC<{
           )}
         </div>
         <button onClick={() => setExpanded((v) => !v)} className="flex-1 text-left min-w-0">
-          <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
+          <p className="text-[12.5px] font-bold text-charcoal flex items-center gap-1.5 truncate">
             {routine.name}
             {isOngoing && (
-              <span className="text-[10px] font-bold uppercase text-[#E9736A] flex items-center gap-1">
+              <span className="text-[10px] font-bold uppercase text-[#E9736A] flex items-center gap-1 shrink-0">
                 <Pause size={10} fill="currentColor" /> Ongoing
               </span>
             )}
           </p>
-          <p className="text-xs text-charcoal-faint">
+          <p className="text-[10px] text-charcoal-tertiary">
             {routine.exercises.length} exercises · ~{routine.estimatedDurationMin} min
           </p>
         </button>
         <button
           onClick={onStart}
           aria-label={isOngoing ? `Resume ${routine.name}` : `Start ${routine.name}`}
-          className={clsx(
-            "tap w-9 h-9 rounded-full text-white flex items-center justify-center shrink-0",
-            isOngoing ? "bg-[#E9736A]" : "bg-primary"
-          )}
+          className={clsx("tap w-8 h-8 rounded-full text-white flex items-center justify-center shrink-0", isOngoing && "animate-pulse")}
+          style={{ background: isOngoing ? "#E9736A" : routine.color }}
         >
-          {isOngoing ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" />}
+          {isOngoing ? <Pause size={13} fill="white" /> : <Play size={13} fill="white" />}
         </button>
-        <button onClick={onDelete} aria-label={`Delete ${routine.name}`} className="tap text-charcoal-faint shrink-0">
-          <X size={16} />
+        <button onClick={onDelete} aria-label={`Delete ${routine.name}`} className="tap text-charcoal-tertiary shrink-0">
+          <X size={15} />
         </button>
       </div>
       {expanded && (
@@ -841,6 +936,6 @@ const RoutineRow: React.FC<{
         }}
         alreadyAdded={routine.exercises.map((e) => e.name)}
       />
-    </Card>
+    </div>
   );
 };

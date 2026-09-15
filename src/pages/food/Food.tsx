@@ -1,8 +1,7 @@
 import { useMemo, useRef, useState } from "react";
+import clsx from "clsx";
 import { useApp } from "../../context/AppContext";
-import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
-import { ProgressBar } from "../../components/ui/ProgressBar";
 import { Chip } from "../../components/ui/Chip";
 import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { EditFoodEntrySheet } from "../../components/food/EditFoodEntrySheet";
@@ -10,17 +9,7 @@ import { DateSelector } from "../../components/dashboard/DateSelector";
 import { mealOrder, mealLabels, sumNutrition, targetsFromGoal } from "../../services/nutrition";
 import { deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
 import type { MealType, FoodLogEntry } from "../../types";
-import {
-  Plus,
-  Star,
-  RefreshCw,
-  UtensilsCrossed,
-  Trash2,
-  ChevronDown,
-  ChevronUp,
-  Undo2,
-} from "lucide-react";
-import { foodCategoryIcon } from "../../utils/icons";
+import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronUp, Undo2 } from "lucide-react";
 import { isFoodRestricted } from "../../utils/dietaryRestrictions";
 import GoalsPanel from "./GoalsPanel";
 import MealPrepPanel from "./MealPrepPanel";
@@ -180,25 +169,29 @@ export default function Food() {
     }
   };
 
-  const macroRow = (label: string, value: number, target: number, color: string) => {
-    const over = Math.round(value) - target;
-    return (
-      <div key={label}>
-        <div className="flex items-baseline justify-between mb-1">
-          <span className="text-[12px] font-semibold text-charcoal-soft">{label}</span>
-          <span className="text-[12px] text-charcoal-faint">
-            {Math.round(value)} / {target}g
-            {over > 0 && <span className="text-status-high font-semibold"> (+{over}g)</span>}
-          </span>
-        </div>
-        <ProgressBar progress={value / target} color={over > 0 ? "#C0392B" : color} height={7} />
-      </div>
-    );
-  };
+  // Iteration 6 "Team" §2.1: each macro's bar sits on the same row as its
+  // label and gram readout now, instead of stacked beneath it.
+  const macroRow = (label: string, value: number, target: number) => (
+    <div key={label} className="flex items-center gap-2">
+      <span className="w-[42px] shrink-0 text-[9.5px] font-bold text-white">{label}</span>
+      <span className="flex-1 min-w-0 h-1 rounded-full bg-white/[0.28] overflow-hidden">
+        <span className="block h-full rounded-full bg-white" style={{ width: `${Math.min(100, (value / (target || 1)) * 100)}%` }} />
+      </span>
+      <span className="shrink-0 text-[9px] text-white/[0.66] tabular-nums">
+        {Math.round(value)} / {target}g
+      </span>
+    </div>
+  );
+
+  const quickAddMeals: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
 
   return (
     <div>
-      <PageHeader title="Food" />
+      {/* Iteration 6 "Team": every redesigned screen uses a compact 19px
+          title instead of PageHeader's 27px default — PageHeader itself is
+          shared by many screens this handoff doesn't touch, so it keeps its
+          existing size and this renders the title directly instead. */}
+      <p className="mb-[11px] text-[19px] font-bold tracking-[-0.03em] text-charcoal">Food</p>
 
       <div className="flex gap-2 mb-5 animate-fade-slide-up">
         <Chip active={tab === "diary"} onClick={() => setTab("diary")}>
@@ -230,32 +223,51 @@ export default function Food() {
               </p>
             </Card>
           ) : (
-            <Card className="mb-6">
-              <div className="flex items-baseline justify-between mb-4">
-                <div>
-                  <p className="text-[34px] font-extrabold text-charcoal leading-none tracking-[-0.035em] tabular-nums">
+            // Iteration 6 "Team" §2.1: lavender-only hero (no halo), the
+            // kcal figure + "of X kcal" + "left" chip stacked in a fixed-
+            // width left column, each macro's bar on the same row as its
+            // label and gram readout.
+            <div
+              className="relative overflow-hidden rounded-[20px] px-4 py-[15px] mb-[13px]"
+              style={{ background: "var(--gradient-food-hero)" }}
+            >
+              <div className="flex items-center gap-4">
+                <div className="shrink-0">
+                  <p className="text-[26px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
                     {Math.round(totals.calories).toLocaleString()}
                   </p>
-                  <p className="text-[11.5px] font-medium text-charcoal-faint mt-1">of {targets.calories.toLocaleString()} kcal</p>
+                  <p className="mt-1 text-[9.5px] text-white/70">of {targets.calories.toLocaleString()} kcal</p>
+                  <p className="mt-[7px] inline-block text-[9.5px] font-bold text-white bg-white/20 rounded-full px-2 py-[3px]">
+                    {targets.calories - Math.round(totals.calories)} left
+                  </p>
                 </div>
-                <span className="text-[12px] font-bold text-primary-deep-text bg-primary-pale rounded-full px-3 py-1.5">
-                  {targets.calories - Math.round(totals.calories)} kcal left
-                </span>
+                <div className="flex-1 min-w-0 flex flex-col gap-2">
+                  {macroRow("Protein", totals.protein, targets.protein)}
+                  {macroRow("Carbs", totals.carbs, targets.carbs)}
+                  {macroRow("Fat", totals.fat, targets.fat)}
+                </div>
               </div>
-              <div className="space-y-3">
-                {macroRow("Protein", totals.protein, targets.protein, "#7D6BB5")}
-                {macroRow("Carbs", totals.carbs, targets.carbs, "#C8BFE9")}
-                {macroRow("Fat", totals.fat, targets.fat, "#A2C8C2")}
-              </div>
-            </Card>
+            </div>
           )}
 
-          {/* QA 11.0: the global swipe hint moves per-meal (each header
-              below is itself the swipe/double-tap target) — this is now
-              just a one-time explainer instead of 4 repeated hint rows. */}
-          <p className="flex items-center justify-center gap-1.5 text-[11px] font-medium text-charcoal-faint mb-4 -mt-2">
-            <RefreshCw size={11} /> Swipe right or double-tap a meal to copy yesterday's food
-          </p>
+          {/* Iteration 6 "Team" §2.5: a quick-add row above the meal list —
+              fixed lavender-tinted pills, always all four meals regardless
+              of what's already logged (unlike the "+" inside each card,
+              which only opens that one meal). */}
+          {!recoverySensitive && (
+            <div className="flex gap-[6px] mb-[13px]">
+              {quickAddMeals.map((meal) => (
+                <button
+                  key={meal}
+                  onClick={() => openAdd(meal)}
+                  className="tap flex-1 flex items-center justify-center gap-1 rounded-[11px] bg-team-lavender/[0.17] border border-team-lavender/[0.28] py-[9px] text-[10px] font-bold text-primary-deep-text whitespace-nowrap"
+                >
+                  <Plus size={11} className="text-team-lavender-deep" />
+                  {mealLabels[meal] === "Snacks" ? "Snack" : mealLabels[meal]}
+                </button>
+              ))}
+            </div>
+          )}
 
           {/* A failed diary read leaves the cached entries on screen, so this
               says the list may be stale rather than implying it is empty. */}
@@ -271,7 +283,7 @@ export default function Food() {
             </p>
           )}
 
-          <div className="space-y-5">
+          <div className="flex flex-col gap-2">
             {mealOrder.map((meal) => {
               const entries = grouped[meal];
               // Plain sums: each entry already carries its own totals.
@@ -279,146 +291,160 @@ export default function Food() {
               const mealProtein = entries.reduce((s, e) => s + e.protein, 0);
               const mealCarbs = entries.reduce((s, e) => s + e.carbs, 0);
               const mealFat = entries.reduce((s, e) => s + e.fat, 0);
+              const macroTotal = mealProtein + mealCarbs + mealFat || 1;
               const collapsed = collapsedMeals.has(meal);
               const showUndo = undoState?.meal === meal;
+              // Iteration 6 "Team" §2.4: the copy-yesterday hint used to be
+              // one persistent line above the whole list; it now only shows
+              // while this specific meal's add sheet is open for it.
+              const isAddingHere = addOpen && addMeal === meal;
               return (
-                <div key={meal}>
-                  <div
-                    // QA 13.0: "Have the titles breakfast, lunch, dinner,
-                    // snacks be colored black, while the box that has them
-                    // be colored the current font color" — inverts QA 12.0's
-                    // choice: the purple now lives on the row's background
-                    // instead of the title text.
-                    className="flex items-center justify-between mb-2.5 rounded-2xl bg-primary-pale px-3.5 py-2.5"
-                    onTouchStart={onMealTouchStart}
-                    onTouchEnd={(ev) => onMealTouchEnd(ev, meal)}
-                    onClick={() => onMealTap(meal)}
+                <div
+                  key={meal}
+                  className={clsx(
+                    "rounded-[15px] bg-cream-card px-3.5 py-[13px]",
+                    collapsed ? "border border-charcoal/[0.08]" : "border border-team-lavender/[0.34] shadow-[0_4px_14px_rgba(95,80,147,0.08)]"
+                  )}
+                  onTouchStart={onMealTouchStart}
+                  onTouchEnd={(ev) => onMealTouchEnd(ev, meal)}
+                  onClick={() => onMealTap(meal)}
+                >
+                  <button
+                    onClick={(ev) => {
+                      ev.stopPropagation();
+                      toggleCollapsed(meal);
+                    }}
+                    className="tap w-full flex items-start gap-2.5"
+                    aria-label={collapsed ? `Expand ${mealLabels[meal]}` : `Collapse ${mealLabels[meal]}`}
                   >
-                    <button
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        toggleCollapsed(meal);
-                      }}
-                      className="tap flex items-center gap-1.5"
-                      aria-label={collapsed ? `Expand ${mealLabels[meal]}` : `Collapse ${mealLabels[meal]}`}
-                    >
-                      {collapsed ? (
-                        <ChevronDown size={15} className="text-charcoal-faint" />
-                      ) : (
-                        <ChevronUp size={15} className="text-charcoal-faint" />
-                      )}
-                      <h3 className="font-display text-[15px] font-bold text-charcoal">
-                        {mealLabels[meal]}
-                      </h3>
-                    </button>
-                    <div className="flex items-center gap-2">
+                    <h3 className="flex-1 min-w-0 text-left text-[13.5px] font-bold text-charcoal">{mealLabels[meal]}</h3>
+                    {!recoverySensitive && (
+                      <span className="flex flex-col gap-1 w-[104px] shrink-0">
+                        <span className="flex h-2 rounded-[3px] overflow-hidden bg-charcoal/[0.07]">
+                          {mealCal > 0 && (
+                            <>
+                              <span style={{ width: `${(mealProtein / macroTotal) * 100}%`, background: "#7D6BB5" }} />
+                              <span style={{ width: `${(mealCarbs / macroTotal) * 100}%`, background: "#AEA1DC" }} />
+                              <span style={{ width: `${(mealFat / macroTotal) * 100}%`, background: "#A2C8C2" }} />
+                            </>
+                          )}
+                        </span>
+                        <span className="flex items-center gap-1 text-[8.5px] font-bold tabular-nums whitespace-nowrap">
+                          <span style={{ color: mealCal > 0 ? "#7D6BB5" : "#A79E93" }}>P {Math.round(mealProtein)}g</span>
+                          <span className="text-charcoal/20">|</span>
+                          <span style={{ color: mealCal > 0 ? "#8C7CC4" : "#A79E93" }}>C {Math.round(mealCarbs)}g</span>
+                          <span className="text-charcoal/20">|</span>
+                          <span style={{ color: mealCal > 0 ? "#4F7F78" : "#A79E93" }}>F {Math.round(mealFat)}g</span>
+                        </span>
+                      </span>
+                    )}
+                    {!recoverySensitive && (
+                      <span className="w-[52px] shrink-0 text-right text-[11px] font-bold text-charcoal-soft tabular-nums">
+                        {Math.round(mealCal)}
+                      </span>
+                    )}
+                    {collapsed ? (
+                      <ChevronDown size={14} className="text-charcoal-faint shrink-0" />
+                    ) : (
+                      <ChevronUp size={14} className="text-charcoal-faint shrink-0" />
+                    )}
+                  </button>
+
+                  {showUndo && (
+                    <div className="flex justify-end mt-1.5">
                       {/* QA 11.0: "Add an undo button to the far right, in a
                           light grey shade color, which only appears after
                           someone swipes or double taps to add food... only
                           remain appearing for 15 seconds." */}
-                      {showUndo && (
-                        <button
-                          onClick={(ev) => {
-                            ev.stopPropagation();
-                            handleUndo();
-                          }}
-                          className="tap flex items-center gap-1 text-[10.5px] font-semibold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-1"
-                        >
-                          <Undo2 size={11} /> Undo
-                        </button>
-                      )}
-                      {entries.length > 0 && !recoverySensitive && (
-                        <span className="text-[11.5px] font-medium text-charcoal-faint">{Math.round(mealCal)} kcal</span>
-                      )}
+                      <button
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          handleUndo();
+                        }}
+                        className="tap flex items-center gap-1 text-[10.5px] font-semibold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-1"
+                      >
+                        <Undo2 size={11} /> Undo
+                      </button>
                     </div>
-                  </div>
-                  {collapsed ? null : entries.length === 0 ? (
-                    <button
-                      onClick={() => openAdd(meal)}
-                      className="tap w-full flex items-center justify-between rounded-2xl border-[1.5px] border-dashed border-charcoal/[0.16] px-4 py-3.5 text-charcoal-faint hover:border-primary/40"
-                    >
-                      <span className="text-[13px] font-medium">Not logged</span>
-                      <Plus size={16} />
-                    </button>
-                  ) : (
-                    <Card padded={false} className="divide-y divide-charcoal/[0.04]">
-                      {entries.map((e) => {
-                        const Icon = foodCategoryIcon[e.display.category] ?? UtensilsCrossed;
-                        const revealed = revealedId === e.id;
-                        // QA 11.0: "Pressing a specific restriction will
-                        // highlight specific food diary items that are not
-                        // compatible with the restriction."
-                        const restricted = !!dietaryRestriction && isFoodRestricted(e, dietaryRestriction);
-                        return (
-                          <div key={e.id} className="relative overflow-hidden">
-                            {revealed && (
-                              <button
-                                onClick={() => {
-                                  void handleDelete(e.id);
-                                  setRevealedId(null);
-                                }}
-                                aria-label={`Delete ${e.name}`}
-                                className="tap absolute inset-y-0 right-0 w-20 flex flex-col items-center justify-center gap-0.5 bg-[#C0392B] text-white text-[10px] font-semibold z-0"
-                              >
-                                <Trash2 size={14} />
-                                Delete
-                              </button>
-                            )}
-                            <button
-                              onClick={() => (revealed ? setRevealedId(null) : setEditingEntry(e))}
-                              onTouchStart={onRowTouchStart}
-                              onTouchEnd={(ev) => onRowTouchEnd(ev, e.id)}
-                              className={`tap relative z-10 w-full flex items-center justify-between px-4 py-3 text-left transition-transform duration-200 ${
-                                restricted ? "bg-status-high-bg" : "bg-cream-card hover:bg-cream-soft"
-                              }`}
-                              style={{ transform: revealed ? "translateX(-80px)" : "translateX(0)" }}
-                            >
-                              <div className="flex items-center gap-3">
-                                <span
-                                  className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${
-                                    restricted ? "bg-status-high/[0.14]" : "bg-primary-pale"
-                                  }`}
+                  )}
+
+                  {!collapsed && (
+                    <div className="mt-[11px]">
+                      {entries.length > 0 && (
+                        <div className="flex flex-col gap-[3px] mb-2.5">
+                          {entries.map((e) => {
+                            const revealed = revealedId === e.id;
+                            // QA 11.0: "Pressing a specific restriction will
+                            // highlight specific food diary items that are not
+                            // compatible with the restriction."
+                            const restricted = !!dietaryRestriction && isFoodRestricted(e, dietaryRestriction);
+                            return (
+                              <div key={e.id} className="relative overflow-hidden rounded-[11px]">
+                                {revealed && (
+                                  <button
+                                    onClick={() => {
+                                      void handleDelete(e.id);
+                                      setRevealedId(null);
+                                    }}
+                                    aria-label={`Delete ${e.name}`}
+                                    className="tap absolute inset-y-0 right-0 w-20 flex flex-col items-center justify-center gap-0.5 rounded-r-[11px] bg-[#C0392B] text-white text-[10px] font-semibold z-0"
+                                  >
+                                    <Trash2 size={14} />
+                                    Delete
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => (revealed ? setRevealedId(null) : setEditingEntry(e))}
+                                  onTouchStart={onRowTouchStart}
+                                  onTouchEnd={(ev) => onRowTouchEnd(ev, e.id)}
+                                  className={clsx(
+                                    "tap relative z-10 w-full flex items-center justify-between gap-2.5 rounded-[11px] px-[11px] py-2 text-left transition-transform duration-200",
+                                    restricted ? "bg-status-high-bg" : "bg-team-lavender/10"
+                                  )}
+                                  style={{ transform: revealed ? "translateX(-80px)" : "translateX(0)" }}
                                 >
-                                  <Icon size={16} className={restricted ? "text-status-high" : "text-primary-dark"} />
-                                </span>
-                                <div>
-                                  <p className="text-[13.5px] font-semibold text-charcoal flex items-center gap-1.5">
-                                    {e.name}
-                                    {e.display.isLebanese && <Star size={10} className="text-gold fill-gold" />}
-                                    {restricted && (
-                                      <span className="text-[9px] font-bold uppercase text-status-high bg-status-high-bg rounded-full px-1.5 py-0.5">
-                                        Not compatible
-                                      </span>
-                                    )}
-                                  </p>
-                                  <p className="text-[11px] font-medium text-charcoal-faint">
-                                    {e.quantity !== 1 ? `${e.quantity} × ` : ""}
-                                    {e.unit && e.unit !== "serving" ? e.unit : e.display.serving}
-                                  </p>
-                                </div>
+                                  <span className="min-w-0">
+                                    <span className="flex items-center gap-1.5 text-[12px] font-semibold text-charcoal">
+                                      {e.name}
+                                      {e.display.isLebanese && <Star size={10} className="text-gold fill-gold shrink-0" />}
+                                      {restricted && (
+                                        <span className="text-[9px] font-bold uppercase text-status-high bg-status-high-bg rounded-full px-1.5 py-0.5 shrink-0">
+                                          Not compatible
+                                        </span>
+                                      )}
+                                    </span>
+                                    <span className="block text-[9.5px] text-charcoal-tertiary">
+                                      {e.quantity !== 1 ? `${e.quantity} × ` : ""}
+                                      {e.unit && e.unit !== "serving" ? e.unit : e.display.serving}
+                                    </span>
+                                  </span>
+                                  {!recoverySensitive && (
+                                    <span className="shrink-0 text-[10.5px] font-bold text-charcoal-soft tabular-nums">
+                                      {Math.round(e.calories)}
+                                    </span>
+                                  )}
+                                </button>
                               </div>
-                              {!recoverySensitive && (
-                                <span className="text-[11.5px] font-semibold text-charcoal-soft">
-                                  {Math.round(e.calories)} kcal
-                                </span>
-                              )}
-                            </button>
-                          </div>
-                        );
-                      })}
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {isAddingHere && (
+                        <div className="flex items-center gap-2 rounded-[11px] bg-teal/[0.13] border border-dashed border-team-teal-deep/40 px-[11px] py-[9px] mb-2">
+                          <RefreshCw size={12} className="text-team-teal-deep shrink-0" />
+                          <span className="text-[10.5px] leading-[1.45] text-team-teal-ink">
+                            Swipe right or double-tap to copy yesterday's {mealLabels[meal].toLowerCase()}
+                          </span>
+                        </div>
+                      )}
+
                       <button
                         onClick={() => openAdd(meal)}
-                        className="tap w-full flex items-center justify-center gap-1.5 px-4 py-2.5 text-[11.5px] font-bold text-primary-dark hover:bg-primary-pale/40"
+                        className="tap w-full flex items-center justify-center gap-[7px] rounded-[11px] bg-team-lavender/[0.16] text-[11px] font-bold text-primary-deep-text py-[9px]"
                       >
-                        <Plus size={13} /> Add more
+                        <Plus size={13} /> {entries.length > 0 ? "Add more" : "Add food"}
                       </button>
-                    </Card>
-                  )}
-                  {!collapsed && entries.length > 0 && !recoverySensitive && (
-                    <div className="flex items-center justify-center gap-3 mt-1.5 text-[10px] font-bold">
-                      <span style={{ color: "#7D6BB5" }}>P {Math.round(mealProtein)}g</span>
-                      <span style={{ color: "#8C7CC4" }}>C {Math.round(mealCarbs)}g</span>
-                      <span style={{ color: "#6F9993" }}>F {Math.round(mealFat)}g</span>
                     </div>
                   )}
                 </div>

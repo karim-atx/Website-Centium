@@ -16,6 +16,11 @@ interface WidgetShellProps {
 
 // V4: reordering is drag-only now — the up/down arrow buttons were removed
 // per QA ("done via dragging not via using the up and down arrows").
+// Iteration 6.2 "Team" canonical widget library: every widget tile is a
+// fixed 114×114 (small) or 358×150 (large) with its own flat tinted ground,
+// radius and padding baked into the widget's own root element (see
+// HomeWidget.tsx) — the shell no longer supplies a uniform white card
+// around it, only sizing and the edit-mode chrome.
 export const WidgetShell: React.FC<WidgetShellProps> = ({
   size,
   editMode,
@@ -33,9 +38,9 @@ export const WidgetShell: React.FC<WidgetShellProps> = ({
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={clsx(
-        "relative bg-cream-card rounded-3xl shadow-soft border border-charcoal/[0.04] p-4 transition-transform",
-        size === "large" ? "col-span-2" : "col-span-1",
-        editMode && "cursor-grab active:cursor-grabbing ring-2 ring-primary/30"
+        "relative shrink-0 rounded-[15px] transition-transform",
+        size === "large" ? "w-full max-w-[358px]" : "w-[114px]",
+        editMode && "cursor-grab active:cursor-grabbing ring-2 ring-team-nav-accent/30"
       )}
     >
       {editMode && (

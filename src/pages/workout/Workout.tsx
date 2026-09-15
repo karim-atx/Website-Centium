@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { PageHeader } from "../../components/ui/PageHeader";
 import { Chip } from "../../components/ui/Chip";
 import RoutinesTab from "./RoutinesTab";
 import ExerciseDatabaseTab from "./ExerciseDatabaseTab";
@@ -21,7 +20,9 @@ export default function Workout() {
 
   return (
     <div>
-      <PageHeader title="Workout" />
+      {/* Iteration 6 "Team": compact 19px title in place of PageHeader's
+          27px default — see the identical note in Food.tsx. */}
+      <p className="mb-3 text-[19px] font-bold tracking-[-0.03em] text-charcoal">Workout</p>
 
       <div className="flex gap-2 mb-5 animate-fade-slide-up overflow-x-auto no-scrollbar">
         {(["routines", "database", "history", "metrics"] as Tab[]).map((t) => (

@@ -5,36 +5,35 @@ import { CalendarPickerSheet } from "./CalendarPickerSheet";
 
 const dayLabel = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  return d.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 };
 
+// Iteration 6 "Team" §1.1: a pill-shaped day navigator with the same
+// lavender border as the bottom-nav pill, replacing the plain card.
 export const DateSelector: React.FC = () => {
   const { selectedDate, goToPrevDate, goToNextDate, goToToday, goToDate, today } = useApp();
   const isToday = selectedDate === today;
   const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
-    <div className="flex items-center justify-between bg-cream-card rounded-2xl px-3 py-2.5 mb-5 shadow-soft animate-fade-slide-up">
+    <div className="flex items-center justify-between gap-2.5 rounded-full bg-white dark:bg-[#221C2E] border border-team-nav-accent/[0.28] dark:border-team-nav-accent/[0.34] px-3 py-2 mb-[13px] animate-fade-slide-up">
       <button
         onClick={goToPrevDate}
-        className="tap w-8 h-8 rounded-full flex items-center justify-center text-charcoal-faint hover:bg-cream-soft"
+        className="tap w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-team-nav-idle"
         aria-label="Previous day"
       >
-        <ChevronLeft size={16} />
+        <ChevronLeft size={15} />
       </button>
-      <button onClick={() => setPickerOpen(true)} className="tap flex items-center gap-1.5">
-        <CalendarDays size={14} className="text-charcoal-faint" />
-        <span className="text-sm font-semibold text-charcoal">
-          {isToday ? "Today" : dayLabel(selectedDate)}
-          {isToday && <span className="text-charcoal-faint font-normal"> — {dayLabel(selectedDate)}</span>}
-        </span>
+      <button onClick={() => setPickerOpen(true)} className="tap flex items-center gap-[7px] min-w-0">
+        <CalendarDays size={14} className="text-team-nav-accent shrink-0" />
+        <span className="text-[12.5px] font-bold text-charcoal whitespace-nowrap">{dayLabel(selectedDate)}</span>
         {!isToday && (
           <span
             onClick={(e) => {
               e.stopPropagation();
               goToToday();
             }}
-            className="text-[10px] font-bold text-primary bg-primary-pale rounded-full px-2 py-0.5"
+            className="text-[10px] font-bold text-team-nav-accent bg-team-nav-accent/[0.14] rounded-full px-2 py-0.5 shrink-0"
           >
             Jump to today
           </span>
@@ -42,10 +41,10 @@ export const DateSelector: React.FC = () => {
       </button>
       <button
         onClick={goToNextDate}
-        className="tap w-8 h-8 rounded-full flex items-center justify-center text-charcoal-faint hover:bg-cream-soft"
+        className="tap w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-team-nav-idle"
         aria-label="Next day"
       >
-        <ChevronRight size={16} />
+        <ChevronRight size={15} />
       </button>
 
       <CalendarPickerSheet

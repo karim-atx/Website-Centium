@@ -2,31 +2,32 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import type { WidgetConfig } from "../../types";
 import { useApp } from "../../context/AppContext";
-import { ProgressBar } from "../ui/ProgressBar";
-import { WaterFillContainer } from "./WaterFillContainer";
-import { MacroRing } from "./MacroRing";
-import { SleepStageWheel } from "../health/SleepStageWheel";
+import { LotusGlyph } from "./LotusGlyph";
+import { HeartRateEKG } from "../health/HeartRateEKG";
+import { QrPattern, DAY_MS, isOneTimePlan } from "../marketplace/GymDetailSheet";
 import { healthMetrics, sleepDetail, heartRateDetail } from "../../data/mockHealthData";
 import { todaysWorkout } from "../../data/mockWorkouts";
 import { sumNutrition, targetsFromGoal } from "../../services/nutrition";
-import {
-  Footprints,
-  Scale,
-  Moon,
-  Dumbbell,
-  ArrowUp,
-  ArrowDown,
-  Droplet,
-  CheckSquare,
-  BookOpen,
-  Utensils,
-  KeyRound,
-  HeartPulse,
-} from "lucide-react";
-import type { LucideIcon } from "lucide-react";
-import { habitIcon } from "../../utils/icons";
-import { YogaFigureIcon } from "../mind/YogaFigureIcon";
+import { BookOpen, KeyRound, Play, AlertCircle, Check } from "lucide-react";
 import { mockGyms } from "../../data/mockProfessionals";
+import { mondayFirstWeek, DAY_LETTERS, dayLetter } from "../../utils/week";
+
+// Iteration 6.2 "Team" canonical widget library — 11 metrics, small (fixed
+// 114×114) and large (fixed 358×150), one flat tinted ground and accent
+// colour per metric. This is the single source every widget placement
+// draws from; there is no other widget treatment left in the app. See
+// CHANGE_MANIFEST.md §4 in scratchpad/design-handoff-main-app for the
+// literal per-widget spec this was built from.
+//
+// A few design values have no real counterpart in this app's data model
+// (an hourly step-activity trace, HRV, a weekly *target* workout count, an
+// expiry date on a recurring — not one-time — gym membership). Rather than
+// invent numbers, those lines are simplified or omitted; each is called
+// out at its call site below.
+
+const capsLabel = "font-bold text-[9px] tracking-[.16em] uppercase";
+const numeralSmall = "text-[16px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums";
+const badge = "text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap shrink-0";
 
 export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => void; onGymPassesClick?: () => void }> = ({
   widget,
@@ -34,456 +35,932 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
   onGymPassesClick,
 }) => {
   const navigate = useNavigate();
-  const { metricValues, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries, gymPurchases, streaks, today, selectedDate } =
+  const { metricValues, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries, gymPurchases, today, selectedDate } =
     useApp();
   const isLarge = widget.size === "large";
 
   const stepsMeta = healthMetrics.find((m) => m.type === "steps")!;
-  const weeklyStepsAvg = Math.round(
-    stepsMeta.history.reduce((s, h) => s + h.value, 0) / stepsMeta.history.length
-  );
-  const weightMeta = healthMetrics.find((m) => m.type === "weight")!;
-  const weeklyTrendPct = (
-    ((weightMeta.history[weightMeta.history.length - 1].value - weightMeta.history[0].value) /
-      weightMeta.history[0].value) *
-    100
-  ).toFixed(1);
-  const sleepMeta = healthMetrics.find((m) => m.type === "sleep")!;
+  const weeklyStepsAvg = Math.round(stepsMeta.history.reduce((s, h) => s + h.value, 0) / stepsMeta.history.length);
+  const stepsMax = Math.max(...stepsMeta.history.map((h) => h.value), stepsGoal);
+  // No stride-length preference exists in this app; 0.762m is the generic
+  // average-adult-stride figure fitness trackers default to absent one.
+  const stepsKm = ((metricValues.steps * 0.762) / 1000).toFixed(1);
 
-  // THE DAY BEING VIEWED, not the whole diary. This summed every entry
-  // ever logged, which was invisible while the app believed in a single
-  // hardcoded date and every entry carried it — with real dates it would
-  // have shown Home a running lifetime total against a daily target, and
-  // disagreed with the Food tab, which has always filtered by day.
+  const weightMeta = healthMetrics.find((m) => m.type === "weight")!;
+  const weightValues = weightMeta.history.map((h) => h.value);
+  const weightMin = Math.min(...weightValues);
+  const weightMax = Math.max(...weightValues);
+
+  const sleepMeta = healthMetrics.find((m) => m.type === "sleep")!;
+  const sleepStages = [
+    { label: "Awake", min: sleepDetail.awakeMin, color: "rgb(var(--c-teal-dark))" },
+    { label: "REM", min: sleepDetail.remMin, color: "rgb(var(--c-berry))" },
+    { label: "Light", min: sleepDetail.lightMin, color: "rgb(var(--c-sky))" },
+    { label: "Deep", min: sleepDetail.deepMin, color: "rgb(var(--c-team-lavender-deep))" },
+  ];
+  const sleepTotalMin = sleepStages.reduce((s, x) => s + x.min, 0) || 1;
+  const fmtMin = (m: number) => `${Math.floor(m / 60)}h${(m % 60).toString().padStart(2, "0")}m`;
+
   const totals = sumNutrition(foodLog.filter((e) => e.date === selectedDate));
   const targets = targetsFromGoal(nutritionGoal);
   const todaysWorkoutLog = workoutLog[workoutLog.length - 1];
 
-  // Design refinement §6.1: "remove decorative icon tints — all widget
-  // icons become #A79E93 at 13px." Widget label drops to 10.5px/500.
-  const header = (label: string, Icon: LucideIcon) => (
-    <div className="flex items-center gap-1.5 mb-2">
-      <Icon size={13} className="text-charcoal-tertiary" />
-      <span className="text-[10.5px] font-medium text-charcoal-faint">{label}</span>
-    </div>
-  );
+  const week = mondayFirstWeek(today);
+  const workoutDaysThisWeek = week.filter((d) => d <= today && workoutLog.some((w) => w.date === d && w.completed));
 
-  // Design refinement §4.3: "Data numeral (widget) 26px/800/-0.03em,
-  // tabular." One shared numeral class for every widget's headline value.
-  const numeral = "text-[26px] font-extrabold text-charcoal leading-none tracking-[-0.03em] tabular-nums";
+  const journalDoneToday = journalEntries.some((e) => e.date === today);
+  const journalWeek = week.map((d) => journalEntries.some((e) => e.date === d));
+  // No dedicated "journal streak" metric exists — derived here the same way
+  // the app's own auto-streaks are, by counting consecutive days with an
+  // entry, walking back from today.
+  let journalStreak = 0;
+  {
+    const cursor = new Date(`${today}T00:00:00`);
+    while (journalEntries.some((e) => e.date === cursor.toISOString().slice(0, 10))) {
+      journalStreak++;
+      cursor.setDate(cursor.getDate() - 1);
+    }
+  }
+  const journalWordTotal = journalEntries.reduce((s, e) => s + e.text.trim().split(/\s+/).filter(Boolean).length, 0);
+  const latestEntry = journalEntries[journalEntries.length - 1];
 
   const wrap = (onClick: () => void, content: React.ReactNode) => (
-    <div onClick={onClick} role="button" tabIndex={0} className="tap cursor-pointer">
+    <div onClick={onClick} role="button" tabIndex={0} className="tap cursor-pointer h-full">
       {content}
     </div>
   );
 
+  // Small: 114×114, padding 11px 12px. Large: 358×150, padding 14px 16px.
+  const shell = (bg: string, content: React.ReactNode) =>
+    isLarge ? (
+      <div className="w-full max-w-[358px] h-[150px] box-border rounded-[15px] flex flex-col p-3.5" style={{ background: bg }}>
+        {content}
+      </div>
+    ) : (
+      <div className="w-[114px] h-[114px] box-border rounded-[15px] flex flex-col px-3 py-[11px]" style={{ background: bg }}>
+        {content}
+      </div>
+    );
+
   switch (widget.type) {
+    // ---------------------------------------------------------------- Steps
     case "steps": {
       const onClick = () => navigate("/app/health", { state: { openMetric: "steps" } });
+      const pct = Math.round((metricValues.steps / stepsGoal) * 100);
       if (!isLarge) {
         return wrap(
           onClick,
-          <div>
-            {header("Steps", Footprints)}
-            <p className={numeral}>{metricValues.steps.toLocaleString()}</p>
-            <p className="text-[10.5px] text-charcoal-tertiary mt-0.5">
-              of {stepsGoal.toLocaleString()} · {Math.round((metricValues.steps / stepsGoal) * 100)}%
-            </p>
-          </div>
+          shell(
+            "rgba(162,200,194,.2)",
+            <>
+              <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Steps</p>
+              <p className={`${numeralSmall} mt-[5px]`}>{metricValues.steps.toLocaleString()}</p>
+              <div className="flex items-end gap-[2px] h-[26px] mt-[9px]">
+                {stepsMeta.history.map((h, i) => {
+                  const isToday = i === stepsMeta.history.length - 1;
+                  return (
+                    <div
+                      key={i}
+                      className="flex-1 rounded-[1px]"
+                      style={{
+                        height: `${Math.max(8, (h.value / stepsMax) * 100)}%`,
+                        background: isToday ? "rgb(var(--c-team-teal-deep))" : "rgba(111,153,147,.34)",
+                      }}
+                    />
+                  );
+                })}
+              </div>
+              <div className="flex gap-[2px] mt-1">
+                {stepsMeta.history.map((h, i) => {
+                  const isToday = i === stepsMeta.history.length - 1;
+                  return (
+                    <span
+                      key={i}
+                      className={`flex-1 text-center text-[7.5px] ${isToday ? "font-extrabold text-team-teal-ink" : "font-semibold text-team-teal-ink/50"}`}
+                    >
+                      {dayLetter(h.date)}
+                    </span>
+                  );
+                })}
+              </div>
+            </>
+          )
         );
       }
       return wrap(
         onClick,
-        <div>
-          {header("Steps", Footprints)}
-          <p className={`${numeral} mb-1`}>
-            {metricValues.steps.toLocaleString()}{" "}
-            <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">/ {stepsGoal.toLocaleString()}</span>
-          </p>
-          <ProgressBar progress={metricValues.steps / stepsGoal} color="#4C8FD1" height={6} />
-          <div className="flex justify-between mt-2.5 text-[11px] text-charcoal-faint">
-            <span>Weekly avg: {weeklyStepsAvg.toLocaleString()}</span>
-            <span className="text-charcoal-soft dark:text-teal-deep-text font-semibold">↑ 6%</span>
-          </div>
-        </div>
-      );
-    }
-
-    case "weight": {
-      const onClick = () => navigate("/app/health", { state: { openMetric: "weight" } });
-      if (!isLarge) {
-        return wrap(
-          onClick,
-          <div>
-            {header("Weight", Scale)}
-            <p className={numeral}>
-              {metricValues.weight} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">kg</span>
-            </p>
-          </div>
-        );
-      }
-      // V8 (QA 8.0): "should show on the right side the desired weight, the
-      // desired weekly rate, and the date of achieving this weight if
-      // chosen — if not chosen leave empty for now."
-      const hasGoal = nutritionGoal.weightGoal !== "maintain" && nutritionGoal.desiredWeightConfirmed && nutritionGoal.desiredWeightKg;
-      let reachDate: string | null = null;
-      if (hasGoal) {
-        const rate = nutritionGoal.weeklyRateKg || 0.5;
-        const weeksToGoal = rate > 0 ? Math.abs(nutritionGoal.desiredWeightKg! - metricValues.weight) / rate : 0;
-        if (weeksToGoal > 0) {
-          const reachDateObj = new Date(Date.parse(`${today}T00:00:00Z`) + weeksToGoal * 7 * 86400000);
-          reachDate = reachDateObj.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
-        }
-      }
-      return wrap(
-        onClick,
-        <div className="flex items-start justify-between gap-3">
-          <div>
-            {header("Weight", Scale)}
-            <p className={`${numeral} mb-1.5`}>
-              {metricValues.weight} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">kg</span>
-            </p>
-            <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5 mb-2">
-              {/* READ, NOT WRITTEN DOWN. This said "0.6 kg" as a literal, which
-                  matched healthMetrics only by coincidence and would have gone on
-                  asserting a loss through any change to the data -- including
-                  while weeklyTrendPct on the next line said the opposite. */}
-              {weightMeta.trend < 0 ? <ArrowDown size={10} /> : <ArrowUp size={10} />}{" "}
-              {Math.abs(weightMeta.trend)} kg this week
-            </span>
-            <p className="text-[11px] text-charcoal-faint">Weekly trend: {weeklyTrendPct}%</p>
-          </div>
-          {hasGoal && (
-            <div className="text-right shrink-0">
-              <p className="text-[10px] font-semibold text-charcoal-tertiary uppercase tracking-wide mb-1">Goal</p>
-              <p className="text-sm font-bold text-charcoal">{nutritionGoal.desiredWeightKg} kg</p>
-              <p className="text-[11px] text-charcoal-faint">
-                {nutritionGoal.weightGoal === "gain" ? "+" : "-"}
-                {(nutritionGoal.weeklyRateKg || 0.5).toFixed(1)} kg/wk
-              </p>
-              {reachDate && <p className="text-[11px] text-charcoal-faint mt-0.5">by {reachDate}</p>}
+        shell(
+          "rgba(162,200,194,.2)",
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Steps</p>
+              <span className={`${badge} text-team-teal-ink bg-teal/[0.42]`}>{Math.min(999, pct)}% of goal</span>
             </div>
-          )}
-        </div>
+            <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
+              <div className="flex items-baseline gap-2.5">
+                <span className="text-[26px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
+                  {metricValues.steps.toLocaleString()}
+                </span>
+                <span className="text-[10px] text-team-teal-ink/[0.72]">
+                  of {stepsGoal.toLocaleString()} · {stepsKm} km
+                </span>
+              </div>
+              <div>
+                <div className="relative h-[9px] rounded-[5px] bg-teal-dark/20 overflow-hidden">
+                  <div
+                    className="absolute inset-y-0 left-0 rounded-[5px]"
+                    style={{ width: `${Math.min(100, pct)}%`, background: "linear-gradient(90deg,#A9CFC9,#6F9993)" }}
+                  />
+                </div>
+                <div className="flex justify-between mt-[5px] text-[8px] font-semibold text-team-teal-ink/[0.72]">
+                  <span>0</span>
+                  <span>Weekly avg {weeklyStepsAvg.toLocaleString()}</span>
+                  <span>{stepsGoal.toLocaleString()}</span>
+                </div>
+              </div>
+            </div>
+          </>
+        )
       );
     }
 
-    case "heartRate": {
-      const onClick = () => navigate("/app/health", { state: { openMetric: "heartRate" } });
-      if (!isLarge) {
-        return wrap(
-          onClick,
-          <div>
-            {header("Heart Rate", HeartPulse)}
-            <p className={numeral}>
-              {metricValues.heartRate} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">bpm</span>
-            </p>
-          </div>
-        );
-      }
-      return wrap(
-        onClick,
-        <div>
-          {header("Heart Rate", HeartPulse)}
-          <p className={`${numeral} mb-1.5`}>
-            {metricValues.heartRate} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">bpm</span>
-          </p>
-          <p className="text-[11px] text-charcoal-faint mb-1.5">Resting · avg {heartRateDetail.average} bpm</p>
-          <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full px-2 py-0.5">
-            Range {heartRateDetail.low}–{heartRateDetail.high} bpm today
-          </span>
-        </div>
-      );
-    }
-
+    // ---------------------------------------------------------------- Water
     case "water": {
       const pct = water / waterGoalMl;
-      // V7 (QA 7.0): "the water log in the plus sign should appear instead
-      // when pressing the widget in the home screen" — pressing this widget
-      // opens the same quick-log sheet the Health tab's "+" used to open;
-      // that button is removed from Health entirely.
+      const glasses = Math.round(Math.max(0, Math.min(1, pct)) * 8);
       const onClick = onWaterClick ?? (() => navigate("/app/health"));
       if (!isLarge) {
         return wrap(
           onClick,
-          <div className="flex items-center gap-3">
-            <WaterFillContainer pct={pct} height={48} width={30} orientation="vertical" />
-            <div>
-              {header("Water", Droplet)}
-              <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] tabular-nums">
-                {(water / 1000).toFixed(1)}L
-              </p>
-            </div>
-          </div>
+          shell(
+            "rgba(143,192,232,.17)",
+            <>
+              <p className={`${capsLabel} text-team-blue-ink/[0.72]`}>Water</p>
+              <div className="flex-1 flex items-center justify-center gap-2.5 min-h-0">
+                <div className="min-w-0 text-right">
+                  <p className="text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">{(water / 1000).toFixed(1)} L</p>
+                  <p className="mt-[5px] text-[9px] text-team-blue-ink">of {(waterGoalMl / 1000).toFixed(1)} L</p>
+                </div>
+                <svg viewBox="0 0 34 40" width={38} height={45} style={{ display: "block", flex: "none", overflow: "visible" }}>
+                  <defs>
+                    <clipPath id="w-cup-clip">
+                      <path d="M5.2 5 H28.8 L26.4 35.2 A2.6 2.6 0 0 1 23.8 37.6 H10.2 A2.6 2.6 0 0 1 7.6 35.2 Z" />
+                    </clipPath>
+                  </defs>
+                  <g clipPath="url(#w-cup-clip)">
+                    <rect x="0" y={40 - Math.max(0, Math.min(1, pct)) * 35} width="34" height="40" fill="#8FC0E8" />
+                  </g>
+                  <path
+                    d="M5.2 5 H28.8 L26.4 35.2 A2.6 2.6 0 0 1 23.8 37.6 H10.2 A2.6 2.6 0 0 1 7.6 35.2 Z"
+                    fill="none"
+                    stroke="#5E8BB3"
+                    strokeWidth={1.7}
+                    strokeLinejoin="round"
+                  />
+                  <path d="M3.6 5 H30.4" stroke="#5E8BB3" strokeWidth={1.7} strokeLinecap="round" />
+                </svg>
+              </div>
+            </>
+          )
         );
       }
       return wrap(
         onClick,
-        <div>
-          {header("Water intake", Droplet)}
-          <p className={`${numeral} mb-1`}>
-            {(water / 1000).toFixed(2)}L{" "}
-            <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">/ {(waterGoalMl / 1000).toFixed(1)}L</span>
-          </p>
-          <WaterFillContainer pct={pct} height={20} width="100%" orientation="horizontal" />
-          <p className="text-[11px] text-charcoal-faint mt-1.5">{Math.round(pct * 100)}% of today's goal</p>
-        </div>
+        shell(
+          "rgba(143,192,232,.17)",
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`${capsLabel} text-team-blue-ink/[0.72]`}>Water</p>
+              <span className={`${badge} text-team-blue-ink bg-team-blue-light/[0.34]`}>{glasses} of 8 glasses</span>
+            </div>
+            <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
+              <div className="flex items-baseline justify-between gap-2.5">
+                <span className="text-[26px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
+                  {(water / 1000).toFixed(1)} L
+                </span>
+                <span className="text-[10px] text-team-blue-ink/[0.72]">
+                  {Math.max(0, (waterGoalMl - water) / 1000).toFixed(1)} L to go
+                </span>
+              </div>
+              <div className="h-[18px] rounded-[7px] bg-team-blue-light/[0.26] overflow-hidden">
+                <div
+                  className="h-full rounded-[7px]"
+                  style={{ width: `${Math.min(100, pct * 100)}%`, background: "linear-gradient(90deg,#A8CFEE,#8FC0E8)" }}
+                />
+              </div>
+              {water === 0 && new Date(`${today}T00:00:00`).getHours() >= 12 && (
+                <div className="flex items-center gap-[9px] rounded-[9px] bg-team-blue-light/[0.22] px-2.5 py-[7px]">
+                  <span className="text-[9.5px] font-semibold leading-[1.35] text-team-blue-ink">
+                    It's past midday and nothing's logged — a glass now keeps you on pace.
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )
       );
     }
 
+    // ---------------------------------------------------------------- Sleep
     case "sleep": {
       const onClick = () => navigate("/app/health", { state: { openMetric: "sleep" } });
+      const h = Math.floor(sleepMeta.current);
+      const m = Math.round((sleepMeta.current % 1) * 60);
       if (!isLarge) {
         return wrap(
           onClick,
-          <div>
-            {header("Sleep", Moon)}
-            <p className={numeral}>
-              {Math.floor(sleepMeta.current)}h {Math.round((sleepMeta.current % 1) * 60)}m
-            </p>
-          </div>
-        );
-      }
-      return wrap(
-        onClick,
-        <div className="flex items-center gap-3">
-          <SleepStageWheel stages={sleepDetail} />
-          <div>
-            {header("Sleep", Moon)}
-            <p className={`${numeral} mb-1.5`}>
-              {Math.floor(sleepMeta.current)}h {Math.round((sleepMeta.current % 1) * 60)}m
-            </p>
-            <span className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-primary-deep-text bg-primary-pale rounded-full px-2 py-0.5">
-              <ArrowUp size={10} /> +0.3h vs weekly avg
-            </span>
-            <p className="text-[11px] text-charcoal-faint mt-1.5">Sleep score {sleepDetail.score}/100</p>
-          </div>
-        </div>
-      );
-    }
-
-    case "nutrition": {
-      const kcalProgress = totals.calories / targets.calories;
-      const onClick = () => navigate("/app/food");
-      if (!isLarge) {
-        return wrap(
-          onClick,
-          <div className="flex items-center gap-3">
-            <MacroRing progress={kcalProgress} protein={totals.protein} carbs={totals.carbs} fat={totals.fat} size={44} strokeWidth={5}>
-              <span className="text-[10px] font-bold text-charcoal">
-                {Math.round((kcalProgress || 0) * 100)}%
-              </span>
-            </MacroRing>
-            <div>
-              {header("Nutrition", Utensils)}
-              <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] tabular-nums">
-                {Math.round(totals.calories)} <span className="text-[11px] font-semibold text-charcoal-tertiary tracking-normal">kcal</span>
+          shell(
+            "rgba(174,161,220,.13)",
+            <>
+              <p className={`${capsLabel} text-primary-deep-text/[0.65]`}>Sleep</p>
+              <p className="mt-[5px] text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">
+                {h}h{m.toString().padStart(2, "0")}
               </p>
-            </div>
-          </div>
+              <div className="flex-1 flex items-center min-h-0 mt-2">
+                <svg viewBox="0 0 100 26" width="100%" height={26} preserveAspectRatio="none" style={{ display: "block", overflow: "visible" }}>
+                  <path
+                    d="M0 22 H14 V13 H26 V4 H34 V13 H48 V22 H60 V13 H72 V4 H80 V13 H92 V20 H100"
+                    fill="none"
+                    stroke="rgb(var(--c-team-lavender-deep))"
+                    strokeWidth={1.7}
+                    strokeLinejoin="round"
+                    strokeLinecap="round"
+                  />
+                </svg>
+              </div>
+              <p className="mt-[6px] text-[9px] text-primary-deep-text">
+                {sleepMeta.trend >= 0 ? "+" : ""}
+                {sleepMeta.trend}h avg
+              </p>
+            </>
+          )
         );
       }
-      // V8 (QA 8.0): horizontal bars per macro, color-coordinated with the
-      // ring's own segments, showing grams left (target minus consumed).
-      // Design refinement §6.1: one hue family (primary-dark/primary-light/
-      // teal), gram figure moves to neutral charcoal so colour lives only
-      // in the bar.
-      const macroRows: { label: string; color: string; consumed: number; target: number }[] = [
-        { label: "Protein", color: "#7D6BB5", consumed: totals.protein, target: targets.protein },
-        { label: "Carbs", color: "#C8BFE9", consumed: totals.carbs, target: targets.carbs },
-        { label: "Fat", color: "#A2C8C2", consumed: totals.fat, target: targets.fat },
-      ];
       return wrap(
         onClick,
-        <div>
-          <div className="flex items-center gap-4 mb-3">
-            <MacroRing progress={kcalProgress} protein={totals.protein} carbs={totals.carbs} fat={totals.fat} size={72} strokeWidth={6}>
-              <div className="text-center">
-                <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.03em] tabular-nums">
-                  {Math.round(totals.calories)}
-                </p>
-                <p className="text-[9.5px] text-charcoal-tertiary">of {targets.calories}</p>
+        shell(
+          "rgba(174,161,220,.16)",
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Sleep</p>
+              <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>Score {sleepDetail.score}</span>
+            </div>
+            <div className="flex-1 flex flex-col justify-between min-h-0 mt-1">
+              <div className="flex items-baseline gap-2.5">
+                <span className="text-[24px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
+                  {h}h {m.toString().padStart(2, "0")}m
+                </span>
+                <span className="text-[10px] whitespace-nowrap text-primary-deep-text/[0.68]">
+                  {sleepMeta.trend >= 0 ? "↑" : "↓"} {Math.abs(sleepMeta.trend)} h vs last wk
+                </span>
               </div>
-            </MacroRing>
-            <div className="flex-1">{header("Nutrition", Utensils)}</div>
-          </div>
-          <div className="space-y-2">
-            {macroRows.map((m) => {
-              const left = Math.max(0, Math.round(m.target - m.consumed));
-              return (
-                <div key={m.label}>
-                  <div className="flex items-center justify-between text-[11px] mb-1">
-                    <span className="text-charcoal-soft">{m.label}</span>
-                    <span className="font-semibold text-charcoal">{left}g left</span>
-                  </div>
-                  <ProgressBar progress={m.consumed / (m.target || 1)} color={m.color} height={4} />
+              <div className="flex gap-[7px] mt-0.5">
+                {sleepStages.map((s) => (
+                  <span key={s.label} className="flex-1 rounded-[9px] bg-white/55 py-[5px] text-center">
+                    <span className="block text-[11px] font-extrabold text-charcoal tabular-nums">{fmtMin(s.min)}</span>
+                    <span className="block mt-[2px] text-[7.5px] font-semibold" style={{ color: s.color }}>
+                      {s.label}
+                    </span>
+                  </span>
+                ))}
+              </div>
+              <div>
+                <span className="flex h-[7px] rounded-[3px] overflow-hidden mt-[3px]">
+                  {sleepStages.map((s) => (
+                    <span key={s.label} style={{ width: `${(s.min / sleepTotalMin) * 100}%`, background: s.color }} />
+                  ))}
+                </span>
+                <div className="flex items-center gap-[11px] mt-2">
+                  {sleepStages.map((s) => (
+                    <span key={s.label} className="flex items-center gap-1">
+                      <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: s.color }} />
+                      <span className="text-[7.5px] font-semibold text-primary-deep-text/[0.68]">{s.label}</span>
+                    </span>
+                  ))}
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              </div>
+            </div>
+          </>
+        )
       );
     }
 
+    // -------------------------------------------------------------- Workout
     case "workout": {
       const done = !!todaysWorkoutLog?.completed;
       const onClick = () => navigate("/app/workout");
       if (!isLarge) {
         return wrap(
           onClick,
-          <div>
-            {header("Workout", Dumbbell)}
-            <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em]">{done ? "Done ✓" : "Pending"}</p>
-          </div>
+          shell(
+            "rgba(162,200,194,.16)",
+            <>
+              <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Workout</p>
+              <div className="flex-1 flex items-center justify-center min-h-0">
+                <span className="flex flex-col items-center text-center leading-[1.25]">
+                  <span className={`${badge} text-team-teal-ink bg-teal/[0.42]`}>{done ? "Completed" : "Up next"}</span>
+                  <span className="mt-1.5 text-[15px] font-extrabold tracking-[-0.02em] text-charcoal">{todaysWorkout.name}</span>
+                  <span className="mt-[5px] text-[8.5px] font-semibold text-team-teal-ink/[0.72]">
+                    {todaysWorkout.exercises.length} exercises
+                  </span>
+                </span>
+              </div>
+            </>
+          )
         );
       }
       return wrap(
         onClick,
-        <div>
-          {header("Workout", Dumbbell)}
-          <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] mb-1.5">{todaysWorkout.name}</p>
-          <span
-            className={`inline-flex items-center gap-1 text-[11px] font-semibold rounded-full px-2 py-0.5 ${
-              done ? "text-primary-deep-text bg-primary-pale" : "text-charcoal-soft dark:text-teal-deep-text bg-teal-pale"
-            }`}
-          >
-            {done ? "Completed ✓" : "Not started yet"}
-          </span>
-          <p className="text-[11px] text-charcoal-faint mt-1.5">
-            {todaysWorkout.exercises.length} exercises · ~{todaysWorkout.durationMin} min
-          </p>
-          <p className="text-[11px] text-primary-deep-text font-semibold mt-1">
-            {/* Found by category, not by id: "s3" was the mock seed's id and a
-                real row carries a uuid. */}
-            🔥 {streaks.find((s) => s.category === "workout")?.days ?? 0} workout streak
-          </p>
-        </div>
+        shell(
+          "rgba(162,200,194,.16)",
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Workout</p>
+              <span className={`${badge} text-team-teal-ink bg-teal/[0.42]`}>{done ? "Completed" : "Up next"}</span>
+            </div>
+            <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[20px] font-extrabold tracking-[-0.03em] text-charcoal truncate">{todaysWorkout.name}</p>
+                  <p className="mt-1 text-[10px] text-team-teal-ink/[0.72]">
+                    {todaysWorkout.exercises.length} exercises · ~{todaysWorkout.durationMin} min
+                  </p>
+                </div>
+                <span className="w-[38px] h-[38px] rounded-full bg-teal-dark flex items-center justify-center shrink-0">
+                  <Play size={15} className="text-white" fill="currentColor" />
+                </span>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[9px] font-bold tracking-[.12em] uppercase text-team-teal-ink/[0.72]">This week</span>
+                  <span className="text-[9.5px] font-extrabold text-team-teal-ink">{workoutDaysThisWeek.length} of 7</span>
+                </div>
+                <span className="flex gap-1 w-full">
+                  {week.map((d) => (
+                    <span
+                      key={d}
+                      className="flex-1 h-1.5 rounded-[3px]"
+                      style={{ background: workoutDaysThisWeek.includes(d) ? "rgb(var(--c-teal-dark))" : "rgba(111,153,147,.24)" }}
+                    />
+                  ))}
+                </span>
+              </div>
+            </div>
+          </>
+        )
       );
     }
 
+    // ----------------------------------------------------------- Nutrition
+    case "nutrition": {
+      const onClick = () => navigate("/app/food");
+      const totalGoal = targets.protein + targets.carbs + targets.fat || 1;
+      const circumference = 2 * Math.PI * 34;
+      const macros = [
+        { label: "Protein", color: "rgb(var(--c-team-lavender-deep))", consumed: totals.protein, target: targets.protein },
+        { label: "Carbs", color: "rgb(var(--c-team-lavender))", consumed: totals.carbs, target: targets.carbs },
+        { label: "Fat", color: "rgb(var(--c-teal))", consumed: totals.fat, target: targets.fat },
+      ];
+      let rotAcc = -90;
+      const arcs = macros.map((m) => {
+        const arc = (m.consumed / totalGoal) * circumference;
+        const rotate = rotAcc;
+        rotAcc += (arc / circumference) * 360;
+        return { ...m, arc, rotate };
+      });
+      const kcalLeft = Math.max(0, Math.round(targets.calories - totals.calories));
+      if (!isLarge) {
+        return wrap(
+          onClick,
+          shell(
+            "rgba(174,161,220,.16)",
+            <>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Food</p>
+              <div className="flex-1 flex items-center justify-center min-h-0">
+                <span className="relative w-[76px] h-[76px] block shrink-0">
+                  <svg width={76} height={76}>
+                    <circle cx="38" cy="38" r="34" fill="none" stroke="rgba(36,31,27,.07)" strokeWidth={8} />
+                    {arcs.map((a) => (
+                      <circle
+                        key={a.label}
+                        cx="38"
+                        cy="38"
+                        r="34"
+                        fill="none"
+                        stroke={a.color}
+                        strokeWidth={8}
+                        strokeDasharray={`${a.arc} ${circumference - a.arc}`}
+                        transform={`rotate(${a.rotate} 38 38)`}
+                      />
+                    ))}
+                  </svg>
+                  <span className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+                    <span className="text-[15px] font-extrabold tracking-[-0.03em] text-charcoal tabular-nums">
+                      {Math.round(totals.calories)}
+                    </span>
+                    <span className="mt-[2px] text-[8px] font-semibold text-charcoal-tertiary">kcal</span>
+                  </span>
+                </span>
+              </div>
+            </>
+          )
+        );
+      }
+      return wrap(
+        onClick,
+        shell(
+          "rgba(174,161,220,.16)",
+          <>
+            <div className="flex items-center justify-between gap-2.5">
+              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Food</p>
+              <span className="flex-1 flex items-baseline justify-end gap-1.5 min-w-0">
+                <span className="text-[22px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
+                  {Math.round(totals.calories)}
+                </span>
+                <span className="text-[9.5px] whitespace-nowrap text-primary-deep-text/[0.68]">of {targets.calories} kcal</span>
+              </span>
+              <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>{kcalLeft} kcal left</span>
+            </div>
+            <div className="flex-1 flex flex-col justify-evenly min-h-0 mt-2">
+              {macros.map((m) => (
+                <div key={m.label} className="flex items-center gap-[9px]">
+                  <span className="flex items-center gap-[5px] w-[62px] shrink-0 text-[10px] font-bold text-charcoal">
+                    <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: m.color }} />
+                    {m.label}
+                  </span>
+                  <span className="flex-1 min-w-0 block h-[13px] rounded-[5px] bg-charcoal/[0.07] overflow-hidden">
+                    <span
+                      className="block h-full rounded-[5px]"
+                      style={{ width: `${Math.min(100, (m.consumed / (m.target || 1)) * 100)}%`, background: m.color }}
+                    />
+                  </span>
+                  <span className="w-14 shrink-0 text-right text-[9px] text-primary-deep-text/[0.68] tabular-nums">
+                    {Math.round(m.consumed)} / {Math.round(m.target)}g
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )
+      );
+    }
+
+    // --------------------------------------------------------------- Weight
+    case "weight": {
+      const onClick = () => navigate("/app/health", { state: { openMetric: "weight" } });
+      if (!isLarge) {
+        return wrap(
+          onClick,
+          shell(
+            "rgba(174,161,220,.11)",
+            <>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Weight</p>
+              <div className="flex-1 flex items-center justify-center min-h-0">
+                <span className="flex flex-col items-center gap-[9px]">
+                  <svg viewBox="0 0 24 24" width={40} height={40} fill="none" stroke="rgb(var(--c-team-lavender-deep))" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flex: "none" }}>
+                    <rect x="2.6" y="2.6" width="18.8" height="18.8" rx="3.6" />
+                    <path d="M5.5 10.1C8.8 7.3 15.2 7.3 18.5 10.1L16.3 15.1C14.1 13.8 9.9 13.8 7.7 15.1Z" strokeWidth={1.1} />
+                    <path d="M9.1 9.1 8.5 10.6" strokeWidth={0.9} />
+                    <path d="M12 8.5V10.1" strokeWidth={0.9} />
+                    <path d="M14.9 9.1 15.5 10.6" strokeWidth={0.9} />
+                    <path d="M13.3 11 11.3 14.3" strokeWidth={0.9} />
+                  </svg>
+                  <span className="flex items-baseline gap-[3px]">
+                    <span className="text-[20px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">
+                      {metricValues.weight}
+                    </span>
+                    <span className="text-[9px] font-bold text-primary-deep-text/[0.68]">kg</span>
+                  </span>
+                </span>
+              </div>
+            </>
+          )
+        );
+      }
+      const vbW = 230,
+        vbH = 78,
+        padX = 14,
+        topY = 19,
+        botY = 66;
+      const pts = weightValues.map((v, i) => {
+        const x = padX + (i * (vbW - 2 * padX)) / (weightValues.length - 1);
+        const y = weightMax === weightMin ? (topY + botY) / 2 : botY - ((v - weightMin) / (weightMax - weightMin)) * (botY - topY);
+        return { x, y, v, date: weightMeta.history[i].date };
+      });
+      return wrap(
+        onClick,
+        shell(
+          "rgba(174,161,220,.11)",
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Weight</p>
+              <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>
+                {weightMeta.trend <= 0 ? "↓" : "↑"} {Math.abs(weightMeta.trend)} kg this week
+              </span>
+            </div>
+            <div className="flex-1 flex min-h-0 mt-[9px]">
+              <div className="flex-1 flex items-center gap-3.5 min-w-0">
+                <div className="shrink-0">
+                  <p className="flex items-baseline gap-[3px]">
+                    <span className="text-[26px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
+                      {metricValues.weight}
+                    </span>
+                    <span className="text-[11px] font-bold text-primary-deep-text/[0.68]">kg</span>
+                  </p>
+                  {nutritionGoal.weightGoal !== "maintain" && nutritionGoal.desiredWeightConfirmed && nutritionGoal.desiredWeightKg && (
+                    <p className="mt-[5px] text-[9.5px] text-primary-deep-text/[0.68]">Goal {nutritionGoal.desiredWeightKg} kg</p>
+                  )}
+                </div>
+                <svg viewBox={`0 0 ${vbW} ${vbH}`} width={vbW} height={vbH} style={{ display: "block", flex: "none" }}>
+                  <polyline
+                    points={pts.map((p) => `${p.x},${p.y}`).join(" ")}
+                    fill="none"
+                    stroke="rgb(var(--c-team-lavender-deep))"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  {pts.map((p, i) => (
+                    <React.Fragment key={i}>
+                      <circle cx={p.x} cy={p.y} r={2.6} fill="rgb(var(--c-team-lavender-deep))" />
+                      <text
+                        x={p.x}
+                        y={p.y - 7}
+                        textAnchor="middle"
+                        fontFamily="Manrope"
+                        fontSize={8}
+                        fontWeight={700}
+                        fill={i === pts.length - 1 ? "rgb(var(--c-primary-deep-text))" : "rgba(95,80,147,.6)"}
+                      >
+                        {p.v.toFixed(1)}
+                      </text>
+                      <text x={p.x} y={76} textAnchor="middle" fontFamily="Manrope" fontSize={7.5} fontWeight={600} fill="rgba(95,80,147,.5)">
+                        {dayLetter(p.date)}
+                      </text>
+                    </React.Fragment>
+                  ))}
+                </svg>
+              </div>
+            </div>
+          </>
+        )
+      );
+    }
+
+    // --------------------------------------------------------------- Habits
     case "habits": {
       const done = habits.filter((h) => h.done).length;
       const onClick = () => navigate("/app/mind");
       if (!isLarge) {
         return wrap(
           onClick,
-          <div>
-            {header("Habits", CheckSquare)}
-            <p className={numeral}>
-              {done}/{habits.length}
-            </p>
-          </div>
+          shell(
+            "rgba(174,161,220,.16)",
+            <>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Habits</p>
+              <div className="flex-1 flex items-center justify-center min-h-0">
+                <span className="flex flex-col items-center gap-2">
+                  <svg viewBox="0 0 24 24" width={40} height={40} style={{ display: "block", flex: "none" }}>
+                    <defs>
+                      <linearGradient id="team-habit-check" x1="0" y1="0" x2="1" y2="0">
+                        <stop offset={`${habits.length ? (done / habits.length) * 100 : 0}%`} stopColor="rgb(var(--c-team-lavender-deep))" />
+                        <stop offset={`${habits.length ? (done / habits.length) * 100 : 0}%`} stopColor="rgba(125,107,181,.22)" />
+                      </linearGradient>
+                    </defs>
+                    <path d="M3.6 12.9 9.1 18.4 20.4 6.2" fill="none" stroke="url(#team-habit-check)" strokeWidth={3.4} strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  <span className="text-[15px] font-extrabold tracking-[-0.02em] text-charcoal tabular-nums">
+                    {done}/{habits.length}
+                  </span>
+                </span>
+              </div>
+            </>
+          )
+        );
+      }
+      const shown = habits.slice(0, 6);
+      const more = habits.length > 6;
+      return wrap(
+        onClick,
+        shell(
+          "rgba(174,161,220,.16)",
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Habits</p>
+              <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>
+                {done} of {habits.length} today
+              </span>
+            </div>
+            <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
+              <div className="grid grid-cols-2 gap-x-2.5 gap-y-[5px]">
+                {shown.map((h) => (
+                  <div
+                    key={h.id}
+                    className="flex items-center justify-between gap-2 rounded-lg px-2 py-[5px]"
+                    style={{ background: h.done ? "rgba(125,107,181,.14)" : "rgba(255,255,255,.45)" }}
+                  >
+                    <span className={`flex-1 min-w-0 text-[9.5px] truncate ${h.done ? "font-bold text-charcoal" : "font-medium text-charcoal-faint"}`}>
+                      {h.label}
+                    </span>
+                    <span
+                      className="w-3.5 h-3.5 rounded shrink-0 flex items-center justify-center"
+                      style={
+                        h.done
+                          ? { background: "rgb(var(--c-team-lavender-deep))", border: "1.5px solid rgb(var(--c-team-lavender-deep))" }
+                          : { background: "transparent", border: "1.5px solid rgba(125,107,181,.3)" }
+                      }
+                    >
+                      {h.done && <Check size={9} className="text-white" strokeWidth={3} />}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              {more && (
+                <div className="flex items-center justify-between gap-2.5 pt-1 pb-px">
+                  <span className="text-[8.5px] font-semibold whitespace-nowrap text-primary-deep-text/[0.68]">For more habits, swipe.</span>
+                  <span className="flex gap-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-team-lavender-deep shrink-0" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-team-lavender-deep/[0.28] shrink-0" />
+                  </span>
+                </div>
+              )}
+            </div>
+          </>
+        )
+      );
+    }
+
+    // ----------------------------------------------------------- Heart rate
+    case "heartRate": {
+      const onClick = () => navigate("/app/health", { state: { openMetric: "heartRate" } });
+      const bpm = metricValues.heartRate;
+      if (!isLarge) {
+        return wrap(
+          onClick,
+          shell(
+            "rgba(156,79,124,.1)",
+            <>
+              <p className={`${capsLabel} text-team-rose-ink/80`}>Heart rate</p>
+              <div className="flex-1 flex items-center justify-center min-h-0">
+                <span className="relative flex items-center justify-center">
+                  <svg viewBox="0 0 24 24" width={70} height={70} style={{ display: "block", flex: "none" }}>
+                    <path
+                      d="M12 20.4S3.6 15 3.6 9.3A4.6 4.6 0 0 1 12 6.6a4.6 4.6 0 0 1 8.4 2.7c0 5.7-8.4 11.1-8.4 11.1Z"
+                      fill="none"
+                      stroke="rgb(var(--c-berry))"
+                      strokeWidth={0.72}
+                      strokeLinejoin="round"
+                      className="animate-cent-heartbeat"
+                      style={{ transformBox: "fill-box", transformOrigin: "center", animationDuration: `${(60 / Math.max(1, bpm)).toFixed(2)}s` }}
+                    />
+                  </svg>
+                  <span className="absolute inset-0 flex flex-col items-center justify-center leading-none pt-1">
+                    <span className="text-[19px] font-extrabold tracking-[-0.04em] text-charcoal tabular-nums">{bpm}</span>
+                    <span className="mt-px text-[7.5px] font-bold text-team-rose-ink/80">bpm</span>
+                  </span>
+                </span>
+              </div>
+            </>
+          )
         );
       }
       return wrap(
         onClick,
-        <div>
-          {header("Habits", CheckSquare)}
-          <p className={`${numeral} mb-2`}>
-            {done}/{habits.length} <span className="text-[12px] font-semibold text-charcoal-tertiary tracking-normal">done today</span>
-          </p>
-          <ProgressBar progress={habits.length ? done / habits.length : 0} color="#7D6BB5" height={4} />
-          <div className="flex flex-wrap gap-1.5 mt-2.5">
-            {habits.slice(0, 5).map((h) => (
-              <span
-                key={h.id}
-                className={`w-7 h-7 rounded-full bg-primary-pale flex items-center justify-center ${h.done ? "" : "opacity-30"}`}
-              >
-                {React.createElement(habitIcon[h.icon], { size: 13, className: "text-primary-dark" })}
-              </span>
-            ))}
-          </div>
-        </div>
+        shell(
+          "rgba(156,79,124,.1)",
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`${capsLabel} text-team-rose-ink/80`}>Heart rate</p>
+              <span className={`${badge} text-team-rose-ink bg-berry/[0.16]`}>Resting</span>
+            </div>
+            <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
+              <div className="flex items-baseline gap-2">
+                <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">{bpm}</span>
+                <span className="text-[11px] font-bold text-team-rose-ink/80">bpm resting</span>
+              </div>
+              {/* Reuses the Health page's own EKG trace component (waveform
+                  AND its real rhythm label) so the two stay in sync by
+                  construction, rather than a second hand-built waveform —
+                  the manifest requires them to mirror exactly. Its rhythm
+                  colour (green/amber/red for brady-/normal/tachycardia) is
+                  real, functional signal, so it's kept rather than
+                  recoloured to the design's flat decorative rose. */}
+              <HeartRateEKG bpm={bpm} />
+              <p className="text-[9.5px] font-semibold text-team-rose-ink/80">
+                Range {heartRateDetail.low} – {heartRateDetail.high} bpm today
+              </p>
+            </div>
+          </>
+        )
       );
     }
 
+    // -------------------------------------------------------------- Journal
     case "journal": {
-      const todaysEntry = journalEntries.some((e) => e.date === today);
       const onClick = () => navigate("/app/mind");
       if (!isLarge) {
         return wrap(
           onClick,
-          <div>
-            {header("Journal", BookOpen)}
-            <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em]">
-              {todaysEntry ? "Written ✓" : "Not yet"}
-            </p>
-          </div>
+          shell(
+            "rgba(217,164,65,.14)",
+            <>
+              <p className={`${capsLabel} text-team-gold-ink/[0.82]`}>Journal</p>
+              <div className="flex-1 flex items-center justify-center min-h-0">
+                <span className="flex flex-col items-center gap-[7px]">
+                  <BookOpen size={30} className="text-team-gold-deep" />
+                  <span className="flex flex-col items-center leading-none">
+                    <span className="text-[20px] font-extrabold tracking-[-0.04em] text-charcoal tabular-nums">{journalStreak}</span>
+                    <span className="mt-1 text-[8.5px] font-bold text-team-gold-ink/[0.82]">day streak</span>
+                  </span>
+                </span>
+              </div>
+            </>
+          )
         );
       }
       return wrap(
         onClick,
-        <div>
-          {header("Journal", BookOpen)}
-          <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] mb-1.5">
-            {todaysEntry ? "Today's entry written ✓" : "Reflect on your day"}
-          </p>
-          <p className="text-[11px] text-charcoal-faint">{journalEntries.length} entries total</p>
-          {journalEntries.length > 0 && (
-            <p className="text-[11px] text-charcoal-faint mt-1">
-              Last: {journalEntries[journalEntries.length - 1].date}
-            </p>
-          )}
-        </div>
+        shell(
+          "rgba(217,164,65,.14)",
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`${capsLabel} text-team-gold-ink/[0.82]`}>Journal</p>
+              <span className={`${badge} text-team-gold-ink bg-gold/[0.22]`}>{journalDoneToday ? "Written today" : "Not written today"}</span>
+            </div>
+            <div className="flex-1 flex flex-col justify-between min-h-0 mt-2.5">
+              <div className="flex items-center gap-[13px]">
+                <BookOpen size={30} className="text-team-gold-deep shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="flex items-baseline gap-1.5">
+                    <span className="text-[22px] font-extrabold leading-none tracking-[-0.035em] text-charcoal">{journalStreak}</span>
+                    <span className="text-[10px] font-bold text-team-gold-ink/[0.82]">day streak</span>
+                  </p>
+                  {latestEntry && (
+                    <p className="mt-[5px] text-[10px] leading-[1.45] text-team-gold-ink/[0.82] overflow-hidden text-ellipsis whitespace-nowrap">
+                      &ldquo;{latestEntry.text}&rdquo;
+                    </p>
+                  )}
+                </div>
+                <span className="shrink-0 text-right">
+                  <span className="block text-[14px] font-extrabold text-charcoal tabular-nums">{journalWordTotal}</span>
+                  <span className="block mt-[2px] text-[7.5px] font-semibold text-team-gold-ink/[0.82]">words</span>
+                </span>
+              </div>
+              <div className="flex gap-[5px]">
+                {journalWeek.map((has, i) => (
+                  <span
+                    key={i}
+                    className="flex-1 flex flex-col items-center gap-1 rounded-lg py-[5px]"
+                    style={{ background: has ? "rgba(217,164,65,.22)" : "rgba(255,255,255,.45)" }}
+                  >
+                    <span className={`text-[7.5px] font-extrabold ${has ? "text-team-gold-ink" : "text-team-gold-ink/50"}`}>{DAY_LETTERS[i]}</span>
+                    {has ? (
+                      <Check size={10} className="text-team-gold-deep" />
+                    ) : (
+                      <span className="w-2.5 h-2.5 rounded-full border-[1.3px] border-team-gold-ink/[0.28]" />
+                    )}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </>
+        )
       );
     }
 
+    // ---------------------------------------------------------- Meditation
     case "meditation": {
       const onClick = () => navigate("/app/mind");
+      const weeklyGoalMin = 20;
+      const todayMin = 12; // No real per-day meditation duration is tracked yet.
+      const weekPct = Math.min(1, todayMin / weeklyGoalMin);
       if (!isLarge) {
         return wrap(
           onClick,
-          <div>
-            {header("Meditation", YogaFigureIcon as unknown as LucideIcon)}
-            <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em]">5 min</p>
-          </div>
+          shell(
+            "rgba(162,200,194,.18)",
+            <>
+              <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Meditation</p>
+              <div className="flex-1 flex items-center justify-center min-h-0">
+                <span className="flex flex-col items-center gap-2">
+                  <LotusGlyph size={40} stroke="rgb(var(--c-teal-dark))" />
+                  <span className="flex items-baseline gap-[3px]">
+                    <span className="text-[20px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">{todayMin}</span>
+                    <span className="text-[9px] font-bold text-team-teal-ink/[0.72]">min</span>
+                  </span>
+                </span>
+              </div>
+            </>
+          )
         );
       }
       return wrap(
         onClick,
-        <div>
-          {header("Meditation", YogaFigureIcon as unknown as LucideIcon)}
-          <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] mb-1.5">
-            Breathing, stretching &amp; yoga
-          </p>
-          <span className="inline-flex items-center text-[11px] font-semibold text-primary-deep-text bg-primary-pale rounded-full px-2 py-0.5">
-            Open library
-          </span>
-          <p className="text-[11px] text-charcoal-faint mt-1.5">5-15 min sessions · guided or free-form</p>
-        </div>
+        shell(
+          "rgba(162,200,194,.18)",
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Meditation</p>
+              <span className={`${badge} text-team-teal-ink bg-teal/[0.42]`}>3 sessions this week</span>
+            </div>
+            <div className="flex-1 flex items-center gap-4 min-h-0 mt-[9px]">
+              <LotusGlyph size={66} progress={weekPct} stroke="rgb(var(--c-teal-dark))" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline gap-2">
+                  <span className="text-[24px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">{todayMin} min</span>
+                  <span className="text-[10px] font-bold text-team-teal-ink/[0.72]">today</span>
+                </div>
+                <p className="mt-[7px] mb-2.5 text-[10px] text-team-teal-ink/[0.72]">Box breathing · 4-4-4-4</p>
+                <div className="h-[7px] rounded-full bg-teal-dark/20 overflow-hidden">
+                  <div className="h-full rounded-full bg-teal-dark" style={{ width: `${weekPct * 100}%` }} />
+                </div>
+                <p className="mt-1.5 text-[8.5px] font-bold text-team-teal-ink/[0.72]">{Math.round(weekPct * 100)}% of your weekly goal</p>
+              </div>
+            </div>
+          </>
+        )
       );
     }
 
+    // ------------------------------------------------------------ Gym passes
     case "gymPasses": {
-      const passCount = Object.values(gymPurchases).reduce((n, arr) => n + arr.length, 0);
-      const passNames = Object.entries(gymPurchases)
-        .flatMap(([gymId, arr]) => arr.map(() => mockGyms.find((g) => g.id === gymId)?.name))
-        .filter((n): n is string => !!n);
+      type Pass = { gymId: string; gymName: string; plan: string; purchasedAt: number; oneTime: boolean };
+      const now = Date.now();
+      const passes: Pass[] = Object.entries(gymPurchases).flatMap(([gymId, arr]) =>
+        arr
+          .filter((p) => !p.oneTime || now - p.purchasedAt < DAY_MS)
+          .map((p) => ({ gymId, gymName: mockGyms.find((g) => g.id === gymId)?.name ?? "Gym", plan: p.plan, purchasedAt: p.purchasedAt, oneTime: p.oneTime }))
+      );
       const onClick = onGymPassesClick ?? (() => {});
       if (!isLarge) {
         return wrap(
           onClick,
-          <div>
-            {header("Gym Passes", KeyRound)}
-            <p className={numeral}>{passCount}</p>
-          </div>
+          shell(
+            "rgba(36,31,27,.05)",
+            <>
+              <p className={`${capsLabel} text-charcoal/50`}>Gym passes</p>
+              <div className="flex-1 flex items-center justify-center min-h-0">
+                <span className="flex flex-col items-center gap-[7px]">
+                  <KeyRound size={38} className="text-charcoal/55" />
+                  <span className="text-[24px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">{passes.length}</span>
+                </span>
+              </div>
+            </>
+          )
         );
       }
+      const current = passes[0];
+      // A one-time pass has a real 24h expiry; a monthly/annual membership
+      // doesn't expire in this app's data model at all, so there is no real
+      // date to show for it — the design's "Ends <date>" row only renders
+      // for the former.
+      const remainingMs = current && current.oneTime ? current.purchasedAt + DAY_MS - now : null;
+      const soon = remainingMs !== null && remainingMs < 6 * 60 * 60 * 1000;
       return wrap(
         onClick,
-        <div>
-          {header("Gym Passes", KeyRound)}
-          <p className="text-[19px] font-extrabold text-charcoal leading-none tracking-[-0.02em] mb-1.5">
-            {passCount > 0 ? `${passCount} active` : "None yet"}
-          </p>
-          <span className="inline-flex items-center text-[11px] font-semibold text-primary-deep-text bg-primary-pale rounded-full px-2 py-0.5">
-            Tap to show QR
-          </span>
-          {passNames.length > 0 && (
-            <p className="text-[11px] text-charcoal-faint mt-1.5 truncate">{passNames.join(" · ")}</p>
-          )}
-        </div>
+        shell(
+          "rgba(36,31,27,.05)",
+          <>
+            <div className="flex items-center justify-between gap-3">
+              <p className={`${capsLabel} text-charcoal/50`}>Gym passes</p>
+              <span className={`${badge} text-charcoal/[0.62] bg-charcoal/[0.09]`}>{passes.length} active</span>
+            </div>
+            {current ? (
+              <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
+                <div className="flex items-center gap-[13px]">
+                  <QrPattern seed={`${current.gymId}-${current.plan}`} className="w-[52px] h-[52px] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[15px] font-extrabold tracking-[-0.02em] text-charcoal truncate">{current.gymName}</p>
+                    <p className="mt-[3px] text-[10px] text-charcoal-tertiary">{current.plan}</p>
+                    {remainingMs !== null && (
+                      <p className={`mt-[5px] flex items-center gap-[5px] text-[10px] font-extrabold ${soon ? "text-status-high" : "text-charcoal-soft"}`}>
+                        <AlertCircle size={11} />
+                        {isOneTimePlan(current.plan) ? "Day pass" : current.plan} · expires{" "}
+                        {new Date(current.purchasedAt + DAY_MS).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {passes.length > 1 && (
+                  <div className="flex items-center justify-between gap-2.5">
+                    <span className="text-[8.5px] font-semibold whitespace-nowrap text-charcoal-tertiary">
+                      Swipe for {passes[1].gymName}
+                    </span>
+                    <span className="flex gap-1">
+                      {passes.map((_, i) => (
+                        <span key={i} className={`w-1.5 h-1.5 rounded-full shrink-0 ${i === 0 ? "bg-charcoal/55" : "bg-charcoal/20"}`} />
+                      ))}
+                    </span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="flex-1 flex items-center justify-center min-h-0">
+                <p className="text-[11px] font-semibold text-charcoal-tertiary">No active passes</p>
+              </div>
+            )}
+          </>
+        )
       );
     }
 

@@ -32,6 +32,46 @@
   --c-primary-dark: 125 107 181;
   --c-primary-deep-text: 95 80 147;
 
+  /* Bottom-nav brand accent (Iteration 6 "Team"). Deliberately NOT
+     --c-primary: the colour-theme picker (Settings > Appearance) swaps
+     --c-primary per [data-accent], but the nav's Centium mark and active
+     tab colour are brand chrome, not theme-reactive content, so they stay
+     this lavender under every accent theme. */
+  --c-team-nav-accent: 143 104 246;
+  --c-team-nav-idle: 154 148 179;
+
+  /* Iteration 6.2 canonical widget library — same reasoning as the nav
+     accent above: these are the design's fixed lavender/teal/blue/rose/gold
+     hues, independent of [data-accent]. Reused directly (not renamed) where
+     they're byte-identical to an existing fixed token — see the widget-by-
+     widget colour mapping in HomeWidget.tsx. */
+  --c-team-lavender: 174 161 220;
+  --c-team-lavender-deep: 125 107 181;
+  --c-team-teal-ink: 60 107 101;
+  --c-team-teal-deep: 79 127 120;
+  --c-team-blue-light: 143 192 232;
+  --c-team-blue-ink: 63 110 147;
+  --c-team-rose-ink: 138 88 120;
+  --c-team-gold-ink: 138 106 62;
+  --c-team-gold-deep: 194 154 61;
+
+  /* Iteration 6.1 "Team Dark" gradients — plain custom properties, not
+     colour triplets, since a multi-stop gradient can't ride the rgb()/
+     alpha-value pattern the tokens above use. Confirmed against the
+     handoff's own IT6.1 dark frames rather than derived: some gradients
+     deepen in dark mode and some don't, and it isn't the same rule for
+     each — Food's hero and the avatar gradient stay exactly as they are
+     in light mode, while the same-looking small lavender accent circle
+     (Calendar's "+", the consent banner) deepens. Named by use, not by
+     hex, because two gradients share a light-mode value and diverge here.
+     `--gradient-food-hero` and the avatar gradient have no .dark entry
+     below because they don't change. */
+  --gradient-board: linear-gradient(122deg, #aea1dc 0%, #8e93c8 46%, #7fb3af 78%, #a2c8c2 100%);
+  --gradient-teal-hero: linear-gradient(150deg, #a2c8c2, #4f7f78);
+  --gradient-food-hero: linear-gradient(150deg, #aea1dc, #6f5fa6);
+  --gradient-lavender-accent: linear-gradient(150deg, #aea1dc, #6f5fa6);
+  --gradient-quick-action: linear-gradient(150deg, #c3b7e6, #a192d6);
+
   /* THE SENT MESSAGE BUBBLE'S GROUND, AND THE READ TICK THAT SITS ON IT.
      Bubble-scoped on purpose: `--c-primary` is the ground for 126 other
      surfaces (buttons, FABs, toggles, chips) where nothing white sits on top
@@ -161,6 +201,25 @@
   --c-charcoal-faint: 125 119 142;
   --c-charcoal-tertiary: 137 131 160;
   --c-charcoal-disabled: 87 81 112;
+
+  /* Iteration 6.1 "Team Dark" — confirmed against the handoff's own IT6.1
+     dark frames. --c-team-nav-accent/-lavender/-lavender-deep/-teal-deep/
+     -gold-deep/-blue-light are deliberately absent here: every one of them
+     sits unchanged in the dark frames (a solid accent like the Food
+     macro's protein dot, or a nav border whose alpha shifts a couple of
+     points at the call site rather than the token itself), so they keep
+     inheriting the :root value. Only the low-opacity "ink" label colours —
+     the ones dark text would vanish at — actually change. */
+  --c-team-nav-idle: 169 161 190;
+  --c-team-teal-ink: 147 193 185;
+  --c-team-blue-ink: 150 196 236;
+  --c-team-rose-ink: 219 159 193;
+  --c-team-gold-ink: 220 187 127;
+
+  --gradient-board: linear-gradient(122deg, #584a8c 0%, #4b5183 46%, #2f6660 78%, #3b7f76 100%);
+  --gradient-teal-hero: linear-gradient(150deg, #2f6660, #24504b);
+  --gradient-lavender-accent: linear-gradient(150deg, #54468a, #3b3168);
+  --gradient-quick-action: linear-gradient(150deg, #6e5fa8, #53478a);
 
   --c-primary: 169 145 254;
   --c-primary-light: 195 179 251;

@@ -60,26 +60,35 @@ export const ConsentReviewBanner: React.FC = () => {
   // the same thing with the professional's name, next to the actual toggles.
   if (count === 0 || pathname === SHARING_ROUTE) return null;
 
+  // Iteration 6 "Team" §5 More: "restyled with lavender ground" — the
+  // gradient below is the same one used for the Home streak board and
+  // Health's weight-trend hero, since the manifest shows the identical
+  // treatment here. Content and behaviour (clears itself, links to the
+  // same sharing screen) are unchanged.
   return (
-    <div className="rounded-2xl bg-primary-pale border border-primary/[0.16] px-4 py-3.5 mb-5">
-      <div className="flex items-start gap-2.5">
-        <ShieldCheck size={16} className="text-primary-dark shrink-0 mt-0.5" />
+    <div
+      className="relative overflow-hidden rounded-[22px] px-4 py-4 mb-[13px]"
+      style={{ background: "var(--gradient-lavender-accent)" }}
+    >
+      <div className="flex items-start gap-[11px]">
+        <ShieldCheck size={17} className="text-white shrink-0 mt-px" />
         <div className="min-w-0 flex-1">
-          <p className="text-[13px] font-semibold text-charcoal">
+          <p className="text-[13.5px] font-extrabold tracking-[-0.01em] text-white">
             A sharing question we didn't ask precisely enough
           </p>
-          <p className="text-[11.5px] text-charcoal-soft mt-0.5">
+          <p className="mt-[5px] text-[11px] leading-[1.6] text-white/[0.82]">
             Your health sharing settings used to bundle several different things into one
             switch. We've separated them so you can decide each one. Nothing you already chose
             has changed — there are just two new questions waiting for you.
           </p>
+          <button
+            onClick={() => navigate(SHARING_ROUTE)}
+            className="tap mt-[11px] rounded-full bg-white text-[11px] font-extrabold px-[15px] py-2"
+            style={{ color: "#5F5093" }}
+          >
+            Review sharing
+          </button>
         </div>
-        <button
-          onClick={() => navigate(SHARING_ROUTE)}
-          className="tap shrink-0 rounded-xl bg-white text-charcoal text-[11.5px] font-semibold px-3 py-1.5 shadow-soft"
-        >
-          Review sharing
-        </button>
       </div>
     </div>
   );

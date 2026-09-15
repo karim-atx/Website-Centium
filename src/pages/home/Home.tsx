@@ -10,7 +10,7 @@ import { AIVoiceLogger } from "../../components/food/AIVoiceLogger";
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { GymPassesSheet } from "../../components/marketplace/GymPassesSheet";
-import { ChevronRight, Sparkles, Store, Crown, HeartHandshake, X } from "lucide-react";
+import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { todaysWorkout } from "../../data/mockWorkouts";
 import ProfessionalDashboard from "../professionals/ProfessionalDashboard";
@@ -82,9 +82,13 @@ export default function Home() {
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-4 animate-fade-slide-up">
+      {/* Iteration 6 "Team" §1.5: context-only, token restyle — smaller
+          19px headline and the design's own teal avatar gradient in place
+          of the flat teal-pale wash; structure (greeting, subtitle,
+          premium crown, avatar) is unchanged. */}
+      <div className="flex items-center justify-between mb-[11px] animate-fade-slide-up">
         <div>
-          <h1 className="font-display text-[27px] font-bold tracking-[-0.022em] text-charcoal flex items-center gap-1.5">
+          <h1 className="font-display text-[19px] font-bold tracking-[-0.03em] text-charcoal flex items-center gap-1.5">
             {t(getGreeting())}, {user.firstName}
             {premiumPlan && <Crown size={16} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
           </h1>
@@ -92,7 +96,8 @@ export default function Home() {
         </div>
         <button
           onClick={() => navigate("/app/profile")}
-          className="tap w-11 h-11 rounded-full bg-teal-pale flex items-center justify-center text-charcoal-soft dark:text-teal-deep-text font-bold shrink-0 overflow-hidden"
+          className="tap w-9 h-9 rounded-full flex items-center justify-center text-team-teal-ink font-extrabold text-[13px] shrink-0 overflow-hidden"
+          style={{ background: "linear-gradient(150deg,#C8E0DC,#A2C8C2)" }}
         >
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -156,8 +161,7 @@ export default function Home() {
         </Card>
       )}
 
-      <p className="section-label text-charcoal-faint mb-3">Quick actions</p>
-      <div className="mb-6">
+      <div className="mb-3.5">
         <QuickActions
           onLogFood={() => setAddFoodOpen(true)}
           onLogWorkout={() => setWorkoutOpen(true)}
@@ -166,27 +170,26 @@ export default function Home() {
         />
       </div>
 
-      <div className="mb-6">
+      <div className="mb-[13px]">
         <WidgetBoard onWaterClick={() => setMetricOpen(true)} onGymPassesClick={() => setGymPassesOpen(true)} />
       </div>
 
-      {/* QA 12.0: "Connect with a professional should have a color to make
-          it stand out... stick to the overall theme but have a different
-          color than the ones found in the homepage" — berry is the one
-          theme token not already used by another Home widget (primary/sky/
-          teal/gold all are), so it reads as its own distinct accent. */}
+      {/* Iteration 6 "Team" §1.5: context-only, token restyle — a lighter
+          berry wash than the app's own berry-pale token, and ArrowRight in
+          place of ChevronRight, per the literal dc.html markup. Still the
+          one theme accent not already used elsewhere on Home (QA 12.0). */}
       <button
         onClick={() => navigate("/app/professionals")}
-        className="tap w-full flex items-center justify-between gap-3 rounded-2xl bg-berry-pale px-4 py-3.5 mb-4 animate-fade-slide-up text-left"
+        className="tap w-full flex items-center justify-between gap-3 rounded-[15px] bg-berry/[0.09] px-3.5 py-3 mb-4 animate-fade-slide-up text-left"
       >
         <div className="flex items-center gap-3 min-w-0">
           <Sparkles size={16} className="text-berry shrink-0" />
           <div className="min-w-0">
-            <p className="text-[13.5px] font-bold text-charcoal">Connect with a professional</p>
-            <p className="text-[11.5px] font-medium text-charcoal-soft">Dietitians, trainers, doctors &amp; more</p>
+            <p className="text-[12.5px] font-bold text-charcoal">Connect with a professional</p>
+            <p className="text-[10px] font-medium text-team-rose-ink mt-0.5">Dietitians, trainers, doctors &amp; more</p>
           </div>
         </div>
-        <ChevronRight size={16} className="text-berry shrink-0" />
+        <ArrowRight size={15} className="text-berry shrink-0" />
       </button>
 
       <AddFoodSheet open={addFoodOpen} onClose={() => setAddFoodOpen(false)} />
