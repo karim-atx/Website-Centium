@@ -60,8 +60,23 @@ export interface CalendarInvite {
 
 /** A calendar event as the client's screen needs it. */
 export interface ClientCalendarEvent extends CalendarEvent {
-  /** Owned by this account, and therefore editable. */
+  /** Owned by this account. NOT the same as editable — see assignmentSourced. */
   mine: boolean;
+  /**
+   * Written onto this calendar by assign_template_to_client, not by the
+   * person whose calendar it is.
+   *
+   * OWNED BUT NOT THEIRS TO CHANGE, and the distinction is a product one
+   * rather than a permission one. The client IS the owner_id, so
+   * calendar_events_update_own and _delete_own both admit them — measured,
+   * not inferred: an update renamed the row and a delete removed it, both
+   * without error. The reason the UI refuses anyway is that
+   * assign_template_to_client deletes and re-inserts this row on every
+   * re-assignment, so an edit survives only until the coach next moves the
+   * day, and a delete comes back. Offering an action that silently reverts
+   * later is worse than not offering it.
+   */
+  assignmentSourced: boolean;
   /** Present when this event arrived as an invitation. */
   invite?: CalendarInvite;
 }
@@ -116,6 +131,9 @@ function toEvent(row: EventRow, userId: string, invite?: CalendarInvite): Client
     color: row.color ?? undefined,
     createdByClient: row.created_by_client,
     mine: row.owner_id === userId,
+    // Only meaningful on a row you own: somebody else's event being
+    // assignment-sourced is not a thing this screen can see or act on.
+    assignmentSourced: row.owner_id === userId && !row.created_by_client,
     invite,
   };
 }
@@ -140,15 +158,19 @@ function statusOf(accepted: boolean | null, respondedAt: string | null): InviteS
  * without explanation would be worse than one marked declined.
  */
 export async function getClientCalendar(userId: string): Promise<CalendarReadResult> {
-  // Own events. created_by_client is pinned to true so this stays the
-  // client's own calendar: an owned row with created_by_client false was
-  // written by assign_template_to_client and belongs to the professional-side
-  // surfaces, which are Phase 2.
+  // EVERY EVENT ON THIS CALENDAR, whoever created it. Phase 1 pinned
+  // created_by_client to true and so hid the sessions a professional had
+  // scheduled — which are the events a client is least able to afford to
+  // miss, and which V9 asked this screen to show in the first place ("syncs
+  // up with anything the connected professional might add").
+  //
+  // The third SELECT path — an assigning professional reading their own
+  // client's row — cannot reach here, because that policy only matches when
+  // auth.uid() owns the template, and this query pins owner_id to the caller.
   const owned = await supabase
     .from("calendar_events")
     .select(COLUMNS)
     .eq("owner_id", userId)
-    .eq("created_by_client", true)
     .order("event_date", { ascending: true });
 
   if (owned.error) {

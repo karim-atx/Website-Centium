@@ -14,7 +14,7 @@ import {
   type ClientCalendarEvent,
 } from "../../services/calendar";
 import { isUuid } from "../../services/food";
-import { ChevronLeft, ChevronRight, Plus, MapPin, FileText, Trash2, Repeat, Check, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, MapPin, FileText, Trash2, Repeat, Check, X, Dumbbell } from "lucide-react";
 import clsx from "clsx";
 
 type View = "year" | "month" | "week" | "day";
@@ -188,9 +188,15 @@ export default function ClientCalendarTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profileReady, authUserId]);
 
-  // Editable means owned AND client-created. An invitation is somebody else's
-  // event: the only thing this screen may write about it is the answer.
-  const isMine = (e: ClientCalendarEvent) => e.mine && !!e.createdByClient;
+  // EDITABLE, NOT MERELY OWNED, and the two differ in one case. An invitation
+  // is somebody else's event, and the only thing this screen may write about
+  // it is the answer. An assignment-scheduled session IS owned — the server
+  // would accept an edit or a delete from the client, measured — but
+  // assign_template_to_client deletes and re-inserts that row whenever the
+  // coach moves the day, so a rename survives until then and a deletion comes
+  // back. Offering the action would be offering a change that quietly undoes
+  // itself.
+  const isMine = (e: ClientCalendarEvent) => e.mine && !e.assignmentSourced;
 
   const eventsByDate = useMemo(() => {
     const map: Record<string, ClientCalendarEvent[]> = {};
@@ -367,7 +373,7 @@ export default function ClientCalendarTab() {
               </p>
             )}
           </button>
-          {status && (
+          {status ? (
             <span
               className={clsx(
                 "shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold",
@@ -380,7 +386,15 @@ export default function ClientCalendarTab() {
             >
               {inviteLabel[status]}
             </span>
-          )}
+          ) : e.assignmentSourced ? (
+            // SAYS WHOSE IT IS, because that is the honest answer to "why can
+            // I not edit this?". The card is otherwise indistinguishable from
+            // one the client typed, and a tap that does nothing with no
+            // explanation reads as a broken screen.
+            <span className="shrink-0 flex items-center gap-1 rounded-full bg-teal-pale px-2 py-0.5 text-[10px] font-bold text-teal-dark">
+              <Dumbbell size={10} /> Scheduled
+            </span>
+          ) : null}
         </div>
 
         {/* THE ONLY THING THIS SCREEN MAY WRITE ABOUT SOMEBODY ELSE'S EVENT.
