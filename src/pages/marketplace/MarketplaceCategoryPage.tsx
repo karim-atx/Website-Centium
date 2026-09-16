@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
 import {
   fetchOfferingsByCategory,
@@ -8,15 +8,10 @@ import {
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
-import {
-  mockGyms,
-  mockClasses,
-  mockMarketplaceListings,
-  marketplaceCategories,
-} from "../../data/mockProfessionals";
+import { marketplaceCategories } from "../../data/mockProfessionals";
 import { useApp } from "../../context/AppContext";
-import { getCurrentPosition, distanceKm, type Coords } from "../../services/geo";
-import { Star, MapPin, Building2, ShoppingBag, SlidersHorizontal, Check } from "lucide-react";
+import { getCurrentPosition, type Coords } from "../../services/geo";
+import { MapPin, Building2, ShoppingBag, SlidersHorizontal, Check } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import type { MarketplaceCategoryId, Gym } from "../../types";
 import type { StoreItem } from "../../data/mockProfessionals";
@@ -40,7 +35,10 @@ export default function MarketplaceCategoryPage() {
   const id = (category ?? "gyms") as MarketplaceCategoryId;
   const meta = marketplaceCategories.find((c) => c.id === id);
   const Icon = marketplaceCategoryIcon[id] ?? marketplaceCategoryIcon.gyms;
-  const [position, setPosition] = useState<Coords | null>(null);
+  // Location is still read — the geo permission prompt and the Coords type
+  // stay in use for the proximity filter — but nothing on this page ranks by
+  // distance any more now that the fabricated venues are gone.
+  const [, setPosition] = useState<Coords | null>(null);
   const [filter, setFilter] = useState<FilterMode>("rating");
   const [filterOpen, setFilterOpen] = useState(false);
   const [activeGym, setActiveGym] = useState<Gym | null>(null);
@@ -54,25 +52,6 @@ export default function MarketplaceCategoryPage() {
   useEffect(() => {
     getCurrentPosition().then(setPosition);
   }, []);
-
-  const rankedGyms = useMemo(() => {
-    const withDistance = mockGyms.map((g) => ({
-      ...g,
-      distanceKm: position ? distanceKm(position, { lat: g.lat, lng: g.lng }) : undefined,
-    }));
-    if (filter === "proximity") {
-      return [...withDistance].sort((a, b) => (a.distanceKm ?? 999) - (b.distanceKm ?? 999));
-    }
-    if (filter === "discount") {
-      return [...withDistance].sort((a, b) => a.perk.localeCompare(b.perk));
-    }
-    return [...withDistance].sort((a, b) => b.rating - a.rating);
-  }, [position, filter]);
-
-  const rankedClasses = useMemo(() => {
-    if (filter === "discount") return [...mockClasses].sort((a, b) => a.offer.localeCompare(b.offer));
-    return [...mockClasses].sort((a, b) => b.rating - a.rating);
-  }, [filter]);
 
   // V7 (QA 7.0): "adopts a marketplace like approach based on what they
   // provide in their Business UI" — offerings a business account created
@@ -104,12 +83,6 @@ export default function MarketplaceCategoryPage() {
       cancelled = true;
     };
   }, [id]);
-
-  const rankedListings = useMemo(() => {
-    const base = mockMarketplaceListings[id as keyof typeof mockMarketplaceListings] ?? [];
-    if (filter === "discount") return [...base].sort((a, b) => (a.offer ? -1 : 1) - (b.offer ? -1 : 1));
-    return [...base].sort((a, b) => b.rating - a.rating);
-  }, [id, filter]);
 
   return (
     <div>
@@ -168,77 +141,23 @@ export default function MarketplaceCategoryPage() {
       </BottomSheet>
 
       <div className="space-y-2.5">
-        {id === "gyms" &&
-          rankedGyms.map((g) => (
-            <Card key={g.id} interactive onClick={() => setActiveGym(g)} className="animate-fade-slide-up">
-              <div className="flex items-start gap-3">
-                <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
-                  <Icon size={18} className="text-primary-dark" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-charcoal truncate">{g.name}</p>
-                  <span className="flex items-center gap-0.5 text-xs text-gold font-semibold mt-0.5">
-                    <Star size={11} className="fill-gold" /> {g.rating}
-                  </span>
-                  <p className="flex items-center gap-1 text-xs text-charcoal-faint truncate mt-0.5">
-                    <span className="truncate">{g.location}</span>
-                    {g.distanceKm !== undefined && (
-                      <span className="flex items-center gap-0.5 shrink-0">
-                        <MapPin size={10} /> {g.distanceKm.toFixed(1)} km
-                      </span>
-                    )}
-                  </p>
-                </div>
-                <span className="text-xs font-bold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1.5 text-center shrink-0 max-w-[38%] leading-snug">
-                  {g.perk}
-                </span>
-              </div>
-            </Card>
-          ))}
-
-        {id === "classes" &&
-          rankedClasses.map((c) => (
-            <Card key={c.id} className="animate-fade-slide-up">
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-sm font-semibold text-charcoal">{c.name}</p>
-                <span className="flex items-center gap-0.5 text-xs font-bold text-gold shrink-0">
-                  <Star size={11} className="fill-gold" /> {c.rating}
-                </span>
-              </div>
-              <p className="text-xs text-primary-dark font-medium">{c.gymName}</p>
-              <div className="flex items-center justify-between mt-2">
-                <span className="flex items-center gap-1 text-xs text-charcoal-faint">
-                  <MapPin size={11} /> {c.location}
-                </span>
-                <span className="text-xs font-bold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1">
-                  {c.offer}
-                </span>
-              </div>
-            </Card>
-          ))}
-
-        {isStoreCategory &&
-          rankedListings.map((item) => (
-            <Card key={item.id} interactive onClick={() => setActiveStore(item)} className="animate-fade-slide-up">
-              <div className="flex items-start gap-3">
-                <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
-                  <Icon size={18} className="text-primary-dark" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-charcoal truncate">{item.name}</p>
-                  <span className="flex items-center gap-0.5 text-xs text-gold font-semibold mt-0.5">
-                    <Star size={11} className="fill-gold" /> {item.rating}
-                  </span>
-                  <p className="text-xs text-charcoal-faint truncate mt-0.5">{item.location}</p>
-                </div>
-                {item.offer && (
-                  <span className="text-xs font-bold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1.5 text-center shrink-0 max-w-[38%] leading-snug">
-                    {item.offer}
-                  </span>
-                )}
-              </div>
-            </Card>
-          ))}
+        {/* THE THREE FABRICATED LISTS THAT LIVED HERE ARE GONE: rankedGyms,
+            rankedClasses and rankedListings, each rendering invented venues
+            with invented star ratings and offers. Gyms and classes are real
+            entities now and belong on Explore, which reads
+            marketplace_venues and marketplace_classes; what remains on a
+            category page is the one thing that was already real. */}
+        {(id === "gyms" || id === "classes") && (
+          <Card className="text-center py-8">
+            <p className="text-sm font-semibold text-charcoal">
+              {id === "gyms" ? "Gyms" : "Classes"} live on Explore now
+            </p>
+            <p className="text-xs text-charcoal-faint mt-1 leading-relaxed max-w-xs mx-auto">
+              Real {id === "gyms" ? "gym listings" : "classes you can book"} are on the Explore
+              screen, with live availability.
+            </p>
+          </Card>
+        )}
 
         {id !== "gyms" && id !== "classes" && businessListingsForCategory.length > 0 && (
           <>

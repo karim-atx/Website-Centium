@@ -1,11 +1,10 @@
 import { useNavigate } from "react-router-dom";
-import clsx from "clsx";
 import { Card } from "../../components/ui/Card";
-import { marketplaceCategories, mockGyms, mockClasses } from "../../data/mockProfessionals";
+import { marketplaceCategories } from "../../data/mockProfessionals";
+import Discover from "./Discover";
 import { useApp } from "../../context/AppContext";
-import { Sparkles, Gem, Plus, Award, Medal, Trophy, Crown, ChevronRight, Gift, KeyRound } from "lucide-react";
+import { Sparkles, Gem, Plus, Award, Medal, Trophy, Crown, Gift } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
-import { QrPattern, DAY_MS, isOneTimePlan } from "../../components/marketplace/GymDetailSheet";
 import BusinessDashboard from "./BusinessDashboard";
 import ProfessionalExplore from "./ProfessionalExplore";
 
@@ -38,7 +37,7 @@ const rewardTiers = [
 ];
 
 export default function Marketplace() {
-  const { streaks, user, bonusPoints, addBonusPoints, gymPurchases } = useApp();
+  const { streaks, user, bonusPoints, addBonusPoints } = useApp();
   const navigate = useNavigate();
 
   // Businesses get a management dashboard here instead of the consumer
@@ -69,13 +68,13 @@ export default function Marketplace() {
     ? Math.min(100, ((points - tier.threshold) / (nextTier.threshold - tier.threshold)) * 100)
     : 100;
 
-  const passes = Object.entries(gymPurchases).flatMap(([gymId, arr]) =>
-    arr
-      .filter((p) => !p.oneTime || Date.now() - p.purchasedAt < DAY_MS)
-      .map((p) => ({ gymId, gymName: mockGyms.find((g) => g.id === gymId)?.name ?? "Gym", plan: p.plan, purchasedAt: p.purchasedAt, oneTime: p.oneTime }))
-  );
-  const currentPass = passes[0];
-  const passRemainingMs = currentPass && currentPass.oneTime ? currentPass.purchasedAt + DAY_MS - Date.now() : null;
+  // "Your passes" used to live here, reading gymPurchases and resolving each
+  // gym's NAME out of mockGyms. Both halves were fabricated: the purchases
+  // were local rows keyed to invented gym ids, bought from a mock gym sheet
+  // reached through the category pages this pass is clearing out. A pass to a
+  // gym that does not exist is not a record of anything, so the section is
+  // gone rather than left showing a QR code for it. Real gym passes become
+  // possible when the gyms table has rows and a purchase path exists.
 
   return (
     <div>
@@ -152,32 +151,12 @@ export default function Marketplace() {
         </div>
       </div>
 
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Near you</p>
-      <div className="flex flex-col gap-[7px] mb-[13px]">
-        {[
-          { id: "gyms", label: "Gyms", count: mockGyms.length, tile: "#7D6BB5", bg: "rgba(174,161,220,.16)" },
-          { id: "classes", label: "Classes", count: mockClasses.length, tile: "#6F9993", bg: "rgba(162,200,194,.18)" },
-        ].map((c) => {
-          const Icon = marketplaceCategoryIcon[c.id as "gyms" | "classes"];
-          return (
-            <button
-              key={c.id}
-              onClick={() => navigate(`/app/marketplace/${c.id}`)}
-              className="tap w-full flex items-center gap-[11px] rounded-[15px] px-3.5 py-3 text-left"
-              style={{ background: c.bg }}
-            >
-              <div className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0" style={{ background: c.tile }}>
-                <Icon size={14} className="text-white" />
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="text-[12.5px] font-bold text-charcoal">{c.label}</p>
-                <p className="text-[10px] text-charcoal-tertiary">{c.count} nearby</p>
-              </div>
-              <ChevronRight size={14} className="text-primary-deep-text/60 shrink-0" />
-            </button>
-          );
-        })}
-      </div>
+      {/* THE "NEAR YOU" TILES ARE GONE, and they were the worst of it: two
+          rows reading `mockGyms.length` and `mockClasses.length` — "3 nearby"
+          for gyms that do not exist. Real classes and real venues now live in
+          the Discover section below, straight from marketplace_classes and
+          marketplace_venues. */}
+      <Discover />
 
       {/* V9 (QA 9.0): "Remove the browse a category and keep the choose a
           category each with their own selectable button" — every category
@@ -202,41 +181,6 @@ export default function Marketplace() {
               </button>
             );
           })}
-      </div>
-
-      {/* "Your passes" — reuses the exact canonical large Gym Passes widget
-          from HomeWidget.tsx, real purchase data. Net new to this screen;
-          not addressed structurally before this handoff. */}
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Your passes</p>
-      <div className="w-full h-[150px] box-border rounded-[15px] px-4 py-3.5 flex flex-col mb-[13px]" style={{ background: "rgba(36,31,27,.05)" }}>
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-charcoal/50">Gym passes</p>
-          <span className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap text-charcoal/[0.62] bg-charcoal/[0.09]">{passes.length} active</span>
-        </div>
-        {currentPass ? (
-          <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
-            <div className="flex items-center gap-[13px]">
-              <QrPattern seed={`${currentPass.gymId}-${currentPass.plan}`} className="w-[52px] h-[52px] shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-extrabold tracking-[-0.02em] text-charcoal truncate">{currentPass.gymName}</p>
-                <p className="mt-[3px] text-[10px] text-charcoal-tertiary">{currentPass.plan}</p>
-                {passRemainingMs !== null && (
-                  <p className={clsx("mt-[5px] text-[10px] font-extrabold", passRemainingMs < 6 * 60 * 60 * 1000 ? "text-status-high" : "text-charcoal-soft")}>
-                    {isOneTimePlan(currentPass.plan) ? "Day pass" : currentPass.plan} · expires{" "}
-                    {new Date(currentPass.purchasedAt + DAY_MS).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        ) : (
-          <div className="flex-1 flex items-center justify-center min-h-0">
-            <span className="flex flex-col items-center gap-[7px] text-charcoal/55">
-              <KeyRound size={30} />
-              <span className="text-[11px] font-semibold">No active passes</span>
-            </span>
-          </div>
-        )}
       </div>
 
       <Card className="text-center py-8 animate-fade-slide-up">
