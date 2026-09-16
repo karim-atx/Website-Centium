@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import type { PlantSpecies } from "../../context/AppContext";
 import { mondayFirstWeek } from "../../utils/week";
+import { localDayOf } from "../../utils/date";
 
 const WEEKDAY_CAPS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
@@ -22,8 +23,19 @@ const SPECIES_PREFIX: Record<PlantSpecies, string> = {
 // stage and species live in AppContext (see the comment there) so they
 // persist and can only move forward, never reset by a quiet week.
 export const StreaksBar: React.FC = () => {
-  const { today, foodLog, waterByDate, workoutLog, journalEntries, plantStage, setPlantStage, plantSpecies, cyclePlantSpecies } =
-    useApp();
+  const {
+    today,
+    foodLog,
+    waterByDate,
+    workoutLog,
+    journalEntries,
+    plantStage,
+    setPlantStage,
+    plantSpecies,
+    cyclePlantSpecies,
+    user,
+    setUser,
+  } = useApp();
   const navigate = useNavigate();
 
   const week = mondayFirstWeek(today);
@@ -44,33 +56,83 @@ export const StreaksBar: React.FC = () => {
   // The unified day streak: consecutive earned days walking back from
   // today (a real computation, not the old 4-category auto-streak numbers,
   // which the redesign's single headline number no longer represents).
+  //
+  // Dates are serialised with `localDayOf`, not `.toISOString()` — the
+  // latter converts to UTC first, which shifts every date back a day for
+  // anyone east of UTC (e.g. Beirut, UTC+3) and misaligns the streak from
+  // the weekday it's paired with. Today is `continue`d past rather than
+  // `break`ing the loop when it isn't earned yet: today is very often
+  // not-yet-earned whenever this runs (most of the day, until the last
+  // sub-goal lands), and breaking there zeroed the streak most mornings
+  // even when yesterday's run was intact. Only a completed PAST day that
+  // wasn't earned actually ends the streak.
   let dayStreak = 0;
   {
     const cursor = new Date(`${today}T00:00:00`);
     for (;;) {
-      const d = cursor.toISOString().slice(0, 10);
+      const d = localDayOf(cursor);
       const subGoals = [
         foodLog.some((e) => e.date === d),
         (waterByDate[d] ?? 0) > 0,
         workoutLog.some((w) => w.date === d && w.completed),
         journalEntries.some((e) => e.date === d),
       ].filter(Boolean).length;
-      if (subGoals < 2) break;
+      if (subGoals < 2) {
+        if (d === today) {
+          cursor.setDate(cursor.getDate() - 1);
+          continue;
+        }
+        break;
+      }
       dayStreak++;
       cursor.setDate(cursor.getDate() - 1);
     }
   }
 
   const earnedThisWeek = days.filter((d) => !d.isFuture && d.earned).length;
-  // "A missed week leaves the plant where it stopped; it resumes rather
-  // than resetting" — the displayed stage is the higher of the persisted
-  // high-water mark and this week's real progress so far, and a new high
-  // is written back so it survives into next week even if this week then
-  // goes quiet.
-  const displayStage = Math.max(plantStage, Math.min(7, earnedThisWeek));
+
+  // Flower stage: one stage per earned day this week, capped at 7. Once it
+  // reaches 7 it stays fully coloured into later weeks for as long as the
+  // day streak above has stayed unbroken since the day it got there — a new
+  // Monday does not reset it. Today is always pending and neither breaks
+  // nor extends that carryover on its own; only a completed PAST day that
+  // wasn't earned ends it (this replaces the old permanent high-water-mark
+  // formula `Math.max(plantStage, earnedThisWeek)`, which could never fall
+  // back down even after a later broken streak).
+  const wasFull = user.plantFullSince != null;
+  let streakUnbroken = wasFull;
+  if (wasFull) {
+    const fullSince = user.plantFullSince as string;
+    const cursor = new Date(`${today}T00:00:00`);
+    for (;;) {
+      const d = localDayOf(cursor);
+      if (d < fullSince) break; // walked back past the day it became full without a break
+      if (d !== today && !dayState(d).earned) {
+        streakUnbroken = false;
+        break;
+      }
+      cursor.setDate(cursor.getDate() - 1);
+    }
+  }
+
+  const displayStage = wasFull && streakUnbroken ? 7 : Math.min(7, earnedThisWeek);
   useEffect(() => {
-    if (displayStage > plantStage) setPlantStage(displayStage);
+    if (displayStage !== plantStage) setPlantStage(displayStage);
   }, [displayStage, plantStage, setPlantStage]);
+
+  // `plantFullSince` — persisted on the account/user record, not a
+  // device-local `usePersistentState` key like `plantStage`, so carryover
+  // survives a device change or reinstall — records the day the flower most
+  // recently reached stage 7. Set the first time it gets there; cleared the
+  // moment the streak backing it breaks, so a later climb back to 7 starts a
+  // fresh carryover window instead of reusing a stale date.
+  useEffect(() => {
+    if (displayStage === 7 && user.plantFullSince == null) {
+      setUser((prev) => ({ ...prev, plantFullSince: today }));
+    } else if (wasFull && !streakUnbroken) {
+      setUser((prev) => ({ ...prev, plantFullSince: null }));
+    }
+  }, [displayStage, wasFull, streakUnbroken, today, user.plantFullSince, setUser]);
 
   return (
     // A plain div, not a button: it holds its own nested button (the plant

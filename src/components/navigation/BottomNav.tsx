@@ -21,6 +21,46 @@ const TEAM_GLYPHS: Record<string, { active: string; idle: string; idleDark: stri
   "/app/workout": { active: "/icon-workFilled-lav.png", idle: "/icon-workOutline-muted.png", idleDark: "/icon-workOutline-dark.png" },
 };
 
+// Design handoff "Health tab active state" (S3 · R2): lucide's HeartPulse
+// renders the ECG squiggle as part of the same filled path as the heart
+// outline, so `fill="currentColor"` on the active tab filled the ECG line
+// too and it disappeared. Fixed the same way Food/Workout solve an
+// equivalent problem — a dedicated active-state glyph instead of trying to
+// coax the stock icon's fill behavior — but as inline SVG (lucide's own two
+// paths, supplied literally by the handoff) since the fix only needs new
+// stroke/fill colors per path, not new artwork.
+const HEALTH_HEART_PATH =
+  "M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z";
+const HEALTH_ECG_PATH = "M3.22 12H9.5l.5-1 2 4.5 2-7 1.5 3.5h5.27";
+
+const HealthTabGlyph: React.FC<{ active: boolean }> = ({ active }) => (
+  <svg
+    width={24}
+    height={24}
+    viewBox="0 0 24 24"
+    className={active ? "text-team-nav-accent" : "text-team-nav-idle"}
+  >
+    <path
+      d={HEALTH_HEART_PATH}
+      fill={active ? "currentColor" : "none"}
+      stroke="currentColor"
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    {/* Same ECG path, position and stroke weight in both states — only the
+        stroke color changes, knocked out white so it reads over the fill. */}
+    <path
+      d={HEALTH_ECG_PATH}
+      fill="none"
+      stroke={active ? "#FFFFFF" : "currentColor"}
+      strokeWidth={1.6}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </svg>
+);
+
 export const BottomNav: React.FC = () => {
   const location = useLocation();
   const { user, t, theme } = useApp();
@@ -97,7 +137,7 @@ export const BottomNav: React.FC = () => {
   return (
     <nav
       className={clsx(
-        "lg:hidden fixed z-40 left-[28px] right-[28px] h-12 rounded-full",
+        "lg:hidden fixed z-40 left-[22px] right-[22px] h-[58px] rounded-full",
         // 18px above the viewport edge, plus the home-indicator/gesture-bar
         // inset on notched devices — the design canvas has no device chrome
         // to account for this, but the bar this replaces did.
@@ -126,7 +166,7 @@ export const BottomNav: React.FC = () => {
                 <span
                   className={clsx(
                     "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-                    "w-14 h-14 rounded-full bg-white dark:bg-[#2A2338] flex items-center justify-center",
+                    "w-[66px] h-[66px] rounded-full bg-white dark:bg-[#2A2338] flex items-center justify-center",
                     active
                       ? "shadow-[0_0_0_2px_rgb(var(--c-team-nav-accent))]"
                       : "shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.28)] dark:shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.42)]"
@@ -135,20 +175,22 @@ export const BottomNav: React.FC = () => {
                   <img
                     src={dark ? "/centium-mark-dark.png" : "/centium-mark-trimmed.png"}
                     alt={t(item.label)}
-                    className={clsx("w-[46px] h-[46px] object-cover rounded-full", active ? "opacity-100" : "opacity-90")}
+                    className={clsx("w-[54px] h-[54px] object-cover rounded-full", active ? "opacity-100" : "opacity-90")}
                   />
                 </span>
               ) : (
-                <span className="flex flex-col items-center justify-center gap-0.5">
+                <span className="flex flex-col items-center justify-center gap-[3px]">
                   {glyph ? (
                     <img
                       src={active ? glyph.active : dark ? glyph.idleDark : glyph.idle}
                       alt=""
-                      className="w-5 h-5 object-contain"
+                      className="w-6 h-6 object-contain"
                     />
+                  ) : item.to === "/app/health" ? (
+                    <HealthTabGlyph active={active} />
                   ) : (
                     <Icon
-                      size={20}
+                      size={24}
                       strokeWidth={1.6}
                       fill={active ? "currentColor" : "none"}
                       className={active ? "text-team-nav-accent" : "text-team-nav-idle"}
@@ -156,7 +198,7 @@ export const BottomNav: React.FC = () => {
                   )}
                   <span
                     className={clsx(
-                      "text-[9px] leading-none",
+                      "text-[10.5px] leading-none",
                       active ? "font-extrabold text-team-nav-accent" : "font-semibold text-team-nav-idle"
                     )}
                   >

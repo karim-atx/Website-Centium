@@ -123,6 +123,13 @@ export interface UserProfile {
   monthlyRate?: number;
   consultationRate?: number;
   paymentModalities?: ("cash" | "card" | "whish")[];
+  // Iteration 6 "Team" §2: the streak board flower's carryover marker — the
+  // local date (yyyy-mm-dd) the flower most recently reached stage 7, or
+  // null/absent while it isn't currently full. Lives on the account/user
+  // record (this object), not a device-local `usePersistentState` key like
+  // `plantStage`, so carryover survives a device change or reinstall the
+  // same way the rest of `user` does. See StreaksBar.tsx.
+  plantFullSince?: string | null;
 }
 
 // V3: a professional generates one of these for a prospective client; the

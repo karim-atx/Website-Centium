@@ -25,15 +25,35 @@ import { mondayFirstWeek, DAY_LETTERS, dayLetter } from "../../utils/week";
 // invent numbers, those lines are simplified or omitted; each is called
 // out at its call site below.
 
+// Handoff §9's "5 glyphs" step-down rule is flagged there as unconfirmed,
+// and its own worked examples are inconsistent: "106.4" is given as fitting
+// at normal size and "188.8" as overrunning the plate, but both are 5
+// characters, so a length check can't actually tell them apart. Measuring
+// real rendered width doesn't resolve it either — checked directly against
+// this app's Manrope 800 in a canvas: "106.4" (34.9px) and "188.8" (34.4px)
+// come out effectively the same width, because this typeface's digits are
+// tabular (equal advance width), so no digit-shape difference exists to
+// detect. Falling back to the plain length check named in the rule's own
+// title ("5 glyphs"), since it's the one reading that still makes the
+// step-down fire for the large values it exists for — width-based detection
+// would silently never trigger it at all. Flagged for a human decision.
+
 const capsLabel = "font-bold text-[9px] tracking-[.16em] uppercase";
 const numeralSmall = "text-[16px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums";
 const badge = "text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap shrink-0";
 
-export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => void; onGymPassesClick?: () => void }> = ({
-  widget,
-  onWaterClick,
-  onGymPassesClick,
-}) => {
+export const HomeWidget: React.FC<{
+  widget: WidgetConfig;
+  onWaterClick?: () => void;
+  onGymPassesClick?: () => void;
+  // Handoff §9: the small Weight icon renders at 66px normally, 62px when
+  // this same tile is shown inside an edit-mode widget board — this is the
+  // WidgetBoard's own `editMode` boolean (the only existing signal that
+  // already distinguishes "normal dashboard" from "edit-mode board" for a
+  // tile), threaded through here since HomeWidget previously had no notion
+  // of edit mode at all.
+  editMode?: boolean;
+}> = ({ widget, onWaterClick, onGymPassesClick, editMode = false }) => {
   const navigate = useNavigate();
   const { metricValues, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries, gymPurchases, today, selectedDate } =
     useApp();
@@ -190,6 +210,13 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
       const glasses = Math.round(Math.max(0, Math.min(1, pct)) * 8);
       const onClick = onWaterClick ?? (() => navigate("/app/health"));
       if (!isLarge) {
+        // Handoff §8: traced reference bottle replaces the old cup glyph
+        // and its `w-cup-clip` clip path (removed below, not left dead).
+        // pct is clamped 0–100 and mapped to the fill rect's top edge via
+        // the handoff's literal formula: y = 78.5 − 56 × (pct/100), so 0%
+        // → y78.5, 50% → y50.5, 100% → y22.5.
+        const bottlePct = Math.max(0, Math.min(100, pct * 100));
+        const bottleFillY = 78.5 - 56 * (bottlePct / 100);
         return wrap(
           onClick,
           shell(
@@ -201,23 +228,45 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
                   <p className="text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">{(water / 1000).toFixed(1)} L</p>
                   <p className="mt-[5px] text-[9px] text-team-blue-ink">of {(waterGoalMl / 1000).toFixed(1)} L</p>
                 </div>
-                <svg viewBox="0 0 34 40" width={38} height={45} style={{ display: "block", flex: "none", overflow: "visible" }}>
+                <svg viewBox="0 0 40 80" width={38} height={76} style={{ display: "block", flex: "none", overflow: "visible" }}>
                   <defs>
-                    <clipPath id="w-cup-clip">
-                      <path d="M5.2 5 H28.8 L26.4 35.2 A2.6 2.6 0 0 1 23.8 37.6 H10.2 A2.6 2.6 0 0 1 7.6 35.2 Z" />
+                    <clipPath id="w-bottle-clip">
+                      <path d="M13.2 21.2 A9.0 9.0 0 0 0 0.75 27.1 V75.3 A4.0 4.0 0 0 0 4.75 79.3 H31.4 A4.0 4.0 0 0 0 35.4 75.3 V27.1 A9.0 9.0 0 0 0 22.9 21.2 Z" />
                     </clipPath>
                   </defs>
-                  <g clipPath="url(#w-cup-clip)">
-                    <rect x="0" y={40 - Math.max(0, Math.min(1, pct)) * 35} width="34" height="40" fill="#8FC0E8" />
+                  {/* Fill is clipped to the body path only (never the collar
+                      or cap) and animates on `y`/`height`, matching
+                      WaterFillContainer's 700ms timing (that component uses
+                      Tailwind's `duration-700 ease-out`; the handoff's own
+                      literal value for this bottle is the slightly
+                      different cubic-bezier(0.16,1,0.3,1) below — used here
+                      verbatim since it's given as an explicit literal). */}
+                  <g clipPath="url(#w-bottle-clip)">
+                    <rect
+                      x={0}
+                      width={40}
+                      fill="#A2D6FA"
+                      style={{
+                        y: bottleFillY,
+                        height: 80 - bottleFillY,
+                        transition: "y 700ms cubic-bezier(0.16, 1, 0.3, 1), height 700ms cubic-bezier(0.16, 1, 0.3, 1)",
+                      }}
+                    />
                   </g>
                   <path
-                    d="M5.2 5 H28.8 L26.4 35.2 A2.6 2.6 0 0 1 23.8 37.6 H10.2 A2.6 2.6 0 0 1 7.6 35.2 Z"
+                    d="M13.2 21.2 A9.0 9.0 0 0 0 0.75 27.1 V75.3 A4.0 4.0 0 0 0 4.75 79.3 H31.4 A4.0 4.0 0 0 0 35.4 75.3 V27.1 A9.0 9.0 0 0 0 22.9 21.2 Z"
                     fill="none"
-                    stroke="#5E8BB3"
-                    strokeWidth={1.7}
+                    stroke="#4E85B6"
+                    strokeWidth={1.5}
                     strokeLinejoin="round"
                   />
-                  <path d="M3.6 5 H30.4" stroke="#5E8BB3" strokeWidth={1.7} strokeLinecap="round" />
+                  <circle cx={32.6} cy={8.4} r={6.5} fill="none" stroke="#4E85B6" strokeWidth={1.5} />
+                  <rect x={6.1} y={14.6} width={23.4} height={5.4} rx={1.6} fill="#A2D5FA" stroke="#4E85B6" strokeWidth={1.5} />
+                  <rect x={9.2} y={4.2} width={14.6} height={10.6} rx={1.6} fill="#A2D5FA" stroke="#4E85B6" strokeWidth={1.5} />
+                  {/* Ticks paint over the fill (declared after it). */}
+                  {[33.6, 43.0, 51.2, 60.0, 68.9].map((ty) => (
+                    <path key={ty} d={`M33.9 ${ty} H35.35`} stroke="#4E85B6" strokeWidth={2.2} strokeLinecap="round" />
+                  ))}
                 </svg>
               </div>
             </>
@@ -509,29 +558,74 @@ export const HomeWidget: React.FC<{ widget: WidgetConfig; onWaterClick?: () => v
     case "weight": {
       const onClick = () => navigate("/app/health", { state: { openMetric: "weight" } });
       if (!isLarge) {
+        // Handoff §9: the scale glyph is replaced, and the value/unit that
+        // used to render BENEATH it now render inside it instead — no
+        // separate text block below the icon anymore. Icon is 66px
+        // normally, 62px inside an edit-mode widget board (the `editMode`
+        // prop threaded in from WidgetBoard), bottom-aligned in the
+        // content area.
+        const iconSize = editMode ? 62 : 66;
+        const weightStr = String(metricValues.weight);
+        const weightOverflows = weightStr.length === 5;
         return wrap(
           onClick,
           shell(
             "rgba(174,161,220,.11)",
             <>
               <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Weight</p>
-              <div className="flex-1 flex items-center justify-center min-h-0">
-                <span className="flex flex-col items-center gap-[9px]">
-                  <svg viewBox="0 0 24 24" width={40} height={40} fill="none" stroke="rgb(var(--c-team-lavender-deep))" strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ display: "block", flex: "none" }}>
-                    <rect x="2.6" y="2.6" width="18.8" height="18.8" rx="3.6" />
-                    <path d="M5.5 10.1C8.8 7.3 15.2 7.3 18.5 10.1L16.3 15.1C14.1 13.8 9.9 13.8 7.7 15.1Z" strokeWidth={1.1} />
-                    <path d="M9.1 9.1 8.5 10.6" strokeWidth={0.9} />
-                    <path d="M12 8.5V10.1" strokeWidth={0.9} />
-                    <path d="M14.9 9.1 15.5 10.6" strokeWidth={0.9} />
-                    <path d="M13.3 11 11.3 14.3" strokeWidth={0.9} />
+              <div className="flex-1 flex items-end justify-center min-h-0">
+                <div style={{ position: "relative", width: iconSize, height: iconSize, flex: "none" }}>
+                  <svg
+                    viewBox="0 0 64 64"
+                    width={iconSize}
+                    height={iconSize}
+                    fill="none"
+                    stroke="#7567B7"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    style={{ display: "block" }}
+                  >
+                    <rect x={1.2} y={1.2} width={61.6} height={61.6} rx={7.2} strokeWidth={2.4} />
+                    <path
+                      d="M13.4 14.6 A27.3 27.3 0 0 1 50.4 14.6 L43.2 26.3 A27.8 27.8 0 0 0 20.6 26.3 Z"
+                      strokeWidth={2.7}
+                    />
+                    <path d="M22.2 10.2 L23.9 14.8" strokeWidth={2.2} />
+                    <path d="M31.8 9.6 V13.3" strokeWidth={2.2} />
+                    <path d="M41.7 10.2 L40.0 16.0" strokeWidth={2.2} />
+                    <path d="M35.6 14.6 L29.8 22.9" strokeWidth={2.7} />
                   </svg>
-                  <span className="flex items-baseline gap-[3px]">
-                    <span className="text-[20px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">
-                      {metricValues.weight}
-                    </span>
-                    <span className="text-[9px] font-bold text-primary-deep-text/[0.68]">kg</span>
+                  <span
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      top: "53.1%",
+                      textAlign: "center",
+                      color: "#7567B7",
+                      fontWeight: 800,
+                      lineHeight: 1,
+                      fontSize: iconSize * (weightOverflows ? 0.176 : 0.197),
+                    }}
+                  >
+                    {weightStr}
                   </span>
-                </span>
+                  <span
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      right: 0,
+                      top: "73%",
+                      textAlign: "center",
+                      color: "#7567B7",
+                      fontWeight: 800,
+                      lineHeight: 1,
+                      fontSize: iconSize * 0.119,
+                    }}
+                  >
+                    kg
+                  </span>
+                </div>
               </div>
             </>
           )

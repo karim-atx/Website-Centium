@@ -84,15 +84,15 @@ export default function Home() {
     <div>
       {/* Iteration 6 "Team" §1.5: context-only, token restyle — smaller
           19px headline and the design's own teal avatar gradient in place
-          of the flat teal-pale wash; structure (greeting, subtitle,
-          premium crown, avatar) is unchanged. */}
+          of the flat teal-pale wash; greeting, premium crown and avatar are
+          unchanged. Home update handoff (change 6): the "Here's your day"
+          subtitle that used to sit under the greeting is removed. */}
       <div className="flex items-center justify-between mb-[11px] animate-fade-slide-up">
         <div>
           <h1 className="font-display text-[19px] font-bold tracking-[-0.03em] text-charcoal flex items-center gap-1.5">
             {t(getGreeting())}, {user.firstName}
             {premiumPlan && <Crown size={16} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
           </h1>
-          <p className="text-[13px] font-medium text-charcoal-faint mt-1.5">{t("Here's your day")}</p>
         </div>
         <button
           onClick={() => navigate("/app/profile")}
