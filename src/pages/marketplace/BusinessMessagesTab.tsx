@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import { useBusinessTeam } from "../../hooks/useBusinessTeam";
-import { mockBusinessCustomers } from "../../data/mockBusinessCustomers";
+import { fetchMyMembers, type Membership } from "../../services/business-members";
+import { MembershipStatusBadge } from "../../components/marketplace/MembershipStatusBadge";
 import { ChevronLeft, MessageCircle, Send, Store } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
 import clsx from "clsx";
@@ -27,15 +28,39 @@ export default function BusinessMessagesTab() {
 
   // Real affiliated professionals. The local map this read was never written
   // to, so the Professionals tab was always empty.
-  const { team: employees } = useBusinessTeam();
+  const { team: employees, businessId } = useBusinessTeam();
+
+  // REAL MEMBERS REPLACE THREE INVENTED NAMES. mockBusinessCustomers held
+  // "Nour Aad", "Fadi Chamoun" and "Lea Matta" — a demo inbox for a business
+  // that had no way to have customers at all. business_members is that
+  // relationship, so this list is now the people who actually joined.
+  //
+  // THE ROSTER HAS NO NAMES ON IT, and that is the database's shape rather
+  // than an unfinished read: a business cannot resolve a member's first name
+  // by any path open to it. So the rows say what they are — a membership, its
+  // plan, its state — and none of them is clickable, because there is nobody
+  // to open a thread with until a business↔member messaging path exists.
+  const [members, setMembers] = useState<Membership[]>([]);
+
+  useEffect(() => {
+    if (!businessId) return;
+    let cancelled = false;
+    void fetchMyMembers(businessId).then((result) => {
+      if (cancelled || !result.ok) return;
+      setMembers(result.members.filter((m) => m.status === "active"));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [businessId]);
+
   const activeCustomer =
-    mockBusinessCustomers.find((c) => c.id === activeCustomerId) ??
-    (activeCustomerId === PROFESSIONAL_THREAD_ID
+    activeCustomerId === PROFESSIONAL_THREAD_ID
       ? {
           id: PROFESSIONAL_THREAD_ID,
           name: employees.find((e) => e.professionalId === PROFESSIONAL_THREAD_ID)?.name ?? "Professional",
         }
-      : undefined);
+      : undefined;
 
   const lastMessageFor = (customerId: string) => {
     const msgs = businessMessages.filter((m) => m.customerId === customerId);
@@ -134,28 +159,31 @@ export default function BusinessMessagesTab() {
 
       {audience === "clients" ? (
         <div className="space-y-2.5">
-          {mockBusinessCustomers.map((c) => {
-            const last = lastMessageFor(c.id);
-            return (
-              <Card
-                key={c.id}
-                interactive
-                onClick={() => setActiveCustomerId(c.id)}
-                className="flex items-center gap-3 animate-fade-slide-up"
-              >
-                <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
-                  <Store size={18} className="text-primary-dark" />
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-charcoal">{c.name}</p>
-                  <p className="text-xs text-charcoal-faint truncate">
-                    {last ? `${last.from === "business" ? "You: " : ""}${last.text}` : "No messages yet"}
-                  </p>
-                </div>
-                <MessageCircle size={16} className="text-charcoal-faint shrink-0" />
-              </Card>
-            );
-          })}
+          {members.map((m) => (
+            <Card key={m.id} className="flex items-center gap-3 animate-fade-slide-up opacity-70">
+              <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
+                <Store size={18} className="text-primary-dark" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-charcoal">{m.planName ?? "Member"}</p>
+                <p className="text-xs text-charcoal-faint truncate">
+                  Member since {new Date(m.respondedAt ?? m.invitedAt).toLocaleDateString("en-US", {
+                    month: "short",
+                    day: "numeric",
+                  })}{" "}
+                  · messaging members isn't available yet
+                </p>
+              </div>
+              <MembershipStatusBadge status={m.status} />
+            </Card>
+          ))}
+          {members.length === 0 && (
+            <Card className="text-center py-8">
+              <p className="text-sm text-charcoal-faint">
+                No members yet — invite one from the Members tab.
+              </p>
+            </Card>
+          )}
         </div>
       ) : (
         <div className="space-y-2.5">

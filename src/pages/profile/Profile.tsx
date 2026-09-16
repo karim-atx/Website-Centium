@@ -14,6 +14,7 @@ import { useReviewsAboutMe } from "../../hooks/useProfessionalReviews";
 import { ReviewItem } from "../../components/professionals/ReviewItem";
 import { removeAvatar, uploadAvatar } from "../../services/avatar";
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
+import { MembershipsCard } from "../../components/profile/MembershipsCard";
 import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
 import { updateBodyMetric, updateDateOfBirth } from "../../services/profile";
 import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
@@ -390,6 +391,12 @@ export default function Profile() {
           </Card>
         </div>
       )}
+
+      {/* Business memberships: invitations to answer, memberships to leave,
+          and the box for redeeming a code handed over at a desk. Sits with
+          the other relationship surfaces on this page rather than inventing a
+          notification centre for one kind of invitation. */}
+      {user.accountType === "customer" && <MembershipsCard />}
 
       {/* QA 12.0: "Reorder the widgets under the profile picture and name
           to have the weight, height and age first then credentials which

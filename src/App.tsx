@@ -34,6 +34,7 @@ import BusinessMarketplaceTab from "./pages/marketplace/BusinessMarketplaceTab";
 import BusinessProfileTab from "./pages/marketplace/BusinessProfileTab";
 import BusinessMessagesTab from "./pages/marketplace/BusinessMessagesTab";
 import BusinessEmployeesTab from "./pages/marketplace/BusinessEmployeesTab";
+import BusinessMembersTab from "./pages/marketplace/BusinessMembersTab";
 import BusinessClassesTab from "./pages/marketplace/BusinessClassesTab";
 import BusinessOperationsTab from "./pages/marketplace/BusinessOperationsTab";
 import BusinessGymTab from "./pages/marketplace/BusinessGymTab";
@@ -370,6 +371,7 @@ function AppRoutes() {
         <Route path="/app/business/profile" element={<BusinessProfileTab />} />
         <Route path="/app/business/messages" element={<BusinessMessagesTab />} />
         <Route path="/app/business/employees" element={<BusinessEmployeesTab />} />
+        <Route path="/app/business/members" element={<BusinessMembersTab />} />
         <Route path="/app/business/classes" element={<BusinessClassesTab />} />
         <Route path="/app/business/operations" element={<BusinessOperationsTab />} />
         <Route path="/app/business/gym" element={<BusinessGymTab />} />
