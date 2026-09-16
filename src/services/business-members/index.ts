@@ -55,7 +55,15 @@ export interface Membership {
   endedAt: string | null;
   /** Null when the row carries no plan, or the plan is unreadable. */
   planName: string | null;
-  /** business_profiles is publicly readable, so this always resolves. */
+  /**
+   * Resolved by my_business_memberships on the member side, and null on the
+   * business's own roster, which never needed it.
+   *
+   * IT DOES NOT "ALWAYS RESOLVE", which this comment used to claim.
+   * business_profiles stopped being unconditionally readable when its SELECT
+   * policy became `active OR is_business_insider(id)` — a member is neither,
+   * so a delisted business used to come back as null here.
+   */
   businessName: string | null;
 }
 
@@ -161,8 +169,26 @@ type CodesTable = {
   };
 };
 
+/** The member's own side, with the two names already joined on. */
+type MembershipsView = {
+  select: (columns: string) => {
+    order: (
+      column: string,
+      options: { ascending: boolean }
+    ) => PromiseLike<{
+      data: (Row & { business_name: string | null; plan_name: string | null })[] | null;
+      error: PgError;
+    }>;
+  };
+};
+
 const membersTable = (): MembersTable =>
   (supabase as unknown as { from: (t: "business_members") => MembersTable }).from("business_members");
+
+const membershipsView = (): MembershipsView =>
+  (supabase as unknown as { from: (v: "my_business_memberships") => MembershipsView }).from(
+    "my_business_memberships"
+  );
 
 const codesTable = (): CodesTable =>
   (supabase as unknown as { from: (t: "business_member_codes") => CodesTable }).from(
@@ -202,20 +228,23 @@ function describe(error: { message?: string; code?: string }, fallback: string):
   }
 }
 
-/** Plan names for the plans actually on screen, batched. */
+/**
+ * Plan names for the plans actually on screen, batched.
+ *
+ * STILL HERE, AND ONLY FOR THE BUSINESS'S OWN ROSTER. The member side reads
+ * my_business_memberships instead, which carries plan_name already — but
+ * membership_plans_select_public is
+ * `business_is_listed(business_id) OR is_business_insider(business_id)`, and
+ * an owner satisfies the second half whatever their listing is set to. So
+ * this read works for fetchMyMembers and would not have worked for a member
+ * looking at a delisted business. businessNames() is gone entirely: nothing
+ * calls it now.
+ */
 async function planNames(ids: string[]): Promise<Map<string, string>> {
   const unique = [...new Set(ids)];
   if (unique.length === 0) return new Map();
   const { data } = await supabase.from("membership_plans").select("id, name").in("id", unique);
   return new Map((data ?? []).map((p) => [p.id as string, p.name as string]));
-}
-
-/** Business names for the businesses on screen, batched. business_profiles is public. */
-async function businessNames(ids: string[]): Promise<Map<string, string>> {
-  const unique = [...new Set(ids)];
-  if (unique.length === 0) return new Map();
-  const { data } = await supabase.from("business_profiles").select("id, business_name").in("id", unique);
-  return new Map((data ?? []).map((b) => [b.id as string, b.business_name as string]));
 }
 
 /**
@@ -245,33 +274,50 @@ export async function fetchMyMembers(
   };
 }
 
-/** The signed-in person's own memberships and invitations. */
+/**
+ * The signed-in person's own memberships and invitations.
+ *
+ * ONE READ FROM A VIEW, replacing a table read plus two lookups that had both
+ * gone quiet. When the listing policies tightened, business_profiles became
+ * `active OR is_business_insider(id)` and membership_plans became
+ * `business_is_listed(business_id) OR is_business_insider(...)` — and
+ * is_business_insider covers the owner and the professionals a business
+ * employs, NOT its members. So the moment a business delisted, a member's own
+ * membership card lost both the business name and the plan name and fell back
+ * to "A business", with no error anywhere to say why: the rows were simply
+ * filtered out, which reads as "no match" rather than "not allowed".
+ *
+ * my_business_memberships resolves both server-side. It is
+ * security_invoker = false and owned by postgres, so the join happens with the
+ * definer's reach rather than the member's, and its WHERE is
+ * `member_id = auth.uid()` — self-scoping by construction, which is why no
+ * filter is passed from here. It carries no `active` condition on the
+ * business, so a delisted business's membership keeps its name.
+ *
+ * NO RESHAPING IN toMembership, checked rather than assumed: the view's first
+ * eight columns are MEMBER_COLUMNS verbatim, same names and same order, so the
+ * Row type still describes them. Only the two extras are new, and they arrive
+ * as plain columns instead of map lookups.
+ */
 export async function fetchMyMemberships(
   userId: string
 ): Promise<{ ok: true; memberships: Membership[] } | { ok: false; message: string }> {
-  const { data, error } = await membersTable()
-    .select(MEMBER_COLUMNS)
-    .eq("member_id", userId)
+  // userId is unused as a filter — the view scopes itself — but is kept in the
+  // signature because every caller has it and dropping it would make the
+  // "whose memberships?" question invisible at the call site.
+  void userId;
+
+  const { data, error } = await membershipsView()
+    .select(`${MEMBER_COLUMNS}, business_name, plan_name`)
     .order("invited_at", { ascending: false });
 
   if (error) {
     console.error("[members] Could not read your memberships:", error.message);
     return { ok: false, message: "Couldn't load your memberships. Try again." };
   }
-  const rows = data ?? [];
-  const [plans, names] = await Promise.all([
-    planNames(rows.map((r) => r.membership_plan_id).filter((x): x is string => !!x)),
-    businessNames(rows.map((r) => r.business_id)),
-  ]);
   return {
     ok: true,
-    memberships: rows.map((r) =>
-      toMembership(
-        r,
-        r.membership_plan_id ? plans.get(r.membership_plan_id) ?? null : null,
-        names.get(r.business_id) ?? null
-      )
-    ),
+    memberships: (data ?? []).map((r) => toMembership(r, r.plan_name, r.business_name)),
   };
 }
 
