@@ -25,22 +25,23 @@ import { supabase } from "../../../lib/supabase/client";
 // (professional_id, reviewer_id), so a second insert is 23505. Callers edit
 // the existing row instead, which is what the screens already offer.
 //
-// REVIEWER NAMES ARE NOT AVAILABLE, and that is structural rather than a gap
-// this file can work around. `profiles` is own-row only,
-// public_profile_summary covers professional and business accounts and
-// deliberately excludes customers, and related_profile_summary covers only
-// your own current relationships. A client browsing a listing therefore cannot
-// resolve another client's first name by any path, and a professional can
-// resolve only their still-connected clients. Reviews are attributed to
-// "A client" where a name will not resolve — inventing one, or falling back to
-// a mock name, would be putting words in a stranger's mouth. Showing real
-// first names to strangers would need a new view or a widened grant, which is
-// a schema decision.
+// REVIEWER NAMES ARE OPT-IN NOW, which is the change migration 20260918200000
+// made and the reason this file was rewritten. It used to be that no name
+// could reach a stranger at all: `profiles` is own-row only,
+// public_profile_summary excludes customers, and related_profile_summary
+// covers only your own current relationships. That still holds — but
+// reviewer_name_visible plus review_author_names() gives an author a way to
+// put their own first name on a specific review, and only the ones they chose.
+//
+// THE TOGGLE IS NOT ANONYMITY, and the UI says so rather than implying
+// otherwise. A professional can still resolve an active client's name through
+// the relationship, so what the toggle controls is whether the name appears to
+// everyone ELSE reading the listing. Calling it "post anonymously" would be a
+// promise this schema does not keep.
 
 export interface ReviewRow {
   id: string;
   professionalId: string;
-  reviewerId: string;
   rating: number;
   /** Null when never written, and also when the review has been redacted. */
   body: string | null;
@@ -49,6 +50,13 @@ export interface ReviewRow {
   editedAt: string | null;
   redactedAt: string | null;
   redactionReason: string | null;
+  /**
+   * Null for a reader who is neither the author nor the reviewed
+   * professional — see the view note below. Distinct from "no review".
+   */
+  reviewerId: string | null;
+  /** The author chose to show their first name on this review. */
+  reviewerNameVisible: boolean;
   /** Resolved where the reader is allowed to; null means "A client". */
   reviewerName: string | null;
 }
@@ -56,17 +64,29 @@ export interface ReviewRow {
 export type ReviewsResult = { ok: true; reviews: ReviewRow[] } | { ok: false; message: string };
 export type WriteResult = { ok: true; review: ReviewRow } | { ok: false; message: string };
 
-// redacted_body and redacted_by are absent on purpose: no client role holds a
-// SELECT grant on either, so asking for them turns the whole read into a 42501.
-const COLUMNS =
-  "id, professional_id, reviewer_id, rating, body, created_at, edited_at, redacted_at, redaction_reason";
+// READ COLUMNS, FROM THE VIEW. reviewer_id is in here because the VIEW
+// computes it per caller; naming it against the base table is what broke.
+// redacted_body and redacted_by stay out for the original reason: no client
+// role holds a SELECT grant on either.
+const READ_COLUMNS =
+  "id, professional_id, reviewer_id, rating, body, reviewer_name_visible, created_at, edited_at, redacted_at, redaction_reason";
+
+// WHAT A WRITE MAY ASK FOR BACK, which is not the same list. A write goes to
+// the base table, and `reviewer_id` is no longer in that table's SELECT grant
+// — so a returning clause naming it fails with 42501 even though the INSERT
+// itself is allowed to set it. The caller is the author, so the id is filled
+// in from what they already know rather than asked for.
+const WRITE_RETURN_COLUMNS =
+  "id, professional_id, rating, body, reviewer_name_visible, created_at, edited_at, redacted_at, redaction_reason";
 
 type Row = {
   id: string;
   professional_id: string;
-  reviewer_id: string;
+  /** Absent on a write's returning clause; per-caller on the view. */
+  reviewer_id?: string | null;
   rating: number;
   body: string | null;
+  reviewer_name_visible: boolean;
   created_at: string;
   edited_at: string | null;
   redacted_at: string | null;
@@ -78,17 +98,27 @@ type OneRow = PromiseLike<{ data: Row | null; error: PgError }>;
 type ManyRows = PromiseLike<{ data: Row[] | null; error: PgError }>;
 
 /**
- * The table as this file uses it.
+ * READS GO TO THE VIEW, WRITES GO TO THE TABLE, and the split is not a style
+ * choice — it is the whole fix.
  *
- * professional_reviews IS ABSENT FROM database.types.ts ENTIRELY — the table
- * is newer than the last regeneration, exactly as calendar_event_invitees and
- * ambassador_grants are. The queries are real; only the typing is missing, so
- * the client is cast here rather than the generated file being hand-edited,
- * which the next regeneration would silently undo. Only the call shapes this
- * file actually makes are described, so a typo in a chain is still a compile
- * error rather than an `any` swallowing it.
+ * Migration 20260918200000 revoked the role-wide SELECT on
+ * professional_reviews.reviewer_id to narrow reviewer anonymity. Every read in
+ * this file named that column, and one of them filtered on it, so the entire
+ * read/write path started failing with 42501 — including the returning clause
+ * on inserts, which is why writes broke too despite reviewer_id still being in
+ * the INSERT grant.
+ *
+ * professional_reviews_readable exposes the same column names, but reviewer_id
+ * comes from review_reviewer_id(id): a SECURITY DEFINER function that returns
+ * the id only to the review's author or the reviewed professional, and NULL to
+ * everyone else. The view itself is security_invoker = true, so row visibility
+ * is still decided by professional_reviews_select_visible on the base table —
+ * the same policy as before. Only the column's resolution changed.
+ *
+ * NEITHER IS IN database.types.ts, as with the base table before them, so both
+ * are cast to exactly the call shapes this file makes.
  */
-type ReviewsTable = {
+type ReviewsView = {
   select: (columns: string) => {
     eq: (
       column: string,
@@ -98,54 +128,114 @@ type ReviewsTable = {
       order: (column: string, options: { ascending: boolean }) => ManyRows;
     };
   };
+};
+
+type ReviewsTable = {
   insert: (row: {
     professional_id: string;
     reviewer_id: string;
     rating: number;
     body: string | null;
+    reviewer_name_visible: boolean;
   }) => { select: (columns: string) => { single: () => OneRow } };
-  update: (row: { rating: number; body: string | null }) => {
+  update: (row: { rating: number; body: string | null; reviewer_name_visible: boolean }) => {
     eq: (column: string, value: string) => { select: (columns: string) => { single: () => OneRow } };
   };
   delete: () => { eq: (column: string, value: string) => PromiseLike<{ error: PgError }> };
 };
 
+/** Reads only. */
+const reviewsReadable = (): ReviewsView =>
+  (
+    supabase as unknown as { from: (view: "professional_reviews_readable") => ReviewsView }
+  ).from("professional_reviews_readable");
+
+/** Writes only. */
 const reviews = (): ReviewsTable =>
   (supabase as unknown as { from: (table: "professional_reviews") => ReviewsTable }).from(
     "professional_reviews"
   );
 
-const toReview = (r: Row, name: string | null = null): ReviewRow => ({
+const toReview = (
+  r: Row,
+  name: string | null = null,
+  reviewerId: string | null = r.reviewer_id ?? null
+): ReviewRow => ({
   id: r.id,
   professionalId: r.professional_id,
-  reviewerId: r.reviewer_id,
+  reviewerId,
   rating: r.rating,
   body: r.body,
   createdAt: r.created_at,
   editedAt: r.edited_at,
   redactedAt: r.redacted_at,
   redactionReason: r.redaction_reason,
+  reviewerNameVisible: r.reviewer_name_visible,
   reviewerName: name,
 });
 
 /**
- * Whatever first names this reader is permitted to see.
+ * First names for exactly the reviews being shown.
  *
- * BEST EFFORT BY DESIGN. related_profile_summary answers only for people the
- * caller is currently connected to, so a professional gets their active
- * clients' names and nothing else, and a client browsing a listing gets none.
- * A failure here is not a failure of the read: the reviews still render, just
- * without names, which is the same thing that happens when the relationship
- * has ended.
+ * TWO PATHS, AND THEY MEAN DIFFERENT THINGS.
+ *
+ * review_author_names(ids) is the opt-in one: SECURITY DEFINER, returning a
+ * name only where the author set reviewer_name_visible on THAT review. It
+ * answers for any authenticated caller, which is the point — opting in is what
+ * makes the name public on that review, and it is scoped per review rather
+ * than per person, so the same author stays unnamed on the ones they did not
+ * opt into.
+ *
+ * related_profile_summary is the pre-existing one, and it is why the toggle's
+ * label does not say "anonymous": a professional can still resolve an ACTIVE
+ * client's name from the relationship itself. That only works when reviewerId
+ * resolved at all, which the view now grants solely to the author and the
+ * reviewed professional — so a stranger has no id to look up and gets nothing
+ * from this path no matter who wrote the review.
+ *
+ * BATCHED OVER THE IDS ON SCREEN, matching how this file already resolved
+ * names: one array in, one round trip, never a call per row.
  */
-async function resolveNames(ids: string[]): Promise<Map<string, string>> {
-  if (ids.length === 0) return new Map();
-  const { data } = await supabase.from("related_profile_summary").select("id, first_name").in("id", ids);
-  return new Map(
-    (data ?? [])
-      .filter((p): p is { id: string; first_name: string } => !!p.id && !!p.first_name?.trim())
-      .map((p) => [p.id, p.first_name.trim()])
-  );
+async function resolveNames(
+  reviewIds: string[],
+  reviewerIds: string[]
+): Promise<{ byReview: Map<string, string>; byReviewer: Map<string, string> }> {
+  const byReview = new Map<string, string>();
+  const byReviewer = new Map<string, string>();
+  if (reviewIds.length === 0) return { byReview, byReviewer };
+
+  const rpc = supabase as unknown as {
+    rpc: (
+      fn: "review_author_names",
+      args: { p_review_ids: string[] }
+    ) => PromiseLike<{
+      data: { review_id: string; first_name: string | null }[] | null;
+      error: { message: string } | null;
+    }>;
+  };
+
+  const opted = await rpc.rpc("review_author_names", { p_review_ids: reviewIds });
+  if (opted.error) {
+    // Not a failure of the read: the reviews still render, unnamed.
+    console.warn("[reviews] Could not resolve opted-in names:", opted.error.message);
+  }
+  for (const row of opted.data ?? []) {
+    const name = row.first_name?.trim();
+    if (name) byReview.set(row.review_id, name);
+  }
+
+  if (reviewerIds.length > 0) {
+    const { data } = await supabase
+      .from("related_profile_summary")
+      .select("id, first_name")
+      .in("id", reviewerIds);
+    for (const p of data ?? []) {
+      const name = (p.first_name as string | null)?.trim();
+      if (p.id && name) byReviewer.set(p.id as string, name);
+    }
+  }
+
+  return { byReview, byReviewer };
 }
 
 function describe(error: { message?: string; code?: string }): string {
@@ -214,8 +304,8 @@ export async function canReviewProfessional(reviewerId: string, professionalId: 
  * split is the grant's doing, not a branch in this code.
  */
 export async function fetchReviewsFor(professionalId: string): Promise<ReviewsResult> {
-  const { data, error } = await reviews()
-    .select(COLUMNS)
+  const { data, error } = await reviewsReadable()
+    .select(READ_COLUMNS)
     .eq("professional_id", professionalId)
     .order("created_at", { ascending: false });
 
@@ -225,8 +315,22 @@ export async function fetchReviewsFor(professionalId: string): Promise<ReviewsRe
   }
 
   const rows = (data ?? []) as Row[];
-  const names = await resolveNames(rows.map((r) => r.reviewer_id));
-  return { ok: true, reviews: rows.map((r) => toReview(r, names.get(r.reviewer_id) ?? null)) };
+  const { byReview, byReviewer } = await resolveNames(
+    rows.map((r) => r.id),
+    rows.map((r) => r.reviewer_id).filter((id): id is string => !!id)
+  );
+
+  return {
+    ok: true,
+    // The opt-in name wins where it exists; the relationship path fills in
+    // only for a reader who could resolve the reviewer at all.
+    reviews: rows.map((r) =>
+      toReview(
+        r,
+        byReview.get(r.id) ?? (r.reviewer_id ? byReviewer.get(r.reviewer_id) ?? null : null)
+      )
+    ),
+  };
 }
 
 /**
@@ -246,8 +350,13 @@ export async function fetchMyReviewOf(
   reviewerId: string,
   professionalId: string
 ): Promise<{ ok: true; review: ReviewRow | null } | { ok: false; message: string }> {
-  const { data, error } = await reviews()
-    .select(COLUMNS)
+  // THROUGH THE VIEW, INCLUDING THE FILTER. This .eq is the other half of the
+  // break: filtering on reviewer_id against the base table needs SELECT on it,
+  // which no client role has any more. On the view the column is the
+  // per-caller function, and it resolves to exactly this account for exactly
+  // this account's own review.
+  const { data, error } = await reviewsReadable()
+    .select(READ_COLUMNS)
     .eq("professional_id", professionalId)
     .eq("reviewer_id", reviewerId)
     .maybeSingle();
@@ -272,7 +381,8 @@ export async function createReview(
   reviewerId: string,
   professionalId: string,
   rating: number,
-  body: string
+  body: string,
+  reviewerNameVisible: boolean
 ): Promise<WriteResult> {
   const { data, error } = await reviews()
     .insert({
@@ -280,37 +390,49 @@ export async function createReview(
       reviewer_id: reviewerId,
       rating,
       body: body.trim() || null,
+      reviewer_name_visible: reviewerNameVisible,
     })
-    .select(COLUMNS)
+    .select(WRITE_RETURN_COLUMNS)
     .single();
 
   if (error || !data) {
     console.error("[reviews] Could not create the review:", error?.message);
     return { ok: false, message: error ? describe(error) : "Couldn't save your review. Try again." };
   }
-  return { ok: true, review: toReview(data as Row) };
+  // reviewerId is supplied rather than read back — the returning clause may
+  // not name a column the caller has no SELECT on, and the caller is the
+  // author, so it is the one id they can be certain of.
+  return { ok: true, review: toReview(data as Row, null, reviewerId) };
 }
 
 /**
  * Edits an existing review.
  *
- * ONLY rating AND body ARE SENT, which is all the UPDATE grant covers.
- * edited_at is stamped by professional_reviews_stamp_edited_at when either
- * actually changes — so the "edited" label the UI shows is the database's
- * judgement about whether something changed, not the client's.
+ * rating, body AND reviewer_name_visible ARE ALL THE UPDATE GRANT COVERS, and
+ * all three are sent: the toggle is editable after the fact, so somebody can
+ * take their name back off a review they already left. edited_at is stamped by
+ * professional_reviews_stamp_edited_at when the rating or body actually
+ * changes — the trigger ignores the toggle, so flipping only the name does not
+ * mark the review as edited, which is right: the words did not change.
  */
-export async function updateReview(reviewId: string, rating: number, body: string): Promise<WriteResult> {
+export async function updateReview(
+  reviewId: string,
+  reviewerId: string,
+  rating: number,
+  body: string,
+  reviewerNameVisible: boolean
+): Promise<WriteResult> {
   const { data, error } = await reviews()
-    .update({ rating, body: body.trim() || null })
+    .update({ rating, body: body.trim() || null, reviewer_name_visible: reviewerNameVisible })
     .eq("id", reviewId)
-    .select(COLUMNS)
+    .select(WRITE_RETURN_COLUMNS)
     .single();
 
   if (error || !data) {
     console.error("[reviews] Could not update the review:", error?.message);
     return { ok: false, message: error ? describe(error) : "Couldn't save your review. Try again." };
   }
-  return { ok: true, review: toReview(data as Row) };
+  return { ok: true, review: toReview(data as Row, null, reviewerId) };
 }
 
 /**

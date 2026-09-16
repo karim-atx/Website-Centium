@@ -223,11 +223,16 @@ export default function ProfessionalDetail() {
 
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
+  // OPT-IN, DEFAULTING OFF, matching the column: reviewer_name_visible is NOT
+  // NULL DEFAULT false, so a review left without touching this is unnamed to
+  // everyone the relationship does not already identify you to.
+  const [showMyName, setShowMyName] = useState(false);
 
   // The sheet opens on what is stored, not on whatever was typed last time.
   const openReviewSheet = () => {
     setReviewRating(myReview?.rating ?? 5);
     setReviewText(myReview?.body ?? "");
+    setShowMyName(myReview?.reviewerNameVisible ?? false);
     setConfirmDeleteReview(false);
     setReviewOpen(true);
   };
@@ -249,7 +254,7 @@ export default function ProfessionalDetail() {
   const submitReview = async () => {
     if (savingReview) return;
     setSavingReview(true);
-    const ok = await saveReview(reviewRating, reviewText);
+    const ok = await saveReview(reviewRating, reviewText, showMyName);
     setSavingReview(false);
     if (!ok) return;
     await refreshAggregate();
@@ -580,6 +585,26 @@ export default function ProfessionalDetail() {
               rows={4}
               className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
+          </label>
+          {/* LABELLED FOR WHAT IT ACTUALLY DOES. It is not "post anonymously":
+              the professional being reviewed can resolve an active client's
+              name from the relationship whatever this says, so the only thing
+              the toggle controls is whether everyone ELSE reading the listing
+              sees it. Saying otherwise would be promising a privacy the schema
+              does not provide. */}
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showMyName}
+              onChange={(e) => setShowMyName(e.target.checked)}
+              className="mt-0.5 w-4 h-4 shrink-0 accent-primary"
+            />
+            <span className="text-xs text-charcoal-soft leading-relaxed">
+              Show my first name on this review —{" "}
+              <span className="text-charcoal-faint">
+                your professional can see who left it either way.
+              </span>
+            </span>
           </label>
           {reviewError && <p className="text-xs font-semibold text-status-high">{reviewError}</p>}
           <Button fullWidth size="lg" onClick={() => void submitReview()} disabled={savingReview}>

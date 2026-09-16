@@ -31,7 +31,7 @@ export interface UseProfessionalReviews {
   error: string | null;
   /** Null until checked; false means the gate refused. */
   canReview: boolean | null;
-  save: (rating: number, body: string) => Promise<boolean>;
+  save: (rating: number, body: string, reviewerNameVisible: boolean) => Promise<boolean>;
   remove: () => Promise<boolean>;
   reload: () => Promise<void>;
 }
@@ -101,11 +101,15 @@ export function useProfessionalReviews(professionalId: string | null): UseProfes
   const others = authUserId ? reviews.filter((r) => r.reviewerId !== authUserId) : reviews;
 
   /** Creates or edits, depending on whether a review already exists. */
-  const save = async (rating: number, body: string): Promise<boolean> => {
+  const save = async (
+    rating: number,
+    body: string,
+    reviewerNameVisible: boolean
+  ): Promise<boolean> => {
     if (!professionalId || !authUserId) return false;
     const result = mine
-      ? await updateReview(mine.id, rating, body)
-      : await createReview(authUserId, professionalId, rating, body);
+      ? await updateReview(mine.id, authUserId, rating, body, reviewerNameVisible)
+      : await createReview(authUserId, professionalId, rating, body, reviewerNameVisible);
 
     if (!result.ok) {
       setError(result.message);

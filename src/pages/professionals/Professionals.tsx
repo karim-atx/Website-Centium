@@ -83,11 +83,14 @@ export default function Professionals() {
 
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewText, setReviewText] = useState("");
+  // Opt-in, defaulting off — the same shape as the column.
+  const [showMyName, setShowMyName] = useState(false);
   const [confirmDeleteReview, setConfirmDeleteReview] = useState(false);
 
   const openReviewSheet = () => {
     setReviewRating(myLinkedReview?.rating ?? 5);
     setReviewText(myLinkedReview?.body ?? "");
+    setShowMyName(myLinkedReview?.reviewerNameVisible ?? false);
     setConfirmDeleteReview(false);
     setReviewOpen(true);
   };
@@ -95,7 +98,7 @@ export default function Professionals() {
   const submitLinkedReview = async () => {
     if (savingReview) return;
     setSavingReview(true);
-    const ok = await saveLinkedReview(reviewRating, reviewText);
+    const ok = await saveLinkedReview(reviewRating, reviewText, showMyName);
     setSavingReview(false);
     if (ok) setReviewOpen(false);
   };
@@ -330,6 +333,23 @@ export default function Professionals() {
               rows={4}
               className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
             />
+          </label>
+          {/* Same wording as the listing sheet, and same reason: the toggle
+              controls who ELSE sees the name, not whether the professional can
+              work out who wrote it. */}
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showMyName}
+              onChange={(e) => setShowMyName(e.target.checked)}
+              className="mt-0.5 w-4 h-4 shrink-0 accent-primary"
+            />
+            <span className="text-xs text-charcoal-soft leading-relaxed">
+              Show my first name on this review —{" "}
+              <span className="text-charcoal-faint">
+                your professional can see who left it either way.
+              </span>
+            </span>
           </label>
           {reviewError && <p className="text-xs font-semibold text-status-high">{reviewError}</p>}
           <Button fullWidth size="lg" onClick={() => void submitLinkedReview()} disabled={savingReview}>
