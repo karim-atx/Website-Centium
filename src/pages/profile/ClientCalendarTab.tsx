@@ -14,6 +14,7 @@ import {
   type ClientCalendarEvent,
 } from "../../services/calendar";
 import { isUuid } from "../../services/food";
+import { fetchMyBookedClasses, type BookedClass } from "../../services/business-classes";
 import {
   ChevronLeft,
   ChevronRight,
@@ -25,6 +26,7 @@ import {
   Check,
   X,
   Dumbbell,
+  Ticket,
   Paperclip,
 } from "lucide-react";
 import clsx from "clsx";
@@ -216,13 +218,73 @@ export default function ClientCalendarTab() {
   // itself.
   const isMine = (e: ClientCalendarEvent) => e.mine && !e.assignmentSourced;
 
+  /**
+   * Classes this account has booked, overlaid on the calendar.
+   *
+   * THE SAME SHAPE THE PROFESSIONAL'S TAB USES for business-scheduled classes:
+   * a separate read, held in its own state, synthesised into calendar events
+   * and merged only at eventsByDate. Not folded into `events` — these are
+   * business_class_bookings rows, not calendar_events, and letting them into
+   * the array that save/delete/respond all mutate is how an overlay row ends
+   * up in a payload that has nowhere to put it.
+   *
+   * A FAILED READ LEAVES THE OVERLAY ALONE, for the reason every hydration on
+   * this screen already gives: an empty calendar is a claim about somebody's
+   * day, and a dropped connection is not entitled to make it.
+   */
+  const [bookedClasses, setBookedClasses] = useState<BookedClass[]>([]);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    void (async () => {
+      const result = await fetchMyBookedClasses();
+      if (cancelled || !result.ok) return;
+      setBookedClasses(result.classes);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, profileReady]);
+
+  const bookedClassEvents = useMemo<ClientCalendarEvent[]>(
+    () =>
+      bookedClasses.map((c) => ({
+        id: c.id,
+        title: c.title,
+        date: c.date,
+        allDay: false,
+        startTime: c.startTime,
+        endTime: c.endTime,
+        repeat: "none" as const,
+        // Same note shape as the professional's overlay — who it is with,
+        // then whatever the class itself said — with the wording corrected for
+        // direction: the client booked this, nobody scheduled it for them.
+        notes: `Booked with ${c.businessName}${c.notes ? ` — ${c.notes}` : ""}`,
+        // The same gold the professional's tab gives business classes, so one
+        // entity reads the same on both calendars.
+        color: "#D9A441",
+        // NOT MINE, WHICH IS WHAT MAKES IT READ-ONLY. isMine() already gates
+        // the card's edit button, and the booking is not a calendar_events row
+        // at all — there is nothing here for updateEvent or deleteEvent to
+        // address. Cancelling a booking is a DELETE on
+        // business_class_bookings, a different action on a different surface.
+        mine: false,
+        assignmentSourced: false,
+      })),
+    [bookedClasses]
+  );
+
+  /** Overlay rows by id, so the card can tell them from calendar_events. */
+  const bookedById = useMemo(() => new Map(bookedClasses.map((c) => [c.id, c])), [bookedClasses]);
+
   const eventsByDate = useMemo(() => {
     const map: Record<string, ClientCalendarEvent[]> = {};
-    events.forEach((e) => {
+    [...events, ...bookedClassEvents].forEach((e) => {
       (map[e.date] ??= []).push(e);
     });
     return map;
-  }, [events]);
+  }, [events, bookedClassEvents]);
 
   const daysInMonth = new Date(cursor.year, cursor.month + 1, 0).getDate();
   const firstWeekday = new Date(cursor.year, cursor.month, 1).getDay();
@@ -385,6 +447,9 @@ export default function ClientCalendarTab() {
   const eventCard = (e: ClientCalendarEvent) => {
     const mine = isMine(e);
     const status = e.invite?.status;
+    // Present only for an overlay row, and the one thing that distinguishes
+    // it from a calendar_events row the client happens not to own.
+    const booked = bookedById.get(e.id);
     return (
       <Card
         key={e.id}
@@ -450,8 +515,26 @@ export default function ClientCalendarTab() {
             <span className="shrink-0 flex items-center gap-1 rounded-full bg-teal-pale px-2 py-0.5 text-[10px] font-bold text-teal-dark">
               <Dumbbell size={10} /> Scheduled
             </span>
+          ) : booked ? (
+            // Same reasoning as the badge above, for the other kind of card
+            // this screen cannot edit.
+            <span className="shrink-0 flex items-center gap-1 rounded-full bg-gold/15 px-2 py-0.5 text-[10px] font-bold text-gold">
+              <Ticket size={10} /> Booked
+            </span>
           ) : null}
         </div>
+
+        {/* WHY THEY CANNOT FIND THIS BUSINESS ANY MORE. A business turning its
+            Explore listing off does not cancel bookings people already hold,
+            so the class stays — but it vanishes from search, from the
+            directory, and from every other surface. Without this line the
+            client is left with a session on their calendar and no way to look
+            up who it is with. */}
+        {booked && !booked.businessActive && (
+          <p className="text-xs text-charcoal-faint italic">
+            {booked.businessName} is no longer listed on Explore. Your booking still stands.
+          </p>
+        )}
 
         {/* THE ONLY THING THIS SCREEN MAY WRITE ABOUT SOMEBODY ELSE'S EVENT.
             Everything above is read-only for an invitation; the grant is
@@ -620,9 +703,21 @@ export default function ClientCalendarTab() {
                         {e.allDay ? "All day" : `${e.startTime} – ${e.endTime}`}
                         {e.repeat !== "none" && ` · repeats ${e.repeat}`}
                         {e.location && ` · ${e.location}`}
+                        {/* WHO IT IS WITH, ON THE DEFAULT VIEW. This compact
+                            card is what Month renders — not eventCard — so the
+                            full card's "Booked" badge never reaches the screen
+                            most people land on. The subtitle already composes
+                            from several optional parts; the business is one
+                            more, and the delisted note rides with it because
+                            there is nowhere else on this card to put it. */}
+                        {bookedById.get(e.id) &&
+                          ` · ${bookedById.get(e.id)!.businessName}${
+                            bookedById.get(e.id)!.businessActive ? "" : " (no longer on Explore)"
+                          }`}
                       </span>
                     </span>
                     {e.invite && <Check size={12} className="text-primary-deep-text/60 shrink-0" />}
+                    {bookedById.has(e.id) && <Ticket size={12} className="text-gold shrink-0" />}
                   </button>
                 );
               })}
@@ -787,12 +882,17 @@ export default function ClientCalendarTab() {
                       {e.title}
                       {/* The timeline block is too small for the badge and the
                           buttons; the day list above carries both. This says
-                          only that the event is an invitation. */}
+                          only that the event is an invitation, or a booking. */}
                       {e.invite && <Check size={10} className="shrink-0" />}
+                      {bookedById.has(e.id) && <Ticket size={10} className="shrink-0 text-gold" />}
                     </p>
                     <p className="text-[10px] text-charcoal-faint truncate">
                       {e.startTime} – {e.endTime}
                       {e.location ? ` · ${e.location}` : ""}
+                      {bookedById.get(e.id) &&
+                        ` · ${bookedById.get(e.id)!.businessName}${
+                          bookedById.get(e.id)!.businessActive ? "" : " (no longer on Explore)"
+                        }`}
                     </p>
                   </button>
                 );

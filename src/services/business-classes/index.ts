@@ -249,3 +249,97 @@ export async function deleteClass(classId: string): Promise<{ ok: boolean; messa
   }
   return { ok: true };
 }
+
+// ---------------------------------------------------------------------------
+// The client's side of a class: what they have actually booked.
+// ---------------------------------------------------------------------------
+
+/** A class this account holds a booking for. */
+export interface BookedClass extends BusinessClassRow {
+  /** business_class_bookings.id — the booking, not the class. */
+  bookingId: string;
+  bookedAt: string;
+  businessId: string;
+  businessName: string;
+  /**
+   * business_profiles.active — whether the business is still listed on
+   * Explore.
+   *
+   * SURFACED RATHER THAN FILTERED. A business that switches its listing off
+   * does not cancel the classes people already booked, so the row stays on
+   * the client's calendar; what changes is that they can no longer find that
+   * business anywhere else in the app. Hiding the flag would leave them
+   * looking at a session they cannot look up.
+   */
+  businessActive: boolean;
+}
+
+type ScheduleRow = Row & {
+  booking_id: string;
+  booked_at: string;
+  class_id: string;
+  business_id: string;
+  business_name: string;
+  business_active: boolean;
+};
+
+/**
+ * Every class this account has booked.
+ *
+ * READ FROM my_class_schedule, NOT FROM THE TABLES. The view is
+ * `security_invoker = false` and owned by postgres, and its WHERE clause is
+ * `bk.client_id = auth.uid()` — so it is self-scoping by construction and
+ * needs no filter from this side. That matters beyond convenience:
+ * business_class_bookings grants `authenticated` only SELECT and DELETE, and
+ * joining business_profiles from the client's own role would be a second
+ * round trip through policies written for other readers. The view does the
+ * join once, as the definer, and hands back exactly the columns a client is
+ * meant to see.
+ *
+ * NO WRITE PATH HERE, deliberately. A booking's INSERT policy is
+ * `auth.uid() = client_id` and `authenticated` holds no INSERT grant on the
+ * table at all, so nothing in the app can create one yet; cancelling — the
+ * DELETE the client does hold — is its own action on its own surface, not
+ * something a calendar overlay should offer.
+ */
+export async function fetchMyBookedClasses(): Promise<
+  { ok: true; classes: BookedClass[] } | { ok: false }
+> {
+  // my_class_schedule is absent from database.types.ts — the view is newer
+  // than the last regeneration, as professional_reviews and ambassador_grants
+  // were. The query is real; only the typing is missing, so the client is cast
+  // rather than the generated file hand-edited.
+  const client = supabase as unknown as {
+    from: (view: "my_class_schedule") => {
+      select: (columns: string) => PromiseLike<{
+        data: ScheduleRow[] | null;
+        error: { message: string } | null;
+      }>;
+    };
+  };
+
+  const { data, error } = await client
+    .from("my_class_schedule")
+    .select(
+      "booking_id, booked_at, class_id, title, class_type, event_date, start_time, end_time, notes, price, payment_type, max_capacity, professional_id, business_id, business_name, business_active"
+    );
+
+  if (error) {
+    console.error("[business-classes] Could not read booked classes:", error.message);
+    return { ok: false };
+  }
+
+  return {
+    ok: true,
+    classes: (data ?? []).map((r) => ({
+      // toClass wants the class's own id; the view exposes it as class_id
+      // because booking_id is the row's identity here.
+      ...toClass({ ...r, id: r.class_id }),
+      bookingId: r.booking_id,
+      bookedAt: r.booked_at,
+      businessId: r.business_id,
+      businessName: r.business_name,
+      businessActive: r.business_active,
+    })),
+  };
+}
