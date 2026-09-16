@@ -153,63 +153,6 @@
         .tabs a { padding: 0.5rem 0.7rem; }
       }
     </style>
-    <!-- LEGACY CENTIUM DATA CLEANUP. Runs on atraxia.org only, and exists
-         because this origin once ran the Centium app itself.
-
-         WHAT HAPPENED. Between 2026-08-27 and 2026-09-07 the Cloudflare
-         Worker reverse-proxied atraxia.org/centium/* to the Centium build on
-         GitHub Pages, so the app executed under THIS origin and wrote its
-         `centium-state:*` localStorage keys here — including health data
-         (bloodMarkers, comorbidities, clientHealthNotes, clientAccessGrants).
-         On 2026-09-07 the proxy became a 301 to centium.atraxia.org, so
-         nothing has written here since. localStorage never expires, though,
-         so the data stayed behind on every browser that used the app in that
-         window. This clears it.
-
-         NOT A SERVICE WORKER PROBLEM, checked rather than assumed: the app's
-         service worker was added 2026-09-14, a week AFTER the proxy ended, so
-         none was ever registered under this origin. The unregister call below
-         is defensive — it costs one promise and removes the doubt — not the
-         mechanism this is here to defeat.
-
-         SAFE BY ORIGIN. A page can only touch its own origin's storage, so
-         this cannot reach centium.atraxia.org, where the same keys are the
-         app's live state. The hostname guard is a second belt: it keeps the
-         script inert if these files are ever served from somewhere else.
-
-         RUNS EVERY LOAD, not once behind a flag. It is a handful of
-         localStorage reads, and a one-shot marker would be one more key on an
-         origin the whole point is to leave clean. -->
-    <script>
-      (function () {
-        try {
-          var h = location.hostname;
-          if (h !== "atraxia.org" && h !== "www.atraxia.org") return;
-
-          try {
-            var keys = [];
-            for (var i = 0; i < localStorage.length; i++) {
-              var k = localStorage.key(i);
-              if (k && k.indexOf("centium-state:") === 0) keys.push(k);
-            }
-            for (var j = 0; j < keys.length; j++) localStorage.removeItem(keys[j]);
-            if (keys.length) {
-              console.info("[atraxia] Cleared " + keys.length + " legacy Centium key(s) from this origin.");
-            }
-          } catch (e) {
-            /* Storage blocked or unavailable — nothing to clear, nothing to do. */
-          }
-
-          if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
-            navigator.serviceWorker.getRegistrations().then(function (regs) {
-              for (var r = 0; r < regs.length; r++) regs[r].unregister();
-            }).catch(function () {});
-          }
-        } catch (e) {
-          /* Never let cleanup break the page it is embedded in. */
-        }
-      })();
-    </script>
   </head>
   <body>
     <img class="hero-backdrop" src="atraxia/atraxia-mark-hi.png" alt="" aria-hidden="true" />
@@ -226,7 +169,6 @@
     <main>
       <h1>Legal</h1>
       <p class="lede">Policies and notices covering Atraxia and the companies in its portfolio.</p>
-      <div class="draft-banner"><strong>Draft — not yet published.</strong> Every <code>[BRACKETED]</code> placeholder on this page is a genuine gap (jurisdiction, company number, retention periods, the real cookie inventory, security controls and more), not an invented value. This page must be reviewed by qualified counsel before it is treated as Atraxia's actual policy.</div>
 
       <div class="layout">
         <nav class="tabs" aria-label="Legal sections">
@@ -246,14 +188,14 @@
             <p class="draft-stamp">Draft &middot; last touched <span class="stamp"></span></p>
 
             <h3>Identity of the publisher</h3>
-            <p>This website at atraxia.org is published by Atraxia, a company registered in <code>[JURISDICTION OF INCORPORATION]</code> under company number <code>[COMPANY NUMBER]</code>, with its registered office at <code>[REGISTERED ADDRESS]</code>.</p>
-            <p>General enquiries: <a href="mailto:support@atraxia.org">support@atraxia.org</a>. Responsible for content: <code>[NAMED CONTENT OWNER]</code>. VAT/tax identification: <code>[VAT / TRN, IF APPLICABLE]</code>.</p>
+            <p>This website at atraxia.org is published by Atraxia.</p>
+            <p>General enquiries: <a href="mailto:support@atraxia.org">support@atraxia.org</a>. Responsible for content: Dr. Karim El Khaldi and Abdallah Diab.</p>
 
             <h3>About Atraxia</h3>
-            <p>Atraxia is the parent company behind a growing portfolio of health and wellness applications and businesses. Its first venture is Centium. References on this site to &ldquo;we&rdquo;, &ldquo;us&rdquo; and &ldquo;Atraxia&rdquo; mean Atraxia together with its subsidiaries and portfolio companies, unless a specific entity is named.</p>
+            <p>Atraxia is the parent company behind a growing portfolio of ventures and businesses, including in the health and wellness sector. Its first venture is Centium. References on this site to &ldquo;we&rdquo;, &ldquo;us&rdquo; and &ldquo;Atraxia&rdquo; mean Atraxia together with its subsidiaries and portfolio companies, unless a specific entity is named.</p>
 
             <h3>No professional or medical advice</h3>
-            <p>Atraxia operates in the health and wellness sector. Nothing on this website is medical, clinical, diagnostic, legal, tax or investment advice, and nothing here creates a practitioner&ndash;patient or adviser&ndash;client relationship. Always consult a qualified professional about your own circumstances.</p>
+            <p>Some of Atraxia&rsquo;s portfolio companies, including Centium, operate in the health and wellness sector. Nothing on this website is medical, clinical, diagnostic, legal, tax or investment advice, and nothing here creates a practitioner-patient or adviser-client relationship. Always consult a qualified professional about your own circumstances.</p>
 
             <h3>Accuracy and availability</h3>
             <p>This site describes ventures at different stages of development, including some not yet released. Forward-looking statements about products, timing or capability are current intentions only and are not commitments. We may change, suspend or withdraw any part of the site at any time.</p>
@@ -262,13 +204,14 @@
             <p>Links to third-party sites are provided for convenience. We do not control and are not responsible for their content, products or privacy practices.</p>
 
             <h3>Limitation of liability</h3>
-            <p>To the fullest extent permitted by <code>[GOVERNING LAW]</code>, Atraxia excludes liability for loss arising from use of, or reliance on, this website. Nothing in this notice limits liability that cannot lawfully be limited, including for death or personal injury caused by negligence, or for fraud.</p>
+            <p>To the fullest extent permitted by the laws of Lebanon, Atraxia excludes liability for loss arising from use of, or reliance on, this website. Nothing in this notice limits liability that cannot lawfully be limited, including for death or personal injury caused by negligence, or for fraud.</p>
 
             <h3>Governing law</h3>
-            <p>This notice and any dispute arising from it are governed by the laws of <code>[GOVERNING LAW]</code>, subject to the exclusive jurisdiction of the courts of <code>[COURTS]</code>.</p>
+            <p>This notice and any dispute arising from it are governed by the laws of Lebanon, subject to the exclusive jurisdiction of the courts of Lebanon.</p>
 
             <h3>Accessibility</h3>
-            <p>We aim to meet WCAG 2.2 Level AA across our sites and products. <code>[CURRENT CONFORMANCE STATUS AND KNOWN EXCEPTIONS]</code>. If you encounter a barrier, email <a href="mailto:support@atraxia.org">support@atraxia.org</a> with the page and the assistive technology you use, and we will respond within <code>[TARGET RESPONSE TIME]</code> and offer the information in an alternative format.</p>
+            <p>We aim to meet WCAG 2.2 Level AA across our sites and products. This site has not yet undergone a formal, independent accessibility audit, so we cannot currently confirm full conformance. Based on an initial internal review, we are not aware of major barriers, though a few areas need attention before we can make that claim with confidence, including confirming colour contrast throughout, verifying full keyboard navigability, and reviewing labelling on interactive elements such as cookie preference controls. We will update this statement once a formal audit has been completed.</p>
+            <p>If you encounter a barrier using this site, email <a href="mailto:support@atraxia.org">support@atraxia.org</a> with the page and the assistive technology you use, and we will respond within 5 business days and offer the information in an alternative format.</p>
           </article>
 
           <article data-panel="privacy">
@@ -279,38 +222,56 @@
             <p>This policy explains how Atraxia and its portfolio companies handle personal data across our websites and applications. Where a portfolio company publishes its own product privacy notice, that notice governs that product and this policy covers the group layer.</p>
 
             <h3>Controller</h3>
-            <p>The controller is Atraxia, <code>[REGISTERED ADDRESS]</code>. Privacy contact: <a href="mailto:support@atraxia.org">support@atraxia.org</a>. <code>[DPO / EU-UK REPRESENTATIVE DETAILS, IF REQUIRED]</code>.</p>
+            <p>The controller is Atraxia. Privacy contact: <a href="mailto:support@atraxia.org">support@atraxia.org</a>. We have not appointed a Data Protection Officer or an EU/UK representative at this time.</p>
 
             <h3>What we collect</h3>
             <ul>
-              <li><strong>Contact data</strong> you send us &mdash; name, email address and message content when you email us or complete a form.</li>
-              <li><strong>Technical data</strong> &mdash; IP address, device and browser type, and pages viewed, collected through server logs and, where you consent, analytics.</li>
-              <li><strong>Product data</strong> &mdash; account and usage data generated in a portfolio product, described in that product&rsquo;s own notice.</li>
+              <li><strong>Contact data</strong> you send us: name, email address and message content when you email us or complete a form.</li>
+              <li><strong>Technical data</strong>: IP address, device and browser type, and pages viewed, collected through server logs and, where you consent, analytics.</li>
+              <li><strong>Product data</strong>: account and usage data generated in a portfolio product, described in that product&rsquo;s own notice.</li>
             </ul>
-            <p><strong>Health data.</strong> Some portfolio products may process health or wellness information, which is a special category of personal data. Where that applies, the relevant product notice sets out the specific condition relied upon (typically explicit consent) and the additional safeguards. <code>[CONFIRM PER PRODUCT BEFORE LAUNCH]</code></p>
-            <p>We do not knowingly collect data from children under <code>[AGE THRESHOLD]</code>.</p>
+            <p><strong>Health data.</strong> Some portfolio products may process health or wellness information, which is a special category of personal data. Where that applies, the relevant product notice sets out the specific condition relied upon (typically explicit consent) and the additional safeguards. This currently applies to Centium, which processes health and wellness data on the basis of explicit consent, with additional safeguards described in Centium&rsquo;s own privacy notice.</p>
+            <p>We do not knowingly collect data from children under 16.</p>
 
             <h3>Why we use it, and our lawful basis</h3>
             <ul>
-              <li>To answer enquiries and provide requested information &mdash; performance of a contract, or legitimate interests.</li>
-              <li>To operate, secure and improve our sites and products &mdash; legitimate interests.</li>
-              <li>To measure how our sites are used &mdash; consent, via the cookie banner.</li>
-              <li>To meet legal, accounting and regulatory obligations &mdash; legal obligation.</li>
+              <li>To answer enquiries and provide requested information (performance of a contract, or legitimate interests).</li>
+              <li>To operate, secure and improve our sites and products (legitimate interests).</li>
+              <li>To measure how our sites are used (consent, via the cookie banner).</li>
+              <li>To meet legal, accounting and regulatory obligations (legal obligation).</li>
             </ul>
             <p>We do not sell personal data, and we do not use it for automated decision-making with legal or similarly significant effects.</p>
 
+            <h3>Retention</h3>
+            <p>We retain personal data for as long as your account is active. Where you request deletion, we remove your data within 30 days of that request, except where we are required to retain certain information to comply with a legal obligation.</p>
+
             <h3>Sharing</h3>
-            <p>We share personal data with service providers acting on our instructions &mdash; hosting, email delivery, analytics and support tooling &mdash; each under a written data processing agreement; with professional advisers; with other group companies where necessary for the purposes above; and with authorities where legally required. <code>[MAINTAIN A CURRENT LIST OF SUB-PROCESSORS]</code></p>
+            <p>We share personal data with service providers acting on our instructions, including hosting, email delivery, analytics and support tooling, each under a written data processing agreement; with professional advisers; with other group companies where necessary for the purposes above; and with authorities where legally required.</p>
+            <p>Our current sub-processors are:</p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>PROVIDER</th><th>PURPOSE</th><th>CATEGORY</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td>Supabase</td><td>Database hosting, and usage analytics</td><td>Hosting / Analytics</td></tr>
+                  <tr><td>Cloudflare</td><td>Website hosting / CDN, and usage analytics</td><td>Hosting / Analytics</td></tr>
+                  <tr><td>LiveKit Cloud</td><td>Voice and video calling infrastructure</td><td>Hosting / Infrastructure</td></tr>
+                  <tr><td>GitHub Pages</td><td>Website hosting</td><td>Hosting</td></tr>
+                  <tr><td>Google Workspace</td><td>Email delivery and customer support</td><td>Email delivery / Support</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>We review this list periodically and update it when we add or remove a provider.</p>
 
             <h3>International transfers</h3>
-            <p>Where personal data leaves its country of origin, we rely on an adequacy decision or on Standard Contractual Clauses with a transfer risk assessment. <code>[LIST TRANSFER DESTINATIONS AND MECHANISMS]</code></p>
-
-            <h3>Retention</h3>
-            <p>We keep personal data only as long as needed for the purpose collected, then delete or anonymise it. Indicative periods: enquiry correspondence <code>[PERIOD]</code>; server and security logs <code>[PERIOD]</code>; analytics data <code>[PERIOD]</code>.</p>
+            <p>Atraxia is based in Lebanon, where personal data is regulated under Law No. 81/2018 on the Protection of Personal Data. Where we process personal data of individuals located in the EU or UK, the GDPR and UK GDPR may also apply to us regardless of our location.</p>
+            <p>Personal data leaves Lebanon when it is processed by our service providers. Our database is hosted with Supabase in Mumbai, India (ap-south-1); voice and video calling is provided by LiveKit Cloud, which by default routes realtime media through the server cluster nearest each participant rather than a single fixed region; our website and CDN are served through Cloudflare&rsquo;s global network; and email and support are handled through Google Workspace, which stores data across Google&rsquo;s global infrastructure.</p>
+            <p>Where personal data is transferred to a country without an EU/UK adequacy decision (including India and the United States), we rely on Standard Contractual Clauses together with a transfer risk assessment, or the data subject&rsquo;s explicit consent where applicable.</p>
 
             <h3>Your rights</h3>
             <p>Depending on where you live, you may have the right to access, correct, delete, port, restrict or object to our processing of your personal data, and to withdraw consent at any time. Under CCPA/CPRA, California residents may also request disclosure of categories collected, request deletion or correction, opt out of any &ldquo;sale&rdquo; or &ldquo;sharing&rdquo; (we do neither), and are entitled not to be discriminated against for exercising these rights.</p>
-            <p>To exercise a right, email <a href="mailto:support@atraxia.org">support@atraxia.org</a>. We respond within one month (GDPR) or 45 days (CCPA), and will tell you if we need longer. You may also complain to your supervisory authority: <code>[LEAD AUTHORITY]</code>.</p>
+            <p>To exercise a right, email <a href="mailto:support@atraxia.org">support@atraxia.org</a>. We respond within one month (GDPR) or 45 days (CCPA), and will tell you if we need longer. You may also complain to a supervisory authority. Lebanon does not currently have an independent data protection regulator; Law No. 81/2018 provides for enforcement through the competent Lebanese courts instead. If you are located in the EU or UK, you may lodge a complaint with the data protection authority in your own country of residence.</p>
 
             <h3>Changes</h3>
             <p>We will post material changes here and, where required, notify you directly.</p>
@@ -321,59 +282,8 @@
             <h2>Cookie Policy and Cookie Preferences</h2>
             <p class="draft-stamp">Draft &middot; last touched <span class="stamp"></span></p>
 
-            <p>Cookies are small files stored on your device. We use a deliberately small number of them. Strictly necessary cookies are set automatically because the site cannot work without them; everything else is set only if you allow it below.</p>
-
-            <div class="cookie-panel">
-              <div class="head">Your cookie preferences</div>
-              <div class="cookie-row">
-                <div>
-                  <div class="name">Strictly necessary</div>
-                  <div class="desc">Needed for the site to load, keep you secure and remember these choices. Always on.</div>
-                </div>
-                <button type="button" class="switch is-on" disabled aria-pressed="true" aria-label="Strictly necessary (always on)"><span class="knob"></span></button>
-              </div>
-              <div class="cookie-row">
-                <div>
-                  <div class="name">Analytics</div>
-                  <div class="desc">Aggregate measurement of which pages are visited, so we can improve them. Off unless you allow it.</div>
-                </div>
-                <button type="button" class="switch" id="cookie-analytics" aria-pressed="false" aria-label="Analytics"><span class="knob"></span></button>
-              </div>
-              <div class="cookie-row">
-                <div>
-                  <div class="name">Preferences</div>
-                  <div class="desc">Remembers non-essential choices such as display settings between visits.</div>
-                </div>
-                <button type="button" class="switch" id="cookie-preference" aria-pressed="false" aria-label="Preferences"><span class="knob"></span></button>
-              </div>
-              <div class="cookie-actions">
-                <button type="button" class="btn-primary" id="cookie-accept-all">Allow all</button>
-                <button type="button" class="btn-secondary" id="cookie-reject-all">Reject non-essential</button>
-                <span class="pref-status" id="cookie-status">Not yet set on this device</span>
-              </div>
-            </div>
-
-            <h3>Cookies we set</h3>
-            <div class="table-wrap">
-              <table>
-                <thead>
-                  <tr><th>NAME</th><th>PURPOSE</th><th>CATEGORY</th><th>EXPIRY</th></tr>
-                </thead>
-                <tbody>
-                  <tr><td class="mono">atx-cookie-prefs</td><td>Stores your cookie choices from this page</td><td>Strictly necessary</td><td>12 months</td></tr>
-                  <tr><td class="mono">[SESSION COOKIE]</td><td>Maintains your session and security state</td><td>Strictly necessary</td><td>Session</td></tr>
-                  <tr><td class="mono">[ANALYTICS ID]</td><td>Distinguishes visitors for aggregate measurement</td><td>Analytics</td><td>[PERIOD]</td></tr>
-                  <tr><td class="mono">[ANALYTICS SESSION]</td><td>Groups requests into a single visit</td><td>Analytics</td><td>[PERIOD]</td></tr>
-                </tbody>
-              </table>
-            </div>
-            <p style="margin-top:1rem"><code>[CONFIRM THIS TABLE AGAINST AN ACTUAL COOKIE SCAN BEFORE PUBLISHING — IT MUST MATCH WHAT THE SITE REALLY SETS]</code></p>
-
-            <h3>Managing cookies in your browser</h3>
-            <p>You can also block or delete cookies in your browser settings. Blocking strictly necessary cookies may stop parts of the site working. Your choices above are stored on this device only, so you will need to set them again on another device or after clearing your browser storage.</p>
-
-            <h3>Do Not Track and Global Privacy Control</h3>
-            <p><code>[STATE WHETHER GPC SIGNALS ARE HONOURED — REQUIRED FOR CPRA COMPLIANCE]</code></p>
+            <p>This site does not currently set any cookies. There is no tracking, analytics, or session cookie in use on atraxia.org today.</p>
+            <p>If that changes in future (for example, if we add analytics or a functional cookie-based preference store), we will update this section before doing so, and cookie consent controls will be added at that time.</p>
           </article>
 
           <article data-panel="security">
@@ -384,29 +294,27 @@
             <p>We welcome reports from security researchers. If you believe you have found a vulnerability in an Atraxia site or product, please tell us before telling anyone else.</p>
 
             <h3>How to report</h3>
-            <p>Email <a href="mailto:support@atraxia.org">support@atraxia.org</a> with the subject line &ldquo;Security report&rdquo;. Include the affected asset, the steps to reproduce, the impact you believe it has, and any proof-of-concept. <code>[SET UP A DEDICATED security@atraxia.org ADDRESS AND A PGP KEY, AND PUBLISH /.well-known/security.txt]</code></p>
+            <p>Email <a href="mailto:support@atraxia.org">support@atraxia.org</a> with the subject line &ldquo;Security report&rdquo;. Include the affected asset, the steps to reproduce, the impact you believe it has, and any proof-of-concept. A dedicated <code>security@atraxia.org</code> address and PGP key are planned; <a href="mailto:support@atraxia.org">support@atraxia.org</a> is the working contact until that is set up. <code>/.well-known/security.txt</code> will be published once the dedicated address exists.</p>
 
             <h3>Our commitments</h3>
             <ul>
-              <li>We acknowledge reports within <code>[N]</code> business days.</li>
-              <li>We give an initial assessment within <code>[N]</code> business days and keep you updated until resolution.</li>
+              <li>We acknowledge reports within 2 business days.</li>
+              <li>We give an initial assessment within 5 business days and keep you updated until resolution.</li>
               <li>We will not pursue legal action against researchers who follow this policy in good faith.</li>
               <li>We credit reporters who wish to be named once a fix has shipped.</li>
             </ul>
 
             <h3>Scope and rules</h3>
-            <p>In scope: atraxia.org, our portfolio product domains and their public APIs. <code>[LIST EXPLICITLY]</code></p>
-            <p>Please do not access, modify or exfiltrate data belonging to anyone else; do not degrade our services (no denial-of-service, no volumetric or automated scanning that affects availability); do not use social engineering or physical attacks against our people or premises; and do not disclose publicly until we have confirmed a fix or <code>[N]</code> days have passed.</p>
+            <p>In scope: atraxia.org, centium.atraxia.org, and their public APIs, specifically the Supabase-backed API (authentication, database REST/Realtime, and storage endpoints) that Centium&rsquo;s web and mobile apps use, and any publicly reachable Edge Function endpoints.</p>
+            <p>Not currently in public scope: Admin-Centium, which is a private, staff-only panel not exposed to the public internet. Reports involving it require separate authorisation.</p>
+            <p>Please do not access, modify or exfiltrate data belonging to anyone else; do not degrade our services (no denial-of-service, no volumetric or automated scanning that affects availability); do not use social engineering or physical attacks against our people or premises; and do not disclose publicly until we have confirmed a fix or 90 days have passed.</p>
             <p>Out of scope: findings from automated scanners without demonstrated impact, missing best-practice headers with no exploitable consequence, rate-limiting on non-sensitive endpoints, and reports requiring a compromised device or a heavily outdated browser.</p>
 
             <h3>Rewards</h3>
-            <p><code>[STATE WHETHER A BOUNTY IS OFFERED — IF NOT, SAY SO PLAINLY]</code></p>
+            <p>No bounty is currently offered. We credit researchers publicly (with consent) as described above.</p>
 
             <h3>How we protect data</h3>
-            <p>We use encryption in transit and at rest, least-privilege access with multi-factor authentication, logging and monitoring, dependency patching, and review before production changes. <code>[DESCRIBE ACTUAL CONTROLS AND ANY CERTIFICATIONS — DO NOT CLAIM CONTROLS OR CERTIFICATIONS YOU DO NOT HAVE]</code></p>
-
-            <h3>Breach notification</h3>
-            <p>If a personal data breach is likely to result in a risk to individuals, we notify the relevant supervisory authority within 72 hours of becoming aware, and affected individuals without undue delay where the risk is high.</p>
+            <p>We use TLS encryption for all data in transit. Our database enforces row-level security policies scoping every query to the authenticated user, verified through real bypass-attempt testing rather than code review alone. Administrative actions require authenticated staff access and are logged to an audit trail. In September 2026, we identified and remediated a legacy client-side storage issue in which application data had persisted under the wrong domain following an earlier infrastructure migration; no server-side data was affected, and affected browsers are cleared automatically on their next visit. We do not currently hold third-party security certifications ourselves; our infrastructure providers maintain their own (for example, our database provider is SOC 2 Type II and ISO 27001 certified).</p>
           </article>
 
           <article data-panel="ip">
@@ -415,7 +323,7 @@
             <p class="draft-stamp">Draft &middot; last touched <span class="stamp"></span></p>
 
             <h3>Ownership</h3>
-            <p>All content on this site &mdash; text, design, layout, graphics, logos, icons, imagery, code and software &mdash; is owned by Atraxia or its licensors and is protected by copyright, trade mark and other intellectual property laws. The Atraxia name and mark, and the Centium name and mark, are trade marks of Atraxia. <code>[NOTE REGISTRATION STATUS AND CLASSES]</code></p>
+            <p>All content on this site (text, design, layout, graphics, logos, icons, imagery, code and software) is owned by Atraxia or its licensors and is protected by copyright, trade mark and other intellectual property laws. The Atraxia name and mark, and the Centium name and mark, are trade marks of Atraxia.</p>
 
             <h3>What you may do</h3>
             <p>You may view this site and print or download extracts for your own personal, non-commercial reference, provided you keep all proprietary notices intact.</p>
@@ -424,13 +332,13 @@
             <p>Without our prior written permission you may not reproduce, republish, adapt, frame, or commercially exploit any part of the site; use our marks in a way likely to cause confusion or imply endorsement; scrape or systematically extract content, including for training machine-learning models; or remove or obscure any proprietary notice.</p>
 
             <h3>Press and brand use</h3>
-            <p>Journalists and partners may use our name and logo to refer to Atraxia factually, without alteration to colour, proportion or composition. For assets or approval, contact <a href="mailto:support@atraxia.org">support@atraxia.org</a>. <code>[LINK A BRAND ASSET PACK AND USAGE GUIDELINES]</code></p>
+            <p>Journalists and partners may use our name and logo to refer to Atraxia factually, without alteration to colour, proportion or composition. For brand assets or approval, contact <a href="mailto:support@atraxia.org">support@atraxia.org</a> and we will send over the relevant materials.</p>
 
             <h3>Third-party and open-source materials</h3>
-            <p>Our products include third-party and open-source components used under their respective licences, together with licensed fonts and imagery. <code>[MAINTAIN AN ATTRIBUTION AND LICENCE NOTICE FILE]</code></p>
+            <p>Our products are built using open-source frameworks and third-party services, including React, Vite, TypeScript, and Tailwind CSS across our web applications, alongside infrastructure and platform services from Supabase, Cloudflare, LiveKit, and Google. We use these under their respective open-source licences and commercial terms of service. We do not yet maintain a formal, itemised attribution and licence file; one will be published here as our stack matures.</p>
 
             <h3>Reporting infringement</h3>
-            <p>If you believe material on our site infringes your rights, email <a href="mailto:support@atraxia.org">support@atraxia.org</a> with: identification of the protected work; the location of the material; your contact details; a statement of good-faith belief that the use is unauthorised; a statement that your notice is accurate; and your signature. We will investigate and remove or disable infringing material where appropriate, and we will forward the notice to the person who posted it, who may submit a counter-notice. <code>[NOMINATE A DESIGNATED AGENT IF DMCA SAFE HARBOUR IS RELEVANT]</code></p>
+            <p>If you believe material on our site infringes your rights, email <a href="mailto:support@atraxia.org">support@atraxia.org</a> with: identification of the protected work; the location of the material; your contact details; a statement of good-faith belief that the use is unauthorised; a statement that your notice is accurate; and your signature. We will investigate and remove or disable infringing material where appropriate, and we will forward the notice to the person who posted it, who may submit a counter-notice.</p>
 
             <h3>Unsolicited ideas</h3>
             <p>We do not accept unsolicited product ideas, proposals or materials. Anything you send us outside a signed agreement is treated as non-confidential, and we are free to use it without obligation to you.</p>
@@ -445,9 +353,9 @@
 
             <h3>What we collect</h3>
             <ul>
-              <li>Details you give us &mdash; CV, cover letter, contact details, work history, education, portfolio or code samples, and right-to-work information.</li>
-              <li>Information generated during the process &mdash; interview notes, exercise submissions and assessment scores.</li>
-              <li>Information from third parties &mdash; references you nominate, and public professional profiles. <code>[STATE WHETHER BACKGROUND CHECKS ARE CARRIED OUT, BY WHOM, AND AT WHAT STAGE]</code></li>
+              <li>Details you give us: CV, cover letter, contact details, work history, education, portfolio or code samples, and right-to-work information.</li>
+              <li>Information generated during the process: interview notes, exercise submissions and assessment scores.</li>
+              <li>Information from third parties: references you nominate, and public professional profiles. As a small team, background and reference checks are currently carried out directly by our co-founders as part of the interview process, rather than by a dedicated HR function or third-party screening provider.</li>
             </ul>
             <p>Please do not send us health information or other special category data unless we ask for it to arrange an adjustment.</p>
 
@@ -455,13 +363,13 @@
             <p>We use this data to assess your suitability, communicate with you, arrange interviews, make and document a hiring decision, and meet legal obligations. Our basis is our legitimate interest in recruiting for our roles and, at offer stage, steps taken to enter into a contract with you. Where we ask to keep your details for future roles, we rely on your consent, which you can withdraw at any time.</p>
 
             <h3>Automated decision-making</h3>
-            <p>We do not use automated tools to reject applications without human review. <code>[IF ANY ATS SCORING, AI SCREENING OR RANKING IS INTRODUCED, DISCLOSE IT HERE — SEVERAL JURISDICTIONS NOW REQUIRE NOTICE AND BIAS AUDITS]</code></p>
+            <p>We do not use automated tools to reject applications without human review. Every application is reviewed strictly by a human. No automated scoring, AI screening or ranking tool is used in our hiring process.</p>
 
             <h3>Who sees it</h3>
-            <p>Access is limited to the hiring team and the people involved in that decision, plus our recruitment and IT service providers acting on our instructions. <code>[NAME THE ATS AND ANY RECRUITMENT AGENCIES USED]</code></p>
+            <p>Access is limited to the hiring team and the people involved in that decision. We are not currently affiliated with any applicant tracking system, recruitment agency, or third-party IT/recruitment service provider, though this may change in future as we grow.</p>
 
             <h3>Retention</h3>
-            <p>If your application is unsuccessful we keep your data for <code>[PERIOD]</code> so we can consider you for other roles and evidence our decision, then delete it. If you join us, relevant records transfer to your employment file under the separate employee privacy notice.</p>
+            <p>If your application is unsuccessful we keep your data for 12 months so we can consider you for other roles and evidence our decision, then delete it. If you join us, relevant records transfer to your employment file under the separate employee privacy notice.</p>
 
             <h3>Your rights</h3>
             <p>You have the same rights described in the Group Privacy Policy, including access, correction and deletion. Asking us to delete your data during a live process will normally mean we cannot continue considering your application. Contact <a href="mailto:support@atraxia.org">support@atraxia.org</a>.</p>
@@ -475,14 +383,14 @@
             <h2>Vendor / Supplier Privacy Notice</h2>
             <p class="draft-stamp">Draft &middot; last touched <span class="stamp"></span></p>
 
-            <p>This notice is for people we deal with at our suppliers, vendors, contractors and professional advisers &mdash; and for sole traders who contract with us directly. It explains what we do with your personal data. It is not a data processing agreement; that sits in the contract.</p>
+            <p>This notice is for people we deal with at our suppliers, vendors, contractors and professional advisers, and for sole traders who contract with us directly. It explains what we do with your personal data. It is not a data processing agreement; that sits in the contract.</p>
 
             <h3>What we collect</h3>
             <ul>
-              <li>Business contact details &mdash; name, job title, employer, work email, work phone.</li>
-              <li>Relationship records &mdash; correspondence, meeting notes, contracts, statements of work and service records.</li>
-              <li>Onboarding and compliance data &mdash; due diligence, sanctions and anti-bribery screening, insurance and, for sole traders, identity and right-to-work evidence.</li>
-              <li>Payment data &mdash; invoices, bank details and payment history.</li>
+              <li>Business contact details: name, job title, employer, work email, work phone.</li>
+              <li>Relationship records: correspondence, meeting notes, contracts, statements of work and service records.</li>
+              <li>Onboarding and compliance data: due diligence, sanctions and anti-bribery screening, insurance and, for sole traders, identity and right-to-work evidence.</li>
+              <li>Payment data: invoices, bank details and payment history.</li>
             </ul>
 
             <h3>Why, and our lawful basis</h3>
@@ -492,10 +400,10 @@
             <p>With our finance, accounting, legal and IT providers; with banks and payment processors; with group companies where relevant to the engagement; and with authorities where required.</p>
 
             <h3>Retention</h3>
-            <p>We keep contract and financial records for <code>[STATUTORY PERIOD, TYPICALLY 6–10 YEARS]</code> after the engagement ends, and contact records for <code>[PERIOD]</code>.</p>
+            <p>We keep contract and financial records for 10 years after the engagement ends, consistent with recordkeeping obligations under Lebanese commercial law, and contact records for 2 years after our last interaction.</p>
 
             <h3>If you process personal data for us</h3>
-            <p>Where a supplier processes personal data on our behalf, we require a written agreement with confidentiality, security, sub-processor, assistance, breach-notification and deletion obligations, and appropriate transfer safeguards. Suppliers must notify us of a suspected personal data breach without undue delay and no later than <code>[N]</code> hours.</p>
+            <p>Where a supplier processes personal data on our behalf, we require a written agreement with confidentiality, security, sub-processor, assistance, breach-notification and deletion obligations, and appropriate transfer safeguards. Suppliers must notify us of a suspected personal data breach without undue delay and no later than 72 hours.</p>
 
             <h3>Your rights</h3>
             <p>The rights in the Group Privacy Policy apply. Contact <a href="mailto:support@atraxia.org">support@atraxia.org</a>.</p>
@@ -566,44 +474,6 @@
         show(location.hash ? location.hash.slice(1) : ids[0]);
       })();
 
-      // Cookie preferences: strictly-necessary is always on; analytics and
-      // preferences persist to localStorage["atx-cookie-prefs"] (documented
-      // in the cookie table above) and are read back on load.
-      (function () {
-        var KEY = 'atx-cookie-prefs';
-        var state = { analytics: false, preference: false, at: '' };
-        try {
-          var raw = localStorage.getItem(KEY);
-          if (raw) {
-            var v = JSON.parse(raw);
-            state.analytics = !!v.analytics;
-            state.preference = !!v.preference;
-            state.at = v.at || '';
-          }
-        } catch (e) {}
-
-        var analyticsSwitch = document.getElementById('cookie-analytics');
-        var prefSwitch = document.getElementById('cookie-preference');
-        var statusEl = document.getElementById('cookie-status');
-
-        function paint() {
-          analyticsSwitch.classList.toggle('is-on', state.analytics);
-          analyticsSwitch.setAttribute('aria-pressed', state.analytics ? 'true' : 'false');
-          prefSwitch.classList.toggle('is-on', state.preference);
-          prefSwitch.setAttribute('aria-pressed', state.preference ? 'true' : 'false');
-          statusEl.textContent = state.at ? ('Saved on this device ' + state.at) : 'Not yet set on this device';
-        }
-        function save() {
-          state.at = new Date().toISOString().slice(0, 10);
-          try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
-          paint();
-        }
-        analyticsSwitch.addEventListener('click', function () { state.analytics = !state.analytics; save(); });
-        prefSwitch.addEventListener('click', function () { state.preference = !state.preference; save(); });
-        document.getElementById('cookie-accept-all').addEventListener('click', function () { state.analytics = true; state.preference = true; save(); });
-        document.getElementById('cookie-reject-all').addEventListener('click', function () { state.analytics = false; state.preference = false; save(); });
-        paint();
-      })();
 
       // v10: cursor parallax for the background watermark — the same subtle
       // drift hub.html's hero gives .hero-backdrop, ported standalone since

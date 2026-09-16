@@ -2,12 +2,15 @@
 //
 //   1. atraxia.org (root) -> the "hub of apps" static page, plus the
 //      root-level static files it references (favicon.svg, robots.txt,
-//      sitemap.xml, legal.html, privacy.html, accessibility.html, and
-//      everything under /atraxia/ and /icons/ — the logo assets, founder
-//      photos and favicon/manifest set the hub loads by root-relative
-//      path). These are straight reverse-proxies to this project's GitHub
-//      Pages deployment, which now publishes the repo's hub/ directory and
-//      nothing else (see .github/workflows/deploy.yml).
+//      sitemap.xml, legal.html, and everything under /atraxia/ and
+//      /icons/ — the logo assets, founder photos and favicon/manifest set
+//      the hub loads by root-relative path). These are straight
+//      reverse-proxies to this project's GitHub Pages deployment, which
+//      now publishes the repo's hub/ directory and nothing else (see
+//      .github/workflows/deploy.yml). privacy.html and accessibility.html
+//      are gone — folded into legal.html's tabs — and deliberately not
+//      redirected: neither URL was ever linked externally or indexed, so
+//      they now 404 like any other removed path.
 //   2. atraxia.org/centium/* (and www.atraxia.org/centium/*) -> a 301
 //      redirect to centium.atraxia.org,
 //      preserving the rest of the path and the query string. Centium used
@@ -62,8 +65,6 @@ const HUB_ASSET_PATHS = new Set([
   "/favicon.svg",
   "/robots.txt",
   "/sitemap.xml",
-  "/privacy.html",
-  "/accessibility.html",
   "/legal.html",
   "/404.html",
 ]);

@@ -149,13 +149,14 @@
       email) to brand values (Principled / Client-Centric / Simplicity);
       the "plain-language summary, see Privacy Policy" disclaimer is
       removed. This section no longer says anything about data handling —
-      that now lives solely in privacy.html.
+      that now lives solely in legal.html's Group Privacy Policy tab.
     - Blog (was Resources): new eyebrow/headline/body/teaser copy.
     - Contact: new eyebrow/body; email changed hello@ -> support@atraxia.org
       (both the section's own two links and the icon SVGs were left as-is —
-      the doc didn't ask for new ones). privacy.html and accessibility.html
-      still reference hello@atraxia.org; the doc didn't cover those pages,
-      so they're untouched — worth a follow-up decision.
+      the doc didn't ask for new ones). The old privacy.html and
+      accessibility.html pages, which still referenced hello@atraxia.org,
+      are gone as of the legal-centre content pass below — folded into
+      legal.html, which uses support@atraxia.org throughout.
 
   Bugfix (2026-09-03): nav-bar click caused a visible jitter/back-and-forth
   in the active-tab pill. The scroll-driven active-section function ran
@@ -428,6 +429,69 @@
   with no backdrop, since regenerating that set would need real image
   tooling this environment doesn't have; flagging as a follow-up rather
   than leaving it silently inconsistent.
+
+  Design pass v11 (Claude Design handoff, "Atraxia landing page — icons,
+  interactions, mobile fixes" — see
+  scratchpad/design-handoff-atraxia-landing-v12/design_handoff_atraxia_landing/
+  README.md): items 1-8 of that handoff (items 9/10, the Legal Centre
+  content pass and accessibility.html/privacy.html retirement, were out of
+  this pass's scope and left for a parallel change).
+    1. Values section: all three `.trust-card .icon` SVGs replaced —
+       compass (Principled, was a scales glyph), two figures over an
+       infinity loop (Client-Centric, was concentric circles), pill switch
+       (Simplicity, was three stacked lines). Tile 44px -> 56px, glyph
+       24px -> 34px.
+    2. The three new icons opt out of the shared `atxDrawIn` scroll-reveal
+       dash animation: it hardcodes `stroke-dasharray: 96`, sized for the
+       old icons' path lengths, which left the new (much shorter) marks
+       permanently part-drawn at rest.
+    3. Hover animations ported into a new fourth end-of-body IIFE
+       (bindIconDraw/bindCompass/bindToggle): Client-Centric self-draws via
+       measured per-element dash lengths (no `pathLength` attribute —
+       reintroducing one silently renormalises every dasharray/dashoffset
+       to a 100-unit space); Principled's needle does one settling spin
+       (rotate(-360deg) snapped, then transitions to rotate(0deg) over
+       900ms); Simplicity's knob is a pure CSS transition on :hover/
+       :focus-within. Each hover binder guards on a versioned dataset flag
+       (ccBound/prBound) and tears down its previous listeners via
+       AbortController before rebinding, rather than a boolean flag, since
+       the SVG nodes persist across any future re-render.
+    4. Touch tap-to-select model (bindTouchTriggers): coarse/touch pointers
+       get a selection model instead of hover — tap an unselected card to
+       select and play its animation, tap again to deselect (no replay);
+       one card selected at a time; a tap outside the grid clears it.
+       `.is-selected` carries the same visual treatment as hover MINUS the
+       lift transform, so a deselecting card never appears to drop. Hover
+       binders are gated to `pointerType === 'mouse'` throughout, since a
+       touch tap also fires `pointerenter`.
+    5. Two mobile-only (max-width: 760px) seam fixes: the mission section's
+       border-bottom replaced with a wash that ramps to zero opacity at
+       both edges instead of stepping; the hero's opaque backdrop dropped
+       and `.hs-stage` mask-image'd to transparent over its last 140px so
+       the shared `.page` gradient shows through the seam uninterrupted
+       (deliberately not colour-matched — the composited colour there
+       depends on document height, so no literal stop is correct).
+    6. Footer social icons: hover now fills pale teal within the existing
+       32px circular border (was a plain navy text/border colour change).
+    7. Hero galaxy v17 module: `coreNear()`'s `return 0` stub (with its
+       anti-reintroduction warning comment) replaced with real cursor-
+       coupling — smoothstep falloff eased 0.07/frame, snapping to 0 below
+       0.0005 — plus a live "lighter"-composite core bloom in `drawGalaxy`
+       and `pointerleave`/`blur` teardown in `bindDrive()`. The handler
+       still only stores raw coordinates; the one layout read
+       (`getBoundingClientRect`) stays inside `coreNear`, once per frame,
+       preserving the module's no-layout-read-in-the-listener rule.
+    8. Portfolio selector: `.pf-item .pf-name` (the Centium title) widened
+       into the same navigation target as `.pf-logo`, same capture-phase
+       listener and is-active gating (unchanged, still required so a
+       bubble-phase listener can't double-fire select-and-navigate against
+       the rail's own target-phase activation). Centium panel copy updated
+       to a two-part title + description (`.desc-title` / `.desc`).
+  All CSS/markup/JS lifted near-verbatim from the handoff's
+  `Atraxia Landing.dc.html` (CSS/markup, items 1/2/5/6/8b) and
+  `atraxia-boot.js` (items 7/8a); items 3/4's logic class was ported from a
+  React-host component method set into a plain end-of-body IIFE, matching
+  this page's own module convention, rather than carried over as a class.
 -->
 
 <html lang="en">
@@ -756,7 +820,13 @@
         border: 1px solid rgb(var(--border) / 0.1);
         transition: color 0.18s ease, border-color 0.18s ease;
       }
-      footer .footer-social a:hover, footer .footer-social a:focus-visible { color: rgb(var(--navy)); border-color: rgb(var(--navy) / 0.3); }
+      footer .footer-social a { transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease; }
+      footer .footer-social a:hover, footer .footer-social a:focus-visible {
+        color: rgb(var(--teal-dark));
+        background: rgb(var(--teal-pale));
+        border-color: rgb(var(--teal) / 0.55);
+        outline: none;
+      }
       footer .footer-bottom-row {
         width: 100%; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;
         margin-top: 1.5rem; padding-top: 1.25rem;
@@ -1479,6 +1549,12 @@
       }
       .pf-panel.is-active { opacity: 1; transform: none; pointer-events: auto; }
       /* legibility carried entirely by the type — the glow is untouched */
+      /* the panel's lead line sits above the description on its own row, in the
+         navy the section's other headings use */
+      .pf-panel .desc-title {
+        display: block; font-weight: 800; font-size: 1.05rem;
+        color: rgb(var(--navy)); letter-spacing: -0.005em; margin-bottom: 0.3rem;
+      }
       .pf-panel .desc {
         margin: 0; max-width: 44ch; font-size: 0.95rem; line-height: 1.6;
         font-weight: 600; color: rgb(var(--charcoal));
@@ -1511,6 +1587,21 @@
       /* icons draw in currentColor, so the tile inverts on hover and they stay legible */
       .trust-card .icon { color: rgb(var(--teal)); transition: background 0.35s ease, color 0.35s ease, transform 0.4s cubic-bezier(.22,1,.36,1), box-shadow 0.35s ease; }
       .trust-card:hover .icon { background: rgb(var(--navy)); color: #ffffff; }
+
+      /* Client-Centric mark: slightly larger than the other two glyphs, which
+         are denser, and self-drawing on card hover. At rest the mark sits
+         fully drawn (dashoffset 0), so a non-hovering visitor never sees a
+         partial icon. */
+      /* All three marks sized up together. Needs the svg element in the chain
+         to outrank the pre-existing `.trust-card .icon svg { width: 24px }`,
+         and the tile grows with them so the glyphs keep their breathing room. */
+      .trust-card .icon { width: 56px; height: 56px; border-radius: 17px; }
+      .trust-card .icon svg.icon-cc,
+      .trust-card .icon svg.icon-pr,
+      .trust-card .icon svg.icon-sp { width: 34px; height: 34px; }
+      /* The draw itself is driven from JS (see bindIconDraw): the dash length
+         has to equal each element's real measured path length. Nothing about
+         the draw lives in CSS. */
 
       /* v7: portfolio selection glow — a lens-shaped wash, wide at the centre
          and feathered to nothing at the edges, coloured from the selected
@@ -1664,9 +1755,60 @@
         box-shadow: 0 0 0 7px rgb(var(--navy) / 0.1);
       }
       .trust-card:hover .icon svg [stroke] { stroke: #ffffff; }
+      /* Touch has no hover, so .is-selected carries the same treatment. It is
+         applied only on coarse pointers (see bindTouchTriggers), which is why
+         these are not inside a media query. */
+      /* No transform on the selected card, deliberately. The hover state lifts
+         it 6px, but on touch that lift releases when you deselect, which reads
+         as the box dropping down the section. Selection is shown by the wash,
+         border and tile instead — nothing moves. */
+      .trust-card.is-selected {
+        background: rgb(var(--teal-pale) / 0.62);
+        border-color: rgb(var(--teal) / 0.34);
+        box-shadow: 0 26px 50px -24px rgb(6 20 25 / 0.3), 0 0 0 1px rgb(var(--teal) / 0.08);
+      }
+      .trust-card.is-selected .icon {
+        transform: translateY(-3px) scale(1.08) rotate(-3deg);
+        background: rgb(var(--navy));
+        box-shadow: 0 0 0 7px rgb(var(--navy) / 0.1);
+      }
+      .trust-card.is-selected .icon svg [stroke] { stroke: #ffffff; }
+      .trust-card.is-selected .icon-sp .sp-knob { transform: translateX(9px); }
       .trust-card h3 { margin-bottom: 0.6rem; }
       .trust-card p { margin-inline: auto; max-width: 34ch; }
       .trust-card .icon svg [stroke] { stroke-dasharray: 96; stroke-dashoffset: 96; }
+      /* This mark opts OUT of the shared reveal above. That rule hardcodes a
+         96-unit dash tuned to the original three icons; the infinity loop
+         measures ~51 units and each head ~11.9, so the shared dash never
+         resolves to a complete mark and the icon sat frozen part-drawn at
+         rest. Both its reveal and its hover replay are driven from measured
+         lengths in bindIconDraw instead, so the resting mark carries no dash
+         state at all. The second selector repeats .is-in purely to outrank
+         the reveal rule. */
+      .trust-card .icon svg.icon-cc [stroke],
+      .trust-grid.is-in .trust-card .icon svg.icon-cc [stroke],
+      .trust-card .icon svg.icon-pr [stroke],
+      .trust-grid.is-in .trust-card .icon svg.icon-pr [stroke],
+      .trust-card .icon svg.icon-sp [stroke],
+      .trust-grid.is-in .trust-card .icon svg.icon-sp [stroke] {
+        stroke-dasharray: none; stroke-dashoffset: 0; animation: none;
+      }
+
+      /* Principled: the needle settles like a compass finding north. Spun from
+         a JS tween (see bindCompass) so each hover restarts it cleanly; the
+         origin has to be the dial centre, not the 24x24 box centre. */
+      .icon-pr .pr-needle { transform-origin: 12px 12.6px; transform-box: view-box; }
+
+      /* Simplicity: the switch flicks on. A plain transition is right here —
+         it re-runs on every hover and reverses itself on the way out, which is
+         exactly the behaviour a toggle wants. */
+      .icon-sp .sp-knob { transition: transform 0.34s cubic-bezier(.34,1.3,.5,1); transform-box: view-box; }
+      /* .is-on is the touch equivalent of the hover state: there is no cursor to
+         hover with, so the switch is flicked on when the card scrolls into view
+         and on tap (see bindTouchTriggers). */
+      .trust-card:hover .icon-sp .sp-knob,
+      .trust-card:focus-within .icon-sp .sp-knob,
+      .icon-sp.is-on .sp-knob { transform: translateX(9px); }
       .trust-grid.is-in .trust-card .icon svg [stroke] { animation: atxDrawIn 1.1s cubic-bezier(.4,0,.2,1) forwards; }
       .trust-grid.is-in .trust-card:nth-child(2) .icon svg [stroke] { animation-delay: 0.1s; }
       .trust-grid.is-in .trust-card:nth-child(3) .icon svg [stroke] { animation-delay: 0.2s; }
@@ -1677,6 +1819,47 @@
         .pf-item { width: 144px; }
         .pf-item .pf-logo { width: 76px; height: 76px; border-radius: 22px; }
         .pf-panels { min-height: 132px; }
+      }
+
+      /* Mobile: drop the two horizontal seams under the hero and between the
+         philosophy and portfolio sections.
+         The philosophy/portfolio one is a real border. The one under the hero
+         is NOT a border — it is a colour step, and colour-matching it cannot
+         work: .page carries a full-height gradient (rgb(217 234 240) → white),
+         so the mission's wash composites over a colour that depends on
+         document height, and any literal end stop is wrong by some amount. */
+      @media (max-width: 760px) {
+        /* The border is only half of each seam — the mission's 0.38 teal wash
+           also starts and stops abruptly, which steps against the raw .page
+           gradient above and below it. Ramping the wash in over its first 170px
+           and out over its last 170px makes both edges disappear without
+           matching any colour: the wash simply arrives at zero opacity where
+           the neighbouring section begins. */
+        .mission {
+          border-bottom: none !important;
+          background-color: transparent !important;
+          background-image: linear-gradient(180deg,
+            rgb(214 235 238 / 0) 0,
+            rgb(214 235 238 / 0.38) 170px,
+            rgb(214 235 238 / 0.38) calc(100% - 170px),
+            rgb(214 235 238 / 0) 100%) !important;
+        }
+        /* Colour-matching the fade to the section below cannot work here: .page
+           carries a full-height gradient (rgb(217 234 240) → white), so the
+           mission's 0.38 wash composites over a colour that depends on document
+           height, and any literal end stop is wrong by some amount — which is
+           the step that read as a line.
+           So nothing is matched. The stage is MASKED to transparent over its
+           last 140px and the hero's own opaque backdrop is dropped, letting the
+           page gradient itself show through the ramp. Both sides of the seam are
+           then literally the same paint, whatever that paint happens to be.
+           140px keeps the ramp below the hero CTAs, which are light-on-dark. */
+        .hero { background: transparent !important; }
+        .hs-stage {
+          -webkit-mask-image: linear-gradient(180deg, #000 calc(100% - 140px), rgb(0 0 0 / 0) 100%);
+          mask-image: linear-gradient(180deg, #000 calc(100% - 140px), rgb(0 0 0 / 0) 100%);
+        }
+        .hs-fade { display: none !important; }
       }
 
       @media (prefers-reduced-motion: reduce) {
@@ -2341,7 +2524,7 @@
               </div>
               <div class="pf-panels">
                 <div class="pf-panel is-active" data-pf-panel="centium">
-                  <p class="desc">Nutrition, training, health data and community — one place to manage your health.</p>
+                  <p class="desc"><strong class="desc-title">Health, accompanied</strong>Your nutrition, training, and health; never managed alone.</p>
                   <a class="cta" href="https://centium.atraxia.org" id="centium-tile">Visit Centium →</a>
                 </div>
                 <div class="pf-panel" data-pf-panel="soon">
@@ -2408,12 +2591,14 @@
             <div class="trust-grid">
               <div class="trust-card">
                 <span class="icon" aria-hidden="true">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 4v16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                    <path d="M5 7h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                    <path d="M5 7l-2.5 5.5h5L5 7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-                    <path d="M19 7l-2.5 5.5h5L19 7Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-                    <path d="M9 20h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  <svg class="icon-pr" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle cx="12" cy="12.6" r="8.3" stroke="currentColor" stroke-width="1.6"/>
+                    <path d="M12 4.3v1.9M12 19v1.9M3.7 12.6h1.9M18.4 12.6h1.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                    <circle cx="12" cy="1.8" r="1.5" fill="currentColor"/>
+                    <g class="pr-needle">
+                      <path d="M15.5 9.1 L13.2 13.8 L8.5 16.1 L10.8 11.4 Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+                      <circle cx="12" cy="12.6" r="1.5" stroke="currentColor" stroke-width="1.6"/>
+                    </g>
                   </svg>
                 </span>
                 <h3>Principled</h3>
@@ -2421,10 +2606,10 @@
               </div>
               <div class="trust-card">
                 <span class="icon" aria-hidden="true">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12" r="2.4" stroke="currentColor" stroke-width="1.6"/>
-                    <circle cx="12" cy="12" r="6.2" stroke="currentColor" stroke-width="1.6"/>
-                    <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.6" stroke-opacity=".45"/>
+                  <svg class="icon-cc" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <circle class="cc-head" cx="8.2" cy="6.4" r="1.9" stroke="currentColor" stroke-width="1.6"/>
+                    <circle class="cc-head" cx="15.8" cy="6.4" r="1.9" stroke="currentColor" stroke-width="1.6"/>
+                    <path class="cc-loop" d="M12 15.1 C7.7 9.9 2.4 11.3 2.4 15.1 C2.4 18.9 7.7 20.3 12 15.1 C16.3 9.9 21.6 11.3 21.6 15.1 C21.6 18.9 16.3 20.3 12 15.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
                   </svg>
                 </span>
                 <h3>Client-Centric</h3>
@@ -2432,10 +2617,9 @@
               </div>
               <div class="trust-card">
                 <span class="icon" aria-hidden="true">
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M4 7h16" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                    <path d="M6 12h12" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                    <path d="M9 17h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+                  <svg class="icon-sp" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="2.4" y="6.9" width="19.2" height="10.2" rx="5.1" stroke="currentColor" stroke-width="1.6"/>
+                    <circle class="sp-knob" cx="7.5" cy="12" r="3.1" fill="currentColor"/>
                   </svg>
                 </span>
                 <h3>Simplicity</h3>
@@ -3565,11 +3749,29 @@
 
   var TILT = -0.28, FLATTEN = 0.46;
 
-  /* 0 → 1 as the drive point approaches the galaxy core */
-  /* Cursor-driven brightness ("glow following") is removed. Kept as a
-     constant 0 so call sites read as fixed values rather than silently
-     re-introducing pointer coupling. */
-  function coreNear() { return 0; }
+  /* 0 → 1 as the CURSOR approaches the galaxy core.
+     Real pointer coupling: the raw value is a smoothstep of distance from the
+     core, and the returned value eases toward it each frame so the glow
+     swells and decays rather than snapping. Pointer-less inputs (touch/
+     coarse) and reduced-motion stay at 0. */
+  var ptrX = 0, ptrY = 0, ptrIn = false, nearEase = 0;
+  var CORE_REACH = 0.13;   /* fraction of g.d that counts as "at the core" */
+  function coreNear(g) {
+    var raw = 0;
+    if (ptrIn && !coarse.matches && !reduce.matches && galC) {
+      var r = galC.getBoundingClientRect();
+      if (r.width) {
+        var dx = (ptrX - r.left) - g.cx;
+        var dy = (ptrY - r.top) - g.cy;
+        var t = 1 - Math.sqrt(dx * dx + dy * dy) / (g.d * CORE_REACH);
+        t = clamp(t, 0, 1);
+        raw = t * t * (3 - 2 * t);
+      }
+    }
+    nearEase += (raw - nearEase) * 0.07;
+    if (nearEase < 0.0005) nearEase = 0;
+    return nearEase;
+  }
 
   function galaxyGeom() {
     return {
@@ -3603,7 +3805,7 @@
 
     /* how close the pointer is to the core, 1 at the core → used to bring the
        core up as the cursor approaches it */
-    var near = coreNear();
+    var near = coreNear(g);
 
     function layerTo(tc, img, angle, scale, alpha, ox, oy) {
       var s = g.d * scale;
@@ -3657,6 +3859,24 @@
 
     for (var i = 0; i < shells.length; i++) {
       layer(shells[i], spin, 1.0, 1, 0, 0);
+    }
+
+    /* live core bloom: swells as the cursor closes on the core, so hovering
+       the nebula's centre reads as feeding it energy. Drawn over the baked
+       shells in 'lighter' so it adds to the existing glow stack instead of
+       replacing it. */
+    if (near > 0) {
+      galX.save();
+      galX.globalCompositeOperation = 'lighter';
+      var cbr = g.d * (0.055 + near * 0.055);
+      var cbg = galX.createRadialGradient(g.cx, g.cy, 0, g.cx, g.cy, cbr);
+      cbg.addColorStop(0.00, 'rgba(255,253,248,' + (0.40 * near).toFixed(3) + ')');
+      cbg.addColorStop(0.24, 'rgba(255,245,226,' + (0.19 * near).toFixed(3) + ')');
+      cbg.addColorStop(0.56, 'rgba(196,234,248,' + (0.085 * near).toFixed(3) + ')');
+      cbg.addColorStop(1.00, 'rgba(120,196,220,0)');
+      galX.fillStyle = cbg;
+      galX.beginPath(); galX.arc(g.cx, g.cy, cbr, 0, Math.PI * 2); galX.fill();
+      galX.restore();
     }
 
     /* core: falloff centre leans toward the pointer and brightens near it, so
@@ -3802,9 +4022,12 @@
   function bindDrive() {
     window.addEventListener('pointermove', function (e) {
       if (coarse.matches) return;
+      ptrX = e.clientX; ptrY = e.clientY; ptrIn = true;
       pTargetX = (e.clientX / window.innerWidth - 0.5) * 2;
       pTargetY = (e.clientY / window.innerHeight - 0.5) * 2;
     }, { passive: true });
+    document.addEventListener('pointerleave', function () { ptrIn = false; }, { passive: true });
+    window.addEventListener('blur', function () { ptrIn = false; }, { passive: true });
     window.addEventListener('scroll', scrollDrive, { passive: true });
     scrollDrive();
   }
@@ -4602,6 +4825,8 @@
       /* v10: the app logo in the portfolio selector links to that app's site,
          the same destination as its "Visit …" CTA. Items without a
          data-pf-url (Coming soon) keep the plain selector behaviour.
+         v11: the Centium title (.pf-name) widened into the same navigation
+         target alongside the logo — same is-active gating, same handler.
          v10b: the rail's own click handler centres (and thus activates) the
          clicked item during the same click, in the target phase — a
          bubble-phase listener here saw is-active === true even for a logo
@@ -4613,7 +4838,7 @@
       (function () {
         if (window.__atxPfLogo) return; window.__atxPfLogo = true;
         document.addEventListener('click', function (e) {
-          var logo = e.target.closest && e.target.closest('.pf-item .pf-logo');
+          var logo = e.target.closest && e.target.closest('.pf-item .pf-logo, .pf-item .pf-name');
           if (!logo) return;
           var item = logo.closest('.pf-item');
           if (!item) return;
@@ -4856,6 +5081,224 @@
           requestAnimationFrame(frame);
         }
         requestAnimationFrame(frame);
+      })();
+    </script>
+    <!-- Design pass v11 (Claude Design handoff, "Atraxia landing page — icons,
+         interactions, mobile fixes" — see
+         scratchpad/design-handoff-atraxia-landing-v12/design_handoff_atraxia_landing/
+         README.md): the three value-section hover animations (Principled
+         compass needle, Client-Centric self-drawing mark, Simplicity switch
+         flick) plus the touch tap-to-select model that stands in for them on
+         coarse pointers. Ported from the handoff's Atraxia Landing.dc.html
+         logic class (bindIconDraw/bindCompass/bindToggle/bindTouchTriggers),
+         as a fourth end-of-body IIFE matching this page's existing module
+         convention rather than the class the design host wrapped it in.
+         Each hover binder guards on a VERSIONED dataset flag and tears its
+         previous listeners down via AbortController before rebinding, rather
+         than a plain boolean — the SVG node can survive a hot reload, so a
+         boolean flag would stay set while the previous run's listeners kept
+         handling events. Circles measure their dash length as 2*PI*r rather
+         than via getTotalLength(), which under-reports a circle's true
+         circumference here; no pathLength attribute is on any element, since
+         it would silently renormalise every dasharray/dashoffset to a
+         100-unit space. The resting mark/needle carries no dasharray/rotation
+         left over from a run; both animations are CSS-transition-driven
+         (the resting value is the declarative target) rather than rAF/
+         element.animate(), so a throttled or cancelled run cannot strand
+         either mid-animation. -->
+    <script>
+      (function () {
+        var fromMouse = function (fn) {
+          return function (e) { if (!e.pointerType || e.pointerType === 'mouse') fn(); };
+        };
+
+        /* Self-drawing Client-Centric mark. Resting state is the complete
+           mark with no dash properties at all. On hover the dash is applied,
+           jumped to the undrawn offset with transitions suppressed, then
+           released so the browser transitions it to 0; dash properties are
+           stripped once the transition finishes. Bound to the CARD, not the
+           icon, so the draw fires anywhere over the box, and each run is a
+           fresh animation, which is what makes it replay on every re-entry. */
+        function bindIconDraw() {
+          var svg = document.querySelector('.icon-cc');
+          if (!svg) return;
+          var card = svg.closest('.trust-card');
+          if (!card) return;
+
+          var BIND = 'v11';
+          if (svg.dataset.ccBound === BIND) return;
+          if (svg.__ccAbort) svg.__ccAbort.abort();
+          svg.__ccAbort = new AbortController();
+          var sig = { signal: svg.__ccAbort.signal };
+          svg.dataset.ccBound = BIND;
+          // drop any dash state a previous, now-abandoned run left behind
+          [].forEach.call(svg.querySelectorAll('.cc-loop, .cc-head'), function (el) {
+            el.removeAttribute('style');
+          });
+
+          var parts = [{ el: svg.querySelector('.cc-loop'), dur: 620, delay: 0 }]
+            .concat([].map.call(svg.querySelectorAll('.cc-head'), function (el, i) {
+              return { el: el, dur: 300, delay: 480 + i * 80 };
+            }))
+            .filter(function (p) { return p.el; });
+
+          /* Circles take their length from 2*PI*r: getTotalLength()
+             under-reports a circle here (10.748 against a true 11.94), and a
+             dash shorter than its path makes the pattern repeat and leak a
+             visible sliver of the "hidden" stroke. Everything else measures;
+             both carry a 2% margin. */
+          parts.forEach(function (p) {
+            var r = parseFloat(p.el.getAttribute('r'));
+            p.len = (p.el.tagName.toLowerCase() === 'circle' && r ? 2 * Math.PI * r : p.el.getTotalLength()) * 1.02;
+          });
+
+          var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+          var EASE = 'cubic-bezier(.3,.8,.35,1)';
+          var cleanup = 0;
+
+          // The resting logo must carry NO dash properties (see header note).
+          var strip = function () {
+            if (cleanup) { clearTimeout(cleanup); cleanup = 0; }
+            parts.forEach(function (p) { p.el.removeAttribute('style'); });
+          };
+
+          var draw = function () {
+            if (reduce.matches) return;
+            strip();
+            parts.forEach(function (p) {
+              p.el.style.transition = 'none';
+              p.el.style.strokeDasharray = p.len;
+              p.el.style.strokeDashoffset = p.len;   // a full period out: nothing shows
+            });
+            void svg.getBoundingClientRect();        // flush the undrawn state
+            parts.forEach(function (p) {
+              p.el.style.transition = 'stroke-dashoffset ' + p.dur + 'ms ' + EASE + ' ' + p.delay + 'ms';
+              p.el.style.strokeDashoffset = '0';      // the browser owns the rest
+            });
+            var total = Math.max.apply(null, parts.map(function (p) { return p.delay + p.dur; }));
+            cleanup = setTimeout(strip, total + 120);
+          };
+          var clear = strip;
+          svg.__atxPlay = draw;   // touch trigger, fired by bindTouchTriggers
+
+          /* Mouse pointers only. A touch tap also emits pointerenter, so
+             binding it unconditionally would run the draw directly on every
+             tap and bypass the tap-selection logic below. */
+          card.addEventListener('pointerenter', fromMouse(draw), sig);
+          card.addEventListener('focusin', draw, sig);
+          card.addEventListener('pointerleave', fromMouse(clear), sig);
+          card.addEventListener('focusout', clear, sig);
+
+          /* Stands in for the scroll reveal this icon opted out of: draw it
+             once, the first time the card comes into view. Hover devices
+             only — on touch the animation belongs to the tap-selection edge,
+             so scrolling past must not spend it. */
+          if (typeof IntersectionObserver === 'function'
+              && !window.matchMedia('(hover: none), (pointer: coarse)').matches) {
+            var io = new IntersectionObserver(function (entries) {
+              if (entries.some(function (e) { return e.isIntersecting; })) { io.disconnect(); draw(); }
+            }, { threshold: 0.4 });
+            io.observe(card);
+            svg.__ccAbort.signal.addEventListener('abort', function () { io.disconnect(); });
+          }
+        }
+
+        /* Principled: one settling spin of the compass needle per hover. A
+           hover snaps the needle a full turn back (rotate(-360deg)) with
+           transitions off, then releases it to rotate(0deg) over 900ms so it
+           settles exactly on its authored bearing — no draw-on. */
+        function bindCompass() {
+          var svg = document.querySelector('.icon-pr');
+          if (!svg) return;
+          var needle = svg.querySelector('.pr-needle');
+          var card = svg.closest('.trust-card');
+          if (!needle || !card) return;
+
+          var BIND = 'v5';   // versioned for the same hot-reload reason as above
+          if (svg.dataset.prBound === BIND) return;
+          if (svg.__prAbort) svg.__prAbort.abort();
+          svg.__prAbort = new AbortController();
+          var sig = { signal: svg.__prAbort.signal };
+          svg.dataset.prBound = BIND;
+          needle.removeAttribute('style');
+
+          var DUR = 900;
+          var EASE = 'cubic-bezier(.2,.85,.25,1)';
+          var reduce = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+          var clear = function () { needle.style.transform = 'rotate(0deg)'; };
+          var spin = function () {
+            if (reduce.matches) return;
+            needle.style.transition = 'none';
+            needle.style.transform = 'rotate(-360deg)';
+            void svg.getBoundingClientRect();
+            needle.style.transition = 'transform ' + DUR + 'ms ' + EASE;
+            needle.style.transform = 'rotate(0deg)';
+          };
+          needle.style.transform = 'rotate(0deg)';
+          needle.style.transition = 'transform ' + DUR + 'ms ' + EASE;
+          svg.__atxPlay = spin;   // touch trigger, fired by bindTouchTriggers
+
+          card.addEventListener('pointerenter', fromMouse(spin), sig);
+          card.addEventListener('focusin', spin, sig);
+          card.addEventListener('pointerleave', fromMouse(clear), sig);
+        }
+
+        /* Simplicity: the switch has no JS on a hover device (a CSS
+           transition owns it via :hover/:focus-within), so its only job here
+           is to clear any .is-on latched by a previous touch selection and
+           register the null touch trigger — on touch the .is-selected class
+           on the card drives the transition directly. */
+        function bindToggle() {
+          var svg = document.querySelector('.icon-sp');
+          if (!svg) return;
+          svg.classList.remove('is-on');
+          svg.__atxPlay = null;
+        }
+
+        /* Mobile/touch parity. The three animations above are all
+           cursor-driven (pointerenter, :hover), so none of them ever ran on
+           a touch device — the marks appeared frozen. Touch gets a
+           selection model instead: tapping an unselected card selects it
+           and plays its animation (via svg.__atxPlay); tapping it again
+           deselects it and plays nothing — a replay requires deselect then
+           select again. One card selected at a time; tapping outside the
+           grid clears it. Scroll triggers nothing on touch, deliberately. */
+        function bindTouchTriggers() {
+          if (!window.matchMedia('(hover: none), (pointer: coarse)').matches) return;
+          var grid = document.querySelector('.trust-grid');
+          if (!grid || grid.dataset.atxTouch === 'v2') return;
+
+          var cards = [].slice.call(grid.querySelectorAll('.trust-card'));
+          if (!cards.length) return;
+          if (grid.__atxTouchAbort) grid.__atxTouchAbort.abort();
+          grid.__atxTouchAbort = new AbortController();
+          var sig = { signal: grid.__atxTouchAbort.signal };
+          grid.dataset.atxTouch = 'v2';
+
+          var deselectAll = function () {
+            cards.forEach(function (c) { c.classList.remove('is-selected'); });
+          };
+
+          cards.forEach(function (card) {
+            card.addEventListener('click', function (e) {
+              e.stopPropagation();            // keep the document handler from undoing this
+              var wasSelected = card.classList.contains('is-selected');
+              deselectAll();
+              if (wasSelected) return;        // selected → deselected: no animation
+              card.classList.add('is-selected');
+              var svg = card.querySelector('.icon-cc, .icon-pr, .icon-sp');
+              if (svg && typeof svg.__atxPlay === 'function') svg.__atxPlay();
+            }, sig);
+          });
+
+          document.addEventListener('click', deselectAll, sig);
+        }
+
+        bindIconDraw();
+        bindCompass();
+        bindToggle();
+        bindTouchTriggers();
       })();
     </script>
   </body>
