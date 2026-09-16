@@ -104,7 +104,18 @@ function permissionTriState(p: NotificationPermission): boolean | null {
 }
 
 export default function Settings() {
-  const { theme, toggleTheme, language, setLanguage, t, user, deleteAccount, authUserId } = useApp();
+  const {
+    theme,
+    toggleTheme,
+    language,
+    setLanguage,
+    t,
+    user,
+    deleteAccount,
+    authUserId,
+    twoFactorNudgeDismissed,
+    setTwoFactorNudgeDismissed,
+  } = useApp();
   const navigate = useNavigate();
   // QA 12.0: "For all UIs put the ability to delete account which when
   // pressed will prompt you to make sure... Make it not that obvious or
@@ -438,6 +449,29 @@ export default function Settings() {
           </div>
           <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
         </button>
+
+        {/* THE WAY BACK FROM A DISMISSAL. The nudge on the professional
+            dashboard hides permanently once dismissed, which is only
+            defensible if turning it back on is findable — and the row sits
+            here, next to the thing it is reminding you about, rather than in
+            a notifications screen two levels away.
+
+            Shown only to the people who can see the nudge and have actually
+            turned it off, so it is not a switch for a banner nobody has met. */}
+        {user.accountType === "professional" && twoFactorNudgeDismissed && !mfaEnrolled && (
+          <div className="flex items-center justify-between px-4 py-3.5 border-t border-charcoal/[0.06]">
+            <div className="text-left pr-3">
+              <span className="text-sm font-medium text-charcoal">Remind me about two-factor</span>
+              <p className="text-[11px] text-charcoal-faint">
+                You dismissed the reminder on your dashboard.
+              </p>
+            </div>
+            <Toggle
+              checked={!twoFactorNudgeDismissed}
+              onChange={() => setTwoFactorNudgeDismissed(false)}
+            />
+          </div>
+        )}
       </Card>
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">

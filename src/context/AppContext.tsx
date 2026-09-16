@@ -555,6 +555,26 @@ interface AppState {
    */
   voiceDisclosureSeen: boolean;
   setVoiceDisclosureSeen: (seen: boolean) => void;
+  /**
+   * The professional has dismissed the "turn on two-factor" nudge.
+   *
+   * SAME SHAPE AS THE TWO FLAGS ABOVE — a persisted boolean gating a
+   * dismissible notice — because that is what this app already does for
+   * non-blocking prompts, and a third mechanism for a third prompt would be
+   * three things to reason about instead of one.
+   *
+   * DISMISSAL IS PER DEVICE, and that is the honest reading of localStorage
+   * rather than a limitation being papered over: the flag is not on the
+   * account, so signing in elsewhere shows the nudge again. For a security
+   * reminder that is the better failure direction — the cost of seeing it
+   * twice is a banner, and the cost of never seeing it again is an
+   * unprotected account.
+   *
+   * NOTHING READS THIS EXCEPT THE BANNER. It gates no route, no query and no
+   * capability; see TwoFactorNudge.
+   */
+  twoFactorNudgeDismissed: boolean;
+  setTwoFactorNudgeDismissed: (dismissed: boolean) => void;
   // "Let users pause reminders, summaries, and notifications with one
   // tap." No real notification engine exists in this prototype to hook
   // into, so this is the user-facing flag that would gate it.
@@ -1735,6 +1755,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
   const [recoverySensitiveIntroSeen, setRecoverySensitiveIntroSeen] = usePersistentState<boolean>(
     "recoverySensitiveIntroSeen",
+    false
+  );
+  const [twoFactorNudgeDismissed, setTwoFactorNudgeDismissed] = usePersistentState<boolean>(
+    "twoFactorNudgeDismissed",
     false
   );
   const [remindersPaused, setRemindersPaused] = usePersistentState<boolean>("remindersPaused", false);
@@ -4304,6 +4328,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       streaksError,
       recoverySensitiveIntroSeen,
       voiceDisclosureSeen,
+      twoFactorNudgeDismissed,
+      setTwoFactorNudgeDismissed,
       setVoiceDisclosureSeen,
       setRecoverySensitiveIntroSeen,
       remindersPaused,
@@ -4487,6 +4513,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       streaksError,
       recoverySensitiveIntroSeen,
       voiceDisclosureSeen,
+      twoFactorNudgeDismissed,
+      setTwoFactorNudgeDismissed,
       setVoiceDisclosureSeen,
       remindersPaused,
       referralRedeemed,

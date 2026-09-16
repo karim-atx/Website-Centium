@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { TwoFactorNudge } from "../../components/profile/TwoFactorNudge";
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import {
@@ -222,6 +223,8 @@ export default function ProfessionalDashboard() {
           </div>
         }
       />
+
+      <TwoFactorNudge />
 
       {searchOpen && (
         <input
