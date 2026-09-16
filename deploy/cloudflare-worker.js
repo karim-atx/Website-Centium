@@ -120,6 +120,28 @@ async function proxyHub404() {
   return new Response(response.body, { status: 404, statusText: "Not Found", headers: response.headers });
 }
 
+// THE INVARIANT THIS FILE EXISTS TO HOLD, and it is not stylistic.
+//
+// Until 2026-09-07 this Worker REVERSE-PROXIED atraxia.org/centium/* to the
+// Centium build on GitHub Pages. That made the app run under the atraxia.org
+// origin, so it wrote its `centium-state:*` localStorage keys there —
+// including health data. Real browsers were later found still holding those
+// keys on this origin. The data outlived the proxy by months because
+// localStorage never expires.
+//
+// So: NOTHING UNDER /centium MAY EVER BE PROXIED FROM THIS DOMAIN AGAIN. A
+// redirect moves the browser to centium.atraxia.org and the app writes to its
+// own origin; a proxy keeps the URL bar on atraxia.org and the app writes
+// here. That single difference is what put health data on the wrong origin.
+//
+// The guard below is deliberately redundant with the routing that follows it:
+// the allowlist already excludes /centium, and the legacy branch already
+// redirects. It is here so that adding "/centium/" to HUB_ASSET_PREFIXES —
+// the one edit that would silently recreate the bug — fails closed instead.
+function assertNeverProxied(pathname) {
+  return isLegacyCentiumPath(pathname);
+}
+
 export default {
   async fetch(request) {
     const url = new URL(request.url);
@@ -129,6 +151,13 @@ export default {
     // branded 404 instead of redirecting.
     if (isHubHost(url.hostname) && isLegacyCentiumPath(url.pathname)) {
       return redirectToCentium(url);
+    }
+
+    // A /centium path on a non-hub hostname bound to this Worker. It cannot
+    // be proxied — see the invariant above — so it gets the 404 rather than
+    // falling through to any asset branch.
+    if (assertNeverProxied(url.pathname)) {
+      return proxyHub404();
     }
 
     if (isHubAsset(url.pathname)) {

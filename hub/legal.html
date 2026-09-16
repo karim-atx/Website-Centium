@@ -153,6 +153,63 @@
         .tabs a { padding: 0.5rem 0.7rem; }
       }
     </style>
+    <!-- LEGACY CENTIUM DATA CLEANUP. Runs on atraxia.org only, and exists
+         because this origin once ran the Centium app itself.
+
+         WHAT HAPPENED. Between 2026-08-27 and 2026-09-07 the Cloudflare
+         Worker reverse-proxied atraxia.org/centium/* to the Centium build on
+         GitHub Pages, so the app executed under THIS origin and wrote its
+         `centium-state:*` localStorage keys here — including health data
+         (bloodMarkers, comorbidities, clientHealthNotes, clientAccessGrants).
+         On 2026-09-07 the proxy became a 301 to centium.atraxia.org, so
+         nothing has written here since. localStorage never expires, though,
+         so the data stayed behind on every browser that used the app in that
+         window. This clears it.
+
+         NOT A SERVICE WORKER PROBLEM, checked rather than assumed: the app's
+         service worker was added 2026-09-14, a week AFTER the proxy ended, so
+         none was ever registered under this origin. The unregister call below
+         is defensive — it costs one promise and removes the doubt — not the
+         mechanism this is here to defeat.
+
+         SAFE BY ORIGIN. A page can only touch its own origin's storage, so
+         this cannot reach centium.atraxia.org, where the same keys are the
+         app's live state. The hostname guard is a second belt: it keeps the
+         script inert if these files are ever served from somewhere else.
+
+         RUNS EVERY LOAD, not once behind a flag. It is a handful of
+         localStorage reads, and a one-shot marker would be one more key on an
+         origin the whole point is to leave clean. -->
+    <script>
+      (function () {
+        try {
+          var h = location.hostname;
+          if (h !== "atraxia.org" && h !== "www.atraxia.org") return;
+
+          try {
+            var keys = [];
+            for (var i = 0; i < localStorage.length; i++) {
+              var k = localStorage.key(i);
+              if (k && k.indexOf("centium-state:") === 0) keys.push(k);
+            }
+            for (var j = 0; j < keys.length; j++) localStorage.removeItem(keys[j]);
+            if (keys.length) {
+              console.info("[atraxia] Cleared " + keys.length + " legacy Centium key(s) from this origin.");
+            }
+          } catch (e) {
+            /* Storage blocked or unavailable — nothing to clear, nothing to do. */
+          }
+
+          if (navigator.serviceWorker && navigator.serviceWorker.getRegistrations) {
+            navigator.serviceWorker.getRegistrations().then(function (regs) {
+              for (var r = 0; r < regs.length; r++) regs[r].unregister();
+            }).catch(function () {});
+          }
+        } catch (e) {
+          /* Never let cleanup break the page it is embedded in. */
+        }
+      })();
+    </script>
   </head>
   <body>
     <img class="hero-backdrop" src="atraxia/atraxia-mark-hi.png" alt="" aria-hidden="true" />
