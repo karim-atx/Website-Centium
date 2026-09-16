@@ -148,9 +148,72 @@
       footer a { font-size: 0.86rem; font-weight: 600; }
 
       @media (max-width: 760px) {
-        .layout { grid-template-columns: 1fr; gap: 1.25rem; }
-        .tabs { position: static; flex-direction: row; flex-wrap: wrap; gap: 0.4rem; }
-        .tabs a { padding: 0.5rem 0.7rem; }
+        /* minmax(0, 1fr), not 1fr: a bare 1fr is minmax(auto, 1fr), whose
+           min-width:auto lets the track grow to the content's min-content
+           width — the sub-processor table's min-width then blew the column out
+           to 544px and scrolled the whole page sideways. */
+        .layout { grid-template-columns: minmax(0, 1fr); gap: 1.25rem; }
+
+        /* The seven labels are long enough that flex-wrap gave every one its own
+           line, i.e. the desktop stack with extra steps: ~340px of nav before any
+           policy text. So on mobile the nav becomes a single horizontally
+           scrollable pill strip, sticky under the header, with scroll-snap and
+           momentum. One row, always, whatever the label lengths. */
+        .tabs {
+          /* --hdr is measured from the real header at runtime (see the script at
+             the end of body) and falls back to its current 82px. Hardcoding it
+             breaks the moment the header reflows — bigger brand text, iOS text
+             scaling, a longer back-link — and the strip then hides behind the
+             header, which is z-index 10 against this strip's 5. */
+          position: sticky; top: var(--hdr, 82px); z-index: 5;
+          display: flex; flex-direction: row; flex-wrap: nowrap; gap: 0.45rem;
+          overflow-x: auto; overflow-y: hidden;
+          scroll-snap-type: x proximity;
+          -webkit-overflow-scrolling: touch;
+          scrollbar-width: none;
+          /* full-bleed past main's 1.5rem padding, so the strip reads as a bar
+             and the last pill is not visually clipped by the page gutter */
+          margin: 0 -1.5rem; padding: 0.55rem 1.5rem;
+          /* the scrollbar is hidden, so without an affordance nothing signals
+             that four more sections exist off-screen. These fades are applied
+             by .has-overflow-* classes (set from the scroll handler) so an edge
+             only softens when there is actually something past it. */
+          background: rgb(var(--cream) / 0.92);
+          backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+          border-bottom: 1px solid rgb(var(--border) / 0.1);
+        }
+        .tabs::-webkit-scrollbar { display: none; }
+        .tabs.has-overflow-end {
+          -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 42px), rgb(0 0 0 / 0.15) 100%);
+          mask-image: linear-gradient(90deg, #000 calc(100% - 42px), rgb(0 0 0 / 0.15) 100%);
+        }
+        .tabs.has-overflow-start {
+          -webkit-mask-image: linear-gradient(90deg, rgb(0 0 0 / 0.15) 0, #000 42px);
+          mask-image: linear-gradient(90deg, rgb(0 0 0 / 0.15) 0, #000 42px);
+        }
+        .tabs.has-overflow-start.has-overflow-end {
+          -webkit-mask-image: linear-gradient(90deg, rgb(0 0 0 / 0.15) 0, #000 42px, #000 calc(100% - 42px), rgb(0 0 0 / 0.15) 100%);
+          mask-image: linear-gradient(90deg, rgb(0 0 0 / 0.15) 0, #000 42px, #000 calc(100% - 42px), rgb(0 0 0 / 0.15) 100%);
+        }
+        .tabs a {
+          flex: 0 0 auto; scroll-snap-align: center;
+          padding: 0.6rem 0.95rem; border-radius: 999px;
+          font-size: 0.875rem; white-space: nowrap;
+          border: 1px solid rgb(var(--border) / 0.12);
+          background: rgb(var(--cream-soft));
+          min-height: 44px; display: flex; align-items: center;
+        }
+        .tabs a.is-active {
+          background: rgb(var(--navy)); color: rgb(var(--cream));
+          border-color: rgb(var(--navy));
+        }
+        .tabs a.is-active:hover, .tabs a.is-active:focus-visible { color: rgb(var(--cream)); }
+
+        main { padding: 1.5rem 1.5rem 4rem; }
+        article h2 { font-size: 1.5rem; }
+        /* the sub-processor table would otherwise force the page sideways */
+        .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .table-wrap table { min-width: 34rem; }
       }
     </style>
   </head>
@@ -471,7 +534,61 @@
             toTop(a);
           });
         });
+        /* Keep the active pill visible in the mobile strip. Written as an
+           explicit scrollLeft on the strip itself (not scrollIntoView, which
+           would also yank the document vertically). */
+        function centreTab(a) {
+          var strip = document.querySelector('.tabs');
+          if (!strip || strip.scrollWidth <= strip.clientWidth) return;
+          var target = a.offsetLeft - (strip.clientWidth - a.offsetWidth) / 2;
+          var max = strip.scrollWidth - strip.clientWidth;
+          var left = Math.max(0, Math.min(target, max));
+          /* Direct assignment, with smooth scrollTo only as an enhancement:
+             scrollTo({behavior:'smooth'}) is a silent no-op on this element in
+             some engines, which left the active pill off-screen entirely. */
+          strip.scrollLeft = left;
+          if (typeof strip.scrollTo === 'function') {
+            try { strip.scrollTo({ left: left, behavior: 'smooth' }); } catch (e) {}
+          }
+        }
+        tabs.forEach(function (a) {
+          a.addEventListener('click', function () { centreTab(a); });
+        });
+
         show(location.hash ? location.hash.slice(1) : ids[0]);
+        var activeTab = document.querySelector('.tabs a.is-active');
+        if (activeTab) centreTab(activeTab);
+
+        /* Mobile strip affordances, both of which need real measurement rather
+           than a CSS guess:
+           1. --hdr publishes the header's true height so the sticky strip sits
+              directly under it however the header reflows.
+           2. .has-overflow-start/end drive the edge fades, so an edge only
+              softens when there is genuinely something past it. */
+        var strip = document.querySelector('.tabs');
+        var header = document.querySelector('.header');
+
+        function syncHeader() {
+          if (!header) return;
+          document.documentElement.style.setProperty('--hdr', Math.round(header.getBoundingClientRect().height) + 'px');
+        }
+        function syncOverflow() {
+          if (!strip) return;
+          var slack = strip.scrollWidth - strip.clientWidth;
+          strip.classList.toggle('has-overflow-start', slack > 1 && strip.scrollLeft > 4);
+          strip.classList.toggle('has-overflow-end', slack > 1 && strip.scrollLeft < slack - 4);
+        }
+        var sync = function () { syncHeader(); syncOverflow(); };
+        sync();
+        if (strip) strip.addEventListener('scroll', syncOverflow, { passive: true });
+        window.addEventListener('resize', sync, { passive: true });
+        window.addEventListener('orientationchange', sync, { passive: true });
+        if (typeof ResizeObserver === 'function' && header) {
+          new ResizeObserver(sync).observe(header);
+        }
+        /* fonts land after first paint and change both measurements */
+        if (document.fonts && document.fonts.ready) { document.fonts.ready.then(sync); }
+        tabs.forEach(function (a) { a.addEventListener('click', syncOverflow); });
       })();
 
 
