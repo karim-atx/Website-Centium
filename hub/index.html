@@ -1483,9 +1483,17 @@
       .stat-orbit .rider { position: absolute; left: 0; top: 0; width: 0; height: 0; }
       .stat-orbit .tangent { position: absolute; left: 0; top: 0; width: 0; height: 0; }
       .stat-trail {
-        /* the SVG now covers the panel instead of a fixed 300x300 box */
-        position: absolute; inset: 0; width: 100%; height: 100%;
-        overflow: visible; pointer-events: none;
+        /* Sized in JS (see the geometry sync in the orbit module), not here:
+           this element's containing block is .stat-orbit, which is a
+           deliberate ZERO-SIZED anchor point (width/height: 0, centred on the
+           panel via left/top: 50%) that the old circle-orbit math positioned
+           everything against. A percentage width/height here resolves
+           against that zero size and collapses to 0×0 regardless of inset —
+           the SVG's own viewport vanishes, so nothing inside it paints even
+           though its path data and opacity are otherwise correct. JS already
+           measures the panel every frame to build the viewBox, so it sets
+           left/top/width/height in real px there instead. */
+        position: absolute; overflow: visible; pointer-events: none;
       }
       .stat-trail circle { stroke: none; transform-origin: 150px 150px; }
       /* the nucleus lives in the SVG alongside the flame path, so head and
@@ -4784,7 +4792,11 @@
               panel.addEventListener('mouseleave', function () { last = -1; });
             }
 
-            /* the SVG now covers the panel instead of a fixed 300x300 box */
+            /* the SVG now covers the panel instead of a fixed 300x300 box.
+               Its containing block (.stat-orbit) is a zero-sized anchor
+               point centred on the panel, so its position/size are set here
+               in real px rather than left to a CSS percentage, which would
+               resolve against that zero size and collapse to nothing. */
             var svgEl = panel.querySelector('.stat-trail');
             var pr = panel.getBoundingClientRect();
             if (pr.width > 2 && Math.abs(pr.width - W) > 1) {
@@ -4792,7 +4804,13 @@
               RX = Math.max(120, W / 2 - 46);
               RY = Math.max(38, Math.min(70, H / 2 - 34));
               CX = W / 2; CY = H * 0.42;
-              if (svgEl) svgEl.setAttribute('viewBox', '0 0 ' + W.toFixed(0) + ' ' + H.toFixed(0));
+              if (svgEl) {
+                svgEl.setAttribute('viewBox', '0 0 ' + W.toFixed(0) + ' ' + H.toFixed(0));
+                svgEl.style.left = (-W / 2) + 'px';
+                svgEl.style.top = (-H / 2) + 'px';
+                svgEl.style.width = W + 'px';
+                svgEl.style.height = H + 'px';
+              }
               hist.length = 0;
             }
 
