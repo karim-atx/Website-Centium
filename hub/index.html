@@ -5256,18 +5256,10 @@
           card.addEventListener('pointerleave', fromMouse(clear), sig);
           card.addEventListener('focusout', clear, sig);
 
-          /* Stands in for the scroll reveal this icon opted out of: draw it
-             once, the first time the card comes into view. Hover devices
-             only — on touch the animation belongs to the tap-selection edge,
-             so scrolling past must not spend it. */
-          if (typeof IntersectionObserver === 'function'
-              && !window.matchMedia('(hover: none), (pointer: coarse)').matches) {
-            var io = new IntersectionObserver(function (entries) {
-              if (entries.some(function (e) { return e.isIntersecting; })) { io.disconnect(); draw(); }
-            }, { threshold: 0.4 });
-            io.observe(card);
-            svg.__ccAbort.signal.addEventListener('abort', function () { io.disconnect(); });
-          }
+          /* No scroll-triggered reveal: the mark stays static (fully drawn,
+             no dash state — see the CSS opt-out above) until the card is
+             actually hovered or focused. Matches bindCompass/bindToggle,
+             neither of which ever animated on scroll either. */
         }
 
         /* Principled: one settling spin of the compass needle per hover. A
