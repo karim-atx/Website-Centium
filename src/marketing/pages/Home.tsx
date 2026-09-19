@@ -10,11 +10,10 @@ import { PlanPicker, type Plan } from "../components/PlanPicker";
 import { FaqAccordion, type FaqItem } from "../components/FaqAccordion";
 import { ProblemList, type ProblemItem } from "../components/ProblemList";
 import { ReviewsConveyor, type Review } from "../components/ReviewsConveyor";
+import { Ecosystem } from "../components/Ecosystem";
 import { BrandLoader } from "../components/BrandLoader";
-import { PricingLeafAccent } from "../components/PricingLeafAccent";
 import { useHeroFlow } from "../hooks/useHeroFlow";
 import { useHeroSubtextPlacement } from "../hooks/useHeroSubtextPlacement";
-import { usePricingAccents } from "../hooks/usePricingAccents";
 import { useSEO } from "../useSEO";
 
 const legacyApps: ProblemItem[] = [
@@ -59,272 +58,55 @@ const faqItems: FaqItem[] = [
 ];
 
 const reviews: Review[] = [
-  { initials: "LK", name: "Layla K.", role: "General User", tone: "primary", quote: "Nutrition goals that adapt to you, not the other way around." },
-  { initials: "OS", name: "Omar S.", role: "Athlete", tone: "teal", quote: "Every set, every rep, every metric, tracked live." },
-  { initials: "NF", name: "Nadia F.", role: "Dietitian", tone: "primary", quote: "Your clients, your plans, one seamless system." },
-  { initials: "KD", name: "Karim D.", role: "General User", tone: "teal", quote: "One place to understand, manage and improve your health." },
-  { initials: "RH", name: "Rana H.", role: "Personal Trainer", tone: "primary", quote: "Manage everything from health data to workouts and nutrition." },
-  { initials: "YT", name: "Youssef T.", role: "General User", tone: "teal", quote: "Log less, eat better." },
+  { initials: "JD", name: "Jane Doe", role: "General User", tone: "primary", quote: "Nutrition goals that adapt to you, not the other way around." },
+  { initials: "JD", name: "John Doe", role: "Athlete", tone: "teal", quote: "Every set, every rep, every metric, tracked live." },
+  { initials: "JR", name: "Jane Roe", role: "Dietitian", tone: "primary", quote: "Your clients, your plans, one seamless system." },
+  { initials: "JR", name: "John Roe", role: "General User", tone: "teal", quote: "One place to understand, manage and improve your health." },
+  { initials: "JP", name: "Jane Poe", role: "Personal Trainer", tone: "primary", quote: "Manage everything from health data to workouts and nutrition." },
+  { initials: "JP", name: "John Poe", role: "General User", tone: "teal", quote: "Log less, eat better." },
 ];
 
+// Literal figures from the v5 handoff's own `homePlans` data (`.dc.html`
+// line ~1736) — a previous round's placeholder prices ($30/$15/$100) are
+// superseded here. Yearly totals are the handoff's own literal −15% figures,
+// not derived at runtime (see PlanPicker's own note on `yearlyPrice`: e.g.
+// $15×12×0.85 = $153, not the handoff's $149).
 const homePlans: Plan[] = [
   {
     key: "professionals",
     name: "Professionals",
     description: "Manage your entire roster, while keeping every experience personal.",
-    monthly: 30,
-    unit: "per seat / month",
+    monthly: 15,
+    unit: "/ month",
+    prefix: "Starting at",
+    yearlyPrice: 149,
+    yearlyUnit: "/ yr",
     features: ["Client roster & booking", "Programs Management", "Comprehensive Data Tracking"],
     ctaLabel: "Get Started",
-    ctaHref: "/app",
   },
   {
     key: "clients",
     name: "General Users",
     description: "Take charge of your health with one click.",
-    monthly: 15,
+    monthly: 9.99,
     unit: "per month",
+    yearlyPrice: 99,
+    yearlyUnit: "/ yr",
     features: ["Nutrition & workout logging", "Health tracking & trends", "Connected Community & Experts"],
     ctaLabel: "Get Started",
-    ctaHref: "/app",
   },
   {
     key: "business",
     name: "Business",
     description: "Unlock new opportunities. Scale your business with Centium.",
-    monthly: 100,
+    monthly: 79,
     unit: "per month + rev share",
+    yearlyPrice: 799,
+    yearlyUnit: "/ yr + rev share",
     features: ["Marketplace Visibility", "Team Operations", "Growth Analytics"],
     ctaLabel: "Talk to us",
-    ctaHref: "/contact",
   },
 ];
-
-// ---------------------------------------------------------------------------
-// Hero phone mockups
-// ---------------------------------------------------------------------------
-
-const StatusBar: React.FC = () => (
-  <div className="flex items-center justify-between px-4 pt-2.5 pb-1 text-[9px] font-bold text-mkt-faint">
-    <span>9:41</span>
-    <span className="w-[58px] h-[5px] rounded-full bg-mkt-line" />
-    <span>100%</span>
-  </div>
-);
-
-const HeroPhoneNutrition: React.FC = () => (
-  <div className="w-full h-full flex flex-col gap-2.5 p-4 bg-white text-left">
-    <div className="flex items-center justify-between gap-2">
-      <div>
-        <div className="text-xs font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">Today</div>
-        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">1,842 / 2,340 kcal</div>
-      </div>
-      <div className="relative w-[34px] h-[34px] rounded-full border-[3px] shrink-0" style={{ borderColor: "#E4DCF8" }}>
-        <div className="absolute -inset-[3px] rounded-full border-[3px] border-r-transparent border-b-transparent" style={{ borderColor: "#7D67D9", borderRightColor: "transparent", borderBottomColor: "transparent" }} />
-      </div>
-    </div>
-    <div className="flex flex-col gap-[7px] mt-0.5">
-      {[
-        { label: "Protein", val: "128 / 165 g", pct: 78, bar: "#7D67D9", bg: "#F4F1FB" },
-        { label: "Carbs", val: "196 / 260 g", pct: 75, bar: "#A895E0", bg: "#F4F1FB" },
-        { label: "Fat", val: "48 / 65 g", pct: 74, bar: "#5E9E95", bg: "#EDF4F3" },
-      ].map((row) => (
-        <div key={row.label} className="flex flex-col gap-1">
-          <div className="flex justify-between">
-            <span className="text-[9.5px] font-semibold text-mkt-soft whitespace-nowrap">{row.label}</span>
-            <span className="text-[9.5px] font-extrabold text-mkt-ink whitespace-nowrap">{row.val}</span>
-          </div>
-          <div className="h-1 rounded-full" style={{ background: row.bg }}>
-            <span className="block h-full rounded-full" style={{ width: `${row.pct}%`, background: row.bar }} />
-          </div>
-        </div>
-      ))}
-    </div>
-    <div className="flex flex-col gap-1.5 mt-0.5 flex-1">
-      {[
-        { icon: "B", iconBg: "#F4F1FB", iconFg: "#5C48A8", border: "#E4DCF8", title: "Breakfast", meta: "38P · 62C · 12F", kcal: "512" },
-        { icon: "L", iconBg: "#EDF4F3", iconFg: "#3F726D", border: "#D8EAE6", title: "Lunch", meta: "52P · 74C · 18F", kcal: "686" },
-      ].map((row) => (
-        <div key={row.title} className="flex items-center gap-[9px] rounded-[10px] p-2" style={{ border: `1px solid ${row.border}` }}>
-          <span className="w-[26px] h-[26px] rounded-[7px] shrink-0 flex items-center justify-center text-[9px] font-extrabold" style={{ background: row.iconBg, color: row.iconFg }}>
-            {row.icon}
-          </span>
-          <div className="flex-1 min-w-0">
-            <div className="text-[10px] font-bold text-mkt-ink whitespace-nowrap">{row.title}</div>
-            <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">{row.meta}</div>
-          </div>
-          <span className="text-[9px] font-extrabold text-mkt-ink whitespace-nowrap">{row.kcal}</span>
-        </div>
-      ))}
-      <div className="flex items-center gap-[9px] rounded-[10px] p-2 border border-dashed" style={{ borderColor: "#E4DCF8" }}>
-        <span className="w-[26px] h-[26px] rounded-[7px] shrink-0 flex items-center justify-center text-[11px] font-extrabold" style={{ background: "#F4F1FB", color: "#5C48A8" }}>
-          +
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="text-[10px] font-bold whitespace-nowrap" style={{ color: "#5C48A8" }}>Log Dinner</div>
-          <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">498 kcal left</div>
-        </div>
-      </div>
-    </div>
-  </div>
-);
-
-const HeroPhoneDashboard: React.FC = () => (
-  <div className="w-full h-full flex flex-col">
-    <StatusBar />
-    <div className="flex-1 flex flex-col gap-[11px] px-4 pt-2.5 pb-3.5 text-left">
-      <div className="flex items-center justify-between gap-2">
-        <div>
-          <div className="text-[13px] font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">Dashboard</div>
-          <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">Thu 7 Sep · day 18 streak</div>
-        </div>
-        <span className="w-[29px] h-[29px] rounded-full shrink-0 flex items-center justify-center text-[9.5px] font-extrabold" style={{ background: "#F4F1FB", color: "#5C48A8" }}>
-          KD
-        </span>
-      </div>
-      <div
-        className="rounded-2xl p-3.5 flex items-center justify-between gap-2.5"
-        style={{ background: "linear-gradient(120deg,#7D67D9 0%,#6E86C0 58%,#5E9E95 100%)" }}
-      >
-        <div>
-          <div className="text-[8px] font-bold tracking-[.16em]" style={{ color: "rgba(255,255,255,.86)" }}>TODAY</div>
-          <div className="text-[19px] font-extrabold tracking-[-.03em] text-white leading-[1.1] mt-0.5">1,842</div>
-          <div className="text-[8.5px] font-semibold whitespace-nowrap" style={{ color: "rgba(255,255,255,.9)" }}>of 2,340 kcal</div>
-        </div>
-        <div className="relative w-11 h-11 rounded-full border-4 shrink-0" style={{ borderColor: "rgba(255,255,255,.34)" }}>
-          <div className="absolute -inset-1 rounded-full border-4 border-white" style={{ borderRightColor: "transparent", borderBottomColor: "transparent", transform: "rotate(38deg)" }} />
-        </div>
-      </div>
-      <div className="grid grid-cols-2 gap-[9px] flex-1">
-        {[
-          { label: "NUTRITION", val: "128 g", meta: "protein of 165", dot: "#7D67D9", border: "#E4DCF8", bar: "#7D67D9", barBg: "#F4F1FB" },
-          { label: "TRAINING", val: "Push Day", meta: "4 of 6 exercises", dot: "#5E9E95", border: "#D8EAE6", bar: "#5E9E95", barBg: "#EDF4F3" },
-          { label: "HEALTH", val: "9,412", meta: "steps · avg 8,640", dot: "#7D67D9", border: "#E4DCF8", bar: "#7D67D9", barBg: "#F4F1FB" },
-          { label: "HABITS", val: "4 / 5", meta: "done today", dot: "#5E9E95", border: "#D8EAE6", bar: "#5E9E95", barBg: "#EDF4F3" },
-        ].map((tile) => (
-          <div key={tile.label} className="rounded-[14px] p-[11px] flex flex-col gap-1" style={{ border: `1px solid ${tile.border}` }}>
-            <div className="flex items-center justify-between">
-              <span className="text-[8px] font-bold tracking-[.14em] text-mkt-faint whitespace-nowrap">{tile.label}</span>
-              <span className="w-1.5 h-1.5 rounded-full" style={{ background: tile.dot }} />
-            </div>
-            <div className="text-[14px] font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">{tile.val}</div>
-            <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">{tile.meta}</div>
-            <div className="h-[3px] rounded-full mt-0.5" style={{ background: tile.barBg }}>
-              <span className="block h-full rounded-full" style={{ width: "72%", background: tile.bar }} />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="rounded-[13px] p-[9px] flex items-center gap-[9px]" style={{ border: "1px solid #E4DCF8" }}>
-        <span className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[9px] font-extrabold" style={{ background: "#EDF4F3", color: "#3F726D" }}>
-          NF
-        </span>
-        <div className="flex-1 min-w-0">
-          <div className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap">Nadia F. · dietitian</div>
-          <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">Updated your macro targets</div>
-        </div>
-      </div>
-    </div>
-    <div className="flex items-center justify-around px-3.5 pt-2.5 pb-3 border-t" style={{ borderColor: "#F1EEE9" }}>
-      <span className="w-[18px] h-[18px] rounded-[6px]" style={{ background: "#7D67D9" }} />
-      <span className="w-[18px] h-[18px] rounded-[6px] bg-mkt-line" />
-      <span className="w-[18px] h-[18px] rounded-[6px] bg-mkt-line" />
-      <span className="w-[18px] h-[18px] rounded-[6px] bg-mkt-line" />
-    </div>
-  </div>
-);
-
-const HeroPhoneHealth: React.FC = () => (
-  <div className="w-full h-full flex flex-col gap-2.5 p-4 bg-white text-left">
-    <div className="flex items-center justify-between gap-2">
-      <div>
-        <div className="text-xs font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">Steps</div>
-        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">9,412 today · 8,640 avg</div>
-      </div>
-      <div className="flex gap-1">
-        <span className="px-2 py-[3px] rounded-full text-[8.5px] font-bold whitespace-nowrap" style={{ background: "#7D67D9", color: "#fff" }}>D</span>
-        <span className="px-2 py-[3px] rounded-full text-[8.5px] font-bold whitespace-nowrap" style={{ background: "#F4F1FB", color: "#5C48A8" }}>W</span>
-        <span className="px-2 py-[3px] rounded-full text-[8.5px] font-bold whitespace-nowrap" style={{ background: "#F4F1FB", color: "#5C48A8" }}>M</span>
-      </div>
-    </div>
-    <div className="flex items-end gap-1 h-[42px] mt-0.5">
-      {[52, 68, 44, 88, 60, 100, 72].map((h, i) => (
-        <span
-          key={i}
-          className="flex-1 rounded-t-sm"
-          style={{ height: `${h}%`, background: i === 5 ? "#7D67D9" : "#F4F1FB", opacity: i === 3 ? 0.5 : 1 }}
-        />
-      ))}
-    </div>
-    <div className="grid grid-cols-2 gap-2">
-      <div className="rounded-[11px] p-2" style={{ border: "1px solid #E4DCF8" }}>
-        <div className="text-[8px] font-bold tracking-[.12em] text-mkt-faint">WEIGHT</div>
-        <div className="text-xs font-extrabold text-mkt-ink mt-0.5">74.6 kg</div>
-        <div className="text-[8px] font-bold" style={{ color: "#5C48A8" }}>tap to edit</div>
-      </div>
-      <div className="rounded-[11px] p-2" style={{ border: "1px solid #D8EAE6" }}>
-        <div className="text-[8px] font-bold tracking-[.12em] text-mkt-faint">BODY FAT</div>
-        <div className="text-xs font-extrabold text-mkt-ink mt-0.5">17.2%</div>
-        <div className="text-[8px] font-bold" style={{ color: "#3F726D" }}>tap to edit</div>
-      </div>
-    </div>
-    <div className="rounded-xl p-[9px] flex-1" style={{ border: "1px solid #E4DCF8" }}>
-      <div className="flex items-center justify-between">
-        <span className="text-[10px] font-bold text-mkt-ink whitespace-nowrap">Sleep score 84</span>
-        <span className="text-[8.5px] text-mkt-faint whitespace-nowrap">7h 22m</span>
-      </div>
-      <div className="flex gap-[3px] mt-1.5 h-1.5">
-        <span className="rounded-full" style={{ flex: 22, background: "#7D67D9" }} />
-        <span className="rounded-full" style={{ flex: 26, background: "#7D67D9", opacity: 0.6 }} />
-        <span className="rounded-full" style={{ flex: 44, background: "#F4F1FB" }} />
-        <span className="rounded-full" style={{ flex: 8, background: "#E7E3DC" }} />
-      </div>
-      <div className="flex justify-between mt-1 text-[7.5px] font-semibold text-mkt-faint">
-        <span>REM 22%</span>
-        <span>Deep 26%</span>
-        <span>Light 44%</span>
-        <span>Awake 8%</span>
-      </div>
-    </div>
-  </div>
-);
-
-const HeroPhoneNarrow: React.FC = () => (
-  <div className="w-full h-full flex flex-col gap-2.5 p-4 bg-white text-left">
-    <div className="flex items-center justify-between gap-2">
-      <div>
-        <div className="text-xs font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">Good morning, Karim</div>
-        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">Thu 7 Sep · all four pillars</div>
-      </div>
-      <span className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-[9.5px] font-extrabold" style={{ background: "#F4F1FB", color: "#5C48A8" }}>
-        KD
-      </span>
-    </div>
-    <div className="grid grid-cols-2 gap-[9px] mt-0.5 flex-1">
-      {[
-        { title: "Nutrition", meta: "1,842 kcal", bg: "#F4F1FB", border: "#E4DCF8" },
-        { title: "Training", meta: "Push Day", bg: "#EDF4F3", border: "#D8EAE6" },
-        { title: "Health", meta: "9,412 steps", bg: "#F4F1FB", border: "#E4DCF8" },
-        { title: "Community", meta: "18-day streak", bg: "#EDF4F3", border: "#D8EAE6" },
-      ].map((tile) => (
-        <div key={tile.title} className="rounded-[13px] p-[11px] flex flex-col gap-1.5" style={{ border: `1px solid ${tile.border}` }}>
-          <span className="w-5 h-5 rounded-md" style={{ background: tile.bg }} />
-          <div className="text-[10.5px] font-extrabold text-mkt-ink whitespace-nowrap">{tile.title}</div>
-          <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">{tile.meta}</div>
-        </div>
-      ))}
-    </div>
-    <div className="rounded-xl p-[9px] flex items-center gap-[9px]" style={{ border: "1px solid #E4DCF8" }}>
-      <span className="w-6 h-6 rounded-full shrink-0 flex items-center justify-center text-[9px] font-extrabold" style={{ background: "#EDF4F3", color: "#3F726D" }}>
-        NF
-      </span>
-      <div className="flex-1 min-w-0">
-        <div className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap">Nadia F. · dietitian</div>
-        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">Updated your macro targets</div>
-      </div>
-    </div>
-  </div>
-);
 
 // ---------------------------------------------------------------------------
 // Platform pillar graphics + browser-chrome mockups
@@ -683,146 +465,22 @@ const pillars: PillarData[] = [
   },
 ];
 
-// ---------------------------------------------------------------------------
-// Who it's for — persona art (unchanged across v2/v3)
-// ---------------------------------------------------------------------------
-
-const traitArt = {
-  checklist: (
-    <div className="relative w-full h-[152px] rounded-[14px] overflow-hidden" style={{ background: "linear-gradient(150deg,#E9E3F8 0%,#EFEAF9 46%,#E4EEEB 100%)" }}>
-      <div className="absolute rounded-full pointer-events-none" style={{ left: -18, top: -22, width: 96, height: 96, background: "radial-gradient(circle at 40% 40%,rgba(162,200,194,.55),rgba(162,200,194,0) 70%)" }} />
-      <div className="absolute rounded-full pointer-events-none" style={{ right: -14, bottom: -26, width: 104, height: 104, background: "radial-gradient(circle at 50% 50%,rgba(140,110,222,.4),rgba(140,110,222,0) 70%)" }} />
-      <div className="relative m-3.5 rounded-[10px] px-[13px] py-3" style={{ background: "rgba(255,255,255,.82)", boxShadow: "0 10px 24px rgba(72,58,130,.12)" }}>
-        <div className="text-[8px] font-bold tracking-[.18em] text-mkt-faint">A HEALTHIER ME</div>
-        <div className="flex flex-col gap-1.5 mt-2.5">
-          {[
-            { label: "Hit Protein Goals", bg: "#7D67D9", done: true },
-            { label: "Mindfulness", bg: "#7D67D9", done: true },
-            { label: "Resistance Train", bg: "#6F9993", done: true },
-            { label: "Online Consultation", bg: "", done: false },
-          ].map((row) => (
-            <div key={row.label} className="flex items-center gap-[7px]">
-              {row.done ? (
-                <span className="w-[11px] h-[11px] rounded-[3px] text-white text-[8px] leading-[11px] text-center" style={{ background: row.bg }}>✓</span>
-              ) : (
-                <span className="w-[11px] h-[11px] rounded-[3px]" style={{ border: "1.5px solid rgba(34,30,26,.28)" }} />
-              )}
-              <span className="text-[10.5px] font-semibold text-[#3B352D] whitespace-nowrap">{row.label}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  ),
-  dumbbell: (
-    <div className="relative w-full h-[152px] rounded-[14px] overflow-hidden" style={{ background: "linear-gradient(150deg,#E6E0F7 0%,#E9E7F5 48%,#DFEDE9 100%)" }}>
-      <div className="absolute rounded-full pointer-events-none" style={{ left: -22, bottom: -28, width: 110, height: 110, background: "radial-gradient(circle at 50% 50%,rgba(140,110,222,.42),rgba(140,110,222,0) 70%)" }} />
-      <div className="absolute rounded-full pointer-events-none" style={{ right: -18, top: -22, width: 96, height: 96, background: "radial-gradient(circle at 50% 50%,rgba(111,153,147,.44),rgba(111,153,147,0) 70%)" }} />
-      <div className="relative h-full flex flex-col justify-between px-4 py-3.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[8px] font-bold tracking-[.18em] text-[#6B6358]">CURL · SET 3 OF 4</span>
-          <span className="px-2 py-[3px] rounded-full text-[8.5px] font-extrabold text-[#5C48A8]" style={{ background: "rgba(255,255,255,.82)" }}>PR</span>
-        </div>
-        <div className="flex items-center justify-center gap-[9px]">
-          <span className="w-[15px] h-[38px] rounded-[5px]" style={{ background: "linear-gradient(#8C7CC4,#6F5FA6)" }} />
-          <span className="w-[9px] h-[26px] rounded-[3px]" style={{ background: "linear-gradient(#A79AD6,#8C7CC4)" }} />
-          <span className="w-[46px] h-2 rounded-full" style={{ background: "rgba(34,30,26,.34)" }} />
-          <span className="w-[9px] h-[26px] rounded-[3px]" style={{ background: "linear-gradient(#93BEB6,#6F9993)" }} />
-          <span className="w-[15px] h-[38px] rounded-[5px]" style={{ background: "linear-gradient(#6F9993,#547E78)" }} />
-        </div>
-        <div className="flex items-end gap-[5px]">
-          <span className="flex-1 h-4 rounded-t" style={{ background: "rgba(140,110,222,.34)" }} />
-          <span className="flex-1 h-6 rounded-t" style={{ background: "rgba(140,110,222,.46)" }} />
-          <span className="flex-1 h-5 rounded-t" style={{ background: "rgba(140,110,222,.4)" }} />
-          <span className="flex-1 h-8 rounded-t" style={{ background: "rgba(111,153,147,.6)" }} />
-          <span className="flex-1 h-10 rounded-t" style={{ background: "#6F9993" }} />
-          <div className="ml-2 text-right">
-            <div className="text-[13px] font-extrabold tracking-[-.02em] text-mkt-ink leading-none">14 kg</div>
-            <div className="text-[8px] font-semibold text-[#6B6358]">×10 reps</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  ),
-  plate: (
-    <div className="relative w-full h-[152px] rounded-[14px] overflow-hidden" style={{ background: "linear-gradient(150deg,#E1EDE9 0%,#EBE8F5 54%,#E6DFF8 100%)" }}>
-      <div className="absolute rounded-full pointer-events-none" style={{ right: -20, bottom: -26, width: 104, height: 104, background: "radial-gradient(circle at 50% 50%,rgba(140,110,222,.4),rgba(140,110,222,0) 70%)" }} />
-      <div className="absolute rounded-full pointer-events-none" style={{ left: -18, top: -24, width: 100, height: 100, background: "radial-gradient(circle at 50% 50%,rgba(111,153,147,.44),rgba(111,153,147,0) 70%)" }} />
-      <div className="relative h-full flex items-center gap-3.5 px-4 py-3.5">
-        <span className="relative w-[86px] h-[86px] shrink-0 rounded-full overflow-hidden" style={{ background: "rgba(255,255,255,.9)", boxShadow: "0 10px 24px rgba(72,58,130,.14)" }}>
-          <span className="absolute left-1/2 top-0 w-1/2 h-full" style={{ background: "linear-gradient(200deg,#8C7CC4,#6F5FA6)" }} />
-          <span className="absolute left-0 top-1/2 w-1/2 h-1/2" style={{ background: "linear-gradient(160deg,#93BEB6,#6F9993)" }} />
-          <span className="absolute left-0 top-0 w-1/2 h-1/2" style={{ background: "linear-gradient(160deg,#C9BEEC,#A79AD6)" }} />
-          <span className="absolute rounded-full" style={{ left: "50%", top: "50%", transform: "translate(-50%,-50%)", width: 26, height: 26, background: "rgba(255,255,255,.92)" }} />
-        </span>
-        <div className="flex-1 min-w-0 flex flex-col gap-[7px]">
-          <div className="text-[8px] font-bold tracking-[.18em] text-[#6B6358]">BALANCED PLATE</div>
-          {[
-            { label: "Protein", pct: 40, bar: "#6F5FA6" },
-            { label: "Carbs", pct: 35, bar: "#A79AD6" },
-            { label: "Veg & fats", pct: 25, bar: "#6F9993" },
-          ].map((row) => (
-            <div key={row.label}>
-              <div className="flex justify-between text-[9px] font-bold text-[#3B352D]">
-                <span>{row.label}</span>
-                <span>{row.pct}%</span>
-              </div>
-              <div className="h-1 rounded-full overflow-hidden mt-[3px]" style={{ background: "rgba(255,255,255,.7)" }}>
-                <span className="block h-full" style={{ width: `${row.pct}%`, background: row.bar }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  ),
-  video: (
-    <div className="relative w-full h-[152px] rounded-[14px] overflow-hidden" style={{ background: "linear-gradient(150deg,#E3EEEB 0%,#EAEAF6 52%,#E7E1F8 100%)" }}>
-      <div className="absolute rounded-full pointer-events-none" style={{ right: -20, top: -24, width: 108, height: 108, background: "radial-gradient(circle at 50% 50%,rgba(140,110,222,.42),rgba(140,110,222,0) 70%)" }} />
-      <div className="absolute rounded-full pointer-events-none" style={{ left: -16, bottom: -24, width: 96, height: 96, background: "radial-gradient(circle at 50% 50%,rgba(111,153,147,.5),rgba(111,153,147,0) 70%)" }} />
-      <div className="relative m-[13px] rounded-[11px] overflow-hidden" style={{ background: "rgba(255,255,255,.86)", boxShadow: "0 10px 24px rgba(72,58,130,.12)" }}>
-        <div className="flex items-center gap-[5px] px-2.5 py-[7px]" style={{ borderBottom: "1px solid rgba(34,30,26,.07)" }}>
-          <span className="w-1.5 h-1.5 rounded-full" style={{ background: "#6F9993" }} />
-          <span className="text-[8px] font-bold tracking-[.14em] text-mkt-faint">LIVE CONSULTATION</span>
-          <span className="ml-auto text-[8px] font-bold text-mkt-accent-hover">12:04</span>
-        </div>
-        <div className="flex gap-[7px] p-2.5">
-          <div className="flex-[1.4] h-16 rounded-lg flex items-end p-1.5" style={{ background: "linear-gradient(160deg,#CFC4EF,#A9C8C1)" }}>
-            <span className="text-[8px] font-bold text-white/95">Dietitian</span>
-          </div>
-          <div className="flex-1 flex flex-col gap-1.5">
-            <div className="flex-1 rounded-lg flex items-end p-[5px]" style={{ background: "linear-gradient(160deg,#DED6F5,#C3D9D4)" }}>
-              <span className="text-[7.5px] font-bold text-white/95">You</span>
-            </div>
-            <div className="flex gap-1">
-              <span className="flex-1 h-[13px] rounded-full" style={{ background: "#7D67D9" }} />
-              <span className="w-[13px] h-[13px] rounded-full" style={{ background: "#EDEAE4" }} />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  ),
-};
-
+// PersonaArc owns each persona's graphic internally, keyed by title (see
+// PersonaArc.tsx's PERSONA_ART) since each graphic is tightly coupled to
+// that card's specific animation — no `art` field needed here.
 const personas: PersonaData[] = [
-  { title: "Principled", accent: "#6A54C4", description: "Shows up, puts in the work, and wants a platform that keeps up.", art: traitArt.checklist },
-  { title: "Determined", accent: "#3F726D", description: "Knows where they want to go and wants everything connected to get there.", art: traitArt.dumbbell },
-  { title: "Intentional", accent: "#6A54C4", description: "Pays attention to the details that shape their health and wants them all in one place.", art: traitArt.plate },
-  { title: "Proactive", accent: "#3F726D", description: "Wants to understand their health, act on it, and keep moving forward.", art: traitArt.video },
+  { title: "Principled", accent: "#6A54C4", description: "Shows up, puts in the work, and wants a platform that keeps up." },
+  { title: "Determined", accent: "#3F726D", description: "Knows where they want to go and wants everything connected to get there." },
+  { title: "Intentional", accent: "#6A54C4", description: "Pays attention to the details that shape their health and wants them all in one place." },
+  { title: "Proactive", accent: "#3F726D", description: "Wants to understand their health, act on it, and keep moving forward." },
 ];
 
-/** Pricing section heading with the v4 handoff's mirrored leaf-stem accents
- *  flanking it — shown only once the heading block itself measures at least
- *  620px wide (see usePricingAccents), so a narrow container never has the
- *  accents crowding the text. */
+/** Pricing section heading. The v4 handoff's mirrored leaf-stem accents that
+ *  used to flank it are gone in v5 — its own markup has no such shape. */
 const PricingHeading: React.FC = () => {
-  const headRef = usePricingAccents<HTMLDivElement>();
   return (
     <Reveal className="relative text-center max-w-[820px] mx-auto mb-11">
-      <div ref={headRef} className="relative">
-        <PricingLeafAccent />
-        <PricingLeafAccent mirror />
+      <div className="relative">
         <Eyebrow className="mx-auto">PRICING</Eyebrow>
         <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px]">
           Whatever your role, Centium fits.
@@ -934,6 +592,8 @@ export const Home: React.FC = () => {
                 </Link>
                 <Link
                   to="/contact"
+                  data-glassy=""
+                  data-glassy-fallback="rgba(255,255,255,.72)"
                   className="tap px-[26px] py-4 rounded-full font-semibold text-[15px] text-mkt-ink transition-[background-color,border-color] duration-200"
                   style={{
                     border: "1px solid rgba(255,255,255,.72)",
@@ -957,42 +617,46 @@ export const Home: React.FC = () => {
               </div>
             </Reveal>
 
+            {/* Real app captures — natural aspect ratio, no crop, no mask
+                (the v3 build's bezel-wrapped fake mockups are superseded by
+                these per the v5 handoff's own literal hero markup). Below
+                640px only the dashboard shows, solo, at min(260px,72vw). */}
             <Reveal delay={0.1} className="w-full">
-              <div
-                className="hidden sm:flex items-end justify-center gap-5 mt-[76px] mb-[-90px]"
-                style={{
-                  WebkitMaskImage: "linear-gradient(to bottom,#000 0%,#000 74%,rgba(0,0,0,.6) 88%,rgba(0,0,0,0) 100%)",
-                  maskImage: "linear-gradient(to bottom,#000 0%,#000 74%,rgba(0,0,0,.6) 88%,rgba(0,0,0,0) 100%)",
-                }}
-              >
-                <div className="bg-white shrink-0 w-[214px] h-[400px] rounded-[26px] border overflow-hidden" style={{ borderColor: "#E4DCF8", padding: 8, boxShadow: "0 18px 50px rgba(72,58,130,.10)" }}>
-                  <div className="w-full h-full rounded-[22px] overflow-hidden">
-                    <HeroPhoneNutrition />
-                  </div>
-                </div>
-                <div className="bg-white shrink-0 w-[262px] h-[520px] rounded-[34px] border overflow-hidden" style={{ borderColor: "#D9D2EF", padding: 9, boxShadow: "0 28px 70px rgba(72,58,130,.16)" }}>
-                  <div className="w-full h-full rounded-[26px] overflow-hidden">
-                    <HeroPhoneDashboard />
-                  </div>
-                </div>
-                <div className="bg-white shrink-0 w-[214px] h-[400px] rounded-[26px] border overflow-hidden" style={{ borderColor: "#E4DCF8", padding: 8, boxShadow: "0 18px 50px rgba(72,58,130,.10)" }}>
-                  <div className="w-full h-full rounded-[22px] overflow-hidden">
-                    <HeroPhoneHealth />
-                  </div>
-                </div>
+              <div className="hidden sm:flex items-center justify-center gap-[clamp(14px,2vw,26px)] mt-[76px] mb-[clamp(48px,6vw,80px)]">
+                <img
+                  src="/hero-food.png"
+                  alt="Centium food diary"
+                  width={1170}
+                  height={2532}
+                  className="shrink-0 block rounded-[22px]"
+                  style={{ width: 236, height: "auto", boxShadow: "0 18px 50px rgba(72,58,130,.14)" }}
+                />
+                <img
+                  src="/hero-dashboard.png"
+                  alt="Centium dashboard"
+                  width={1170}
+                  height={2532}
+                  className="shrink-0 block rounded-[22px]"
+                  style={{ width: 310, height: "auto", boxShadow: "0 28px 70px rgba(72,58,130,.22)" }}
+                />
+                <img
+                  src="/hero-workout.png"
+                  alt="Centium workout routines"
+                  width={1170}
+                  height={2532}
+                  className="shrink-0 block rounded-[22px]"
+                  style={{ width: 236, height: "auto", boxShadow: "0 18px 50px rgba(72,58,130,.14)" }}
+                />
               </div>
-              <div
-                className="sm:hidden mt-12 flex justify-center"
-                style={{
-                  WebkitMaskImage: "linear-gradient(to bottom,#000 0%,#000 78%,rgba(0,0,0,.6) 90%,rgba(0,0,0,0) 100%)",
-                  maskImage: "linear-gradient(to bottom,#000 0%,#000 78%,rgba(0,0,0,.6) 90%,rgba(0,0,0,0) 100%)",
-                }}
-              >
-                <div className="bg-white shrink-0 w-[220px] h-[410px] rounded-[27px] border overflow-hidden" style={{ borderColor: "#D9D2EF", padding: 8, boxShadow: "0 20px 50px rgba(72,58,130,.14)" }}>
-                  <div className="w-full h-full rounded-[20px] overflow-hidden">
-                    <HeroPhoneNarrow />
-                  </div>
-                </div>
+              <div className="sm:hidden mt-12 flex justify-center">
+                <img
+                  src="/hero-dashboard.png"
+                  alt="Centium dashboard"
+                  width={1170}
+                  height={2532}
+                  className="block rounded-[20px]"
+                  style={{ width: "min(260px,72vw)", height: "auto", boxShadow: "0 20px 50px rgba(72,58,130,.18)" }}
+                />
               </div>
             </Reveal>
           </div>
@@ -1090,190 +754,30 @@ export const Home: React.FC = () => {
           }
         />
 
-        {/* Beyond the individual. Regression fix: top padding was the
-            generic clamp(48px,6vw,72px) section rhythm — the handoff tightens
-            this specific boundary (persona section's bottom padding was
-            already trimmed to match) to clamp(26px,2.8vw,38px) so the two
-            sections read as connected. */}
-        <section className="relative pt-[clamp(26px,2.8vw,38px)] pb-[clamp(48px,6vw,72px)] overflow-hidden">
-          <div
-            aria-hidden="true"
-            className="absolute rounded-full pointer-events-none animate-mkt-drift-a"
-            style={{ left: -120, top: 60, width: 340, height: 340, background: "radial-gradient(circle at 50% 50%,rgba(111,153,147,.34),rgba(111,153,147,0) 68%)" }}
-          />
-          <div
-            aria-hidden="true"
-            className="absolute rounded-full pointer-events-none animate-mkt-drift-b"
-            style={{ right: -140, bottom: 20, width: 400, height: 400, background: "radial-gradient(circle at 50% 50%,rgba(140,110,222,.3),rgba(140,110,222,0) 68%)" }}
-          />
-          <div className="relative max-w-[1180px] mx-auto px-5 sm:px-10">
+        {/* Beyond the individual — a drag slider between the professionals
+            and business audiences (see components/Ecosystem.tsx). The
+            v4-era static two-card grid this replaces carried placeholder
+            copy/numbers (Nadine Khalil/Sami Rahal/Yara Bou Saab, a plain
+            check-ins bar chart) that the v5 handoff's own `.dc.html`
+            supersedes with a KPI dashboard (members/MRR/retention/ARPM/
+            visits-per-week), class occupancy and the literal John/Jane/
+            Richard Doe/Roe roster — Ecosystem.tsx owns all of that now.
+            Top padding stays at the v4 handoff's tightened
+            clamp(26px,2.8vw,38px) (a past regression fix for the seam with
+            PersonaArc above) since the v5 `.dc.html`'s own section padding
+            (`0 0 clamp(56px,6vw,72px)`) assumes spacing comes from the
+            *previous* section instead, which this codebase gets from
+            PersonaArc's own bottom padding, not from here. */}
+        <Ecosystem
+          heading={
             <Reveal>
-              <div className="mb-10">
-                <Eyebrow tone="teal">BEYOND THE INDIVIDUAL</Eyebrow>
-                <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] max-w-[600px]">
-                  The ecosystem built around your health.
-                </h2>
-              </div>
+              <Eyebrow tone="teal">BEYOND THE INDIVIDUAL</Eyebrow>
+              <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px] max-w-[600px]">
+                The ecosystem built around your health.
+              </h2>
             </Reveal>
-            <div className="grid lg:grid-cols-2 gap-5 items-stretch">
-              <Reveal className="flex">
-                <div
-                  className="flex-1 flex flex-col rounded-[26px] overflow-hidden transition-[transform,box-shadow,border-color] duration-[350ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)] hover:-translate-y-2 shadow-[0_1px_0_rgba(255,255,255,.9)_inset,0_22px_54px_rgba(72,58,130,.12)] hover:shadow-[0_1px_0_rgba(255,255,255,.9)_inset,0_30px_68px_rgba(72,58,130,.2)]"
-                  style={{ background: "#FFFFFF", border: "1px solid #DCD2F5" }}
-                >
-                  <div className="flex items-center gap-3.5" style={{ padding: "22px 28px", background: "#F4F1FB", borderBottom: "1px solid #DCD2F5" }}>
-                    <span
-                      className="w-[46px] h-[46px] shrink-0 rounded-[14px] flex items-center justify-center"
-                      style={{ background: "#FFFFFF", border: "1px solid #DCD2F5", color: "#7D67D9", boxShadow: "0 6px 16px rgba(72,58,130,.1)" }}
-                    >
-                      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                        <path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13A4 4 0 0 1 16 11" />
-                      </svg>
-                    </span>
-                    <div className="min-w-0">
-                      <div className="font-extrabold text-xl tracking-[-.02em] text-mkt-ink whitespace-nowrap">For professionals</div>
-                      <div className="text-[11px] font-bold tracking-[.16em] mt-[3px]" style={{ color: "#7D67D9" }}>PRACTITIONER SIDE</div>
-                    </div>
-                  </div>
-                  <div className="flex-1 flex flex-col" style={{ padding: "24px 28px 28px" }}>
-                    <p className="text-base leading-relaxed text-mkt-soft" style={{ textWrap: "pretty" }}>
-                      Your clients, your plans, one seamless system. Manage everything from their health data to
-                      workouts and nutrition, with updates flowing straight to their app.
-                    </p>
-                    <div className="flex flex-wrap gap-2 mt-6">
-                      {["Personal trainers", "Dietitians", "Physiotherapists", "General Practitioners"].map((t) => (
-                        <span key={t} className="px-3.5 py-2 rounded-full bg-mkt-tint text-mkt-accent-hover font-semibold text-[13px] whitespace-nowrap shrink-0">
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="mt-7 rounded-2xl overflow-hidden" style={{ background: "#FAF9F7", border: "1px solid #EDEAE4" }}>
-                      <div className="p-5 bg-white flex flex-col gap-3">
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <div className="text-[12.5px] font-extrabold tracking-[-.02em] text-mkt-ink">Clients</div>
-                            <div className="text-[9px] text-mkt-faint whitespace-nowrap">3 active · Thu 4 Sep</div>
-                          </div>
-                          <div className="flex gap-[5px]">
-                            <span className="px-[9px] py-1 rounded-full bg-mkt-accent text-white text-[8.5px] font-bold whitespace-nowrap">All</span>
-                            <span className="px-[9px] py-1 rounded-full text-[8.5px] font-bold whitespace-nowrap" style={{ background: "#F6F4F0", color: "#8C8378" }}>Needs review</span>
-                          </div>
-                        </div>
-                        <div className="flex flex-col mt-1">
-                          {[
-                            { initials: "NK", name: "Nadine Khalil", meta: "64.2 kg · −0.8 · 1,840 kcal", status: "Logged", tone: "primary" },
-                            { initials: "SR", name: "Sami Rahal", meta: "81.6 kg · +0.3 · 2,650 kcal", status: "Logged", tone: "teal" },
-                            { initials: "YB", name: "Yara Bou Saab", meta: "58.9 kg · −0.2 · 1,620 kcal", status: "Pending", tone: "primary" },
-                            { initials: "RT", name: "Roster today", meta: "2 logged today · 1 pending", status: "3 clients", tone: "teal" },
-                          ].map((row, i) => (
-                            <div key={row.initials + i} className="flex items-center gap-3 py-2.5" style={i !== 0 ? { borderTop: "1px solid #EDEAE4" } : undefined}>
-                              <span
-                                className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-[10px] font-extrabold"
-                                style={row.tone === "primary" ? { background: "#DED4F4", color: "#5C48A8" } : { background: "#DAEAE7", color: "#3F726D" }}
-                              >
-                                {row.initials}
-                              </span>
-                              <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-                                <div className="text-[11.5px] font-bold text-mkt-ink whitespace-nowrap">{row.name}</div>
-                                <div className="text-[9.5px] text-mkt-faint whitespace-nowrap">{row.meta}</div>
-                              </div>
-                              <div
-                                className="shrink-0 px-[9px] py-1 rounded-full text-[9.5px] font-bold text-mkt-soft"
-                                style={{ background: row.tone === "primary" ? "#F4F1FB" : "#EDF4F3" }}
-                              >
-                                {row.status}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-              <Reveal delay={0.06} className="flex">
-                <div
-                  className="flex-1 flex flex-col rounded-[26px] overflow-hidden transition-[transform,box-shadow,border-color] duration-[350ms] [transition-timing-function:cubic-bezier(.22,1,.36,1)] hover:-translate-y-2 shadow-[0_1px_0_rgba(255,255,255,.9)_inset,0_22px_54px_rgba(72,58,130,.12)] hover:shadow-[0_1px_0_rgba(255,255,255,.9)_inset,0_30px_68px_rgba(94,158,149,.22)]"
-                  style={{ background: "#FFFFFF", border: "1px solid #CFE4DF" }}
-                >
-                  <div className="flex items-center gap-3.5" style={{ padding: "22px 28px", background: "#EDF4F3", borderBottom: "1px solid #CFE4DF" }}>
-                    <span
-                      className="w-[46px] h-[46px] shrink-0 rounded-[14px] flex items-center justify-center"
-                      style={{ background: "#FFFFFF", border: "1px solid #CFE4DF", color: "#5E9E95", boxShadow: "0 6px 16px rgba(72,58,130,.1)" }}
-                    >
-                      <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                        <path d="M3 21V8l9-5 9 5v13" />
-                        <path d="M9 21v-6h6v6" />
-                        <path d="M3 21h18" />
-                      </svg>
-                    </span>
-                    <div className="min-w-0">
-                      <div className="font-extrabold text-xl tracking-[-.02em] text-mkt-ink whitespace-nowrap">For businesses</div>
-                      <div className="text-[11px] font-bold tracking-[.16em] mt-[3px]" style={{ color: "#5E9E95" }}>BUSINESS SIDE</div>
-                    </div>
-                  </div>
-                  <div className="flex-1 flex flex-col" style={{ padding: "24px 28px 28px" }}>
-                    <p className="text-base leading-relaxed text-mkt-soft" style={{ textWrap: "pretty" }}>
-                      Put your gym, classes and services on the map, digitize memberships, connect with professionals
-                      and gain insights through client analytics.
-                    </p>
-                    <div className="flex flex-wrap gap-2 mt-6">
-                      {["Gyms & studios", "Equipment & supplements", "Meal prep services", "Activewear"].map((t) => (
-                        <span key={t} className="px-3.5 py-2 rounded-full font-semibold text-[13px] whitespace-nowrap shrink-0" style={{ background: "#EDF4F3", color: "#4F8F8A" }}>
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="mt-7 rounded-2xl overflow-hidden" style={{ background: "#FAF9F7", border: "1px solid #EDEAE4" }}>
-                      <div className="p-5 bg-white flex flex-col gap-3">
-                        <div className="flex items-end justify-between gap-2">
-                          <div>
-                            <div className="text-[12.5px] font-extrabold tracking-[-.02em] text-mkt-ink">Check-ins</div>
-                            <div className="text-[9px] text-mkt-faint whitespace-nowrap">This week · 591 visits</div>
-                          </div>
-                          <span className="px-[9px] py-1 rounded-full text-[8.5px] font-extrabold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#3F726D" }}>+18% WoW</span>
-                        </div>
-                        <div className="flex items-end gap-1.5 h-[88px]">
-                          {[
-                            { day: "Mon", v: 53, h: 38 },
-                            { day: "Tue", v: 87, h: 62 },
-                            { day: "Wed", v: 70, h: 50 },
-                            { day: "Thu", v: 109, h: 78 },
-                            { day: "Fri", v: 81, h: 58 },
-                            { day: "Sat", v: 129, h: 92 },
-                            { day: "Sun", v: 62, h: 44 },
-                          ].map((bar) => (
-                            <div key={bar.day} className="flex-1 flex flex-col items-center gap-1 h-full justify-end">
-                              <span className="text-[7px] font-bold whitespace-nowrap" style={{ color: bar.day === "Sat" ? "#5C48A8" : "#A9A29A" }}>{bar.v}</span>
-                              <div
-                                className="w-full rounded-t"
-                                style={{ height: `${bar.h}%`, background: bar.day === "Sat" ? "#7D67D9" : "rgba(125,103,217,.26)" }}
-                              />
-                              <span className="text-[7px] font-semibold text-mkt-faint whitespace-nowrap">{bar.day}</span>
-                            </div>
-                          ))}
-                        </div>
-                        <div className="grid grid-cols-2 gap-2.5">
-                          {[
-                            { name: "Nour Aad", status: "Membership active" },
-                            { name: "Fadi Chamoun", status: "Class booked" },
-                          ].map((c) => (
-                            <div key={c.name} className="rounded-xl p-2.5 flex flex-col gap-1.5" style={{ border: "1px solid #EDEAE4" }}>
-                              <div className="text-[11.5px] font-bold text-mkt-ink whitespace-nowrap">{c.name}</div>
-                              <div className="text-[9.5px] text-mkt-faint whitespace-nowrap mt-0.5">{c.status}</div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </Reveal>
-            </div>
-          </div>
-        </section>
+          }
+        />
 
         {/* Pricing preview */}
         <section id="pricing" className="py-[clamp(48px,6vw,72px)] pb-[clamp(72px,8vw,96px)] scroll-mt-[88px]">
@@ -1286,7 +790,7 @@ export const Home: React.FC = () => {
         </section>
 
         {/* Final CTA */}
-        <Section className="bg-transparent text-center">
+        <Section id="cta" className="bg-transparent text-center scroll-mt-[88px]">
           <Reveal className="flex flex-col items-center">
             <h2 className="font-display font-extrabold text-[34px] sm:text-[52px] leading-[1.08] tracking-[-.032em] text-mkt-ink max-w-[620px]">
               Ready to bring it all together?

@@ -9,6 +9,15 @@ import { CentiumMark, CentiumWordmarkCropped } from "./CentiumLogo";
 // no LinkedIn icon in this handoff), column titles/links go grey instead of
 // purple/teal, and a peaked "colour wash" gradient layer sits behind the
 // whole thing.
+//
+// v5 landing handoff: the colour-wash layer itself was replaced wholesale —
+// a horizontal rainbow sweep (purple → white → teal) masked by three
+// elliptical radial masks composited add/add/subtract, superseded by two
+// bottom-corner radial colour pools (purple bottom-left, teal bottom-right)
+// over a white base, clipped by a symmetric V-shaped wedge made of two
+// diagonal (48deg/312deg) linear-gradient masks. This is a full replacement
+// of that div's `background`/mask properties, not an addition alongside the
+// old ones — see CLAUDE.md's "footer double-gradient" regression.
 const columns: { title: string; links: { to: string; label: string; tealHover?: boolean }[] }[] = [
   {
     title: "Product",
@@ -80,26 +89,32 @@ export const Footer: React.FC = () => (
       aria-hidden="true"
       className="absolute left-0 right-0 bottom-0 pointer-events-none z-0"
       style={{
-        top: -560,
+        top: -660,
         background:
-          "linear-gradient(90deg,#8E71DE 0%,#A88FE6 12%,#C6B5F0 22%,#E6DFF8 32%,#F7F4FD 41%,#FFFFFF 50%,#F1F8F5 59%,#DCEDE8 68%,#B5D8D0 78%,#7CBBAF 88%,#4F9E91 100%)",
+          "linear-gradient(90deg,rgba(255,255,255,0) 26%,rgba(255,255,255,.28) 34%,rgba(255,255,255,.66) 40%,rgba(255,255,255,.92) 45%,#FFFFFF 50%,rgba(255,255,255,.92) 55%,rgba(255,255,255,.66) 60%,rgba(255,255,255,.28) 66%,rgba(255,255,255,0) 74%)," +
+          "radial-gradient(118% 122% at 0% 100%,rgba(124,96,214,0.5000) 0.0%,rgba(124,96,214,0.4677) 4.0%,rgba(124,96,214,0.4362) 8.0%,rgba(124,96,214,0.4054) 12.0%,rgba(124,96,214,0.3754) 16.0%,rgba(124,96,214,0.3462) 20.0%,rgba(124,96,214,0.3177) 24.0%,rgba(124,96,214,0.2901) 28.0%,rgba(124,96,214,0.2633) 32.0%,rgba(124,96,214,0.2374) 36.0%,rgba(124,96,214,0.2125) 40.0%,rgba(124,96,214,0.1884) 44.0%,rgba(124,96,214,0.1654) 48.0%,rgba(124,96,214,0.1433) 52.0%,rgba(124,96,214,0.1224) 56.0%,rgba(124,96,214,0.1026) 60.0%,rgba(124,96,214,0.0840) 64.0%,rgba(124,96,214,0.0666) 68.0%,rgba(124,96,214,0.0507) 72.0%,rgba(124,96,214,0.0363) 76.0%,rgba(124,96,214,0.0236) 80.0%,rgba(124,96,214,0.0128) 84.0%,rgba(124,96,214,0.0045) 88.0%,rgba(124,96,214,0.0000) 92.0%,rgba(255,255,255,0) 100%)," +
+          "radial-gradient(118% 122% at 100% 100%,rgba(62,145,132,0.4600) 0.0%,rgba(62,145,132,0.4303) 4.0%,rgba(62,145,132,0.4013) 8.0%,rgba(62,145,132,0.3730) 12.0%,rgba(62,145,132,0.3454) 16.0%,rgba(62,145,132,0.3185) 20.0%,rgba(62,145,132,0.2923) 24.0%,rgba(62,145,132,0.2669) 28.0%,rgba(62,145,132,0.2423) 32.0%,rgba(62,145,132,0.2185) 36.0%,rgba(62,145,132,0.1955) 40.0%,rgba(62,145,132,0.1734) 44.0%,rgba(62,145,132,0.1521) 48.0%,rgba(62,145,132,0.1319) 52.0%,rgba(62,145,132,0.1126) 56.0%,rgba(62,145,132,0.0944) 60.0%,rgba(62,145,132,0.0772) 64.0%,rgba(62,145,132,0.0613) 68.0%,rgba(62,145,132,0.0466) 72.0%,rgba(62,145,132,0.0334) 76.0%,rgba(62,145,132,0.0217) 80.0%,rgba(62,145,132,0.0118) 84.0%,rgba(62,145,132,0.0042) 88.0%,rgba(62,145,132,0.0000) 92.0%,rgba(255,255,255,0) 100%)," +
+          "#FFFFFF",
         maskImage:
-          "radial-gradient(ellipse 470px 1120px at -4% 118%,#000 0%,#000 40%,rgba(0,0,0,.72) 60%,rgba(0,0,0,.34) 76%,rgba(0,0,0,.08) 90%,rgba(0,0,0,0) 100%)," +
-          "radial-gradient(ellipse 470px 1120px at 104% 118%,#000 0%,#000 40%,rgba(0,0,0,.72) 60%,rgba(0,0,0,.34) 76%,rgba(0,0,0,.08) 90%,rgba(0,0,0,0) 100%)," +
-          "radial-gradient(ellipse 620px 900px at 50% 112%,#000 0%,#000 58%,rgba(0,0,0,.7) 78%,rgba(0,0,0,.24) 92%,rgba(0,0,0,0) 100%)",
+          "linear-gradient(48deg,#000 0%,#000 2%,rgba(0,0,0,1.0000) 2.0%,rgba(0,0,0,0.9934) 4.7%,rgba(0,0,0,0.9745) 7.3%,rgba(0,0,0,0.9446) 10.0%,rgba(0,0,0,0.9050) 12.7%,rgba(0,0,0,0.8569) 15.3%,rgba(0,0,0,0.8017) 18.0%,rgba(0,0,0,0.7407) 20.7%,rgba(0,0,0,0.6752) 23.3%,rgba(0,0,0,0.6064) 26.0%,rgba(0,0,0,0.5357) 28.7%,rgba(0,0,0,0.4643) 31.3%,rgba(0,0,0,0.3936) 34.0%,rgba(0,0,0,0.3248) 36.7%,rgba(0,0,0,0.2593) 39.3%,rgba(0,0,0,0.1983) 42.0%,rgba(0,0,0,0.1431) 44.7%,rgba(0,0,0,0.0950) 47.3%,rgba(0,0,0,0.0554) 50.0%,rgba(0,0,0,0.0255) 52.7%,rgba(0,0,0,0.0066) 55.3%,rgba(0,0,0,0.0000) 58.0%,rgba(0,0,0,0) 62%)," +
+          "linear-gradient(312deg,#000 0%,#000 2%,rgba(0,0,0,1.0000) 2.0%,rgba(0,0,0,0.9934) 4.7%,rgba(0,0,0,0.9745) 7.3%,rgba(0,0,0,0.9446) 10.0%,rgba(0,0,0,0.9050) 12.7%,rgba(0,0,0,0.8569) 15.3%,rgba(0,0,0,0.8017) 18.0%,rgba(0,0,0,0.7407) 20.7%,rgba(0,0,0,0.6752) 23.3%,rgba(0,0,0,0.6064) 26.0%,rgba(0,0,0,0.5357) 28.7%,rgba(0,0,0,0.4643) 31.3%,rgba(0,0,0,0.3936) 34.0%,rgba(0,0,0,0.3248) 36.7%,rgba(0,0,0,0.2593) 39.3%,rgba(0,0,0,0.1983) 42.0%,rgba(0,0,0,0.1431) 44.7%,rgba(0,0,0,0.0950) 47.3%,rgba(0,0,0,0.0554) 50.0%,rgba(0,0,0,0.0255) 52.7%,rgba(0,0,0,0.0066) 55.3%,rgba(0,0,0,0.0000) 58.0%,rgba(0,0,0,0) 62%)",
         WebkitMaskImage:
-          "radial-gradient(ellipse 470px 1120px at -4% 118%,#000 0%,#000 40%,rgba(0,0,0,.72) 60%,rgba(0,0,0,.34) 76%,rgba(0,0,0,.08) 90%,rgba(0,0,0,0) 100%)," +
-          "radial-gradient(ellipse 470px 1120px at 104% 118%,#000 0%,#000 40%,rgba(0,0,0,.72) 60%,rgba(0,0,0,.34) 76%,rgba(0,0,0,.08) 90%,rgba(0,0,0,0) 100%)," +
-          "radial-gradient(ellipse 620px 900px at 50% 112%,#000 0%,#000 58%,rgba(0,0,0,.7) 78%,rgba(0,0,0,.24) 92%,rgba(0,0,0,0) 100%)",
-        maskComposite: "add,add,subtract",
-        WebkitMaskComposite: "source-over,source-over,destination-out",
+          "linear-gradient(48deg,#000 0%,#000 2%,rgba(0,0,0,1.0000) 2.0%,rgba(0,0,0,0.9934) 4.7%,rgba(0,0,0,0.9745) 7.3%,rgba(0,0,0,0.9446) 10.0%,rgba(0,0,0,0.9050) 12.7%,rgba(0,0,0,0.8569) 15.3%,rgba(0,0,0,0.8017) 18.0%,rgba(0,0,0,0.7407) 20.7%,rgba(0,0,0,0.6752) 23.3%,rgba(0,0,0,0.6064) 26.0%,rgba(0,0,0,0.5357) 28.7%,rgba(0,0,0,0.4643) 31.3%,rgba(0,0,0,0.3936) 34.0%,rgba(0,0,0,0.3248) 36.7%,rgba(0,0,0,0.2593) 39.3%,rgba(0,0,0,0.1983) 42.0%,rgba(0,0,0,0.1431) 44.7%,rgba(0,0,0,0.0950) 47.3%,rgba(0,0,0,0.0554) 50.0%,rgba(0,0,0,0.0255) 52.7%,rgba(0,0,0,0.0066) 55.3%,rgba(0,0,0,0.0000) 58.0%,rgba(0,0,0,0) 62%)," +
+          "linear-gradient(312deg,#000 0%,#000 2%,rgba(0,0,0,1.0000) 2.0%,rgba(0,0,0,0.9934) 4.7%,rgba(0,0,0,0.9745) 7.3%,rgba(0,0,0,0.9446) 10.0%,rgba(0,0,0,0.9050) 12.7%,rgba(0,0,0,0.8569) 15.3%,rgba(0,0,0,0.8017) 18.0%,rgba(0,0,0,0.7407) 20.7%,rgba(0,0,0,0.6752) 23.3%,rgba(0,0,0,0.6064) 26.0%,rgba(0,0,0,0.5357) 28.7%,rgba(0,0,0,0.4643) 31.3%,rgba(0,0,0,0.3936) 34.0%,rgba(0,0,0,0.3248) 36.7%,rgba(0,0,0,0.2593) 39.3%,rgba(0,0,0,0.1983) 42.0%,rgba(0,0,0,0.1431) 44.7%,rgba(0,0,0,0.0950) 47.3%,rgba(0,0,0,0.0554) 50.0%,rgba(0,0,0,0.0255) 52.7%,rgba(0,0,0,0.0066) 55.3%,rgba(0,0,0,0.0000) 58.0%,rgba(0,0,0,0) 62%)",
+        maskComposite: "add",
+        WebkitMaskComposite: "source-over",
       }}
     />
-    <div className="relative max-w-[1180px] mx-auto px-5 sm:px-10 pt-16 pb-8">
+    <div className="relative max-w-[1180px] mx-auto px-5 sm:px-10 pt-9 pb-8">
       <div className="flex flex-col items-center gap-[26px]">
-        <Link to="/" id="footer-logo" className="flex items-center gap-[9.9px]" style={{ color: "#5C48A8" }}>
-          <CentiumMark size={26} />
-          <CentiumWordmarkCropped height={10} />
+        <Link
+          to="/"
+          id="footer-logo"
+          className="flex items-center gap-[15.2px]"
+          style={{ color: "#5C48A8", transform: "translateX(-3px)" }}
+        >
+          <CentiumMark size={40} />
+          <CentiumWordmarkCropped height={15.4} />
         </Link>
 
         <div className="flex gap-2 justify-center">
@@ -111,8 +126,8 @@ export const Footer: React.FC = () => (
               target={s.external ? "_blank" : undefined}
               rel={s.external ? "noreferrer noopener" : undefined}
               aria-label={s.label}
-              className="w-[34px] h-[34px] rounded-full flex items-center justify-center border-[#C6B9EE] bg-[#F4F1FB] text-[#7D67D9] transition-[color,background-color,border-color,transform] duration-200 hover:bg-[#5E9E95] hover:border-[#5E9E95] hover:text-white hover:-translate-y-0.5"
-              style={{ borderWidth: 1, borderStyle: "solid" }}
+              className="w-[34px] h-[34px] rounded-full flex items-center justify-center border-[#C6B9EE] bg-[#F4F1FB] transition-[color,background-color,border-color,transform] duration-200 hover:bg-[#5E9E95] hover:border-[#5E9E95] hover:text-white hover:-translate-y-0.5"
+              style={{ borderWidth: 1, borderStyle: "solid", color: "#7D67D9" }}
             >
               {s.path}
             </a>

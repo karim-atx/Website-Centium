@@ -7,14 +7,73 @@ import { useNavTheme } from "../hooks/useNavTheme";
 import { useNavHeroGlass } from "../hooks/useNavHeroGlass";
 import { useNavScrollSpy } from "../hooks/useNavScrollSpy";
 
+// Fired on `window` whenever a nav-triggered long jump (see scrollToSection
+// below) starts/stops, so the hero canvas (useHeroFlow.ts, owned separately)
+// can idle for the duration per the handoff's "Hero flow canvas" section
+// ("idles when ... a nav jump is travelling"). No existing pub/sub
+// convention for this in the codebase, so a plain CustomEvent is the
+// smallest contract — flagged in the handoff report for the hero-canvas
+// owner to pick up (or ignore) on their side.
+export const NAV_JUMP_EVENT = "centium:nav-scroll-jump";
+
+const NAV_OFFSET = 88;
+
+/** Handoff's `scrollToOffset()`: short hops use the browser's native smooth
+ *  scroll (already handled correctly by MarketingLayout's hash effect for
+ *  every Link here — untouched, out of this file's scope), but a jump
+ *  further than 1.2 viewport heights away is driven frame-by-frame with a
+ *  fixed, distance-clamped duration instead, because native smooth-scroll
+ *  duration grows with distance and crawls on long jumps. Returns true if it
+ *  took over (caller should preventDefault); false leaves the click to the
+ *  default Link/route-hash handling. */
+function scrollToSection(id: string): boolean {
+  const el = document.getElementById(id);
+  if (!el) return false;
+  const measureTop = () => el.getBoundingClientRect().top + window.scrollY - NAV_OFFSET;
+  const from = window.scrollY;
+  const target = measureTop();
+  if (Math.abs(target - from) <= window.innerHeight * 1.2) return false;
+
+  window.dispatchEvent(new CustomEvent(NAV_JUMP_EVENT, { detail: { active: true } }));
+  const dist = Math.abs(target - from);
+  const dur = Math.min(900, Math.max(420, 360 + dist * 0.055));
+  const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+  const t0 = performance.now();
+  let done = false;
+  const finish = () => {
+    if (done) return;
+    done = true;
+    window.dispatchEvent(new CustomEvent(NAV_JUMP_EVENT, { detail: { active: false } }));
+    (["wheel", "touchstart", "keydown"] as const).forEach((ev) => window.removeEventListener(ev, finish));
+    // Keep the URL in sync without re-triggering MarketingLayout's own hash
+    // scroll (it would just be a harmless no-op at this point, but a plain
+    // history update is simpler than reasoning about a second smooth-scroll
+    // racing this one to the same target).
+    window.history.replaceState(null, "", `/#${id}`);
+  };
+  const step = (now: number) => {
+    if (done) return;
+    const k = Math.min(1, (now - t0) / dur);
+    window.scrollTo(0, Math.round(from + (target - from) * ease(k)));
+    if (k >= 1) { finish(); return; }
+    requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+  // Wheel/touch/key input hands control back immediately.
+  (["wheel", "touchstart", "keydown"] as const).forEach((ev) =>
+    window.addEventListener(ev, finish, { once: true, passive: true })
+  );
+  return true;
+}
+
 // QA - Web 2.0 §01: the nav is part of the single-page landing page, not a
 // set of separate routes — every item scrolls to a section on "/" instead
 // of navigating to its own page. "Contact" has no equivalent landing-page
 // section, so it's kept as a real route to the existing /contact page.
 const links = [
   { to: "/#platform", label: "Features", spyId: "platform" },
-  { to: "/#pricing", label: "Pricing", spyId: "pricing" },
   { to: "/#faq", label: "FAQ", spyId: "faq" },
+  { to: "/#pricing", label: "Pricing", spyId: "pricing" },
   { to: "/contact", label: "Contact", spyId: null },
 ];
 
@@ -33,7 +92,7 @@ const links = [
  *      pill has almost no contrast against the light lavender/teal gradient,
  *      so the pill/buttons gain a real glass fill and the logo lightens.
  *   3. plain — the default dark-ink-on-transparent look.
- *  Same-page hash links (Features/Pricing/FAQ) get a real active state via
+ *  Same-page hash links (Features/FAQ/Pricing) get a real active state via
  *  scroll-spy (useNavScrollSpy) — a no-op returning null on any page other
  *  than Home, where those section ids don't exist. Contact keeps its
  *  existing route-based active check since it's a real page, not a section. */
@@ -43,6 +102,15 @@ export const Nav: React.FC = () => {
   const glass = useNavHeroGlass();
   const { pathname } = useLocation();
   const { active: spyActive, onLinkClick } = useNavScrollSpy(["platform", "pricing", "faq"]);
+  // Logo plate is inverted relative to the nav pills: over the hero the
+  // white-on-color lockup needs no plate of its own (setGlass(true) in the
+  // handoff clears it to transparent), so it only appears once glass turns
+  // off — i.e. past the hero, or on any page that never has a hero at all.
+  // The `dark` palette is left alone here (data-nav-dark is inert on Home
+  // per the handoff's "Known Deviations", but it's live and unrelated to
+  // this glass mechanism on the other marketing pages, so it keeps its
+  // existing plate-less treatment rather than gaining one now).
+  const logoPlate = !dark && !glass;
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[60] bg-transparent">
@@ -54,13 +122,21 @@ export const Nav: React.FC = () => {
       >
         <Link
           to="/"
-          className="group flex items-center gap-[10.9px] shrink-0"
+          className="group flex items-center gap-[10.9px] shrink-0 rounded-full border border-transparent transition-[background-color,backdrop-filter] duration-[450ms]"
           onClick={() => setOpen(false)}
-          style={
-            glass && !dark
+          style={{
+            padding: "9px 15px",
+            ...(glass && !dark
               ? { color: "#FFFFFF", filter: "drop-shadow(0 2px 10px rgba(52,38,110,.42))" }
-              : undefined
-          }
+              : undefined),
+            ...(logoPlate
+              ? {
+                  background: "rgba(255,255,255,.72)",
+                  backdropFilter: "blur(22px) saturate(1.5) brightness(1.06)",
+                  WebkitBackdropFilter: "blur(22px) saturate(1.5) brightness(1.06)",
+                }
+              : undefined),
+          }}
         >
           <CentiumMark size={28} leafFill={dark ? "#FFFFFF" : glass ? "#D8F1EB" : "#8AC4BA"} />
           <CentiumWordmarkCropped height={11} />
@@ -94,7 +170,11 @@ export const Nav: React.FC = () => {
               <Link
                 key={l.to}
                 to={l.to}
-                onClick={() => l.spyId && onLinkClick(l.spyId)}
+                onClick={(e) => {
+                  if (!l.spyId) return;
+                  onLinkClick(l.spyId);
+                  if (scrollToSection(l.spyId)) e.preventDefault();
+                }}
                 aria-current={isActive ? "true" : undefined}
                 className={clsx(
                   "px-4 py-2 rounded-full text-[13.5px] font-semibold whitespace-nowrap transition-colors duration-200",
@@ -159,9 +239,11 @@ export const Nav: React.FC = () => {
                 <Link
                   key={l.to}
                   to={l.to}
-                  onClick={() => {
+                  onClick={(e) => {
                     setOpen(false);
-                    if (l.spyId) onLinkClick(l.spyId);
+                    if (!l.spyId) return;
+                    onLinkClick(l.spyId);
+                    if (scrollToSection(l.spyId)) e.preventDefault();
                   }}
                   className={clsx(
                     "px-3 py-2.5 rounded-xl text-sm font-semibold",

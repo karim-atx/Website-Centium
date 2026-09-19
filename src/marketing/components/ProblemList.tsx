@@ -7,11 +7,12 @@ export interface ProblemItem {
 }
 
 /** The Problem section's animated strikethrough list. Each row strikes as it
- *  crosses 82% of viewport height, fading its own ink from #221E1A to
- *  #A9A29A as it goes; once all five have struck, the "Centium is the
- *  solution" bar resolves in with a one-shot three-layer teal sheen (a
- *  vertical wipe, a diagonal gloss, and a pulsing ring on the bar itself)
- *  that clears itself at 2200ms so the bar always rests on its flat fill.
+ *  crosses 95% of viewport height (v5 handoff — see the threshold note on
+ *  the scroll effect below), fading its own ink from #221E1A to #A9A29A as
+ *  it goes; once all five have struck, the "Centium is the solution" bar
+ *  resolves in with a one-shot three-layer teal sheen (a vertical wipe, a
+ *  diagonal gloss, and a pulsing ring on the bar itself) that clears itself
+ *  at 2200ms so the bar always rests on its flat fill.
  *
  *  Each label carries an absolutely-positioned duplicate of itself, painted
  *  fully transparent (color + -webkit-text-fill-color) so only its
@@ -33,17 +34,24 @@ export const ProblemList: React.FC<{ items: ProblemItem[] }> = ({ items }) => {
   const listRef = useRef<HTMLDivElement>(null);
   const reduceMotion = useReducedMotion();
 
-  // Regression fix: rows now stage in one at a time (320ms apart via a
-  // queued/drain timer), matching the handoff's own onScroll/drain — a
-  // fast scroll or resize that crosses several rows' 82vh thresholds in one
+  // Regression fix: rows now stage in one at a time (210ms apart via a
+  // queued/drain timer), matching the v5 handoff's own onScroll/drain — a
+  // fast scroll or resize that crosses several rows' thresholds in one
   // tick previously struck all of them in the same instant instead of in
   // sequence.
+  //
+  // Threshold is 95vh, not 82vh: the handoff's own initProblem() comment
+  // notes it moved off .82 ("waited until the list was almost fully on
+  // screen") to fire earlier, as each row starts crossing into view. The
+  // README's prose still says 82vh/320ms apart — stale relative to the
+  // .dc.html's own onScroll/drain, which is the literal spec per this
+  // repo's handoff-implementation standards.
   useEffect(() => {
     if (reduceMotion) {
       setStruck(items.length);
       return;
     }
-    const STEP = 320;
+    const STEP = 210;
     let queued = 0;
     let done = 0;
     let timer: ReturnType<typeof setTimeout> | null = null;
@@ -61,7 +69,7 @@ export const ProblemList: React.FC<{ items: ProblemItem[] }> = ({ items }) => {
       const vh = window.innerHeight;
       let k = 0;
       for (let i = 0; i < items.length && i < rows.length; i++) {
-        if (rows[i].getBoundingClientRect().top < vh * 0.82) k = i + 1;
+        if (rows[i].getBoundingClientRect().top < vh * 0.95) k = i + 1;
       }
       if (k > queued) {
         queued = k;

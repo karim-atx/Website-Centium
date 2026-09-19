@@ -17,7 +17,12 @@ export const BrandLoader: React.FC = () => {
   const [visible, setVisible] = useState(true);
 
   useEffect(() => {
-    const t = setTimeout(() => setVisible(false), 3700);
+    // Handoff's own initLoader(): `reduce ? 1700 : 3700` — the reduced-motion
+    // path isn't just "skip the CSS steps", it also shortens the JS dismiss
+    // timer to match the CSS's own shortened .cent-loader-lockup timeline
+    // below (fade starts at 1.2s, ends at 1.6s under reduced motion).
+    const reduce = !!(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+    const t = setTimeout(() => setVisible(false), reduce ? 1700 : 3700);
     return () => clearTimeout(t);
   }, []);
 
@@ -44,8 +49,19 @@ export const BrandLoader: React.FC = () => {
         @keyframes centLoaderSweep{0%{-webkit-mask-position:-90% 0;mask-position:-90% 0}100%{-webkit-mask-position:190% 0;mask-position:190% 0}}
         @keyframes centLoaderOut{0%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.05)}}
         @media (prefers-reduced-motion: reduce) {
-          .cent-loader-leaf, .cent-loader-c, .cent-loader-word, .cent-loader-sweep, .cent-loader-lockup {
+          .cent-loader-leaf, .cent-loader-c, .cent-loader-word, .cent-loader-sweep {
             animation: none !important; opacity: 1 !important; transform: none !important;
+          }
+          .cent-loader-c {
+            -webkit-mask-image: none !important; mask-image: none !important;
+          }
+          /* The lockup keeps its own (shortened) fade-out — only the leaf/C-draw/
+             word/sweep sequencing steps are skipped, per the handoff's literal
+             reduced-motion CSS. Zeroing this out too (an earlier version here
+             did) leaves the loader mounted at opacity 1 until the JS timer
+             unmounts it, dropping the reduced-motion fade entirely. */
+          .cent-loader-lockup {
+            animation: centLoaderOut .4s ease 1.2s both !important;
           }
         }
       `}</style>
