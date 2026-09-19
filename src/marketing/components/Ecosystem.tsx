@@ -530,7 +530,18 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
 
           {/* Deck — both panels always mounted, stacked in the same grid
               cell; a clip-path wipe (driven by the travel fraction) is what
-              actually reveals one side or the other. */}
+              actually reveals one side or the other.
+
+              Neither wrapper carries a `filter: drop-shadow(...)` for the
+              receded side — that was applied to the full-width, clipped
+              wrapper (not the narrower card inside it), and browsers don't
+              agree on whether a filter's drop-shadow follows an element's
+              original box or its clip-path-visible shape. Where it follows
+              the clipped shape, it paints a shadow along the invisible clip
+              boundary itself, which reads as a phantom disconnected box
+              floating over the panel. Each card already has its own real
+              `boxShadow` (see proCard/bizCard) for the "elevated" look,
+              which doesn't have this clip-path interaction at all. */}
           <div className="relative grid w-full" style={{ gridTemplateColumns: "minmax(0,1fr)", gridRow: 2 }}>
             <div
               className="flex w-full min-w-0"
@@ -539,7 +550,6 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
                 gridRow: 1,
                 clipPath: `inset(0 0 0 ${(t * 100).toFixed(2)}%)`,
                 justifyContent: "flex-end",
-                filter: proOn ? "none" : "drop-shadow(0 16px 30px rgba(78,56,148,.18))",
               }}
             >
               <Reveal className="flex min-w-0">{proCard}</Reveal>
@@ -551,7 +561,6 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
                 gridRow: 1,
                 clipPath: `inset(0 ${((1 - t) * 100).toFixed(2)}% 0 0)`,
                 justifyContent: "flex-start",
-                filter: bizOn ? "none" : "drop-shadow(0 16px 30px rgba(47,95,88,.18))",
               }}
             >
               <Reveal delay={0.06} className="flex min-w-0">{bizCard}</Reveal>
