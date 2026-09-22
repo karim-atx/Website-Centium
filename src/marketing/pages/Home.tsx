@@ -118,6 +118,74 @@ const homePlans: Plan[] = [
 // ported 1:1 from the .dc.html rather than the earlier, larger reproduction.
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Pillar-pane mockup module primitives — ported structurally from the v6
+// handoff's `[data-mod-grid] > div` module shape (see the .dc.html's
+// `data-pane-figure` blocks per pillar). `ModCard` is the bordered module
+// wrapper (border/radius/padding/gap/background are literal); `ModInfo` is
+// the label+badge header row followed by the `[data-mod-caption]` advisory
+// copy (and any literal `aria-hidden` decorative content after it) — these
+// two are exactly what the responsive-fit tier CSS in PillarRail.tsx keys
+// off via `[data-mod-ui]`/`[data-mod-caption]`/`data-cap-min`. Font sizes
+// here stay at this file's existing compact (~7-9px) scale rather than the
+// handoff's own ~12-16px, matching how BrowserMockup's rail/body sizing was
+// already deliberately kept smaller than the handoff for this narrower
+// 430px card — only content (copy, labels, numbers, module counts and
+// flex-basis widths, which the tier CSS's width math depends on) is ported
+// literally, not the handoff's larger absolute type scale.
+// ---------------------------------------------------------------------------
+
+const ModCard: React.FC<{
+  border: string;
+  align?: "center" | "stretch";
+  fullWidth?: boolean;
+  children: React.ReactNode;
+}> = ({ border, align = "center", fullWidth, children }) => (
+  <div
+    className="flex gap-[11px] min-w-0 rounded-[10px] px-[7px] py-[6px] bg-white"
+    style={{
+      border: `1px solid ${border}`,
+      alignItems: align === "stretch" ? "stretch" : "center",
+      gridColumn: fullWidth ? "1 / -1" : undefined,
+    }}
+  >
+    {children}
+  </div>
+);
+
+const ModInfo: React.FC<{
+  label: string;
+  badge: string;
+  badgeBg: string;
+  badgeInk: string;
+  capMin?: 230 | 236 | 246;
+  capInk: string;
+  capPlate: string;
+  capBorder: string;
+  children: React.ReactNode;
+  extra?: React.ReactNode;
+}> = ({ label, badge, badgeBg, badgeInk, capMin, capInk, capPlate, capBorder, children, extra }) => (
+  <div className="flex-1 min-w-0 flex flex-col gap-[5px]">
+    <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
+      <span className="text-[8px] font-extrabold tracking-[.1em] whitespace-nowrap" style={{ color: "#6B6358" }}>
+        {label}
+      </span>
+      <span className="px-[6px] py-[2px] rounded-full text-[7.5px] font-extrabold whitespace-nowrap" style={{ background: badgeBg, color: badgeInk }}>
+        {badge}
+      </span>
+    </div>
+    <span
+      data-mod-caption=""
+      {...(capMin ? { "data-cap-min": String(capMin) } : {})}
+      className="block text-[8.5px] font-bold leading-snug rounded-r-[7px]"
+      style={{ color: capInk, background: capPlate, borderLeft: `3px solid ${capBorder}`, padding: "5px 7px" }}
+    >
+      {children}
+    </span>
+    {extra}
+  </div>
+);
+
 const NutritionGraphic: React.FC = () => (
   <>
     <span
@@ -153,41 +221,156 @@ const NutritionMockup: React.FC = () => (
     <div className="flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="text-xs font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">Today</div>
-        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">1,842 / 2,340 kcal</div>
+        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">1,842 / 2,340 kcal · 18-day streak</div>
       </div>
       <div className="flex gap-1 shrink-0">
         <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#7D67D9", color: "#fff" }}>Log</span>
         <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#F6F3FD", color: "#4E3894" }}>Meal Prep</span>
       </div>
     </div>
-    <div className="flex flex-col gap-1.5">
-      {[
-        { label: "Protein", val: "128 / 165 g", pct: 78, bar: "#4E3894" },
-        { label: "Carbs", val: "196 / 260 g", pct: 75, bar: "#A895E0" },
-        { label: "Fat", val: "48 / 65 g", pct: 74, bar: "#5E9E95" },
-      ].map((row) => (
-        <div key={row.label} className="flex flex-col gap-[3px]">
-          <div className="flex justify-between gap-1.5">
-            <span className="text-[9px] font-semibold text-[#5B5349] whitespace-nowrap">{row.label}</span>
-            <span className="text-[9px] font-extrabold text-mkt-ink whitespace-nowrap">{row.val}</span>
-          </div>
-          <div className="h-1 rounded-full" style={{ background: "#F4F1FB" }}>
-            <span className="block h-full rounded-full" style={{ width: `${row.pct}%`, background: row.bar }} />
-          </div>
+
+    <div
+      data-mod-grid
+      className="grid min-w-0"
+      style={{ flex: "1 1 auto", alignContent: "stretch", alignItems: "stretch", gridTemplateColumns: "repeat(auto-fit,minmax(min(420px,100%),1fr))", gap: 6 }}
+    >
+      {/* Module 1 — Macro targets (full width, literal from .dc.html
+          data-pane-figure for /nutrition) */}
+      <ModCard border="#E4DCF8" align="stretch" fullWidth>
+        <div data-mod-ui className="grid gap-[5px] min-w-0" style={{ gridAutoRows: "1fr", alignItems: "stretch", flex: "0 1 420px" }}>
+          {[
+            { label: "Protein", pct: 30, val: "30% · 165 g", bar: "#4E3894", ink: "#4E3894" },
+            { label: "Carbs", pct: 45, val: "45% · 260 g", bar: "#7D67D9", ink: "#5C48A8" },
+            { label: "Fat", pct: 25, val: "25% · 65 g", bar: "#2F5F58", ink: "#2F5F58" },
+          ].map((row) => (
+            <span key={row.label} className="flex items-center gap-[6px]">
+              <span className="w-[34px] text-[8px] font-bold whitespace-nowrap" style={{ color: "#3B352D" }}>{row.label}</span>
+              <span className="relative flex-1 h-[4px] rounded-full" style={{ background: "#EFEAFB" }}>
+                <span className="absolute left-0 top-0 bottom-0 rounded-full" style={{ width: `${row.pct}%`, background: row.bar }} />
+              </span>
+              <span className="w-[50px] text-right text-[8px] font-extrabold whitespace-nowrap" style={{ color: row.ink }}>{row.val}</span>
+            </span>
+          ))}
+          <span aria-hidden="true" className="grid gap-[1.5px]" style={{ gridTemplateColumns: "repeat(20,1fr)" }}>
+            {Array.from({ length: 20 }).map((_, i) => (
+              <span key={i} className="h-[6px] rounded-[1px]" style={{ background: i < 6 ? "#4E3894" : i < 15 ? "#7D67D9" : "#A895E0" }} />
+            ))}
+          </span>
         </div>
-      ))}
-    </div>
-    <div className="flex flex-col gap-[5px]">
-      {[
-        { title: "Breakfast", meta: "38P · 62C · 12F", kcal: "512" },
-        { title: "Lunch", meta: "52P · 74C · 18F", kcal: "686" },
-      ].map((row) => (
-        <div key={row.title} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5" style={{ border: "1px solid #E4DCF8" }}>
-          <span className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap overflow-hidden text-ellipsis min-w-0">{row.title}</span>
-          <span className="text-[8.5px] text-[#5B5349] whitespace-nowrap shrink-0">{row.meta}</span>
-          <span className="text-[8px] font-bold whitespace-nowrap shrink-0" style={{ color: "#4E3894" }}>{row.kcal}</span>
+        <ModInfo
+          label="MACRO TARGETS"
+          badge="TDEE 2,340"
+          badgeBg="#F4F1FB"
+          badgeInk="#4E3894"
+          capMin={246}
+          capInk="#2F5F58"
+          capPlate="#EDF4F3"
+          capBorder="#5E9E95"
+          extra={
+            <span aria-hidden="true" className="flex flex-col gap-[4px]">
+              <span className="flex items-baseline justify-between gap-2">
+                <span className="text-[7.5px] font-extrabold tracking-[.08em] whitespace-nowrap" style={{ color: "#6B6358" }}>TODAY SO FAR</span>
+                <span className="text-[7.5px] font-bold whitespace-nowrap" style={{ color: "#6B6358" }}>498 kcal still to log</span>
+              </span>
+              {[
+                { l: "P", val: "128", of: "/165 g", pct: 78, bg: "#4E3894" },
+                { l: "C", val: "196", of: "/260 g", pct: 75, bg: "#7D67D9" },
+                { l: "F", val: "48", of: "/65 g", pct: 74, bg: "#2F5F58" },
+              ].map((r) => (
+                <span key={r.l} className="relative block w-full h-[12px] rounded-full overflow-hidden" style={{ background: "#F4F1FB" }}>
+                  <span className="absolute left-0 top-0 bottom-0" style={{ width: `${r.pct}%`, background: r.bg }} />
+                  <span className="absolute inset-0 flex items-center justify-between px-[6px]">
+                    <span className="text-[7.5px] font-extrabold text-white">{r.l}</span>
+                    <span className="text-[7.5px] font-extrabold whitespace-nowrap" style={{ color: r.bg }}>
+                      {r.val}
+                      <span style={{ color: "#A9A29A" }}>{r.of}</span>
+                    </span>
+                  </span>
+                </span>
+              ))}
+            </span>
+          }
+        >
+          Editable macro sliders — drag any target and the split rebalances against your own TDEE.
+        </ModInfo>
+      </ModCard>
+
+      {/* Module 2 — Today's log */}
+      <ModCard border="#E4DCF8">
+        <div data-mod-ui className="flex flex-col gap-[5px] min-w-0" style={{ flex: "0 1 210px" }}>
+          {[
+            { title: "Breakfast", meta: "38P · 62C · 12F", kcal: "512", dashed: false },
+            { title: "Lunch", meta: "52P · 74C · 18F", kcal: "686", dashed: false },
+            { title: "+ Log dinner", meta: "498 kcal left", kcal: "", dashed: true },
+          ].map((row) => (
+            <span
+              key={row.title}
+              className="flex flex-wrap items-center justify-between gap-[6px] rounded-[7px] px-[6px] py-[4px]"
+              style={{ border: row.dashed ? "1px dashed #E4DCF8" : "1px solid #E4DCF8" }}
+            >
+              <span className="text-[8px] font-bold whitespace-nowrap" style={{ color: row.dashed ? "#5C48A8" : "#221E1A" }}>{row.title}</span>
+              <span className="text-[8px] font-bold whitespace-nowrap" style={{ color: "#5B5349" }}>{row.meta}</span>
+              {row.kcal && <span className="text-[8px] font-extrabold whitespace-nowrap" style={{ color: "#4E3894" }}>{row.kcal}</span>}
+            </span>
+          ))}
         </div>
-      ))}
+        <ModInfo label="TODAY'S LOG" badge="ONE TAP" badgeBg="#F4F1FB" badgeInk="#4E3894" capInk="#2F5F58" capPlate="#EDF4F3" capBorder="#5E9E95">
+          Log a meal with its full protein, carb and fat split.
+        </ModInfo>
+      </ModCard>
+
+      {/* Module 3 — Meal prep */}
+      <ModCard border="#E4DCF8">
+        <div data-mod-ui className="flex flex-col gap-[6px] min-w-0" style={{ flex: "0 1 250px" }}>
+          <span className="flex gap-[3px]">
+            {[
+              { d: "M", n: "3", k: "1.9k", off: false },
+              { d: "T", n: "3", k: "2.1k", off: false },
+              { d: "W", n: "3", k: "1.9k", off: false },
+              { d: "T", n: "3", k: "2.0k", off: false },
+              { d: "F", n: "3", k: "1.9k", off: false },
+              { d: "S", n: "—", k: "", off: true },
+              { d: "S", n: "—", k: "", off: true },
+            ].map((c, i) => (
+              <span key={i} className="flex-1 min-w-0 flex flex-col items-center gap-[1px]">
+                <span className="text-[7px] font-bold" style={{ color: "#6B6358" }}>{c.d}</span>
+                <span
+                  className="w-full h-[16px] rounded-[3px] flex items-center justify-center text-[7.5px] font-extrabold"
+                  style={c.off ? { background: "#F6F4F0", border: "1px solid #EDEAE4", color: "#C3BCB2" } : { background: "#F4F1FB", border: "1px solid #E4DCF8", color: "#5C48A8" }}
+                >
+                  {c.n}
+                </span>
+                <span className="text-[6.5px] font-bold whitespace-nowrap" style={{ color: c.off ? "#C3BCB2" : "#6B6358" }}>{c.k}</span>
+              </span>
+            ))}
+          </span>
+          <span aria-hidden="true" className="flex items-center gap-[4px] flex-wrap">
+            {["5 planned", "2 to go", "1,980 kcal avg"].map((c) => (
+              <span key={c} className="px-[6px] py-[1.5px] rounded-full text-[7px] font-extrabold whitespace-nowrap" style={{ background: "#F4F1FB", color: "#4E3894" }}>{c}</span>
+            ))}
+          </span>
+          <span aria-hidden="true" className="flex flex-col gap-[3px]">
+            <span className="flex items-baseline justify-between gap-[6px]">
+              <span className="text-[7px] font-extrabold tracking-[.06em] whitespace-nowrap" style={{ color: "#6B6358" }}>BATCH CONTAINERS</span>
+              <span className="text-[7px] font-extrabold whitespace-nowrap" style={{ color: "#4E3894" }}>7 / 10</span>
+            </span>
+            <span className="flex items-end gap-[4px]">
+              {[100, 100, 100, 60, 20].map((h, i) => (
+                <span key={i} className="relative flex-1 min-w-0 h-[16px] overflow-hidden" style={{ border: "1.5px solid #7D67D9", borderRadius: "2px 2px 4px 4px", background: "#fff" }}>
+                  <span className="absolute left-0 right-0 bottom-0" style={{ height: `${h}%`, background: "#7D67D9" }} />
+                </span>
+              ))}
+            </span>
+          </span>
+          <span aria-hidden="true" className="flex items-center justify-between gap-[6px] rounded-[6px] px-[6px] py-[4px]" style={{ border: "1px solid #E4DCF8" }}>
+            <span className="text-[7px] font-extrabold tracking-[.06em] whitespace-nowrap" style={{ color: "#6B6358" }}>NEXT COOK</span>
+            <span className="text-[7.5px] font-bold whitespace-nowrap" style={{ color: "#4E3894" }}>Sun · 6 meals · 2h 10m</span>
+          </span>
+        </div>
+        <ModInfo label="MEAL PREP" badge="WEEK 37" badgeBg="#F4F1FB" badgeInk="#4E3894" capInk="#2F5F58" capPlate="#EDF4F3" capBorder="#5E9E95">
+          Plan the week ahead in Meal Prep.
+        </ModInfo>
+      </ModCard>
     </div>
   </BrowserMockup>
 );
@@ -234,40 +417,140 @@ const TrainingMockup: React.FC = () => (
     <div className="flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="text-xs font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">Push Day</div>
-        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">Session 41:08 · 8,420 kg</div>
+        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">Session 41:08 · 8,420 kg total</div>
       </div>
       <div className="flex gap-1 shrink-0">
-        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#5E9E95", color: "#fff" }}>Live</span>
-        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#F0F7F5", color: "#2F5F58" }}>History</span>
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#2F5F58", color: "#fff" }}>● LIVE</span>
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#3F726D" }}>History</span>
       </div>
     </div>
-    <div className="flex flex-col gap-[5px]">
-      {[
-        { name: "Bench Press", meta: "4 × 8 · 82.5 kg", rpe: "RPE 8" },
-        { name: "Incline DB Press", meta: "3 × 10 · 30 kg", rpe: "RPE 7" },
-        { name: "Cable Fly", meta: "3 × 12 · 17.5 kg", rpe: "RPE 9" },
-      ].map((row) => (
-        <div key={row.name} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5" style={{ border: "1px solid #D8EAE6" }}>
-          <span className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap overflow-hidden text-ellipsis min-w-0">{row.name}</span>
-          <span className="text-[8.5px] text-[#5B5349] whitespace-nowrap shrink-0">{row.meta}</span>
-          <span className="text-[8px] font-bold whitespace-nowrap shrink-0" style={{ color: "#2F5F58" }}>{row.rpe}</span>
+
+    <div
+      data-mod-grid
+      className="grid min-w-0"
+      style={{ flex: "1 1 auto", alignContent: "stretch", alignItems: "stretch", gridTemplateColumns: "repeat(auto-fit,minmax(min(420px,100%),1fr))", gap: 6 }}
+    >
+      {/* Module 1 — Live set logging. Literal source order differs from the
+          other modules: text column first, then [data-mod-ui], then a
+          sibling "SET 3 OF 4" badge — not just the two-child shape. */}
+      <ModCard border="#D8EAE6">
+        <div className="flex-1 min-w-0 flex flex-col gap-[7px]">
+          <div className="flex items-center justify-between gap-2 flex-wrap min-w-0">
+            <span className="text-[8px] font-extrabold tracking-[.1em] whitespace-nowrap" style={{ color: "#6B6358" }}>LIVE SET LOGGING</span>
+          </div>
+          <span data-mod-caption="" className="block text-[8.5px] font-bold leading-snug rounded-r-[7px]" style={{ color: "#4E3894", background: "#F4F1FB", borderLeft: "3px solid #7D67D9", padding: "5px 7px" }}>
+            Log sets, reps and weight live during a session.
+          </span>
+          <span aria-hidden="true" className="flex flex-col gap-[4px]" style={{ maxWidth: 420 }}>
+            <span className="flex items-baseline justify-between gap-2">
+              <span className="text-[7.5px] font-extrabold tracking-[.08em] whitespace-nowrap" style={{ color: "#6B6358" }}>SETS BANKED</span>
+              <span className="text-[7.5px] font-bold whitespace-nowrap" style={{ color: "#2F5F58" }}>1,320 kg of 2,640 planned</span>
+            </span>
+            <span className="flex gap-[4px]">
+              <span className="flex-1 h-[9px] rounded-full" style={{ background: "#2F5F58" }} />
+              <span className="flex-1 h-[9px] rounded-full" style={{ background: "#2F5F58" }} />
+              <span className="flex-1 h-[9px] rounded-full" style={{ background: "#5E9E95" }} />
+              <span className="flex-1 h-[9px] rounded-full" style={{ background: "#EDF4F3", boxShadow: "inset 0 0 0 1.5px #CFE4DF" }} />
+            </span>
+            <span className="flex gap-[4px]">
+              {["8 × 82.5", "8 × 82.5", "logging", "to come"].map((t, i) => (
+                <span key={i} className="flex-1 text-center text-[7.5px] font-bold" style={{ color: i < 2 ? "#2F5F58" : i === 2 ? "#5E9E95" : "#A9A29A" }}>{t}</span>
+              ))}
+            </span>
+          </span>
         </div>
-      ))}
-    </div>
-    <div className="flex flex-col gap-1">
-      <span className="text-[8px] font-bold tracking-[.14em]" style={{ color: "#8C8378" }}>VOLUME · 6 WEEKS +14%</span>
-      <span className="flex items-end gap-1 h-[26px]">
-        {[
-          { h: 38, o: 0.3 },
-          { h: 52, o: 0.4 },
-          { h: 46, o: 0.5 },
-          { h: 70, o: 0.6 },
-          { h: 86, o: 0.7 },
-          { h: 100, o: 1 },
-        ].map((bar, i) => (
-          <span key={i} className="flex-1 rounded" style={{ height: `${bar.h}%`, background: i === 5 ? "#2F5F58" : "#5E9E95", opacity: bar.o }} />
-        ))}
-      </span>
+        <div data-mod-ui className="flex flex-col gap-[5px] min-w-0" style={{ flex: "0 1 420px" }}>
+          <span className="flex items-center justify-between gap-2">
+            <span className="text-[8.5px] font-extrabold whitespace-nowrap" style={{ color: "#221E1A" }}>Bench Press</span>
+            <span className="text-[8px] font-bold whitespace-nowrap" style={{ color: "#6B6358" }}>82.5 kg · RPE 8</span>
+          </span>
+          <span className="flex flex-wrap gap-[4px]">
+            <span className="px-[6px] py-[3px] rounded-[6px] text-[8px] font-extrabold whitespace-nowrap" style={{ background: "#2F5F58", color: "#fff" }}>8 × 82.5</span>
+            <span className="px-[6px] py-[3px] rounded-[6px] text-[8px] font-extrabold whitespace-nowrap" style={{ background: "#2F5F58", color: "#fff" }}>8 × 82.5</span>
+            <span className="px-[6px] py-[3px] rounded-[6px] text-[8px] font-extrabold whitespace-nowrap" style={{ background: "#fff", color: "#2F5F58", border: "1.5px solid #5E9E95" }}>reps __</span>
+            <span className="px-[6px] py-[3px] rounded-[6px] text-[8px] font-extrabold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#3F726D" }}>4</span>
+          </span>
+          <span className="flex items-center justify-between gap-[6px] rounded-[6px] px-[6px] py-[4px]" style={{ background: "#EDF4F3" }}>
+            <span className="text-[7.5px] font-extrabold tracking-[.06em] whitespace-nowrap" style={{ color: "#2F5F58" }}>REST</span>
+            <span className="relative flex-1 min-w-0 h-[5px] rounded-full overflow-hidden" style={{ background: "#fff" }}>
+              <span className="block h-full rounded-full" style={{ width: "62%", background: "#5E9E95" }} />
+            </span>
+            <span className="text-[7.5px] font-bold whitespace-nowrap" style={{ color: "#2F5F58" }}>1:12 / 2:00</span>
+          </span>
+          {[
+            { name: "Incline DB Press", meta: "3 × 10 · 30 kg" },
+            { name: "Cable Fly", meta: "3 × 12 · 17.5 kg" },
+          ].map((row) => (
+            <span key={row.name} className="flex flex-wrap items-center justify-between gap-[6px] rounded-[6px] px-[6px] py-[4px]" style={{ border: "1px solid #D8EAE6" }}>
+              <span className="text-[8px] font-bold whitespace-nowrap" style={{ color: "#221E1A" }}>{row.name}</span>
+              <span className="text-[8px] font-bold whitespace-nowrap" style={{ color: "#5B5349" }}>{row.meta}</span>
+            </span>
+          ))}
+        </div>
+        <span className="self-start shrink-0 px-[6px] py-[2px] rounded-full text-[7.5px] font-extrabold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#3F726D" }}>SET 3 OF 4</span>
+      </ModCard>
+
+      {/* Module 2 — RPE calculator */}
+      <ModCard border="#D8EAE6">
+        <div data-mod-ui className="grid gap-[5px] min-w-0" style={{ gridAutoRows: "1fr", alignItems: "stretch", flex: "0 1 210px" }}>
+          <span aria-hidden="true" className="flex flex-col gap-[3px]">
+            <span className="relative block h-[8px] rounded-full" style={{ background: "linear-gradient(90deg,#D8EAE6 0%,#93C1B9 45%,#5E9E95 72%,#2F5F58 100%)" }}>
+              <span className="absolute rounded-full" style={{ top: -2, left: "62%", transform: "translateX(-50%)", width: 5, height: 12, background: "#2F5F58", boxShadow: "0 0 0 2px #FFFFFF" }} />
+            </span>
+            <span className="flex">
+              {["6", "7", "8", "9", "10"].map((n) => (
+                <span key={n} className="flex-1 text-center text-[7.5px]" style={{ color: n === "8" ? "#2F5F58" : "#6B6358", fontWeight: n === "8" ? 800 : 700 }}>{n}</span>
+              ))}
+            </span>
+          </span>
+          <span className="flex items-center justify-between gap-[6px]">
+            <span className="text-[8px] font-bold whitespace-nowrap" style={{ color: "#6B6358" }}>Timer</span>
+            <span className="text-[8.5px] font-extrabold whitespace-nowrap" style={{ color: "#2F5F58" }}>01:32 rest</span>
+          </span>
+          <span aria-hidden="true" className="flex items-center gap-[6px]">
+            <svg viewBox="0 0 28 28" className="w-[18px] h-[18px] shrink-0 block">
+              <circle cx="14" cy="14" r="11" fill="none" stroke="#D8EAE6" strokeWidth="3" />
+              <circle cx="14" cy="14" r="11" fill="none" stroke="#2F5F58" strokeWidth="3" strokeLinecap="round" strokeDasharray="69.1" strokeDashoffset="24" transform="rotate(-90 14 14)" />
+            </svg>
+            <span className="flex-1 min-w-0 text-[7.5px] font-bold whitespace-nowrap" style={{ color: "#2F5F58" }}>65% of 90s rest elapsed</span>
+          </span>
+        </div>
+        <ModInfo label="RPE CALCULATOR" badge="e1RM 104 kg" badgeBg="#EDF4F3" badgeInk="#3F726D" capInk="#4E3894" capPlate="#F4F1FB" capBorder="#7D67D9">
+          RPE calculator and a running session timer.
+        </ModInfo>
+      </ModCard>
+
+      {/* Module 3 — History · volume */}
+      <ModCard border="#D8EAE6">
+        <div data-mod-ui className="grid gap-[5px] min-w-0" style={{ gridAutoRows: "1fr", alignItems: "stretch", flex: "0 1 210px" }}>
+          <span aria-hidden="true" className="block h-[22px]">
+            <svg viewBox="0 0 120 34" preserveAspectRatio="none" className="w-full h-full block">
+              <polyline points="2,28 22,24 42,25 62,17 82,13 102,7 118,4 118,34 2,34" fill="#5E9E95" fillOpacity={0.18} stroke="none" />
+              <polyline points="2,28 22,24 42,25 62,17 82,13 102,7 118,4" fill="none" stroke="#2F5F58" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </span>
+          <span aria-hidden="true" className="flex items-center gap-[4px] flex-wrap">
+            {["6 weeks", "+14% volume", "8,420 kg"].map((c) => (
+              <span key={c} className="px-[6px] py-[1.5px] rounded-full text-[7px] font-extrabold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#2F5F58" }}>{c}</span>
+            ))}
+          </span>
+          <span aria-hidden="true" className="flex items-end gap-[4px]">
+            {[
+              { h: 16.8, label: "Push", bg: "#2F5F58" },
+              { h: 12.6, label: "Pull", bg: "#5E9E95" },
+              { h: 12.6, label: "Legs", bg: "#93C1B9" },
+            ].map((b) => (
+              <span key={b.label} className="flex-1 flex flex-col items-center gap-[1px]">
+                <span className="w-full rounded-[2px]" style={{ height: `${b.h}px`, background: b.bg }} />
+                <span className="text-[7px] font-bold" style={{ color: "#6B6358" }}>{b.label}</span>
+              </span>
+            ))}
+          </span>
+        </div>
+        <ModInfo label="HISTORY · VOLUME" badge="+14% · 6 WK" badgeBg="#EDF4F3" badgeInk="#3F726D" capInk="#4E3894" capPlate="#F4F1FB" capBorder="#7D67D9">
+          Volume progression charted under History.
+        </ModInfo>
+      </ModCard>
     </div>
   </BrowserMockup>
 );
@@ -299,32 +582,140 @@ const HealthMockup: React.FC = () => (
     <div className="flex items-start justify-between gap-2">
       <div className="min-w-0">
         <div className="text-xs font-extrabold tracking-[-.02em] text-mkt-ink whitespace-nowrap">Steps</div>
-        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">9,412 · avg 8,640</div>
+        <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">9,412 today · avg 8,640</div>
       </div>
       <div className="flex gap-1 shrink-0">
-        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold" style={{ background: "#7D67D9", color: "#fff" }}>D</span>
-        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold" style={{ background: "#F6F3FD", color: "#54409B" }}>W</span>
-        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold" style={{ background: "#F6F3FD", color: "#54409B" }}>M</span>
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold" style={{ background: "#F4F1FB", color: "#54409B" }}>D</span>
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold" style={{ background: "#5C48A8", color: "#fff" }}>W</span>
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold" style={{ background: "#F4F1FB", color: "#54409B" }}>M</span>
       </div>
     </div>
-    <span className="flex items-end gap-1 h-[30px]">
-      {[52, 68, 44, 86, 62, 100, 74].map((h, i) => (
-        <span key={i} className="flex-1 rounded-sm" style={{ height: `${h}%`, background: i === 5 ? "#7D67D9" : "#F4F1FB" }} />
-      ))}
-    </span>
-    <div className="grid grid-cols-2 gap-[7px]">
-      <div className="rounded-lg p-1.5" style={{ border: "1px solid #E4DCF8" }}>
-        <div className="text-[7.5px] font-bold tracking-[.12em] text-mkt-faint">WEIGHT</div>
-        <div className="text-[11px] font-extrabold text-mkt-ink">74.6 kg</div>
-      </div>
-      <div className="rounded-lg p-1.5" style={{ border: "1px solid #E4DCF8" }}>
-        <div className="text-[7.5px] font-bold tracking-[.12em] text-mkt-faint">BODY FAT</div>
-        <div className="text-[11px] font-extrabold text-mkt-ink">17.2%</div>
-      </div>
-    </div>
-    <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5" style={{ border: "1px solid #E4DCF8" }}>
-      <span className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap">Sleep score 84</span>
-      <span className="text-[8.5px] text-mkt-faint whitespace-nowrap">7h 22m</span>
+
+    <div
+      data-mod-grid
+      className="grid min-w-0"
+      style={{ flex: "1 1 auto", alignContent: "stretch", alignItems: "stretch", gridTemplateColumns: "repeat(auto-fit,minmax(min(420px,100%),1fr))", gap: 6 }}
+    >
+      {/* Module 1 — Steps */}
+      <ModCard border="#E4DCF8">
+        <div data-mod-ui className="grid gap-[5px] min-w-0" style={{ gridAutoRows: "1fr", alignItems: "stretch", flex: "0 1 210px" }}>
+          <span className="relative flex items-end gap-[3px] h-[22px]">
+            {[52, 68, 44, 86, 62, 100, 74].map((h, i) => (
+              <span key={i} className="flex-1 rounded-t-[2px]" style={{ height: `${h}%`, background: i === 5 ? "#5C48A8" : "#EFEAFB" }} />
+            ))}
+            <span className="absolute left-0 right-0" style={{ bottom: "62%", borderTop: "1px dashed #54409B", opacity: 0.55 }} />
+          </span>
+          <span aria-hidden="true" className="flex items-center gap-[4px] flex-wrap">
+            {["avg 8,640", "today 9,412", "+9%"].map((c) => (
+              <span key={c} className="px-[6px] py-[1.5px] rounded-full text-[7px] font-extrabold whitespace-nowrap" style={{ background: "#F4F1FB", color: "#4E3894" }}>{c}</span>
+            ))}
+          </span>
+          <span aria-hidden="true" className="flex gap-[2px] h-[6px]">
+            <span className="rounded-full" style={{ flex: 62, background: "#7D67D9" }} />
+            <span className="rounded-full" style={{ flex: 38, background: "#E4DCF8" }} />
+          </span>
+        </div>
+        <ModInfo label="STEPS" badge="AVG 8,640" badgeBg="#F4F1FB" badgeInk="#54409B" capInk="#2F5F58" capPlate="#EDF4F3" capBorder="#5E9E95">
+          Maintain your average step count.
+        </ModInfo>
+      </ModCard>
+
+      {/* Module 2 — Body (weight/body fat vs goal) */}
+      <ModCard border="#E4DCF8">
+        <div data-mod-ui className="grid gap-[5px] min-w-0" style={{ gridAutoRows: "1fr", alignItems: "stretch", flex: "0 1 210px" }}>
+          <span className="flex gap-[5px]">
+            {[
+              { label: "WEIGHT", val: "74.6 kg" },
+              { label: "BODY FAT", val: "17.2%" },
+            ].map((c) => (
+              <span key={c.label} className="flex-1 flex flex-col gap-[1px] rounded-[7px] px-[6px] py-[4px]" style={{ border: "1px solid #E4DCF8" }}>
+                <span className="text-[7px] font-extrabold tracking-[.06em] whitespace-nowrap" style={{ color: "#6B6358" }}>{c.label}</span>
+                <span className="text-[8.5px] font-extrabold whitespace-nowrap" style={{ color: "#221E1A" }}>{c.val}</span>
+                <span className="text-[7.5px] font-bold whitespace-nowrap" style={{ color: "#54409B" }}>edit</span>
+              </span>
+            ))}
+          </span>
+          <span className="flex flex-col gap-[3px]">
+            <span className="flex items-baseline justify-between gap-[6px]">
+              <span className="text-[7px] font-extrabold tracking-[.06em] whitespace-nowrap" style={{ color: "#6B6358" }}>GOAL 72.0 kg</span>
+              <span className="text-[7px] font-extrabold whitespace-nowrap" style={{ color: "#4E3894" }}>2.6 to go</span>
+            </span>
+            <span className="block h-[4px] rounded-full" style={{ background: "#EFEAFB" }}>
+              <span className="block h-full rounded-full" style={{ width: "68%", background: "#4E3894" }} />
+            </span>
+          </span>
+        </div>
+        <ModInfo label="BODY" badge="VS GOAL" badgeBg="#F4F1FB" badgeInk="#54409B" capInk="#2F5F58" capPlate="#EDF4F3" capBorder="#5E9E95">
+          Reach your goal weight and body fat.
+        </ModInfo>
+      </ModCard>
+
+      {/* Module 3 — Sleep */}
+      <ModCard border="#E4DCF8">
+        <div data-mod-ui className="flex items-center gap-[8px] min-w-0" style={{ flex: "0 1 210px" }}>
+          <span aria-hidden="true" className="relative w-[42px] h-[42px] shrink-0 rounded-full flex items-center justify-center" style={{ background: "conic-gradient(#4E3894 0turn .84turn,#EFEAFB .84turn 1turn)" }}>
+            <span className="absolute inset-[5px] rounded-full bg-white" />
+            <span className="relative flex flex-col items-center leading-none">
+              <span className="text-[10px] font-extrabold" style={{ color: "#221E1A" }}>84</span>
+              <span className="text-[6px] font-extrabold tracking-[.06em]" style={{ color: "#6B6358" }}>SCORE</span>
+            </span>
+          </span>
+          <span className="flex-1 min-w-0 flex flex-col gap-[4px]">
+            {[
+              { label: "REM", pct: 22, bg: "#7D67D9" },
+              { label: "Deep", pct: 26, bg: "#4E3894" },
+              { label: "Light", pct: 44, bg: "#A895E0" },
+            ].map((r) => (
+              <span key={r.label} className="flex items-center gap-[4px]">
+                <span className="w-[22px] text-[7px] font-bold whitespace-nowrap" style={{ color: "#6B6358" }}>{r.label}</span>
+                <span className="flex-1 h-[3px] rounded-full" style={{ background: "#EFEAFB" }}>
+                  <span className="block h-full rounded-full" style={{ width: `${r.pct}%`, background: r.bg }} />
+                </span>
+                <span className="text-[7px] font-extrabold whitespace-nowrap" style={{ color: "#4E3894" }}>{r.pct}%</span>
+              </span>
+            ))}
+          </span>
+        </div>
+        <ModInfo label="SLEEP" badge="SCORE 84" badgeBg="#F4F1FB" badgeInk="#54409B" capInk="#2F5F58" capPlate="#EDF4F3" capBorder="#5E9E95">
+          Optimize sleep by measuring REM, deep, light and awake scores.
+        </ModInfo>
+      </ModCard>
+
+      {/* Module 4 — Biomarkers */}
+      <ModCard border="#E4DCF8">
+        <div data-mod-ui className="grid gap-[5px] min-w-0" style={{ gridAutoRows: "1fr", alignItems: "stretch", flex: "0 1 210px" }}>
+          <span className="flex items-center gap-[6px] min-w-0">
+            <span className="w-[20px] h-[20px] rounded-[6px] shrink-0 flex items-center justify-center" style={{ border: "1px dashed #7D67D9", background: "#F4F1FB" }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#54409B" strokeWidth="2" strokeLinecap="round">
+                <path d="M3 8h3l2-2h8l2 2h3v11H3z" />
+                <circle cx="12" cy="13" r="3.2" />
+              </svg>
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-[8px] font-bold whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: "#221E1A" }}>Vitamin D · 32 ng/mL</span>
+              <span className="block text-[7px] font-medium whitespace-nowrap" style={{ color: "#6B6358" }}>read from photo · added to history</span>
+            </span>
+          </span>
+          <span className="flex flex-col gap-[4px]">
+            {[
+              { name: "Ferritin", markerPct: 48, val: "86" },
+              { name: "HbA1c", markerPct: 34, val: "5.4" },
+            ].map((r) => (
+              <span key={r.name} className="flex items-center gap-[5px]">
+                <span className="flex-1 min-w-0 text-[7.5px] font-bold whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: "#221E1A" }}>{r.name}</span>
+                <span className="relative w-[36px] h-[3px] rounded-full shrink-0" style={{ background: "#EFEAFB" }}>
+                  <span className="absolute top-0 bottom-0 rounded-full" style={{ left: "22%", right: "22%", background: "#D9CEF6" }} />
+                  <span className="absolute rounded-full" style={{ top: -1.5, left: `${r.markerPct}%`, width: 3, height: 6, background: "#4E3894" }} />
+                </span>
+                <span className="text-[7.5px] font-extrabold whitespace-nowrap" style={{ color: "#4E3894" }}>{r.val}</span>
+              </span>
+            ))}
+          </span>
+        </div>
+        <ModInfo label="BIOMARKERS" badge="MEDICAL LOG" badgeBg="#F4F1FB" badgeInk="#54409B" capInk="#2F5F58" capPlate="#EDF4F3" capBorder="#5E9E95">
+          Track and record medical history straight into history.
+        </ModInfo>
+      </ModCard>
     </div>
   </BrowserMockup>
 );
@@ -361,33 +752,152 @@ const CommunityMockup: React.FC = () => (
         <div className="text-[8.5px] text-mkt-faint whitespace-nowrap">4 of 5 done · 18-day streak</div>
       </div>
       <div className="flex gap-1 shrink-0">
-        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#5E9E95", color: "#fff" }}>Habits</span>
-        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#F0F7F5", color: "#33665E" }}>Journal</span>
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#2F5F58", color: "#fff" }}>Habits</span>
+        <span className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#33665E" }}>Journal</span>
       </div>
     </div>
-    <div className="flex flex-col gap-[5px]">
-      {[
-        { name: "Morning walk", meta: "7 days", status: "done" },
-        { name: "Protein target", meta: "18 days", status: "done" },
-        { name: "Sleep by 11pm", meta: "4 days", status: "open" },
-      ].map((row) => (
-        <div key={row.name} className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5" style={{ border: "1px solid #D8EAE6" }}>
-          <span className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap overflow-hidden text-ellipsis min-w-0">{row.name}</span>
-          <span className="text-[8.5px] text-[#5B5349] whitespace-nowrap shrink-0">{row.meta}</span>
-          <span className="text-[8px] font-bold whitespace-nowrap shrink-0" style={{ color: "#33665E" }}>{row.status}</span>
+
+    <div
+      data-mod-grid
+      className="grid min-w-0"
+      style={{ flex: "1 1 auto", alignContent: "stretch", alignItems: "stretch", gridTemplateColumns: "repeat(auto-fit,minmax(min(420px,100%),1fr))", gap: 6 }}
+    >
+      {/* Module 1 — Habits & streaks */}
+      <ModCard border="#D8EAE6">
+        <div data-mod-ui className="grid gap-[5px] min-w-0" style={{ gridAutoRows: "1fr", alignItems: "stretch", flex: "0 1 210px" }}>
+          {[
+            { name: "Morning walk", days: [1, 1, 1, 1, 1, 1, 1], streak: "7 d" },
+            { name: "Protein target", days: [1, 1, 1, 1, 1, 1, 0], streak: "18 d" },
+            { name: "Sleep by 11pm", days: [1, 1, 1, 1, 0, 0, 0], streak: "4 d" },
+          ].map((row) => (
+            <span key={row.name} className="flex items-center justify-between gap-[6px]">
+              <span className="text-[8px] font-bold whitespace-nowrap overflow-hidden text-ellipsis" style={{ color: "#221E1A" }}>{row.name}</span>
+              <span className="flex gap-[2px] shrink-0">
+                {row.days.map((d, i) => (
+                  <span key={i} className="w-[5px] h-[5px] rounded-full" style={{ background: d ? "#33665E" : "#E4F0ED" }} />
+                ))}
+              </span>
+              <span className="text-[8px] font-extrabold whitespace-nowrap shrink-0" style={{ color: "#33665E" }}>{row.streak}</span>
+            </span>
+          ))}
+          <span aria-hidden="true" className="relative flex items-start justify-between">
+            <span className="absolute rounded-full" style={{ left: "16.667%", right: "16.667%", top: 3, height: 2, background: "#CFE4DF" }} />
+            <span className="absolute rounded-full" style={{ left: "16.667%", top: 3, width: "33.333%", height: 2, background: "#2F5F58" }} />
+            {[
+              { label: "7d", filled: true, ring: false },
+              { label: "18d", filled: true, ring: true },
+              { label: "30d", filled: false, ring: false },
+            ].map((m) => (
+              <span key={m.label} className="relative flex-1 flex flex-col items-center gap-[2px]">
+                <span
+                  className="w-[8px] h-[8px] rounded-full"
+                  style={{
+                    background: m.filled ? "#2F5F58" : "#FFFFFF",
+                    boxShadow: m.filled ? (m.ring ? "0 0 0 2px rgba(47,95,88,.22)" : "none") : "inset 0 0 0 1.5px #CFE4DF",
+                  }}
+                />
+                <span className="text-[7px] font-bold whitespace-nowrap" style={{ color: m.filled ? "#2F5F58" : "#6B6358" }}>{m.label}</span>
+              </span>
+            ))}
+          </span>
         </div>
-      ))}
-    </div>
-    <div className="flex flex-wrap gap-1">
-      {["Personal", "Training", "Nutrition", "General"].map((chip) => (
-        <span key={chip} className="px-[7px] py-[3px] rounded-full text-[8px] font-bold whitespace-nowrap" style={{ background: "#F0F7F5", color: "#33665E" }}>
-          {chip}
-        </span>
-      ))}
-    </div>
-    <div className="flex items-center justify-between gap-2 rounded-lg px-2 py-1.5" style={{ border: "1px solid #D8EAE6" }}>
-      <span className="text-[9.5px] font-bold text-mkt-ink whitespace-nowrap">Rana H. · roster</span>
-      <span className="text-[8.5px] text-mkt-faint whitespace-nowrap">12 clients</span>
+        <ModInfo label="HABITS & STREAKS" badge="18-DAY" badgeBg="#EDF4F3" badgeInk="#33665E" capInk="#54409B" capPlate="#F4F1FB" capBorder="#7D67D9">
+          Habits and streaks that hold the routine together.
+        </ModInfo>
+      </ModCard>
+
+      {/* Module 2 — Journal */}
+      <ModCard border="#D8EAE6">
+        <div data-mod-ui className="grid gap-[5px] min-w-0" style={{ gridAutoRows: "1fr", alignItems: "stretch", flex: "0 1 210px" }}>
+          <span className="flex flex-wrap" style={{ gap: "3px 2px" }}>
+            {["Personal", "Training", "Nutrition", "General"].map((t, i) => (
+              <span key={t} className="px-[6px] py-[2px] rounded-t-[5px] text-[7.5px] font-extrabold whitespace-nowrap" style={{ background: i === 0 ? "#33665E" : "#EDF4F3", color: i === 0 ? "#fff" : "#33665E" }}>
+                {t}
+              </span>
+            ))}
+          </span>
+          <span className="flex flex-col gap-[2px] px-[6px] py-[4px]" style={{ border: "1px solid #D8EAE6", borderRadius: "0 6px 6px 6px" }}>
+            <span className="text-[7.5px] font-bold" style={{ color: "#221E1A" }}>Felt strong on the last set</span>
+            <span className="block h-[2px] rounded-full" style={{ width: "86%", background: "#E4F0ED" }} />
+            <span className="block h-[2px] rounded-full" style={{ width: "64%", background: "#E4F0ED" }} />
+          </span>
+          <span aria-hidden="true" className="flex gap-[1.5px]">
+            {["#7FB3AA", "#EDF4F3", "#2F5F58", "#BFD9D3", "#7FB3AA", "#2F5F58", "#EDF4F3", "#BFD9D3", "#2F5F58", "#7FB3AA", "#EDF4F3", "#7FB3AA", "#2F5F58", "#BFD9D3"].map((c, i) => (
+              <span key={i} className="flex-1 min-w-0 h-[10px] rounded-[1px]" style={{ background: c }} />
+            ))}
+          </span>
+        </div>
+        <ModInfo label="JOURNAL" badge="4 FOLDERS" badgeBg="#EDF4F3" badgeInk="#33665E" capMin={230} capInk="#54409B" capPlate="#F4F1FB" capBorder="#7D67D9">
+          A journal log to jot down personal, training, nutrition and general accomplishments.
+        </ModInfo>
+      </ModCard>
+
+      {/* Module 3 — Client roster */}
+      <ModCard border="#D8EAE6">
+        <div data-mod-ui className="grid gap-[5px] min-w-0" style={{ gridAutoRows: "1fr", alignItems: "stretch", flex: "0 1 210px" }}>
+          {[
+            { initials: "JD", name: "Jane D.", status: "logged" },
+            { initials: "JD", name: "John D.", status: "logged" },
+            { initials: "JR", name: "Jane R.", status: "pending" },
+          ].map((row, i) => (
+            <span key={i} className="flex items-center gap-[5px]">
+              <span className="w-[14px] h-[14px] rounded-full shrink-0 flex items-center justify-center text-[7px] font-extrabold" style={{ background: "#EDF4F3", color: "#33665E" }}>{row.initials}</span>
+              <span className="flex-1 min-w-0 text-[8px] font-bold whitespace-nowrap" style={{ color: "#221E1A" }}>{row.name}</span>
+              <span className="text-[8px] font-extrabold whitespace-nowrap" style={{ color: row.status === "logged" ? "#33665E" : "#6B6358" }}>{row.status}</span>
+            </span>
+          ))}
+          <span className="flex justify-between gap-[6px] pt-[5px]" style={{ borderTop: "1px solid #D8EAE6" }}>
+            <span className="text-[7.5px] font-bold whitespace-nowrap" style={{ color: "#6B6358" }}>2 logged today</span>
+            <span className="text-[7.5px] font-bold whitespace-nowrap" style={{ color: "#6B6358" }}>1 pending</span>
+          </span>
+        </div>
+        <ModInfo label="CLIENT ROSTER" badge="12 CLIENTS" badgeBg="#EDF4F3" badgeInk="#33665E" capInk="#54409B" capPlate="#F4F1FB" capBorder="#7D67D9">
+          Client rosters with roster stats for professionals.
+        </ModInfo>
+      </ModCard>
+
+      {/* Module 4 — Explore (gyms) */}
+      <ModCard border="#D8EAE6">
+        <div data-mod-ui className="grid gap-[5px] min-w-0" style={{ gridAutoRows: "1fr", alignItems: "stretch", flex: "0 1 210px" }}>
+          <span className="flex items-center gap-[6px] min-w-0">
+            <span className="w-[18px] h-[18px] rounded-[6px] shrink-0 flex items-center justify-center" style={{ background: "#EDF4F3" }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#33665E" strokeWidth="2" strokeLinecap="round">
+                <path d="M3 21V8l9-5 9 5v13" />
+                <path d="M9 21v-6h6v6" />
+              </svg>
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-[8px] font-bold whitespace-nowrap" style={{ color: "#221E1A" }}>Anytown Fitness Co.</span>
+              <span className="block text-[7px] font-medium whitespace-nowrap" style={{ color: "#6B6358" }}>591 members reached</span>
+            </span>
+            <span className="w-[18px] h-[10px] rounded-full shrink-0 flex items-center justify-end" style={{ background: "#33665E", padding: "0 1.5px" }}>
+              <span className="w-[7px] h-[7px] rounded-full bg-white" />
+            </span>
+          </span>
+          <span aria-hidden="true" className="flex items-center gap-[6px]">
+            <svg viewBox="0 0 46 46" className="w-[26px] h-[26px] shrink-0 block">
+              <circle cx="23" cy="23" r="21" fill="none" stroke="#D8EAE6" strokeWidth="1.5" />
+              <circle cx="23" cy="23" r="13" fill="none" stroke="#D8EAE6" strokeWidth="1.5" />
+              <circle cx="23" cy="23" r="3.4" fill="#2F5F58" />
+              <circle cx="34" cy="16" r="3" fill="#5E9E95" />
+              <circle cx="14" cy="31" r="3" fill="#5E9E95" />
+              <circle cx="31" cy="34" r="2.6" fill="#93C1B9" />
+            </svg>
+            <span className="flex-1 min-w-0 flex flex-col gap-[1px]">
+              <span className="text-[8.5px] font-extrabold whitespace-nowrap" style={{ color: "#221E1A" }}>4 venues · 3 km</span>
+              <span className="text-[7px] font-bold whitespace-nowrap" style={{ color: "#2F5F58" }}>18 classes/wk</span>
+            </span>
+          </span>
+          <span aria-hidden="true" className="flex items-center gap-[4px] flex-wrap">
+            {["drop-in", "open now", "from $12"].map((c) => (
+              <span key={c} className="px-[6px] py-[1.5px] rounded-full text-[7px] font-extrabold whitespace-nowrap" style={{ background: "#EDF4F3", color: "#2F5F58" }}>{c}</span>
+            ))}
+          </span>
+        </div>
+        <ModInfo label="EXPLORE" badge="ACTIVE" badgeBg="#EDF4F3" badgeInk="#33665E" capMin={236} capInk="#54409B" capPlate="#F4F1FB" capBorder="#7D67D9">
+          Connect and join gyms, classes and browse a wide selection of items in a curated marketplace.
+        </ModInfo>
+      </ModCard>
     </div>
   </BrowserMockup>
 );

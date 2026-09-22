@@ -16,19 +16,87 @@ const LEAF_SLIT_PATH =
 
 const clamp1 = (v: number) => Math.max(-1, Math.min(1, v));
 
-const clients = [
-  { initials: "JD", name: "John Doe", meta: "64.2 kg · −0.8 · 1,840 kcal", status: "Logged", tone: "primary" as const },
-  { initials: "JR", name: "Jane Roe", meta: "81.6 kg · +0.3 · 2,650 kcal", status: "Logged", tone: "teal" as const },
-  { initials: "RR", name: "Richard Roe", meta: "58.9 kg · −0.2 · 1,620 kcal", status: "Pending", tone: "primary" as const },
-  { initials: "RT", name: "Roster today", meta: "2 logged today · 1 pending", status: "3 clients", tone: "teal" as const },
+type ChipTone = "normal" | "warn";
+interface RowChip {
+  text: string;
+  tone?: ChipTone;
+}
+interface ClientRow {
+  initials: string;
+  name: string;
+  meta: string;
+  chips: RowChip[];
+  status: string;
+  tone: "primary" | "teal";
+  /** data-eco-shed tier on the whole row — matches the handoff's literal
+   *  markup (Richard Roe = 6, the "Roster today" summary row = 1). John Doe
+   *  and Jane Roe carry no row-level tier; only their chip clusters do (2). */
+  shed?: "1" | "6";
+}
+
+const clients: ClientRow[] = [
+  {
+    initials: "JD",
+    name: "John Doe",
+    meta: "64.2 kg · −0.8 · 1,840 kcal",
+    chips: [{ text: "8,420 steps" }, { text: "P 132g" }, { text: "7h 20m sleep" }],
+    status: "Logged",
+    tone: "primary",
+  },
+  {
+    initials: "JR",
+    name: "Jane Roe",
+    meta: "81.6 kg · +0.3 · 2,650 kcal",
+    chips: [{ text: "11,260 steps" }, { text: "P 186g" }, { text: "⚠ Left knee", tone: "warn" }],
+    status: "Logged",
+    tone: "teal",
+  },
+  {
+    initials: "RR",
+    name: "Richard Roe",
+    meta: "58.9 kg · −0.2 · 1,620 kcal",
+    chips: [{ text: "6,140 steps" }, { text: "P 98g" }, { text: "⚠ Low energy", tone: "warn" }],
+    status: "Pending",
+    tone: "primary",
+    shed: "6",
+  },
+  {
+    initials: "RT",
+    name: "Roster today",
+    meta: "2 logged · 1 pending",
+    chips: [{ text: "2 flags open", tone: "warn" }, { text: "86% adherence" }, { text: "4 sessions" }],
+    status: "3 clients",
+    tone: "teal",
+    shed: "1",
+  },
 ];
 
-const kpis = [
-  { label: "MEMBERS", value: "412" },
-  { label: "MRR", value: "$24.8k" },
-  { label: "RETENTION", value: "78%" },
-  { label: "ARPM", value: "$60" },
-  { label: "VISITS / WK", value: "3.2" },
+interface StatTile {
+  label: string;
+  value: string;
+  note: string;
+  shed?: "3";
+}
+
+const proStats: StatTile[] = [
+  { label: "ACTIVE CLIENTS", value: "12", note: "+2 this month" },
+  { label: "ADHERENCE", value: "86%", note: "plans followed" },
+  { label: "SESSIONS / WK", value: "18", note: "4 today", shed: "3" },
+  { label: "RETENTION", value: "91%", note: "rolling 90 days", shed: "3" },
+];
+
+const compliance = [
+  { name: "John Doe", pct: "92%", top: 18.7, color: "#4E3894" },
+  { name: "Jane Roe", pct: "74%", top: 60.7, color: "#5C48A8" },
+  { name: "Richard Roe", pct: "58%", top: 98.0, color: "#6A54C4" },
+];
+
+const kpis: StatTile[] = [
+  { label: "MEMBERS", value: "412", note: "" },
+  { label: "MRR", value: "$24.8k", note: "" },
+  { label: "RETENTION", value: "78%", note: "" },
+  { label: "ARPM", value: "$60", note: "", shed: "3" },
+  { label: "VISITS / WK", value: "3.2", note: "", shed: "3" },
 ];
 
 const checkins = [
@@ -41,10 +109,10 @@ const checkins = [
   { day: "Sun", v: 62, h: 47 },
 ];
 
-const occupancy = [
-  { name: "HIIT 45", pct: 92 },
-  { name: "Strength Foundations", pct: 75 },
-  { name: "Vinyasa Flow", pct: 100 },
+const occupancy: { name: string; time: string; pct: number; booked: string; waitlist?: string; shed?: "1" }[] = [
+  { name: "HIIT 45", time: "06:30 · Dana", pct: 92, booked: "22/24" },
+  { name: "Strength Foundations", time: "12:00 · Ravi", pct: 75, booked: "15/20" },
+  { name: "Vinyasa Flow", time: "18:30 · Mia", pct: 100, booked: "18/18", waitlist: "4 waitlist", shed: "1" },
 ];
 
 /** Beyond the Individual — a drag slider between the professionals and
@@ -75,7 +143,19 @@ const occupancy = [
  *  Right/End -> 1, Enter/Space toggles. Travel is derived from the rail's own
  *  measured width (`useResizeObserver`-style rect read), never a hardcoded
  *  span — the handoff's own Gotchas call out a slider that hardcoded this and
- *  landed 22px short of its end. */
+ *  landed 22px short of its end.
+ *
+ *  Below 1024px, ported from the handoff's own `_ecoFit()`: the switch bar
+ *  plus whichever panel's content is tallest must always fit
+ *  `vh - 72 - 24`. `data-eco-shed="1".."7"` tiers get shed as a whole group
+ *  (stage `data-efit` attribute) until it fits — measured from each panel's
+ *  full, un-clipped content (`data-eco-clip`'s first child), not the
+ *  currently-visible clipped height, so the fit is identical whichever side
+ *  is open — then individual items are backfilled per panel, graphics
+ *  first (`4,3,6,2,1,5,7`), while that panel still fits. Any leftover room
+ *  then stretches that panel's chart (business check-in bars additively,
+ *  the professional compliance plot multiplicatively, re-spacing its
+ *  labels). */
 export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) => {
   const [pos, setPos] = useState(-1); // -1..1; only ever settles at -1 or 1
   const [dragging, setDragging] = useState(false);
@@ -98,13 +178,17 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
       ? new ResizeObserver((entries) => {
           const w = entries[0]?.contentRect.width;
           if (w) setReach(w / 2);
+          ecoFit();
         })
       : null;
     // Read the full border box via getBoundingClientRect (not the observer
     // entry's contentRect, which excludes the bar's own 3px border) so the
     // seam starts exactly at the bar's rendered bottom edge.
     const roBar = bar
-      ? new ResizeObserver(() => setBarHeight(bar.getBoundingClientRect().height))
+      ? new ResizeObserver(() => {
+          setBarHeight(bar.getBoundingClientRect().height);
+          ecoFit();
+        })
       : null;
     if (track && roTrack) roTrack.observe(track);
     if (bar && roBar) roBar.observe(bar);
@@ -112,6 +196,7 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
       roTrack?.disconnect();
       roBar?.disconnect();
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const proOn = pos < 0;
@@ -152,6 +237,189 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
     else if (e.key === "Enter" || e.key === " ") { e.preventDefault(); commit(pos < 0 ? 1 : -1); }
   };
 
+  // Mobile fit — literal port of the handoff's `_ecoFit()`. See the class
+  // doc comment above for the summary; every step below (the `need()`
+  // full-content measurement, the whole-tier shed loop capped at 8, the
+  // per-panel graphics-first backfill in exactly two passes, and the
+  // bars-additive/plot-multiplicative chart stretch) mirrors that function
+  // line for line, adapted only where this port's DOM nesting differs from
+  // the handoff's (see the data-eco-clip/-screen/-mod markup below).
+  const ecoFit = useCallback(() => {
+    const stage = document.getElementById("eco-stage");
+    const deck = document.getElementById("eco-deck");
+    if (!stage || !deck) return;
+
+    if (!window.matchMedia("(max-width:1023px)").matches) {
+      stage.removeAttribute("data-efit");
+      stage.querySelectorAll<HTMLElement>("[data-h0]").forEach((el) => {
+        el.style.height = (el.getAttribute("data-h0") || "0") + "px";
+      });
+      stage.querySelectorAll<HTMLElement>("[data-t0]").forEach((el) => {
+        el.style.top = (el.getAttribute("data-t0") || "0") + "px";
+      });
+      return;
+    }
+
+    const room = Math.max(240, window.innerHeight - 72 - 24);
+    const wipes = deck.querySelectorAll<HTMLElement>("[data-eco-wipe]");
+
+    // Measures the height the deck WOULD be if the taller panel's full,
+    // un-clipped content were shown — not the currently-clipped/wiped
+    // height. Same "open or shut" for that reason.
+    const need = () => {
+      let m = 0;
+      for (let i = 0; i < wipes.length; i++) {
+        const clip = wipes[i].querySelector<HTMLElement>("[data-eco-clip]");
+        const inner = (clip?.firstElementChild as HTMLElement | null) ?? null;
+        if (!clip || !inner) continue;
+        m = Math.max(m, wipes[i].offsetHeight - clip.offsetHeight + inner.offsetHeight);
+      }
+      return stage.offsetHeight - deck.offsetHeight + m;
+    };
+
+    // Undo any growth/shift from a previous pass before measuring fresh.
+    stage.querySelectorAll<HTMLElement>("[data-h0]").forEach((el) => {
+      el.style.height = (el.getAttribute("data-h0") || "0") + "px";
+    });
+    stage.querySelectorAll<HTMLElement>("[data-t0]").forEach((el) => {
+      el.style.top = (el.getAttribute("data-t0") || "0") + "px";
+    });
+    stage.querySelectorAll("[data-ekeep]").forEach((el) => el.removeAttribute("data-ekeep"));
+
+    const levels: number[] = [];
+    stage.setAttribute("data-efit", "");
+    while (levels.length < 8 && need() > room) {
+      levels.push(levels.length + 1);
+      stage.setAttribute("data-efit", levels.join(" "));
+    }
+
+    // Back-fill PER PANEL (not globally) — tiers are shared by both panels
+    // and shed in whole groups, so the shorter panel (and any overshoot)
+    // can leave empty room. Restore individual items, graphics-first
+    // (chart 4, tiles 3, occupancy 6, chips 2, rows 1, caption 5,
+    // headers 7), two passes, while that panel still fits.
+    const hid = (el: Element) => (el as HTMLElement).offsetParent === null && getComputedStyle(el).display === "none";
+    const chrome = () => stage.offsetHeight - deck.offsetHeight;
+    const needOf = (wp: HTMLElement) => {
+      const clip = wp.querySelector<HTMLElement>("[data-eco-clip]");
+      const inner = (clip?.firstElementChild as HTMLElement | null) ?? null;
+      return clip && inner ? chrome() + wp.offsetHeight - clip.offsetHeight + inner.offsetHeight : 0;
+    };
+    const ORDER = ["4", "3", "6", "2", "1", "5", "7"];
+    if (levels.length) {
+      for (let w = 0; w < wipes.length; w++) {
+        for (let pass = 0; pass < 2; pass++) {
+          let changed = false;
+          for (let o = 0; o < ORDER.length; o++) {
+            const els = wipes[w].querySelectorAll<HTMLElement>(`[data-eco-shed="${ORDER[o]}"]`);
+            for (let j = 0; j < els.length; j++) {
+              const el = els[j];
+              if (el.hasAttribute("data-ekeep") || !hid(el)) continue;
+              el.setAttribute("data-ekeep", "");
+              if (hid(el) || needOf(wipes[w]) > room) el.removeAttribute("data-ekeep");
+              else changed = true;
+            }
+          }
+          if (!changed) break;
+        }
+      }
+    }
+
+    // Whatever room is left over (measured as the screen's free space via
+    // space-between layout) goes to that panel's chart, stretched to fill
+    // it. Two different chart shapes grow differently: the business
+    // panel's weekly check-in bars (baseline 34px) grow additively; the
+    // professional panel's compliance plot (baseline 125px) grows
+    // multiplicatively and re-spaces its axis labels to match.
+    for (let w = 0; w < wipes.length; w++) {
+      const scr = wipes[w].querySelector<HTMLElement>("[data-eco-screen]");
+      const mod = scr?.querySelector<HTMLElement>(":scope > [data-eco-mod]") ?? null;
+      const prev = (mod?.previousElementSibling as HTMLElement | null) ?? null;
+      if (!scr || !prev) continue;
+      let p: HTMLElement | null = prev;
+      while (p && !p.offsetParent) p = p.previousElementSibling as HTMLElement | null;
+      if (!p) continue;
+
+      const cs = getComputedStyle(scr);
+      const gap = parseFloat(cs.rowGap) || 8;
+      let used = 0;
+      let n = 0;
+      for (let c = scr.firstElementChild as HTMLElement | null; c; c = c.nextElementSibling as HTMLElement | null) {
+        if (!c.offsetParent) continue;
+        used += c.getBoundingClientRect().height;
+        n++;
+      }
+      const spare = Math.floor(
+        scr.clientHeight -
+          (parseFloat(cs.paddingTop) || 0) -
+          (parseFloat(cs.paddingBottom) || 0) -
+          used -
+          gap * Math.max(0, n - 1)
+      );
+      if (spare < 12) continue;
+
+      const chart = wipes[w].querySelector<HTMLElement>('[data-eco-shed="4"]');
+      if (!chart || !chart.offsetParent) continue;
+
+      const bars = chart.querySelectorAll<HTMLElement>('div[style*="height:34px"], div[style*="height: 34px"]');
+      const plots = chart.querySelectorAll<HTMLElement>('div[style*="height:125px"], div[style*="height: 125px"]');
+      if (bars.length) {
+        const add = Math.min(spare, 110); // capped growth
+        for (let i = 0; i < bars.length; i++) {
+          if (!bars[i].hasAttribute("data-h0")) bars[i].setAttribute("data-h0", "34");
+          bars[i].style.height = 34 + add + "px";
+        }
+      } else if (plots.length) {
+        const nh = 125 + Math.min(spare, 150);
+        const k = nh / 125;
+        for (let i = 0; i < plots.length; i++) {
+          if (!plots[i].hasAttribute("data-h0")) plots[i].setAttribute("data-h0", "125");
+          plots[i].style.height = nh + "px";
+          const labs = plots[i].querySelectorAll<HTMLElement>(":scope > span");
+          for (let j = 0; j < labs.length; j++) {
+            const t0 = labs[j].getAttribute("data-t0") || String(parseFloat(labs[j].style.top));
+            if (!labs[j].style.top || isNaN(parseFloat(t0))) continue;
+            labs[j].setAttribute("data-t0", t0);
+            labs[j].style.top = (parseFloat(t0) * k).toFixed(1) + "px";
+          }
+        }
+      }
+    }
+  }, []);
+
+  // Run on mount (once immediately, then again once web fonts have settled
+  // — the handoff's own `document.fonts.ready.then(() => this._ecoFit())`,
+  // since font swaps change every measured height), on window resize/settle,
+  // and whenever the open side changes (switching sides can change which
+  // panel's content is being measured for the chart-visibility checks and
+  // the per-panel backfill/stretch passes).
+  useEffect(() => {
+    ecoFit();
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(() => ecoFit()).catch(() => {});
+    }
+  }, [ecoFit]);
+
+  useEffect(() => {
+    let raf = 0;
+    const onResize = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        ecoFit();
+      });
+    };
+    window.addEventListener("resize", onResize);
+    return () => {
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("resize", onResize);
+    };
+  }, [ecoFit]);
+
+  useEffect(() => {
+    ecoFit();
+  }, [proOn, ecoFit]);
+
   const barBg = proOn
     ? "linear-gradient(150deg,#EDE7FB 0%,#E4DBF7 52%,#E2EEEA 100%)"
     : "linear-gradient(150deg,#E2EFEB 0%,#D8E9E3 52%,#E8E2F8 100%)";
@@ -164,6 +432,7 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
   const proCard = useMemo(
     () => (
       <div
+        data-eco-wipe="pro"
         style={{
           flex: "1",
           width: proOn ? "min(540px,100%)" : "min(330px,100%)",
@@ -181,71 +450,158 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
           borderBottom: "3px solid #4E3894",
         }}
       >
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 28px 28px", minWidth: 0 }}>
-          <div style={{ borderRadius: 16, overflow: "hidden", background: "#FAF9F7", border: "1px solid #EDEAE4" }}>
-            <div style={{ padding: 20, background: "#fff", display: "flex", flexDirection: "column", gap: 10 }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                <div style={{ minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "-.02em", color: "#221E1A" }}>Clients</div>
-                  <div style={{ fontSize: 11, color: "#6B6358" }}>3 active · Thu 4 Sep</div>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 28px 28px", minWidth: 0, minHeight: 0 }}>
+          {/* data-eco-clip's first child ("inner") is what `need()` measures
+              the panel's full, un-clipped natural content height from. */}
+          <div data-eco-clip style={{ overflow: "hidden", minHeight: 0, flex: 1, display: "flex", flexDirection: "column" }}>
+            <div style={{ borderRadius: 16, overflow: "hidden", background: "#FAF9F7", border: "1px solid #EDEAE4", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+              <div data-eco-screen style={{ padding: 20, background: "#fff", display: "flex", flexDirection: "column", gap: 10, flex: 1, minHeight: 0 }}>
+                <div data-eco-shed="7" style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 13, fontWeight: 800, letterSpacing: "-.02em", color: "#221E1A" }}>Clients</div>
+                    <div style={{ fontSize: 11, color: "#6B6358" }}>3 active · Thu 4 Sep</div>
+                  </div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5, flexShrink: 0 }}>
+                    <span style={{ padding: "4px 9px", borderRadius: 999, background: "#5C48A8", color: "#fff", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>All</span>
+                    <span style={{ padding: "4px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", background: "#F1EEE9", color: "#4A443C" }}>Needs review</span>
+                  </div>
                 </div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, flexShrink: 0 }}>
-                  <span style={{ padding: "4px 9px", borderRadius: 999, background: "#5C48A8", color: "#fff", fontSize: 11, fontWeight: 700, whiteSpace: "nowrap" }}>All</span>
-                  <span style={{ padding: "4px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, whiteSpace: "nowrap", background: "#F1EEE9", color: "#4A443C" }}>Needs review</span>
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", marginTop: 4 }}>
-                {clients.map((row, i) => (
-                  <div
-                    key={row.name}
-                    style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: i !== 0 ? "1px solid #EDEAE4" : undefined, minWidth: 0 }}
-                  >
-                    <span
-                      style={{
-                        width: 28,
-                        height: 28,
-                        flexShrink: 0,
-                        borderRadius: 999,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: 11,
-                        fontWeight: 800,
-                        background: row.tone === "primary" ? "#DED4F4" : "#DAEAE7",
-                        color: row.tone === "primary" ? "#4E3894" : "#2F5F58",
-                      }}
-                    >
-                      {row.initials}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
-                      <div style={{ fontSize: 12, fontWeight: 700, color: "#221E1A", whiteSpace: "nowrap" }}>{row.name}</div>
-                      <div style={{ fontSize: 11, color: "#6B6358" }}>{row.meta}</div>
+
+                <div data-eco-split style={{ display: "grid", gridTemplateColumns: "minmax(0,1.05fr) minmax(0,1fr)", gap: 18, alignItems: "start", marginTop: 4 }}>
+                  <div style={{ display: "flex", flexDirection: "column", minWidth: 0 }}>
+                    {clients.map((row, i) => (
+                      <div
+                        key={row.name}
+                        data-eco-shed={row.shed}
+                        style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderTop: i !== 0 ? "1px solid #EDEAE4" : undefined, minWidth: 0 }}
+                      >
+                        <span
+                          style={{
+                            width: 28,
+                            height: 28,
+                            flexShrink: 0,
+                            borderRadius: 999,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontSize: 11,
+                            fontWeight: 800,
+                            background: row.tone === "primary" ? "#DED4F4" : "#DAEAE7",
+                            color: row.tone === "primary" ? "#4E3894" : "#2F5F58",
+                          }}
+                        >
+                          {row.initials}
+                        </span>
+                        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", gap: 2 }}>
+                          <div style={{ fontSize: 12, fontWeight: 700, color: "#221E1A", whiteSpace: "nowrap" }}>{row.name}</div>
+                          <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 6 }}>
+                            <span
+                              style={{
+                                padding: "2px 7px",
+                                borderRadius: 999,
+                                fontSize: 10.5,
+                                fontWeight: 700,
+                                whiteSpace: "nowrap",
+                                color: row.tone === "primary" ? "#4E3894" : "#2F5F58",
+                                background: row.tone === "primary" ? "#F4F1FB" : "#EDF4F3",
+                              }}
+                            >
+                              {row.meta}
+                            </span>
+                            <div data-eco-shed="2" style={{ display: "flex", flexWrap: "wrap", gap: 4, minWidth: 0 }}>
+                              {row.chips.map((chip) => (
+                                <span
+                                  key={chip.text}
+                                  style={{
+                                    padding: "2px 7px",
+                                    borderRadius: 999,
+                                    fontSize: 10.5,
+                                    fontWeight: 700,
+                                    whiteSpace: "nowrap",
+                                    color: chip.tone === "warn" ? "#8A6512" : row.tone === "primary" ? "#4E3894" : "#2F5F58",
+                                    background: chip.tone === "warn" ? "#FBF3DF" : row.tone === "primary" ? "#F4F1FB" : "#EDF4F3",
+                                  }}
+                                >
+                                  {chip.text}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ flexShrink: 0, padding: "4px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, color: "#5B5349", background: i % 2 === 0 ? "#F4F1FB" : "#EDF4F3" }}>
+                          {row.status}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: "flex", flexDirection: "column", gap: 10, minWidth: 0 }}>
+                    <div data-eco-shed="7" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(104px,100%),1fr))", gap: 7 }}>
+                      {proStats.map((s) => (
+                        <div key={s.label} data-eco-shed={s.shed} style={{ border: "1px solid #E4DCF8", borderRadius: 10, padding: "7px 8px", display: "flex", flexDirection: "column", gap: 1, minWidth: 0 }}>
+                          <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".08em", lineHeight: 1.25, color: "#6B6358" }}>{s.label}</span>
+                          <span style={{ fontSize: 15, fontWeight: 800, letterSpacing: "-.02em", color: "#221E1A" }}>{s.value}</span>
+                          <span style={{ fontSize: 11, fontWeight: 700, lineHeight: 1.3, color: "#4E3894" }}>{s.note}</span>
+                        </div>
+                      ))}
                     </div>
-                    <div style={{ flexShrink: 0, padding: "4px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, color: "#5B5349", background: i % 2 === 0 ? "#F4F1FB" : "#EDF4F3" }}>
-                      {row.status}
+
+                    <div data-eco-shed="4" style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                        <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "#6B6358" }}>PLAN COMPLIANCE</span>
+                        <span style={{ padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 800, background: "#F4F1FB", color: "#4E3894" }}>7 weeks</span>
+                      </div>
+                      <div style={{ display: "flex", alignItems: "stretch", gap: 12 }}>
+                        <div style={{ position: "relative", flex: 1, minWidth: 0, height: 125 }}>
+                          <span style={{ position: "absolute", inset: 0, lineHeight: 0 }}>
+                            <svg viewBox="0 0 300 125" preserveAspectRatio="none" aria-hidden="true" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", display: "block" }}>
+                              <line x1={0} y1={101.3} x2={300} y2={101.3} stroke="#E4DCF8" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                              <line x1={0} y1={54.7} x2={300} y2={54.7} stroke="#E4DCF8" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                              <line x1={0} y1={8.0} x2={300} y2={8.0} stroke="#E4DCF8" strokeWidth={1} vectorEffect="non-scaling-stroke" />
+                              <line x1={0} y1={54.7} x2={300} y2={54.7} stroke="#7D67D9" strokeWidth={1.4} strokeDasharray="5 4" opacity={0.75} vectorEffect="non-scaling-stroke" />
+                              <polyline points="0.0,68.7 48.0,57.0 96.0,47.7 144.0,40.7 192.0,45.3 240.0,33.7 288.0,26.7" fill="none" stroke="#4E3894" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                              <polyline points="0.0,78.0 40.0,87.3 80.0,73.3 120.0,80.3 160.0,64.0 200.0,75.7 240.0,68.7" fill="none" stroke="#7D67D9" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                              <polyline points="0.0,92.0 32.0,99.0 64.0,108.3 96.0,96.7 128.0,113.0 160.0,101.3 192.0,106.0" fill="none" stroke="#A895E0" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" vectorEffect="non-scaling-stroke" />
+                            </svg>
+                            <span aria-hidden="true" style={{ position: "absolute", left: "96%", top: "21.4%", width: 9, height: 9, margin: "-4.5px 0 0 -4.5px", borderRadius: 999, background: "#4E3894", boxShadow: "0 0 0 2px #fff" }} />
+                            <span aria-hidden="true" style={{ position: "absolute", left: "80%", top: "55%", width: 9, height: 9, margin: "-4.5px 0 0 -4.5px", borderRadius: 999, background: "#7D67D9", boxShadow: "0 0 0 2px #fff" }} />
+                            <span aria-hidden="true" style={{ position: "absolute", left: "64%", top: "84.8%", width: 9, height: 9, margin: "-4.5px 0 0 -4.5px", borderRadius: 999, background: "#A895E0", boxShadow: "0 0 0 2px #fff" }} />
+                          </span>
+                          <span style={{ position: "absolute", left: 0, top: 20.7, fontSize: 10.5, fontWeight: 800, letterSpacing: ".06em", color: "#5C48A8", background: "#F4F1FB", borderRadius: 999, padding: "2px 7px", lineHeight: 1.1 }}>
+                            80% TARGET
+                          </span>
+                        </div>
+                        <div style={{ position: "relative", width: 132, flexShrink: 0, height: 125 }}>
+                          {compliance.map((r) => (
+                            <span key={r.name} style={{ position: "absolute", left: 0, right: 0, top: r.top, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                              <span style={{ fontSize: 11, fontWeight: 700, color: "#221E1A", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{r.name}</span>
+                              <span style={{ fontSize: 11, fontWeight: 800, color: r.color, whiteSpace: "nowrap" }}>{r.pct}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
                     </div>
                   </div>
-                ))}
+                </div>
+
+                <div data-eco-mod style={{ marginTop: "auto", borderTop: "1px solid #D8EAE6", paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4, color: "#2F5F58", background: "#EDF4F3", borderLeft: "3px solid #5E9E95", borderRadius: "0 7px 7px 0", padding: "9px 11px 9px 12px", display: "block" }}>
+                    Your clients, your plans, one seamless system. Manage everything from their health data to workouts and nutrition, with updates flowing straight to their app.
+                  </span>
+                  <div data-eco-shed="5" style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".14em", color: "#6B6358" }}>WHO IT&apos;S FOR</span>
+                    <span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {["Personal trainers", "Dietitians", "Physiotherapists", "General Practitioners"].map((t2) => (
+                        <span key={t2} style={{ padding: "5px 11px", borderRadius: 999, background: "#EDF4F3", color: "#2F5F58", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>
+                          {t2}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <Reveal>
-            <div style={{ marginTop: 4, borderTop: "1px solid #D8EAE6", paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4, color: "#2F5F58", background: "#EDF4F3", borderLeft: "3px solid #5E9E95", borderRadius: "0 7px 7px 0", padding: "9px 11px 9px 12px", display: "block" }}>
-                Your clients, your plans, one seamless system. Manage everything from their health data to workouts and nutrition, with updates flowing straight to their app.
-              </span>
-              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".14em", color: "#6B6358" }}>WHO IT&apos;S FOR</span>
-                <span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {["Personal trainers", "Dietitians", "Physiotherapists", "General Practitioners"].map((t2) => (
-                    <span key={t2} style={{ padding: "5px 11px", borderRadius: 999, background: "#EDF4F3", color: "#2F5F58", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>
-                      {t2}
-                    </span>
-                  ))}
-                </span>
-              </div>
-            </div>
-          </Reveal>
         </div>
       </div>
     ),
@@ -255,6 +611,7 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
   const bizCard = useMemo(
     () => (
       <div
+        data-eco-wipe="biz"
         style={{
           flex: "1",
           width: bizOn ? "min(540px,100%)" : "min(330px,100%)",
@@ -272,75 +629,90 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
           borderBottom: "3px solid #2F5F58",
         }}
       >
-        <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 28px 28px", minWidth: 0 }}>
-          <div style={{ borderRadius: 16, overflow: "hidden", background: "#FAF9F7", border: "1px solid #EDEAE4" }}>
-            <div style={{ padding: 20, background: "#fff", display: "flex", flexDirection: "column", gap: 8 }}>
-              <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
-                <div style={{ minWidth: 0, fontSize: 13, fontWeight: 800, letterSpacing: "-.02em", color: "#221E1A" }}>Studio overview</div>
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
-                  <span style={{ padding: "3px 9px", borderRadius: 999, background: "#2F5F58", color: "#fff", fontSize: 11, fontWeight: 700 }}>Week</span>
-                  <span style={{ padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: "#EDF4F3", color: "#2F5F58" }}>Month</span>
-                </div>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(74px,100%),1fr))", gap: 5 }}>
-                {kpis.map((k) => (
-                  <div key={k.label} style={{ border: "1px solid #D8EAE6", borderRadius: 9, padding: "6px 7px", display: "flex", flexDirection: "column", gap: 1, minWidth: 0 }}>
-                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".06em", lineHeight: 1.2, color: "#6B6358" }}>{k.label}</span>
-                    <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-.02em", color: "#221E1A" }}>{k.value}</span>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", padding: "24px 28px 28px", minWidth: 0, minHeight: 0 }}>
+          <div data-eco-clip style={{ overflow: "hidden", minHeight: 0, flex: 1, display: "flex", flexDirection: "column" }}>
+            <div style={{ borderRadius: 16, overflow: "hidden", background: "#FAF9F7", border: "1px solid #EDEAE4", flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+              <div data-eco-screen style={{ padding: 20, background: "#fff", display: "flex", flexDirection: "column", gap: 8, flex: 1, minHeight: 0 }}>
+                <div data-eco-shed="7" style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                  <div style={{ minWidth: 0, fontSize: 13, fontWeight: 800, letterSpacing: "-.02em", color: "#221E1A" }}>Studio overview</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
+                    <span style={{ padding: "3px 9px", borderRadius: 999, background: "#2F5F58", color: "#fff", fontSize: 11, fontWeight: 700 }}>Week</span>
+                    <span style={{ padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700, background: "#EDF4F3", color: "#2F5F58" }}>Month</span>
                   </div>
-                ))}
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: 8, borderTop: "1px solid #D8EAE6" }}>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "#6B6358" }}>CHECK-INS · 591</span>
-                  <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, background: "#EDF4F3", color: "#2F5F58" }}>+18% WoW</span>
                 </div>
-                <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
-                  {checkins.map((b) => (
-                    <div key={b.day} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                      <span style={{ fontSize: 11, fontWeight: 700, color: b.day === "Sat" ? "#2F5F58" : "#6B6358" }}>{b.v}</span>
-                      <div style={{ width: "100%", height: 34, display: "flex", alignItems: "flex-end" }}>
-                        <div style={{ width: "100%", flexShrink: 0, height: `${b.h}%`, borderRadius: "3px 3px 0 0", background: b.day === "Sat" ? "#2F5F58" : "#5E9E95" }} />
-                      </div>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: b.day === "Sat" ? "#2F5F58" : "#6B6358" }}>{b.day}</span>
+                <div data-eco-shed="7" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(74px,100%),1fr))", gap: 5 }}>
+                  {kpis.map((k) => (
+                    <div key={k.label} data-eco-shed={k.shed} style={{ border: "1px solid #D8EAE6", borderRadius: 9, padding: "6px 7px", display: "flex", flexDirection: "column", gap: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".06em", lineHeight: 1.2, color: "#6B6358" }}>{k.label}</span>
+                      <span style={{ fontSize: 14, fontWeight: 800, letterSpacing: "-.02em", color: "#221E1A" }}>{k.value}</span>
                     </div>
                   ))}
                 </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 5, paddingTop: 8, borderTop: "1px solid #D8EAE6" }}>
-                <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
-                  <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "#6B6358" }}>CLASS OCCUPANCY</span>
-                  <span style={{ fontSize: 11, fontWeight: 700, color: "#6B6358", whiteSpace: "nowrap", flexShrink: 0 }}>86 booked · 64% leads</span>
-                </div>
-                {occupancy.map((cls) => (
-                  <div key={cls.name} style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#221E1A", flex: "0 0 40%", minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{cls.name}</span>
-                    <span style={{ flex: 1, minWidth: 0, height: 6, borderRadius: 999, background: "#EDF4F3" }}>
-                      <span style={{ display: "block", height: "100%", width: `${cls.pct}%`, borderRadius: 999, background: cls.pct >= 90 ? "#2F5F58" : "#5E9E95" }} />
-                    </span>
-                    <span style={{ fontSize: 11.5, fontWeight: 800, color: "#2F5F58", whiteSpace: "nowrap", flexShrink: 0 }}>{cls.pct}%</span>
+                <div data-eco-shed="4" style={{ display: "flex", flexDirection: "column", gap: 4, paddingTop: 8, borderTop: "1px solid #D8EAE6" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "#6B6358" }}>CHECK-INS · 591</span>
+                    <span style={{ padding: "2px 8px", borderRadius: 999, fontSize: 11, fontWeight: 800, background: "#EDF4F3", color: "#2F5F58" }}>+18% WoW</span>
                   </div>
-                ))}
+                  <div style={{ display: "flex", alignItems: "flex-end", gap: 6 }}>
+                    {checkins.map((b) => (
+                      <div key={b.day} style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: b.day === "Sat" ? "#2F5F58" : "#6B6358" }}>{b.v}</span>
+                        <div style={{ width: "100%", height: 34, display: "flex", alignItems: "flex-end" }}>
+                          <div style={{ width: "100%", flexShrink: 0, height: `${b.h}%`, borderRadius: "3px 3px 0 0", background: b.day === "Sat" ? "#2F5F58" : "#5E9E95" }} />
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: b.day === "Sat" ? "#2F5F58" : "#6B6358" }}>{b.day}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div data-eco-shed="6" style={{ display: "flex", flexDirection: "column", gap: 5, paddingTop: 8, borderTop: "1px solid #D8EAE6" }}>
+                  <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", gap: 10, flexWrap: "wrap" }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".1em", color: "#6B6358" }}>CLASS OCCUPANCY</span>
+                    <span data-eco-shed="2" data-eco-chips style={{ display: "flex", gap: 5, flexShrink: 0 }}>
+                      {["86 booked", "64% leads", "peak Sat 18:00"].map((c) => (
+                        <span key={c} style={{ padding: "2px 7px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap", color: "#2F5F58", background: "#EDF4F3" }}>
+                          {c}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                  {occupancy.map((cls) => (
+                    <div key={cls.name} data-eco-shed={cls.shed} data-eco-class style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                      <span style={{ flex: "0 0 auto", minWidth: 0, display: "flex", alignItems: "baseline", gap: 7 }}>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: "#221E1A", whiteSpace: "nowrap" }}>{cls.name}</span>
+                        <span style={{ fontSize: 11, fontWeight: 600, color: "#6B6358", whiteSpace: "nowrap" }}>{cls.time}</span>
+                      </span>
+                      <span style={{ flex: 1, minWidth: 0, height: 6, borderRadius: 999, background: "#EDF4F3" }}>
+                        <span style={{ display: "block", height: "100%", width: `${cls.pct}%`, borderRadius: 999, background: cls.pct >= 90 ? "#2F5F58" : "#5E9E95" }} />
+                      </span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: "#6B6358", whiteSpace: "nowrap", flexShrink: 0 }}>{cls.booked}</span>
+                      {cls.waitlist && (
+                        <span style={{ padding: "2px 7px", borderRadius: 999, fontSize: 10.5, fontWeight: 700, whiteSpace: "nowrap", flexShrink: 0, color: "#8A6512", background: "#FBF3DF" }}>
+                          {cls.waitlist}
+                        </span>
+                      )}
+                      <span style={{ fontSize: 11.5, fontWeight: 800, color: "#2F5F58", whiteSpace: "nowrap", flexShrink: 0, width: 38, textAlign: "right" }}>{cls.pct}%</span>
+                    </div>
+                  ))}
+                </div>
+                <div data-eco-mod style={{ marginTop: "auto", borderTop: "1px solid #E4DCF8", paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4, color: "#4E3894", background: "#F4F1FB", borderLeft: "3px solid #7D67D9", borderRadius: "0 7px 7px 0", padding: "9px 11px 9px 12px", display: "block" }}>
+                    Put your gym, classes and services on the map, digitize memberships, connect with professionals and gain insights through client analytics.
+                  </span>
+                  <div data-eco-shed="5" style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                    <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".14em", color: "#6B6358" }}>WHO IT&apos;S FOR</span>
+                    <span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                      {["Gyms & studios", "Equipment & supplements", "Meal prep services", "Activewear"].map((t2) => (
+                        <span key={t2} style={{ padding: "5px 11px", borderRadius: 999, background: "#F4F1FB", color: "#4E3894", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>
+                          {t2}
+                        </span>
+                      ))}
+                    </span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-          <Reveal delay={0.04}>
-            <div style={{ marginTop: 4, borderTop: "1px solid #E4DCF8", paddingTop: 14, display: "flex", flexDirection: "column", gap: 10 }}>
-              <span style={{ fontSize: 14, fontWeight: 700, lineHeight: 1.4, color: "#4E3894", background: "#F4F1FB", borderLeft: "3px solid #7D67D9", borderRadius: "0 7px 7px 0", padding: "9px 11px 9px 12px", display: "block" }}>
-                Put your gym, classes and services on the map, digitize memberships, connect with professionals and gain insights through client analytics.
-              </span>
-              <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
-                <span style={{ fontSize: 11, fontWeight: 800, letterSpacing: ".14em", color: "#6B6358" }}>WHO IT&apos;S FOR</span>
-                <span style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
-                  {["Gyms & studios", "Equipment & supplements", "Meal prep services", "Activewear"].map((t2) => (
-                    <span key={t2} style={{ padding: "5px 11px", borderRadius: 999, background: "#F4F1FB", color: "#4E3894", fontWeight: 700, fontSize: 12, whiteSpace: "nowrap" }}>
-                      {t2}
-                    </span>
-                  ))}
-                </span>
-              </div>
-            </div>
-          </Reveal>
         </div>
       </div>
     ),
@@ -349,10 +721,40 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
 
   return (
     <section className="relative pt-[clamp(26px,2.8vw,38px)] pb-[clamp(48px,6vw,72px)] overflow-hidden">
+      {/* Mobile fit CSS — literal port of the handoff's own `@media
+          (max-width:1023px)` block for the ecosystem slider (the same
+          breakpoint block the Pillar Rail's own mobile CSS lives in there;
+          kept as its own scoped block here since that file owns its rules
+          separately). One selector is adapted from the handoff's literal
+          `[data-eco-wipe] > div > div:nth-child(2)` to `[data-eco-wipe] >
+          div` — this port never renders the handoff's `data-eco-head`
+          placeholder block (it's hard set to `display:none` there and
+          intentionally not ported, per the class doc comment above), so the
+          card's body div is `data-eco-wipe`'s only child rather than its
+          second. */}
+      <style>{`
+        @media (max-width:1023px){
+          #eco-switch{flex-wrap:wrap !important;row-gap:8px !important;padding:12px 14px !important;}
+          #eco-switch > [data-eco-switch-label]{order:1;flex:1 1 40% !important;font-size:clamp(17px,4.6vw,24px) !important;}
+          #eco-track{order:2;flex:1 1 100% !important;width:auto !important;margin:0 22px !important;height:44px !important;}
+          #eco-deck [data-eco-wipe] > div{padding:12px !important;}
+          #eco-stage [data-eco-screen]{padding:12px !important;justify-content:space-between !important;}
+          #eco-stage [data-eco-screen] > [data-eco-mod]{margin-top:0 !important;}
+          #eco-stage [style*="font-size:10.5px"],#eco-stage [style*="font-size: 10.5px"],#eco-stage [style*="font-size:10px"],#eco-stage [style*="font-size: 10px"]{font-size:11px !important;}
+          #eco-stage [data-eco-chips]{flex-wrap:wrap !important;flex-shrink:1 !important;}
+          #eco-stage [data-eco-class]{flex-wrap:wrap !important;row-gap:4px !important;}
+          #eco-stage [data-eco-class] > :first-child{flex:1 1 100% !important;}
+          #eco-stage[data-efit~="1"] [data-eco-shed="1"]:not([data-ekeep]),#eco-stage[data-efit~="2"] [data-eco-shed="2"]:not([data-ekeep]),#eco-stage[data-efit~="3"] [data-eco-shed="3"]:not([data-ekeep]),#eco-stage[data-efit~="4"] [data-eco-shed="4"]:not([data-ekeep]),#eco-stage[data-efit~="5"] [data-eco-shed="5"]:not([data-ekeep]),#eco-stage[data-efit~="6"] [data-eco-shed="6"]:not([data-ekeep]),#eco-stage[data-efit~="7"] [data-eco-shed="7"]:not([data-ekeep]),#eco-stage[data-efit~="8"] [data-eco-screen] > :not([data-eco-mod]):not([data-ekeep]){display:none !important;}
+        }
+        @media (max-width:639px){
+          #eco-stage [data-eco-split]{grid-template-columns:minmax(0,1fr) !important;gap:10px !important;}
+        }
+      `}</style>
       <div className="relative max-w-[1180px] mx-auto px-5 sm:px-10">
         {heading}
 
         <div
+          id="eco-stage"
           className="relative grid"
           style={{ gridTemplateColumns: "minmax(0,1fr)", gap: 0, alignItems: "start", justifyItems: "stretch", marginTop: "clamp(72px,10vw,144px)" }}
         >
@@ -382,6 +784,7 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
               handoff: "the whole shell recolours to the active side"). */}
           <div
             ref={barRef}
+            id="eco-switch"
             style={{
               gridColumn: "1 / -1",
               gridRow: 1,
@@ -419,6 +822,7 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
             />
             <span
               aria-hidden="true"
+              data-eco-switch-label=""
               className="relative flex-1 text-center"
               style={{
                 zIndex: 2,
@@ -508,6 +912,7 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
 
             <span
               aria-hidden="true"
+              data-eco-switch-label=""
               className="relative flex-1 text-center"
               style={{
                 zIndex: 2,
@@ -542,7 +947,7 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
               floating over the panel. Each card already has its own real
               `boxShadow` (see proCard/bizCard) for the "elevated" look,
               which doesn't have this clip-path interaction at all. */}
-          <div className="relative grid w-full" style={{ gridTemplateColumns: "minmax(0,1fr)", gridRow: 2 }}>
+          <div id="eco-deck" className="relative grid w-full" style={{ gridTemplateColumns: "minmax(0,1fr)", gridRow: 2 }}>
             <div
               className="flex w-full min-w-0"
               style={{
