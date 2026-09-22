@@ -1,5 +1,4 @@
 import React from "react";
-import { Mic } from "lucide-react";
 
 interface QuickActionsProps {
   onLogFood: () => void;
@@ -8,155 +7,85 @@ interface QuickActionsProps {
   onVoiceLog: () => void;
 }
 
-// Design handoff "Quick Actions — final design" (S4 · R3 · V1): replaces the
-// old three gradient pills + teal voice bar entirely. Three lavender pills
-// (Log food / Log workout / Add metric) plus a circular teal voice hub,
-// absolutely positioned inside a 358x104 box — the dc.html "ref" markup
-// (QaBlock.dc.html) is the literal source for every coordinate below; the
-// README's prose table matches it exactly for this variant.
+// Design handoff item 4 "Home Quick Actions cluster" — replaces the old
+// CSS-drawn three lavender pills + teal voice hub entirely with the
+// supplied artwork (public/qa-cluster-ref-teal.png, already flattened to a
+// white background with the hub recoloured to #95C0BB). The cluster is
+// placed as-is; only four transparent hit areas are added on top, each
+// wired to the same handler the old CSS pills used to call.
 //
-// The "Add metric" bottom pill must stay one continuous tap target and one
-// continuous visual shape even though the voice hub visually dips into its
-// upper portion. The gap-ring behind the hub is purely decorative (it shows
-// the page background through the 5px gap) and is pointer-events-none so
-// clicks in that ring fall through to the bottom pill underneath it; the hub
-// itself is clipped to a circle (clip-path) so hit-testing matches its round
-// shape instead of its square bounding box, which would otherwise steal a
-// few corner-pixels of clicks from the bottom pill where the two overlap.
+// The artwork (2164x727 source, ~2.977 aspect) is rendered at a literal
+// 412.08px width, which is taller than the 358x95.9 visible block — the
+// block is a crop window over the artwork's own built-in padding, so the
+// container clips with `overflow: hidden` while the image is positioned at
+// the handoff's literal left/top offset inside it.
 export const QuickActions: React.FC<QuickActionsProps> = ({
   onLogFood,
   onLogWorkout,
   onAddMetric,
   onVoiceLog,
 }) => {
-  const pillStyle: React.CSSProperties = {
-    background: "#AEA1DC",
-    borderRadius: 22,
-    padding: 0,
+  const hitAreaStyle: React.CSSProperties = {
+    position: "absolute",
+    background: "transparent",
     border: "none",
-    textAlign: "left",
-  };
-  const dividerStyle: React.CSSProperties = {
-    width: 1,
-    height: 20,
-    background: "rgba(255,255,255,0.45)",
-  };
-  const labelStyle: React.CSSProperties = {
-    fontSize: 13,
-    fontWeight: 700,
-    color: "#FFFFFF",
-    whiteSpace: "nowrap",
+    padding: 0,
+    margin: 0,
   };
 
   return (
     <div className="animate-fade-slide-up">
       <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Quick actions</p>
 
-      <div className="relative w-full" style={{ height: 104 }}>
+      <div
+        className="relative w-full overflow-hidden"
+        style={{ height: 95.9, marginTop: -8, marginBottom: -12 }}
+      >
+        <img
+          src="/qa-cluster-ref-teal.png"
+          alt=""
+          style={{
+            position: "absolute",
+            left: -26.82,
+            top: -21.69,
+            width: 412.08,
+            maxWidth: "none",
+            display: "block",
+            pointerEvents: "none",
+          }}
+        />
+
         {/* Log food */}
         <button
           onClick={onLogFood}
-          className="tap absolute"
-          style={{ left: 0, top: 12, width: 165, height: 44, ...pillStyle }}
-        >
-          <span style={{ position: "absolute", left: 18, top: 0, height: 44, display: "flex", alignItems: "center" }}>
-            <img src="/qa-icon-bowl.png" alt="" style={{ width: 21, height: 22, objectFit: "contain", display: "block" }} />
-          </span>
-          <span style={{ position: "absolute", left: 47, top: 0, height: 44, display: "flex", alignItems: "center" }}>
-            <span style={dividerStyle} />
-          </span>
-          <span style={{ position: "absolute", left: 61, top: 0, height: 44, display: "flex", alignItems: "center", ...labelStyle }}>
-            Log food
-          </span>
-        </button>
+          aria-label="Log food"
+          className="tap"
+          style={{ ...hitAreaStyle, left: 0, top: 14.5, width: 137.7, height: 45.7 }}
+        />
 
-        {/* Log workout — icon sits at the pill's outer/right end, with the
-            label unusually to the LEFT of the divider (matches the handoff's
-            dc.html markup literally). */}
+        {/* Log workout */}
         <button
           onClick={onLogWorkout}
-          className="tap absolute"
-          style={{ left: 193, top: 12, width: 165, height: 44, ...pillStyle }}
-        >
-          <span style={{ position: "absolute", left: 330 - 193, top: 0, height: 44, display: "flex", alignItems: "center" }}>
-            <img src="/qa-icon-runner.png" alt="" style={{ width: 18, height: 22, objectFit: "contain", display: "block" }} />
-          </span>
-          <span style={{ position: "absolute", left: 322 - 193, top: 0, height: 44, display: "flex", alignItems: "center" }}>
-            <span style={dividerStyle} />
-          </span>
-          <span style={{ position: "absolute", left: 235 - 193, top: 0, height: 44, display: "flex", alignItems: "center", ...labelStyle }}>
-            Log workout
-          </span>
-        </button>
+          aria-label="Log workout"
+          className="tap"
+          style={{ ...hitAreaStyle, left: 219.6, top: 14.5, width: 138.4, height: 45.7 }}
+        />
 
-        {/* Add metric — full-width bottom pill; stays one tap target even
-            though the voice hub overlaps its upper-left portion. */}
+        {/* Add metric */}
         <button
           onClick={onAddMetric}
-          className="tap absolute"
-          style={{ left: 0, top: 60, width: 358, height: 44, ...pillStyle }}
-        >
-          <span style={{ position: "absolute", left: 18, top: 0, height: 44, display: "flex", alignItems: "center" }}>
-            <img src="/qa-icon-bars.png" alt="" style={{ width: 19, height: 20, objectFit: "contain", display: "block" }} />
-          </span>
-          <span style={{ position: "absolute", left: 47, top: 0, height: 44, display: "flex", alignItems: "center" }}>
-            <span style={dividerStyle} />
-          </span>
-          <span
-            style={{
-              position: "absolute",
-              left: 226,
-              top: 0,
-              width: 132,
-              height: 44,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              ...labelStyle,
-            }}
-          >
-            Add metric
-          </span>
-        </button>
-
-        {/* Gap ring — decorative only, shows the page background through the
-            5px gap around the hub; must not intercept clicks meant for the
-            Add metric pill beneath it. */}
-        <span
-          aria-hidden
-          className="absolute pointer-events-none"
-          style={{
-            left: 132,
-            top: 0,
-            width: 94,
-            height: 94,
-            borderRadius: 999,
-            background: "rgb(var(--c-cream))",
-          }}
+          aria-label="Add metric"
+          className="tap"
+          style={{ ...hitAreaStyle, left: 129.1, top: 72.3, width: 100, height: 23.3 }}
         />
 
         {/* Voice hub */}
         <button
           onClick={onVoiceLog}
-          className="tap absolute flex flex-col items-center justify-center text-white"
-          style={{
-            left: 137,
-            top: 5,
-            width: 84,
-            height: 84,
-            borderRadius: 999,
-            background: "linear-gradient(150deg, #A2C8C2, #6F9993)",
-            gap: 3,
-            clipPath: "circle(50%)",
-            padding: 0,
-            border: "none",
-          }}
-        >
-          <Mic size={16} />
-          <span style={{ width: 68, textAlign: "center", fontSize: 9.5, fontWeight: 700, lineHeight: 1.25 }}>
-            Tell Centium what you ate
-          </span>
-        </button>
+          aria-label="Voice log"
+          className="tap"
+          style={{ ...hitAreaStyle, left: 142.2, top: -1.5, width: 73, height: 73, borderRadius: 9999 }}
+        />
       </div>
     </div>
   );

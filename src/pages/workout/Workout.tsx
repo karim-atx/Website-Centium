@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Chip } from "../../components/ui/Chip";
+import { SegmentedTabs, type SegmentedTabItem } from "../../components/ui/SegmentedTabs";
 import RoutinesTab from "./RoutinesTab";
 import ExerciseDatabaseTab from "./ExerciseDatabaseTab";
 import HistoryTab from "./HistoryTab";
@@ -15,6 +15,17 @@ const tabLabels: Record<Tab, string> = {
   metrics: "Metrics",
 };
 
+// Mobile handoff item 11: the pill-tab row is replaced by the shared
+// SegmentedTabs bar everywhere it appears (Food and Workout). The handoff's
+// README gives literal flex-weights for Food's three tabs but not Workout's
+// four beyond "fill the track, no horizontal scroll at 390px" — left
+// unweighted (equal share) rather than guessing decimals that weren't
+// specified.
+const workoutTabs: SegmentedTabItem[] = (["routines", "database", "history", "metrics"] as Tab[]).map((t) => ({
+  key: t,
+  label: tabLabels[t],
+}));
+
 export default function Workout() {
   const [tab, setTab] = useState<Tab>("routines");
 
@@ -24,13 +35,12 @@ export default function Workout() {
           27px default — see the identical note in Food.tsx. */}
       <p className="mb-3 text-[19px] font-bold tracking-[-0.03em] text-charcoal">Workout</p>
 
-      <div className="flex gap-2 mb-5 animate-fade-slide-up overflow-x-auto no-scrollbar">
-        {(["routines", "database", "history", "metrics"] as Tab[]).map((t) => (
-          <Chip key={t} active={tab === t} onClick={() => setTab(t)}>
-            {tabLabels[t]}
-          </Chip>
-        ))}
-      </div>
+      <SegmentedTabs
+        items={workoutTabs}
+        activeKey={tab}
+        onChange={(key) => setTab(key as Tab)}
+        className="mb-5 animate-fade-slide-up"
+      />
 
       {tab === "routines" && <RoutinesTab />}
       {tab === "database" && <ExerciseDatabaseTab />}

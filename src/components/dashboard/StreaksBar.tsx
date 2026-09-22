@@ -115,7 +115,11 @@ export const StreaksBar: React.FC = () => {
     }
   }
 
-  const displayStage = wasFull && streakUnbroken ? 7 : Math.min(7, earnedThisWeek);
+  // Clamped to a minimum of 1: at earnedThisWeek === 0 this would otherwise
+  // compute stage 0 and request `/plant-${prefix}0.png`, which has no
+  // corresponding asset under public/ for any species (only stage1..7
+  // exist) — a real broken-image bug, not a cosmetic one.
+  const displayStage = wasFull && streakUnbroken ? 7 : Math.max(1, Math.min(7, earnedThisWeek));
   useEffect(() => {
     if (displayStage !== plantStage) setPlantStage(displayStage);
   }, [displayStage, plantStage, setPlantStage]);

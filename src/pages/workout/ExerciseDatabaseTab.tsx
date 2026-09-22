@@ -4,9 +4,10 @@ import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import { MUSCLE_GROUP_LABEL } from "../../utils/muscleGroups";
 import type { MuscleGroup, ExerciseClassification } from "../../types";
-import { List, User, Search, RotateCw } from "lucide-react";
+import { List, User, Search } from "lucide-react";
 import clsx from "clsx";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "../../components/workout/CreateCustomExerciseSheet";
+import { BODY_ZONES } from "../../data/bodyZones";
 
 type ViewMode = "list" | "body";
 type SortMode = "alphabetical" | "muscleGroup" | "classification";
@@ -38,60 +39,50 @@ const classificationLabel: Record<ExerciseClassification, string> = {
   duration: "Duration",
 };
 
-// Design refinement §6.4/§6.5: real anatomical line art (masked PNGs, see
-// public/body/) with contoured, body-clipped highlight zones — replacing
-// the flat silhouette blobs + rectangle/path hit zones. Order per §6.4.6
-// (chips, bidirectional hover with the figure).
-const frontZones: MuscleGroup[] = ["shoulders", "chest", "bicep", "forearms", "core", "quads", "calves"];
-const backZones: MuscleGroup[] = ["shoulders", "back", "tricep", "forearms", "glutes", "hamstrings", "calves"];
+// Item 12 (Workout › Library › Body view): six plain-color figure PNGs (see
+// public/body/) with zone overlays positioned by the handoff's own literal
+// per-figure percentages in src/data/bodyZones.ts — no currentColor
+// masking, which would strip the artwork's line work and teal leaf mark.
+type FigureGender = "male" | "female" | "andro";
+type BodySide = "front" | "back";
+type FigureKey = keyof typeof BODY_ZONES;
 
-interface ZoneEllipse {
-  group: MuscleGroup;
-  cx: number;
-  cy: number;
-  rx: number;
-  ry: number;
-}
+// BODY_ZONES keys are the handoff's own (plural) zone names; MuscleGroup
+// uses singular bicep/tricep. This is the only place that reconciles them.
+const ZONE_KEY_TO_GROUP: Record<keyof (typeof BODY_ZONES)[FigureKey], MuscleGroup> = {
+  shoulders: "shoulders",
+  chest: "chest",
+  back: "back",
+  biceps: "bicep",
+  triceps: "tricep",
+  forearms: "forearms",
+  core: "core",
+  glutes: "glutes",
+  quads: "quads",
+  hamstrings: "hamstrings",
+  calves: "calves",
+};
 
-// §6.4.3 — coordinates in the artwork's own 186×390 box, matching the
-// front/back masks 1:1 at any render size.
-const frontZoneEllipses: ZoneEllipse[] = [
-  { group: "shoulders", cx: 52, cy: 77, rx: 14, ry: 16 },
-  { group: "shoulders", cx: 134, cy: 77, rx: 14, ry: 16 },
-  { group: "chest", cx: 75, cy: 83, rx: 18, ry: 18 },
-  { group: "chest", cx: 111, cy: 83, rx: 18, ry: 18 },
-  { group: "bicep", cx: 46, cy: 108, rx: 11, ry: 21 },
-  { group: "bicep", cx: 140, cy: 108, rx: 11, ry: 21 },
-  { group: "forearms", cx: 40, cy: 140, rx: 9, ry: 18 },
-  { group: "forearms", cx: 146, cy: 140, rx: 9, ry: 18 },
-  { group: "core", cx: 93, cy: 118, rx: 19, ry: 20 },
-  { group: "core", cx: 93, cy: 154, rx: 17, ry: 21 },
-  { group: "quads", cx: 71, cy: 200, rx: 16, ry: 34 },
-  { group: "quads", cx: 115, cy: 200, rx: 16, ry: 34 },
-  { group: "quads", cx: 68, cy: 240, rx: 13, ry: 18 },
-  { group: "quads", cx: 118, cy: 240, rx: 13, ry: 18 },
-  { group: "calves", cx: 69, cy: 292, rx: 11, ry: 25 },
-  { group: "calves", cx: 117, cy: 292, rx: 11, ry: 25 },
+// Zone keys valid per side — front and back have asymmetric pairs
+// (chest/back, biceps/triceps); BODY_ZONES carries both uniformly per
+// figure, so this list is what filters to the visually-correct set.
+const FRONT_ZONE_KEYS: (keyof (typeof BODY_ZONES)[FigureKey])[] = [
+  "shoulders",
+  "chest",
+  "biceps",
+  "forearms",
+  "core",
+  "quads",
+  "calves",
 ];
-
-const backZoneEllipses: ZoneEllipse[] = [
-  { group: "shoulders", cx: 52, cy: 79, rx: 14, ry: 16 },
-  { group: "shoulders", cx: 134, cy: 79, rx: 14, ry: 16 },
-  { group: "back", cx: 93, cy: 80, rx: 25, ry: 15 },
-  { group: "back", cx: 78, cy: 118, rx: 18, ry: 31 },
-  { group: "back", cx: 108, cy: 118, rx: 18, ry: 31 },
-  { group: "tricep", cx: 46, cy: 109, rx: 11, ry: 21 },
-  { group: "tricep", cx: 140, cy: 109, rx: 11, ry: 21 },
-  { group: "forearms", cx: 40, cy: 140, rx: 9, ry: 18 },
-  { group: "forearms", cx: 146, cy: 140, rx: 9, ry: 18 },
-  { group: "glutes", cx: 80, cy: 183, rx: 16, ry: 23 },
-  { group: "glutes", cx: 106, cy: 183, rx: 16, ry: 23 },
-  { group: "hamstrings", cx: 71, cy: 232, rx: 16, ry: 30 },
-  { group: "hamstrings", cx: 115, cy: 232, rx: 16, ry: 30 },
-  { group: "hamstrings", cx: 70, cy: 264, rx: 13, ry: 14 },
-  { group: "hamstrings", cx: 116, cy: 264, rx: 13, ry: 14 },
-  { group: "calves", cx: 70, cy: 298, rx: 12, ry: 26 },
-  { group: "calves", cx: 116, cy: 298, rx: 12, ry: 26 },
+const BACK_ZONE_KEYS: (keyof (typeof BODY_ZONES)[FigureKey])[] = [
+  "shoulders",
+  "back",
+  "triceps",
+  "forearms",
+  "glutes",
+  "hamstrings",
+  "calves",
 ];
 
 export default function ExerciseDatabaseTab() {
@@ -102,14 +93,20 @@ export default function ExerciseDatabaseTab() {
     addCustomExercise,
     updateCustomExercise,
     removeCustomExercise,
+    user,
   } = useApp();
   const [view, setView] = useState<ViewMode>("list");
   const [sort, setSort] = useState<SortMode>("alphabetical");
   const [query, setQuery] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null);
-  const [hoveredGroup, setHoveredGroup] = useState<MuscleGroup | null>(null);
-  const [bodySide, setBodySide] = useState<"front" | "back">("front");
-  const bodyZones = bodySide === "front" ? frontZones : backZones;
+  const [bodySide, setBodySide] = useState<BodySide>("front");
+  const sideZoneKeys = bodySide === "front" ? FRONT_ZONE_KEYS : BACK_ZONE_KEYS;
+  const bodyZones = sideZoneKeys.map((k) => ZONE_KEY_TO_GROUP[k]);
+  // Item 12: male → male figure pair, female → female figure pair, anything
+  // else (other/unset/no sex on record) → the androgynous pair.
+  const figureGender: FigureGender =
+    user.sex === "male" ? "male" : user.sex === "female" ? "female" : "andro";
+  const figureKey = `${figureGender}-${bodySide}` as FigureKey;
   // V8 (QA 8.0): "ability to edit each exercise if pressed on in the
   // library" — a custom exercise is edited in place; a stock library
   // exercise is saved as a new custom one instead of mutating shared data.
@@ -190,32 +187,15 @@ export default function ExerciseDatabaseTab() {
   // Design refinement §6.4.2: highlight fills — idle transparent, hover a
   // translucent lavender wash, selected a stronger lavender fill. Values
   // differ slightly by theme so they hold against the dark ground too.
-  const zoneFill = (zone: MuscleGroup) => {
-    if (selectedGroup === zone) return "var(--zone-selected)";
-    if (hoveredGroup === zone) return "var(--zone-hover)";
-    return "transparent";
-  };
-
+  // Item 12: front/back have different zone sets, so the current selection
+  // clears on every flip rather than being carried over.
   const flipSide = () => {
-    const next = bodySide === "front" ? "back" : "front";
-    const nextZones = next === "front" ? frontZones : backZones;
-    // §6.4.5: keep the selection only if it exists on the destination side.
-    setSelectedGroup((g) => (g && nextZones.includes(g) ? g : null));
-    setHoveredGroup(null);
-    setBodySide(next);
+    setSelectedGroup(null);
+    setBodySide((s) => (s === "front" ? "back" : "front"));
   };
-
-  const ellipses = bodySide === "front" ? frontZoneEllipses : backZoneEllipses;
-  const fillAsset = bodySide === "front" ? "/body/centium-body-front-fill.png" : "/body/centium-body-back-fill.png";
-  const lineAsset = bodySide === "front" ? "/body/centium-body-front.png" : "/body/centium-body-back.png";
-  const maskId = `centBody-${bodySide}`;
 
   return (
     <div className="animate-fade-slide-up">
-      <style>{`
-        :root { --zone-hover: rgba(174,161,220,0.42); --zone-selected: rgba(125,107,181,0.55); }
-        .dark { --zone-hover: rgba(195,179,251,0.30); --zone-selected: rgba(169,145,254,0.50); }
-      `}</style>
       <div className="relative mb-4">
         <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
         <input
@@ -293,83 +273,79 @@ export default function ExerciseDatabaseTab() {
           <p className="text-xs text-charcoal-faint mb-3 text-center">
             Tap a muscle group to see its exercises — {bodySide === "front" ? "front" : "back"} view.
           </p>
-          <div className="flex justify-center mb-3">
-            {/* §6.4.1/§6.4.2: line art as a CSS mask (colour comes from
-                currentColor via the mask trick below), highlights clipped
-                to the body silhouette via an SVG mask built from the
-                "-fill" asset. key={bodySide} forces a full remount on
-                flip — §6.4.4's fix for the cross-fade-flash bug (sharing
-                one subtree across front/back let React reuse ellipse N's
-                DOM node for a different muscle and carry its lit fill). */}
-            <div className="relative" style={{ width: 186, height: 390 }}>
-              <div
-                className="absolute inset-0 text-charcoal-soft"
-                style={{
-                  backgroundColor: "currentColor",
-                  maskImage: `url(${lineAsset})`,
-                  maskSize: "contain",
-                  maskRepeat: "no-repeat",
-                  maskPosition: "center",
-                  WebkitMaskImage: `url(${lineAsset})`,
-                  WebkitMaskSize: "contain",
-                  WebkitMaskRepeat: "no-repeat",
-                  WebkitMaskPosition: "center",
-                  pointerEvents: "none",
-                }}
+
+          {/* Item 12: figure panel — plain-color <img> (no recoloring, which
+              would strip the line work and teal leaf mark) with a Front/Back
+              toggle top-right and %-positioned zone overlays above it. */}
+          <div className="relative flex justify-center mb-3">
+            <div className="relative" style={{ width: 220, maxWidth: "100%" }}>
+              <img
+                key={figureKey}
+                src={`/body/${figureKey}.png`}
+                alt=""
+                draggable={false}
+                className="block w-full h-auto select-none pointer-events-none"
               />
-              <svg viewBox="0 0 186 390" width={186} height={390} className="absolute inset-0">
-                <defs>
-                  <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="186" height="390">
-                    <image href={fillAsset} x="0" y="0" width="186" height="390" preserveAspectRatio="xMidYMid meet" />
-                  </mask>
-                </defs>
-                <g key={bodySide} mask={`url(#${maskId})`}>
-                  {ellipses.map((z, i) => (
-                    <ellipse
-                      key={`${bodySide}-${z.group}-${i}`}
-                      cx={z.cx}
-                      cy={z.cy}
-                      rx={z.rx}
-                      ry={z.ry}
-                      fill={zoneFill(z.group)}
-                      className="cursor-pointer"
-                      style={{ transition: "fill 0.18s ease" }}
-                      onMouseEnter={() => setHoveredGroup(z.group)}
-                      onMouseLeave={() => setHoveredGroup(null)}
-                      onClick={() => setSelectedGroup(selectedGroup === z.group ? null : z.group)}
+              <div className="absolute inset-0">
+                {sideZoneKeys.map((zoneKey) => {
+                  const group = ZONE_KEY_TO_GROUP[zoneKey];
+                  const selected = selectedGroup === group;
+                  return BODY_ZONES[figureKey][zoneKey].map((rect, i) => (
+                    <button
+                      key={`${zoneKey}-${i}`}
+                      aria-label={MUSCLE_GROUP_LABEL[group]}
+                      onClick={() => setSelectedGroup(selected ? null : group)}
+                      className="tap absolute"
+                      style={{
+                        left: `${rect.x}%`,
+                        top: `${rect.y}%`,
+                        width: `${rect.w}%`,
+                        height: `${rect.h}%`,
+                        borderRadius: 6,
+                        backgroundColor: selected ? "rgba(143,104,246,0.34)" : "transparent",
+                        border: selected ? "1.5px solid rgba(95,80,147,0.75)" : "1.5px solid transparent",
+                        transition: "background-color 0.15s ease, border-color 0.15s ease",
+                      }}
                     />
-                  ))}
-                </g>
-              </svg>
+                  ));
+                })}
+              </div>
+
+              <div className="absolute top-0 right-0 flex items-center gap-0.5 bg-cream-soft rounded-full p-0.5">
+                {(["front", "back"] as BodySide[]).map((side) => (
+                  <button
+                    key={side}
+                    onClick={() => {
+                      if (side === bodySide) return;
+                      flipSide();
+                    }}
+                    className={clsx(
+                      "tap px-2 py-1 rounded-full text-[10px] font-semibold capitalize",
+                      bodySide === side ? "bg-primary text-white" : "text-charcoal-faint"
+                    )}
+                  >
+                    {side}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          <div className="flex justify-center mb-5">
-            <button
-              onClick={flipSide}
-              className="tap flex items-center gap-1.5 text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-3.5 py-1.5"
-            >
-              <RotateCw size={13} /> Switch to {bodySide === "front" ? "back" : "front"} view
-            </button>
-          </div>
-
-          {/* §6.4.6: hover is bidirectional — hovering a chip lights its
-              muscle, hovering a muscle lights its chip (via hoveredGroup). */}
           <div className="flex flex-wrap justify-center gap-1.5 mb-5">
             {bodyZones.map((mg) => (
               <button
                 key={mg}
                 onClick={() => setSelectedGroup(selectedGroup === mg ? null : mg)}
-                onMouseEnter={() => setHoveredGroup(mg)}
-                onMouseLeave={() => setHoveredGroup(null)}
                 className={clsx(
-                  "tap px-2.5 py-1 rounded-full text-[10px] font-semibold border transition-colors",
+                  "tap px-2.5 py-1 text-[10px] font-semibold border transition-colors",
                   selectedGroup === mg
-                    ? "bg-primary text-white border-primary"
-                    : hoveredGroup === mg
-                    ? "bg-primary-pale border-primary text-primary-deep-text"
+                    ? "text-white border-transparent"
                     : "bg-cream-soft border-transparent text-charcoal-soft"
                 )}
+                style={{
+                  borderRadius: 8,
+                  backgroundColor: selectedGroup === mg ? "#A092E0" : undefined,
+                }}
               >
                 {MUSCLE_GROUP_LABEL[mg]}
               </button>
@@ -377,7 +353,7 @@ export default function ExerciseDatabaseTab() {
           </div>
 
           <p className="text-[11px] text-charcoal-faint text-center mb-4">
-            Not shown on either picture — find these in List mode: Cardio, Full Body, Olympic.
+            Not shown on either picture — find these in List mode: Cardio, Olympic.
           </p>
 
           {selectedGroup && (

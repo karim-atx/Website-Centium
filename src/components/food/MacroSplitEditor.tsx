@@ -6,10 +6,13 @@ import type { MacroSplit } from "../../types";
 // are the Acceptable Macronutrient Distribution Ranges (AMDR) from the
 // Dietary Reference Intakes — the established evidence-based bounds for
 // healthy adults — rather than the previous shared 5-70% for every macro.
+// Mobile handoff item 8: the dashboard's own nutrition-bar trio colors,
+// replacing the previous gold (carbs) and teal (fat) — protein was already
+// on-spec.
 const macroMeta = [
   { key: "proteinPct" as const, label: "Protein", color: "#7D6BB5", kcalPerG: 4, min: 10, max: 35 },
-  { key: "carbsPct" as const, label: "Carbs", color: "#D9A441", kcalPerG: 4, min: 30, max: 65 },
-  { key: "fatPct" as const, label: "Fat", color: "#6F9993", kcalPerG: 9, min: 20, max: 40 },
+  { key: "carbsPct" as const, label: "Carbs", color: "#AEA1DC", kcalPerG: 4, min: 30, max: 65 },
+  { key: "fatPct" as const, label: "Fat", color: "#A2C8C2", kcalPerG: 9, min: 20, max: 40 },
 ];
 
 type MacroMeta = (typeof macroMeta)[number];

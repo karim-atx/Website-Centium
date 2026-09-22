@@ -2,19 +2,24 @@ import { useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/ui/Card";
-import { Chip } from "../../components/ui/Chip";
+import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { EditFoodEntrySheet } from "../../components/food/EditFoodEntrySheet";
 import { DateSelector } from "../../components/dashboard/DateSelector";
-import { mealOrder, mealLabels, sumNutrition, targetsFromGoal } from "../../services/nutrition";
+import { mealLabels, sumNutrition, targetsFromGoal } from "../../services/nutrition";
 import { deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
 import type { MealType, FoodLogEntry } from "../../types";
-import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronUp, Undo2 } from "lucide-react";
+import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronRight, Undo2 } from "lucide-react";
 import { isFoodRestricted } from "../../utils/dietaryRestrictions";
 import GoalsPanel from "./GoalsPanel";
 import MealPrepPanel from "./MealPrepPanel";
+import { foodTabs, type Tab } from "./foodTabs";
 
-type Tab = "diary" | "goals" | "prep";
+// Item 7: the Diary's own display order (Breakfast, Snack, Lunch, Dinner) —
+// deliberately separate from the shared `mealOrder` export (services/
+// nutrition), which stays breakfast/lunch/dinner/snack for the meal-picker
+// sheets (AddFoodSheet, CreateMealSheet) that still import it.
+const diaryMealOrder: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
 
 const SWIPE_THRESHOLD = 60;
 
@@ -193,17 +198,12 @@ export default function Food() {
           existing size and this renders the title directly instead. */}
       <p className="mb-[11px] text-[19px] font-bold tracking-[-0.03em] text-charcoal">Food</p>
 
-      <div className="flex gap-2 mb-5 animate-fade-slide-up">
-        <Chip active={tab === "diary"} onClick={() => setTab("diary")}>
-          Diary
-        </Chip>
-        <Chip active={tab === "goals"} onClick={() => setTab("goals")}>
-          Goals & Macros
-        </Chip>
-        <Chip active={tab === "prep"} onClick={() => setTab("prep")}>
-          Meal Prep
-        </Chip>
-      </div>
+      <SegmentedTabs
+        className="mb-5 animate-fade-slide-up"
+        items={foodTabs}
+        activeKey={tab}
+        onChange={(key) => setTab(key as Tab)}
+      />
 
       {tab === "diary" && (
         <div className="animate-fade-slide-up">
@@ -227,8 +227,15 @@ export default function Food() {
             // kcal figure + "of X kcal" + "left" chip stacked in a fixed-
             // width left column, each macro's bar on the same row as its
             // label and gram readout.
-            <div
-              className="relative overflow-hidden rounded-[20px] px-4 py-[15px] mb-[13px]"
+            <button
+              type="button"
+              onClick={() => {
+                // Item 7: Nutrient Summary is a separate, not-yet-built
+                // screen (its data source hasn't been decided) — this tap
+                // is a placeholder/no-op until that view exists, so it
+                // currently does nothing beyond the tap feedback.
+              }}
+              className="tap relative overflow-hidden rounded-[20px] px-4 py-[15px] mb-[13px] w-full text-left"
               style={{ background: "var(--gradient-food-hero)" }}
             >
               <div className="flex items-center gap-4">
@@ -241,13 +248,26 @@ export default function Food() {
                     {targets.calories - Math.round(totals.calories)} left
                   </p>
                 </div>
-                <div className="flex-1 min-w-0 flex flex-col gap-2">
+                <div className="flex-1 min-w-0 flex flex-col gap-2 pr-5">
                   {macroRow("Protein", totals.protein, targets.protein)}
                   {macroRow("Carbs", totals.carbs, targets.carbs)}
                   {macroRow("Fat", totals.fat, targets.fat)}
                 </div>
               </div>
-            </div>
+              <span
+                className="absolute flex items-center justify-center rounded-full"
+                style={{
+                  width: 22,
+                  height: 22,
+                  right: 13,
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "rgba(255,255,255,0.18)",
+                }}
+              >
+                <ChevronRight size={13} className="text-white" />
+              </span>
+            </button>
           )}
 
           {/* Iteration 6 "Team" §2.5: a quick-add row above the meal list —
@@ -284,7 +304,7 @@ export default function Food() {
           )}
 
           <div className="flex flex-col gap-2">
-            {mealOrder.map((meal) => {
+            {diaryMealOrder.map((meal) => {
               const entries = grouped[meal];
               // Plain sums: each entry already carries its own totals.
               const mealCal = entries.reduce((s, e) => s + e.calories, 0);
@@ -302,9 +322,13 @@ export default function Food() {
                 <div
                   key={meal}
                   className={clsx(
-                    "rounded-[15px] bg-cream-card px-3.5 py-[13px]",
+                    "rounded-[15px] px-3.5 py-[13px]",
                     collapsed ? "border border-charcoal/[0.08]" : "border border-team-lavender/[0.34] shadow-[0_4px_14px_rgba(95,80,147,0.08)]"
                   )}
+                  // Item 7: collapsed meal cards are plain white; the open
+                  // card gets the same lavender tint convention used for
+                  // other collapsible sections in the app.
+                  style={{ background: collapsed ? "#FFFFFF" : "rgba(174,161,220,0.12)" }}
                   onTouchStart={onMealTouchStart}
                   onTouchEnd={(ev) => onMealTouchEnd(ev, meal)}
                   onClick={() => onMealTap(meal)}
@@ -343,11 +367,16 @@ export default function Food() {
                         {Math.round(mealCal)}
                       </span>
                     )}
-                    {collapsed ? (
-                      <ChevronDown size={14} className="text-charcoal-faint shrink-0" />
-                    ) : (
-                      <ChevronUp size={14} className="text-charcoal-faint shrink-0" />
-                    )}
+                    {/* Item 7: a single chevron that rotates 180deg over
+                        0.18s instead of swapping icons. */}
+                    <ChevronDown
+                      size={14}
+                      className="text-charcoal-faint shrink-0"
+                      style={{
+                        transform: collapsed ? "rotate(0deg)" : "rotate(180deg)",
+                        transition: "transform 0.18s",
+                      }}
+                    />
                   </button>
 
                   {showUndo && (
@@ -454,7 +483,7 @@ export default function Food() {
         </div>
       )}
 
-      {tab === "goals" && <GoalsPanel />}
+      {tab === "goals" && <GoalsPanel onTabChange={setTab} />}
       {tab === "prep" && <MealPrepPanel />}
 
       {tab === "diary" && (

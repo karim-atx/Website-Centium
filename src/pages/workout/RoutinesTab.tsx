@@ -52,6 +52,24 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
 
 const folderColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
 
+
+// Colour-coded folders: folder.color is already per-folder state (set by the
+// user via the color picker, or seeded per-index in AppContext's
+// defaultRoutineFolders), but any folder WITHOUT an explicit color fell back
+// to the same shared "#5B5349" (rgb(var(--c-charcoal-soft))) tile — so a
+// batch of un-colored folders all looked identical. This derives a stable,
+// distinct color per folder id (not render index, so it survives reordering
+// via moveRoutineFolder) from the same six-color palette already used for
+// the color pickers and recognized by rowTint above.
+const folderTileColor = (folder: RoutineFolder): string => {
+  if (folder.color) return folder.color;
+  let hash = 0;
+  for (let i = 0; i < folder.id.length; i++) {
+    hash = (hash * 31 + folder.id.charCodeAt(i)) >>> 0;
+  }
+  return folderColorOptions[hash % folderColorOptions.length];
+};
+
 // Iteration 6 "Team" §3.2: folders and routines render as "quiet tinted
 // rows" — the dc.html markup keys each row's light background to which
 // colour family its own solid accent (folder.color / routine.color)
@@ -197,12 +215,13 @@ export default function RoutinesTab() {
     const folderRoutines = routines.filter((r) => r.folderId === folder.id);
     const subfolders = childrenOf(folder.id);
     const collapsed = collapsedFolders.has(folder.id);
+    const tileColor = folderTileColor(folder);
 
     return (
       <div style={{ marginLeft: depth * 16 }}>
         <div
           className="flex items-center gap-[11px] justify-between mb-2 rounded-[15px] px-3.5 py-3"
-          style={{ background: rowTint(folder.color ?? "#7D6BB5") }}
+          style={{ background: rowTint(tileColor) }}
         >
           {renamingId === folder.id ? (
             <div className="flex items-center gap-2 flex-1">
@@ -236,7 +255,7 @@ export default function RoutinesTab() {
               >
                 <span
                   className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0"
-                  style={{ background: folder.color ?? "rgb(var(--c-charcoal-soft))" }}
+                  style={{ background: tileColor }}
                 >
                   <Folder size={14} className="text-white" />
                 </span>
@@ -465,9 +484,11 @@ export default function RoutinesTab() {
         <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Folders</p>
         <button
           onClick={() => setNewFolderOpen(true)}
-          className="tap flex items-center gap-1.5 text-xs font-semibold text-primary"
+          title="New folder"
+          aria-label="New folder"
+          className="tap w-[30px] h-[30px] rounded-[10px] flex items-center justify-center text-primary"
         >
-          <FolderPlus size={13} /> New folder
+          <FolderPlus size={18} />
         </button>
       </div>
 

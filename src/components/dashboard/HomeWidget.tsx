@@ -42,6 +42,246 @@ const capsLabel = "font-bold text-[9px] tracking-[.16em] uppercase";
 const numeralSmall = "text-[16px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums";
 const badge = "text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap shrink-0";
 
+// Item 5 (large water widget): builds a smooth, tileable sine-like wave as
+// one cubic Bezier per half-period, control points offset by the
+// circle/Bezier "kappa" constant (0.5522847) — a close, cheap stand-in for
+// a true sine that is exactly periodic, so two copies placed side by side
+// tile with no seam for the horizontal drift loop. `y`/`amp` are percents
+// of the fill's own height (the SVG's 0..100 viewBox, stretched to the
+// fill's actual box via preserveAspectRatio="none"). Returns both the full
+// filled-down-to-the-bottom path and just the wavy top edge (used for the
+// frontmost layer's specular crest line).
+function buildWavePaths(yPercent: number, ampPercent: number, crests: number) {
+  const halfPeriods = crests * 2;
+  const halfW = 100 / halfPeriods;
+  const k = 0.5522847 * halfW;
+  let fill = `M0,100 L0,${yPercent.toFixed(2)} `;
+  let top = `M0,${yPercent.toFixed(2)} `;
+  let x = 0;
+  for (let s = 0; s < halfPeriods; s++) {
+    const extreme = s % 2 === 0 ? yPercent - ampPercent : yPercent + ampPercent;
+    const xEnd = x + halfW;
+    const c1x = x + k;
+    const c2x = xEnd - k;
+    const seg = `C${c1x.toFixed(2)},${extreme.toFixed(2)} ${c2x.toFixed(2)},${extreme.toFixed(2)} ${xEnd.toFixed(2)},${yPercent.toFixed(2)} `;
+    fill += seg;
+    top += seg;
+    x = xEnd;
+  }
+  fill += "L100,100 Z";
+  return { fill, top };
+}
+
+// Item 5 literal table, back to front in render order. The table as given
+// lists (30,22,46,14,74) and separately calls out the (14/8/2) row as "the
+// frontmost layer" — inconsistent with reading the table's own listed order
+// as strict back-to-front. Resolved here by trusting the explicit
+// "frontmost" callout over positional ordering: (14/8/2) is rendered last
+// (front), the rest kept in the table's given order. Flagged in the report.
+const WATER_WAVE_LAYERS: Array<{
+  y: number;
+  amp: number;
+  crests: number;
+  fillColor: string;
+  swell: string;
+  drift: string;
+  reverse: boolean;
+  delay: string;
+  front?: boolean;
+}> = [
+  { y: 30, amp: 9, crests: 2, fillColor: "rgba(23,69,127,0.17)", swell: "8.5s", drift: "9s", reverse: false, delay: "-0.6s" },
+  { y: 22, amp: 6, crests: 3, fillColor: "rgba(23,69,127,0.11)", swell: "6.5s", drift: "7s", reverse: true, delay: "-1.63s" },
+  { y: 46, amp: 7, crests: 5, fillColor: "rgba(255,255,255,0.13)", swell: "7.5s", drift: "11s", reverse: false, delay: "-2.65s" },
+  { y: 74, amp: 6, crests: 4, fillColor: "rgba(255,255,255,0.10)", swell: "9s", drift: "13s", reverse: false, delay: "-3.68s" },
+  { y: 14, amp: 8, crests: 2, fillColor: "rgba(255,255,255,0.30)", swell: "5.5s", drift: "5s", reverse: true, delay: "-4.7s", front: true },
+];
+
+// Item 5's full replacement for the large water widget: a 5-layer wave
+// fill tank (see WATER_WAVE_LAYERS) replacing the old flat horizontal
+// progress bar. Split out of the switch's JSX for readability given its
+// size. `pct` is the existing fraction (water / waterGoalMl); `glasses` is
+// the existing 0–8 rounded count used in the below-goal pill sub-label.
+const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: number; glasses: number }> = ({
+  water,
+  waterGoalMl,
+  pct,
+  glasses,
+}) => {
+  const pctPercent = pct * 100;
+  // Item 5 literal formula: 100% stops 5px short of the 131px-tall fill
+  // frame's own top edge; above 100% the fill never rises further.
+  const fillHeightPx = (Math.min(100, pctPercent) / 100) * 126;
+  const atOrAboveGoal = pctPercent >= 100;
+  const overGoal = pctPercent > 100;
+
+  const bodyGradient = atOrAboveGoal
+    ? "linear-gradient(180deg, #6FA6EC 0%, #4A85DC 46%, #2C5FAF 100%)"
+    : "linear-gradient(180deg, #E4F0FE 0%, #B9D7F8 42%, #7FB0EE 100%)";
+  const captionColor = atOrAboveGoal ? "#FFFFFF" : "#3A4351";
+  const valueColor = atOrAboveGoal ? "#FFFFFF" : "#000000";
+  const toGoColor = atOrAboveGoal ? "#FFFFFF" : "#46505F";
+  const pillBg = overGoal ? "#F4D789" : "rgba(143,192,232,.34)";
+  const pillTextColor = overGoal ? "#8B5900" : atOrAboveGoal ? "#FFFFFF" : "#26303D";
+  const whiteShadow = "0 1px 3px rgba(12,40,82,.45)";
+  const textShadow = atOrAboveGoal ? whiteShadow : "none";
+  const subLabel = atOrAboveGoal ? "Goal reached!" : `${glasses} of 8 glasses`;
+
+  return (
+    <div
+      className="relative w-full max-w-[358px] h-[150px] rounded-[15px] overflow-hidden box-border"
+      style={{ background: "rgba(143,192,232,.17)" }}
+    >
+      <style>{`
+        @keyframes cent-water-drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+        @keyframes cent-water-swell { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+        @keyframes cent-water-slosh { 0% { transform: translateY(6px); } 40% { transform: translateY(-3px); } 70% { transform: translateY(1.5px); } 100% { transform: translateY(0); } }
+        @keyframes cent-water-sparkle { 0%, 100% { transform: scale(0.55) rotate(0deg); opacity: 0.45; } 50% { transform: scale(1.15) rotate(45deg); opacity: 1; } }
+        .cent-water-anim { animation-timing-function: linear; animation-iteration-count: infinite; }
+        .cent-water-slosh-el { animation: cent-water-slosh 1.4s cubic-bezier(.22,1,.36,1); }
+        @media (prefers-reduced-motion: reduce) {
+          .cent-water-anim { animation-duration: 40s !important; }
+          .cent-water-slosh-el { animation: none !important; }
+        }
+      `}</style>
+
+      {/* Tank: the 131px-tall fill frame the literal fill formula is
+          relative to, bottom-anchored and edge-to-edge inside the card. */}
+      <div className="absolute left-0 right-0 bottom-0 overflow-hidden" style={{ height: 131 }}>
+        <div
+          key={water}
+          className="absolute left-0 right-0 bottom-0 cent-water-slosh-el"
+          style={{
+            height: fillHeightPx,
+            transition: "height 1.1s cubic-bezier(.22,1,.36,1)",
+            background: bodyGradient,
+            willChange: "transform",
+          }}
+        >
+          {/* waterline highlight */}
+          <div
+            className="absolute left-0 right-0 top-0"
+            style={{ height: 22, background: "linear-gradient(to bottom, rgba(255,255,255,.42), transparent)" }}
+          />
+
+          {WATER_WAVE_LAYERS.map((w, i) => {
+            const { fill, top } = buildWavePaths(w.y, w.amp, w.crests);
+            return (
+              <div key={i} className="absolute inset-0 overflow-hidden">
+                <div
+                  className="absolute left-0 top-0 cent-water-anim"
+                  style={{
+                    width: "200%",
+                    height: "100%",
+                    animationName: "cent-water-drift",
+                    animationDuration: w.drift,
+                    animationDirection: w.reverse ? "reverse" : "normal",
+                    willChange: "transform",
+                  }}
+                >
+                  {[0, 1].map((tile) => (
+                    <div
+                      key={tile}
+                      className="absolute top-0 cent-water-anim"
+                      style={{
+                        left: `${tile * 50}%`,
+                        width: "50%",
+                        height: "100%",
+                        animationName: "cent-water-swell",
+                        animationDuration: w.swell,
+                        animationDelay: w.delay,
+                        animationTimingFunction: "ease-in-out",
+                        willChange: "transform",
+                      }}
+                    >
+                      <svg viewBox="0 0 100 100" preserveAspectRatio="none" width="100%" height="100%" style={{ display: "block" }}>
+                        <path d={fill} fill={w.fillColor} />
+                        {w.front && (
+                          <path d={top} fill="none" stroke="rgba(255,255,255,.95)" strokeWidth={1.7} vectorEffect="non-scaling-stroke" />
+                        )}
+                      </svg>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+
+          {/* depth cues: inset shadow left/right/bottom */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{
+              boxShadow:
+                "inset 13px 0 20px -13px rgba(11,40,80,.42), inset -13px 0 20px -13px rgba(11,40,80,.42), inset 0 -18px 26px -12px rgba(11,40,80,.5)",
+            }}
+          />
+        </div>
+      </div>
+
+      {/* content overlay */}
+      <div className="relative z-10 flex flex-col h-full p-3.5 box-border">
+        <div className="flex items-center justify-between gap-3">
+          <p className={capsLabel} style={{ color: captionColor, textShadow }}>
+            Water
+          </p>
+          <span className={badge} style={{ background: pillBg, color: pillTextColor, textShadow: overGoal ? "none" : textShadow }}>
+            {subLabel}
+          </span>
+        </div>
+        <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
+          <div className="flex items-baseline justify-between gap-2.5">
+            <span className="text-[26px] font-extrabold leading-none tracking-[-0.035em] tabular-nums" style={{ color: valueColor, textShadow }}>
+              {(water / 1000).toFixed(1)} L
+            </span>
+            <span className="text-[10px]" style={{ color: toGoColor, textShadow }}>
+              {Math.max(0, (waterGoalMl - water) / 1000).toFixed(1)} L to go
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* sparkles — over-goal only, positioned inside the widget frame */}
+      {overGoal && (
+        <>
+          <span
+            className="absolute cent-water-sparkle-el"
+            style={{
+              right: 96,
+              top: 16,
+              width: 13,
+              height: 13,
+              animation: "cent-water-sparkle 1.7s ease-in-out infinite",
+              animationDelay: "0s",
+              filter: "drop-shadow(0 1px 1.5px rgba(120,76,0,.45))",
+              willChange: "transform",
+            }}
+          >
+            <svg viewBox="0 0 24 24" width={13} height={13}>
+              <path d="M12 0C12 6 14 10 24 12C14 14 12 18 12 24C12 18 10 14 0 12C10 10 12 6 12 0Z" fill="#E8A21B" />
+            </svg>
+          </span>
+          <span
+            className="absolute cent-water-sparkle-el"
+            style={{
+              right: 88,
+              top: 34,
+              width: 9,
+              height: 9,
+              animation: "cent-water-sparkle 1.7s ease-in-out infinite",
+              animationDelay: "0.55s",
+              filter: "drop-shadow(0 1px 1.5px rgba(120,76,0,.45))",
+              willChange: "transform",
+            }}
+          >
+            <svg viewBox="0 0 24 24" width={9} height={9}>
+              <path d="M12 0C12 6 14 10 24 12C14 14 12 18 12 24C12 18 10 14 0 12C10 10 12 6 12 0Z" fill="#F0B63C" />
+            </svg>
+          </span>
+        </>
+      )}
+    </div>
+  );
+};
+
 export const HomeWidget: React.FC<{
   widget: WidgetConfig;
   onWaterClick?: () => void;
@@ -273,41 +513,12 @@ export const HomeWidget: React.FC<{
           )
         );
       }
-      return wrap(
-        onClick,
-        shell(
-          "rgba(143,192,232,.17)",
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-team-blue-ink/[0.72]`}>Water</p>
-              <span className={`${badge} text-team-blue-ink bg-team-blue-light/[0.34]`}>{glasses} of 8 glasses</span>
-            </div>
-            <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
-              <div className="flex items-baseline justify-between gap-2.5">
-                <span className="text-[26px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
-                  {(water / 1000).toFixed(1)} L
-                </span>
-                <span className="text-[10px] text-team-blue-ink/[0.72]">
-                  {Math.max(0, (waterGoalMl - water) / 1000).toFixed(1)} L to go
-                </span>
-              </div>
-              <div className="h-[18px] rounded-[7px] bg-team-blue-light/[0.26] overflow-hidden">
-                <div
-                  className="h-full rounded-[7px]"
-                  style={{ width: `${Math.min(100, pct * 100)}%`, background: "linear-gradient(90deg,#A8CFEE,#8FC0E8)" }}
-                />
-              </div>
-              {water === 0 && new Date(`${today}T00:00:00`).getHours() >= 12 && (
-                <div className="flex items-center gap-[9px] rounded-[9px] bg-team-blue-light/[0.22] px-2.5 py-[7px]">
-                  <span className="text-[9.5px] font-semibold leading-[1.35] text-team-blue-ink">
-                    It's past midday and nothing's logged — a glass now keeps you on pace.
-                  </span>
-                </div>
-              )}
-            </div>
-          </>
-        )
-      );
+      // Item 5: the old flat two-stop-gradient horizontal progress bar (and
+      // its past-midday nudge banner, not called for anywhere in the item 5
+      // final-state spec and with no room left for it in the new tank
+      // layout) is fully replaced by LargeWaterWidget's 5-layer wave fill —
+      // see the component above for the literal per-layer geometry.
+      return wrap(onClick, <LargeWaterWidget water={water} waterGoalMl={waterGoalMl} pct={pct} glasses={glasses} />);
     }
 
     // ---------------------------------------------------------------- Sleep
@@ -590,11 +801,21 @@ export const HomeWidget: React.FC<{
                       d="M13.4 14.6 A27.3 27.3 0 0 1 50.4 14.6 L43.2 26.3 A27.8 27.8 0 0 0 20.6 26.3 Z"
                       strokeWidth={2.7}
                     />
-                    <path d="M22.2 10.2 L23.9 14.8" strokeWidth={2.2} />
-                    <path d="M31.8 9.6 V13.3" strokeWidth={2.2} />
-                    <path d="M41.7 10.2 L40.0 16.0" strokeWidth={2.2} />
+                    {/* Item 4: the three dial "feet" pins normalized to
+                        literal lengths — outer pins 4.0 units, centre pin
+                        2.8 units (trimmed so it doesn't overshoot the
+                        dial's crest it sits on). Previously uneven
+                        (~4.9 / ~3.7 / ~6.0) from an approximate
+                        reproduction; start points kept fixed on the arc,
+                        only the length (endpoint) changed. */}
+                    <path d="M22.2 10.2 L23.59 13.95" strokeWidth={2.2} />
+                    <path d="M31.8 9.6 V12.4" strokeWidth={2.2} />
+                    <path d="M41.7 10.2 L40.57 14.04" strokeWidth={2.2} />
                     <path d="M35.6 14.6 L29.8 22.9" strokeWidth={2.7} />
                   </svg>
+                  {/* Item 4: the numeric value must be charcoal, not
+                      accent-colored — the unit text and glyph/icon below
+                      keep the existing #7567B7 accent. */}
                   <span
                     style={{
                       position: "absolute",
@@ -602,7 +823,7 @@ export const HomeWidget: React.FC<{
                       right: 0,
                       top: "53.1%",
                       textAlign: "center",
-                      color: "#7567B7",
+                      color: "#241F1B",
                       fontWeight: 800,
                       lineHeight: 1,
                       fontSize: iconSize * (weightOverflows ? 0.176 : 0.197),

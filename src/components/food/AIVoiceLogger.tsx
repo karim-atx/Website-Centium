@@ -51,6 +51,72 @@ interface Notice {
   text: string;
 }
 
+// --- Recording-stage waveform -----------------------------------------
+//
+// Item 13: the old pulse rings were pure CSS decoration with no relation to
+// what the mic was actually hearing. This replaces them with a live
+// waveform driven by an AnalyserNode tapped off the same MediaStream the
+// MediaRecorder already uses (in parallel, not instead of it). Drawn as one
+// canvas pass per frame rather than N styled DOM bars, so a page with
+// several of these mounted doesn't force a style recalc every frame.
+const WAVE_BAR_PITCH = 6; // px between bar starts (bar width + gap)
+const WAVE_BAR_WIDTH = 3;
+const WAVE_STEP_MS = 60; // ms between new samples entering the buffer
+const WAVE_FLOOR = 0.06; // silence still shows a low, visibly-alive row
+// Newest -> oldest, a 3-step gradient across the buffer's age.
+const WAVE_COLORS = ["#6F9993", "#83AAA4", "#A2C8C2"] as const;
+
+/** RMS of a time-domain byte buffer, mapped to a 0..1 bar-height fraction. */
+function amplitudeFromTimeDomain(data: Uint8Array<ArrayBuffer>): number {
+  let sumSq = 0;
+  for (let i = 0; i < data.length; i++) {
+    const v = (data[i] - 128) / 128;
+    sumSq += v * v;
+  }
+  const rms = Math.sqrt(sumSq / data.length);
+  return Math.max(WAVE_FLOOR, Math.min(1, Math.pow(rms * 3.4, 0.82)));
+}
+
+/**
+ * Draws every bar in the rolling buffer in one pass. `scrollOffset` is a
+ * sub-bar-pitch pixel amount (0..WAVE_BAR_PITCH) applied as a single
+ * translate so the scroll reads as continuous motion instead of a bar
+ * appearing in discrete jumps once per step.
+ */
+function renderWave(canvas: HTMLCanvasElement, buffer: number[], scrollOffset: number, dpr: number) {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+  const cssWidth = canvas.width / dpr;
+  const cssHeight = canvas.height / dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, cssWidth, cssHeight);
+
+  const midY = cssHeight / 2;
+  // Clamped so a loud input can never draw past the canvas's own bounds.
+  const maxBarHalf = Math.max(2, cssHeight / 2 - WAVE_BAR_WIDTH / 2 - 1);
+  const n = buffer.length;
+
+  ctx.save();
+  ctx.translate(-scrollOffset, 0);
+  ctx.lineCap = "round";
+  ctx.lineWidth = WAVE_BAR_WIDTH;
+
+  for (let i = 0; i < n; i++) {
+    const ageFromNewest = n - 1 - i; // 0 = newest (rightmost)
+    const x = cssWidth - ageFromNewest * WAVE_BAR_PITCH;
+    if (x < -WAVE_BAR_PITCH || x > cssWidth + scrollOffset + WAVE_BAR_PITCH) continue;
+
+    const half = Math.min(maxBarHalf, Math.max(1, buffer[i] * maxBarHalf));
+    const ageFrac = ageFromNewest / Math.max(1, n - 1);
+    ctx.strokeStyle = ageFrac < 1 / 3 ? WAVE_COLORS[0] : ageFrac < 2 / 3 ? WAVE_COLORS[1] : WAVE_COLORS[2];
+    ctx.beginPath();
+    ctx.moveTo(x, midY - half);
+    ctx.lineTo(x, midY + half);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = ({
   open,
   onClose,
@@ -80,6 +146,78 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
   const capTimerRef = useRef<number | null>(null);
   const tickRef = useRef<number | null>(null);
 
+  // The waveform: an AnalyserNode tapped off the same stream as the
+  // MediaRecorder above, running in parallel with it, plus everything the
+  // canvas render loop needs across frames without triggering re-renders.
+  const waveCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const analyserSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const waveTimeDomainRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
+  const waveRafRef = useRef<number | null>(null);
+  const waveBufferRef = useRef<number[]>([]);
+  const waveModeRef = useRef<"live" | "synthetic">("live");
+  const waveScrollRef = useRef(0);
+  const waveLastFrameTimeRef = useRef<number | null>(null);
+  const waveSyntheticPhaseRef = useRef(0);
+
+  /**
+   * Tries to tap an AnalyserNode off the recording stream, in parallel with
+   * the MediaRecorder already reading it -- this only listens, it never
+   * touches the stream's tracks, so it can't interfere with the recording
+   * itself. Returns false (never throws) on anything that means there is no
+   * live level to show: unsupported API, an insecure context, or the
+   * AudioContext refusing to construct -- the caller falls back to a
+   * synthetic wave in that case.
+   */
+  const setupAnalyser = (stream: MediaStream): boolean => {
+    try {
+      if (!window.isSecureContext) return false;
+      const Ctx =
+        window.AudioContext ??
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!Ctx) return false;
+
+      const ctx = new Ctx();
+      const source = ctx.createMediaStreamSource(stream);
+      const analyser = ctx.createAnalyser();
+      analyser.fftSize = 1024;
+      analyser.smoothingTimeConstant = 0.55;
+      // Listen only -- never connected to ctx.destination, so this can't
+      // introduce feedback or echo the user's own mic back to them.
+      source.connect(analyser);
+      void ctx.resume().catch(() => {});
+
+      audioCtxRef.current = ctx;
+      analyserRef.current = analyser;
+      analyserSourceRef.current = source;
+      waveTimeDomainRef.current = new Uint8Array(analyser.fftSize);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  /**
+   * Releases the analyser and its AudioContext. Lives next to `teardown`
+   * below and is called from there plus from the recorder's own `onstop` --
+   * one shared function, not a second cleanup path, so the stream and the
+   * audio graph tapped off it are always released together.
+   */
+  const teardownWave = () => {
+    if (waveRafRef.current !== null) { cancelAnimationFrame(waveRafRef.current); waveRafRef.current = null; }
+    analyserSourceRef.current?.disconnect();
+    analyserSourceRef.current = null;
+    analyserRef.current?.disconnect();
+    analyserRef.current = null;
+    const ctx = audioCtxRef.current;
+    audioCtxRef.current = null;
+    if (ctx && ctx.state !== "closed") {
+      void ctx.close().catch(() => {});
+    }
+    waveTimeDomainRef.current = null;
+  };
+
   /**
    * Releases the microphone and every timer, whatever state we were in.
    *
@@ -101,6 +239,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
     chunksRef.current = [];
+    teardownWave();
   };
 
   // Covers every way this component can go away: the sheet closing, a route
@@ -109,6 +248,78 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
   useEffect(() => {
     if (!open) teardown();
   }, [open]);
+
+  // The waveform's own render loop. Scoped tightly to the recording stage
+  // being on screen -- there can be more than one of these loggers mounted
+  // at once, and a rAF loop that keeps running after the stage moves on
+  // would stall the whole page, not just this sheet.
+  useEffect(() => {
+    if (stage !== "recording") return;
+    const canvas = waveCanvasRef.current;
+    const stream = streamRef.current;
+    if (!canvas || !stream) return;
+
+    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    const amplitudeScale = reducedMotion ? 0.34 : 1;
+    const stepMs = reducedMotion ? WAVE_STEP_MS * 1.7 : WAVE_STEP_MS;
+
+    waveModeRef.current = setupAnalyser(stream) ? "live" : "synthetic";
+
+    const dpr = window.devicePixelRatio || 1;
+    const resize = () => {
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.round(rect.width * dpr));
+      canvas.height = Math.max(1, Math.round(rect.height * dpr));
+    };
+    resize();
+
+    const barCount = Math.max(8, Math.ceil(canvas.getBoundingClientRect().width / WAVE_BAR_PITCH) + 2);
+    waveBufferRef.current = new Array(barCount).fill(WAVE_FLOOR * amplitudeScale);
+    waveScrollRef.current = 0;
+    waveLastFrameTimeRef.current = null;
+    waveSyntheticPhaseRef.current = 0;
+
+    const ro = new ResizeObserver(resize);
+    ro.observe(canvas);
+
+    const readAmplitude = (): number => {
+      if (waveModeRef.current === "live" && analyserRef.current && waveTimeDomainRef.current) {
+        analyserRef.current.getByteTimeDomainData(waveTimeDomainRef.current);
+        return amplitudeFromTimeDomain(waveTimeDomainRef.current);
+      }
+      // Gentle synthetic wave: no live levels available (unsupported API,
+      // insecure context, or the AudioContext failed to construct), but the
+      // MediaRecorder above is still recording completely undisturbed.
+      waveSyntheticPhaseRef.current += 0.12;
+      const slow = (Math.sin(waveSyntheticPhaseRef.current) + 1) / 2;
+      const wobble = (Math.sin(waveSyntheticPhaseRef.current * 2.7) + 1) / 2;
+      return Math.max(WAVE_FLOOR, Math.min(1, WAVE_FLOOR + (0.3 + 0.15 * wobble) * slow));
+    };
+
+    const draw = (time: number) => {
+      if (waveLastFrameTimeRef.current === null) waveLastFrameTimeRef.current = time;
+      const dt = Math.min(250, time - waveLastFrameTimeRef.current);
+      waveLastFrameTimeRef.current = time;
+
+      waveScrollRef.current += (dt / stepMs) * WAVE_BAR_PITCH;
+      while (waveScrollRef.current >= WAVE_BAR_PITCH) {
+        waveScrollRef.current -= WAVE_BAR_PITCH;
+        const buf = waveBufferRef.current;
+        buf.shift();
+        buf.push(readAmplitude() * amplitudeScale);
+      }
+
+      renderWave(canvas, waveBufferRef.current, waveScrollRef.current, dpr);
+      waveRafRef.current = requestAnimationFrame(draw);
+    };
+    waveRafRef.current = requestAnimationFrame(draw);
+
+    return () => {
+      ro.disconnect();
+      teardownWave();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stage]);
 
   const reset = () => {
     teardown();
@@ -193,9 +404,13 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     recorder.onstop = () => {
       // The mic is released the moment recording ends, not when the upload
       // finishes: there is nothing left to capture and the indicator should go
-      // out immediately.
+      // out immediately. The analyser/AudioContext tapped off the same stream
+      // are released right here too -- this also stops the wave's rAF loop,
+      // which is what makes it "freeze" on its last frame: the canvas node
+      // itself isn't removed until the stage change below unmounts it.
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
+      teardownWave();
 
       const blob = new Blob(chunksRef.current, { type: mimeType });
       chunksRef.current = [];
@@ -406,12 +621,14 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
         {stage === "recording" && (
           <>
             <div className="relative w-24 h-24 mb-6">
-              <span className="absolute inset-0 rounded-full bg-teal/40 animate-pulse-ring" />
-              <span className="absolute inset-0 rounded-full bg-teal/40 animate-pulse-ring [animation-delay:0.4s]" />
               <div className="relative w-24 h-24 rounded-full bg-teal flex items-center justify-center shadow-lift">
                 <Mic size={32} className="text-white" />
               </div>
             </div>
+            {/* Item 13: a live waveform off the mic's actual input level,
+                replacing the old decorative pulse rings. See the
+                AnalyserNode setup/render loop above. */}
+            <canvas ref={waveCanvasRef} className="w-full h-16 mb-6 block" aria-hidden="true" />
             <p className="font-display text-xl font-semibold text-charcoal mb-1">Listening…</p>
             <p className="text-sm text-charcoal-soft mb-6 tabular-nums">
               {elapsed}s · {remaining}s left
