@@ -13,8 +13,11 @@ import { X, Camera, ChevronRight } from "lucide-react";
 const quickAmounts = [100, 250, 500] as const;
 
 // Traced bottle glyphs, one shared scale per dose (source boxes 61x130,
-// 71x173, 123x194 -> rendered 17x56, 20x56, 35x56px). Colors, paths and the
-// fixed "water line" fill are copied verbatim from the handoff markup.
+// 71x173, 123x194 -> rendered 17x56, 20x56, 35x56px). Outline and cap paths
+// are copied verbatim from the handoff markup. Master handover item 5 sets
+// the water fill (#B5DAF9) and each water line as a share of the bottle's
+// body: +100ml 47% down its straight body (y 54-127.5), +250ml 28% (body
+// y 59-170), +500ml 40% (body y 65-190, unchanged from the markup).
 const WaterGlyph100: React.FC = () => (
   <svg width={17} height={56} viewBox="0 0 61 198" fill="none" style={{ display: "block" }}>
     <defs>
@@ -27,7 +30,7 @@ const WaterGlyph100: React.FC = () => (
         d="M11 25 L11 32 C11 40 2.5 44 2.5 54 L2.5 116 C2.5 124 8 127.5 14 127.5 L47 127.5 C53 127.5 58.5 124 58.5 116 L58.5 54 C58.5 44 50 40 50 32 L50 25 Z"
         fill="#FFFFFF"
       />
-      <rect x={0} y={61} width={61} height={70} fill="#BEE3FB" clipPath="url(#metric-water-100)" />
+      <rect x={0} y={88.5} width={61} height={42.5} fill="#B5DAF9" clipPath="url(#metric-water-100)" />
       <path
         d="M11 25 L11 32 C11 40 2.5 44 2.5 54 L2.5 116 C2.5 124 8 127.5 14 127.5 L47 127.5 C53 127.5 58.5 124 58.5 116 L58.5 54 C58.5 44 50 40 50 32 L50 25"
         fill="none"
@@ -50,7 +53,7 @@ const WaterGlyph250: React.FC = () => (
     </defs>
     <g transform="translate(0,25)">
       <rect x={3} y={59} width={65} height={111} rx={14} fill="#FFFFFF" />
-      <rect x={0} y={81} width={71} height={92} fill="#BEE3FB" clipPath="url(#metric-water-250)" />
+      <rect x={0} y={90.08} width={71} height={82.92} fill="#B5DAF9" clipPath="url(#metric-water-250)" />
       <rect x={3} y={59} width={65} height={111} rx={14} fill="none" stroke="#4A80DC" strokeWidth={6} />
       <path d="M19 28 L19 16 C19 11 23 8 28 8 L46 8 L46 28 Z" fill="#4274D7" />
       <rect x={41.5} y={3.5} width={23} height={15} rx={7} fill="none" stroke="#4274D7" strokeWidth={7} />
@@ -68,7 +71,7 @@ const WaterGlyph500: React.FC = () => (
     </defs>
     <g transform="translate(0,4)">
       <rect x={4} y={65} width={93} height={125} rx={16} fill="#FFFFFF" />
-      <rect x={0} y={115} width={101} height={79} fill="#BEE3FB" clipPath="url(#metric-water-500)" />
+      <rect x={0} y={115} width={101} height={79} fill="#B5DAF9" clipPath="url(#metric-water-500)" />
       <circle cx={100} cy={22} r={17} fill="none" stroke="#4A80DC" strokeWidth={8} />
       <rect x={29} y={49} width={43} height={12} fill="#FFFFFF" stroke="#4A80DC" strokeWidth={8} strokeLinejoin="round" />
       <rect x={21} y={19} width={54} height={22} rx={8} fill="#4A80DC" stroke="#4A80DC" strokeWidth={8} strokeLinejoin="round" />
@@ -241,7 +244,6 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   if (!open) return null;
 
   const confirmationText = error ? error : saving ? "Saving…" : "Your entries are saved automatically.";
-  const confirmationIsError = !!error;
 
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
@@ -251,10 +253,10 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
         onClick={onClose}
       />
       <div
-        className="relative w-full sm:max-w-md rounded-[20px] shadow-lift overflow-hidden animate-pop max-h-[85vh] overflow-y-auto"
+        className="relative w-full sm:max-w-md rounded-[20px] shadow-lift overflow-hidden animate-pop flex flex-col max-h-[calc(100dvh-32px)]"
         style={{ background: "#ECEBFE", border: "1px solid #B2A9F4" }}
       >
-        <div className="relative flex items-center justify-center" style={{ height: 42 }}>
+        <div className="relative shrink-0 flex items-center justify-center" style={{ height: 42 }}>
           <p style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em", color: "#9C7EF8", whiteSpace: "nowrap" }}>
             Add Metric
           </p>
@@ -268,7 +270,9 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
           </button>
         </div>
 
-        <div className="bg-white" style={{ borderRadius: 18, padding: 14 }}>
+        {/* Scrolls only on a screen too short to fit the card; the shell itself
+            stays overflow hidden per the handover. */}
+        <div className="bg-white min-h-0 overflow-y-auto" style={{ borderRadius: 18, padding: 14 }}>
           <div className="flex items-start justify-between gap-3" style={{ marginBottom: 9 }}>
             <p style={{ margin: 0, fontSize: 12, letterSpacing: "0.02em", color: "#655B69" }}>WATER</p>
             <div style={{ textAlign: "right" }}>
@@ -285,7 +289,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               >
                 {(water / 1000).toFixed(2)}L
               </p>
-              <p style={{ margin: "3px 0 0", fontSize: 10, color: "#827C9C" }}>of {(waterGoalMl / 1000).toFixed(1)}L goal</p>
+              <p style={{ margin: "3px 0 0", fontSize: 10, color: "#8C8378" }}>of {(waterGoalMl / 1000).toFixed(1)}L goal</p>
             </div>
           </div>
 
@@ -334,7 +338,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                     color: "#241F1B",
                   }}
                 />
-                <span style={{ fontSize: 11, color: "#827C9C", flex: "none" }}>kg</span>
+                <span style={{ fontSize: 11, color: "#8C8378", flex: "none" }}>kg</span>
               </div>
             </div>
             <div className="min-w-0">
@@ -350,7 +354,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                   <span style={{ display: "block", fontSize: 8.5, fontWeight: 600, color: "#241F1B", whiteSpace: "nowrap" }}>
                     Add Photo / Upload File
                   </span>
-                  <span style={{ display: "block", fontSize: 7.5, color: "#827C9C", whiteSpace: "nowrap" }}>
+                  <span style={{ display: "block", fontSize: 7.5, color: "#8C8378", whiteSpace: "nowrap" }}>
                     Lab results, reports, etc.
                   </span>
                 </span>
@@ -401,21 +405,14 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             <span style={{ fontSize: 11, color: "#827C9C", flex: "none" }}>mmHg</span>
           </div>
 
-          {confirmationIsError ? (
-            <div className="flex items-center gap-[9px] bg-status-high-bg" style={{ borderRadius: 12, padding: "11px 13px" }}>
-              <span className="text-status-high" style={{ display: "flex", flex: "none" }}>
-                <X size={20} strokeWidth={1.8} />
-              </span>
-              <span className="text-status-high" style={{ fontSize: 12, fontWeight: 600 }}>
-                {confirmationText}
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-[9px]" style={{ background: "#F0F0FD", borderRadius: 12, padding: "11px 13px" }}>
-              <CheckCircleGlyph />
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#1A00E0" }}>{confirmationText}</span>
-            </div>
-          )}
+          <div
+            className="flex items-center gap-[9px]"
+            style={{ background: "#F0F0FD", borderRadius: 12, padding: "11px 13px" }}
+            role={error ? "alert" : undefined}
+          >
+            <CheckCircleGlyph />
+            <span style={{ fontSize: 12, fontWeight: 600, color: "#1A00E0" }}>{confirmationText}</span>
+          </div>
 
           <p style={{ margin: "13px 4px 2px", fontSize: 10, lineHeight: 1.5, color: "#827C9C", textAlign: "center" }}>
             Body Fat, Steps, Sleep and Calories Burned sync automatically from Apple/Android Health and
