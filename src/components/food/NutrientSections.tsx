@@ -305,24 +305,19 @@ function NutrientSectionBlock({
   const visibleSub = data.filter === "logged" ? subViews.filter(rowHasData) : subViews;
   const nothingUnderFilter = data.filter === "logged" && visibleMain.length === 0 && visibleSub.length === 0;
 
-  // Master handover: the card is always white with the lavender hairline and
-  // shadow (CentiumNutrientSummary); item 10 puts the open wash on the header
-  // only — "Collapsed header #FFFFFF; open header rgba(174,161,220,0.12)" —
-  // with the header/body split of the handover's other washed-header card
-  // (CentiumTabFrame's meal cards: header 13px 14px, body 11px 14px 13px).
+  // Master handover (CentiumNutrientSummary): an always-white card with the
+  // lavender hairline and shadow, padded 13px 14px as a whole; the header
+  // carries no wash (the design's, chosen over item 10's prose), and an
+  // opened body fades up 12px below it.
   return (
     <div
-      className="rounded-[15px] bg-white overflow-hidden"
-      style={{ border: "1px solid rgba(174,161,220,0.34)", boxShadow: "0 4px 14px rgba(95,80,147,0.08)" }}
+      className="rounded-[15px] bg-white"
+      style={{ padding: "13px 14px", border: "1px solid rgba(174,161,220,0.34)", boxShadow: "0 4px 14px rgba(95,80,147,0.08)" }}
     >
       <button
         onClick={onToggle}
         className="tap w-full flex items-center gap-2.5"
-        style={{
-          padding: "13px 14px",
-          background: expanded ? "rgba(174,161,220,0.12)" : "#FFFFFF",
-          transition: "background-color .18s ease",
-        }}
+        style={{ padding: 0, background: "none" }}
         aria-label={expanded ? `Collapse ${section.name}` : `Expand ${section.name}`}
       >
         <h3 className="flex-1 min-w-0 text-left text-[13.5px] font-bold text-charcoal">{section.name}</h3>
@@ -347,7 +342,7 @@ function NutrientSectionBlock({
       </button>
 
       {expanded && (
-        <div style={{ padding: "11px 14px 13px" }}>
+        <div style={{ marginTop: 12, animation: "fade-slide-up .35s cubic-bezier(.22,1,.36,1) both" }}>
           {nothingUnderFilter ? (
             <p className="py-3 text-center text-[11.5px] text-charcoal-faint">Nothing logged in this group yet</p>
           ) : (
@@ -389,9 +384,14 @@ function NutrientSectionBlock({
 
 const LIMIT_NUTRIENTS = new Set(["Saturated fat", "Trans fat", "Cholesterol", "Sodium", "Added sugars", "Caffeine"]);
 
+// The handover's detail formatter (CentiumFrame nutrientDetails fmt): zero is
+// "0", small amounts keep up to three decimals, and a trailing ".0" drops
+// ("2", not "2.0").
 function formatDetailAmount(n: number): string {
-  if (Math.abs(n) < 0.1) return String(Number(n.toFixed(3)));
-  if (Math.abs(n) < 10) return n.toFixed(1);
+  const a = Math.abs(n);
+  if (a === 0) return "0";
+  if (a < 0.1) return n.toFixed(3).replace(/0+$/, "").replace(/\.$/, "");
+  if (a < 10) return (Math.round(n * 10) / 10).toString();
   return Math.round(n).toLocaleString();
 }
 
@@ -471,14 +471,14 @@ function NutrientDetailSection({
         <ChevronDown
           size={14}
           className="shrink-0"
-          style={{ color: "#8C8378", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
+          style={{ color: "#8C8378", transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform .18s ease" }}
         />
       </button>
 
       {expanded && (
         <div style={{ padding: "2px 12px 10px" }}>
           {visible.length === 0 ? (
-            <p style={{ margin: 0, padding: "7px 0", fontSize: 11.5, color: "#8C8378" }}>
+            <p style={{ margin: "8px 0", fontSize: 11.5, color: "#8C8378" }}>
               No data for this food in this group.
             </p>
           ) : (
