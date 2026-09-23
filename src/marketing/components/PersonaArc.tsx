@@ -414,22 +414,30 @@ export const PersonaArc: React.FC<{ personas: PersonaData[]; heading: React.Reac
                           cursor: "pointer",
                           transition: "transform .5s,filter .5s,box-shadow .5s",
                           filter: "grayscale(1) contrast(.82) brightness(1.16) opacity(.3)",
-                          // Not a handoff value -- a defensive buffer. The
-                          // focused card's art gets a spec'd scale(1.04)
-                          // zoom (see usePersonaArc's focus paint); a CSS
-                          // scale doesn't push siblings out of the way, so
-                          // that 4% growth visually bleeds past this
-                          // wrapper's own box into the title below it.
-                          // Measured on Chromium at ~3.2-3.4px (roughly
-                          // consistent across card sizes), reported as a
-                          // visible overlap on iPhone Safari specifically --
-                          // rendering the same transform slightly more
-                          // generously there is plausible and can't be
-                          // verified from here. This margin absorbs the
-                          // bleed with room to spare either way, without
-                          // touching the title's own literal marginTop:0 or
-                          // removing the zoom effect itself.
-                          marginBottom: 8,
+                          // Not a handoff value. The focused card's art gets
+                          // a spec'd scale(1.04) zoom (usePersonaArc's
+                          // paintFocus, which only ever touches this
+                          // element's `transform`, never `transformOrigin`,
+                          // so this is safe to set statically here). Default
+                          // transform-origin is the element's own center, so
+                          // that 4% growth splits evenly -- half bleeds
+                          // upward (harmless, into the card's own top
+                          // padding), half bleeds DOWNWARD past this
+                          // wrapper's box into the title below it, since a
+                          // CSS scale doesn't push siblings out of the way.
+                          // A margin here to absorb that downward half (tried
+                          // first) fixed the overlap but read as an
+                          // unwanted empty gap instead. Anchoring the scale
+                          // to the bottom edge puts the entire 4% growth
+                          // upward instead, into the same space the old
+                          // center-anchored version harmlessly used for its
+                          // upward half -- so the title sits flush against
+                          // the art with neither an overlap nor a gap,
+                          // measured overlap-free on Chromium; the bottom
+                          // edge no longer moves at all, so this should hold
+                          // regardless of how a given engine rounds the
+                          // transform.
+                          transformOrigin: "center bottom",
                         }}
                       >
                         <div
