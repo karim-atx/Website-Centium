@@ -50,6 +50,8 @@ export const EditFoodEntrySheet: React.FC<{
   const [unit, setUnit] = useState<ServingUnit>("serving");
   // Writes go to the database first now, so they can fail and take time.
   const [busy, setBusy] = useState(false);
+  // Which write `busy` is for: a delete must not show "Saving…" on Save.
+  const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Mobile handoff item 2, Edit Logged Food's entry point (frame `fd1a`):
   // same "Advanced" second step as AddFoodSheet, inside this sheet via
@@ -69,6 +71,7 @@ export const EditFoodEntrySheet: React.FC<{
       setUnit(entry.unit ?? "serving");
       setError(null);
       setBusy(false);
+      setDeleting(false);
       setAdvancedOpen(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,8 +142,10 @@ export const EditFoodEntrySheet: React.FC<{
     }
 
     setBusy(true);
+    setDeleting(true);
     const result = await deleteDiaryEntry(entry.id);
     setBusy(false);
+    setDeleting(false);
     if (!result.ok) {
       setError(result.message ?? "Could not delete that entry.");
       return;
@@ -309,7 +314,7 @@ export const EditFoodEntrySheet: React.FC<{
               className="tap inline-flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
               style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "#A198DF", color: "#FFFFFF", fontSize: 15.5, fontWeight: 700 }}
             >
-              {busy ? "Saving…" : "Save changes"}
+              {busy && !deleting ? "Saving…" : "Save changes"}
             </button>
             <button
               type="button"
