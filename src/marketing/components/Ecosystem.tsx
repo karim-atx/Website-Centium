@@ -300,7 +300,20 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
                   background: "transparent",
                   filter: "drop-shadow(0 1px 2px rgba(255,255,255,.95)) drop-shadow(0 -1px 2px rgba(255,255,255,.95)) drop-shadow(1px 0 2px rgba(255,255,255,.95)) drop-shadow(-1px 0 2px rgba(255,255,255,.95))",
                   cursor: "grab",
-                  touchAction: "none",
+                  // "pan-y", not "none": the hook now direction-locks a drag
+                  // in JS (see its onPointerMove) instead of relying on CSS to
+                  // block 100% of the browser's native touch handling on this
+                  // 48x48 knob from the first pixel of any touch that starts
+                  // on it. "none" (the design handoff's own reference value)
+                  // froze page scrolling for the whole gesture whenever a
+                  // user's thumb happened to pass over the knob while
+                  // scrolling past this card -- not dragging it at all -- and
+                  // could even flip the panel on release from incidental
+                  // jitter. "pan-y" lets the browser start a native vertical
+                  // scroll immediately, as if the knob weren't there; the
+                  // hook only takes over once it's confirmed the gesture is
+                  // actually horizontal.
+                  touchAction: "pan-y",
                   userSelect: "none",
                   transition: `left .42s cubic-bezier(.22,1,.36,1),box-shadow .3s`,
                 }}

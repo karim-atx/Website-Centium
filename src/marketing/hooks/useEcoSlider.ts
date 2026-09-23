@@ -35,7 +35,10 @@ export function useEcoSlider(initial: EcoPos = -1) {
   const knob = useRef<HTMLDivElement>(null);  // #eco-slider
   const seam = useRef<HTMLDivElement>(null);  // [data-eco-seam]
 
-  const drag = useRef({ active: false, startX: 0, startPos: initial as number, span: 150, moved: 0, live: null as number | null });
+  // `locked` starts false every gesture: until horizontal movement clearly
+  // beats vertical, this is treated as "might be a page scroll that merely
+  // started on the knob," not a drag -- see onPointerMove.
+  const drag = useRef({ active: false, startX: 0, startY: 0, startPos: initial as number, span: 150, moved: 0, live: null as number | null, locked: false });
   const seamAt = useRef(0);
   const seamTimer = useRef<number | null>(null);
 
@@ -80,18 +83,54 @@ export function useEcoSlider(initial: EcoPos = -1) {
   }, [paint]);
 
   // ---- pointer + keyboard ---------------------------------------------------
+  // Direction-locked, so a touch that starts on this 48x48 knob but turns
+  // out to be a scroll past the card -- not a drag -- never gets captured.
+  // The old version set touchAction:"none" and called preventDefault() on
+  // every pointerdown unconditionally, which blocks ALL of the browser's
+  // native touch handling for that touch from the first pixel, including
+  // vertical scroll: on a phone the knob sits right in the content a thumb
+  // naturally passes over while scrolling through this section, so touching
+  // down on it (with no intent to drag at all) froze scrolling completely
+  // until the finger lifted -- felt like scrolling "teleporting"/lagging --
+  // and incidental jitter during that stuck gesture could still cross the
+  // tap-vs-drag threshold on release and flip Professionals/Businesses, i.e.
+  // "using the slider" (never touched, just scrolled past) visibly changed
+  // the card's content/size.
+  //
+  // touchAction is now "pan-y" (see the knob's style in Ecosystem.tsx): the
+  // browser is free to start a native vertical scroll immediately, exactly
+  // as if the knob weren't there. Only once *this* gesture's own horizontal
+  // movement clearly exceeds its vertical movement do we lock in "drag" and
+  // start calling preventDefault() -- before that point every move is a
+  // no-op for us, so the page scrolls completely normally.
   const onPointerDown = useCallback((e: React.PointerEvent) => {
     const d = drag.current;
-    d.active = true; d.moved = 0; d.startX = e.clientX; d.startPos = posRef.current; d.live = null;
+    d.active = true; d.locked = false; d.moved = 0; d.startX = e.clientX; d.startY = e.clientY; d.startPos = posRef.current; d.live = null;
     d.span = Math.max(60, (track.current?.getBoundingClientRect().width ?? 172) / 2);
+    // Capture is safe to take immediately -- it only routes future pointer
+    // EVENTS to this element if the gesture continues past it; it has no
+    // effect on whether the browser scrolls, which touchAction governs.
     try { (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId); } catch {}
-    e.preventDefault();
   }, []);
   const onPointerMove = useCallback((e: React.PointerEvent) => {
     const d = drag.current;
     if (!d.active) return;
     const dx = e.clientX - d.startX;
-    d.moved = Math.abs(dx);
+    const dy = e.clientY - d.startY;
+    if (!d.locked) {
+      if (Math.abs(dx) < 6 && Math.abs(dy) < 6) return; // too small to have a direction yet
+      if (Math.abs(dy) > Math.abs(dx)) {
+        // Vertical wins: this is a scroll, not a drag. Let go completely --
+        // no preventDefault was ever called, so the page is already
+        // scrolling natively and hasn't missed a frame.
+        d.active = false;
+        try { (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId); } catch {}
+        return;
+      }
+      d.locked = true; // horizontal wins: commit to dragging from here on
+    }
+    e.preventDefault();
+    d.moved = Math.max(d.moved, Math.abs(dx));
     d.live = Math.max(-1, Math.min(1, d.startPos + dx / d.span));
     paint(d.live, true); // no setState per frame
   }, [paint]);
@@ -101,7 +140,11 @@ export function useEcoSlider(initial: EcoPos = -1) {
     d.active = false;
     const p = d.live ?? posRef.current;
     d.live = null;
-    // tap flips; a drag lands on the side it ended nearest (two stops only)
+    // A gesture that bailed to scroll never reaches here at all -- it set
+    // d.active=false itself, so the guard above already returned. Only two
+    // kinds of release make it this far: a genuine tap (lifted before ever
+    // crossing the 6px direction threshold, d.moved still 0) or a completed,
+    // locked-in drag -- exactly the two cases this line's already handled.
     if (d.moved < 4) commit(d.startPos < 0 ? 1 : -1);
     else commit(p < 0 ? -1 : 1);
   }, [commit]);
