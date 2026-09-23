@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import type React from "react";
 import { Plus } from "lucide-react";
 import { useApp } from "../../context/AppContext";
@@ -7,6 +7,10 @@ import { CreateRecipeSheet } from "../../components/food/CreateRecipeSheet";
 import { MealPrepFlowSheet, type PrepKind } from "../../components/food/MealPrepFlowSheet";
 import { MacroBar, sumItems, divideTotals, PREP_TEAL, PREP_LAV, type PrepItem } from "../../components/food/mealPrepShared";
 import type { CustomMeal, Recipe } from "../../types";
+
+// Pull-to-refresh, the same gesture and threshold as the Health page's: the
+// load-error lines ask the user to "Pull to retry" (Part 4 Q7).
+const PULL_THRESHOLD = 70;
 
 // Mobile handoff item 10 (README lines 613-774, CentiumMealPrep.dc.html):
 // the tab is now two widget cards modelled on the Habits widget — tinted
@@ -19,7 +23,29 @@ import type { CustomMeal, Recipe } from "../../types";
 // its own sheet (CreateMealSheet already worked this way before this
 // handoff; CreateRecipeSheet mirrors it).
 export default function MealPrepPanel() {
-  const { customMeals, customMealsError, recipes, recipesError } = useApp();
+  const { customMeals, customMealsError, recipes, recipesError, reloadMealPrep } = useApp();
+
+  const [pullY, setPullY] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
+  const pullStartY = useRef<number | null>(null);
+  const handlePullStart = (clientY: number) => {
+    if (refreshing || window.scrollY > 0) return;
+    pullStartY.current = clientY;
+  };
+  const handlePullMove = (clientY: number) => {
+    if (pullStartY.current === null || refreshing) return;
+    const delta = clientY - pullStartY.current;
+    if (delta > 0) setPullY(Math.min(delta, 100));
+  };
+  const handlePullEnd = () => {
+    if (pullStartY.current === null) return;
+    pullStartY.current = null;
+    if (pullY >= PULL_THRESHOLD) {
+      setRefreshing(true);
+      void reloadMealPrep().finally(() => setRefreshing(false));
+    }
+    setPullY(0);
+  };
 
   const [flow, setFlow] = useState<null | { kind: PrepKind; screen: "list" | "detail"; itemId?: string }>(null);
   const [createKind, setCreateKind] = useState<PrepKind | null>(null);
@@ -43,7 +69,23 @@ export default function MealPrepPanel() {
   };
 
   return (
-    <div className="space-y-3 animate-fade-slide-up">
+    <div
+      className="space-y-3 animate-fade-slide-up"
+      onTouchStart={(e) => handlePullStart(e.touches[0].clientY)}
+      onTouchMove={(e) => handlePullMove(e.touches[0].clientY)}
+      onTouchEnd={handlePullEnd}
+      onMouseDown={(e) => handlePullStart(e.clientY)}
+      onMouseMove={(e) => e.buttons === 1 && handlePullMove(e.clientY)}
+      onMouseUp={handlePullEnd}
+      onMouseLeave={handlePullEnd}
+    >
+      {(pullY > 0 || refreshing) && (
+        <div className="flex items-center justify-center overflow-hidden" style={{ height: refreshing ? 28 : pullY }}>
+          <p className="text-[10px] font-semibold text-charcoal-faint">
+            {refreshing ? "Refreshing…" : pullY >= PULL_THRESHOLD ? "Release to refresh" : "Pull to refresh"}
+          </p>
+        </div>
+      )}
       <PrepCard
         kind="meals"
         entries={customMeals}

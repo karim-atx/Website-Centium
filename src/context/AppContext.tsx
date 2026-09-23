@@ -649,6 +649,8 @@ interface AppState {
   ) => Promise<string | undefined>;
   removeRecipe: (id: string) => Promise<void>;
   recipesError: string | null;
+  /** Re-reads custom meals and recipes (Meal Prep's pull-to-refresh). Local-only items are kept. */
+  reloadMealPrep: () => Promise<void>;
   clientRecipes: Record<string, Recipe[]>;
   addClientRecipe: (clientId: string, title: string, items: RecipeItem[], servings: number, steps?: string) => void;
   updateClientRecipe: (
@@ -3803,6 +3805,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // every meal the server knows about carries a uuid.
   const isRemoteMealId = (id: string) => isUuid(id);
 
+  // Meal Prep's pull-to-refresh. The same reads the hydration effects above
+  // make, without their one-time upload of local stragglers; a failed read
+  // keeps what is on screen and sets the error, exactly as those do.
+  // Local-only items (never synced) stay: custom meals after the server's
+  // list (ascending), recipes in front of it (newest first, item 11).
+  const reloadMealPrep: AppState["reloadMealPrep"] = async () => {
+    if (!authUserId) return;
+    const [meals, recipeRead] = await Promise.all([getCustomMeals(authUserId), getRecipes(authUserId)]);
+    if (meals.ok) {
+      setCustomMealsError(null);
+      setCustomMeals((prev) => [...meals.meals, ...prev.filter((m) => !isUuid(m.id))]);
+    } else {
+      setCustomMealsError(meals.message ?? "Could not load your meals.");
+    }
+    if (recipeRead.ok) {
+      setRecipesError(null);
+      setRecipes((prev) => [...prev.filter((r) => !isUuid(r.id)), ...recipeRead.recipes]);
+    } else {
+      setRecipesError(recipeRead.message ?? "Could not load your recipes.");
+    }
+  };
+
   const addCustomMeal: AppState["addCustomMeal"] = async (title, items, mealType) => {
     // Signed out, behave exactly as before rather than refusing: the meal is
     // still useful locally and the upload below will take it on next sign-in.
@@ -4531,6 +4555,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       logCustomMeal,
       recipes,
       recipesError,
+      reloadMealPrep,
       addRecipe,
       updateRecipe,
       removeRecipe,
