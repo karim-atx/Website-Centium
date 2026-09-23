@@ -3,71 +3,73 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Search, Plus, X, UtensilsCrossed, Minus } from "lucide-react";
 import { mockFoods } from "../../data/mockFoods";
-import type { Food, CustomFood, CustomMeal, CustomMealItem, MealType, ServingUnit } from "../../types";
+import type { Food, CustomFood, Recipe, RecipeItem, ServingUnit } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { foodCategoryIcon } from "../../utils/icons";
-import { mealOrder, mealLabels } from "../../services/nutrition";
-import { MacroStrip, sumItems, type PrepItem } from "./mealPrepShared";
+import { MacroStrip, sumItems, divideTotals, PREP_LAV, type PrepItem } from "./mealPrepShared";
 
 const EMPTY_FOODS: CustomFood[] = [];
 
-// QA 11.0: "At this stage when adding foods as part of creating a meal,
-// there should be the option of choosing the serving size of the food."
 const servingUnitOptions: ServingUnit[] = ["serving", "g", "ml", "cup", "tbsp", "tsp"];
 
-// V4: Meal Prep reworked — "Create Meal" groups several existing food items
-// under one title (e.g. eggs + tea + bread + cream cheese -> "Omelette
-// Breakfast"); logging that title later logs every item individually.
-// Inspired by MyNetDiary's approach, not copied.
-// V7 (QA 7.0): also used by the professional's Meal Plan Builder — passing
-// `clientId` scopes food creation to that client's own food database
-// instead of the account's personal custom foods, and a meal-type tag
-// (breakfast/lunch/snack/dinner) can now be set on the plan itself.
-export const CreateMealSheet: React.FC<{
+// Mobile handoff item 10 — mirrors CreateMealSheet.tsx's structure exactly
+// (same search+inline-custom-food-creation UI, same per-item quantity/unit
+// controls), with the deltas the handoff calls out explicitly:
+//   - No meal-type chips: a recipe's meal is chosen at LOG time (see the
+//     Meal selector on MealPrepFlowSheet's detail screen), never stored here.
+//   - "Number of servings" (required) replaces it, and an optional "Steps"
+//     textarea is added after the ingredient list — field order here follows
+//     CentiumMealPrep.dc.html's createScreen literally (name → servings →
+//     ingredients → live macro strip → steps → Save), which differs slightly
+//     from the README prose's "name → steps → ingredients" ordering; the
+//     handoff's own instructions (CLAUDE.md) say the markup wins on conflict.
+//   - Each ingredient also gets an optional free-text `note` (handoff Q3,
+//     e.g. "400g dry"), alongside quantity+unit — RecipeItem carries it,
+//     CustomMealItem does not.
+//   - The live macro strip divides by the currently-typed servings count, so
+//     it always reads PER SERVING and re-divides as that number changes.
+//   - Editing shows Delete (README: "Editing also shows delete") — the old
+//     per-card X button this replaced is gone now that the tab opens a List
+//     screen instead of showing meals/recipes inline.
+export const CreateRecipeSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   clientId?: string;
-  // V10 (QA 10.0): "Creating a meal prep should also allow you to edit and
-  // delete it" — passing an existing meal pre-fills the form and saving
-  // updates it in place instead of creating a new one.
-  editMeal?: CustomMeal | null;
-}> = ({ open, onClose, clientId, editMeal }) => {
+  editRecipe?: Recipe | null;
+}> = ({ open, onClose, clientId, editRecipe }) => {
   const {
     customFoods,
     clientCustomFoods,
-    addCustomMeal,
-    updateCustomMeal,
-    removeCustomMeal,
+    addRecipe,
+    updateRecipe,
+    removeRecipe,
     addClientCustomFood,
     addCustomFood,
-    addClientCustomMeal,
-    updateClientCustomMeal,
-    removeClientCustomMeal,
+    addClientRecipe,
+    updateClientRecipe,
+    removeClientRecipe,
   } = useApp();
   const [query, setQuery] = useState("");
-  const [items, setItems] = useState<CustomMealItem[]>(editMeal?.items ?? []);
-  const [title, setTitle] = useState(editMeal?.title ?? "");
-  const [mealType, setMealType] = useState<MealType | null>(editMeal?.mealType ?? null);
+  const [items, setItems] = useState<RecipeItem[]>(editRecipe?.items ?? []);
+  const [title, setTitle] = useState(editRecipe?.title ?? "");
+  const [servings, setServings] = useState(editRecipe ? String(editRecipe.servings) : "4");
+  const [steps, setSteps] = useState(editRecipe?.steps ?? "");
   const [creatingFood, setCreatingFood] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  // Mobile handoff item 10: "editing also shows delete" — the old per-card X
-  // button (removeCustomMeal) this replaced is gone now that MealPrepPanel
-  // opens a List screen instead of showing meals inline; the two-tap confirm
-  // matches the rest of the app's destructive-action pattern (e.g.
-  // ProfessionalDetail's "Tap again to delete your review").
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [foodDraft, setFoodDraft] = useState({ name: "", serving: "1 serving", calories: "", protein: "", carbs: "", fat: "" });
 
   React.useEffect(() => {
     if (open) {
-      setItems(editMeal?.items ?? []);
-      setTitle(editMeal?.title ?? "");
-      setMealType(editMeal?.mealType ?? null);
+      setItems(editRecipe?.items ?? []);
+      setTitle(editRecipe?.title ?? "");
+      setServings(editRecipe ? String(editRecipe.servings) : "4");
+      setSteps(editRecipe?.steps ?? "");
       setConfirmDelete(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, editMeal]);
+  }, [open, editRecipe]);
 
   const ownFoods = clientId ? clientCustomFoods[clientId] ?? EMPTY_FOODS : customFoods;
   const allFoods = useMemo(() => [...ownFoods, ...mockFoods], [ownFoods]);
@@ -76,11 +78,15 @@ export const CreateMealSheet: React.FC<{
     [allFoods, query]
   );
 
+  const servingsN = Math.max(1, Number(servings) || 1);
+  const perServing = divideTotals(sumItems(items as PrepItem[]), servingsN);
+
   const reset = () => {
     setQuery("");
     setItems([]);
     setTitle("");
-    setMealType(null);
+    setServings("4");
+    setSteps("");
     setCreatingFood(false);
     setConfirmDelete(false);
     setFoodDraft({ name: "", serving: "1 serving", calories: "", protein: "", carbs: "", fat: "" });
@@ -92,12 +98,12 @@ export const CreateMealSheet: React.FC<{
     setQuery("");
   };
   const removeItem = (foodId: string) => setItems((prev) => prev.filter((i) => i.food.id !== foodId));
-  const updateItemServing = (foodId: string, patch: Partial<Pick<CustomMealItem, "quantity" | "unit">>) =>
+  const updateItemField = (foodId: string, patch: Partial<Pick<RecipeItem, "quantity" | "unit" | "note">>) =>
     setItems((prev) => prev.map((i) => (i.food.id === foodId ? { ...i, ...patch } : i)));
   const cycleUnit = (foodId: string, current: ServingUnit | undefined) => {
     const idx = servingUnitOptions.indexOf(current ?? "serving");
     const next = servingUnitOptions[(idx + 1) % servingUnitOptions.length];
-    updateItemServing(foodId, { unit: next });
+    updateItemField(foodId, { unit: next });
   };
 
   const saveFood = async () => {
@@ -111,36 +117,24 @@ export const CreateMealSheet: React.FC<{
       carbs: Number(foodDraft.carbs) || 0,
       fat: Number(foodDraft.fat) || 0,
     };
-    // addClientCustomFood stays synchronous and local: the professional path
-    // identifies clients by relationship id rather than profile id, so there is
-    // nothing valid to put in scoped_to_client_id yet.
     const food = clientId ? addClientCustomFood(clientId, payload) : await addCustomFood(payload);
     addItem(food);
     setCreatingFood(false);
     setFoodDraft({ name: "", serving: "1 serving", calories: "", protein: "", carbs: "", fat: "" });
   };
 
-  // QA 11.0: "Meal plans created by the professional should ONLY appear
-  // for the assigned client and not everyone" — a `clientId` routes the
-  // plan itself (not just foods created while building it) into that
-  // client's own store instead of the shared personal one.
-  // AWAITED NOW, BECAUSE THE PERSONAL PATH REACHES SUPABASE. Closing on a
-  // refused save would drop the meal with nothing said -- and the one refusal
-  // that actually happens is specific and worth reading: an item whose food
-  // the database does not know, which custom_meal_items cannot reference.
-  // The client path stays synchronous; it is still local (see AppContext).
   const save = async () => {
     if (!title.trim() || items.length === 0 || saving) return;
     setSaveError(null);
 
     if (clientId) {
-      if (editMeal) updateClientCustomMeal(clientId, editMeal.id, title, items, mealType ?? undefined);
-      else addClientCustomMeal(clientId, title, items, mealType ?? undefined);
+      if (editRecipe) updateClientRecipe(clientId, editRecipe.id, title, items, servingsN, steps || undefined);
+      else addClientRecipe(clientId, title, items, servingsN, steps || undefined);
     } else {
       setSaving(true);
-      const message = editMeal
-        ? await updateCustomMeal(editMeal.id, title, items, mealType ?? undefined)
-        : await addCustomMeal(title, items, mealType ?? undefined);
+      const message = editRecipe
+        ? await updateRecipe(editRecipe.id, title, items, servingsN, steps || undefined)
+        : await addRecipe(title, items, servingsN, steps || undefined);
       setSaving(false);
       if (message) {
         setSaveError(message);
@@ -152,14 +146,14 @@ export const CreateMealSheet: React.FC<{
   };
 
   const doDelete = async () => {
-    if (!editMeal) return;
+    if (!editRecipe) return;
     if (!confirmDelete) {
       setConfirmDelete(true);
       setTimeout(() => setConfirmDelete(false), 3000);
       return;
     }
-    if (clientId) removeClientCustomMeal(clientId, editMeal.id);
-    else await removeCustomMeal(editMeal.id);
+    if (clientId) removeClientRecipe(clientId, editRecipe.id);
+    else await removeRecipe(editRecipe.id);
     reset();
     onClose();
   };
@@ -171,40 +165,34 @@ export const CreateMealSheet: React.FC<{
         reset();
         onClose();
       }}
-      title={editMeal ? "Edit Meal" : "Create Meal"}
+      title={editRecipe ? "Edit Recipe" : "Create Recipe"}
     >
       <div className="space-y-5 animate-fade-slide-up">
         <label className="block">
-          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Meal title</span>
+          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Recipe name</span>
           <input
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            placeholder="Omelette Breakfast"
+            placeholder="Lentil Mujaddara"
             className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         </label>
 
-        <div>
-          <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Meal type</span>
-          <div className="grid grid-cols-4 gap-2">
-            {mealOrder.map((m) => (
-              <button
-                key={m}
-                onClick={() => setMealType((prev) => (prev === m ? null : m))}
-                className={`tap rounded-xl py-2 text-xs font-semibold border transition-colors ${
-                  mealType === m ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
-                }`}
-              >
-                {mealLabels[m]}
-              </button>
-            ))}
-          </div>
-        </div>
+        <label className="block">
+          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Number of servings</span>
+          <input
+            value={servings}
+            onChange={(e) => setServings(e.target.value.replace(/[^\d]/g, ""))}
+            inputMode="numeric"
+            placeholder="4"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+          />
+        </label>
 
         {items.length > 0 && (
           <div>
             <span className="text-xs font-semibold text-charcoal-soft mb-2 block">
-              Items in this meal ({items.length})
+              Ingredients ({items.length})
             </span>
             <div className="space-y-1.5">
               {items.map((i) => {
@@ -220,10 +208,9 @@ export const CreateMealSheet: React.FC<{
                         <X size={14} />
                       </button>
                     </div>
-                    {/* QA 11.0: serving size (quantity + unit) chosen per item. */}
                     <div className="flex items-center gap-2 pl-[26px]">
                       <button
-                        onClick={() => updateItemServing(i.food.id, { quantity: Math.max(0.1, +(i.quantity - 1).toFixed(1)) })}
+                        onClick={() => updateItemField(i.food.id, { quantity: Math.max(0.1, +(i.quantity - 1).toFixed(1)) })}
                         className="tap w-6 h-6 rounded-full bg-cream-card flex items-center justify-center text-charcoal-soft shrink-0"
                         aria-label={`Decrease ${i.food.name} quantity`}
                       >
@@ -231,7 +218,7 @@ export const CreateMealSheet: React.FC<{
                       </button>
                       <span className="text-xs font-semibold text-charcoal w-6 text-center tabular-nums">{i.quantity}</span>
                       <button
-                        onClick={() => updateItemServing(i.food.id, { quantity: +(i.quantity + 1).toFixed(1) })}
+                        onClick={() => updateItemField(i.food.id, { quantity: +(i.quantity + 1).toFixed(1) })}
                         className="tap w-6 h-6 rounded-full bg-cream-card flex items-center justify-center text-charcoal-soft shrink-0"
                         aria-label={`Increase ${i.food.name} quantity`}
                       >
@@ -244,6 +231,15 @@ export const CreateMealSheet: React.FC<{
                         {i.unit ?? "serving"}
                       </button>
                     </div>
+                    {/* Handoff Q3: free-text alongside quantity+unit, e.g. "400g dry". */}
+                    <div className="pl-[26px] mt-1.5">
+                      <input
+                        value={i.note ?? ""}
+                        onChange={(e) => updateItemField(i.food.id, { note: e.target.value })}
+                        placeholder="Note, e.g. 400g dry"
+                        className="w-full rounded-lg bg-cream-card border border-charcoal/10 px-2.5 py-1.5 text-xs text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      />
+                    </div>
                   </div>
                 );
               })}
@@ -252,7 +248,7 @@ export const CreateMealSheet: React.FC<{
         )}
 
         <div>
-          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Add food items</span>
+          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Add ingredients</span>
           <div className="flex items-center gap-2 mb-2.5">
             <div className="relative flex-1">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
@@ -306,13 +302,8 @@ export const CreateMealSheet: React.FC<{
                   />
                 ))}
               </div>
-              <Button
-                fullWidth
-                size="sm"
-                onClick={saveFood}
-                disabled={!foodDraft.name.trim() || !foodDraft.calories}
-              >
-                Add to meal
+              <Button fullWidth size="sm" onClick={saveFood} disabled={!foodDraft.name.trim() || !foodDraft.calories}>
+                Add to recipe
               </Button>
             </div>
           )}
@@ -337,8 +328,19 @@ export const CreateMealSheet: React.FC<{
         </div>
 
         {items.length > 0 && (
-          <MacroStrip t={sumItems(items as PrepItem[])} note="Whole meal, updating as foods are added." />
+          <MacroStrip t={perServing} note={`Per serving ÷ ${servingsN}, updating as ingredients are added.`} />
         )}
+
+        <label className="block">
+          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Steps (optional)</span>
+          <textarea
+            value={steps}
+            onChange={(e) => setSteps(e.target.value)}
+            rows={3}
+            placeholder="Fry the onions until deep brown…"
+            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
+          />
+        </label>
 
         {saveError && (
           <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5 mb-3">{saveError}</p>
@@ -348,19 +350,20 @@ export const CreateMealSheet: React.FC<{
           size="lg"
           onClick={() => void save()}
           disabled={!title.trim() || items.length === 0 || saving}
+          style={{ background: PREP_LAV.cta }}
         >
-          {saving ? "Saving…" : editMeal ? "Save changes" : "Save meal"}
+          {saving ? "Saving…" : editRecipe ? "Save changes" : "Save recipe"}
         </Button>
         <p className="text-[11px] text-charcoal-faint text-center">
-          Search "{title || "this meal's title"}" from Add Food to log every item at once.
+          {`Search "${title || "this recipe's title"}" from the Recipes detail screen to log it.`}
         </p>
 
-        {editMeal && (
+        {editRecipe && (
           <button
             onClick={() => void doDelete()}
             className="tap w-full text-center text-xs font-semibold text-status-high py-2"
           >
-            {confirmDelete ? "Tap again to delete this meal" : "Delete meal"}
+            {confirmDelete ? "Tap again to delete this recipe" : "Delete recipe"}
           </button>
         )}
       </div>

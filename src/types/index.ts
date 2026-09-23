@@ -532,6 +532,12 @@ export interface FoodLogEntry {
   protein: number;
   carbs: number;
   fat: number;
+  // Per-nutrient snapshot, same rule as the four macros above: multiplied
+  // once at log time, then fixed forever. Keyed by the canonical nutrient
+  // keys in src/data/nutrientSchema.ts. Undefined for entries logged before
+  // food_nutrients existed, a custom/manual food, or a catalog food FDC
+  // hasn't matched yet — always "no data", never a zero.
+  nutrients?: Record<string, number>;
   // How much was logged, in `unit`. Display and provenance metadata ONLY —
   // the macros above are already multiplied, so never multiply by this.
   quantity: number;
@@ -1094,6 +1100,31 @@ export interface CustomMeal {
   items: CustomMealItem[];
   // V7 (QA 7.0): which meal slot this plan is intended for.
   mealType?: MealType;
+}
+
+// Mobile handoff item 10: a recipe, mirroring CustomMeal/CustomMealItem —
+// same live-pointer items, same source tagging, same hydrate-vs-local-build
+// ambiguity `source` resolves. Two real differences from a custom meal:
+// no `mealType` (the handoff is explicit that meal is chosen at log time on
+// the detail screen, never stored on the definition), and `servings` +
+// optional `steps`, since a recipe's numbers are always per serving.
+export interface RecipeItem {
+  food: Food;
+  quantity: number;
+  unit?: ServingUnit;
+  /** Free-text alongside quantity+unit — handoff Q3, e.g. "400g dry", "3 large". */
+  note?: string;
+  source?: "catalog" | "custom";
+}
+
+export interface Recipe {
+  id: string;
+  title: string;
+  items: RecipeItem[];
+  servings: number;
+  steps?: string;
+  /** Professional-authored recipe scoped to one client — mirrors CustomMeal's client-scoped local list, handoff Q6. */
+  scopedToClientId?: string;
 }
 
 // V2: Journal — organized into folders, entries retain their date.

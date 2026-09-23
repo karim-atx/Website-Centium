@@ -16,6 +16,7 @@ import { NotFound as MarketingNotFound } from "./marketing/pages/NotFound";
 import Onboarding from "./pages/onboarding/Onboarding";
 import Home from "./pages/home/Home";
 import Food from "./pages/food/Food";
+import NutrientSummaryPage from "./pages/food/NutrientSummaryPage";
 import Workout from "./pages/workout/Workout";
 import Health from "./pages/health/Health";
 import Mind from "./pages/mind/Mind";
@@ -353,6 +354,7 @@ function AppRoutes() {
       >
         <Route path="/app" element={<Home />} />
         <Route path="/app/food" element={<Food />} />
+        <Route path="/app/food/nutrient-summary" element={<NutrientSummaryPage />} />
         <Route path="/app/workout" element={<Workout />} />
         <Route path="/app/health" element={<Health />} />
         <Route path="/app/mind" element={<Mind />} />

@@ -1821,6 +1821,7 @@ export type Database = {
           logged_via: Database["public"]["Enums"]["food_log_source"] | null
           meal: Database["public"]["Enums"]["meal_slot"]
           name: string
+          nutrients: Json | null
           protein_g: number
           quantity: number
           serving_label: string | null
@@ -1841,6 +1842,7 @@ export type Database = {
           logged_via?: Database["public"]["Enums"]["food_log_source"] | null
           meal: Database["public"]["Enums"]["meal_slot"]
           name: string
+          nutrients?: Json | null
           protein_g: number
           quantity: number
           serving_label?: string | null
@@ -1861,6 +1863,7 @@ export type Database = {
           logged_via?: Database["public"]["Enums"]["food_log_source"] | null
           meal?: Database["public"]["Enums"]["meal_slot"]
           name?: string
+          nutrients?: Json | null
           protein_g?: number
           quantity?: number
           serving_label?: string | null
@@ -1909,6 +1912,144 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      food_nutrients: {
+        Row: {
+          fdc_description: string | null
+          fdc_id: number | null
+          food_id: string
+          imported_at: string
+          match_confidence: string
+          nutrients: Json
+        }
+        Insert: {
+          fdc_description?: string | null
+          fdc_id?: number | null
+          food_id: string
+          imported_at?: string
+          match_confidence?: string
+          nutrients?: Json
+        }
+        Update: {
+          fdc_description?: string | null
+          fdc_id?: number | null
+          food_id?: string
+          imported_at?: string
+          match_confidence?: string
+          nutrients?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "food_nutrients_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: true
+            referencedRelation: "foods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipes: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          scoped_to_client_id: string | null
+          servings: number
+          steps: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          scoped_to_client_id?: string | null
+          servings: number
+          steps?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          scoped_to_client_id?: string | null
+          servings?: number
+          steps?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipe_items: {
+        Row: {
+          custom_food_id: string | null
+          food_id: string | null
+          id: string
+          note: string | null
+          position: number
+          quantity: number
+          recipe_id: string
+          unit: Database["public"]["Enums"]["food_unit"]
+        }
+        Insert: {
+          custom_food_id?: string | null
+          food_id?: string | null
+          id?: string
+          note?: string | null
+          position: number
+          quantity: number
+          recipe_id: string
+          unit?: Database["public"]["Enums"]["food_unit"]
+        }
+        Update: {
+          custom_food_id?: string | null
+          food_id?: string | null
+          id?: string
+          note?: string | null
+          position?: number
+          quantity?: number
+          recipe_id?: string
+          unit?: Database["public"]["Enums"]["food_unit"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_items_custom_food_id_fkey"
+            columns: ["custom_food_id"]
+            isOneToOne: false
+            referencedRelation: "custom_foods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_items_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "foods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_items_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
           },
         ]
       }

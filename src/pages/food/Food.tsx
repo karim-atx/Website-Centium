@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from "react";
 import clsx from "clsx";
+import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/ui/Card";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
@@ -37,6 +38,7 @@ function mealForCurrentTime(): MealType {
 export default function Food() {
   const { foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, diaryError } =
     useApp();
+  const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("diary");
   const [addOpen, setAddOpen] = useState(false);
   const [addMeal, setAddMeal] = useState<MealType>("lunch");
@@ -230,10 +232,11 @@ export default function Food() {
             <button
               type="button"
               onClick={() => {
-                // Item 7: Nutrient Summary is a separate, not-yet-built
-                // screen (its data source hasn't been decided) — this tap
-                // is a placeholder/no-op until that view exists, so it
-                // currently does nothing beyond the tap feedback.
+                // Item 9: Nutrient Summary is its own page now, reached only
+                // from here. selectedDate is global app state, so the page
+                // reads it straight from context rather than needing it
+                // passed through a route param.
+                navigate("/app/food/nutrient-summary");
               }}
               className="tap relative overflow-hidden rounded-[20px] px-4 py-[15px] mb-[13px] w-full text-left"
               style={{ background: "var(--gradient-food-hero)" }}

@@ -14,6 +14,8 @@ import type {
   WeightGoalType,
   MacroSplit,
   CustomMeal,
+  Recipe,
+  RecipeItem,
   RoutineFolder,
   Routine,
   WorkoutSession,
@@ -50,6 +52,12 @@ import {
   getCustomMeals,
   updateCustomMeal as updateCustomMealRemote,
 } from "../services/custom-meals";
+import {
+  createRecipe as createRecipeRemote,
+  deleteRecipe as deleteRecipeRemote,
+  getRecipes,
+  updateRecipe as updateRecipeRemote,
+} from "../services/recipes";
 import {
   createCustomExercise as createCustomExerciseRemote,
   deleteCustomExercise as deleteCustomExerciseRemote,
@@ -619,6 +627,43 @@ interface AppState {
   ) => void;
   removeClientCustomMeal: (clientId: string, id: string) => void;
   logCustomMeal: (mealId: string, meal: MealType, date: string) => Promise<void>;
+
+  // Mobile handoff item 10: Recipes. Mirrors the customMeals block above
+  // exactly — same offline-first local-id pattern, same client-scoped local
+  // store for professional-authored recipes (handoff Q6), same reasoning in
+  // services/recipes for why it stays local rather than writing
+  // scoped_to_client_id from a relationship id that would point at nothing.
+  recipes: Recipe[];
+  addRecipe: (
+    title: string,
+    items: RecipeItem[],
+    servings: number,
+    steps?: string
+  ) => Promise<string | undefined>;
+  updateRecipe: (
+    id: string,
+    title: string,
+    items: RecipeItem[],
+    servings: number,
+    steps?: string
+  ) => Promise<string | undefined>;
+  removeRecipe: (id: string) => Promise<void>;
+  recipesError: string | null;
+  clientRecipes: Record<string, Recipe[]>;
+  addClientRecipe: (clientId: string, title: string, items: RecipeItem[], servings: number, steps?: string) => void;
+  updateClientRecipe: (
+    clientId: string,
+    id: string,
+    title: string,
+    items: RecipeItem[],
+    servings: number,
+    steps?: string
+  ) => void;
+  removeClientRecipe: (clientId: string, id: string) => void;
+  // Logs `servingsToLog` servings' worth of the recipe's ingredients,
+  // per-serving (`ingredient total / recipe.servings`), never the whole
+  // batch — matching the handoff's "per-serving arithmetic" rule.
+  logRecipe: (recipeId: string, servingsToLog: number, meal: MealType, date: string) => Promise<void>;
 
   journalFolders: JournalFolder[];
   journalEntries: JournalEntry[];
@@ -1764,6 +1809,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [remindersPaused, setRemindersPaused] = usePersistentState<boolean>("remindersPaused", false);
 
   const [customMeals, setCustomMeals] = usePersistentState<CustomMeal[]>("customMeals", []);
+  const [recipes, setRecipes] = usePersistentState<Recipe[]>("recipes", []);
 
   const [journalFolders, setJournalFolders] = usePersistentState<JournalFolder[]>(
     "journalFolders",
@@ -2126,6 +2172,51 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cancelled = true;
     };
     // customMeals is read for the one-time upload and must not re-trigger this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authUserId, profileReady]);
+
+  // Recipes — same hydrate-then-upload-local-stragglers shape as customMeals
+  // just above, for the same reason. See that block's comments; not repeated
+  // here so the two do not drift into two different explanations.
+  const [recipesError, setRecipesError] = useState<string | null>(null);
+  const recipeUploadAttempted = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+
+    void getRecipes(authUserId).then(async (result) => {
+      if (cancelled) return;
+      if (!result.ok) {
+        setRecipesError(result.message ?? "Could not load your recipes.");
+        return;
+      }
+      setRecipesError(null);
+
+      const pending = recipeUploadAttempted.current !== authUserId && isAdminRef.current !== true
+        ? recipes.filter((r) => !isRemoteRecipeId(r.id))
+        : [];
+      recipeUploadAttempted.current = authUserId;
+
+      const uploaded: Recipe[] = [];
+      const keptLocal: Recipe[] = [];
+      for (const recipe of pending) {
+        const written = await createRecipeRemote(authUserId, recipe.title, recipe.items, recipe.servings, recipe.steps);
+        if (written.ok && written.recipe) uploaded.push(written.recipe);
+        else {
+          console.error("[recipes] Could not upload a local recipe:", written.message);
+          keptLocal.push(recipe);
+        }
+      }
+      if (cancelled) return;
+
+      setRecipes(() => [...result.recipes, ...uploaded, ...keptLocal]);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // recipes is read for the one-time upload and must not re-trigger this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [authUserId, profileReady]);
 
@@ -3799,6 +3890,95 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // A LOCAL ID MEANS NEVER SYNCED, same shape as isRemoteMealId above.
+  const isRemoteRecipeId = (id: string) => isUuid(id);
+
+  const addRecipe: AppState["addRecipe"] = async (title, items, servings, steps) => {
+    if (!authUserId) {
+      setRecipes((prev) => [
+        ...prev,
+        { id: `rc${Date.now()}`, title: title.trim(), items, servings, steps },
+      ]);
+      return undefined;
+    }
+    const result = await createRecipeRemote(authUserId, title, items, servings, steps);
+    if (!result.ok || !result.recipe) return result.message ?? "Could not save that recipe.";
+    setRecipes((prev) => [...prev, result.recipe!]);
+    return undefined;
+  };
+
+  const updateRecipe: AppState["updateRecipe"] = async (id, title, items, servings, steps) => {
+    const applyLocal = () =>
+      setRecipes((prev) =>
+        prev.map((r) => (r.id === id ? { ...r, title: title.trim(), items, servings, steps } : r))
+      );
+
+    if (!authUserId || !isRemoteRecipeId(id)) {
+      applyLocal();
+      return undefined;
+    }
+    const result = await updateRecipeRemote(id, title, items, servings, steps);
+    if (!result.ok) return result.message ?? "Could not save that recipe.";
+    applyLocal();
+    return undefined;
+  };
+
+  const removeRecipe: AppState["removeRecipe"] = async (id) => {
+    if (authUserId && isRemoteRecipeId(id)) await deleteRecipeRemote(id);
+    setRecipes((prev) => prev.filter((r) => r.id !== id));
+  };
+
+  const addClientRecipe: AppState["addClientRecipe"] = (clientId, title, items, servings, steps) =>
+    setClientRecipes((prev) => ({
+      ...prev,
+      [clientId]: [...(prev[clientId] ?? []), { id: `crc${Date.now()}`, title: title.trim(), items, servings, steps }],
+    }));
+  const updateClientRecipe: AppState["updateClientRecipe"] = (clientId, id, title, items, servings, steps) =>
+    setClientRecipes((prev) => ({
+      ...prev,
+      [clientId]: (prev[clientId] ?? []).map((r) =>
+        r.id === id ? { ...r, title: title.trim(), items, servings, steps } : r
+      ),
+    }));
+  const removeClientRecipe: AppState["removeClientRecipe"] = (clientId, id) =>
+    setClientRecipes((prev) => ({ ...prev, [clientId]: (prev[clientId] ?? []).filter((r) => r.id !== id) }));
+
+  // Per-serving arithmetic: `ingredient total / recipe.servings`, computed
+  // here and never stored as a second figure (handoff: "Lentil Mujaddara
+  // totals 2,120 kcal over 4 servings and reads exactly 530 per serving").
+  // Logging N servings multiplies every ingredient's own quantity by
+  // N / recipe.servings before handing it to logFoodEntry, so the diary
+  // entry's snapshot is already the right size — the same "multiply once,
+  // at the write path" rule services/food's header documents.
+  const logRecipe: AppState["logRecipe"] = async (recipeId, servingsToLog, meal, date) => {
+    const recipe = recipes.find((r) => r.id === recipeId);
+    if (!recipe || !authUserId) return;
+    const scale = servingsToLog / recipe.servings;
+
+    for (const item of recipe.items) {
+      const base = manualFood(item.food);
+      const fromCustom = (item.food as Partial<CustomFood>).isCustom === true;
+      const food =
+        fromCustom || (!("isCustom" in item.food) && isUuid(item.food.id))
+          ? { ...base, source: "custom" as const }
+          : isUuid(item.food.id)
+            ? { ...base, source: "catalog" as const }
+            : base;
+
+      const result = await logFoodEntry({
+        userId: authUserId,
+        food,
+        quantity: item.quantity * scale,
+        unit: item.unit ?? "serving",
+        meal,
+        date,
+        loggedVia: "quick",
+      });
+      if (result.ok && result.entry) addFoodEntryRecord(result.entry);
+      else console.error("[diary] recipe item failed:", result.message);
+    }
+  };
+
   const addJournalEntry = (folderId: string, title: string, text: string) => {
     const now = new Date();
     setJournalEntries((prev) => [
@@ -3954,6 +4134,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "clientCustomMeals",
     {}
   );
+  const [clientRecipes, setClientRecipes] = usePersistentState<Record<string, Recipe[]>>("clientRecipes", {});
   const addClientCustomFood: AppState["addClientCustomFood"] = (clientId, food) => {
     const custom: CustomFood = {
       ...food,
@@ -4344,6 +4525,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateClientCustomMeal,
       removeClientCustomMeal,
       logCustomMeal,
+      recipes,
+      recipesError,
+      addRecipe,
+      updateRecipe,
+      removeRecipe,
+      clientRecipes,
+      addClientRecipe,
+      updateClientRecipe,
+      removeClientRecipe,
+      logRecipe,
       journalFolders,
       journalEntries,
       addJournalEntry,

@@ -155,7 +155,7 @@ export function rescaleEntry(
   entry: FoodLogEntry,
   quantity: number,
   unit: ServingUnit
-): Pick<FoodLogEntry, "calories" | "protein" | "carbs" | "fat"> {
+): Pick<FoodLogEntry, "calories" | "protein" | "carbs" | "fat" | "nutrients"> {
   const before = servingMultiplier(entry.display.serving, entry.quantity, entry.unit);
   const after = servingMultiplier(entry.display.serving, quantity, unit);
   const k = before > 0 ? after / before : 1;
@@ -165,6 +165,12 @@ export function rescaleEntry(
     protein: r(entry.protein * k),
     carbs: r(entry.carbs * k),
     fat: r(entry.fat * k),
+    // Rescaled by the same ratio as the macros, so editing an entry's
+    // quantity keeps its Advanced/Nutrient Summary figures in step instead
+    // of quietly going stale.
+    nutrients: entry.nutrients
+      ? Object.fromEntries(Object.entries(entry.nutrients).map(([key, amount]) => [key, r(amount * k)]))
+      : undefined,
   };
 }
 
@@ -184,6 +190,41 @@ export function sumNutrition(entries: FoodLogEntry[]): NutritionTotals {
     },
     { calories: 0, protein: 0, carbs: 0, fat: 0 }
   );
+}
+
+export interface NutrientTotals {
+  /** Summed amount per canonical nutrient key (src/data/nutrientSchema.ts). */
+  totals: Record<string, number>;
+  /** How many of the input maps actually had that key, out of `itemCount` — the "Based on 3 of 5 foods" partial-data count. */
+  present: Record<string, number>;
+  itemCount: number;
+}
+
+/**
+ * Sums per-nutrient maps for the Nutrient Summary page (item 9) and every
+ * "Advanced" view built on it (items 2 and 10) — one shared aggregator so
+ * "partial data" is computed the same way everywhere instead of three times.
+ *
+ * A `null`/`undefined` map means that item has no nutrient data at all (a
+ * custom/manual food, or a catalog food FDC hasn't matched yet) — it still
+ * counts toward `itemCount` so the partial-count is honest, it just never
+ * contributes to `present`. A key simply absent from a present map means
+ * that food logged some nutrients but not this one — same effect. Neither
+ * case is ever treated as a zero.
+ */
+export function sumNutrientMaps(maps: (Record<string, number> | null | undefined)[]): NutrientTotals {
+  const totals: Record<string, number> = {};
+  const present: Record<string, number> = {};
+  for (const map of maps) {
+    if (!map) continue;
+    for (const key of Object.keys(map)) {
+      const amount = map[key];
+      if (typeof amount !== "number" || Number.isNaN(amount)) continue;
+      totals[key] = (totals[key] ?? 0) + amount;
+      present[key] = (present[key] ?? 0) + 1;
+    }
+  }
+  return { totals, present, itemCount: maps.length };
 }
 
 // Iteration 6 "Team" §2.2: Breakfast → Lunch → Dinner → Snacks (was

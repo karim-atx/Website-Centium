@@ -2,10 +2,11 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Chip } from "../ui/Chip";
-import { Search, Mic, Camera, ScanLine, Clock, Star, Minus, Plus, Check, UtensilsCrossed, Sparkles } from "lucide-react";
+import { Search, Mic, Camera, ScanLine, Clock, Star, Minus, Plus, Check, UtensilsCrossed, Sparkles, SlidersHorizontal } from "lucide-react";
 import { foodCategories, addFoodFilterCategories } from "../../data/mockFoods";
 import type { Food, MealType, ServingUnit } from "../../types";
-import { mealLabels, mealOrder, servingMultiplier } from "../../services/nutrition";
+import { mealLabels, mealOrder, servingMultiplier, sumNutrientMaps, targetsFromGoal } from "../../services/nutrition";
+import { NutrientSections } from "./NutrientSections";
 import {
   searchFoods,
   listFoods,
@@ -15,6 +16,7 @@ import {
   logFoodEntry,
   type FoodSearchResult,
 } from "../../services/food";
+import { getFoodNutrientsById } from "../../services/food-nutrients";
 import { useApp } from "../../context/AppContext";
 import { AIVoiceLogger } from "./AIVoiceLogger";
 import { foodCategoryIcon } from "../../utils/icons";
@@ -66,6 +68,8 @@ export const AddFoodSheet: React.FC<{
     customMeals,
     logCustomMeal,
     selectedDate,
+    nutritionGoal,
+    metricValues,
   } = useApp();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
@@ -92,6 +96,16 @@ export const AddFoodSheet: React.FC<{
     });
   };
   const [unit, setUnit] = useState<ServingUnit>("serving");
+  // Mobile handoff item 2: "Advanced" opens a second step inside this same
+  // sheet (BottomSheet's onBack, not a separate sheet/route) showing the
+  // selected food's full per-nutrient breakdown, scaled by the same
+  // quantity/unit multiplier as the macro strip below.
+  const [advancedOpen, setAdvancedOpen] = useState(false);
+  // Per-serving nutrient map for the selected catalog food (unscaled). Null
+  // for a custom/manual food (no food_nutrients row exists) or before the
+  // fetch resolves.
+  const [rawNutrients, setRawNutrients] = useState<Record<string, number> | null>(null);
+  const [nutrientsLoading, setNutrientsLoading] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [scanMode, setScanMode] = useState<ScanMode>(null);
   const [scanResultFood, setScanResultFood] = useState<FoodSearchResult | null>(null);
@@ -171,6 +185,29 @@ export const AddFoodSheet: React.FC<{
     };
   }, [foodLog, open]);
 
+  // Fetched as soon as a food is selected (not lazily on Advanced tap) so the
+  // multiplier — already recomputed every render from quantity/unit — stays
+  // live if the user opens Advanced, backs out, changes quantity, and
+  // reopens it. Custom/manual foods have no food_nutrients row; per
+  // getFoodNutrientsById's contract that's always null, never an error.
+  useEffect(() => {
+    if (!selectedFood || selectedFood.source !== "catalog") {
+      setRawNutrients(null);
+      setNutrientsLoading(false);
+      return;
+    }
+    let cancelled = false;
+    setNutrientsLoading(true);
+    void getFoodNutrientsById(selectedFood.id).then((data) => {
+      if (cancelled) return;
+      setRawNutrients(data);
+      setNutrientsLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedFood]);
+
   // Foods the user created before custom-food writes were wired to Supabase
   // still live in localStorage. Merged in so they stay searchable; see the
   // note in the sheet's own follow-ups.
@@ -234,6 +271,9 @@ export const AddFoodSheet: React.FC<{
     setQuantity(1);
     setQuantityDraft("1");
     setUnit("serving");
+    setAdvancedOpen(false);
+    setRawNutrients(null);
+    setNutrientsLoading(false);
     setScanMode(null);
     setScanResultFood(null);
     setJustAdded(false);
@@ -385,114 +425,180 @@ export const AddFoodSheet: React.FC<{
   if (selectedFood) {
     const multiplier = servingMultiplier(selectedFood.servingLabel, quantity, unit);
     const foodTotalCal = Math.round(selectedFood.calories * multiplier);
+
+    // Mobile handoff item 2: same scaling rule as the macro strip above —
+    // the per-serving map fetched for this food, multiplied by the same
+    // `multiplier` quantity/unit already produces for calories/protein/
+    // carbs/fat. null stays null (custom/manual foods, or not loaded yet)
+    // rather than becoming a fabricated zero.
+    const scaledNutrients = rawNutrients
+      ? Object.fromEntries(Object.entries(rawNutrients).map(([key, amount]) => [key, amount * multiplier]))
+      : null;
+    // Single-food case: itemCount is always 1, so sumNutrientMaps' "partial:
+    // N of M" machinery degrades to plain has-data/no-data for this one food,
+    // which is what NutrientSections should render for an embedded context.
+    const nutrientTotals = sumNutrientMaps([scaledNutrients]);
+    const targets = targetsFromGoal(nutritionGoal);
+    const multiplierDisplay = Math.round(multiplier * 100) / 100;
+
     return (
-      <BottomSheet open={open} onClose={resetAndClose} title="Add Food">
-        <div className="animate-fade-slide-up">
-          <div className="flex items-center gap-3 mb-5">
-            <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
-              <FoodIcon category={selectedFood.category} size={19} className="text-primary-dark" />
-            </span>
-            <div>
-              <p className="font-display font-semibold text-lg text-charcoal">{selectedFood.name}</p>
-              <p className="text-xs text-charcoal-faint">
-                {selectedFood.servingLabel}
-                {selectedFood.isVerified ? " · USDA verified" : " · estimate"}
+      <BottomSheet
+        open={open}
+        onClose={resetAndClose}
+        title={advancedOpen ? "Nutrient details" : "Add Food"}
+        onBack={advancedOpen ? () => setAdvancedOpen(false) : () => setSelectedFood(null)}
+      >
+        {advancedOpen ? (
+          <div className="animate-fade-slide-up flex flex-col gap-2.5">
+            <p className="text-[13px]" style={{ color: "#575863", margin: "0 2px 2px" }}>
+              {selectedFood.name} ·{" "}
+              {multiplierDisplay === 1 ? selectedFood.servingLabel : `${multiplierDisplay} × ${selectedFood.servingLabel}`}
+            </p>
+
+            {selectedFood.source !== "catalog" ? (
+              <p className="text-center text-sm text-charcoal-faint py-8">
+                No per-nutrient data for custom or manually entered foods.
               </p>
-            </div>
-          </div>
-
-          <div className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3 mb-3">
-            <span className="text-sm font-semibold text-charcoal-soft">Quantity</span>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setQuantity((q) => Math.max(0.1, +(q - 1).toFixed(1)))}
-                className="tap w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
-              >
-                <Minus size={14} />
-              </button>
-              <input
-                value={quantityDraft}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^\d.]/g, "");
-                  setQuantityDraft(v);
-                  const n = Number(v);
-                  if (v && !Number.isNaN(n) && n > 0) setQuantityRaw(n);
-                }}
-                onBlur={() => setQuantityDraft(String(quantity))}
-                inputMode="decimal"
-                className="w-14 text-center font-semibold text-charcoal bg-transparent focus:outline-none"
+            ) : nutrientsLoading ? (
+              <p className="text-center text-sm text-charcoal-faint py-8">Loading nutrients…</p>
+            ) : (
+              <NutrientSections
+                totals={nutrientTotals.totals}
+                present={nutrientTotals.present}
+                itemCount={nutrientTotals.itemCount}
+                calorieTarget={targets.calories}
+                proteinTarget={targets.protein}
+                carbTarget={targets.carbs}
+                fatTarget={targets.fat}
+                bodyWeightKg={metricValues.weight ?? null}
+                // Embedded Advanced view has no filter toggle — README.md
+                // line 925: "Removed; the view always shows available
+                // nutrients and names empty groups."
+                filter="all"
+                suppressEmptyState
               />
+            )}
+
+            <p className="text-[10.5px] leading-relaxed" style={{ color: "#8C8378", margin: "6px 2px 0" }}>
+              % of the FDA Daily Value for adults, from this food alone. Calorie and macro percentages use your
+              Goals.
+            </p>
+          </div>
+        ) : (
+          <div className="animate-fade-slide-up">
+            <div className="flex items-center gap-3 mb-5">
+              <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
+                <FoodIcon category={selectedFood.category} size={19} className="text-primary-dark" />
+              </span>
+              <div>
+                <p className="font-display font-semibold text-lg text-charcoal">{selectedFood.name}</p>
+                <p className="text-xs text-charcoal-faint">
+                  {selectedFood.servingLabel}
+                  {selectedFood.isVerified ? " · USDA verified" : " · estimate"}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3 mb-3">
+              <span className="text-sm font-semibold text-charcoal-soft">Quantity</span>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => setQuantity((q) => Math.max(0.1, +(q - 1).toFixed(1)))}
+                  className="tap w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
+                >
+                  <Minus size={14} />
+                </button>
+                <input
+                  value={quantityDraft}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[^\d.]/g, "");
+                    setQuantityDraft(v);
+                    const n = Number(v);
+                    if (v && !Number.isNaN(n) && n > 0) setQuantityRaw(n);
+                  }}
+                  onBlur={() => setQuantityDraft(String(quantity))}
+                  inputMode="decimal"
+                  className="w-14 text-center font-semibold text-charcoal bg-transparent focus:outline-none"
+                />
+                <button
+                  onClick={() => setQuantity((q) => +(q + 1).toFixed(1))}
+                  className="tap w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
+                >
+                  <Plus size={14} />
+                </button>
+              </div>
+            </div>
+
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Unit</p>
+            <div className="flex flex-wrap gap-2 mb-6">
+              {servingUnitOptions.map((u) => (
+                <button
+                  key={u.value}
+                  onClick={() => setUnit(u.value)}
+                  className={`tap rounded-xl px-3.5 py-2 text-xs font-semibold border transition-colors ${
+                    unit === u.value ? "bg-primary text-white border-primary" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
+                  }`}
+                >
+                  {u.label}
+                </button>
+              ))}
+            </div>
+
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Meal</p>
+            <div className="grid grid-cols-4 gap-2 mb-6">
+              {mealOrder.map((m) => (
+                <button
+                  key={m}
+                  onClick={() => setMeal(m)}
+                  className={`tap rounded-xl py-2.5 text-xs font-semibold border transition-colors ${
+                    meal === m ? "bg-primary text-white border-primary" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
+                  }`}
+                >
+                  {mealLabels[m]}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex justify-around bg-cream-soft rounded-2xl px-4 py-3 mb-6 text-center">
+              <div>
+                <p className="text-sm font-bold text-charcoal">{foodTotalCal}</p>
+                <p className="text-[10px] text-charcoal-faint">kcal</p>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.protein * multiplier)}g</p>
+                <p className="text-[10px] text-charcoal-faint">protein</p>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.carbs * multiplier)}g</p>
+                <p className="text-[10px] text-charcoal-faint">carbs</p>
+              </div>
+              <div>
+                <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.fat * multiplier)}g</p>
+                <p className="text-[10px] text-charcoal-faint">fat</p>
+              </div>
+            </div>
+
+            {addError && (
+              <p className="text-xs font-semibold text-status-high text-center mb-3">{addError}</p>
+            )}
+
+            <div className="flex gap-2.5">
+              <Button fullWidth onClick={handleAdd} disabled={justAdded || saving}>
+                {justAdded ? <><Check size={16} /> Added</> : saving ? "Saving…" : "Add to Diary"}
+              </Button>
               <button
-                onClick={() => setQuantity((q) => +(q + 1).toFixed(1))}
-                className="tap w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
+                type="button"
+                onClick={() => setAdvancedOpen(true)}
+                aria-label="Nutrient details"
+                title="Nutrient details"
+                className="tap shrink-0 flex items-center justify-center"
+                style={{ width: 60, height: 52, borderRadius: 14, background: "#FFFFFF", border: "1px solid #E4E4E9", color: "#241F1B" }}
               >
-                <Plus size={14} />
+                <SlidersHorizontal size={20} strokeWidth={1.9} />
               </button>
             </div>
           </div>
-
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Unit</p>
-          <div className="flex flex-wrap gap-2 mb-6">
-            {servingUnitOptions.map((u) => (
-              <button
-                key={u.value}
-                onClick={() => setUnit(u.value)}
-                className={`tap rounded-xl px-3.5 py-2 text-xs font-semibold border transition-colors ${
-                  unit === u.value ? "bg-primary text-white border-primary" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
-                }`}
-              >
-                {u.label}
-              </button>
-            ))}
-          </div>
-
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Meal</p>
-          <div className="grid grid-cols-4 gap-2 mb-6">
-            {mealOrder.map((m) => (
-              <button
-                key={m}
-                onClick={() => setMeal(m)}
-                className={`tap rounded-xl py-2.5 text-xs font-semibold border transition-colors ${
-                  meal === m ? "bg-primary text-white border-primary" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
-                }`}
-              >
-                {mealLabels[m]}
-              </button>
-            ))}
-          </div>
-
-          <div className="flex justify-around bg-cream-soft rounded-2xl px-4 py-3 mb-6 text-center">
-            <div>
-              <p className="text-sm font-bold text-charcoal">{foodTotalCal}</p>
-              <p className="text-[10px] text-charcoal-faint">kcal</p>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.protein * multiplier)}g</p>
-              <p className="text-[10px] text-charcoal-faint">protein</p>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.carbs * multiplier)}g</p>
-              <p className="text-[10px] text-charcoal-faint">carbs</p>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.fat * multiplier)}g</p>
-              <p className="text-[10px] text-charcoal-faint">fat</p>
-            </div>
-          </div>
-
-          {addError && (
-            <p className="text-xs font-semibold text-status-high text-center mb-3">{addError}</p>
-          )}
-
-          <div className="flex gap-2.5">
-            <Button variant="outline" onClick={() => setSelectedFood(null)}>
-              Back
-            </Button>
-            <Button fullWidth onClick={handleAdd} disabled={justAdded || saving}>
-              {justAdded ? <><Check size={16} /> Added</> : saving ? "Saving…" : "Add to Diary"}
-            </Button>
-          </div>
-        </div>
+        )}
       </BottomSheet>
     );
   }

@@ -4,6 +4,7 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 import type { FoodLogEntry, MealType, ServingUnit } from "../../types";
 import { servingMultiplier, rescaleEntry } from "../nutrition";
+import { getFoodNutrientsById } from "../food-nutrients";
 
 // Reads and writes the real food catalog and diary.
 //
@@ -377,6 +378,16 @@ export async function logFoodEntry(params: LogFoodEntryParams): Promise<LogFoodE
     fat: round(food.fat * multiplier),
   };
 
+  // Per-nutrient snapshot, same rule as the four macros above: multiplied
+  // once, here, then fixed forever regardless of what food_nutrients says
+  // later. Only catalog foods can have a food_nutrients row at all — a
+  // custom/manual food, or a catalog food FDC hasn't matched yet, snapshots
+  // undefined, which the app already renders as "no data" everywhere else.
+  const perServingNutrients = food.source === "catalog" ? await getFoodNutrientsById(food.id) : null;
+  const nutrients = perServingNutrients
+    ? Object.fromEntries(Object.entries(perServingNutrients).map(([key, amount]) => [key, round(amount * multiplier)]))
+    : undefined;
+
   const { data, error } = await supabase
     .from("food_log_entries")
     .insert({
@@ -390,6 +401,7 @@ export async function logFoodEntry(params: LogFoodEntryParams): Promise<LogFoodE
       protein_g: snapshot.protein,
       carbs_g: snapshot.carbs,
       fat_g: snapshot.fat,
+      nutrients: nutrients ?? null,
       quantity,
       unit,
       meal,
@@ -423,6 +435,7 @@ export async function logFoodEntry(params: LogFoodEntryParams): Promise<LogFoodE
       foodId: food.source === "catalog" ? food.id : null,
       customFoodId: food.source === "custom" ? food.id : null,
       ...snapshot,
+      nutrients,
       quantity,
       unit,
       meal,
@@ -460,6 +473,7 @@ interface DiaryRow {
   serving_label: string | null;
   category: Enums<"food_category"> | null;
   is_lebanese: boolean | null;
+  nutrients: Record<string, number> | null;
 }
 
 /**
@@ -503,7 +517,7 @@ export async function getDiaryEntries(
     .from("food_log_entries")
     .select(
       "id, food_id, custom_food_id, name, calories, protein_g, carbs_g, fat_g, quantity, unit, meal, logged_date, logged_via, " +
-        "serving_label, category, is_lebanese"
+        "serving_label, category, is_lebanese, nutrients"
     )
     .eq("user_id", userId)
     .gte("logged_date", startDate)
@@ -527,6 +541,7 @@ export async function getDiaryEntries(
       protein: r.protein_g,
       carbs: r.carbs_g,
       fat: r.fat_g,
+      nutrients: r.nutrients ?? undefined,
       quantity: r.quantity,
       unit: r.unit,
       meal: r.meal,
@@ -690,6 +705,7 @@ export async function copyDiaryEntry(
       protein_g: entry.protein,
       carbs_g: entry.carbs,
       fat_g: entry.fat,
+      nutrients: entry.nutrients ?? null,
       quantity: entry.quantity,
       unit: entry.unit,
       meal: entry.meal,
@@ -792,6 +808,7 @@ export async function updateDiaryEntry(
       protein_g: totals.protein,
       carbs_g: totals.carbs,
       fat_g: totals.fat,
+      nutrients: totals.nutrients ?? null,
     })
     .eq("id", entry.id)
     .select("id");
