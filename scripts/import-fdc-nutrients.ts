@@ -37,8 +37,10 @@
  *      which rules out the dataType filter that would have carried
  *      "Survey (FNDDS)" (see searchFdc for the measurements). So the search
  *      asks for FDC's maximum page and drops Branded rows on arrival. Within
- *      what remains, an exact case-insensitive name match wins, then
- *      Foundation, then SR Legacy, then Survey.
+ *      what remains, the datasets are ranked by how complete their nutrient
+ *      profiles are (SR Legacy, then Survey, then Foundation — see
+ *      DATA_TYPE_RANK for the measurements) and an exact case-insensitive
+ *      name match within that order wins.
  *   3. Fetches that FDC food's full nutrient profile (reported per 100 g)
  *      and converts it to THIS food's own serving_label basis — the same
  *      basis `foods.calories` etc. are already on — using the gram weight
@@ -218,16 +220,28 @@ interface FdcFoodDetail {
   foodNutrients: FdcNutrientEntry[];
 }
 
-// THE KEYS ARE FDC'S OWN STRINGS, which is the bug this used to carry:
+// RANKED BY HOW COMPLETE THE NUTRIENT PROFILE ACTUALLY IS, not by how
+// authoritative the dataset sounds. Foundation is FDC's newest and most
+// rigorously measured set and the obvious thing to prefer, but measured
+// against this app's own 103-row schema it is the thinnest: across the last
+// full dry run, Foundation matches populated 13-25 of 103 nutrients, SR
+// Legacy 49-62, and Survey (FNDDS) a consistent 40. Foundation publishes
+// few nutrients per food to a high standard; SR Legacy publishes a full
+// profile. For a nutrition screen that has to fill 103 rows, the fuller
+// profile is worth more than the tighter one, so SR Legacy leads.
+//
+// THE KEYS ARE FDC'S OWN STRINGS, which is a bug this table used to carry:
 // "Survey" was written here, FDC returns "Survey (FNDDS)". The lookup never
 // matched, so every Survey food fell to the `?? 9` default and sorted BELOW
-// Branded (3) — the exact inversion of the intended preference. Measured:
-// searching "Apple" returned three Branded and five Survey (FNDDS) rows, and
-// this table handed the win to a Branded label.
+// Branded — the exact inversion of the intended preference. Branded stays
+// last here even though searchFdc filters it out before this table is
+// consulted: the filter is what excludes it, and this is the backstop for
+// the one way a branded product still gets through (FDC files some under SR
+// Legacy — "HOUSE FOODS Premium Firm Tofu" is in this catalog's own results).
 const DATA_TYPE_RANK: Record<string, number> = {
-  Foundation: 0,
-  "SR Legacy": 1,
-  "Survey (FNDDS)": 2,
+  "SR Legacy": 0,
+  "Survey (FNDDS)": 1,
+  Foundation: 2,
   Branded: 3,
 };
 
@@ -312,16 +326,17 @@ async function searchFdc(name: string): Promise<FdcSearchFood | null> {
     foods.push(...measured);
   }
 
-  const normalized = name.trim().toLowerCase();
-  const exact = foods.find((f) => f.description.trim().toLowerCase() === normalized);
-  if (exact) return exact;
-
-  // No exact match: prefer measured data over a branded label, then the
-  // search engine's own top relevance ordering within that tier.
+  // RANKED FIRST, THEN SEARCHED FOR AN EXACT NAME — not the other way round.
+  // The same description exists in more than one dataset ("Broccoli, raw" is
+  // in both Survey and SR Legacy), so taking the first exact match in FDC's
+  // relevance order threw away the completeness the ranking above exists to
+  // capture. Array.prototype.sort is stable, so within a tier FDC's own
+  // relevance ordering is preserved.
   const sorted = [...foods].sort(
     (a, b) => (DATA_TYPE_RANK[a.dataType] ?? 9) - (DATA_TYPE_RANK[b.dataType] ?? 9)
   );
-  return sorted[0];
+  const normalized = name.trim().toLowerCase();
+  return sorted.find((f) => f.description.trim().toLowerCase() === normalized) ?? sorted[0];
 }
 
 async function fetchFdcDetail(fdcId: number): Promise<FdcFoodDetail> {
