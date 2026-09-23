@@ -19,7 +19,12 @@ export const WeightTrendChart: React.FC<{
   reachDate?: string | null;
   width?: number;
   height?: number;
-}> = ({ history, desiredWeightKg, reachDate, width = 280, height = 120 }) => {
+  /** Opt-in: draw in the width×height coordinate space but render the SVG
+   *  at this size, stretched with preserveAspectRatio="none" (Goals &
+   *  Macros draws in 260×110 and squeezes it into 192×56). */
+  displayWidth?: number;
+  displayHeight?: number;
+}> = ({ history, desiredWeightKg, reachDate, width = 280, height = 120, displayWidth, displayHeight }) => {
   const points: Point[] = history.map((h) => ({ ...h, projected: false }));
   if (desiredWeightKg !== undefined && reachDate) {
     points.push({ date: reachDate, value: desiredWeightKg, projected: true });
@@ -48,7 +53,14 @@ export const WeightTrendChart: React.FC<{
       .join(" ");
 
   return (
-    <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
+    <svg
+      width={displayWidth ?? width}
+      height={displayHeight ?? height}
+      viewBox={`0 0 ${width} ${height}`}
+      preserveAspectRatio={displayWidth !== undefined || displayHeight !== undefined ? "none" : undefined}
+      className="overflow-visible"
+      style={displayWidth !== undefined || displayHeight !== undefined ? { display: "block", flex: "none" } : undefined}
+    >
       {/* y-axis ticks */}
       {[min, (min + max) / 2, max].map((v, i) => (
         <g key={i}>

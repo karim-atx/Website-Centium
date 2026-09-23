@@ -80,7 +80,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
   const targets = targetsFromGoal(nutritionGoal);
   // V9 (QA 9.0): "TDEE estimate should include the maintenance calorie as
   // well as the calories based on what goal is chosen" — same formula
-  // "Use suggested target" applies, shown alongside the maintenance figure.
+  // "Use suggested" applies, shown alongside the maintenance figure.
   const suggestedForGoal = Math.round(
     nutritionGoal.weightGoal === "lose"
       ? tdee - ((nutritionGoal.weeklyRateKg || 0.5) * 7700) / 7
@@ -283,14 +283,14 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
 
       <Card padded={false} className={cardClass}>
         <div className="flex items-center justify-between mb-0.5">
-          {/* Item 9: "WEIGHT TREND" and its figure in the panel's purple,
-              primary-deep-text (#5F5093). */}
-          <p className={`${capsLabel} text-primary-deep-text`}>Weight trend</p>
+          {/* "WEIGHT TREND" in #6D50D3; the figure below stays charcoal
+              (#241F1B), per the reference markup. */}
+          <p className={capsLabel} style={{ color: "#6D50D3" }}>Weight trend</p>
           <span className="text-[10px] text-charcoal-faint">{reachDate ? "To goal" : "7 days"}</span>
         </div>
         <div className="flex items-end justify-between gap-2.5">
           <div className="shrink-0">
-            <p className="text-[19px] font-bold leading-[1.1] text-primary-deep-text">{weight.current} kg</p>
+            <p className="text-[19px] font-bold leading-[1.1] text-charcoal">{weight.current} kg</p>
             <p className="text-[10px] text-charcoal-faint">
               {weight.trend < 0 ? "↓" : "↑"} {Math.abs(weight.trend)} kg this week
             </p>
@@ -299,8 +299,10 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
             history={weight.history}
             desiredWeightKg={reachDate ? desiredWeightKg : undefined}
             reachDate={reachDateIso}
-            width={192}
-            height={56}
+            width={260}
+            height={110}
+            displayWidth={192}
+            displayHeight={56}
           />
         </div>
         {reachDate && (
@@ -326,7 +328,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
             disabled={locked}
             className="tap shrink-0 h-[30px] px-[11px] rounded-[9px] bg-cream-soft text-charcoal text-[11px] font-bold whitespace-nowrap inline-flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
           >
-            Use suggested target
+            Use suggested
           </button>
         </div>
         {(nutritionGoal.weightGoal !== "maintain" || tdeeAtGoal !== null) && (
@@ -353,7 +355,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
             value changes. */}
         <div className="flex items-center justify-between gap-2.5">
           <p className={`${capsLabel} min-w-0`} style={{ color: "#9891A8" }}>
-            Daily calorie target
+            Daily target
           </p>
           <div className="flex items-center gap-[11px] shrink-0">
             <span className="flex items-stretch h-9 rounded-full overflow-hidden" style={{ background: "#F5F5FE" }}>
@@ -412,8 +414,8 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
           compact
         />
         {/* Item 9: the dashboard's nutrition trio. Protein #7D6BB5; carbs on
-            #F0EDF9 with #8175C2; fat on its own #A2C8C2 tint with the trio's
-            fat type colour #5E8A83 — no gold or former teal. */}
+            #F0EDF9 with #8175C2; fat on #EAF4F2 with #6F9993, per the
+            reference markup. */}
         <div className="grid grid-cols-3 gap-1.5 mt-[7px]">
           <div className="text-center rounded-[9px] py-1" style={{ background: "#F0EDF9" }}>
             <p className="text-[12px] font-bold" style={{ color: "#7D6BB5" }}>{targets.protein}g</p>
@@ -423,9 +425,9 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
             <p className="text-[12px] font-bold" style={{ color: "#8175C2" }}>{targets.carbs}g</p>
             <p className="text-[9px]" style={{ color: "rgba(129,117,194,0.75)" }}>Carbs</p>
           </div>
-          <div className="text-center rounded-[9px] py-1" style={{ background: "rgba(162,200,194,0.18)" }}>
-            <p className="text-[12px] font-bold" style={{ color: "#5E8A83" }}>{targets.fat}g</p>
-            <p className="text-[9px]" style={{ color: "rgba(94,138,131,0.7)" }}>Fat</p>
+          <div className="text-center rounded-[9px] py-1" style={{ background: "#EAF4F2" }}>
+            <p className="text-[12px] font-bold" style={{ color: "#6F9993" }}>{targets.fat}g</p>
+            <p className="text-[9px]" style={{ color: "rgba(111,153,147,0.7)" }}>Fat</p>
           </div>
         </div>
         <p className="mt-1.5 text-[9.5px] leading-[1.35] text-charcoal-faint">{MACRO_REBALANCE_NOTE}</p>
@@ -438,7 +440,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
             <Chip
               key={p}
               active={nutritionGoal.planType === p}
-              className="!px-2.5 !py-[5px] !text-[11px] !gap-[5px]"
+              className="!px-2.5 !py-[5px] !text-[11px] !leading-[14px] !gap-[5px]"
               onClick={() => {
                 // V10 (QA 10.0): "Pressing existing plan, will tell the
                 // client that the professional will be responsible for the
@@ -468,7 +470,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
               many dietary restrictions in a drop down box." */}
           <Chip
             active={!!dietaryRestriction || restrictionOpen}
-            className="!px-2.5 !py-[5px] !text-[11px] !gap-[5px]"
+            className="!px-2.5 !py-[5px] !text-[11px] !leading-[14px] !gap-[5px]"
             onClick={() => setRestrictionOpen((v) => !v)}
           >
             <span className="flex items-center gap-1">

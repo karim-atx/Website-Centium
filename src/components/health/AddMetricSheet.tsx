@@ -16,10 +16,9 @@ const quickAmounts = [100, 250, 500] as const;
 
 // Traced bottle glyphs, one shared scale per dose (source boxes 61x130,
 // 71x173, 123x194 -> rendered 17x56, 20x56, 35x56px). Outline and cap paths
-// are copied verbatim from the handoff markup. Master handover item 5 sets
-// the water fill (#B5DAF9) and each water line as a share of the bottle's
-// body: +100ml 47% down its straight body (y 54-127.5), +250ml 28% (body
-// y 59-170), +500ml 40% (body y 65-190, unchanged from the markup).
+// are copied verbatim from the handoff markup, as are the water fill
+// (#BEE3FB) and each water rect (+100ml y61 h70, +250ml y81 h92, +500ml
+// y115 h79).
 const WaterGlyph100: React.FC = () => (
   <svg width={17} height={56} viewBox="0 0 61 198" fill="none" style={{ display: "block" }}>
     <defs>
@@ -32,7 +31,7 @@ const WaterGlyph100: React.FC = () => (
         d="M11 25 L11 32 C11 40 2.5 44 2.5 54 L2.5 116 C2.5 124 8 127.5 14 127.5 L47 127.5 C53 127.5 58.5 124 58.5 116 L58.5 54 C58.5 44 50 40 50 32 L50 25 Z"
         fill="#FFFFFF"
       />
-      <rect x={0} y={88.5} width={61} height={42.5} fill="#B5DAF9" clipPath="url(#metric-water-100)" />
+      <rect x={0} y={61} width={61} height={70} fill="#BEE3FB" clipPath="url(#metric-water-100)" />
       <path
         d="M11 25 L11 32 C11 40 2.5 44 2.5 54 L2.5 116 C2.5 124 8 127.5 14 127.5 L47 127.5 C53 127.5 58.5 124 58.5 116 L58.5 54 C58.5 44 50 40 50 32 L50 25"
         fill="none"
@@ -55,7 +54,7 @@ const WaterGlyph250: React.FC = () => (
     </defs>
     <g transform="translate(0,25)">
       <rect x={3} y={59} width={65} height={111} rx={14} fill="#FFFFFF" />
-      <rect x={0} y={90.08} width={71} height={82.92} fill="#B5DAF9" clipPath="url(#metric-water-250)" />
+      <rect x={0} y={81} width={71} height={92} fill="#BEE3FB" clipPath="url(#metric-water-250)" />
       <rect x={3} y={59} width={65} height={111} rx={14} fill="none" stroke="#4A80DC" strokeWidth={6} />
       <path d="M19 28 L19 16 C19 11 23 8 28 8 L46 8 L46 28 Z" fill="#4274D7" />
       <rect x={41.5} y={3.5} width={23} height={15} rx={7} fill="none" stroke="#4274D7" strokeWidth={7} />
@@ -73,7 +72,7 @@ const WaterGlyph500: React.FC = () => (
     </defs>
     <g transform="translate(0,4)">
       <rect x={4} y={65} width={93} height={125} rx={16} fill="#FFFFFF" />
-      <rect x={0} y={115} width={101} height={79} fill="#B5DAF9" clipPath="url(#metric-water-500)" />
+      <rect x={0} y={115} width={101} height={79} fill="#BEE3FB" clipPath="url(#metric-water-500)" />
       <circle cx={100} cy={22} r={17} fill="none" stroke="#4A80DC" strokeWidth={8} />
       <rect x={29} y={49} width={43} height={12} fill="#FFFFFF" stroke="#4A80DC" strokeWidth={8} strokeLinejoin="round" />
       <rect x={21} y={19} width={54} height={22} rx={8} fill="#4A80DC" stroke="#4A80DC" strokeWidth={8} strokeLinejoin="round" />
@@ -161,7 +160,13 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   const isToday = selectedDate === today;
   const loggedForDay = weightLoggedDate === selectedDate;
   const dayWeight = weightByDate[selectedDate] ?? (isToday ? metricValues.weight : undefined);
-  const [weightDraft, setWeightDraft] = useState(loggedForDay && dayWeight !== undefined ? String(dayWeight) : "");
+  // With no weight logged for the day the field shows the handoff's "70"
+  // (CentiumFrame.dc.html `v2Weight`). Like blood pressure's 120/80, that is
+  // a display default only: autosave waits until the user edits the field,
+  // so 70 is never logged as a weight nobody entered.
+  const initialWeightDraft = () => (loggedForDay && dayWeight !== undefined ? String(dayWeight) : "70");
+  const [weightDraft, setWeightDraft] = useState(initialWeightDraft);
+  const [weightDirty, setWeightDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   // Both halves of this sheet now write to Supabase, so both can fail. One
   // slot rather than two: only one write is ever in flight at a time.
@@ -178,7 +183,8 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
 
   useEffect(() => {
     if (open) {
-      setWeightDraft(loggedForDay && dayWeight !== undefined ? String(dayWeight) : "");
+      setWeightDraft(initialWeightDraft());
+      setWeightDirty(false);
       setError(null);
       setBpSys("120");
       setBpDia("80");
@@ -259,13 +265,13 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   // feature: it reuses the same saveWeight()/logWeightForToday() path the
   // old save button used to call.
   useEffect(() => {
-    if (!open) return;
+    if (!open || !weightDirty) return;
     if (!weightDraft) return;
     if (loggedForDay && dayWeight !== undefined && String(dayWeight) === weightDraft) return;
     const t = setTimeout(() => void saveWeight(weightDraft), 700);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [weightDraft, open]);
+  }, [weightDraft, weightDirty, open]);
 
   const quickAddWater = async (ml: number) => {
     setSaving(true);
@@ -340,7 +346,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               >
                 {(water / 1000).toFixed(2)}L
               </p>
-              <p style={{ margin: "3px 0 0", fontSize: 10, color: "#8C8378" }}>of {(waterGoalMl / 1000).toFixed(1)}L goal</p>
+              <p style={{ margin: "3px 0 0", fontSize: 10, color: "#827C9C" }}>of {(waterGoalMl / 1000).toFixed(1)}L goal</p>
             </div>
           </div>
 
@@ -352,8 +358,15 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                   key={ml}
                   onClick={() => void quickAddWater(ml)}
                   disabled={saving}
-                  className="tap flex flex-col items-center disabled:opacity-50"
-                  style={{ background: "#E1F2FE", border: "none", borderRadius: 12, padding: "10px 0 9px", gap: 7 }}
+                  className="flex flex-col items-center active:scale-[0.97] disabled:opacity-50"
+                  style={{
+                    background: "#E1F2FE",
+                    border: "none",
+                    borderRadius: 12,
+                    padding: "10px 0 9px",
+                    gap: 7,
+                    transition: "transform .15s cubic-bezier(.22,1,.36,1)",
+                  }}
                 >
                   <Glyph />
                   <span style={{ fontSize: 14, fontWeight: 700, color: "#0A80E8" }}>+{ml}ml</span>
@@ -374,7 +387,10 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                 <WeightGlyph />
                 <input
                   value={weightDraft}
-                  onChange={(e) => setWeightDraft(e.target.value.replace(/[^\d.]/g, ""))}
+                  onChange={(e) => {
+                    setWeightDraft(e.target.value.replace(/[^\d.]/g, ""));
+                    setWeightDirty(true);
+                  }}
                   placeholder="e.g. 70"
                   inputMode="decimal"
                   className="flex-1 w-full min-w-0 outline-none"
@@ -389,7 +405,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                     color: "#241F1B",
                   }}
                 />
-                <span style={{ fontSize: 11, color: "#8C8378", flex: "none" }}>kg</span>
+                <span style={{ fontSize: 11, color: "#827C9C", flex: "none" }}>kg</span>
               </div>
             </div>
             <div className="min-w-0">
@@ -405,7 +421,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                   <span style={{ display: "block", fontSize: 8.5, fontWeight: 600, color: "#241F1B", whiteSpace: "nowrap" }}>
                     Add Photo / Upload File
                   </span>
-                  <span style={{ display: "block", fontSize: 7.5, color: "#8C8378", whiteSpace: "nowrap" }}>
+                  <span style={{ display: "block", fontSize: 7.5, color: "#827C9C", whiteSpace: "nowrap" }}>
                     Lab results, reports, etc.
                   </span>
                 </span>

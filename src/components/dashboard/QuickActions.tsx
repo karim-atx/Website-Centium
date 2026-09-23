@@ -15,7 +15,7 @@ interface QuickActionsProps {
 // wired to the same handler the old CSS pills used to call.
 //
 // The artwork (2164x727 source, ~2.977 aspect) is rendered at a literal
-// 412.08px width, which is taller than the 358x95.9 visible block — the
+// 411.64px width, which is taller than the 358x95.9 visible block — the
 // block is a crop window over the artwork's own built-in padding, so the
 // container clips with `overflow: hidden` while the image is positioned at
 // the handoff's literal left/top offset inside it.
@@ -31,6 +31,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
     border: "none",
     padding: 0,
     margin: 0,
+    cursor: "pointer",
   };
 
   return (
@@ -50,7 +51,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
             position: "absolute",
             left: -26.82,
             top: -21.69,
-            width: 412.08,
+            width: 411.64,
             height: "auto",
             maxWidth: "none",
             display: "block",
@@ -62,7 +63,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         <button
           onClick={onLogFood}
           aria-label="Log food"
-          className="tap"
           style={{ ...hitAreaStyle, left: 0, top: 14.5, width: 137.7, height: 45.7 }}
         />
 
@@ -70,7 +70,6 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         <button
           onClick={onLogWorkout}
           aria-label="Log workout"
-          className="tap"
           style={{ ...hitAreaStyle, left: 219.6, top: 14.5, width: 138.4, height: 45.7 }}
         />
 
@@ -78,16 +77,14 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         <button
           onClick={onAddMetric}
           aria-label="Add metric"
-          className="tap"
-          style={{ ...hitAreaStyle, left: 129.1, top: 72.3, width: 100, height: 23.3 }}
+          style={{ ...hitAreaStyle, left: 129.1, top: 72.3, width: 100, height: 23.5 }}
         />
 
         {/* Voice hub */}
         <button
           onClick={onVoiceLog}
           aria-label="Tell Centium what you ate"
-          className="tap"
-          style={{ ...hitAreaStyle, left: 142.2, top: -1.5, width: 73, height: 73, borderRadius: 9999 }}
+          style={{ ...hitAreaStyle, left: 142.3, top: -1.5, width: 72.9, height: 72.9, borderRadius: 9999 }}
         />
       </div>
     </div>

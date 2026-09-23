@@ -25,18 +25,9 @@ import { mondayFirstWeek, DAY_LETTERS, dayLetter } from "../../utils/week";
 // invent numbers, those lines are simplified or omitted; each is called
 // out at its call site below.
 
-// Handoff §9's "5 glyphs" step-down rule is flagged there as unconfirmed,
-// and its own worked examples are inconsistent: "106.4" is given as fitting
-// at normal size and "188.8" as overrunning the plate, but both are 5
-// characters, so a length check can't actually tell them apart. Measuring
-// real rendered width doesn't resolve it either — checked directly against
-// this app's Manrope 800 in a canvas: "106.4" (34.9px) and "188.8" (34.4px)
-// come out effectively the same width, because this typeface's digits are
-// tabular (equal advance width), so no digit-shape difference exists to
-// detect. Falling back to the plain length check named in the rule's own
-// title ("5 glyphs"), since it's the one reading that still makes the
-// step-down fire for the large values it exists for — width-based detection
-// would silently never trigger it at all. Flagged for a human decision.
+// The small Weight tile's value is always 0.176 × the icon size, per the
+// reference markup (CentiumFrame.dc.html `wValueSize`); there is no
+// step-down branch.
 
 const capsLabel = "font-bold text-[9px] tracking-[.16em] uppercase";
 const numeralSmall = "text-[16px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums";
@@ -57,7 +48,8 @@ function buildWavePath(y: number, amp: number, crests: number, floor: number) {
   return { fill: `${edge} L716 ${floor} L0 ${floor} Z`, edge };
 }
 
-// Item 7's table, in paint order (back to front; the front layer last).
+// Item 7's table, in the reference markup's paint order: the front (y14)
+// layer is 4th, and the faint y74 layer paints last, over it.
 // `swell` names one of the three swell keyframes below: A = 6px/-5px
 // (layers 1 and 4), B = -4px/5px (layer 3 and the front), C = -3px/4px
 // (layer 2). `delay` offsets the swell only.
@@ -76,8 +68,8 @@ const WATER_WAVE_LAYERS: Array<{
   { y: 30, amp: 9, crests: 2, fill: "rgba(23,69,127,0.17)", swellCycle: "8.5s", driftCycle: "9s", rightward: false, swell: "A", delay: "-1.2s" },
   { y: 22, amp: 6, crests: 3, fill: "rgba(23,69,127,0.11)", swellCycle: "6.5s", driftCycle: "7s", rightward: true, swell: "C", delay: "-3.4s" },
   { y: 46, amp: 7, crests: 5, fill: "rgba(255,255,255,0.13)", swellCycle: "7.5s", driftCycle: "11s", rightward: false, swell: "B", delay: "-0.6s" },
-  { y: 74, amp: 6, crests: 4, fill: "rgba(255,255,255,0.10)", swellCycle: "9s", driftCycle: "13s", rightward: false, swell: "A", delay: "-4.7s" },
   { y: 14, amp: 8, crests: 2, fill: "rgba(255,255,255,0.30)", swellCycle: "5.5s", driftCycle: "5s", rightward: true, swell: "B", delay: "-2.1s", front: true },
+  { y: 74, amp: 6, crests: 4, fill: "rgba(255,255,255,0.10)", swellCycle: "9s", driftCycle: "13s", rightward: false, swell: "A", delay: "-4.7s" },
 ];
 
 // Seamless drift. A layer's loop only closes if its travel is a whole number
@@ -92,10 +84,6 @@ function driftFor(crests: number, cycle: string) {
   const seconds = (parseFloat(cycle) * distance) / 358;
   return { distance: `${distance.toFixed(2)}px`, duration: `${Number(seconds.toFixed(3))}s` };
 }
-
-// The 14px surface strip's edge: item 7's wave formula, 2 crests, 3px
-// amplitude, centred 4px down the strip.
-const SURFACE_EDGE = buildWavePath(4, 3, 2, 14).fill;
 
 // Star shape for the over-goal sparkles (the handoff reference's four-point star).
 const SPARKLE_PATH = "M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z";
@@ -117,15 +105,14 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
   const bodyGradient = atOrAboveGoal
     ? "linear-gradient(180deg, #6FA6EC 0%, #4A85DC 46%, #2C5FAF 100%)"
     : "linear-gradient(180deg, #E4F0FE 0%, #B9D7F8 42%, #7FB0EE 100%)";
-  const surfaceFill = atOrAboveGoal ? "#9CC4F3" : "#DDEBFD";
   const labelColor = atOrAboveGoal ? "rgba(255,255,255,0.92)" : "#3A4351";
   const valueColor = atOrAboveGoal ? "#FFFFFF" : "#000000";
   const subColor = atOrAboveGoal ? "rgba(255,255,255,0.95)" : "#46505F";
   const goalColor = atOrAboveGoal ? "rgba(255,255,255,0.92)" : "#26303D";
   const textShadow = atOrAboveGoal ? "0 1px 3px rgba(12,40,82,0.45)" : "none";
-  // Pill: below or at the goal the blue fill with the reference's blue type
-  // (#004376, #003874 at the goal); above it gold.
-  const pillBg = overGoal ? "#F4D789" : "rgba(143,192,232,.34)";
+  // Pill: solid blue below the goal (#D7E8FA, #004376 type), a deeper blue
+  // at it (#D1E5FD, #003874), gold above it.
+  const pillBg = overGoal ? "#F4D789" : atOrAboveGoal ? "#D1E5FD" : "#D7E8FA";
   const pillFg = overGoal ? "#8B5900" : atOrAboveGoal ? "#003874" : "#004376";
   const subLabel = atOrAboveGoal ? "Goal reached!" : `${((waterGoalMl - water) / 1000).toFixed(1)} L to go`;
 
@@ -139,40 +126,25 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
         @keyframes cent-water-swell-a { 0%, 100% { transform: translateY(6px); } 50% { transform: translateY(-5px); } }
         @keyframes cent-water-swell-b { 0%, 100% { transform: translateY(-4px); } 50% { transform: translateY(5px); } }
         @keyframes cent-water-swell-c { 0%, 100% { transform: translateY(-3px); } 50% { transform: translateY(4px); } }
-        @keyframes cent-water-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2.5px); } }
         @keyframes cent-water-slosh { 0% { transform: translateY(6px); } 45% { transform: translateY(-3px); } 75% { transform: translateY(1.5px); } 100% { transform: translateY(0); } }
-        @keyframes cent-water-sparkle { 0%, 100% { opacity: 0.45; transform: scale(0.7) rotate(0deg); } 50% { opacity: 1; transform: scale(1.12) rotate(22deg); } }
+        @keyframes cent-water-sparkle { 0%, 100% { opacity: 0.35; transform: scale(0.72); } 50% { opacity: 1; transform: scale(1); } }
         .cent-water-drift { animation-name: cent-water-drift; animation-timing-function: linear; animation-iteration-count: infinite; }
         .cent-water-swell { animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
-        .cent-water-bob { animation: cent-water-bob 11s ease-in-out infinite; }
         .cent-water-slosh { animation: cent-water-slosh 1.4s cubic-bezier(0.22,1,0.36,1) 1; }
-        .cent-water-sparkle { animation: cent-water-sparkle 1.7s ease-in-out infinite; }
+        .cent-water-sparkle { animation: cent-water-sparkle 1.8s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) {
           .cent-water-drift, .cent-water-swell { animation-duration: 40s !important; }
-          .cent-water-slosh, .cent-water-bob, .cent-water-sparkle { animation: none !important; }
+          .cent-water-slosh, .cent-water-sparkle { animation: none !important; }
         }
       `}</style>
 
       {/* Fill container: 126px at the goal, never higher. */}
       <div
         className="absolute left-0 right-0 bottom-0"
-        style={{ height: fillHeightPx, transition: "height 1.1s cubic-bezier(0.22,1,0.36,1)" }}
+        style={{ height: fillHeightPx, transition: "height 1.1s cubic-bezier(.34,1.32,.5,1)" }}
       >
         {/* Body, from 10px below the container's top edge. */}
         <div className="absolute left-0 right-0 bottom-0" style={{ top: 10, background: bodyGradient }} />
-
-        {/* Surface strip: 14px, its own wave edge, on an 11s bob. */}
-        <div className="absolute left-0 right-0 top-0 overflow-hidden cent-water-bob" style={{ height: 14, willChange: "transform" }}>
-          <svg
-            width={716}
-            height={14}
-            viewBox="0 0 716 14"
-            className="cent-water-drift"
-            style={{ position: "absolute", left: 0, top: 0, display: "block", animationDuration: "11s", willChange: "transform" }}
-          >
-            <path d={SURFACE_EDGE} fill={surfaceFill} />
-          </svg>
-        </div>
 
         {/* Waves, band and depth shadow. Keyed on the millilitre value so the
             slosh restarts on every change; the container above is not keyed,
@@ -275,29 +247,22 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
       {overGoal && (
         <>
           <svg
-            width={13}
-            height={13}
-            viewBox="0 0 24 24"
-            className="absolute cent-water-sparkle"
-            style={{ right: 9, top: 10, display: "block", filter: "drop-shadow(0 1px 1.5px rgba(120,76,0,0.45))", willChange: "transform, opacity" }}
-          >
-            <path d={SPARKLE_PATH} fill="#E8A21B" />
-          </svg>
-          <svg
             width={9}
             height={9}
             viewBox="0 0 24 24"
             className="absolute cent-water-sparkle"
-            style={{
-              right: 7.5,
-              top: 28.5,
-              display: "block",
-              animationDelay: "0.55s",
-              filter: "drop-shadow(0 1px 1.5px rgba(120,76,0,0.45))",
-              willChange: "transform, opacity",
-            }}
+            style={{ right: 11, top: 12, display: "block" }}
           >
-            <path d={SPARKLE_PATH} fill="#F0B63C" />
+            <path d={SPARKLE_PATH} fill="#FFE9B0" />
+          </svg>
+          <svg
+            width={6}
+            height={6}
+            viewBox="0 0 24 24"
+            className="absolute cent-water-sparkle"
+            style={{ right: 9, top: 30, display: "block", animationDelay: "0.6s" }}
+          >
+            <path d={SPARKLE_PATH} fill="#FFF3D4" />
           </svg>
         </>
       )}
@@ -305,7 +270,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
       {/* Goal marker: a hairline beside the goal figure. */}
       <span className="absolute flex items-stretch" style={{ right: 21, top: 82, gap: 8 }}>
         <span style={{ width: 1, background: "#FFFFFF", flex: "none" }} />
-        <span className="flex flex-col justify-center" style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.16, color: goalColor, textShadow }}>
+        <span className="flex flex-col justify-center" style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.16, color: goalColor }}>
           <span>{(waterGoalMl / 1000).toFixed(1)} L</span>
           <span>Goal</span>
         </span>
@@ -481,63 +446,46 @@ export const HomeWidget: React.FC<{
       const pct = water / waterGoalMl;
       const onClick = onWaterClick ?? (() => navigate("/app/health"));
       if (!isLarge) {
-        // Handoff §8: traced reference bottle replaces the old cup glyph
-        // and its `w-cup-clip` clip path (removed below, not left dead).
-        // pct is clamped 0–100 and mapped to the fill rect's top edge via
-        // the handoff's literal formula: y = 78.5 − 56 × (pct/100), so 0%
-        // → y78.5, 50% → y50.5, 100% → y22.5.
-        const bottlePct = Math.max(0, Math.min(100, pct * 100));
-        const bottleFillY = 78.5 - 56 * (bottlePct / 100);
+        // CentiumWaterWidget.dc.html, variant "bottle": the fill is clipped
+        // to the body path, so it never enters the collar or cap. Its top
+        // edge runs from the body floor (y96) at 0% to the body top (y34) at
+        // the goal, and rises no further above it. Static, as in the markup.
+        const BOTTLE_BODY = "M14 34 h36 a3 3 0 0 1 3 3 v54 a5 5 0 0 1 -5 5 h-32 a5 5 0 0 1 -5 -5 v-54 a3 3 0 0 1 3 -3 z";
+        const bottleFillTop = 96 - Math.max(0, Math.min(1, pct)) * (96 - 34);
         return wrap(
           onClick,
           shell(
             "rgba(143,192,232,.17)",
             <>
-              <p className={`${capsLabel} text-team-blue-ink/[0.72]`}>Water</p>
-              <div className="flex-1 flex items-center justify-center gap-2.5 min-h-0">
-                <div className="min-w-0 text-right">
-                  <p className="text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">{(water / 1000).toFixed(1)} L</p>
-                  <p className="mt-[5px] text-[9px] text-team-blue-ink">of {(waterGoalMl / 1000).toFixed(1)} L</p>
-                </div>
-                <svg viewBox="0 0 40 80" width={38} height={76} style={{ display: "block", flex: "none", overflow: "visible" }}>
+              <p className={capsLabel} style={{ color: "#5B86AD" }}>Water</p>
+              <div className="flex-1 flex items-center justify-between gap-1 min-h-0">
+                <span className="flex flex-col min-w-0">
+                  <span className="text-[17px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums whitespace-nowrap">
+                    {(water / 1000).toFixed(1)} L
+                  </span>
+                  <span className="text-[9px] font-semibold mt-[5px] whitespace-nowrap" style={{ color: "#5B86AD" }}>
+                    of {(waterGoalMl / 1000).toFixed(1)} L
+                  </span>
+                </span>
+                <svg width={41} height={64} viewBox="0 0 64 100" style={{ display: "block", flex: "none", overflow: "visible" }}>
                   <defs>
                     <clipPath id="w-bottle-clip">
-                      <path d="M13.2 21.2 A9.0 9.0 0 0 0 0.75 27.1 V75.3 A4.0 4.0 0 0 0 4.75 79.3 H31.4 A4.0 4.0 0 0 0 35.4 75.3 V27.1 A9.0 9.0 0 0 0 22.9 21.2 Z" />
+                      <path d={BOTTLE_BODY} />
                     </clipPath>
                   </defs>
-                  {/* Fill is clipped to the body path only (never the collar
-                      or cap) and animates on `y`/`height`, matching
-                      WaterFillContainer's 700ms timing (that component uses
-                      Tailwind's `duration-700 ease-out`; the handoff's own
-                      literal value for this bottle is the slightly
-                      different cubic-bezier(0.16,1,0.3,1) below — used here
-                      verbatim since it's given as an explicit literal). */}
                   <g clipPath="url(#w-bottle-clip)">
-                    <rect
-                      x={0}
-                      width={40}
-                      fill="#A2D6FA"
-                      style={{
-                        y: bottleFillY,
-                        height: 80 - bottleFillY,
-                        transition: "y 700ms cubic-bezier(0.16, 1, 0.3, 1), height 700ms cubic-bezier(0.16, 1, 0.3, 1)",
-                      }}
-                    />
+                    <rect x={10} y={bottleFillTop.toFixed(2)} width={44} height={100} fill="#A8D5F2" />
                   </g>
-                  <path
-                    d="M13.2 21.2 A9.0 9.0 0 0 0 0.75 27.1 V75.3 A4.0 4.0 0 0 0 4.75 79.3 H31.4 A4.0 4.0 0 0 0 35.4 75.3 V27.1 A9.0 9.0 0 0 0 22.9 21.2 Z"
-                    fill="none"
-                    stroke="#4E85B6"
-                    strokeWidth={1.5}
-                    strokeLinejoin="round"
-                  />
-                  <circle cx={32.6} cy={8.4} r={6.5} fill="none" stroke="#4E85B6" strokeWidth={1.5} />
-                  <rect x={6.1} y={14.6} width={23.4} height={5.4} rx={1.6} fill="#A2D5FA" stroke="#4E85B6" strokeWidth={1.5} />
-                  <rect x={9.2} y={4.2} width={14.6} height={10.6} rx={1.6} fill="#A2D5FA" stroke="#4E85B6" strokeWidth={1.5} />
-                  {/* Ticks paint over the fill (declared after it). */}
-                  {[33.6, 43.0, 51.2, 60.0, 68.9].map((ty) => (
-                    <path key={ty} d={`M33.9 ${ty} H35.35`} stroke="#4E85B6" strokeWidth={2.2} strokeLinecap="round" />
-                  ))}
+                  <path d={BOTTLE_BODY} fill="none" stroke="#4A85C4" strokeWidth={3.4} strokeLinejoin="round" />
+                  <path d="M21 26 h22 v8 h-22 z" fill="#A8D5F2" stroke="#4A85C4" strokeWidth={3.4} strokeLinejoin="round" />
+                  <rect x={19} y={13} width={26} height={13} rx={3.5} fill="#A8D5F2" stroke="#4A85C4" strokeWidth={3.4} strokeLinejoin="round" />
+                  <circle cx={53} cy={15} r={7.5} fill="none" stroke="#4A85C4" strokeWidth={3.4} />
+                  <g stroke="#4A85C4" strokeWidth={3} strokeLinecap="round">
+                    <path d="M46 46 h4" />
+                    <path d="M46 58 h4" />
+                    <path d="M46 70 h4" />
+                    <path d="M46 82 h4" />
+                  </g>
                 </svg>
               </div>
             </>
@@ -804,7 +752,6 @@ export const HomeWidget: React.FC<{
         // content area.
         const iconSize = editMode ? 62 : 66;
         const weightStr = String(metricValues.weight);
-        const weightOverflows = weightStr.length === 5;
         return wrap(
           onClick,
           shell(
@@ -828,16 +775,12 @@ export const HomeWidget: React.FC<{
                       d="M13.4 14.6 A27.3 27.3 0 0 1 50.4 14.6 L43.2 26.3 A27.8 27.8 0 0 0 20.6 26.3 Z"
                       strokeWidth={2.7}
                     />
-                    {/* Item 4: the three dial "feet" pins normalized to
-                        literal lengths — outer pins 4.0 units, centre pin
-                        2.8 units (trimmed so it doesn't overshoot the
-                        dial's crest it sits on). Previously uneven
-                        (~4.9 / ~3.7 / ~6.0) from an approximate
-                        reproduction; start points kept fixed on the arc,
-                        only the length (endpoint) changed. */}
+                    {/* The three dial "feet" pins, all 4.0 units on their
+                        existing bearings (CentiumFrame.dc.html, iteration
+                        tickA/tickB/tickC). */}
                     <path d="M22.2 10.2 L23.59 13.95" strokeWidth={2.2} />
-                    <path d="M31.8 9.6 V12.4" strokeWidth={2.2} />
-                    <path d="M41.7 10.2 L40.57 14.04" strokeWidth={2.2} />
+                    <path d="M31.8 9.6 V13.6" strokeWidth={2.2} />
+                    <path d="M41.7 10.2 L40.58 14.04" strokeWidth={2.2} />
                     <path d="M35.6 14.6 L29.8 22.9" strokeWidth={2.7} />
                   </svg>
                   {/* Item 4: the numeric value must be charcoal, not
@@ -853,7 +796,7 @@ export const HomeWidget: React.FC<{
                       color: "#241F1B",
                       fontWeight: 800,
                       lineHeight: 1,
-                      fontSize: iconSize * (weightOverflows ? 0.176 : 0.197),
+                      fontSize: iconSize * 0.176,
                     }}
                   >
                     {weightStr}
