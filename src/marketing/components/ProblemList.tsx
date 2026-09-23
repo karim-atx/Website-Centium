@@ -63,6 +63,12 @@ export const ProblemList: React.FC<{ items: ProblemItem[] }> = ({ items }) => {
       if (done < queued) timer = setTimeout(drain, STEP);
     };
     const onScroll = () => {
+      // Every row has already struck -- nothing left this handler could
+      // ever change, so stop measuring. Without this it kept doing a
+      // getBoundingClientRect() per row on every scroll event for the rest
+      // of the page session, long after this section had scrolled away --
+      // reported as a continuous stutter well beyond just this section.
+      if (queued >= items.length) return;
       const list = listRef.current;
       if (!list) return;
       const rows = list.children;
@@ -76,11 +82,16 @@ export const ProblemList: React.FC<{ items: ProblemItem[] }> = ({ items }) => {
         if (!timer) drain();
       }
     };
+    // rAF-coalesced to at most once per frame, same as the sibling nav
+    // hooks -- this ran unthrottled on every 'scroll' event before.
+    let raf = 0;
+    const scheduled = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; onScroll(); }); };
     onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("scroll", scheduled, { passive: true });
     return () => {
       if (timer) clearTimeout(timer);
-      window.removeEventListener("scroll", onScroll);
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", scheduled);
     };
   }, [items.length, reduceMotion]);
 

@@ -34,12 +34,24 @@ export function useNavScrollSpy(ids: string[]) {
       }
       setActive((prev) => (prev === found ? prev : found));
     };
+    // Reported as a continuous mobile scroll stutter across the whole page,
+    // not localized to one section -- consistent with this: `spy` ran a
+    // getBoundingClientRect() per tracked id (here 3) on every single
+    // 'scroll' event, unthrottled, for as long as Nav is mounted, which on
+    // this single-page site is the entire session. rAF-coalescing multiple
+    // scroll events into at most one measurement per frame is the same
+    // pattern already used for usePillarRail's/useEcoSlider's resize
+    // handlers; nothing here needs to run more often than the screen can
+    // actually repaint.
+    let raf = 0;
+    const scheduled = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; spy(); }); };
     spy();
-    window.addEventListener("scroll", spy, { passive: true });
-    window.addEventListener("resize", spy);
+    window.addEventListener("scroll", scheduled, { passive: true });
+    window.addEventListener("resize", scheduled);
     return () => {
-      window.removeEventListener("scroll", spy);
-      window.removeEventListener("resize", spy);
+      window.removeEventListener("scroll", scheduled);
+      window.removeEventListener("resize", scheduled);
+      if (raf) cancelAnimationFrame(raf);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsKey, pathname]);

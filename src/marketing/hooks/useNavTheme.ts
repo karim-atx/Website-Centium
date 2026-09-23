@@ -31,12 +31,18 @@ export function useNavTheme() {
       }
       setDark((prev) => (prev === next ? prev : next));
     };
+    // Same reasoning as useNavScrollSpy: a querySelectorAll plus a
+    // getBoundingClientRect loop on every 'scroll' event, unthrottled, for
+    // the whole page session -- rAF-coalesced to at most once per frame.
+    let raf = 0;
+    const scheduled = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; check(); }); };
     check();
-    window.addEventListener("scroll", check, { passive: true });
-    window.addEventListener("resize", check);
+    window.addEventListener("scroll", scheduled, { passive: true });
+    window.addEventListener("resize", scheduled);
     return () => {
-      window.removeEventListener("scroll", check);
-      window.removeEventListener("resize", check);
+      window.removeEventListener("scroll", scheduled);
+      window.removeEventListener("resize", scheduled);
+      if (raf) cancelAnimationFrame(raf);
     };
   }, [pathname]);
 

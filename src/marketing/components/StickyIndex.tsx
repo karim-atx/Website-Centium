@@ -47,12 +47,18 @@ export const StickyIndex: React.FC<{ items: { id: string; label: string }[]; cla
       setActive(current);
     };
 
+    // Same reasoning as the marketing nav hooks: a getBoundingClientRect
+    // per tracked section on every 'scroll' event, unthrottled, for as long
+    // as this is mounted -- rAF-coalesced to at most once per frame.
+    let raf = 0;
+    const scheduled = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; compute(); }); };
     compute();
-    window.addEventListener("scroll", compute, { passive: true });
-    window.addEventListener("resize", compute);
+    window.addEventListener("scroll", scheduled, { passive: true });
+    window.addEventListener("resize", scheduled);
     return () => {
-      window.removeEventListener("scroll", compute);
-      window.removeEventListener("resize", compute);
+      window.removeEventListener("scroll", scheduled);
+      window.removeEventListener("resize", scheduled);
+      if (raf) cancelAnimationFrame(raf);
     };
   }, [items]);
 
