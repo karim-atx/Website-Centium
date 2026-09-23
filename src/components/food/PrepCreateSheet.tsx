@@ -47,16 +47,18 @@ const toFood = (r: FoodSearchResult): Food => ({
 });
 
 /**
- * Master handover item 11: Create / edit for the client's own Custom Meals
- * and Recipes, one screen for both. Name (and, for recipes, servings), the
- * ingredients in a grey container whose "Add food" opens the same food search
- * Add Food uses (real catalog plus the user's own foods, as a step inside
- * this sheet), a live macro strip (recipes per serving, re-dividing as
- * servings change), recipe steps, and Save plus — when editing — the
- * destructive button (two taps: the first arms it).
+ * Master handover item 11: Create / edit for Custom Meals and Recipes, one
+ * screen for both. Name (and, for recipes, servings), the ingredients in a
+ * grey container whose "Add food" opens the same food search Add Food uses
+ * (real catalog plus the user's own foods, as a step inside this sheet), a
+ * live macro strip (recipes per serving, re-dividing as servings change),
+ * recipe steps, and Save plus — when editing — the destructive button (two
+ * taps: the first arms it).
  *
- * The professional meal-plan builder keeps its own sheet (CreateMealSheet's
- * clientId path), unchanged.
+ * With `clientId` (the professional meal-plan builder, meals only) the same
+ * screen works on that client's plan: the search offers the catalog plus the
+ * client's own foods, an inline food is saved to the client's food database,
+ * and saving/deleting uses the client-meal actions.
  */
 export const PrepCreateSheet: React.FC<{
   kind: PrepKind;
@@ -66,10 +68,25 @@ export const PrepCreateSheet: React.FC<{
   editRecipe?: Recipe | null;
   /** True when opened from the flow's List or Detail: the back chevron returns there. */
   hasPrevious?: boolean;
-}> = ({ kind, open, onClose, editMeal, editRecipe, hasPrevious }) => {
+  /** Professional meal-plan builder: the client whose plan this meal belongs to. */
+  clientId?: string;
+}> = ({ kind, open, onClose, editMeal, editRecipe, hasPrevious, clientId }) => {
   const isR = kind === "recipes";
   const editing = isR ? editRecipe ?? null : editMeal ?? null;
-  const { addCustomMeal, updateCustomMeal, removeCustomMeal, addRecipe, updateRecipe, removeRecipe, addCustomFood } = useApp();
+  const {
+    addCustomMeal,
+    updateCustomMeal,
+    removeCustomMeal,
+    addRecipe,
+    updateRecipe,
+    removeRecipe,
+    addCustomFood,
+    clientCustomFoods,
+    addClientCustomFood,
+    addClientCustomMeal,
+    updateClientCustomMeal,
+    removeClientCustomMeal,
+  } = useApp();
 
   const [step, setStep] = useState<"form" | "search">("form");
   const [title, setTitle] = useState("");
@@ -115,7 +132,33 @@ export const PrepCreateSheet: React.FC<{
       () => {
         void (term ? searchFoods(term) : listFoods()).then((rows) => {
           if (cancelled) return;
-          setResults(rows);
+          if (clientId) {
+            // A client's plan: the catalog plus that client's own foods (not
+            // the professional's personal ones).
+            const own = (clientCustomFoods[clientId] ?? [])
+              .filter((f) => !term || f.name.toLowerCase().includes(term.toLowerCase()))
+              .map(
+                (f): FoodSearchResult => ({
+                  id: f.id,
+                  source: "custom",
+                  name: f.name,
+                  nameAr: f.nameAr ?? null,
+                  category: f.category,
+                  servingLabel: f.serving,
+                  calories: f.calories,
+                  protein: f.protein,
+                  carbs: f.carbs,
+                  fat: f.fat,
+                  isLebanese: false,
+                  isVerified: false,
+                  barcode: null,
+                  overridesFoodId: null,
+                })
+              );
+            setResults([...own, ...rows.filter((r) => r.source === "catalog")]);
+          } else {
+            setResults(rows);
+          }
           setSearching(false);
         });
       },
@@ -125,7 +168,7 @@ export const PrepCreateSheet: React.FC<{
       cancelled = true;
       window.clearTimeout(timer);
     };
-  }, [query, open, step]);
+  }, [query, open, step, clientId, clientCustomFoods]);
 
   const servingsN = Math.max(1, Number(servings) || 1);
   const total = useMemo(() => sumItems(items), [items]);
@@ -154,7 +197,7 @@ export const PrepCreateSheet: React.FC<{
 
   const saveFood = async () => {
     if (!foodDraft.name.trim() || !foodDraft.calories) return;
-    const food = await addCustomFood({
+    const payload = {
       name: foodDraft.name.trim(),
       category: "homemade" as Food["category"],
       serving: foodDraft.serving || "1 serving",
@@ -162,7 +205,8 @@ export const PrepCreateSheet: React.FC<{
       protein: Number(foodDraft.protein) || 0,
       carbs: Number(foodDraft.carbs) || 0,
       fat: Number(foodDraft.fat) || 0,
-    });
+    };
+    const food = clientId ? addClientCustomFood(clientId, payload) : await addCustomFood(payload);
     // A food saved to the database is a custom_foods row; one kept local only
     // (signed out, or the write failed) has no row to point at yet.
     addFood(food, isUuid(food.id) ? "custom" : undefined);
@@ -176,6 +220,13 @@ export const PrepCreateSheet: React.FC<{
 
   const save = async () => {
     if (!title.trim() || items.length === 0 || saving) return;
+    if (clientId && !isR) {
+      // Client plans are local to the professional's workspace; these writes can't fail.
+      if (editMeal) updateClientCustomMeal(clientId, editMeal.id, title, items, mealType ?? undefined);
+      else addClientCustomMeal(clientId, title, items, mealType ?? undefined);
+      close();
+      return;
+    }
     setSaving(true);
     setSaveError(null);
     const message = isR
@@ -200,7 +251,8 @@ export const PrepCreateSheet: React.FC<{
       window.setTimeout(() => setConfirmDelete(false), 3000);
       return;
     }
-    if (isR) await removeRecipe(editing.id);
+    if (clientId && !isR) removeClientCustomMeal(clientId, editing.id);
+    else if (isR) await removeRecipe(editing.id);
     else await removeCustomMeal(editing.id);
     close();
   };
@@ -270,6 +322,11 @@ export const PrepCreateSheet: React.FC<{
           </button>
           {creatingFood && (
             <div className="flex flex-col gap-2" style={containerStyle}>
+              {clientId && (
+                <p className="text-[11px] text-charcoal-faint">
+                  Saved only to this client's own food database — not your personal foods.
+                </p>
+              )}
               <input
                 value={foodDraft.name}
                 onChange={(e) => setFoodDraft((d) => ({ ...d, name: e.target.value }))}
