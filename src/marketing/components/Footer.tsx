@@ -171,6 +171,22 @@ export const Footer: React.FC = () => (
       <div className="flex items-center justify-center mt-[52px] pt-[22px] border-t border-mkt-ink/[.14]">
         <span className="text-[12.5px] text-[#5B5349] text-center">© {new Date().getFullYear()} Centium. All rights reserved.</span>
       </div>
+
+      {/* iOS Safari's rubber-band bounce past the document's true end reveals
+          the page's own background beneath the wash -- overscroll-behavior
+          on <html> (see index.css) doesn't suppress this for the main-frame
+          scroller in Safari specifically (a known WebKit limitation; it only
+          takes effect for nested overflow containers there), and there's no
+          reliable CSS/JS way to fix that without rearchitecting the whole
+          site onto a nested scroll container, which every scroll-linked
+          section (persona arc, pillar rail, eco-slider, nav) assumes is the
+          document itself. Cheaper and robust regardless of engine: extend
+          the wash-covered area past the visible content by a bounce-sized
+          buffer, so the document's true end sits further down than any
+          realistic rubber-band travel (~150px) ever reaches -- the reveal
+          still happens, but what it reveals is more of this same wash, not
+          the page's white background. */}
+      <div aria-hidden="true" style={{ height: 220 }} />
     </div>
   </footer>
 );
