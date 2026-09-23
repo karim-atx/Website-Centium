@@ -195,9 +195,23 @@ export function useEcoSlider(initial: EcoPos = -1) {
 
   useEffect(() => {
     let rq = 0;
-    const onResize = () => { if (!rq) rq = requestAnimationFrame(() => { rq = 0; fit(); equalise(); paint(posRef.current, false); }); };
+    const recompute = () => { rq = 0; fit(); equalise(); paint(posRef.current, false); };
+    // Mobile browsers fire `resize` when the address bar/toolbar shows or
+    // hides during scroll -- that changes innerHeight only, never width, but
+    // fit()'s `room` (line ~129) is keyed on innerHeight. Treating every
+    // resize as a real layout change meant scrolling alone could re-run the
+    // shed/backfill pass with a different `room` and visibly reshape the
+    // card -- "changes shape" without the user resizing anything. A real
+    // resize or orientation change always changes innerWidth; a bare
+    // toolbar show/hide never does, so width is what actually gates a refit.
+    let lastWidth = window.innerWidth;
+    const onResize = () => {
+      if (window.innerWidth === lastWidth) return;
+      lastWidth = window.innerWidth;
+      if (!rq) rq = requestAnimationFrame(recompute);
+    };
     window.addEventListener("resize", onResize);
-    document.fonts?.ready.then(onResize).catch(() => {});
+    document.fonts?.ready.then(() => { if (!rq) rq = requestAnimationFrame(recompute); }).catch(() => {});
     return () => { window.removeEventListener("resize", onResize); if (rq) cancelAnimationFrame(rq); if (seamTimer.current) clearTimeout(seamTimer.current); };
   }, [fit, equalise, paint]);
 
