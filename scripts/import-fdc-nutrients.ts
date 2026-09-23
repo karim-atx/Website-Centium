@@ -669,7 +669,9 @@ function computedFor(name: string): ComputedFood | undefined {
  * what it is made of. Returns the same shape a matched food produces, so
  * nothing downstream has to know the difference.
  */
-async function computeNutrients(spec: ComputedFood): Promise<Record<string, number>> {
+async function computeNutrients(
+  spec: ComputedFood
+): Promise<{ nutrients: Record<string, number>; servingGrams: number }> {
   const per100: Record<string, number> = {};
 
   if (spec.kind === "recipe") {
@@ -678,7 +680,11 @@ async function computeNutrients(spec: ComputedFood): Promise<Record<string, numb
     // concentrated — what goes in is what comes out.
     const totals: Record<string, number> = {};
     for (const ingredient of spec.ingredients) {
-      const values = extractPer100g(await fetchFdcDetail(ingredient.fdcId));
+      const detail = await fetchFdcDetail(ingredient.fdcId);
+      // Printed so a mistyped id shows up in a dry run as the wrong food
+      // next to its label, rather than silently feeding a recipe.
+      console.log(`    · ${ingredient.label} (${ingredient.grams} g) <- FDC ${ingredient.fdcId} "${detail.description}"`);
+      const values = extractPer100g(detail);
       for (const [key, amount] of Object.entries(values)) {
         totals[key] = (totals[key] ?? 0) + (amount * ingredient.grams) / 100;
       }
@@ -719,10 +725,24 @@ async function computeNutrients(spec: ComputedFood): Promise<Record<string, numb
     if (per100.calories !== undefined) per100.calories = atwaterCalories(per100);
   }
 
-  const scale = spec.servingGrams / 100;
-  return Object.fromEntries(
-    Object.entries(per100).map(([key, amount]) => [key, Math.round(amount * scale * 1000) / 1000])
-  );
+  let servingGrams: number;
+  if (spec.kind === "recipe" && spec.servingKcal !== undefined) {
+    if (spec.servingGrams !== undefined) throw new Error("A computed recipe gives servingGrams or servingKcal, not both.");
+    if (!(per100.calories > 0)) throw new Error("Cannot size a serving by calories: the recipe computed no energy.");
+    servingGrams = (spec.servingKcal / per100.calories) * 100;
+  } else if (spec.servingGrams !== undefined) {
+    servingGrams = spec.servingGrams;
+  } else {
+    throw new Error("A computed food needs servingGrams (or, for a recipe, servingKcal).");
+  }
+
+  const scale = servingGrams / 100;
+  return {
+    nutrients: Object.fromEntries(
+      Object.entries(per100).map(([key, amount]) => [key, Math.round(amount * scale * 1000) / 1000])
+    ),
+    servingGrams: Math.round(servingGrams * 10) / 10,
+  };
 }
 
 function assertCuratedNamesMatchCatalog(foods: FoodRow[]) {
@@ -790,21 +810,23 @@ async function main() {
       // actually weighs.
       const computed = computedFor(food.name);
       if (computed) {
-        const nutrients = await computeNutrients(computed);
+        const { nutrients, servingGrams } = await computeNutrients(computed);
 
         // If the catalog label DOES carry a gram weight, it and the
         // derivation have to agree, or the app would show per-serving
         // numbers for a serving the label describes as a different size.
         const labelled = gramsInServingLabel(food.serving_label);
-        if (labelled && Math.abs(labelled - computed.servingGrams) > 0.5) {
+        if (labelled && Math.abs(labelled - servingGrams) > 0.5) {
           throw new Error(
-            `${food.name}: fdc-computed.ts says one serving is ${computed.servingGrams} g, the catalog label says ${labelled} g ("${food.serving_label}"). Fix whichever is wrong.`
+            `${food.name}: fdc-computed.ts gives one serving as ${servingGrams} g, the catalog label says ${labelled} g ("${food.serving_label}"). Fix whichever is wrong.`
           );
         }
 
+        const sizedByKcal = computed.kind === "recipe" && computed.servingKcal !== undefined;
         console.log(
           `[computed] ${food.name} -> ${computed.derivation} — ` +
-            `${Object.keys(nutrients).length}/${ALL_NUTRIENT_ROWS.length} nutrients, per ${computed.servingGrams} g serving`
+            `${Object.keys(nutrients).length}/${ALL_NUTRIENT_ROWS.length} nutrients, per ${servingGrams} g serving` +
+            (sizedByKcal ? ` (sized to the catalog's ${computed.servingKcal} kcal)` : "")
         );
 
         let computeWriteError: string | null = null;
