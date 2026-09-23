@@ -18,6 +18,28 @@ const topics: { label: string; value: ContactTopic }[] = [
 const SUPPORT_EMAIL = "support@atraxia.org";
 
 /**
+ * The colour the four submission errors are written in.
+ *
+ * REUSED RATHER THAN INVENTED, but as a literal rather than as the token. This
+ * is exactly the app's own error colour — the light-mode value of
+ * `--c-status-high` in src/index.css, which `text-status-high` resolves to
+ * everywhere in the signed-in product.
+ *
+ * The token itself would be wrong here, and the reason is not stylistic. It is
+ * theme-aware: AppContext puts `.dark` on <html> for the whole document,
+ * marketing routes included, and under `.dark` the variable becomes a pale
+ * salmon meant for dark surfaces. This message sits on a card hard-coded
+ * `bg-white`, which does not follow the theme — so a visitor whose app theme
+ * is dark would get #F09A8E on #FFFFFF, a 2.16:1 contrast that fails AA badly.
+ * Pinning the light value keeps the hue the product already uses for errors
+ * and keeps it legible on the one background this card ever has.
+ *
+ * 5.44:1 against #FFFFFF. An inline hex because that is how every other custom
+ * colour in this file is applied (#6A54C4, #2F5F58, #E0DDD6).
+ */
+const ERROR_RED = "#C0392B";
+
+/**
  * The site key is baked in at build time, and its absence is a real state
  * rather than a crash: see the `unavailable` branch below.
  */
@@ -224,6 +246,20 @@ export const Contact: React.FC = () => {
     </a>
   );
 
+  /**
+   * The same address inside an error, in the error's own colour.
+   *
+   * It keeps an underline where the lavender one above does not: inside a
+   * paragraph that is entirely red, colour alone no longer marks the link as a
+   * link, so the underline is carrying the affordance rather than decorating
+   * it.
+   */
+  const errorMailtoLink = (
+    <a href={`mailto:${SUPPORT_EMAIL}`} className="font-semibold underline" style={{ color: ERROR_RED }}>
+      {SUPPORT_EMAIL}
+    </a>
+  );
+
   const errorMessage = () => {
     switch (errorCode) {
       case "invalid_input":
@@ -231,9 +267,9 @@ export const Contact: React.FC = () => {
       case "captcha_failed":
         return <>Verification didn't complete. Please try again.</>;
       case "rate_limited":
-        return <>You've sent several messages recently. Please wait a while, or email us at {mailtoLink}.</>;
+        return <>You've sent several messages recently. Please wait a while, or email us at {errorMailtoLink}.</>;
       default:
-        return <>Your message wasn't sent. Your text is still here — try again, or email us at {mailtoLink}.</>;
+        return <>Your message wasn't sent. Your text is still here — try again, or email us at {errorMailtoLink}.</>;
     }
   };
 
@@ -386,7 +422,9 @@ export const Contact: React.FC = () => {
                   {status === "sending" ? "Sending…" : "Send message"}
                 </button>
                 {errorCode !== null && (
-                  <p className="text-[12.5px] leading-relaxed text-mkt-soft text-center mt-1">{errorMessage()}</p>
+                  <p className="text-[12.5px] leading-relaxed text-center mt-1" style={{ color: ERROR_RED }}>
+                    {errorMessage()}
+                  </p>
                 )}
               </>
             )}
