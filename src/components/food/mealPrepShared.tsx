@@ -89,14 +89,16 @@ export const MacroBar: React.FC<{ p: number; c: number; f: number }> = ({ p, c, 
 /**
  * The grey 4-column macro strip on the Detail and Create screens (00-
  * FOUNDATIONS §0.3): equal cells, figures in the macro trio's type-on-white
- * colours, protein and fat to one decimal, carbs and kcal whole.
+ * colours, protein and fat to at most one decimal (Math.round(x*10)/10, so a
+ * whole figure reads "16g", not "16.0g"), carbs and kcal whole — literal
+ * from CentiumMealPrep.dc.html's `macroStrip`.
  */
 export const MacroStrip: React.FC<{ t: MacroTotals; note?: string }> = ({ t, note }) => {
   const rows: [string, string, string][] = [
     [String(Math.round(t.kcal)), "kcal", PREP_CHARCOAL],
-    [`${t.p.toFixed(1)}g`, "protein", "#7D6BB5"],
+    [`${Math.round(t.p * 10) / 10}g`, "protein", "#7D6BB5"],
     [`${Math.round(t.c)}g`, "carbs", "#8175C2"],
-    [`${t.f.toFixed(1)}g`, "fat", "#5E8A83"],
+    [`${Math.round(t.f * 10) / 10}g`, "fat", "#4274D7"],
   ];
   return (
     <div>
@@ -119,7 +121,8 @@ export const PREP_MEAL_ORDER: MealType[] = ["breakfast", "snack", "lunch", "dinn
 export const prepMealLabel = (m: MealType) => (m === "snack" ? "Snack" : mealLabels[m]);
 
 // Item 11: solid primary fills for the flow's own buttons (List "Create",
-// Detail "Add to Diary") — teal for meals, lavender for recipes.
+// Create "Save", Detail "Add to Diary") and the selected meal pill — teal for
+// meals, lavender for recipes.
 export const PREP_PRIMARY = { meals: "#79A8A1", recipes: "#A198DF" } as const;
 
 export function capsLabelStyle(color: string): React.CSSProperties {

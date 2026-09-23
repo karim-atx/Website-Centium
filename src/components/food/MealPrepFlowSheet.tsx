@@ -6,7 +6,6 @@ import type { CustomMeal, MealType, Recipe } from "../../types";
 import { sumNutrientMaps, servingMultiplier, targetsFromGoal } from "../../services/nutrition";
 import { getFoodNutrients } from "../../services/food-nutrients";
 import { NutrientDetailSections } from "./NutrientSections";
-import { sheetChipStyle } from "../ui/sheetChip";
 import {
   MacroBar,
   MacroStrip,
@@ -42,20 +41,22 @@ type Screen = "list" | "detail" | "advanced";
  * Create/edit stays a SEPARATE sheet (CreateMealSheet/CreateRecipeSheet,
  * already their own self-contained BottomSheet) rather than a third screen
  * here, matching how CreateMealSheet already worked before this handoff.
- * Both sheets can be mounted at once — opening Create on top of this one
- * (from the list's CTA or the detail pencil) simply stacks; closing Create
- * reveals this sheet again underneath with its state untouched, which is
- * what gives "Save returns to the list" for free.
+ * Both sheets can be mounted at once — Create stacks on top of this one.
+ * The handoff's Create always steps back (and saves) to the List
+ * (`goBack` / Save → `kind.list`), so MealPrepPanel reopens this sheet on
+ * its list by bumping `resetKey` whenever Create leaves that way.
  */
 export const MealPrepFlowSheet: React.FC<{
   kind: PrepKind;
   open: boolean;
   initialScreen: Screen;
   initialItemId?: string;
+  /** Bumped by the parent to force a return to `initialScreen`. */
+  resetKey?: number;
   onClose: () => void;
   onEdit: (id: string) => void;
   onCreate: () => void;
-}> = ({ kind, open, initialScreen, initialItemId, onClose, onEdit, onCreate }) => {
+}> = ({ kind, open, initialScreen, initialItemId, resetKey, onClose, onEdit, onCreate }) => {
   const { customMeals, customMealsError, recipes, recipesError, selectedDate, logCustomMeal, logRecipe } = useApp();
   const isR = kind === "recipes";
   const accentText = isR ? PREP_LAV.text : PREP_TEAL.text;
@@ -67,7 +68,9 @@ export const MealPrepFlowSheet: React.FC<{
   const [itemId, setItemId] = useState<string | undefined>(initialItemId);
   const [query, setQuery] = useState("");
   const [qty, setQty] = useState("1");
-  const [meal, setMeal] = useState<MealType | null>(null);
+  // CentiumMealPrep.dc.html's state starts `meal: "lunch"` and never resets
+  // it per item, so Add to Diary is enabled from the first frame.
+  const [meal, setMeal] = useState<MealType>("lunch");
   const [logging, setLogging] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
 
@@ -87,15 +90,13 @@ export const MealPrepFlowSheet: React.FC<{
     setQuery("");
     setLogError(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialScreen, initialItemId]);
+  }, [open, initialScreen, initialItemId, resetKey]);
 
   const item = entries.find((e) => e.id === itemId) ?? null;
 
   useEffect(() => {
     setQty("1");
     setLogError(null);
-    setMeal(item && "mealType" in item ? (item.mealType ?? null) : null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [itemId]);
 
   if (!open) return null;
@@ -115,7 +116,7 @@ export const MealPrepFlowSheet: React.FC<{
   };
 
   const doLog = async () => {
-    if (!item || !meal || logging) return;
+    if (!item || logging) return;
     setLogging(true);
     setLogError(null);
     try {
@@ -153,6 +154,20 @@ export const MealPrepFlowSheet: React.FC<{
       // Item 11 back steps: advanced → detail → list → the Meal Prep tab.
       onBack={screen === "list" ? onClose : goBack}
       title={title}
+      // The handoff's `canEdit` pencil sits in the header, just left of the
+      // close ring: 26px, no fill, #9C7EF8, 15px icon at stroke 2.1.
+      headerAction={
+        screen === "detail" && item ? (
+          <button
+            onClick={() => onEdit(item.id)}
+            aria-label="Edit"
+            className="tap shrink-0 flex items-center justify-center"
+            style={{ width: 26, height: 26, borderRadius: 9999, background: "none", border: "none", padding: 0, color: "#9C7EF8" }}
+          >
+            <Pencil size={15} strokeWidth={2.1} />
+          </button>
+        ) : undefined
+      }
     >
       {screen === "list" && (
         <ListScreen
@@ -177,8 +192,6 @@ export const MealPrepFlowSheet: React.FC<{
           setQty={setQty}
           meal={meal}
           setMeal={setMeal}
-          accentText={accentText}
-          onEdit={() => onEdit(item.id)}
           onAdvanced={() => setScreen("advanced")}
           onLog={() => void doLog()}
           logging={logging}
@@ -282,6 +295,21 @@ const ListScreen: React.FC<{
 };
 
 // ---------------------------------------------------------- Detail screen
+// CentiumMealPrep.dc.html's `pill(on, accent)`: the selected meal fills with
+// the kind's colour (#79A8A1 meals / #A198DF recipes).
+const prepPillStyle = (on: boolean, accent: string): React.CSSProperties => ({
+  borderRadius: 8,
+  padding: "8px 14px",
+  fontSize: 13,
+  fontWeight: on ? 700 : 500,
+  border: `1px solid ${on ? accent : "#E5E6EB"}`,
+  background: on ? accent : "#FAFAFB",
+  color: on ? "#FFFFFF" : PREP_CHARCOAL,
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+  flex: "none",
+});
+
 const DetailScreen: React.FC<{
   kind: PrepKind;
   item: CustomMeal | Recipe;
@@ -289,34 +317,28 @@ const DetailScreen: React.FC<{
   per: { kcal: number; p: number; c: number; f: number };
   qty: string;
   setQty: (v: string) => void;
-  meal: MealType | null;
+  meal: MealType;
   setMeal: (m: MealType) => void;
-  accentText: string;
-  onEdit: () => void;
   onAdvanced: () => void;
   onLog: () => void;
   logging: boolean;
   logError: string | null;
-}> = ({ kind, item, total, per, qty, setQty, meal, setMeal, accentText, onEdit, onAdvanced, onLog, logging, logError }) => {
+}> = ({ kind, item, total, per, qty, setQty, meal, setMeal, onAdvanced, onLog, logging, logError }) => {
   const isR = kind === "recipes";
+  const accent = PREP_PRIMARY[kind];
   const q = Number(qty) > 0 ? Number(qty) : 1;
   const shown = { kcal: per.kcal * q, p: per.p * q, c: per.c * q, f: per.f * q };
   const recipe = isR ? (item as Recipe) : null;
 
   return (
     <div className="flex flex-col gap-3 animate-fade-slide-up">
-      <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-[19px] font-extrabold tracking-[-0.015em] truncate" style={{ color: PREP_CHARCOAL }}>
-            {item.title}
-          </p>
-          <p className="mt-0.5 text-[12.5px]" style={{ color: PREP_FAINT }}>
-            {isR ? `${recipe!.servings} servings · ${Math.round(total.kcal)} kcal total` : `${item.items.length} foods`}
-          </p>
-        </div>
-        <button onClick={onEdit} aria-label="Edit" className="tap w-7 h-7 rounded-full bg-cream-soft flex items-center justify-center shrink-0" style={{ color: accentText }}>
-          <Pencil size={13} />
-        </button>
+      <div className="min-w-0">
+        <p className="text-[19px] font-extrabold tracking-[-0.015em] truncate" style={{ color: PREP_CHARCOAL }}>
+          {item.title}
+        </p>
+        <p className="mt-0.5 text-[12.5px]" style={{ color: PREP_FAINT }}>
+          {isR ? `${recipe!.servings} servings · ${Math.round(total.kcal)} kcal total` : `${item.items.length} foods`}
+        </p>
       </div>
 
       <MacroStrip t={shown} note={isR ? `Per serving × ${q}. Totals ÷ ${recipe!.servings} servings.` : `Whole meal × ${q}.`} />
@@ -387,7 +409,7 @@ const DetailScreen: React.FC<{
               key={m}
               onClick={() => setMeal(m)}
               className="tap transition-colors"
-              style={{ ...sheetChipStyle(meal === m), flex: 1, minWidth: 0, padding: "8px 4px" }}
+              style={{ ...prepPillStyle(meal === m, accent), flex: 1, minWidth: 0, padding: "8px 4px" }}
             >
               {prepMealLabel(m)}
             </button>
@@ -400,7 +422,7 @@ const DetailScreen: React.FC<{
       <div className="flex items-center" style={{ gap: 10 }}>
         <button
           onClick={onLog}
-          disabled={!meal || logging}
+          disabled={logging}
           className="tap flex-1 h-[52px] rounded-[14px] text-[15.5px] font-bold text-white disabled:opacity-40"
           style={{ background: PREP_PRIMARY[kind] }}
         >

@@ -3,7 +3,7 @@ import { X, Plus, Trash2 } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { sheetChipStyle } from "../ui/sheetChip";
 import { useApp } from "../../context/AppContext";
-import type { CustomMeal, Food, MealType, Recipe, ServingUnit } from "../../types";
+import type { CustomMeal, Food, Recipe, ServingUnit } from "../../types";
 import { searchFoods, listFoods, isUuid, type FoodSearchResult } from "../../services/food";
 import {
   MacroStrip,
@@ -11,8 +11,7 @@ import {
   divideTotals,
   PREP_CHARCOAL,
   PREP_FAINT,
-  PREP_MEAL_ORDER,
-  prepMealLabel,
+  PREP_PRIMARY,
   capsLabelStyle,
   type PrepItem,
 } from "./mealPrepShared";
@@ -66,11 +65,16 @@ export const PrepCreateSheet: React.FC<{
   onClose: () => void;
   editMeal?: CustomMeal | null;
   editRecipe?: Recipe | null;
-  /** True when opened from the flow's List or Detail: the back chevron returns there. */
-  hasPrevious?: boolean;
+  /**
+   * Meal Prep: returns to the kind's List. The handoff's Create always shows
+   * the back chevron (`canBack`), and both it and Save (and delete) step back
+   * to the List; the X (`onClose`) leaves the whole flow. Without it (the
+   * meal-plan builder) there is no chevron and Save closes the sheet.
+   */
+  onBack?: () => void;
   /** Professional meal-plan builder: the client whose plan this meal belongs to. */
   clientId?: string;
-}> = ({ kind, open, onClose, editMeal, editRecipe, hasPrevious, clientId }) => {
+}> = ({ kind, open, onClose, editMeal, editRecipe, onBack, clientId }) => {
   const isR = kind === "recipes";
   const editing = isR ? editRecipe ?? null : editMeal ?? null;
   const {
@@ -92,7 +96,6 @@ export const PrepCreateSheet: React.FC<{
   const [title, setTitle] = useState("");
   const [servings, setServings] = useState("4");
   const [steps, setSteps] = useState("");
-  const [mealType, setMealType] = useState<MealType | null>(null);
   const [items, setItems] = useState<PrepItem[]>([]);
   const [qtyDrafts, setQtyDrafts] = useState<Record<number, string>>({});
   const [saving, setSaving] = useState(false);
@@ -112,7 +115,6 @@ export const PrepCreateSheet: React.FC<{
     setTitle(editing?.title ?? "");
     setServings(isR ? String(editRecipe?.servings ?? 4) : "4");
     setSteps(isR ? editRecipe?.steps ?? "" : "");
-    setMealType(!isR ? editMeal?.mealType ?? null : null);
     setItems(editing ? (editing.items as PrepItem[]) : []);
     setQtyDrafts({});
     setSaveError(null);
@@ -217,14 +219,24 @@ export const PrepCreateSheet: React.FC<{
     setStep("form");
     onClose();
   };
+  // Save/delete land on the List when there is one (handoff: Save →
+  // `kind.list`), otherwise the sheet just closes.
+  const done = () => {
+    setStep("form");
+    (onBack ?? onClose)();
+  };
+
+  // The handoff's Create screen has no meal-type picker: a new meal is saved
+  // without one, and an edit keeps whatever type the meal already had.
+  const mealType = editMeal?.mealType;
 
   const save = async () => {
     if (!title.trim() || items.length === 0 || saving) return;
     if (clientId && !isR) {
       // Client plans are local to the professional's workspace; these writes can't fail.
-      if (editMeal) updateClientCustomMeal(clientId, editMeal.id, title, items, mealType ?? undefined);
-      else addClientCustomMeal(clientId, title, items, mealType ?? undefined);
-      close();
+      if (editMeal) updateClientCustomMeal(clientId, editMeal.id, title, items, mealType);
+      else addClientCustomMeal(clientId, title, items);
+      done();
       return;
     }
     setSaving(true);
@@ -234,14 +246,14 @@ export const PrepCreateSheet: React.FC<{
         ? await updateRecipe(editRecipe.id, title, items, servingsN, steps.trim() || undefined)
         : await addRecipe(title, items, servingsN, steps.trim() || undefined)
       : editMeal
-        ? await updateCustomMeal(editMeal.id, title, items, mealType ?? undefined)
-        : await addCustomMeal(title, items, mealType ?? undefined);
+        ? await updateCustomMeal(editMeal.id, title, items, mealType)
+        : await addCustomMeal(title, items);
     setSaving(false);
     if (message) {
       setSaveError(message);
       return;
     }
-    close();
+    done();
   };
 
   const doDelete = async () => {
@@ -254,17 +266,19 @@ export const PrepCreateSheet: React.FC<{
     if (clientId && !isR) removeClientCustomMeal(clientId, editing.id);
     else if (isR) await removeRecipe(editing.id);
     else await removeCustomMeal(editing.id);
-    close();
+    done();
   };
 
-  const title_ = editing ? (isR ? "Edit Recipe" : "Edit Meal") : isR ? "Create Recipe" : "Create Meal";
+  // Editing reuses the Create screen as-is (handoff `goEdit` → `kind.create`),
+  // title included.
+  const title_ = isR ? "Create Recipe" : "Create Meal";
 
   return (
     <BottomSheet
       open={open}
       onClose={close}
       title={step === "search" ? "Add food" : title_}
-      onBack={step === "search" ? () => setStep("form") : hasPrevious ? close : undefined}
+      onBack={step === "search" ? () => setStep("form") : onBack ? done : undefined}
     >
       {step === "search" ? (
         <div className="flex flex-col gap-2.5 animate-fade-slide-up">
@@ -391,26 +405,6 @@ export const PrepCreateSheet: React.FC<{
             </label>
           )}
 
-          {/* Q1: custom meals keep their stored meal type; the detail screen
-              pre-selects it at log time. */}
-          {!isR && (
-            <div style={containerStyle}>
-              <p style={capsLabelStyle(PREP_FAINT)}>Meal</p>
-              <div className="flex" style={{ gap: 6, marginTop: 9 }}>
-                {PREP_MEAL_ORDER.map((m) => (
-                  <button
-                    key={m}
-                    onClick={() => setMealType((prev) => (prev === m ? null : m))}
-                    className="tap transition-colors"
-                    style={{ ...sheetChipStyle(mealType === m), flex: 1, minWidth: 0, padding: "8px 4px" }}
-                  >
-                    {prepMealLabel(m)}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div style={containerStyle}>
             <div className="flex items-center justify-between">
               <p style={capsLabelStyle(PREP_FAINT)}>Ingredients</p>
@@ -513,9 +507,9 @@ export const PrepCreateSheet: React.FC<{
               onClick={() => void save()}
               disabled={!title.trim() || items.length === 0 || saving}
               className="tap flex-1 disabled:opacity-40 disabled:pointer-events-none"
-              style={{ height: 52, borderRadius: 14, border: "none", background: "#A198DF", color: "#FFFFFF", fontSize: 15.5, fontWeight: 700 }}
+              style={{ height: 52, borderRadius: 14, border: "none", background: PREP_PRIMARY[kind], color: "#FFFFFF", fontSize: 15.5, fontWeight: 700 }}
             >
-              {saving ? "Saving…" : editing ? "Save changes" : isR ? "Save recipe" : "Save meal"}
+              {saving ? "Saving…" : "Save"}
             </button>
           </div>
           {confirmDelete && (

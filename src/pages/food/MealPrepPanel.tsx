@@ -47,25 +47,37 @@ export default function MealPrepPanel() {
     setPullY(0);
   };
 
-  const [flow, setFlow] = useState<null | { kind: PrepKind; screen: "list" | "detail"; itemId?: string }>(null);
+  // `reset` is bumped to force the flow sheet back onto its initial screen
+  // even when kind/screen/itemId are unchanged.
+  const [flow, setFlow] = useState<null | { kind: PrepKind; screen: "list" | "detail"; itemId?: string; reset: number }>(null);
+  const openFlow = (kind: PrepKind, screen: "list" | "detail", itemId?: string) =>
+    setFlow((prev) => ({ kind, screen, itemId, reset: (prev?.reset ?? 0) + 1 }));
   const [createKind, setCreateKind] = useState<PrepKind | null>(null);
   const [editMeal, setEditMeal] = useState<CustomMeal | null>(null);
   const [editRecipe, setEditRecipe] = useState<Recipe | null>(null);
-  // Item 11: create opened from the flow's List or Detail steps back there
-  // (the chevron); opened from a card's CTA it has no previous screen.
-  const [createFromFlow, setCreateFromFlow] = useState(false);
 
+  // CentiumMealPrep.dc.html: Create always has the back chevron, and it and
+  // Save both go to the kind's List (`goBack`/Save → `kind.list`) — even when
+  // Create was opened straight from a card's CTA — while the X leaves to the
+  // tab. So the card CTA puts the List underneath Create too.
   const openCreate = (kind: PrepKind, fromFlow = false) => {
     if (kind === "meals") setEditMeal(null);
     else setEditRecipe(null);
-    setCreateFromFlow(fromFlow);
+    if (!fromFlow) openFlow(kind, "list");
     setCreateKind(kind);
   };
   const openEdit = (kind: PrepKind, id: string) => {
     if (kind === "meals") setEditMeal(customMeals.find((m) => m.id === id) ?? null);
     else setEditRecipe(recipes.find((r) => r.id === id) ?? null);
-    setCreateFromFlow(true);
     setCreateKind(kind);
+  };
+  const createBack = (kind: PrepKind) => {
+    setCreateKind(null);
+    openFlow(kind, "list");
+  };
+  const createClose = () => {
+    setCreateKind(null);
+    setFlow(null);
   };
 
   return (
@@ -90,16 +102,16 @@ export default function MealPrepPanel() {
         kind="meals"
         entries={customMeals}
         error={customMealsError}
-        onOpenList={() => setFlow({ kind: "meals", screen: "list" })}
-        onOpenDetail={(id) => setFlow({ kind: "meals", screen: "detail", itemId: id })}
+        onOpenList={() => openFlow("meals", "list")}
+        onOpenDetail={(id) => openFlow("meals", "detail", id)}
         onCreate={() => openCreate("meals")}
       />
       <PrepCard
         kind="recipes"
         entries={recipes}
         error={recipesError}
-        onOpenList={() => setFlow({ kind: "recipes", screen: "list" })}
-        onOpenDetail={(id) => setFlow({ kind: "recipes", screen: "detail", itemId: id })}
+        onOpenList={() => openFlow("recipes", "list")}
+        onOpenDetail={(id) => openFlow("recipes", "detail", id)}
         onCreate={() => openCreate("recipes")}
       />
 
@@ -108,6 +120,7 @@ export default function MealPrepPanel() {
         open={flow?.kind === "meals"}
         initialScreen={flow?.kind === "meals" ? flow.screen : "list"}
         initialItemId={flow?.kind === "meals" ? flow.itemId : undefined}
+        resetKey={flow?.kind === "meals" ? flow.reset : undefined}
         onClose={() => setFlow(null)}
         onEdit={(id) => openEdit("meals", id)}
         onCreate={() => openCreate("meals", true)}
@@ -117,6 +130,7 @@ export default function MealPrepPanel() {
         open={flow?.kind === "recipes"}
         initialScreen={flow?.kind === "recipes" ? flow.screen : "list"}
         initialItemId={flow?.kind === "recipes" ? flow.itemId : undefined}
+        resetKey={flow?.kind === "recipes" ? flow.reset : undefined}
         onClose={() => setFlow(null)}
         onEdit={(id) => openEdit("recipes", id)}
         onCreate={() => openCreate("recipes", true)}
@@ -124,15 +138,15 @@ export default function MealPrepPanel() {
 
       <CreateMealSheet
         open={createKind === "meals"}
-        onClose={() => setCreateKind(null)}
+        onClose={createClose}
+        onBack={() => createBack("meals")}
         editMeal={editMeal}
-        hasPrevious={createFromFlow}
       />
       <CreateRecipeSheet
         open={createKind === "recipes"}
-        onClose={() => setCreateKind(null)}
+        onClose={createClose}
+        onBack={() => createBack("recipes")}
         editRecipe={editRecipe}
-        hasPrevious={createFromFlow}
       />
     </div>
   );

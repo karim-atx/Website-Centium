@@ -10,8 +10,8 @@ export const CreateRecipeSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   editRecipe?: Recipe | null;
-  /** True when opened from the Recipes list or detail: the back chevron returns there. */
-  hasPrevious?: boolean;
-}> = ({ open, onClose, editRecipe, hasPrevious }) => (
-  <PrepCreateSheet kind="recipes" open={open} onClose={onClose} editRecipe={editRecipe} hasPrevious={hasPrevious} />
+  /** Back chevron and Save return to the Recipes list. */
+  onBack?: () => void;
+}> = ({ open, onClose, editRecipe, onBack }) => (
+  <PrepCreateSheet kind="recipes" open={open} onClose={onClose} editRecipe={editRecipe} onBack={onBack} />
 );

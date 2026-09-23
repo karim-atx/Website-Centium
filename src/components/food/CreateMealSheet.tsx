@@ -11,7 +11,7 @@ import { PrepCreateSheet } from "./PrepCreateSheet";
 //
 // Both now render the shared Meal Prep create screen (PrepCreateSheet, master
 // handover item 11): the real food search Add Food uses, typed quantities,
-// unit chips, meal-type chips, a live macro strip, and the destructive button.
+// unit chips, a live macro strip, and the destructive button.
 export const CreateMealSheet: React.FC<{
   open: boolean;
   onClose: () => void;
@@ -20,15 +20,15 @@ export const CreateMealSheet: React.FC<{
   // delete it" — passing an existing meal pre-fills the form and saving
   // updates it in place instead of creating a new one.
   editMeal?: CustomMeal | null;
-  /** True when opened from the Custom Meals list or detail: the back chevron returns there. */
-  hasPrevious?: boolean;
-}> = ({ open, onClose, clientId, editMeal, hasPrevious }) => (
+  /** Meal Prep: back chevron and Save return to the Custom Meals list. */
+  onBack?: () => void;
+}> = ({ open, onClose, clientId, editMeal, onBack }) => (
   <PrepCreateSheet
     kind="meals"
     open={open}
     onClose={onClose}
     editMeal={editMeal}
-    hasPrevious={hasPrevious}
+    onBack={onBack}
     clientId={clientId}
   />
 );
