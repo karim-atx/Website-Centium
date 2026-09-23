@@ -371,21 +371,35 @@ export const PersonaArc: React.FC<{ personas: PersonaData[]; heading: React.Reac
                 height: 552,
                 overflow: "hidden",
                 maskImage:
-                  "linear-gradient(90deg,transparent 0%,rgba(0,0,0,.35) 5%,rgba(0,0,0,.85) 12%,#000 20%,#000 80%,rgba(0,0,0,.85) 88%,rgba(0,0,0,.35) 95%,transparent 100%)," +
-                  "linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 4%,#000 11%,#000 90%,rgba(0,0,0,.6) 97%,transparent 100%)",
+                  "linear-gradient(90deg,transparent 0%,rgba(0,0,0,.35) 5%,rgba(0,0,0,.85) 12%,#000 20%,#000 80%,rgba(0,0,0,.85) 88%,rgba(0,0,0,.35) 95%,transparent 100%)",
                 WebkitMaskImage:
-                  "linear-gradient(90deg,transparent 0%,rgba(0,0,0,.35) 5%,rgba(0,0,0,.85) 12%,#000 20%,#000 80%,rgba(0,0,0,.85) 88%,rgba(0,0,0,.35) 95%,transparent 100%)," +
-                  "linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 4%,#000 11%,#000 90%,rgba(0,0,0,.6) 97%,transparent 100%)",
-                // Order matters: -webkit-mask-composite and mask-composite
-                // alias to the same underlying value in this engine, so
-                // whichever is set last wins. Mirrors the handoff's own
-                // literal order (-webkit- first, standard property last) so
-                // "intersect" wins over the legacy "source-in" keyword --
-                // see the identical fix/comment in Footer.tsx's colour wash.
-                WebkitMaskComposite: "source-in",
-                maskComposite: "intersect",
+                  "linear-gradient(90deg,transparent 0%,rgba(0,0,0,.35) 5%,rgba(0,0,0,.85) 12%,#000 20%,#000 80%,rgba(0,0,0,.85) 88%,rgba(0,0,0,.35) 95%,transparent 100%)",
               }}
             >
+              {/* The stage's edge fade was originally one 2-layer mask-image
+                  (90deg horizontal + 180deg vertical) combined with
+                  `mask-composite:intersect`. Dropped in favor of nesting: the
+                  90deg mask lives on the stage above, the 180deg one on this
+                  wrapper -- nested masks multiply their alpha naturally
+                  (each level further restricts what's visible), giving true
+                  intersect semantics without depending on how a given engine
+                  resolves mask-composite vs. its legacy -webkit- twin. See
+                  Footer.tsx's colour wash for the fuller account of why that
+                  property was dropped outright: a live iPhone report showed
+                  the equivalent bug persisting even with the two properties
+                  in the handoff's own literal order, meaning real Safari
+                  doesn't resolve them the same way this repo's Chromium-based
+                  testing tool does. `inset:0` exactly fills the stage above,
+                  so `wrap`'s own `top:96` positioning below resolves against
+                  the same box it always did. */}
+              <div
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  maskImage: "linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 4%,#000 11%,#000 90%,rgba(0,0,0,.6) 97%,transparent 100%)",
+                  WebkitMaskImage: "linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 4%,#000 11%,#000 90%,rgba(0,0,0,.6) 97%,transparent 100%)",
+                }}
+              >
               <div ref={wrap} id="persona-wrap" style={{ position: "absolute", left: 0, right: 0, top: 96, bottom: 0 }}>
                 {personas.map((p) => {
                   const Art = PERSONA_ART[p.title];
@@ -497,6 +511,7 @@ export const PersonaArc: React.FC<{ personas: PersonaData[]; heading: React.Reac
                     </div>
                   );
                 })}
+              </div>
               </div>
             </div>
           </Reveal>

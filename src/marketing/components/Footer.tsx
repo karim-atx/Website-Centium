@@ -83,34 +83,42 @@ const socials: { label: string; href: string; external?: boolean; path: React.Re
   },
 ];
 
+const WASH_BG =
+  "linear-gradient(90deg,rgba(255,255,255,0) 26%,rgba(255,255,255,.28) 34%,rgba(255,255,255,.66) 40%,rgba(255,255,255,.92) 45%,#FFFFFF 50%,rgba(255,255,255,.92) 55%,rgba(255,255,255,.66) 60%,rgba(255,255,255,.28) 66%,rgba(255,255,255,0) 74%)," +
+  "radial-gradient(118% 122% at 0% 100%,rgba(124,96,214,0.5000) 0.0%,rgba(124,96,214,0.4677) 4.0%,rgba(124,96,214,0.4362) 8.0%,rgba(124,96,214,0.4054) 12.0%,rgba(124,96,214,0.3754) 16.0%,rgba(124,96,214,0.3462) 20.0%,rgba(124,96,214,0.3177) 24.0%,rgba(124,96,214,0.2901) 28.0%,rgba(124,96,214,0.2633) 32.0%,rgba(124,96,214,0.2374) 36.0%,rgba(124,96,214,0.2125) 40.0%,rgba(124,96,214,0.1884) 44.0%,rgba(124,96,214,0.1654) 48.0%,rgba(124,96,214,0.1433) 52.0%,rgba(124,96,214,0.1224) 56.0%,rgba(124,96,214,0.1026) 60.0%,rgba(124,96,214,0.0840) 64.0%,rgba(124,96,214,0.0666) 68.0%,rgba(124,96,214,0.0507) 72.0%,rgba(124,96,214,0.0363) 76.0%,rgba(124,96,214,0.0236) 80.0%,rgba(124,96,214,0.0128) 84.0%,rgba(124,96,214,0.0045) 88.0%,rgba(124,96,214,0.0000) 92.0%,rgba(255,255,255,0) 100%)," +
+  "radial-gradient(118% 122% at 100% 100%,rgba(62,145,132,0.4600) 0.0%,rgba(62,145,132,0.4303) 4.0%,rgba(62,145,132,0.4013) 8.0%,rgba(62,145,132,0.3730) 12.0%,rgba(62,145,132,0.3454) 16.0%,rgba(62,145,132,0.3185) 20.0%,rgba(62,145,132,0.2923) 24.0%,rgba(62,145,132,0.2669) 28.0%,rgba(62,145,132,0.2423) 32.0%,rgba(62,145,132,0.2185) 36.0%,rgba(62,145,132,0.1955) 40.0%,rgba(62,145,132,0.1734) 44.0%,rgba(62,145,132,0.1521) 48.0%,rgba(62,145,132,0.1319) 52.0%,rgba(62,145,132,0.1126) 56.0%,rgba(62,145,132,0.0944) 60.0%,rgba(62,145,132,0.0772) 64.0%,rgba(62,145,132,0.0613) 68.0%,rgba(62,145,132,0.0466) 72.0%,rgba(62,145,132,0.0334) 76.0%,rgba(62,145,132,0.0217) 80.0%,rgba(62,145,132,0.0118) 84.0%,rgba(62,145,132,0.0042) 88.0%,rgba(62,145,132,0.0000) 92.0%,rgba(255,255,255,0) 100%)," +
+  "#FFFFFF";
+
+// The two diagonal wedge masks below were originally one 2-layer mask-image
+// combined with `mask-composite:add`. Dropped in favor of two separate,
+// fully-overlapping elements below -- one masked by WASH_WEDGE_48, the
+// other by WASH_WEDGE_312 -- that union naturally through plain DOM
+// stacking: both paint the identical WASH_BG, so wherever
+// either one's mask is opaque, the same content shows through, with no
+// difference from a true union. This sidesteps mask-composite entirely.
+// Verified in this repo's testing browser that a reversed property order
+// between mask-composite and -webkit-mask-composite silently breaks the
+// wedge union (the invalid legacy keyword wins over the standard one) --
+// but a live report from an actual iPhone showed the white gap even with
+// the "correct" order, meaning real Safari doesn't resolve the two
+// properties the same way this repo's Chromium-based tooling does. Rather
+// than guess at Safari's actual resolution rule, this avoids needing one.
+const WASH_WEDGE_48 =
+  "linear-gradient(48deg,#000 0%,#000 2%,rgba(0,0,0,1.0000) 2.0%,rgba(0,0,0,0.9934) 4.7%,rgba(0,0,0,0.9745) 7.3%,rgba(0,0,0,0.9446) 10.0%,rgba(0,0,0,0.9050) 12.7%,rgba(0,0,0,0.8569) 15.3%,rgba(0,0,0,0.8017) 18.0%,rgba(0,0,0,0.7407) 20.7%,rgba(0,0,0,0.6752) 23.3%,rgba(0,0,0,0.6064) 26.0%,rgba(0,0,0,0.5357) 28.7%,rgba(0,0,0,0.4643) 31.3%,rgba(0,0,0,0.3936) 34.0%,rgba(0,0,0,0.3248) 36.7%,rgba(0,0,0,0.2593) 39.3%,rgba(0,0,0,0.1983) 42.0%,rgba(0,0,0,0.1431) 44.7%,rgba(0,0,0,0.0950) 47.3%,rgba(0,0,0,0.0554) 50.0%,rgba(0,0,0,0.0255) 52.7%,rgba(0,0,0,0.0066) 55.3%,rgba(0,0,0,0.0000) 58.0%,rgba(0,0,0,0) 62%)";
+const WASH_WEDGE_312 =
+  "linear-gradient(312deg,#000 0%,#000 2%,rgba(0,0,0,1.0000) 2.0%,rgba(0,0,0,0.9934) 4.7%,rgba(0,0,0,0.9745) 7.3%,rgba(0,0,0,0.9446) 10.0%,rgba(0,0,0,0.9050) 12.7%,rgba(0,0,0,0.8569) 15.3%,rgba(0,0,0,0.8017) 18.0%,rgba(0,0,0,0.7407) 20.7%,rgba(0,0,0,0.6752) 23.3%,rgba(0,0,0,0.6064) 26.0%,rgba(0,0,0,0.5357) 28.7%,rgba(0,0,0,0.4643) 31.3%,rgba(0,0,0,0.3936) 34.0%,rgba(0,0,0,0.3248) 36.7%,rgba(0,0,0,0.2593) 39.3%,rgba(0,0,0,0.1983) 42.0%,rgba(0,0,0,0.1431) 44.7%,rgba(0,0,0,0.0950) 47.3%,rgba(0,0,0,0.0554) 50.0%,rgba(0,0,0,0.0255) 52.7%,rgba(0,0,0,0.0066) 55.3%,rgba(0,0,0,0.0000) 58.0%,rgba(0,0,0,0) 62%)";
+
 export const Footer: React.FC = () => (
   <footer className="relative bg-white">
     <div
       aria-hidden="true"
       className="absolute left-0 right-0 bottom-0 pointer-events-none z-0"
-      style={{
-        top: -660,
-        background:
-          "linear-gradient(90deg,rgba(255,255,255,0) 26%,rgba(255,255,255,.28) 34%,rgba(255,255,255,.66) 40%,rgba(255,255,255,.92) 45%,#FFFFFF 50%,rgba(255,255,255,.92) 55%,rgba(255,255,255,.66) 60%,rgba(255,255,255,.28) 66%,rgba(255,255,255,0) 74%)," +
-          "radial-gradient(118% 122% at 0% 100%,rgba(124,96,214,0.5000) 0.0%,rgba(124,96,214,0.4677) 4.0%,rgba(124,96,214,0.4362) 8.0%,rgba(124,96,214,0.4054) 12.0%,rgba(124,96,214,0.3754) 16.0%,rgba(124,96,214,0.3462) 20.0%,rgba(124,96,214,0.3177) 24.0%,rgba(124,96,214,0.2901) 28.0%,rgba(124,96,214,0.2633) 32.0%,rgba(124,96,214,0.2374) 36.0%,rgba(124,96,214,0.2125) 40.0%,rgba(124,96,214,0.1884) 44.0%,rgba(124,96,214,0.1654) 48.0%,rgba(124,96,214,0.1433) 52.0%,rgba(124,96,214,0.1224) 56.0%,rgba(124,96,214,0.1026) 60.0%,rgba(124,96,214,0.0840) 64.0%,rgba(124,96,214,0.0666) 68.0%,rgba(124,96,214,0.0507) 72.0%,rgba(124,96,214,0.0363) 76.0%,rgba(124,96,214,0.0236) 80.0%,rgba(124,96,214,0.0128) 84.0%,rgba(124,96,214,0.0045) 88.0%,rgba(124,96,214,0.0000) 92.0%,rgba(255,255,255,0) 100%)," +
-          "radial-gradient(118% 122% at 100% 100%,rgba(62,145,132,0.4600) 0.0%,rgba(62,145,132,0.4303) 4.0%,rgba(62,145,132,0.4013) 8.0%,rgba(62,145,132,0.3730) 12.0%,rgba(62,145,132,0.3454) 16.0%,rgba(62,145,132,0.3185) 20.0%,rgba(62,145,132,0.2923) 24.0%,rgba(62,145,132,0.2669) 28.0%,rgba(62,145,132,0.2423) 32.0%,rgba(62,145,132,0.2185) 36.0%,rgba(62,145,132,0.1955) 40.0%,rgba(62,145,132,0.1734) 44.0%,rgba(62,145,132,0.1521) 48.0%,rgba(62,145,132,0.1319) 52.0%,rgba(62,145,132,0.1126) 56.0%,rgba(62,145,132,0.0944) 60.0%,rgba(62,145,132,0.0772) 64.0%,rgba(62,145,132,0.0613) 68.0%,rgba(62,145,132,0.0466) 72.0%,rgba(62,145,132,0.0334) 76.0%,rgba(62,145,132,0.0217) 80.0%,rgba(62,145,132,0.0118) 84.0%,rgba(62,145,132,0.0042) 88.0%,rgba(62,145,132,0.0000) 92.0%,rgba(255,255,255,0) 100%)," +
-          "#FFFFFF",
-        maskImage:
-          "linear-gradient(48deg,#000 0%,#000 2%,rgba(0,0,0,1.0000) 2.0%,rgba(0,0,0,0.9934) 4.7%,rgba(0,0,0,0.9745) 7.3%,rgba(0,0,0,0.9446) 10.0%,rgba(0,0,0,0.9050) 12.7%,rgba(0,0,0,0.8569) 15.3%,rgba(0,0,0,0.8017) 18.0%,rgba(0,0,0,0.7407) 20.7%,rgba(0,0,0,0.6752) 23.3%,rgba(0,0,0,0.6064) 26.0%,rgba(0,0,0,0.5357) 28.7%,rgba(0,0,0,0.4643) 31.3%,rgba(0,0,0,0.3936) 34.0%,rgba(0,0,0,0.3248) 36.7%,rgba(0,0,0,0.2593) 39.3%,rgba(0,0,0,0.1983) 42.0%,rgba(0,0,0,0.1431) 44.7%,rgba(0,0,0,0.0950) 47.3%,rgba(0,0,0,0.0554) 50.0%,rgba(0,0,0,0.0255) 52.7%,rgba(0,0,0,0.0066) 55.3%,rgba(0,0,0,0.0000) 58.0%,rgba(0,0,0,0) 62%)," +
-          "linear-gradient(312deg,#000 0%,#000 2%,rgba(0,0,0,1.0000) 2.0%,rgba(0,0,0,0.9934) 4.7%,rgba(0,0,0,0.9745) 7.3%,rgba(0,0,0,0.9446) 10.0%,rgba(0,0,0,0.9050) 12.7%,rgba(0,0,0,0.8569) 15.3%,rgba(0,0,0,0.8017) 18.0%,rgba(0,0,0,0.7407) 20.7%,rgba(0,0,0,0.6752) 23.3%,rgba(0,0,0,0.6064) 26.0%,rgba(0,0,0,0.5357) 28.7%,rgba(0,0,0,0.4643) 31.3%,rgba(0,0,0,0.3936) 34.0%,rgba(0,0,0,0.3248) 36.7%,rgba(0,0,0,0.2593) 39.3%,rgba(0,0,0,0.1983) 42.0%,rgba(0,0,0,0.1431) 44.7%,rgba(0,0,0,0.0950) 47.3%,rgba(0,0,0,0.0554) 50.0%,rgba(0,0,0,0.0255) 52.7%,rgba(0,0,0,0.0066) 55.3%,rgba(0,0,0,0.0000) 58.0%,rgba(0,0,0,0) 62%)",
-        WebkitMaskImage:
-          "linear-gradient(48deg,#000 0%,#000 2%,rgba(0,0,0,1.0000) 2.0%,rgba(0,0,0,0.9934) 4.7%,rgba(0,0,0,0.9745) 7.3%,rgba(0,0,0,0.9446) 10.0%,rgba(0,0,0,0.9050) 12.7%,rgba(0,0,0,0.8569) 15.3%,rgba(0,0,0,0.8017) 18.0%,rgba(0,0,0,0.7407) 20.7%,rgba(0,0,0,0.6752) 23.3%,rgba(0,0,0,0.6064) 26.0%,rgba(0,0,0,0.5357) 28.7%,rgba(0,0,0,0.4643) 31.3%,rgba(0,0,0,0.3936) 34.0%,rgba(0,0,0,0.3248) 36.7%,rgba(0,0,0,0.2593) 39.3%,rgba(0,0,0,0.1983) 42.0%,rgba(0,0,0,0.1431) 44.7%,rgba(0,0,0,0.0950) 47.3%,rgba(0,0,0,0.0554) 50.0%,rgba(0,0,0,0.0255) 52.7%,rgba(0,0,0,0.0066) 55.3%,rgba(0,0,0,0.0000) 58.0%,rgba(0,0,0,0) 62%)," +
-          "linear-gradient(312deg,#000 0%,#000 2%,rgba(0,0,0,1.0000) 2.0%,rgba(0,0,0,0.9934) 4.7%,rgba(0,0,0,0.9745) 7.3%,rgba(0,0,0,0.9446) 10.0%,rgba(0,0,0,0.9050) 12.7%,rgba(0,0,0,0.8569) 15.3%,rgba(0,0,0,0.8017) 18.0%,rgba(0,0,0,0.7407) 20.7%,rgba(0,0,0,0.6752) 23.3%,rgba(0,0,0,0.6064) 26.0%,rgba(0,0,0,0.5357) 28.7%,rgba(0,0,0,0.4643) 31.3%,rgba(0,0,0,0.3936) 34.0%,rgba(0,0,0,0.3248) 36.7%,rgba(0,0,0,0.2593) 39.3%,rgba(0,0,0,0.1983) 42.0%,rgba(0,0,0,0.1431) 44.7%,rgba(0,0,0,0.0950) 47.3%,rgba(0,0,0,0.0554) 50.0%,rgba(0,0,0,0.0255) 52.7%,rgba(0,0,0,0.0066) 55.3%,rgba(0,0,0,0.0000) 58.0%,rgba(0,0,0,0) 62%)",
-        // Order matters: -webkit-mask-composite and mask-composite alias to
-        // the same underlying value in this engine, so whichever is set
-        // last wins. The handoff's own markup writes -webkit- first, then
-        // the standard property last (so "add" wins over the legacy
-        // "source-over" keyword) -- this object mirrors that literal order.
-        // Reversed, the invalid "source-over" value wins for both, which
-        // blanks out most of the mask instead of unioning the two wedges.
-        WebkitMaskComposite: "source-over",
-        maskComposite: "add",
-      }}
+      style={{ top: -660, background: WASH_BG, maskImage: WASH_WEDGE_48, WebkitMaskImage: WASH_WEDGE_48 }}
+    />
+    <div
+      aria-hidden="true"
+      className="absolute left-0 right-0 bottom-0 pointer-events-none z-0"
+      style={{ top: -660, background: WASH_BG, maskImage: WASH_WEDGE_312, WebkitMaskImage: WASH_WEDGE_312 }}
     />
     <div className="relative max-w-[1180px] mx-auto px-5 sm:px-10 pt-9 pb-8">
       <div className="flex flex-col items-center gap-[26px]">
