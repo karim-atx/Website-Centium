@@ -568,9 +568,10 @@ export const AddFoodSheet: React.FC<{
           </div>
         ) : (
           // Mobile handoff item 2: the detail step in the sheet control
-          // vocabulary, sections 10px apart.
-          <div className="animate-fade-slide-up flex flex-col" style={{ gap: 10 }}>
-            <div className="flex items-center" style={{ gap: 13, marginBottom: 14 }}>
+          // vocabulary. Spacing is the markup's own per-block margins
+          // (addFoodBody): header 16, controls 10, macro strip 16.
+          <div className="animate-fade-slide-up">
+            <div className="flex items-center" style={{ gap: 13, marginBottom: 16 }}>
               <span
                 className="flex items-center justify-center shrink-0"
                 style={{ width: 48, height: 48, borderRadius: 15, background: "#EFECFB", color: "#6B4BE0" }}
@@ -593,7 +594,7 @@ export const AddFoodSheet: React.FC<{
 
             <div
               className="flex items-center"
-              style={{ gap: 12, background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
+              style={{ gap: 12, background: "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}
             >
               <span style={{ flex: "none", fontSize: 14.5, fontWeight: 500, color: "#575863" }}>Quantity</span>
               <input
@@ -611,7 +612,7 @@ export const AddFoodSheet: React.FC<{
               />
             </div>
 
-            <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}>
+            <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}>
               <p style={sheetCapsLabelStyle}>UNIT</p>
               <div
                 className="flex overflow-x-auto no-scrollbar"
@@ -630,7 +631,7 @@ export const AddFoodSheet: React.FC<{
               </div>
             </div>
 
-            <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}>
+            <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}>
               <p style={sheetCapsLabelStyle}>MEAL</p>
               <div className="flex" style={{ gap: 6, marginTop: 9 }}>
                 {detailMealOrder.map((m) => (
@@ -646,12 +647,12 @@ export const AddFoodSheet: React.FC<{
               </div>
             </div>
 
-            <div className="grid grid-cols-4" style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 0" }}>
+            <div className="grid grid-cols-4" style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 0", marginBottom: 16 }}>
               {[
                 { value: `${foodTotalCal}`, color: "#241F1B", caption: "kcal" },
-                { value: `${(selectedFood.protein * multiplier).toFixed(1)}g`, color: "#7D6BB5", caption: "protein" },
+                { value: `${Math.round(selectedFood.protein * multiplier)}g`, color: "#7D6BB5", caption: "protein" },
                 { value: `${Math.round(selectedFood.carbs * multiplier)}g`, color: "#8175C2", caption: "carbs" },
-                { value: `${(selectedFood.fat * multiplier).toFixed(1)}g`, color: "#5E8A83", caption: "fat" },
+                { value: `${Math.round(selectedFood.fat * multiplier)}g`, color: "#4274D7", caption: "fat" },
               ].map((cell, i) => (
                 <div
                   key={cell.caption}
@@ -665,7 +666,9 @@ export const AddFoodSheet: React.FC<{
             </div>
 
             {addError && (
-              <p className="text-xs font-semibold text-status-high text-center">{addError}</p>
+              <p className="text-xs font-semibold text-status-high text-center" style={{ marginBottom: 10 }}>
+                {addError}
+              </p>
             )}
 
             <div className="flex" style={{ gap: 10 }}>

@@ -214,10 +214,11 @@ export const EditFoodEntrySheet: React.FC<{
           </p>
         </div>
       ) : (
-        // Mobile handoff item 3: the Add Food detail step's controls, sections
-        // 10px apart, with a delete / Save changes / Advanced action row.
-        <div className="animate-fade-slide-up flex flex-col" style={{ gap: 10 }}>
-          <div className="flex items-center" style={{ gap: 13 }}>
+        // Mobile handoff item 3: the Add Food detail step's controls, with the
+        // markup's per-block margins (editLoggedBody): header 14, controls 10,
+        // macro strip 16, then the delete / Save changes / Advanced row.
+        <div className="animate-fade-slide-up">
+          <div className="flex items-center" style={{ gap: 13, marginBottom: 14 }}>
             <span
               className="flex items-center justify-center shrink-0"
               style={{ width: 48, height: 48, borderRadius: 15, background: "#EFECFB", color: "#6B4BE0" }}
@@ -234,7 +235,7 @@ export const EditFoodEntrySheet: React.FC<{
 
           <div
             className="flex items-center"
-            style={{ gap: 12, background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
+            style={{ gap: 12, background: "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}
           >
             <span style={{ flex: "none", fontSize: 14.5, fontWeight: 500, color: "#575863" }}>Quantity</span>
             <input
@@ -252,7 +253,7 @@ export const EditFoodEntrySheet: React.FC<{
             />
           </div>
 
-          <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}>
+          <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}>
             <p style={sheetCapsLabelStyle}>UNIT</p>
             <div
               className="flex overflow-x-auto no-scrollbar"
@@ -276,9 +277,9 @@ export const EditFoodEntrySheet: React.FC<{
           <div className="grid grid-cols-4" style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 0", marginBottom: 16 }}>
             {[
               { value: `${Math.round(preview.calories)}`, color: "#241F1B", caption: "kcal" },
-              { value: `${preview.protein.toFixed(1)}g`, color: "#7D6BB5", caption: "protein" },
+              { value: `${Math.round(preview.protein * 10) / 10}g`, color: "#7D6BB5", caption: "protein" },
               { value: `${Math.round(preview.carbs)}g`, color: "#8175C2", caption: "carbs" },
-              { value: `${preview.fat.toFixed(1)}g`, color: "#5E8A83", caption: "fat" },
+              { value: `${Math.round(preview.fat * 10) / 10}g`, color: "#4274D7", caption: "fat" },
             ].map((cell, i) => (
               <div
                 key={cell.caption}
@@ -292,7 +293,9 @@ export const EditFoodEntrySheet: React.FC<{
           </div>
 
           {error && (
-            <p className="text-xs font-semibold text-status-high text-center">{error}</p>
+            <p className="text-xs font-semibold text-status-high text-center" style={{ marginBottom: 10 }}>
+              {error}
+            </p>
           )}
 
           <div className="flex" style={{ gap: 10 }}>
