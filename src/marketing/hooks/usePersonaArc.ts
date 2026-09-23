@@ -182,11 +182,37 @@ export function usePersonaArc() {
       }
       const want = sec.offsetHeight + Math.round(vh * 0.62) * (count - 1);
       if (tr.style.height !== want + "px") tr.style.height = want + "px";
+      // Cached here, not recomputed per scroll event (see activeNow) --
+      // offsetHeight on tr/sec forces a synchronous layout, same as every
+      // other read in this function. span only actually changes when
+      // measurePin's own inputs (vh/vw/cardH/pref) do, i.e. on resize.
+      cachedSpan = Math.max(1, tr.offsetHeight - sec.offsetHeight + (pinTop || 0));
     };
+    // Reported as a continuous stutter through scroll on iPhone -- both
+    // Safari and Chrome, which share the same WebKit engine on iOS, so a
+    // Safari-specific quirk was ruled out. Traced to here: activeNow() used
+    // to call measurePin() -- ~8 forced-synchronous-layout reads (4 cards'
+    // offsetHeight, stage/section/track offsetHeight, a
+    // getBoundingClientRect) -- on every single 'scroll' event, unthrottled,
+    // for as long as this component is mounted. On a single-page site that's
+    // effectively the whole session, so it ran on every scroll anywhere on
+    // the page, not just while this section was in view -- matching "the
+    // whole time," not something localized to one section. Forced
+    // synchronous layout is comparatively cheap on Chromium/Blink (never
+    // reproduced there in testing) but WebKit's layout engine is documented
+    // to handle it worse, especially on real phone hardware rather than a
+    // desktop testing machine.
+    //
+    // The span/cardH/pref geometry this depends on only actually changes on
+    // resize, mount, or a font-load reflow (README §5's own "recompute the
+    // fit only when vh×vw×cardH×prefH changes") -- never merely from
+    // scrolling. measurePin() (and its reads) now only runs from repaint(),
+    // itself only called on mount/resize/fonts-ready below. The scroll path
+    // reuses the cached span and does only the one read that must be
+    // current every frame: the track's live position.
+    let cachedSpan = 1;
     const activeNow = () => {
-      measurePin();
-      const span = Math.max(1, tr.offsetHeight - sec.offsetHeight + (pinTop || 0));
-      let p = (-tr.getBoundingClientRect().top + (pinTop || 0)) / span;
+      let p = (-tr.getBoundingClientRect().top + (pinTop || 0)) / cachedSpan;
       p = p <= 0 ? 0 : p >= 1 ? 0.999 : p;
       return Math.min(count - 1, Math.max(0, Math.floor(p * count)));
     };
