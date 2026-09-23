@@ -398,6 +398,32 @@ body {
   transform: scale(0.96);
 }
 
+/* Hero handoff (design_handoff_hero/source/hero.css + README §2/§3 row 10):
+   real CSS hover/active states for the hero CTAs, replacing the "Request a
+   Demo" button's previous JS onMouseEnter/onMouseLeave handlers. */
+.hero-cta-solid:hover {
+  background: #6a54c4;
+}
+.hero-cta-solid:active {
+  transform: scale(0.96);
+}
+.hero-cta-ghost:hover {
+  background: rgba(94, 158, 149, 0.16);
+  border-color: #5e9e95;
+  color: #2f5f58;
+}
+.hero-cta-ghost:active {
+  transform: scale(0.96);
+}
+
+/* Hero handoff source/hero.css: the design relies on the reviews belt being
+   decorative, so pause its infinite marquee for reduced-motion users. */
+@media (prefers-reduced-motion: reduce) {
+  #reviews-belt {
+    animation: none !important;
+  }
+}
+
 /* Design refinement: the one text role repeated on nearly every screen —
    section labels ("WEIGHT GOAL", "TODAY", "BIOMARKERS"...). Quieter than
    the old 12px/600/wide-tracking convention. */

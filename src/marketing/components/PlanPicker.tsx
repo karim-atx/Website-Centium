@@ -135,7 +135,12 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
         >
           Explore For
         </span>
-        <div className="font-bold text-[19px] text-mkt-ink">{plan.name}</div>
+        <div
+          className="font-bold text-[19px] transition-colors duration-300 [transition-timing-function:cubic-bezier(.22,1,.36,1)]"
+          style={{ color: isSelected ? "#427C76" : "#221E1A" }}
+        >
+          {plan.name}
+        </div>
         <p className={clsx("text-[14.5px] leading-relaxed text-mkt-soft mt-2.5", !narrow && "min-h-[74px]")}>
           {plan.description}
         </p>
@@ -148,8 +153,19 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
           </span>
           <span className="text-[13.5px] text-mkt-faint pb-[3px] whitespace-nowrap">{unit}</span>
         </div>
-        <div className="text-[13px] text-mkt-faint mt-1.5">
-          {yearly ? "Billed yearly — 15% off" : "Billed monthly"}
+        {/* Handoff (rendered/08*.html): the "Billed monthly"/"Billed yearly"
+           text itself always stays #8C8378 — only the trailing "— 15% off"
+           span switches to the selected card's teal (#427C76) — this is not
+           the same color swap as the toggle's discount chip below. */}
+        <div className="text-[13px] mt-1.5" style={{ color: "#8C8378" }}>
+          {yearly ? (
+            <>
+              Billed yearly{" "}
+              <span style={{ color: isSelected ? "#427C76" : "#8C8378", fontWeight: 600 }}>— 15% off</span>
+            </>
+          ) : (
+            "Billed monthly"
+          )}
         </div>
         <div className={clsx("flex flex-col gap-[11px] my-[26px]", !narrow && "min-h-[112px]")}>
           {plan.features.map((f) => (
@@ -199,7 +215,13 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
             Yearly
             <span
               className="text-[10.5px] font-bold tracking-[.04em] px-[7px] py-[3px] rounded-full"
-              style={{ background: yearly ? "rgba(255,255,255,.9)" : "rgba(125,103,217,.14)", color: "#6A54C4" }}
+              style={{
+                background: yearly ? "rgba(255,255,255,.9)" : "rgba(125,103,217,.14)",
+                // Handoff: the chip's text color swaps with the toggle state
+                // too, not just its background (rendered/08b: #427C76 on
+                // yearly vs rendered/08: #6A54C4 on monthly).
+                color: yearly ? "#427C76" : "#6A54C4",
+              }}
             >
               −15%
             </span>
@@ -235,7 +257,7 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
               key={plan.key}
               onClick={() => setSelected(i)}
               aria-pressed={i === selected}
-              className="min-h-10 min-w-0 px-1.5 py-2 rounded-full text-[12.5px] font-bold leading-tight [overflow-wrap:anywhere] transition-[background-color,color,box-shadow] duration-200"
+              className="min-h-10 min-w-0 px-1.5 py-2 rounded-full text-[12.5px] font-bold leading-[1.2] whitespace-normal [overflow-wrap:anywhere] [hyphens:auto] transition-[background-color,color,box-shadow] duration-200"
               style={
                 i === selected
                   ? { background: "#7D67D9", color: "#fff", boxShadow: "0 6px 16px rgba(125,103,217,.28)" }

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useCallback, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import { Section } from "../components/Section";
 import { Reveal } from "../components/Reveal";
@@ -9,11 +9,10 @@ import { PersonaArc, type PersonaData } from "../components/PersonaArc";
 import { PlanPicker, type Plan } from "../components/PlanPicker";
 import { FaqAccordion, type FaqItem } from "../components/FaqAccordion";
 import { ProblemList, type ProblemItem } from "../components/ProblemList";
-import { ReviewsConveyor, type Review } from "../components/ReviewsConveyor";
 import { Ecosystem } from "../components/Ecosystem";
 import { BrandLoader } from "../components/BrandLoader";
-import { useHeroFlow } from "../hooks/useHeroFlow";
-import { useHeroSubtextPlacement } from "../hooks/useHeroSubtextPlacement";
+import { HeroSection } from "../components/HeroSection";
+import { NAV_JUMP_EVENT } from "../components/Nav";
 import { useSEO } from "../useSEO";
 
 const legacyApps: ProblemItem[] = [
@@ -57,29 +56,24 @@ const faqItems: FaqItem[] = [
   },
 ];
 
-const reviews: Review[] = [
-  { initials: "JD", name: "Jane Doe", role: "General User", tone: "primary", quote: "Nutrition goals that adapt to you, not the other way around." },
-  { initials: "JD", name: "John Doe", role: "Athlete", tone: "teal", quote: "Every set, every rep, every metric, tracked live." },
-  { initials: "JR", name: "Jane Roe", role: "Dietitian", tone: "primary", quote: "Your clients, your plans, one seamless system." },
-  { initials: "JR", name: "John Roe", role: "General User", tone: "teal", quote: "One place to understand, manage and improve your health." },
-  { initials: "JP", name: "Jane Poe", role: "Personal Trainer", tone: "primary", quote: "Manage everything from health data to workouts and nutrition." },
-  { initials: "JP", name: "John Poe", role: "General User", tone: "teal", quote: "Log less, eat better." },
-];
-
-// Literal figures from the v5 handoff's own `homePlans` data (`.dc.html`
-// line ~1736) — a previous round's placeholder prices ($30/$15/$100) are
-// superseded here. Yearly totals are the handoff's own literal −15% figures,
-// not derived at runtime (see PlanPicker's own note on `yearlyPrice`: e.g.
-// $15×12×0.85 = $153, not the handoff's $149).
+// Literal figures from the v7 handoff's own `homePlans` data
+// (logic/data.js line ~147). A stale v5-round comment here previously cited
+// $15/$149/$99/$79/$799 as the handoff's literal values and rounded off the
+// cents — the current handoff's data.js carries every price (monthly *and*
+// yearly) as an explicit "*.99" string: 14.99/149.99, 9.99/99.99,
+// 79.99/799.99. rendered/08*.html confirms these are what's actually drawn
+// ($14.99, $149.99, $79.99, $799.99), so they are not derived at runtime
+// (e.g. $14.99×12×0.85 ≈ $152.99, not the handoff's own $149.99) — copy them
+// verbatim from data.js instead.
 const homePlans: Plan[] = [
   {
     key: "professionals",
     name: "Professionals",
     description: "Manage your entire roster, while keeping every experience personal.",
-    monthly: 15,
+    monthly: 14.99,
     unit: "/ month",
     prefix: "Starting at",
-    yearlyPrice: 149,
+    yearlyPrice: 149.99,
     yearlyUnit: "/ yr",
     features: ["Client roster & booking", "Programs Management", "Comprehensive Data Tracking"],
     ctaLabel: "Get Started",
@@ -90,7 +84,7 @@ const homePlans: Plan[] = [
     description: "Take charge of your health with one click.",
     monthly: 9.99,
     unit: "per month",
-    yearlyPrice: 99,
+    yearlyPrice: 99.99,
     yearlyUnit: "/ yr",
     features: ["Nutrition & workout logging", "Health tracking & trends", "Connected Community & Experts"],
     ctaLabel: "Get Started",
@@ -99,9 +93,9 @@ const homePlans: Plan[] = [
     key: "business",
     name: "Business",
     description: "Unlock new opportunities. Scale your business with Centium.",
-    monthly: 79,
+    monthly: 79.99,
     unit: "per month + rev share",
-    yearlyPrice: 799,
+    yearlyPrice: 799.99,
     yearlyUnit: "/ yr + rev share",
     features: ["Marketplace Visibility", "Team Operations", "Growth Analytics"],
     ctaLabel: "Talk to us",
@@ -883,176 +877,57 @@ export const Home: React.FC = () => {
     "Your health, all in one place",
     "Centium brings nutrition tracking, workout logging, health tracking and community into one place."
   );
-  const canvasRef = useHeroFlow();
-  useHeroSubtextPlacement();
+  // README §4.4/§6.5: isOccluded must read refs, not stale props — a plain
+  // function closing over these refs, recreated only if the refs themselves
+  // changed (they don't), so useHeroFlow always calls the latest state.
+  // Loader detection reuses the same DOM-query pattern useNavHeroGlass uses
+  // for #hero-band/#reviews-belt, since BrandLoader owns its own dismiss
+  // timing internally and exposes no prop/state to read it by. Nav-jump
+  // detection listens for the same NAV_JUMP_EVENT Nav.tsx already dispatches
+  // around its own long (>1.2x viewport) smooth-scroll jumps. A routed
+  // screen (Contact/Legal) covering the hero needs no separate check here:
+  // those are real React Router routes in this codebase, so Home — and the
+  // canvas's effect — fully unmounts on navigation instead of continuing to
+  // run underneath an overlay.
+  const navJumpingRef = useRef(false);
+  useEffect(() => {
+    const onNavJump = (e: Event) => {
+      navJumpingRef.current = !!(e as CustomEvent<{ active: boolean }>).detail?.active;
+    };
+    window.addEventListener(NAV_JUMP_EVENT, onNavJump);
+    return () => window.removeEventListener(NAV_JUMP_EVENT, onNavJump);
+  }, []);
+  const isOccluded = useCallback(() => !!document.querySelector(".cent-loader-lockup") || navJumpingRef.current, []);
+
+  // README §7: tier-1 degrade must strip backdrop-filter from EVERY
+  // [data-glassy] element (nav pill, Log in, burger, AND Request a Demo),
+  // not just the hero's own CTA — moved here from inside the canvas hook so
+  // it's an external callback the hook fires once, matching the design's own
+  // architecture (initHeroFlow calls out to the page, it doesn't reach into
+  // the nav itself).
+  const onDegradeGlass = useCallback(() => {
+    document.querySelectorAll<HTMLElement>("[data-glassy]").forEach((el) => {
+      el.style.backdropFilter = "none";
+      (el.style as unknown as { webkitBackdropFilter: string }).webkitBackdropFilter = "none";
+      const solid = el.getAttribute("data-glassy-fallback");
+      if (solid) el.style.background = solid;
+    });
+  }, []);
+
+  // README §2/§3 row 9: "Get Started" smooth-scrolls to #cta (the final CTA
+  // section further down this same page) instead of routing to /app. The
+  // 88px nav offset is already the existing `scroll-mt-[88px]` on that
+  // section (see its <Section id="cta"> below) rather than a duplicated
+  // offset constant here.
+  const onGetStarted = useCallback(() => {
+    document.getElementById("cta")?.scrollIntoView({ behavior: "smooth" });
+  }, []);
 
   return (
     <>
       <BrandLoader />
 
-      {/* Hero + reviews conveyor share one gradient container, masked out
-          toward the bottom so the seam into "The Problem" disappears — see
-          the v3 handoff's own note that this must be a mask, not a white
-          overlay, or a hard edge shows. #hero-band/#reviews-belt (rendered
-          by ReviewsConveyor) are read by useNavHeroGlass to know when the
-          nav should show its glass treatment. */}
-      {/* Regression fix: the gradient + vertical fade previously lived
-          directly on this wrapping div — but `mask-image` alpha-multiplies
-          an element's *entire* rendered output, foreground included, so
-          everything inside (the hero copy, and the review belt further
-          down) inherited the same fade-to-transparent and read as washed
-          out/barely visible by the time the mask reached ~80-100%. Per the
-          handoff: "the gradient lives on an absolutely-positioned child
-          that is masked out vertically" — the mask belongs on its own
-          background-only layer, sibling to the real content, not on the
-          content's own container. */}
-      <div id="hero-band" className="relative bg-white">
-        <div
-          aria-hidden="true"
-          className="absolute inset-0 pointer-events-none"
-          style={{
-            background:
-              "radial-gradient(70% 42% at 50% 22%,#F6F3FC 0%,rgba(246,243,252,.72) 36%,rgba(246,243,252,0) 72%)," +
-              "radial-gradient(58% 44% at 2% 60%,rgba(140,110,222,.34) 0%,rgba(140,110,222,0) 62%)," +
-              "radial-gradient(58% 44% at 98% 60%,rgba(84,158,146,.34) 0%,rgba(84,158,146,0) 62%)," +
-              "linear-gradient(90deg,#B49DEA 0%,#C4B7EC 24%,#D2D6E4 50%,#A8CFC6 76%,#8CC1B6 100%)",
-            WebkitMaskImage:
-              "linear-gradient(to bottom,#000 0%,#000 30%,rgba(0,0,0,.94) 42%,rgba(0,0,0,.82) 52%,rgba(0,0,0,.64) 62%,rgba(0,0,0,.44) 71%,rgba(0,0,0,.26) 79%,rgba(0,0,0,.12) 87%,rgba(0,0,0,.04) 94%,rgba(0,0,0,0) 100%)",
-            maskImage:
-              "linear-gradient(to bottom,#000 0%,#000 30%,rgba(0,0,0,.94) 42%,rgba(0,0,0,.82) 52%,rgba(0,0,0,.64) 62%,rgba(0,0,0,.44) 71%,rgba(0,0,0,.26) 79%,rgba(0,0,0,.12) 87%,rgba(0,0,0,.04) 94%,rgba(0,0,0,0) 100%)",
-          }}
-        />
-        <section id="top" className="relative overflow-hidden">
-          <div
-            className="absolute inset-0 overflow-hidden pointer-events-none z-0 opacity-[.92]"
-            aria-hidden="true"
-            style={{
-              WebkitMaskImage: "linear-gradient(to bottom,#000 0%,#000 38%,rgba(0,0,0,.82) 56%,rgba(0,0,0,.5) 72%,rgba(0,0,0,.22) 86%,rgba(0,0,0,0) 98%)",
-              maskImage: "linear-gradient(to bottom,#000 0%,#000 38%,rgba(0,0,0,.82) 56%,rgba(0,0,0,.5) 72%,rgba(0,0,0,.22) 86%,rgba(0,0,0,0) 98%)",
-            }}
-          >
-            <canvas ref={canvasRef} className="absolute inset-0 w-full h-full block" />
-            <div
-              className="absolute inset-0"
-              style={{ background: "radial-gradient(ellipse 30% 26% at 50% 34%,rgba(247,245,253,.5) 0%,rgba(247,245,253,.2) 58%,rgba(247,245,253,0) 84%)" }}
-            />
-            <div
-              className="absolute inset-0"
-              style={{ background: "linear-gradient(rgba(232,225,250,.42) 0%,rgba(251,250,254,0) 24%,rgba(255,255,255,.08) 78%,rgba(255,255,255,0) 100%)" }}
-            />
-          </div>
-
-          <div className="relative z-10 max-w-[1180px] mx-auto px-5 sm:px-10 pt-[132px] sm:pt-[172px] flex flex-col items-center text-center">
-            <Reveal>
-              <span className="block font-display font-extrabold text-[11px] tracking-[.22em]" style={{ color: "#7D67D9" }}>
-                NUTRITION · TRAINING · HEALTH · COMMUNITY
-              </span>
-              <h1 className="font-display font-extrabold text-[44px] sm:text-6xl lg:text-[76px] leading-[1.03] tracking-[-.034em] text-mkt-ink mt-5 max-w-[900px]">
-                Your health,
-              </h1>
-              <div
-                id="hero-line2"
-                className="inline-block font-display font-extrabold text-[44px] sm:text-6xl lg:text-[76px] leading-[1.03] tracking-[-.034em] text-mkt-ink mt-1.5 whitespace-nowrap"
-              >
-                <span id="hw-all">All</span> in <span id="hw-one">one</span> <span id="hw-place">place</span>
-              </div>
-              <div
-                id="hero-sub"
-                className="flex flex-wrap items-baseline justify-center gap-x-6 gap-y-2.5 mt-6 text-lg leading-[1.4] text-mkt-soft"
-              >
-                <span className="hero-sub-line whitespace-nowrap" data-word="hw-all">
-                  More clarity.
-                </span>
-                <span className="hero-sub-line whitespace-nowrap" data-word="hw-one">
-                  More control.
-                </span>
-                <span className="hero-sub-line whitespace-nowrap" data-word="hw-place">
-                  More you.
-                </span>
-              </div>
-              <div className="flex flex-wrap justify-center gap-3 mt-9">
-                <Link
-                  to="/app"
-                  className="tap px-[30px] py-4 rounded-full bg-mkt-accent hover:bg-mkt-accent-hover text-white font-semibold text-[15px] transition-colors"
-                >
-                  Get Started
-                </Link>
-                <Link
-                  to="/contact"
-                  data-glassy=""
-                  data-glassy-fallback="rgba(255,255,255,.72)"
-                  className="tap px-[26px] py-4 rounded-full font-semibold text-[15px] text-mkt-ink transition-[background-color,border-color] duration-200"
-                  style={{
-                    border: "1px solid rgba(255,255,255,.72)",
-                    background: "rgba(255,255,255,.42)",
-                    backdropFilter: "blur(16px) saturate(1.7)",
-                    boxShadow: "0 10px 28px rgba(72,58,130,.12), inset 0 1px 0 rgba(255,255,255,.6)",
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.background = "rgba(94,158,149,.16)";
-                    e.currentTarget.style.borderColor = "#5E9E95";
-                    e.currentTarget.style.color = "#2F5F58";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.background = "rgba(255,255,255,.42)";
-                    e.currentTarget.style.borderColor = "rgba(255,255,255,.72)";
-                    e.currentTarget.style.color = "";
-                  }}
-                >
-                  Request a Demo
-                </Link>
-              </div>
-            </Reveal>
-
-            {/* Real app captures — natural aspect ratio, no crop, no mask
-                (the v3 build's bezel-wrapped fake mockups are superseded by
-                these per the v5 handoff's own literal hero markup). Below
-                640px only the dashboard shows, solo, at min(260px,72vw). */}
-            <Reveal delay={0.1} className="w-full">
-              <div className="hidden sm:flex items-center justify-center gap-[clamp(14px,2vw,26px)] mt-[76px] mb-[clamp(48px,6vw,80px)]">
-                <img
-                  src="/hero-food.png"
-                  alt="Centium food diary"
-                  width={1170}
-                  height={2532}
-                  className="shrink-0 block rounded-[22px]"
-                  style={{ width: 236, height: "auto", boxShadow: "0 18px 50px rgba(72,58,130,.14)" }}
-                />
-                <img
-                  src="/hero-dashboard.png"
-                  alt="Centium dashboard"
-                  width={1170}
-                  height={2532}
-                  className="shrink-0 block rounded-[22px]"
-                  style={{ width: 310, height: "auto", boxShadow: "0 28px 70px rgba(72,58,130,.22)" }}
-                />
-                <img
-                  src="/hero-workout.png"
-                  alt="Centium workout routines"
-                  width={1170}
-                  height={2532}
-                  className="shrink-0 block rounded-[22px]"
-                  style={{ width: 236, height: "auto", boxShadow: "0 18px 50px rgba(72,58,130,.14)" }}
-                />
-              </div>
-              <div className="sm:hidden mt-12 flex justify-center">
-                <img
-                  src="/hero-dashboard.png"
-                  alt="Centium dashboard"
-                  width={1170}
-                  height={2532}
-                  className="block rounded-[20px]"
-                  style={{ width: "min(260px,72vw)", height: "auto", boxShadow: "0 20px 50px rgba(72,58,130,.18)" }}
-                />
-              </div>
-            </Reveal>
-          </div>
-        </section>
-
-        <section className="relative z-[6]">
-          <ReviewsConveyor reviews={reviews} />
-        </section>
-      </div>
+      <HeroSection isOccluded={isOccluded} onDegradeGlass={onDegradeGlass} onGetStarted={onGetStarted} />
 
       {/* Problem */}
       <Section className="bg-white" style={{ paddingTop: "clamp(40px,5vw,64px)", paddingBottom: "clamp(72px,8vw,96px)" }}>
@@ -1110,7 +985,14 @@ export const Home: React.FC = () => {
           background: "linear-gradient(#FBFAF8 0%,#FDFCFB 14%,#FFFFFF 34%,#FFFFFF 100%)",
         }}
       >
-        <Section id="faq" className="bg-transparent scroll-mt-[88px]">
+        {/* v7 landing handoff §5.5: bottom padding tightened on 23 Sep to
+            close the gap before "Who it's for" — asymmetric, not the
+            Section default's equal top/bottom rhythm. */}
+        <Section
+          id="faq"
+          className="bg-transparent scroll-mt-[88px]"
+          style={{ paddingTop: "clamp(80px,7vw,112px)", paddingBottom: "clamp(36px,3.6vw,52px)" }}
+        >
           <Reveal className="mb-11">
             <Eyebrow tone="teal">FAQ</Eyebrow>
             <h2 className="font-display font-extrabold text-[32px] sm:text-[46px] leading-[1.08] tracking-[-.03em] text-mkt-ink mt-[18px]">
@@ -1166,8 +1048,14 @@ export const Home: React.FC = () => {
           }
         />
 
-        {/* Pricing preview */}
-        <section id="pricing" className="py-[clamp(48px,6vw,72px)] pb-[clamp(72px,8vw,96px)] scroll-mt-[88px]">
+        {/* Pricing preview. rendered/08*.html: padding is
+            `clamp(48px,6vw,72px) 0 clamp(28px,3vw,40px)` — the bottom value
+            was previously stretched to clamp(72px,8vw,96px), which stacked
+            on top of the CTA section's own (already-fixed) increased top
+            padding below and doubled up the gap the 23 Sep fix already
+            supplies. Use the section's own literal bottom padding instead
+            of also padding it out here. */}
+        <section id="pricing" className="py-[clamp(48px,6vw,72px)] pb-[clamp(28px,3vw,40px)] scroll-mt-[88px]">
           <div className="max-w-[1180px] mx-auto px-5 sm:px-10">
             <PricingHeading />
             <Reveal delay={0.08}>
@@ -1176,8 +1064,14 @@ export const Home: React.FC = () => {
           </div>
         </section>
 
-        {/* Final CTA */}
-        <Section id="cta" className="bg-transparent text-center scroll-mt-[88px]">
+        {/* Final CTA — v7 landing handoff §5.9: top padding increased twice
+            on 23 Sep at the user's request, to separate the CTA from the
+            pricing cards. Asymmetric, not the Section default. */}
+        <Section
+          id="cta"
+          className="bg-transparent text-center scroll-mt-[88px]"
+          style={{ paddingTop: "clamp(176px,18vw,256px)", paddingBottom: "clamp(92px,9.5vw,135px)" }}
+        >
           <Reveal className="flex flex-col items-center">
             <h2 className="font-display font-extrabold text-[34px] sm:text-[52px] leading-[1.08] tracking-[-.032em] text-mkt-ink max-w-[620px]">
               Ready to bring it all together?

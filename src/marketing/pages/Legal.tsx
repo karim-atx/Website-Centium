@@ -260,8 +260,14 @@ function parseLegalHash(hash: string): { doc: DocKey; sub: string | null } {
 
 const HERO_BACKGROUND =
   "radial-gradient(86% 128% at 0% 0%,rgba(124,96,214,0.5000) 0.0%,rgba(124,96,214,0.4605) 4.0%,rgba(124,96,214,0.4226) 8.0%,rgba(124,96,214,0.3861) 12.0%,rgba(124,96,214,0.3511) 16.0%,rgba(124,96,214,0.3177) 20.0%,rgba(124,96,214,0.2858) 24.0%,rgba(124,96,214,0.2555) 28.0%,rgba(124,96,214,0.2267) 32.0%,rgba(124,96,214,0.1996) 36.0%,rgba(124,96,214,0.1740) 40.0%,rgba(124,96,214,0.1501) 44.0%,rgba(124,96,214,0.1277) 48.0%,rgba(124,96,214,0.1071) 52.0%,rgba(124,96,214,0.0881) 56.0%,rgba(124,96,214,0.0709) 60.0%,rgba(124,96,214,0.0554) 64.0%,rgba(124,96,214,0.0416) 68.0%,rgba(124,96,214,0.0297) 72.0%,rgba(124,96,214,0.0197) 76.0%,rgba(124,96,214,0.0115) 80.0%,rgba(124,96,214,0.0055) 84.0%,rgba(124,96,214,0.0015) 88.0%,rgba(124,96,214,0.0000) 92.0%,rgba(255,255,255,0) 100%),radial-gradient(86% 128% at 100% 0%,rgba(62,145,132,0.4600) 0.0%,rgba(62,145,132,0.4237) 4.0%,rgba(62,145,132,0.3887) 8.0%,rgba(62,145,132,0.3552) 12.0%,rgba(62,145,132,0.3230) 16.0%,rgba(62,145,132,0.2923) 20.0%,rgba(62,145,132,0.2630) 24.0%,rgba(62,145,132,0.2351) 28.0%,rgba(62,145,132,0.2086) 32.0%,rgba(62,145,132,0.1836) 36.0%,rgba(62,145,132,0.1601) 40.0%,rgba(62,145,132,0.1381) 44.0%,rgba(62,145,132,0.1175) 48.0%,rgba(62,145,132,0.0985) 52.0%,rgba(62,145,132,0.0811) 56.0%,rgba(62,145,132,0.0652) 60.0%,rgba(62,145,132,0.0509) 64.0%,rgba(62,145,132,0.0383) 68.0%,rgba(62,145,132,0.0273) 72.0%,rgba(62,145,132,0.0181) 76.0%,rgba(62,145,132,0.0106) 80.0%,rgba(62,145,132,0.0050) 84.0%,rgba(62,145,132,0.0014) 88.0%,rgba(62,145,132,0.0000) 92.0%,rgba(255,255,255,0) 100%),#FFFFFF";
+// Literal from rendered/12-legal-screen.{terms,privacy,health}.html (identical
+// across all three doc states) — this is a 16-stop mask, not the shorter
+// hand-simplified curve this file previously had; see CLAUDE.md's root-cause
+// #2 (approximate reproduction instead of literal values), the exact failure
+// mode that caused the review-belt fade-mask regression this file's own
+// standing rules were written after.
 const HERO_MASK =
-  "linear-gradient(to bottom,#000 0%,#000 62%,rgba(0,0,0,.82) 78%,rgba(0,0,0,.45) 90%,rgba(0,0,0,.16) 97%,rgba(0,0,0,0) 100%)";
+  "linear-gradient(to bottom,#000 0%,#000 48%,rgba(0,0,0,0.8559) 51.7%,rgba(0,0,0,0.7235) 55.4%,rgba(0,0,0,0.6026) 59.1%,rgba(0,0,0,0.4933) 62.9%,rgba(0,0,0,0.3954) 66.6%,rgba(0,0,0,0.3088) 70.3%,rgba(0,0,0,0.2333) 74.0%,rgba(0,0,0,0.1688) 77.7%,rgba(0,0,0,0.1151) 81.4%,rgba(0,0,0,0.0720) 85.1%,rgba(0,0,0,0.0394) 88.9%,rgba(0,0,0,0.0168) 92.6%,rgba(0,0,0,0.0039) 96.3%,rgba(0,0,0,0.0000) 100.0%)";
 
 // This "Last updated" date is a static literal (matching this repo's
 // existing convention, e.g. the equivalent line on Contact/Home) rather than
@@ -396,7 +402,8 @@ export const Legal: React.FC = () => {
             responsible for.
           </p>
           <div
-            className="inline-flex items-center gap-2.5 mt-[26px] px-4 py-[11px] rounded-2xl"
+            data-legal-stamp=""
+            className="inline-flex items-center gap-2.5 mt-[26px] px-4 py-[11px] rounded-[14px]"
             style={{ background: "rgba(255,255,255,.72)", border: "1px solid rgba(34,30,26,.09)", boxShadow: "0 6px 18px rgba(72,58,130,.07)" }}
           >
             <span aria-hidden="true" className="flex" style={{ color: "#6A54C4" }}>
@@ -409,7 +416,7 @@ export const Legal: React.FC = () => {
               <span className="font-extrabold text-[10.5px] tracking-[.16em]" style={{ color: "#6B6358" }}>
                 LAST UPDATED
               </span>
-              <span className="font-bold text-sm text-mkt-ink">{LEGAL_UPDATED_DATE}</span>
+              <span data-legal-date="" className="font-bold text-sm text-mkt-ink">{LEGAL_UPDATED_DATE}</span>
             </span>
           </div>
         </div>
@@ -436,13 +443,17 @@ export const Legal: React.FC = () => {
             {DOC_KEYS.map((key) => {
               const m = DOC_META[key];
               const selected = key === doc;
-              const firstSub = subsFor(key);
-              const href = `${location.pathname}${legalHashFor(key, firstSub.length ? slugify(firstSub[0]) : null)}`;
+              // Literal from the handoff's own template: the tab's static href is
+              // the bare "#legal/<doc>" (no subsection) — only the click handler's
+              // selectDoc() (mirroring setLegalDoc()) actually lands on the first
+              // subsection. See rendered/12-legal-screen.*.html and dc.html §3.
+              const href = `${location.pathname}${legalHashFor(key, null)}`;
               return (
                 <a
                   key={key}
                   id={`legal-tab-${key}`}
                   href={href}
+                  data-legal-doc={key}
                   ref={(el) => {
                     tabRefs.current[key] = el;
                   }}
@@ -491,7 +502,7 @@ export const Legal: React.FC = () => {
                     aria-expanded={jumpOpen}
                     aria-controls="legal-subnav"
                     onClick={() => setJumpOpen((o) => !o)}
-                    className="flex w-full items-center justify-between gap-2.5 rounded-2xl font-bold text-sm text-left cursor-pointer"
+                    className="flex w-full items-center justify-between gap-2.5 rounded-[14px] font-bold text-sm text-left cursor-pointer"
                     style={{ padding: "13px 16px", border: "1px solid rgba(34,30,26,.1)", background: "#FAF9F7", color: "#221E1A", fontFamily: "inherit" }}
                   >
                     <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap">{jumpLabel}</span>

@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import { Mail, Clock } from "lucide-react";
 import { Section } from "../components/Section";
 import { Reveal } from "../components/Reveal";
@@ -23,7 +24,7 @@ export const Contact: React.FC = () => {
       </Reveal>
 
       <Reveal delay={0.08}>
-        <div className="grid lg:grid-cols-[1.3fr_.7fr] gap-8 max-w-4xl mx-auto border border-mkt-line rounded-3xl overflow-hidden bg-white">
+        <div className="grid lg:grid-cols-[1.3fr_.7fr] max-w-4xl mx-auto border border-mkt-line rounded-3xl overflow-hidden bg-white">
           <form
             onSubmit={(e) => {
               e.preventDefault();
@@ -96,6 +97,21 @@ export const Contact: React.FC = () => {
           </div>
         </div>
       </Reveal>
+
+      <div className="flex flex-wrap gap-3 justify-center mt-[76px]">
+        <Link
+          to="/"
+          className="px-7 py-[15px] rounded-full bg-mkt-accent hover:bg-mkt-accent-hover text-white font-semibold text-[15px] transition-colors"
+        >
+          Back to home
+        </Link>
+        <Link
+          to="/legal"
+          className="px-[26px] py-[15px] rounded-full border border-[#CFC5EA] hover:border-mkt-accent text-mkt-ink font-semibold text-[15px] transition-colors"
+        >
+          Legal
+        </Link>
+      </div>
     </Section>
   );
 };

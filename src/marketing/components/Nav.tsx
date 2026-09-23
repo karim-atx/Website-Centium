@@ -111,6 +111,21 @@ export const Nav: React.FC = () => {
   // this glass mechanism on the other marketing pages, so it keeps its
   // existing plate-less treatment rather than gaining one now).
   const logoPlate = !dark && !glass;
+  // v7 landing handoff §5.1: past the hero (or on any page with no hero at
+  // all), the logo plate AND the links pill/Log in/burger all share this
+  // one recipe now — "the same plate as the logo (fill .14, blur 120px, and
+  // a border), on the pill too." Applied wherever `logoPlate` is true.
+  // Previously the pill/Log in/burger had no background at all past the
+  // hero (only Tailwind blur classes with nothing to blur), which is the
+  // exact "pill goes transparent and links float over the page text" bug
+  // the handoff calls out by name — fixed by giving them this style too.
+  const pastHeroPlateStyle: React.CSSProperties = {
+    background: "rgba(246,245,250,.14)",
+    borderColor: "rgba(34,30,26,.08)",
+    boxShadow: "0 6px 22px rgba(72,58,130,.10)",
+    backdropFilter: "blur(120px) saturate(2.1)",
+    WebkitBackdropFilter: "blur(120px) saturate(2.1)",
+  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[60] bg-transparent">
@@ -129,13 +144,7 @@ export const Nav: React.FC = () => {
             ...(glass && !dark
               ? { color: "#FFFFFF", filter: "drop-shadow(0 2px 10px rgba(52,38,110,.42))" }
               : undefined),
-            ...(logoPlate
-              ? {
-                  background: "rgba(255,255,255,.72)",
-                  backdropFilter: "blur(22px) saturate(1.5) brightness(1.06)",
-                  WebkitBackdropFilter: "blur(22px) saturate(1.5) brightness(1.06)",
-                }
-              : undefined),
+            ...(logoPlate ? { ...pastHeroPlateStyle, border: "1px solid rgba(34,30,26,.08)" } : undefined),
           }}
         >
           <CentiumMark size={28} leafFill={dark ? "#FFFFFF" : glass ? "#D8F1EB" : "#8AC4BA"} />
@@ -145,12 +154,23 @@ export const Nav: React.FC = () => {
         <nav
           className={clsx(
             "hidden lg:flex items-center gap-0.5 rounded-full p-1 backdrop-blur-[22px] backdrop-saturate-[1.8] transition-[background-color,border-color,box-shadow] duration-[450ms]",
-            glass && !dark && "border"
+            !dark && (glass || logoPlate) && "border"
           )}
+          // Hero handoff README §7: when the hero canvas grades itself tier-1
+          // (slow device), every [data-glassy] element on the page must drop
+          // its backdrop-filter — not just the hero's own "Request a Demo"
+          // pill. data-glassy-fallback repeats this pill's own existing glass
+          // background (the value below is not itself named in the hero
+          // handoff, which only specifies the CTA's fallback; it's reused
+          // here as the closest already-correct value for this element).
+          data-glassy=""
+          data-glassy-fallback="rgba(255,255,255,.66)"
           style={
             glass && !dark
               ? { background: "rgba(255,255,255,.66)", borderColor: "rgba(255,255,255,.78)", boxShadow: "0 8px 26px rgba(72,58,130,.14)" }
-              : undefined
+              : logoPlate
+                ? pastHeroPlateStyle
+                : undefined
           }
           aria-label="Primary"
         >
@@ -199,7 +219,15 @@ export const Nav: React.FC = () => {
                   ? "text-[#3B352D]"
                   : "text-mkt-soft border-mkt-ink/[.08]"
             )}
-            style={glass && !dark ? { background: "rgba(255,255,255,.66)", borderColor: "rgba(255,255,255,.78)", boxShadow: "0 8px 26px rgba(72,58,130,.14)" } : undefined}
+            data-glassy=""
+            data-glassy-fallback="rgba(255,255,255,.66)"
+            style={
+              glass && !dark
+                ? { background: "rgba(255,255,255,.66)", borderColor: "rgba(255,255,255,.78)", boxShadow: "0 8px 26px rgba(72,58,130,.14)" }
+                : logoPlate
+                  ? pastHeroPlateStyle
+                  : undefined
+            }
           >
             Log in
           </Link>
@@ -217,9 +245,17 @@ export const Nav: React.FC = () => {
           aria-expanded={open}
           className={clsx(
             "lg:hidden tap w-10 h-10 rounded-full flex items-center justify-center backdrop-blur-[22px] backdrop-saturate-[1.8] border transition-[transform,color,background-color,border-color] duration-150 active:scale-[.96]",
-            dark ? "text-white border-white/[.14]" : glass ? "text-mkt-ink" : "text-mkt-ink border-mkt-ink/[.08]"
+            dark ? "text-white border-white/[.14]" : glass ? "text-[#3B352D]" : "text-mkt-ink border-mkt-ink/[.08]"
           )}
-          style={glass && !dark ? { background: "rgba(255,255,255,.66)", borderColor: "rgba(255,255,255,.78)", boxShadow: "0 8px 26px rgba(72,58,130,.14)" } : undefined}
+          data-glassy=""
+          data-glassy-fallback="rgba(255,255,255,.66)"
+          style={
+            glass && !dark
+              ? { background: "rgba(255,255,255,.66)", borderColor: "rgba(255,255,255,.78)", boxShadow: "0 8px 26px rgba(72,58,130,.14)" }
+              : logoPlate
+                ? pastHeroPlateStyle
+                : undefined
+          }
         >
           {open ? <X size={20} /> : <Menu size={20} />}
         </button>
