@@ -11,7 +11,34 @@ const topics = ["General", "Professional", "Business", "Press"];
 export const Contact: React.FC = () => {
   useSEO("Contact", "Get in touch with the Centium team.");
   const [topic, setTopic] = useState(0);
-  const [sent, setSent] = useState(false);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [message, setMessage] = useState("");
+  /**
+   * Whether the mail-app handoff has been attempted — NOT whether the message
+   * reached anyone, and that distinction is the whole point of this change.
+   *
+   * The button used to flip to a thank-you confirmation on submit while the
+   * handler did nothing but `preventDefault()`. There was no request, no
+   * mailto, no table and no Edge Function behind it: every visitor who filled
+   * this in was told their message had been received, and their name, email
+   * and text were discarded on unload.
+   *
+   * Handing the message to the visitor's own email client is something this
+   * page can actually do. What it cannot do is know whether a mail client
+   * opened at all, or whether they then pressed send — so the copy below
+   * claims neither, and offers the address directly for the case where
+   * nothing happened.
+   */
+  const [handoffAttempted, setHandoffAttempted] = useState(false);
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const subject = encodeURIComponent(`[Centium – ${topics[topic]}] Message from ${name}`);
+    const body = encodeURIComponent(`${message}\n\n—\n${name}\n${email}`);
+    window.location.href = `mailto:support@atraxia.org?subject=${subject}&body=${body}`;
+    setHandoffAttempted(true);
+  };
 
   return (
     <Section className="pt-32 sm:pt-[152px] pb-24">
@@ -25,13 +52,7 @@ export const Contact: React.FC = () => {
 
       <Reveal delay={0.08}>
         <div className="grid lg:grid-cols-[1.3fr_.7fr] max-w-4xl mx-auto border border-mkt-line rounded-3xl overflow-hidden bg-white">
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              setSent(true);
-            }}
-            className="p-7 sm:p-9 flex flex-col gap-3.5"
-          >
+          <form onSubmit={handleSubmit} className="p-7 sm:p-9 flex flex-col gap-3.5">
             <span className="font-semibold text-[10.5px] tracking-[.16em] text-mkt-faint">WHAT'S THIS ABOUT?</span>
             <div className="flex flex-wrap gap-2 mb-1.5">
               {topics.map((t, i) => {
@@ -56,27 +77,49 @@ export const Contact: React.FC = () => {
             <input
               type="text"
               required
+              maxLength={100}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
               placeholder="Name"
               className="border border-[#E0DDD6] rounded-xl px-4 py-3 text-sm text-mkt-ink placeholder:text-mkt-faint focus:outline-none focus:border-mkt-accent transition-colors duration-200"
             />
             <input
               type="email"
               required
+              maxLength={254}
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
               className="border border-[#E0DDD6] rounded-xl px-4 py-3 text-sm text-mkt-ink placeholder:text-mkt-faint focus:outline-none focus:border-mkt-accent transition-colors duration-200"
             />
             <textarea
               required
+              maxLength={1500}
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
               rows={4}
               placeholder="How can we help?"
               className="border border-[#E0DDD6] rounded-xl px-4 py-3 text-sm text-mkt-ink placeholder:text-mkt-faint focus:outline-none focus:border-mkt-accent transition-colors duration-200 resize-none"
             />
+            <p className="text-[12px] text-mkt-faint -mt-1">
+              Please don't include medical details in this form.
+            </p>
             <button
               type="submit"
               className="tap self-center w-1/2 rounded-full bg-mkt-accent hover:bg-mkt-accent-hover active:scale-[0.98] text-white font-semibold text-sm py-3.5 px-[26px] mt-1 transition-colors duration-200"
             >
-              {sent ? "Message noted — thank you" : "Send message"}
+              Send message
             </button>
+            {handoffAttempted && (
+              <p className="text-[12.5px] leading-relaxed text-mkt-soft text-center mt-1">
+                Your email app should open with your message ready to send. If nothing opened, email
+                us directly at{" "}
+                <a href="mailto:support@atraxia.org" className="font-semibold" style={{ color: "#6A54C4" }}>
+                  support@atraxia.org
+                </a>
+                .
+              </p>
+            )}
           </form>
 
           <div className="border-t lg:border-t-0 lg:border-l border-mkt-line p-7 sm:p-9 flex flex-col gap-6 bg-mkt-wash2">
