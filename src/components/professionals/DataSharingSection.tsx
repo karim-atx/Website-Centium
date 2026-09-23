@@ -21,6 +21,12 @@ import {
   type LinkedProfessional,
   type UnansweredMap,
 } from "../../services/consent";
+import {
+  clearPendingGrant,
+  recordPendingGrant,
+  reconcilePendingGrants,
+  type PendingGrantChange,
+} from "../../services/consent/pending";
 
 /** The display label for a category, for use inside prose. */
 const labelFor = (category: AccessCategory): string =>
@@ -63,6 +69,16 @@ export const DataSharingSection: React.FC<{
   // failure: the error message already owns that case, and two signals for
   // one outcome is noise.
   const [savedKey, setSavedKey] = useState<string | null>(null);
+  // Changes this device asked for that the database does not reflect. Filled
+  // on load by comparing the record written before each write against what the
+  // server actually returned, and retired per switch as soon as that switch
+  // gets a direct answer — see services/consent/pending.
+  //
+  // Kept separate from `error`, which reports a write that failed in front of
+  // the client. This reports one that failed behind their back, possibly in a
+  // different session, and it is the more important of the two: nobody saw it
+  // happen.
+  const [unsaved, setUnsaved] = useState<PendingGrantChange[]>([]);
   const savedTimer = useRef<number | null>(null);
   useEffect(
     () => () => {
@@ -96,6 +112,10 @@ export const DataSharingSection: React.FC<{
       if (myGrants.status === "ok") {
         setGrants(myGrants.grants);
         setUnanswered(myGrants.unanswered);
+        // Only against a successful read. Reconciling against a failed one
+        // would compare the client's intent with an empty map and report every
+        // pending change as lost.
+        setUnsaved(reconcilePendingGrants(authUserId, myGrants.grants));
       } else setError(myGrants.message);
       setLoading(false);
     })();
@@ -146,7 +166,33 @@ export const DataSharingSection: React.FC<{
     });
     setGrants((g) => ({ ...g, [professionalId]: { ...g[professionalId], [category]: next } }));
 
+    // WRITTEN BEFORE THE REQUEST, not after, and that ordering is the whole
+    // point: the failure this guards against is one where nothing after the
+    // request ever runs. keepalive carries the write across a page unload;
+    // this carries the QUESTION across it, so the next load can ask whether
+    // the answer arrived.
+    recordPendingGrant(authUserId, professionalId, category, next);
+
     const result = await setGrant(authUserId, professionalId, category, next);
+    // CLEARED ONLY ON SUCCESS, and only because testing showed what clearing
+    // on failure actually does. A page unload does not leave the request
+    // hanging — it REJECTS it, so the await resumes, setGrant catches the
+    // abort and returns an error, and a clear-on-either-outcome deleted the
+    // record microseconds before the document died. The witness was destroyed
+    // by the very event it existed to survive, and the reconciliation never
+    // fired once in a real run.
+    //
+    // Keeping the record after a visible error costs at most one extra
+    // message on the next load, and only when the database genuinely still
+    // disagrees. Losing it costs a silent PHI exposure.
+    if (result.status === "ok") {
+      clearPendingGrant(authUserId, professionalId, category);
+      // The standing warning about this switch retires with it: the client has
+      // just been given a direct answer about this exact category, and a
+      // notice about the previous attempt beside it would contradict whichever
+      // one they read second.
+      setUnsaved((u) => u.filter((p) => !(p.professionalId === professionalId && p.category === category)));
+    }
     // Paired with the line above by `attempt`. `checkmark` is the handler's
     // own decision rather than an observation of the rendered UI — it is the
     // only thing that sets savedKey, so a checkmark appearing when this says
@@ -203,15 +249,35 @@ export const DataSharingSection: React.FC<{
     setSaving(professionalId);
     setError(null);
 
-    const declined: AccessCategory[] = [];
-    for (const category of pending) {
-      const result = await setGrant(authUserId, professionalId, category, false);
-      if (result.status === "error") {
-        setError(result.message);
-        break;
-      }
-      declined.push(category);
-    }
+    // CONCURRENT, NOT SEQUENTIAL, and that is a fix rather than a tidy-up.
+    // Awaiting each write before building the next meant the later requests
+    // did not exist yet when a page unload arrived — keepalive can carry a
+    // request that has been sent, not one that was never made. Issuing them
+    // together puts every decline in flight in the same tick, so an unload
+    // catches all of them or none.
+    //
+    // The rows are distinct by category, so there is nothing to serialise for:
+    // no two of these writes touch the same row.
+    pending.forEach((category) => recordPendingGrant(authUserId, professionalId, category, false));
+    const results = await Promise.all(
+      pending.map(async (category) => ({
+        category,
+        result: await setGrant(authUserId, professionalId, category, false),
+      }))
+    );
+    // Only the ones that actually landed, for the reason spelt out in toggle:
+    // an aborted request comes back as an error, and clearing on an error
+    // throws away the record that would have caught it.
+    results
+      .filter((r) => r.result.status === "ok")
+      .forEach(({ category }) => clearPendingGrant(authUserId, professionalId, category));
+
+    // Every category is attempted now, where the loop stopped at the first
+    // failure. On a control whose whole purpose is to say no, recording four
+    // of five noes beats recording one and abandoning the rest.
+    const declined = results.filter((r) => r.result.status === "ok").map((r) => r.category);
+    const firstFailure = results.find((r) => r.result.status === "error")?.result;
+    if (firstFailure?.status === "error") setError(firstFailure.message);
 
     setSaving(null);
     if (declined.length > 0) {
@@ -221,6 +287,10 @@ export const DataSharingSection: React.FC<{
       }));
     }
   };
+
+  /** Who a pending-change warning is about, for the message that names them. */
+  const nameFor = (id: string) =>
+    professionals.find((p) => p.professionalId === id)?.name ?? "your professional";
 
   // One fetch, filtered — not a second query or a second component.
   const visible = professionalId
@@ -241,6 +311,34 @@ export const DataSharingSection: React.FC<{
       )}
 
       {error && <p className="text-xs font-semibold text-status-high mb-2">{error}</p>}
+
+      {/* SAID IN WORDS, not left as a switch that quietly sprang back. The
+          client asked for something, this device recorded the request before
+          sending it, and the database came back disagreeing — so the change is
+          not in effect and they are the only person who can put that right.
+          Rendering the true value alone would be the silent failure all over
+          again, one screen further on.
+
+          Named per professional even inside the single-professional sheet: a
+          change that did not take effect for someone else is still a category
+          being shared against the client's wishes, and the sheet's title is
+          not a reason to withhold that. */}
+      {unsaved.length > 0 && (
+        <div className="rounded-2xl bg-status-high-bg border border-status-high/30 px-3.5 py-3 mb-2.5">
+          <p className="text-[11.5px] font-semibold text-status-high mb-1">
+            {unsaved.length > 1 ? "Some changes didn't save" : "A change didn't save"}
+          </p>
+          {unsaved.map((u) => (
+            <p
+              key={`${u.professionalId}:${u.category}`}
+              className="text-[11px] text-charcoal-soft leading-relaxed"
+            >
+              {labelFor(u.category)} is still {u.requested ? "not " : ""}shared with{" "}
+              {nameFor(u.professionalId)}. Set it again to retry.
+            </p>
+          ))}
+        </div>
+      )}
 
       {visible.map((pro) => (
         <Card key={pro.professionalId} className="mb-2.5 animate-fade-slide-up">
@@ -332,14 +430,22 @@ export const DataSharingSection: React.FC<{
             })}
           </div>
 
-          {/* The grant is real and the professional can read it. What it
-              unlocks is not built yet, and saying otherwise would overstate
-              what turning a switch on actually does today. */}
+          {/* THIS USED TO SAY THE OPPOSITE, and it was wrong in the most
+              dangerous direction a sentence on this screen can be wrong:
+              "the data itself isn't connected yet, so turning something on
+              doesn't reveal anything to them today". Eighteen RLS policies and
+              two Storage policies gate professional access on these switches —
+              food diary, workouts, weight, vitals, blood panels and markers,
+              medications, surgeries, comorbidities, imaging, and the lab-report
+              and medical-imaging buckets. Turning one on discloses real
+              clinical data to a real person, immediately. Telling a client
+              otherwise on the screen where they decide is not a stale comment;
+              it is misinformed consent. */}
           <p className="flex items-start gap-1.5 text-[11px] text-charcoal-faint mt-3.5 pt-3 border-t border-charcoal/[0.06]">
             <Info size={12} className="mt-0.5 shrink-0" />
             <span>
-              Your choices are saved and visible to {pro.name} now. The data itself isn't connected
-              yet, so turning something on doesn't reveal anything to them today.
+              These take effect straight away. Turning one on lets {pro.name} see that data from
+              that moment; turning it off stops them just as quickly.
             </span>
           </p>
         </Card>

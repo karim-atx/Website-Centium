@@ -73,8 +73,70 @@ export function consumeAccountSuspended(): boolean {
 }
 
 /**
- * A `fetch` that watches auth responses for the banned code and otherwise
- * behaves exactly like the one it wraps.
+ * The PostgREST paths whose WRITES must outlive the page that started them.
+ *
+ * WHY THIS LIVES IN A FETCH WRAPPER, of all places. A consent PATCH is an
+ * ordinary `fetch`, and an ordinary `fetch` is cancelled when the page
+ * unloads. The toggle has already moved optimistically by then, the promise
+ * never settles so no error can be raised, no confirmation appears, and the
+ * row is left exactly as it was. That is not hypothetical: it is the
+ * reproduced cause of three recorded consent-write failures, one of them a
+ * revocation that left clinical data readable by a professional the client
+ * had decided should no longer see it.
+ *
+ * `keepalive` is the one flag that fixes it. The browser finishes the request
+ * after the document is gone; the response is discarded, which is fine —
+ * nothing is left to render it to, and the write is the part that matters.
+ *
+ * MEASURED, NOT ASSUMED. The window is the round trip: ~5 ms against a local
+ * Supabase, but 202-563 ms (median 213) against the staging project, which is
+ * why this failed in real use and survived eighteen local reproduction runs.
+ *
+ * AN ALLOWLIST RATHER THAN EVERY MUTATION. `keepalive` caps a request at 64 KB
+ * including headers, and that cap applies whether or not the page is
+ * unloading. Applying it to every write would put a size limit on paths that
+ * legitimately carry large bodies, to fix a problem they do not have. These
+ * two carry a one-field PATCH and a one-uuid RPC argument — hundreds of bytes
+ * with headers, three orders of magnitude inside the cap.
+ *
+ *   client_access_grants          the consent record itself: eighteen RLS
+ *                                 policies and two Storage policies gate
+ *                                 professional access on it
+ *   disconnect_client_relationship  ends the engagement AND clears every
+ *                                 grant between the pair; losing it leaves
+ *                                 both standing
+ */
+const KEEPALIVE_WRITE_PATHS = ["/rest/v1/client_access_grants", "/rest/v1/rpc/disconnect_client_relationship"];
+
+/** GET and HEAD are not writes; losing one costs nothing but a re-read. */
+const MUTATING_METHODS = new Set(["POST", "PATCH", "PUT", "DELETE"]);
+
+function urlOf(input: RequestInfo | URL): string {
+  if (typeof input === "string") return input;
+  if (input instanceof URL) return input.href;
+  return input.url;
+}
+
+/**
+ * Whether this particular request is a consent write that has to survive the
+ * page going away.
+ *
+ * Reads the method from `init` first and the Request object second, because
+ * postgrest-js calls fetch with a URL string and an init — but a caller
+ * handing over a Request would otherwise read as a GET and silently lose the
+ * protection.
+ */
+export function needsKeepalive(input: RequestInfo | URL, init?: RequestInit): boolean {
+  const method = (init?.method ?? (typeof input === "object" && "method" in input ? input.method : "GET")).toUpperCase();
+  if (!MUTATING_METHODS.has(method)) return false;
+  const url = urlOf(input);
+  return KEEPALIVE_WRITE_PATHS.some((path) => url.includes(path));
+}
+
+/**
+ * A `fetch` that watches auth responses for the banned code, keeps consent
+ * writes alive across a page unload, and otherwise behaves exactly like the
+ * one it wraps.
  *
  * READS A CLONE, NEVER THE RESPONSE. The body is a single-use stream and
  * auth-js is about to read it to build its own error; consuming it here would
@@ -83,20 +145,24 @@ export function consumeAccountSuspended(): boolean {
  * NARROW ON PURPOSE. Only non-OK responses from the auth endpoint are
  * inspected, so the ordinary request path does no extra work: no clone, no
  * parse, nothing. It also never throws — a failure to inspect must not turn a
- * recoverable request into a broken one.
+ * recoverable request into a broken one. The keepalive branch is the same
+ * shape: one string test per request, and nothing changed for anything else.
  */
 export function suspensionAwareFetch(inner?: typeof fetch): typeof fetch {
   return async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    // Left untouched unless this is one of the two consent writes, so the
+    // common path is byte-for-byte the request postgrest-js built.
+    const request = needsKeepalive(input, init) ? { ...init, keepalive: true } : init;
+
     // Resolved per call rather than captured at module load. The client is
     // constructed at import time, and binding `globalThis.fetch` then would
     // freeze whatever existed at that instant — which breaks any environment
     // that installs or replaces fetch afterwards, and makes this untestable.
-    const response = await (inner ?? globalThis.fetch)(input, init);
+    const response = await (inner ?? globalThis.fetch)(input, request);
     if (response.ok) return response;
 
     try {
-      const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
-      if (!/\/auth\/v1\//.test(url)) return response;
+      if (!/\/auth\/v1\//.test(urlOf(input))) return response;
       const body = await response.clone().json();
       if (isUserBannedPayload(body)) markAccountSuspended();
     } catch {

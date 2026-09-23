@@ -218,11 +218,18 @@ export interface ProfessionalClient {
   code?: string;
   joinedAt: string;
   // --- Everything below is CLIENT HEALTH/TRAINING DATA and is undefined on
-  // real rows. It lives on the client's own tables behind
-  // `client_access_grants`, which is still decorative, and those tables are
-  // still mock. Anything reading these must handle undefined and say so in
-  // the UI rather than rendering a confident zero. See the README follow-up
-  // "The professional dashboard's client-health tiles are not wired".
+  // real rows. It lives on the client's own tables, behind
+  // `client_access_grants` — which is enforced, not decorative: eighteen RLS
+  // policies and two on storage.objects gate professional reads on
+  // `has_client_access()`. These fields are undefined because no professional
+  // screen has been built to fetch them, not because the data or the
+  // permission is missing.
+  //
+  // Anything reading these must handle undefined and say so in the UI rather
+  // than rendering a confident zero — and anything that starts filling them
+  // must read through the gated tables rather than around them. See the README
+  // follow-up "The professional dashboard's client-health tiles are not
+  // wired".
   activityLevel?: ActivityLevel;
   activityType?: "cardio" | "strength" | "both";
   age?: number;

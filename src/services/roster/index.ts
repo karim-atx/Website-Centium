@@ -8,9 +8,16 @@ import type { Enums } from "../../../lib/supabase/database.types";
 // Deliberately narrow. The roster row that comes back carries the
 // relationship itself plus the client's display identity — nothing about
 // the client's health, training or nutrition. Those live on the client's own
-// tables behind `client_access_grants`, are still mock in this app, and are
-// NOT surfaced here; see the README follow-up rather than reintroducing the
-// cached-projection fields the mock used to carry.
+// tables, hold real records, and are gated by real RLS: eighteen policies and
+// two on storage.objects resolve `has_client_access()` against
+// `client_access_grants` before a professional reads a row. (This comment used
+// to call them mock. They are not, and reading that as permission to project
+// them onto the roster would route PHI around the consent check.)
+//
+// `access` below is the grant state itself, which the professional is entitled
+// to see; the data behind it stays where it is. See the README follow-up
+// rather than reintroducing the cached-projection fields the mock used to
+// carry.
 
 export interface RosterClient {
   /** professional_clients.id — the relationship, and what disconnect takes. */
