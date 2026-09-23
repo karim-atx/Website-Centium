@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useApp } from "../../context/AppContext";
-import { X, Camera, ChevronRight } from "lucide-react";
+import { X, Camera, ChevronRight, AlertCircle } from "lucide-react";
 
 // Item 3 of the "Centium Mobile" handoff (design_handoff_centium_mobile,
 // frame p10b, screen="metric" metricStyle="v2"): Add Metric stops being a
@@ -410,7 +410,13 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             style={{ background: "#F0F0FD", borderRadius: 12, padding: "11px 13px" }}
             role={error ? "alert" : undefined}
           >
-            <CheckCircleGlyph />
+            {/* Same strip, same colour; an error gets an alert glyph so it
+                doesn't read as a confirmation. */}
+            {error ? (
+              <AlertCircle size={20} strokeWidth={1.8} style={{ color: "#1A00E0", flex: "none" }} />
+            ) : (
+              <CheckCircleGlyph />
+            )}
             <span style={{ fontSize: 12, fontWeight: 600, color: "#1A00E0" }}>{confirmationText}</span>
           </div>
 
