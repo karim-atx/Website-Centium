@@ -57,8 +57,13 @@ export function gramsInServingLabel(label: string): number | null {
  * everywhere, but Hummus is labelled "1/2 cup", and without this it fell
  * through to the unitScale fallback and logged one cup as one serving
  * instead of two.
+ *
+ * Exported for scripts/import-fdc-nutrients.ts, which needs the same
+ * count-and-unit split to ask FDC for a gram weight for "1/2 cup" of a
+ * specific food. A second parser there would be free to drift from this one,
+ * and the two disagreeing about what a serving is would be invisible.
  */
-function servingLabelUnit(label: string): { count: number; unit: ServingUnit } | null {
+export function servingLabelUnit(label: string): { count: number; unit: ServingUnit } | null {
   const match = label
     .trim()
     .match(/^([0-9]+(?:\.[0-9]+)?)(?:\s*\/\s*([0-9]+))?\s*(g|ml|cups?|tbsp|tsp)\b/i);

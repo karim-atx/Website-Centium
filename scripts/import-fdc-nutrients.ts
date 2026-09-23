@@ -43,11 +43,14 @@
  *      name match within that order wins.
  *   3. Fetches that FDC food's full nutrient profile (reported per 100 g)
  *      and converts it to THIS food's own serving_label basis — the same
- *      basis `foods.calories` etc. are already on — using the gram weight
- *      `gramsInServingLabel` extracts from the label. A food whose label has
- *      no gram weight ("1 piece", "1 bowl" — the Lebanese-dish case this
- *      app's own serving-multiplier logic already documents) cannot be
- *      converted honestly, so it is SKIPPED, not guessed.
+ *      basis `foods.calories` etc. are already on. The gram weight comes
+ *      from the label where the label carries one, and otherwise from FDC's
+ *      own portion table for the measure the label names ("1/2 cup" of
+ *      hummus is 123 g because FDC publishes 246 g per cup for it). A label
+ *      naming no measure at all ("1 piece", "1 wrap", "1 bowl" — the
+ *      Lebanese-dish case this app's own serving-multiplier logic already
+ *      documents) cannot be converted honestly, so it is SKIPPED, not
+ *      guessed, and so is a measure FDC publishes no weight for.
  *   4. Maps FDC nutrient ids to this app's canonical keys via
  *      src/data/fdcNutrientMap.ts. A "standard"-confidence mapping that
  *      resolves a real value gets one-time logged under VERIFY so a human
@@ -76,7 +79,7 @@ import dotenv from "dotenv";
 dotenv.config({ path: [".env.local", ".env"], quiet: true });
 
 import { createClient } from "@supabase/supabase-js";
-import { gramsInServingLabel } from "../src/services/nutrition";
+import { gramsInServingLabel, servingLabelUnit } from "../src/services/nutrition";
 import { FDC_NUTRIENT_MAP, type FdcNutrientMapping } from "../src/data/fdcNutrientMap";
 import { ALL_NUTRIENT_ROWS } from "../src/data/nutrientSchema";
 
@@ -213,11 +216,29 @@ function nutrientIdOf(entry: FdcNutrientEntry): number | null {
   return null;
 }
 
+/**
+ * A gram weight FDC publishes for one named household measure of a food.
+ * The three datasets fill this in differently, which is why the reader below
+ * looks at four fields rather than one: SR Legacy puts the unit in
+ * `modifier` with `measureUnit` literally set to "undetermined"
+ * (hummus: modifier "cup", gramWeight 246), Survey puts it in
+ * `portionDescription` with no `amount` at all (tabbouleh: "1 cup", 160 g),
+ * and Foundation uses `measureUnit` properly when it uses it.
+ */
+interface FdcPortion {
+  amount?: number;
+  gramWeight?: number;
+  modifier?: string;
+  portionDescription?: string;
+  measureUnit?: { name?: string; abbreviation?: string };
+}
+
 interface FdcFoodDetail {
   fdcId: number;
   description: string;
   dataType: string;
   foodNutrients: FdcNutrientEntry[];
+  foodPortions?: FdcPortion[];
 }
 
 // RANKED BY HOW COMPLETE THE NUTRIENT PROFILE ACTUALLY IS, not by how
@@ -410,6 +431,48 @@ interface FoodRow {
   calories: number;
 }
 
+// The words each of this app's serving units can appear as in FDC's portion
+// fields. FDC is not consistent about spelling or placement ("tbsp" in an SR
+// Legacy modifier, "Tablespoons" in a Foundation measureUnit name), so this
+// matches whole words from any of the four fields rather than one field's
+// exact spelling. Plain "g" and "ml" are absent deliberately: a gram label
+// never reaches here, and treating a millilitre as a gram for an arbitrary
+// food is exactly the guess this script refuses to make.
+const PORTION_UNIT_WORDS: Record<string, string[]> = {
+  cup: ["cup", "cups"],
+  tbsp: ["tbsp", "tbs", "tablespoon", "tablespoons"],
+  tsp: ["tsp", "teaspoon", "teaspoons"],
+};
+
+/** Grams in ONE `unit` of this food, per FDC's own portion table. */
+function portionGramsPerUnit(detail: FdcFoodDetail, unit: string): number | null {
+  const words = PORTION_UNIT_WORDS[unit];
+  if (!words) return null;
+
+  for (const portion of detail.foodPortions ?? []) {
+    if (!(typeof portion.gramWeight === "number") || portion.gramWeight <= 0) continue;
+
+    const tokens = new Set(
+      [portion.measureUnit?.name, portion.measureUnit?.abbreviation, portion.modifier, portion.portionDescription]
+        .filter((field): field is string => typeof field === "string")
+        .join(" ")
+        .toLowerCase()
+        .split(/[^a-z]+/)
+    );
+    if (!words.some((word) => tokens.has(word))) continue;
+
+    // HOW MANY of that unit the gram weight covers. SR Legacy says so in
+    // `amount`; Survey omits `amount` and writes it into the description
+    // ("1 cup"). Falling back to 1 when neither is present is not a guess
+    // about the food — it is what "a cup" means when nothing says otherwise.
+    const described = Number(portion.portionDescription?.trim().match(/^[0-9.]+/)?.[0]);
+    const amount =
+      portion.amount && portion.amount > 0 ? portion.amount : described > 0 ? described : 1;
+    return portion.gramWeight / amount;
+  }
+  return null;
+}
+
 async function loadFoods(): Promise<FoodRow[]> {
   if (!supabase) {
     throw new Error("Cannot read the foods table without SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY, even for --dry-run's matching preview. Set both, or point --only at a name you'll type manually.");
@@ -433,9 +496,25 @@ async function main() {
 
   for (const food of foods) {
     try {
-      const grams = gramsInServingLabel(food.serving_label);
-      if (!grams) {
-        skippedNoGramWeight.push(`${food.name} (serving: "${food.serving_label}")`);
+      // A GRAM WEIGHT IN THE LABEL IS STILL THE HONEST BASIS and is used
+      // as-is. Failing that, a countable household measure — "1/2 cup",
+      // "2 tbsp" — can still be converted, but only with FDC's own gram
+      // weight for that measure OF THAT FOOD, which isn't known until the
+      // food has been matched and fetched. So the search now runs before the
+      // skip decision instead of after it, and 24 foods that were skipped
+      // unconditionally get a real chance.
+      //
+      // A label naming no unit at all still skips without spending a request:
+      // "1 piece", "1 wrap", "1 bowl" and "3 skewers" have nothing to convert
+      // FROM, and inventing a weight for them is the guess this script exists
+      // to refuse. That distinction — no unit vs. a unit FDC has no weight
+      // for — is why the skip message now says which one happened.
+      const labelGrams = gramsInServingLabel(food.serving_label);
+      const labelUnit = labelGrams ? null : servingLabelUnit(food.serving_label);
+      if (!labelGrams && !labelUnit) {
+        skippedNoGramWeight.push(
+          `${food.name} (serving: "${food.serving_label}" — no unit to convert from)`
+        );
         continue;
       }
 
@@ -447,6 +526,16 @@ async function main() {
       const isExact = found.description.trim().toLowerCase() === food.name.trim().toLowerCase();
 
       const detail = await fetchFdcDetail(found.fdcId);
+
+      const perUnit = labelUnit ? portionGramsPerUnit(detail, labelUnit.unit) : null;
+      const grams = labelGrams ?? (perUnit && labelUnit ? labelUnit.count * perUnit : null);
+      if (!grams) {
+        skippedNoGramWeight.push(
+          `${food.name} (serving: "${food.serving_label}" — FDC ${found.fdcId} "${found.description}" publishes no gram weight per ${labelUnit?.unit})`
+        );
+        continue;
+      }
+
       const per100g = extractPer100g(detail);
       const scale = grams / 100;
       const nutrients = Object.fromEntries(
@@ -455,7 +544,12 @@ async function main() {
 
       console.log(
         `${isExact ? "[exact]" : "[fuzzy]"} ${food.name} -> FDC ${found.fdcId} "${found.description}" ` +
-          `(${found.dataType}) — ${Object.keys(nutrients).length}/${ALL_NUTRIENT_ROWS.length} nutrients matched`
+          `(${found.dataType}) — ${Object.keys(nutrients).length}/${ALL_NUTRIENT_ROWS.length} nutrients matched` +
+          // Named explicitly when the serving basis came from FDC rather
+          // than from the label, because it is the one number in this line
+          // that was derived rather than read, and every nutrient on the
+          // row is scaled by it.
+          (labelGrams ? "" : ` [${food.serving_label} = ${Math.round(grams)} g, from FDC portion data]`)
       );
 
       let writeError: string | null = null;
