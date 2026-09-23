@@ -3,7 +3,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import type { StoreItem } from "../../data/mockProfessionals";
-import { Star, MapPin, ChevronLeft, Minus, Plus, ShoppingBag, Check } from "lucide-react";
+import { Star, MapPin, ChevronLeft, ShoppingBag, Check } from "lucide-react";
 
 // V8 (QA 8.0): "After accessing the specific store, it should direct you
 // to a store page that includes things like the item name, its price,
@@ -18,11 +18,13 @@ export const StoreDetailSheet: React.FC<{
   const { addToCart } = useApp();
   const [selectedItem, setSelectedItem] = useState<StoreItem | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [quantityDraft, setQuantityDraft] = useState("1");
   const [added, setAdded] = useState(false);
 
   const reset = () => {
     setSelectedItem(null);
     setQuantity(1);
+    setQuantityDraft("1");
     setAdded(false);
   };
 
@@ -50,23 +52,28 @@ export const StoreDetailSheet: React.FC<{
           <p className="text-lg font-bold text-primary-dark mb-3">${selectedItem.price}</p>
           <p className="text-sm text-charcoal-soft leading-relaxed mb-5">{selectedItem.description}</p>
 
-          <div className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3 mb-5">
-            <span className="text-sm font-semibold text-charcoal-soft">Quantity</span>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setQuantity((q) => Math.max(1, q - 1))}
-                className="tap w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
-              >
-                <Minus size={14} />
-              </button>
-              <span className="font-semibold text-charcoal w-6 text-center">{quantity}</span>
-              <button
-                onClick={() => setQuantity((q) => q + 1)}
-                className="tap w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
-              >
-                <Plus size={14} />
-              </button>
-            </div>
+          {/* Foundations: number entry is typed, never -/+ buttons. Grey
+              container + white input; the draft lets the field be cleared
+              mid-edit, and blur restores the last valid (>= 1) quantity. */}
+          <div
+            className="flex items-center mb-5"
+            style={{ gap: 12, background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
+          >
+            <span style={{ flex: "none", fontSize: 14.5, fontWeight: 500, color: "#575863" }}>Quantity</span>
+            <input
+              value={quantityDraft}
+              onChange={(e) => {
+                const v = e.target.value.replace(/\D/g, "");
+                setQuantityDraft(v);
+                const n = Number(v);
+                if (v && n >= 1) setQuantity(n);
+              }}
+              onBlur={() => setQuantityDraft(String(quantity))}
+              inputMode="numeric"
+              aria-label="Quantity"
+              className="min-w-0 text-center focus:outline-none"
+              style={{ flex: 1, background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
+            />
           </div>
 
           <Button

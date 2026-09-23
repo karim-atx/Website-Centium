@@ -2,7 +2,35 @@ import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
-import { Minus, Plus, Trash2, ShoppingBag, Check, Store } from "lucide-react";
+import { Trash2, ShoppingBag, Check, Store } from "lucide-react";
+
+// Foundations: number entry is typed, never -/+ buttons. White input in the
+// row's grey container; the draft lets the field be cleared mid-edit, every
+// valid (>= 1) value commits live so the subtotal tracks it, and blur
+// restores the last committed quantity. Removal stays on the trash button.
+const CartQuantityField: React.FC<{ itemName: string; quantity: number; onCommit: (n: number) => void }> = ({
+  itemName,
+  quantity,
+  onCommit,
+}) => {
+  const [draft, setDraft] = useState(String(quantity));
+  return (
+    <input
+      value={draft}
+      onChange={(e) => {
+        const v = e.target.value.replace(/\D/g, "");
+        setDraft(v);
+        const n = Number(v);
+        if (v && n >= 1) onCommit(n);
+      }}
+      onBlur={() => setDraft(String(quantity))}
+      inputMode="numeric"
+      aria-label={`${itemName} quantity`}
+      className="shrink-0 text-center focus:outline-none"
+      style={{ width: 64, background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
+    />
+  );
+};
 
 // V8 (QA 8.0): "When bought it goes to a cart that adopts the same
 // features of checkout most store pages have" — quantity editing, a
@@ -58,28 +86,20 @@ export const CartSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ op
                 <>
                   <div className="space-y-2.5 mb-3">
                     {s.items.map((c) => (
-                      <div key={c.itemId} className="flex items-center gap-3 bg-cream-soft rounded-2xl px-3.5 py-3">
+                      <div
+                        key={c.itemId}
+                        className="flex items-center gap-3"
+                        style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
+                      >
                         <div className="min-w-0 flex-1">
                           <p className="text-sm font-semibold text-charcoal truncate">{c.itemName}</p>
                           <p className="text-xs font-semibold text-primary-dark mt-0.5">${c.price} each</p>
                         </div>
-                        <div className="flex items-center gap-1.5 shrink-0">
-                          <button
-                            onClick={() => updateCartQuantity(c.itemId, c.quantity - 1)}
-                            className="tap w-7 h-7 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
-                            aria-label={`Decrease ${c.itemName} quantity`}
-                          >
-                            <Minus size={12} />
-                          </button>
-                          <span className="text-sm font-semibold text-charcoal w-5 text-center">{c.quantity}</span>
-                          <button
-                            onClick={() => updateCartQuantity(c.itemId, c.quantity + 1)}
-                            className="tap w-7 h-7 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
-                            aria-label={`Increase ${c.itemName} quantity`}
-                          >
-                            <Plus size={12} />
-                          </button>
-                        </div>
+                        <CartQuantityField
+                          itemName={c.itemName}
+                          quantity={c.quantity}
+                          onCommit={(n) => updateCartQuantity(c.itemId, n)}
+                        />
                         <button
                           onClick={() => removeFromCart(c.itemId)}
                           className="tap text-charcoal-faint shrink-0"
