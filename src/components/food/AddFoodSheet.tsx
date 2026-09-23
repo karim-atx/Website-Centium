@@ -5,7 +5,7 @@ import { Button } from "../ui/Button";
 import { Search, Mic, Camera, ScanLine, Clock, Star, Check, UtensilsCrossed, Sparkles, SlidersHorizontal } from "lucide-react";
 import { foodCategories, addFoodFilterCategories } from "../../data/mockFoods";
 import type { Food, MealType, ServingUnit } from "../../types";
-import { mealLabels, mealOrder, servingMultiplier, sumNutrientMaps, targetsFromGoal } from "../../services/nutrition";
+import { servingMultiplier, sumNutrientMaps, targetsFromGoal } from "../../services/nutrition";
 import { NutrientSections } from "./NutrientSections";
 import {
   searchFoods,
@@ -34,6 +34,27 @@ const servingUnitOptions: { value: ServingUnit; label: string }[] = [
   { value: "tbsp", label: "tbsp" },
   { value: "tsp", label: "tsp" },
 ];
+
+// Mobile handoff item 2: the detail step's meal row order and labels. Local
+// to this step — the shared mealOrder/mealLabels drive the diary and other
+// screens, which this item doesn't touch.
+const detailMealOrder: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
+const detailMealLabels: Record<MealType, string> = {
+  breakfast: "Breakfast",
+  snack: "Snack",
+  lunch: "Lunch",
+  dinner: "Dinner",
+};
+
+// Caps label at the top of a grey sheet container (00-FOUNDATIONS §0.3).
+const sheetCapsLabelStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+  color: "#8C8378",
+};
 
 const FoodIcon: React.FC<{ category: Food["category"]; size?: number; className?: string }> = ({
   category,
@@ -87,7 +108,7 @@ export const AddFoodSheet: React.FC<{
   const [quantityDraft, setQuantityDraft] = useState("1");
   // V7 (QA 7.0): quantity can now be typed directly (with decimals), not
   // just stepped — keep the draft text in sync whenever it changes
-  // programmatically (the +/- buttons, or resetting the form).
+  // programmatically (resetting the form).
   const setQuantity = (updater: number | ((q: number) => number)) => {
     setQuantityRaw((prev) => {
       const next = typeof updater === "function" ? updater(prev) : updater;
@@ -485,27 +506,35 @@ export const AddFoodSheet: React.FC<{
             </p>
           </div>
         ) : (
-          <div className="animate-fade-slide-up">
-            <div className="flex items-center gap-3 mb-5">
-              <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
-                <FoodIcon category={selectedFood.category} size={19} className="text-primary-dark" />
+          // Mobile handoff item 2: the detail step in the sheet control
+          // vocabulary, sections 10px apart.
+          <div className="animate-fade-slide-up flex flex-col" style={{ gap: 10 }}>
+            <div className="flex items-center" style={{ gap: 13, marginBottom: 14 }}>
+              <span
+                className="flex items-center justify-center shrink-0"
+                style={{ width: 48, height: 48, borderRadius: 15, background: "#EFECFB", color: "#6B4BE0" }}
+              >
+                <FoodIcon category={selectedFood.category} size={20} />
               </span>
-              <div>
-                <p className="font-display font-semibold text-lg text-charcoal">{selectedFood.name}</p>
-                <p className="text-xs text-charcoal-faint">
+              <div className="min-w-0">
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em", color: "#241F1B" }}>
+                  {selectedFood.name}
+                </p>
+                {/* The verified/estimate note isn't in the handoff's header
+                    spec; kept (restyled) because it tells the user whether the
+                    figures are sourced or approximate. */}
+                <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "#8C8378" }}>
                   {selectedFood.servingLabel}
                   {selectedFood.isVerified ? " · USDA verified" : " · estimate"}
                 </p>
               </div>
             </div>
 
-            {/* Mobile handoff item 1: typed, never stepped — white input in
-                the grey sheet container. */}
             <div
-              className="flex items-center justify-between mb-3"
-              style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
+              className="flex items-center"
+              style={{ gap: 12, background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
             >
-              <span className="text-sm font-semibold text-charcoal-soft">Quantity</span>
+              <span style={{ flex: "none", fontSize: 14.5, fontWeight: 500, color: "#575863" }}>Quantity</span>
               <input
                 value={quantityDraft}
                 onChange={(e) => {
@@ -516,66 +545,78 @@ export const AddFoodSheet: React.FC<{
                 }}
                 onBlur={() => setQuantityDraft(String(quantity))}
                 inputMode="decimal"
-                className="w-14 text-center focus:outline-none"
-                style={{ background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
+                className="min-w-0 text-center focus:outline-none"
+                style={{ flex: 1, background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
               />
             </div>
 
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Unit</p>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6">
-              {servingUnitOptions.map((u) => (
-                <button
-                  key={u.value}
-                  onClick={() => setUnit(u.value)}
-                  className="tap transition-colors"
-                  style={sheetChipStyle(unit === u.value)}
-                >
-                  {u.label}
-                </button>
-              ))}
+            <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}>
+              <p style={sheetCapsLabelStyle}>UNIT</p>
+              <div
+                className="flex overflow-x-auto no-scrollbar"
+                style={{ gap: 7, margin: "9px -14px 0", padding: "0 14px" }}
+              >
+                {servingUnitOptions.map((u) => (
+                  <button
+                    key={u.value}
+                    onClick={() => setUnit(u.value)}
+                    className="tap transition-colors"
+                    style={sheetChipStyle(unit === u.value)}
+                  >
+                    {u.label}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Meal</p>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6">
-              {mealOrder.map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setMeal(m)}
-                  className="tap transition-colors"
-                  style={sheetChipStyle(meal === m)}
-                >
-                  {mealLabels[m]}
-                </button>
-              ))}
+            <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}>
+              <p style={sheetCapsLabelStyle}>MEAL</p>
+              <div className="flex" style={{ gap: 6, marginTop: 9 }}>
+                {detailMealOrder.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setMeal(m)}
+                    className="tap transition-colors"
+                    style={{ ...sheetChipStyle(meal === m), flex: 1, minWidth: 0, padding: "8px 4px" }}
+                  >
+                    {detailMealLabels[m]}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            <div className="flex justify-around bg-cream-soft rounded-2xl px-4 py-3 mb-6 text-center">
-              <div>
-                <p className="text-sm font-bold text-charcoal">{foodTotalCal}</p>
-                <p className="text-[10px] text-charcoal-faint">kcal</p>
-              </div>
-              <div>
-                <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.protein * multiplier)}g</p>
-                <p className="text-[10px] text-charcoal-faint">protein</p>
-              </div>
-              <div>
-                <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.carbs * multiplier)}g</p>
-                <p className="text-[10px] text-charcoal-faint">carbs</p>
-              </div>
-              <div>
-                <p className="text-sm font-bold text-charcoal">{Math.round(selectedFood.fat * multiplier)}g</p>
-                <p className="text-[10px] text-charcoal-faint">fat</p>
-              </div>
+            <div className="grid grid-cols-4" style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 0" }}>
+              {[
+                { value: `${foodTotalCal}`, color: "#241F1B", caption: "kcal" },
+                { value: `${(selectedFood.protein * multiplier).toFixed(1)}g`, color: "#7D6BB5", caption: "protein" },
+                { value: `${Math.round(selectedFood.carbs * multiplier)}g`, color: "#8175C2", caption: "carbs" },
+                { value: `${(selectedFood.fat * multiplier).toFixed(1)}g`, color: "#5E8A83", caption: "fat" },
+              ].map((cell, i) => (
+                <div
+                  key={cell.caption}
+                  className="text-center"
+                  style={i > 0 ? { borderLeft: "1px solid #E2E3E7" } : undefined}
+                >
+                  <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: cell.color }}>{cell.value}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "#8C8378" }}>{cell.caption}</p>
+                </div>
+              ))}
             </div>
 
             {addError && (
-              <p className="text-xs font-semibold text-status-high text-center mb-3">{addError}</p>
+              <p className="text-xs font-semibold text-status-high text-center">{addError}</p>
             )}
 
-            <div className="flex gap-2.5">
-              <Button fullWidth onClick={handleAdd} disabled={justAdded || saving}>
+            <div className="flex" style={{ gap: 10 }}>
+              <button
+                type="button"
+                onClick={handleAdd}
+                disabled={justAdded || saving}
+                className="tap inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
+                style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "#A198DF", color: "#FFFFFF", fontSize: 15.5, fontWeight: 700 }}
+              >
                 {justAdded ? <><Check size={16} /> Added</> : saving ? "Saving…" : "Add to Diary"}
-              </Button>
+              </button>
               <button
                 type="button"
                 onClick={() => setAdvancedOpen(true)}
