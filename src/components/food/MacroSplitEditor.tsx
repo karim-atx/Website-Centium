@@ -17,6 +17,9 @@ const macroMeta = [
 
 type MacroMeta = (typeof macroMeta)[number];
 
+export const MACRO_REBALANCE_NOTE =
+  "Adjusting one macro rebalances the other two within evidence-based ranges so they always total 100%.";
+
 const clamp = (value: number, m: MacroMeta) => Math.min(m.max, Math.max(m.min, value));
 
 interface Props {
@@ -24,12 +27,16 @@ interface Props {
   calories: number;
   onChange: (split: MacroSplit) => void;
   disabled?: boolean;
+  /** Master handover item 9: the Goals & Macros compact sizes (7px apart,
+   *  12px labels, 5px tracks). The caller renders MACRO_REBALANCE_NOTE itself
+   *  (below its swatches). Off by default, so other callers are unchanged. */
+  compact?: boolean;
 }
 
 /** Editing one slider rescales the other two proportionally to their current
  * ratio, then clamps both to their AMDR range so no macro can be dragged to
  * a scientifically unreasonable extreme just to make room for another. */
-export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, disabled }) => {
+export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, disabled, compact }) => {
   const handleSlide = (key: keyof MacroSplit, rawValue: number) => {
     const m = macroMeta.find((mm) => mm.key === key)!;
     const value = clamp(rawValue, m);
@@ -49,16 +56,16 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
   };
 
   return (
-    <div className={disabled ? "space-y-5 opacity-50 pointer-events-none" : "space-y-5"}>
+    <div className={`${compact ? "space-y-[7px]" : "space-y-5"}${disabled ? " opacity-50 pointer-events-none" : ""}`}>
       {macroMeta.map((m) => {
         const pct = split[m.key];
         const grams = Math.round((calories * (pct / 100)) / m.kcalPerG);
         const frac = ((pct - m.min) / (m.max - m.min)) * 100;
         return (
           <div key={m.key}>
-            <div className="flex items-baseline justify-between mb-1.5">
-              <span className="text-sm font-semibold text-charcoal">{m.label}</span>
-              <span className="text-xs text-charcoal-faint">
+            <div className={`flex items-baseline justify-between ${compact ? "mb-[3px]" : "mb-1.5"}`}>
+              <span className={`${compact ? "text-[12px]" : "text-sm"} font-semibold text-charcoal`}>{m.label}</span>
+              <span className={`${compact ? "text-[10px]" : "text-xs"} text-charcoal-faint`}>
                 {pct}% · {grams}g
               </span>
             </div>
@@ -75,7 +82,9 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
               value={pct}
               onChange={(e) => handleSlide(m.key, Number(e.target.value))}
               disabled={disabled}
-              className="w-full h-2 rounded-full appearance-none"
+              // Compact: block, so the inline line box doesn't add ~19px of
+              // text line-height under each 5px track.
+              className={`w-full ${compact ? "block h-[5px]" : "h-2"} rounded-full appearance-none`}
               style={{
                 accentColor: m.color,
                 backgroundImage: `linear-gradient(to right, ${m.color} ${frac}%, rgb(var(--c-cream-soft)) ${frac}%)`,
@@ -84,10 +93,7 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
           </div>
         );
       })}
-      <p className="text-xs text-charcoal-faint">
-        Adjusting one macro rebalances the other two within evidence-based ranges so they always total
-        100%.
-      </p>
+      {!compact && <p className="text-xs text-charcoal-faint">{MACRO_REBALANCE_NOTE}</p>}
     </div>
   );
 };

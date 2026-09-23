@@ -202,12 +202,16 @@ export default function Food() {
           existing size and this renders the title directly instead. */}
       <p className="mb-[11px] text-[19px] font-bold tracking-[-0.03em] text-charcoal">Food</p>
 
-      <SegmentedTabs
-        className="mb-5 animate-fade-slide-up"
-        items={foodTabs}
-        activeKey={tab}
-        onChange={(key) => setTab(key as Tab)}
-      />
+      {/* Goals & Macros draws its own tab bar (GoalsPanel), 5px above its
+          cards; drawing this one too showed two identical bars there. */}
+      {tab !== "goals" && (
+        <SegmentedTabs
+          className="mb-5 animate-fade-slide-up"
+          items={foodTabs}
+          activeKey={tab}
+          onChange={(key) => setTab(key as Tab)}
+        />
+      )}
 
       {tab === "diary" && (
         <div className="animate-fade-slide-up">
