@@ -27,7 +27,7 @@ const PrincipledArt: React.FC = () => {
   const days = ["M", "T", "W", "T", "F", "S"];
   return (
     <div
-      className="relative w-full"
+      className="relative w-full h-full"
       style={{ background: "linear-gradient(150deg,#F4F1FB 0%,#EFEAF9 46%,#EDF4F3 100%)" }}
     >
       <div
@@ -92,7 +92,7 @@ const PrincipledArt: React.FC = () => {
 };
 
 const DeterminedArt: React.FC = () => (
-  <div className="relative w-full" style={{ background: "linear-gradient(150deg,#EDF4F3 0%,#E9EFEE 48%,#F4F1FB 100%)" }}>
+  <div className="relative w-full h-full" style={{ background: "linear-gradient(150deg,#EDF4F3 0%,#E9EFEE 48%,#F4F1FB 100%)" }}>
     <div
       aria-hidden
       className="absolute rounded-full pointer-events-none"
@@ -155,7 +155,7 @@ const MACROS = [
 ];
 
 const IntentionalArt: React.FC = () => (
-  <div className="relative w-full" style={{ background: "linear-gradient(150deg,#EDE9F9 0%,#EBE8F5 54%,#EDF4F3 100%)" }}>
+  <div className="relative w-full h-full" style={{ background: "linear-gradient(150deg,#EDE9F9 0%,#EBE8F5 54%,#EDF4F3 100%)" }}>
     <div
       aria-hidden
       className="absolute rounded-full pointer-events-none"
@@ -213,7 +213,7 @@ const IntentionalArt: React.FC = () => (
  *  repo's standing rule, the handoff's own markup is the literal source for
  *  these values, not a freehand reproduction. */
 const ProactiveArt: React.FC = () => (
-  <div className="relative w-full" style={{ background: "linear-gradient(150deg,#EDF4F3 0%,#EAEAF6 52%,#E9E4F8 100%)" }}>
+  <div className="relative w-full h-full" style={{ background: "linear-gradient(150deg,#EDF4F3 0%,#EAEAF6 52%,#E9E4F8 100%)" }}>
     <div
       aria-hidden
       className="absolute rounded-full pointer-events-none"
