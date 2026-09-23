@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { X, Camera, ChevronRight, AlertCircle } from "lucide-react";
 
@@ -229,10 +230,13 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
     if (!result.ok) setError(result.message ?? "Couldn't save that.");
   };
 
-  // No records flow exists yet in the app — the handoff's own reference
-  // wires this button to a no-op (v2Records: () => {}), so it stays an
-  // inert tap target with the correct chrome until that flow is built.
-  const handleAddRecords = () => {};
+  // Add Records' destination is Medical Records: close this card and open the
+  // Health page's Records sheet (the photo/upload flows live there).
+  const navigate = useNavigate();
+  const handleAddRecords = () => {
+    onClose();
+    navigate("/app/health", { state: { openRecords: true } });
+  };
 
   const handleSysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBpSys(e.target.value.replace(/\D/g, "").slice(0, 3));

@@ -154,7 +154,14 @@ export default function Health() {
   const location = useLocation();
   const navigate = useNavigate();
   useEffect(() => {
-    const openMetric = (location.state as { openMetric?: string } | null)?.openMetric;
+    const navState = location.state as { openMetric?: string; openRecords?: boolean } | null;
+    // Add Metric's "Add Records" button lands here with the Records sheet open.
+    if (navState?.openRecords) {
+      setRecordsOpen(true);
+      navigate(".", { replace: true, state: null });
+      return;
+    }
+    const openMetric = navState?.openMetric;
     if (!openMetric) return;
     const currentByType: Record<string, number> = {
       weight: metricValues.weight,
