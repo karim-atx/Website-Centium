@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { sheetChipStyle } from "../ui/sheetChip";
+import { sessionChipStyle } from "./sessionSheetStyles";
 import { rpeOptions, weightFromRpe } from "../../services/workout";
 
 export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
@@ -15,7 +15,7 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
   }, [oneRm, reps, rpe]);
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="RPE Calculator">
+    <BottomSheet open={open} onClose={onClose} title="RPE Calculator" variant="session">
       <div className="space-y-5 animate-fade-slide-up">
         <label className="block">
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Known 1RM (kg)</span>
@@ -39,13 +39,13 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
 
         <div>
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Target RPE</span>
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+          <div className="flex flex-wrap" style={{ gap: 6 }}>
             {rpeOptions.map((r) => (
               <button
                 key={r}
                 onClick={() => setRpe(r)}
                 className="tap"
-                style={sheetChipStyle(rpe === r)}
+                style={sessionChipStyle(rpe === r)}
               >
                 {r}
               </button>

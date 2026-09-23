@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { sheetChipStyle } from "../ui/sheetChip";
+import { sessionChipStyle, sessionOptionStyle } from "./sessionSheetStyles";
 import { Button } from "../ui/Button";
 import type { LoggedSet, SetType } from "../../types";
 import { rpeOptions } from "../../services/workout";
@@ -53,19 +53,19 @@ export const SetOptionsSheet: React.FC<{
   })();
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={`Set ${set.setNumber} options`}>
+    <BottomSheet open={open} onClose={onClose} title={`Set ${set.setNumber} options`} variant="session">
       <div className="space-y-5 animate-fade-slide-up">
         <div>
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
             Classification
           </p>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          <div className="grid grid-cols-2 gap-2">
             {setTypes.map((t) => (
               <button
                 key={t.value}
                 onClick={() => setSetType(t.value)}
                 className="tap transition-colors"
-                style={sheetChipStyle(setType === t.value)}
+                style={sessionOptionStyle(setType === t.value, { borderRadius: 12, padding: "10px 0" })}
               >
                 {t.label}
               </button>
@@ -75,13 +75,13 @@ export const SetOptionsSheet: React.FC<{
 
         <div>
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">RPE</p>
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
+          <div className="flex flex-wrap" style={{ gap: 6 }}>
             {rpeOptions.map((r) => (
               <button
                 key={r}
                 onClick={() => setRpe(rpe === r ? undefined : r)}
                 className="tap"
-                style={sheetChipStyle(rpe === r)}
+                style={sessionChipStyle(rpe === r)}
               >
                 {r}
               </button>
@@ -107,7 +107,7 @@ export const SetOptionsSheet: React.FC<{
             className="w-full"
             style={{ accentColor: painColor }}
           />
-          <div className="flex items-center justify-between text-[10px] text-charcoal-faint mt-1 mb-5">
+          <div className="flex items-center justify-between text-[10px] text-charcoal-faint mt-1">
             <span>No injury</span>
             <span>Severe pain</span>
           </div>
@@ -126,6 +126,7 @@ export const SetOptionsSheet: React.FC<{
             value={mood}
             onChange={(e) => setMood(Number(e.target.value))}
             className="w-full"
+            style={{ accentColor: "#AEA1DC" }}
           />
           <div className="flex items-center justify-between text-[10px] text-charcoal-faint mt-1">
             <span>Bad mood</span>
@@ -133,13 +134,17 @@ export const SetOptionsSheet: React.FC<{
           </div>
         </div>
 
-        <label className="block">
-          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Notes</span>
+        {/* CentiumFrame field(): grey #F2F3F5 container, white borderless input. */}
+        <label className="block" style={{ background: "#F2F3F5", borderRadius: 14, padding: "12px 14px" }}>
+          <span className="block" style={{ fontSize: 13, fontWeight: 500, color: "#575863", marginBottom: 8 }}>
+            Notes
+          </span>
           <input
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g. felt heavy, elbow twinge…"
-            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+            className="w-full text-charcoal placeholder:text-charcoal-faint focus:outline-none"
+            style={{ borderRadius: 10, background: "#FFFFFF", border: "none", padding: "11px 13px", fontSize: 14 }}
           />
         </label>
 

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { sheetChipStyle } from "../ui/sheetChip";
+import { sessionOptionStyle } from "./sessionSheetStyles";
 import { AlertTriangle } from "lucide-react";
 
 const BAR_OPTIONS: { value: "20" | "15" | "other"; label: string; kg?: number }[] = [
@@ -70,15 +70,23 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
   const collarHeight = plateCollar === 5 ? 34 : plateCollar === 2.5 ? 26 : 0;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Plate Calculator">
+    <BottomSheet open={open} onClose={onClose} title="Plate Calculator" variant="session">
       <div className="space-y-5 animate-fade-slide-up">
-        <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit">
+        <div className="flex items-center gap-2 w-fit" style={{ background: "#F5F5F6", borderRadius: 10, padding: 4 }}>
           {(["kg", "lb"] as const).map((u) => (
             <button
               key={u}
               onClick={() => setUnit(u)}
               className="tap uppercase"
-              style={sheetChipStyle(unit === u)}
+              style={{
+                padding: "7px 16px",
+                borderRadius: 8,
+                fontSize: 12,
+                fontWeight: 700,
+                border: "none",
+                background: unit === u ? "#A299DE" : "#FFFFFF",
+                color: unit === u ? "#FFFFFF" : "#241F1B",
+              }}
             >
               {u}
             </button>
@@ -89,28 +97,33 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
             Target weight ({unit})
           </span>
-          {/* Mobile handoff item 1: typed, never stepped — white input in
-              the grey sheet container. */}
-          <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}>
-            <input
-              value={targetDraft}
-              onChange={(e) => setTargetDraft(e.target.value.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, ""))}
-              inputMode="decimal"
-              className="w-full text-center focus:outline-none"
-              style={{ background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
-            />
-          </div>
+          {/* Typed, never stepped — a single grey field. */}
+          <input
+            value={targetDraft}
+            onChange={(e) => setTargetDraft(e.target.value.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, ""))}
+            inputMode="decimal"
+            className="w-full min-w-0 text-center focus:outline-none"
+            style={{
+              background: "#F5F5F6",
+              border: "1px solid rgba(36,31,27,0.07)",
+              borderRadius: 12,
+              padding: "10px 12px",
+              fontSize: 18,
+              fontWeight: 700,
+              color: "#241F1B",
+            }}
+          />
         </label>
 
         <div>
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Bar</span>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar mb-2">
+          <div className="flex gap-2 mb-2">
             {BAR_OPTIONS.map((b) => (
               <button
                 key={b.value}
                 onClick={() => setBarChoice(b.value)}
                 className="tap transition-colors"
-                style={sheetChipStyle(barChoice === b.value)}
+                style={sessionOptionStyle(barChoice === b.value, { borderRadius: 12, padding: "8px 14px" })}
               >
                 {b.label}
               </button>
@@ -130,13 +143,13 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
         {/* §6.9b: "Collars become a three-way mutually-exclusive selector." */}
         <div>
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Collars (per side)</span>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar">
+          <div className="flex gap-2">
             {[5, 2.5, 0].map((c) => (
               <button
                 key={c}
                 onClick={() => setPlateCollar(c as 5 | 2.5 | 0)}
                 className="tap transition-colors"
-                style={sheetChipStyle(plateCollar === c)}
+                style={{ flex: 1, ...sessionOptionStyle(plateCollar === c, { borderRadius: 12, padding: "8px 0" }) }}
               >
                 {c === 0 ? "None" : `${c} kg`}
               </button>
@@ -157,6 +170,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
             value={pct}
             onChange={(e) => setPct(Number(e.target.value))}
             className="w-full"
+            style={{ accentColor: "#AEA1DC" }}
           />
         </div>
 
