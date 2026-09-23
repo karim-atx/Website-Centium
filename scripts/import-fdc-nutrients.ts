@@ -302,12 +302,19 @@ const DATA_TYPE_RANK: Record<string, number> = {
 //
 //   * Parentheses are stripped from the query itself, so "Low-Fat Milk (1%)"
 //     is searched as "Low-Fat Milk 1%". Measured: that returns the same
-//     intended row ("Milk, low fat (1%)", Survey) and stops 400ing. Percent
-//     signs and apostrophes are fine and are left alone.
+//     intended row ("Milk, low fat (1%)", Survey) and stops 400ing.
+//
+//   * A forward slash is stripped for the same measured reason: the query
+//     "Beef, ground, 95% lean meat / 5% fat, raw" 400s on both attempts,
+//     and the same query without the slash returns that exact row. No name
+//     in this catalog carries one today, so this costs nothing now and
+//     stops the next name that does from failing for a reason nobody would
+//     think to look for. Percent signs and apostrophes are genuinely fine
+//     and are left alone.
 const SEARCH_PAGE_SIZE = 200;
 
 function searchableName(name: string): string {
-  return name.replace(/[()]/g, " ").replace(/\s+/g, " ").trim();
+  return name.replace(/[()/]/g, " ").replace(/\s+/g, " ").trim();
 }
 
 async function searchFdc(name: string): Promise<FdcSearchFood | null> {
