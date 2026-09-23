@@ -409,14 +409,14 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
                 clipPath: `inset(0px 0px 0px ${proOn ? 0 : 100}.00%)`,
                 boxShadow: proOn ? "inset 3px 0 0 0 #4E3894" : "inset 3px 0 0 0 transparent",
                 transition: "clip-path .52s cubic-bezier(.22,1,.36,1),box-shadow .52s cubic-bezier(.22,1,.36,1)",
-                // Both wipe panels are always fully painted (see the file
-                // header) -- this keeps this one on its own compositor layer
-                // at rest so ordinary page scroll over the section doesn't
-                // re-rasterize it every frame. useEcoSlider's fit()/equalise()
-                // toggle it off for the instant they synchronously measure
-                // this element -- it corrupts those offsetHeight reads if left
-                // on, verified directly -- and restore it right after.
-                willChange: "clip-path",
+                // Both wipe panels are always fully mounted (see the file
+                // header). visibility and will-change are both owned by
+                // useEcoSlider's paint() (via refs, never through this style
+                // prop) rather than set here: the inactive one is hidden
+                // whenever the slider is at rest, and will-change:clip-path
+                // is applied only for the brief drag/transition window it
+                // actually helps -- see paint()'s own comment for why it's
+                // no longer a permanent style.
                 minWidth: 0,
                 justifyContent: "flex-end",
               }}
@@ -619,9 +619,8 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
                 clipPath: `inset(0px ${bizOn ? 0 : 100}.00% 0px 0px)`,
                 boxShadow: bizOn ? "inset -3px 0 0 0 #2F5F58" : "inset -3px 0 0 0 transparent",
                 transition: "clip-path .52s cubic-bezier(.22,1,.36,1),box-shadow .52s cubic-bezier(.22,1,.36,1)",
-                // See the "pro" panel above for why this is here and why
-                // useEcoSlider toggles it off during its own measurements.
-                willChange: "clip-path",
+                // See the "pro" panel above -- visibility/will-change are
+                // both owned by paint(), not this style prop.
                 minWidth: 0,
                 justifyContent: "flex-start",
               }}

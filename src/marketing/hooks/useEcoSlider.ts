@@ -62,28 +62,43 @@ export function useEcoSlider(initial: EcoPos = -1) {
       // that's the entire cost behind this section's mobile scroll jank.
       // Verified directly: A/B-hiding just the currently-inactive one for
       // an identical scroll gesture took average frame time from 68ms to
-      // 17ms and dropped-frame rate from 29% to 0%, while will-change alone
-      // (still kept below, it helps the wipe transition itself) wasn't
-      // enough on its own. `visibility` (not `display`) is used because it
-      // never affects layout -- fit()/equalise() measure a
-      // visibility:hidden panel exactly the same as a visible one, so no
-      // extra toggling is needed there. The inactive panel only needs to be
-      // shown during a live drag or the .52s wipe transition -- dragging
-      // and commitLive cover both -- and stays hidden the rest of the time.
-      // No separate timer needed: this piggybacks on the seam's own
-      // commitLive window and its existing re-paint at +580ms below, which
-      // re-evaluates and hides the now-inactive panel once that window
-      // closes.
+      // 17ms and dropped-frame rate from 29% to 0%. `visibility` (not
+      // `display`) is used because it never affects layout -- fit()/
+      // equalise() measure a visibility:hidden panel exactly the same as a
+      // visible one, so no extra toggling is needed there. The inactive
+      // panel only needs to be shown during a live drag or the .52s wipe
+      // transition -- dragging and commitLive cover both -- and stays
+      // hidden the rest of the time. No separate timer needed: this
+      // piggybacks on the seam's own commitLive window and its existing
+      // re-paint at +580ms below, which re-evaluates and hides the
+      // now-inactive panel once that window closes.
+      //
+      // will-change:clip-path is applied on this same bothVisible window,
+      // not as a permanent style, for the same reason: fixed a reported
+      // Chrome/Android jank (confirmed above), but the report re-surfaced
+      // specifically on iPhone Safari after that fix shipped, and Safari
+      // is documented to hold onto compositing layers from a persistent
+      // will-change far more eagerly than Chromium does -- a static hint
+      // that's "on" nearly all the time (as it was, applied via the style
+      // prop) is exactly the shape of hint Safari handles worst. Since the
+      // inactive panel is now hidden outside of a drag/transition anyway,
+      // the hint is only ever load-bearing during that same brief window,
+      // so it costs nothing to scope it there instead of leaving it
+      // permanently on. fit()/equalise() still defensively clear it during
+      // their own measurement pass (see below) for the rare case a resize
+      // or font-load refit lands mid-transition, when it's briefly "on".
       const bothVisible = dragging || commitLive;
       if (pro) {
         pro.style.clipPath = `inset(0px 0px 0px ${(t * 100).toFixed(2)}%)`;
         pro.style.transition = dragging ? "none" : "";
         pro.style.visibility = bothVisible || p < 0 ? "" : "hidden";
+        pro.style.willChange = bothVisible ? "clip-path" : "auto";
       }
       if (biz) {
         biz.style.clipPath = `inset(0px ${((1 - t) * 100).toFixed(2)}% 0px 0px)`;
         biz.style.transition = dragging ? "none" : "";
         biz.style.visibility = bothVisible || p >= 0 ? "" : "hidden";
+        biz.style.willChange = bothVisible ? "clip-path" : "auto";
       }
     }
     const s = seam.current;
@@ -212,17 +227,20 @@ export function useEcoSlider(initial: EcoPos = -1) {
     // unconstrained size; equalise() re-applies the real (post-shed)
     // min-height afterwards, same as it always has.
     dk.querySelectorAll<HTMLElement>("[data-eco-wipe] > div").forEach((c) => { c.style.minHeight = ""; });
-    // `will-change: clip-path` (set in Ecosystem.tsx) keeps each wipe panel
-    // on its own compositor layer at rest -- both panels are always fully
-    // painted (see this hook's own doc comment), so that's what keeps plain
-    // page scroll over this section cheap on mobile instead of re-rastering
-    // both of them every frame. It also corrupts the offsetHeight reads this
-    // function takes on these exact elements -- verified directly: left on
-    // during a measurement pass, the shed/back-fill math below collapses the
-    // card to almost nothing. So it's dropped for the duration of this
-    // synchronous pass and restored before returning, on every path out.
+    // will-change:clip-path corrupts the offsetHeight reads this function
+    // takes on these exact elements -- verified directly: left on during a
+    // measurement pass, the shed/back-fill math below collapses the card to
+    // almost nothing. paint() (above) only ever applies it during a live
+    // drag or the .52s wipe transition now, so most fit() calls land with
+    // it already "auto" -- but a resize/font-load refit can still land
+    // mid-transition, when it's briefly "clip-path", so this stays
+    // defensive rather than assuming. Each element's own prior value is
+    // saved and restored (not hardcoded back to "clip-path", which paint()
+    // used to always leave it at when this was a permanent style) so a
+    // during-rest call doesn't leave the hint on for no reason afterward.
     // Nothing repaints in between: fit() only ever runs inside a layout
     // effect or an rAF callback, before the browser's next paint.
+    const savedWC = wipes.map((wp) => wp.style.willChange);
     for (const wp of wipes) wp.style.willChange = "auto";
     try {
       const chrome = () => st.offsetHeight - dk.offsetHeight;
@@ -276,7 +294,7 @@ export function useEcoSlider(initial: EcoPos = -1) {
         else if (plot && plot.offsetParent) plot.style.setProperty("--eco-grow", Math.min(spare, 150) + "px");
       }
     } finally {
-      for (const wp of wipes) wp.style.willChange = "clip-path";
+      wipes.forEach((wp, i) => { wp.style.willChange = savedWC[i]; });
     }
   }, []);
 
@@ -286,8 +304,10 @@ export function useEcoSlider(initial: EcoPos = -1) {
     if (!dk) return;
     // Same will-change dance as fit() above and for the same reason: these
     // cards are descendants of the wipe panels the compositor hint lives on,
-    // so it's dropped for this synchronous read too, as a precaution.
+    // so it's dropped for this synchronous read too, as a precaution, and
+    // each element's own prior value (not a hardcoded one) is restored.
     const wipes = Array.from(dk.querySelectorAll<HTMLElement>("[data-eco-wipe]"));
+    const savedWC = wipes.map((wp) => wp.style.willChange);
     for (const wp of wipes) wp.style.willChange = "auto";
     try {
       const cards = Array.from(dk.querySelectorAll<HTMLElement>("[data-eco-wipe] > div"));
@@ -295,7 +315,7 @@ export function useEcoSlider(initial: EcoPos = -1) {
       const max = Math.max(0, ...cards.map((c) => Math.ceil(c.getBoundingClientRect().height)));
       if (max) cards.forEach((c) => (c.style.minHeight = max + "px"));
     } finally {
-      for (const wp of wipes) wp.style.willChange = "clip-path";
+      wipes.forEach((wp, i) => { wp.style.willChange = savedWC[i]; });
     }
   }, []);
 
