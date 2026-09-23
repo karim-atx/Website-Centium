@@ -83,6 +83,30 @@ export function usePersonaArc() {
     }
 
     let active = 0, painted = -1, pinTop: number | null = null;
+    // Reported as a brief (~90-100ms, 2-3 times per scroll-through) residual
+    // stutter isolated to this section specifically, right when the focused
+    // card changes -- traced to the fit-correction pass below, which forces
+    // two synchronous layout reads (the measure-revert-remeasure dance) on
+    // every single focus change. That dance exists to answer one question:
+    // how many px does a card at distance `d` from focus overshoot the
+    // stage's bottom edge by? That overshoot depends only on d and the
+    // current stage/card geometry (wrapH, cardW, each card's own height) --
+    // never on which literal card (or which `act`) currently sits at that
+    // d. So AS LONG AS all `count` cards render at the same height, the
+    // per-distance overshoot is the same value no matter which card is
+    // asked, and can be measured once and reused across every focus change
+    // until the geometry itself changes (resize/mount/fonts-ready).
+    //
+    // That "same height" condition is verified on every measurePin() pass
+    // (see cardHeightsUniform below), reusing offsetHeight reads it already
+    // takes -- not assumed. If a future content edit ever makes one
+    // persona's description long enough to change that card's height, this
+    // automatically falls back to the always-correct per-call measurement
+    // below rather than silently serving a stale, wrong correction -- the
+    // one failure mode worth avoiding on this specific section, which has
+    // a history of exactly this class of pin/fit bug.
+    let cardHeightsUniform = true;
+    let cachedOverByD: number[] | null = null;
 
     // ---- (C1) fan geometry, fitted to the RENDERED boxes --------------------
     const paintArc = (act: number) => {
@@ -105,22 +129,37 @@ export function usePersonaArc() {
         c.style.transform = `translate3d(${Math.round(g.slot * stepX)}px,${ys[i] || 0}px,0) rotate(${g.tilt}deg) scale(${g.scale})`;
       });
       const ys = cards.map((_, i) => Math.round(rawY(i - act)));
-      // measure pass with transitions OFF (a live transition returns the in-flight rect)
-      const saved = cards.map((c) => c.style.transition);
-      const prev = cards.map((c) => c.style.transform);
-      cards.forEach((c) => (c.style.transition = "none"));
-      layOut(ys);
-      void wr.offsetHeight;
-      const limit = stg.getBoundingClientRect().bottom;
-      cards.forEach((c, i) => {
-        const over = c.getBoundingClientRect().bottom - limit;
-        if (over > 0.5) ys[i] = Math.max(-46, ys[i] - Math.ceil(over)); // lift into the top slack
-      });
-      // rewind so the real write below still eases
-      cards.forEach((c, i) => (c.style.transform = prev[i]));
-      void wr.offsetHeight;
-      cards.forEach((c, i) => (c.style.transition = saved[i]));
-      layOut(ys);
+      if (cardHeightsUniform && cachedOverByD) {
+        // Fast path: apply the cached per-distance correction directly and
+        // write the final transform once, transitions untouched -- same
+        // end state as the slow path below, none of its measurement cost.
+        cards.forEach((_, i) => {
+          const over = cachedOverByD![geom(i).d] || 0;
+          if (over) ys[i] = Math.max(-46, ys[i] - over);
+        });
+        layOut(ys);
+      } else {
+        // measure pass with transitions OFF (a live transition returns the in-flight rect)
+        const saved = cards.map((c) => c.style.transition);
+        const prev = cards.map((c) => c.style.transform);
+        cards.forEach((c) => (c.style.transition = "none"));
+        layOut(ys);
+        void wr.offsetHeight;
+        const limit = stg.getBoundingClientRect().bottom;
+        const overByD = cardHeightsUniform ? new Array(count).fill(0) : null;
+        cards.forEach((c, i) => {
+          const over = c.getBoundingClientRect().bottom - limit;
+          const correction = over > 0.5 ? Math.ceil(over) : 0;
+          if (correction) ys[i] = Math.max(-46, ys[i] - correction); // lift into the top slack
+          if (overByD) overByD[geom(i).d] = Math.max(overByD[geom(i).d], correction);
+        });
+        if (overByD) cachedOverByD = overByD;
+        // rewind so the real write below still eases
+        cards.forEach((c, i) => (c.style.transform = prev[i]));
+        void wr.offsetHeight;
+        cards.forEach((c, i) => (c.style.transition = saved[i]));
+        layOut(ys);
+      }
       cards.forEach((c, i) => {
         const { d } = geom(i), tint = TINT(i);
         c.style.filter = d === 0 ? "none" : `grayscale(1) contrast(.9) brightness(1.03) blur(${(d * 0.9).toFixed(1)}px)`;
@@ -157,13 +196,19 @@ export function usePersonaArc() {
     let fitKey = "";
     const measurePin = () => {
       const vh = window.innerHeight, vw = window.innerWidth;
-      let cardH = 0;
-      cards.forEach((c) => (cardH = Math.max(cardH, c.offsetHeight)));
+      let cardH = 0, minCardH = Infinity;
+      // Same reads paintArc's fast-path safety check relies on (see its own
+      // comment) -- no extra cost, just also tracking the minimum alongside
+      // the existing max.
+      cards.forEach((c) => { const h = c.offsetHeight; cardH = Math.max(cardH, h); minCardH = Math.min(minCardH, h); });
+      if (minCardH !== cardH) { cardHeightsUniform = false; cachedOverByD = null; }
+      else cardHeightsUniform = true;
       cardH += 24; // focused card paints ~23px taller than its layout box
       const pref = parseFloat(stg.dataset.prefH || "") || stg.offsetHeight;
       const key = vh + "x" + vw + "x" + cardH + "x" + pref;
       if (key !== fitKey) {
         fitKey = key;
+        cachedOverByD = null; // geometry changed -- any cached correction is stale
         sec.style.paddingTop = "30px";
         let stageOff = 0;
         for (let el: HTMLElement | null = stg; el && el !== sec; el = el.offsetParent as HTMLElement | null) stageOff += el.offsetTop;
