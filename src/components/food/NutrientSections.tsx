@@ -3,10 +3,10 @@ import clsx from "clsx";
 import { ChevronDown } from "lucide-react";
 import { NUTRIENT_SECTIONS, CALC_KEYS, type NutrientRow, type NutrientSection } from "../../data/nutrientSchema";
 
-// Pure, page-agnostic renderer for the Nutrient Summary's 8 sections —
-// shared between the full Nutrient Summary page (mobile handoff item 9) and
-// the Meal Prep "Advanced" nutrient view. Add Food and Edit Logged Food use
-// NutrientDetailSections below instead (master handover item 4). Everything
+// Pure, page-agnostic renderer for the Nutrient Summary page's 8 sections
+// (master handover item 10). The sheet nutrient steps — Add Food, Edit Logged
+// Food (item 4) and Meal Prep (item 11) — use NutrientDetailSections below
+// instead. Everything
 // page-level (PageHeader, the filter popover chrome, the empty-day banner's
 // framing) stays out of this file on purpose so it can be dropped into a
 // sheet step later without carrying routing/header assumptions with it.
@@ -385,6 +385,15 @@ export interface NutrientDetailSectionsProps {
   proteinTarget: number;
   carbTarget: number;
   fatTarget: number;
+  /**
+   * Master handover item 11 (Meal Prep): several ingredients. `present[key]`
+   * is how many of the `itemCount` ingredients have a value for it. Every row
+   * then shows: the value (and % when all ingredients have it), the value
+   * with a "partial" chip and "Based on X of N ingredients" when only some
+   * do, or "No data" when none do. Omitted for a single food (item 4).
+   */
+  present?: Record<string, number>;
+  itemCount?: number;
 }
 
 function detailTarget(row: NutrientRow, props: NutrientDetailSectionsProps): number | null {
@@ -408,12 +417,25 @@ function NutrientDetailSection({
   props: NutrientDetailSectionsProps;
 }) {
   const rows = section.sub ? [...section.rows, ...section.sub.rows] : section.rows;
-  const withAmounts = rows
-    .map((row) => ({
-      row,
-      amount: row.kind === "calc" ? computeCalcAmount(row.key, props.totals) : props.totals[row.key],
-    }))
-    .filter((r): r is { row: NutrientRow; amount: number } => r.amount !== undefined);
+  const multi = props.itemCount !== undefined && props.present !== undefined;
+  const allRows = rows.map((row) => {
+    const amount = row.kind === "calc" ? computeCalcAmount(row.key, props.totals) : props.totals[row.key];
+    const known =
+      amount === undefined
+        ? 0
+        : !multi
+          ? undefined
+          : row.kind === "calc"
+            ? calcPresentCount(row.key, props.totals, props.present!) ?? 0
+            : props.present![row.key] ?? 0;
+    return { row, amount, known };
+  });
+  const withAmounts = allRows.filter(
+    (r): r is { row: NutrientRow; amount: number; known: number | undefined } => r.amount !== undefined
+  );
+  // A single food hides what it has no value for; several ingredients list
+  // every nutrient, saying "No data" where none of them has one.
+  const visible = multi ? allRows : withAmounts;
 
   return (
     <div style={{ background: "#FFFFFF", border: "1px solid rgba(174,161,220,0.34)", borderRadius: 12, overflow: "hidden" }}>
@@ -438,25 +460,29 @@ function NutrientDetailSection({
 
       {expanded && (
         <div style={{ padding: "2px 12px 10px" }}>
-          {withAmounts.length === 0 ? (
+          {visible.length === 0 ? (
             <p style={{ margin: 0, padding: "7px 0", fontSize: 11.5, color: "#8C8378" }}>
               No data for this food in this group.
             </p>
           ) : (
-            withAmounts.map(({ row, amount }, i) => {
+            visible.map(({ row, amount, known }, i) => {
+              const n = props.itemCount ?? 1;
+              const hasValue = amount !== undefined;
+              const partial = multi && hasValue && known !== undefined && known > 0 && known < n;
               const target = detailTarget(row, props);
-              const percent = target !== null && target > 0 ? Math.round((amount / target) * 100) : null;
-              const overLimit = row.kind === "limit" && target !== null && amount > target;
-              const amountText =
-                row.key === CALC_KEYS.omega6to3.key
+              // Several ingredients: a percentage only when every one of them
+              // has a value — a partial sum is never presented as complete.
+              const percent =
+                hasValue && !partial && target !== null && target > 0 ? Math.round((amount / target) * 100) : null;
+              const overLimit = hasValue && row.kind === "limit" && target !== null && amount > target;
+              const amountText = !hasValue
+                ? "No data"
+                : row.key === CALC_KEYS.omega6to3.key
                   ? `${formatDetailAmount(amount)} : 1`
                   : `${formatDetailAmount(amount)}${row.unit ? ` ${row.unit}` : ""}`;
               return (
-                <div
-                  key={row.key}
-                  className="flex items-center"
-                  style={{ gap: 8, padding: "7px 0", borderTop: i > 0 ? "1px solid rgba(36,31,27,0.05)" : undefined }}
-                >
+                <div key={row.key} style={{ padding: "7px 0", borderTop: i > 0 ? "1px solid rgba(36,31,27,0.05)" : undefined }}>
+                <div className="flex items-center" style={{ gap: 8 }}>
                   <span className="flex-1 min-w-0" style={{ fontSize: 12.5, color: "#241F1B" }}>
                     {row.name}
                     {LIMIT_NUTRIENTS.has(row.name) && (
@@ -474,8 +500,26 @@ function NutrientDetailSection({
                         limit
                       </span>
                     )}
+                    {partial && (
+                      <span
+                        style={{
+                          marginLeft: 6,
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: "#8A6A1E",
+                          background: "rgba(217,164,65,0.22)",
+                          borderRadius: 5,
+                          padding: "1px 5px",
+                        }}
+                      >
+                        partial
+                      </span>
+                    )}
                   </span>
-                  <span className="shrink-0 tabular-nums" style={{ fontSize: 12.5, fontWeight: 700, color: "#241F1B" }}>
+                  <span
+                    className="shrink-0 tabular-nums"
+                    style={{ fontSize: 12.5, fontWeight: hasValue ? 700 : 500, color: hasValue ? "#241F1B" : "#B3ADA4" }}
+                  >
                     {amountText}
                   </span>
                   <span
@@ -490,6 +534,12 @@ function NutrientDetailSection({
                   >
                     {percent === null ? "—" : `${percent}%`}
                   </span>
+                </div>
+                {partial && (
+                  <p style={{ margin: "2px 0 0", fontSize: 10.5, color: "#8C8378" }}>
+                    Based on {known} of {n} ingredients
+                  </p>
+                )}
                 </div>
               );
             })

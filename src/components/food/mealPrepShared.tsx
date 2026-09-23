@@ -1,6 +1,6 @@
 import type React from "react";
-import type { Food, ServingUnit } from "../../types";
-import { servingMultiplier } from "../../services/nutrition";
+import type { Food, MealType, ServingUnit } from "../../types";
+import { servingMultiplier, mealLabels } from "../../services/nutrition";
 
 // Shared building blocks for mobile handoff item 10 (Food > Meal Prep
 // redesign): the Custom Meals + Recipes widget cards on MealPrepPanel, and
@@ -61,14 +61,13 @@ export const PREP_LAV = { text: "#5F5093", container: "rgba(174,161,220,0.17)", 
 /**
  * The 104x8 macro bar used on both the widget-card preview rows and the List
  * rows — three segments sized by each macro's share of TOTAL GRAMS, not
- * calories. Segment widths are `grams / totalGrams * 104`, each rounded
- * independently (not as a running remainder), which is what makes a
- * 16/61/22 g item read 17/64/23px: 16/99*104=16.81→17, 61/99*104=64.04→64,
- * 22/99*104=23.11→23 (acceptance criterion, README line 765).
+ * calories. Master handover item 11: segment width = grams / totalGrams x
+ * 100% of the 104px track, unrounded, so a 16/61/22 g item reads 16.8, 64.1
+ * and 23.1px.
  */
 export const MacroBar: React.FC<{ p: number; c: number; f: number }> = ({ p, c, f }) => {
   const total = p + c + f;
-  const w = (g: number) => (total > 0 ? Math.round((g / total) * 104) : 0);
+  const w = (g: number) => (total > 0 ? `${(g / total) * 100}%` : 0);
   return (
     <span style={{ display: "flex", flexDirection: "column", gap: 4, width: 104, flex: "none" }}>
       <span style={{ display: "flex", height: 8, borderRadius: 3, overflow: "hidden", background: "rgba(36,31,27,0.07)" }}>
@@ -88,24 +87,22 @@ export const MacroBar: React.FC<{ p: number; c: number; f: number }> = ({ p, c, 
 };
 
 /**
- * The grey 4-column macro strip used on List row's counterpart (Detail/
- * Create screens) — literal from CentiumMealPrep.dc.html's `macroStrip()`.
- * Distinct color set from MacroBar above (that one is the handoff's own
- * doing — this strip's protein/carbs/fat tones are not the same hexes as
- * the 104px bar's, per the dc.html JS).
+ * The grey 4-column macro strip on the Detail and Create screens (00-
+ * FOUNDATIONS §0.3): equal cells, figures in the macro trio's type-on-white
+ * colours, protein and fat to one decimal, carbs and kcal whole.
  */
 export const MacroStrip: React.FC<{ t: MacroTotals; note?: string }> = ({ t, note }) => {
   const rows: [string, string, string][] = [
     [String(Math.round(t.kcal)), "kcal", PREP_CHARCOAL],
-    [`${Math.round(t.p * 10) / 10}g`, "protein", "#7D6BB5"],
+    [`${t.p.toFixed(1)}g`, "protein", "#7D6BB5"],
     [`${Math.round(t.c)}g`, "carbs", "#8175C2"],
-    [`${Math.round(t.f * 10) / 10}g`, "fat", "#4274D7"],
+    [`${t.f.toFixed(1)}g`, "fat", "#5E8A83"],
   ];
   return (
     <div>
-      <div style={{ background: "#F4F4F6", borderRadius: 16, display: "flex", padding: "13px 0" }}>
+      <div className="grid grid-cols-4" style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 0" }}>
         {rows.map((r, k) => (
-          <div key={k} style={{ flex: 1, textAlign: "center", borderLeft: k === 0 ? "none" : "1px solid #E2E3E7" }}>
+          <div key={k} style={{ textAlign: "center", borderLeft: k === 0 ? "none" : "1px solid #E2E3E7" }}>
             <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: r[2] }}>{r[0]}</p>
             <p style={{ margin: "2px 0 0", fontSize: 11, color: PREP_FAINT }}>{r[1]}</p>
           </div>
@@ -115,6 +112,15 @@ export const MacroStrip: React.FC<{ t: MacroTotals; note?: string }> = ({ t, not
     </div>
   );
 };
+
+// Master handover item 11: meal chips run Breakfast, Snack, Lunch, Dinner
+// (singular "Snack"; the shared mealLabels keeps "Snacks" for other screens).
+export const PREP_MEAL_ORDER: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
+export const prepMealLabel = (m: MealType) => (m === "snack" ? "Snack" : mealLabels[m]);
+
+// Item 11: solid primary fills for the flow's own buttons (List "Create",
+// Detail "Add to Diary") — teal for meals, lavender for recipes.
+export const PREP_PRIMARY = { meals: "#79A8A1", recipes: "#A198DF" } as const;
 
 export function capsLabelStyle(color: string): React.CSSProperties {
   return { margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color };

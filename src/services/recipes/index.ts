@@ -136,17 +136,16 @@ function toRecipe(row: RecipeRow): Recipe {
 
 /**
  * Every recipe the caller can see: their own, plus any a professional scoped
- * to them (handoff Q6). Ordered ascending, matching getCustomMeals — the
- * handoff's Q2 answer keeps that query's own ordering untouched and sorts
- * newest-first client-side at display time instead; the same choice applies
- * here for consistency between the two lists.
+ * to them (handoff Q6). Newest first (master handover item 11: recipes read
+ * newest first everywhere). Custom meals keep their own ascending query and
+ * are reversed at display time instead (Part 4 Q2).
  */
 export async function getRecipes(userId: string): Promise<RecipesResult> {
   const { data, error } = await supabase
     .from("recipes")
     .select(`id, title, servings, steps, recipe_items(${ITEM_SELECT})`)
     .or(`owner_id.eq.${userId},scoped_to_client_id.eq.${userId}`)
-    .order("created_at", { ascending: true });
+    .order("created_at", { ascending: false });
 
   if (error) {
     console.error("[recipes] Could not read recipes:", error.message);

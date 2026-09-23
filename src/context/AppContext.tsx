@@ -2210,7 +2210,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       if (cancelled) return;
 
-      setRecipes(() => [...result.recipes, ...uploaded, ...keptLocal]);
+      // Master handover item 11: recipes are newest first everywhere. The
+      // server list already is (getRecipes orders created_at descending);
+      // recipes created on this device before sign-in are newer still, so
+      // they go in front, newest first.
+      setRecipes(() => [...uploaded.reverse(), ...keptLocal.reverse(), ...result.recipes]);
     });
 
     return () => {
@@ -3896,14 +3900,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addRecipe: AppState["addRecipe"] = async (title, items, servings, steps) => {
     if (!authUserId) {
       setRecipes((prev) => [
-        ...prev,
         { id: `rc${Date.now()}`, title: title.trim(), items, servings, steps },
+        ...prev,
       ]);
       return undefined;
     }
     const result = await createRecipeRemote(authUserId, title, items, servings, steps);
     if (!result.ok || !result.recipe) return result.message ?? "Could not save that recipe.";
-    setRecipes((prev) => [...prev, result.recipe!]);
+    setRecipes((prev) => [result.recipe!, ...prev]);
     return undefined;
   };
 

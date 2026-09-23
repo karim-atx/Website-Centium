@@ -8,6 +8,7 @@ import { useApp } from "../../context/AppContext";
 import { foodCategoryIcon } from "../../utils/icons";
 import { mealOrder, mealLabels } from "../../services/nutrition";
 import { MacroStrip, sumItems, type PrepItem } from "./mealPrepShared";
+import { PrepCreateSheet } from "./PrepCreateSheet";
 
 const EMPTY_FOODS: CustomFood[] = [];
 
@@ -23,7 +24,7 @@ const servingUnitOptions: ServingUnit[] = ["serving", "g", "ml", "cup", "tbsp", 
 // `clientId` scopes food creation to that client's own food database
 // instead of the account's personal custom foods, and a meal-type tag
 // (breakfast/lunch/snack/dinner) can now be set on the plan itself.
-export const CreateMealSheet: React.FC<{
+interface CreateMealSheetProps {
   open: boolean;
   onClose: () => void;
   clientId?: string;
@@ -31,7 +32,21 @@ export const CreateMealSheet: React.FC<{
   // delete it" — passing an existing meal pre-fills the form and saving
   // updates it in place instead of creating a new one.
   editMeal?: CustomMeal | null;
-}> = ({ open, onClose, clientId, editMeal }) => {
+  /** True when opened from the Custom Meals list or detail: the back chevron returns there. */
+  hasPrevious?: boolean;
+}
+
+// Master handover item 11: the client's own Meal Prep uses the shared create
+// screen (PrepCreateSheet). The professional meal-plan builder (clientId) keeps
+// this sheet exactly as it was — item 11 leaves professional builders alone.
+export const CreateMealSheet: React.FC<CreateMealSheetProps> = ({ clientId, hasPrevious, ...rest }) =>
+  clientId ? (
+    <ProfessionalCreateMealSheet clientId={clientId} {...rest} />
+  ) : (
+    <PrepCreateSheet kind="meals" open={rest.open} onClose={rest.onClose} editMeal={rest.editMeal} hasPrevious={hasPrevious} />
+  );
+
+const ProfessionalCreateMealSheet: React.FC<CreateMealSheetProps> = ({ open, onClose, clientId, editMeal }) => {
   const {
     customFoods,
     clientCustomFoods,

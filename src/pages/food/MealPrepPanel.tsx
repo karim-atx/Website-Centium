@@ -25,15 +25,20 @@ export default function MealPrepPanel() {
   const [createKind, setCreateKind] = useState<PrepKind | null>(null);
   const [editMeal, setEditMeal] = useState<CustomMeal | null>(null);
   const [editRecipe, setEditRecipe] = useState<Recipe | null>(null);
+  // Item 11: create opened from the flow's List or Detail steps back there
+  // (the chevron); opened from a card's CTA it has no previous screen.
+  const [createFromFlow, setCreateFromFlow] = useState(false);
 
-  const openCreate = (kind: PrepKind) => {
+  const openCreate = (kind: PrepKind, fromFlow = false) => {
     if (kind === "meals") setEditMeal(null);
     else setEditRecipe(null);
+    setCreateFromFlow(fromFlow);
     setCreateKind(kind);
   };
   const openEdit = (kind: PrepKind, id: string) => {
     if (kind === "meals") setEditMeal(customMeals.find((m) => m.id === id) ?? null);
     else setEditRecipe(recipes.find((r) => r.id === id) ?? null);
+    setCreateFromFlow(true);
     setCreateKind(kind);
   };
 
@@ -63,7 +68,7 @@ export default function MealPrepPanel() {
         initialItemId={flow?.kind === "meals" ? flow.itemId : undefined}
         onClose={() => setFlow(null)}
         onEdit={(id) => openEdit("meals", id)}
-        onCreate={() => openCreate("meals")}
+        onCreate={() => openCreate("meals", true)}
       />
       <MealPrepFlowSheet
         kind="recipes"
@@ -72,11 +77,21 @@ export default function MealPrepPanel() {
         initialItemId={flow?.kind === "recipes" ? flow.itemId : undefined}
         onClose={() => setFlow(null)}
         onEdit={(id) => openEdit("recipes", id)}
-        onCreate={() => openCreate("recipes")}
+        onCreate={() => openCreate("recipes", true)}
       />
 
-      <CreateMealSheet open={createKind === "meals"} onClose={() => setCreateKind(null)} editMeal={editMeal} />
-      <CreateRecipeSheet open={createKind === "recipes"} onClose={() => setCreateKind(null)} editRecipe={editRecipe} />
+      <CreateMealSheet
+        open={createKind === "meals"}
+        onClose={() => setCreateKind(null)}
+        editMeal={editMeal}
+        hasPrevious={createFromFlow}
+      />
+      <CreateRecipeSheet
+        open={createKind === "recipes"}
+        onClose={() => setCreateKind(null)}
+        editRecipe={editRecipe}
+        hasPrevious={createFromFlow}
+      />
     </div>
   );
 }
@@ -91,9 +106,10 @@ const PrepCard: React.FC<{
 }> = ({ kind, entries, error, onOpenList, onOpenDetail, onCreate }) => {
   const isR = kind === "recipes";
   const c = isR ? PREP_LAV : PREP_TEAL;
-  // Handoff acceptance: "newest-first display, CLIENT-SIDE ONLY" — the
-  // services intentionally keep `created_at ascending`; reverse here only.
-  const newestFirst = entries.slice().reverse();
+  // Newest first: recipes already arrive that way (getRecipes orders
+  // descending, item 11); custom meals keep their ascending query and are
+  // reversed here instead (Part 4 Q2).
+  const newestFirst = isR ? entries : entries.slice().reverse();
   const preview = newestFirst.slice(0, 3);
   const count = entries.length;
 
@@ -129,25 +145,29 @@ const PrepCard: React.FC<{
         >
           {isR ? "Recipes" : "Custom Meals"}
         </span>
-        <span
-          className="flex-none whitespace-nowrap"
-          style={{ fontSize: 10.5, fontWeight: 700, color: c.text, background: c.badgeBg, borderRadius: 9999, padding: "4px 10px" }}
-        >
-          {count ? `${count} saved` : "None yet"}
-        </span>
+        {/* Item 11: the badge hides while the read has failed. */}
+        {!error && (
+          <span
+            className="flex-none whitespace-nowrap"
+            style={{ fontSize: 10.5, fontWeight: 700, color: c.text, background: c.badgeBg, borderRadius: 9999, padding: "4px 10px" }}
+          >
+            {count ? `${count} saved` : "None yet"}
+          </span>
+        )}
       </div>
 
-      {/* A failed read must not look empty (handoff Q7) — distinct from the
-          "No custom meals/recipes yet" empty-state copy below. */}
-      {error && (
-        <p className="text-[11px] font-semibold text-status-high mb-2">
-          {`Couldn't refresh your ${isR ? "recipes" : "custom meals"}${count ? " — showing what was saved on this device." : "."}`}
-        </p>
-      )}
-
-      {count > 0 ? (
+      {/* A failed read must never look empty (Part 4 Q7): the error line
+          replaces the rows, then the CTA. */}
+      {error ? (
+        <div>
+          <p className="mb-[9px]" style={{ fontSize: 13, color: "#5B5349" }}>
+            {isR ? "Couldn't load your recipes. Pull to retry." : "Couldn't load your meals. Pull to retry."}
+          </p>
+          {cta}
+        </div>
+      ) : count > 0 ? (
         <>
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-[7px]">
             {preview.map((x) => {
               const total = sumItems(x.items as PrepItem[]);
               const servings = "servings" in x ? x.servings : 1;
@@ -173,15 +193,13 @@ const PrepCard: React.FC<{
               );
             })}
           </div>
-          <div className="mt-2.5">{cta}</div>
+          <div className="mt-[9px]">{cta}</div>
         </>
       ) : (
         <div>
-          {!error && (
-            <p className="mb-2.5" style={{ fontSize: 13, color: isR ? "rgba(95,80,147,0.8)" : "rgba(60,107,101,0.8)" }}>
-              {isR ? "No recipes yet" : "No custom meals yet"}
-            </p>
-          )}
+          <p className="mb-[9px]" style={{ fontSize: 13, color: isR ? "rgba(95,80,147,0.8)" : "rgba(60,107,101,0.8)" }}>
+            {isR ? "No recipes yet" : "No custom meals yet"}
+          </p>
           {cta}
         </div>
       )}

@@ -1,14 +1,32 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { Search, Pencil } from "lucide-react";
+import { Pencil, SlidersHorizontal } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import type { CustomMeal, MealType, Recipe } from "../../types";
-import { mealOrder, mealLabels, sumNutrientMaps, servingMultiplier, targetsFromGoal } from "../../services/nutrition";
+import { sumNutrientMaps, servingMultiplier, targetsFromGoal } from "../../services/nutrition";
 import { getFoodNutrients } from "../../services/food-nutrients";
-import { NutrientSections } from "./NutrientSections";
-import { MacroBar, MacroStrip, sumItems, divideTotals, PREP_TEAL, PREP_LAV, PREP_FAINT, PREP_SOFT, PREP_CHARCOAL, type PrepItem } from "./mealPrepShared";
+import { NutrientDetailSections } from "./NutrientSections";
+import { sheetChipStyle } from "../ui/sheetChip";
+import {
+  MacroBar,
+  MacroStrip,
+  sumItems,
+  divideTotals,
+  PREP_TEAL,
+  PREP_LAV,
+  PREP_FAINT,
+  PREP_SOFT,
+  PREP_CHARCOAL,
+  PREP_MEAL_ORDER,
+  PREP_PRIMARY,
+  prepMealLabel,
+  type PrepItem,
+} from "./mealPrepShared";
 
 export type PrepKind = "meals" | "recipes";
+
+// Grey sheet container (00-FOUNDATIONS §0.3).
+const GREY_CONTAINER: React.CSSProperties = { background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" };
 
 type Screen = "list" | "detail" | "advanced";
 
@@ -41,7 +59,9 @@ export const MealPrepFlowSheet: React.FC<{
   const { customMeals, customMealsError, recipes, recipesError, selectedDate, logCustomMeal, logRecipe } = useApp();
   const isR = kind === "recipes";
   const accentText = isR ? PREP_LAV.text : PREP_TEAL.text;
-  const accentCta = isR ? PREP_LAV.cta : PREP_TEAL.cta;
+  // Item 11: the flow's own primaries are solid (#79A8A1 / #A198DF); the
+  // translucent card CTA colours stay on the Meal Prep tab's cards.
+  const accentCta = PREP_PRIMARY[kind];
 
   const [screen, setScreen] = useState<Screen>(initialScreen);
   const [itemId, setItemId] = useState<string | undefined>(initialItemId);
@@ -51,10 +71,11 @@ export const MealPrepFlowSheet: React.FC<{
   const [logging, setLogging] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
 
-  // Handoff acceptance: "newest-first display, CLIENT-SIDE ONLY" — the
-  // services intentionally keep `created_at ascending`; reverse here only.
+  // Newest first: recipes already arrive that way (getRecipes orders
+  // descending, item 11); custom meals keep their ascending query and are
+  // reversed here instead (Part 4 Q2).
   const entries = useMemo<(CustomMeal | Recipe)[]>(
-    () => (isR ? recipes.slice().reverse() : customMeals.slice().reverse()),
+    () => (isR ? recipes : customMeals.slice().reverse()),
     [isR, recipes, customMeals]
   );
   const readError = isR ? recipesError : customMealsError;
@@ -129,7 +150,8 @@ export const MealPrepFlowSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      onBack={screen === "list" ? undefined : goBack}
+      // Item 11 back steps: advanced → detail → list → the Meal Prep tab.
+      onBack={screen === "list" ? onClose : goBack}
       title={title}
     >
       {screen === "list" && (
@@ -167,7 +189,7 @@ export const MealPrepFlowSheet: React.FC<{
         <p style={{ margin: 0, fontSize: 13, color: PREP_FAINT }}>Nothing saved yet.</p>
       )}
       {screen === "advanced" && (
-        <AdvancedScreen kind={kind} item={item} qty={qty} per={per} />
+        <AdvancedScreen kind={kind} item={item} qty={qty} />
       )}
     </BottomSheet>
   );
@@ -190,25 +212,21 @@ const ListScreen: React.FC<{
 
   return (
     <div className="flex flex-col gap-3 animate-fade-slide-up">
-      <div className="relative">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={isR ? "Search recipes…" : "Search meals…"}
-          className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 pl-9 pr-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-        />
-      </div>
+      <input
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={isR ? "Search recipes…" : "Search meals…"}
+        className="w-full focus:outline-none placeholder:text-charcoal-faint"
+        style={{ background: "#F4F4F6", border: "none", borderRadius: 14, padding: "11px 14px", fontSize: 14, color: PREP_CHARCOAL }}
+      />
 
-      {/* A failed read must not look empty (handoff Q7) — distinct from
-          "nothing matches this search" and from "nothing saved yet". */}
-      {readError && (
-        <p className="text-[11.5px] font-semibold text-status-high">
-          {`Couldn't refresh your ${isR ? "recipes" : "custom meals"} — showing what was saved on this device.`}
+      {/* A failed read must never look empty (Part 4 Q7): the error line
+          replaces the rows. */}
+      {readError ? (
+        <p style={{ margin: 0, fontSize: 13, color: PREP_SOFT }}>
+          {isR ? "Couldn't load your recipes. Pull to retry." : "Couldn't load your meals. Pull to retry."}
         </p>
-      )}
-
-      {filtered.length > 0 ? (
+      ) : filtered.length > 0 ? (
         <div className="flex flex-col gap-2">
           {filtered.map((x) => {
             const total = sumItems(x.items as PrepItem[]);
@@ -218,8 +236,8 @@ const ListScreen: React.FC<{
               <button
                 key={x.id}
                 onClick={() => onOpen(x.id)}
-                className="tap w-full flex items-center justify-between gap-2.5 rounded-2xl bg-white text-left"
-                style={{ border: "1px solid rgba(36,31,27,0.1)", padding: "13px 12px" }}
+                className="tap w-full flex items-center justify-between rounded-[14px] bg-white text-left"
+                style={{ border: "1px solid rgba(36,31,27,0.1)", padding: "13px 12px", gap: 9 }}
               >
                 <span className="flex-1 min-w-0">
                   <span className="block text-sm font-bold truncate" style={{ color: PREP_CHARCOAL }}>
@@ -254,7 +272,7 @@ const ListScreen: React.FC<{
 
       <button
         onClick={onCreate}
-        className="tap w-full h-[52px] rounded-2xl text-[15.5px] font-bold text-white"
+        className="tap w-full h-[52px] rounded-[14px] text-[15.5px] font-bold text-white"
         style={{ background: accentCta }}
       >
         {isR ? "Create Recipe" : "Create Meal"}
@@ -303,7 +321,7 @@ const DetailScreen: React.FC<{
 
       <MacroStrip t={shown} note={isR ? `Per serving × ${q}. Totals ÷ ${recipe!.servings} servings.` : `Whole meal × ${q}.`} />
 
-      <div className="rounded-2xl bg-[#F4F4F6] p-3.5">
+      <div style={GREY_CONTAINER}>
         <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
           {isR ? "Ingredients" : "Foods"}
         </p>
@@ -312,7 +330,7 @@ const DetailScreen: React.FC<{
             const rItem = x as PrepItem;
             const kcal = sumItems([rItem]).kcal;
             return (
-              <div key={i} className="flex items-center gap-2 bg-white rounded-xl px-2.5 py-2">
+              <div key={i} className="flex items-center gap-2 bg-white rounded-[10px] px-2.5 py-2">
                 <span className="flex-1 min-w-0">
                   <span className="block text-[12.5px] font-semibold truncate" style={{ color: PREP_CHARCOAL }}>
                     {rItem.food.name}
@@ -336,46 +354,42 @@ const DetailScreen: React.FC<{
       </div>
 
       {isR && recipe!.steps && (
-        <div className="rounded-2xl bg-[#F4F4F6] p-3.5">
+        <div style={GREY_CONTAINER}>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
             Steps
           </p>
-          <p className="mt-2.5 text-[13px] leading-relaxed" style={{ color: PREP_SOFT }}>
+          <p className="mt-2.5 text-[13px] whitespace-pre-line" style={{ color: PREP_SOFT, lineHeight: 1.6 }}>
             {recipe!.steps}
           </p>
         </div>
       )}
 
-      <div className="rounded-2xl bg-[#F4F4F6] p-3.5 flex items-center gap-3">
-        <span className="flex-none text-[14.5px]" style={{ color: "#575863" }}>
+      <div className="flex items-center gap-3" style={GREY_CONTAINER}>
+        <span className="flex-none" style={{ fontSize: 14.5, fontWeight: 500, color: "#575863" }}>
           {isR ? "Servings" : "Quantity"}
         </span>
         <input
           value={qty}
           inputMode="decimal"
-          onChange={(e) => setQty(e.target.value.replace(/[^\d.]/g, ""))}
-          className="flex-1 min-w-0 bg-white rounded-xl px-3 py-2.5 text-center text-[15px] font-bold outline-none"
-          style={{ color: PREP_CHARCOAL }}
+          onChange={(e) => setQty(e.target.value.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, ""))}
+          className="flex-1 min-w-0 text-center outline-none"
+          style={{ background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: PREP_CHARCOAL }}
         />
       </div>
 
-      <div className="rounded-2xl bg-[#F4F4F6] p-3.5">
+      <div style={GREY_CONTAINER}>
         <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
           Meal
         </p>
-        <div className="mt-2.5 flex gap-1.5">
-          {mealOrder.map((m) => (
+        <div className="flex" style={{ gap: 6, marginTop: 9 }}>
+          {PREP_MEAL_ORDER.map((m) => (
             <button
               key={m}
               onClick={() => setMeal(m)}
-              className="tap flex-1 min-w-0 rounded-lg py-2 text-[13px] font-semibold border transition-colors"
-              style={
-                meal === m
-                  ? { background: accentText, borderColor: accentText, color: "#FFFFFF" }
-                  : { background: "#FAFAFB", borderColor: "#E5E6EB", color: PREP_CHARCOAL }
-              }
+              className="tap transition-colors"
+              style={{ ...sheetChipStyle(meal === m), flex: 1, minWidth: 0, padding: "8px 4px" }}
             >
-              {mealLabels[m]}
+              {prepMealLabel(m)}
             </button>
           ))}
         </div>
@@ -383,12 +397,12 @@ const DetailScreen: React.FC<{
 
       {logError && <p className="text-[11.5px] font-semibold text-status-high">{logError}</p>}
 
-      <div className="flex items-center gap-2.5">
+      <div className="flex items-center" style={{ gap: 10 }}>
         <button
           onClick={onLog}
           disabled={!meal || logging}
-          className="tap flex-1 h-[52px] rounded-2xl text-[15.5px] font-bold text-white disabled:opacity-40"
-          style={{ background: accentText }}
+          className="tap flex-1 h-[52px] rounded-[14px] text-[15.5px] font-bold text-white disabled:opacity-40"
+          style={{ background: PREP_PRIMARY[kind] }}
         >
           {logging ? "Logging…" : "Add to Diary"}
         </button>
@@ -396,13 +410,10 @@ const DetailScreen: React.FC<{
           onClick={onAdvanced}
           aria-label="Nutrient details"
           title="Nutrient details"
-          className="tap flex-none w-[60px] h-[52px] rounded-2xl bg-white flex items-center justify-center"
-          style={{ border: "1px solid #E4E4E9", color: PREP_CHARCOAL }}
+          className="tap flex-none flex items-center justify-center"
+          style={{ width: 60, height: 52, borderRadius: 14, background: "#FFFFFF", border: "1px solid #E4E4E9", color: PREP_CHARCOAL }}
         >
-          <svg width={20} height={20} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.9} strokeLinecap="round">
-            <path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3" />
-            <path d="M14 2v4M8 10v4M16 18v4" />
-          </svg>
+          <SlidersHorizontal size={20} strokeWidth={1.9} />
         </button>
       </div>
     </div>
@@ -410,26 +421,22 @@ const DetailScreen: React.FC<{
 };
 
 // -------------------------------------------------------- Advanced screen
-// Handoff item 10, "Advanced view micronutrients": ingredient-summed
-// nutrient totals, live-fetched per catalog ingredient and scaled by that
-// ingredient's own servingMultiplier, divided by `servings` for a recipe.
-// The macro figures reuse the same `per`/`qty` the Detail screen already
-// shows (dc.html's advancedScreen does the same — the macros come from the
-// items' own calories/protein/carbs/fat, not from food_nutrients). The
-// deeper per-nutrient section list (vitamins, minerals, ...) renders via the
-// shared NutrientSections component (item 9), same as the standalone
-// Nutrient Summary page — see NutrientSummaryPage.tsx for the prop shape
-// this mirrors.
+// Master handover item 11: the nutrient breakdown sums each nutrient across
+// the ingredient foods — per ingredient, its profile amount x its own
+// quantity multiplier; known = ingredients with a value; n = ingredients.
+// Recipes: sum / servings x q. Meals: sum x q. Calories and macros come from
+// each ingredient's own figures (always known); every other nutrient only
+// from fetched profiles (catalog foods — custom foods have none). Rendered by
+// the same breakdown Add Food and Edit Logged Food use (item 4), in its
+// multi-ingredient mode ("No data" / "partial").
 const AdvancedScreen: React.FC<{
   kind: PrepKind;
   item: CustomMeal | Recipe | null;
   qty: string;
-  per: { kcal: number; p: number; c: number; f: number };
-}> = ({ kind, item, qty, per }) => {
-  const { nutritionGoal, metricValues } = useApp();
+}> = ({ kind, item, qty }) => {
+  const { nutritionGoal } = useApp();
   const isR = kind === "recipes";
   const q = Number(qty) > 0 ? Number(qty) : 1;
-  const shown = { kcal: per.kcal * q, p: per.p * q, c: per.c * q, f: per.f * q };
   const targets = targetsFromGoal(nutritionGoal);
 
   const [state, setState] = useState<
@@ -446,37 +453,40 @@ const AdvancedScreen: React.FC<{
       const result = await getFoodNutrients(catalogItems.map((i) => i.food.id));
       if (cancelled) return;
       const perIngredientMaps = items.map((i) => {
-        if (i.source !== "catalog") return null; // custom food: no per-nutrient data, honestly "no data"
-        const raw = result.byFoodId[i.food.id];
-        if (!raw) return null;
         const m = servingMultiplier(i.food.serving, i.quantity, i.unit ?? "serving");
-        return Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, v * m]));
+        const raw = i.source === "catalog" ? result.byFoodId[i.food.id] : undefined;
+        const scaled = raw ? Object.fromEntries(Object.entries(raw).map(([k, v]) => [k, v * m])) : {};
+        return {
+          ...scaled,
+          calories: i.food.calories * m,
+          protein: i.food.protein * m,
+          total_fat: i.food.fat * m,
+          total_carbohydrates: i.food.carbs * m,
+        };
       });
       const summed = sumNutrientMaps(perIngredientMaps);
-      const totals = isR && "servings" in item
-        ? Object.fromEntries(Object.entries(summed.totals).map(([k, v]) => [k, v / item.servings]))
-        : summed.totals;
+      const factor = (isR && "servings" in item ? 1 / Math.max(1, item.servings) : 1) * q;
+      const totals = Object.fromEntries(Object.entries(summed.totals).map(([k, v]) => [k, v * factor]));
       if (!cancelled) setState({ loading: false, totals, present: summed.present, itemCount: summed.itemCount });
     })();
     return () => {
       cancelled = true;
     };
-  }, [item, isR]);
+  }, [item, isR, q]);
 
   if (!item) return <p style={{ margin: 0, fontSize: 13, color: PREP_FAINT }}>Nothing saved yet.</p>;
 
   return (
-    <div className="flex flex-col gap-3 animate-fade-slide-up">
+    <div className="flex flex-col gap-2.5 animate-fade-slide-up">
       <p style={{ margin: "0 2px 2px", fontSize: 13, color: PREP_SOFT }}>
-        {item.title} · {isR ? `${q} serving${q === 1 ? "" : "s"}` : `× ${q}`}
+        {isR ? `${item.title} · ${q} serving${q === 1 ? "" : "s"}` : `${item.title} × ${q}`}
       </p>
-      <MacroStrip t={shown} />
       {state.loading ? (
         <p className="text-center text-[13px] py-6" style={{ color: PREP_FAINT }}>
           Loading nutrient details…
         </p>
       ) : (
-        <NutrientSections
+        <NutrientDetailSections
           totals={state.totals}
           present={state.present}
           itemCount={state.itemCount}
@@ -484,12 +494,6 @@ const AdvancedScreen: React.FC<{
           proteinTarget={targets.protein}
           carbTarget={targets.carbs}
           fatTarget={targets.fat}
-          bodyWeightKg={metricValues.weight ?? null}
-          filter="all"
-          // itemCount === 0 here means this item's ingredients carry no
-          // nutrient data, not an empty diary day — the page-level
-          // "nothing logged today" framing doesn't apply.
-          suppressEmptyState
         />
       )}
     </div>
