@@ -78,42 +78,56 @@ at `/` so local URLs don't need any prefix.
 
 ## Deployment
 
-This repo deploys to **GitHub Pages** via
+Centium and the "hub of apps" landing page it's linked from now deploy
+**separately**, on two different services. They used to be one combined
+GitHub Pages build with Centium reorganized into a `/centium` subfolder at
+runtime; that's gone.
+
+**The hub** deploys to **GitHub Pages** via
 [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), which
-builds and publishes `dist/` on every push to `main`. In the repo's GitHub
-settings, **Settings → Pages → Source** needs to be set to **GitHub
-Actions** for this to take effect.
+publishes the repo's hand-written [`hub/`](hub/) directory as-is on every
+push to `main` — no Node, no build step, just an upload. In the repo's
+GitHub settings, **Settings → Pages → Source** needs to be set to **GitHub
+Actions** for this to take effect. That gives the hub a GitHub Pages URL:
+`https://karim-atx.github.io/Website-Centium/`.
 
-That gives the site a GitHub Pages URL
-(`https://karim-atx.github.io/Website-Centium/`) — but the workflow
-reorganizes `dist/` after building it: the Centium app itself (built from
-`index.html`/`src/`) moves into a `/centium` subfolder, and
-[`public/hub.html`](public/hub.html) — a small static "hub of apps" page,
-fully self-contained so it ships as-is via Vite's `public/` dir — takes
-over the true root. That mirrors the public URL structure one level down:
-Centium's raw GitHub Pages URL is `.../Website-Centium/centium/`, and the
-hub is `.../Website-Centium/`.
+**Centium** (built from `index.html`/`src/`) builds and deploys on its own
+via **Cloudflare Pages**, reachable directly at `https://centium.atraxia.org`.
+That build/deploy configuration lives in the Cloudflare dashboard, not in
+this repo — there's no workflow file for it here, and (same as the Worker
+below) no Cloudflare credentials are configured in this repo to inspect or
+change it. Because Centium only ever deploys at that one domain root now,
+`vite.config.ts` sets a plain absolute `base: '/'` — the old relative
+`'./'` base plus a runtime `<base>`-tag injection existed only to make one
+build work at two different path prefixes at once, which no longer happens.
 
-The Centium app's build emits relative asset paths (see `vite.config.ts`)
-and picks the right `<base>` at runtime (see the inline script in
-`index.html`), so it renders correctly both raw at that nested GitHub
-Pages path and proxied at `atraxia.org/centium` below — whichever prefix
-it was actually loaded under.
+To make **`atraxia.org`** itself serve the hub, and to keep old
+`atraxia.org/centium/*` links working, `atraxia.org` is behind Cloudflare,
+so a Cloudflare Worker handles both:
 
-To make it reachable at **`atraxia.org`** (hub) and **`atraxia.org/centium`**
-(Centium app), `atraxia.org` is behind Cloudflare, so a Cloudflare Worker
-reverse-proxies both straight through to the matching path on the GitHub
-Pages origin above — see
-[`deploy/cloudflare-worker.js`](deploy/cloudflare-worker.js) for the script
-and exact setup steps. This repo has no Cloudflare credentials configured,
-so someone with access to the `atraxia.org` Cloudflare account needs to set
-that part up manually; no DNS record changes are needed for it (Workers
-routes run in front of whatever already serves the domain).
+1. `atraxia.org` (and `www`) — reverse-proxies the hub's root page and its
+   root-level static assets (favicon, robots.txt, sitemap.xml, legal.html,
+   `/atraxia/`, `/icons/`) straight through to the GitHub Pages origin
+   above.
+2. `atraxia.org/centium/*` (and `www`) — a permanent redirect to
+   `centium.atraxia.org/*`, preserving the rest of the path and the query
+   string, for anything that still links to the old proxied path.
+
+See [`deploy/cloudflare-worker.js`](deploy/cloudflare-worker.js) for the
+script and exact setup steps — that file is the source of truth for this
+mechanism, kept current, since it also has to be pasted into the Cloudflare
+dashboard by hand. This repo has no Cloudflare credentials configured, so
+someone with access to the `atraxia.org` Cloudflare account needs to set
+both the Worker and Centium's `centium.atraxia.org` Cloudflare Pages custom
+domain up manually; no DNS record changes are needed for the Worker route
+(Workers routes run in front of whatever already serves the domain).
 
 There's no `CNAME` file in this repo — that's intentional. A `CNAME` tells
 GitHub Pages to expect a custom domain pointed directly at it, which isn't
 this setup (GitHub Pages stays reachable only at its own `github.io` URL;
-the Cloudflare Worker is what stitches the subpath together).
+the Cloudflare Worker is what stitches `atraxia.org`'s root together, and
+`centium.atraxia.org` is Cloudflare Pages' own custom domain, configured
+entirely on that side).
 
 ## Environment variables
 
