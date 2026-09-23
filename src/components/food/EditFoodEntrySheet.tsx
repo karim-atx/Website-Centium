@@ -6,9 +6,9 @@ import type { FoodLogEntry, ServingUnit } from "../../types";
 import { Trash2, UtensilsCrossed, SlidersHorizontal } from "lucide-react";
 import { foodCategoryIcon } from "../../utils/icons";
 import { updateDiaryEntry, deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
-import { rescaleEntry, servingMultiplier, sumNutrientMaps, targetsFromGoal } from "../../services/nutrition";
+import { rescaleEntry, servingMultiplier, targetsFromGoal } from "../../services/nutrition";
 import { getFoodNutrientsById } from "../../services/food-nutrients";
-import { NutrientSections } from "./NutrientSections";
+import { NutrientDetailSections } from "./NutrientSections";
 
 const servingUnitOptions: { value: ServingUnit; label: string }[] = [
   { value: "serving", label: "serving" },
@@ -37,7 +37,7 @@ export const EditFoodEntrySheet: React.FC<{
   onClose: () => void;
   entry: FoodLogEntry | null;
 }> = ({ open, onClose, entry }) => {
-  const { updateFoodEntry, removeFoodEntry, nutritionGoal, metricValues } = useApp();
+  const { updateFoodEntry, removeFoodEntry, nutritionGoal } = useApp();
   const [quantity, setQuantityRaw] = useState(1);
   const [quantityDraft, setQuantityDraft] = useState("1");
   const setQuantity = (updater: number | ((q: number) => number)) => {
@@ -58,8 +58,8 @@ export const EditFoodEntrySheet: React.FC<{
   // Fallback fetch ONLY for entries logged before the nutrients snapshot
   // existed (entry.nutrients undefined) that still have a real catalog
   // foodId. Scaled to the entry's OWN stored quantity/unit, matching
-  // entry.calories/protein/etc — this sheet has no live macro preview
-  // before saving, so Advanced doesn't get a richer live preview either.
+  // entry.calories/protein/etc; the nutrient step then rescales it to the
+  // amount being edited (see detailTotals below).
   const [fallbackNutrients, setFallbackNutrients] = useState<Record<string, number> | null>(null);
   const [fallbackLoading, setFallbackLoading] = useState(false);
 
@@ -156,12 +156,26 @@ export const EditFoodEntrySheet: React.FC<{
   // carries a snapshot, else the scaled fallback fetch for older entries
   // that predate it. Never coerced to zero; null means genuinely no data.
   const nutrientsForAdvanced = entry.nutrients ?? fallbackNutrients;
-  const nutrientTotals = sumNutrientMaps([nutrientsForAdvanced ?? null]);
   const targets = targetsFromGoal(nutritionGoal);
   const entryMultiplier = servingMultiplier(entry.display.serving, entry.quantity, entry.unit ?? "serving");
-  const entryMultiplierDisplay = Math.round(entryMultiplier * 100) / 100;
   // Macro strip preview for the quantity/unit being edited.
   const preview = rescaleEntry(entry, quantity, unit);
+  // Mobile handoff item 4: the nutrient step follows the amount being
+  // edited, not the amount logged — the stored snapshot is rescaled by the
+  // same ratio rescaleEntry() applies to the macros. Calories and macros
+  // always come from the entry; every other nutrient only from its profile.
+  const editMultiplier = servingMultiplier(entry.display.serving, quantity, unit);
+  const editMultiplierDisplay = Math.round(editMultiplier * 100) / 100;
+  const k = entryMultiplier > 0 ? editMultiplier / entryMultiplier : 1;
+  const detailTotals: Record<string, number> = {
+    ...(nutrientsForAdvanced
+      ? Object.fromEntries(Object.entries(nutrientsForAdvanced).map(([key, amount]) => [key, amount * k]))
+      : {}),
+    calories: preview.calories,
+    protein: preview.protein,
+    total_fat: preview.fat,
+    total_carbohydrates: preview.carbs,
+  };
 
   return (
     <BottomSheet
@@ -172,40 +186,24 @@ export const EditFoodEntrySheet: React.FC<{
     >
       {advancedOpen ? (
         <div className="animate-fade-slide-up flex flex-col gap-2.5">
-          <p className="text-[13px]" style={{ color: "#575863", margin: "0 2px 2px" }}>
+          <p style={{ fontSize: 13, color: "#5B5349", margin: "0 2px 2px" }}>
             {entry.name} ·{" "}
-            {entryMultiplierDisplay === 1 ? entry.display.serving : `${entryMultiplierDisplay} × ${entry.display.serving}`}
+            {editMultiplierDisplay === 1 ? entry.display.serving : `${editMultiplierDisplay} × ${entry.display.serving}`}
           </p>
 
-          {!entry.foodId && !entry.nutrients ? (
-            <p className="text-center text-sm text-charcoal-faint py-8">
-              No per-nutrient data for custom or manually entered foods.
-            </p>
-          ) : fallbackLoading ? (
+          {fallbackLoading ? (
             <p className="text-center text-sm text-charcoal-faint py-8">Loading nutrients…</p>
-          ) : !nutrientsForAdvanced ? (
-            <p className="text-center text-sm text-charcoal-faint py-8">
-              No per-nutrient data available for this food yet.
-            </p>
           ) : (
-            <NutrientSections
-              totals={nutrientTotals.totals}
-              present={nutrientTotals.present}
-              itemCount={nutrientTotals.itemCount}
+            <NutrientDetailSections
+              totals={detailTotals}
               calorieTarget={targets.calories}
               proteinTarget={targets.protein}
               carbTarget={targets.carbs}
               fatTarget={targets.fat}
-              bodyWeightKg={metricValues.weight ?? null}
-              // Embedded Advanced view has no filter toggle — README.md
-              // line 925: "Removed; the view always shows available
-              // nutrients and names empty groups."
-              filter="all"
-              suppressEmptyState
             />
           )}
 
-          <p className="text-[10.5px] leading-relaxed" style={{ color: "#8C8378", margin: "6px 2px 0" }}>
+          <p style={{ fontSize: 10.5, lineHeight: 1.5, color: "#8C8378", margin: "6px 2px 0" }}>
             % of the FDA Daily Value for adults, from this food alone. Calorie and macro percentages use your
             Goals.
           </p>

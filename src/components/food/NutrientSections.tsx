@@ -5,7 +5,8 @@ import { NUTRIENT_SECTIONS, CALC_KEYS, type NutrientRow, type NutrientSection } 
 
 // Pure, page-agnostic renderer for the Nutrient Summary's 8 sections —
 // shared between the full Nutrient Summary page (mobile handoff item 9) and
-// the embedded "Advanced" nutrient view (items 2 and 10). Everything
+// the Meal Prep "Advanced" nutrient view. Add Food and Edit Logged Food use
+// NutrientDetailSections below instead (master handover item 4). Everything
 // page-level (PageHeader, the filter popover chrome, the empty-day banner's
 // framing) stays out of this file on purpose so it can be dropped into a
 // sheet step later without carrying routing/header assumptions with it.
@@ -323,6 +324,171 @@ function NutrientSectionBlock({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ---- Sheet nutrient step (mobile handoff item 4) ---------------------------
+// The "Nutrient details" step inside Add Food and Edit Logged Food: one
+// food, scaled live to the detail step's amount. Only what has data is
+// shown; a group with nothing reads "No data for this food in this group."
+// Percentages only against the user's Goals (calories, protein, total fat,
+// total carbohydrates) or an FDA Daily Value — the footnote calls every % an
+// FDA DV, so reference-intake and body-weight figures (omegas, amino acids)
+// show the amount alone. The Nutrient Summary page keeps NutrientSections
+// above until item 10.
+
+const LIMIT_NUTRIENTS = new Set(["Saturated fat", "Trans fat", "Cholesterol", "Sodium", "Added sugars", "Caffeine"]);
+
+function formatDetailAmount(n: number): string {
+  if (Math.abs(n) < 0.1) return String(Number(n.toFixed(3)));
+  if (Math.abs(n) < 10) return n.toFixed(1);
+  return Math.round(n).toLocaleString();
+}
+
+export interface NutrientDetailSectionsProps {
+  /** Amount per canonical nutrient key for this food at the chosen amount. A missing key means no data. */
+  totals: Record<string, number>;
+  calorieTarget: number;
+  proteinTarget: number;
+  carbTarget: number;
+  fatTarget: number;
+}
+
+function detailTarget(row: NutrientRow, props: NutrientDetailSectionsProps): number | null {
+  if (row.fromGoals) {
+    const targetKey = FROM_GOALS_TARGET_BY_NAME[row.name];
+    return targetKey ? props[targetKey] : null;
+  }
+  if (row.source !== "FDA DV") return null;
+  return row.target;
+}
+
+function NutrientDetailSection({
+  section,
+  expanded,
+  onToggle,
+  props,
+}: {
+  section: NutrientSection;
+  expanded: boolean;
+  onToggle: () => void;
+  props: NutrientDetailSectionsProps;
+}) {
+  const rows = section.sub ? [...section.rows, ...section.sub.rows] : section.rows;
+  const withAmounts = rows
+    .map((row) => ({
+      row,
+      amount: row.kind === "calc" ? computeCalcAmount(row.key, props.totals) : props.totals[row.key],
+    }))
+    .filter((r): r is { row: NutrientRow; amount: number } => r.amount !== undefined);
+
+  return (
+    <div style={{ background: "#FFFFFF", border: "1px solid rgba(174,161,220,0.34)", borderRadius: 12, overflow: "hidden" }}>
+      <button
+        onClick={onToggle}
+        className="tap w-full flex items-center text-left"
+        style={{ padding: "10px 12px", gap: 8, background: expanded ? "rgba(174,161,220,0.12)" : "#FFFFFF" }}
+        aria-expanded={expanded}
+      >
+        <span className="flex-1 min-w-0" style={{ fontSize: 12.5, fontWeight: 700, color: "#241F1B" }}>
+          {section.name}
+        </span>
+        <span className="shrink-0 tabular-nums" style={{ fontSize: 10.5, fontWeight: 600, color: "#8C8378" }}>
+          {withAmounts.length} of {rows.length}
+        </span>
+        <ChevronDown
+          size={14}
+          className="shrink-0"
+          style={{ color: "#8C8378", transform: expanded ? "rotate(180deg)" : "rotate(0deg)" }}
+        />
+      </button>
+
+      {expanded && (
+        <div style={{ padding: "2px 12px 10px" }}>
+          {withAmounts.length === 0 ? (
+            <p style={{ margin: 0, padding: "7px 0", fontSize: 11.5, color: "#8C8378" }}>
+              No data for this food in this group.
+            </p>
+          ) : (
+            withAmounts.map(({ row, amount }, i) => {
+              const target = detailTarget(row, props);
+              const percent = target !== null && target > 0 ? Math.round((amount / target) * 100) : null;
+              const overLimit = row.kind === "limit" && target !== null && amount > target;
+              const amountText =
+                row.key === CALC_KEYS.omega6to3.key
+                  ? `${formatDetailAmount(amount)} : 1`
+                  : `${formatDetailAmount(amount)}${row.unit ? ` ${row.unit}` : ""}`;
+              return (
+                <div
+                  key={row.key}
+                  className="flex items-center"
+                  style={{ gap: 8, padding: "7px 0", borderTop: i > 0 ? "1px solid rgba(36,31,27,0.05)" : undefined }}
+                >
+                  <span className="flex-1 min-w-0" style={{ fontSize: 12.5, color: "#241F1B" }}>
+                    {row.name}
+                    {LIMIT_NUTRIENTS.has(row.name) && (
+                      <span
+                        style={{
+                          marginLeft: 6,
+                          fontSize: 9,
+                          fontWeight: 700,
+                          color: "#8A6A1E",
+                          background: "rgba(217,164,65,0.16)",
+                          borderRadius: 5,
+                          padding: "1px 5px",
+                        }}
+                      >
+                        limit
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 tabular-nums" style={{ fontSize: 12.5, fontWeight: 700, color: "#241F1B" }}>
+                    {amountText}
+                  </span>
+                  <span
+                    className="shrink-0 tabular-nums"
+                    style={{
+                      width: 46,
+                      textAlign: "right",
+                      fontSize: 11.5,
+                      fontWeight: 700,
+                      color: percent === null ? "transparent" : overLimit ? "#B4491F" : "#5F5093",
+                    }}
+                  >
+                    {percent === null ? "—" : `${percent}%`}
+                  </span>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function NutrientDetailSections(props: NutrientDetailSectionsProps) {
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set(["popular"]));
+  const toggle = (id: string) =>
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  return (
+    <div className="flex flex-col" style={{ gap: 10 }}>
+      {NUTRIENT_SECTIONS.map((section) => (
+        <NutrientDetailSection
+          key={section.id}
+          section={section}
+          expanded={expandedIds.has(section.id)}
+          onToggle={() => toggle(section.id)}
+          props={props}
+        />
+      ))}
     </div>
   );
 }

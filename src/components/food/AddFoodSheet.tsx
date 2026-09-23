@@ -5,8 +5,8 @@ import { Button } from "../ui/Button";
 import { Search, Mic, Camera, ScanLine, Clock, Star, Check, UtensilsCrossed, Sparkles, SlidersHorizontal } from "lucide-react";
 import { foodCategories, addFoodFilterCategories } from "../../data/mockFoods";
 import type { Food, MealType, ServingUnit } from "../../types";
-import { servingMultiplier, sumNutrientMaps, targetsFromGoal } from "../../services/nutrition";
-import { NutrientSections } from "./NutrientSections";
+import { servingMultiplier, targetsFromGoal } from "../../services/nutrition";
+import { NutrientDetailSections } from "./NutrientSections";
 import {
   searchFoods,
   listFoods,
@@ -90,7 +90,6 @@ export const AddFoodSheet: React.FC<{
     logCustomMeal,
     selectedDate,
     nutritionGoal,
-    metricValues,
   } = useApp();
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
@@ -455,10 +454,17 @@ export const AddFoodSheet: React.FC<{
     const scaledNutrients = rawNutrients
       ? Object.fromEntries(Object.entries(rawNutrients).map(([key, amount]) => [key, amount * multiplier]))
       : null;
-    // Single-food case: itemCount is always 1, so sumNutrientMaps' "partial:
-    // N of M" machinery degrades to plain has-data/no-data for this one food,
-    // which is what NutrientSections should render for an embedded context.
-    const nutrientTotals = sumNutrientMaps([scaledNutrients]);
+    // Mobile handoff item 4: calories and macros always come from the food
+    // itself (the figures the diary logs, so this step agrees with the macro
+    // strip); every other nutrient only from its fetched profile, so a food
+    // without one reads as missing rather than zero.
+    const detailTotals: Record<string, number> = {
+      ...(scaledNutrients ?? {}),
+      calories: selectedFood.calories * multiplier,
+      protein: selectedFood.protein * multiplier,
+      total_fat: selectedFood.fat * multiplier,
+      total_carbohydrates: selectedFood.carbs * multiplier,
+    };
     const targets = targetsFromGoal(nutritionGoal);
     const multiplierDisplay = Math.round(multiplier * 100) / 100;
 
@@ -471,36 +477,24 @@ export const AddFoodSheet: React.FC<{
       >
         {advancedOpen ? (
           <div className="animate-fade-slide-up flex flex-col gap-2.5">
-            <p className="text-[13px]" style={{ color: "#575863", margin: "0 2px 2px" }}>
+            <p style={{ fontSize: 13, color: "#5B5349", margin: "0 2px 2px" }}>
               {selectedFood.name} ·{" "}
               {multiplierDisplay === 1 ? selectedFood.servingLabel : `${multiplierDisplay} × ${selectedFood.servingLabel}`}
             </p>
 
-            {selectedFood.source !== "catalog" ? (
-              <p className="text-center text-sm text-charcoal-faint py-8">
-                No per-nutrient data for custom or manually entered foods.
-              </p>
-            ) : nutrientsLoading ? (
+            {selectedFood.source === "catalog" && nutrientsLoading ? (
               <p className="text-center text-sm text-charcoal-faint py-8">Loading nutrients…</p>
             ) : (
-              <NutrientSections
-                totals={nutrientTotals.totals}
-                present={nutrientTotals.present}
-                itemCount={nutrientTotals.itemCount}
+              <NutrientDetailSections
+                totals={detailTotals}
                 calorieTarget={targets.calories}
                 proteinTarget={targets.protein}
                 carbTarget={targets.carbs}
                 fatTarget={targets.fat}
-                bodyWeightKg={metricValues.weight ?? null}
-                // Embedded Advanced view has no filter toggle — README.md
-                // line 925: "Removed; the view always shows available
-                // nutrients and names empty groups."
-                filter="all"
-                suppressEmptyState
               />
             )}
 
-            <p className="text-[10.5px] leading-relaxed" style={{ color: "#8C8378", margin: "6px 2px 0" }}>
+            <p style={{ fontSize: 10.5, lineHeight: 1.5, color: "#8C8378", margin: "6px 2px 0" }}>
               % of the FDA Daily Value for adults, from this food alone. Calorie and macro percentages use your
               Goals.
             </p>
