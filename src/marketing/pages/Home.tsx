@@ -914,20 +914,11 @@ export const Home: React.FC = () => {
     });
   }, []);
 
-  // README §2/§3 row 9: "Get Started" smooth-scrolls to #cta (the final CTA
-  // section further down this same page) instead of routing to /app. The
-  // 88px nav offset is already the existing `scroll-mt-[88px]` on that
-  // section (see its <Section id="cta"> below) rather than a duplicated
-  // offset constant here.
-  const onGetStarted = useCallback(() => {
-    document.getElementById("cta")?.scrollIntoView({ behavior: "smooth" });
-  }, []);
-
   return (
     <>
       <BrandLoader />
 
-      <HeroSection isOccluded={isOccluded} onDegradeGlass={onDegradeGlass} onGetStarted={onGetStarted} />
+      <HeroSection isOccluded={isOccluded} onDegradeGlass={onDegradeGlass} />
 
       {/* Problem */}
       <Section className="bg-white" style={{ paddingTop: "clamp(40px,5vw,64px)", paddingBottom: "clamp(72px,8vw,96px)" }}>

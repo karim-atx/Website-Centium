@@ -65,11 +65,9 @@ export interface HeroSectionProps {
   isOccluded: () => boolean;
   /** tier-1 slow device: nav must drop backdrop-filter on [data-glassy] (README §7) */
   onDegradeGlass: () => void;
-  /** "Get Started" → smooth-scroll to #cta (88px nav offset); design does NOT route to /app */
-  onGetStarted: () => void;
 }
 
-export const HeroSection: React.FC<HeroSectionProps> = ({ isOccluded, onDegradeGlass, onGetStarted }) => {
+export const HeroSection: React.FC<HeroSectionProps> = ({ isOccluded, onDegradeGlass }) => {
   const canvasRef = useHeroFlow({ isOccluded, onDegrade: onDegradeGlass });
   const subRef = useRef<HTMLDivElement>(null);
   useHeroSubtext(subRef);
@@ -109,15 +107,13 @@ export const HeroSection: React.FC<HeroSectionProps> = ({ isOccluded, onDegradeG
               <span className="hero-sub-line" data-word="hw-place" style={{ whiteSpace: "nowrap" }}>More you.</span>
             </div>
             <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: 12, marginTop: 36 }}>
-              <a
-                href="#cta"
-                data-nav-anchor="cta"
+              <Link
+                to="/app"
                 className="hero-cta-solid"
-                onClick={(e) => { e.preventDefault(); onGetStarted(); }}
                 style={{ padding: "16px 30px", borderRadius: 999, background: "#7D67D9", color: "#fff", fontWeight: 600, fontSize: 15, transition: "background-color .2s,transform .15s" }}
               >
                 Get Started
-              </a>
+              </Link>
               {/* Request a Demo: real CSS hover/active states (.hero-cta-ghost, in
                   index.css) rather than JS onMouseEnter/onMouseLeave handlers — README
                   §3 row 10 / ground rule 3. Both backdrop-filter properties (Safari
