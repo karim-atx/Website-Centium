@@ -3,6 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="%BASE_URL%favicon.svg" />
+    <!-- PNG favicons + apple-touch-icon, mirroring hub/index.html's set.
+         The SVG above covers modern desktop browsers; iOS Safari does not
+         reliably rasterize an SVG for a bookmark tile, and with no PNG to
+         fall back to it was synthesizing its own generic colored-initial
+         icon instead of the real mark (visible in Safari's Favorites grid).
+         The vite-plugin-pwa manifest (see vite.config.ts) covers "Add to
+         Home Screen"/installed-app icons separately via its own
+         pwa-*.png set and is unrelated to this — apple-touch-icon is what
+         a plain bookmark actually reads. -->
+    <link rel="icon" type="image/png" sizes="16x16" href="%BASE_URL%icons/favicon-16.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="%BASE_URL%icons/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="48x48" href="%BASE_URL%icons/favicon-48.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="%BASE_URL%icons/favicon-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="%BASE_URL%icons/apple-touch-icon.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#AEA1DC" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0D0B1A" media="(prefers-color-scheme: dark)" />
