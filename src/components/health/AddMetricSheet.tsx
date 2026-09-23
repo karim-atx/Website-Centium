@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
+import { getBloodPressureForDay, logBloodPressure, validateBloodPressure } from "../../services/blood-pressure";
 import { X, Camera, ChevronRight, AlertCircle } from "lucide-react";
 
 // Item 3 of the "Centium Mobile" handoff (design_handoff_centium_mobile,
@@ -155,6 +156,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
     logWeightForToday,
     selectedDate,
     today,
+    authUserId,
   } = useApp();
   const isToday = selectedDate === today;
   const loggedForDay = weightLoggedDate === selectedDate;
@@ -165,21 +167,64 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   // slot rather than two: only one write is ever in flight at a time.
   const [error, setError] = useState<string | null>(null);
 
-  // Blood pressure is new in this handoff round with no backing field on
-  // AppContext (no addBloodPressure/persistence hook exists yet) — kept as
-  // local-only UI state defaulting 120/80 per the handoff's own reference
-  // state (bpSys/bpDia). Flagged in the final report as a gap: it does not
-  // persist across reloads.
+  // Blood pressure, persisted in public.blood_pressure_readings (Part 4, R2).
+  // Opens on the selected day's latest reading, else the handoff's 120/80
+  // defaults. Like weight it autosaves on a short debounce — but only after
+  // the user has changed a value, so the defaults are never logged as a
+  // reading nobody took.
   const [bpSys, setBpSys] = useState("120");
   const [bpDia, setBpDia] = useState("80");
+  const [bpDirty, setBpDirty] = useState(false);
 
   useEffect(() => {
     if (open) {
       setWeightDraft(loggedForDay && dayWeight !== undefined ? String(dayWeight) : "");
       setError(null);
+      setBpSys("120");
+      setBpDia("80");
+      setBpDirty(false);
+      if (authUserId) {
+        let cancelled = false;
+        void getBloodPressureForDay(authUserId, selectedDate).then((result) => {
+          if (cancelled || !result.ok || !result.reading) return;
+          setBpSys(String(result.reading.systolic));
+          setBpDia(String(result.reading.diastolic));
+        });
+        return () => {
+          cancelled = true;
+        };
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, selectedDate]);
+
+  useEffect(() => {
+    if (!open || !bpDirty) return;
+    // Wait until both look complete (2-3 digits) so half-typed numbers aren't
+    // judged or saved.
+    if (bpSys.length < 2 || bpDia.length < 2) return;
+    const t = setTimeout(() => {
+      const reading = { systolic: Number(bpSys), diastolic: Number(bpDia) };
+      const invalid = validateBloodPressure(reading);
+      if (invalid) {
+        setError(invalid);
+        return;
+      }
+      if (!authUserId) {
+        setError("You need to be signed in to save your blood pressure.");
+        return;
+      }
+      setSaving(true);
+      setError(null);
+      void logBloodPressure({ userId: authUserId, reading, day: selectedDate, today }).then((result) => {
+        setSaving(false);
+        if (!result.ok) setError(result.message);
+        else setBpDirty(false);
+      });
+    }, 700);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bpSys, bpDia, bpDirty, open]);
 
   // Lock background scroll while the card is open — ported from
   // BottomSheet's own open-effect now that this sheet no longer renders
@@ -240,9 +285,11 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
 
   const handleSysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBpSys(e.target.value.replace(/\D/g, "").slice(0, 3));
+    setBpDirty(true);
   };
   const handleDiaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setBpDia(e.target.value.replace(/\D/g, "").slice(0, 3));
+    setBpDirty(true);
   };
 
   if (!open) return null;

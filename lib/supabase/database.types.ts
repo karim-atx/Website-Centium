@@ -1950,6 +1950,44 @@ export type Database = {
           },
         ]
       }
+      blood_pressure_readings: {
+        Row: {
+          created_at: string
+          diastolic: number
+          id: string
+          recorded_at: string
+          source: string
+          systolic: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          diastolic: number
+          id?: string
+          recorded_at: string
+          source?: string
+          systolic: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          diastolic?: number
+          id?: string
+          recorded_at?: string
+          source?: string
+          systolic?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blood_pressure_readings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       recipes: {
         Row: {
           created_at: string
