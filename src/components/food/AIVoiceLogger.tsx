@@ -59,12 +59,30 @@ interface Notice {
 // MediaRecorder already uses (in parallel, not instead of it). Drawn as one
 // canvas pass per frame rather than N styled DOM bars, so a page with
 // several of these mounted doesn't force a style recalc every frame.
-const WAVE_BAR_PITCH = 6; // px between bar starts (bar width + gap)
-const WAVE_BAR_WIDTH = 3;
-const WAVE_STEP_MS = 60; // ms between new samples entering the buffer
-const WAVE_FLOOR = 0.06; // silence still shows a low, visibly-alive row
-// Newest -> oldest, a 3-step gradient across the buffer's age.
-const WAVE_COLORS = ["#6F9993", "#83AAA4", "#A2C8C2"] as const;
+//
+// Master handover item 13 values: 53 levels, one shifted in every 58ms; 4px
+// bars 2.8px apart, max(4px, level x 64px) tall with round caps, coloured by
+// position oldest -> newest: first 50% #A2C8C2, next 32% #83AAA4, last 18%
+// #6F9993.
+const WAVE_BAR_WIDTH = 4;
+const WAVE_BAR_GAP = 2.8;
+const WAVE_BAR_PITCH = WAVE_BAR_WIDTH + WAVE_BAR_GAP; // px between bar starts
+const WAVE_BUFFER_LENGTH = 53;
+const WAVE_STEP_MS = 58; // ms between new levels entering the buffer
+const WAVE_HEIGHT = 64;
+const WAVE_FLOOR = 0.08; // silence still shows a low, visibly-alive row
+const WAVE_MIN_PAINT_WIDTH = 140; // narrower than this: pause and release audio
+const WAVE_STOP_HOLD_MS = 250; // the last frame holds this long on stop
+const waveColor = (i: number, n: number) => {
+  const frac = i / n; // 0 = oldest (leftmost)
+  return frac < 0.5 ? "#A2C8C2" : frac < 0.82 ? "#83AAA4" : "#6F9993";
+};
+
+/** Item 13's no-live-levels wave, `t` in seconds. */
+function syntheticLevel(t: number): number {
+  const s = 0.5 * Math.sin(2.1 * t) + 0.3 * Math.sin(3.7 * t + 1.1) + 0.2 * Math.sin(0.9 * t);
+  return Math.max(WAVE_FLOOR, Math.min(1, 0.34 + Math.abs(s) * 0.3));
+}
 
 /** RMS of a time-domain byte buffer, mapped to a 0..1 bar-height fraction. */
 function amplitudeFromTimeDomain(data: Uint8Array<ArrayBuffer>): number {
@@ -78,43 +96,30 @@ function amplitudeFromTimeDomain(data: Uint8Array<ArrayBuffer>): number {
 }
 
 /**
- * Draws every bar in the rolling buffer in one pass. `scrollOffset` is a
- * sub-bar-pitch pixel amount (0..WAVE_BAR_PITCH) applied as a single
- * translate so the scroll reads as continuous motion instead of a bar
- * appearing in discrete jumps once per step.
+ * One draw pass for the whole rolling buffer: bar i (0 = oldest) in slot i
+ * of a canvas exactly WAVE_BUFFER_LENGTH slots wide, newest at the right.
+ * Bars are centred on the midline and clamped to the 64px canvas. The
+ * continuous scroll between steps is a single translateX on the canvas
+ * element (set by the loop), never a style per bar.
  */
-function renderWave(canvas: HTMLCanvasElement, buffer: number[], scrollOffset: number, dpr: number) {
+function renderWave(canvas: HTMLCanvasElement, buffer: number[], dpr: number) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
   const cssWidth = canvas.width / dpr;
-  const cssHeight = canvas.height / dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, cssWidth, cssHeight);
+  ctx.clearRect(0, 0, cssWidth, WAVE_HEIGHT);
 
-  const midY = cssHeight / 2;
-  // Clamped so a loud input can never draw past the canvas's own bounds.
-  const maxBarHalf = Math.max(2, cssHeight / 2 - WAVE_BAR_WIDTH / 2 - 1);
   const n = buffer.length;
-
-  ctx.save();
-  ctx.translate(-scrollOffset, 0);
-  ctx.lineCap = "round";
-  ctx.lineWidth = WAVE_BAR_WIDTH;
-
+  const midY = WAVE_HEIGHT / 2;
   for (let i = 0; i < n; i++) {
-    const ageFromNewest = n - 1 - i; // 0 = newest (rightmost)
-    const x = cssWidth - ageFromNewest * WAVE_BAR_PITCH;
-    if (x < -WAVE_BAR_PITCH || x > cssWidth + scrollOffset + WAVE_BAR_PITCH) continue;
-
-    const half = Math.min(maxBarHalf, Math.max(1, buffer[i] * maxBarHalf));
-    const ageFrac = ageFromNewest / Math.max(1, n - 1);
-    ctx.strokeStyle = ageFrac < 1 / 3 ? WAVE_COLORS[0] : ageFrac < 2 / 3 ? WAVE_COLORS[1] : WAVE_COLORS[2];
+    const h = Math.min(WAVE_HEIGHT, Math.max(4, buffer[i] * WAVE_HEIGHT));
+    const x = i * WAVE_BAR_PITCH;
+    ctx.fillStyle = waveColor(i, n);
     ctx.beginPath();
-    ctx.moveTo(x, midY - half);
-    ctx.lineTo(x, midY + half);
-    ctx.stroke();
+    if (typeof ctx.roundRect === "function") ctx.roundRect(x, midY - h / 2, WAVE_BAR_WIDTH, h, WAVE_BAR_WIDTH / 2);
+    else ctx.rect(x, midY - h / 2, WAVE_BAR_WIDTH, h);
+    ctx.fill();
   }
-  ctx.restore();
 }
 
 export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = ({
@@ -149,7 +154,12 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
   // The waveform: an AnalyserNode tapped off the same stream as the
   // MediaRecorder above, running in parallel with it, plus everything the
   // canvas render loop needs across frames without triggering re-renders.
+  const waveWrapRef = useRef<HTMLDivElement | null>(null);
   const waveCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  // Set when the recording stops: the last frame holds and nothing restarts
+  // the loop (or re-taps audio) during the hold.
+  const waveFrozenRef = useRef(false);
+  const waveHoldTimerRef = useRef<number | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const analyserSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -159,7 +169,6 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
   const waveModeRef = useRef<"live" | "synthetic">("live");
   const waveScrollRef = useRef(0);
   const waveLastFrameTimeRef = useRef<number | null>(null);
-  const waveSyntheticPhaseRef = useRef(0);
 
   /**
    * Tries to tap an AnalyserNode off the recording stream, in parallel with
@@ -227,6 +236,8 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
    */
   const teardown = () => {
     if (capTimerRef.current !== null) { clearTimeout(capTimerRef.current); capTimerRef.current = null; }
+    // A stop's 250ms hold must not fire an upload behind a closing sheet.
+    if (waveHoldTimerRef.current !== null) { clearTimeout(waveHoldTimerRef.current); waveHoldTimerRef.current = null; }
     if (tickRef.current !== null) { clearInterval(tickRef.current); tickRef.current = null; }
     const recorder = recorderRef.current;
     if (recorder && recorder.state !== "inactive") {
@@ -255,45 +266,40 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
   // would stall the whole page, not just this sheet.
   useEffect(() => {
     if (stage !== "recording") return;
+    const wrap = waveWrapRef.current;
     const canvas = waveCanvasRef.current;
-    const stream = streamRef.current;
-    if (!canvas || !stream) return;
+    if (!wrap || !canvas || !streamRef.current) return;
 
+    // Master handover item 13, reduced motion: lower (x0.34) and slower
+    // (1.7 x 58ms per step).
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const amplitudeScale = reducedMotion ? 0.34 : 1;
     const stepMs = reducedMotion ? WAVE_STEP_MS * 1.7 : WAVE_STEP_MS;
 
-    waveModeRef.current = setupAnalyser(stream) ? "live" : "synthetic";
+    // Backing store at min(2, devicePixelRatio). The canvas is exactly the
+    // buffer's width, right-aligned in the wrapper, so the oldest bars run
+    // off the left edge on a narrow sheet.
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    const cssWidth = WAVE_BUFFER_LENGTH * WAVE_BAR_PITCH;
+    canvas.style.width = `${cssWidth}px`;
+    canvas.style.height = `${WAVE_HEIGHT}px`;
+    canvas.width = Math.round(cssWidth * dpr);
+    canvas.height = Math.round(WAVE_HEIGHT * dpr);
 
-    const dpr = window.devicePixelRatio || 1;
-    const resize = () => {
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = Math.max(1, Math.round(rect.width * dpr));
-      canvas.height = Math.max(1, Math.round(rect.height * dpr));
-    };
-    resize();
-
-    const barCount = Math.max(8, Math.ceil(canvas.getBoundingClientRect().width / WAVE_BAR_PITCH) + 2);
-    waveBufferRef.current = new Array(barCount).fill(WAVE_FLOOR * amplitudeScale);
+    waveFrozenRef.current = false;
+    waveBufferRef.current = new Array(WAVE_BUFFER_LENGTH).fill(WAVE_FLOOR * amplitudeScale);
     waveScrollRef.current = 0;
-    waveLastFrameTimeRef.current = null;
-    waveSyntheticPhaseRef.current = 0;
+    renderWave(canvas, waveBufferRef.current, dpr);
 
-    const ro = new ResizeObserver(resize);
-    ro.observe(canvas);
-
-    const readAmplitude = (): number => {
+    const readLevel = (): number => {
       if (waveModeRef.current === "live" && analyserRef.current && waveTimeDomainRef.current) {
         analyserRef.current.getByteTimeDomainData(waveTimeDomainRef.current);
         return amplitudeFromTimeDomain(waveTimeDomainRef.current);
       }
-      // Gentle synthetic wave: no live levels available (unsupported API,
-      // insecure context, or the AudioContext failed to construct), but the
-      // MediaRecorder above is still recording completely undisturbed.
-      waveSyntheticPhaseRef.current += 0.12;
-      const slow = (Math.sin(waveSyntheticPhaseRef.current) + 1) / 2;
-      const wobble = (Math.sin(waveSyntheticPhaseRef.current * 2.7) + 1) / 2;
-      return Math.max(WAVE_FLOOR, Math.min(1, WAVE_FLOOR + (0.3 + 0.15 * wobble) * slow));
+      // No live levels (no AudioContext, an insecure context, or the
+      // analyser failed to construct): the MediaRecorder above is still
+      // recording undisturbed, and the wave is never an empty component.
+      return syntheticLevel(performance.now() / 1000);
     };
 
     const draw = (time: number) => {
@@ -301,20 +307,53 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
       const dt = Math.min(250, time - waveLastFrameTimeRef.current);
       waveLastFrameTimeRef.current = time;
 
+      // Continuous motion: between steps the whole row slides left by the
+      // fraction of a step elapsed; each full step shifts one level in at
+      // the right and drops the oldest off the left.
       waveScrollRef.current += (dt / stepMs) * WAVE_BAR_PITCH;
       while (waveScrollRef.current >= WAVE_BAR_PITCH) {
         waveScrollRef.current -= WAVE_BAR_PITCH;
         const buf = waveBufferRef.current;
         buf.shift();
-        buf.push(readAmplitude() * amplitudeScale);
+        buf.push(readLevel() * amplitudeScale);
       }
 
-      renderWave(canvas, waveBufferRef.current, waveScrollRef.current, dpr);
+      renderWave(canvas, waveBufferRef.current, dpr);
+      canvas.style.transform = `translateX(${-waveScrollRef.current}px)`;
       waveRafRef.current = requestAnimationFrame(draw);
     };
-    waveRafRef.current = requestAnimationFrame(draw);
+
+    // Paint only while on screen and at least 140px wide; otherwise pause
+    // the loop and release the audio graph (the recording itself goes on).
+    let onScreen = true;
+    let wideEnough = wrap.getBoundingClientRect().width >= WAVE_MIN_PAINT_WIDTH;
+    const running = () => waveRafRef.current !== null;
+    const update = () => {
+      const shouldPaint = onScreen && wideEnough && !waveFrozenRef.current;
+      if (shouldPaint && !running()) {
+        const stream = streamRef.current;
+        if (!stream) return;
+        if (!analyserRef.current) waveModeRef.current = setupAnalyser(stream) ? "live" : "synthetic";
+        waveLastFrameTimeRef.current = null;
+        waveRafRef.current = requestAnimationFrame(draw);
+      } else if (!shouldPaint && running() && !waveFrozenRef.current) {
+        teardownWave();
+      }
+    };
+    const io = new IntersectionObserver((entries) => {
+      onScreen = entries.some((e) => e.isIntersecting);
+      update();
+    });
+    io.observe(wrap);
+    const ro = new ResizeObserver(() => {
+      wideEnough = wrap.getBoundingClientRect().width >= WAVE_MIN_PAINT_WIDTH;
+      update();
+    });
+    ro.observe(wrap);
+    update();
 
     return () => {
+      io.disconnect();
       ro.disconnect();
       teardownWave();
     };
@@ -408,18 +447,25 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
       // are released right here too -- this also stops the wave's rAF loop,
       // which is what makes it "freeze" on its last frame: the canvas node
       // itself isn't removed until the stage change below unmounts it.
+      waveFrozenRef.current = true;
       streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
       teardownWave();
 
       const blob = new Blob(chunksRef.current, { type: mimeType });
       chunksRef.current = [];
-      if (blob.size === 0) {
-        setStage("idle");
-        setNotice({ tone: "error", text: "That recording didn't capture any audio. Try again." });
-        return;
-      }
-      void finish(blob);
+      // Master handover item 13: the wave's last frame holds for 250ms, then
+      // the sheet moves on as before. The mic and audio graph are already
+      // released above, so the recording indicator is off during the hold.
+      waveHoldTimerRef.current = window.setTimeout(() => {
+        waveHoldTimerRef.current = null;
+        if (blob.size === 0) {
+          setStage("idle");
+          setNotice({ tone: "error", text: "That recording didn't capture any audio. Try again." });
+          return;
+        }
+        void finish(blob);
+      }, WAVE_STOP_HOLD_MS);
     };
 
     setElapsed(0);
@@ -640,7 +686,12 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
             {/* Item 13: a live waveform off the mic's actual input level,
                 replacing the old decorative pulse rings. See the
                 AnalyserNode setup/render loop above. */}
-            <canvas ref={waveCanvasRef} className="w-full h-16 mb-6 block" aria-hidden="true" />
+            {/* Full content width, 64px tall; the canvas inside is the
+                buffer's exact width, right-aligned, and slides left by a
+                single translateX between steps. */}
+            <div ref={waveWrapRef} className="relative w-full h-16 mb-6 overflow-hidden" aria-hidden="true">
+              <canvas ref={waveCanvasRef} className="absolute top-0 right-0 block" style={{ willChange: "transform" }} />
+            </div>
             <p className="font-display text-xl font-semibold text-charcoal mb-1">Listening…</p>
             <p className="text-sm text-charcoal-soft mb-6 tabular-nums">
               {elapsed}s · {remaining}s left
