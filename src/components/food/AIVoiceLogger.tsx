@@ -60,59 +60,69 @@ interface Notice {
 // canvas pass per frame rather than N styled DOM bars, so a page with
 // several of these mounted doesn't force a style recalc every frame.
 //
-// Master handover item 13 values: 53 levels, one shifted in every 58ms; 4px
-// bars 2.8px apart, max(4px, level x 64px) tall with round caps, coloured by
-// position oldest -> newest: first 50% #A2C8C2, next 32% #83AAA4, last 18%
-// #6F9993.
-const WAVE_BAR_WIDTH = 4;
-const WAVE_BAR_GAP = 2.8;
+// Master handover, the "After · reference style" listening frame (p8b) and
+// its Waveform component in CentiumFrame.dc.html — which differ from item
+// 13's prose (64px, 4px bars, 58ms, 250ms hold) and are followed here: 53
+// levels, one shifted in every 55ms; 3px bars 3px apart in a row 315px wide,
+// centred in a 96px-tall box; max(3px, level x 96px) tall with round caps;
+// coloured by recency i/(n-1): above 0.82 #6F9993, above 0.5 #83AAA4, else
+// #A2C8C2. The last frame holds 450ms on stop.
+const WAVE_BAR_WIDTH = 3;
+const WAVE_BAR_GAP = 3;
 const WAVE_BAR_PITCH = WAVE_BAR_WIDTH + WAVE_BAR_GAP; // px between bar starts
 const WAVE_BUFFER_LENGTH = 53;
-const WAVE_STEP_MS = 58; // ms between new levels entering the buffer
-const WAVE_HEIGHT = 64;
-const WAVE_FLOOR = 0.08; // silence still shows a low, visibly-alive row
+const WAVE_ROW_WIDTH = WAVE_BUFFER_LENGTH * WAVE_BAR_PITCH - WAVE_BAR_GAP;
+const WAVE_STEP_MS = 55; // ms between new levels entering the buffer
+const WAVE_HEIGHT = 96;
+const WAVE_FLOOR = 0.055; // silence still shows a low, visibly-alive row
 const WAVE_MIN_PAINT_WIDTH = 140; // narrower than this: pause and release audio
-const WAVE_STOP_HOLD_MS = 250; // the last frame holds this long on stop
+const WAVE_STOP_HOLD_MS = 450; // the last frame holds this long on stop
 const waveColor = (i: number, n: number) => {
-  const frac = i / n; // 0 = oldest (leftmost)
-  return frac < 0.5 ? "#A2C8C2" : frac < 0.82 ? "#83AAA4" : "#6F9993";
+  const recency = i / (n - 1); // 0 = oldest (leftmost), 1 = newest
+  return recency > 0.82 ? "#6F9993" : recency > 0.5 ? "#83AAA4" : "#A2C8C2";
 };
 
-/** Item 13's no-live-levels wave, `t` in seconds. */
-function syntheticLevel(t: number): number {
+/** The frame's seed row, so the wave is never an empty box before levels arrive. */
+function seededLevel(i: number, level: number): number {
+  const a = Math.sin(i * 0.7) * 0.5 + Math.sin(i * 1.9 + 1.3) * 0.28 + Math.sin(i * 0.31) * 0.22;
+  const env = 0.62 + 0.38 * Math.sin(i * 0.11 + 0.6);
+  return Math.max(WAVE_FLOOR, Math.min(1, Math.abs(a) * env * level));
+}
+
+/** The no-live-levels wave, `t` in seconds, `scale` 0.34 under reduced motion. */
+function syntheticLevel(t: number, scale: number): number {
   const s = 0.5 * Math.sin(2.1 * t) + 0.3 * Math.sin(3.7 * t + 1.1) + 0.2 * Math.sin(0.9 * t);
-  return Math.max(WAVE_FLOOR, Math.min(1, 0.34 + Math.abs(s) * 0.3));
+  return Math.max(WAVE_FLOOR, Math.min(1, (0.34 + Math.abs(s) * 0.3) * scale));
 }
 
 /** RMS of a time-domain byte buffer, mapped to a 0..1 bar-height fraction. */
-function amplitudeFromTimeDomain(data: Uint8Array<ArrayBuffer>): number {
+function amplitudeFromTimeDomain(data: Uint8Array<ArrayBuffer>, scale: number): number {
   let sumSq = 0;
   for (let i = 0; i < data.length; i++) {
     const v = (data[i] - 128) / 128;
     sumSq += v * v;
   }
   const rms = Math.sqrt(sumSq / data.length);
-  return Math.max(WAVE_FLOOR, Math.min(1, Math.pow(rms * 3.4, 0.82)));
+  return Math.max(WAVE_FLOOR, Math.min(1, Math.pow(rms * 3.4, 0.82) * scale));
 }
 
 /**
  * One draw pass for the whole rolling buffer: bar i (0 = oldest) in slot i
- * of a canvas exactly WAVE_BUFFER_LENGTH slots wide, newest at the right.
- * Bars are centred on the midline and clamped to the 64px canvas. The
- * continuous scroll between steps is a single translateX on the canvas
- * element (set by the loop), never a style per bar.
+ * of a canvas exactly WAVE_ROW_WIDTH wide, newest at the right. Bars are
+ * centred on the midline and clamped to the 96px canvas. The continuous
+ * scroll between steps is a single translateX on the canvas element (set by
+ * the loop), never a style per bar.
  */
 function renderWave(canvas: HTMLCanvasElement, buffer: number[], dpr: number) {
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const cssWidth = canvas.width / dpr;
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-  ctx.clearRect(0, 0, cssWidth, WAVE_HEIGHT);
+  ctx.clearRect(0, 0, WAVE_ROW_WIDTH, WAVE_HEIGHT);
 
   const n = buffer.length;
   const midY = WAVE_HEIGHT / 2;
   for (let i = 0; i < n; i++) {
-    const h = Math.min(WAVE_HEIGHT, Math.max(4, buffer[i] * WAVE_HEIGHT));
+    const h = Math.min(WAVE_HEIGHT, Math.max(WAVE_BAR_WIDTH, buffer[i] * WAVE_HEIGHT));
     const x = i * WAVE_BAR_PITCH;
     ctx.fillStyle = waveColor(i, n);
     ctx.beginPath();
@@ -236,7 +246,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
    */
   const teardown = () => {
     if (capTimerRef.current !== null) { clearTimeout(capTimerRef.current); capTimerRef.current = null; }
-    // A stop's 250ms hold must not fire an upload behind a closing sheet.
+    // A stop's 450ms hold must not fire an upload behind a closing sheet.
     if (waveHoldTimerRef.current !== null) { clearTimeout(waveHoldTimerRef.current); waveHoldTimerRef.current = null; }
     if (tickRef.current !== null) { clearInterval(tickRef.current); tickRef.current = null; }
     const recorder = recorderRef.current;
@@ -270,56 +280,58 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     const canvas = waveCanvasRef.current;
     if (!wrap || !canvas || !streamRef.current) return;
 
-    // Master handover item 13, reduced motion: lower (x0.34) and slower
-    // (1.7 x 58ms per step).
+    // Reduced motion: lower (x0.34) and slower (1.7 x the step).
     const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
     const amplitudeScale = reducedMotion ? 0.34 : 1;
     const stepMs = reducedMotion ? WAVE_STEP_MS * 1.7 : WAVE_STEP_MS;
 
     // Backing store at min(2, devicePixelRatio). The canvas is exactly the
-    // buffer's width, right-aligned in the wrapper, so the oldest bars run
-    // off the left edge on a narrow sheet.
+    // row's width, centred in the 96px box.
     const dpr = Math.min(2, window.devicePixelRatio || 1);
-    const cssWidth = WAVE_BUFFER_LENGTH * WAVE_BAR_PITCH;
-    canvas.style.width = `${cssWidth}px`;
+    canvas.style.width = `${WAVE_ROW_WIDTH}px`;
     canvas.style.height = `${WAVE_HEIGHT}px`;
-    canvas.width = Math.round(cssWidth * dpr);
+    canvas.width = Math.round(WAVE_ROW_WIDTH * dpr);
     canvas.height = Math.round(WAVE_HEIGHT * dpr);
 
     waveFrozenRef.current = false;
-    waveBufferRef.current = new Array(WAVE_BUFFER_LENGTH).fill(WAVE_FLOOR * amplitudeScale);
+    // Seeded and painted once up front, so the box shows a wave rather than
+    // an empty row while the first levels arrive.
+    waveBufferRef.current = Array.from({ length: WAVE_BUFFER_LENGTH }, (_, i) => seededLevel(i, 0.5));
     waveScrollRef.current = 0;
     renderWave(canvas, waveBufferRef.current, dpr);
 
     const readLevel = (): number => {
       if (waveModeRef.current === "live" && analyserRef.current && waveTimeDomainRef.current) {
         analyserRef.current.getByteTimeDomainData(waveTimeDomainRef.current);
-        return amplitudeFromTimeDomain(waveTimeDomainRef.current);
+        return amplitudeFromTimeDomain(waveTimeDomainRef.current, amplitudeScale);
       }
       // No live levels (no AudioContext, an insecure context, or the
       // analyser failed to construct): the MediaRecorder above is still
       // recording undisturbed, and the wave is never an empty component.
-      return syntheticLevel(performance.now() / 1000);
+      return syntheticLevel(performance.now() / 1000, amplitudeScale);
     };
 
     const draw = (time: number) => {
       if (waveLastFrameTimeRef.current === null) waveLastFrameTimeRef.current = time;
-      const dt = Math.min(250, time - waveLastFrameTimeRef.current);
-      waveLastFrameTimeRef.current = time;
+      const dt = time - waveLastFrameTimeRef.current;
 
-      // Continuous motion: between steps the whole row slides left by the
-      // fraction of a step elapsed; each full step shifts one level in at
-      // the right and drops the oldest off the left.
-      waveScrollRef.current += (dt / stepMs) * WAVE_BAR_PITCH;
-      while (waveScrollRef.current >= WAVE_BAR_PITCH) {
-        waveScrollRef.current -= WAVE_BAR_PITCH;
+      // Each full step shifts one level in at the right and drops the oldest
+      // off the left (at most 4 per frame, as the frame's own loop does);
+      // between steps the whole row slides left by the fraction of a step
+      // elapsed, so the motion is continuous.
+      if (dt >= stepMs) {
+        const steps = Math.min(4, Math.floor(dt / stepMs));
         const buf = waveBufferRef.current;
-        buf.shift();
-        buf.push(readLevel() * amplitudeScale);
+        for (let k = 0; k < steps; k++) {
+          buf.shift();
+          buf.push(readLevel());
+        }
+        waveLastFrameTimeRef.current = time - (dt % stepMs);
       }
+      waveScrollRef.current = Math.min(1, (time - waveLastFrameTimeRef.current) / stepMs) * WAVE_BAR_PITCH;
 
       renderWave(canvas, waveBufferRef.current, dpr);
-      canvas.style.transform = `translateX(${-waveScrollRef.current}px)`;
+      canvas.style.transform = `translateX(${(-waveScrollRef.current).toFixed(2)}px)`;
       waveRafRef.current = requestAnimationFrame(draw);
     };
 
@@ -454,7 +466,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
       const blob = new Blob(chunksRef.current, { type: mimeType });
       chunksRef.current = [];
-      // Master handover item 13: the wave's last frame holds for 250ms, then
+      // Master handover (p8b frame): the wave's last frame holds for 450ms, then
       // the sheet moves on as before. The mic and audio graph are already
       // released above, so the recording indicator is off during the hold.
       waveHoldTimerRef.current = window.setTimeout(() => {
@@ -585,8 +597,10 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
       onClose={handleClose}
       title="Tell Centium what you ate"
       // Mobile handoff item 1: the mic-denied screen's old in-content "Back"
-      // button becomes the header chevron, back to the idle mic prompt.
-      onBack={stage === "denied" ? reset : undefined}
+      // button becomes the header chevron, back to the idle mic prompt. The
+      // handover's frame (CentiumFrame sheetCanBack) shows it on the review
+      // screen too, stepping back to idle the same way.
+      onBack={stage === "denied" || stage === "result" ? reset : undefined}
     >
       <div className="min-h-[280px] flex flex-col items-center justify-center text-center py-4">
         {stage === "idle" && (
@@ -646,7 +660,10 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
         {stage === "requesting" && (
           <>
-            <div className="w-24 h-24 rounded-full bg-teal/20 flex items-center justify-center mb-6 animate-pulse">
+            <div
+              className="w-24 h-24 rounded-full bg-teal/20 flex items-center justify-center mb-6"
+              style={{ animation: "fade-in 1.5s ease-in-out infinite alternate" }}
+            >
               <Mic size={32} className="text-teal" />
             </div>
             <p className="font-display text-xl font-semibold text-charcoal mb-2">
@@ -678,19 +695,19 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
         {stage === "recording" && (
           <>
-            <div className="relative w-24 h-24 mb-6">
-              <div className="relative w-24 h-24 rounded-full bg-teal flex items-center justify-center shadow-lift">
-                <Mic size={32} className="text-white" />
-              </div>
-            </div>
-            {/* Item 13: a live waveform off the mic's actual input level,
-                replacing the old decorative pulse rings. See the
-                AnalyserNode setup/render loop above. */}
-            {/* Full content width, 64px tall; the canvas inside is the
-                buffer's exact width, right-aligned, and slides left by a
-                single translateX between steps. */}
-            <div ref={waveWrapRef} className="relative w-full h-16 mb-6 overflow-hidden" aria-hidden="true">
-              <canvas ref={waveCanvasRef} className="absolute top-0 right-0 block" style={{ willChange: "transform" }} />
+            {/* A live waveform off the mic's actual input level, replacing
+                the old pulse rings and mic circle (the handover's listening
+                frame shows the wave alone). See the AnalyserNode setup/render
+                loop above. Full content width, 96px tall, 18px above
+                "Listening…"; the canvas inside is the row's exact width,
+                centred, and slides left by a single translateX between steps. */}
+            <div
+              ref={waveWrapRef}
+              className="w-full flex items-center justify-center overflow-hidden"
+              style={{ height: 96, marginBottom: 18 }}
+              aria-hidden="true"
+            >
+              <canvas ref={waveCanvasRef} className="block shrink-0" style={{ willChange: "transform" }} />
             </div>
             <p className="font-display text-xl font-semibold text-charcoal mb-1">Listening…</p>
             <p className="text-sm text-charcoal-soft mb-6 tabular-nums">
@@ -707,7 +724,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
         {stage === "processing" && (
           <>
             <div className="w-16 h-16 rounded-full bg-primary-pale flex items-center justify-center mb-6 animate-pop">
-              <Sparkles size={26} className="text-primary animate-pulse" />
+              <Sparkles size={26} className="text-primary" />
             </div>
             <p className="font-display text-xl font-semibold text-charcoal mb-2">
               Centium is processing…
