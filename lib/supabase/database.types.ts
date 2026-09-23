@@ -1344,8 +1344,10 @@ export type Database = {
           created_at: string
           fat_g: number
           id: string
+          logo_tone: number | null
           name: string
           name_ar: string | null
+          nutrients: Json | null
           overrides_food_id: string | null
           owner_id: string
           protein_g: number
@@ -1360,8 +1362,10 @@ export type Database = {
           created_at?: string
           fat_g: number
           id?: string
+          logo_tone?: number | null
           name: string
           name_ar?: string | null
+          nutrients?: Json | null
           overrides_food_id?: string | null
           owner_id: string
           protein_g: number
@@ -1376,8 +1380,10 @@ export type Database = {
           created_at?: string
           fat_g?: number
           id?: string
+          logo_tone?: number | null
           name?: string
           name_ar?: string | null
+          nutrients?: Json | null
           overrides_food_id?: string | null
           owner_id?: string
           protein_g?: number

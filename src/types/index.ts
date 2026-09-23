@@ -1159,6 +1159,10 @@ export type ColorTheme = "centium" | "ocean" | "sunset" | "berry";
 // V3: custom (user-added) foods, kept separate from the curated mock database.
 export interface CustomFood extends Food {
   isCustom: true;
+  /** Create Custom Food's logo colour: index 0-5 into LOGO_TONES. */
+  logoTone?: number | null;
+  /** Per-serving amounts beyond the four macros, keyed by nutrientSchema keys. */
+  nutrients?: Record<string, number> | null;
 }
 
 // V3: expanded mock sleep-stage breakdown for the Health page detail view.

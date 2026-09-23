@@ -4123,7 +4123,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // and logged next week is exactly the case worth persisting -- deferring the
   // write would leave it invisible on every other device until it happened to
   // be used, which is the same bug in a smaller box. It also makes the sheet's
-  // own promise ("Saved foods appear in search next time") literally true,
+  // own promise (saved foods "show up in search alongside the database") true,
   // since searchFoods already queries this table.
   //
   // A failed write does NOT lose what the user typed. The food falls back to a
