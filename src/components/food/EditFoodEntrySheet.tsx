@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { sheetChipStyle } from "../ui/sheetChip";
-import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import type { FoodLogEntry, ServingUnit } from "../../types";
 import { Trash2, UtensilsCrossed, SlidersHorizontal } from "lucide-react";
 import { foodCategoryIcon } from "../../utils/icons";
 import { updateDiaryEntry, deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
-import { servingMultiplier, sumNutrientMaps, targetsFromGoal } from "../../services/nutrition";
+import { rescaleEntry, servingMultiplier, sumNutrientMaps, targetsFromGoal } from "../../services/nutrition";
 import { getFoodNutrientsById } from "../../services/food-nutrients";
 import { NutrientSections } from "./NutrientSections";
 
@@ -19,6 +18,16 @@ const servingUnitOptions: { value: ServingUnit; label: string }[] = [
   { value: "tbsp", label: "tbsp" },
   { value: "tsp", label: "tsp" },
 ];
+
+// Caps label at the top of a grey sheet container (00-FOUNDATIONS §0.3).
+const sheetCapsLabelStyle: React.CSSProperties = {
+  margin: 0,
+  fontSize: 11,
+  fontWeight: 700,
+  letterSpacing: "0.12em",
+  textTransform: "uppercase",
+  color: "#8C8378",
+};
 
 // V4: "Logged foods should be editable, to be able to change quantities or
 // adjust when needed" — tapping a diary entry opens this instead of only
@@ -151,6 +160,8 @@ export const EditFoodEntrySheet: React.FC<{
   const targets = targetsFromGoal(nutritionGoal);
   const entryMultiplier = servingMultiplier(entry.display.serving, entry.quantity, entry.unit ?? "serving");
   const entryMultiplierDisplay = Math.round(entryMultiplier * 100) / 100;
+  // Macro strip preview for the quantity/unit being edited.
+  const preview = rescaleEntry(entry, quantity, unit);
 
   return (
     <BottomSheet
@@ -200,24 +211,29 @@ export const EditFoodEntrySheet: React.FC<{
           </p>
         </div>
       ) : (
-        <div className="animate-fade-slide-up">
-          <div className="flex items-center gap-3 mb-5">
-            <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
-              <Icon size={19} className="text-primary-dark" />
+        // Mobile handoff item 3: the Add Food detail step's controls, sections
+        // 10px apart, with a delete / Save changes / Advanced action row.
+        <div className="animate-fade-slide-up flex flex-col" style={{ gap: 10 }}>
+          <div className="flex items-center" style={{ gap: 13 }}>
+            <span
+              className="flex items-center justify-center shrink-0"
+              style={{ width: 48, height: 48, borderRadius: 15, background: "#EFECFB", color: "#6B4BE0" }}
+            >
+              <Icon size={20} />
             </span>
-            <div>
-              <p className="font-display font-semibold text-lg text-charcoal">{entry.name}</p>
-              <p className="text-xs text-charcoal-faint">{entry.display.serving}</p>
+            <div className="min-w-0">
+              <p style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em", color: "#241F1B" }}>
+                {entry.name}
+              </p>
+              <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "#8C8378" }}>{entry.display.serving}</p>
             </div>
           </div>
 
-          {/* Mobile handoff item 1: typed, never stepped — white input in
-              the grey sheet container. */}
           <div
-            className="flex items-center justify-between mb-3"
-            style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
+            className="flex items-center"
+            style={{ gap: 12, background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
           >
-            <span className="text-sm font-semibold text-charcoal-soft">Quantity</span>
+            <span style={{ flex: "none", fontSize: 14.5, fontWeight: 500, color: "#575863" }}>Quantity</span>
             <input
               value={quantityDraft}
               onChange={(e) => {
@@ -228,41 +244,75 @@ export const EditFoodEntrySheet: React.FC<{
               }}
               onBlur={() => setQuantityDraft(String(quantity))}
               inputMode="decimal"
-              className="w-14 text-center focus:outline-none"
-              style={{ background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
+              className="min-w-0 text-center focus:outline-none"
+              style={{ flex: 1, background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
             />
           </div>
 
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Unit</p>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6">
-            {servingUnitOptions.map((u) => (
-              <button
-                key={u.value}
-                onClick={() => setUnit(u.value)}
-                className="tap transition-colors"
-                style={sheetChipStyle(unit === u.value)}
+          <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}>
+            <p style={sheetCapsLabelStyle}>UNIT</p>
+            <div
+              className="flex overflow-x-auto no-scrollbar"
+              style={{ gap: 7, margin: "9px -14px 0", padding: "0 14px" }}
+            >
+              {servingUnitOptions.map((u) => (
+                <button
+                  key={u.value}
+                  onClick={() => setUnit(u.value)}
+                  className="tap transition-colors"
+                  style={sheetChipStyle(unit === u.value)}
+                >
+                  {u.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Same rescaleEntry() the save uses, so the preview can't disagree
+              with what gets written. */}
+          <div className="grid grid-cols-4" style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 0", marginBottom: 16 }}>
+            {[
+              { value: `${Math.round(preview.calories)}`, color: "#241F1B", caption: "kcal" },
+              { value: `${preview.protein.toFixed(1)}g`, color: "#7D6BB5", caption: "protein" },
+              { value: `${Math.round(preview.carbs)}g`, color: "#8175C2", caption: "carbs" },
+              { value: `${preview.fat.toFixed(1)}g`, color: "#5E8A83", caption: "fat" },
+            ].map((cell, i) => (
+              <div
+                key={cell.caption}
+                className="text-center"
+                style={i > 0 ? { borderLeft: "1px solid #E2E3E7" } : undefined}
               >
-                {u.label}
-              </button>
+                <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: cell.color }}>{cell.value}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 11, color: "#8C8378" }}>{cell.caption}</p>
+              </div>
             ))}
           </div>
 
           {error && (
-            <p className="text-xs font-semibold text-status-high text-center mb-3">{error}</p>
+            <p className="text-xs font-semibold text-status-high text-center">{error}</p>
           )}
 
-          <div className="flex gap-2.5">
-            <Button
-              variant="outline"
+          <div className="flex" style={{ gap: 10 }}>
+            <button
+              type="button"
               onClick={handleDelete}
               disabled={busy}
-              className="!border-teal/30 !text-teal-dark"
+              aria-label="Delete entry"
+              title="Delete entry"
+              className="tap shrink-0 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
+              style={{ width: 60, height: 52, borderRadius: 14, background: "#FCEDEC", border: "1px solid #F2CFCC", color: "#B4372C" }}
             >
-              <Trash2 size={15} />
-            </Button>
-            <Button fullWidth onClick={handleSave} disabled={busy}>
+              <Trash2 size={19} />
+            </button>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={busy}
+              className="tap inline-flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
+              style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "#A198DF", color: "#FFFFFF", fontSize: 15.5, fontWeight: 700 }}
+            >
               {busy ? "Saving…" : "Save changes"}
-            </Button>
+            </button>
             <button
               type="button"
               onClick={() => setAdvancedOpen(true)}
