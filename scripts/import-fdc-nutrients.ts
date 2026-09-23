@@ -82,6 +82,7 @@ import { createClient } from "@supabase/supabase-js";
 import { gramsInServingLabel, servingLabelUnit } from "../src/services/nutrition";
 import { FDC_NUTRIENT_MAP, type FdcNutrientMapping } from "../src/data/fdcNutrientMap";
 import { ALL_NUTRIENT_ROWS } from "../src/data/nutrientSchema";
+import { FDC_OVERRIDES, type FdcOverride } from "./fdc-overrides";
 
 // ---------------------------------------------------------------------------
 // CLI args / env
@@ -317,6 +318,153 @@ function searchableName(name: string): string {
   return name.replace(/[()/]/g, " ").replace(/\s+/g, " ").trim();
 }
 
+// WITHIN A TIER, THE CLOSEST NAME WINS. FDC's own result order is a
+// relevance order, not a name-similarity order, and SR Legacy is large
+// enough that a DERIVATIVE of a food routinely outranks the food itself.
+// Measured on the previous dry run: "Apple" landed on "Croissants, apple",
+// "Walnuts" on "Oil, walnut", "Orange" on "Marmalade, orange", "Carrot" on
+// "Carrot, dehydrated" — fourteen in all. Ranking by completeness bought
+// ~1,700 populated nutrients and paid for it in matches like those; this is
+// what buys most of them back.
+//
+// The score is built only from signals that are IN the data, not from a
+// list of foods:
+//
+//   HEAD NOUN — FDC writes descriptions head-first ("Apples, raw, with
+//   skin"), so the text before the first comma is the food and everything
+//   after qualifies it. A head containing one of the catalog name's words
+//   outweighs any number of qualifier hits, which is the whole difference
+//   between "Apples, raw" and "Croissants, apple".
+//
+//   COVERAGE — each distinct catalog word found anywhere in the
+//   description. "Cheddar Cheese" scores twice against "Cheese, cheddar".
+//
+//   BRAND SHOUTING — FDC capitalises brand names inside otherwise
+//   lower-case descriptions: "SILK Coffee, soymilk", "Cereals, QUAKER,
+//   Quick Oats, Dry", "HOUSE FOODS Premium Firm Tofu", "Rice, brown,
+//   parboiled, cooked, UNCLE BENS". Those are branded products filed under
+//   SR Legacy, where the Branded dataType filter never sees them. An
+//   all-caps word the catalog name did not ask for is the one reliable
+//   marker of it, and it is treated as disqualifying rather than merely bad.
+//
+//   FORM WORDS — a word naming a different FORM of the food (oil, powder,
+//   dehydrated, flour) is penalised ONLY when the catalog name doesn't
+//   contain it, so "Tuna, canned in water" is not punished for "canned"
+//   while "Tomato" is punished for "powder".
+//
+//   EVERY OTHER UNMATCHED WORD costs a little, so among otherwise equal
+//   descriptions the plainest one wins.
+//
+// This is a heuristic and is not expected to be right every time. The
+// override table below is what pins the cases it gets wrong; the point of
+// the score is to keep that table down to the foods that genuinely need a
+// human decision.
+const SCORE_WEIGHTS = {
+  /** A catalog word the description has, and the same size penalty for one it lacks. */
+  word: 100,
+  /** The description's very first word being one of the catalog's. */
+  headFirst: 50,
+  /** An unmatched word INSIDE the head — the head is the food's identity. */
+  headExtra: 49,
+  /** An unmatched word that names a different form of the food. */
+  form: 29,
+  /** Any other unmatched word: enough to break a tie toward the plainest. */
+  other: 1,
+  /** An all-caps word the catalog never asked for. Disqualifying. */
+  brand: 500,
+};
+
+// BOTH WORD SETS ARE STEMMED ON CONSTRUCTION, because every word they are
+// tested against has been through scoreStem first: "cookies" arrives as
+// "cooki" and "juice" as "juic", so a set holding the dictionary spelling
+// would silently never match. Written as the readable spellings and stemmed
+// once here, rather than as pre-stemmed strings nobody could check.
+
+// Grammar and USDA boilerplate. Free rather than penalised, because their
+// presence says nothing about whether this is the right food ("Includes
+// foods for USDA's Food Distribution Program" is appended to hundreds of
+// rows).
+const SCORE_STOPWORDS = new Set(
+  [
+    "a", "all", "and", "commercial", "commercially", "distribution", "food", "foods", "for",
+    "in", "includes", "of", "or", "program", "s", "the", "usda", "variety", "varieties", "with",
+    "without",
+  ].map(scoreStem)
+);
+
+// Words that mean a DIFFERENT FORM of the food rather than a preparation of
+// it. Cooking words ("cooked", "roasted", "boiled", "raw") are deliberately
+// absent: this catalog's names often specify one, and a food prepared the
+// way the catalog says is the match, not a penalty.
+// "Dried", "frozen" and "canned" are absent for a related reason: they
+// preserve a food rather than transform it, and for several catalog foods
+// the preserved entry is the only measured one FDC has ("Seeds, sunflower
+// seed kernels, dried" is the sunflower seed row).
+const SCORE_FORM_WORDS = new Set(
+  [
+    "bread", "breaded", "cake", "candied", "chips", "cookie", "cookies", "croissant",
+    "croissants", "dehydrated", "flour", "glazed", "imitation", "jam", "jelly", "juice",
+    "marmalade", "oil", "paste", "pie", "powder", "salad", "sandwich", "sauce", "soup",
+    "spread", "sticks", "substitute", "syrup",
+  ].map(scoreStem)
+);
+
+// Crude, deliberately symmetrical stemming: a trailing "s" then a trailing
+// "e", applied to both sides so they agree. "Oranges"/"orange" both reach
+// "orang" and "Tomatoes"/"tomato" both reach "tomato", which plural-only
+// stripping does not manage.
+function scoreStem(word: string): string {
+  const singular = word.length > 3 ? word.replace(/s$/, "") : word;
+  return singular.length > 3 ? singular.replace(/e$/, "") : singular;
+}
+
+// Digits are kept as words on purpose. They are the whole difference between
+// "Milk, fluid, 1% fat" and "Milk, low sodium, fluid" for a catalog food
+// called "Low-Fat Milk (1%)", and between 95% and 80% lean ground beef.
+function scoreWords(text: string): string[] {
+  return text
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter(Boolean)
+    .map(scoreStem);
+}
+
+/** All-caps runs of 3+ letters — FDC's own marker for a brand name. */
+function shoutedWords(text: string): string[] {
+  return (text.match(/[A-Z]{3,}/g) ?? []).map((w) => scoreStem(w.toLowerCase()));
+}
+
+function nameScore(description: string, catalogWords: Set<string>): number {
+  const headWords = scoreWords(description.split(",")[0] ?? "");
+  const headSet = new Set(headWords);
+  const all = new Set(scoreWords(description));
+
+  let score = 0;
+
+  // A catalog word the description LACKS counts against it as hard as a
+  // present one counts for it. Without that, "Salmon nuggets, cooked" scored
+  // close to "Fish, salmon, Atlantic, farmed, cooked, dry heat" simply by
+  // being shorter — missing the word that made the match specific was free.
+  for (const word of catalogWords) score += all.has(word) ? SCORE_WEIGHTS.word : -SCORE_WEIGHTS.word;
+
+  if (headWords[0] && catalogWords.has(headWords[0])) score += SCORE_WEIGHTS.headFirst;
+
+  for (const word of shoutedWords(description)) {
+    if (!catalogWords.has(word)) score -= SCORE_WEIGHTS.brand;
+  }
+
+  for (const word of all) {
+    if (catalogWords.has(word) || SCORE_STOPWORDS.has(word)) continue;
+    score -= SCORE_WEIGHTS.other;
+    // An extra word in the head names a DIFFERENT food, not a variation of
+    // this one: "Grape leaves", "Salmon nuggets", "Wild rice", "Fish broth"
+    // and "Rose-apples" all beat the right answer until this landed.
+    if (headSet.has(word)) score -= SCORE_WEIGHTS.headExtra;
+    if (SCORE_FORM_WORDS.has(word)) score -= SCORE_WEIGHTS.form;
+  }
+  return score;
+}
+
 async function searchFdc(name: string): Promise<FdcSearchFood | null> {
   const params = new URLSearchParams({
     query: searchableName(name),
@@ -358,11 +506,16 @@ async function searchFdc(name: string): Promise<FdcSearchFood | null> {
   // The same description exists in more than one dataset ("Broccoli, raw" is
   // in both Survey and SR Legacy), so taking the first exact match in FDC's
   // relevance order threw away the completeness the ranking above exists to
-  // capture. Array.prototype.sort is stable, so within a tier FDC's own
-  // relevance ordering is preserved.
-  const sorted = [...foods].sort(
-    (a, b) => (DATA_TYPE_RANK[a.dataType] ?? 9) - (DATA_TYPE_RANK[b.dataType] ?? 9)
-  );
+  // capture.
+  //
+  // Tier first, then name similarity within the tier, then — because sort is
+  // stable — FDC's own relevance order for anything still tied.
+  const catalogWords = new Set(scoreWords(name));
+  const sorted = [...foods].sort((a, b) => {
+    const tier = (DATA_TYPE_RANK[a.dataType] ?? 9) - (DATA_TYPE_RANK[b.dataType] ?? 9);
+    if (tier !== 0) return tier;
+    return nameScore(b.description, catalogWords) - nameScore(a.description, catalogWords);
+  });
   const normalized = name.trim().toLowerCase();
   return sorted.find((f) => f.description.trim().toLowerCase() === normalized) ?? sorted[0];
 }
@@ -480,6 +633,32 @@ function portionGramsPerUnit(detail: FdcFoodDetail, unit: string): number | null
   return null;
 }
 
+// Case-insensitive because the override table is written the way a person
+// reads the catalog, and a capitalisation drift between the two would fail
+// silently in the direction of doing nothing.
+const OVERRIDES_BY_NAME = new Map(
+  Object.entries(FDC_OVERRIDES).map(([name, override]) => [name.trim().toLowerCase(), override])
+);
+
+function overrideFor(name: string): FdcOverride | undefined {
+  return OVERRIDES_BY_NAME.get(name.trim().toLowerCase());
+}
+
+// AN OVERRIDE FOR A FOOD THAT DOESN'T EXIST DOES NOTHING, AND SAYS NOTHING.
+// A renamed or deleted catalog food would leave its pin behind as a line
+// that looks like a decision and has no effect, so the mismatch is a hard
+// error rather than a warning — there is no version of this worth
+// continuing past.
+function assertOverridesMatchCatalog(foods: FoodRow[]) {
+  const known = new Set(foods.map((f) => f.name.trim().toLowerCase()));
+  const dead = Object.keys(FDC_OVERRIDES).filter((name) => !known.has(name.trim().toLowerCase()));
+  if (dead.length > 0) {
+    throw new Error(
+      `fdc-overrides.ts pins ${dead.length} food${dead.length === 1 ? "" : "s"} that the catalog does not contain: ${dead.join(", ")}. Fix the key or remove the row.`
+    );
+  }
+}
+
 async function loadFoods(): Promise<FoodRow[]> {
   if (!supabase) {
     throw new Error("Cannot read the foods table without SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY, even for --dry-run's matching preview. Set both, or point --only at a name you'll type manually.");
@@ -493,10 +672,12 @@ async function loadFoods(): Promise<FoodRow[]> {
 
 async function main() {
   const foods = await loadFoods();
+  assertOverridesMatchCatalog(foods);
   console.log(`Loaded ${foods.length} food${foods.length === 1 ? "" : "s"} to match against FDC.\n`);
 
   let matchedExact = 0;
   let matchedFuzzy = 0;
+  let matchedManual = 0;
   const unmatched: string[] = [];
   const skippedNoGramWeight: string[] = [];
   const failures: string[] = [];
@@ -525,20 +706,45 @@ async function main() {
         continue;
       }
 
-      const found = await searchFdc(food.name);
-      if (!found) {
-        unmatched.push(food.name);
-        continue;
-      }
-      const isExact = found.description.trim().toLowerCase() === food.name.trim().toLowerCase();
+      // A PINNED ID SKIPS THE SEARCH ENTIRELY. The override table IS the
+      // decision for these foods; searching anyway and then discarding the
+      // result would only give the two something to disagree about silently.
+      const override = overrideFor(food.name);
 
-      const detail = await fetchFdcDetail(found.fdcId);
+      let detail: FdcFoodDetail;
+      let fdcId: number;
+      let description: string;
+      let dataType: string;
+      let confidence: string;
+      if (override) {
+        detail = await fetchFdcDetail(override.fdcId);
+        fdcId = override.fdcId;
+        // FDC's own description for the pinned row, not a remembered copy of
+        // it in the override table: the column should say what was actually
+        // fetched, and a description that has since changed upstream is worth
+        // seeing rather than papering over.
+        description = detail.description;
+        dataType = detail.dataType;
+        confidence = "manual";
+      } else {
+        const found = await searchFdc(food.name);
+        if (!found) {
+          unmatched.push(food.name);
+          continue;
+        }
+        detail = await fetchFdcDetail(found.fdcId);
+        fdcId = found.fdcId;
+        description = found.description;
+        dataType = found.dataType;
+        confidence =
+          description.trim().toLowerCase() === food.name.trim().toLowerCase() ? "exact" : "fuzzy";
+      }
 
       const perUnit = labelUnit ? portionGramsPerUnit(detail, labelUnit.unit) : null;
       const grams = labelGrams ?? (perUnit && labelUnit ? labelUnit.count * perUnit : null);
       if (!grams) {
         skippedNoGramWeight.push(
-          `${food.name} (serving: "${food.serving_label}" — FDC ${found.fdcId} "${found.description}" publishes no gram weight per ${labelUnit?.unit})`
+          `${food.name} (serving: "${food.serving_label}" — FDC ${fdcId} "${description}" publishes no gram weight per ${labelUnit?.unit})`
         );
         continue;
       }
@@ -550,8 +756,8 @@ async function main() {
       );
 
       console.log(
-        `${isExact ? "[exact]" : "[fuzzy]"} ${food.name} -> FDC ${found.fdcId} "${found.description}" ` +
-          `(${found.dataType}) — ${Object.keys(nutrients).length}/${ALL_NUTRIENT_ROWS.length} nutrients matched` +
+        `[${confidence}]${override?.lowConfidence ? "[low-confidence]" : ""} ${food.name} -> FDC ${fdcId} "${description}" ` +
+          `(${dataType}) — ${Object.keys(nutrients).length}/${ALL_NUTRIENT_ROWS.length} nutrients matched` +
           // Named explicitly when the serving basis came from FDC rather
           // than from the label, because it is the one number in this line
           // that was derived rather than read, and every nutrient on the
@@ -563,9 +769,9 @@ async function main() {
       if (!DRY_RUN && supabase) {
         const { error } = await supabase.from("food_nutrients").upsert({
           food_id: food.id,
-          fdc_id: found.fdcId,
-          fdc_description: found.description,
-          match_confidence: isExact ? "exact" : "fuzzy",
+          fdc_id: fdcId,
+          fdc_description: description,
+          match_confidence: confidence,
           nutrients,
           imported_at: new Date().toISOString(),
         });
@@ -578,10 +784,11 @@ async function main() {
       // bucket and the buckets sum to foods.length. The previous version
       // incremented the match counters the moment a search hit came back, so a
       // food that then failed its detail fetch or its write was counted twice
-      // — which is why the last dry run's buckets summed to 115 across 92
+      // — which is why an early dry run's buckets summed to 115 across 92
       // foods.
       if (writeError) failures.push(`${food.name}: ${writeError}`);
-      else if (isExact) matchedExact++;
+      else if (confidence === "manual") matchedManual++;
+      else if (confidence === "exact") matchedExact++;
       else matchedFuzzy++;
 
       // Polite pacing — see this session's own DEMO_KEY rate-limit hit.
@@ -591,17 +798,18 @@ async function main() {
     }
   }
 
-  // Every food resolves to exactly one of these five buckets, so they sum to
+  // Every food resolves to exactly one of these six buckets, so they sum to
   // foods.length. Printed and checked rather than assumed: a future edit that
   // adds a sixth outcome, or re-introduces a double-count, shows up here
   // instead of quietly skewing the match-quality picture.
   const accounted =
-    matchedExact + matchedFuzzy + unmatched.length + skippedNoGramWeight.length + failures.length;
+    matchedExact + matchedFuzzy + matchedManual + unmatched.length + skippedNoGramWeight.length + failures.length;
 
   console.log("\n" + "=".repeat(72));
   console.log(`${DRY_RUN ? "DRY RUN — no rows written" : "Import complete"}`);
   console.log(`  Foods considered: ${foods.length}`);
   console.log(`  Matched exact: ${matchedExact}`);
+  console.log(`  Pinned by the override table: ${matchedManual}`);
   console.log(`  Matched fuzzy (review these): ${matchedFuzzy}`);
   console.log(`  Unmatched (no FDC result at all): ${unmatched.length}`);
   if (unmatched.length) console.log("    " + unmatched.join(", "));
