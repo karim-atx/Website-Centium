@@ -37,6 +37,15 @@ export interface FdcOverride {
   note: string;
   /** Set when this is an approximation of the food rather than the food. */
   lowConfidence?: true;
+  /**
+   * Grams in ONE catalog serving, for a label that names no weight or unit
+   * the importer can convert ("1 piece", "1 bowl", "3 skewers"). Only ever
+   * a sourced figure — `servingSource` says where it comes from — never an
+   * estimate: a food nobody can weigh honestly stays skipped.
+   */
+  servingGrams?: number;
+  /** Where servingGrams comes from (an FDC portion, a manufacturer spec, …). */
+  servingSource?: string;
 }
 
 export const FDC_OVERRIDES: Record<string, FdcOverride> = {
@@ -160,6 +169,51 @@ export const FDC_OVERRIDES: Record<string, FdcOverride> = {
   "Brown Rice, cooked": {
     fdcId: 169704,
     note: "Long-grain brown rice, cooked. Unreachable by search: it is not among the first 200 non-branded results, and what wins instead is Pork sausage rice links.",
+  },
+
+  // --- count servings with a sourced gram weight ------------------------------
+  // The catalog labels these in pieces, orders or cans, which the importer
+  // cannot convert on its own. Each weight below is FDC's own portion for
+  // that measure of that food (or says exactly where else it comes from),
+  // and each was checked against the catalog's own calories for the serving.
+  Falafel: {
+    fdcId: 2707408,
+    note: "FNDDS Falafel. 4 patties at FDC's 17 g per patty is 350 kcal, matching the catalog's 330; SR Legacy's home-prepared row (333 kcal/100 g) would give 226 and disagree.",
+    servingGrams: 68,
+    servingSource: "FDC 2707408 portion \"1 patty\" = 17 g, x4",
+  },
+  "French Fries": {
+    fdcId: 2709461,
+    note: "FNDDS Potato, french fries, fast food. A small order is 343 kcal, matching the catalog's 340.",
+    servingGrams: 110,
+    servingSource: "FDC 2709461 portion \"1 small fast food order\" = 110 g",
+  },
+  "Diet Pepsi": {
+    fdcId: 2710542,
+    note: "FNDDS Soft drink, cola, diet — generic, not the Pepsi brand, which FDC lists only as branded rows without micronutrients. About 7 kcal per can against the catalog's 0.",
+    servingGrams: 360,
+    servingSource: "FDC 2710542 portion \"1 can (12 fl oz)\" = 360 g",
+  },
+  "Lebanese Bread": {
+    fdcId: 2707616,
+    note: "FNDDS Bread, pita. FDC has no loaf size; its large pita is the nearest to a Lebanese khubz loaf and gives 234 kcal against the catalog's 210.",
+    servingGrams: 85,
+    servingSource: "FDC 2707616 portion \"1 large pita\" = 85 g",
+    lowConfidence: true,
+  },
+  "Warak Enab": {
+    fdcId: 2709064,
+    note: "FNDDS Grape leaves stuffed with rice (the vegetarian Lebanese warak enab). This row's own \"1 roll\" is 56 g, which puts 6 rolls at 564 kcal — implausible for small Lebanese rolls. Its sister rows' 21 g roll gives 212 kcal, matching the catalog's 220.",
+    servingGrams: 126,
+    servingSource: "FDC 2706621 / 2706659 portion \"1 roll\" = 21 g (stuffed grape leaves, same rolls with meat), x6",
+    lowConfidence: true,
+  },
+  Baklava: {
+    fdcId: 2708044,
+    note: "FNDDS Baklava. FDC's piece is 80 g (352 kcal) but the catalog shows 210 kcal per piece, so the serving is taken as the weight those 210 kcal imply at this row's 440 kcal/100 g, keeping the nutrient breakdown consistent with the calories the app shows. Revisit if the catalog's piece is reweighed.",
+    servingGrams: 48,
+    servingSource: "catalog calories 210 kcal / FDC 2708044's 440 kcal per 100 g",
+    lowConfidence: true,
   },
 
   // --- accepted approximations ----------------------------------------------

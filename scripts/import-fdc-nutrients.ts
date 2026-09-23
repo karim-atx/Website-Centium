@@ -840,9 +840,20 @@ async function main() {
       // FROM, and inventing a weight for them is the guess this script exists
       // to refuse. That distinction — no unit vs. a unit FDC has no weight
       // for — is why the skip message now says which one happened.
+      //
+      // …unless a pinned override states a SOURCED gram weight for the
+      // serving (servingGrams, with its servingSource). That is the one way a
+      // count label gets converted: someone looked the weight up, and the
+      // override table records where.
+      const override = overrideFor(food.name);
       const labelGrams = gramsInServingLabel(food.serving_label);
-      const labelUnit = labelGrams ? null : servingLabelUnit(food.serving_label);
-      if (!labelGrams && !labelUnit) {
+      if (labelGrams && override?.servingGrams && Math.abs(labelGrams - override.servingGrams) > 0.5) {
+        throw new Error(
+          `${food.name}: fdc-overrides.ts says one serving is ${override.servingGrams} g, the catalog label says ${labelGrams} g ("${food.serving_label}"). Fix whichever is wrong.`
+        );
+      }
+      const labelUnit = labelGrams || override?.servingGrams ? null : servingLabelUnit(food.serving_label);
+      if (!labelGrams && !labelUnit && !override?.servingGrams) {
         skippedNoGramWeight.push(
           `${food.name} (serving: "${food.serving_label}" — no unit to convert from)`
         );
@@ -852,7 +863,6 @@ async function main() {
       // A PINNED ID SKIPS THE SEARCH ENTIRELY. The override table IS the
       // decision for these foods; searching anyway and then discarding the
       // result would only give the two something to disagree about silently.
-      const override = overrideFor(food.name);
 
       let detail: FdcFoodDetail;
       let fdcId: number;
@@ -884,7 +894,8 @@ async function main() {
       }
 
       const perUnit = labelUnit ? portionGramsPerUnit(detail, labelUnit.unit) : null;
-      const grams = labelGrams ?? (perUnit && labelUnit ? labelUnit.count * perUnit : null);
+      const grams =
+        labelGrams ?? override?.servingGrams ?? (perUnit && labelUnit ? labelUnit.count * perUnit : null);
       if (!grams) {
         skippedNoGramWeight.push(
           `${food.name} (serving: "${food.serving_label}" — FDC ${fdcId} "${description}" publishes no gram weight per ${labelUnit?.unit})`
@@ -905,7 +916,11 @@ async function main() {
           // than from the label, because it is the one number in this line
           // that was derived rather than read, and every nutrient on the
           // row is scaled by it.
-          (labelGrams ? "" : ` [${food.serving_label} = ${Math.round(grams)} g, from FDC portion data]`)
+          (labelGrams
+            ? ""
+            : override?.servingGrams
+              ? ` [${food.serving_label} = ${override.servingGrams} g, from ${override.servingSource ?? "fdc-overrides.ts"}]`
+              : ` [${food.serving_label} = ${Math.round(grams)} g, from FDC portion data]`)
       );
 
       let writeError: string | null = null;
