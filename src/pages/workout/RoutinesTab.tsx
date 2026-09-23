@@ -77,7 +77,13 @@ const folderTileColor = (folder: RoutineFolder, order: number): { fill: string; 
 const rowTint = (color: string): string => {
   switch (color) {
     case "#6F9993":
+    case "#A2C8C2": // master handover item 12 palette, teal family
+    case "#4F7F78":
       return "rgba(162,200,194,.18)"; // teal
+    case "#E8C877": // item 12 palette, gold family
+      return "rgba(217,164,65,.14)";
+    case "#E0A9C6": // item 12 palette, berry family
+      return "rgba(156,79,124,.1)";
     case "#4C8FD1":
       return "rgba(76,143,209,.14)"; // sky
     case "#9C4F7C":
