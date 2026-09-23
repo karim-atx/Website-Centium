@@ -38,8 +38,10 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
       <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Quick actions</p>
 
       <div
-        className="relative w-full overflow-hidden"
-        style={{ height: 95.9, marginTop: -8, marginBottom: -12 }}
+        className="relative overflow-hidden"
+        // Master handover item 6: 358px wide, capped to the column so a phone
+        // narrower than 390px never pushes it past the page edge.
+        style={{ width: 358, maxWidth: "100%", height: 95.9, marginTop: -8, marginBottom: -12 }}
       >
         <img
           src="/qa-cluster-ref-teal.png"
@@ -49,6 +51,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
             left: -26.82,
             top: -21.69,
             width: 412.08,
+            height: "auto",
             maxWidth: "none",
             display: "block",
             pointerEvents: "none",
@@ -82,7 +85,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         {/* Voice hub */}
         <button
           onClick={onVoiceLog}
-          aria-label="Voice log"
+          aria-label="Tell Centium what you ate"
           className="tap"
           style={{ ...hitAreaStyle, left: 142.2, top: -1.5, width: 73, height: 73, borderRadius: 9999 }}
         />
