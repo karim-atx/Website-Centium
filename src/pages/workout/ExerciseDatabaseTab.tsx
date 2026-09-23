@@ -4,7 +4,7 @@ import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import { MUSCLE_GROUP_LABEL } from "../../utils/muscleGroups";
 import type { MuscleGroup, ExerciseClassification } from "../../types";
-import { List, User, Search, RotateCw } from "lucide-react";
+import { List, User, Search, RefreshCw } from "lucide-react";
 import clsx from "clsx";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "../../components/workout/CreateCustomExerciseSheet";
 import { BODY_ZONES } from "../../data/bodyZones";
@@ -81,15 +81,30 @@ const ZONE_LABEL: Record<keyof (typeof BODY_ZONES)[FigureKey], string> = {
 };
 
 // Item 12: each figure renders in a 376px-tall box whose width is
-// imageWidth x 376 / imageHeight (public/body/*.png natural sizes).
+// imageWidth x 376 / imageHeight (public/body/*.png natural sizes), rounded
+// to a whole pixel as CentiumBodyView.dc.html's figW does.
 const FIGURE_BOX_WIDTH: Record<FigureKey, number> = {
-  "male-front": (245 * 376) / 593,
-  "male-back": (282 * 376) / 595,
-  "female-front": (278 * 376) / 579,
-  "female-back": (282 * 376) / 584,
-  "andro-front": (308 * 376) / 593,
-  "andro-back": (298 * 376) / 593,
+  "male-front": Math.round(245 * (376 / 593)),
+  "male-back": Math.round(282 * (376 / 595)),
+  "female-front": Math.round(278 * (376 / 579)),
+  "female-back": Math.round(282 * (376 / 584)),
+  "andro-front": Math.round(308 * (376 / 593)),
+  "andro-back": Math.round(298 * (376 / 593)),
 };
+
+// CentiumBodyView.dc.html: the figure's caption and img alt, built as
+// NAME[sex] + " " + ("Front" | "Back").
+const FIGURE_NAME: Record<FigureGender, string> = {
+  male: "Male",
+  female: "Female",
+  andro: "Androgynous",
+};
+
+// CentiumBodyView.dc.html's cb-fade entrance (figure panel and selected
+// list): no existing Tailwind animation matches it (fade-slide-up moves 12px
+// over 0.45s), so its keyframes are carried verbatim.
+const CB_FADE_KEYFRAMES =
+  "@keyframes cb-fade { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }";
 
 // Zone keys valid per side — front and back have asymmetric pairs
 // (chest/back, biceps/triceps); BODY_ZONES carries both uniformly per
@@ -140,6 +155,7 @@ export default function ExerciseDatabaseTab() {
   const figureGender: FigureGender =
     user.sex === "male" ? "male" : user.sex === "female" ? "female" : "andro";
   const figureKey = `${figureGender}-${bodySide}` as FigureKey;
+  const figureAlt = `${FIGURE_NAME[figureGender]} ${bodySide === "front" ? "Front" : "Back"}`;
   // V8 (QA 8.0): "ability to edit each exercise if pressed on in the
   // library" — a custom exercise is edited in place; a stock library
   // exercise is saved as a new custom one instead of mutating shared data.
@@ -303,55 +319,27 @@ export default function ExerciseDatabaseTab() {
 
       {view === "body" && (
         <>
-          <p className="text-xs text-charcoal-faint mb-3 text-center">
-            Tap a muscle group to see its exercises — {bodySide === "front" ? "front" : "back"} view.
-          </p>
+          <style>{CB_FADE_KEYFRAMES}</style>
 
-          {/* Master handover item 12: figure panel — a plain <img> (never a
-              CSS mask or currentColor, which would recolour the line art and
-              lose the teal leaf) in a 376px-tall box sized to the image's own
-              proportions, the Front/Back chip top-right, and zone overlays
-              centred on each zone's x/y. */}
-          <div className="relative flex justify-center mb-3">
-            <div className="relative" style={{ width: FIGURE_BOX_WIDTH[figureKey], height: 376 }}>
-              <img
-                key={figureKey}
-                src={`/body/${figureKey}.png`}
-                alt=""
-                draggable={false}
-                className="block w-full h-full select-none pointer-events-none"
-                style={{ objectFit: "contain" }}
-              />
-              <div className="absolute inset-0">
-                {sideZoneKeys.map((zoneKey) => {
-                  const group = ZONE_KEY_TO_GROUP[zoneKey];
-                  const selected = selectedGroup === group;
-                  return BODY_ZONES[figureKey][zoneKey].map((rect, i) => (
-                    <button
-                      key={`${zoneKey}-${i}`}
-                      aria-label={ZONE_LABEL[zoneKey]}
-                      onClick={() => setSelectedGroup(selected ? null : group)}
-                      className="tap absolute"
-                      style={{
-                        left: `${rect.x}%`,
-                        top: `${rect.y}%`,
-                        width: `${rect.w}%`,
-                        height: `${rect.h}%`,
-                        transform: "translate(-50%,-50%)",
-                        borderRadius: "50%",
-                        backgroundColor: selected ? "rgba(143,104,246,0.34)" : "transparent",
-                        border: selected ? "1.5px solid rgba(95,80,147,0.75)" : "1.5px solid transparent",
-                        transition: "background-color 0.18s ease, border-color 0.18s ease",
-                      }}
-                    />
-                  ));
-                })}
-              </div>
-            </div>
-
+          {/* CentiumBodyView.dc.html: header row — the side's caps label on
+              the left, the Front/Back flip chip on the right. */}
+          <div className="flex items-center justify-between" style={{ marginBottom: 10 }}>
+            <p
+              className="whitespace-nowrap"
+              style={{
+                margin: 0,
+                fontSize: 11,
+                fontWeight: 700,
+                letterSpacing: "0.14em",
+                textTransform: "uppercase",
+                color: "#8C8378",
+              }}
+            >
+              {bodySide === "front" ? "Front view" : "Back view"}
+            </p>
             <button
               onClick={flipSide}
-              className="tap absolute top-0 right-0 flex items-center gap-1.5"
+              className="tap flex items-center gap-1.5"
               style={{
                 height: 32,
                 padding: "0 13px",
@@ -363,15 +351,79 @@ export default function ExerciseDatabaseTab() {
                 color: "#5F5093",
               }}
             >
-              <RotateCw size={13} strokeWidth={2.2} />
+              <RefreshCw size={13} strokeWidth={2} />
               {bodySide === "front" ? "Back" : "Front"}
             </button>
           </div>
 
-          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: "#8C8378" }}>
+          {/* Master handover item 12: figure panel — a plain <img> (never a
+              CSS mask or currentColor, which would recolour the line art and
+              lose the teal leaf) in a 376px-tall box sized to the image's own
+              proportions, zone overlays centred on each zone's x/y, and the
+              figure's name captioned bottom-left. */}
+          <div
+            className="relative w-full flex items-center justify-center overflow-hidden"
+            style={{
+              height: 404,
+              background: "#FBFBFD",
+              border: "1px solid rgba(174,161,220,0.3)",
+              borderRadius: 18,
+              animation: "cb-fade .3s ease both",
+            }}
+          >
+            <div className="relative" style={{ width: FIGURE_BOX_WIDTH[figureKey], height: 376 }}>
+              <img
+                key={figureKey}
+                src={`/body/${figureKey}.png`}
+                alt={figureAlt}
+                draggable={false}
+                className="absolute inset-0 block w-full h-full select-none pointer-events-none"
+                style={{ objectFit: "contain" }}
+              />
+              {sideZoneKeys.map((zoneKey) => {
+                const group = ZONE_KEY_TO_GROUP[zoneKey];
+                const selected = selectedGroup === group;
+                return BODY_ZONES[figureKey][zoneKey].map((rect, i) => (
+                  <button
+                    key={`${zoneKey}-${i}`}
+                    title={ZONE_LABEL[zoneKey]}
+                    aria-label={ZONE_LABEL[zoneKey]}
+                    onClick={() => setSelectedGroup(selected ? null : group)}
+                    className="tap absolute"
+                    style={{
+                      left: `${rect.x}%`,
+                      top: `${rect.y}%`,
+                      width: `${rect.w}%`,
+                      height: `${rect.h}%`,
+                      transform: "translate(-50%,-50%)",
+                      borderRadius: "50%",
+                      padding: 0,
+                      backgroundColor: selected ? "rgba(143,104,246,0.34)" : "rgba(143,104,246,0)",
+                      border: selected ? "1.5px solid rgba(95,80,147,0.75)" : "1.5px solid rgba(143,104,246,0)",
+                      transition: "background-color .18s ease, border-color .18s ease",
+                    }}
+                  />
+                ));
+              })}
+            </div>
+            <p className="absolute" style={{ left: 12, bottom: 10, margin: 0, fontSize: 10, color: "#A79E93" }}>
+              {figureAlt}
+            </p>
+          </div>
+
+          <p
+            style={{
+              margin: "16px 0 8px",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.14em",
+              textTransform: "uppercase",
+              color: "#8C8378",
+            }}
+          >
             Muscle groups
           </p>
-          <div className="flex flex-wrap gap-1.5 mb-5">
+          <div className="flex flex-wrap" style={{ gap: 7 }}>
             {sideZoneKeys.map((zoneKey) => {
               const mg = ZONE_KEY_TO_GROUP[zoneKey];
               const selected = selectedGroup === mg;
@@ -384,6 +436,7 @@ export default function ExerciseDatabaseTab() {
                     borderRadius: 8,
                     padding: "8px 14px",
                     fontSize: 13,
+                    whiteSpace: "nowrap",
                     ...(selected
                       ? { background: "#A092E0", border: "1px solid #A092E0", color: "#FFFFFF", fontWeight: 700 }
                       : { background: "#FAFAFB", border: "1px solid #E5E6EB", color: "#241F1B", fontWeight: 500 }),
@@ -395,31 +448,36 @@ export default function ExerciseDatabaseTab() {
             })}
           </div>
 
-          <p className="text-[11px] text-charcoal-faint text-center mb-4">
-            Not shown on either picture — find these in List mode: Cardio, Olympic.
-          </p>
-
+          {/* CentiumBodyView.dc.html: the selected muscle's exercises — a
+              plain 13px header and separate bordered rows, each naming its
+              classification on the right. */}
           {selectedGroup && (
-            <div>
-              <p className="section-label text-charcoal-faint mb-2">
+            <div style={{ marginTop: 16, animation: "cb-fade .3s ease both" }}>
+              <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: "#241F1B" }}>
                 {`${selectedMuscleLabel} · ${filteredByGroup.length} ${filteredByGroup.length === 1 ? "exercise" : "exercises"}`}
               </p>
-              <Card padded={false} className="divide-y divide-charcoal/[0.06]">
-                {filteredByGroup.length === 0 ? (
-                  <p className="text-sm text-charcoal-faint text-center py-6">No exercises for this group.</p>
-                ) : (
-                  filteredByGroup.map((e) => (
+              {filteredByGroup.length === 0 ? (
+                <p className="text-sm text-charcoal-faint text-center py-6">No exercises for this group.</p>
+              ) : (
+                <div className="flex flex-col" style={{ gap: 6 }}>
+                  {filteredByGroup.map((e) => (
                     <button
                       key={e.id}
                       onClick={() => setEditingExercise(e)}
-                      className="tap w-full flex items-center justify-between px-4 py-3 text-left"
+                      className="tap w-full flex items-center justify-between text-left"
+                      style={{
+                        gap: 10,
+                        border: "1px solid rgba(36,31,27,0.1)",
+                        borderRadius: 12,
+                        padding: "11px 13px",
+                      }}
                     >
-                      <span className="text-sm font-medium text-charcoal">{e.name}</span>
-                      {e.isCustom && <span className="text-[10px] font-semibold text-gold">Custom</span>}
+                      <span style={{ fontSize: 13.5, fontWeight: 600, color: "#241F1B" }}>{e.name}</span>
+                      <span style={{ fontSize: 11, color: "#8C8378" }}>{classificationLabel[e.classification]}</span>
                     </button>
-                  ))
-                )}
-              </Card>
+                  ))}
+                </div>
+              )}
             </div>
           )}
         </>
