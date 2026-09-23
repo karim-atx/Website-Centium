@@ -192,7 +192,13 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
 
   return (
     <div className={className}>
-      <div className="flex justify-center mb-[clamp(52px,6vw,76px)]">
+      {/* Below 640px this toggle sits above the plan-switcher pill tabs, not
+          directly above a card -- the desktop-sized gap left the tabs
+          hugging the toggle instead of sitting centered between it and the
+          selected card below, so mobile gets its own smaller value here,
+          rebalanced against the tabs' own margin (see the sm:hidden block
+          below) to land the tabs roughly midway between the two. */}
+      <div className="flex justify-center mb-8 sm:mb-[clamp(52px,6vw,76px)]">
         <div className="inline-flex gap-1 bg-white/[.62] border border-mkt-ink/[.07] rounded-full p-1">
           <button
             onClick={() => setYearly(false)}
@@ -250,7 +256,7 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
          the handoff's own "Gotchas" note on that exact failure mode. */}
       <div className="sm:hidden">
         <div
-          className="grid grid-cols-3 gap-1 bg-white/[.62] border border-mkt-ink/[.07] rounded-full p-1 mb-[22px]"
+          className="grid grid-cols-3 gap-1 bg-white/[.62] border border-mkt-ink/[.07] rounded-full p-1 mb-8"
         >
           {plans.map((plan, i) => (
             <button
