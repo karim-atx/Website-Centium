@@ -680,6 +680,14 @@ async function computeNutrients(
     // concentrated — what goes in is what comes out.
     const totals: Record<string, number> = {};
     for (const ingredient of spec.ingredients) {
+      // An ingredient with no FDC row carries its own cited composition.
+      if ("composition" in ingredient) {
+        console.log(`    · ${ingredient.label} (${ingredient.grams} g) <- measured composition: ${ingredient.compositionSource}`);
+        for (const [key, amount] of Object.entries(ingredient.composition)) {
+          totals[key] = (totals[key] ?? 0) + (amount * ingredient.grams) / 100;
+        }
+        continue;
+      }
       const detail = await fetchFdcDetail(ingredient.fdcId);
       // Printed so a mistyped id shows up in a dry run as the wrong food
       // next to its label, rather than silently feeding a recipe.

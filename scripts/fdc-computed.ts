@@ -3,7 +3,7 @@
  * read off a single FDC row, because FDC has no row for them.
  *
  * Toum and Labneh were the first two, and both were checked against every
- * other option first. Eleven Lebanese and other dishes with no FDC row
+ * other option first. Twelve Lebanese and other dishes with no FDC row
  * (manakeesh, kibbeh, fattoush, shawarma and the rest) follow at the end of
  * the table, each from a cited published recipe and sized to the catalog's
  * own calories — see the note above them.
@@ -56,10 +56,20 @@ export interface ComputedRecipe {
   servingKcal?: number;
   /** Grams the whole batch yields, INCLUDING any nutritionally inert water. */
   yieldGrams: number;
-  ingredients: { label: string; fdcId: number; grams: number }[];
+  ingredients: RecipeIngredient[];
   derivation: string;
   sources: string[];
 }
+
+/**
+ * One recipe ingredient: normally an FDC row. An ingredient FDC has no
+ * generic row for at all can instead carry its own per-100 g composition,
+ * keyed by nutrientSchema keys, from a cited measurement — only the
+ * nutrients that measurement reports, never filled-in guesses.
+ */
+export type RecipeIngredient =
+  | { label: string; fdcId: number; grams: number }
+  | { label: string; grams: number; composition: Record<string, number>; compositionSource: string };
 
 export interface ComputedConcentrate {
   kind: "concentrate";
@@ -304,6 +314,45 @@ export const FDC_COMPUTED: Record<string, ComputedFood> = {
     sources: [
       "Maureen Abood, Lebanese Baking (2024): Za'atar Manakeesh — 248 g bread flour, 5 g instant yeast, 4 g sugar, 12 g salt, 4 g olive oil in the dough; 24 g za'atar with 62 g olive oil on top; makes 4. https://www.kingarthurbaking.com/recipes/zaatar-manakeesh-recipe and https://www.splendidtable.org/story/2025/10/31/zaatar-manakeesh",
       "Za'atar blend (equal parts thyme, sumac, sesame; half-part salt) per Maureen Abood, https://maureenabood.com/what-is-zaatar-and-how-to-cook-with-zaatar/ — read from a search snippet; the page itself could not be opened to confirm.",
+    ],
+  },
+
+  "Man'oushe Keshek": {
+    kind: "recipe",
+    servingKcal: 380,
+    // Zaatar and Zaytoun, 8 pieces. Flour 3¼ cups at FDC 1 cup = 125 g
+    // (406 g); yeast 1 tbsp (FDC 12 g); salt ½ tsp (3 g); sugar ½ tsp (FDC
+    // 1 tsp = 4.2 g); oil 3 tbsp + ¼ cup = 7 tbsp at 13.5 g (olive oil, the
+    // usual Lebanese choice — the recipe says "oil"); 2 tomatoes (FDC medium
+    // 123 g); ¼ small onion (FDC small 70 g). Kishk 4 tbsp at 9 g/tbsp — the
+    // midpoint of the 8–10 g a level tablespoon weighs, as supplied by the
+    // user. FDC has no kishk row, so its composition is the midpoint of the
+    // measured ranges for commercial Lebanese kishk (per 100 g dry matter;
+    // the powder is not quite fully dry, so this slightly overstates it),
+    // macros only, with energy by Atwater 4/9/4.
+    yieldGrams: 817.1,
+    ingredients: [
+      { label: "Wheat flour, all-purpose", fdcId: 168894, grams: 406 },
+      { label: "Yeast, baker's, active dry", fdcId: 175043, grams: 12 },
+      { label: "Salt", fdcId: 173468, grams: 3 },
+      { label: "Sugar, granulated", fdcId: 169655, grams: 2.1 },
+      { label: "Olive oil (dough + topping)", fdcId: 171413, grams: 94.5 },
+      {
+        label: "Kishk powder (4 tbsp)",
+        grams: 36,
+        composition: { protein: 18.1, total_fat: 7.1, total_carbohydrates: 68.9, calories: 411 },
+        compositionSource:
+          "commercial Lebanese kishk, midpoints of 14.7–21.4 g protein, 2.6–11.5 g fat, 61–76.8 g carbohydrate per 100 g dry matter (Le Lait 79(3), 1999)",
+      },
+      { label: "Tomatoes (2)", fdcId: 170457, grams: 246 },
+      { label: "Onion, raw", fdcId: 170000, grams: 17.5 },
+    ],
+    derivation:
+      "Computed from Zaatar and Zaytoun's kishk manoushe (FDC 168894 flour, 171413 olive oil, 170457 tomato; kishk from measured Lebanese kishk composition, macros only), sized to the catalog's calories",
+    sources: [
+      "Zaatar and Zaytoun (Yosra), Kishik Manoushe — 3¼ cups flour, 1 cup water, 1 tbsp yeast, ½ tsp salt, ½ tsp sugar, 3 tbsp + ¼ cup oil, 4 tbsp kishk, 2 tomatoes, ¼ small onion; 8 pieces. https://zaatarandzaytoun.com/kishik-manoushe/",
+      "Kishk composition: 'Composition of kishk' study of commercial Lebanese kishk, Le Lait 79(3) (1999). https://lait.dairy-journal.org/articles/lait/abs/1999/03/lait_79_1999_3_27/lait_79_1999_3_27.html",
+      "Kishk powder weight: 8–10 g per level tablespoon (9 g used), supplied by the user.",
     ],
   },
 
