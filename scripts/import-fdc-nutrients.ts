@@ -83,6 +83,13 @@ import { gramsInServingLabel, servingLabelUnit } from "../src/services/nutrition
 import { FDC_NUTRIENT_MAP, type FdcNutrientMapping } from "../src/data/fdcNutrientMap";
 import { ALL_NUTRIENT_ROWS } from "../src/data/nutrientSchema";
 import { FDC_OVERRIDES, type FdcOverride } from "./fdc-overrides";
+import {
+  FDC_COMPUTED,
+  SECTION_BY_KEY,
+  atwaterCalories,
+  partitionFor,
+  type ComputedFood,
+} from "./fdc-computed";
 
 // ---------------------------------------------------------------------------
 // CLI args / env
@@ -649,13 +656,104 @@ function overrideFor(name: string): FdcOverride | undefined {
 // that looks like a decision and has no effect, so the mismatch is a hard
 // error rather than a warning — there is no version of this worth
 // continuing past.
-function assertOverridesMatchCatalog(foods: FoodRow[]) {
+const COMPUTED_BY_NAME = new Map(
+  Object.entries(FDC_COMPUTED).map(([name, spec]) => [name.trim().toLowerCase(), spec])
+);
+
+function computedFor(name: string): ComputedFood | undefined {
+  return COMPUTED_BY_NAME.get(name.trim().toLowerCase());
+}
+
+/**
+ * Per-serving nutrients for a food FDC has no row for, from FDC rows for
+ * what it is made of. Returns the same shape a matched food produces, so
+ * nothing downstream has to know the difference.
+ */
+async function computeNutrients(spec: ComputedFood): Promise<Record<string, number>> {
+  const per100: Record<string, number> = {};
+
+  if (spec.kind === "recipe") {
+    // Straight mass balance. Energy is summed from the ingredients' own
+    // measured values rather than recomputed, because nothing here is being
+    // concentrated — what goes in is what comes out.
+    const totals: Record<string, number> = {};
+    for (const ingredient of spec.ingredients) {
+      const values = extractPer100g(await fetchFdcDetail(ingredient.fdcId));
+      for (const [key, amount] of Object.entries(values)) {
+        totals[key] = (totals[key] ?? 0) + (amount * ingredient.grams) / 100;
+      }
+      await sleep(150);
+    }
+    for (const [key, amount] of Object.entries(totals)) {
+      per100[key] = (amount / spec.yieldGrams) * 100;
+    }
+  } else {
+    const base = extractPer100g(await fetchFdcDetail(spec.base.fdcId));
+
+    // The three anchors only mean anything as RATIOS against the base's own
+    // measured values, so a base missing any of them would silently produce
+    // Infinity or NaN across a whole profile. Caught here instead.
+    for (const key of ["total_fat", "protein", "water"]) {
+      if (!(base[key] > 0)) {
+        throw new Error(
+          `FDC ${spec.base.fdcId} ("${spec.base.label}") publishes no usable ${key}, so it cannot be used as a concentrate base.`
+        );
+      }
+    }
+
+    const factors: Record<string, number> = {
+      fat: spec.anchors.fatG / base.total_fat,
+      curd: spec.anchors.proteinG / base.protein,
+      serum: spec.anchors.waterG / base.water,
+    };
+
+    for (const [key, amount] of Object.entries(base)) {
+      per100[key] = amount * factors[partitionFor(key, SECTION_BY_KEY[key] ?? "others")];
+    }
+
+    // The anchors are measurements of the finished food, so they are set
+    // exactly rather than left as the product of a rounded ratio.
+    per100.total_fat = spec.anchors.fatG;
+    per100.protein = spec.anchors.proteinG;
+    per100.water = spec.anchors.waterG;
+    if (per100.calories !== undefined) per100.calories = atwaterCalories(per100);
+  }
+
+  const scale = spec.servingGrams / 100;
+  return Object.fromEntries(
+    Object.entries(per100).map(([key, amount]) => [key, Math.round(amount * scale * 1000) / 1000])
+  );
+}
+
+function assertCuratedNamesMatchCatalog(foods: FoodRow[]) {
+  // ONLY MEANINGFUL AGAINST THE WHOLE CATALOG. --only and --limit hand this
+  // a deliberately short list, where every curated name that wasn't asked
+  // for looks dead. Checking anyway turned a one-food dry run into a
+  // 30-name error about nothing.
+  if (ONLY || LIMIT) {
+    console.log("[note] --only/--limit in use, so the curated-name check against the catalog is skipped.");
+    return;
+  }
+
   const known = new Set(foods.map((f) => f.name.trim().toLowerCase()));
-  const dead = Object.keys(FDC_OVERRIDES).filter((name) => !known.has(name.trim().toLowerCase()));
-  if (dead.length > 0) {
-    throw new Error(
-      `fdc-overrides.ts pins ${dead.length} food${dead.length === 1 ? "" : "s"} that the catalog does not contain: ${dead.join(", ")}. Fix the key or remove the row.`
-    );
+  for (const [file, names] of [
+    ["fdc-overrides.ts", Object.keys(FDC_OVERRIDES)],
+    ["fdc-computed.ts", Object.keys(FDC_COMPUTED)],
+  ] as const) {
+    const dead = names.filter((name) => !known.has(name.trim().toLowerCase()));
+    if (dead.length > 0) {
+      throw new Error(
+        `${file} names ${dead.length} food${dead.length === 1 ? "" : "s"} that the catalog does not contain: ${dead.join(", ")}. Fix the key or remove the row.`
+      );
+    }
+  }
+
+  // A food cannot be both pinned to an FDC row and computed from other
+  // rows; whichever branch ran first would win and the other would look
+  // like it had been applied when it never was.
+  const both = Object.keys(FDC_COMPUTED).filter((name) => FDC_OVERRIDES[name] !== undefined);
+  if (both.length > 0) {
+    throw new Error(`${both.join(", ")} appear in BOTH fdc-overrides.ts and fdc-computed.ts. Pick one.`);
   }
 }
 
@@ -672,18 +770,63 @@ async function loadFoods(): Promise<FoodRow[]> {
 
 async function main() {
   const foods = await loadFoods();
-  assertOverridesMatchCatalog(foods);
+  assertCuratedNamesMatchCatalog(foods);
   console.log(`Loaded ${foods.length} food${foods.length === 1 ? "" : "s"} to match against FDC.\n`);
 
   let matchedExact = 0;
   let matchedFuzzy = 0;
   let matchedManual = 0;
+  let matchedComputed = 0;
   const unmatched: string[] = [];
   const skippedNoGramWeight: string[] = [];
   const failures: string[] = [];
 
   for (const food of foods) {
     try {
+      // COMPUTED FOODS SHORT-CIRCUIT EVERYTHING BELOW. There is no FDC row
+      // to search for, and no gram weight to read off the label either —
+      // the derivation states its own serving weight, because it is the
+      // thing that knows how much a tablespoon of the finished food
+      // actually weighs.
+      const computed = computedFor(food.name);
+      if (computed) {
+        const nutrients = await computeNutrients(computed);
+
+        // If the catalog label DOES carry a gram weight, it and the
+        // derivation have to agree, or the app would show per-serving
+        // numbers for a serving the label describes as a different size.
+        const labelled = gramsInServingLabel(food.serving_label);
+        if (labelled && Math.abs(labelled - computed.servingGrams) > 0.5) {
+          throw new Error(
+            `${food.name}: fdc-computed.ts says one serving is ${computed.servingGrams} g, the catalog label says ${labelled} g ("${food.serving_label}"). Fix whichever is wrong.`
+          );
+        }
+
+        console.log(
+          `[computed] ${food.name} -> ${computed.derivation} — ` +
+            `${Object.keys(nutrients).length}/${ALL_NUTRIENT_ROWS.length} nutrients, per ${computed.servingGrams} g serving`
+        );
+
+        let computeWriteError: string | null = null;
+        if (!DRY_RUN && supabase) {
+          const { error } = await supabase.from("food_nutrients").upsert({
+            food_id: food.id,
+            // No single id produced these, so the column stays null rather
+            // than naming one ingredient as though it were the source.
+            fdc_id: null,
+            fdc_description: computed.derivation,
+            match_confidence: "computed",
+            nutrients,
+            imported_at: new Date().toISOString(),
+          });
+          if (error) computeWriteError = error.message;
+        }
+        if (computeWriteError) failures.push(`${food.name}: ${computeWriteError}`);
+        else matchedComputed++;
+        await sleep(150);
+        continue;
+      }
+
       // A GRAM WEIGHT IN THE LABEL IS STILL THE HONEST BASIS and is used
       // as-is. Failing that, a countable household measure — "1/2 cup",
       // "2 tbsp" — can still be converted, but only with FDC's own gram
@@ -798,18 +941,19 @@ async function main() {
     }
   }
 
-  // Every food resolves to exactly one of these six buckets, so they sum to
+  // Every food resolves to exactly one of these seven buckets, so they sum to
   // foods.length. Printed and checked rather than assumed: a future edit that
   // adds a sixth outcome, or re-introduces a double-count, shows up here
   // instead of quietly skewing the match-quality picture.
   const accounted =
-    matchedExact + matchedFuzzy + matchedManual + unmatched.length + skippedNoGramWeight.length + failures.length;
+    matchedExact + matchedFuzzy + matchedManual + matchedComputed + unmatched.length + skippedNoGramWeight.length + failures.length;
 
   console.log("\n" + "=".repeat(72));
   console.log(`${DRY_RUN ? "DRY RUN — no rows written" : "Import complete"}`);
   console.log(`  Foods considered: ${foods.length}`);
   console.log(`  Matched exact: ${matchedExact}`);
   console.log(`  Pinned by the override table: ${matchedManual}`);
+  console.log(`  Computed from ingredient data: ${matchedComputed}`);
   console.log(`  Matched fuzzy (review these): ${matchedFuzzy}`);
   console.log(`  Unmatched (no FDC result at all): ${unmatched.length}`);
   if (unmatched.length) console.log("    " + unmatched.join(", "));
