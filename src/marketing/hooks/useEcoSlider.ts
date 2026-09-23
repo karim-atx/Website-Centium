@@ -258,8 +258,41 @@ export function useEcoSlider(initial: EcoPos = -1) {
     }
   }, []);
 
+  // A web font can land with meaningfully different metrics than the
+  // fallback font the very first (synchronous, pre-paint) fit() pass below
+  // measures with -- confirmed directly by logging fit()'s own numbers on a
+  // cold load: "need" jumped from 675 to 727, and the shed-tier count from
+  // 5 to all 8, the moment `document.fonts.ready` resolved ~200ms later.
+  // Un-gated, that's a second, visibly different shed pass popping in
+  // shortly after the first -- the card changing shape mid-load, often
+  // right as the user scrolls down to it. `fontsGated` makes sure this
+  // hide-until-settled handling only ever runs once, on mount; it flips
+  // true either immediately below (fonts already loaded/cached) or once the
+  // delayed branch's own fonts.ready handler runs.
+  const fontsGated = useRef(false);
+
   // after every commit render: re-assert the committed paint, then measure
-  useLayoutEffect(() => { paint(pos, false); fit(); equalise(); }, [pos, paint, fit, equalise]);
+  useLayoutEffect(() => {
+    paint(pos, false);
+    fit();
+    equalise();
+    if (fontsGated.current) return;
+    const st = stage.current;
+    const settled = !document.fonts || document.fonts.status === "loaded";
+    if (settled || !st) { fontsGated.current = true; return; }
+    st.style.visibility = "hidden";
+    document.fonts.ready.then(() => {
+      fit(); equalise(); paint(posRef.current, false);
+      fontsGated.current = true;
+      // One frame so the corrected layout is already what gets painted the
+      // moment visibility flips back, not the stale pre-font one.
+      requestAnimationFrame(() => { st.style.visibility = ""; });
+    }).catch(() => { fontsGated.current = true; st.style.visibility = ""; });
+    // Safety net: document.fonts.ready is spec-guaranteed to resolve, but
+    // never leave the section permanently invisible if some browser bug
+    // stalls it anyway.
+    window.setTimeout(() => { if (!fontsGated.current) { fontsGated.current = true; st.style.visibility = ""; } }, 2500);
+  }, [pos, paint, fit, equalise]);
 
   useEffect(() => {
     let rq = 0;
@@ -279,7 +312,6 @@ export function useEcoSlider(initial: EcoPos = -1) {
       if (!rq) rq = requestAnimationFrame(recompute);
     };
     window.addEventListener("resize", onResize);
-    document.fonts?.ready.then(() => { if (!rq) rq = requestAnimationFrame(recompute); }).catch(() => {});
     return () => { window.removeEventListener("resize", onResize); if (rq) cancelAnimationFrame(rq); if (seamTimer.current) clearTimeout(seamTimer.current); };
   }, [fit, equalise, paint]);
 
