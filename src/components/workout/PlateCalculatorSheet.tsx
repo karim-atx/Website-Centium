@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { Minus, Plus, AlertTriangle } from "lucide-react";
-import clsx from "clsx";
+import { sheetChipStyle } from "../ui/sheetChip";
+import { AlertTriangle } from "lucide-react";
 
 const BAR_OPTIONS: { value: "20" | "15" | "other"; label: string; kg?: number }[] = [
   { value: "20", label: "20kg", kg: 20 },
@@ -67,13 +67,6 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
 
   const displayKg = (kg: number) => (unit === "kg" ? kg : +(kg * KG_TO_LB).toFixed(1));
 
-  // §6.9b: "±1kg stepper (40px square buttons, clamped 20-300kg)."
-  const stepTarget = (delta: number) => {
-    const current = Number(targetDraft) || 0;
-    const next = Math.max(20, Math.min(300, current + delta));
-    setTargetDraft(String(next));
-  };
-
   const collarHeight = plateCollar === 5 ? 34 : plateCollar === 2.5 ? 26 : 0;
 
   return (
@@ -84,10 +77,8 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
             <button
               key={u}
               onClick={() => setUnit(u)}
-              className={clsx(
-                "tap px-4 py-1.5 rounded-full text-xs font-bold uppercase",
-                unit === u ? "bg-primary text-white" : "text-charcoal-faint"
-              )}
+              className="tap uppercase"
+              style={sheetChipStyle(unit === u)}
             >
               {u}
             </button>
@@ -98,43 +89,28 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
             Target weight ({unit})
           </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => stepTarget(-1)}
-              aria-label="Decrease target by 1"
-              className="tap shrink-0 w-10 h-10 rounded-xl bg-cream-soft flex items-center justify-center text-charcoal"
-            >
-              <Minus size={14} />
-            </button>
+          {/* Mobile handoff item 1: typed, never stepped — white input in
+              the grey sheet container. */}
+          <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}>
             <input
               value={targetDraft}
-              onChange={(e) => setTargetDraft(e.target.value.replace(/[^\d.]/g, ""))}
+              onChange={(e) => setTargetDraft(e.target.value.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, ""))}
               inputMode="decimal"
-              className="w-full rounded-xl bg-cream-soft border border-charcoal/[0.07] px-3 py-2.5 text-lg font-bold text-charcoal text-center focus:outline-none focus:ring-2 focus:ring-primary/20"
+              className="w-full text-center focus:outline-none"
+              style={{ background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
             />
-            <button
-              onClick={() => stepTarget(1)}
-              aria-label="Increase target by 1"
-              className="tap shrink-0 w-10 h-10 rounded-xl bg-cream-soft flex items-center justify-center text-charcoal"
-            >
-              <Plus size={14} />
-            </button>
           </div>
         </label>
 
         <div>
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Bar</span>
-          <div className="flex gap-2 mb-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar mb-2">
             {BAR_OPTIONS.map((b) => (
               <button
                 key={b.value}
                 onClick={() => setBarChoice(b.value)}
-                className={clsx(
-                  "tap rounded-xl px-3.5 py-2 text-xs font-semibold border transition-colors",
-                  barChoice === b.value
-                    ? "bg-primary text-white border-primary"
-                    : "bg-cream-soft border-transparent text-charcoal-soft"
-                )}
+                className="tap transition-colors"
+                style={sheetChipStyle(barChoice === b.value)}
               >
                 {b.label}
               </button>
@@ -154,17 +130,13 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
         {/* §6.9b: "Collars become a three-way mutually-exclusive selector." */}
         <div>
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Collars (per side)</span>
-          <div className="flex gap-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {[5, 2.5, 0].map((c) => (
               <button
                 key={c}
                 onClick={() => setPlateCollar(c as 5 | 2.5 | 0)}
-                className={clsx(
-                  "tap flex-1 rounded-xl py-2 text-xs font-semibold border transition-colors",
-                  plateCollar === c
-                    ? "bg-primary text-white border-primary"
-                    : "bg-cream-soft border-transparent text-charcoal-soft"
-                )}
+                className="tap transition-colors"
+                style={sheetChipStyle(plateCollar === c)}
               >
                 {c === 0 ? "None" : `${c} kg`}
               </button>

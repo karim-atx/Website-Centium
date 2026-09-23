@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
+import { sheetChipStyle } from "../ui/sheetChip";
 import { rpeOptions, weightFromRpe } from "../../services/workout";
 
 export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
@@ -38,14 +39,13 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
 
         <div>
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Target RPE</span>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
             {rpeOptions.map((r) => (
               <button
                 key={r}
                 onClick={() => setRpe(r)}
-                className={`tap px-3 py-1.5 rounded-full text-xs font-semibold border ${
-                  rpe === r ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
-                }`}
+                className="tap"
+                style={sheetChipStyle(rpe === r)}
               >
                 {r}
               </button>

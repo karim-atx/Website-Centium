@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
+import { sheetChipStyle } from "../ui/sheetChip";
 import { Button } from "../ui/Button";
 import type { LoggedSet, SetType } from "../../types";
 import { rpeOptions } from "../../services/workout";
-import clsx from "clsx";
 
 // QA 11.0: "When editing a routine, add more buttons like super set and
 // PR." A PR set that gets checked off fires a confetti celebration (see
@@ -59,17 +59,13 @@ export const SetOptionsSheet: React.FC<{
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
             Classification
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar">
             {setTypes.map((t) => (
               <button
                 key={t.value}
                 onClick={() => setSetType(t.value)}
-                className={clsx(
-                  "tap rounded-xl py-2.5 text-xs font-semibold border transition-colors",
-                  setType === t.value
-                    ? "bg-primary text-white border-primary"
-                    : "bg-cream-soft border-transparent text-charcoal-soft"
-                )}
+                className="tap transition-colors"
+                style={sheetChipStyle(setType === t.value)}
               >
                 {t.label}
               </button>
@@ -79,15 +75,13 @@ export const SetOptionsSheet: React.FC<{
 
         <div>
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">RPE</p>
-          <div className="flex flex-wrap gap-1.5">
+          <div className="flex gap-1.5 overflow-x-auto no-scrollbar">
             {rpeOptions.map((r) => (
               <button
                 key={r}
                 onClick={() => setRpe(rpe === r ? undefined : r)}
-                className={clsx(
-                  "tap px-3 py-1.5 rounded-full text-xs font-semibold border",
-                  rpe === r ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
-                )}
+                className="tap"
+                style={sheetChipStyle(rpe === r)}
               >
                 {r}
               </button>

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Check, Mic, Minus, Plus, Sparkles, MicOff, Square, ShieldCheck, UtensilsCrossed, X } from "lucide-react";
+import { Check, Mic, Sparkles, MicOff, Square, ShieldCheck, UtensilsCrossed, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { logFoodEntry, manualFood } from "../../services/food";
 import {
@@ -454,21 +454,29 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     setItems((prev) => prev.map((it, i) => (i === index ? { ...it, selected: !it.selected } : it)));
 
   /**
-   * Adjusts one item's quantity.
+   * Types one item's quantity (mobile handoff item 1: typed, never stepped).
    *
-   * Steps of one, floored at one. A parsed fraction is kept as it came -- "half
-   * a cup" is a real thing to have said -- so decrementing at or below 1 does
-   * nothing rather than rounding it away. toFixed(2) exists because 0.5 + 1 in
-   * binary floating point is not always what it looks like.
+   * The draft holds the raw text while the field is being edited, so an empty
+   * or half-typed value ("", "0.") doesn't overwrite the quantity; only a
+   * positive number is committed. A parsed fraction is kept as it came --
+   * "half a cup" is a real thing to have said. Blur drops the draft and the
+   * field shows the committed quantity again.
    */
-  const stepQuantity = (index: number, delta: number) =>
-    setItems((prev) =>
-      prev.map((it, i) => {
-        if (i !== index) return it;
-        if (delta < 0 && it.quantity <= 1) return it;
-        return { ...it, quantity: Math.max(1, +(it.quantity + delta).toFixed(2)) };
-      })
-    );
+  const [quantityDrafts, setQuantityDrafts] = useState<Record<number, string>>({});
+  const typeQuantity = (index: number, raw: string) => {
+    const v = raw.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, "");
+    setQuantityDrafts((prev) => ({ ...prev, [index]: v }));
+    const n = Number(v);
+    if (v && !Number.isNaN(n) && n > 0) {
+      setItems((prev) => prev.map((it, i) => (i === index ? { ...it, quantity: n } : it)));
+    }
+  };
+  const commitQuantity = (index: number) =>
+    setQuantityDrafts((prev) => {
+      const next = { ...prev };
+      delete next[index];
+      return next;
+    });
 
   /**
    * Logs the matched items.
@@ -526,7 +534,14 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
   const selectedCount = items.filter((i) => i.selected).length;
 
   return (
-    <BottomSheet open={open} onClose={handleClose} title="Tell Centium what you ate">
+    <BottomSheet
+      open={open}
+      onClose={handleClose}
+      title="Tell Centium what you ate"
+      // Mobile handoff item 1: the mic-denied screen's old in-content "Back"
+      // button becomes the header chevron, back to the idle mic prompt.
+      onBack={stage === "denied" ? reset : undefined}
+    >
       <div className="min-h-[280px] flex flex-col items-center justify-center text-center py-4">
         {stage === "idle" && (
           <>
@@ -612,9 +627,6 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               Enable microphone access in your browser or device settings to use voice logging. You
               can still add foods manually from the search tab.
             </p>
-            <Button variant="outline" onClick={reset}>
-              Back
-            </Button>
           </>
         )}
 
@@ -683,7 +695,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                   >
                     <div className="flex items-center justify-between gap-3">
                       {/* The row toggles, the way a scanned blood panel is
-                          confirmed. The stepper below stops its own clicks, so
+                          confirmed. The quantity field below stops its own clicks, so
                           changing an amount is not also a deselect. */}
                       <button
                         onClick={() => toggleItem(i)}
@@ -736,31 +748,20 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                       <span className="text-[11px] text-charcoal-faint">
                         {item.unit ? `per ${item.unit}` : "servings"}
                       </span>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            stepQuantity(i, -1);
-                          }}
-                          disabled={item.quantity <= 1}
-                          aria-label={`Less ${item.food?.name ?? item.spokenName}`}
-                          className="tap w-7 h-7 rounded-full bg-cream-card flex items-center justify-center text-charcoal-soft disabled:opacity-40"
-                        >
-                          <Minus size={13} />
-                        </button>
-                        <span className="text-sm font-bold text-charcoal tabular-nums min-w-[2ch] text-center">
-                          {item.quantity}
-                        </span>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            stepQuantity(i, 1);
-                          }}
-                          aria-label={`More ${item.food?.name ?? item.spokenName}`}
-                          className="tap w-7 h-7 rounded-full bg-cream-card flex items-center justify-center text-charcoal-soft"
-                        >
-                          <Plus size={13} />
-                        </button>
+                      <div
+                        className="shrink-0"
+                        style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
+                      >
+                        <input
+                          value={quantityDrafts[i] ?? String(item.quantity)}
+                          onChange={(e) => typeQuantity(i, e.target.value)}
+                          onBlur={() => commitQuantity(i)}
+                          onClick={(e) => e.stopPropagation()}
+                          inputMode="decimal"
+                          aria-label={`${item.food?.name ?? item.spokenName} quantity`}
+                          className="w-14 text-center tabular-nums focus:outline-none"
+                          style={{ background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
+                        />
                       </div>
                     </div>
                   </div>

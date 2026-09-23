@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
+import { sheetChipStyle } from "../ui/sheetChip";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import type { FoodLogEntry, ServingUnit } from "../../types";
-import { Minus, Plus, Trash2, UtensilsCrossed, SlidersHorizontal } from "lucide-react";
+import { Trash2, UtensilsCrossed, SlidersHorizontal } from "lucide-react";
 import { foodCategoryIcon } from "../../utils/icons";
 import { updateDiaryEntry, deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
 import { servingMultiplier, sumNutrientMaps, targetsFromGoal } from "../../services/nutrition";
@@ -210,45 +211,36 @@ export const EditFoodEntrySheet: React.FC<{
             </div>
           </div>
 
-          <div className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3 mb-3">
+          {/* Mobile handoff item 1: typed, never stepped — white input in
+              the grey sheet container. */}
+          <div
+            className="flex items-center justify-between mb-3"
+            style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
+          >
             <span className="text-sm font-semibold text-charcoal-soft">Quantity</span>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setQuantity((q) => Math.max(0.1, +(q - 1).toFixed(1)))}
-                className="tap w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
-              >
-                <Minus size={14} />
-              </button>
-              <input
-                value={quantityDraft}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[^\d.]/g, "");
-                  setQuantityDraft(v);
-                  const n = Number(v);
-                  if (v && !Number.isNaN(n) && n > 0) setQuantityRaw(n);
-                }}
-                onBlur={() => setQuantityDraft(String(quantity))}
-                inputMode="decimal"
-                className="w-14 text-center font-semibold text-charcoal bg-transparent focus:outline-none"
-              />
-              <button
-                onClick={() => setQuantity((q) => +(q + 1).toFixed(1))}
-                className="tap w-8 h-8 rounded-full bg-white shadow-soft flex items-center justify-center text-charcoal"
-              >
-                <Plus size={14} />
-              </button>
-            </div>
+            <input
+              value={quantityDraft}
+              onChange={(e) => {
+                const v = e.target.value.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, "");
+                setQuantityDraft(v);
+                const n = Number(v);
+                if (v && !Number.isNaN(n) && n > 0) setQuantityRaw(n);
+              }}
+              onBlur={() => setQuantityDraft(String(quantity))}
+              inputMode="decimal"
+              className="w-14 text-center focus:outline-none"
+              style={{ background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
+            />
           </div>
 
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Unit</p>
-          <div className="flex flex-wrap gap-2 mb-6">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar mb-6">
             {servingUnitOptions.map((u) => (
               <button
                 key={u.value}
                 onClick={() => setUnit(u.value)}
-                className={`tap rounded-xl px-3.5 py-2 text-xs font-semibold border transition-colors ${
-                  unit === u.value ? "bg-primary text-white border-primary" : "bg-cream-card border-charcoal/10 text-charcoal-soft"
-                }`}
+                className="tap transition-colors"
+                style={sheetChipStyle(unit === u.value)}
               >
                 {u.label}
               </button>
