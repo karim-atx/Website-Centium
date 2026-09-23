@@ -42,74 +42,74 @@ const capsLabel = "font-bold text-[9px] tracking-[.16em] uppercase";
 const numeralSmall = "text-[16px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums";
 const badge = "text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap shrink-0";
 
-// Item 5 (large water widget): builds a smooth, tileable sine-like wave as
-// one cubic Bezier per half-period, control points offset by the
-// circle/Bezier "kappa" constant (0.5522847) — a close, cheap stand-in for
-// a true sine that is exactly periodic, so two copies placed side by side
-// tile with no seam for the horizontal drift loop. `y`/`amp` are percents
-// of the fill's own height (the SVG's 0..100 viewBox, stretched to the
-// fill's actual box via preserveAspectRatio="none"). Returns both the full
-// filled-down-to-the-bottom path and just the wavy top edge (used for the
-// frontmost layer's specular crest line).
-function buildWavePaths(yPercent: number, ampPercent: number, crests: number) {
-  const halfPeriods = crests * 2;
-  const halfW = 100 / halfPeriods;
-  const k = 0.5522847 * halfW;
-  let fill = `M0,100 L0,${yPercent.toFixed(2)} `;
-  let top = `M0,${yPercent.toFixed(2)} `;
-  let x = 0;
-  for (let s = 0; s < halfPeriods; s++) {
-    const extreme = s % 2 === 0 ? yPercent - ampPercent : yPercent + ampPercent;
-    const xEnd = x + halfW;
-    const c1x = x + k;
-    const c2x = xEnd - k;
-    const seg = `C${c1x.toFixed(2)},${extreme.toFixed(2)} ${c2x.toFixed(2)},${extreme.toFixed(2)} ${xEnd.toFixed(2)},${yPercent.toFixed(2)} `;
-    fill += seg;
-    top += seg;
-    x = xEnd;
+// Master handover item 7: one wave layer's path, 716px wide (two periods of
+// the 358px widget). For each crest i of n across 716px, s = 716 / n and the
+// segment from x0 = i*s is `C (x0+0.28s) (y-amp) (x0+0.72s) (y+amp) (x0+s) y`,
+// starting at `M0 y`. `floor` closes the fill down past the container floor;
+// the crest line is the same path left open.
+function buildWavePath(y: number, amp: number, crests: number, floor: number) {
+  const s = 716 / crests;
+  let edge = `M0 ${y}`;
+  for (let i = 0; i < crests; i++) {
+    const x0 = i * s;
+    edge += ` C${(x0 + 0.28 * s).toFixed(2)} ${y - amp} ${(x0 + 0.72 * s).toFixed(2)} ${y + amp} ${(x0 + s).toFixed(2)} ${y}`;
   }
-  fill += "L100,100 Z";
-  return { fill, top };
+  return { fill: `${edge} L716 ${floor} L0 ${floor} Z`, edge };
 }
 
-// Item 5 literal table, back to front in render order. The table as given
-// lists (30,22,46,14,74) and separately calls out the (14/8/2) row as "the
-// frontmost layer" — inconsistent with reading the table's own listed order
-// as strict back-to-front. Resolved here by trusting the explicit
-// "frontmost" callout over positional ordering: (14/8/2) is rendered last
-// (front), the rest kept in the table's given order. Flagged in the report.
+// Item 7's table, in paint order (back to front; the front layer last).
+// `swell` names one of the three swell keyframes below: A = 6px/-5px
+// (layers 1 and 4), B = -4px/5px (layer 3 and the front), C = -3px/4px
+// (layer 2). `delay` offsets the swell only.
 const WATER_WAVE_LAYERS: Array<{
   y: number;
   amp: number;
   crests: number;
-  fillColor: string;
-  swell: string;
-  drift: string;
-  reverse: boolean;
+  fill: string;
+  swellCycle: string;
+  driftCycle: string;
+  rightward: boolean;
+  swell: "A" | "B" | "C";
   delay: string;
   front?: boolean;
 }> = [
-  { y: 30, amp: 9, crests: 2, fillColor: "rgba(23,69,127,0.17)", swell: "8.5s", drift: "9s", reverse: false, delay: "-0.6s" },
-  { y: 22, amp: 6, crests: 3, fillColor: "rgba(23,69,127,0.11)", swell: "6.5s", drift: "7s", reverse: true, delay: "-1.63s" },
-  { y: 46, amp: 7, crests: 5, fillColor: "rgba(255,255,255,0.13)", swell: "7.5s", drift: "11s", reverse: false, delay: "-2.65s" },
-  { y: 74, amp: 6, crests: 4, fillColor: "rgba(255,255,255,0.10)", swell: "9s", drift: "13s", reverse: false, delay: "-3.68s" },
-  { y: 14, amp: 8, crests: 2, fillColor: "rgba(255,255,255,0.30)", swell: "5.5s", drift: "5s", reverse: true, delay: "-4.7s", front: true },
+  { y: 30, amp: 9, crests: 2, fill: "rgba(23,69,127,0.17)", swellCycle: "8.5s", driftCycle: "9s", rightward: false, swell: "A", delay: "-1.2s" },
+  { y: 22, amp: 6, crests: 3, fill: "rgba(23,69,127,0.11)", swellCycle: "6.5s", driftCycle: "7s", rightward: true, swell: "C", delay: "-3.4s" },
+  { y: 46, amp: 7, crests: 5, fill: "rgba(255,255,255,0.13)", swellCycle: "7.5s", driftCycle: "11s", rightward: false, swell: "B", delay: "-0.6s" },
+  { y: 74, amp: 6, crests: 4, fill: "rgba(255,255,255,0.10)", swellCycle: "9s", driftCycle: "13s", rightward: false, swell: "A", delay: "-4.7s" },
+  { y: 14, amp: 8, crests: 2, fill: "rgba(255,255,255,0.30)", swellCycle: "5.5s", driftCycle: "5s", rightward: true, swell: "B", delay: "-2.1s", front: true },
 ];
 
-// Item 5's full replacement for the large water widget: a 5-layer wave
-// fill tank (see WATER_WAVE_LAYERS) replacing the old flat horizontal
-// progress bar. Split out of the switch's JSX for readability given its
-// size. `pct` is the existing fraction (water / waterGoalMl); `glasses` is
-// the existing 0–8 rounded count used in the below-goal pill sub-label.
-const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: number; glasses: number }> = ({
-  water,
-  waterGoalMl,
-  pct,
-  glasses,
-}) => {
+// Seamless drift. A layer's loop only closes if its travel is a whole number
+// of its own wave periods (716 / crests). 358px is that for 2 and 4 crests;
+// for 3 and 5 crests it is 1.5 and 2.5 periods, which flips crest and trough
+// once per cycle. Those layers travel the largest whole number of periods
+// that fits in 358px instead, over a proportionally shorter cycle, so every
+// layer keeps item 7's speed (358px per listed cycle).
+function driftFor(crests: number, cycle: string) {
+  const period = 716 / crests;
+  const distance = Math.floor(358 / period + 1e-9) * period;
+  const seconds = (parseFloat(cycle) * distance) / 358;
+  return { distance: `${distance.toFixed(2)}px`, duration: `${Number(seconds.toFixed(3))}s` };
+}
+
+// The 14px surface strip's edge: item 7's wave formula, 2 crests, 3px
+// amplitude, centred 4px down the strip.
+const SURFACE_EDGE = buildWavePath(4, 3, 2, 14).fill;
+
+// Star shape for the over-goal sparkles (the handoff reference's four-point star).
+const SPARKLE_PATH = "M12 2 L14 10 L22 12 L14 14 L12 22 L10 14 L2 12 L10 10 Z";
+
+// Master handover item 7: the large Water widget — 358x131, five layered
+// translucent waves that drift and swell independently, filling to 126px at
+// the daily goal (5px short of the top), sloshing when the amount changes,
+// white type at the goal, and a gold pill with sparkles above it. Values are
+// item 7's; element positions and type sizes follow the handover's own
+// reference (CentiumWaterWidget.dc.html), which item 7 describes as the
+// current layout. The small (bottle) tile is a separate branch and is not
+// touched here.
+const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: number }> = ({ water, waterGoalMl, pct }) => {
   const pctPercent = pct * 100;
-  // Item 5 literal formula: 100% stops 5px short of the 131px-tall fill
-  // frame's own top edge; above 100% the fill never rises further.
   const fillHeightPx = (Math.min(100, pctPercent) / 100) * 126;
   const atOrAboveGoal = pctPercent >= 100;
   const overGoal = pctPercent > 100;
@@ -117,167 +117,199 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
   const bodyGradient = atOrAboveGoal
     ? "linear-gradient(180deg, #6FA6EC 0%, #4A85DC 46%, #2C5FAF 100%)"
     : "linear-gradient(180deg, #E4F0FE 0%, #B9D7F8 42%, #7FB0EE 100%)";
-  const captionColor = atOrAboveGoal ? "#FFFFFF" : "#3A4351";
+  const surfaceFill = atOrAboveGoal ? "#9CC4F3" : "#DDEBFD";
+  const labelColor = atOrAboveGoal ? "rgba(255,255,255,0.92)" : "#3A4351";
   const valueColor = atOrAboveGoal ? "#FFFFFF" : "#000000";
-  const toGoColor = atOrAboveGoal ? "#FFFFFF" : "#46505F";
+  const subColor = atOrAboveGoal ? "rgba(255,255,255,0.95)" : "#46505F";
+  const goalColor = atOrAboveGoal ? "rgba(255,255,255,0.92)" : "#26303D";
+  const textShadow = atOrAboveGoal ? "0 1px 3px rgba(12,40,82,0.45)" : "none";
+  // Pill: below or at the goal the blue fill with the reference's blue type
+  // (#004376, #003874 at the goal); above it gold.
   const pillBg = overGoal ? "#F4D789" : "rgba(143,192,232,.34)";
-  const pillTextColor = overGoal ? "#8B5900" : atOrAboveGoal ? "#FFFFFF" : "#26303D";
-  const whiteShadow = "0 1px 3px rgba(12,40,82,.45)";
-  const textShadow = atOrAboveGoal ? whiteShadow : "none";
-  const subLabel = atOrAboveGoal ? "Goal reached!" : `${glasses} of 8 glasses`;
+  const pillFg = overGoal ? "#8B5900" : atOrAboveGoal ? "#003874" : "#004376";
+  const subLabel = atOrAboveGoal ? "Goal reached!" : `${((waterGoalMl - water) / 1000).toFixed(1)} L to go`;
 
   return (
     <div
-      className="relative w-full max-w-[358px] h-[150px] rounded-[15px] overflow-hidden box-border"
-      style={{ background: "rgba(143,192,232,.17)" }}
+      className="relative w-full max-w-[358px] h-[131px] rounded-[15px] overflow-hidden box-border"
+      style={{ background: "linear-gradient(180deg, #F4F8FE, #ECF4FE)" }}
     >
       <style>{`
-        @keyframes cent-water-drift { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-        @keyframes cent-water-swell { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-        @keyframes cent-water-slosh { 0% { transform: translateY(6px); } 40% { transform: translateY(-3px); } 70% { transform: translateY(1.5px); } 100% { transform: translateY(0); } }
-        @keyframes cent-water-sparkle { 0%, 100% { transform: scale(0.55) rotate(0deg); opacity: 0.45; } 50% { transform: scale(1.15) rotate(45deg); opacity: 1; } }
-        .cent-water-anim { animation-timing-function: linear; animation-iteration-count: infinite; }
-        .cent-water-slosh-el { animation: cent-water-slosh 1.4s cubic-bezier(.22,1,.36,1); }
+        @keyframes cent-water-drift { from { transform: translateX(0); } to { transform: translateX(calc(-1 * var(--cent-drift, 358px))); } }
+        @keyframes cent-water-swell-a { 0%, 100% { transform: translateY(6px); } 50% { transform: translateY(-5px); } }
+        @keyframes cent-water-swell-b { 0%, 100% { transform: translateY(-4px); } 50% { transform: translateY(5px); } }
+        @keyframes cent-water-swell-c { 0%, 100% { transform: translateY(-3px); } 50% { transform: translateY(4px); } }
+        @keyframes cent-water-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2.5px); } }
+        @keyframes cent-water-slosh { 0% { transform: translateY(6px); } 45% { transform: translateY(-3px); } 75% { transform: translateY(1.5px); } 100% { transform: translateY(0); } }
+        @keyframes cent-water-sparkle { 0%, 100% { opacity: 0.45; transform: scale(0.7) rotate(0deg); } 50% { opacity: 1; transform: scale(1.12) rotate(22deg); } }
+        .cent-water-drift { animation-name: cent-water-drift; animation-timing-function: linear; animation-iteration-count: infinite; }
+        .cent-water-swell { animation-timing-function: ease-in-out; animation-iteration-count: infinite; }
+        .cent-water-bob { animation: cent-water-bob 11s ease-in-out infinite; }
+        .cent-water-slosh { animation: cent-water-slosh 1.4s cubic-bezier(0.22,1,0.36,1) 1; }
+        .cent-water-sparkle { animation: cent-water-sparkle 1.7s ease-in-out infinite; }
         @media (prefers-reduced-motion: reduce) {
-          .cent-water-anim { animation-duration: 40s !important; }
-          .cent-water-slosh-el { animation: none !important; }
+          .cent-water-drift, .cent-water-swell { animation-duration: 40s !important; }
+          .cent-water-slosh, .cent-water-bob, .cent-water-sparkle { animation: none !important; }
         }
       `}</style>
 
-      {/* Tank: the 131px-tall fill frame the literal fill formula is
-          relative to, bottom-anchored and edge-to-edge inside the card. */}
-      <div className="absolute left-0 right-0 bottom-0 overflow-hidden" style={{ height: 131 }}>
-        <div
-          key={water}
-          className="absolute left-0 right-0 bottom-0 cent-water-slosh-el"
-          style={{
-            height: fillHeightPx,
-            transition: "height 1.1s cubic-bezier(.22,1,.36,1)",
-            background: bodyGradient,
-            willChange: "transform",
-          }}
-        >
-          {/* waterline highlight */}
-          <div
-            className="absolute left-0 right-0 top-0"
-            style={{ height: 22, background: "linear-gradient(to bottom, rgba(255,255,255,.42), transparent)" }}
-          />
+      {/* Fill container: 126px at the goal, never higher. */}
+      <div
+        className="absolute left-0 right-0 bottom-0"
+        style={{ height: fillHeightPx, transition: "height 1.1s cubic-bezier(0.22,1,0.36,1)" }}
+      >
+        {/* Body, from 10px below the container's top edge. */}
+        <div className="absolute left-0 right-0 bottom-0" style={{ top: 10, background: bodyGradient }} />
 
+        {/* Surface strip: 14px, its own wave edge, on an 11s bob. */}
+        <div className="absolute left-0 right-0 top-0 overflow-hidden cent-water-bob" style={{ height: 14, willChange: "transform" }}>
+          <svg
+            width={716}
+            height={14}
+            viewBox="0 0 716 14"
+            className="cent-water-drift"
+            style={{ position: "absolute", left: 0, top: 0, display: "block", animationDuration: "11s", willChange: "transform" }}
+          >
+            <path d={SURFACE_EDGE} fill={surfaceFill} />
+          </svg>
+        </div>
+
+        {/* Waves, band and depth shadow. Keyed on the millilitre value so the
+            slosh restarts on every change; the container above is not keyed,
+            so its height transition still runs. */}
+        <div key={water} className="absolute left-0 right-0 bottom-0 overflow-hidden cent-water-slosh" style={{ top: 10, willChange: "transform" }}>
           {WATER_WAVE_LAYERS.map((w, i) => {
-            const { fill, top } = buildWavePaths(w.y, w.amp, w.crests);
+            const { fill, edge } = buildWavePath(w.y, w.amp, w.crests, 160);
+            const drift = driftFor(w.crests, w.driftCycle);
             return (
-              <div key={i} className="absolute inset-0 overflow-hidden">
-                <div
-                  className="absolute left-0 top-0 cent-water-anim"
+              <span
+                key={i}
+                className="absolute inset-0 block cent-water-swell"
+                style={{
+                  animationName: `cent-water-swell-${w.swell.toLowerCase()}`,
+                  animationDuration: w.swellCycle,
+                  animationDelay: w.delay,
+                  willChange: "transform",
+                }}
+              >
+                <svg
+                  width={716}
+                  height={190}
+                  viewBox="0 -30 716 190"
+                  className="cent-water-drift"
                   style={{
-                    width: "200%",
-                    height: "100%",
-                    animationName: "cent-water-drift",
-                    animationDuration: w.drift,
-                    animationDirection: w.reverse ? "reverse" : "normal",
+                    position: "absolute",
+                    left: 0,
+                    top: -30,
+                    display: "block",
+                    animationDuration: drift.duration,
+                    animationDirection: w.rightward ? "reverse" : "normal",
                     willChange: "transform",
-                  }}
+                    ["--cent-drift" as string]: drift.distance,
+                  } as React.CSSProperties}
                 >
-                  {[0, 1].map((tile) => (
-                    <div
-                      key={tile}
-                      className="absolute top-0 cent-water-anim"
-                      style={{
-                        left: `${tile * 50}%`,
-                        width: "50%",
-                        height: "100%",
-                        animationName: "cent-water-swell",
-                        animationDuration: w.swell,
-                        animationDelay: w.delay,
-                        animationTimingFunction: "ease-in-out",
-                        willChange: "transform",
-                      }}
-                    >
-                      <svg viewBox="0 0 100 100" preserveAspectRatio="none" width="100%" height="100%" style={{ display: "block" }}>
-                        <path d={fill} fill={w.fillColor} />
-                        {w.front && (
-                          <path d={top} fill="none" stroke="rgba(255,255,255,.95)" strokeWidth={1.7} vectorEffect="non-scaling-stroke" />
-                        )}
-                      </svg>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                  <path d={fill} fill={w.fill} />
+                  {w.front && (
+                    <path d={edge} fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth={1.7} strokeLinecap="round" />
+                  )}
+                </svg>
+              </span>
             );
           })}
-
-          {/* depth cues: inset shadow left/right/bottom */}
-          <div
+          <span
+            aria-hidden="true"
+            className="absolute left-0 right-0 top-0 pointer-events-none"
+            style={{ height: 22, background: "linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0))" }}
+          />
+          <span
+            aria-hidden="true"
             className="absolute inset-0 pointer-events-none"
             style={{
               boxShadow:
-                "inset 13px 0 20px -13px rgba(11,40,80,.42), inset -13px 0 20px -13px rgba(11,40,80,.42), inset 0 -18px 26px -12px rgba(11,40,80,.5)",
+                "inset 13px 0 20px -13px rgba(11,40,80,0.42), inset -13px 0 20px -13px rgba(11,40,80,0.42), inset 0 -18px 26px -12px rgba(11,40,80,0.5)",
             }}
           />
         </div>
       </div>
 
-      {/* content overlay */}
-      <div className="relative z-10 flex flex-col h-full p-3.5 box-border">
-        <div className="flex items-center justify-between gap-3">
-          <p className={capsLabel} style={{ color: captionColor, textShadow }}>
-            Water
-          </p>
-          <span className={badge} style={{ background: pillBg, color: pillTextColor, textShadow: overGoal ? "none" : textShadow }}>
-            {subLabel}
-          </span>
-        </div>
-        <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
-          <div className="flex items-baseline justify-between gap-2.5">
-            <span className="text-[26px] font-extrabold leading-none tracking-[-0.035em] tabular-nums" style={{ color: valueColor, textShadow }}>
-              {(water / 1000).toFixed(1)} L
-            </span>
-            <span className="text-[10px]" style={{ color: toGoColor, textShadow }}>
-              {Math.max(0, (waterGoalMl - water) / 1000).toFixed(1)} L to go
-            </span>
-          </div>
-        </div>
-      </div>
+      <p
+        className="absolute uppercase"
+        style={{ left: 25, top: 19, margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: ".16em", lineHeight: 1, color: labelColor, textShadow }}
+      >
+        Water
+      </p>
+      <p
+        className="absolute tabular-nums"
+        style={{ left: 25, top: 37, margin: 0, fontSize: 29, fontWeight: 800, lineHeight: 1, letterSpacing: "-0.035em", color: valueColor, textShadow }}
+      >
+        {(water / 1000).toFixed(1)} L
+      </p>
+      <p
+        className="absolute"
+        style={{ left: 25, top: 70, margin: 0, fontSize: 13.5, fontWeight: 500, lineHeight: 1.2, whiteSpace: "nowrap", color: subColor, textShadow }}
+      >
+        {subLabel}
+      </p>
 
-      {/* sparkles — over-goal only, positioned inside the widget frame */}
+      <span
+        className="absolute flex items-center rounded-full tabular-nums"
+        style={{
+          right: 21,
+          top: 15,
+          height: 28,
+          padding: "0 14px",
+          fontSize: 13.5,
+          fontWeight: 700,
+          lineHeight: 1,
+          whiteSpace: "nowrap",
+          background: pillBg,
+          color: pillFg,
+          transition: "background-color .5s ease, color .5s ease",
+        }}
+      >
+        {Math.min(100, Math.round(pctPercent))}%
+      </span>
+
+      {/* Above the goal only: two twinkling stars beside the pill, clear of
+          the rounded corner. */}
       {overGoal && (
         <>
-          <span
-            className="absolute cent-water-sparkle-el"
-            style={{
-              right: 96,
-              top: 16,
-              width: 13,
-              height: 13,
-              animation: "cent-water-sparkle 1.7s ease-in-out infinite",
-              animationDelay: "0s",
-              filter: "drop-shadow(0 1px 1.5px rgba(120,76,0,.45))",
-              willChange: "transform",
-            }}
+          <svg
+            width={13}
+            height={13}
+            viewBox="0 0 24 24"
+            className="absolute cent-water-sparkle"
+            style={{ right: 9, top: 10, display: "block", filter: "drop-shadow(0 1px 1.5px rgba(120,76,0,0.45))", willChange: "transform, opacity" }}
           >
-            <svg viewBox="0 0 24 24" width={13} height={13}>
-              <path d="M12 0C12 6 14 10 24 12C14 14 12 18 12 24C12 18 10 14 0 12C10 10 12 6 12 0Z" fill="#E8A21B" />
-            </svg>
-          </span>
-          <span
-            className="absolute cent-water-sparkle-el"
+            <path d={SPARKLE_PATH} fill="#E8A21B" />
+          </svg>
+          <svg
+            width={9}
+            height={9}
+            viewBox="0 0 24 24"
+            className="absolute cent-water-sparkle"
             style={{
-              right: 88,
-              top: 34,
-              width: 9,
-              height: 9,
-              animation: "cent-water-sparkle 1.7s ease-in-out infinite",
+              right: 7.5,
+              top: 28.5,
+              display: "block",
               animationDelay: "0.55s",
-              filter: "drop-shadow(0 1px 1.5px rgba(120,76,0,.45))",
-              willChange: "transform",
+              filter: "drop-shadow(0 1px 1.5px rgba(120,76,0,0.45))",
+              willChange: "transform, opacity",
             }}
           >
-            <svg viewBox="0 0 24 24" width={9} height={9}>
-              <path d="M12 0C12 6 14 10 24 12C14 14 12 18 12 24C12 18 10 14 0 12C10 10 12 6 12 0Z" fill="#F0B63C" />
-            </svg>
-          </span>
+            <path d={SPARKLE_PATH} fill="#F0B63C" />
+          </svg>
         </>
       )}
+
+      {/* Goal marker: a hairline beside the goal figure. */}
+      <span className="absolute flex items-stretch" style={{ right: 21, top: 82, gap: 8 }}>
+        <span style={{ width: 1, background: "#FFFFFF", flex: "none" }} />
+        <span className="flex flex-col justify-center" style={{ fontSize: 11, fontWeight: 500, lineHeight: 1.16, color: goalColor, textShadow }}>
+          <span>{(waterGoalMl / 1000).toFixed(1)} L</span>
+          <span>Goal</span>
+        </span>
+      </span>
     </div>
   );
 };
@@ -447,7 +479,6 @@ export const HomeWidget: React.FC<{
     // ---------------------------------------------------------------- Water
     case "water": {
       const pct = water / waterGoalMl;
-      const glasses = Math.round(Math.max(0, Math.min(1, pct)) * 8);
       const onClick = onWaterClick ?? (() => navigate("/app/health"));
       if (!isLarge) {
         // Handoff §8: traced reference bottle replaces the old cup glyph
@@ -513,12 +544,8 @@ export const HomeWidget: React.FC<{
           )
         );
       }
-      // Item 5: the old flat two-stop-gradient horizontal progress bar (and
-      // its past-midday nudge banner, not called for anywhere in the item 5
-      // final-state spec and with no room left for it in the new tank
-      // layout) is fully replaced by LargeWaterWidget's 5-layer wave fill —
-      // see the component above for the literal per-layer geometry.
-      return wrap(onClick, <LargeWaterWidget water={water} waterGoalMl={waterGoalMl} pct={pct} glasses={glasses} />);
+      // Master handover item 7: the large tile is LargeWaterWidget above.
+      return wrap(onClick, <LargeWaterWidget water={water} waterGoalMl={waterGoalMl} pct={pct} />);
     }
 
     // ---------------------------------------------------------------- Sleep
