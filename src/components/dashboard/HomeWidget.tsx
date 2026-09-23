@@ -295,6 +295,10 @@ export const HomeWidget: React.FC<{
   const { metricValues, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries, gymPurchases, today, selectedDate } =
     useApp();
   const isLarge = widget.size === "large";
+  // Per-instance clip id for the small water bottle, so two water tiles on
+  // one board never resolve url(#…) to the other tile's clip path. useId's
+  // colons are stripped: they are not safe inside a url() fragment.
+  const bottleClipId = `w-bottle-clip-${React.useId().replace(/:/g, "")}`;
 
   const stepsMeta = healthMetrics.find((m) => m.type === "steps")!;
   const weeklyStepsAvg = Math.round(stepsMeta.history.reduce((s, h) => s + h.value, 0) / stepsMeta.history.length);
@@ -469,11 +473,11 @@ export const HomeWidget: React.FC<{
                 </span>
                 <svg width={41} height={64} viewBox="0 0 64 100" style={{ display: "block", flex: "none", overflow: "visible" }}>
                   <defs>
-                    <clipPath id="w-bottle-clip">
+                    <clipPath id={bottleClipId}>
                       <path d={BOTTLE_BODY} />
                     </clipPath>
                   </defs>
-                  <g clipPath="url(#w-bottle-clip)">
+                  <g clipPath={`url(#${bottleClipId})`}>
                     <rect x={10} y={bottleFillTop.toFixed(2)} width={44} height={100} fill="#A8D5F2" />
                   </g>
                   <path d={BOTTLE_BODY} fill="none" stroke="#4A85C4" strokeWidth={3.4} strokeLinejoin="round" />
