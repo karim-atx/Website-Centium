@@ -3,7 +3,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
-import { professionalTiers } from "../../data/professionalTiers";
+import { useSubscriptionTiers } from "../../hooks/useSubscriptionTiers";
 import { Check, Copy, UserPlus } from "lucide-react";
 
 // Invite-a-client. This used to collect the client's name, prefix, age, sex,
@@ -21,8 +21,27 @@ import { Check, Copy, UserPlus } from "lucide-react";
 export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const { generateClientCode, professionalClients, professionalTier } = useApp();
   const navigate = useNavigate();
-  const tier = professionalTiers.find((t) => t.id === professionalTier) ?? professionalTiers[0];
-  const atCap = tier.maxClients !== null && professionalClients.length >= tier.maxClients;
+  const { tiers } = useSubscriptionTiers("professional");
+  const tier = tiers.find((t) => t.id === professionalTier);
+  /**
+   * The tier whose cap has been reached, or null — one value rather than a
+   * boolean plus a separately-nullable tier, so the panel below cannot render
+   * a cap it does not have.
+   *
+   * UNKNOWN NO LONGER MEANS STARTER. This used to fall back to
+   * `professionalTiers[0]` when the id did not match, which was harmless
+   * while the list was a literal that always contained it. Now the list is a
+   * fetch, and that fallback would have told an Unlimited professional they
+   * had hit five clients every time the read was slow or failed — blocking a
+   * real action on a guess.
+   *
+   * So a missing tier blocks nothing. The cap is not advisory in the end:
+   * professional_clients_enforce_tier_cap rejects the relationship at
+   * redemption, so the worst case is a refusal with a reason rather than a
+   * silent overrun.
+   */
+  const capReached =
+    tier && tier.maxClients !== null && professionalClients.length >= tier.maxClients ? tier : null;
   const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -63,11 +82,11 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
       }}
       title="Add Client"
     >
-      {atCap ? (
+      {capReached ? (
         <div className="text-center animate-fade-slide-up py-4">
           <p className="text-sm text-charcoal-soft mb-4">
-            Your {tier.name} tier allows up to {tier.maxClients} clients, and you're already there.
-            Upgrade to add more.
+            Your {capReached.name} tier allows up to {capReached.maxClients} clients, and you're
+            already there. Upgrade to add more.
           </p>
           <Button
             fullWidth

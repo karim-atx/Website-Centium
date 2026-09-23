@@ -4,8 +4,7 @@ import { Button } from "../../components/ui/Button";
 import { PaymentMethodSheet } from "../../components/profile/PaymentMethodSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
-import { professionalTiers } from "../../data/professionalTiers";
-import { businessTiers } from "../../data/businessTiers";
+import { useSubscriptionTiers } from "../../hooks/useSubscriptionTiers";
 import {
   ChevronLeft,
   Mic,
@@ -19,6 +18,17 @@ import {
   Check,
 } from "lucide-react";
 import clsx from "clsx";
+
+/**
+ * The price line for a professional tier.
+ *
+ * Built from the number rather than read from a string, because the string is
+ * gone: professionalTiers.ts carried `price: "$14.99/month"` and the database
+ * carries `monthly_price: 14.99`. Formatting here reproduces those labels
+ * exactly, and leaves one copy of the figure rather than two.
+ */
+const monthlyLabel = (monthlyPrice: number) =>
+  monthlyPrice === 0 ? "Free" : `$${monthlyPrice.toFixed(2)}/month`;
 
 const features = [
   { icon: Mic, label: "AI food logging" },
@@ -34,16 +44,23 @@ const features = [
 function ProfessionalSubscription() {
   const navigate = useNavigate();
   const { professionalTier, setProfessionalTier, professionalClients } = useApp();
+  const { tiers, loading, error } = useSubscriptionTiers("professional");
   const [selected, setSelected] = useState(professionalTier);
   const [confirmed, setConfirmed] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
   const [downgradeOpen, setDowngradeOpen] = useState(false);
   const [downgradeFeedback, setDowngradeFeedback] = useState("");
 
-  const currentIdx = professionalTiers.findIndex((t) => t.id === professionalTier);
-  const selectedIdx = professionalTiers.findIndex((t) => t.id === selected);
-  const selectedIsFree = professionalTiers.find((t) => t.id === selected)?.price === "Free";
-  const isDowngrade = selectedIdx < currentIdx;
+  const currentIdx = tiers.findIndex((t) => t.id === professionalTier);
+  const selectedIdx = tiers.findIndex((t) => t.id === selected);
+  const selectedTier = selectedIdx >= 0 ? tiers[selectedIdx] : null;
+  const selectedIsFree = selectedTier?.monthlyPrice === 0;
+  // BOTH INDICES HAVE TO EXIST, which they did not have to before: the list
+  // was a literal, so findIndex always found something. It is a fetch now, so
+  // an empty or still-loading list gives -1, and `-1 < -1` would have read as
+  // "not a downgrade" while `selectedIdx < currentIdx` with one of them -1
+  // would have read as one.
+  const isDowngrade = currentIdx >= 0 && selectedIdx >= 0 && selectedIdx < currentIdx;
 
   const confirm = () => {
     setProfessionalTier(selected);
@@ -87,8 +104,21 @@ function ProfessionalSubscription() {
         </p>
       </div>
 
+      {/* A FAILED READ IS SAID OUT LOUD, not rendered as an empty list. On the
+          screen where someone chooses what to pay for, "no plans" and "we
+          couldn't fetch the plans" are not the same sentence, and only one of
+          them is true. */}
+      {error && <p className="text-xs font-semibold text-status-high mb-4">{error}</p>}
+
       <div className="space-y-2.5 mb-6">
-        {professionalTiers.map((t) => (
+        {loading &&
+          [0, 1, 2, 3].map((i) => (
+            <div key={i} className="rounded-2xl border-2 border-charcoal/10 bg-cream-card px-4 py-4">
+              <div className="h-3.5 w-24 rounded bg-charcoal/10 mb-2" />
+              <div className="h-3 w-40 rounded bg-charcoal/[0.06]" />
+            </div>
+          ))}
+        {tiers.map((t) => (
           <button
             key={t.id}
             onClick={() => setSelected(t.id)}
@@ -107,7 +137,8 @@ function ProfessionalSubscription() {
                 )}
               </div>
               <p className="text-xs text-charcoal-faint">
-                {t.maxClients === null ? "Unlimited clients" : `Up to ${t.maxClients} clients`} · {t.price}
+                {t.maxClients === null ? "Unlimited clients" : `Up to ${t.maxClients} clients`} ·{" "}
+                {monthlyLabel(t.monthlyPrice)}
               </p>
             </div>
             {selected === t.id && (
@@ -123,7 +154,10 @@ function ProfessionalSubscription() {
         fullWidth
         size="lg"
         onClick={handlePrimaryAction}
-        disabled={confirmed && selected === professionalTier}
+        // Also disabled until the tiers are known: without them the button
+        // cannot tell an upgrade from a downgrade, so it would take money for
+        // a switch it has not understood.
+        disabled={(confirmed && selected === professionalTier) || !selectedTier}
       >
         {confirmed && selected === professionalTier
           ? "You're all set ✓"
@@ -141,7 +175,7 @@ function ProfessionalSubscription() {
       <BottomSheet open={downgradeOpen} onClose={() => setDowngradeOpen(false)} title="We're sorry to see you go">
         <div className="space-y-4 animate-fade-slide-up">
           <p className="text-sm text-charcoal-soft leading-relaxed">
-            Before you switch to {professionalTiers[selectedIdx].name}, would you tell us what didn't work,
+            Before you switch to {selectedTier?.name ?? "that plan"}, would you tell us what didn't work,
             or what would've kept you on your current plan? It helps us improve.
           </p>
           <textarea
@@ -160,7 +194,7 @@ function ProfessionalSubscription() {
               setDowngradeFeedback("");
             }}
           >
-            Confirm switch to {professionalTiers[selectedIdx].name}
+            Confirm switch to {selectedTier?.name ?? "that plan"}
           </Button>
         </div>
       </BottomSheet>
@@ -181,6 +215,7 @@ type BillingPeriod = (typeof billingPeriods)[number]["value"];
 function BusinessSubscription() {
   const navigate = useNavigate();
   const { user, businessDirectory, updateMyBusinessTier } = useApp();
+  const { tiers, loading, error } = useSubscriptionTiers("business");
   const currentTier = businessDirectory.find((b) => b.id === user.businessId)?.tier ?? "starter";
   const [selected, setSelected] = useState(currentTier);
   const [period, setPeriod] = useState<BillingPeriod>("yearly");
@@ -189,10 +224,15 @@ function BusinessSubscription() {
   const [downgradeOpen, setDowngradeOpen] = useState(false);
   const [downgradeFeedback, setDowngradeFeedback] = useState("");
 
-  const currentIdx = businessTiers.findIndex((t) => t.id === currentTier);
-  const selectedIdx = businessTiers.findIndex((t) => t.id === selected);
-  const selectedIsFree = businessTiers.find((t) => t.id === selected)?.monthlyPrice === null;
-  const isDowngrade = selectedIdx < currentIdx;
+  const currentIdx = tiers.findIndex((t) => t.id === currentTier);
+  const selectedIdx = tiers.findIndex((t) => t.id === selected);
+  const selectedTier = selectedIdx >= 0 ? tiers[selectedIdx] : null;
+  // `monthlyPrice` was nullable in businessTiers.ts, where null meant Free.
+  // The column is NOT NULL and the free tier is 0.00, so free is a value now
+  // rather than an absence — which also removes the case where a missing
+  // price and a free one looked the same.
+  const selectedIsFree = selectedTier?.monthlyPrice === 0;
+  const isDowngrade = currentIdx >= 0 && selectedIdx >= 0 && selectedIdx < currentIdx;
 
   const confirm = () => {
     updateMyBusinessTier(selected);
@@ -212,8 +252,8 @@ function BusinessSubscription() {
     }
   };
 
-  const priceFor = (monthlyPrice: number | null) => {
-    if (monthlyPrice === null) return "Free";
+  const priceFor = (monthlyPrice: number) => {
+    if (monthlyPrice === 0) return "Free";
     const { months, discount, label } = billingPeriods.find((p) => p.value === period)!;
     const total = monthlyPrice * months * (1 - discount);
     return `$${total.toFixed(2)} / ${label.toLowerCase()}`;
@@ -258,8 +298,19 @@ function BusinessSubscription() {
         ))}
       </div>
 
+      {/* Same reasoning as the professional screen: an empty list and a failed
+          read say different things, and only one of them is honest here. */}
+      {error && <p className="text-xs font-semibold text-status-high mb-4">{error}</p>}
+
       <div className="space-y-2.5 mb-4">
-        {businessTiers.map((t) => (
+        {loading &&
+          [0, 1, 2, 3].map((i) => (
+            <div key={i} className="rounded-2xl border-2 border-charcoal/10 bg-cream-card px-4 py-4">
+              <div className="h-3.5 w-24 rounded bg-charcoal/10 mb-2" />
+              <div className="h-3 w-44 rounded bg-charcoal/[0.06]" />
+            </div>
+          ))}
+        {tiers.map((t) => (
           <button
             key={t.id}
             onClick={() => setSelected(t.id)}
@@ -303,7 +354,10 @@ function BusinessSubscription() {
         fullWidth
         size="lg"
         onClick={handlePrimaryAction}
-        disabled={confirmed && selected === currentTier}
+        // Disabled until the tiers are known, for the same reason as the
+        // professional screen: no list means no way to tell a switch apart
+        // from a purchase.
+        disabled={(confirmed && selected === currentTier) || !selectedTier}
       >
         {confirmed && selected === currentTier
           ? "You're all set ✓"
@@ -321,7 +375,7 @@ function BusinessSubscription() {
       <BottomSheet open={downgradeOpen} onClose={() => setDowngradeOpen(false)} title="We're sorry to see you go">
         <div className="space-y-4 animate-fade-slide-up">
           <p className="text-sm text-charcoal-soft leading-relaxed">
-            Before you switch to {businessTiers[selectedIdx].name}, would you tell us what didn't work, or
+            Before you switch to {selectedTier?.name ?? "that plan"}, would you tell us what didn't work, or
             what would've kept you on your current plan? It helps us improve.
           </p>
           <textarea
@@ -340,7 +394,7 @@ function BusinessSubscription() {
               setDowngradeFeedback("");
             }}
           >
-            Confirm switch to {businessTiers[selectedIdx].name}
+            Confirm switch to {selectedTier?.name ?? "that plan"}
           </Button>
         </div>
       </BottomSheet>
