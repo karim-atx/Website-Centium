@@ -180,14 +180,6 @@ export default {
           "0%": { opacity: 0, transform: "translateY(-12px) scale(0.98)" },
           "100%": { opacity: 1, transform: "translateY(0) scale(1)" },
         },
-        // Nutrient Summary's filter popover: a plain scale from its own
-        // top-right corner (transform-origin set by the caller), not the
-        // translateY+bounce the other overlays use — the handoff calls for
-        // "scale-from-top-right entry", no caret, anchored under its icon.
-        "popover-in": {
-          "0%": { opacity: 0, transform: "scale(0.92)" },
-          "100%": { opacity: 1, transform: "scale(1)" },
-        },
         "pulse-ring": {
           "0%": { transform: "scale(0.9)", opacity: 0.8 },
           "100%": { transform: "scale(1.6)", opacity: 0 },
@@ -399,7 +391,6 @@ export default {
         "pop": "pop 0.4s cubic-bezier(0.22,1,0.36,1) both",
         "sheet-up": "sheet-up 0.35s cubic-bezier(0.22,1,0.36,1) both",
         "drop-down": "drop-down 0.28s cubic-bezier(0.22,1,0.36,1) both",
-        "popover-in": "popover-in 0.16s cubic-bezier(0.22,1,0.36,1) both",
         "pulse-ring": "pulse-ring 1.6s cubic-bezier(0,0,0.2,1) infinite",
         "logo-launch": "logo-launch 0.8s cubic-bezier(0.34,1.56,0.64,1) both",
         "logo-launch-ring": "logo-launch-ring 0.85s cubic-bezier(0,0,0.2,1) both",

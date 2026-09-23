@@ -213,7 +213,7 @@ export const NUTRIENT_SECTIONS: NutrientSection[] = [
       row("Caprylic acid (C8:0)", "g", null, "none", "No DV"),
       row("Capric acid (C10:0)", "g", null, "none", "No DV"),
       row("Lauric acid (C12:0)", "g", null, "none", "No DV", {
-        note: "Sometimes classed as medium-chain, sometimes long-chain.",
+        note: "Sometimes classed as medium-chain, sometimes as long-chain.",
       }),
       row("Total MCTs", "g", null, "calc", "C6:0 + C8:0 + C10:0", {
         note: "Lauric acid excluded from this total.",
