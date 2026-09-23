@@ -482,9 +482,14 @@ export default function RoutinesTab() {
       <div className="flex items-center justify-between mb-2.5">
         <p className="text-[9.5px] font-bold tracking-[.2em] uppercase" style={{ color: "#9A94B3" }}>Folders</p>
         <button
-          onClick={() => setNewFolderOpen(true)}
+          // Tapping it again closes the new-folder form, discarding the draft.
+          onClick={() => {
+            if (newFolderOpen) setNewFolderName("");
+            setNewFolderOpen((v) => !v);
+          }}
           title="New folder"
           aria-label="New folder"
+          aria-expanded={newFolderOpen}
           className="tap w-[30px] h-[30px] rounded-[9px] flex items-center justify-center"
           style={{ color: "#6B41EF", margin: "-4px -6px -4px 0" }}
         >
