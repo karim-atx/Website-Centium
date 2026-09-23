@@ -32,13 +32,28 @@ const ScrollToHash: React.FC = () => {
   return null;
 };
 
-export const MarketingLayout: React.FC = () => (
-  <div className="min-h-screen bg-cream flex flex-col">
-    <ScrollToHash />
-    <Nav />
-    <main className="flex-1">
-      <Outlet />
-    </main>
-    <Footer />
-  </div>
-);
+// iOS Safari's rubber-band overscroll past the very bottom of the page
+// reveals the document's own background beneath the footer's colour wash —
+// a plain white strip that looks out of place. overscroll-behavior on <html>
+// suppresses that bounce, so it's scoped to exactly when marketing pages are
+// mounted (not the app shell, which hasn't reported this) via this class.
+const useNoOverscroll = () => {
+  useEffect(() => {
+    document.documentElement.classList.add("mkt-no-overscroll");
+    return () => document.documentElement.classList.remove("mkt-no-overscroll");
+  }, []);
+};
+
+export const MarketingLayout: React.FC = () => {
+  useNoOverscroll();
+  return (
+    <div className="min-h-screen bg-cream flex flex-col">
+      <ScrollToHash />
+      <Nav />
+      <main className="flex-1">
+        <Outlet />
+      </main>
+      <Footer />
+    </div>
+  );
+};

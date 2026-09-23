@@ -343,6 +343,21 @@ body,
   height: 100%;
 }
 
+/* Marketing site only (toggled on <html> by MarketingLayout while mounted):
+   the footer's colour-wash background sits flush against the document's own
+   end, so iOS Safari's rubber-band overscroll past the bottom revealed a
+   plain white strip beneath it (the page's own background-color) — a stark,
+   uncoloured cut right under the wash that read as a rendering glitch.
+   overscroll-behavior on the root element suppresses that native bounce/
+   reveal outright rather than trying to colour-match a moving target: the
+   wash is a multi-stop radial gradient, so "the exact colour it ends on" is
+   both viewport-dependent and fragile to keep in sync. Scoped to the
+   marketing routes only, not the app shell, which relies on the ordinary
+   document scroll and hasn't reported this. */
+html.mkt-no-overscroll {
+  overscroll-behavior-y: none;
+}
+
 body {
   margin: 0;
   background-color: rgb(var(--c-cream));
