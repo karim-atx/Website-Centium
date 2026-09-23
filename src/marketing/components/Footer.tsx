@@ -101,8 +101,15 @@ export const Footer: React.FC = () => (
         WebkitMaskImage:
           "linear-gradient(48deg,#000 0%,#000 2%,rgba(0,0,0,1.0000) 2.0%,rgba(0,0,0,0.9934) 4.7%,rgba(0,0,0,0.9745) 7.3%,rgba(0,0,0,0.9446) 10.0%,rgba(0,0,0,0.9050) 12.7%,rgba(0,0,0,0.8569) 15.3%,rgba(0,0,0,0.8017) 18.0%,rgba(0,0,0,0.7407) 20.7%,rgba(0,0,0,0.6752) 23.3%,rgba(0,0,0,0.6064) 26.0%,rgba(0,0,0,0.5357) 28.7%,rgba(0,0,0,0.4643) 31.3%,rgba(0,0,0,0.3936) 34.0%,rgba(0,0,0,0.3248) 36.7%,rgba(0,0,0,0.2593) 39.3%,rgba(0,0,0,0.1983) 42.0%,rgba(0,0,0,0.1431) 44.7%,rgba(0,0,0,0.0950) 47.3%,rgba(0,0,0,0.0554) 50.0%,rgba(0,0,0,0.0255) 52.7%,rgba(0,0,0,0.0066) 55.3%,rgba(0,0,0,0.0000) 58.0%,rgba(0,0,0,0) 62%)," +
           "linear-gradient(312deg,#000 0%,#000 2%,rgba(0,0,0,1.0000) 2.0%,rgba(0,0,0,0.9934) 4.7%,rgba(0,0,0,0.9745) 7.3%,rgba(0,0,0,0.9446) 10.0%,rgba(0,0,0,0.9050) 12.7%,rgba(0,0,0,0.8569) 15.3%,rgba(0,0,0,0.8017) 18.0%,rgba(0,0,0,0.7407) 20.7%,rgba(0,0,0,0.6752) 23.3%,rgba(0,0,0,0.6064) 26.0%,rgba(0,0,0,0.5357) 28.7%,rgba(0,0,0,0.4643) 31.3%,rgba(0,0,0,0.3936) 34.0%,rgba(0,0,0,0.3248) 36.7%,rgba(0,0,0,0.2593) 39.3%,rgba(0,0,0,0.1983) 42.0%,rgba(0,0,0,0.1431) 44.7%,rgba(0,0,0,0.0950) 47.3%,rgba(0,0,0,0.0554) 50.0%,rgba(0,0,0,0.0255) 52.7%,rgba(0,0,0,0.0066) 55.3%,rgba(0,0,0,0.0000) 58.0%,rgba(0,0,0,0) 62%)",
-        maskComposite: "add",
+        // Order matters: -webkit-mask-composite and mask-composite alias to
+        // the same underlying value in this engine, so whichever is set
+        // last wins. The handoff's own markup writes -webkit- first, then
+        // the standard property last (so "add" wins over the legacy
+        // "source-over" keyword) -- this object mirrors that literal order.
+        // Reversed, the invalid "source-over" value wins for both, which
+        // blanks out most of the mask instead of unioning the two wedges.
         WebkitMaskComposite: "source-over",
+        maskComposite: "add",
       }}
     />
     <div className="relative max-w-[1180px] mx-auto px-5 sm:px-10 pt-9 pb-8">

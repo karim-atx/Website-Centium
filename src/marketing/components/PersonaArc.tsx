@@ -376,8 +376,14 @@ export const PersonaArc: React.FC<{ personas: PersonaData[]; heading: React.Reac
                 WebkitMaskImage:
                   "linear-gradient(90deg,transparent 0%,rgba(0,0,0,.35) 5%,rgba(0,0,0,.85) 12%,#000 20%,#000 80%,rgba(0,0,0,.85) 88%,rgba(0,0,0,.35) 95%,transparent 100%)," +
                   "linear-gradient(180deg,transparent 0%,rgba(0,0,0,.55) 4%,#000 11%,#000 90%,rgba(0,0,0,.6) 97%,transparent 100%)",
-                maskComposite: "intersect",
+                // Order matters: -webkit-mask-composite and mask-composite
+                // alias to the same underlying value in this engine, so
+                // whichever is set last wins. Mirrors the handoff's own
+                // literal order (-webkit- first, standard property last) so
+                // "intersect" wins over the legacy "source-in" keyword --
+                // see the identical fix/comment in Footer.tsx's colour wash.
                 WebkitMaskComposite: "source-in",
+                maskComposite: "intersect",
               }}
             >
               <div ref={wrap} id="persona-wrap" style={{ position: "absolute", left: 0, right: 0, top: 96, bottom: 0 }}>

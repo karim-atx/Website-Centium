@@ -35,6 +35,23 @@ export function useEcoSlider(initial: EcoPos = -1) {
   const knob = useRef<HTMLDivElement>(null);  // #eco-slider
   const seam = useRef<HTMLDivElement>(null);  // [data-eco-seam]
 
+  // fit()'s `room` is keyed off innerHeight, but fit() itself runs on every
+  // slider commit (see the layout effect below), not just on resize -- and
+  // iOS's address bar collapses/expands as the page is scrolled to reach
+  // this section, changing innerHeight with no real resize involved (same
+  // root cause as the resize listener's own width-gate a few lines down).
+  // A commit-triggered fit() read window.innerHeight live, so the exact same
+  // toggle (Professionals <-> Businesses) could see a taller or shorter
+  // room depending only on how far the address bar happened to have
+  // collapsed by then -- and because the backfill loop below is a greedy
+  // first-fit over differently-sized tiers, a *larger* room can still
+  // displace a smaller tier that used to fit (see BACKFILL's ordering),
+  // producing a visibly different set of shown content on every toggle
+  // ("pops in and out, not consistent") instead of the same room every
+  // time. Cached at mount and only ever updated by a confirmed width-driven
+  // resize, so fit()'s room stays stable across slider commits and scroll.
+  const stableVh = useRef(window.innerHeight);
+
   // `locked` starts false every gesture: until horizontal movement clearly
   // beats vertical, this is treated as "might be a page scroll that merely
   // started on the knob," not a drag -- see onPointerMove.
@@ -196,7 +213,7 @@ export function useEcoSlider(initial: EcoPos = -1) {
     st.querySelectorAll("[data-ekeep]").forEach((e) => e.removeAttribute("data-ekeep"));
     if (!window.matchMedia(MOBILE_MQ).matches) { st.removeAttribute("data-efit"); return; }
 
-    const room = Math.max(240, window.innerHeight - NAV - MARGIN);
+    const room = Math.max(240, stableVh.current - NAV - MARGIN);
     const wipes = Array.from(dk.querySelectorAll<HTMLElement>("[data-eco-wipe]"));
     // equalise() (called right after fit() on every pass, see below) leaves
     // a min-height on each panel's card from the LAST pass. If that's still
@@ -352,6 +369,7 @@ export function useEcoSlider(initial: EcoPos = -1) {
     const onResize = () => {
       if (window.innerWidth === lastWidth) return;
       lastWidth = window.innerWidth;
+      stableVh.current = window.innerHeight; // confirmed real resize -- refresh fit()'s cached room input
       if (!rq) rq = requestAnimationFrame(recompute);
     };
     window.addEventListener("resize", onResize);
