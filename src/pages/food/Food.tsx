@@ -22,6 +22,10 @@ import { foodTabs, type Tab } from "./foodTabs";
 // sheets (AddFoodSheet, CreateMealSheet) that still import it.
 const diaryMealOrder: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
 
+// Master handover item 8: the Diary's card titles and quick-add labels are
+// singular ("Snack"); the shared mealLabels keeps "Snacks" for other screens.
+const diaryMealLabel = (meal: MealType) => (meal === "snack" ? "Snack" : mealLabels[meal]);
+
 const SWIPE_THRESHOLD = 60;
 
 // V5 (QA 5.0): the global floating "+" has no specific meal section to
@@ -190,8 +194,6 @@ export default function Food() {
     </div>
   );
 
-  const quickAddMeals: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
-
   return (
     <div>
       {/* Iteration 6 "Team": every redesigned screen uses a compact 19px
@@ -238,6 +240,7 @@ export default function Food() {
                 // passed through a route param.
                 navigate("/app/food/nutrient-summary");
               }}
+              aria-label="Open Nutrient Summary"
               className="tap relative overflow-hidden rounded-[20px] px-4 py-[15px] mb-[13px] w-full text-left"
               style={{ background: "var(--gradient-food-hero)" }}
             >
@@ -279,14 +282,14 @@ export default function Food() {
               which only opens that one meal). */}
           {!recoverySensitive && (
             <div className="flex gap-[6px] mb-[13px]">
-              {quickAddMeals.map((meal) => (
+              {diaryMealOrder.map((meal) => (
                 <button
                   key={meal}
                   onClick={() => openAdd(meal)}
                   className="tap flex-1 flex items-center justify-center gap-1 rounded-[11px] bg-team-lavender/[0.17] border border-team-lavender/[0.28] py-[9px] text-[10px] font-bold text-primary-deep-text whitespace-nowrap"
                 >
                   <Plus size={11} className="text-team-lavender-deep" />
-                  {mealLabels[meal] === "Snacks" ? "Snack" : mealLabels[meal]}
+                  {diaryMealLabel(meal)}
                 </button>
               ))}
             </div>
@@ -342,9 +345,9 @@ export default function Food() {
                       toggleCollapsed(meal);
                     }}
                     className="tap w-full flex items-start gap-2.5"
-                    aria-label={collapsed ? `Expand ${mealLabels[meal]}` : `Collapse ${mealLabels[meal]}`}
+                    aria-label={collapsed ? `Expand ${diaryMealLabel(meal)}` : `Collapse ${diaryMealLabel(meal)}`}
                   >
-                    <h3 className="flex-1 min-w-0 text-left text-[13.5px] font-bold text-charcoal">{mealLabels[meal]}</h3>
+                    <h3 className="flex-1 min-w-0 text-left text-[13.5px] font-bold text-charcoal">{diaryMealLabel(meal)}</h3>
                     {!recoverySensitive && (
                       <span className="flex flex-col gap-1 w-[104px] shrink-0">
                         <span className="flex h-2 rounded-[3px] overflow-hidden bg-charcoal/[0.07]">
@@ -377,7 +380,7 @@ export default function Food() {
                       className="text-charcoal-faint shrink-0"
                       style={{
                         transform: collapsed ? "rotate(0deg)" : "rotate(180deg)",
-                        transition: "transform 0.18s",
+                        transition: "transform 0.18s ease",
                       }}
                     />
                   </button>
