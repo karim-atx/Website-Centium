@@ -11,17 +11,20 @@ export interface SegmentedTabItem {
 
 /** The mobile handoff's segmented tab bar (item 7), replacing every pill-tab
  *  row on Food, Workout and any other iteration screen. Track `#F3F3FD`
- *  radius 16px padding 6px gap 5px; each tab 44px tall, radius 12px; active
- *  `#A79AD5` with `#FFFFFF` 12.5px/700; idle `#F5F4FE` with `#6D50D3`.
+ *  radius 16px padding 6px gap 5px; each tab 44px tall, radius 12px, padding
+ *  `0 6px`, `min-width: 0`; active `#A79AD5` with `#FFFFFF` 12.5px/700; idle
+ *  `#F5F4FE` with `#6D50D3` (Food) — Workout's frame (CentiumTabFrame
+ *  `tabsWorkout`) sets its idle label in `#5B5349`, hence `idleInk`.
  *  Labels only, no icons. */
 export const SegmentedTabs: React.FC<{
   items: SegmentedTabItem[];
   activeKey: string;
   onChange: (key: string) => void;
   className?: string;
-}> = ({ items, activeKey, onChange, className }) => (
+  idleInk?: string;
+}> = ({ items, activeKey, onChange, className, idleInk = "#6D50D3" }) => (
   <div
-    className={`flex ${className ?? ""}`}
+    className={`flex items-center ${className ?? ""}`}
     style={{ background: "#F3F3FD", borderRadius: 16, padding: 6, gap: 5 }}
     role="tablist"
   >
@@ -36,10 +39,12 @@ export const SegmentedTabs: React.FC<{
           className="tap flex items-center justify-center whitespace-nowrap"
           style={{
             flex: item.weight ?? 1,
+            minWidth: 0,
             height: 44,
+            padding: "0 6px",
             borderRadius: 12,
             background: active ? "#A79AD5" : "#F5F4FE",
-            color: active ? "#FFFFFF" : "#6D50D3",
+            color: active ? "#FFFFFF" : idleInk,
             fontSize: 12.5,
             fontWeight: 700,
           }}

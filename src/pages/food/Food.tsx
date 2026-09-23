@@ -10,7 +10,7 @@ import { DateSelector } from "../../components/dashboard/DateSelector";
 import { mealLabels, sumNutrition, targetsFromGoal } from "../../services/nutrition";
 import { deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
 import type { MealType, FoodLogEntry } from "../../types";
-import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronRight, Undo2 } from "lucide-react";
+import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronRight, Undo2, Sunrise, Clock, Sun, Sunset } from "lucide-react";
 import { isFoodRestricted } from "../../utils/dietaryRestrictions";
 import GoalsPanel from "./GoalsPanel";
 import MealPrepPanel from "./MealPrepPanel";
@@ -22,9 +22,15 @@ import { foodTabs, type Tab } from "./foodTabs";
 // sheets (AddFoodSheet, CreateMealSheet) that still import it.
 const diaryMealOrder: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
 
-// Master handover item 8: the Diary's card titles and quick-add labels are
-// singular ("Snack"); the shared mealLabels keeps "Snacks" for other screens.
-const diaryMealLabel = (meal: MealType) => (meal === "snack" ? "Snack" : mealLabels[meal]);
+// Master handover, CentiumTabFrame `food.diary` with quick-add "timeOfDay":
+// the quick-add tiles read "Snack" while the meal cards keep mealLabels'
+// "Snacks". Each tile carries its own sampled fill and time-of-day glyph.
+const quickAddTiles: Record<MealType, { label: string; fill: string; Icon: typeof Sunrise }> = {
+  breakfast: { label: "Breakfast", fill: "#BEB4E6", Icon: Sunrise },
+  snack: { label: "Snack", fill: "#B1A5DF", Icon: Clock },
+  lunch: { label: "Lunch", fill: "#B1A5E0", Icon: Sun },
+  dinner: { label: "Dinner", fill: "#9284C4", Icon: Sunset },
+};
 
 const SWIPE_THRESHOLD = 60;
 
@@ -206,7 +212,7 @@ export default function Food() {
           cards; drawing this one too showed two identical bars there. */}
       {tab !== "goals" && (
         <SegmentedTabs
-          className="mb-5 animate-fade-slide-up"
+          className="mb-4 animate-fade-slide-up"
           items={foodTabs}
           activeKey={tab}
           onChange={(key) => setTab(key as Tab)}
@@ -275,27 +281,31 @@ export default function Food() {
                   background: "rgba(255,255,255,0.18)",
                 }}
               >
-                <ChevronRight size={13} className="text-white" />
+                <ChevronRight size={13} strokeWidth={2.4} className="text-white" />
               </span>
             </button>
           )}
 
-          {/* Iteration 6 "Team" §2.5: a quick-add row above the meal list —
-              fixed lavender-tinted pills, always all four meals regardless
-              of what's already logged (unlike the "+" inside each card,
-              which only opens that one meal). */}
+          {/* A quick-add row above the meal list, always all four meals
+              regardless of what's already logged (unlike the "+" inside each
+              card, which only opens that one meal). Master handover: four
+              solid lavender steps with time-of-day glyphs. */}
           {!recoverySensitive && (
-            <div className="flex gap-[6px] mb-[13px]">
-              {diaryMealOrder.map((meal) => (
-                <button
-                  key={meal}
-                  onClick={() => openAdd(meal)}
-                  className="tap flex-1 flex items-center justify-center gap-1 rounded-[11px] bg-team-lavender/[0.17] border border-team-lavender/[0.28] py-[9px] text-[10px] font-bold text-primary-deep-text whitespace-nowrap"
-                >
-                  <Plus size={11} className="text-team-lavender-deep" />
-                  {diaryMealLabel(meal)}
-                </button>
-              ))}
+            <div className="flex gap-[6px] mb-[11px]">
+              {diaryMealOrder.map((meal) => {
+                const { label, fill, Icon } = quickAddTiles[meal];
+                return (
+                  <button
+                    key={meal}
+                    onClick={() => openAdd(meal)}
+                    className="tap flex-1 h-[38px] flex items-center justify-center gap-1.5 rounded-[11px] text-[10px] font-bold text-white whitespace-nowrap"
+                    style={{ background: fill }}
+                  >
+                    <Icon size={19} className="shrink-0" style={{ color: "#FFFFFF" }} />
+                    {label}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -328,17 +338,15 @@ export default function Food() {
               // one persistent line above the whole list; it now only shows
               // while this specific meal's add sheet is open for it.
               const isAddingHere = addOpen && addMeal === meal;
+              // Master handover (CentiumTabFrame food.diary): the card itself
+              // is always white with the lavender hairline and shadow; only
+              // its header carries the lavender wash, and only while open.
+              const headBg = collapsed ? "#FFFFFF" : "rgba(174,161,220,0.12)";
               return (
                 <div
                   key={meal}
-                  className={clsx(
-                    "rounded-[15px] px-3.5 py-[13px]",
-                    collapsed ? "border border-charcoal/[0.08]" : "border border-team-lavender/[0.34] shadow-[0_4px_14px_rgba(95,80,147,0.08)]"
-                  )}
-                  // Item 7: collapsed meal cards are plain white; the open
-                  // card gets the same lavender tint convention used for
-                  // other collapsible sections in the app.
-                  style={{ background: collapsed ? "#FFFFFF" : "rgba(174,161,220,0.12)" }}
+                  className="rounded-[15px] bg-white overflow-hidden"
+                  style={{ border: "1px solid rgba(174,161,220,0.34)", boxShadow: "0 4px 14px rgba(95,80,147,0.08)" }}
                   onTouchStart={onMealTouchStart}
                   onTouchEnd={(ev) => onMealTouchEnd(ev, meal)}
                   onClick={() => onMealTap(meal)}
@@ -349,9 +357,10 @@ export default function Food() {
                       toggleCollapsed(meal);
                     }}
                     className="tap w-full flex items-start gap-2.5"
-                    aria-label={collapsed ? `Expand ${diaryMealLabel(meal)}` : `Collapse ${diaryMealLabel(meal)}`}
+                    style={{ background: headBg, padding: "13px 14px", transition: "background-color .18s ease" }}
+                    aria-label={collapsed ? `Expand ${mealLabels[meal]}` : `Collapse ${mealLabels[meal]}`}
                   >
-                    <h3 className="flex-1 min-w-0 text-left text-[13.5px] font-bold text-charcoal">{diaryMealLabel(meal)}</h3>
+                    <h3 className="flex-1 min-w-0 text-left text-[13.5px] font-bold text-charcoal">{mealLabels[meal]}</h3>
                     {!recoverySensitive && (
                       <span className="flex flex-col gap-1 w-[104px] shrink-0">
                         <span className="flex h-2 rounded-[3px] overflow-hidden bg-charcoal/[0.07]">
@@ -390,7 +399,7 @@ export default function Food() {
                   </button>
 
                   {showUndo && (
-                    <div className="flex justify-end mt-1.5">
+                    <div className="flex justify-end" style={{ background: headBg, padding: "0 14px 8px" }}>
                       {/* QA 11.0: "Add an undo button to the far right, in a
                           light grey shade color, which only appears after
                           someone swipes or double taps to add food... only
@@ -408,7 +417,7 @@ export default function Food() {
                   )}
 
                   {!collapsed && (
-                    <div className="mt-[11px]">
+                    <div style={{ padding: "11px 14px 13px" }}>
                       {entries.length > 0 && (
                         <div className="flex flex-col gap-[3px] mb-2.5">
                           {entries.map((e) => {

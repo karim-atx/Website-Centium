@@ -10,8 +10,8 @@ import ProfessionalExplore from "./ProfessionalExplore";
 
 // Iteration 6 "Team" §5 Explore: each "More categories" tile gets its own
 // icon colour and light row tint — extending the same colour family used
-// for every other tinted-row list this pass touched (see rowTint in
-// RoutinesTab.tsx). The four not shown in the captured frame (the rest of
+// for every other tinted-row list this pass touched. The four not shown in
+// the captured frame (the rest of
 // marketplaceCategories) get a neutral tile in the same spirit as
 // Explore/Referral/Settings on the More screen.
 const CATEGORY_STYLE: Record<string, { icon: string; bg: string }> = {

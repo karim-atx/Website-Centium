@@ -848,9 +848,11 @@ export const AddFoodSheet: React.FC<{
           {/* V10 (QA 10.0): "Only the circled part in the attached picture
               should scroll the rest is locked in add food" — search, the
               AI/scan/custom buttons, recent, custom meals and the category
-              chips all stay pinned right under the sheet's own sticky
-              title bar; only the results list below scrolls. */}
-          <div className="sticky top-16 -mt-5 -mx-5 px-5 pt-3 pb-1 bg-cream z-10">
+              chips sit in a static block; only the results list below
+              scrolls, in its own region (master handover, CentiumFrame
+              lavSheet browse view). The block bleeds to the panel's edges,
+              so it carries the panel's top radius itself. */}
+          <div className="bg-white" style={{ margin: "-20px -20px 0", padding: "12px 20px 4px", borderRadius: "22px 22px 0 0" }}>
           <div className="relative mb-4">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-faint" />
             <input
@@ -861,35 +863,26 @@ export const AddFoodSheet: React.FC<{
             />
           </div>
 
+          {/* The four entry points on Centium's two brand hues at
+              alternating depths — teal, deep teal, lavender, deep purple —
+              each a gradient with a white glyph and label. */}
           <div className="grid grid-cols-4 gap-2 mb-5">
-            <button
-              onClick={() => setVoiceOpen(true)}
-              className="tap flex flex-col items-center gap-1.5 rounded-2xl py-3 bg-teal/10 text-teal-dark"
-            >
-              <Mic size={17} />
-              <span className="text-[11px] font-semibold">AI Voice</span>
-            </button>
-            <button
-              onClick={() => runScan("scan")}
-              className="tap flex flex-col items-center gap-1.5 rounded-2xl py-3 bg-sky-pale text-sky"
-            >
-              <Sparkles size={17} />
-              <span className="text-[11px] font-semibold">AI Scan</span>
-            </button>
-            <button
-              onClick={() => runScan("barcode")}
-              className="tap flex flex-col items-center gap-1.5 rounded-2xl py-3 bg-berry-pale text-berry"
-            >
-              <ScanLine size={17} />
-              <span className="text-[11px] font-semibold">Barcode</span>
-            </button>
-            <button
-              onClick={() => setCustomMode(true)}
-              className="tap flex flex-col items-center gap-1.5 rounded-2xl py-3 bg-gold-pale text-gold"
-            >
-              <UtensilsCrossed size={17} />
-              <span className="text-[11px] font-semibold">Custom</span>
-            </button>
+            {[
+              { label: "AI Voice", Icon: Mic, bg: "linear-gradient(150deg,#A2C8C2,#6F9993)", onClick: () => setVoiceOpen(true) },
+              { label: "AI Scan", Icon: Sparkles, bg: "linear-gradient(150deg,#8FB5AF,#4F7F78)", onClick: () => runScan("scan") },
+              { label: "Barcode", Icon: ScanLine, bg: "linear-gradient(150deg,#C0B4E8,#8F7FC9)", onClick: () => runScan("barcode") },
+              { label: "Custom", Icon: UtensilsCrossed, bg: "linear-gradient(150deg,#9184CE,#5F5093)", onClick: () => setCustomMode(true) },
+            ].map(({ label, Icon, bg, onClick }) => (
+              <button
+                key={label}
+                onClick={onClick}
+                className="tap flex flex-col items-center gap-1.5 rounded-2xl py-3"
+                style={{ background: bg, color: "#FFFFFF" }}
+              >
+                <Icon size={17} />
+                <span className="text-[11px] font-semibold">{label}</span>
+              </button>
+            ))}
           </div>
 
           {!query && recent.length > 0 && (
@@ -941,42 +934,61 @@ export const AddFoodSheet: React.FC<{
           )}
 
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-            <button className="tap transition-colors" style={sheetChipStyle(category === null)} onClick={() => setCategory(null)}>
-              All
-            </button>
-            {addFoodFilterCategories.map((c) => (
-              <button
-                key={c.id}
-                className="tap transition-colors"
-                style={sheetChipStyle(category === c.id)}
-                onClick={() => setCategory(c.id)}
-              >
-                {c.label}
-              </button>
-            ))}
+            {[{ id: null as string | null, label: "All" }, ...addFoodFilterCategories].map((c) => {
+              const active = category === c.id;
+              return (
+                <button
+                  key={c.label}
+                  className="tap transition-colors"
+                  style={{
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    whiteSpace: "nowrap",
+                    borderRadius: 8,
+                    padding: "7px 13px",
+                    fontSize: 12,
+                    border: `1px solid ${active ? "#A299DE" : "#E7E7EC"}`,
+                    background: active ? "#A299DE" : "#FFFFFF",
+                    color: active ? "#FFFFFF" : "#241F1B",
+                    fontWeight: active ? 700 : 600,
+                    flex: "none",
+                  }}
+                  onClick={() => setCategory(c.id)}
+                >
+                  {c.label}
+                </button>
+              );
+            })}
           </div>
           </div>
 
-          <div className="space-y-1.5 pt-4 min-h-[200px]">
+          {/* The list's own scroll region, starting under the filter chips,
+              so rows never travel up behind the pinned block or the band. */}
+          <div className="flex flex-col no-scrollbar" style={{ gap: 6, maxHeight: 424, overflowY: "auto", margin: "0 -20px", padding: "12px 20px 0" }}>
             {filtered.map((f) => (
               <button
                 key={`${f.source}-${f.id}`}
                 onClick={() => setSelectedFood(f)}
-                className="tap w-full flex items-center justify-between rounded-2xl px-3 py-2.5 hover:bg-cream-soft text-left"
+                className="tap w-full flex items-center justify-between text-left shrink-0"
+                style={{ borderRadius: 16, padding: "10px 12px" }}
               >
                 <div className="flex items-center gap-3">
-                  <span className="w-9 h-9 rounded-xl bg-primary-pale flex items-center justify-center shrink-0">
-                    <FoodIcon category={f.category} size={16} className="text-primary-dark" />
+                  <span
+                    className="flex items-center justify-center shrink-0"
+                    style={{ width: 36, height: 36, borderRadius: 12, background: "#F0EDF9" }}
+                  >
+                    <FoodIcon category={f.category} size={16} className="text-[#7D6BB5]" />
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-charcoal flex items-center gap-1.5">
+                    <p className="flex items-center gap-1.5" style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#241F1B" }}>
                       {f.name}
                       {f.isLebanese && <Star size={10} className="text-gold fill-gold" />}
                     </p>
-                    <p className="text-[11px] text-charcoal-faint">{f.servingLabel}</p>
+                    <p style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>{f.servingLabel}</p>
                   </div>
                 </div>
-                <span className="text-xs font-semibold text-charcoal-soft">{f.calories} kcal</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: "#5B5349" }}>{f.calories} kcal</span>
               </button>
             ))}
             {loading && filtered.length === 0 && (

@@ -53,48 +53,43 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
 const folderColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
 
 
-// Colour-coded folders: folder.color is per-folder state (set by the user via
-// the color picker, or seeded per-index in AppContext's defaultRoutineFolders).
-// Any folder WITHOUT an explicit color used to fall back to one shared
-// "#5B5349" tile, so a batch of un-colored folders all looked identical.
-//
-// Master handover item 12: a folder the user coloured keeps that colour; one
-// without takes the next colour of the item-12 palette in folder order,
-// repeating, with the glyph darkened on the three light fills.
-const FOLDER_TILE_PALETTE = ["#A299DE", "#A2C8C2", "#E8C877", "#E0A9C6", "#5F5093", "#4F7F78"];
-const FOLDER_GLYPH_ON: Record<string, string> = { "#A2C8C2": "#2F5A54", "#E8C877": "#5A4410", "#E0A9C6": "#6E2B4B" };
-const folderTileColor = (folder: RoutineFolder, order: number): { fill: string; glyph: string } => {
-  const fill = folder.color ?? FOLDER_TILE_PALETTE[order % FOLDER_TILE_PALETTE.length];
-  return { fill, glyph: FOLDER_GLYPH_ON[fill] ?? "#FFFFFF" };
+// Colour-coded folders (master handover, CentiumTabFrame "Color-coded
+// folders"): each folder is a solid bar with a darker icon tile, and its
+// routines sit beneath it as rows in a lighter shade of the same hue, with a
+// matching accent bar and play button. A family is those five shades.
+interface FolderFamily {
+  head: string;
+  tile: string;
+  row: string;
+  bar: string;
+  play: string;
+}
+
+// The two families the handover specifies, literally.
+const PURPLE: FolderFamily = { head: "#A797E3", tile: "#6E56C5", row: "#F0EEFE", bar: "#7C66CF", play: "#836BD6" };
+const TEAL: FolderFamily = { head: "#8ABFB5", tile: "#4B786F", row: "#EBF4F3", bar: "#61958C", play: "#63968B" };
+
+// A folder can still be given any of the six picker colours. The handover
+// only has shades for lavender and teal; the other four are DERIVED, not
+// from the handover: each keeps its picker colour's hue, and takes the
+// saturation step and lightness the two specified families use for each
+// role on average (saturation capped at the handover's own ~58%).
+const FOLDER_FAMILIES: Record<string, FolderFamily> = {
+  "#7D6BB5": PURPLE,
+  "#6F9993": TEAL,
+  "#4C8FD1": { head: "#84B1DE", tile: "#3277BB", row: "#EBF2FA", bar: "#488BCE", play: "#4E8FD0" },
+  "#9C4F7C": { head: "#DE85B9", tile: "#AE3F80", row: "#FAEBF4", bar: "#C15594", play: "#C45998" },
+  "#D9A441": { head: "#DEBF84", tile: "#BB8B32", row: "#FAF5EB", bar: "#CE9F48", play: "#D0A24E" },
+  "#241F1B": { head: "#C4AF9E", tile: "#8E745F", row: "#F7F2ED", bar: "#A28974", play: "#A68D78" },
 };
 
-// Iteration 6 "Team" §3.2: folders and routines render as "quiet tinted
-// rows" — the dc.html markup keys each row's light background to which
-// colour family its own solid accent (folder.color / routine.color)
-// belongs to, rather than just lightening that exact hex. Only lavender
-// and teal are shown in the canvas; sky/berry/gold/charcoal extend the
-// same light-tint treatment to the rest of the existing colour picker.
-const rowTint = (color: string): string => {
-  switch (color) {
-    case "#6F9993":
-    case "#A2C8C2": // master handover item 12 palette, teal family
-    case "#4F7F78":
-      return "rgba(162,200,194,.18)"; // teal
-    case "#E8C877": // item 12 palette, gold family
-      return "rgba(217,164,65,.14)";
-    case "#E0A9C6": // item 12 palette, berry family
-      return "rgba(156,79,124,.1)";
-    case "#4C8FD1":
-      return "rgba(76,143,209,.14)"; // sky
-    case "#9C4F7C":
-      return "rgba(156,79,124,.1)"; // berry
-    case "#D9A441":
-      return "rgba(217,164,65,.14)"; // gold
-    case "#241F1B":
-      return "rgba(36,31,27,.06)"; // charcoal
-    default:
-      return "rgba(174,161,220,.14)"; // lavender — #7D6BB5 and any custom colour
-  }
+// A folder nobody has coloured (the seeded Strength and Hypertrophy among
+// them) alternates the two handover families in folder order: Strength
+// purple, Hypertrophy teal. Unfiled routines take purple.
+const folderFamily = (folder: RoutineFolder | undefined, order: number): FolderFamily => {
+  if (folder?.color && FOLDER_FAMILIES[folder.color]) return FOLDER_FAMILIES[folder.color];
+  if (!folder) return PURPLE;
+  return order % 2 === 0 ? PURPLE : TEAL;
 };
 
 export default function RoutinesTab() {
@@ -148,13 +143,9 @@ export default function RoutinesTab() {
   // deleting" — same full-screen confirm pattern as pendingRoutine above.
   const [pendingDeleteRoutine, setPendingDeleteRoutine] = useState<Routine | null>(null);
   const [settingsExercise, setSettingsExercise] = useState<{ routineId: string; exercise: Exercise } | null>(null);
-  // V9 (QA 9.0): "Example folders strength and hypertrophy start collapsed
-  // already" — the two seeded example folders (see defaultRoutineFolders in
-  // AppContext.tsx) default to collapsed; any folder the user creates still
-  // starts expanded.
-  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(
-    new Set(["rf-strength", "rf-hypertrophy"])
-  );
+  // Master handover ("Color-coded folders": "Folders now open"): every
+  // folder, the seeded Strength and Hypertrophy included, starts expanded.
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
 
   const toggleFolderCollapsed = (id: string) =>
     setCollapsedFolders((prev) => {
@@ -220,13 +211,13 @@ export default function RoutinesTab() {
     const subfolders = childrenOf(folder.id);
     const collapsed = collapsedFolders.has(folder.id);
     // Folder order: the folder's position in the account's folder list.
-    const tile = folderTileColor(folder, routineFolders.indexOf(folder));
+    const family = folderFamily(folder, routineFolders.indexOf(folder));
 
     return (
-      <div style={{ marginLeft: depth * 16 }}>
+      <div className="flex flex-col gap-1.5" style={{ marginLeft: depth * 16 }}>
         <div
-          className="flex items-center gap-[11px] justify-between mb-2 rounded-[15px] px-3.5 py-3"
-          style={{ background: rowTint(tile.fill) }}
+          className="flex items-center gap-[13px] justify-between rounded-[14px]"
+          style={{ background: family.head, minHeight: 54, padding: "0 14px" }}
         >
           {renamingId === folder.id ? (
             <div className="flex items-center gap-2 flex-1">
@@ -256,33 +247,36 @@ export default function RoutinesTab() {
             <>
               <button
                 onClick={() => toggleFolderCollapsed(folder.id)}
-                className="tap flex items-center gap-[11px] flex-1 text-left min-w-0"
+                className="tap flex items-center gap-[13px] flex-1 text-left min-w-0 self-stretch"
               >
                 <span
-                  className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0"
-                  style={{ background: tile.fill }}
+                  className="w-[33px] h-[33px] rounded-[10px] flex items-center justify-center shrink-0"
+                  style={{ background: family.tile }}
                 >
-                  <Folder size={14} style={{ color: tile.glyph }} />
+                  <Folder size={16} style={{ color: "#FFFFFF" }} />
                 </span>
-                <span className="min-w-0">
-                  <span className="block text-[12.5px] font-bold text-charcoal truncate">{folder.name}</span>
-                  <span className="block text-[10px] text-charcoal-tertiary">
+                <span className="flex-1 min-w-0">
+                  <span className="flex items-center gap-[7px]">
+                    <span className="text-[15px] font-extrabold text-white truncate">{folder.name}</span>
+                    {collapsed ? (
+                      <ChevronRight size={15} strokeWidth={2.4} className="shrink-0" style={{ color: "#FFFFFF" }} />
+                    ) : (
+                      <ChevronDown size={15} strokeWidth={2.4} className="shrink-0" style={{ color: "#FFFFFF" }} />
+                    )}
+                  </span>
+                  <span className="block text-[11.5px] mt-px" style={{ color: "rgba(255,255,255,0.86)" }}>
                     {folderRoutines.length} {folderRoutines.length === 1 ? "routine" : "routines"}
                   </span>
                 </span>
-                {collapsed ? (
-                  <ChevronRight size={14} className="text-charcoal-tertiary shrink-0" />
-                ) : (
-                  <ChevronDown size={14} className="text-charcoal-tertiary shrink-0" />
-                )}
               </button>
               <div className="relative">
                 <button
                   onClick={() => setMenuFolderId(menuFolderId === folder.id ? null : folder.id)}
-                  className="tap text-charcoal-faint shrink-0"
+                  className="tap flex shrink-0"
+                  style={{ color: "#FFFFFF" }}
                   aria-label={`Options for ${folder.name}`}
                 >
-                  <MoreVertical size={15} />
+                  <MoreVertical size={17} />
                 </button>
                 {menuFolderId === folder.id && (
                   <div className="absolute right-0 top-7 z-20 w-48 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] overflow-hidden animate-fade-slide-up">
@@ -396,7 +390,7 @@ export default function RoutinesTab() {
         </div>
 
         {!collapsed && (
-          <div className="space-y-2 mb-2">
+          <div className="flex flex-col gap-1.5">
             {folderRoutines.map((r) => (
               <RoutineRow
                 key={r.id}
@@ -420,7 +414,7 @@ export default function RoutinesTab() {
                 onAddExercise={(pick) =>
                   run(updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] }))
                 }
-                onColorChange={(color) => run(updateRoutine(r.id, { color }))}
+                family={family}
               />
             ))}
 
@@ -485,13 +479,14 @@ export default function RoutinesTab() {
         if (editingColorId) setEditingColorId(null);
       }}
     >
-      <div className="flex items-center justify-between mb-[9px]">
-        <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Folders</p>
+      <div className="flex items-center justify-between mb-2.5">
+        <p className="text-[9.5px] font-bold tracking-[.2em] uppercase" style={{ color: "#9A94B3" }}>Folders</p>
         <button
           onClick={() => setNewFolderOpen(true)}
           title="New folder"
           aria-label="New folder"
-          className="tap w-[30px] h-[30px] rounded-[10px] flex items-center justify-center text-primary"
+          className="tap w-[30px] h-[30px] rounded-[9px] flex items-center justify-center"
+          style={{ color: "#6B41EF", margin: "-4px -6px -4px 0" }}
         >
           <FolderPlus size={18} />
         </button>
@@ -559,7 +554,7 @@ export default function RoutinesTab() {
         </div>
       )}
 
-      <div className="space-y-6 mb-6">
+      <div className="flex flex-col gap-3.5 mb-[17px]">
         {topLevelFolders.map((folder) => (
           <FolderNode key={folder.id} folder={folder} depth={0} />
         ))}
@@ -567,7 +562,7 @@ export default function RoutinesTab() {
         {unfiled.length > 0 && (
           <div>
             <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Unfiled</p>
-            <div className="space-y-[7px]">
+            <div className="flex flex-col gap-1.5">
               {unfiled.map((r) => (
                 <RoutineRow
                   key={r.id}
@@ -591,7 +586,7 @@ export default function RoutinesTab() {
                   onAddExercise={(pick) =>
                     run(updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] }))
                   }
-                  onColorChange={(color) => run(updateRoutine(r.id, { color }))}
+                  family={PURPLE}
                 />
               ))}
             </div>
@@ -616,23 +611,28 @@ export default function RoutinesTab() {
         </Card>
       )}
 
-      <div className="space-y-2.5">
-        {/* Iteration 6 "Team" §3.2: a quiet lavender pill in place of the
-            standard solid Button here — the rest of the tab's actions
-            (Browse starter programs, folder/routine writes) are untouched. */}
+      {/* Master handover (CentiumTabFrame "Color-coded folders"): a 54px
+          lavender "Create routine" and a 50px outlined "Browse starter
+          programs", 9px apart. */}
+      <div className="flex flex-col gap-[9px]">
         <button
           onClick={() => {
             setCreateFolder(null);
             setCreateOpen(true);
           }}
-          className="tap w-full flex items-center justify-center gap-2 rounded-[15px] bg-team-lavender/[0.22] text-[12.5px] font-extrabold text-primary-deep-text py-3.5"
+          className="tap w-full h-[54px] flex items-center justify-center gap-[9px] rounded-[14px] text-[14.5px] font-bold"
+          style={{ background: "#EFEEFD", color: "#6B41EF" }}
         >
-          <Plus size={14} /> Create routine
+          <Plus size={17} /> Create routine
         </button>
         {routines.length > 0 && (
-          <Button variant="outline" fullWidth onClick={() => setBrowseOpen(true)}>
-            <Library size={14} /> Browse starter programs
-          </Button>
+          <button
+            onClick={() => setBrowseOpen(true)}
+            className="tap w-full h-[50px] flex items-center justify-center gap-[9px] rounded-[14px] bg-white text-[14px] font-bold text-charcoal"
+            style={{ border: "1px solid rgba(143,104,246,0.28)" }}
+          >
+            <Library size={17} style={{ color: "#5B5349" }} /> Browse starter programs
+          </button>
         )}
       </div>
 
@@ -787,14 +787,14 @@ const RoutineRow: React.FC<{
   onDeleteExercise: (exerciseId: string) => void;
   onReplaceExercise: (exerciseId: string, pick: ExercisePick) => void;
   onAddExercise: (pick: ExercisePick) => void;
-  onColorChange: (color: string) => void;
+  /** The colours of the folder this routine sits in. */
+  family: FolderFamily;
   isOngoing?: boolean;
-}> = ({ routine, onStart, onDelete, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, onColorChange, isOngoing }) => {
+}> = ({ routine, onStart, onDelete, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, family, isOngoing }) => {
   const [expanded, setExpanded] = useState(false);
   const [revealedId, setRevealedId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
-  const [colorPickerOpen, setColorPickerOpen] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   // Swipe-left on an exercise row reveals Replace/Delete, Apple-UI style —
@@ -818,49 +818,17 @@ const RoutineRow: React.FC<{
   };
 
   return (
-    // Iteration 6 "Team" §3.2: a quiet tinted row, background keyed to the
-    // routine's own colour the same way a folder's is (see rowTint above).
-    <div className="rounded-[15px] overflow-hidden" style={{ background: rowTint(routine.color) }}>
-      <div className="flex items-center gap-[11px] px-3.5 py-3">
-        {/* QA 11.0: "the three dots... edit things like Folder Color, or
-            Routine color" — the routine's own colour bar doubles as the
-            edit affordance for it. */}
-        <div className="relative shrink-0">
-          <button
-            onClick={(ev) => {
-              ev.stopPropagation();
-              setColorPickerOpen((v) => !v);
-            }}
-            aria-label={`Edit ${routine.name} color`}
-            className={clsx("tap w-[3px] h-8 rounded-full block", isOngoing && "animate-pulse")}
-            style={{ background: isOngoing ? "#E9736A" : routine.color }}
-          />
-          {colorPickerOpen && (
-            <div className="absolute left-0 top-12 z-20 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] p-3 animate-fade-slide-up">
-              <div className="flex gap-2">
-                {folderColorOptions.map((c) => (
-                  <button
-                    key={c}
-                    onClick={(ev) => {
-                      ev.stopPropagation();
-                      onColorChange(c);
-                      setColorPickerOpen(false);
-                    }}
-                    aria-label={`Color ${c}`}
-                    className="tap w-7 h-7 rounded-full"
-                    style={{
-                      background: c,
-                      outline: routine.color === c ? "2px solid rgb(var(--c-charcoal))" : "none",
-                      outlineOffset: 2,
-                    }}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+    // Master handover (CentiumTabFrame "Color-coded folders"): a 54px row in
+    // the lighter shade of its folder's hue, with the folder's accent bar
+    // and play button. An ongoing (paused) routine keeps its coral pulse.
+    <div className="rounded-[14px] overflow-hidden" style={{ background: family.row }}>
+      <div className="flex items-center gap-[13px] min-h-[54px]" style={{ padding: "0 14px 0 0" }}>
+        <span
+          className={clsx("w-1 h-8 rounded-full shrink-0 block", isOngoing && "animate-pulse")}
+          style={{ marginLeft: 15, background: isOngoing ? "#E9736A" : family.bar }}
+        />
         <button onClick={() => setExpanded((v) => !v)} className="flex-1 text-left min-w-0">
-          <p className="text-[12.5px] font-bold text-charcoal flex items-center gap-1.5 truncate">
+          <p className="text-[14.5px] font-bold text-charcoal flex items-center gap-1.5 truncate">
             {routine.name}
             {isOngoing && (
               <span className="text-[10px] font-bold uppercase text-[#E9736A] flex items-center gap-1 shrink-0">
@@ -868,20 +836,24 @@ const RoutineRow: React.FC<{
               </span>
             )}
           </p>
-          <p className="text-[10px] text-charcoal-tertiary">
-            {routine.exercises.length} exercises · ~{routine.estimatedDurationMin} min
+          <p className="text-[11.5px] mt-0.5" style={{ color: "#8C8378" }}>
+            {routine.exercises.length} exercises • ~{routine.estimatedDurationMin} min
           </p>
         </button>
         <button
           onClick={onStart}
           aria-label={isOngoing ? `Resume ${routine.name}` : `Start ${routine.name}`}
-          className={clsx("tap w-8 h-8 rounded-full text-white flex items-center justify-center shrink-0", isOngoing && "animate-pulse")}
-          style={{ background: isOngoing ? "#E9736A" : routine.color }}
+          className={clsx("tap w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0", isOngoing && "animate-pulse")}
+          style={{ background: isOngoing ? "#E9736A" : family.play }}
         >
-          {isOngoing ? <Pause size={13} fill="white" /> : <Play size={13} fill="white" />}
+          {isOngoing ? (
+            <Pause size={13} fill="#FFFFFF" style={{ color: "#FFFFFF" }} />
+          ) : (
+            <Play size={13} fill="#FFFFFF" style={{ color: "#FFFFFF", marginLeft: 1 }} />
+          )}
         </button>
-        <button onClick={onDelete} aria-label={`Delete ${routine.name}`} className="tap text-charcoal-tertiary shrink-0">
-          <X size={15} />
+        <button onClick={onDelete} aria-label={`Remove ${routine.name}`} className="tap flex shrink-0" style={{ color: "#8C8378" }}>
+          <X size={16} />
         </button>
       </div>
       {expanded && (

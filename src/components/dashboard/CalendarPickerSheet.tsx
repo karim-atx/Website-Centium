@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
-import { ChevronLeft, ChevronRight, X } from "lucide-react";
-import clsx from "clsx";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -21,13 +20,19 @@ function toIso(d: Date) {
 // modal form. Portaled to <body> for the same reason as BottomSheet (an
 // ancestor's `animate-fade-slide-up` transform would otherwise clip a
 // `position: fixed` popover to that ancestor's box).
+//
+// Master handover (CentiumFrame `ovCalendarLav`): its own lavender chrome —
+// a #EDEAFE shell with a #7155CA hairline and a centred 20px title, a white
+// panel beneath holding a #F6F4FE month bar, #5B3FE4 weekday letters and
+// chevrons, and the selected day filled #AB9ED7. There is no close button;
+// tapping the backdrop closes it.
 export const CalendarPickerSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   selectedDate: string;
   today: string;
   onSelect: (date: string) => void;
-}> = ({ open, onClose, selectedDate, today, onSelect }) => {
+}> = ({ open, onClose, selectedDate, onSelect }) => {
   const [cursor, setCursor] = useState(() => new Date(`${selectedDate}T00:00:00`));
 
   useEffect(() => {
@@ -53,69 +58,77 @@ export const CalendarPickerSheet: React.FC<{
     <div className="fixed inset-0 z-50">
       <div className="absolute inset-0 bg-charcoal/40 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
       <div className="absolute inset-x-0 top-0 flex justify-center px-4 pt-20 sm:pt-24">
-        <div className="relative w-full sm:max-w-sm bg-cream rounded-3xl shadow-lift p-5 animate-drop-down">
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm font-semibold text-charcoal">Choose a date</p>
-            <button
-              onClick={onClose}
-              className="tap w-7 h-7 rounded-full bg-charcoal/5 flex items-center justify-center text-charcoal-soft hover:bg-charcoal/10"
-              aria-label="Close"
-            >
-              <X size={14} />
-            </button>
+        <div
+          className="relative w-full sm:max-w-sm shadow-lift overflow-hidden animate-drop-down"
+          style={{ background: "#EDEAFE", borderRadius: 28, border: "1px solid #7155CA" }}
+        >
+          <div className="flex items-center justify-center" style={{ height: 37 }}>
+            <p style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em", color: "#7155CA" }}>
+              Choose a date
+            </p>
           </div>
 
-          <div className="flex items-center justify-between mb-4">
-            <button
-              onClick={() => setCursor(new Date(year, month - 1, 1))}
-              className="tap w-8 h-8 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft"
-              aria-label="Previous month"
+          <div style={{ background: "#FFFFFF", borderRadius: "22px 22px 0 0", padding: "14px 12px 16px" }}>
+            <div
+              className="flex items-center justify-between"
+              style={{ background: "#F6F4FE", borderRadius: 16, height: 40, padding: "0 12px", marginBottom: 10 }}
             >
-              <ChevronLeft size={16} />
-            </button>
-            <p className="text-sm font-semibold text-charcoal">{monthLabel}</p>
-            <button
-              onClick={() => setCursor(new Date(year, month + 1, 1))}
-              className="tap w-8 h-8 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft"
-              aria-label="Next month"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
+              <button
+                onClick={() => setCursor(new Date(year, month - 1, 1))}
+                className="tap flex items-center justify-center"
+                style={{ width: 26, height: 26, color: "#5B3FE4" }}
+                aria-label="Previous month"
+              >
+                <ChevronLeft size={16} strokeWidth={2.2} />
+              </button>
+              <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#241F1B" }}>{monthLabel}</p>
+              <button
+                onClick={() => setCursor(new Date(year, month + 1, 1))}
+                className="tap flex items-center justify-center"
+                style={{ width: 26, height: 26, color: "#5B3FE4" }}
+                aria-label="Next month"
+              >
+                <ChevronRight size={16} strokeWidth={2.2} />
+              </button>
+            </div>
 
-          <div className="grid grid-cols-7 gap-1 mb-1">
-            {WEEKDAYS.map((w, i) => (
-              <div key={i} className="text-center text-[10px] font-semibold text-charcoal-faint py-1">
-                {w}
-              </div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-1">
-            {cells.map((d, i) => {
-              if (!d) return <div key={i} />;
-              const iso = toIso(d);
-              const isSelected = iso === selectedDate;
-              const isToday = iso === today;
-              return (
-                <button
+            <div className="grid grid-cols-7" style={{ gap: 2, marginBottom: 2 }}>
+              {WEEKDAYS.map((w, i) => (
+                <div
                   key={i}
-                  onClick={() => {
-                    onSelect(iso);
-                    onClose();
-                  }}
-                  className={clsx(
-                    "tap aspect-square rounded-xl text-sm font-medium flex items-center justify-center",
-                    isSelected
-                      ? "bg-primary text-white font-bold"
-                      : isToday
-                      ? "bg-primary-pale text-primary-dark font-bold"
-                      : "text-charcoal hover:bg-cream-soft"
-                  )}
+                  className="text-center"
+                  style={{ fontSize: 13, fontWeight: 600, color: "#5B3FE4", padding: "6px 0" }}
                 >
-                  {d.getDate()}
-                </button>
-              );
-            })}
+                  {w}
+                </div>
+              ))}
+            </div>
+            <div className="grid grid-cols-7" style={{ gap: 2 }}>
+              {cells.map((d, i) => {
+                if (!d) return <div key={i} />;
+                const iso = toIso(d);
+                const isSelected = iso === selectedDate;
+                return (
+                  <button
+                    key={i}
+                    onClick={() => {
+                      onSelect(iso);
+                      onClose();
+                    }}
+                    className="tap aspect-square flex items-center justify-center"
+                    style={{
+                      borderRadius: 12,
+                      fontSize: 15,
+                      fontWeight: isSelected ? 600 : 500,
+                      background: isSelected ? "#AB9ED7" : "transparent",
+                      color: isSelected ? "#FFFFFF" : "#000000",
+                    }}
+                  >
+                    {d.getDate()}
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>

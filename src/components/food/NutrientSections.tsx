@@ -305,21 +305,38 @@ function NutrientSectionBlock({
   const visibleSub = data.filter === "logged" ? subViews.filter(rowHasData) : subViews;
   const nothingUnderFilter = data.filter === "logged" && visibleMain.length === 0 && visibleSub.length === 0;
 
+  // Master handover: the card is always white with the lavender hairline and
+  // shadow (CentiumNutrientSummary); item 10 puts the open wash on the header
+  // only — "Collapsed header #FFFFFF; open header rgba(174,161,220,0.12)" —
+  // with the header/body split of the handover's other washed-header card
+  // (CentiumTabFrame's meal cards: header 13px 14px, body 11px 14px 13px).
   return (
     <div
-      className={clsx(
-        "rounded-[15px] px-3.5 py-[13px]",
-        !expanded && "border border-charcoal/[0.08]"
-      )}
-      style={{ background: expanded ? "rgba(174,161,220,0.12)" : "#FFFFFF" }}
+      className="rounded-[15px] bg-white overflow-hidden"
+      style={{ border: "1px solid rgba(174,161,220,0.34)", boxShadow: "0 4px 14px rgba(95,80,147,0.08)" }}
     >
       <button
         onClick={onToggle}
         className="tap w-full flex items-center gap-2.5"
+        style={{
+          padding: "13px 14px",
+          background: expanded ? "rgba(174,161,220,0.12)" : "#FFFFFF",
+          transition: "background-color .18s ease",
+        }}
         aria-label={expanded ? `Collapse ${section.name}` : `Expand ${section.name}`}
       >
         <h3 className="flex-1 min-w-0 text-left text-[13.5px] font-bold text-charcoal">{section.name}</h3>
-        <span className="shrink-0 text-[11px] font-semibold text-charcoal-faint tabular-nums">
+        <span
+          className="shrink-0 tabular-nums whitespace-nowrap"
+          style={{
+            fontSize: 9.5,
+            fontWeight: 700,
+            color: "#5F5093",
+            background: "rgba(174,161,220,0.18)",
+            borderRadius: 8,
+            padding: "3px 8px",
+          }}
+        >
           {loggedCount} of {allViews.length}
         </span>
         <ChevronDown
@@ -330,7 +347,7 @@ function NutrientSectionBlock({
       </button>
 
       {expanded && (
-        <div className="mt-[11px]">
+        <div style={{ padding: "11px 14px 13px" }}>
           {nothingUnderFilter ? (
             <p className="py-3 text-center text-[11.5px] text-charcoal-faint">Nothing logged in this group yet</p>
           ) : (

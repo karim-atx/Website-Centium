@@ -15,15 +15,13 @@ const tabLabels: Record<Tab, string> = {
   metrics: "Metrics",
 };
 
-// Mobile handoff item 11: the pill-tab row is replaced by the shared
-// SegmentedTabs bar everywhere it appears (Food and Workout). The handoff's
-// README gives literal flex-weights for Food's three tabs but not Workout's
-// four beyond "fill the track, no horizontal scroll at 390px" — left
-// unweighted (equal share) rather than guessing decimals that weren't
-// specified.
+// Master handover, CentiumTabFrame `tabsWorkout`: the segmented bar with the
+// frame's own flex-weights (1 / 0.94 / 0.96 / 0.95) and idle label ink.
+const tabWeights: Record<Tab, number> = { routines: 1, database: 0.94, history: 0.96, metrics: 0.95 };
 const workoutTabs: SegmentedTabItem[] = (["routines", "database", "history", "metrics"] as Tab[]).map((t) => ({
   key: t,
   label: tabLabels[t],
+  weight: tabWeights[t],
 }));
 
 export default function Workout() {
@@ -39,7 +37,8 @@ export default function Workout() {
         items={workoutTabs}
         activeKey={tab}
         onChange={(key) => setTab(key as Tab)}
-        className="mb-5 animate-fade-slide-up"
+        idleInk="#5B5349"
+        className="mb-4 animate-fade-slide-up"
       />
 
       {tab === "routines" && <RoutinesTab />}
