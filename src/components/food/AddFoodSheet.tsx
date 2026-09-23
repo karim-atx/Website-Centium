@@ -44,20 +44,39 @@ const servingUnitOptions: { value: ServingUnit; label: string }[] = [
 const detailMealOrder: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
 const detailMealLabels: Record<MealType, string> = {
   breakfast: "Breakfast",
-  snack: "Snack",
+  snack: "Snacks",
   lunch: "Lunch",
   dinner: "Dinner",
 };
 
-// Caps label at the top of a grey sheet container (00-FOUNDATIONS §0.3).
-const sheetCapsLabelStyle: React.CSSProperties = {
-  margin: 0,
-  fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: "0.12em",
-  textTransform: "uppercase",
-  color: "#8C8378",
-};
+// Grey sheet container and its sentence-case label (CentiumFrame addFoodBody
+// `grey` / `lbl`, and the same values as field() below).
+const sheetGreyStyle: React.CSSProperties = { background: "#F2F3F5", borderRadius: 14, padding: "12px 14px" };
+const sheetLabelStyle: React.CSSProperties = { margin: 0, fontSize: 13, fontWeight: 500, color: "#575863" };
+
+// CentiumFrame field(): a grey labelled container with a white borderless
+// input. Shared by Create Custom Food and the barcode no-match form.
+const SheetField: React.FC<{
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  numeric?: boolean;
+}> = ({ label, value, onChange, placeholder, numeric = false }) => (
+  <label className="block" style={{ ...sheetGreyStyle, boxSizing: "border-box" }}>
+    <span className="block" style={{ ...sheetLabelStyle, marginBottom: 8 }}>
+      {label}
+    </span>
+    <input
+      value={value}
+      onChange={(e) => onChange(numeric ? e.target.value.replace(/[^\d.]/g, "") : e.target.value)}
+      placeholder={placeholder}
+      inputMode={numeric ? "decimal" : "text"}
+      className="w-full placeholder:text-charcoal-faint focus:outline-none"
+      style={{ borderRadius: 10, background: "#FFFFFF", border: "none", padding: "11px 13px", fontSize: 14, color: "#241F1B", boxSizing: "border-box" }}
+    />
+  </label>
+);
 
 const FoodIcon: React.FC<{ category: Food["category"]; size?: number; className?: string }> = ({
   category,
@@ -574,7 +593,7 @@ export const AddFoodSheet: React.FC<{
             <div className="flex items-center" style={{ gap: 13, marginBottom: 16 }}>
               <span
                 className="flex items-center justify-center shrink-0"
-                style={{ width: 48, height: 48, borderRadius: 15, background: "#EFECFB", color: "#6B4BE0" }}
+                style={{ width: 46, height: 46, borderRadius: 14, background: "#EEEBFB", color: "#6B4BE0" }}
               >
                 <FoodIcon category={selectedFood.category} size={20} />
               </span>
@@ -594,7 +613,7 @@ export const AddFoodSheet: React.FC<{
 
             <div
               className="flex items-center"
-              style={{ gap: 12, background: "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}
+              style={{ ...sheetGreyStyle, gap: 12, marginBottom: 10 }}
             >
               <span style={{ flex: "none", fontSize: 14.5, fontWeight: 500, color: "#575863" }}>Quantity</span>
               <input
@@ -612,8 +631,8 @@ export const AddFoodSheet: React.FC<{
               />
             </div>
 
-            <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}>
-              <p style={sheetCapsLabelStyle}>UNIT</p>
+            <div style={{ ...sheetGreyStyle, marginBottom: 10 }}>
+              <p style={sheetLabelStyle}>Unit</p>
               <div
                 className="flex overflow-x-auto no-scrollbar"
                 style={{ gap: 7, margin: "9px -14px 0", padding: "0 14px" }}
@@ -631,8 +650,8 @@ export const AddFoodSheet: React.FC<{
               </div>
             </div>
 
-            <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}>
-              <p style={sheetCapsLabelStyle}>MEAL</p>
+            <div style={{ ...sheetGreyStyle, marginBottom: 10 }}>
+              <p style={sheetLabelStyle}>Meal</p>
               <div className="flex" style={{ gap: 6, marginTop: 9 }}>
                 {detailMealOrder.map((m) => (
                   <button
@@ -647,7 +666,7 @@ export const AddFoodSheet: React.FC<{
               </div>
             </div>
 
-            <div className="grid grid-cols-4" style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 0", marginBottom: 16 }}>
+            <div className="grid grid-cols-4" style={{ ...sheetGreyStyle, padding: "13px 0", marginBottom: 16 }}>
               {[
                 { value: `${foodTotalCal}`, color: "#241F1B", caption: "kcal" },
                 { value: `${Math.round(selectedFood.protein * multiplier)}g`, color: "#7D6BB5", caption: "protein" },
@@ -709,24 +728,13 @@ export const AddFoodSheet: React.FC<{
       placeholder: string,
       numeric = false
     ) => (
-      <label className="block" style={{ background: "#F2F3F5", borderRadius: 14, padding: "12px 14px" }}>
-        <span className="block" style={{ fontSize: 13, fontWeight: 500, color: "#575863", marginBottom: 8 }}>
-          {label}
-        </span>
-        <input
-          value={customDraft[key]}
-          onChange={(e) =>
-            setCustomDraft((d) => ({
-              ...d,
-              [key]: numeric ? e.target.value.replace(/[^\d.]/g, "") : e.target.value,
-            }))
-          }
-          placeholder={placeholder}
-          inputMode={numeric ? "decimal" : "text"}
-          className="w-full placeholder:text-charcoal-faint focus:outline-none"
-          style={{ borderRadius: 10, background: "#FFFFFF", border: "none", padding: "11px 13px", fontSize: 14, color: "#241F1B" }}
-        />
-      </label>
+      <SheetField
+        label={label}
+        value={customDraft[key]}
+        onChange={(v) => setCustomDraft((d) => ({ ...d, [key]: v }))}
+        placeholder={placeholder}
+        numeric={numeric}
+      />
     );
 
     const tone = LOGO_TONES[customLogoTone % LOGO_TONES.length];
@@ -1004,21 +1012,14 @@ export const AddFoodSheet: React.FC<{
       placeholder: string,
       numeric = false
     ) => (
-      <label className="block">
-        <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{label}</span>
-        <input
-          value={barcodeDraft[key]}
-          onChange={(e) =>
-            setBarcodeDraft((d) => ({
-              ...d,
-              [key]: numeric ? e.target.value.replace(/[^\d.]/g, "") : e.target.value,
-            }))
-          }
-          placeholder={placeholder}
-          inputMode={numeric ? "decimal" : "text"}
-          className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-        />
-      </label>
+      // CentiumFrame barcodeMiss: the same field() as Create Custom Food.
+      <SheetField
+        label={label}
+        value={barcodeDraft[key]}
+        onChange={(v) => setBarcodeDraft((d) => ({ ...d, [key]: v }))}
+        placeholder={placeholder}
+        numeric={numeric}
+      />
     );
 
     return (
