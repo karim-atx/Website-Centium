@@ -414,6 +414,22 @@ export const PersonaArc: React.FC<{ personas: PersonaData[]; heading: React.Reac
                           cursor: "pointer",
                           transition: "transform .5s,filter .5s,box-shadow .5s",
                           filter: "grayscale(1) contrast(.82) brightness(1.16) opacity(.3)",
+                          // Not a handoff value -- a defensive buffer. The
+                          // focused card's art gets a spec'd scale(1.04)
+                          // zoom (see usePersonaArc's focus paint); a CSS
+                          // scale doesn't push siblings out of the way, so
+                          // that 4% growth visually bleeds past this
+                          // wrapper's own box into the title below it.
+                          // Measured on Chromium at ~3.2-3.4px (roughly
+                          // consistent across card sizes), reported as a
+                          // visible overlap on iPhone Safari specifically --
+                          // rendering the same transform slightly more
+                          // generously there is plausible and can't be
+                          // verified from here. This margin absorbs the
+                          // bleed with room to spare either way, without
+                          // touching the title's own literal marginTop:0 or
+                          // removing the zoom effect itself.
+                          marginBottom: 8,
                         }}
                       >
                         <div
