@@ -276,7 +276,9 @@ export function useEcoSlider(initial: EcoPos = -1) {
         else if (plot && plot.offsetParent) plot.style.setProperty("--eco-grow", Math.min(spare, 150) + "px");
       }
     } finally {
-      for (const wp of wipes) wp.style.willChange = "clip-path";
+      // Matches the steady-state value set in Ecosystem.tsx -- see its own
+      // comment for why `transform` was added alongside `clip-path`.
+      for (const wp of wipes) wp.style.willChange = "clip-path, transform";
     }
   }, []);
 
@@ -295,7 +297,7 @@ export function useEcoSlider(initial: EcoPos = -1) {
       const max = Math.max(0, ...cards.map((c) => Math.ceil(c.getBoundingClientRect().height)));
       if (max) cards.forEach((c) => (c.style.minHeight = max + "px"));
     } finally {
-      for (const wp of wipes) wp.style.willChange = "clip-path";
+      for (const wp of wipes) wp.style.willChange = "clip-path, transform";
     }
   }, []);
 

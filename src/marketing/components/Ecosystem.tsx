@@ -416,7 +416,23 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
                 // toggle it off for the instant they synchronously measure
                 // this element -- it corrupts those offsetHeight reads if left
                 // on, verified directly -- and restore it right after.
-                willChange: "clip-path",
+                //
+                // `transform` added alongside `clip-path`: reported as still
+                // stuttering continuously through scroll on iPhone Safari
+                // even with this hint present, on both slow drags and fast
+                // flicks -- consistent with the layer not actually holding
+                // through scroll there. This card's own box-shadow (22px/
+                // 54px blur, line ~436) is exactly the kind of content
+                // Safari is documented to re-rasterize expensively if its
+                // layer isn't kept stable during scroll, and `will-change`
+                // is a hint, not a guarantee -- `clip-path` alone signals
+                // "this property animates," not "keep me composited for
+                // plain scroll." `transform` is the hint every engine
+                // treats most conservatively for exactly that. Can't verify
+                // this from here (no real Safari access), but it's additive
+                // and doesn't change the existing toggle-for-measurement
+                // behavior below, only what value it toggles back to.
+                willChange: "clip-path, transform",
                 minWidth: 0,
                 justifyContent: "flex-end",
               }}
@@ -619,9 +635,10 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
                 clipPath: `inset(0px ${bizOn ? 0 : 100}.00% 0px 0px)`,
                 boxShadow: bizOn ? "inset -3px 0 0 0 #2F5F58" : "inset -3px 0 0 0 transparent",
                 transition: "clip-path .52s cubic-bezier(.22,1,.36,1),box-shadow .52s cubic-bezier(.22,1,.36,1)",
-                // See the "pro" panel above for why this is here and why
-                // useEcoSlider toggles it off during its own measurements.
-                willChange: "clip-path",
+                // See the "pro" panel above for why this is here, why it now
+                // includes `transform`, and why useEcoSlider toggles it off
+                // during its own measurements.
+                willChange: "clip-path, transform",
                 minWidth: 0,
                 justifyContent: "flex-start",
               }}
