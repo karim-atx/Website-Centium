@@ -171,6 +171,20 @@ export function useEcoSlider(initial: EcoPos = -1) {
 
     const room = Math.max(240, window.innerHeight - NAV - MARGIN);
     const wipes = Array.from(dk.querySelectorAll<HTMLElement>("[data-eco-wipe]"));
+    // equalise() (called right after fit() on every pass, see below) leaves
+    // a min-height on each panel's card from the LAST pass. If that's still
+    // applied when THIS pass measures wp.offsetHeight, fit() ends up
+    // measuring its own leftover instead of this pass's true natural
+    // content height. Verified directly: toggling Professionals/Businesses
+    // repeatedly showed wp.offsetHeight exactly matching the previous
+    // equalise() min-height every time, and the shed decision flip-flopping
+    // between two stable-looking-but-wrong states on every single toggle
+    // (625px/5 tiers shed <-> 253px/all 8 shed) -- "using the slider
+    // changes the box shape," every time it's used. Cleared here, before
+    // any measurement, so this pass always starts from the elements' own
+    // unconstrained size; equalise() re-applies the real (post-shed)
+    // min-height afterwards, same as it always has.
+    dk.querySelectorAll<HTMLElement>("[data-eco-wipe] > div").forEach((c) => { c.style.minHeight = ""; });
     // `will-change: clip-path` (set in Ecosystem.tsx) keeps each wipe panel
     // on its own compositor layer at rest -- both panels are always fully
     // painted (see this hook's own doc comment), so that's what keeps plain
