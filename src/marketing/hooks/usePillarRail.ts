@@ -272,13 +272,32 @@ export function usePillarRail(): PillarRailRefs {
     });
     roSec.observe(sec);
     window.addEventListener("scroll", tick, { passive: true });
-    window.addEventListener("resize", onResize);
+    // Mobile browsers fire `resize` when the address bar shows/hides during
+    // scroll -- height-only, never width -- but measure() keys its whole
+    // fit ladder off innerHeight (line ~168). Reacting to every resize meant
+    // that completely normal address-bar collapse/expand, which happens on
+    // any scroll, could re-run the fit mid-pin and shift this section's
+    // sticky `top`/height while it's actively pinned under the user's
+    // finger -- reported as the section "rubber banding" during scroll, the
+    // content fighting the gesture instead of tracking it. Same root cause,
+    // same fix already applied to useEcoSlider's and usePersonaArc's resize
+    // handlers earlier this same investigation. Only the plain window
+    // listener needs this gate -- the ResizeObservers above already key off
+    // actual element size changes (content height, section width), not raw
+    // window resize, so they're unaffected by the toolbar and stay ungated.
+    let lastWidth = window.innerWidth;
+    const onWindowResize = () => {
+      if (window.innerWidth === lastWidth) return;
+      lastWidth = window.innerWidth;
+      onResize();
+    };
+    window.addEventListener("resize", onWindowResize);
     return () => {
       if (raf) cancelAnimationFrame(raf);
       if (rq) cancelAnimationFrame(rq);
       roFit.disconnect(); roSec.disconnect();
       window.removeEventListener("scroll", tick);
-      window.removeEventListener("resize", onResize);
+      window.removeEventListener("resize", onWindowResize);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

@@ -288,7 +288,26 @@ export function usePersonaArc() {
     repaint(); phase();
     document.fonts?.ready.then(repaint).catch(() => {});
     let rq = 0;
-    const onResize = () => { if (!rq) rq = requestAnimationFrame(() => { rq = 0; repaint(); phase(); }); };
+    // Mobile browsers fire `resize` when the address bar shows/hides during
+    // scroll -- that changes innerHeight only, never width, but
+    // measurePin()'s `top`/`wrapTop`/stage height all key off innerHeight
+    // (README §5). Reacting to every resize meant the address bar
+    // collapsing/expanding mid-scroll -- completely normal, happens
+    // whenever a user scrolls at all -- could shift this section's pinned
+    // `top` while it's actively pinned under the user's finger, snapping
+    // the content to a new position against the scroll gesture. Reported
+    // as the section "rubber banding" during scroll -- exactly that: the
+    // content fighting the finger instead of tracking it. Same root cause,
+    // same fix already applied to useEcoSlider's resize handler earlier
+    // this same investigation -- width is what actually changed on a real
+    // resize or orientation change; a bare toolbar show/hide never touches
+    // it.
+    let lastWidth = window.innerWidth;
+    const onResize = () => {
+      if (window.innerWidth === lastWidth) return;
+      lastWidth = window.innerWidth;
+      if (!rq) rq = requestAnimationFrame(() => { rq = 0; repaint(); phase(); });
+    };
     window.addEventListener("scroll", sync, { passive: true });
     window.addEventListener("resize", onResize);
     const poll = window.setInterval(sync, 200); // safety net, same as the design
