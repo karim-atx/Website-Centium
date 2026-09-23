@@ -4,7 +4,7 @@ import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import { MUSCLE_GROUP_LABEL } from "../../utils/muscleGroups";
 import type { MuscleGroup, ExerciseClassification } from "../../types";
-import { List, User, Search } from "lucide-react";
+import { List, User, Search, RotateCw } from "lucide-react";
 import clsx from "clsx";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "../../components/workout/CreateCustomExerciseSheet";
 import { BODY_ZONES } from "../../data/bodyZones";
@@ -63,6 +63,34 @@ const ZONE_KEY_TO_GROUP: Record<keyof (typeof BODY_ZONES)[FigureKey], MuscleGrou
   calves: "calves",
 };
 
+// Master handover item 12: the Body view's muscle names (zone buttons'
+// aria-labels, chips, list header) — plural Biceps/Triceps, unlike the
+// catalog's singular MUSCLE_GROUP_LABEL used by the List view.
+const ZONE_LABEL: Record<keyof (typeof BODY_ZONES)[FigureKey], string> = {
+  shoulders: "Shoulders",
+  chest: "Chest",
+  back: "Back",
+  biceps: "Biceps",
+  triceps: "Triceps",
+  forearms: "Forearms",
+  core: "Core",
+  glutes: "Glutes",
+  quads: "Quads",
+  hamstrings: "Hamstrings",
+  calves: "Calves",
+};
+
+// Item 12: each figure renders in a 376px-tall box whose width is
+// imageWidth x 376 / imageHeight (public/body/*.png natural sizes).
+const FIGURE_BOX_WIDTH: Record<FigureKey, number> = {
+  "male-front": (245 * 376) / 593,
+  "male-back": (282 * 376) / 595,
+  "female-front": (278 * 376) / 579,
+  "female-back": (282 * 376) / 584,
+  "andro-front": (308 * 376) / 593,
+  "andro-back": (298 * 376) / 593,
+};
+
 // Zone keys valid per side — front and back have asymmetric pairs
 // (chest/back, biceps/triceps); BODY_ZONES carries both uniformly per
 // figure, so this list is what filters to the visually-correct set.
@@ -101,7 +129,12 @@ export default function ExerciseDatabaseTab() {
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null);
   const [bodySide, setBodySide] = useState<BodySide>("front");
   const sideZoneKeys = bodySide === "front" ? FRONT_ZONE_KEYS : BACK_ZONE_KEYS;
-  const bodyZones = sideZoneKeys.map((k) => ZONE_KEY_TO_GROUP[k]);
+  const selectedZoneKey = sideZoneKeys.find((k) => ZONE_KEY_TO_GROUP[k] === selectedGroup);
+  const selectedMuscleLabel = selectedZoneKey
+    ? ZONE_LABEL[selectedZoneKey]
+    : selectedGroup
+      ? MUSCLE_GROUP_LABEL[selectedGroup]
+      : "";
   // Item 12: male → male figure pair, female → female figure pair, anything
   // else (other/unset/no sex on record) → the androgynous pair.
   const figureGender: FigureGender =
@@ -274,17 +307,20 @@ export default function ExerciseDatabaseTab() {
             Tap a muscle group to see its exercises — {bodySide === "front" ? "front" : "back"} view.
           </p>
 
-          {/* Item 12: figure panel — plain-color <img> (no recoloring, which
-              would strip the line work and teal leaf mark) with a Front/Back
-              toggle top-right and %-positioned zone overlays above it. */}
+          {/* Master handover item 12: figure panel — a plain <img> (never a
+              CSS mask or currentColor, which would recolour the line art and
+              lose the teal leaf) in a 376px-tall box sized to the image's own
+              proportions, the Front/Back chip top-right, and zone overlays
+              centred on each zone's x/y. */}
           <div className="relative flex justify-center mb-3">
-            <div className="relative" style={{ width: 220, maxWidth: "100%" }}>
+            <div className="relative" style={{ width: FIGURE_BOX_WIDTH[figureKey], height: 376 }}>
               <img
                 key={figureKey}
                 src={`/body/${figureKey}.png`}
                 alt=""
                 draggable={false}
-                className="block w-full h-auto select-none pointer-events-none"
+                className="block w-full h-full select-none pointer-events-none"
+                style={{ objectFit: "contain" }}
               />
               <div className="absolute inset-0">
                 {sideZoneKeys.map((zoneKey) => {
@@ -293,7 +329,7 @@ export default function ExerciseDatabaseTab() {
                   return BODY_ZONES[figureKey][zoneKey].map((rect, i) => (
                     <button
                       key={`${zoneKey}-${i}`}
-                      aria-label={MUSCLE_GROUP_LABEL[group]}
+                      aria-label={ZONE_LABEL[zoneKey]}
                       onClick={() => setSelectedGroup(selected ? null : group)}
                       className="tap absolute"
                       style={{
@@ -301,55 +337,62 @@ export default function ExerciseDatabaseTab() {
                         top: `${rect.y}%`,
                         width: `${rect.w}%`,
                         height: `${rect.h}%`,
-                        borderRadius: 6,
+                        transform: "translate(-50%,-50%)",
+                        borderRadius: "50%",
                         backgroundColor: selected ? "rgba(143,104,246,0.34)" : "transparent",
                         border: selected ? "1.5px solid rgba(95,80,147,0.75)" : "1.5px solid transparent",
-                        transition: "background-color 0.15s ease, border-color 0.15s ease",
+                        transition: "background-color 0.18s ease, border-color 0.18s ease",
                       }}
                     />
                   ));
                 })}
               </div>
-
-              <div className="absolute top-0 right-0 flex items-center gap-0.5 bg-cream-soft rounded-full p-0.5">
-                {(["front", "back"] as BodySide[]).map((side) => (
-                  <button
-                    key={side}
-                    onClick={() => {
-                      if (side === bodySide) return;
-                      flipSide();
-                    }}
-                    className={clsx(
-                      "tap px-2 py-1 rounded-full text-[10px] font-semibold capitalize",
-                      bodySide === side ? "bg-primary text-white" : "text-charcoal-faint"
-                    )}
-                  >
-                    {side}
-                  </button>
-                ))}
-              </div>
             </div>
+
+            <button
+              onClick={flipSide}
+              className="tap absolute top-0 right-0 flex items-center gap-1.5"
+              style={{
+                height: 32,
+                padding: "0 13px",
+                borderRadius: 9,
+                border: "1px solid #E5E6EB",
+                background: "#FAFAFB",
+                fontSize: 12,
+                fontWeight: 700,
+                color: "#5F5093",
+              }}
+            >
+              <RotateCw size={13} strokeWidth={2.2} />
+              {bodySide === "front" ? "Back" : "Front"}
+            </button>
           </div>
 
-          <div className="flex flex-wrap justify-center gap-1.5 mb-5">
-            {bodyZones.map((mg) => (
-              <button
-                key={mg}
-                onClick={() => setSelectedGroup(selectedGroup === mg ? null : mg)}
-                className={clsx(
-                  "tap px-2.5 py-1 text-[10px] font-semibold border transition-colors",
-                  selectedGroup === mg
-                    ? "text-white border-transparent"
-                    : "bg-cream-soft border-transparent text-charcoal-soft"
-                )}
-                style={{
-                  borderRadius: 8,
-                  backgroundColor: selectedGroup === mg ? "#A092E0" : undefined,
-                }}
-              >
-                {MUSCLE_GROUP_LABEL[mg]}
-              </button>
-            ))}
+          <p className="mb-2 text-[11px] font-bold uppercase tracking-[0.12em]" style={{ color: "#8C8378" }}>
+            Muscle groups
+          </p>
+          <div className="flex flex-wrap gap-1.5 mb-5">
+            {sideZoneKeys.map((zoneKey) => {
+              const mg = ZONE_KEY_TO_GROUP[zoneKey];
+              const selected = selectedGroup === mg;
+              return (
+                <button
+                  key={zoneKey}
+                  onClick={() => setSelectedGroup(selected ? null : mg)}
+                  className="tap transition-colors"
+                  style={{
+                    borderRadius: 8,
+                    padding: "8px 14px",
+                    fontSize: 13,
+                    ...(selected
+                      ? { background: "#A092E0", border: "1px solid #A092E0", color: "#FFFFFF", fontWeight: 700 }
+                      : { background: "#FAFAFB", border: "1px solid #E5E6EB", color: "#241F1B", fontWeight: 500 }),
+                  }}
+                >
+                  {ZONE_LABEL[zoneKey]}
+                </button>
+              );
+            })}
           </div>
 
           <p className="text-[11px] text-charcoal-faint text-center mb-4">
@@ -358,7 +401,9 @@ export default function ExerciseDatabaseTab() {
 
           {selectedGroup && (
             <div>
-              <p className="section-label text-charcoal-faint mb-2">{MUSCLE_GROUP_LABEL[selectedGroup]}</p>
+              <p className="section-label text-charcoal-faint mb-2">
+                {`${selectedMuscleLabel} · ${filteredByGroup.length} ${filteredByGroup.length === 1 ? "exercise" : "exercises"}`}
+              </p>
               <Card padded={false} className="divide-y divide-charcoal/[0.06]">
                 {filteredByGroup.length === 0 ? (
                   <p className="text-sm text-charcoal-faint text-center py-6">No exercises for this group.</p>

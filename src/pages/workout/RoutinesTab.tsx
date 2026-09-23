@@ -53,21 +53,19 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
 const folderColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
 
 
-// Colour-coded folders: folder.color is already per-folder state (set by the
-// user via the color picker, or seeded per-index in AppContext's
-// defaultRoutineFolders), but any folder WITHOUT an explicit color fell back
-// to the same shared "#5B5349" (rgb(var(--c-charcoal-soft))) tile — so a
-// batch of un-colored folders all looked identical. This derives a stable,
-// distinct color per folder id (not render index, so it survives reordering
-// via moveRoutineFolder) from the same six-color palette already used for
-// the color pickers and recognized by rowTint above.
-const folderTileColor = (folder: RoutineFolder): string => {
-  if (folder.color) return folder.color;
-  let hash = 0;
-  for (let i = 0; i < folder.id.length; i++) {
-    hash = (hash * 31 + folder.id.charCodeAt(i)) >>> 0;
-  }
-  return folderColorOptions[hash % folderColorOptions.length];
+// Colour-coded folders: folder.color is per-folder state (set by the user via
+// the color picker, or seeded per-index in AppContext's defaultRoutineFolders).
+// Any folder WITHOUT an explicit color used to fall back to one shared
+// "#5B5349" tile, so a batch of un-colored folders all looked identical.
+//
+// Master handover item 12: a folder the user coloured keeps that colour; one
+// without takes the next colour of the item-12 palette in folder order,
+// repeating, with the glyph darkened on the three light fills.
+const FOLDER_TILE_PALETTE = ["#A299DE", "#A2C8C2", "#E8C877", "#E0A9C6", "#5F5093", "#4F7F78"];
+const FOLDER_GLYPH_ON: Record<string, string> = { "#A2C8C2": "#2F5A54", "#E8C877": "#5A4410", "#E0A9C6": "#6E2B4B" };
+const folderTileColor = (folder: RoutineFolder, order: number): { fill: string; glyph: string } => {
+  const fill = folder.color ?? FOLDER_TILE_PALETTE[order % FOLDER_TILE_PALETTE.length];
+  return { fill, glyph: FOLDER_GLYPH_ON[fill] ?? "#FFFFFF" };
 };
 
 // Iteration 6 "Team" §3.2: folders and routines render as "quiet tinted
@@ -215,13 +213,14 @@ export default function RoutinesTab() {
     const folderRoutines = routines.filter((r) => r.folderId === folder.id);
     const subfolders = childrenOf(folder.id);
     const collapsed = collapsedFolders.has(folder.id);
-    const tileColor = folderTileColor(folder);
+    // Folder order: the folder's position in the account's folder list.
+    const tile = folderTileColor(folder, routineFolders.indexOf(folder));
 
     return (
       <div style={{ marginLeft: depth * 16 }}>
         <div
           className="flex items-center gap-[11px] justify-between mb-2 rounded-[15px] px-3.5 py-3"
-          style={{ background: rowTint(tileColor) }}
+          style={{ background: rowTint(tile.fill) }}
         >
           {renamingId === folder.id ? (
             <div className="flex items-center gap-2 flex-1">
@@ -255,9 +254,9 @@ export default function RoutinesTab() {
               >
                 <span
                   className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0"
-                  style={{ background: tileColor }}
+                  style={{ background: tile.fill }}
                 >
-                  <Folder size={14} className="text-white" />
+                  <Folder size={14} style={{ color: tile.glyph }} />
                 </span>
                 <span className="min-w-0">
                   <span className="block text-[12.5px] font-bold text-charcoal truncate">{folder.name}</span>
