@@ -5,7 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { CreateMealSheet } from "../../components/food/CreateMealSheet";
 import { CreateRecipeSheet } from "../../components/food/CreateRecipeSheet";
 import { MealPrepFlowSheet, type PrepKind } from "../../components/food/MealPrepFlowSheet";
-import { MacroBar, sumItems, divideTotals, PREP_TEAL, PREP_LAV, type PrepItem } from "../../components/food/mealPrepShared";
+import { sumItems, divideTotals, PREP_TEAL, PREP_LAV, type PrepItem } from "../../components/food/mealPrepShared";
 import type { CustomMeal, Recipe } from "../../types";
 
 // Pull-to-refresh, the same gesture and threshold as the Health page's: the
@@ -15,7 +15,8 @@ const PULL_THRESHOLD = 70;
 // Mobile handoff item 10 (README lines 613-774, CentiumMealPrep.dc.html):
 // the tab is now two widget cards modelled on the Habits widget — tinted
 // container, caps title top-left, count badge top-right, up to three
-// newest-first preview rows with a macro bar, then a CTA. Tapping the card
+// newest-first preview rows (name and kcal only, as the master handover's
+// frames draw them), then a CTA. Tapping the card
 // body opens that item's List screen; tapping a preview row (stopping
 // propagation so the card body's own handler doesn't also fire) opens that
 // item's Detail screen directly; the CTA (also stopping propagation) opens
@@ -241,7 +242,6 @@ const PrepCard: React.FC<{
                   <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "#241F1B" }}>
                     {x.title}
                   </span>
-                  <MacroBar p={per.p} c={per.c} f={per.f} />
                   <span className="flex-none text-[12px] font-semibold tabular-nums whitespace-nowrap" style={{ color: c.text }}>
                     {Math.round(per.kcal)}{isR ? " /srv" : " kcal"}
                   </span>
