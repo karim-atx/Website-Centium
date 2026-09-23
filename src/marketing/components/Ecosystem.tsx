@@ -409,6 +409,14 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
                 clipPath: `inset(0px 0px 0px ${proOn ? 0 : 100}.00%)`,
                 boxShadow: proOn ? "inset 3px 0 0 0 #4E3894" : "inset 3px 0 0 0 transparent",
                 transition: "clip-path .52s cubic-bezier(.22,1,.36,1),box-shadow .52s cubic-bezier(.22,1,.36,1)",
+                // Both wipe panels are always fully painted (see the file
+                // header) -- this keeps this one on its own compositor layer
+                // at rest so ordinary page scroll over the section doesn't
+                // re-rasterize it every frame. useEcoSlider's fit()/equalise()
+                // toggle it off for the instant they synchronously measure
+                // this element -- it corrupts those offsetHeight reads if left
+                // on, verified directly -- and restore it right after.
+                willChange: "clip-path",
                 minWidth: 0,
                 justifyContent: "flex-end",
               }}
@@ -611,6 +619,9 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
                 clipPath: `inset(0px ${bizOn ? 0 : 100}.00% 0px 0px)`,
                 boxShadow: bizOn ? "inset -3px 0 0 0 #2F5F58" : "inset -3px 0 0 0 transparent",
                 transition: "clip-path .52s cubic-bezier(.22,1,.36,1),box-shadow .52s cubic-bezier(.22,1,.36,1)",
+                // See the "pro" panel above for why this is here and why
+                // useEcoSlider toggles it off during its own measurements.
+                willChange: "clip-path",
                 minWidth: 0,
                 justifyContent: "flex-start",
               }}

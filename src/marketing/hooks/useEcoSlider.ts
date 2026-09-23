@@ -171,55 +171,71 @@ export function useEcoSlider(initial: EcoPos = -1) {
 
     const room = Math.max(240, window.innerHeight - NAV - MARGIN);
     const wipes = Array.from(dk.querySelectorAll<HTMLElement>("[data-eco-wipe]"));
-    const chrome = () => st.offsetHeight - dk.offsetHeight;
-    // content height, not the clip's: identical whichever side is showing
-    const needOf = (wp: HTMLElement) => {
-      const clip = wp.querySelector<HTMLElement>("[data-eco-clip]");
-      const inner = clip?.firstElementChild as HTMLElement | null;
-      return inner ? chrome() + wp.offsetHeight - clip!.offsetHeight + inner.offsetHeight : 0;
-    };
-    const need = () => Math.max(...wipes.map(needOf));
+    // `will-change: clip-path` (set in Ecosystem.tsx) keeps each wipe panel
+    // on its own compositor layer at rest -- both panels are always fully
+    // painted (see this hook's own doc comment), so that's what keeps plain
+    // page scroll over this section cheap on mobile instead of re-rastering
+    // both of them every frame. It also corrupts the offsetHeight reads this
+    // function takes on these exact elements -- verified directly: left on
+    // during a measurement pass, the shed/back-fill math below collapses the
+    // card to almost nothing. So it's dropped for the duration of this
+    // synchronous pass and restored before returning, on every path out.
+    // Nothing repaints in between: fit() only ever runs inside a layout
+    // effect or an rAF callback, before the browser's next paint.
+    for (const wp of wipes) wp.style.willChange = "auto";
+    try {
+      const chrome = () => st.offsetHeight - dk.offsetHeight;
+      // content height, not the clip's: identical whichever side is showing
+      const needOf = (wp: HTMLElement) => {
+        const clip = wp.querySelector<HTMLElement>("[data-eco-clip]");
+        const inner = clip?.firstElementChild as HTMLElement | null;
+        return inner ? chrome() + wp.offsetHeight - clip!.offsetHeight + inner.offsetHeight : 0;
+      };
+      const need = () => Math.max(...wipes.map(needOf));
 
-    // 1) shared tiers until the taller panel fits
-    const levels: number[] = [];
-    st.setAttribute("data-efit", "");
-    while (levels.length < TIERS && need() > room) {
-      levels.push(levels.length + 1);
-      st.setAttribute("data-efit", levels.join(" "));
-    }
-    // 2) per-panel back-fill, graphics first
-    const hidden = (el: Element) => (el as HTMLElement).offsetParent === null && getComputedStyle(el).display === "none";
-    if (levels.length) for (const wp of wipes) {
-      for (let pass = 0; pass < 2; pass++) {
-        let changed = false;
-        for (const tier of BACKFILL) {
-          wp.querySelectorAll(`[data-eco-shed="${tier}"]`).forEach((el) => {
-            if (el.hasAttribute("data-ekeep") || !hidden(el)) return;
-            el.setAttribute("data-ekeep", "");
-            if (hidden(el) || needOf(wp) > room) el.removeAttribute("data-ekeep");
-            else changed = true;
-          });
+      // 1) shared tiers until the taller panel fits
+      const levels: number[] = [];
+      st.setAttribute("data-efit", "");
+      while (levels.length < TIERS && need() > room) {
+        levels.push(levels.length + 1);
+        st.setAttribute("data-efit", levels.join(" "));
+      }
+      // 2) per-panel back-fill, graphics first
+      const hidden = (el: Element) => (el as HTMLElement).offsetParent === null && getComputedStyle(el).display === "none";
+      if (levels.length) for (const wp of wipes) {
+        for (let pass = 0; pass < 2; pass++) {
+          let changed = false;
+          for (const tier of BACKFILL) {
+            wp.querySelectorAll(`[data-eco-shed="${tier}"]`).forEach((el) => {
+              if (el.hasAttribute("data-ekeep") || !hidden(el)) return;
+              el.setAttribute("data-ekeep", "");
+              if (hidden(el) || needOf(wp) > room) el.removeAttribute("data-ekeep");
+              else changed = true;
+            });
+          }
+          if (!changed) break;
         }
-        if (!changed) break;
       }
-    }
-    // 3) leftover height → the visible chart (bars: +px, cap 110; plot: +px, cap 150)
-    for (const wp of wipes) {
-      const scr = wp.querySelector<HTMLElement>("[data-eco-screen]");
-      if (!scr) continue;
-      const cs = getComputedStyle(scr);
-      const gap = parseFloat(cs.rowGap) || 8;
-      let used = 0, n = 0;
-      for (let c = scr.firstElementChild as HTMLElement | null; c; c = c.nextElementSibling as HTMLElement | null) {
-        if (!c.offsetParent) continue;
-        used += c.getBoundingClientRect().height; n++;
+      // 3) leftover height → the visible chart (bars: +px, cap 110; plot: +px, cap 150)
+      for (const wp of wipes) {
+        const scr = wp.querySelector<HTMLElement>("[data-eco-screen]");
+        if (!scr) continue;
+        const cs = getComputedStyle(scr);
+        const gap = parseFloat(cs.rowGap) || 8;
+        let used = 0, n = 0;
+        for (let c = scr.firstElementChild as HTMLElement | null; c; c = c.nextElementSibling as HTMLElement | null) {
+          if (!c.offsetParent) continue;
+          used += c.getBoundingClientRect().height; n++;
+        }
+        const spare = Math.floor(scr.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0) - used - gap * Math.max(0, n - 1));
+        if (spare < 12) continue;
+        const bars = wp.querySelector<HTMLElement>("[data-eco-bars]");
+        const plot = wp.querySelector<HTMLElement>("[data-eco-plot]");
+        if (bars && bars.offsetParent) bars.style.setProperty("--eco-grow", Math.min(spare, 110) + "px");
+        else if (plot && plot.offsetParent) plot.style.setProperty("--eco-grow", Math.min(spare, 150) + "px");
       }
-      const spare = Math.floor(scr.clientHeight - (parseFloat(cs.paddingTop) || 0) - (parseFloat(cs.paddingBottom) || 0) - used - gap * Math.max(0, n - 1));
-      if (spare < 12) continue;
-      const bars = wp.querySelector<HTMLElement>("[data-eco-bars]");
-      const plot = wp.querySelector<HTMLElement>("[data-eco-plot]");
-      if (bars && bars.offsetParent) bars.style.setProperty("--eco-grow", Math.min(spare, 110) + "px");
-      else if (plot && plot.offsetParent) plot.style.setProperty("--eco-grow", Math.min(spare, 150) + "px");
+    } finally {
+      for (const wp of wipes) wp.style.willChange = "clip-path";
     }
   }, []);
 
@@ -227,10 +243,19 @@ export function useEcoSlider(initial: EcoPos = -1) {
   const equalise = useCallback(() => {
     const dk = deck.current;
     if (!dk) return;
-    const cards = Array.from(dk.querySelectorAll<HTMLElement>("[data-eco-wipe] > div"));
-    cards.forEach((c) => (c.style.minHeight = ""));
-    const max = Math.max(0, ...cards.map((c) => Math.ceil(c.getBoundingClientRect().height)));
-    if (max) cards.forEach((c) => (c.style.minHeight = max + "px"));
+    // Same will-change dance as fit() above and for the same reason: these
+    // cards are descendants of the wipe panels the compositor hint lives on,
+    // so it's dropped for this synchronous read too, as a precaution.
+    const wipes = Array.from(dk.querySelectorAll<HTMLElement>("[data-eco-wipe]"));
+    for (const wp of wipes) wp.style.willChange = "auto";
+    try {
+      const cards = Array.from(dk.querySelectorAll<HTMLElement>("[data-eco-wipe] > div"));
+      cards.forEach((c) => (c.style.minHeight = ""));
+      const max = Math.max(0, ...cards.map((c) => Math.ceil(c.getBoundingClientRect().height)));
+      if (max) cards.forEach((c) => (c.style.minHeight = max + "px"));
+    } finally {
+      for (const wp of wipes) wp.style.willChange = "clip-path";
+    }
   }, []);
 
   // after every commit render: re-assert the committed paint, then measure
