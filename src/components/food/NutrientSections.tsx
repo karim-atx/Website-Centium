@@ -66,11 +66,30 @@ function computeCalcAmount(key: string, totals: Record<string, number>): number 
   if (key === CALC_KEYS.omega6to3.key) {
     const n6 = sumPresent(totals, CALC_KEYS.omega6to3.n6);
     const n3 = sumPresent(totals, CALC_KEYS.omega6to3.n3);
-    if (n6 === undefined && n3 === undefined) return undefined;
-    if (!n3) return undefined; // no omega-3 data to express a ratio against
-    return (n6 ?? 0) / n3;
+    // Item 10: never state a ratio from one side's data alone — omega-6 with
+    // no values is unknown, not zero.
+    if (n6 === undefined || n3 === undefined) return undefined;
+    if (!n3) return undefined; // no omega-3 amount to express a ratio against
+    return n6 / n3;
   }
   return undefined;
+}
+
+function calcPresentCount(
+  key: string,
+  totals: Record<string, number>,
+  present: Record<string, number>
+): number | undefined {
+  const components =
+    key === CALC_KEYS.netCarbs.key
+      ? CALC_KEYS.netCarbs.from
+      : key === CALC_KEYS.totalMcts.key
+        ? CALC_KEYS.totalMcts.from
+        : key === CALC_KEYS.omega6to3.key
+          ? [...CALC_KEYS.omega6to3.n6, ...CALC_KEYS.omega6to3.n3]
+          : [];
+  const counts = components.filter((k) => totals[k] !== undefined).map((k) => present[k] ?? 0);
+  return counts.length ? Math.min(...counts) : undefined;
 }
 
 // ---- Target resolution ------------------------------------------------
@@ -130,24 +149,42 @@ function buildRowView(row: NutrientRow, props: NutrientSectionsProps): RowView {
   }
 
   // Calc rows have no `present` entry of their own (they're derived, not
-  // looked up), so a partial-data chip isn't attempted for them.
-  const presentCount = row.kind === "calc" ? undefined : present[row.key];
+  // looked up). Master handover item 10: a figure derived from partial inputs
+  // is itself partial — its known-food count is the lowest of the components
+  // it was actually computed from.
+  const presentCount = row.kind === "calc" ? calcPresentCount(row.key, totals, present) : present[row.key];
   const partial =
-    row.kind !== "calc" && hasAmount && itemCount > 0 && presentCount !== undefined && presentCount < itemCount
+    hasAmount && itemCount > 0 && presentCount !== undefined && presentCount < itemCount
       ? { shown: presentCount, of: itemCount }
       : null;
 
   return { row, amount, hasAmount, target, percent, isOverLimit, partial };
 }
 
-function rowIsZero(view: RowView): boolean {
-  return !view.hasAmount || view.amount === 0;
+// Item 10: the six limit nutrients carry the "limit" chip — trans fat too,
+// though it has no Daily Value and so renders amount-only.
+const LIMIT_CHIP_NAMES = new Set(["Saturated fat", "Trans fat", "Cholesterol", "Sodium", "Added sugars", "Caffeine"]);
+
+// Item 10: a Daily Value exists for these, but food data never reports them,
+// so they always read as a dash — never a zero.
+const ALWAYS_DASH_NAMES = new Set(["Chromium", "Chloride"]);
+
+// Item 10: a row has data when it has an amount (a logged 0 counts) and is not
+// one of the always-dash rows. Drives the section count and "Logged only".
+function rowHasData(view: RowView): boolean {
+  return view.hasAmount && !ALWAYS_DASH_NAMES.has(view.row.name);
 }
+
+// Item 10 chip: 9px 700, radius 5.
+const chipClass = "text-[9px] font-bold rounded-[5px] px-[5px] py-px";
 
 // ---- Row rendering ----------------------------------------------------
 
 function NutrientRowLine({ view }: { view: RowView }) {
-  const { row, amount, hasAmount, target, percent, isOverLimit, partial } = view;
+  const { row, target, percent, isOverLimit, partial } = view;
+  const alwaysDash = ALWAYS_DASH_NAMES.has(row.name);
+  const hasAmount = view.hasAmount && !alwaysDash;
+  const amount = alwaysDash ? undefined : view.amount;
   const isRatioRow = row.key === CALC_KEYS.omega6to3.key;
 
   const amountText =
@@ -159,42 +196,37 @@ function NutrientRowLine({ view }: { view: RowView }) {
 
   const targetText =
     row.kind === "ref"
-      ? row.refText ?? "Ref"
+      ? `Ref ${row.refText ?? ""}`.trim()
       : row.kind === "none" || row.kind === "calc"
         ? null
         : target !== null
           ? `${formatAmount(target)}${row.unit ? ` ${row.unit}` : ""}`
           : "—";
 
-  const showBar = row.kind === "ref" ? target !== null : (row.kind === "goal" || row.kind === "limit") && target !== null;
+  // Bars only for a real amount against a real target (goal, limit, or a
+  // muted reference bar); an empty day renders no bars at all.
+  const showBar =
+    hasAmount && target !== null && (row.kind === "ref" || row.kind === "goal" || row.kind === "limit");
   const barPct =
-    showBar && hasAmount && amount !== undefined && target !== null && target > 0
-      ? Math.min(100, (amount / target) * 100)
-      : 0;
+    showBar && amount !== undefined && target !== null && target > 0 ? Math.min(100, (amount / target) * 100) : 0;
+  const showPercent = hasAmount && percent !== null;
 
   return (
     <div className="py-[9px] border-b border-charcoal/[0.06] last:border-b-0">
       <div className="flex items-start justify-between gap-2">
         <span className="min-w-0 flex-1 text-[12px] font-semibold text-charcoal truncate">{row.name}</span>
         <div className="flex items-center gap-1 shrink-0">
-          {row.kind === "limit" && (
-            <span className="text-[8px] font-bold uppercase tracking-wide rounded-full px-1.5 py-[2px] bg-status-caution-bg text-status-caution">
-              Limit
-            </span>
-          )}
-          {row.kind === "ref" && (
-            <span className="text-[8px] font-bold uppercase tracking-wide rounded-full px-1.5 py-[2px] bg-charcoal/[0.07] text-charcoal-faint">
-              Ref
+          {LIMIT_CHIP_NAMES.has(row.name) && (
+            <span className={chipClass} style={{ color: "#8A6A1E", background: "rgba(217,164,65,0.16)" }}>
+              limit
             </span>
           )}
           {row.kind === "calc" && (
-            <span className="text-[8px] font-bold uppercase tracking-wide rounded-full px-1.5 py-[2px] bg-team-lavender/[0.18] text-team-lavender-deep">
-              Calculated
-            </span>
+            <span className={`${chipClass} bg-team-lavender/[0.18] text-team-lavender-deep`}>calculated</span>
           )}
-          {partial && (
-            <span className="text-[8px] font-bold uppercase tracking-wide rounded-full px-1.5 py-[2px] bg-status-caution-bg text-status-caution">
-              Partial
+          {partial && hasAmount && (
+            <span className={chipClass} style={{ color: "#8A6A1E", background: "rgba(217,164,65,0.16)" }}>
+              partial
             </span>
           )}
         </div>
@@ -204,7 +236,7 @@ function NutrientRowLine({ view }: { view: RowView }) {
         <span className="text-[11.5px] font-bold text-charcoal-soft tabular-nums">{amountText}</span>
         <span className="flex items-center gap-1.5 shrink-0">
           {targetText && <span className="text-[10px] text-charcoal-faint tabular-nums">{targetText}</span>}
-          {percent !== null && (
+          {showPercent && percent !== null && (
             <span
               className={clsx(
                 "text-[10.5px] font-bold tabular-nums",
@@ -229,21 +261,21 @@ function NutrientRowLine({ view }: { view: RowView }) {
         </div>
       )}
 
-      {isOverLimit && target !== null && (
+      {hasAmount && isOverLimit && target !== null && (
         <p className="mt-1 text-[10px] font-semibold text-status-caution">
           Over the {formatAmount(target)}
           {row.unit ? ` ${row.unit}` : ""} limit
         </p>
       )}
 
-      {partial && (
+      {partial && hasAmount && (
         <p className="mt-1 text-[10px] text-charcoal-faint">
           Based on {partial.shown} of {partial.of} foods
         </p>
       )}
 
       {row.mgPerKgBodyWeight != null && target !== null && (
-        <p className="mt-1 text-[10px] text-charcoal-faint">Target based on your body weight.</p>
+        <p className="mt-1 text-[10px] text-charcoal-faint">based on your body weight</p>
       )}
 
       {row.note && <p className="mt-1 text-[10px] italic text-charcoal-faint">{row.note}</p>}
@@ -267,10 +299,10 @@ function NutrientSectionBlock({
   const mainViews = section.rows.map((row) => buildRowView(row, data));
   const subViews = section.sub ? section.sub.rows.map((row) => buildRowView(row, data)) : [];
   const allViews = [...mainViews, ...subViews];
-  const loggedCount = allViews.filter((v) => v.hasAmount).length;
+  const loggedCount = allViews.filter(rowHasData).length;
 
-  const visibleMain = data.filter === "logged" ? mainViews.filter((v) => !rowIsZero(v)) : mainViews;
-  const visibleSub = data.filter === "logged" ? subViews.filter((v) => !rowIsZero(v)) : subViews;
+  const visibleMain = data.filter === "logged" ? mainViews.filter(rowHasData) : mainViews;
+  const visibleSub = data.filter === "logged" ? subViews.filter(rowHasData) : subViews;
   const nothingUnderFilter = data.filter === "logged" && visibleMain.length === 0 && visibleSub.length === 0;
 
   return (

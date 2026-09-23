@@ -28,10 +28,26 @@ export default function NutrientSummaryPage() {
   const [filterOpen, setFilterOpen] = useState(false);
 
   const todaysEntries = useMemo(() => foodLog.filter((e) => e.date === selectedDate), [foodLog, selectedDate]);
-  const { totals, present, itemCount } = useMemo(
-    () => sumNutrientMaps(todaysEntries.map((e) => e.nutrients)),
-    [todaysEntries]
-  );
+  // Master handover item 10: amounts are the day's sum across every logged
+  // food. Calories and macros come from each entry's own totals (every entry
+  // has them, so they are never partial); every other nutrient only from the
+  // entries whose per-nutrient snapshot carries it.
+  const { totals, present, itemCount } = useMemo(() => {
+    const summed = sumNutrientMaps(todaysEntries.map((e) => e.nutrients));
+    if (todaysEntries.length === 0) return summed;
+    const macros: Record<string, number> = {
+      calories: todaysEntries.reduce((s, e) => s + e.calories, 0),
+      protein: todaysEntries.reduce((s, e) => s + e.protein, 0),
+      total_fat: todaysEntries.reduce((s, e) => s + e.fat, 0),
+      total_carbohydrates: todaysEntries.reduce((s, e) => s + e.carbs, 0),
+    };
+    const complete = Object.fromEntries(Object.keys(macros).map((k) => [k, todaysEntries.length]));
+    return {
+      totals: { ...summed.totals, ...macros },
+      present: { ...summed.present, ...complete },
+      itemCount: summed.itemCount,
+    };
+  }, [todaysEntries]);
   const targets = targetsFromGoal(nutritionGoal);
 
   return (
@@ -60,12 +76,19 @@ export default function NutrientSummaryPage() {
             {filterOpen &&
               createPortal(
                 <>
-                  {/* Tapping the dimmed page closes the popover — no caret,
-                      scale-from-top-right entry per the handoff. */}
-                  <div className="fixed inset-0 z-40 bg-charcoal/10" onClick={() => setFilterOpen(false)} />
+                  {/* Item 10: a transparent backdrop closes the popover; no
+                      caret; scales in from its top-right corner. White card,
+                      8px padding (168px content, ~186 x 96 overall). */}
+                  <div className="fixed inset-0 z-40" onClick={() => setFilterOpen(false)} />
                   <div
-                    className="fixed z-50 w-[186px] h-24 rounded-[14px] bg-white border border-team-lavender/30 shadow-soft p-1.5 flex flex-col gap-1 animate-popover-in"
-                    style={{ top: 66, right: 16, transformOrigin: "top right" }}
+                    className="fixed z-50 w-[186px] h-24 box-border rounded-[14px] bg-white p-2 flex flex-col gap-1 animate-popover-in"
+                    style={{
+                      top: 66,
+                      right: 16,
+                      transformOrigin: "top right",
+                      border: "1px solid rgba(174,161,220,0.5)",
+                      boxShadow: "0 12px 32px rgba(95,80,147,0.18)",
+                    }}
                   >
                     {filterOptions.map((opt) => (
                       <button
@@ -90,9 +113,9 @@ export default function NutrientSummaryPage() {
 
       {filter === "logged" && (
         <div className="flex items-center justify-between gap-2 rounded-full bg-team-lavender/10 px-3.5 py-2 mb-3 animate-fade-slide-up">
-          <span className="text-[11px] font-semibold text-primary-deep-text">Showing logged nutrients only</span>
+          <span className="text-[11px] font-semibold text-primary-deep-text">Logged only</span>
           <button onClick={() => setFilter("all")} className="tap text-[11px] font-bold text-primary shrink-0">
-            All nutrients
+            Show all
           </button>
         </div>
       )}
