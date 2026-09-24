@@ -72,7 +72,7 @@ const TERMS_GROUPS: LegalGroup[] = [
     h: "Subscriptions and billing",
     items: [
       "Consumer plans bill monthly or yearly in advance; yearly plans are discounted and renew automatically until cancelled.",
-      "Professional seats are billed per active seat per month. Business plans combine a platform fee with a revenue share on marketplace transactions, itemised on each invoice.",
+      "Professionals subscribe to their own plan, billed monthly or yearly. Businesses pay a base platform fee plus seat blocks of five professionals, billed monthly or yearly; each seated professional receives the Starter plan. A marketplace revenue share applies to businesses' marketplace sales and is billed separately.",
       "You can cancel at any time; access continues to the end of the paid period. Statutory refund and cooling-off rights are unaffected.",
       "Prices may change with at least 30 days' notice before your next renewal.",
     ],
