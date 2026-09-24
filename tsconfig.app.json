@@ -27,5 +27,7 @@
   "include": ["src", "lib"],
   // Compiled by tsconfig.worker.json instead — it runs in a worker global, not
   // the DOM one this project describes.
-  "exclude": ["src/sw.ts"]
+  // Tests belong to tsconfig.test.json, which has node types; the app project
+  // deliberately does not.
+  "exclude": ["src/sw.ts", "src/**/*.test.ts"]
 }

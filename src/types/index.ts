@@ -609,6 +609,86 @@ export const ONE_RM_CLASSIFICATIONS: ExerciseClassification[] = [
   "weighted_bodyweight",
 ];
 
+
+// ---------------------------------------------------------------------------
+// Endurance plans — the structured cardio prescription, schema v1.
+//
+// MIRRORS valid_endurance_plan() EXACTLY (Database-Atraxia 20260924270000).
+// The database validates this document with a CHECK, so a shape this type
+// allows but that validator rejects is a runtime refusal rather than a
+// compile error — which is why every union here is written as narrowly as the
+// SQL is, down to the key counts the validator enforces.
+//
+// SUPERSEDES the cardio_* fields below it. Those columns are still read when
+// a row predates this and carries no plan, and are never written again.
+// ---------------------------------------------------------------------------
+
+/** What an athlete is asked to hold during one step. */
+export type EnduranceTarget =
+  | { kind: "open" }
+  | { kind: "hr_zone"; zone: number }
+  | { kind: "rpe"; value: number }
+  /** A BAND in seconds per km, never a single figure. min <= max. */
+  | { kind: "pace"; min_sec_per_km: number; max_sec_per_km: number };
+
+/** How a recovery step is covered. Absent on work steps that assume running. */
+export type EnduranceMode = "run" | "jog" | "walk" | "rest";
+
+/**
+ * One step, measured by time OR by distance — never both.
+ *
+ * The validator rejects a step carrying `seconds` and `meters` together, since
+ * it would be ambiguous about which one the athlete stops on.
+ */
+export type EnduranceStep =
+  | { measure: "time"; seconds: number; target: EnduranceTarget; mode?: EnduranceMode }
+  | { measure: "distance"; meters: number; target: EnduranceTarget; mode?: EnduranceMode };
+
+export type EnduranceMain =
+  | { type: "steady"; step: EnduranceStep }
+  | { type: "intervals"; repeats: number; work: EnduranceStep; recovery: EnduranceStep };
+
+export interface EndurancePlan {
+  version: 1;
+  /** Explicit null is as valid as absence — the document round-trips whole. */
+  warmup?: EnduranceStep | null;
+  main: EnduranceMain;
+  cooldown?: EnduranceStep | null;
+}
+
+/**
+ * How a group of exercises repeats.
+ *
+ * Mirrors public.block_kind. The four differ only in what governs the
+ * repetition, which is why the database models them as one enum with a
+ * per-kind CHECK rather than four tables.
+ */
+export type BlockKind = "superset" | "amrap" | "emom" | "for_time";
+
+/**
+ * A group of consecutive exercises inside one routine or template.
+ *
+ * THE PARAMETER SHAPE IS PER KIND and the database enforces it:
+ *   superset  none of the three
+ *   amrap     timeCapSeconds only  (the window; the round count is the RESULT)
+ *   emom      intervalSeconds + rounds
+ *   for_time  rounds, optional timeCapSeconds
+ *
+ * Members are `Exercise`s carrying this block's id, and must be CONTIGUOUS by
+ * position — checked by a DEFERRED trigger, because the save path deletes
+ * every prescription and re-inserts, passing through states no immediate
+ * constraint could accept.
+ */
+export interface WorkoutBlock {
+  id: string;
+  kind: BlockKind;
+  /** Free text the athlete sees — "Finisher", "Metcon A". The kind is shown when absent. */
+  label?: string;
+  timeCapSeconds?: number;
+  intervalSeconds?: number;
+  rounds?: number;
+}
+
 export interface Exercise {
   id: string;
   name: string;
@@ -674,6 +754,20 @@ export interface Exercise {
   cardioInclinePct?: number;
   cardioPaceMinPerKm?: number;
   cardioAvgHeartRate?: number;
+  /**
+   * A timed hold, for the `duration` classification — routine_exercises.
+   * duration_seconds, which has existed since 20260917050000 and which no
+   * client code has ever read or written until now.
+   */
+  durationSeconds?: number;
+  /**
+   * The structured cardio prescription. Present only on `cardio` exercises —
+   * the database enforces that with a trigger, since the classification lives
+   * on another table.
+   */
+  endurancePlan?: EndurancePlan | null;
+  /** The block this belongs to, or absent for a standalone exercise. */
+  blockId?: string | null;
 }
 
 // V4 (QA 4.0): a custom exercise, saved to the searchable library on
@@ -748,6 +842,15 @@ export interface Routine {
   // client-professional relationship ends.
   assignedByProfessional?: boolean;
   sourceTemplateId?: string;
+  /**
+   * The groups this routine's exercises are gathered into.
+   *
+   * SEPARATE FROM `exercises` rather than nested inside it, mirroring the
+   * schema: a block is a row of its own and its members point at it. Nesting
+   * would make the flat ordered list — which is what position means, what the
+   * contiguity rule is about, and what the session walks — the derived thing.
+   */
+  blocks?: WorkoutBlock[];
 }
 
 // V3: per-set classification + notes + RPE, added via the "..." menu.

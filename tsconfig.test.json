@@ -1,0 +1,32 @@
+{
+  // The node:test files. Its own project, rather than widening the app's
+  // `types` with "node": doing that would put `process`, `Buffer` and friends
+  // in scope for every browser module, which is exactly the mistake the app
+  // project exists to catch.
+  //
+  // Bundler resolution, like the app, so a test imports what the module under
+  // test imports and the two cannot disagree about a path. Node resolves the
+  // one RUNTIME import itself, which is why tests import the module with its
+  // .ts extension; everything else they take is `import type`, erased before
+  // Node ever sees it.
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.test.tsbuildinfo",
+    "target": "es2023",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "skipLibCheck": true,
+
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "moduleDetection": "force",
+    "noEmit": true,
+
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "erasableSyntaxOnly": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src/**/*.test.ts"]
+}
