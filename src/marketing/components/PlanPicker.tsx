@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import clsx from "clsx";
+import { yearlySaving } from "../../services/subscription-tiers/pricing";
 
 export interface Plan {
   key: string;
@@ -10,9 +11,9 @@ export interface Plan {
   monthly: number;
   /** Monthly billing-unit label, e.g. "per month" or "per month + rev share". */
   unit: string;
-  /** Literal discounted annual total (v5 handoff: −15%, e.g. 149/99/799) —
-   *  NOT derived from `monthly` at runtime. $15×12×0.85 = $153, not the
-   *  handoff's $149, so these figures must come from the data, verbatim. */
+  /** The annual total, from subscription_tiers.yearly_price. NOT derived
+   *  from `monthly`: $9.99 x 12 is $119.88 and the column says $99.99, so a
+   *  computed one would be wrong by exactly the discount. */
   yearlyPrice: number;
   /** Yearly billing-unit label, e.g. "/ yr" or "/ yr + rev share". */
   yearlyUnit: string;
@@ -34,8 +35,10 @@ export interface Plan {
  *  `selected` index below so it can never drift between the border, shadow,
  *  scale, badge and CTA fill on a given card.
  *
- *  Monthly/yearly billing toggle (−15% yearly, literal annual totals from
- *  `plan.yearlyPrice`) sits above the grid and is shared across all cards
+ *  Monthly/yearly billing toggle (annual totals come from `plan.yearlyPrice`,
+ *  which is a database column; the saving beside them is computed per card
+ *  from its own two prices, never a fixed percentage)
+ *  and sits above the grid, shared across all cards
  *  via one piece of state, so every price and billing-note label updates
  *  together.
  *
@@ -96,6 +99,12 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
   const renderCard = (plan: Plan, i: number, narrow: boolean) => {
     const isSelected = i === selected;
     const isBusiness = plan.key === "business";
+    // COMPUTED FROM THIS CARD'S OWN TWO PRICES. The note read a flat
+    // "— 15% off" beside figures that give 16%, and the comment above the
+    // data said outright that the yearly total was not derived from the
+    // monthly one — which was true, and was also the reason the percentage
+    // beside it could not be a constant.
+    const saving = yearlySaving(plan.monthly, plan.yearlyPrice);
     const price = yearly ? plan.yearlyPrice : plan.monthly;
     const unit = yearly ? plan.yearlyUnit : plan.unit;
 
@@ -161,7 +170,11 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
           {yearly ? (
             <>
               Billed yearly{" "}
-              <span style={{ color: isSelected ? "#427C76" : "#8C8378", fontWeight: 600 }}>— 15% off</span>
+              {saving && (
+                <span style={{ color: isSelected ? "#427C76" : "#8C8378", fontWeight: 600 }}>
+                  — {saving.percent}% off
+                </span>
+              )}
             </>
           ) : (
             "Billed monthly"

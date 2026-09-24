@@ -7,6 +7,8 @@ import { PillarRail, type PillarData } from "../components/PillarRail";
 import { BrowserMockup, type RailItem } from "../components/BrowserMockup";
 import { PersonaArc, type PersonaData } from "../components/PersonaArc";
 import { PlanPicker, type Plan } from "../components/PlanPicker";
+import { PricingUnavailable } from "../components/PricingUnavailable";
+import { baseTier, cheapestPaid, usePricing, type Pricing } from "../hooks/usePricing";
 import { FaqAccordion, type FaqItem } from "../components/FaqAccordion";
 import { ProblemList, type ProblemItem } from "../components/ProblemList";
 import { Ecosystem } from "../components/Ecosystem";
@@ -56,51 +58,66 @@ const faqItems: FaqItem[] = [
   },
 ];
 
-// Literal figures from the v7 handoff's own `homePlans` data
-// (logic/data.js line ~147). A stale v5-round comment here previously cited
-// $15/$149/$99/$79/$799 as the handoff's literal values and rounded off the
-// cents — the current handoff's data.js carries every price (monthly *and*
-// yearly) as an explicit "*.99" string: 14.99/149.99, 9.99/99.99,
-// 79.99/799.99. rendered/08*.html confirms these are what's actually drawn
-// ($14.99, $149.99, $79.99, $799.99), so they are not derived at runtime
-// (e.g. $14.99×12×0.85 ≈ $152.99, not the handoff's own $149.99) — copy them
-// verbatim from data.js instead.
-const homePlans: Plan[] = [
-  {
-    key: "professionals",
-    name: "Professionals",
-    description: "Manage your entire roster, while keeping every experience personal.",
-    monthly: 14.99,
-    unit: "/ month",
-    prefix: "Starting at",
-    yearlyPrice: 149.99,
-    yearlyUnit: "/ yr",
-    features: ["Client roster & booking", "Programs Management", "Comprehensive Data Tracking"],
-    ctaLabel: "Get Started",
-  },
-  {
-    key: "clients",
-    name: "General Users",
-    description: "Take charge of your health with one click.",
-    monthly: 9.99,
-    unit: "per month",
-    yearlyPrice: 99.99,
-    yearlyUnit: "/ yr",
-    features: ["Nutrition & workout logging", "Health tracking & trends", "Connected Community & Experts"],
-    ctaLabel: "Get Started",
-  },
-  {
-    key: "business",
-    name: "Business",
-    description: "Unlock new opportunities. Scale your business with Centium.",
-    monthly: 79.99,
-    unit: "per month + rev share",
-    yearlyPrice: 799.99,
-    yearlyUnit: "/ yr + rev share",
-    features: ["Marketplace Visibility", "Team Operations", "Growth Analytics"],
-    ctaLabel: "Talk to us",
-  },
-];
+// THE PRICES COME FROM THE DATABASE NOW, not from the handoff's data.js.
+//
+// The comment that stood here was right for its moment: the handoff carried
+// explicit "*.99" figures and said they were not derived at runtime, because
+// $14.99 x 12 x 0.85 is $152.99 and the handoff wanted $149.99. Both reasons
+// have expired — subscription_tiers is final and anon-readable, and the
+// yearly price is a COLUMN rather than a discount anyone computes. What is
+// derived is the SAVING, which the handoff wrote as a flat 15% beside prices
+// that actually give 16%.
+//
+// The copy around each price — names, descriptions, feature bullets, CTA
+// wording — is still the handoff's, verbatim. Only the numbers moved.
+function buildHomePlans(pricing: Pricing): Plan[] {
+  const professional = cheapestPaid(pricing.professional);
+  const client = cheapestPaid(pricing.client);
+  const business = baseTier(pricing.business);
+  const plans: Plan[] = [];
+
+  if (professional) {
+    plans.push({
+      key: "professionals",
+      name: "Professionals",
+      description: "Manage your entire roster, while keeping every experience personal.",
+      monthly: professional.monthlyPrice,
+      unit: "/ month",
+      prefix: "Starting at",
+      yearlyPrice: professional.yearlyPrice ?? professional.monthlyPrice * 12,
+      yearlyUnit: "/ yr",
+      features: ["Client roster & booking", "Programs Management", "Comprehensive Data Tracking"],
+      ctaLabel: "Get Started",
+    });
+  }
+  if (client) {
+    plans.push({
+      key: "clients",
+      name: "General Users",
+      description: "Take charge of your health with one click.",
+      monthly: client.monthlyPrice,
+      unit: "per month",
+      yearlyPrice: client.yearlyPrice ?? client.monthlyPrice * 12,
+      yearlyUnit: "/ yr",
+      features: ["Nutrition & workout logging", "Health tracking & trends", "Connected Community & Experts"],
+      ctaLabel: "Get Started",
+    });
+  }
+  if (business) {
+    plans.push({
+      key: "business",
+      name: "Business",
+      description: "Unlock new opportunities. Scale your business with Centium.",
+      monthly: business.monthlyPrice,
+      unit: "per month + rev share",
+      yearlyPrice: business.yearlyPrice ?? business.monthlyPrice * 12,
+      yearlyUnit: "/ yr + rev share",
+      features: ["Marketplace Visibility", "Team Operations", "Growth Analytics"],
+      ctaLabel: "Talk to us",
+    });
+  }
+  return plans;
+}
 
 // ---------------------------------------------------------------------------
 // Platform pillar browser-chrome mockups.
@@ -873,6 +890,7 @@ const PricingHeading: React.FC = () => {
 };
 
 export const Home: React.FC = () => {
+  const { pricing, error: pricingError, retry: retryPricing } = usePricing();
   useSEO(
     "Your health, all in one place",
     "Centium brings nutrition tracking, workout logging, health tracking and community into one place."
@@ -1050,7 +1068,13 @@ export const Home: React.FC = () => {
           <div className="max-w-[1180px] mx-auto px-5 sm:px-10">
             <PricingHeading />
             <Reveal delay={0.08}>
-              <PlanPicker plans={homePlans} defaultSelected={1} />
+              {pricingError ? (
+                <PricingUnavailable message={pricingError} onRetry={retryPricing} />
+              ) : pricing ? (
+                <PlanPicker plans={buildHomePlans(pricing)} defaultSelected={1} />
+              ) : (
+                <p className="text-center text-sm text-mkt-soft py-10">Loading plans…</p>
+              )}
             </Reveal>
           </div>
         </section>
