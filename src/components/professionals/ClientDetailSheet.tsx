@@ -464,6 +464,7 @@ export const ClientDetailSheet: React.FC<{
         {(client.access.healthMetrics ||
           client.access.medicalHistory ||
           client.access.labResults ||
+          client.access.bloodPressure ||
           activeNotes.length > 0) && (
           <div className="bg-cream-soft rounded-2xl p-4">
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5 flex items-center gap-1.5">

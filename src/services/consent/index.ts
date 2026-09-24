@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { BP_SHARING_DESCRIPTION } from "../blood-pressure/guidance";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 
@@ -72,7 +73,9 @@ export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: strin
   {
     category: "blood_pressure",
     label: "Blood pressure",
-    description: "Your blood-pressure readings, with pulse, arm and position",
+    // The sentence lives with the rest of the blood-pressure copy, so there is
+    // one place to review it rather than two that can drift apart.
+    description: BP_SHARING_DESCRIPTION,
   },
 ];
 
