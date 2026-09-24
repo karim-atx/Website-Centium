@@ -2,19 +2,21 @@ import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { sessionChipStyle, sessionOptionStyle } from "./sessionSheetStyles";
 import { Button } from "../ui/Button";
-import type { LoggedSet, SetType } from "../../types";
+import type { LoggedSet, SetOutcome, SetType } from "../../types";
 import { rpeOptions } from "../../services/workout";
 
-// QA 11.0: "When editing a routine, add more buttons like super set and
-// PR." A PR set that gets checked off fires a confetti celebration (see
-// WorkoutSessionSheet).
-const setTypes: { value: SetType; label: string }[] = [
-  { value: "normal", label: "Normal" },
-  { value: "warmup", label: "Warm up" },
-  { value: "failure", label: "Failure" },
-  { value: "dropset", label: "Drop set" },
-  { value: "superset", label: "Superset" },
-  { value: "pr", label: "PR" },
+// WHAT KIND OF SET IT WAS, and nothing else.
+//
+// Failure, Superset and PR are gone from this list, which is not a removal of
+// features: they were three different questions jammed into one enum, so a set
+// could never be both a warm-up and a failure. How a set went is now an
+// outcome on the row itself, a record is its own flag beside it, and a
+// superset is a block in the routine. The enum keeps those members for
+// sessions already logged; nothing offers them.
+const setTypes: { value: SetType; label: string; blurb: string }[] = [
+  { value: "normal", label: "Normal", blurb: "A working set." },
+  { value: "warmup", label: "Warm up", blurb: "Building up, not counted as work." },
+  { value: "dropset", label: "Drop set", blurb: "Straight into a lighter load." },
 ];
 
 export const SetOptionsSheet: React.FC<{
@@ -24,6 +26,8 @@ export const SetOptionsSheet: React.FC<{
   onSave: (patch: Partial<LoggedSet>) => void;
 }> = ({ open, onClose, set, onSave }) => {
   const [setType, setSetType] = useState<SetType>("normal");
+  const [outcome, setOutcome] = useState<SetOutcome | undefined>(undefined);
+  const [isPr, setIsPr] = useState(false);
   const [notes, setNotes] = useState("");
   const [rpe, setRpe] = useState<number | undefined>(undefined);
   const [mood, setMood] = useState(5);
@@ -32,6 +36,8 @@ export const SetOptionsSheet: React.FC<{
   useEffect(() => {
     if (set) {
       setSetType(set.setType ?? "normal");
+      setOutcome(set.outcome);
+      setIsPr(!!set.isPr);
       setNotes(set.notes ?? "");
       setRpe(set.rpe);
       setMood(set.mood ?? 5);
@@ -57,13 +63,63 @@ export const SetOptionsSheet: React.FC<{
       <div className="space-y-5 animate-fade-slide-up">
         <div>
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+            How it went
+          </p>
+          {/* THE SAME THREE ACTIONS AS THE ROW, reachable from here too. A set
+              opened for a note is often the one that went badly, and making
+              somebody close the sheet to say so is the reason notes and
+              outcomes drift apart. Toggleable, and PR combines with any of
+              them — an outcome answers "how", is_pr answers "was it a
+              record", and they are not alternatives. */}
+          <div className="grid grid-cols-2" style={{ gap: 8 }}>
+            {([
+              ["completed", "Completed"],
+              ["failed", "Failed"],
+              ["skipped", "Skipped"],
+            ] as const).map(([value, label]) => (
+              <button
+                key={value}
+                onClick={() => setOutcome((o) => (o === value ? undefined : value))}
+                aria-pressed={outcome === value}
+                className="tap transition-colors"
+                style={sessionOptionStyle(outcome === value, { borderRadius: 12, padding: "10px 0" })}
+              >
+                {label}
+              </button>
+            ))}
+            <button
+              onClick={() => setIsPr((v) => !v)}
+              aria-pressed={isPr}
+              className="tap transition-colors"
+              style={{
+                ...sessionOptionStyle(isPr, { borderRadius: 12, padding: "10px 0" }),
+                ...(isPr ? { background: "rgba(200,145,43,0.16)", color: "#8A6318", borderColor: "#C8912B" } : {}),
+              }}
+            >
+              Personal record
+            </button>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
             Classification
           </p>
-          <div className="grid grid-cols-2 gap-2">
+          {/* SCROLLABLE IN ITS OWN RIGHT. The sheet scrolls as a whole, but on
+              a short screen — a phone in landscape, or one with the keyboard
+              up because the notes field has focus — the shell's 88vh left this
+              list clipped with no way to reach the last option. Capping it and
+              letting it scroll means the list is always complete, whatever is
+              above or below it. */}
+          <div
+            className="grid grid-cols-2 gap-2 overflow-y-auto overscroll-contain"
+            style={{ maxHeight: 168 }}
+          >
             {setTypes.map((t) => (
               <button
                 key={t.value}
                 onClick={() => setSetType(t.value)}
+                aria-pressed={setType === t.value}
                 className="tap transition-colors"
                 style={sessionOptionStyle(setType === t.value, { borderRadius: 12, padding: "10px 0" })}
               >
@@ -71,7 +127,11 @@ export const SetOptionsSheet: React.FC<{
               </button>
             ))}
           </div>
+          <p className="text-[11px] text-charcoal-faint mt-1.5">
+            {setTypes.find((t) => t.value === setType)?.blurb}
+          </p>
         </div>
+
 
         <div>
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">RPE</p>
@@ -152,7 +212,18 @@ export const SetOptionsSheet: React.FC<{
           fullWidth
           size="lg"
           onClick={() => {
-            onSave({ setType, notes: notes.trim() || undefined, rpe, mood, pain });
+            onSave({
+              setType,
+              outcome,
+              // Kept in step with what the database's trigger derives, so
+              // the row on screen matches the row that comes back.
+              completed: outcome != null && outcome !== "skipped",
+              isPr,
+              notes: notes.trim() || undefined,
+              rpe,
+              mood,
+              pain,
+            });
             onClose();
           }}
         >
