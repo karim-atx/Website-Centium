@@ -5,6 +5,7 @@ import { formatDuration } from "../../services/workout";
 import { WorkoutCalendarSheet } from "../../components/workout/WorkoutCalendarSheet";
 import { ChevronDown, ChevronUp, Calendar, BarChart3, Clock } from "lucide-react";
 import type { WorkoutSession } from "../../types";
+import { SessionDetail } from "../../components/workout/SessionDetail";
 
 // V8 (QA 8.0): "say that the client lifted the equivalent of a certain
 // animal or object of that similar weight" — picks whichever reference is
@@ -143,32 +144,7 @@ const SessionRow: React.FC<{
 
       {expanded && (
         <div className="border-t border-charcoal/[0.06] px-4 py-3 animate-fade-slide-up">
-          <div className="divide-y divide-charcoal/[0.04]">
-            {session.exercises.map((ex) => (
-              <div key={ex.exerciseId} className="py-2">
-                <p className="text-sm font-medium text-charcoal mb-1">{ex.name}</p>
-                <div className="flex flex-wrap gap-x-3 gap-y-0.5 mb-1">
-                  {ex.sets.map((s, i) => (
-                    <span key={i} className="text-[11px] text-charcoal-faint">
-                      {s.weightKg}kg × {s.reps}
-                      {s.completed ? "" : " (skipped)"}
-                    </span>
-                  ))}
-                </div>
-                {ex.sets.some((s) => s.notes) && (
-                  <div className="space-y-0.5">
-                    {ex.sets
-                      .filter((s) => s.notes)
-                      .map((s, i) => (
-                        <p key={i} className="text-[11px] text-charcoal-soft italic">
-                          Set {s.setNumber}: "{s.notes}"
-                        </p>
-                      ))}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
+          <SessionDetail session={session} />
         </div>
       )}
     </Card>
