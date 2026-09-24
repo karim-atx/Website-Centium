@@ -61,6 +61,34 @@ export interface SubscriptionTier {
   /** 0 for the free tier — the column is NOT NULL, so absence is not a case. */
   monthlyPrice: number;
   /**
+   * The yearly price, or null when the row has none.
+   *
+   * NULL IS NOT ZERO AND NOT TWELVE MONTHLIES. Only the free tiers leave it
+   * null, and a yearly view of a free plan says "Free" rather than "$0/year".
+   * Nothing derives it: $9.99 x 12 is $119.88 and the row says $99.99, so a
+   * computed yearly price would be wrong by the exact amount of the discount.
+   */
+  yearlyPrice: number | null;
+  /**
+   * An add-on bought in units rather than a plan somebody is on — the seat
+   * block. It never appears in a "which plan am I on" list, and its price is
+   * per unit, not per account.
+   */
+  isAddon: boolean;
+  /** How many professionals one unit of an add-on covers. Null unless isAddon. */
+  seatsPerUnit: number | null;
+  /**
+   * The plan a professional gets from a business seat.
+   *
+   * A FLAG ON THE ROW, not the name "Starter". A business buying seat blocks
+   * entitles each seated professional to whichever tier carries this, and
+   * effective_professional_tier resolves it server-side from the same column
+   * — so naming it here would be a second opinion that goes wrong the first
+   * time the seat plan changes.
+   */
+  isBusinessSeatPlan: boolean;
+
+  /**
    * The plan an account with no active subscription falls back to.
    *
    * A FLAG, NOT A NAME OR A PRICE. Database-Atraxia 20260924240000 added it
@@ -80,6 +108,10 @@ interface Row {
   max_clients: number | null;
   max_employees: number | null;
   monthly_price: number | string;
+  yearly_price: number | string | null;
+  is_addon: boolean;
+  seats_per_unit: number | null;
+  is_business_seat_plan: boolean;
   is_default: boolean;
 }
 
@@ -92,6 +124,10 @@ const toTier = (row: Row): SubscriptionTier => ({
   // numeric(10,2) arrives as a number over PostgREST and as a string through
   // some drivers. Coerced either way rather than trusted to be one of them.
   monthlyPrice: Number(row.monthly_price),
+  yearlyPrice: row.yearly_price == null ? null : Number(row.yearly_price),
+  isAddon: row.is_addon,
+  seatsPerUnit: row.seats_per_unit,
+  isBusinessSeatPlan: row.is_business_seat_plan,
   isDefault: row.is_default,
 });
 
@@ -99,7 +135,12 @@ async function load(tierType: TierType): Promise<TiersResult> {
   try {
     const { data, error } = await supabase
       .from("subscription_tiers")
-      .select("id, name, max_clients, max_employees, monthly_price, is_default")
+      // ONE STRING, NOT A CONCATENATION. postgrest-js infers the row type
+      // from this literal, and splitting it across lines makes it opaque —
+      // the result then types as GenericStringError and every field read is
+      // a cast into the dark.
+      // prettier-ignore
+      .select("id, name, max_clients, max_employees, monthly_price, yearly_price, is_default, is_addon, seats_per_unit, is_business_seat_plan")
       .eq("tier_type", tierType)
       // ORDER IS SEMANTIC HERE, not cosmetic. Subscription.tsx decides whether
       // a change is an upgrade or a downgrade by comparing positions in this
@@ -226,6 +267,206 @@ export async function fetchMySubscriptionTier(
   // misconfiguration the database logs and allows rather than enforces. The
   // caller shows nothing instead of naming a plan nobody is on.
   return { ok: true, resolved: fallback ? { tier: fallback, fromDefault: true } : null };
+}
+
+
+// ---------------------------------------------------------------------------
+// The marketplace revenue share
+// ---------------------------------------------------------------------------
+
+export type RevenueShareResult = { ok: true; pct: number } | { ok: false; message: string };
+
+let revenueShare: Promise<RevenueShareResult> | null = null;
+
+/**
+ * The percentage a business pays on marketplace sales.
+ *
+ * ONE ROW, ENFORCED BY THE TABLE. platform_settings has a boolean primary key
+ * defaulting to true, which is how the schema says "there is exactly one of
+ * these" — so this reads the single row rather than picking one.
+ *
+ * Cached and shared like the tiers, and a failure is never cached, for the
+ * same reasons fetchSubscriptionTiers gives.
+ */
+export function fetchRevenueSharePct(): Promise<RevenueShareResult> {
+  if (revenueShare) return revenueShare;
+  const request = (async (): Promise<RevenueShareResult> => {
+    try {
+      const { data, error } = await supabase
+        .from("platform_settings")
+        .select("marketplace_revenue_share_pct")
+        .maybeSingle();
+      if (error) {
+        return {
+          ok: false,
+          message: isOffline(error) ? OFFLINE_MESSAGE : "Could not load pricing. Try again.",
+        };
+      }
+      if (!data) return { ok: false, message: "Could not load pricing. Try again." };
+      return { ok: true, pct: Number(data.marketplace_revenue_share_pct) };
+    } catch (e) {
+      return {
+        ok: false,
+        message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load pricing. Try again.",
+      };
+    }
+  })().then((result) => {
+    if (!result.ok) revenueShare = null;
+    return result;
+  });
+  revenueShare = request;
+  return request;
+}
+
+// ---------------------------------------------------------------------------
+// Which plan a professional is actually on
+// ---------------------------------------------------------------------------
+
+/** Where a professional's plan comes from. Mirrors public.professional_plan_source. */
+export type PlanSource = Enums<"professional_plan_source">;
+
+export interface EffectiveProfessionalTier {
+  tier: SubscriptionTier;
+  source: PlanSource;
+  /** The business whose seat this is, when the plan came from one. */
+  viaBusinessName?: string;
+}
+
+export type EffectiveTierResult =
+  | { ok: true; effective: EffectiveProfessionalTier | null }
+  | { ok: false; message: string };
+
+/**
+ * A professional's plan, resolved the way the database resolves it.
+ *
+ * THREE WAYS TO HOLD ONE, and the order between them is not this client's to
+ * decide: an own subscription, a seat in a business that bought seat blocks,
+ * or the free default. effective_professional_tier(uuid) answers it in SQL —
+ * the same function the client-cap trigger consults — so a professional with
+ * both an own Pro plan and a business seat is told Pro by the one authority
+ * that also decides how many clients they may add.
+ *
+ * Reimplementing that precedence here would be a second opinion, and the two
+ * would disagree the first time somebody bought a plan while seated.
+ */
+export async function fetchEffectiveProfessionalTier(
+  professionalId: string
+): Promise<EffectiveTierResult> {
+  const tiers = await fetchSubscriptionTiers("professional");
+  if (!tiers.ok) return { ok: false, message: tiers.message };
+
+  try {
+    const { data, error } = await supabase.rpc("effective_professional_tier", {
+      p_professional_id: professionalId,
+    });
+    if (error) {
+      return {
+        ok: false,
+        message: isOffline(error) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+      };
+    }
+    // A set-returning function comes back as an array of at most one row.
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) return { ok: true, effective: null };
+
+    const tier = tiers.tiers.find((t) => t.rowId === row.tier_id);
+    if (!tier) return { ok: true, effective: null };
+
+    const effective: EffectiveProfessionalTier = { tier, source: row.source };
+    if (row.source !== "business_seat") return { ok: true, effective };
+
+    // WHOSE SEAT, named. "Starter (via Iron Works)" is a different sentence
+    // from "Starter": one of them tells a professional that losing the
+    // affiliation costs them the plan. The function returns the tier, not the
+    // business, so this is a second read — and a failure to name the business
+    // is not a failure to resolve the plan.
+    const { data: seat } = await supabase
+      .from("business_employees")
+      .select("business_profiles(business_name)")
+      .eq("professional_id", professionalId)
+      .limit(1)
+      .maybeSingle();
+    const name = (seat as { business_profiles?: { business_name?: string } } | null)
+      ?.business_profiles?.business_name;
+    return { ok: true, effective: name ? { ...effective, viaBusinessName: name } : effective };
+  } catch (e) {
+    return {
+      ok: false,
+      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+    };
+  }
+}
+
+/** "Starter (via Iron Works)", or just the plan name when it is their own. */
+export function effectiveTierLabel(effective: EffectiveProfessionalTier): string {
+  if (effective.source === "business_seat" && effective.viaBusinessName) {
+    return `${effective.tier.name} (via ${effective.viaBusinessName})`;
+  }
+  if (effective.source === "business_seat") return `${effective.tier.name} (via your business)`;
+  return tierLabel(effective.tier);
+}
+
+// ---------------------------------------------------------------------------
+// A business's own plan: the base, plus however many seat blocks it bought
+// ---------------------------------------------------------------------------
+
+export interface BusinessPlan {
+  base: SubscriptionTier | null;
+  seatAddon: SubscriptionTier | null;
+  /** How many blocks are held. Zero is the ordinary case. */
+  seatBlocks: number;
+  /** Blocks x seats per block. The denominator of "N of M seats used". */
+  totalSeats: number;
+  /** base + blocks x seat price, for the period being shown. */
+  monthlyTotal: number;
+}
+
+export type BusinessPlanResult =
+  | { ok: true; plan: BusinessPlan }
+  | { ok: false; message: string };
+
+export async function fetchBusinessPlan(ownerId: string): Promise<BusinessPlanResult> {
+  const tiers = await fetchSubscriptionTiers("business");
+  if (!tiers.ok) return { ok: false, message: tiers.message };
+
+  const base = tiers.tiers.find((t) => !t.isAddon) ?? null;
+  const seatAddon = tiers.tiers.find((t) => t.isAddon) ?? null;
+
+  let seatBlocks = 0;
+  try {
+    const { data, error } = await supabase
+      .from("subscription_states")
+      .select("seat_blocks, status")
+      .eq("owner_id", ownerId)
+      .maybeSingle();
+    if (error) {
+      return {
+        ok: false,
+        message: isOffline(error) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+      };
+    }
+    // Only an active subscription entitles anyone to seats, exactly as
+    // fetchMySubscriptionTier treats a cancelled row as no row.
+    if (data?.status === "active") seatBlocks = data.seat_blocks ?? 0;
+  } catch (e) {
+    return {
+      ok: false,
+      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+    };
+  }
+
+  const perBlock = seatAddon?.seatsPerUnit ?? 0;
+  return {
+    ok: true,
+    plan: {
+      base,
+      seatAddon,
+      seatBlocks,
+      totalSeats: seatBlocks * perBlock,
+      monthlyTotal:
+        Math.round(((base?.monthlyPrice ?? 0) + seatBlocks * (seatAddon?.monthlyPrice ?? 0)) * 100) / 100,
+    },
+  };
 }
 
 /**
