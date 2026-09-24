@@ -268,6 +268,15 @@ function BusinessSubscription() {
           <p className="text-sm text-primary-dark">Checking your plan…</p>
         ) : planError ? (
           <p className="text-sm font-semibold text-status-high">{planError}</p>
+        ) : plan && !plan.active ? (
+          // NO SUBSCRIPTION, SAID PLAINLY. This branch used to fall through to
+          // the one below, which read "You're on Base · 0 of 0 seats used" off
+          // the tier reference row — telling a business that has never paid
+          // anything that it is on a plan, on the screen whose job is to sell
+          // it one.
+          <p className="text-sm text-primary-dark">
+            You're not on a plan yet. Pick one below.
+          </p>
         ) : plan ? (
           <>
             <p className="text-sm text-primary-dark">
@@ -305,7 +314,12 @@ function BusinessSubscription() {
           <PlanRow
             tier={base}
             period={period}
-            isCurrent={!!plan?.base}
+            // `active`, NOT `base`. plan.base is the tier reference row,
+            // which is filled in for every business account whether or not it
+            // holds anything — so this badge used to read CURRENT even for a
+            // business with no subscription at all, on the very screen meant
+            // to sell it one.
+            isCurrent={plan?.active === true}
             detail="The business account itself"
           />
         )}
