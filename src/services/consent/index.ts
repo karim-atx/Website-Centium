@@ -64,6 +64,16 @@ export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: strin
     label: "Body measurements",
     description: "Tape measurements and body fat percentage",
   },
+  // ITS OWN CATEGORY, for the reason body_measurements has one: folding blood
+  // pressure into "Activity & vitals" would have retroactively widened every
+  // grant already given, so somebody who ticked a box meaning "steps, sleep,
+  // water" would have started sharing their blood pressure without touching
+  // anything. Off until switched on, like all of these.
+  {
+    category: "blood_pressure",
+    label: "Blood pressure",
+    description: "Your blood-pressure readings, with pulse, arm and position",
+  },
 ];
 
 /** Maps the DB enum onto the key shape the professional-side UI reads. */
@@ -77,6 +87,7 @@ export const accessKeyFor: Record<
   | "labResults"
   | "medicalHistory"
   | "bodyMeasurements"
+  | "bloodPressure"
 > = {
   food_diary: "foodDiary",
   workout_activity: "workoutActivity",
@@ -86,6 +97,7 @@ export const accessKeyFor: Record<
   lab_results: "labResults",
   medical_history: "medicalHistory",
   body_measurements: "bodyMeasurements",
+  blood_pressure: "bloodPressure",
 };
 
 export interface LinkedProfessional {

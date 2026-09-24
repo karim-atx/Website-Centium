@@ -43,6 +43,7 @@ export interface RosterClient {
     labResults: boolean;
     medicalHistory: boolean;
     bodyMeasurements: boolean;
+    bloodPressure: boolean;
   };
 }
 
@@ -55,6 +56,7 @@ const emptyAccess = (): RosterClient["access"] => ({
   labResults: false,
   medicalHistory: false,
   bodyMeasurements: false,
+  bloodPressure: false,
 });
 
 /**
@@ -74,6 +76,7 @@ const accessKeyFor: Partial<Record<Enums<"access_category">, keyof RosterClient[
   lab_results: "labResults",
   medical_history: "medicalHistory",
   body_measurements: "bodyMeasurements",
+  blood_pressure: "bloodPressure",
 };
 
 /**

@@ -635,29 +635,41 @@ export type Database = {
       }
       blood_pressure_readings: {
         Row: {
+          arm: string | null
           created_at: string
           diastolic: number
           id: string
+          notes: string | null
+          position: string | null
+          pulse: number | null
           recorded_at: string
-          source: string
+          source: Database["public"]["Enums"]["health_metric_source"]
           systolic: number
           user_id: string
         }
         Insert: {
+          arm?: string | null
           created_at?: string
           diastolic: number
           id?: string
+          notes?: string | null
+          position?: string | null
+          pulse?: number | null
           recorded_at: string
-          source?: string
+          source?: Database["public"]["Enums"]["health_metric_source"]
           systolic: number
           user_id: string
         }
         Update: {
+          arm?: string | null
           created_at?: string
           diastolic?: number
           id?: string
+          notes?: string | null
+          position?: string | null
+          pulse?: number | null
           recorded_at?: string
-          source?: string
+          source?: Database["public"]["Enums"]["health_metric_source"]
           systolic?: number
           user_id?: string
         }
@@ -3232,82 +3244,6 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
-      }
-      extracted_biomarkers: {
-        Row: {
-          created_at: string
-          id: string
-          name: string
-          selected: boolean
-          source_image_url: string | null
-          unit: string | null
-          user_id: string
-          value: number | null
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          name: string
-          selected?: boolean
-          source_image_url?: string | null
-          unit?: string | null
-          user_id: string
-          value?: number | null
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          name?: string
-          selected?: boolean
-          source_image_url?: string | null
-          unit?: string | null
-          user_id?: string
-          value?: number | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "extracted_biomarkers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "connected_professional_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "extracted_biomarkers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "extracted_biomarkers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_profile_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "extracted_biomarkers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "related_profile_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "extracted_biomarkers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "storage_purge_stalls"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "extracted_biomarkers_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "thread_participant_summary"
-            referencedColumns: ["participant_id"]
-          },
-        ]
       }
       food_log_entries: {
         Row: {
@@ -9519,6 +9455,7 @@ export type Database = {
         }
       }
       advance_auto_streaks: { Args: never; Returns: number }
+      assert_health_reset_coverage: { Args: never; Returns: undefined }
       assert_subscription_price_list: { Args: never; Returns: undefined }
       assert_workout_copy_complete: { Args: never; Returns: undefined }
       assign_template_to_client: {
@@ -9823,6 +9760,13 @@ export type Database = {
         Returns: boolean
       }
       health_data_reset_eligible_tables: { Args: never; Returns: string[] }
+      health_data_reset_excluded_tables: {
+        Args: never
+        Returns: {
+          reason: string
+          table_name: string
+        }[]
+      }
       health_data_reset_storage_map: {
         Args: never
         Returns: {
@@ -9858,6 +9802,16 @@ export type Database = {
           bucket_id: string
           object_name: string
           user_id: string
+        }[]
+      }
+      my_business_seat_capacity: {
+        Args: never
+        Returns: {
+          business_id: string
+          capacity: number
+          seat_blocks: number
+          seats_per_unit: number
+          seats_used: number
         }[]
       }
       my_effective_professional_tier: {
@@ -10173,6 +10127,7 @@ export type Database = {
         | "lab_results"
         | "medical_history"
         | "body_measurements"
+        | "blood_pressure"
       account_type: "customer" | "professional" | "business"
       activity_level:
         | "sedentary"
@@ -10498,6 +10453,7 @@ export const Constants = {
         "lab_results",
         "medical_history",
         "body_measurements",
+        "blood_pressure",
       ],
       account_type: ["customer", "professional", "business"],
       activity_level: [
