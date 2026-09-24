@@ -178,3 +178,19 @@ test("an endurance effort has no set rows at all", () => {
   assert.deepEqual(seedSets(run), []);
   assert.deepEqual(finalizeSets(seedSets(run)), []);
 });
+
+test("a prescribed weight in the box is not a set somebody did", () => {
+  // Measured: seeding 80 kg into every row made the optional ones look
+  // touched, and a complete 3-of-3–5 saved as "skipped 80.00x0" twice.
+  const rows = seedSets(ex({ minSets: 3, maxSets: 5, reps: 8, weightKg: 80 }));
+  assert.equal(rows[4].weightKg, 80, "it is still pre-filled");
+  assert.equal(isTouched(rows[4]), false, "but that is not something anybody did");
+  const done = finalizeSets(rows.map((s, i) => (i < 3 ? { ...s, completed: true } : s)));
+  assert.equal(done.length, 3);
+});
+
+test("a note or an RPE alone keeps an optional row", () => {
+  const rows = seedSets(ex({ minSets: 1, maxSets: 2, weightKg: 60 }));
+  assert.equal(isTouched({ ...rows[1], notes: "felt heavy" }), true);
+  assert.equal(isTouched({ ...rows[1], rpe: 8 }), true);
+});

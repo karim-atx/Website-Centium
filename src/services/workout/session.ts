@@ -81,18 +81,22 @@ export function initLoggedExercises(exercises: Exercise[]): LoggedExercise[] {
   }));
 }
 
-/** Whether a row has been touched at all — logged, edited, or annotated. */
+/**
+ * Whether somebody DID something to this row, as opposed to looking at it.
+ *
+ * THE NUMBERS DO NOT COUNT, and that is the whole point. A row is seeded with
+ * the prescribed weight and, where there is one, the prescribed rep count — so
+ * a test of "is there a number in the box" said yes to every row of every
+ * exercise that prescribes a load, and the optional rows of a 3–5 sets were
+ * recorded as skipped instead of dropped. Measured on a real save: sets 4 and
+ * 5 came back as `skipped 80.00x0`.
+ *
+ * What counts is a deliberate act — an outcome, a record, a note, an RPE, a
+ * kind. Typing a weight into a row you never marked is not a set you did, and
+ * if you did it, you would have marked it.
+ */
 export function isTouched(s: LoggedSet): boolean {
-  return (
-    s.outcome != null ||
-    s.completed ||
-    !!s.isPr ||
-    s.reps > 0 ||
-    s.weightKg > 0 ||
-    !!s.notes ||
-    s.rpe != null ||
-    !!s.setType
-  );
+  return s.outcome != null || s.completed || !!s.isPr || !!s.notes || s.rpe != null || !!s.setType;
 }
 
 /**
