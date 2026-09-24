@@ -6,6 +6,7 @@ import { Sparkline } from "../../components/health/Sparkline";
 import { OneRepMaxesSheet } from "../../components/workout/OneRepMaxesSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { TrendingUp, Dumbbell, Scale3D, Flame, Scale } from "lucide-react";
+import { countsTowardVolume } from "../../services/workout/session";
 
 // QA 12.0: "Rework the metrics tab... Limiting the default view to 3-5
 // primary metrics (rather than overwhelming users with everything at
@@ -15,7 +16,6 @@ import { TrendingUp, Dumbbell, Scale3D, Flame, Scale } from "lucide-react";
 // since this prototype's only real "did they show up" signal is the
 // workout streak, which is also the explicit "Adherence should be
 // connected to the streaks tab" ask.
-const seedVolumes = [4200, 4550, 4100, 4820, 5010, 4700];
 
 const balanceColors: Record<string, string> = {
   back: "#7D6BB5",
@@ -32,34 +32,75 @@ const balanceColors: Record<string, string> = {
 };
 
 export default function MetricsTab() {
-  const { workoutSessions, personalRecords, streaks, weightByDate, exerciseCatalog } = useApp();
+  const { workoutSessions, personalRecords, streaks, weightByDate, exerciseCatalog, customExercises } =
+    useApp();
   const [oneRmOpen, setOneRmOpen] = useState(false);
   const [balanceOpen, setBalanceOpen] = useState(false);
 
-  const volumePoints = [...seedVolumes, ...workoutSessions.map((s) => s.totalVolumeKg)];
-  const lastVolume = volumePoints[volumePoints.length - 1];
+  // REAL SESSIONS ONLY. This used to begin with six invented numbers —
+  // 4200, 4550, 4100, 4820, 5010, 4700 — so a brand-new account opened the
+  // Metrics tab to a volume trend it had never produced, and the first real
+  // session was compared against an average of fiction. A chart with one
+  // point is honest; a chart with six borrowed ones is not.
+  const volumePoints = workoutSessions.map((s) => s.totalVolumeKg);
+  const lastVolume = volumePoints.length > 0 ? volumePoints[volumePoints.length - 1] : 0;
+
+  /**
+   * How many sessions before "vs your recent average" means anything.
+   *
+   * THREE PRIOR SESSIONS PLUS THE ONE BEING COMPARED. With one prior, the
+   * "average" is that single session and a normal week-to-week swing reads as
+   * a 30% collapse; the deload advice this card gives would then be triggered
+   * by noise. Four is the smallest number where the comparison is a trend
+   * rather than a pair.
+   */
+  const MIN_SESSIONS_FOR_TREND = 4;
+  const hasTrend = volumePoints.length >= MIN_SESSIONS_FOR_TREND;
   const priorAvg =
     volumePoints.length > 1
       ? volumePoints.slice(0, -1).reduce((a, b) => a + b, 0) / (volumePoints.length - 1)
       : lastVolume;
-  const volumeChangePct = priorAvg > 0 ? Math.round(((lastVolume - priorAvg) / priorAvg) * 100) : 0;
+  const volumeChangePct =
+    hasTrend && priorAvg > 0 ? Math.round(((lastVolume - priorAvg) / priorAvg) * 100) : 0;
   const prCount = Object.keys(personalRecords).length;
 
-  // "Balance": tally of sets per primary muscle group across every logged
-  // exercise, cross-referenced against the exercise library (LoggedExercise
-  // itself only stores a name, not its muscle groups).
+
+  /**
+   * Completed sets per primary muscle group, across every logged session.
+   *
+   * MATCHED BY ID, NOT BY NAME. A logged exercise carries the library
+   * reference it was performed against — catalogExerciseId or
+   * customExerciseId — and matching on the NAME instead meant a movement
+   * stopped counting the moment it was renamed: every set of "Sandbag Carry"
+   * vanished from this chart when it became "Sandbag Shuttle Run", because
+   * the log keeps the name it was logged under and the library no longer had
+   * one to match. Renaming your own exercise is not a reason to lose your
+   * training history.
+   *
+   * The name is still the LAST resort, for rows written before those
+   * references existed — services/workout/log's header is explicit that they
+   * were left null and are not backfilled.
+   */
   const muscleGroupTally = useMemo(() => {
+    const catalogById = new Map(exerciseCatalog.map((e) => [e.id, e]));
+    const customById = new Map(customExercises.filter((e) => e.id).map((e) => [e.id!, e]));
+    const byName = new Map(exerciseCatalog.map((e) => [e.name, e]));
+
     const tally: Record<string, number> = {};
     for (const session of workoutSessions) {
       for (const ex of session.exercises) {
-        const libEntry = exerciseCatalog.find((l) => l.name === ex.name);
-        const group = libEntry?.muscleGroups?.[0];
+        const definition =
+          (ex.catalogExerciseId ? catalogById.get(ex.catalogExerciseId) : undefined) ??
+          (ex.customExerciseId ? customById.get(ex.customExerciseId) : undefined) ??
+          byName.get(ex.name);
+        const group = definition?.muscleGroups?.[0];
         if (!group) continue;
-        tally[group] = (tally[group] ?? 0) + ex.sets.filter((s) => s.completed).length;
+        tally[group] = (tally[group] ?? 0) + ex.sets.filter(countsTowardVolume).length;
       }
     }
     return tally;
-  }, [workoutSessions, exerciseCatalog]);
+  }, [workoutSessions, exerciseCatalog, customExercises]);
+
   const totalSets = Object.values(muscleGroupTally).reduce((a, b) => a + b, 0);
   const sortedGroups = Object.entries(muscleGroupTally).sort((a, b) => b[1] - a[1]);
   const topGroup = sortedGroups[0];
@@ -81,25 +122,41 @@ export default function MetricsTab() {
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Volume trend</p>
           <TrendingUp size={14} className="text-primary" />
         </div>
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-2xl font-bold text-charcoal">{lastVolume.toLocaleString()} kg</p>
-            <p className="text-xs text-charcoal-faint">Last logged session</p>
-          </div>
-          <Sparkline values={volumePoints} color="#7D6BB5" width={140} height={44} />
-        </div>
-        {/* QA 12.0: "Every visualization should ideally suggest a next
-            action (e.g., 'volume dropped 15% — consider a deload')." */}
-        {volumeChangePct <= -15 ? (
-          <p className="text-xs font-semibold text-status-high bg-status-high-bg rounded-full px-3 py-1.5 mt-3 inline-block">
-            Volume dropped {Math.abs(volumeChangePct)}% — consider a deload week
+        {volumePoints.length === 0 ? (
+          <p className="text-sm text-charcoal-faint">
+            Finish a workout and the volume you lifted appears here.
           </p>
-        ) : volumeChangePct >= 15 ? (
-          <p className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-3 py-1.5 mt-3 inline-block">
-            Volume is up {volumeChangePct}% vs your recent average — trending well
-          </p>
-        ) : null}
+        ) : (
+          <>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-2xl font-bold text-charcoal">{lastVolume.toLocaleString()} kg</p>
+                <p className="text-xs text-charcoal-faint">Last logged session</p>
+              </div>
+              <Sparkline values={volumePoints} color="#7D6BB5" width={140} height={44} />
+            </div>
+            {/* QA 12.0: "Every visualization should ideally suggest a next
+                action (e.g., 'volume dropped 15% — consider a deload')." Said
+                only once there is enough to compare against: with two or three
+                sessions the "average" is one or two numbers, and an ordinary
+                week-to-week swing would trigger deload advice. */}
+            {!hasTrend ? (
+              <p className="text-xs text-charcoal-faint mt-3">
+                Log a few more sessions to see trends.
+              </p>
+            ) : volumeChangePct <= -15 ? (
+              <p className="text-xs font-semibold text-status-high bg-status-high-bg rounded-full px-3 py-1.5 mt-3 inline-block">
+                Volume dropped {Math.abs(volumeChangePct)}% — consider a deload week
+              </p>
+            ) : volumeChangePct >= 15 ? (
+              <p className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-3 py-1.5 mt-3 inline-block">
+                Volume is up {volumeChangePct}% vs your recent average — trending well
+              </p>
+            ) : null}
+          </>
+        )}
       </Card>
+
 
       <Card className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
