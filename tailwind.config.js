@@ -261,9 +261,15 @@ export default {
           "0%": { transform: "scale(0.3)", opacity: 0 },
           "100%": { transform: "scale(1)", opacity: 1 },
         },
+        // THE END FRAME IS THE ROW'S OWN COLOUR, not a fixed purple. The
+        // fill mode is `both`, so whatever this lands on overrides the
+        // inline background for as long as the class is applied — with the
+        // completed tint hard-coded here, a failed set and a personal record
+        // both settled into looking completed, which is the one thing they
+        // are not. The caller supplies both ends.
         "set-row-settle": {
-          "0%": { backgroundColor: "#DED7F1" },
-          "100%": { backgroundColor: "#EFECF8" },
+          "0%": { backgroundColor: "var(--settle-from, #DED7F1)" },
+          "100%": { backgroundColor: "var(--settle-to, #EFECF8)" },
         },
         // A personal record, which is the one set worth celebrating on the
         // row itself. Gold rather than the accent colour, which the theme

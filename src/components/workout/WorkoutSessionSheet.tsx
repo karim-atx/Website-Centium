@@ -823,6 +823,18 @@ const SetRow: React.FC<{
   // apart before either is filled in.
   const muted = (!!s.optional && !outcome) || skipped;
 
+  // The row's colour, and the deeper tint the completion animation starts
+  // from. BOTH ARE HANDED TO THE KEYFRAMES, because the animation's fill mode
+  // is `both` — whatever it ends on wins over this inline background for as
+  // long as the class is applied, so a hard-coded end frame repainted a
+  // failed set and a personal record as completed.
+  const rowBackground = s.isPr ? PR_GOLD_PALE : outcome ? OUTCOME_STYLE[outcome].row : "transparent";
+  const settleFrom = s.isPr
+    ? "rgba(200,145,43,0.30)"
+    : outcome === "failed"
+    ? "#F3D9D4"
+    : "#DED7F1";
+
   const field = clsx(
     "w-full rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border",
     skipped && "line-through",
@@ -838,7 +850,9 @@ const SetRow: React.FC<{
       className={clsx("grid gap-2 items-center px-3 py-2", justTicked && "animate-set-row-settle")}
       style={{
         gridTemplateColumns: "34px 1fr 1fr 30px 30px",
-        background: s.isPr ? PR_GOLD_PALE : style?.row ?? "transparent",
+        background: rowBackground,
+        ["--settle-from" as string]: settleFrom,
+        ["--settle-to" as string]: rowBackground,
         opacity: muted ? 0.62 : 1,
         ...(s.isPr ? { boxShadow: `inset 3px 0 0 ${PR_GOLD}` } : {}),
       }}
