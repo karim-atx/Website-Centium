@@ -594,6 +594,21 @@ export type MuscleGroup =
   | "shoulders"
   | "tricep";
 
+/**
+ * A discipline a movement belongs to, which is not a muscle.
+ *
+ * MANY-TO-MANY AND ORTHOGONAL TO ANATOMY: a Front Squat is an Olympic
+ * accessory and a CrossFit staple at once, and neither fact is answerable by
+ * asking what it trains. Mirrors public.valid_exercise_tags, which rejects
+ * anything outside this set.
+ */
+export type ExerciseTag =
+  | "olympic_weightlifting"
+  | "crossfit"
+  | "running"
+  | "plyometric"
+  | "mobility";
+
 export type ExerciseClassification =
   | "barbell"
   | "dumbbell"
@@ -811,6 +826,8 @@ export interface CustomExerciseLibraryItem {
   name: string;
   muscleGroups?: MuscleGroup[];
   secondaryMuscleGroups?: MuscleGroup[];
+  /** The disciplines this movement belongs to. See ExerciseTag. */
+  tags?: ExerciseTag[];
   classification: ExerciseClassification;
 }
 

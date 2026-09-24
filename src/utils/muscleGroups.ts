@@ -24,3 +24,18 @@ export const MUSCLE_GROUP_LABEL: Record<MuscleGroup, string> = {
   shoulders: "Shoulders",
   tricep: "Tricep",
 };
+
+/**
+ * The groups a user may pick or filter by.
+ *
+ * WITHOUT `olympic`, which was never a muscle. It got into public.muscle_group
+ * as a browse category and Database 20260924330000 emptied it: every row that
+ * carried it now has real movers and an `olympic_weightlifting` TAG instead,
+ * which is the axis people were actually filtering on. The enum value stays
+ * for any row written before that, which is why MUSCLE_GROUP_LABEL above
+ * still has a label for it — a legacy value must render, it just must not be
+ * offered.
+ */
+export const SELECTABLE_MUSCLE_GROUPS: MuscleGroup[] = (
+  Object.keys(MUSCLE_GROUP_LABEL) as MuscleGroup[]
+).filter((mg) => mg !== "olympic");

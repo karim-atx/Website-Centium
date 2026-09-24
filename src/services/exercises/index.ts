@@ -1,7 +1,13 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { PostgrestError } from "@supabase/supabase-js";
-import type { CustomExerciseLibraryItem, ExerciseClassification, MuscleGroup } from "../../types";
+import type {
+  CustomExerciseLibraryItem,
+  ExerciseClassification,
+  ExerciseTag,
+  MuscleGroup,
+} from "../../types";
+import { readTags } from "../../utils/exerciseTags";
 
 // The exercise library: the public catalog, and a user's own movements.
 //
@@ -50,15 +56,18 @@ export interface CatalogExercise {
    * "informed estimate", never as "unverified junk".
    */
   isVerified: boolean;
+  /** The disciplines this movement belongs to. See ExerciseTag. */
+  tags: ExerciseTag[];
 }
 
 const CATALOG_COLUMNS =
-  "id, name, category, classification, muscle_groups, secondary_muscle_groups, is_verified";
+  "id, name, category, classification, muscle_groups, secondary_muscle_groups, is_verified, tags";
 // No is_verified here, and no owner_id: a user's own movement is never
 // verified — the table has no such column, precisely because the answer is
 // always the same — and owner_id is settled by the RLS policy, not by the
 // caller reading it back.
-const CUSTOM_COLUMNS = "id, name, category, classification, muscle_groups, secondary_muscle_groups";
+const CUSTOM_COLUMNS =
+  "id, name, category, classification, muscle_groups, secondary_muscle_groups, tags";
 
 interface CatalogRow {
   id: string;
@@ -68,6 +77,7 @@ interface CatalogRow {
   muscle_groups: MuscleGroup[];
   secondary_muscle_groups: MuscleGroup[];
   is_verified: boolean;
+  tags: string[] | null;
 }
 
 interface CustomRow {
@@ -77,6 +87,7 @@ interface CustomRow {
   classification: ExerciseClassification;
   muscle_groups: MuscleGroup[];
   secondary_muscle_groups: MuscleGroup[];
+  tags: string[] | null;
 }
 
 const fromCatalog = (r: CatalogRow): CatalogExercise => ({
@@ -87,6 +98,10 @@ const fromCatalog = (r: CatalogRow): CatalogExercise => ({
   muscleGroups: r.muscle_groups,
   secondaryMuscleGroups: r.secondary_muscle_groups,
   isVerified: r.is_verified,
+  // Unknown values are dropped on read rather than shown: a tag this build
+  // has no label for can be neither displayed nor filtered on, and the row
+  // itself is untouched because nothing writes back what it did not read.
+  tags: readTags(r.tags),
 });
 
 const fromCustom = (r: CustomRow): CustomExerciseLibraryItem => ({
@@ -95,6 +110,7 @@ const fromCustom = (r: CustomRow): CustomExerciseLibraryItem => ({
   classification: r.classification,
   muscleGroups: r.muscle_groups,
   secondaryMuscleGroups: r.secondary_muscle_groups,
+  tags: readTags(r.tags),
 });
 
 /**
@@ -211,6 +227,7 @@ export async function createCustomExercise(
       classification: item.classification,
       muscle_groups: item.muscleGroups ?? [],
       secondary_muscle_groups: item.secondaryMuscleGroups ?? [],
+      tags: item.tags ?? [],
     })
     .select(CUSTOM_COLUMNS)
     .single();
@@ -230,8 +247,8 @@ export async function createCustomExercise(
  *
  * owner_id IS NOT SENT, and that is not an oversight. The UPDATE grant is
  * column-scoped to (name, category, classification, muscle_groups,
- * secondary_muscle_groups); naming owner_id in the payload would be refused
- * with 42501 even though the value would be identical.
+ * secondary_muscle_groups, tags); naming owner_id in the payload would be
+ * refused with 42501 even though the value would be identical.
  */
 export async function updateCustomExercise(
   id: string,
@@ -245,6 +262,7 @@ export async function updateCustomExercise(
       classification: item.classification,
       muscle_groups: item.muscleGroups ?? [],
       secondary_muscle_groups: item.secondaryMuscleGroups ?? [],
+      tags: item.tags ?? [],
     })
     .eq("id", id);
 
@@ -258,13 +276,22 @@ export async function updateCustomExercise(
 /**
  * Deletes one of the user's own movements.
  *
- * WHAT GOES WITH IT, once routines and templates are real rows:
- * routine_exercises.custom_exercise_id and
- * workout_template_exercises.custom_exercise_id are ON DELETE CASCADE, so a
- * deleted movement takes its lines out of the routines that used it, while
- * logged_exercises.custom_exercise_id is ON DELETE SET NULL and keeps the
- * history. None of that is reachable yet — those tables are still local state
- * — but it is what this call will mean the moment they are not.
+ * WHAT GOES WITH IT, measured off pg_constraint rather than assumed:
+ *
+ *   routine_exercises.custom_exercise_id          ON DELETE CASCADE
+ *   workout_template_exercises.custom_exercise_id ON DELETE CASCADE
+ *   personal_records.custom_exercise_id           ON DELETE CASCADE
+ *   logged_exercises.custom_exercise_id           ON DELETE SET NULL
+ *
+ * So the movement leaves every routine and template that prescribed it, and
+ * its personal record goes with it — but TRAINING HISTORY SURVIVES, because
+ * logged_exercises.name is NOT NULL and carries the name the set was logged
+ * under. A past session still reads correctly with the definition gone.
+ *
+ * That last column is the reason the confirm can promise history is kept.
+ * This comment used to end "None of that is reachable yet — those tables are
+ * still local state", which stopped being true when routines, templates and
+ * the workout log became rows.
  */
 export async function deleteCustomExercise(id: string): Promise<CustomExerciseWriteResult> {
   const { error } = await supabase.from("custom_exercise_library_items").delete().eq("id", id);
