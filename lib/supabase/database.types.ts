@@ -5319,6 +5319,24 @@ export type Database = {
           },
         ]
       }
+      platform_settings: {
+        Row: {
+          id: boolean
+          marketplace_revenue_share_pct: number
+          updated_at: string
+        }
+        Insert: {
+          id?: boolean
+          marketplace_revenue_share_pct: number
+          updated_at?: string
+        }
+        Update: {
+          id?: boolean
+          marketplace_revenue_share_pct?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       points_ledger: {
         Row: {
           amount: number
@@ -7140,6 +7158,7 @@ export type Database = {
           owner_id: string
           premium_plan: Database["public"]["Enums"]["premium_plan"] | null
           renews_at: string | null
+          seat_blocks: number
           started_at: string | null
           status: Database["public"]["Enums"]["subscription_status"] | null
           tier_id: string | null
@@ -7151,6 +7170,7 @@ export type Database = {
           owner_id: string
           premium_plan?: Database["public"]["Enums"]["premium_plan"] | null
           renews_at?: string | null
+          seat_blocks?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["subscription_status"] | null
           tier_id?: string | null
@@ -7162,6 +7182,7 @@ export type Database = {
           owner_id?: string
           premium_plan?: Database["public"]["Enums"]["premium_plan"] | null
           renews_at?: string | null
+          seat_blocks?: number
           started_at?: string | null
           status?: Database["public"]["Enums"]["subscription_status"] | null
           tier_id?: string | null
@@ -7223,32 +7244,44 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_addon: boolean
+          is_business_seat_plan: boolean
           is_default: boolean
           max_clients: number | null
           max_employees: number | null
           monthly_price: number
           name: string
+          seats_per_unit: number | null
           tier_type: Database["public"]["Enums"]["subscription_tier_type"]
+          yearly_price: number | null
         }
         Insert: {
           created_at?: string
           id?: string
+          is_addon?: boolean
+          is_business_seat_plan?: boolean
           is_default?: boolean
           max_clients?: number | null
           max_employees?: number | null
           monthly_price: number
           name: string
+          seats_per_unit?: number | null
           tier_type: Database["public"]["Enums"]["subscription_tier_type"]
+          yearly_price?: number | null
         }
         Update: {
           created_at?: string
           id?: string
+          is_addon?: boolean
+          is_business_seat_plan?: boolean
           is_default?: boolean
           max_clients?: number | null
           max_employees?: number | null
           monthly_price?: number
           name?: string
+          seats_per_unit?: number | null
           tier_type?: Database["public"]["Enums"]["subscription_tier_type"]
+          yearly_price?: number | null
         }
         Relationships: []
       }
@@ -9415,6 +9448,7 @@ export type Database = {
         Args: {
           force?: boolean
           reason?: string
+          seat_blocks?: number
           target_user_id: string
           tier_id: string
         }
@@ -9452,9 +9486,12 @@ export type Database = {
           onboarded: boolean
           premium_plan: Database["public"]["Enums"]["premium_plan"]
           professional_subtype: Database["public"]["Enums"]["professional_subtype"]
+          seat_blocks: number
+          seats_used: number
           shared_consent_categories: string[]
           signed_up_at: string
           subscription_renews_at: string
+          subscription_source: Database["public"]["Enums"]["professional_plan_source"]
           subscription_status: string
           subscription_tier: string
         }[]
@@ -9482,6 +9519,7 @@ export type Database = {
         }
       }
       advance_auto_streaks: { Args: never; Returns: number }
+      assert_subscription_price_list: { Args: never; Returns: undefined }
       assert_workout_copy_complete: { Args: never; Returns: undefined }
       assign_template_to_client: {
         Args: {
@@ -9537,6 +9575,10 @@ export type Database = {
         }
       }
       business_is_listed: { Args: { p_business_id: string }; Returns: boolean }
+      business_seat_capacity: {
+        Args: { p_business_id: string }
+        Returns: number
+      }
       can_enroll_client_in_class: {
         Args: { p_class_id: string; p_client_id: string }
         Returns: boolean
@@ -9688,6 +9730,15 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      effective_professional_tier: {
+        Args: { p_professional_id: string }
+        Returns: {
+          max_clients: number
+          source: Database["public"]["Enums"]["professional_plan_source"]
+          tier_id: string
+          tier_name: string
+        }[]
       }
       end_business_membership: {
         Args: { p_membership_id: string }
@@ -10241,6 +10292,7 @@ export type Database = {
       payment_modality: "cash" | "card" | "whish"
       points_source: "streak" | "referral" | "manual_adjustment" | "other"
       premium_plan: "monthly" | "yearly"
+      professional_plan_source: "own_subscription" | "business_seat" | "default"
       professional_subtype:
         | "trainer"
         | "physiotherapist"
@@ -10264,7 +10316,7 @@ export type Database = {
       sex: "female" | "male" | "other"
       store_owner_type: "business" | "professional"
       subscription_status: "active" | "cancelled" | "expired"
-      subscription_tier_type: "professional" | "business"
+      subscription_tier_type: "professional" | "business" | "client"
       template_level: "beginner" | "intermediate" | "advanced"
       theme_mode: "light" | "dark" | "auto"
       thread_kind: "peer" | "official_support"
@@ -10576,6 +10628,11 @@ export const Constants = {
       payment_modality: ["cash", "card", "whish"],
       points_source: ["streak", "referral", "manual_adjustment", "other"],
       premium_plan: ["monthly", "yearly"],
+      professional_plan_source: [
+        "own_subscription",
+        "business_seat",
+        "default",
+      ],
       professional_subtype: [
         "trainer",
         "physiotherapist",
@@ -10601,7 +10658,7 @@ export const Constants = {
       sex: ["female", "male", "other"],
       store_owner_type: ["business", "professional"],
       subscription_status: ["active", "cancelled", "expired"],
-      subscription_tier_type: ["professional", "business"],
+      subscription_tier_type: ["professional", "business", "client"],
       template_level: ["beginner", "intermediate", "advanced"],
       theme_mode: ["light", "dark", "auto"],
       thread_kind: ["peer", "official_support"],
