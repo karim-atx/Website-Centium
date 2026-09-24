@@ -3063,6 +3063,188 @@ export type Database = {
           },
         ]
       }
+      cycle_day_logs: {
+        Row: {
+          bbt_celsius: number | null
+          cervical_mucus: Database["public"]["Enums"]["cervical_mucus"] | null
+          created_at: string
+          energy: number | null
+          flow: Database["public"]["Enums"]["cycle_flow"] | null
+          id: string
+          is_period: boolean
+          lh_test: Database["public"]["Enums"]["lh_test_result"] | null
+          log_date: string
+          mood: string[]
+          notes: string | null
+          pregnancy_test:
+            | Database["public"]["Enums"]["pregnancy_test_result"]
+            | null
+          sex_activity: Database["public"]["Enums"]["sex_activity"] | null
+          symptoms: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          bbt_celsius?: number | null
+          cervical_mucus?: Database["public"]["Enums"]["cervical_mucus"] | null
+          created_at?: string
+          energy?: number | null
+          flow?: Database["public"]["Enums"]["cycle_flow"] | null
+          id?: string
+          is_period?: boolean
+          lh_test?: Database["public"]["Enums"]["lh_test_result"] | null
+          log_date: string
+          mood?: string[]
+          notes?: string | null
+          pregnancy_test?:
+            | Database["public"]["Enums"]["pregnancy_test_result"]
+            | null
+          sex_activity?: Database["public"]["Enums"]["sex_activity"] | null
+          symptoms?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          bbt_celsius?: number | null
+          cervical_mucus?: Database["public"]["Enums"]["cervical_mucus"] | null
+          created_at?: string
+          energy?: number | null
+          flow?: Database["public"]["Enums"]["cycle_flow"] | null
+          id?: string
+          is_period?: boolean
+          lh_test?: Database["public"]["Enums"]["lh_test_result"] | null
+          log_date?: string
+          mood?: string[]
+          notes?: string | null
+          pregnancy_test?:
+            | Database["public"]["Enums"]["pregnancy_test_result"]
+            | null
+          sex_activity?: Database["public"]["Enums"]["sex_activity"] | null
+          symptoms?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cycle_day_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycle_day_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycle_day_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycle_day_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycle_day_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "cycle_day_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      cycle_settings: {
+        Row: {
+          conditions: string[]
+          contraception: Database["public"]["Enums"]["contraception_method"]
+          luteal_length: number
+          tracker_enabled: boolean
+          typical_cycle_length: number
+          typical_period_length: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          conditions?: string[]
+          contraception?: Database["public"]["Enums"]["contraception_method"]
+          luteal_length?: number
+          tracker_enabled?: boolean
+          typical_cycle_length?: number
+          typical_period_length?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          conditions?: string[]
+          contraception?: Database["public"]["Enums"]["contraception_method"]
+          luteal_length?: number
+          tracker_enabled?: boolean
+          typical_cycle_length?: number
+          typical_period_length?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cycle_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycle_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycle_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycle_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cycle_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "cycle_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       device_presentation_settings: {
         Row: {
           color_theme: Database["public"]["Enums"]["color_theme"]
@@ -5337,6 +5519,245 @@ export type Database = {
           {
             foreignKeyName: "points_ledger_owner_id_fkey"
             columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      pregnancies: {
+        Row: {
+          created_at: string
+          due_date: string | null
+          ended_on: string | null
+          id: string
+          lmp_date: string | null
+          outcome: Database["public"]["Enums"]["pregnancy_outcome"] | null
+          postpartum_until: string | null
+          status: Database["public"]["Enums"]["pregnancy_status"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          due_date?: string | null
+          ended_on?: string | null
+          id?: string
+          lmp_date?: string | null
+          outcome?: Database["public"]["Enums"]["pregnancy_outcome"] | null
+          postpartum_until?: string | null
+          status?: Database["public"]["Enums"]["pregnancy_status"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          due_date?: string | null
+          ended_on?: string | null
+          id?: string
+          lmp_date?: string | null
+          outcome?: Database["public"]["Enums"]["pregnancy_outcome"] | null
+          postpartum_until?: string | null
+          status?: Database["public"]["Enums"]["pregnancy_status"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pregnancies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pregnancies_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      pregnancy_contractions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          pregnancy_id: string
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          pregnancy_id: string
+          started_at: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          pregnancy_id?: string
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pregnancy_contractions_pregnancy_id_fkey"
+            columns: ["pregnancy_id"]
+            isOneToOne: false
+            referencedRelation: "pregnancies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancy_contractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancy_contractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancy_contractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancy_contractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancy_contractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pregnancy_contractions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      pregnancy_kick_sessions: {
+        Row: {
+          created_at: string
+          ended_at: string | null
+          id: string
+          kicks: number
+          pregnancy_id: string
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          kicks?: number
+          pregnancy_id: string
+          started_at: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          ended_at?: string | null
+          id?: string
+          kicks?: number
+          pregnancy_id?: string
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pregnancy_kick_sessions_pregnancy_id_fkey"
+            columns: ["pregnancy_id"]
+            isOneToOne: false
+            referencedRelation: "pregnancies"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancy_kick_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancy_kick_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancy_kick_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancy_kick_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pregnancy_kick_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pregnancy_kick_sessions_user_id_fkey"
+            columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
@@ -9578,6 +9999,17 @@ export type Database = {
         Returns: undefined
       }
       class_booked_count: { Args: { p_class_id: string }; Returns: number }
+      client_cycle_phase: {
+        Args: { p_client: string }
+        Returns: Database["public"]["Enums"]["cycle_phase_kind"]
+      }
+      client_pregnancy_status: {
+        Args: { p_client: string }
+        Returns: {
+          status: string
+          trimester: number
+        }[]
+      }
       create_business_member_code: {
         Args: {
           p_business_id: string
@@ -9644,6 +10076,26 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      cycle_prediction: {
+        Args: { p_on: string; p_user: string }
+        Returns: {
+          confidence: Database["public"]["Enums"]["cycle_confidence"]
+          cycle_day: number
+          fertile_from: string
+          fertile_to: string
+          flags: string[]
+          irregular: boolean
+          next_period_from: string
+          next_period_start: string
+          next_period_to: string
+          ovulation_estimate: string
+          phase: Database["public"]["Enums"]["cycle_phase_kind"]
+          pregnancy_day: number
+          pregnancy_week: number
+          trimester: number
+        }[]
+      }
+      delete_my_cycle_data: { Args: never; Returns: undefined }
       disconnect_client_relationship: {
         Args: { p_relationship_id: string }
         Returns: {
@@ -9812,6 +10264,25 @@ export type Database = {
           seat_blocks: number
           seats_per_unit: number
           seats_used: number
+        }[]
+      }
+      my_cycle_prediction: {
+        Args: { p_on?: string }
+        Returns: {
+          confidence: Database["public"]["Enums"]["cycle_confidence"]
+          cycle_day: number
+          fertile_from: string
+          fertile_to: string
+          flags: string[]
+          irregular: boolean
+          next_period_from: string
+          next_period_start: string
+          next_period_to: string
+          ovulation_estimate: string
+          phase: Database["public"]["Enums"]["cycle_phase_kind"]
+          pregnancy_day: number
+          pregnancy_week: number
+          trimester: number
         }[]
       }
       my_effective_professional_tier: {
@@ -10116,6 +10587,10 @@ export type Database = {
       valid_endurance_step: { Args: { s: Json }; Returns: boolean }
       valid_endurance_target: { Args: { t: Json }; Returns: boolean }
       valid_exercise_tags: { Args: { t: string[] }; Returns: boolean }
+      valid_string_set: {
+        Args: { allowed: string[]; v: string[] }
+        Returns: boolean
+      }
     }
     Enums: {
       access_category:
@@ -10128,6 +10603,8 @@ export type Database = {
         | "medical_history"
         | "body_measurements"
         | "blood_pressure"
+        | "cycle_phase"
+        | "pregnancy"
       account_type: "customer" | "professional" | "business"
       activity_level:
         | "sedentary"
@@ -10158,8 +10635,31 @@ export type Database = {
         | "completed"
         | "cap_ended"
         | "failed"
+      cervical_mucus: "dry" | "sticky" | "creamy" | "watery" | "egg_white"
       color_theme: "centium" | "ocean" | "sunset" | "berry"
+      contraception_method:
+        | "none"
+        | "pill_combined"
+        | "pill_progestin"
+        | "iud_hormonal"
+        | "iud_copper"
+        | "implant"
+        | "injection"
+        | "ring"
+        | "patch"
+        | "condom"
+        | "other"
       customer_subtype: "client" | "regular" | "athlete" | "general"
+      cycle_confidence: "low" | "medium" | "high"
+      cycle_flow: "none" | "spotting" | "light" | "medium" | "heavy"
+      cycle_phase_kind:
+        | "menstrual"
+        | "follicular"
+        | "ovulatory"
+        | "luteal"
+        | "hormonal_contraception"
+        | "pregnant"
+        | "unavailable"
       dietary_restriction:
         | "vegetarian"
         | "vegan"
@@ -10222,6 +10722,7 @@ export type Database = {
         | "calf_right"
         | "body_fat_pct"
       health_provider: "apple_health" | "android_health"
+      lh_test_result: "negative" | "positive" | "peak"
       meal_slot: "breakfast" | "lunch" | "snack" | "dinner"
       medication_route: "oral" | "injectable" | "topical" | "inhaled" | "other"
       message_flag: "starred" | "hidden"
@@ -10255,6 +10756,9 @@ export type Database = {
         | "meal_prep"
       payment_modality: "cash" | "card" | "whish"
       points_source: "streak" | "referral" | "manual_adjustment" | "other"
+      pregnancy_outcome: "birth" | "loss" | "other"
+      pregnancy_status: "active" | "ended"
+      pregnancy_test_result: "negative" | "positive"
       premium_plan: "monthly" | "yearly"
       professional_plan_source: "own_subscription" | "business_seat" | "default"
       professional_subtype:
@@ -10278,6 +10782,7 @@ export type Database = {
       set_outcome: "completed" | "skipped" | "failed"
       set_type: "normal" | "warmup" | "failure" | "dropset" | "superset" | "pr"
       sex: "female" | "male" | "other"
+      sex_activity: "none" | "protected" | "unprotected"
       store_owner_type: "business" | "professional"
       subscription_status: "active" | "cancelled" | "expired"
       subscription_tier_type: "professional" | "business" | "client"
@@ -10454,6 +10959,8 @@ export const Constants = {
         "medical_history",
         "body_measurements",
         "blood_pressure",
+        "cycle_phase",
+        "pregnancy",
       ],
       account_type: ["customer", "professional", "business"],
       activity_level: [
@@ -10488,8 +10995,33 @@ export const Constants = {
         "cap_ended",
         "failed",
       ],
+      cervical_mucus: ["dry", "sticky", "creamy", "watery", "egg_white"],
       color_theme: ["centium", "ocean", "sunset", "berry"],
+      contraception_method: [
+        "none",
+        "pill_combined",
+        "pill_progestin",
+        "iud_hormonal",
+        "iud_copper",
+        "implant",
+        "injection",
+        "ring",
+        "patch",
+        "condom",
+        "other",
+      ],
       customer_subtype: ["client", "regular", "athlete", "general"],
+      cycle_confidence: ["low", "medium", "high"],
+      cycle_flow: ["none", "spotting", "light", "medium", "heavy"],
+      cycle_phase_kind: [
+        "menstrual",
+        "follicular",
+        "ovulatory",
+        "luteal",
+        "hormonal_contraception",
+        "pregnant",
+        "unavailable",
+      ],
       dietary_restriction: [
         "vegetarian",
         "vegan",
@@ -10557,6 +11089,7 @@ export const Constants = {
         "body_fat_pct",
       ],
       health_provider: ["apple_health", "android_health"],
+      lh_test_result: ["negative", "positive", "peak"],
       meal_slot: ["breakfast", "lunch", "snack", "dinner"],
       medication_route: ["oral", "injectable", "topical", "inhaled", "other"],
       message_flag: ["starred", "hidden"],
@@ -10592,6 +11125,9 @@ export const Constants = {
       ],
       payment_modality: ["cash", "card", "whish"],
       points_source: ["streak", "referral", "manual_adjustment", "other"],
+      pregnancy_outcome: ["birth", "loss", "other"],
+      pregnancy_status: ["active", "ended"],
+      pregnancy_test_result: ["negative", "positive"],
       premium_plan: ["monthly", "yearly"],
       professional_plan_source: [
         "own_subscription",
@@ -10621,6 +11157,7 @@ export const Constants = {
       set_outcome: ["completed", "skipped", "failed"],
       set_type: ["normal", "warmup", "failure", "dropset", "superset", "pr"],
       sex: ["female", "male", "other"],
+      sex_activity: ["none", "protected", "unprotected"],
       store_owner_type: ["business", "professional"],
       subscription_status: ["active", "cancelled", "expired"],
       subscription_tier_type: ["professional", "business", "client"],
