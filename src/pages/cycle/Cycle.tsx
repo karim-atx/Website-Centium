@@ -13,7 +13,6 @@ import { LogDaySheet } from "../../components/cycle/LogDaySheet";
 import { deleteAllCycleData } from "../../services/cycle";
 import {
   CONDITIONS,
-  CONTRACEPTION_OPTIONS,
   SETTINGS_LIMITS,
   type Condition,
   type CyclePhase,
@@ -462,20 +461,12 @@ export default function Cycle() {
             />
           </Card>
 
-          <Card className="mb-3">
-            <p className="text-[11px] font-bold text-charcoal mb-2">Contraception</p>
-            <div className="flex flex-wrap gap-2">
-              {CONTRACEPTION_OPTIONS.map((c) => (
-                <Chip
-                  key={c}
-                  active={settings.contraception === c}
-                  onClick={() => void saveSettings({ contraception: c })}
-                >
-                  {G.CONTRACEPTION_LABEL[c]}
-                </Chip>
-              ))}
-            </div>
-          </Card>
+          {/* CONTRACEPTION IS PART 2'S, and not because of scope:
+              20260924470000 moved it out of cycle_settings into
+              contraception_plans, where a method carries a start date, a pack
+              schedule and reminder times. A row of chips cannot express a
+              plan, and writing half of one would leave the reminders that
+              20260924480000 queues pointing at nothing. */}
 
           <Card className="mb-3">
             <p className="text-[11px] font-bold text-charcoal mb-2">Conditions</p>

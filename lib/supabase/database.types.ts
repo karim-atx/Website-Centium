@@ -2652,6 +2652,201 @@ export type Database = {
         }
         Relationships: []
       }
+      contraception_events: {
+        Row: {
+          created_at: string
+          event: Database["public"]["Enums"]["contraception_event"]
+          id: string
+          notes: string | null
+          occurred_at: string | null
+          occurred_on: string
+          plan_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          event: Database["public"]["Enums"]["contraception_event"]
+          id?: string
+          notes?: string | null
+          occurred_at?: string | null
+          occurred_on: string
+          plan_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          event?: Database["public"]["Enums"]["contraception_event"]
+          id?: string
+          notes?: string | null
+          occurred_at?: string | null
+          occurred_on?: string
+          plan_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contraception_events_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "contraception_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contraception_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contraception_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contraception_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contraception_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contraception_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "contraception_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      contraception_plans: {
+        Row: {
+          active_days: number | null
+          break_days: number | null
+          change_weekday: number | null
+          created_at: string
+          ended_on: string | null
+          first_applied_on: string | null
+          id: string
+          inserted_on: string | null
+          interval_weeks: number | null
+          last_given_on: string | null
+          method: Database["public"]["Enums"]["contraception_method"]
+          pack_start_date: string | null
+          patch_free_week: boolean | null
+          reminder_time: string | null
+          replace_by: string | null
+          started_on: string
+          updated_at: string
+          user_id: string
+          weeks_in: number | null
+          weeks_out: number | null
+        }
+        Insert: {
+          active_days?: number | null
+          break_days?: number | null
+          change_weekday?: number | null
+          created_at?: string
+          ended_on?: string | null
+          first_applied_on?: string | null
+          id?: string
+          inserted_on?: string | null
+          interval_weeks?: number | null
+          last_given_on?: string | null
+          method: Database["public"]["Enums"]["contraception_method"]
+          pack_start_date?: string | null
+          patch_free_week?: boolean | null
+          reminder_time?: string | null
+          replace_by?: string | null
+          started_on: string
+          updated_at?: string
+          user_id: string
+          weeks_in?: number | null
+          weeks_out?: number | null
+        }
+        Update: {
+          active_days?: number | null
+          break_days?: number | null
+          change_weekday?: number | null
+          created_at?: string
+          ended_on?: string | null
+          first_applied_on?: string | null
+          id?: string
+          inserted_on?: string | null
+          interval_weeks?: number | null
+          last_given_on?: string | null
+          method?: Database["public"]["Enums"]["contraception_method"]
+          pack_start_date?: string | null
+          patch_free_week?: boolean | null
+          reminder_time?: string | null
+          replace_by?: string | null
+          started_on?: string
+          updated_at?: string
+          user_id?: string
+          weeks_in?: number | null
+          weeks_out?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contraception_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contraception_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contraception_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contraception_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "contraception_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "contraception_plans_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       custom_exercise_library_items: {
         Row: {
           category: Database["public"]["Enums"]["muscle_group"] | null
@@ -3172,8 +3367,11 @@ export type Database = {
       cycle_settings: {
         Row: {
           conditions: string[]
-          contraception: Database["public"]["Enums"]["contraception_method"]
           luteal_length: number
+          method_reminders: boolean
+          notification_detail: Database["public"]["Enums"]["notification_detail_level"]
+          pill_reminder: boolean
+          timezone: string
           tracker_enabled: boolean
           typical_cycle_length: number
           typical_period_length: number
@@ -3182,8 +3380,11 @@ export type Database = {
         }
         Insert: {
           conditions?: string[]
-          contraception?: Database["public"]["Enums"]["contraception_method"]
           luteal_length?: number
+          method_reminders?: boolean
+          notification_detail?: Database["public"]["Enums"]["notification_detail_level"]
+          pill_reminder?: boolean
+          timezone?: string
           tracker_enabled?: boolean
           typical_cycle_length?: number
           typical_period_length?: number
@@ -3192,8 +3393,11 @@ export type Database = {
         }
         Update: {
           conditions?: string[]
-          contraception?: Database["public"]["Enums"]["contraception_method"]
           luteal_length?: number
+          method_reminders?: boolean
+          notification_detail?: Database["public"]["Enums"]["notification_detail_level"]
+          pill_reminder?: boolean
+          timezone?: string
           tracker_enabled?: boolean
           typical_cycle_length?: number
           typical_period_length?: number
@@ -6798,6 +7002,82 @@ export type Database = {
           },
         ]
       }
+      reminder_sends: {
+        Row: {
+          body: string
+          delivered_at: string | null
+          due_date: string
+          id: string
+          kind: string
+          queued_at: string
+          title: string
+          user_id: string
+        }
+        Insert: {
+          body: string
+          delivered_at?: string | null
+          due_date: string
+          id?: string
+          kind: string
+          queued_at?: string
+          title: string
+          user_id: string
+        }
+        Update: {
+          body?: string
+          delivered_at?: string | null
+          due_date?: string
+          id?: string
+          kind?: string
+          queued_at?: string
+          title?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reminder_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "reminder_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "reminder_sends_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       routine_exercise_blocks: {
         Row: {
           created_at: string
@@ -10010,6 +10290,7 @@ export type Database = {
           trimester: number
         }[]
       }
+      contraception_is_hormonal: { Args: { p_user: string }; Returns: boolean }
       create_business_member_code: {
         Args: {
           p_business_id: string
@@ -10266,6 +10547,18 @@ export type Database = {
           seats_used: number
         }[]
       }
+      my_contraception_status: {
+        Args: never
+        Returns: {
+          days_until: number
+          method: Database["public"]["Enums"]["contraception_method"]
+          next_event_kind: string
+          next_event_on: string
+          pack_day: number
+          pack_phase: string
+          pill_taken_today: boolean
+        }[]
+      }
       my_cycle_prediction: {
         Args: { p_on?: string }
         Returns: {
@@ -10330,6 +10623,7 @@ export type Database = {
       }
       purge_contact_submissions: { Args: never; Returns: Json }
       queue_account_email: { Args: { p_id: string }; Returns: boolean }
+      queue_contraception_reminders: { Args: never; Returns: number }
       reconcile_storage_usage: {
         Args: { p_user_id?: string }
         Returns: {
@@ -10637,6 +10931,17 @@ export type Database = {
         | "failed"
       cervical_mucus: "dry" | "sticky" | "creamy" | "watery" | "egg_white"
       color_theme: "centium" | "ocean" | "sunset" | "berry"
+      contraception_event:
+        | "pill_taken"
+        | "pill_missed"
+        | "pill_late"
+        | "ring_inserted"
+        | "ring_removed"
+        | "patch_applied"
+        | "patch_removed"
+        | "injection_given"
+        | "device_inserted"
+        | "device_removed"
       contraception_method:
         | "none"
         | "pill_combined"
@@ -10744,6 +11049,7 @@ export type Database = {
         | "quads"
         | "shoulders"
         | "tricep"
+      notification_detail_level: "neutral" | "detailed"
       nutrition_plan_type: "custom" | "existing"
       offering_category:
         | "gyms"
@@ -10997,6 +11303,18 @@ export const Constants = {
       ],
       cervical_mucus: ["dry", "sticky", "creamy", "watery", "egg_white"],
       color_theme: ["centium", "ocean", "sunset", "berry"],
+      contraception_event: [
+        "pill_taken",
+        "pill_missed",
+        "pill_late",
+        "ring_inserted",
+        "ring_removed",
+        "patch_applied",
+        "patch_removed",
+        "injection_given",
+        "device_inserted",
+        "device_removed",
+      ],
       contraception_method: [
         "none",
         "pill_combined",
@@ -11112,6 +11430,7 @@ export const Constants = {
         "shoulders",
         "tricep",
       ],
+      notification_detail_level: ["neutral", "detailed"],
       nutrition_plan_type: ["custom", "existing"],
       offering_category: [
         "gyms",

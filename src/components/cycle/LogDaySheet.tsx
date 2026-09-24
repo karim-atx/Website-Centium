@@ -67,7 +67,16 @@ const Section: React.FC<{ title: string; hint?: string; children: React.ReactNod
   </div>
 );
 
-const toggle = <T,>(list: T[], value: T): T[] =>
+/**
+ * FUNCTIONAL UPDATE, not a value computed from the render closure.
+ *
+ * `setSymptoms(toggle(symptoms, s))` reads `symptoms` as it was when this
+ * render ran, so two chips tapped inside one frame both start from the same
+ * list and the second overwrites the first. Caught while scripting the
+ * verification, where two clicks genuinely do land in the same tick -- rare
+ * with a thumb, not impossible, and silent when it happens.
+ */
+const toggle = <T,>(value: T) => (list: T[]): T[] =>
   list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 
 export const LogDaySheet: React.FC<{
@@ -196,7 +205,7 @@ export const LogDaySheet: React.FC<{
               <Chip
                 key={sym}
                 active={symptoms.includes(sym)}
-                onClick={() => setSymptoms(toggle(symptoms, sym))}
+                onClick={() => setSymptoms(toggle(sym))}
               >
                 {SYMPTOM_LABEL[sym]}
               </Chip>
@@ -207,7 +216,7 @@ export const LogDaySheet: React.FC<{
         <Section title="Mood">
           <ChipRow>
             {MOODS.map((m) => (
-              <Chip key={m} active={mood.includes(m)} onClick={() => setMood(toggle(mood, m))}>
+              <Chip key={m} active={mood.includes(m)} onClick={() => setMood(toggle(m))}>
                 {MOOD_LABEL[m]}
               </Chip>
             ))}

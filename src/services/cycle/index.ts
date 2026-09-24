@@ -55,15 +55,15 @@ export type SettingsResult =
   | { ok: true; settings: CycleSettings | null }
   | { ok: false; message: string };
 
+// NO contraception COLUMN: 20260924470000 moved it to contraception_plans.
 const SETTINGS_COLUMNS =
-  "tracker_enabled, typical_cycle_length, typical_period_length, luteal_length, contraception, conditions";
+  "tracker_enabled, typical_cycle_length, typical_period_length, luteal_length, conditions";
 
 function toSettings(row: {
   tracker_enabled: boolean;
   typical_cycle_length: number;
   typical_period_length: number;
   luteal_length: number;
-  contraception: string;
   conditions: string[];
 }): CycleSettings {
   return {
@@ -71,7 +71,6 @@ function toSettings(row: {
     typicalCycleLength: row.typical_cycle_length,
     typicalPeriodLength: row.typical_period_length,
     lutealLength: row.luteal_length,
-    contraception: row.contraception as CycleSettings["contraception"],
     conditions: row.conditions as Condition[],
   };
 }
@@ -128,10 +127,17 @@ export function validateSettings(patch: Partial<CycleSettings>): string | null {
 /**
  * Creates or updates the settings row.
  *
- * UPSERT IS SAFE HERE, unlike on health_metrics: cycle_settings is keyed on
- * user_id with a full table-level UPDATE grant, so writing every column in the
- * payload does not trip the column-scoped-grant problem that makes upsert fail
- * with 42501 there.
+ * UPDATE FIRST, INSERT IF IT MISSED — NOT UPSERT, and this cost a bug before
+ * it was written down. `.upsert()` compiles to INSERT … ON CONFLICT DO
+ * UPDATE, and the UPDATE branch writes EVERY column in the payload. On this
+ * table `user_id` is granted for INSERT and deliberately not for UPDATE (it
+ * identifies the row; nothing may reassign one), so the moment a row already
+ * existed the upsert asked for a privilege it does not have and came back
+ * 42501, "permission denied for table cycle_settings".
+ *
+ * services/health-metrics carries the same warning in capital letters at the
+ * top of the file. Two requests instead of one is the price of a grant that
+ * says what it means.
  */
 export async function saveCycleSettings(
   userId: string,
@@ -140,22 +146,40 @@ export async function saveCycleSettings(
   const invalid = validateSettings(patch);
   if (invalid) return { ok: false, message: invalid };
 
-  const row: Record<string, unknown> = { user_id: userId };
-  if (patch.trackerEnabled !== undefined) row.tracker_enabled = patch.trackerEnabled;
-  if (patch.typicalCycleLength !== undefined) row.typical_cycle_length = patch.typicalCycleLength;
-  if (patch.typicalPeriodLength !== undefined) row.typical_period_length = patch.typicalPeriodLength;
-  if (patch.lutealLength !== undefined) row.luteal_length = patch.lutealLength;
-  if (patch.contraception !== undefined) row.contraception = patch.contraception;
-  if (patch.conditions !== undefined) row.conditions = patch.conditions;
+  // NO user_id IN THE PATCH, because RLS supplies it: the update policy is
+  // `auth.uid() = user_id`, so a row belonging to anyone else is not visible
+  // to update in the first place.
+  const patchRow: Record<string, unknown> = {};
+  if (patch.trackerEnabled !== undefined) patchRow.tracker_enabled = patch.trackerEnabled;
+  if (patch.typicalCycleLength !== undefined) patchRow.typical_cycle_length = patch.typicalCycleLength;
+  if (patch.typicalPeriodLength !== undefined) patchRow.typical_period_length = patch.typicalPeriodLength;
+  if (patch.lutealLength !== undefined) patchRow.luteal_length = patch.lutealLength;
+  if (patch.conditions !== undefined) patchRow.conditions = patch.conditions;
+  if (Object.keys(patchRow).length === 0) return { ok: true };
 
-  const { error } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("cycle_settings")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .upsert(row as any, { onConflict: "user_id" });
+    .update(patchRow as any)
+    .eq("user_id", userId)
+    .select("user_id");
 
-  if (error) {
-    console.error("[cycle] Could not save settings:", error.message);
-    return { ok: false, message: describe(error) };
+  if (updateError) {
+    console.error("[cycle] Could not save settings:", updateError.message);
+    return { ok: false, message: describe(updateError) };
+  }
+  if (updated && updated.length > 0) return { ok: true };
+
+  // No row to update, so this is the first write. user_id belongs in the
+  // INSERT and only in the INSERT.
+  const { error: insertError } = await supabase
+    .from("cycle_settings")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .insert({ user_id: userId, ...patchRow } as any);
+
+  if (insertError) {
+    console.error("[cycle] Could not create settings:", insertError.message);
+    return { ok: false, message: describe(insertError) };
   }
   return { ok: true };
 }
@@ -232,17 +256,19 @@ export function validateDayLog(log: Partial<CycleDayLog>): string | null {
 /**
  * Writes one day, replacing whatever was there.
  *
- * UPSERT ON (user_id, log_date), which the table's own unique constraint
- * `cycle_day_logs_unique_day` provides. A day is a single record that gets
- * edited, not a series of events — logging cramps in the morning and a
- * temperature at night is one day, twice amended.
+ * A DAY IS ONE RECORD THAT GETS EDITED, not a series of events — logging
+ * cramps in the morning and a temperature at night is one day, twice amended,
+ * which is what `cycle_day_logs_unique_day` on (user_id, log_date) assumes.
+ *
+ * UPDATE FIRST, INSERT IF IT MISSED, for the reason on saveCycleSettings:
+ * id, created_at and user_id are granted for INSERT and not for UPDATE, and
+ * an upsert writes the whole payload down the UPDATE branch.
  */
 export async function saveCycleDay(userId: string, log: CycleDayLog): Promise<WriteResult> {
   const invalid = validateDayLog(log);
   if (invalid) return { ok: false, message: invalid };
 
   const row = {
-    user_id: userId,
     log_date: log.date,
     flow: log.flow,
     is_period: log.isPeriod,
@@ -258,14 +284,28 @@ export async function saveCycleDay(userId: string, log: CycleDayLog): Promise<Wr
     notes: log.notes?.trim() ? log.notes.trim() : null,
   };
 
-  const { error } = await supabase
+  const { data: updated, error: updateError } = await supabase
     .from("cycle_day_logs")
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    .upsert(row as any, { onConflict: "user_id,log_date" });
+    .update(row as any)
+    .eq("user_id", userId)
+    .eq("log_date", log.date)
+    .select("log_date");
 
-  if (error) {
-    console.error("[cycle] Could not save day:", error.message);
-    return { ok: false, message: describe(error) };
+  if (updateError) {
+    console.error("[cycle] Could not save day:", updateError.message);
+    return { ok: false, message: describe(updateError) };
+  }
+  if (updated && updated.length > 0) return { ok: true };
+
+  const { error: insertError } = await supabase
+    .from("cycle_day_logs")
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .insert({ user_id: userId, ...row } as any);
+
+  if (insertError) {
+    console.error("[cycle] Could not create day:", insertError.message);
+    return { ok: false, message: describe(insertError) };
   }
   return { ok: true };
 }
