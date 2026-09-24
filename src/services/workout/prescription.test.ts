@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
   blockHeading,
+  formatClock,
   formatEndurancePlan,
   formatPace,
   formatSeconds,
@@ -297,4 +298,26 @@ test("only a superset is not round-based", () => {
   for (const kind of ["amrap", "emom", "for_time"] as const) {
     assert.equal(isRoundBased(kind), true, kind);
   }
+});
+
+// --- the clock face ----------------------------------------------------------
+
+test("the clock reads the way people say it", () => {
+  assert.equal(formatClock(0), "0:00");
+  assert.equal(formatClock(9), "0:09");
+  assert.equal(formatClock(60), "1:00");
+  assert.equal(formatClock(90), "1:30");
+  assert.equal(formatClock(872), "14:32");
+  assert.equal(formatClock(1200), "20:00");
+});
+
+test("an hour is an hour, not sixty-one minutes", () => {
+  // The For Time stopwatch runs on this, and a long chipper passes an hour.
+  assert.equal(formatClock(3600), "1:00:00");
+  assert.equal(formatClock(3661), "1:01:01");
+  assert.equal(formatClock(3725), "1:02:05");
+});
+
+test("a countdown that overshoots reads zero, not a minus sign", () => {
+  assert.equal(formatClock(-5), "0:00");
 });

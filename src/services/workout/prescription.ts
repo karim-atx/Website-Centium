@@ -226,16 +226,24 @@ export function prescriptionLine(ex: Exercise, options: PrescriptionOptions = {}
 // --- blocks ----------------------------------------------------------------
 
 /**
- * A clock as coaches write it: 60 -> "1:00", 90 -> "1:30".
+ * A clock as coaches write it: 60 -> "1:00", 90 -> "1:30", 3725 -> "1:02:05".
  *
  * Distinct from formatSeconds, which reads as prose ("1 min 30 s"). An EMOM
  * interval is a clock face — "every 1:00" — and writing it as "every 1 min"
  * loses the thing that makes it an EMOM.
+ *
+ * THE HOUR CASE IS NOT DECORATION. This is also the face on the session's For
+ * Time stopwatch, where a long chipper genuinely passes an hour; the earlier
+ * version had no hours branch and read 3661 as "61:01". Floored at zero so a
+ * countdown that overshoots shows 0:00 rather than a minus sign.
  */
 export function formatClock(total: number): string {
-  const minutes = Math.floor(total / 60);
-  const seconds = total % 60;
-  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+  const s = Math.max(0, Math.floor(total));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) return `${h}:${String(m).padStart(2, "0")}:${String(sec).padStart(2, "0")}`;
+  return `${m}:${String(sec).padStart(2, "0")}`;
 }
 
 /** A, B, C… for supersets, which are told apart by letter rather than number. */
