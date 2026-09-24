@@ -13,7 +13,12 @@ import {
   withinDays,
 } from "../../services/health-metrics/series";
 import { todaysWorkout } from "../../data/mockWorkouts";
-import { sumNutrition, targetsFromGoal } from "../../services/nutrition";
+import {
+  isReferenceOnlyTarget,
+  REFERENCE_INTAKE_NOTE,
+  sumNutrition,
+  targetsFromGoal,
+} from "../../services/nutrition";
 import { BookOpen, KeyRound, Play, AlertCircle, Check } from "lucide-react";
 import { mockGyms } from "../../data/mockProfessionals";
 import { mondayFirstWeek, DAY_LETTERS, dayLetter } from "../../utils/week";
@@ -298,7 +303,7 @@ export const HomeWidget: React.FC<{
   editMode?: boolean;
 }> = ({ widget, onWaterClick, onGymPassesClick, editMode = false }) => {
   const navigate = useNavigate();
-  const { metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries, gymPurchases, today, selectedDate } =
+  const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries, gymPurchases, today, selectedDate } =
     useApp();
   const isLarge = widget.size === "large";
   // Per-instance clip id for the small water bottle, so two water tiles on
@@ -769,7 +774,17 @@ export const HomeWidget: React.FC<{
                 <span className="text-[22px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
                   {Math.round(totals.calories)}
                 </span>
-                <span className="text-[9.5px] whitespace-nowrap text-primary-deep-text/[0.68]">of {targets.calories} kcal</span>
+                <span className="text-[9.5px] whitespace-nowrap text-primary-deep-text/[0.68]">
+                  of {targets.calories} kcal
+                  {/* The large widget has the room to say whose number this
+                      is; the small one shows the figure alone, and the Food
+                      tab it opens onto carries the same note. */}
+                  {isReferenceOnlyTarget(user) && (
+                    <span className="block text-[8.5px] leading-[1.3] text-primary-deep-text/[0.55]">
+                      {REFERENCE_INTAKE_NOTE}
+                    </span>
+                  )}
+                </span>
               </span>
               <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>{kcalLeft} kcal left</span>
             </div>

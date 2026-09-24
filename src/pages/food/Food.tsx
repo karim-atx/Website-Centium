@@ -7,7 +7,13 @@ import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { EditFoodEntrySheet } from "../../components/food/EditFoodEntrySheet";
 import { DateSelector } from "../../components/dashboard/DateSelector";
-import { mealLabels, sumNutrition, targetsFromGoal } from "../../services/nutrition";
+import {
+  isReferenceOnlyTarget,
+  mealLabels,
+  REFERENCE_INTAKE_NOTE,
+  sumNutrition,
+  targetsFromGoal,
+} from "../../services/nutrition";
 import { deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
 import type { MealType, FoodLogEntry } from "../../types";
 import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronRight, Undo2, Sunrise, Clock, Sun, Sunset } from "lucide-react";
@@ -46,7 +52,7 @@ function mealForCurrentTime(): MealType {
 }
 
 export default function Food() {
-  const { foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, diaryError } =
+  const { user, foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, diaryError } =
     useApp();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("diary");
@@ -260,6 +266,14 @@ export default function Food() {
                     {Math.round(totals.calories).toLocaleString()}
                   </p>
                   <p className="mt-1 text-[9.5px] text-white/70">of {targets.calories.toLocaleString()} kcal</p>
+                  {/* SAYS WHOSE NUMBER IT IS. With no height or weight on
+                      record the target is a published reference intake rather
+                      than anything computed from this person. */}
+                  {isReferenceOnlyTarget(user) && (
+                    <p className="mt-[3px] text-[8.5px] leading-[1.3] text-white/60">
+                      {REFERENCE_INTAKE_NOTE}
+                    </p>
+                  )}
                   <p className="mt-[7px] inline-block text-[9.5px] font-bold text-white bg-white/20 rounded-full px-2 py-[3px]">
                     {targets.calories - Math.round(totals.calories)} left
                   </p>

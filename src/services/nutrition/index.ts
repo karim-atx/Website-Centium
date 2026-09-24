@@ -339,6 +339,29 @@ export function macroGramsFromSplit(calories: number, split: MacroSplit) {
 /** A general reference intake, used only when no height or weight is known. */
 export const DEFAULT_REFERENCE_INTAKE = 2000;
 
+/**
+ * Said wherever a target that came from DEFAULT_REFERENCE_INTAKE is shown.
+ *
+ * A PUBLISHED AVERAGE IS NOT A PERSONAL TARGET. 2,000 kcal is a labelling
+ * reference for a notional adult; presenting it as "your daily calories"
+ * makes it a recommendation for a specific person, which is exactly the claim
+ * this app has spent three commits removing from the health tab. The number is
+ * still a reasonable place to start — it just has to say what it is.
+ */
+export const REFERENCE_INTAKE_NOTE =
+  "General reference: add your details for a personal target";
+
+/**
+ * True when the target on screen could not have been computed from this user.
+ *
+ * Asks the same question calculateTDEE answers, so the two cannot drift: if
+ * Mifflin-St Jeor has no height and no weight to work with, whatever number is
+ * being displayed did not come from this person's body.
+ */
+export function isReferenceOnlyTarget(user: UserProfile): boolean {
+  return calculateTDEE(user) === null;
+}
+
 export function suggestNutritionGoal(
   user: UserProfile,
   weightGoal: WeightGoalType = "maintain",

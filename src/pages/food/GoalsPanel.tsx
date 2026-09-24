@@ -6,7 +6,12 @@ import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { MacroSplitEditor, MACRO_REBALANCE_NOTE } from "../../components/food/MacroSplitEditor";
 import { WeightTrendChart } from "../../components/health/WeightTrendChart";
 import { useApp } from "../../context/AppContext";
-import { calculateTDEE, targetsFromGoal } from "../../services/nutrition";
+import {
+  calculateTDEE,
+  isReferenceOnlyTarget,
+  REFERENCE_INTAKE_NOTE,
+  targetsFromGoal,
+} from "../../services/nutrition";
 import { canDrawSparkline, trendLabel, withinDays } from "../../services/health-metrics/series";
 import type { WeightGoalType, PlanType } from "../../types";
 import { Check, Minus, Plus, ChevronDown, X } from "lucide-react";
@@ -424,6 +429,12 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
             <span className="text-[12px]" style={{ color: "#898597" }}>kcal</span>
           </div>
         </div>
+        {/* WHAT THIS NUMBER IS, when it is not this user's. */}
+        {isReferenceOnlyTarget(user) && (
+          <p className="mt-1.5 text-[10.5px] leading-[1.4] text-charcoal-faint">
+            {REFERENCE_INTAKE_NOTE}
+          </p>
+        )}
         {!locked && Number(calorieDraft || 0) !== nutritionGoal.targetCalories && (
           <Button
             size="sm"
