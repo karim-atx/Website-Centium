@@ -63,8 +63,16 @@ export interface UserProfile {
   dateOfBirth?: string;
   age: number;
   sex: Sex;
-  heightCm: number;
-  weightKg: number;
+  /**
+   * NULL UNTIL MEASURED. Both of these used to default to a body — 178 cm and
+   * 106.4 kg, from AppContext's defaultUser — which every account carried
+   * until its own profile overwrote them, and which an account that never
+   * recorded either kept for good. That default reached further than it
+   * looks: getTestRecommendations divided the two into a BMI of 33.6 and told
+   * such accounts they were "in the obese range".
+   */
+  heightCm: number | null;
+  weightKg: number | null;
   goals: Goal[];
   activityLevel: ActivityLevel;
   tracking: TrackPreference[];

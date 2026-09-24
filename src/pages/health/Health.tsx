@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { BiomarkerCaptureFlow } from "../../components/health/BiomarkerCaptureFlow";
@@ -13,20 +13,32 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { HeartRateEKG } from "../../components/health/HeartRateEKG";
 import { CalorieFlame } from "../../components/health/CalorieFlame";
 import { detectPlatform } from "../../components/health/IntegrationsCard";
-import { healthMetrics } from "../../data/mockHealthData";
+import {
+  averageOf,
+  canDrawSparkline,
+  emptyHint,
+  formatMetric,
+  NO_READINGS,
+  trendLabel,
+  withinDays,
+  type MetricReadings,
+} from "../../services/health-metrics/series";
 import { dayLetter } from "../../utils/week";
 import { useApp } from "../../context/AppContext";
 import { getTestRecommendations } from "../../utils/biomarkerRecommendations";
 import { ChevronRight, Flame, Stethoscope, FileText } from "lucide-react";
 import clsx from "clsx";
-import type { BloodMarker, HealthMetric, ImagingRecord } from "../../types";
+import type { BloodMarker, ImagingRecord } from "../../types";
 
-// V9 (QA 9.0): "swiping down on this page should prompt syncing data with
-// selected integrated health data device" — a pull-to-refresh gesture,
-// only armed at the very top of the page so it doesn't fight normal
-// scrolling further down.
-const PULL_THRESHOLD = 70;
-const SYNC_DURATION_MS = 1400;
+// THE PULL-TO-SYNC GESTURE IS GONE, with the device toggle behind it.
+// "Swiping down on this page should prompt syncing data with selected
+// integrated health data device" was built as far as the prompt: a 70px pull
+// threshold, a 1400 ms progress bar driven by requestAnimationFrame, and the
+// message "Synced with Apple Health" at the end of it. No request was ever
+// made. A gesture that reports a sync that did not happen is worse than no
+// gesture, because it tells the user their empty cards are stale rather than
+// empty. It returns when there is something to sync with — see
+// IntegrationsCard.
 
 
 export default function Health() {
@@ -35,79 +47,41 @@ export default function Health() {
     water,
     waterGoalMl,
     metricValues,
+    healthSeries,
+    today,
     bloodMarkers,
     stepsGoal,
     setStepsGoal,
-    healthIntegrationConnected,
     recoverySensitive,
     imagingRecords,
   } = useApp();
   const testRecommendations = useMemo(() => getTestRecommendations(user), [user]);
+  const platformLabel = detectPlatform() === "ios" ? "Apple Health" : "Android Health";
   const [waterOpen, setWaterOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
   const [shareMarker, setShareMarker] = useState<BloodMarker | null>(null);
   const [detailMarker, setDetailMarker] = useState<BloodMarker | null>(null);
   const [shareAllOpen, setShareAllOpen] = useState(false);
-  const [detailMetric, setDetailMetric] = useState<{ metric: HealthMetric; current: number } | null>(null);
+  const [detailMetric, setDetailMetric] = useState<{ metric: MetricReadings; current: number } | null>(null);
   // QA 13.0: "Have records be a button you can press that leads to the
   // following tabs" — Biomarkers/Imaging/History/Medications now live
   // behind one entry point instead of sitting inline on the page.
-  const [recordsOpen, setRecordsOpen] = useState(false);
+  // WHICH ROW WAS PRESSED, not just that one was. Both rows used to set a
+  // bare boolean and the sheet always opened on Biomarkers.
+  const [recordsTab, setRecordsTab] = useState<"biomarkers" | "imaging" | null>(null);
+  const recordsOpen = recordsTab !== null;
   const [scanImagingOpen, setScanImagingOpen] = useState(false);
   const [shareImagingRecord, setShareImagingRecord] = useState<ImagingRecord | null>(null);
   const [shareAllImagingOpen, setShareAllImagingOpen] = useState(false);
 
-  const [pullY, setPullY] = useState(0);
-  const [syncing, setSyncing] = useState(false);
-  const [syncProgress, setSyncProgress] = useState(0);
-  const [syncMessage, setSyncMessage] = useState<string | null>(null);
-  const pullStartY = useRef<number | null>(null);
-  const platformLabel = detectPlatform() === "ios" ? "Apple Health" : "Android Health";
-
-  const runSync = () => {
-    if (syncing) return;
-    if (!healthIntegrationConnected) {
-      setSyncMessage(`Connect ${platformLabel} in Settings to sync.`);
-      setTimeout(() => setSyncMessage(null), 2200);
-      return;
-    }
-    setSyncing(true);
-    setSyncProgress(0);
-    const start = Date.now();
-    const tick = () => {
-      const pct = Math.min(100, ((Date.now() - start) / SYNC_DURATION_MS) * 100);
-      setSyncProgress(pct);
-      if (pct < 100) requestAnimationFrame(tick);
-      else {
-        setSyncing(false);
-        setSyncMessage(`Synced with ${platformLabel}`);
-        setTimeout(() => setSyncMessage(null), 1800);
-      }
-    };
-    requestAnimationFrame(tick);
-  };
-
-  const handlePullStart = (clientY: number) => {
-    if (syncing || window.scrollY > 0) return;
-    pullStartY.current = clientY;
-  };
-  const handlePullMove = (clientY: number) => {
-    if (pullStartY.current === null || syncing) return;
-    const delta = clientY - pullStartY.current;
-    if (delta > 0) setPullY(Math.min(delta, 100));
-  };
-  const handlePullEnd = () => {
-    if (pullStartY.current === null) return;
-    pullStartY.current = null;
-    if (pullY >= PULL_THRESHOLD) runSync();
-    setPullY(0);
-  };
-
-  const sleepMeta = healthMetrics.find((m) => m.type === "sleep")!;
-  const weightMeta = healthMetrics.find((m) => m.type === "weight")!;
-  const heartRateMeta = healthMetrics.find((m) => m.type === "heartRate")!;
-  const caloriesMeta = healthMetrics.find((m) => m.type === "caloriesBurned")!;
-  const stepsMeta = healthMetrics.find((m) => m.type === "steps")!;
+  const week = (type: MetricReadings["type"]) => withinDays(healthSeries[type], 7, today);
+  const sleepMeta = week("sleep");
+  const weightMeta = week("weight");
+  const heartRateMeta = week("heartRate");
+  const caloriesMeta = week("caloriesBurned");
+  const stepsMeta = week("steps");
+  // Guarded against an empty history: Math.max() of nothing is -Infinity, and
+  // a bar height divided by that is not a number.
   const stepsMax = Math.max(...stepsMeta.history.map((h) => h.value), stepsGoal);
 
   // Biomarkers row subtitle: real markers outside their reference range,
@@ -117,13 +91,30 @@ export default function Health() {
   const biomarkersSubtitle =
     flaggedMarkers.length > 0 ? `${flaggedMarkers.slice(0, 2).join(" and ")} suggested` : "Vitamins, minerals, panels";
 
-  const heightM = 1.78;
-  const bmiValue = metricValues.weight / (heightM * heightM);
-  const bmi = bmiValue.toFixed(1);
+  // BMI FROM THE USER'S OWN HEIGHT, and only when both halves exist.
+  //
+  // This read `const heightM = 1.78` — a literal, for everybody. BMI is a
+  // ratio of two measurements and the app was supplying one of them, so the
+  // figure was wrong for every user who is not 178 cm, and the WHO category
+  // printed beside it — "normal weight", "obese" — was a health
+  // classification derived from a number nobody had measured.
+  //
+  // profiles.height_cm has been read into user.heightCm all along and is
+  // editable in Profile, so this is a substitution rather than new plumbing.
+  // Missing either height or a weight reading yields null, and the footer
+  // says what to add rather than computing around the gap.
+  const heightM = user.heightCm && user.heightCm > 0 ? user.heightCm / 100 : null;
+  const bmiValue =
+    heightM !== null && metricValues.weight !== null
+      ? metricValues.weight / (heightM * heightM)
+      : null;
+  const bmi = bmiValue === null ? null : bmiValue.toFixed(1);
   // V7 (QA 7.0): standard WHO BMI bands, colored consistently with the
   // rest of the app's explicit (brand-independent) status colors.
   const bmiCategory =
-    bmiValue < 18.5
+    bmiValue === null
+      ? null
+      : bmiValue < 18.5
       ? { label: "Underweight", color: "#4C8FD1" }
       : bmiValue < 25
       ? { label: "Normal weight", color: "#3F9165" }
@@ -133,7 +124,7 @@ export default function Health() {
   // Design refinement §6.3: "a proportional four-segment WHO band (flex
   // 1.85/0.65/0.5/1 = under/normal/over/obese, a linear 0–40 scale) with a
   // downward triangle marker pinned at the reading's position."
-  const bmiBandPct = Math.max(0, Math.min(100, (bmiValue / 40) * 100));
+  const bmiBandPct = bmiValue === null ? 0 : Math.max(0, Math.min(100, (bmiValue / 40) * 100));
 
   // Iteration 6 "Team" §5 Health: the weight-trend hero's sparkline, real
   // 7-day history scaled into the dc.html's own 130×44 viewBox.
@@ -146,7 +137,7 @@ export default function Health() {
     return `${x},${y}`;
   });
 
-  const openDetail = (metric: HealthMetric, current: number) => setDetailMetric({ metric, current });
+  const openDetail = (metric: MetricReadings, current: number) => setDetailMetric({ metric, current });
 
   // V8 (QA 8.0): "the widget directory for weight, steps and sleep should
   // redirect you to the detailed version" — Home links here with the
@@ -157,63 +148,28 @@ export default function Health() {
     const navState = location.state as { openMetric?: string; openRecords?: boolean } | null;
     // Add Metric's "Add Records" button lands here with the Records sheet open.
     if (navState?.openRecords) {
-      setRecordsOpen(true);
+      setRecordsTab("biomarkers");
       navigate(".", { replace: true, state: null });
       return;
     }
-    const openMetric = navState?.openMetric;
+    const openMetric = navState?.openMetric as MetricReadings["type"] | undefined;
     if (!openMetric) return;
-    const currentByType: Record<string, number> = {
-      weight: metricValues.weight,
-      steps: metricValues.steps,
-      sleep: metricValues.sleepHours,
-      heartRate: metricValues.heartRate,
-    };
-    const meta = healthMetrics.find((m) => m.type === openMetric);
-    if (meta && currentByType[openMetric] !== undefined) {
-      openDetail(meta, currentByType[openMetric]);
-    }
+    // Only opens onto a metric that has something to show. Deep-linking into
+    // a detail sheet for a metric with no readings would open an empty sheet.
+    const meta = healthSeries[openMetric];
+    if (meta && meta.current !== null) openDetail(meta, meta.current);
     navigate(".", { replace: true, state: null });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.state]);
 
   return (
-    <div
-      onTouchStart={(e) => handlePullStart(e.touches[0].clientY)}
-      onTouchMove={(e) => handlePullMove(e.touches[0].clientY)}
-      onTouchEnd={handlePullEnd}
-      onMouseDown={(e) => handlePullStart(e.clientY)}
-      onMouseMove={(e) => e.buttons === 1 && handlePullMove(e.clientY)}
-      onMouseUp={handlePullEnd}
-      onMouseLeave={handlePullEnd}
-    >
-      {(pullY > 0 || syncing) && (
-        <div className="flex flex-col items-center justify-center overflow-hidden" style={{ height: syncing ? 28 : pullY }}>
-          {syncing ? (
-            <div className="w-24 h-1 rounded-full bg-cream-soft overflow-hidden">
-              <div
-                className="h-full bg-primary rounded-full"
-                style={{ width: `${syncProgress}%`, transition: "width 0.05s linear" }}
-              />
-            </div>
-          ) : (
-            <p className="text-[10px] font-semibold text-charcoal-faint">
-              {pullY >= PULL_THRESHOLD ? "Release to sync" : "Pull to sync"}
-            </p>
-          )}
-        </div>
-      )}
-      {syncMessage && (
-        <p className="text-center text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-3 py-1.5 mb-3 animate-fade-in">
-          {syncMessage}
-        </p>
-      )}
+    <div>
       {/* V7 (QA 7.0): the "+" quick water-log moved to the Home water
           widget — pressing it opens this same AddMetricSheet. */}
       <div className="mb-[13px]">
         <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal">Health</p>
         <p className="mt-[3px] text-[11px] text-charcoal-tertiary">
-          {healthIntegrationConnected ? `Synced with ${platformLabel}` : `Connect ${platformLabel} in Settings to sync`}
+          Weight and water are yours to log. {platformLabel} sync is coming.
         </p>
       </div>
 
@@ -221,9 +177,21 @@ export default function Health() {
           the Home streak board), BMI folded into its footer instead of a
           separate card. Hidden under recovery-sensitive exactly as the
           weight/BMI cards it replaces were. */}
-      {!recoverySensitive && (
+      {/* NO HERO WITHOUT A WEIGHT. The card's whole content is a number, a
+          trend and a sparkline; with nothing recorded it used to render
+          106.4 kg, "↓ 0.6 kg this week" and a seven-point line, none of which
+          had ever been measured. An account that has never weighed in gets an
+          invitation instead. */}
+      {!recoverySensitive && metricValues.weight === null && (
+        <div className="rounded-[22px] px-[17px] py-4 mb-[13px] bg-cream-card border border-charcoal/[0.06]">
+          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Weight trend</p>
+          <p className="mt-[9px] text-[15px] font-bold text-charcoal">{NO_READINGS}</p>
+          <p className="mt-[5px] text-[11px] text-charcoal-tertiary">{emptyHint("weight")}</p>
+        </div>
+      )}
+      {!recoverySensitive && metricValues.weight !== null && (
         <button
-          onClick={() => openDetail(weightMeta, metricValues.weight)}
+          onClick={() => openDetail(weightMeta, metricValues.weight as number)}
           className="tap w-full text-left relative overflow-hidden rounded-[22px] px-[17px] py-4 mb-[13px]"
           style={{ background: "var(--gradient-board)" }}
         >
@@ -236,25 +204,40 @@ export default function Health() {
                 </span>
                 <span className="text-[12px] font-semibold text-white/[0.74]">kg</span>
               </p>
-              <p className="mt-[5px] text-[10px] text-white/70">
-                {weightMeta.trend <= 0 ? "↓" : "↑"} {Math.abs(weightMeta.trend)} kg this week
-              </p>
+              {/* Only where there are two readings to compare. One weigh-in
+                  has no direction, and "↓ 0 kg" over nothing is the a8499e4
+                  bug in a different card. */}
+              {trendLabel(weightMeta) && (
+                <p className="mt-[5px] text-[10px] text-white/70">{trendLabel(weightMeta)}</p>
+              )}
             </div>
-            <svg viewBox="0 0 130 44" style={{ width: 148, height: 44, flex: "none", display: "block" }}>
-              <polyline points={weightSparkPoints.join(" ")} fill="none" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
-              {weightSparkPoints.map((p) => (
-                <circle key={p} cx={p.split(",")[0]} cy={p.split(",")[1]} r={2.2} fill="#fff" />
-              ))}
-            </svg>
+            {canDrawSparkline(weightMeta) && (
+              <svg viewBox="0 0 130 44" style={{ width: 148, height: 44, flex: "none", display: "block" }}>
+                <polyline points={weightSparkPoints.join(" ")} fill="none" stroke="#fff" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" />
+                {weightSparkPoints.map((p) => (
+                  <circle key={p} cx={p.split(",")[0]} cy={p.split(",")[1]} r={2.2} fill="#fff" />
+                ))}
+              </svg>
+            )}
           </div>
           <div className="flex items-center gap-[11px] mt-[13px] pt-[11px] border-t border-white/[0.24]">
             <span className="shrink-0 text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.62]">BMI</span>
-            <span className="flex-1 min-w-0 block h-1 rounded-full bg-white/[0.26] overflow-hidden">
-              <span className="block h-full rounded-full bg-white" style={{ width: `${bmiBandPct}%` }} />
-            </span>
-            <span className="shrink-0 text-[11px] font-bold text-white whitespace-nowrap">
-              {bmi} · {bmiCategory.label.toLowerCase()}
-            </span>
+            {bmi !== null && bmiCategory !== null ? (
+              <>
+                <span className="flex-1 min-w-0 block h-1 rounded-full bg-white/[0.26] overflow-hidden">
+                  <span className="block h-full rounded-full bg-white" style={{ width: `${bmiBandPct}%` }} />
+                </span>
+                <span className="shrink-0 text-[11px] font-bold text-white whitespace-nowrap">
+                  {bmi} · {bmiCategory.label.toLowerCase()}
+                </span>
+              </>
+            ) : (
+              // No band and no category, because both would be drawn from a
+              // height this app does not know.
+              <span className="flex-1 text-[11px] font-semibold text-white/[0.78]">
+                Add your height in Profile to see your BMI
+              </span>
+            )}
           </div>
         </button>
       )}
@@ -267,15 +250,22 @@ export default function Health() {
       <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Today</p>
       <div className="flex gap-[7px] mb-[9px]">
         <button
-          onClick={() => openDetail(stepsMeta, metricValues.steps)}
-          className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left"
+          onClick={() => metricValues.steps !== null && openDetail(stepsMeta, metricValues.steps)}
+          disabled={metricValues.steps === null}
+          className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left disabled:cursor-default"
           style={{ background: "rgba(162,200,194,.2)" }}
         >
           <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-teal-ink/[0.72]">Steps</p>
           <p className="mt-[5px] text-[16px] font-extrabold tracking-[-0.03em] text-charcoal tabular-nums">
-            {metricValues.steps.toLocaleString()}
+            {metricValues.steps === null ? (
+              <span className="text-[11px] font-semibold text-charcoal-tertiary">{NO_READINGS}</span>
+            ) : (
+              formatMetric("steps", metricValues.steps)
+            )}
           </p>
           <div className="flex items-end gap-[2px] h-[26px] mt-[9px]">
+            {/* One bar per day that HAS a step count. The week used to be
+                seven bars whatever the account had recorded. */}
             {stepsMeta.history.map((h, i) => {
               const isToday = i === stepsMeta.history.length - 1;
               return (
@@ -326,29 +316,31 @@ export default function Health() {
         </button>
 
         <button
-          onClick={() => openDetail(sleepMeta, metricValues.sleepHours)}
-          className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left"
+          onClick={() => metricValues.sleepHours !== null && openDetail(sleepMeta, metricValues.sleepHours)}
+          disabled={metricValues.sleepHours === null}
+          className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left disabled:cursor-default"
           style={{ background: "rgba(174,161,220,.13)" }}
         >
           <p className="text-[9px] font-bold tracking-[.16em] uppercase text-primary-deep-text/[0.65]">Sleep</p>
           <p className="mt-[5px] text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">
-            {Math.floor(metricValues.sleepHours)}h{Math.round((metricValues.sleepHours % 1) * 60)
-              .toString()
-              .padStart(2, "0")}
+            {metricValues.sleepHours === null ? (
+              <span className="text-[11px] font-semibold text-charcoal-tertiary">{NO_READINGS}</span>
+            ) : (
+              formatMetric("sleep", metricValues.sleepHours)
+            )}
           </p>
-          <div className="flex-1 flex items-center min-h-0 mt-2">
-            <svg viewBox="0 0 100 26" width="100%" height={26} preserveAspectRatio="none" style={{ display: "block", overflow: "visible" }}>
-              <path
-                d="M0 22 H14 V13 H26 V4 H34 V13 H48 V22 H60 V13 H72 V4 H80 V13 H92 V20 H100"
-                fill="none"
-                stroke="rgb(var(--c-team-lavender-deep))"
-                strokeWidth={1.7}
-                strokeLinejoin="round"
-                strokeLinecap="round"
-              />
-            </svg>
-          </div>
-          <p className="mt-[6px] text-[9px] text-primary-deep-text">+0.3h avg</p>
+          {/* THE HYPNOGRAM IS GONE. It was one fixed `d` attribute — the same
+              five-step zigzag for every account and every night, drawn
+              whether or not anything had been slept through. Real stage data
+              lives in sleep_details and is drawn in the detail sheet; there
+              is nothing to shrink into a 100×26 box until a night exists. */}
+          <div className="flex-1 min-h-0" />
+          {/* The week's average, over nights actually recorded. */}
+          {averageOf(sleepMeta) !== null && (
+            <p className="mt-[6px] text-[9px] text-primary-deep-text">
+              {formatMetric("sleep", averageOf(sleepMeta) as number)} avg this week
+            </p>
+          )}
         </button>
       </div>
 
@@ -356,13 +348,29 @@ export default function Health() {
           shown in this handoff's Health frame at all — kept as its own
           untouched card rather than deleted, per "absence from the canvas
           means not in scope, never delete." */}
-      <Card interactive className="relative mb-[13px]" onClick={() => openDetail(caloriesMeta, metricValues.caloriesBurned)}>
+      <Card
+        interactive={metricValues.caloriesBurned !== null}
+        className="relative mb-[13px]"
+        onClick={
+          metricValues.caloriesBurned === null
+            ? undefined
+            : () => openDetail(caloriesMeta, metricValues.caloriesBurned as number)
+        }
+      >
         <div className="flex items-center justify-between mb-1">
           <p className="text-[11px] font-semibold text-charcoal-soft">Calories burned</p>
           <CalorieFlame size={13} />
         </div>
-        <p className="text-[24px] font-extrabold text-charcoal tracking-[-0.03em] tabular-nums">{metricValues.caloriesBurned.toLocaleString()}</p>
-        <p className="text-[11px] text-charcoal-faint mt-2">Estimated, incl. workouts</p>
+        {metricValues.caloriesBurned === null ? (
+          <p className="text-[13px] font-semibold text-charcoal-tertiary">{NO_READINGS}</p>
+        ) : (
+          <>
+            <p className="text-[24px] font-extrabold text-charcoal tracking-[-0.03em] tabular-nums">
+              {formatMetric("caloriesBurned", metricValues.caloriesBurned)}
+            </p>
+            <p className="text-[11px] text-charcoal-faint mt-2">Estimated, incl. workouts</p>
+          </>
+        )}
       </Card>
 
       {/* Canonical Heart Rate large widget, reusing the Health page's own
@@ -370,23 +378,33 @@ export default function Health() {
           manifest requires the two to mirror exactly, so they share one
           instance rather than two hand-built copies). */}
       <button
-        onClick={() => openDetail(heartRateMeta, metricValues.heartRate)}
-        className="tap w-full h-[150px] box-border rounded-[15px] px-4 py-3.5 flex flex-col text-left mb-[13px]"
-        style={{ background: "rgba(156,79,124,.1)" }}
+        onClick={() => metricValues.heartRate !== null && openDetail(heartRateMeta, metricValues.heartRate)}
+        disabled={metricValues.heartRate === null}
+        className="tap w-full box-border rounded-[15px] px-4 py-3.5 flex flex-col text-left mb-[13px] disabled:cursor-default"
+        style={{ background: "rgba(156,79,124,.1)", height: metricValues.heartRate === null ? undefined : 150 }}
       >
         <div className="flex items-center justify-between gap-3">
           <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-rose-ink/80">Heart rate</p>
-          <span className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap text-team-rose-ink bg-berry/[0.16]">Resting</span>
+          {metricValues.heartRate !== null && (
+            <span className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap text-team-rose-ink bg-berry/[0.16]">Resting</span>
+          )}
         </div>
-        <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
-          <div className="flex items-baseline gap-2">
-            <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">
-              {metricValues.heartRate}
-            </span>
-            <span className="text-[11px] font-bold text-team-rose-ink/80">bpm resting</span>
+        {metricValues.heartRate === null ? (
+          // NO TRACE OVER NO PULSE. HeartRateEKG animates at the bpm it is
+          // given, so an empty card used to draw a steady 68 for somebody
+          // wearing nothing.
+          <p className="mt-2 text-[13px] font-semibold text-charcoal-tertiary">{NO_READINGS}</p>
+        ) : (
+          <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
+            <div className="flex items-baseline gap-2">
+              <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">
+                {formatMetric("heartRate", metricValues.heartRate)}
+              </span>
+              <span className="text-[11px] font-bold text-team-rose-ink/80">bpm resting</span>
+            </div>
+            <HeartRateEKG bpm={metricValues.heartRate} />
           </div>
-          <HeartRateEKG bpm={metricValues.heartRate} />
-        </div>
+        )}
       </button>
 
       {/* QA 11.0: "Based on the information provided by the client...
@@ -421,7 +439,7 @@ export default function Health() {
       <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Records</p>
       <div className="flex flex-col gap-[7px] mb-3">
         <button
-          onClick={() => setRecordsOpen(true)}
+          onClick={() => setRecordsTab("biomarkers")}
           className="tap flex items-center gap-[11px] rounded-[15px] px-3.5 py-3"
           style={{ background: "rgba(174,161,220,.16)" }}
         >
@@ -435,7 +453,7 @@ export default function Health() {
           <ChevronRight size={14} className="text-primary-deep-text/60 shrink-0" />
         </button>
         <button
-          onClick={() => setRecordsOpen(true)}
+          onClick={() => setRecordsTab("imaging")}
           className="tap flex items-center gap-[11px] rounded-[15px] px-3.5 py-3"
           style={{ background: "rgba(162,200,194,.18)" }}
         >
@@ -454,8 +472,14 @@ export default function Health() {
         <Flame size={11} /> Health-data tracking, not a diagnosis. Always consult a professional.
       </p>
 
-      <BottomSheet open={recordsOpen} onClose={() => setRecordsOpen(false)} title="Records">
+      <BottomSheet open={recordsOpen} onClose={() => setRecordsTab(null)} title="Records">
+        {/* KEYED ON THE TAB, so the sheet remounts when it is opened from the
+            other row. Without the key, initialTab is only the INITIAL value of
+            a useState that already exists, and the second row would land
+            wherever the first visit left off. */}
         <MedicalRecordsSection
+          key={recordsTab ?? "closed"}
+          initialTab={recordsTab ?? "biomarkers"}
           hideLabel
           bloodMarkers={bloodMarkers}
           onShareAll={() => setShareAllOpen(true)}
@@ -493,7 +517,7 @@ export default function Health() {
         open={!!detailMetric}
         onClose={() => setDetailMetric(null)}
         metric={detailMetric?.metric ?? null}
-        current={detailMetric?.current ?? 0}
+        current={detailMetric?.current ?? null}
         stepsGoal={stepsGoal}
         onEditStepsGoal={setStepsGoal}
       />

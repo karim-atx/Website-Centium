@@ -1,24 +1,55 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { PeriodBarChart } from "./PeriodBarChart";
-import { StackedSleepBar, StackedSleepColumns, sleepStageLegend, type SleepStages } from "./StackedSleepBar";
+import { StackedSleepBar, StackedSleepColumns, sleepStageLegend } from "./StackedSleepBar";
 import { CaloriesRing } from "./CaloriesRing";
-import { sleepDetail, heartRateDetail } from "../../data/mockHealthData";
-import type { HealthMetric } from "../../types";
+import { useApp } from "../../context/AppContext";
+import {
+  averageOf,
+  emptyHint,
+  formatMetric,
+  NO_READINGS,
+  trendLabel,
+  type MetricReadings,
+} from "../../services/health-metrics/series";
+import {
+  bucketReadings,
+  periodReadingCount,
+  periodValue,
+  PERIOD_LABEL,
+  readingCountLabel,
+  valueOn,
+  type Period,
+} from "../../services/health-metrics/periods";
 import { CalendarDays, Pencil, Check, HeartPulse, Scale, Moon, Flame } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+
+// The expanded view behind every Health tab card.
+//
+// EVERY NUMBER IN HERE IS NOW A READING. What it used to do instead:
+//
+//   • Month and Year were `weeklyAvg * (1 + Math.sin(i * 1.7) * spread)` —
+//     one week's figure nudged four and twelve ways.
+//   • The calendar picker ran the chosen date through a string hash and
+//     scaled the current value by it, so any day in history returned a
+//     stable, plausible, invented number.
+//   • The heart-rate block printed a fixed resting/range/average and four
+//     "time in zone" tiles, none of which any table could have produced.
+//   • The sleep block took one mock night and multiplied its four stages by
+//     the same sine wave to make a week of them.
+//
+// A period with no readings in it now says so, and the chart is simply absent.
 
 // V10 (QA 10.0): "Similar to the water widget, replace the lock icon in
 // other widgets to minimalistic icons relevant to each widget" — a
 // per-metric icon instead of a generic Lock next to "Keep auto-synced".
-const autoSyncedIcon: Partial<Record<HealthMetric["type"], LucideIcon>> = {
+const autoSyncedIcon: Partial<Record<MetricReadings["type"], LucideIcon>> = {
   weight: Scale,
   heartRate: HeartPulse,
   sleep: Moon,
   caloriesBurned: Flame,
 };
 
-type Period = "daily" | "weekly" | "monthly" | "yearly";
 const periodTabs: { value: Period; label: string }[] = [
   { value: "daily", label: "D" },
   { value: "weekly", label: "W" },
@@ -31,33 +62,18 @@ const periodTabs: { value: Period; label: string }[] = [
 // user-editable, handled by its own WaterDetailSheet instead of this one.
 const AUTO_SOURCED_TYPES = new Set(["weight", "heartRate", "steps", "sleep", "caloriesBurned"]);
 
-// Deterministic small variation used only to synthesize longer-period demo
-// aggregates from a single week of real-looking data — same spirit as the
-// synthesis already used in StepsPeriodCard.
-const wobble = (i: number, spread = 0.08) => 1 + Math.sin(i * 1.7) * spread;
-
-function hashString(s: string) {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-// V7 (QA 7.0): "Day" is that specific day, "Week" is Monday-Sunday, "Month"
-// is the 4 weeks of that month, "Year" is January-December — real calendar
-// granularity at every level, instead of the previous D/W/M/Y tabs each
-// jumping straight to a different aggregation than their name implied.
-const monthNames = Array.from({ length: 12 }, (_, i) =>
-  new Date(2000, i, 1).toLocaleDateString("en-US", { month: "short" })
-);
+const hoursAndMinutes = (minutes: number) => `${Math.floor(minutes / 60)}h${minutes % 60}m`;
 
 export const MetricDetailSheet: React.FC<{
   open: boolean;
   onClose: () => void;
-  metric: HealthMetric | null;
-  current: number;
+  metric: MetricReadings | null;
+  /** The latest reading, or null when there is none. */
+  current: number | null;
   stepsGoal?: number;
   onEditStepsGoal?: (goal: number) => void;
 }> = ({ open, onClose, metric, current, stepsGoal, onEditStepsGoal }) => {
+  const { today, sleepNights } = useApp();
   const [period, setPeriod] = useState<Period>("daily");
   const [pickedDate, setPickedDate] = useState<string | null>(null);
   const [selectedSleepIdx, setSelectedSleepIdx] = useState<number | null>(null);
@@ -79,61 +95,46 @@ export const MetricDetailSheet: React.FC<{
   } else if (!open && wasOpen) {
     setWasOpen(false);
   }
+
   if (!metric) return null;
 
   const isSleep = metric.type === "sleep";
   const isSteps = metric.type === "steps";
   const isWeight = metric.type === "weight";
   const isHeartRate = metric.type === "heartRate";
-  const isTrend = isWeight;
   const isCalories = metric.type === "caloriesBurned";
   const isAuto = AUTO_SOURCED_TYPES.has(metric.type);
 
-  const dailyHistory = metric.history.map((h) => h.value);
-  const weekdayLabels = metric.history.map((h) =>
-    new Date(`${h.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" })
-  );
-  const weekOfMonthLabels = Array.from({ length: 4 }, (_, i) => `Week ${i + 1}`);
-
-  // V10 (QA 10.0): "Pressing Day, week, month or year in the detailed
-  // widget should reflect the value of the day, weekly average, monthly
-  // average, or yearly average above respectively" — the headline number
-  // now tracks the selected period instead of always showing today's value.
-  const weeklyAvg = dailyHistory.reduce((s, v) => s + v, 0) / dailyHistory.length;
-  const monthOfWeekAvgs = Array.from({ length: 4 }, (_, i) => weeklyAvg * wobble(i, isTrend ? 0.03 : 0.08));
-  const yearOfMonthAvgs = Array.from({ length: 12 }, (_, i) => weeklyAvg * wobble(i, isTrend ? 0.05 : 0.12));
-  const monthlyAvg = monthOfWeekAvgs.reduce((s, v) => s + v, 0) / monthOfWeekAvgs.length;
-  const yearlyAvg = yearOfMonthAvgs.reduce((s, v) => s + v, 0) / yearOfMonthAvgs.length;
-  const periodValue =
-    period === "daily" ? current : period === "weekly" ? weeklyAvg : period === "monthly" ? monthlyAvg : yearlyAvg;
-
-  // Deterministic mock value for an arbitrary picked date, in the same
-  // spirit as the rest of this prototype's synthesized longer-range data.
-  const valueForDate = (iso: string) => {
-    const seed = hashString(`${metric.type}-${iso}`);
-    const f = wobble(seed % 20, 0.15);
-    return isTrend ? +(current * f).toFixed(1) : Math.round(current * f);
-  };
+  const buckets = bucketReadings(metric, period, today);
+  const figure = period === "daily" ? current : periodValue(metric, period, today);
+  const readings = periodReadingCount(metric, period, today);
 
   return (
     <BottomSheet open={open} onClose={onClose} title={metric.label}>
       <div className="animate-fade-slide-up">
         <div className="flex items-center justify-between mb-2">
           <div>
+            {/* NO FIGURE WITHOUT A READING IN THE PERIOD. Switching to Year on
+                an account that logged twice last week used to produce a
+                confident yearly average; it now says there is nothing there. */}
             <p className="text-4xl font-bold text-charcoal leading-none">
-              {metric.type === "sleep"
-                ? `${Math.floor(periodValue)}h ${Math.round((periodValue % 1) * 60)}m`
-                : isTrend
-                ? periodValue.toFixed(1)
-                : Math.round(periodValue).toLocaleString()}
-              {metric.type !== "sleep" && (
-                <span className="text-base font-normal text-charcoal-faint ml-1">{metric.unit}</span>
+              {figure === null ? (
+                <span className="text-lg font-semibold text-charcoal-faint">{NO_READINGS}</span>
+              ) : (
+                <>
+                  {formatMetric(metric.type, figure)}
+                  {!isSleep && (
+                    <span className="text-base font-normal text-charcoal-faint ml-1">{metric.unit}</span>
+                  )}
+                </>
               )}
             </p>
             <p className="text-xs text-charcoal-faint mt-1">
-              {period === "daily"
-                ? `${metric.trend >= 0 ? "↑" : "↓"} ${Math.abs(metric.trend)} ${metric.unit} vs last week`
-                : { weekly: "Weekly average", monthly: "Monthly average", yearly: "Yearly average" }[period]}
+              {figure === null
+                ? (emptyHint(metric.type) ?? "Nothing recorded for this period")
+                : period === "daily"
+                ? trendLabel(metric) ?? readingCountLabel(readings)
+                : `${PERIOD_LABEL[period]} · ${readingCountLabel(readings)}`}
             </p>
           </div>
           {isSteps && onEditStepsGoal ? (
@@ -238,256 +239,242 @@ export const MetricDetailSheet: React.FC<{
                 year: "numeric",
               })}
             </p>
-            <p className="text-2xl font-bold text-primary-dark">
-              {metric.type === "sleep"
-                ? `${Math.floor(valueForDate(pickedDate))}h ${Math.round((valueForDate(pickedDate) % 1) * 60)}m`
-                : `${valueForDate(pickedDate).toLocaleString()} ${metric.unit}`}
-            </p>
+            {/* A DAY WITH NO READING SAYS SO. This used to hash the date into
+                a multiplier, so every day ever picked returned a number. */}
+            {(() => {
+              const value = valueOn(metric, pickedDate);
+              if (value === null) {
+                return <p className="text-sm font-semibold text-primary-dark/80">No reading on this day</p>;
+              }
+              return (
+                <p className="text-2xl font-bold text-primary-dark">
+                  {formatMetric(metric.type, value)}
+                  {!isSleep && ` ${metric.unit}`}
+                </p>
+              );
+            })()}
           </div>
         )}
 
-        {/* Steps: bar chart per period (moved here from the compact widget
-            per QA). V8 (QA 8.0): week/month/year bars are the average daily
-            steps for that unit (not a redundant total on top of the day
-            count) — the day view drops the chart entirely, same treatment
-            as the weight/body fat trend's daily case just below. */}
-        {isSteps &&
-          period !== "daily" &&
-          (() => {
-            const weeklyAvg = Math.round(dailyHistory.reduce((s, v) => s + v, 0) / dailyHistory.length);
-            const weekOfMonthAvgs = Array.from({ length: 4 }, (_, i) => Math.round(weeklyAvg * wobble(i)));
-            const monthOfYearAvgs = Array.from({ length: 12 }, (_, i) => Math.round(weeklyAvg * wobble(i, 0.12)));
-            const view = {
-              weekly: { values: dailyHistory, labels: weekdayLabels },
-              monthly: { values: weekOfMonthAvgs, labels: weekOfMonthAvgs.map((_, i) => `Week ${i + 1}`) },
-              yearly: { values: monthOfYearAvgs, labels: monthNames },
-            }[period];
-            return (
-              <div className="mb-4">
-                <PeriodBarChart values={view.values} labels={view.labels} color="#4C8FD1" />
-              </div>
-            );
-          })()}
-
-        {/* Weight: real Day/Week/Month/Year granularity.
-            V10 (QA 10.0): "pressing week, month, or year in the detailed
-            weight widget... should show a graph with the date being on the
-            x-axis and weight in the y-axis" — a labeled bar chart (dates on
-            weekly, week-of-month on monthly, months on yearly) instead of
-            an unlabeled sparkline. */}
-        {isTrend &&
-          (() => {
-            const base = dailyHistory[dailyHistory.length - 1];
-            const monthVals = Array.from({ length: 4 }, (_, i) => +(base * wobble(i, 0.03)).toFixed(1));
-            const yearVals = Array.from({ length: 12 }, (_, i) => +(base * wobble(i, 0.05)).toFixed(1));
-            if (period === "daily") {
-              return (
-                <div className="mb-4 text-center">
-                  <p className="text-xs text-charcoal-faint">Today's reading — see the number above.</p>
-                </div>
-              );
-            }
-            const view = {
-              weekly: { values: dailyHistory, labels: weekdayLabels },
-              monthly: { values: monthVals, labels: weekOfMonthLabels },
-              yearly: { values: yearVals, labels: monthNames },
-            }[period];
-            const high = Math.max(...view.values);
-            const low = Math.min(...view.values);
-            return (
-              <div className="mb-4">
-                <PeriodBarChart values={view.values} labels={view.labels} color="#7D6BB5" />
+        {/* The chart, for every metric with more than a day's view selected.
+            One bar per day, week or month that carries readings — so a chart
+            with nothing behind it is simply not drawn. */}
+        {!isCalories && !isSleep && period !== "daily" && (
+          buckets.length > 0 ? (
+            <div className="mb-4">
+              <PeriodBarChart
+                values={buckets.map((b) => b.value)}
+                labels={buckets.map((b) => b.label)}
+                color={isWeight ? "#7D6BB5" : isHeartRate ? "#E9736A" : "#4C8FD1"}
+              />
+              {isWeight && (
                 <div className="flex justify-center gap-4 text-xs mt-2">
-                  <span className="text-trend-high-text font-semibold">↑ High {high.toFixed(1)}kg</span>
-                  <span className="text-trend-low-text font-semibold">↓ Low {low.toFixed(1)}kg</span>
+                  <span className="text-trend-high-text font-semibold">
+                    ↑ High {Math.max(...buckets.map((b) => b.value)).toFixed(1)}kg
+                  </span>
+                  <span className="text-trend-low-text font-semibold">
+                    ↓ Low {Math.min(...buckets.map((b) => b.value)).toFixed(1)}kg
+                  </span>
                 </div>
-              </div>
-            );
-          })()}
+              )}
+            </div>
+          ) : (
+            <p className="text-xs text-charcoal-faint text-center mb-4">
+              Nothing recorded in this period.
+            </p>
+          )
+        )}
 
-        {/* Heart Rate: resting/average headline plus low/high range and a
-            zone-minutes breakdown, Apple-Health-inspired. */}
+        {isWeight && period === "daily" && current !== null && (
+          <div className="mb-4 text-center">
+            <p className="text-xs text-charcoal-faint">Latest reading — see the number above.</p>
+          </div>
+        )}
+
+        {/* Heart rate: latest, range and average — each computed from the
+            readings in the selected period.
+
+            THE ZONE TILES ARE GONE. "Time in heart-rate zones today" showed
+            Rest 19h40m / Fat burn 3h00m / Cardio 55m / Peak 25m, from a
+            literal in mockHealthData. Zones are minutes spent between two
+            bpm thresholds, which needs a continuous trace; health_metrics
+            stores one value per reading and nothing writes even that. There
+            is no honest version of this block, so it does not ship. */}
         {isHeartRate && (
           <div className="mb-4 animate-fade-slide-up">
-            {period !== "daily" && (
-              <div className="mb-4">
-                <PeriodBarChart
-                  values={
-                    { weekly: dailyHistory, monthly: monthOfWeekAvgs.map((v) => Math.round(v)), yearly: yearOfMonthAvgs.map((v) => Math.round(v)) }[
-                      period
-                    ]
-                  }
-                  labels={{ weekly: weekdayLabels, monthly: weekOfMonthLabels, yearly: monthNames }[period]}
-                  color="#E9736A"
-                />
-              </div>
-            )}
-            <div className="grid grid-cols-3 gap-2 mb-4">
-              <div className="text-center bg-cream-soft rounded-xl py-2.5">
-                <p className="text-sm font-bold text-charcoal">{heartRateDetail.resting}</p>
-                <p className="text-[10px] text-charcoal-faint">Resting</p>
-              </div>
-              <div className="text-center bg-cream-soft rounded-xl py-2.5">
-                <p className="text-sm font-bold text-charcoal">{heartRateDetail.low}–{heartRateDetail.high}</p>
-                <p className="text-[10px] text-charcoal-faint">Range (bpm)</p>
-              </div>
-              <div className="text-center bg-cream-soft rounded-xl py-2.5">
-                <p className="text-sm font-bold text-charcoal">{heartRateDetail.average}</p>
-                <p className="text-[10px] text-charcoal-faint">Average</p>
-              </div>
-            </div>
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-              Time in heart-rate zones today
-            </p>
-            <div className="grid grid-cols-4 gap-2">
-              {[
-                { label: "Rest", min: heartRateDetail.zoneMinutes.rest, color: "#4C8FD1" },
-                { label: "Fat burn", min: heartRateDetail.zoneMinutes.fatBurn, color: "#3F9165" },
-                { label: "Cardio", min: heartRateDetail.zoneMinutes.cardio, color: "#D9A441" },
-                { label: "Peak", min: heartRateDetail.zoneMinutes.peak, color: "#E9736A" },
-              ].map((z) => (
-                <div key={z.label} className="text-center bg-cream-soft rounded-xl py-2">
-                  <p className="text-sm font-bold" style={{ color: z.color }}>
-                    {Math.floor(z.min / 60)}h{z.min % 60}m
-                  </p>
-                  <p className="text-[9px] text-charcoal-faint">{z.label}</p>
+            {(() => {
+              const values = metric.history.map((p) => p.value);
+              if (values.length === 0) return null;
+              const average = averageOf(metric);
+              return (
+                <div className="grid grid-cols-3 gap-2">
+                  <div className="text-center bg-cream-soft rounded-xl py-2.5">
+                    <p className="text-sm font-bold text-charcoal">{Math.round(values[values.length - 1])}</p>
+                    <p className="text-[10px] text-charcoal-faint">Latest</p>
+                  </div>
+                  <div className="text-center bg-cream-soft rounded-xl py-2.5">
+                    <p className="text-sm font-bold text-charcoal">
+                      {values.length > 1
+                        ? `${Math.round(Math.min(...values))}–${Math.round(Math.max(...values))}`
+                        : "—"}
+                    </p>
+                    <p className="text-[10px] text-charcoal-faint">Range (bpm)</p>
+                  </div>
+                  <div className="text-center bg-cream-soft rounded-xl py-2.5">
+                    <p className="text-sm font-bold text-charcoal">{average === null ? "—" : Math.round(average)}</p>
+                    <p className="text-[10px] text-charcoal-faint">Average</p>
+                  </div>
                 </div>
-              ))}
-            </div>
+              );
+            })()}
           </div>
         )}
 
-        {/* Calories burned: Apple-Fitness-ring-inspired flame fill */}
-        {isCalories && (
+        {/* Calories burned: Apple-Fitness-ring-inspired flame fill. The 2,600
+            goal is the app's own target, not a reading, so it stands — but
+            the ring needs a real figure to fill against. */}
+        {isCalories && current !== null && (
           <div className="flex flex-col items-center mb-4">
             <CaloriesRing progress={current / 2600} />
-            <p className="text-xs text-charcoal-faint mt-2">{current.toLocaleString()} / 2,600 kcal goal</p>
-          </div>
-        )}
-
-        {!isSleep && !isSteps && !isTrend && !isCalories && !isHeartRate && (
-          <div className="grid grid-cols-7 gap-1.5 mb-4">
-            {metric.history.map((h, i) => (
-              <div key={i} className="text-center">
-                <p className="text-[10px] text-charcoal-faint mb-1">{weekdayLabels[i]}</p>
-                <p className="text-xs font-semibold text-charcoal">{Math.round(h.value)}</p>
-              </div>
-            ))}
+            <p className="text-xs text-charcoal-faint mt-2">
+              {Math.round(current).toLocaleString()} / 2,600 kcal goal
+            </p>
           </div>
         )}
 
         {isSleep && (
           <div className="animate-fade-slide-up">
-            <div className="flex items-center justify-between bg-primary-pale rounded-2xl px-4 py-3 mb-4">
-              <span className="text-sm font-semibold text-primary-dark">Sleep score</span>
-              <span className="text-2xl font-bold text-primary-dark">{sleepDetail.score}</span>
-            </div>
+            {(() => {
+              const night = metric.history.length > 0 ? sleepNights[sleepNights.length - 1] : null;
+              const withStages = sleepNights.filter((n) => n.stages !== null);
 
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-              Total time asleep by stage
-            </p>
-            <div className="grid grid-cols-4 gap-2 mb-4">
-              {sleepStageLegend.map((s) => {
-                const minutes = { rem: sleepDetail.remMin, deep: sleepDetail.deepMin, light: sleepDetail.lightMin, awake: sleepDetail.awakeMin }[
-                  s.key as "rem" | "deep" | "light" | "awake"
-                ];
+              // NO BREAKDOWN WITHOUT A ROW. sleep_details is written by
+              // nothing today — a stage breakdown comes from a wearable and
+              // device sync is not built — so this is the usual case, and it
+              // says so instead of showing a score of 82.
+              if (!night && withStages.length === 0) {
                 return (
-                  <div key={s.key} className="text-center bg-cream-soft rounded-xl py-2">
-                    <p className="text-sm font-bold text-charcoal">
-                      {Math.floor(minutes / 60)}h{minutes % 60}m
-                    </p>
-                    <p className="text-[10px] text-charcoal-faint">{s.label}</p>
-                  </div>
+                  <p className="text-xs text-charcoal-faint">
+                    No sleep stage detail recorded. Stages and a sleep score come from a
+                    connected device.
+                  </p>
                 );
-              })}
-            </div>
+              }
 
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-              Sleep stages
-            </p>
+              return (
+                <>
+                  {night?.score != null && (
+                    <div className="flex items-center justify-between bg-primary-pale rounded-2xl px-4 py-3 mb-4">
+                      <span className="text-sm font-semibold text-primary-dark">Sleep score</span>
+                      <span className="text-2xl font-bold text-primary-dark">{night.score}</span>
+                    </div>
+                  )}
 
-            {period === "daily" ? (
-              <StackedSleepBar stages={sleepDetail} />
-            ) : (
-              (() => {
-                const counts = { weekly: 7, monthly: 4, yearly: 12 }[period] ?? 7;
-                const items = Array.from({ length: counts }, (_, i) => {
-                  const f = wobble(i, 0.15);
-                  const stages: SleepStages = {
-                    remMin: Math.round(sleepDetail.remMin * f),
-                    deepMin: Math.round(sleepDetail.deepMin * f),
-                    lightMin: Math.round(sleepDetail.lightMin * f),
-                    awakeMin: Math.round(sleepDetail.awakeMin * (2 - f)),
-                  };
-                  const label =
-                    period === "weekly"
-                      ? weekdayLabels[i] ?? `Day ${i + 1}`
-                      : period === "monthly"
-                      ? `Week ${i + 1}`
-                      : monthNames[i];
-                  return { stages, label };
-                });
-                const selected = selectedSleepIdx !== null ? items[selectedSleepIdx] : null;
-                return (
-                  <>
-                    <StackedSleepColumns items={items} selectedIndex={selectedSleepIdx} onSelect={setSelectedSleepIdx} />
-                    <p className="text-[11px] text-charcoal-faint text-center mt-2">
-                      {selected ? `Comparing ${selected.label} against the rest` : "Tap a bar to compare that sleep cycle"}
-                    </p>
-                    {selected && (
-                      <div className="bg-cream-soft rounded-2xl p-3.5 mt-2">
-                        <p className="text-xs font-semibold text-charcoal mb-2">{selected.label}</p>
-                        <StackedSleepBar stages={selected.stages} />
-                        <div className="grid grid-cols-4 gap-2 mt-3">
-                          {sleepStageLegend.map((s) => {
-                            const minutes = {
-                              rem: selected.stages.remMin,
-                              deep: selected.stages.deepMin,
-                              light: selected.stages.lightMin,
-                              awake: selected.stages.awakeMin,
-                            }[s.key as "rem" | "deep" | "light" | "awake"];
-                            return (
-                              <div key={s.key} className="text-center">
-                                <p className="text-xs font-bold text-charcoal">
-                                  {Math.floor(minutes / 60)}h{minutes % 60}m
-                                </p>
-                                <p className="text-[9px] text-charcoal-faint">{s.label}</p>
-                              </div>
-                            );
-                          })}
-                        </div>
+                  {night?.stages && (
+                    <>
+                      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+                        Total time asleep by stage
+                      </p>
+                      <div className="grid grid-cols-4 gap-2 mb-4">
+                        {sleepStageLegend.map((s) => {
+                          const minutes = {
+                            rem: night.stages!.remMin,
+                            deep: night.stages!.deepMin,
+                            light: night.stages!.lightMin,
+                            awake: night.stages!.awakeMin,
+                          }[s.key as "rem" | "deep" | "light" | "awake"];
+                          return (
+                            <div key={s.key} className="text-center bg-cream-soft rounded-xl py-2">
+                              <p className="text-sm font-bold text-charcoal">{hoursAndMinutes(minutes)}</p>
+                              <p className="text-[10px] text-charcoal-faint">{s.label}</p>
+                            </div>
+                          );
+                        })}
                       </div>
-                    )}
-                  </>
-                );
-              })()
-            )}
 
-            <div className="flex flex-wrap gap-3 mt-3 mb-4">
-              {sleepStageLegend.map((s) => (
-                <span key={s.key} className="flex items-center gap-1.5 text-[11px] text-charcoal-soft">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} /> {s.label}
-                </span>
-              ))}
-            </div>
+                      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+                        Sleep stages
+                      </p>
+                    </>
+                  )}
 
-            {period === "daily" && (
-              <p className="text-xs text-charcoal-soft leading-relaxed mb-2">{sleepDetail.summary}</p>
-            )}
-            <p className="text-[11px] text-charcoal-faint">
-              Sleep stage data is sourced from Apple/Android Health when connected — mocked here.
-            </p>
+                  {period === "daily"
+                    ? night?.stages && <StackedSleepBar stages={night.stages} />
+                    : (() => {
+                        // ONE COLUMN PER NIGHT ON RECORD. This used to be
+                        // seven, four or twelve columns built by scaling the
+                        // single mock night through a sine wave.
+                        const items = withStages.map((n) => ({
+                          stages: n.stages!,
+                          label: new Date(`${n.date}T00:00:00`).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                          }),
+                        }));
+                        if (items.length === 0) {
+                          return (
+                            <p className="text-[11px] text-charcoal-faint text-center">
+                              No nights with stage detail in this period.
+                            </p>
+                          );
+                        }
+                        const selected = selectedSleepIdx !== null ? items[selectedSleepIdx] : null;
+                        return (
+                          <>
+                            <StackedSleepColumns
+                              items={items}
+                              selectedIndex={selectedSleepIdx}
+                              onSelect={setSelectedSleepIdx}
+                            />
+                            <p className="text-[11px] text-charcoal-faint text-center mt-2">
+                              {selected
+                                ? `Comparing ${selected.label} against the rest`
+                                : "Tap a bar to compare that night"}
+                            </p>
+                            {selected && (
+                              <div className="bg-cream-soft rounded-2xl p-3.5 mt-2">
+                                <p className="text-xs font-semibold text-charcoal mb-2">{selected.label}</p>
+                                <StackedSleepBar stages={selected.stages} />
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+
+                  {night?.stages && (
+                    <div className="flex flex-wrap gap-3 mt-3 mb-4">
+                      {sleepStageLegend.map((s) => (
+                        <span key={s.key} className="flex items-center gap-1.5 text-[11px] text-charcoal-soft">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ background: s.color }} /> {s.label}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+
+                  {period === "daily" && night?.summary && (
+                    <p className="text-xs text-charcoal-soft leading-relaxed mb-2">{night.summary}</p>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 
-        {isAuto && !isSleep && !isSteps && (
+        {/* WHERE THE NUMBER WOULD COME FROM, said once and truthfully. The
+            old line claimed these were "synced automatically from Apple/
+            Android Health", which no account has ever been: there is no
+            device sync in this app. */}
+        {isAuto && !isSteps && (
           <p className="text-[11px] text-charcoal-faint mt-2">
-            Synced automatically from Apple/Android Health — not manually editable.
+            {metric.type === "weight"
+              ? "Logged by you, or synced from a connected device when that arrives."
+              : "Recorded by a connected device. Device sync isn't available yet."}
           </p>
         )}
         {isSteps && (
           <p className="text-[11px] text-charcoal-faint mt-2">
-            Synced automatically from Apple/Android Health — tap the pencil to set your daily goal.
+            Recorded by a connected device — tap the pencil to set your daily goal. Device sync
+            isn't available yet.
           </p>
         )}
       </div>

@@ -159,7 +159,10 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   } = useApp();
   const isToday = selectedDate === today;
   const loggedForDay = weightLoggedDate === selectedDate;
-  const dayWeight = weightByDate[selectedDate] ?? (isToday ? metricValues.weight : undefined);
+  // ?? rather than ||, and null-checked: metricValues.weight is null for an
+  // account with no weigh-ins, and String(null) is the string "null" in the
+  // draft field.
+  const dayWeight = weightByDate[selectedDate] ?? (isToday ? metricValues.weight ?? undefined : undefined);
   // With no weight logged for the day the field shows the handoff's "70"
   // (CentiumFrame.dc.html `v2Weight`). Like blood pressure's 120/80, that is
   // a display default only: autosave waits until the user edits the field,

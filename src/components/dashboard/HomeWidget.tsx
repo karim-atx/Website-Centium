@@ -5,7 +5,13 @@ import { useApp } from "../../context/AppContext";
 import { LotusGlyph } from "./LotusGlyph";
 import { HeartRateEKG } from "../health/HeartRateEKG";
 import { QrPattern, DAY_MS, isOneTimePlan } from "../marketplace/GymDetailSheet";
-import { healthMetrics, sleepDetail, heartRateDetail } from "../../data/mockHealthData";
+import {
+  averageOf,
+  emptyHint,
+  NO_READINGS,
+  trendLabel,
+  withinDays,
+} from "../../services/health-metrics/series";
 import { todaysWorkout } from "../../data/mockWorkouts";
 import { sumNutrition, targetsFromGoal } from "../../services/nutrition";
 import { BookOpen, KeyRound, Play, AlertCircle, Check } from "lucide-react";
@@ -292,7 +298,7 @@ export const HomeWidget: React.FC<{
   editMode?: boolean;
 }> = ({ widget, onWaterClick, onGymPassesClick, editMode = false }) => {
   const navigate = useNavigate();
-  const { metricValues, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries, gymPurchases, today, selectedDate } =
+  const { metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries, gymPurchases, today, selectedDate } =
     useApp();
   const isLarge = widget.size === "large";
   // Per-instance clip id for the small water bottle, so two water tiles on
@@ -300,26 +306,35 @@ export const HomeWidget: React.FC<{
   // colons are stripped: they are not safe inside a url() fragment.
   const bottleClipId = `w-bottle-clip-${React.useId().replace(/:/g, "")}`;
 
-  const stepsMeta = healthMetrics.find((m) => m.type === "steps")!;
-  const weeklyStepsAvg = Math.round(stepsMeta.history.reduce((s, h) => s + h.value, 0) / stepsMeta.history.length);
+  // A WEEK OF REAL READINGS. These three used to come from mockHealthData's
+  // seven-value literals, so every widget on every Home screen drew the same
+  // week — 7,200 to 8,421 steps, 107.6 down to 106.4 kg.
+  const stepsMeta = withinDays(healthSeries.steps, 7, today);
+  const weeklyStepsAvg = averageOf(stepsMeta);
   const stepsMax = Math.max(...stepsMeta.history.map((h) => h.value), stepsGoal);
   // No stride-length preference exists in this app; 0.762m is the generic
   // average-adult-stride figure fitness trackers default to absent one.
-  const stepsKm = ((metricValues.steps * 0.762) / 1000).toFixed(1);
+  const stepsKm =
+    metricValues.steps === null ? null : ((metricValues.steps * 0.762) / 1000).toFixed(1);
 
-  const weightMeta = healthMetrics.find((m) => m.type === "weight")!;
+  const weightMeta = withinDays(healthSeries.weight, 7, today);
   const weightValues = weightMeta.history.map((h) => h.value);
   const weightMin = Math.min(...weightValues);
   const weightMax = Math.max(...weightValues);
 
-  const sleepMeta = healthMetrics.find((m) => m.type === "sleep")!;
-  const sleepStages = [
-    { label: "Awake", min: sleepDetail.awakeMin, color: "rgb(var(--c-teal-dark))" },
-    { label: "REM", min: sleepDetail.remMin, color: "rgb(var(--c-berry))" },
-    { label: "Light", min: sleepDetail.lightMin, color: "rgb(var(--c-sky))" },
-    { label: "Deep", min: sleepDetail.deepMin, color: "rgb(var(--c-team-lavender-deep))" },
-  ];
-  const sleepTotalMin = sleepStages.reduce((s, x) => s + x.min, 0) || 1;
+  const sleepMeta = withinDays(healthSeries.sleep, 7, today);
+  // The stage bar, drawn only when a real night carries all four stages.
+  // This read mockHealthData's sleepDetail — 18/96/210/78 minutes, the same
+  // night for every account that had never worn anything to bed.
+  const sleepStages = sleepDetail?.stages
+    ? [
+        { label: "Awake", min: sleepDetail.stages.awakeMin, color: "rgb(var(--c-teal-dark))" },
+        { label: "REM", min: sleepDetail.stages.remMin, color: "rgb(var(--c-berry))" },
+        { label: "Light", min: sleepDetail.stages.lightMin, color: "rgb(var(--c-sky))" },
+        { label: "Deep", min: sleepDetail.stages.deepMin, color: "rgb(var(--c-team-lavender-deep))" },
+      ]
+    : null;
+  const sleepTotalMin = sleepStages ? sleepStages.reduce((s, x) => s + x.min, 0) || 1 : 1;
   const fmtMin = (m: number) => `${Math.floor(m / 60)}h${(m % 60).toString().padStart(2, "0")}m`;
 
   const totals = sumNutrition(foodLog.filter((e) => e.date === selectedDate));
@@ -351,6 +366,29 @@ export const HomeWidget: React.FC<{
     </div>
   );
 
+  /**
+   * A widget with nothing behind it yet.
+   *
+   * SAME FRAME, NO FIGURE. Each of these cards is built around a number, a
+   * trend and a small chart; with no readings they used to render the same
+   * seeded ones for everybody — 8,421 steps, 106.4 kg, 68 bpm, 7h42. The card
+   * keeps its place on the board and says it is empty, which is also what
+   * makes it obvious where to start.
+   */
+  const emptyCard = (bg: string, label: string, hint: string | null) =>
+    shell(
+      bg,
+      <>
+        <p className={`${capsLabel} text-charcoal/[0.42]`}>{label}</p>
+        <div className="flex-1 flex flex-col justify-center min-h-0">
+          <p className="text-[12px] font-semibold text-charcoal-tertiary leading-snug">{NO_READINGS}</p>
+          {hint && isLarge && (
+            <p className="mt-1 text-[10.5px] text-charcoal-faint leading-snug">{hint}</p>
+          )}
+        </div>
+      </>
+    );
+
   // Small: 114×114, padding 11px 12px. Large: 358×150, padding 14px 16px.
   const shell = (bg: string, content: React.ReactNode) =>
     isLarge ? (
@@ -367,7 +405,11 @@ export const HomeWidget: React.FC<{
     // ---------------------------------------------------------------- Steps
     case "steps": {
       const onClick = () => navigate("/app/health", { state: { openMetric: "steps" } });
-      const pct = Math.round((metricValues.steps / stepsGoal) * 100);
+      if (metricValues.steps === null) {
+        return wrap(onClick, emptyCard("rgba(162,200,194,.2)", "Steps", emptyHint("steps")));
+      }
+      const steps = metricValues.steps;
+      const pct = Math.round((steps / stepsGoal) * 100);
       if (!isLarge) {
         return wrap(
           onClick,
@@ -435,7 +477,9 @@ export const HomeWidget: React.FC<{
                 </div>
                 <div className="flex justify-between mt-[5px] text-[8px] font-semibold text-team-teal-ink/[0.72]">
                   <span>0</span>
-                  <span>Weekly avg {weeklyStepsAvg.toLocaleString()}</span>
+                  <span>
+                    {weeklyStepsAvg === null ? "No weekly average yet" : `Weekly avg ${weeklyStepsAvg.toLocaleString()}`}
+                  </span>
                   <span>{stepsGoal.toLocaleString()}</span>
                 </div>
               </div>
@@ -502,9 +546,17 @@ export const HomeWidget: React.FC<{
 
     // ---------------------------------------------------------------- Sleep
     case "sleep": {
+      if (metricValues.sleepHours === null) {
+        return wrap(
+          () => navigate("/app/health", { state: { openMetric: "sleep" } }),
+          emptyCard("rgba(174,161,220,.13)", "Sleep", emptyHint("sleep"))
+        );
+      }
       const onClick = () => navigate("/app/health", { state: { openMetric: "sleep" } });
-      const h = Math.floor(sleepMeta.current);
-      const m = Math.round((sleepMeta.current % 1) * 60);
+      const hours = metricValues.sleepHours;
+      const h = Math.floor(hours);
+      const m = Math.round((hours % 1) * 60);
+      const sleepTrend = trendLabel(sleepMeta, "vs last wk");
       if (!isLarge) {
         return wrap(
           onClick,
@@ -515,22 +567,13 @@ export const HomeWidget: React.FC<{
               <p className="mt-[5px] text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">
                 {h}h{m.toString().padStart(2, "0")}
               </p>
-              <div className="flex-1 flex items-center min-h-0 mt-2">
-                <svg viewBox="0 0 100 26" width="100%" height={26} preserveAspectRatio="none" style={{ display: "block", overflow: "visible" }}>
-                  <path
-                    d="M0 22 H14 V13 H26 V4 H34 V13 H48 V22 H60 V13 H72 V4 H80 V13 H92 V20 H100"
-                    fill="none"
-                    stroke="rgb(var(--c-team-lavender-deep))"
-                    strokeWidth={1.7}
-                    strokeLinejoin="round"
-                    strokeLinecap="round"
-                  />
-                </svg>
-              </div>
-              <p className="mt-[6px] text-[9px] text-primary-deep-text">
-                {sleepMeta.trend >= 0 ? "+" : ""}
-                {sleepMeta.trend}h avg
-              </p>
+              {/* The fixed hypnogram `d` is gone: one zigzag, identical on
+                  every account and every night, drawn whether or not anything
+                  had been slept through. */}
+              <div className="flex-1 min-h-0" />
+              {sleepTrend && (
+                <p className="mt-[6px] text-[9px] text-primary-deep-text">{sleepTrend}</p>
+              )}
             </>
           )
         );
@@ -542,17 +585,24 @@ export const HomeWidget: React.FC<{
           <>
             <div className="flex items-center justify-between gap-3">
               <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Sleep</p>
-              <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>Score {sleepDetail.score}</span>
+              {sleepDetail?.score != null && (
+                <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>Score {sleepDetail.score}</span>
+              )}
             </div>
             <div className="flex-1 flex flex-col justify-between min-h-0 mt-1">
               <div className="flex items-baseline gap-2.5">
                 <span className="text-[24px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
                   {h}h {m.toString().padStart(2, "0")}m
                 </span>
-                <span className="text-[10px] whitespace-nowrap text-primary-deep-text/[0.68]">
-                  {sleepMeta.trend >= 0 ? "↑" : "↓"} {Math.abs(sleepMeta.trend)} h vs last wk
-                </span>
+                {sleepTrend && (
+                  <span className="text-[10px] whitespace-nowrap text-primary-deep-text/[0.68]">{sleepTrend}</span>
+                )}
               </div>
+              {/* A NIGHT'S LENGTH AND A NIGHT'S STAGES ARE DIFFERENT
+                  FACTS. The hours can be recorded without a wearable; the
+                  four-stage split cannot, so it is drawn only when a real
+                  sleep_details row carries all four. */}
+              {sleepStages && (
               <div className="flex gap-[7px] mt-0.5">
                 {sleepStages.map((s) => (
                   <span key={s.label} className="flex-1 rounded-[9px] bg-white/55 py-[5px] text-center">
@@ -563,6 +613,8 @@ export const HomeWidget: React.FC<{
                   </span>
                 ))}
               </div>
+              )}
+              {sleepStages && (
               <div>
                 <span className="flex h-[7px] rounded-[3px] overflow-hidden mt-[3px]">
                   {sleepStages.map((s) => (
@@ -578,6 +630,7 @@ export const HomeWidget: React.FC<{
                   ))}
                 </div>
               </div>
+              )}
             </div>
           </>
         )
@@ -746,6 +799,12 @@ export const HomeWidget: React.FC<{
 
     // --------------------------------------------------------------- Weight
     case "weight": {
+      if (metricValues.weight === null) {
+        return wrap(
+          () => navigate("/app/health", { state: { openMetric: "weight" } }),
+          emptyCard("rgba(174,161,220,.11)", "Weight", emptyHint("weight"))
+        );
+      }
       const onClick = () => navigate("/app/health", { state: { openMetric: "weight" } });
       if (!isLarge) {
         // Handoff §9: the scale glyph is replaced, and the value/unit that
@@ -843,9 +902,11 @@ export const HomeWidget: React.FC<{
           <>
             <div className="flex items-center justify-between gap-3">
               <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Weight</p>
-              <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>
-                {weightMeta.trend <= 0 ? "↓" : "↑"} {Math.abs(weightMeta.trend)} kg this week
-              </span>
+              {trendLabel(weightMeta) && (
+                <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>
+                  {trendLabel(weightMeta)}
+                </span>
+              )}
             </div>
             <div className="flex-1 flex min-h-0 mt-[9px]">
               <div className="flex-1 flex items-center gap-3.5 min-w-0">
@@ -982,6 +1043,11 @@ export const HomeWidget: React.FC<{
     // ----------------------------------------------------------- Heart rate
     case "heartRate": {
       const onClick = () => navigate("/app/health", { state: { openMetric: "heartRate" } });
+      if (metricValues.heartRate === null) {
+        // The heart glyph animates at `60 / bpm` seconds a beat, so an empty
+        // card used to pulse at a steady seeded 68.
+        return wrap(onClick, emptyCard("rgba(156,79,124,.1)", "Heart rate", emptyHint("heartRate")));
+      }
       const bpm = metricValues.heartRate;
       if (!isLarge) {
         return wrap(
@@ -1035,9 +1101,14 @@ export const HomeWidget: React.FC<{
                   real, functional signal, so it's kept rather than
                   recoloured to the design's flat decorative rose. */}
               <HeartRateEKG bpm={bpm} />
-              <p className="text-[9.5px] font-semibold text-team-rose-ink/80">
-                Range {heartRateDetail.low} – {heartRateDetail.high} bpm today
-              </p>
+              {/* Real min and max across the week's readings. This printed
+                  "Range 58 – 142 bpm today" from a literal, to everybody. */}
+              {healthSeries.heartRate.history.length > 1 && (
+                <p className="text-[9.5px] font-semibold text-team-rose-ink/80">
+                  Range {Math.round(Math.min(...healthSeries.heartRate.history.map((h) => h.value)))} –{" "}
+                  {Math.round(Math.max(...healthSeries.heartRate.history.map((h) => h.value)))} bpm
+                </p>
+              )}
             </div>
           </>
         )

@@ -17,7 +17,14 @@ export function getTestRecommendations(user: UserProfile): TestRecommendation[] 
   const age = user.age ?? 0;
   const isFemale = user.sex === "female";
   const isMale = user.sex === "male";
-  const bmi = user.heightCm ? user.weightKg / ((user.heightCm / 100) * (user.heightCm / 100)) : null;
+  // BOTH HALVES OR NO BMI. This guarded the height and not the weight, so an
+  // account with a height and no weigh-in still got a BMI — and with both
+  // defaulting to a stand-in body, every account got 33.6 and a sentence
+  // about the obese range.
+  const bmi =
+    user.heightCm && user.weightKg
+      ? user.weightKg / ((user.heightCm / 100) * (user.heightCm / 100))
+      : null;
 
   // Postmenopausal women and low body weight are the two biggest
   // osteoporosis risk factors a resting profile can flag.
@@ -25,7 +32,7 @@ export function getTestRecommendations(user: UserProfile): TestRecommendation[] 
     recs.push({
       test: "DEXA (bone density) scan",
       reason:
-        user.weightKg < 60
+        user.weightKg !== null && user.weightKg < 60
           ? `Postmenopausal age combined with a lower body weight (${user.weightKg}kg) raises osteoporosis risk.`
           : "Postmenopausal age alone is a standard indication for a baseline bone density scan.",
     });

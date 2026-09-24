@@ -45,6 +45,7 @@ import type {
   CartItem,
   ForumPost,
   ForumCategory,
+  HealthMetric,
 } from "../types";
 import {
   createCustomMeal as createCustomMealRemote,
@@ -169,7 +170,19 @@ import {
   removeComorbidityRemote,
   updateMedicationRemote,
 } from "../services/medical-history";
-import { getHealthMetrics, logHealthMetric } from "../services/health-metrics";
+import {
+  getHealthMetrics,
+  latestDayOf,
+  logHealthMetric,
+  type MetricHistory,
+  type ReadMetricType,
+} from "../services/health-metrics";
+import {
+  buildMetricReadings,
+  HEALTH_METRIC_META,
+  type MetricReadings,
+} from "../services/health-metrics/series";
+import { getSleepDetails, latestNight, type SleepDetail } from "../services/sleep-details";
 import {
   addImagingRecordRemote,
   deleteImagingRecordRemote,
@@ -186,14 +199,27 @@ import { todayLocal } from "../utils/date";
 // this would cap, which is not reachable on an app with no logging history.
 const DIARY_WINDOW_DAYS = 90;
 
+// A YEAR OF METRICS, because the detail sheet offers a Year tab. It used to
+// fill that tab by scaling one week's average through a sine wave; filling it
+// with real rows means having a year of them. Cheap to carry: one row per day
+// per metric is a few hundred numbers, against the diary's ninety days of
+// food entries.
+const METRIC_WINDOW_DAYS = 365;
+
 const defaultUser: UserProfile = {
   id: "u1",
   firstName: "Abdallah",
   email: "",
   age: 29,
   sex: "male",
-  heightCm: 178,
-  weightKg: 106.4,
+  // NO BODY BY DEFAULT. These were 178 cm and 106.4 kg — the same figures
+  // mockHealthData used — and they were not merely cosmetic: profile loading
+  // only overwrites a field the row actually carries, so an account with no
+  // height on record kept 178 permanently, and getTestRecommendations divided
+  // the pair into a BMI of 33.6 and told the user they were in the obese
+  // range. Null is what "we have not been told" looks like.
+  heightCm: null,
+  weightKg: null,
   goals: ["build_muscle", "improve_health"],
   activityLevel: "moderate",
   tracking: ["nutrition", "workouts", "weight", "steps", "sleep"],
@@ -502,7 +528,35 @@ interface AppState {
   plantSpecies: PlantSpecies;
   cyclePlantSpecies: () => void;
 
-  metricValues: { weight: number; heartRate: number; steps: number; sleepHours: number; caloriesBurned: number };
+  /**
+   * The latest real reading of each metric, or null where there is none.
+   *
+   * NULLABLE THROUGHOUT, and that is the change. These were plain numbers
+   * seeded with 106.4 / 68 / 8421 / 7.7 / 2340, so a consumer with nothing to
+   * show had no way to say so and every account was handed the same body on
+   * its first paint. Null means "no reading": each card renders its own empty
+   * state, and no arithmetic runs on a number that does not exist.
+   */
+  metricValues: {
+    weight: number | null;
+    heartRate: number | null;
+    steps: number | null;
+    sleepHours: number | null;
+    caloriesBurned: number | null;
+  };
+  /**
+   * Each metric's real readings — history, latest value and trend.
+   *
+   * THIS REPLACES `healthMetrics` FROM data/mockHealthData. Every sparkline,
+   * weekly average and "↓ 0.6 kg this week" on Home and Health read that
+   * array of seven-value literals; they read this instead, and a metric with
+   * no rows arrives with an empty history, a null current and a null trend.
+   */
+  healthSeries: Record<HealthMetric["type"], MetricReadings>;
+  /** The most recent night's stage breakdown, or null when none is recorded. */
+  sleepDetail: SleepDetail | null;
+  /** Every night on record in the metric window, oldest first. Empty is normal. */
+  sleepNights: SleepDetail[];
   updateMetricValue: (
     type: "weight" | "heartRate" | "steps" | "sleepHours" | "caloriesBurned",
     value: number
@@ -522,8 +576,6 @@ interface AppState {
   // V9 (QA 9.0): "swiping down on [Health] should prompt syncing data with
   // selected integrated health data device" — lifted out of IntegrationsCard
   // (was component-local) so the Health page can tell whether one is on.
-  healthIntegrationConnected: boolean;
-  setHealthIntegrationConnected: (connected: boolean) => void;
 
   // Future Supabase migration: device_presentation_settings (per-platform,
   // stays local, never synced) — see the WidgetConfig type comment.
@@ -1787,12 +1839,23 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setPlantSpecies((s) => order[(order.indexOf(s) + 1) % order.length]);
   };
 
-  const [metricValues, setMetricValues] = usePersistentState("metricValues", {
-    weight: 106.4,
-    heartRate: 68,
-    steps: 8421,
-    sleepHours: 7.7,
-    caloriesBurned: 2340,
+  // NOTHING UNTIL THE DATABASE ANSWERS. This was a usePersistentState seed of
+  // 106.4 kg, 68 bpm, 8,421 steps, 7.7 hours and 2,340 kcal — rendered to
+  // every account before a single row had been read, and kept for good if the
+  // read failed. Only weight was ever overwritten by anything; the other four
+  // were the same numbers for everybody, forever.
+  const [metricValues, setMetricValues] = usePersistentState<{
+    weight: number | null;
+    heartRate: number | null;
+    steps: number | null;
+    sleepHours: number | null;
+    caloriesBurned: number | null;
+  }>("metricValues", {
+    weight: null,
+    heartRate: null,
+    steps: null,
+    sleepHours: null,
+    caloriesBurned: null,
   });
 
   const [widgets, setWidgets] = usePersistentState<WidgetConfig[]>("widgets", defaultWidgets);
@@ -2072,6 +2135,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // leaves the loaded range, and the effect below does not refetch on ordinary
   // day-to-day navigation.
   const diaryWindowStart = shiftDate(today, -(DIARY_WINDOW_DAYS - 1));
+  const metricWindowStart = shiftDate(today, -(METRIC_WINDOW_DAYS - 1));
   const diaryStart = selectedDate < diaryWindowStart ? selectedDate : diaryWindowStart;
   const diaryEnd = selectedDate > today ? selectedDate : today;
 
@@ -3767,6 +3831,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     {}
   );
 
+  // THE RAW SERIES, kept beside the day-keyed weight and water maps the diary
+  // and the water widget already read. Those two are absolute-snapshot maps
+  // with their own write paths; this is every metric's readings as stored,
+  // which is what a sparkline and a weekly average have to be built from.
+  const [metricHistory, setMetricHistory] = useState<MetricHistory>({});
+
   // Weight and water history, hydrated from health_metrics.
   //
   // A PLAIN REPLACE, like the workout history and for the same reason: both
@@ -3780,32 +3850,77 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   useEffect(() => {
     if (!profileReady || !authUserId) return;
     let cancelled = false;
-    void getHealthMetrics(authUserId, diaryWindowStart).then((result) => {
+    void getHealthMetrics(authUserId, metricWindowStart).then((result) => {
       if (cancelled) return;
       if (!result.ok) {
         setMetricsError(result.message);
         return;
       }
       setMetricsError(null);
-      setWeightByDate(result.history.weightByDate);
-      setWaterByDate(result.history.waterByDate);
-      setWeightLoggedDate(result.history.weightLoggedDate);
-      // The live "current weight" that BMI, the Home widget and user.weightKg
-      // all read is the latest reading, not a separately stored number.
-      const latest = result.history.weightLoggedDate;
-      if (latest !== null) {
-        const kg = result.history.weightByDate[latest];
-        if (kg !== undefined) {
-          setMetricValues((prev) => ({ ...prev, weight: kg }));
-          setUser((prev) => ({ ...prev, weightKg: kg }));
-        }
-      }
+      setMetricHistory(result.history);
+      setWeightByDate(result.history.weight ?? {});
+      setWaterByDate(result.history.water ?? {});
+      setWeightLoggedDate(latestDayOf(result.history, "weight"));
+
+      // EVERY HEADLINE NUMBER, from the latest real reading of each metric.
+      // Only weight used to be set here; the other four kept their seed. A
+      // metric with no rows resolves to null rather than being left at
+      // whatever was on screen, so signing into an account that has never
+      // recorded a heart rate shows no heart rate.
+      const latestOf = (type: ReadMetricType): number | null => {
+        const day = latestDayOf(result.history, type);
+        return day === null ? null : result.history[type]?.[day] ?? null;
+      };
+      const kg = latestOf("weight");
+      setMetricValues({
+        weight: kg,
+        heartRate: latestOf("heart_rate"),
+        steps: latestOf("steps"),
+        sleepHours: latestOf("sleep"),
+        caloriesBurned: latestOf("calories_burned"),
+      });
+      // user.weightKg follows the latest reading, and only when there is one:
+      // the profile's own stored weight stands until a reading replaces it.
+      if (kg !== null) setUser((prev) => ({ ...prev, weightKg: kg }));
     });
     return () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [authUserId, profileReady, diaryWindowStart]);
+  }, [authUserId, profileReady, metricWindowStart]);
+
+  // ONE SET OF READINGS PER METRIC, derived rather than stored: metricHistory
+  // is the only source, so a sparkline on Home and the same sparkline on
+  // Health cannot disagree. buildMetricReadings is where "fewer than two
+  // points is not a trend" lives.
+  const healthSeries = useMemo(() => {
+    const out = {} as Record<HealthMetric["type"], MetricReadings>;
+    for (const type of Object.keys(HEALTH_METRIC_META) as HealthMetric["type"][]) {
+      out[type] = buildMetricReadings(type, metricHistory[HEALTH_METRIC_META[type].dbType]);
+    }
+    return out;
+  }, [metricHistory]);
+
+  // The latest night's stage breakdown, from sleep_details.
+  //
+  // NULL IS THE ORDINARY ANSWER. Nothing in this app measures sleep stages —
+  // a breakdown like this comes from a wearable and device sync is not built —
+  // so every account has no row here today. What this replaces is the
+  // `sleepDetail` literal in mockHealthData, which gave all of them a score of
+  // 82 and 96 minutes of REM.
+  const [sleepNights, setSleepNights] = useState<SleepDetail[]>([]);
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+    void getSleepDetails(authUserId, metricWindowStart).then((result) => {
+      if (cancelled || !result.ok) return;
+      setSleepNights(result.nights);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, profileReady, metricWindowStart]);
+  const sleepDetail = latestNight(sleepNights);
 
   const logWeightForToday: AppState["logWeightForToday"] = async (value) => {
     if (!authUserId) return { ok: false, message: "You need to be signed in to log your weight." };
@@ -3827,10 +3942,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [stepsGoal, setStepsGoal] = usePersistentState<number>("stepsGoal", 10000);
 
-  const [healthIntegrationConnected, setHealthIntegrationConnected] = usePersistentState<boolean>(
-    "healthIntegrationConnected",
-    false
-  );
 
   const addWidget: AppState["addWidget"] = (type, size = "small") =>
     setWidgets((prev) => [
@@ -4581,14 +4692,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       plantSpecies,
       cyclePlantSpecies,
       metricValues,
+      healthSeries,
+      sleepDetail,
+      sleepNights,
       updateMetricValue,
       weightLoggedDate,
       weightByDate,
       logWeightForToday,
       stepsGoal,
       setStepsGoal,
-      healthIntegrationConnected,
-      setHealthIntegrationConnected,
       widgets,
       addWidget,
       removeWidget,
@@ -4785,10 +4897,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       plantStage,
       plantSpecies,
       metricValues,
+      healthSeries,
+      sleepDetail,
+      sleepNights,
       weightLoggedDate,
       weightByDate,
       stepsGoal,
-      healthIntegrationConnected,
       widgets,
       nutritionGoal,
       customMeals,

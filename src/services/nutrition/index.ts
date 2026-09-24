@@ -305,8 +305,13 @@ export function calculateTDEEFromParts(
 /**
  * Mifflin-St Jeor BMR -> TDEE. A standard, transparent estimate — clearly
  * prototype-level, not a clinical calculation.
+ *
+ * NULL WITHOUT A HEIGHT AND A WEIGHT, because Mifflin-St Jeor is a formula in
+ * both. Substituting a default body produces a maintenance figure for
+ * somebody else and then hands it to the user as their own calorie target.
  */
-export function calculateTDEE(user: UserProfile): number {
+export function calculateTDEE(user: UserProfile): number | null {
+  if (user.weightKg === null || user.heightCm === null) return null;
   return calculateTDEEFromParts(user.weightKg, user.heightCm, user.age, user.sex, user.activityLevel);
 }
 
@@ -331,12 +336,19 @@ export function macroGramsFromSplit(calories: number, split: MacroSplit) {
   };
 }
 
+/** A general reference intake, used only when no height or weight is known. */
+export const DEFAULT_REFERENCE_INTAKE = 2000;
+
 export function suggestNutritionGoal(
   user: UserProfile,
   weightGoal: WeightGoalType = "maintain",
   weeklyRateKg = 0
 ): NutritionGoal {
-  const tdee = calculateTDEE(user);
+  // WITHOUT A BODY, A STANDARD STARTING POINT RATHER THAN A DERIVED ONE.
+  // 2000 kcal is a published general reference intake, offered as a default
+  // the user adjusts — not a personal maintenance figure computed from
+  // somebody else's height and weight, which is what a stand-in body produced.
+  const tdee = calculateTDEE(user) ?? DEFAULT_REFERENCE_INTAKE;
   const targetCalories = calculateTargetCalories(tdee, weightGoal, weeklyRateKg);
   // A balanced default split; skew protein up slightly for lose/gain goals.
   const macroSplit: MacroSplit =

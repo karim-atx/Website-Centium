@@ -2,8 +2,9 @@ import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import { localDayOf } from "../../utils/date";
 
-// A client's own manually-logged body metrics: weight and water, in
-// public.health_metrics.
+// A client's own body metrics, in public.health_metrics: weight and water
+// written from the manual-entry sheet, and heart rate, steps, sleep and
+// calories burned read back for whoever eventually writes them.
 //
 // Until now both lived entirely in localStorage, so the same account on
 // another device showed nothing, and the professional-side weight tiles —
@@ -28,9 +29,35 @@ import { localDayOf } from "../../utils/date";
 // with 42501 the moment a row conflicted. Appending is also the honest shape
 // for a table whose own comment calls it a pure time series.
 
-/** The metrics this module writes. The enum holds four more, all of which are
- *  device-synced and have no manual-entry UI. */
+/**
+ * The metrics this module WRITES.
+ *
+ * Still two, because manual entry still exists for exactly two: weight and
+ * water, both from AddMetricSheet. The four below are readable and not
+ * writable here, which is not an oversight — there is no screen anywhere in
+ * this app that lets somebody type in their step count, and inventing one to
+ * make the set symmetrical would be building a feature to justify a type.
+ */
 export type MetricKind = "weight" | "water";
+
+/**
+ * The metrics this module READS.
+ *
+ * All six, where it used to be two. The other four — heart rate, steps, sleep
+ * and calories burned — were never read from anywhere: their values came from
+ * a `usePersistentState` seed of 68 / 8421 / 7.7 / 2340 that every account saw
+ * on its first paint and kept for good. The enum has always held them and the
+ * rows have always been readable; nothing asked.
+ */
+export const READ_METRIC_TYPES = [
+  "weight",
+  "water",
+  "heart_rate",
+  "steps",
+  "sleep",
+  "calories_burned",
+] as const;
+export type ReadMetricType = (typeof READ_METRIC_TYPES)[number];
 
 // value is numeric(12,3) with a `value >= 0` check and no upper bound, so the
 // only server-side rejection is a negative number. These bounds exist to turn
@@ -124,13 +151,16 @@ export async function logHealthMetric(params: {
   return { ok: true };
 }
 
-/** Day-keyed history, in the shape AppContext already holds it. */
-export interface MetricHistory {
-  weightByDate: Record<string, number>;
-  waterByDate: Record<string, number>;
-  /** The most recent day carrying a weight reading, or null. */
-  weightLoggedDate: string | null;
-}
+/**
+ * Day-keyed history, one map per metric that has any readings.
+ *
+ * ABSENT MEANS NEVER MEASURED, and that distinction is the reason this is a
+ * partial record rather than six maps initialised to `{}`. A metric with no
+ * entry stands for "nothing has ever been recorded"; the UI can then show its
+ * empty state instead of a zero, and the difference between "no steps today"
+ * and "no step data at all" survives the trip out of this module.
+ */
+export type MetricHistory = Partial<Record<ReadMetricType, Record<string, number>>>;
 
 export type MetricHistoryResult =
   | { ok: true; history: MetricHistory }
@@ -160,7 +190,7 @@ export async function getHealthMetrics(
     .from("health_metrics")
     .select("metric_type, value, recorded_at, created_at")
     .eq("user_id", userId)
-    .in("metric_type", ["weight", "water"])
+    .in("metric_type", READ_METRIC_TYPES)
     .gte("recorded_at", `${sinceDay}T00:00:00Z`)
     .order("recorded_at", { ascending: true })
     .order("created_at", { ascending: true });
@@ -170,20 +200,27 @@ export async function getHealthMetrics(
     return { ok: false, message: describe(error) };
   }
 
-  const weightByDate: Record<string, number> = {};
-  const waterByDate: Record<string, number> = {};
-  let weightLoggedDate: string | null = null;
+  // A map appears only once a row of that type has been seen, so a metric with
+  // no readings stays absent rather than arriving as an empty object that a
+  // consumer might round to zero.
+  const history: MetricHistory = {};
+  const readable = new Set<string>(READ_METRIC_TYPES);
 
   for (const row of data ?? []) {
+    if (!readable.has(row.metric_type)) continue;
+    const type = row.metric_type as ReadMetricType;
     const day = localDayOf(row.recorded_at);
-    if (row.metric_type === "weight") {
-      weightByDate[day] = Number(row.value);
-      // Ascending order means the last one seen is the most recent.
-      weightLoggedDate = day;
-    } else if (row.metric_type === "water") {
-      waterByDate[day] = Number(row.value);
-    }
+    // Ascending order means the last row written into a day wins, which is
+    // the "latest snapshot" reduction this table's shape requires.
+    (history[type] ??= {})[day] = Number(row.value);
   }
 
-  return { ok: true, history: { weightByDate, waterByDate, weightLoggedDate } };
+  return { ok: true, history };
+}
+
+/** The most recent day carrying a reading of this metric, or null. */
+export function latestDayOf(history: MetricHistory, type: ReadMetricType): string | null {
+  const days = Object.keys(history[type] ?? {});
+  if (days.length === 0) return null;
+  return days.reduce((newest, day) => (day > newest ? day : newest));
 }

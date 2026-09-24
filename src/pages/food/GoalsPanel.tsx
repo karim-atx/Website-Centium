@@ -7,7 +7,7 @@ import { MacroSplitEditor, MACRO_REBALANCE_NOTE } from "../../components/food/Ma
 import { WeightTrendChart } from "../../components/health/WeightTrendChart";
 import { useApp } from "../../context/AppContext";
 import { calculateTDEE, targetsFromGoal } from "../../services/nutrition";
-import { healthMetrics } from "../../data/mockHealthData";
+import { canDrawSparkline, trendLabel, withinDays } from "../../services/health-metrics/series";
 import type { WeightGoalType, PlanType } from "../../types";
 import { Check, Minus, Plus, ChevronDown, X } from "lucide-react";
 import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
@@ -39,7 +39,7 @@ interface GoalsPanelProps {
 }
 
 export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
-  const { user, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, dietaryRestriction, setDietaryRestriction, today } =
+  const { user, healthSeries, metricValues, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, dietaryRestriction, setDietaryRestriction, today } =
     useApp();
   const [calorieDraft, setCalorieDraft] = useState(String(nutritionGoal.targetCalories));
   const [planError, setPlanError] = useState<string | null>(null);
@@ -81,24 +81,29 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
   // V9 (QA 9.0): "TDEE estimate should include the maintenance calorie as
   // well as the calories based on what goal is chosen" — same formula
   // "Use suggested" applies, shown alongside the maintenance figure.
-  const suggestedForGoal = Math.round(
-    nutritionGoal.weightGoal === "lose"
-      ? tdee - ((nutritionGoal.weeklyRateKg || 0.5) * 7700) / 7
-      : nutritionGoal.weightGoal === "gain"
-      ? tdee + ((nutritionGoal.weeklyRateKg || 0.5) * 7700) / 7
-      : tdee
-  );
-  // V5 (QA 5.0): the weight trend uses the weight provided in Profile
-  // (user.weightKg), not the static mock — the mock's 7-day shape is kept
-  // (this prototype has no daily weight-history log) but rescaled so it
-  // actually ends at the user's real current weight.
-  const weightMeta = healthMetrics.find((m) => m.type === "weight")!;
-  const historyScale = user.weightKg / weightMeta.history[weightMeta.history.length - 1].value;
-  const weightHistory = weightMeta.history.map((h) => ({ ...h, value: +(h.value * historyScale).toFixed(1) }));
+  // NO SUGGESTION WITHOUT A BODY TO BASE IT ON. calculateTDEE returns null
+  // when height or weight is unrecorded, rather than running Mifflin-St Jeor
+  // on a stand-in.
+  const suggestedForGoal =
+    tdee === null
+      ? null
+      : Math.round(
+          nutritionGoal.weightGoal === "lose"
+            ? tdee - ((nutritionGoal.weeklyRateKg || 0.5) * 7700) / 7
+            : nutritionGoal.weightGoal === "gain"
+            ? tdee + ((nutritionGoal.weeklyRateKg || 0.5) * 7700) / 7
+            : tdee
+        );
+  // THE USER'S OWN WEIGH-INS, and only those.
+  //
+  // This took the mock's seven-point shape and RESCALED it so the last point
+  // landed on the user's real weight — which produced a chart whose ending
+  // was true and whose whole trajectory was somebody else's, then printed a
+  // "↓ 1.2 kg this week" derived from the invented end of it.
+  const weightMeta = withinDays(healthSeries.weight, 7, today);
   const weight = {
-    current: user.weightKg,
-    trend: +(weightHistory[weightHistory.length - 1].value - weightHistory[0].value).toFixed(1),
-    history: weightHistory,
+    current: metricValues.weight,
+    history: weightMeta.history,
   };
   // TDEE at the goal weight — adapts as the weight goal / desired weight
   // change, since a lighter or heavier body has a different BMR.
@@ -109,8 +114,11 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
 
   const rate = nutritionGoal.weeklyRateKg || 0.5;
   const desiredWeightKg = nutritionGoal.desiredWeightKg ?? user.weightKg;
+  // NO PROJECTION WITHOUT A STARTING POINT. "Reach 75 kg by 12 March" needs
+  // a weight to count down from; with no weigh-in on record there is nothing
+  // to measure the distance from, so no date is offered.
   const weeksToGoal =
-    nutritionGoal.weightGoal !== "maintain" && rate > 0
+    nutritionGoal.weightGoal !== "maintain" && rate > 0 && weight.current !== null && desiredWeightKg !== null
       ? Math.abs(desiredWeightKg - weight.current) / rate
       : 0;
   // Projected forward from today, which the provider re-derives rather than
@@ -134,11 +142,11 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
     }
     const kg = Number(desiredWeightDraft);
     if (!kg) return;
-    if (nutritionGoal.weightGoal === "lose" && kg >= user.weightKg) {
+    if (nutritionGoal.weightGoal === "lose" && user.weightKg !== null && kg >= user.weightKg) {
       setWeightGoalError(`Desired weight must be lower than your current weight (${user.weightKg}kg) to lose weight.`);
       return;
     }
-    if (nutritionGoal.weightGoal === "gain" && kg <= user.weightKg) {
+    if (nutritionGoal.weightGoal === "gain" && user.weightKg !== null && kg <= user.weightKg) {
       setWeightGoalError(`Desired weight must be higher than your current weight (${user.weightKg}kg) to gain weight.`);
       return;
     }
@@ -157,6 +165,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
 
   const applyExistingPlan = () => {
     const suggested = calculateTDEE(user);
+    if (suggested === null) return;
     setNutritionGoal({
       ...nutritionGoal,
       planType: "existing",
@@ -170,6 +179,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
 
   const applySuggested = () => {
     const suggested = calculateTDEE(user);
+    if (suggested === null) return;
     const delta = (nutritionGoal.weeklyRateKg * 7700) / 7;
     const cals =
       nutritionGoal.weightGoal === "lose"
@@ -290,20 +300,31 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
         </div>
         <div className="flex items-end justify-between gap-2.5">
           <div className="shrink-0">
-            <p className="text-[19px] font-bold leading-[1.1] text-charcoal">{weight.current} kg</p>
-            <p className="text-[10px] text-charcoal-faint">
-              {weight.trend < 0 ? "↓" : "↑"} {Math.abs(weight.trend)} kg this week
-            </p>
+            {weight.current === null ? (
+              <p className="text-[13px] font-semibold text-charcoal-tertiary leading-[1.1]">
+                No weigh-ins yet
+              </p>
+            ) : (
+              <>
+                <p className="text-[19px] font-bold leading-[1.1] text-charcoal">{weight.current} kg</p>
+                {trendLabel(weightMeta) && (
+                  <p className="text-[10px] text-charcoal-faint">{trendLabel(weightMeta)}</p>
+                )}
+              </>
+            )}
           </div>
+          {/* A LINE NEEDS TWO POINTS. One weigh-in drew a flat week. */}
+          {canDrawSparkline(weightMeta) && (
           <WeightTrendChart
             history={weight.history}
-            desiredWeightKg={reachDate ? desiredWeightKg : undefined}
+            desiredWeightKg={reachDate ? desiredWeightKg ?? undefined : undefined}
             reachDate={reachDateIso}
             width={260}
             height={110}
             displayWidth={192}
             displayHeight={56}
           />
+          )}
         </div>
         {reachDate && (
           <p className="text-[10px] text-primary-dark bg-primary-pale rounded-full px-2.5 py-0.5 mt-1 inline-block">
@@ -317,15 +338,29 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
         <p className={`${capsLabel} text-charcoal-faint mb-1`}>TDEE estimate</p>
         <div className="flex items-center justify-between gap-2.5">
           <div className="min-w-0">
-            <p className="text-[19px] font-bold leading-[1.1] text-charcoal">{tdee.toLocaleString()} kcal</p>
-            <p className="mt-px text-[8px] leading-[1.3] text-charcoal-faint">
-              Estimated maintenance calories at your current weight (Mifflin-St Jeor) — a prototype
-              estimate, adjust as needed.
-            </p>
+            {tdee === null ? (
+              <>
+                <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">
+                  Needs your height and weight
+                </p>
+                <p className="mt-px text-[8px] leading-[1.3] text-charcoal-faint">
+                  Mifflin-St Jeor is a formula in both — add them in Profile for a maintenance
+                  estimate.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-[19px] font-bold leading-[1.1] text-charcoal">{tdee.toLocaleString()} kcal</p>
+                <p className="mt-px text-[8px] leading-[1.3] text-charcoal-faint">
+                  Estimated maintenance calories at your current weight (Mifflin-St Jeor) — a prototype
+                  estimate, adjust as needed.
+                </p>
+              </>
+            )}
           </div>
           <button
             onClick={applySuggested}
-            disabled={locked}
+            disabled={locked || tdee === null}
             className="tap shrink-0 h-[30px] px-[11px] rounded-[9px] bg-cream-soft text-charcoal text-[11px] font-bold whitespace-nowrap inline-flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
           >
             Use suggested
@@ -333,7 +368,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
         </div>
         {(nutritionGoal.weightGoal !== "maintain" || tdeeAtGoal !== null) && (
           <div className="flex flex-wrap gap-1 mt-1">
-            {nutritionGoal.weightGoal !== "maintain" && (
+            {nutritionGoal.weightGoal !== "maintain" && suggestedForGoal !== null && (
               <p className="text-[10px] text-charcoal bg-cream-soft rounded-full px-2.5 py-0.5">
                 {suggestedForGoal.toLocaleString()} kcal to {nutritionGoal.weightGoal} weight at your
                 current rate
