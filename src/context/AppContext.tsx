@@ -2949,7 +2949,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       exerciseLookupRef.current
     );
     if (!result.ok) return result.message ?? "Could not save that template.";
-    setWorkoutTemplates((prev) => prev.map((t) => (t.id === id ? { ...t, ...patch } : t)));
+    // The blocks come back with the ids they were saved under — see the same
+    // note on updateRoutine. Without this the next save would ungroup them.
+    setWorkoutTemplates((prev) =>
+      prev.map((t) =>
+        t.id === id
+          ? result.saved
+            ? { ...t, ...patch, blocks: result.saved.blocks, exercises: result.saved.exercises }
+            : { ...t, ...patch }
+          : t
+      )
+    );
     return undefined;
   };
 
@@ -3520,6 +3530,21 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     const result = await updateRoutineRemote(id, patch, patch.exercises, exerciseLookupRef.current);
     if (!result.ok) return result.message ?? "Could not save that routine.";
+    // THE SAVE ANSWERS WITH THE BLOCKS IT WROTE, and that answer replaces the
+    // patch rather than merging behind it: writeBlocks re-inserts every block,
+    // so the ids the editor was holding are gone and its members now point at
+    // new ones. Applying the patch alone would leave state describing a
+    // grouping the database no longer has.
+    if (result.saved) {
+      setRoutines((prev) =>
+        prev.map((r) =>
+          r.id === id
+            ? { ...r, ...patch, blocks: result.saved!.blocks, exercises: result.saved!.exercises }
+            : r
+        )
+      );
+      return undefined;
+    }
     applyLocal();
     return undefined;
   };

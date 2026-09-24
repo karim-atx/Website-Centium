@@ -2,11 +2,14 @@ import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type {
+  BlockKind,
+  EndurancePlan,
   Exercise,
   ExerciseClassification,
   MuscleGroup,
   RepMaxUpdateMode,
   Routine,
+  WorkoutBlock,
 } from "../../types";
 import {
   createFolder,
@@ -138,6 +141,24 @@ export interface RoutineResult {
 export interface WriteResult {
   ok: boolean;
   message?: string;
+  /**
+   * What the routine now looks like, when the write replaced its blocks.
+   *
+   * THE IDS CHANGE ON EVERY SAVE, because writeBlocks deletes and re-inserts.
+   * A caller that keeps its own copy in state — which AppContext does, rather
+   * than refetching — would otherwise hold block ids that no longer exist and
+   * exercises pointing at them, and the NEXT save would then quietly ungroup
+   * everything. Handing the resolved arrays back is cheaper and more certain
+   * than a refetch.
+   */
+  saved?: { blocks: WorkoutBlock[]; exercises: Exercise[] };
+}
+
+/** Points each member at the real block id its local id was mapped to. */
+function remapBlockIds(exercises: Exercise[], idByLocalId: Map<string, string>): Exercise[] {
+  return exercises.map((ex) =>
+    ex.blockId ? { ...ex, blockId: idByLocalId.get(ex.blockId) ?? null } : ex
+  );
 }
 
 // --- routines --------------------------------------------------------------
@@ -145,13 +166,18 @@ export interface WriteResult {
 const PRESCRIPTION_COLUMNS =
   "id, position, sets, reps, weight_kg, min_sets, max_sets, min_reps, max_reps, " +
   "intensity_pct, rep_max_kg, rep_max_update_mode, rest_seconds, rpe, tempo, " +
-  "estimated_one_rep_max_kg, cardio_duration_min, cardio_distance_km, " +
+  "estimated_one_rep_max_kg, duration_seconds, endurance_plan, block_id, " +
+  "cardio_duration_min, cardio_distance_km, " +
   "cardio_incline_pct, cardio_pace_min_per_km, cardio_avg_heart_rate";
+
+/** A block row, read and written whole — there is no partial update path. */
+const BLOCK_COLUMNS = "id, kind, label, time_cap_seconds, interval_seconds, rounds";
 
 const DEFINITION_COLUMNS = "id, name, classification, muscle_groups, secondary_muscle_groups";
 
 const ROUTINE_SELECT =
   "id, folder_id, name, color, estimated_duration_min, coach_note, " +
+  `routine_exercise_blocks(${BLOCK_COLUMNS}), ` +
   `routine_exercises(${PRESCRIPTION_COLUMNS}, ` +
   `exercises(${DEFINITION_COLUMNS}), ` +
   `custom_exercise_library_items(${DEFINITION_COLUMNS}))`;
@@ -181,6 +207,9 @@ interface PrescriptionRow {
   rpe: number | null;
   tempo: string | null;
   estimated_one_rep_max_kg: number | null;
+  duration_seconds: number | null;
+  endurance_plan: EndurancePlan | null;
+  block_id: string | null;
   cardio_duration_min: number | null;
   cardio_distance_km: number | null;
   cardio_incline_pct: number | null;
@@ -190,6 +219,15 @@ interface PrescriptionRow {
   custom_exercise_library_items: DefinitionRow | null;
 }
 
+interface BlockRow {
+  id: string;
+  kind: BlockKind;
+  label: string | null;
+  time_cap_seconds: number | null;
+  interval_seconds: number | null;
+  rounds: number | null;
+}
+
 interface RoutineRow {
   id: string;
   folder_id: string | null;
@@ -197,6 +235,7 @@ interface RoutineRow {
   color: string | null;
   estimated_duration_min: number | null;
   coach_note: string | null;
+  routine_exercise_blocks: BlockRow[];
   routine_exercises: PrescriptionRow[];
 }
 
@@ -245,8 +284,20 @@ function toExercise(r: PrescriptionRow): Exercise | null {
     cardioInclinePct: num(r.cardio_incline_pct),
     cardioPaceMinPerKm: num(r.cardio_pace_min_per_km),
     cardioAvgHeartRate: num(r.cardio_avg_heart_rate),
+    durationSeconds: num(r.duration_seconds),
+    endurancePlan: r.endurance_plan ?? null,
+    blockId: r.block_id,
   };
 }
+
+const toBlock = (b: BlockRow): WorkoutBlock => ({
+  id: b.id,
+  kind: b.kind,
+  label: b.label ?? undefined,
+  timeCapSeconds: b.time_cap_seconds ?? undefined,
+  intervalSeconds: b.interval_seconds ?? undefined,
+  rounds: b.rounds ?? undefined,
+});
 
 function toRoutine(r: RoutineRow): Routine {
   const exercises = [...r.routine_exercises]
@@ -265,6 +316,7 @@ function toRoutine(r: RoutineRow): Routine {
     estimatedDurationMin: r.estimated_duration_min ?? 30,
     exercises,
     coachNote: r.coach_note ?? undefined,
+    blocks: (r.routine_exercise_blocks ?? []).map(toBlock),
   };
 }
 
@@ -290,7 +342,13 @@ export async function getRoutines(userId: string): Promise<RoutinesResult> {
  * clearing it are the same thing here only because the rows are replaced
  * wholesale, and writing it out makes that explicit rather than incidental.
  */
-function prescriptionOf(ex: Exercise, ref: ExerciseRef, routineId: string, position: number) {
+function prescriptionOf(
+  ex: Exercise,
+  ref: ExerciseRef,
+  routineId: string,
+  position: number,
+  blockId: string | null
+) {
   return {
     routine_id: routineId,
     ...ref,
@@ -314,7 +372,89 @@ function prescriptionOf(ex: Exercise, ref: ExerciseRef, routineId: string, posit
     cardio_incline_pct: ex.cardioInclinePct ?? null,
     cardio_pace_min_per_km: ex.cardioPaceMinPerKm ?? null,
     cardio_avg_heart_rate: ex.cardioAvgHeartRate ?? null,
+    duration_seconds: ex.durationSeconds ?? null,
+    // WRITTEN ONLY FOR CARDIO. routine_exercises_endurance_plan_classification
+    // refuses a plan on anything else, and a stale plan left on an exercise
+    // whose classification just changed is exactly what that trigger is for.
+    endurance_plan: ex.classification === "cardio" ? ex.endurancePlan ?? null : null,
+    block_id: blockId,
   };
+}
+
+/**
+ * Replaces a routine's blocks, and says what id each one ended up with.
+ *
+ * DELETE-THEN-INSERT, LIKE THE PRESCRIPTIONS THEMSELVES, and for the same
+ * reason: a block carries no user data of its own beyond a kind, a label and
+ * three numbers, so rewriting the set is simpler and more honest than
+ * diffing it — and diffing would still have to handle a block that gained,
+ * lost or reordered members, which is the whole of the interesting case.
+ *
+ * THE RETURNED MAP IS THE POINT. The editor mints local ids for blocks the
+ * user has just drawn (`blk…`), and the rows come back with real uuids; the
+ * prescriptions inserted immediately after must point at those. Returning the
+ * map rather than mutating the caller's exercises keeps this function free of
+ * opinions about what a member looks like.
+ *
+ * WHY THIS CANNOT VIOLATE THE MEMBERSHIP RULE. routine_exercises_block_
+ * membership is a DEFERRED constraint trigger, so it runs at the end of each
+ * transaction — and each PostgREST request is one transaction. By the time
+ * this runs the caller has already deleted every prescription, so the blocks
+ * it deletes have no members to strand and the blocks it inserts are
+ * momentarily memberless, which the trigger explicitly permits. The only
+ * state that has to satisfy contiguity is the prescription insert that
+ * follows, and that insert carries every position and every block_id at once
+ * — so a reorder and a regroup are the same write and cannot half-apply.
+ */
+async function writeBlocks(
+  routineId: string,
+  blocks: WorkoutBlock[]
+): Promise<{ idByLocalId: Map<string, string>; saved: WorkoutBlock[] } | { message: string }> {
+  const { error: clearError } = await supabase
+    .from("routine_exercise_blocks")
+    .delete()
+    .eq("routine_id", routineId);
+  if (clearError) {
+    console.error("[routines] Could not clear blocks:", clearError.message);
+    return { message: describe(clearError) };
+  }
+
+  if (blocks.length === 0) return { idByLocalId: new Map(), saved: [] };
+
+  const rows = blocks.map((b) => ({
+    routine_id: routineId,
+    kind: b.kind,
+    label: b.label?.trim() || null,
+    // NULL WHERE THE KIND FORBIDS IT. routine_exercise_blocks_kind_shape_check
+    // rejects a superset carrying rounds as firmly as an EMOM missing them, so
+    // the shape is decided here rather than trusted from whatever the editor
+    // last had in state.
+    time_cap_seconds: b.kind === "amrap" || b.kind === "for_time" ? b.timeCapSeconds ?? null : null,
+    interval_seconds: b.kind === "emom" ? b.intervalSeconds ?? null : null,
+    rounds: b.kind === "emom" || b.kind === "for_time" ? b.rounds ?? null : null,
+  }));
+
+  const { data, error } = await supabase
+    .from("routine_exercise_blocks")
+    .insert(rows)
+    .select(BLOCK_COLUMNS);
+  if (error || !data) {
+    console.error("[routines] Could not write blocks:", error?.message);
+    return { message: error ? describe(error) : "Could not save the blocks in this routine." };
+  }
+
+  // INSERT ORDER IS THE ONLY LINK between what went in and what came back —
+  // a block has no natural key, and two supersets in one routine are
+  // identical rows. PostgREST returns an insert's rows in the order they were
+  // sent, which is what makes this safe and also why the two arrays are
+  // zipped rather than matched on anything.
+  const saved = (data as BlockRow[]).map(toBlock);
+  const idByLocalId = new Map<string, string>();
+  blocks.forEach((b, i) => {
+    const row = saved[i];
+    if (row) idByLocalId.set(b.id, row.id);
+  });
+  return { idByLocalId, saved };
 }
 
 /**
@@ -329,7 +469,8 @@ function prescriptionOf(ex: Exercise, ref: ExerciseRef, routineId: string, posit
 async function writeExercises(
   routineId: string,
   exercises: Exercise[],
-  lookup: ExerciseLookup
+  lookup: ExerciseLookup,
+  blockIdByLocalId: Map<string, string>
 ): Promise<string | null> {
   const rows = [];
   for (const [index, ex] of exercises.entries()) {
@@ -340,7 +481,11 @@ async function writeExercises(
     if (!ref) {
       return `"${ex.name}" isn't in the exercise library, so this routine can't be saved.`;
     }
-    rows.push(prescriptionOf(ex, ref, routineId, index));
+    // An unknown local id means a member whose block was dropped between the
+    // editor and here. Ungrouped is the safe reading — the alternative is an
+    // insert that fails the foreign key and loses the whole routine.
+    const blockId = ex.blockId ? blockIdByLocalId.get(ex.blockId) ?? null : null;
+    rows.push(prescriptionOf(ex, ref, routineId, index, blockId));
   }
 
   if (rows.length === 0) return null;
@@ -378,7 +523,21 @@ export async function createRoutine(
     };
   }
 
-  const exerciseError = await writeExercises(data.id, routine.exercises, lookup);
+  // BLOCKS FIRST, because the prescriptions point at them. A freshly created
+  // routine has none to clear, but the same function is used so the id map
+  // comes back the one way.
+  const blockWrite = await writeBlocks(data.id, routine.blocks ?? []);
+  if ("message" in blockWrite) {
+    await supabase.from("routines").delete().eq("id", data.id);
+    return { ok: false, message: blockWrite.message };
+  }
+
+  const exerciseError = await writeExercises(
+    data.id,
+    routine.exercises,
+    lookup,
+    blockWrite.idByLocalId
+  );
   if (exerciseError) {
     // Clean up rather than leaving an empty routine in the list. Best effort:
     // if this delete also fails the user sees an exercise-less routine they
@@ -387,7 +546,15 @@ export async function createRoutine(
     return { ok: false, message: exerciseError };
   }
 
-  return { ok: true, routine: { ...routine, id: data.id } };
+  return {
+    ok: true,
+    routine: {
+      ...routine,
+      id: data.id,
+      blocks: blockWrite.saved,
+      exercises: remapBlockIds(routine.exercises, blockWrite.idByLocalId),
+    },
+  };
 }
 
 /**
@@ -433,6 +600,18 @@ export async function updateRoutine(
 
   if (exercises === undefined) return { ok: true };
 
+  // ORDER IS FORCED, AND EACH STEP IS ITS OWN TRANSACTION.
+  //
+  //   1. delete the prescriptions  -> every block is now memberless, which the
+  //      deferred membership trigger explicitly permits
+  //   2. delete and re-insert the blocks -> nothing points at them
+  //   3. insert the prescriptions carrying both position and block_id
+  //
+  // Only step 3 has to satisfy contiguity, and it carries the whole final
+  // arrangement in one statement — so a reorder and a regroup are the same
+  // write. There is no transaction across the three (PostgREST has none), so
+  // a failure at 2 or 3 leaves the routine without prescriptions; that is the
+  // pre-existing shape of this function and the caller reports it.
   const { error: clearError } = await supabase
     .from("routine_exercises")
     .delete()
@@ -442,9 +621,18 @@ export async function updateRoutine(
     return { ok: false, message: describe(clearError) };
   }
 
-  const exerciseError = await writeExercises(id, exercises, lookup);
+  const blockWrite = await writeBlocks(id, patch.blocks ?? []);
+  if ("message" in blockWrite) return { ok: false, message: blockWrite.message };
+
+  const exerciseError = await writeExercises(id, exercises, lookup, blockWrite.idByLocalId);
   if (exerciseError) return { ok: false, message: exerciseError };
-  return { ok: true };
+  return {
+    ok: true,
+    saved: {
+      blocks: blockWrite.saved,
+      exercises: remapBlockIds(exercises, blockWrite.idByLocalId),
+    },
+  };
 }
 
 /** Prescriptions go with it: routine_exercises.routine_id is ON DELETE CASCADE. */

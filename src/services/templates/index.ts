@@ -10,11 +10,14 @@ import {
 } from "../folders";
 import { resolveExerciseRef, type ExerciseLookup } from "../routines";
 import type {
+  BlockKind,
+  EndurancePlan,
   Exercise,
   ExerciseClassification,
   MuscleGroup,
   RepMaxUpdateMode,
   TemplateLevel,
+  WorkoutBlock,
   WorkoutTemplate,
   WorkoutTemplateAssignment,
 } from "../../types";
@@ -89,6 +92,8 @@ export interface TemplateResult {
 export interface WriteResult {
   ok: boolean;
   message?: string;
+  /** The blocks as saved, with real ids — see the routine twin of this. */
+  saved?: { blocks: WorkoutBlock[]; exercises: Exercise[] };
 }
 
 // --- folders ---------------------------------------------------------------
@@ -121,13 +126,17 @@ export const deleteTemplateFolder = (id: string) =>
 const PRESCRIPTION_COLUMNS =
   "id, position, sets, reps, weight_kg, min_sets, max_sets, min_reps, max_reps, " +
   "intensity_pct, rep_max_kg, rep_max_update_mode, rest_seconds, rpe, tempo, " +
-  "estimated_one_rep_max_kg, cardio_duration_min, cardio_distance_km, " +
+  "estimated_one_rep_max_kg, duration_seconds, endurance_plan, block_id, " +
+  "cardio_duration_min, cardio_distance_km, " +
   "cardio_incline_pct, cardio_pace_min_per_km, cardio_avg_heart_rate";
+
+const BLOCK_COLUMNS = "id, kind, label, time_cap_seconds, interval_seconds, rounds";
 
 const DEFINITION_COLUMNS = "id, name, classification, muscle_groups, secondary_muscle_groups";
 
 const TEMPLATE_SELECT =
   "id, owner_id, name, category, description, duration_min, level, folder_id, coach_note, is_public, is_verified, created_at, " +
+  `workout_template_exercise_blocks(${BLOCK_COLUMNS}), ` +
   `workout_template_exercises(${PRESCRIPTION_COLUMNS}, ` +
   `exercises(${DEFINITION_COLUMNS}), ` +
   `custom_exercise_library_items(${DEFINITION_COLUMNS}))`;
@@ -162,6 +171,9 @@ interface PrescriptionRow {
   cardio_incline_pct: number | null;
   cardio_pace_min_per_km: number | null;
   cardio_avg_heart_rate: number | null;
+  duration_seconds: number | null;
+  endurance_plan: EndurancePlan | null;
+  block_id: string | null;
   exercises: DefinitionRow | null;
   custom_exercise_library_items: DefinitionRow | null;
 }
@@ -179,8 +191,27 @@ interface TemplateRow {
   is_public: boolean;
   is_verified: boolean;
   created_at: string;
+  workout_template_exercise_blocks: BlockRow[];
   workout_template_exercises: PrescriptionRow[];
 }
+
+interface BlockRow {
+  id: string;
+  kind: BlockKind;
+  label: string | null;
+  time_cap_seconds: number | null;
+  interval_seconds: number | null;
+  rounds: number | null;
+}
+
+const toBlock = (b: BlockRow): WorkoutBlock => ({
+  id: b.id,
+  kind: b.kind,
+  label: b.label ?? undefined,
+  timeCapSeconds: b.time_cap_seconds ?? undefined,
+  intervalSeconds: b.interval_seconds ?? undefined,
+  rounds: b.rounds ?? undefined,
+});
 
 const num = (v: number | null): number | undefined => (v === null ? undefined : Number(v));
 
@@ -221,6 +252,9 @@ function toExercise(r: PrescriptionRow): Exercise | null {
     cardioInclinePct: num(r.cardio_incline_pct),
     cardioPaceMinPerKm: num(r.cardio_pace_min_per_km),
     cardioAvgHeartRate: num(r.cardio_avg_heart_rate),
+    durationSeconds: num(r.duration_seconds),
+    endurancePlan: r.endurance_plan ?? null,
+    blockId: r.block_id,
   };
 }
 
@@ -242,6 +276,7 @@ function toTemplate(r: TemplateRow): WorkoutTemplate {
     isPublic: r.is_public,
     isVerified: r.is_verified,
     ownerId: r.owner_id,
+    blocks: (r.workout_template_exercise_blocks ?? []).map(toBlock),
   };
 }
 
@@ -320,7 +355,8 @@ function prescriptionOf(
   ex: Exercise,
   ref: { exercise_id: string | null; custom_exercise_id: string | null },
   templateId: string,
-  position: number
+  position: number,
+  blockId: string | null
 ) {
   return {
     workout_template_id: templateId,
@@ -345,6 +381,9 @@ function prescriptionOf(
     cardio_incline_pct: ex.cardioInclinePct ?? null,
     cardio_pace_min_per_km: ex.cardioPaceMinPerKm ?? null,
     cardio_avg_heart_rate: ex.cardioAvgHeartRate ?? null,
+    duration_seconds: ex.durationSeconds ?? null,
+    endurance_plan: ex.classification === "cardio" ? ex.endurancePlan ?? null : null,
+    block_id: blockId,
   };
 }
 
@@ -355,10 +394,58 @@ function prescriptionOf(
  * writeExercises makes for routines: a template that silently comes back with
  * four of its five movements is worse than one that did not save.
  */
+/**
+ * Replaces a template's blocks. The routine twin of this, with the same
+ * reasoning — see writeBlocks in ../routines, including why the deferred
+ * membership trigger cannot be violated by this ordering.
+ */
+async function writeBlocks(
+  templateId: string,
+  blocks: WorkoutBlock[]
+): Promise<{ idByLocalId: Map<string, string>; saved: WorkoutBlock[] } | { message: string }> {
+  const { error: clearError } = await supabase
+    .from("workout_template_exercise_blocks")
+    .delete()
+    .eq("workout_template_id", templateId);
+  if (clearError) {
+    console.error("[templates] Could not clear blocks:", clearError.message);
+    return { message: describe(clearError) };
+  }
+
+  if (blocks.length === 0) return { idByLocalId: new Map(), saved: [] };
+
+  const rows = blocks.map((b) => ({
+    workout_template_id: templateId,
+    kind: b.kind,
+    label: b.label?.trim() || null,
+    time_cap_seconds: b.kind === "amrap" || b.kind === "for_time" ? b.timeCapSeconds ?? null : null,
+    interval_seconds: b.kind === "emom" ? b.intervalSeconds ?? null : null,
+    rounds: b.kind === "emom" || b.kind === "for_time" ? b.rounds ?? null : null,
+  }));
+
+  const { data, error } = await supabase
+    .from("workout_template_exercise_blocks")
+    .insert(rows)
+    .select(BLOCK_COLUMNS);
+  if (error || !data) {
+    console.error("[templates] Could not write blocks:", error?.message);
+    return { message: error ? describe(error) : "Could not save the blocks in this template." };
+  }
+
+  const saved = (data as BlockRow[]).map(toBlock);
+  const idByLocalId = new Map<string, string>();
+  blocks.forEach((b, i) => {
+    const row = saved[i];
+    if (row) idByLocalId.set(b.id, row.id);
+  });
+  return { idByLocalId, saved };
+}
+
 async function writeExercises(
   templateId: string,
   exercises: Exercise[],
-  lookup: ExerciseLookup
+  lookup: ExerciseLookup,
+  blockIdByLocalId: Map<string, string>
 ): Promise<string | null> {
   const rows = [];
   for (const [index, ex] of exercises.entries()) {
@@ -366,7 +453,8 @@ async function writeExercises(
     if (!ref) {
       return `"${ex.name}" isn't in the exercise library, so this template can't be saved.`;
     }
-    rows.push(prescriptionOf(ex, ref, templateId, index));
+    const blockId = ex.blockId ? blockIdByLocalId.get(ex.blockId) ?? null : null;
+    rows.push(prescriptionOf(ex, ref, templateId, index, blockId));
   }
 
   if (rows.length === 0) return null;
@@ -410,7 +498,18 @@ export async function createTemplate(
     };
   }
 
-  const exerciseError = await writeExercises(data.id, template.exercises, lookup);
+  const blockWrite = await writeBlocks(data.id, template.blocks ?? []);
+  if ("message" in blockWrite) {
+    await supabase.from("workout_templates").delete().eq("id", data.id);
+    return { ok: false, message: blockWrite.message };
+  }
+
+  const exerciseError = await writeExercises(
+    data.id,
+    template.exercises,
+    lookup,
+    blockWrite.idByLocalId
+  );
   if (exerciseError) {
     // Clean up rather than leaving an exercise-less template behind.
     await supabase.from("workout_templates").delete().eq("id", data.id);
@@ -484,9 +583,20 @@ export async function updateTemplate(
     return { ok: false, message: describe(clearError) };
   }
 
-  const exerciseError = await writeExercises(id, exercises, lookup);
+  const blockWrite = await writeBlocks(id, patch.blocks ?? []);
+  if ("message" in blockWrite) return { ok: false, message: blockWrite.message };
+
+  const exerciseError = await writeExercises(id, exercises, lookup, blockWrite.idByLocalId);
   if (exerciseError) return { ok: false, message: exerciseError };
-  return { ok: true };
+  return {
+    ok: true,
+    saved: {
+      blocks: blockWrite.saved,
+      exercises: exercises.map((ex) =>
+        ex.blockId ? { ...ex, blockId: blockWrite.idByLocalId.get(ex.blockId) ?? null } : ex
+      ),
+    },
+  };
 }
 
 /** Prescriptions and assignment rows go with it, both ON DELETE CASCADE. The

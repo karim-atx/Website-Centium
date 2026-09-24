@@ -392,6 +392,8 @@ export interface WorkoutTemplate {
   name: string;
   /** The same 25-column prescription a routine carries. */
   exercises: Exercise[];
+  /** The template mirror of Routine.blocks, copied to a client on assignment. */
+  blocks?: WorkoutBlock[];
   createdAt: string;
   // V7 (QA 7.0): organize templates into folders/subfolders, mirroring the
   // client UI's routine-folder system.
@@ -648,13 +650,21 @@ export type EnduranceMain =
   | { type: "steady"; step: EnduranceStep }
   | { type: "intervals"; repeats: number; work: EnduranceStep; recovery: EnduranceStep };
 
-export interface EndurancePlan {
+/**
+ * A TYPE ALIAS, NOT AN INTERFACE, and the difference is load-bearing here.
+ * This document is written into a `jsonb` column whose generated type is
+ * `Json`, and TypeScript gives an object type alias the implicit index
+ * signature that assignment needs while an interface never gets one. An
+ * interface here fails to compile at the insert with a message about
+ * `{ [key: string]: Json }` that says nothing about why.
+ */
+export type EndurancePlan = {
   version: 1;
   /** Explicit null is as valid as absence — the document round-trips whole. */
   warmup?: EnduranceStep | null;
   main: EnduranceMain;
   cooldown?: EnduranceStep | null;
-}
+};
 
 /**
  * How a group of exercises repeats.
