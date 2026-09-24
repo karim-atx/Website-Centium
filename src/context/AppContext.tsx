@@ -94,7 +94,7 @@ import {
   type ExerciseLookup,
 } from "../services/routines";
 import { mockForumPosts } from "../data/mockForum";
-import { defaultHabits, streaks as seedStreaks } from "../data/mockHealthData";
+import { defaultHabits } from "../data/mockHealthData";
 import { todaysWorkout, workoutPrograms } from "../data/mockWorkouts";
 import { estimate1RM } from "../services/workout";
 import {
@@ -1763,7 +1763,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [waterGoalMl, setWaterGoalState] = usePersistentState<number>("waterGoalMl", 2500);
   const [habits, setHabits] = usePersistentState<HabitItem[]>("habits", defaultHabits);
-  const [streaks, setStreaks] = usePersistentState<Streak[]>("streaks", seedStreaks);
+  // EMPTY UNTIL THE DATABASE ANSWERS. This used to start from a seed of
+  // 7/12/4/21 days, which every account saw on its first paint and kept
+  // forever if the read below failed — an invented streak is worse than no
+  // streak, because the second one is honest about not knowing yet. The
+  // hydration builds all four rows from AUTO_STREAK_CATEGORIES, so nothing
+  // here needs to pre-declare them, and every consumer already guards for an
+  // empty list (Mind's hero, MetricsTab's workout card).
+  const [streaks, setStreaks] = usePersistentState<Streak[]>("streaks", []);
 
   // Iteration 6 "Team" §8, Home streak board: the plant's growth is a
   // running high-water mark, not something re-derived from the current

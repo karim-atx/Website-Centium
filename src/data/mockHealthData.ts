@@ -1,4 +1,4 @@
-import type { HealthMetric, BloodPanel, Streak, HabitItem } from "../types";
+import type { HealthMetric, BloodPanel, HabitItem } from "../types";
 
 // Still demo data — these values are invented. Only the DATES are real, so
 // a chart labelled as the last n days is actually the last n days; every
@@ -135,30 +135,27 @@ export const bloodPanel: BloodPanel = {
   ],
 };
 
-// V4: these four are auto-derived from real logging activity (see
-// recomputeAutoStreaks in AppContext) — no goal, not user-editable.
-export const streaks: Streak[] = [
-  // NO goalDays, because a real auto row cannot have one: the schema's
-  // streaks_auto_no_goal_check refuses it and the insert policy refuses it
-  // again. These four used to carry 30/30/8/30, which meant local state looked
-  // nothing like the rows the database would actually hold — and every goal
-  // string the UI rendered from them described a target that cannot exist.
-  //
-  // The labels are the ones services/streaks seeds, so what renders here and
-  // what the nightly sweep advances are the same four things.
-  // `category` is what consumers look these up by now — the ids below are
-  // this seed's own and a hydrated row carries a uuid instead, so a lookup on
-  // "s3" would find nothing the moment real data arrived.
-  { id: "s1", label: "Logging streak", days: 7, auto: true, category: "logging" },
-  { id: "s2", label: "Movement streak", days: 12, auto: true, category: "movement" },
-  { id: "s3", label: "Workout streak", days: 4, auto: true, category: "workout" },
-  { id: "s4", label: "Nutrition streak", days: 21, auto: true, category: "nutrition" },
-];
+// THE FOUR AUTO STREAKS ARE NOT SEEDED HERE ANY MORE. They used to be, with
+// days of 7/12/4/21 — and because they were a usePersistentState INITIAL
+// value, every account saw those four numbers on its very first paint, before
+// the server had been asked anything, and kept them for good if the read
+// failed. An account that had logged nothing in its life was told it had a
+// 21-day nutrition streak.
+//
+// AppContext starts the list empty instead, so nothing is claimed until the
+// database answers. The labels and categories the hydration builds its four
+// rows from live in services/streaks, which is where the nightly sweep's own
+// vocabulary is defined; this file never held the authoritative copy.
 
+// A STARTER TEMPLATE, NOT A CLAIM. Habits are local-only — nothing hydrates
+// them — so these five are a genuine default worth offering a new account.
+// What was NOT worth offering was their state: three arrived already ticked
+// for today, carrying streaks of 12, 7 and 4 days. A habit somebody has never
+// seen has been kept for zero days and was not done this morning.
 export const defaultHabits: HabitItem[] = [
-  { id: "h1", label: "Drink water", icon: "water", done: true, streakDays: 12 },
-  { id: "h2", label: "10,000 steps", icon: "steps", done: true, streakDays: 7 },
-  { id: "h3", label: "Workout", icon: "workout", done: true, streakDays: 4 },
+  { id: "h1", label: "Drink water", icon: "water", done: false, streakDays: 0 },
+  { id: "h2", label: "10,000 steps", icon: "steps", done: false, streakDays: 0 },
+  { id: "h3", label: "Workout", icon: "workout", done: false, streakDays: 0 },
   { id: "h4", label: "Journal", icon: "journal", done: false, streakDays: 0 },
   { id: "h5", label: "Meditate", icon: "meditation", done: false, streakDays: 0 },
 ];
