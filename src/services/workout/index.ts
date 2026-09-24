@@ -1,3 +1,4 @@
+import { countsTowardVolume } from "./session";
 import type { LoggedExercise, LoggedSet } from "../../types";
 
 /** Epley formula — a standard, simple estimated-1RM calculation. */
@@ -6,8 +7,16 @@ export function estimate1RM(weightKg: number, reps: number): number {
   return Math.round(weightKg * (1 + reps / 30) * 10) / 10;
 }
 
+/**
+ * Volume, counting only the sets that happened.
+ *
+ * A SKIPPED SET IS WORTH NOTHING and a FAILED ONE IS WORTH WHAT WAS DONE —
+ * the reps in the box are already the reps managed, so the rule is a filter
+ * rather than a calculation. Falls back to `completed` for sessions logged
+ * before outcomes existed, which is what those rows carry.
+ */
 export function volumeForSets(sets: LoggedSet[]): number {
-  return sets.filter((s) => s.completed).reduce((sum, s) => sum + s.reps * s.weightKg, 0);
+  return sets.filter(countsTowardVolume).reduce((sum, s) => sum + s.reps * s.weightKg, 0);
 }
 
 export function volumeForSession(exercises: LoggedExercise[]): number {

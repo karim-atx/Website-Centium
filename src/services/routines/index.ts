@@ -253,11 +253,14 @@ function toExercise(r: PrescriptionRow): Exercise | null {
   return {
     id: r.id,
     name: def.name,
-    // The three defaults the UI has always assumed for a prescription that
-    // never filled them in. Null in the column means "not prescribed", and
-    // every surface reads these as plain numbers.
-    sets: r.sets ?? 3,
-    reps: r.reps ?? 10,
+    // NOTHING IS INVENTED HERE. These read `?? 3` and `?? 10`, which made
+    // "not prescribed" unsayable: the prescription formatter has an AMRAP
+    // case for an exercise with no rep target that could never be reached,
+    // and a session seeded five rows of ten reps for a coach who had
+    // deliberately written none. Null in the column means the coach did not
+    // say, and every reader now decides for itself what to do with that.
+    sets: r.sets ?? undefined,
+    reps: r.reps ?? undefined,
     weightKg: num(r.weight_kg) ?? 0,
     muscleGroups: def.muscle_groups,
     secondaryMuscleGroups: def.secondary_muscle_groups,

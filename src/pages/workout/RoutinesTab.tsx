@@ -23,6 +23,7 @@ import {
   pruneBlocks,
   ungroupBlock,
 } from "../../services/workout/blocks";
+import { setRowCount } from "../../services/workout/session";
 import {
   ChevronDown,
   ChevronRight,
@@ -209,7 +210,10 @@ export default function RoutinesTab() {
   let resumeInfo: { routine: Routine; exerciseIndex: number; minutesLeft: number; progress: number } | null = null;
   if (pausedRoutine && pausedSession) {
     const totalExercises = pausedRoutine.exercises.length || 1;
-    const totalSets = pausedRoutine.exercises.reduce((s, e) => s + e.sets, 0) || 1;
+    // setRowCount rather than `e.sets`, which is optional now and absent for
+    // an exercise nobody prescribed — the progress ring would have divided by
+    // the number of exercises instead of the number of sets.
+    const totalSets = pausedRoutine.exercises.reduce((s, e) => s + setRowCount(e).offered, 0) || 1;
     const completedSets = pausedSession.logged.reduce((s, e) => s + e.sets.filter((set) => set.completed).length, 0);
     const doneExercises = pausedSession.logged.filter((e) => e.sets.length > 0 && e.sets.every((set) => set.completed)).length;
     const progress = Math.min(1, completedSets / totalSets);
@@ -694,6 +698,7 @@ export default function RoutinesTab() {
           routineId={activeRoutine.id}
           routineName={activeRoutine.name}
           exercises={activeRoutine.exercises}
+          blocks={activeRoutine.blocks}
           coachNote={activeRoutine.coachNote}
         />
       )}
