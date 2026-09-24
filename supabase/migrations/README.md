@@ -30,9 +30,13 @@ That file is now deleted. Two remain, and neither is safe to delete blindly:
 `supabase/.temp/linked-project.json` pointed this working copy at the
 `atraxia-staging` project — the same project Database-Atraxia is linked to —
 which is what made `supabase db push` from this directory possible in the
-first place. It has been removed. It is gitignored, so it can come back the
-moment somebody runs `supabase link` here; do not.
+first place.
 
-`package.json`'s `gen:types` still names the staging project id. That one
-stays: it only reads the schema into `lib/supabase/database.types.ts` and
-cannot write.
+**Deleting it once is not enough.** Any Supabase CLI invocation writes it back,
+including our own `npm run gen:types` — which is how it reappeared thirty
+seconds after the first deletion. So `gen:types` now removes it as its last
+step. It is gitignored either way, so it can also come back the moment somebody
+runs `supabase link` here; do not.
+
+`gen:types` keeps naming the staging project id. That part stays: it only reads
+the schema into `lib/supabase/database.types.ts` and cannot write.

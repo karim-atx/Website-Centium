@@ -9,7 +9,7 @@
     "lint": "oxlint",
     "test": "node --import ./scripts/register-test-hooks.mjs --test \"src/**/*.test.ts\"",
     "preview": "vite preview",
-    "gen:types": "npx --yes supabase@2.117.0 gen types typescript --project-id mwnkhhyrheprugeornjl --schema public > lib/supabase/database.types.ts"
+    "gen:types": "npx --yes supabase@2.117.0 gen types typescript --project-id mwnkhhyrheprugeornjl --schema public > lib/supabase/database.types.ts && node -e \"require('fs').rmSync('supabase/.temp',{recursive:true,force:true})\""
   },
   "dependencies": {
     "@livekit/components-react": "^2.9.24",
