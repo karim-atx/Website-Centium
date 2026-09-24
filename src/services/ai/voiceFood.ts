@@ -110,6 +110,16 @@ export interface VoiceFoodItem {
    * match rather than being filtered out here.
    */
   food: FoodSearchResult | null;
+  /**
+   * The foods that tied with the match, at most three.
+   *
+   * CARRIED EVEN THOUGH ONE WAS CHOSEN. "chicken" reaches three catalog rows
+   * that all begin with the word and nothing in the sentence chooses between
+   * them, so the ranking picks one and this says what the others were. Empty
+   * when the match was unambiguous, which is what keeps the review quiet in
+   * the ordinary case.
+   */
+  alternatives: FoodSearchResult[];
 }
 
 export type VoiceFoodOutcome =
@@ -264,12 +274,14 @@ export async function transcribeAndParse(audio: Blob): Promise<VoiceFoodOutcome>
         typeof e.quantity === "number" && Number.isFinite(e.quantity) && e.quantity > 0 ? e.quantity : 1;
       const spokenUnit = typeof e.unit === "string" && e.unit.trim() ? e.unit.trim() : null;
 
+      const match = await matchFoodByName(spokenName);
       return {
         spokenName,
         quantity,
         spokenUnit,
         unit: convertibleUnit(spokenUnit),
-        food: await matchFoodByName(spokenName),
+        food: match?.food ?? null,
+        alternatives: match?.alternatives ?? [],
       };
     })
   );

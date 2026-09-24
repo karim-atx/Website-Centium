@@ -584,6 +584,29 @@ export async function getDiaryEntries(
 }
 
 /**
+ * How many runners-up a card may offer.
+ *
+ * Three, because the chip row sits under a name on a phone and a fourth
+ * wraps — and because past three the list stops being "did you mean one of
+ * these" and becomes a search the user did not ask for.
+ */
+const MAX_ALTERNATIVES = 3;
+
+/**
+ * The winning food, plus the candidates that tied with it.
+ *
+ * A SHAPE RATHER THAN A BARE FOOD, because "the best match" and "was there
+ * anything else it could have been" are two different facts and the review
+ * screen needs both. Returning only the winner made an arguable guess look
+ * like a certainty.
+ */
+export interface FoodMatch {
+  food: FoodSearchResult;
+  /** Same-rank runners-up, best first. Empty when the match was unambiguous. */
+  alternatives: FoodSearchResult[];
+}
+
+/**
  * The best food for a spoken or typed name, or null.
  *
  * WHY THIS REPLACED AN EXACT MATCH. The voice logger used to resolve each
@@ -620,7 +643,7 @@ export async function getDiaryEntries(
  * whole class of ordinary sentences. It runs only when the full term found
  * nothing, so it can never outrank a real result.
  */
-export async function matchFoodByName(name: string): Promise<FoodSearchResult | null> {
+export async function matchFoodByName(name: string): Promise<FoodMatch | null> {
   const term = name.trim();
   if (!term) return null;
 
@@ -639,7 +662,7 @@ export async function matchFoodByName(name: string): Promise<FoodSearchResult | 
     return 2;
   };
 
-  return [...candidates].sort((a, b) => {
+  const ranked = [...candidates].sort((a, b) => {
     const byRank = rank(a) - rank(b);
     if (byRank !== 0) return byRank;
     // A user's own food wins a tie: they named it themselves, so it is more
@@ -647,7 +670,20 @@ export async function matchFoodByName(name: string): Promise<FoodSearchResult | 
     const byOwner = (a.source === "custom" ? 0 : 1) - (b.source === "custom" ? 0 : 1);
     if (byOwner !== 0) return byOwner;
     return a.name.length - b.name.length;
-  })[0];
+  });
+
+  const best = ranked[0];
+  const bestRank = rank(best);
+  return {
+    food: best,
+    // SAME RANK ONLY. A "contains" match is not an alternative to a
+    // "starts-with" one — it lost on the thing the ranking is for, and
+    // offering it beside the winner would present a worse answer as an equal
+    // one. Runners-up from the SAME tier are the genuinely arguable cases:
+    // three foods all beginning "Chicken" and nothing in the words to choose
+    // between them.
+    alternatives: ranked.slice(1).filter((f) => rank(f) === bestRank).slice(0, MAX_ALTERNATIVES),
+  };
 }
 
 /**

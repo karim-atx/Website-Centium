@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Check, ChevronDown, Mic, Plus, Sparkles, MicOff, Square, ShieldCheck, UtensilsCrossed, X } from "lucide-react";
@@ -398,30 +398,46 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
   }, [stage]);
 
   /**
-   * Per-nutrient data for every matched CATALOG food on the review, in ONE
-   * request.
+   * Every catalog food on the review, matches AND alternatives, as one sorted
+   * list of ids.
    *
-   * getFoodNutrients takes a list precisely so this can be one round trip;
-   * asking per card would be a request per item for a screen that renders
-   * them all at once. Custom foods carry their own map inline (whatever the
-   * user typed into Create Custom Food) and are not part of this fetch —
-   * there is no food_nutrients row for them to have.
+   * KEYED ON THE IDS, NOT ON `items`, and that is the whole point of the memo.
+   * The effect below used to depend on `items`, which changes identity on
+   * every keystroke in a quantity field, every tick of a checkbox and every
+   * swap — so a screen whose nutrient data had not changed at all re-fetched
+   * it each time. The set of foods is what the request is about, so the set of
+   * foods is what it watches.
+   *
+   * ALTERNATIVES ARE IN THE SAME REQUEST as the matches. They are one tap away
+   * and the tap recomputes the whole preview, so fetching them only once
+   * tapped would put a spinner — or worse, a silent gap where the nutrients
+   * should be — on the interaction this feature exists for. It also means a
+   * swap costs no round trip at all.
    */
-  useEffect(() => {
+  const nutrientIds = useMemo(() => {
     const ids = items
-      .map((i) => i.food)
+      .flatMap((i) => [i.food, ...i.alternatives])
       .filter((f): f is FoodSearchResult => !!f && f.source === "catalog")
       .map((f) => f.id);
-    if (ids.length === 0) return;
+    return [...new Set(ids)].sort();
+  }, [items]);
+  const nutrientIdsKey = nutrientIds.join(",");
+
+  useEffect(() => {
+    if (nutrientIds.length === 0) return;
     let cancelled = false;
-    void getFoodNutrients(ids).then((result) => {
+    void getFoodNutrients(nutrientIds).then((result) => {
       if (cancelled || !result.ok) return;
       setNutrientsByFoodId(result.byFoodId);
     });
     return () => {
       cancelled = true;
     };
-  }, [items]);
+    // nutrientIdsKey IS nutrientIds, flattened to something React can compare.
+    // Listing the array itself would defeat the memo above, since a new array
+    // with the same contents is still a new array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [nutrientIdsKey]);
 
   const reset = () => {
     teardown();
@@ -593,6 +609,28 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
       delete next[index];
       return next;
     });
+
+  /**
+   * Chooses one of the runners-up for a row.
+   *
+   * SWAPPED IN PLACE, not appended: the food that was showing takes the
+   * chip's slot, so the row keeps its length and its order, the tap is
+   * reversible with a second tap, and nothing below the chips jumps. The
+   * quantity and unit are untouched — only which food they apply to changes,
+   * and previewFor recomputes the multiplier against the new serving label.
+   */
+  const chooseAlternative = (index: number, alternative: FoodSearchResult) =>
+    setItems((prev) =>
+      prev.map((it, i) => {
+        if (i !== index || !it.food) return it;
+        const previous = it.food;
+        return {
+          ...it,
+          food: alternative,
+          alternatives: it.alternatives.map((a) => (a.id === alternative.id ? previous : a)),
+        };
+      })
+    );
 
   /**
    * Attaches a freshly-created food to the row it was created for.
@@ -1011,6 +1049,30 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                             </div>
                           ))}
                         </div>
+                      </div>
+                    )}
+
+                    {/* WHAT ELSE IT COULD HAVE BEEN. Shown only when the
+                        ranking had a genuine tie — several foods at the same
+                        rank, nothing in the sentence to choose between them —
+                        so an unambiguous match stays a single clean line. The
+                        chips carry no macros of their own: tapping one swaps
+                        the match and the panel above recomputes, which is a
+                        better answer than four sets of numbers at once. */}
+                    {item.food && item.alternatives.length > 0 && (
+                      <div className="mt-2 pl-11 flex items-center gap-1.5 flex-wrap">
+                        <span className="text-[11px] text-charcoal-faint shrink-0">Also:</span>
+                        {item.alternatives.map((alt) => (
+                          <button
+                            key={alt.id}
+                            onClick={() => chooseAlternative(i, alt)}
+                            aria-label={`Use ${alt.name} instead`}
+                            className="tap transition-colors"
+                            style={{ ...sheetChipStyle(false), padding: "5px 10px", fontSize: 11.5 }}
+                          >
+                            {alt.name}
+                          </button>
+                        ))}
                       </div>
                     )}
 
