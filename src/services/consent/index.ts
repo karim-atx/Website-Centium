@@ -19,7 +19,7 @@ import type { Enums } from "../../../lib/supabase/database.types";
 export type AccessCategory = Enums<"access_category">;
 
 /**
- * The seven categories this client surfaces, in display order.
+ * The eight categories this client surfaces, in display order.
  *
  * These snake_case values ARE the contract now. Two other spellings used to
  * exist — the professional side's camelCase (`foodDiary`) and the client
@@ -27,18 +27,19 @@ export type AccessCategory = Enums<"access_category">;
  * the other, toggling a switch on one side was invisible to the other. One
  * vocabulary, taken from the database enum.
  *
- * `access_category` gained `body_measurements` in Database-Atraxia
- * 20260924320000, and it is deliberately NOT in the two lists below yet. The
- * arrays drive the client's own sharing toggles, so adding a row here would
- * put a new consent switch in front of every user as a side effect of
- * regenerating types — and tape measurements are part 2 of the workout
- * overhaul, with no capture screen and nothing to show a professional.
+ * `body_measurements` joins them here. It was held out deliberately while
+ * there was no capture screen and nothing to show a professional, with the
+ * note that "deleting the Exclude is what wiring it up looks like, and the
+ * compiler then demands both lists". Both lists follow, and so does
+ * roster/index's access map, which the compiler could not demand because it
+ * is a Partial by design.
  *
- * Named rather than left implicit so the omission is a decision on the page
- * instead of a gap somebody later reads as an oversight. Deleting the Exclude
- * is what wiring it up looks like, and the compiler then demands both lists.
+ * NOTHING IS GRANTED BY ADDING IT. has_client_access needs a row with
+ * granted = true, no function in the schema inserts one, and the client is
+ * the only writer — so every existing relationship starts with this switch
+ * off and stays off until its owner turns it on.
  */
-export type SurfacedAccessCategory = Exclude<AccessCategory, "body_measurements">;
+export type SurfacedAccessCategory = AccessCategory;
 
 export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: string; description: string }[] = [
   { category: "food_diary", label: "Food diary", description: "Meals and nutrition you log" },
@@ -53,12 +54,29 @@ export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: strin
   { category: "health_metrics", label: "Activity & vitals", description: "Steps, sleep, heart rate, water and calories burned" },
   { category: "lab_results", label: "Lab results", description: "Blood panels, markers and lab report documents" },
   { category: "medical_history", label: "Medical history", description: "Medications, surgeries, conditions and imaging" },
+  // Its own category rather than a corner of Activity & vitals, and the
+  // migration that added it is explicit about why: folding these into the
+  // vitals policy would have retroactively widened every existing grant, so
+  // somebody who ticked a box meaning "steps, water, sleep" would have
+  // started sharing their waist without touching anything.
+  {
+    category: "body_measurements",
+    label: "Body measurements",
+    description: "Tape measurements and body fat percentage",
+  },
 ];
 
 /** Maps the DB enum onto the key shape the professional-side UI reads. */
 export const accessKeyFor: Record<
   SurfacedAccessCategory,
-  "foodDiary" | "workoutActivity" | "weight" | "progress" | "healthMetrics" | "labResults" | "medicalHistory"
+  | "foodDiary"
+  | "workoutActivity"
+  | "weight"
+  | "progress"
+  | "healthMetrics"
+  | "labResults"
+  | "medicalHistory"
+  | "bodyMeasurements"
 > = {
   food_diary: "foodDiary",
   workout_activity: "workoutActivity",
@@ -67,6 +85,7 @@ export const accessKeyFor: Record<
   health_metrics: "healthMetrics",
   lab_results: "labResults",
   medical_history: "medicalHistory",
+  body_measurements: "bodyMeasurements",
 };
 
 export interface LinkedProfessional {
