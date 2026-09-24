@@ -64,10 +64,16 @@ export interface FoodSearchResult {
 const CATALOG_COLUMNS =
   "id, name, name_ar, category, serving_label, calories, protein_g, carbs_g, fat_g, is_lebanese, is_verified, barcode";
 // "*" rather than a list, deliberately: logo_tone and nutrients arrive with
-// migration 20260925000000, which is applied by hand. Naming them here would
-// fail every custom-food read until it is; "*" returns them once they exist
-// and simply omits them before. custom_foods is owner-only data, so reading
-// every column exposes nothing extra.
+// Database-Atraxia's 20260924420000. Naming them here would fail every
+// custom-food read on a database that has not run it yet; "*" returns them
+// once they exist and simply omits them before. custom_foods is owner-only
+// data, so reading every column exposes nothing extra.
+//
+// THAT MIGRATION USED TO BE NUMBERED 20260925000000, in this repo's own
+// supabase/migrations, carrying a "review, then apply by hand" note that
+// somebody followed against staging -- so staging grew both columns with no
+// schema_migrations row behind them while a fresh reset had neither. It is
+// Database-Atraxia's now (b5b1f36), applied the ordinary way.
 const CUSTOM_COLUMNS = "*";
 
 interface CatalogRow {
@@ -87,7 +93,7 @@ interface CatalogRow {
 
 type CustomRow = Omit<CatalogRow, "is_lebanese" | "is_verified" | "barcode"> & {
   overrides_food_id: string | null;
-  // Absent until migration 20260925000000 is applied.
+  // Absent until Database-Atraxia 20260924420000 is applied.
   logo_tone?: number | null;
   nutrients?: Record<string, number> | null;
 };
@@ -739,9 +745,9 @@ export async function createCustomFood(
     protein: number;
     carbs: number;
     fat: number;
-    /** Index 0-5 into LOGO_TONES; needs migration 20260925000000. */
+    /** Index 0-5 into LOGO_TONES; needs Database-Atraxia 20260924420000. */
     logoTone?: number | null;
-    /** Per-serving amounts beyond the macros; needs migration 20260925000000. */
+    /** Per-serving amounts beyond the macros; needs Database-Atraxia 20260924420000. */
     nutrients?: Record<string, number> | null;
     /** Makes this a personal correction of that catalog row. */
     overridesFoodId?: string | null;
@@ -772,7 +778,9 @@ export async function createCustomFood(
   // The food itself matters more than its colour or extra nutrients, so it
   // is saved without them rather than not at all.
   if (error && Object.keys(extras).length > 0 && (error.code === "PGRST204" || error.code === "42703")) {
-    console.error("[food] custom food extras need migration 20260925000000; saved without them");
+    console.error(
+      "[food] custom food extras need Database-Atraxia 20260924420000; saved without them"
+    );
     ({ data, error } = await insert(base));
   }
 

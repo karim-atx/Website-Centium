@@ -1,7 +1,7 @@
 /**
  * Imports per-nutrient data for this app's food catalog from USDA
- * FoodData Central (FDC) into the `food_nutrients` table added by
- * supabase/migrations/20260923000000_food_nutrients_and_recipes.sql.
+ * FoodData Central (FDC) into the `food_nutrients` table, added by
+ * Database-Atraxia's 20260923000000_food_nutrients_and_recipes.
  *
  * WHY THIS IS A STANDALONE SCRIPT, NOT APP CODE
  * This repository ships as a static frontend (see README.md's "Deployment"
