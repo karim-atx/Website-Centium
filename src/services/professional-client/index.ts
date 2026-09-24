@@ -1,10 +1,12 @@
 import { supabase } from "../../../lib/supabase/client";
+import { SESSION_SELECT, toWorkoutSession } from "../workout/log";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type {
   BloodMarker,
   ClientNutrition,
   ClientWorkoutActivity,
   ImagingRecord,
+  WorkoutSession,
   LabReport,
 } from "../../types";
 import { groupPanelsByMarkerName, type PanelRow } from "../labs";
@@ -180,6 +182,57 @@ export async function fetchClientWorkoutActivity(
 
   return { ok: true, byClient };
 }
+
+// ---------------------------------------------------------------------------
+// A client's actual sessions
+// ---------------------------------------------------------------------------
+
+export type ClientSessionsResult =
+  | { ok: true; byClient: Record<string, WorkoutSession[]> }
+  | { ok: false; message: string };
+
+/**
+ * The sessions a client logged against particular routines.
+ *
+ * WHAT THE PROFESSIONAL IS ALLOWED TO SEE, AND NOTHING ELSE. The filter is
+ * RLS's, not this function's: workout_sessions' select policy is the owner OR
+ * `has_client_access(user_id, 'workout_activity')`, and every table underneath
+ * carries the matching rule through its parent. A client who has not shared
+ * workout activity simply produces no rows — which is why the caller must
+ * distinguish "not shared" from "nothing logged", exactly as the roster badge
+ * does, rather than rendering an empty result as "no sessions".
+ *
+ * NARROWED BY ROUTINE because the question is about a template, not about the
+ * client's whole training life. A professional who assigned one program has a
+ * reason to see how that program went; the rest of somebody's log is not part
+ * of that question, even where the grant would permit it.
+ */
+export async function fetchClientSessionsForRoutines(
+  routineIds: string[],
+  limit = 40
+): Promise<ClientSessionsResult> {
+  if (routineIds.length === 0) return { ok: true, byClient: {} };
+
+  const { data, error } = await supabase
+    .from("workout_sessions")
+    .select(`user_id, ${SESSION_SELECT}`)
+    .in("routine_id", routineIds)
+    .order("started_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("[professional-client] Could not read client sessions:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+
+  const byClient: Record<string, WorkoutSession[]> = {};
+  for (const row of data ?? []) {
+    const userId = (row as { user_id: string }).user_id;
+    (byClient[userId] ??= []).push(toWorkoutSession(row));
+  }
+  return { ok: true, byClient };
+}
+
 
 export interface ClientWeight {
   /** The most recent reading in the window, in kg. */

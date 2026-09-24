@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -12,15 +12,12 @@ import { BlockCard } from "../../components/workout/BlockCard";
 import { groupIntoRuns } from "../../services/workout/blocks";
 import { prescriptionLine } from "../../services/workout/prescription";
 import { Plus, Trash2, ChevronDown, ChevronUp, Folder, FolderPlus, MoreVertical, Copy, Pencil, Settings2, Send } from "lucide-react";
+import { SessionDetail } from "../../components/workout/SessionDetail";
+import { fetchClientSessionsForRoutines } from "../../services/professional-client";
+import { formatDuration } from "../../services/workout";
+import { formatDisplayDate } from "../../utils/date";
+import type { WorkoutSession } from "../../types";
 import clsx from "clsx";
-
-// Deterministic small hash so each template+client pairing gets a stable
-// (not random-on-every-render) set of mock tracking numbers.
-function hash(input: string) {
-  let h = 0;
-  for (let i = 0; i < input.length; i++) h = (h * 31 + input.charCodeAt(i)) >>> 0;
-  return h;
-}
 
 const folderColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
 
@@ -72,6 +69,54 @@ export default function WorkoutTemplateBuilderTab() {
     setNewFolderColor(folderColorOptions[0]);
     setNewFolderOpen(false);
   };
+
+
+  // The expanded template's clients' real sessions.
+  //
+  // FETCHED ON EXPANSION, not on mount: a professional with thirty templates
+  // and a roster of forty would otherwise pull every session either of them
+  // has ever logged, to render a list nobody has opened.
+  //
+  // Keyed by the ROUTINE each assignment created, which is how a session
+  // knows which template it belongs to — routine_id on workout_sessions
+  // against routine_id on workout_template_assignments. An assignment with no
+  // routine (one whose routine has since been deleted) contributes nothing to
+  // ask about.
+  //
+  // THE ANSWER CARRIES THE QUESTION IT ANSWERS. Holding the template id
+  // alongside the sessions means expanding a second template shows a loading
+  // state rather than the first one's results — storing the map alone left
+  // the previous template's sessions on screen, under the new one's name,
+  // until the fetch came back.
+  const [loaded, setLoaded] = useState<{ templateId: string; byClient: Record<string, WorkoutSession[]> } | null>(null);
+
+  const expandedRoutineIds = useMemo(() => {
+    if (!expandedId) return [] as string[];
+    return templateAssignments
+      .filter((a) => a.templateId === expandedId && a.routineId)
+      .map((a) => a.routineId as string);
+  }, [expandedId, templateAssignments]);
+
+  useEffect(() => {
+    if (!expandedId || expandedRoutineIds.length === 0) return;
+    let cancelled = false;
+    void fetchClientSessionsForRoutines(expandedRoutineIds).then((result) => {
+      // A FAILED READ IS NOT AN EMPTY ONE. Rendering "no sessions logged yet"
+      // because the network dropped tells a professional something false
+      // about their client, which is the whole reason these reads report
+      // failure rather than returning an empty map — so a failure leaves the
+      // loading state up rather than replacing it with a wrong answer.
+      if (cancelled || !result.ok) return;
+      setLoaded({ templateId: expandedId, byClient: result.byClient });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [expandedId, expandedRoutineIds]);
+
+  const sessionsFor = (templateId: string, clientId: string): WorkoutSession[] | undefined =>
+    loaded?.templateId === templateId ? loaded.byClient[clientId] ?? [] : undefined;
+
 
   const topFolders = workoutTemplateFolders.filter((f) => !f.parentId);
   const subfoldersOf = (id: string) => workoutTemplateFolders.filter((f) => f.parentId === id);
@@ -190,48 +235,61 @@ export default function WorkoutTemplateBuilderTab() {
                       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">
                         Client activity
                       </p>
+                      {/* WHAT THEY ACTUALLY LOGGED, or an honest silence.
+                          This block used to derive sets, reps, RPE, mood and
+                          a sentence about exercises added or replaced from
+                          `hash(template.id + client.id)` — stable, plausible,
+                          and entirely invented. A professional reading "avg
+                          RPE 8, mood 7/10" had no way to know none of it had
+                          happened, and would coach against it.
+                          The four states are the roster's, for the reason
+                          utils/workoutDisplay spells out: a client who has
+                          not shared workout activity must never be reported
+                          as one who did not train. */}
                       <div className="space-y-2">
                         {clients.map((c) => {
-                          const h = hash(t.id + c.id);
-                          const totalSets = t.exercises.length * (3 + (h % 2));
-                          const totalReps = totalSets * (8 + (h % 5));
-                          const rpe = 6 + (h % 4);
-                          const mood = 4 + (h % 6);
-                          const changed = h % 3;
+                          const sessions = c.access.workoutActivity
+                            ? sessionsFor(t.id, c.id)
+                            : [];
                           return (
                             <div key={c.id} className="bg-cream-soft rounded-xl px-3.5 py-3">
                               <p className="text-sm font-semibold text-charcoal mb-1.5">{c.name}</p>
-                              <div className="grid grid-cols-4 gap-2 text-center mb-2">
-                                <div>
-                                  <p className="text-sm font-bold text-charcoal">{totalSets}</p>
-                                  <p className="text-[9px] text-charcoal-faint">Sets</p>
+                              {!c.access.workoutActivity ? (
+                                <p className="text-[11px] text-charcoal-faint">
+                                  Not sharing workout activity.
+                                </p>
+                              ) : sessions === undefined ? (
+                                <p className="text-[11px] text-charcoal-faint">Loading sessions…</p>
+                              ) : sessions.length === 0 ? (
+                                <p className="text-[11px] text-charcoal-faint">
+                                  No sessions logged yet.
+                                </p>
+                              ) : (
+                                <div className="space-y-2">
+                                  {sessions.slice(0, 3).map((s) => (
+                                    <div key={s.id}>
+                                      <p className="text-[11px] font-semibold text-charcoal-soft">
+                                        {formatDisplayDate(s.date)} · {formatDuration(s.durationSec)} ·{" "}
+                                        {s.totalVolumeKg.toLocaleString()} kg
+                                      </p>
+                                      <SessionDetail session={s} />
+                                    </div>
+                                  ))}
+                                  {sessions.length > 3 && (
+                                    <p className="text-[10.5px] text-charcoal-faint">
+                                      {sessions.length - 3} earlier session
+                                      {sessions.length - 3 === 1 ? "" : "s"} not shown.
+                                    </p>
+                                  )}
                                 </div>
-                                <div>
-                                  <p className="text-sm font-bold text-charcoal">{totalReps}</p>
-                                  <p className="text-[9px] text-charcoal-faint">Reps</p>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-bold text-charcoal">{rpe}</p>
-                                  <p className="text-[9px] text-charcoal-faint">Avg RPE</p>
-                                </div>
-                                <div>
-                                  <p className="text-sm font-bold text-charcoal">{mood}/10</p>
-                                  <p className="text-[9px] text-charcoal-faint">Mood</p>
-                                </div>
-                              </div>
-                              <p className="text-[11px] text-charcoal-faint">
-                                {changed === 0
-                                  ? "No exercises added, removed or replaced."
-                                  : changed === 1
-                                  ? "1 exercise replaced from the assigned template."
-                                  : "1 exercise added beyond the assigned template."}
-                              </p>
+                              )}
                             </div>
                           );
                         })}
                       </div>
                     </div>
                   )}
+
                 </div>
               )}
             </Card>
