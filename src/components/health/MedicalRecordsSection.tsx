@@ -5,6 +5,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { Toggle } from "../ui/Toggle";
 import { useApp } from "../../context/AppContext";
+import { imagingTypes } from "./imagingTypes";
 import { FileViewerSheet } from "./FileViewerSheet";
 import type { PrivateBucket } from "../../services/storage";
 import type { BloodMarker, ImagingRecord, LabReport, MedicationRoute } from "../../types";
@@ -28,7 +29,6 @@ const statusColor: Record<string, string> = {
   high: "text-status-high bg-status-high-bg",
 };
 
-const imagingTypes = ["X-Ray", "MRI", "CT scan", "Ultrasound", "Urine analysis", "DEXA scan", "Other"];
 const commonComorbidities = [
   "Diabetes",
   "Hypertension",
@@ -163,7 +163,7 @@ export const MedicalRecordsSection: React.FC<{
               <Share2 size={13} /> Share all
             </button>
             <button onClick={onScan} className="tap flex items-center gap-1.5 text-[11.5px] font-semibold text-primary-dark">
-              <Camera size={13} /> Scan result
+              <Camera size={13} /> Add result
             </button>
           </div>
         )}
@@ -173,7 +173,7 @@ export const MedicalRecordsSection: React.FC<{
               <Share2 size={13} /> Share all
             </button>
             <button onClick={onScanImaging} className="tap flex items-center gap-1.5 text-[11.5px] font-semibold text-primary-dark">
-              <Camera size={13} /> Scan result
+              <Camera size={13} /> Add result
             </button>
           </div>
         )}
@@ -348,15 +348,18 @@ export const MedicalRecordsSection: React.FC<{
               </div>
             </Card>
           ))}
-          {/* QA 13.0: "you should be given the option to take a picture or
-              attach files of medical imaging/tests whereby AI will read the
-              result" — Scan sits alongside the existing manual-entry add. */}
+          {/* QA 13.0 asked to "take a picture or attach files of medical
+              imaging/tests whereby AI will read the result". Only the first
+              half is built: the photo route sits alongside the manual add,
+              both ask for the same typed fields, and the difference is only
+              whether the document is attached. Nothing reads it — see the
+              header of ImagingCaptureFlow for what used to pretend it did. */}
           <div className="flex gap-2.5">
             <button
               onClick={onScanImaging}
               className="tap flex-1 flex items-center justify-center gap-1.5 rounded-2xl border-[1.5px] border-dashed border-charcoal/[0.16] px-4 py-3 text-sm font-semibold text-primary-dark"
             >
-              <Camera size={14} /> Scan
+              <Camera size={14} /> Add from photo
             </button>
             <button
               onClick={() => setAddImagingOpen(true)}

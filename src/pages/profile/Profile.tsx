@@ -12,7 +12,7 @@ import { useApp } from "../../context/AppContext";
 import { useIsAmbassador } from "../../hooks/useIsAmbassador";
 import { useReviewsAboutMe } from "../../hooks/useProfessionalReviews";
 import { ReviewItem } from "../../components/professionals/ReviewItem";
-import { removeAvatar, uploadAvatar } from "../../services/avatar";
+import { AVATAR_ACCEPT, removeAvatar, uploadAvatar } from "../../services/avatar";
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
 import { MembershipsCard } from "../../components/profile/MembershipsCard";
 import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
@@ -650,17 +650,28 @@ export default function Profile() {
       <input
         ref={cameraInputRef}
         type="file"
-        accept="image/*"
+        accept={AVATAR_ACCEPT}
         capture="user"
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && void handleAvatarFile(e.target.files[0])}
+        // Cleared after every pick so choosing the SAME file again still fires
+        // onChange — otherwise a rejected photo cannot be retried without
+        // picking something else first. Same fix the capture flows carry.
+        onChange={(e) => {
+          const picked = e.target.files?.[0];
+          e.target.value = "";
+          if (picked) void handleAvatarFile(picked);
+        }}
       />
       <input
         ref={galleryInputRef}
         type="file"
-        accept="image/*"
+        accept={AVATAR_ACCEPT}
         className="hidden"
-        onChange={(e) => e.target.files?.[0] && void handleAvatarFile(e.target.files[0])}
+        onChange={(e) => {
+          const picked = e.target.files?.[0];
+          e.target.value = "";
+          if (picked) void handleAvatarFile(picked);
+        }}
       />
       {/* Weight and height. One sheet for both — the fields differ only by
           label, unit and bound, and two near-identical sheets would drift. */}

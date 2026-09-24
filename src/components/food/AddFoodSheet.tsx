@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { sheetChipStyle } from "../ui/sheetChip";
 import { Button } from "../ui/Button";
-import { Search, Mic, Camera, ScanLine, Clock, Star, Check, UtensilsCrossed, Sparkles, SlidersHorizontal, ChevronDown } from "lucide-react";
+import { Search, Mic, ScanLine, Clock, Star, Check, UtensilsCrossed, SlidersHorizontal, ChevronDown } from "lucide-react";
 import { LOGO_TONES, logoTone } from "./logoTones";
 import { NUTRIENT_SECTIONS } from "../../data/nutrientSchema";
 import { foodCategories, addFoodFilterCategories } from "../../data/mockFoods";
@@ -23,8 +23,6 @@ import { getFoodNutrientsById } from "../../services/food-nutrients";
 import { useApp } from "../../context/AppContext";
 import { AIVoiceLogger } from "./AIVoiceLogger";
 import { foodCategoryIcon } from "../../utils/icons";
-
-type ScanMode = "scan" | "barcode" | null;
 
 // V4: preset serving units offered as tap targets — only the quantity number
 // is typed. The relevant subset differs a little by food category (a plate
@@ -149,7 +147,9 @@ export const AddFoodSheet: React.FC<{
   const [rawNutrients, setRawNutrients] = useState<Record<string, number> | null>(null);
   const [nutrientsLoading, setNutrientsLoading] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
-  const [scanMode, setScanMode] = useState<ScanMode>(null);
+  // Whether the barcode-entry view is open. A boolean now that there is only
+  // one thing it can be.
+  const [barcodeOpen, setBarcodeOpen] = useState(false);
   const [scanResultFood, setScanResultFood] = useState<FoodSearchResult | null>(null);
   const [justAdded, setJustAdded] = useState(false);
   const [customMode, setCustomMode] = useState(false);
@@ -327,7 +327,7 @@ export const AddFoodSheet: React.FC<{
     setAdvancedOpen(false);
     setRawNutrients(null);
     setNutrientsLoading(false);
-    setScanMode(null);
+    setBarcodeOpen(false);
     setScanResultFood(null);
     setJustAdded(false);
     setCustomMode(false);
@@ -470,17 +470,9 @@ export const AddFoodSheet: React.FC<{
     setTimeout(resetAndClose, 700);
   };
 
-  // AI Scan stays a demo — there is no on-device image recognition — but it
-  // now "recognises" a real catalog row rather than a hardcoded mock, so the
-  // food it hands back can actually be logged with real provenance.
-  const runScan = (mode: ScanMode) => {
-    setScanMode(mode);
+  const openBarcode = () => {
+    setBarcodeOpen(true);
     setScanResultFood(null);
-    if (mode !== "scan") return;
-    setTimeout(() => {
-      const demo = results.find((f) => f.name === "Manoushe Jebneh") ?? results[0] ?? null;
-      setScanResultFood(demo);
-    }, 1600);
   };
 
   // Lookup only. Creating a shared catalog row is a separate, explicit step —
@@ -844,13 +836,13 @@ export const AddFoodSheet: React.FC<{
               <button
                 onClick={() => {
                   setCustomMode(false);
-                  runScan("barcode");
+                  openBarcode();
                 }}
-                aria-label="Scan barcode"
+                aria-label="Look up barcode"
                 className="tap flex items-center justify-center"
                 style={{ flex: "none", width: 44, height: 40, borderRadius: 10, background: "#A092E0", border: "none" }}
               >
-                <Camera size={17} style={{ color: "#FFFFFF" }} />
+                <ScanLine size={17} style={{ color: "#FFFFFF" }} />
               </button>
             </div>
             <p style={{ margin: "7px 2px 0", fontSize: 10, color: "#8C8378" }}>
@@ -1005,7 +997,7 @@ export const AddFoodSheet: React.FC<{
   }
 
   // Scan / barcode view
-  if (scanMode) {
+  if (barcodeOpen) {
     const barcodeField = (
       label: string,
       key: keyof typeof barcodeDraft,
@@ -1026,37 +1018,25 @@ export const AddFoodSheet: React.FC<{
       <BottomSheet
         open={open}
         onClose={resetAndClose}
-        title={scanMode === "barcode" ? "Scan Barcode" : "Scan Food"}
-        // Master handover (CentiumFrame sheetCanBack): the scan steps have
-        // somewhere to return to — the food list.
+        title="Enter barcode"
+        // Master handover (CentiumFrame sheetCanBack): this step has somewhere
+        // to return to — the food list.
         onBack={() => {
-          setScanMode(null);
+          setBarcodeOpen(false);
           setScanResultFood(null);
           setBarcodeState("idle");
         }}
       >
         <div className="flex flex-col items-center text-center py-4">
-          <div className="w-full aspect-[4/3] rounded-3xl bg-charcoal relative overflow-hidden mb-5 flex items-center justify-center">
-            <div className="absolute inset-6 border-2 border-dashed border-white/40 rounded-2xl" />
-            {!scanResultFood ? (
-              <div className="text-white/70 text-sm flex flex-col items-center gap-2">
-                {scanMode === "barcode" ? <ScanLine size={28} className="animate-pulse" /> : <Camera size={28} className="animate-pulse" />}
-                {scanMode === "barcode"
-                  ? barcodeState === "looking"
-                    ? "Looking up…"
-                    : "Enter a barcode below"
-                  : "Scanning…"}
-              </div>
-            ) : (
-              <div className="text-white text-sm">Match found</div>
-            )}
-          </div>
-
-          {/* Barcode entry. Camera scanning is a separate, larger task (a
-              scanning library, camera permission, a video pipeline), so the
-              barcode arrives as text for now — the lookup and creation paths
-              behind it are real. */}
-          {scanMode === "barcode" && !scanResultFood && (
+          {/* THE VIEWFINDER IS GONE, and that is the point of this screen now.
+              A 4:3 charcoal panel with a dashed frame and a pulsing scanner
+              glyph is a camera as far as anyone looking at it is concerned,
+              so the feature read as a broken scanner rather than as the
+              keyed-in lookup it has always been. Camera scanning needs a
+              scanning library, a camera permission and a video pipeline;
+              until those exist the screen says so in one line instead of
+              miming them. The lookup and creation paths below are real. */}
+          {!scanResultFood && (
             <div className="w-full text-left mb-4">
               <div className="flex gap-2">
                 <input
@@ -1126,18 +1106,14 @@ export const AddFoodSheet: React.FC<{
                 fullWidth
                 onClick={() => {
                   setSelectedFood(scanResultFood);
-                  setScanMode(null);
+                  setBarcodeOpen(false);
                 }}
               >
                 Use this result
               </Button>
             </div>
           ) : (
-            scanMode === "scan" && (
-              <p className="text-xs text-charcoal-faint max-w-xs">
-                Prototype demo — production Centium will use on-device image recognition to identify food automatically.
-              </p>
-            )
+            <p className="text-xs text-charcoal-faint max-w-xs">Camera scanning is coming soon.</p>
           )}
         </div>
       </BottomSheet>
@@ -1167,14 +1143,21 @@ export const AddFoodSheet: React.FC<{
             />
           </div>
 
-          {/* The four entry points on Centium's two brand hues at
-              alternating depths — teal, deep teal, lavender, deep purple —
-              each a gradient with a white glyph and label. */}
-          <div className="grid grid-cols-4 gap-2 mb-5">
+          {/* THREE entry points, on Centium's two brand hues at alternating
+              depths — teal, lavender, deep purple — each a gradient with a
+              white glyph and label.
+
+              AI SCAN IS GONE, not hidden behind a flag. It opened a camera
+              that was a styled div and announced a catalog row after 1600ms,
+              which is a made-up answer to a question nobody had asked it.
+              Identifying a meal from a photo needs a vision model; there is
+              nothing to switch back on until one exists, and the tile is
+              worth less than nothing in the meantime. Its teal-deep gradient
+              goes with it — the remaining three keep their own. */}
+          <div className="grid grid-cols-3 gap-2 mb-5">
             {[
               { label: "AI Voice", Icon: Mic, bg: "linear-gradient(150deg,#A2C8C2,#6F9993)", onClick: () => setVoiceOpen(true) },
-              { label: "AI Scan", Icon: Sparkles, bg: "linear-gradient(150deg,#8FB5AF,#4F7F78)", onClick: () => runScan("scan") },
-              { label: "Barcode", Icon: ScanLine, bg: "linear-gradient(150deg,#C0B4E8,#8F7FC9)", onClick: () => runScan("barcode") },
+              { label: "Enter barcode", Icon: ScanLine, bg: "linear-gradient(150deg,#C0B4E8,#8F7FC9)", onClick: openBarcode },
               { label: "Custom", Icon: UtensilsCrossed, bg: "linear-gradient(150deg,#9184CE,#5F5093)", onClick: () => setCustomMode(true) },
             ].map(({ label, Icon, bg, onClick }) => (
               <button

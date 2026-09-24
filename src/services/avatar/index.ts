@@ -53,6 +53,23 @@ const MAX_EDGE_PX = 512;
 /** Re-encode quality. High enough that a face at 512px shows no artefacts. */
 const JPEG_QUALITY = 0.85;
 
+/**
+ * The `accept` attribute for a file input feeding this bucket.
+ *
+ * DERIVED FROM MIME_TYPES, for the reason services/storage's acceptFor gives
+ * and for the same failure it was written to end: both avatar pickers used
+ * `accept="image/*"`, which offers HEIC, GIF, SVG, BMP, TIFF and AVIF — none
+ * of which the check below accepts. An iPhone shooting High Efficiency hands
+ * back a HEIC the picker had just said yes to, and the rejection arrives
+ * after the pick rather than instead of it.
+ *
+ * Extension hints alongside the MIME types, because some pickers match one
+ * and not the other. NOT A CONTROL: `accept` is a hint, most OS dialogs offer
+ * a way past it, and a file's reported type can be wrong regardless — the
+ * check inside uploadAvatar is what actually decides.
+ */
+export const AVATAR_ACCEPT = [...MIME_TYPES, ".jpg", ".jpeg", ".png", ".webp"].join(",");
+
 export type AvatarResult =
   | { ok: true; url: string }
   | { ok: false; message: string };

@@ -1,30 +1,52 @@
 import React, { useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Camera, Check, FileText, Sparkles } from "lucide-react";
-import { parseImagingFile, type ExtractedImagingRecord } from "../../services/ai/parseImagingFile";
+import { Chip } from "../ui/Chip";
+import { Camera, Check, FileText } from "lucide-react";
 import { acceptFor, validateFileFor } from "../../services/storage";
+import { todayLocal } from "../../utils/date";
 import { useApp } from "../../context/AppContext";
+import { imagingTypes } from "./imagingTypes";
 
-type Stage = "capture" | "analyzing" | "results" | "done";
+// Photograph an imaging or test result, then TYPE WHAT IT SAYS.
+//
+// WHAT THIS REPLACED, AND WHY IT HAD TO GO. This flow used to hand the file to
+// services/ai/parseImagingFile, which ignored its argument and returned the
+// same two findings every time — an "X-Ray" dated today noting "No acute
+// findings noted on the report", and a "Follow-up recommended" suggesting a
+// review in 6 weeks — under the words "Reading your result…" and "Identifying
+// study type, date and findings." The first was pre-ticked.
+//
+// "No acute findings" is not a neutral placeholder. It is a reassuring
+// clinical statement about a document the app had not read, offered to
+// somebody who had just photographed a real one, and it was written into
+// their medical history as their own record when they pressed Add.
+//
+// NOW NOTHING IS PREFILLED EXCEPT THE DATE, which is today and is editable,
+// the way the manual add sheet in MedicalRecordsSection has always worked —
+// and this form deliberately mirrors that one, down to sharing its type list.
+// The file is still uploaded to medical-imaging and still attached, which is
+// what makes the typed record checkable later.
+
+type Stage = "capture" | "entry" | "done";
 type Source = "camera" | "pdf" | null;
 
-// QA 13.0: "Similar to blood biomarkers, in imaging & tests you should be
-// given the option to take a picture or attach files of medical
-// imaging/tests whereby AI will read the result and give you the option to
-// choose which one you want to add." Mirrors BiomarkerCaptureFlow's
-// capture -> analyzing -> results -> done stages exactly, over
-// ImagingRecord instead of ExtractedBiomarker.
 export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const { addImagingRecord } = useApp();
+  const today = todayLocal();
   const [stage, setStage] = useState<Stage>("capture");
   const [source, setSource] = useState<Source>(null);
   const [photo, setPhoto] = useState<string | null>(null);
-  const [results, setResults] = useState<ExtractedImagingRecord[]>([]);
-  // THE FILE ITSELF, kept alongside the preview. The data URL is for showing
-  // a thumbnail and feeding the mock parser; the File is what actually gets
-  // uploaded. Sending the data URL to Storage would upload a base64 string
-  // roughly a third larger than the original for no reason.
+  const [type, setType] = useState(imagingTypes[0]);
+  // Today, and editable. A scan is usually added the day it is collected, so
+  // this is the one prefill that saves a tap without asserting anything the
+  // user did not know — and imaging_date is NOT NULL, so it cannot be blank.
+  const [date, setDate] = useState(today);
+  const [note, setNote] = useState("");
+  // THE FILE ITSELF, kept alongside the preview. The data URL is only ever a
+  // thumbnail; the File is what actually gets uploaded. Sending the data URL
+  // to Storage would upload a base64 string roughly a third larger than the
+  // original for no reason.
   const [file, setFile] = useState<File | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -35,7 +57,9 @@ export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }
     setStage("capture");
     setSource(null);
     setPhoto(null);
-    setResults([]);
+    setType(imagingTypes[0]);
+    setDate(today);
+    setNote("");
     setFile(null);
     setSaveError(null);
     setSaving(false);
@@ -49,9 +73,9 @@ export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }
   const handleFile = (picked: File, via: Source) => {
     // CHECKED BEFORE ANYTHING ELSE HAPPENS TO IT — see the same guard in
     // BiomarkerCaptureFlow. Running the check only inside uploadPrivateFile
-    // meant an unusable file was read, parsed and reviewed before the
-    // rejection arrived. Nothing here advances the stage, so the sheet stays
-    // on capture with the message beside the buttons.
+    // meant an unusable file was read and reviewed before the rejection
+    // arrived. Nothing here advances the stage, so the sheet stays on capture
+    // with the message beside the buttons.
     const check = validateFileFor("medical-imaging", picked);
     if (!check.ok) {
       setSaveError(check.message ?? "That file can't be used.");
@@ -60,59 +84,49 @@ export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }
     setSource(via);
     setFile(picked);
     setSaveError(null);
+
+    // STRAIGHT TO THE FORM. There is nothing to wait for.
+    setStage("entry");
+
+    if (via !== "camera") return;
     const reader = new FileReader();
-    reader.onload = () => {
-      if (via === "camera") setPhoto(reader.result as string);
-      setStage("analyzing");
-      parseImagingFile(reader.result as string).then((res) => {
-        setResults(res);
-        setStage("results");
-      });
-    };
+    reader.onload = () => setPhoto(reader.result as string);
     reader.readAsDataURL(picked);
   };
 
-  const toggleResult = (idx: number) =>
-    setResults((prev) => prev.map((r, i) => (i === idx ? { ...r, selected: !r.selected } : r)));
-
   /**
-   * Saves the selected findings, attaching the captured file to the FIRST of
-   * them only.
+   * Saves ONE record with the file attached.
    *
-   * One upload, not one per finding. The file is a single scan or report that
-   * happens to have produced several findings, so uploading it once per
-   * selected row would put identical copies in the bucket and leave the client
-   * deleting one record without freeing the storage the others still hold.
-   * Attaching it to the first record keeps exactly one object per capture, and
-   * one row owning it.
-   *
-   * Sequential rather than parallel: each insert reports its own failure, and
-   * stopping at the first one avoids reporting a single error for a batch
-   * that partly succeeded.
+   * One upload, one row. The old flow could produce several findings from a
+   * single file and attached the object to the first of them only, so that
+   * deleting that one record left the others pointing at storage nobody
+   * owned. A capture is one document and is now one record, which removes
+   * that whole class of problem rather than managing it.
    */
-  const addSelected = async () => {
-    const selected = results.filter((r) => r.selected);
-    if (selected.length === 0) return;
+  const save = async () => {
+    if (!date) return;
     setSaving(true);
     setSaveError(null);
-    for (const [index, r] of selected.entries()) {
-      const result = await addImagingRecord(
-        { type: r.type, date: r.date, note: r.note },
-        index === 0 ? file ?? undefined : undefined
-      );
-      if (!result.ok) {
-        setSaving(false);
-        setSaveError(result.message ?? "That couldn't be saved.");
-        return;
-      }
-    }
+    const result = await addImagingRecord(
+      { type, date, note: note.trim() || undefined },
+      file ?? undefined
+    );
     setSaving(false);
+    if (!result.ok) {
+      setSaveError(result.message ?? "That couldn't be saved.");
+      return;
+    }
     setStage("done");
     setTimeout(handleClose, 900);
   };
 
   return (
-    <BottomSheet open={open} onClose={handleClose} title="Scan Imaging or Test">
+    <BottomSheet
+      open={open}
+      onClose={handleClose}
+      title="Add imaging or test"
+      onBack={stage === "entry" ? reset : undefined}
+    >
       <div className="min-h-[280px] flex flex-col animate-fade-slide-up">
         {stage === "capture" && (
           <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
@@ -162,75 +176,77 @@ export const ImagingCaptureFlow: React.FC<{ open: boolean; onClose: () => void }
               Take a picture, or attach a file, of your imaging or test result
             </p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Photograph a scan report or attach it as a file — Centium's AI will read it so you can
-              confirm what to add.
+              Then add what it says. Your file is saved with it for reference.
             </p>
-            {/* saveError renders in the results stage too. It has to render
-                here as well now that a file can be rejected at pick time:
-                without this the sheet would simply sit there having silently
-                discarded what the user chose. */}
             {saveError && (
               <p className="text-[11px] text-status-high mt-3 text-center max-w-xs">{saveError}</p>
             )}
           </div>
         )}
 
-        {stage === "analyzing" && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-            {photo ? (
-              <img src={photo} alt="Captured imaging result" className="w-32 h-32 object-cover rounded-2xl mb-5 opacity-70" />
-            ) : (
-              source === "pdf" && (
-                <div className="w-20 h-20 rounded-2xl bg-cream-soft flex items-center justify-center mb-5">
-                  <FileText size={28} className="text-charcoal-faint" />
+        {stage === "entry" && (
+          <div className="space-y-4">
+            {/* The document, kept in view while it is described. */}
+            <div className="flex items-center gap-3 bg-cream-soft rounded-2xl px-3.5 py-3">
+              {photo ? (
+                <img src={photo} alt="Your imaging result" className="w-12 h-12 object-cover rounded-xl shrink-0" />
+              ) : (
+                <div className="w-12 h-12 rounded-xl bg-cream-card flex items-center justify-center shrink-0">
+                  <FileText size={20} className="text-charcoal-faint" />
                 </div>
-              )
-            )}
-            <div className="w-14 h-14 rounded-full bg-primary-pale flex items-center justify-center mb-4 animate-pop">
-              <Sparkles size={24} className="text-primary animate-pulse" />
+              )}
+              <div className="min-w-0 text-left">
+                <p className="text-sm font-semibold text-charcoal">Add what your result says</p>
+                <p className="text-[11px] text-charcoal-faint">
+                  Your {source === "pdf" ? "file" : "photo"} is saved with it for reference.
+                </p>
+              </div>
             </div>
-            <p className="font-display text-lg font-semibold text-charcoal mb-1">Reading your result…</p>
-            <p className="text-sm text-charcoal-soft">Identifying study type, date and findings.</p>
-          </div>
-        )}
 
-        {stage === "results" && (
-          <div>
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-              We found — select what to add
-            </p>
-            <div className="space-y-2 mb-5">
-              {results.map((r, i) => (
-                <button
-                  key={`${r.type}-${i}`}
-                  onClick={() => toggleResult(i)}
-                  className={`tap w-full flex items-center justify-between rounded-2xl px-4 py-3 border transition-colors ${
-                    r.selected ? "bg-primary-pale border-primary" : "bg-cream-soft border-transparent"
-                  }`}
-                >
-                  <div className="text-left">
-                    <p className="text-sm font-semibold text-charcoal">{r.type}</p>
-                    <p className="text-xs text-charcoal-faint">{r.date}</p>
-                    {r.note && <p className="text-xs text-charcoal-soft mt-0.5">{r.note}</p>}
-                  </div>
-                  <div
-                    className={`w-5 h-5 rounded-full flex items-center justify-center border-2 shrink-0 ${
-                      r.selected ? "bg-primary border-primary" : "border-charcoal/20"
-                    }`}
-                  >
-                    {r.selected && <Check size={11} className="text-white" strokeWidth={3} />}
-                  </div>
-                </button>
-              ))}
+            <div>
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Type</span>
+              <div className="flex flex-wrap gap-2">
+                {imagingTypes.map((t) => (
+                  <Chip key={t} active={type === t} onClick={() => setType(t)}>
+                    {t}
+                  </Chip>
+                ))}
+              </div>
             </div>
-            {saveError && <p className="text-[11px] text-status-high mb-2 text-center">{saveError}</p>}
-            <Button
-              fullWidth
-              size="lg"
-              onClick={() => void addSelected()}
-              disabled={!results.some((r) => r.selected) || saving}
-            >
-              {saving ? "Saving…" : "Add selected results"}
+
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Date</span>
+              <input
+                type="date"
+                value={date}
+                max={today}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+              {/* Required for the same reason the manual add sheet says so:
+                  imaging_date is NOT NULL, so an undated record has nowhere to
+                  be stored, and a placeholder date would be a false fact in a
+                  medical record. */}
+              <span className="text-[11px] text-charcoal-faint mt-1.5 block">
+                Required. If you're not sure of the exact day, your best estimate is fine.
+              </span>
+            </label>
+
+            <label className="block">
+              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
+                Findings (optional)
+              </span>
+              <input
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder="What the report says, in your own words"
+                className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+            </label>
+
+            {saveError && <p className="text-[11px] text-status-high text-center">{saveError}</p>}
+            <Button fullWidth size="lg" onClick={() => void save()} disabled={!date || saving}>
+              {saving ? "Saving…" : "Save result"}
             </Button>
           </div>
         )}
