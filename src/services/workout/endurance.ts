@@ -4,6 +4,7 @@ import type {
   EnduranceStep,
   EnduranceTarget,
 } from "../../types";
+import { formatStep } from "./prescription";
 
 // Building and checking an endurance plan, client-side.
 //
@@ -172,3 +173,59 @@ export const secondsToClock = (total: number): { minutes: number; seconds: numbe
 
 export const clockToSeconds = (minutes: number, seconds: number): number =>
   Math.max(0, Math.round(minutes)) * 60 + Math.max(0, Math.round(seconds));
+
+
+// --- running one -----------------------------------------------------------
+//
+// Everything above turns the editor's fields into a plan the validator will
+// accept. Everything below turns a plan into the steps somebody performs, and
+// reads back what they typed afterwards. Both live here rather than in the
+// components, so they can be tested without rendering anything.
+
+interface Row {
+  key: string;
+  label: string;
+  detail: string;
+}
+
+/** The plan flattened into the steps somebody actually performs, in order. */
+export function planRows(plan: EndurancePlan): Row[] {
+  const rows: Row[] = [];
+  if (plan.warmup) rows.push({ key: "warmup", label: "Warm-up", detail: formatStep(plan.warmup) });
+  if (plan.main.type === "steady") {
+    rows.push({ key: "main", label: "Main set", detail: formatStep(plan.main.step) });
+  } else {
+    const { repeats, work, recovery } = plan.main;
+    for (let i = 0; i < repeats; i++) {
+      rows.push({ key: `work-${i}`, label: `Rep ${i + 1} of ${repeats}`, detail: formatStep(work as EnduranceStep) });
+      // The last recovery is left off: nobody jogs a recovery lap after the
+      // final rep of a session that has a cool-down of its own.
+      if (i < repeats - 1) {
+        rows.push({ key: `rec-${i}`, label: "Recovery", detail: formatStep(recovery as EnduranceStep) });
+      }
+    }
+  }
+  if (plan.cooldown) rows.push({ key: "cooldown", label: "Cool-down", detail: formatStep(plan.cooldown) });
+  return rows;
+}
+
+/** How many work reps the plan asked for, which is what "intervals" counts. */
+export const plannedIntervals = (plan: EndurancePlan): number =>
+  plan.main.type === "intervals" ? plan.main.repeats : 0;
+
+/**
+ * "38:10" or "1:02:05" back to seconds, and a bare number as minutes.
+ *
+ * Typing 30 for half an hour is what people do, and reading it as thirty
+ * seconds would record a five-kilometre run at a world-record pace.
+ */
+export function parseClock(raw: string): number | undefined {
+  // SPLIT ON ANY RUN OF NON-DIGITS, not on the colon alone. "38m 10s" is a
+  // thing people paste out of a watch app, and stripping the letters before
+  // splitting read it as 3810 minutes — two and a half weeks of running.
+  const parts = raw.split(/[^\d]+/).filter((p) => p !== "").map(Number);
+  if (parts.length === 0 || parts.some((n) => !Number.isFinite(n))) return undefined;
+  if (parts.length === 1) return parts[0] * 60;
+  if (parts.length === 2) return parts[0] * 60 + parts[1];
+  return parts[0] * 3600 + parts[1] * 60 + parts[2];
+}

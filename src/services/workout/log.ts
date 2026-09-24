@@ -1,8 +1,10 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
-import type { LoggedExercise, LoggedSet, WorkoutSession } from "../../types";
+import type { BlockResult, EnduranceResult, LoggedExercise, LoggedSet, WorkoutSession } from "../../types";
+import { SET_TYPES } from "../../types";
 import { localDayOf } from "../../utils/date";
 import { isUuid } from "../food";
+import { serializeEnduranceResult } from "./results";
 
 // A client's own training log: workout_sessions, and the logged_exercises /
 // logged_sets hanging off it.
@@ -149,6 +151,50 @@ export async function saveWorkoutSession(
 
   if (session.exercises.length === 0) return { ok: true, id: sessionId };
 
+  // BLOCK RESULTS FIRST, because the logged exercises reference them.
+  //
+  // The local block id is not a row id — it is whatever the routine editor
+  // generated — so the insert has to hand back the real ones and the
+  // exercises are matched to them by the order they went out. Blocks with
+  // nothing to score are skipped: a superset has no score columns at all,
+  // and a block the athlete never touched has no result to record.
+  const scoredBlocks = (session.blockResults ?? []).filter(
+    (b) => b.kind !== "superset" || b.notes
+  );
+  const blockIdByLocalId = new Map<string, string>();
+  if (scoredBlocks.length > 0) {
+    const { data: blockRows, error: blockError } = await supabase
+      .from("workout_block_results")
+      .insert(
+        scoredBlocks.map((b) => ({
+          workout_session_id: sessionId,
+          // THE SHAPE IS SNAPSHOTTED, not pointed at: the routine can be
+          // edited afterwards, and a result reading "12 rounds" against a
+          // block whose cap has since changed would be a lie.
+          kind: b.kind,
+          label: b.label ?? null,
+          time_cap_seconds: b.timeCapSeconds ?? null,
+          interval_seconds: b.intervalSeconds ?? null,
+          rounds: b.rounds ?? null,
+          rounds_completed: b.roundsCompleted ?? null,
+          extra_reps: b.extraReps ?? null,
+          time_seconds: b.timeSeconds ?? null,
+          capped: b.capped ?? null,
+          notes: b.notes ?? null,
+        }))
+      )
+      .select("id");
+
+    if (blockError || !blockRows) {
+      console.error("[workout] Could not save block results:", blockError?.message);
+      return abandon(blockError ? describe(blockError) : "Couldn't save this workout.");
+    }
+    scoredBlocks.forEach((b, i) => {
+      const id = blockRows[i]?.id;
+      if (id) blockIdByLocalId.set(b.id, id);
+    });
+  }
+
   const { data: exerciseRows, error: exerciseError } = await supabase
     .from("logged_exercises")
     .insert(
@@ -157,9 +203,14 @@ export async function saveWorkoutSession(
         ...exerciseRef(ex),
         name: ex.name,
         position: i,
+        // Null when the block scored nothing to point at — a superset, or one
+        // nobody ran. The exercises are still in the session either way.
+        block_result_id: ex.blockResultId ? blockIdByLocalId.get(ex.blockResultId) ?? null : null,
+        endurance_result: ex.enduranceResult ? serializeEnduranceResult(ex.enduranceResult) : null,
       }))
     )
     .select("id, position");
+
 
   if (exerciseError || !exerciseRows) {
     console.error("[workout] Could not save exercises:", exerciseError?.message);
@@ -181,8 +232,16 @@ export async function saveWorkoutSession(
       set_number: j + 1,
       reps: Math.max(0, Math.round(s.reps)),
       weight_kg: round2(Math.max(0, s.weightKg)),
+      // DERIVED FROM outcome by logged_sets_sync_completed() whenever one is
+      // set, so this is what an older row would have carried and never
+      // disagrees with the outcome beside it.
       completed: s.completed,
-      set_type: s.setType ?? null,
+      // set_type keeps the KIND only. failure, pr and superset are legacy
+      // members and nothing writes them: how a set went is `outcome`,
+      // whether it was notable is `is_pr`, and a superset is a block.
+      set_type: s.setType && SET_TYPES.includes(s.setType) ? s.setType : null,
+      outcome: s.outcome ?? null,
+      is_pr: !!s.isPr,
       notes: s.notes ?? null,
       rpe: s.rpe ?? null,
       mood: s.mood ?? null,
@@ -205,6 +264,20 @@ export type WorkoutHistoryResult =
   | { ok: true; sessions: WorkoutSession[] }
   | { ok: false; message: string };
 
+type BlockResultRow = {
+  id: string;
+  kind: BlockResult["kind"];
+  label: string | null;
+  time_cap_seconds: number | null;
+  interval_seconds: number | null;
+  rounds: number | null;
+  rounds_completed: number | null;
+  extra_reps: number | null;
+  time_seconds: number | null;
+  capped: boolean | null;
+  notes: string | null;
+};
+
 type SessionRow = {
   id: string;
   routine_name: string;
@@ -214,18 +287,23 @@ type SessionRow = {
   total_volume_kg: number | null;
   notes: string | null;
   routine_id: string | null;
+  workout_block_results: BlockResultRow[] | null;
   logged_exercises: {
     id: string;
     name: string;
     position: number;
     exercise_id: string | null;
     custom_exercise_id: string | null;
+    block_result_id: string | null;
+    endurance_result: EnduranceResult | null;
     logged_sets: {
       set_number: number;
       reps: number | null;
       weight_kg: number | null;
       completed: boolean;
       set_type: LoggedSet["setType"] | null;
+      outcome: LoggedSet["outcome"] | null;
+      is_pr: boolean | null;
       notes: string | null;
       rpe: number | null;
       mood: number | null;
@@ -233,6 +311,90 @@ type SessionRow = {
     }[];
   }[];
 };
+
+const toBlockResult = (b: BlockResultRow): BlockResult => ({
+  id: b.id,
+  kind: b.kind,
+  ...(b.label ? { label: b.label } : {}),
+  ...(b.time_cap_seconds != null ? { timeCapSeconds: b.time_cap_seconds } : {}),
+  ...(b.interval_seconds != null ? { intervalSeconds: b.interval_seconds } : {}),
+  ...(b.rounds != null ? { rounds: b.rounds } : {}),
+  ...(b.rounds_completed != null ? { roundsCompleted: b.rounds_completed } : {}),
+  ...(b.extra_reps != null ? { extraReps: b.extra_reps } : {}),
+  ...(b.time_seconds != null ? { timeSeconds: b.time_seconds } : {}),
+  ...(b.capped != null ? { capped: b.capped } : {}),
+  ...(b.notes ? { notes: b.notes } : {}),
+});
+
+/** The columns every session read needs, in one place so they cannot drift. */
+export const SESSION_SELECT =
+  "id, routine_id, routine_name, started_at, ended_at, duration_sec, total_volume_kg, notes," +
+  " workout_block_results(id, kind, label, time_cap_seconds, interval_seconds, rounds, rounds_completed, extra_reps, time_seconds, capped, notes)," +
+  " logged_exercises(id, name, position, exercise_id, custom_exercise_id, block_result_id, endurance_result," +
+  " logged_sets(set_number, reps, weight_kg, completed, set_type, outcome, is_pr, notes, rpe, mood, pain))";
+
+/**
+ * One row into the session the app holds.
+ *
+ * Exported because the professional's read of a client's sessions goes
+ * through the same shape — a second mapper would be a second place to forget
+ * that a null outcome means "logged before outcomes existed" rather than
+ * "not done".
+ */
+export function toWorkoutSession(row: unknown): WorkoutSession {
+  const r = row as SessionRow;
+  const exercises: LoggedExercise[] = [...(r.logged_exercises ?? [])]
+    .sort((a, b) => a.position - b.position)
+    .map((ex) => ({
+      // The logged_exercises row id, as before. The two library references
+      // below are separate, and are both absent on a row written before
+      // they could be filled in — no backfill, per the header.
+      exerciseId: ex.id,
+      ...(ex.exercise_id ? { catalogExerciseId: ex.exercise_id } : {}),
+      ...(ex.custom_exercise_id ? { customExerciseId: ex.custom_exercise_id } : {}),
+      ...(ex.block_result_id ? { blockResultId: ex.block_result_id } : {}),
+      ...(ex.endurance_result ? { enduranceResult: ex.endurance_result } : {}),
+      name: ex.name,
+      sets: [...(ex.logged_sets ?? [])]
+        .sort((a, b) => a.set_number - b.set_number)
+        .map((s) => ({
+          setNumber: s.set_number,
+          reps: s.reps ?? 0,
+          weightKg: s.weight_kg ?? 0,
+          completed: s.completed,
+          ...(s.set_type ? { setType: s.set_type } : {}),
+          // NULL IS NOT "not done". The migration backfilled every set on a
+          // finished session, so a null here means a row still in flight —
+          // and the readers treat it as unlogged rather than as skipped.
+          ...(s.outcome ? { outcome: s.outcome } : {}),
+          ...(s.is_pr ? { isPr: true } : {}),
+          ...(s.notes ? { notes: s.notes } : {}),
+          ...(s.rpe != null ? { rpe: s.rpe } : {}),
+          ...(s.mood != null ? { mood: s.mood } : {}),
+          ...(s.pain != null ? { pain: s.pain } : {}),
+        })),
+    }));
+
+  const blockResults = (r.workout_block_results ?? []).map(toBlockResult);
+
+  return {
+    id: r.id,
+    routineId: r.routine_id,
+    routineName: r.routine_name,
+    // The table has no date column; the day is whatever started_at fell on
+    // LOCALLY. Slicing the ISO string instead would give the UTC day, which
+    // is a different day for part of every night and would not match what
+    // WorkoutSessionSheet wrote or what the streak anchors compare against.
+    date: localDayOf(r.started_at),
+    startedAt: r.started_at,
+    endedAt: r.ended_at ?? undefined,
+    durationSec: r.duration_sec ?? 0,
+    totalVolumeKg: r.total_volume_kg ?? 0,
+    exercises,
+    ...(blockResults.length > 0 ? { blockResults } : {}),
+    ...(r.notes ? { notes: r.notes } : {}),
+  };
+}
 
 /**
  * A user's sessions, newest first, with exercises and sets nested.
@@ -248,9 +410,7 @@ export async function getWorkoutSessions(
 ): Promise<WorkoutHistoryResult> {
   const { data, error } = await supabase
     .from("workout_sessions")
-    .select(
-      "id, routine_id, routine_name, started_at, ended_at, duration_sec, total_volume_kg, notes, logged_exercises(id, name, position, exercise_id, custom_exercise_id, logged_sets(set_number, reps, weight_kg, completed, set_type, notes, rpe, mood, pain))"
-    )
+    .select(SESSION_SELECT)
     .eq("user_id", userId)
     .order("started_at", { ascending: false })
     .limit(limit);
@@ -260,53 +420,9 @@ export async function getWorkoutSessions(
     return { ok: false, message: describe(error) };
   }
 
-  const sessions: WorkoutSession[] = (data ?? []).map((row) => {
-    const r = row as unknown as SessionRow;
-    const exercises: LoggedExercise[] = [...(r.logged_exercises ?? [])]
-      .sort((a, b) => a.position - b.position)
-      .map((ex) => ({
-        // The logged_exercises row id, as before. The two library references
-        // below are separate, and are both absent on a row written before
-        // they could be filled in — no backfill, per the header.
-        exerciseId: ex.id,
-        ...(ex.exercise_id ? { catalogExerciseId: ex.exercise_id } : {}),
-        ...(ex.custom_exercise_id ? { customExerciseId: ex.custom_exercise_id } : {}),
-        name: ex.name,
-        sets: [...(ex.logged_sets ?? [])]
-          .sort((a, b) => a.set_number - b.set_number)
-          .map((s) => ({
-            setNumber: s.set_number,
-            reps: s.reps ?? 0,
-            weightKg: s.weight_kg ?? 0,
-            completed: s.completed,
-            ...(s.set_type ? { setType: s.set_type } : {}),
-            ...(s.notes ? { notes: s.notes } : {}),
-            ...(s.rpe != null ? { rpe: s.rpe } : {}),
-            ...(s.mood != null ? { mood: s.mood } : {}),
-            ...(s.pain != null ? { pain: s.pain } : {}),
-          })),
-      }));
-
-    return {
-      id: r.id,
-      routineId: r.routine_id,
-      routineName: r.routine_name,
-      // The table has no date column; the day is whatever started_at fell on
-      // LOCALLY. Slicing the ISO string instead would give the UTC day, which
-      // is a different day for part of every night and would not match what
-      // WorkoutSessionSheet wrote or what the streak anchors compare against.
-      date: localDayOf(r.started_at),
-      startedAt: r.started_at,
-      endedAt: r.ended_at ?? undefined,
-      durationSec: r.duration_sec ?? 0,
-      totalVolumeKg: r.total_volume_kg ?? 0,
-      exercises,
-      ...(r.notes ? { notes: r.notes } : {}),
-    };
-  });
-
-  return { ok: true, sessions };
+  return { ok: true, sessions: (data ?? []).map(toWorkoutSession) };
 }
+
 
 export type WorkoutMutationResult = { ok: boolean; message?: string };
 

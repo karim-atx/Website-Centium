@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { checkPlan, serializePlan } from "./endurance.ts";
+import { checkPlan, plannedIntervals, planRows, parseClock, serializePlan } from "./endurance.ts";
 import type { EndurancePlan } from "../../types";
 
 // The client-side mirror of valid_endurance_plan(). Each case names the SQL
@@ -154,4 +154,91 @@ test("serializePlan omits warmup and cooldown rather than nulling them", () => {
   const out = serializePlan(steady());
   assert.equal("warmup" in out, false);
   assert.equal("cooldown" in out, false);
+});
+
+// --- running one -------------------------------------------------------------
+
+test("a steady plan is three steps at most, in order", () => {
+  const plan = steady({
+    warmup: { measure: "time", seconds: 300, target: { kind: "open" } },
+    cooldown: { measure: "time", seconds: 300, target: { kind: "open" } },
+  });
+  assert.deepEqual(
+    planRows(plan).map((r) => r.label),
+    ["Warm-up", "Main set", "Cool-down"]
+  );
+});
+
+test("a plan with no warm-up or cool-down is just its main set", () => {
+  assert.deepEqual(
+    planRows(steady()).map((r) => r.label),
+    ["Main set"]
+  );
+});
+
+test("intervals become one row per rep, with recovery between them", () => {
+  const plan: EndurancePlan = {
+    version: 1,
+    main: {
+      type: "intervals",
+      repeats: 3,
+      work: { measure: "distance", meters: 800, target: { kind: "open" } },
+      recovery: { measure: "time", seconds: 120, target: { kind: "open" }, mode: "jog" },
+    },
+  };
+  assert.deepEqual(
+    planRows(plan).map((r) => r.label),
+    ["Rep 1 of 3", "Recovery", "Rep 2 of 3", "Recovery", "Rep 3 of 3"]
+  );
+});
+
+test("the last recovery is left off — nobody jogs one after the final rep", () => {
+  const plan: EndurancePlan = {
+    version: 1,
+    main: {
+      type: "intervals",
+      repeats: 2,
+      work: { measure: "distance", meters: 400, target: { kind: "open" } },
+      recovery: { measure: "time", seconds: 60, target: { kind: "open" } },
+    },
+  };
+  const labels = planRows(plan).map((r) => r.label);
+  assert.equal(labels[labels.length - 1], "Rep 2 of 2");
+});
+
+test("intervals are counted only where the plan has them", () => {
+  assert.equal(plannedIntervals(steady()), 0);
+  assert.equal(
+    plannedIntervals({
+      version: 1,
+      main: {
+        type: "intervals",
+        repeats: 6,
+        work: { measure: "distance", meters: 800, target: { kind: "open" } },
+        recovery: { measure: "time", seconds: 120, target: { kind: "open" } },
+      },
+    }),
+    6
+  );
+});
+
+// --- what somebody types -----------------------------------------------------
+
+test("a bare number is minutes, because that is what people mean", () => {
+  // Reading 30 as thirty seconds would log a 5 km run at a world-record pace.
+  assert.equal(parseClock("30"), 1800);
+});
+
+test("mm:ss and h:mm:ss both read", () => {
+  assert.equal(parseClock("38:10"), 2290);
+  assert.equal(parseClock("1:02:05"), 3725);
+});
+
+test("nothing typed is nothing recorded, not zero", () => {
+  assert.equal(parseClock(""), undefined);
+  assert.equal(parseClock("   "), undefined);
+});
+
+test("stray characters are ignored rather than poisoning the number", () => {
+  assert.equal(parseClock("38m 10s"), 2290);
 });
