@@ -2,6 +2,7 @@ import React, { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { useApp } from "../../context/AppContext";
+import { CyclePhaseStrip } from "../../components/cycle/CyclePhaseStrip";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
@@ -499,6 +500,12 @@ export default function RoutinesTab() {
         if (editingColorId) setEditingColorId(null);
       }}
     >
+      {/* PAGE-LEVEL, which is why it is here and not in the three-dots menu:
+          that menu belongs to one folder, and a cycle phase is a property of
+          the person and the day. This row is the only slot in the tab with
+          global scope. */}
+      <CyclePhaseStrip />
+
       <div className="flex items-center justify-between mb-2.5">
         <p className="text-[9.5px] font-bold tracking-[.2em] uppercase" style={{ color: "#9A94B3" }}>Folders</p>
         <button

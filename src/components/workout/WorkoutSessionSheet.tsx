@@ -12,6 +12,7 @@ import type {
 } from "../../types";
 import { ONE_RM_CLASSIFICATIONS } from "../../types";
 import { useApp } from "../../context/AppContext";
+import { CyclePhaseChip } from "../cycle/CyclePhaseStrip";
 import { Metronome } from "./Metronome";
 import { RPECalculator } from "./RPECalculator";
 import { PlateCalculatorSheet } from "./PlateCalculatorSheet";
@@ -594,6 +595,9 @@ export const WorkoutSessionSheet: React.FC<{
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {/* Beside Play/Pause, the metronome and the coach's note — where
+              phase actually informs a decision, mid-session. */}
+          <CyclePhaseChip />
           <button
             onClick={() => {
               if (!started && elapsed === 0) setStartedAt(new Date());
