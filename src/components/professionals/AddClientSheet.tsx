@@ -3,7 +3,9 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
-import { useSubscriptionTiers } from "../../hooks/useSubscriptionTiers";
+import { useMySubscriptionTier } from "../../hooks/useMySubscriptionTier";
+import { capLabel, tierLabel } from "../../services/subscription-tiers";
+import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { Check, Copy, UserPlus } from "lucide-react";
 
 // Invite-a-client. This used to collect the client's name, prefix, age, sex,
@@ -19,10 +21,14 @@ import { Check, Copy, UserPlus } from "lucide-react";
 // It also no longer pretends a client exists. Generating a code creates no
 // relationship; the client appears on the roster only once they redeem.
 export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
-  const { generateClientCode, professionalClients, professionalTier } = useApp();
+  const { generateClientCode, professionalClients } = useApp();
   const navigate = useNavigate();
-  const { tiers } = useSubscriptionTiers("professional");
-  const tier = tiers.find((t) => t.id === professionalTier);
+  // THE PLAN THE ACCOUNT ACTUALLY HOLDS, which for almost everyone today is
+  // the free default. This used to read a localStorage string written by the
+  // subscription screen's own demo purchase, so the cap shown here and the cap
+  // the database enforces were two unrelated values.
+  const { resolved } = useMySubscriptionTier("professional");
+  const tier = resolved?.tier;
   /**
    * The tier whose cap has been reached, or null — one value rather than a
    * boolean plus a separately-nullable tier, so the panel below cannot render
@@ -84,20 +90,32 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
     >
       {capReached ? (
         <div className="text-center animate-fade-slide-up py-4">
-          <p className="text-sm text-charcoal-soft mb-4">
-            Your {capReached.name} tier allows up to {capReached.maxClients} clients, and you're
-            already there. Upgrade to add more.
+          <p className="text-sm font-bold text-charcoal mb-1.5">
+            You've reached the client limit on your {tierLabel(capReached)} plan.
           </p>
-          <Button
-            fullWidth
-            size="lg"
+          <p className="text-sm text-charcoal-soft mb-4">
+            {capLabel(capReached, professionalClients.length)}. Disconnect a client to free a
+            place, or ask us to move you to a bigger plan.
+          </p>
+          {/* A MAILTO, NOT A CHECKOUT. There is nothing to buy: subscription_states
+              is read-only to every client role and is written by a payment process
+              that does not exist yet, so a payment sheet here would take a card for
+              a change nothing can apply. */}
+          <a
+            href={upgradeMailto()}
+            className="tap w-full flex items-center justify-center rounded-2xl bg-primary text-white text-sm font-semibold h-12 mb-2.5"
+          >
+            {UPGRADE_ACTION_LABEL}
+          </a>
+          <button
             onClick={() => {
               onClose();
               navigate("/app/subscription");
             }}
+            className="tap w-full text-center text-sm font-semibold text-charcoal-soft"
           >
-            View subscription tiers
-          </Button>
+            See the plans
+          </button>
         </div>
       ) : !generatedCode ? (
         <div className="animate-fade-slide-up py-2">

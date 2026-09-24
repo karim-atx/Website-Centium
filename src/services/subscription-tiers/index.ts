@@ -29,6 +29,14 @@ export type TierType = Enums<"subscription_tier_type">;
 
 export interface SubscriptionTier {
   /**
+   * The row uuid, used for ONE thing: joining subscription_states.tier_id.
+   *
+   * Not the key. gen_random_uuid() differs per environment, which is why `id`
+   * below is derived from the name instead — but subscription_states points
+   * here by uuid, so resolving which plan an account holds needs it.
+   */
+  rowId: string;
+  /**
    * The app's own stable key for a tier — "starter", "growth", "pro",
    * "unlimited" — derived from the name rather than from the row's uuid.
    *
@@ -52,18 +60,31 @@ export interface SubscriptionTier {
   maxEmployees: number | null;
   /** 0 for the free tier — the column is NOT NULL, so absence is not a case. */
   monthlyPrice: number;
+  /**
+   * The plan an account with no active subscription falls back to.
+   *
+   * A FLAG, NOT A NAME OR A PRICE. Database-Atraxia 20260924240000 added it
+   * and a partial unique index making "at most one per tier_type" a
+   * constraint; the client-cap trigger reads the same column. Inferring it
+   * from name = "Starter" or monthly_price = 0 would be a guess that happens
+   * to be right today and silently wrong after a rename or a paid entry tier.
+   */
+  isDefault: boolean;
 }
 
 export type TiersResult = { ok: true; tiers: SubscriptionTier[] } | { ok: false; message: string };
 
 interface Row {
+  id: string;
   name: string;
   max_clients: number | null;
   max_employees: number | null;
   monthly_price: number | string;
+  is_default: boolean;
 }
 
 const toTier = (row: Row): SubscriptionTier => ({
+  rowId: row.id,
   id: row.name.trim().toLowerCase(),
   name: row.name,
   maxClients: row.max_clients,
@@ -71,13 +92,14 @@ const toTier = (row: Row): SubscriptionTier => ({
   // numeric(10,2) arrives as a number over PostgREST and as a string through
   // some drivers. Coerced either way rather than trusted to be one of them.
   monthlyPrice: Number(row.monthly_price),
+  isDefault: row.is_default,
 });
 
 async function load(tierType: TierType): Promise<TiersResult> {
   try {
     const { data, error } = await supabase
       .from("subscription_tiers")
-      .select("name, max_clients, max_employees, monthly_price")
+      .select("id, name, max_clients, max_employees, monthly_price, is_default")
       .eq("tier_type", tierType)
       // ORDER IS SEMANTIC HERE, not cosmetic. Subscription.tsx decides whether
       // a change is an upgrade or a downgrade by comparing positions in this
@@ -127,4 +149,108 @@ export function fetchSubscriptionTiers(tierType: TierType): Promise<TiersResult>
   });
   inFlight.set(tierType, request);
   return request;
+}
+
+/**
+ * Which plan an account actually holds — the answer, not a default the UI
+ * invented.
+ *
+ * "NO SUBSCRIPTION" IS NOT A STATE ANYONE IS IN. subscription_states is empty
+ * for every account that has never been given a plan, because it is written
+ * only by a payment process that does not exist yet — it is READ-ONLY to every
+ * client role, with no write policy or grant at all. So an empty read is the
+ * ordinary case, not a missing record, and the account is on the free plan.
+ *
+ * WHICH free plan comes from is_default, not from this file. Database-Atraxia
+ * 20260924240000 marks it and the client-cap trigger reads the same column, so
+ * the plan this screen names and the cap the database enforces are the same
+ * row. A hardcoded "starter" here would be a second opinion, and the two would
+ * disagree the first time anyone renamed a tier.
+ *
+ * A NON-ACTIVE ROW COUNTS AS NO ROW. status is 'active' | 'cancelled' |
+ * 'expired'; only the first entitles anyone to anything, and a cancelled
+ * subscription falls back to the free plan exactly as a missing one does.
+ */
+export interface ResolvedTier {
+  tier: SubscriptionTier;
+  /** True when this is the free fallback rather than a held subscription. */
+  fromDefault: boolean;
+}
+
+export type MyTierResult =
+  | { ok: true; resolved: ResolvedTier | null }
+  | { ok: false; message: string };
+
+export async function fetchMySubscriptionTier(
+  userId: string,
+  tierType: TierType
+): Promise<MyTierResult> {
+  const tiers = await fetchSubscriptionTiers(tierType);
+  if (!tiers.ok) return { ok: false, message: tiers.message };
+
+  // owner_id is UNIQUE on this table, so there is at most one row per account
+  // and maybeSingle is the honest shape rather than a limit(1).
+  let held: { tier_id: string | null; status: string | null } | null = null;
+  try {
+    const { data, error } = await supabase
+      .from("subscription_states")
+      .select("tier_id, status")
+      .eq("owner_id", userId)
+      .maybeSingle();
+    if (error) {
+      return {
+        ok: false,
+        message: isOffline(error) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+      };
+    }
+    held = data;
+  } catch (e) {
+    return {
+      ok: false,
+      message: isOffline(e) ? OFFLINE_MESSAGE : "Could not load your plan. Try again.",
+    };
+  }
+
+  if (held?.status === "active" && held.tier_id) {
+    const active = tiers.tiers.find((t) => t.rowId === held!.tier_id);
+    // A tier_id pointing at a row this type's list does not contain means the
+    // account holds a plan of the OTHER type, or one that has since been
+    // deleted (tier_id is ON DELETE SET NULL, so that is rare but possible).
+    // Falling through to the default is the safe reading: it is what the cap
+    // trigger will do too.
+    if (active) return { ok: true, resolved: { tier: active, fromDefault: false } };
+  }
+
+  const fallback = tiers.tiers.find((t) => t.isDefault) ?? null;
+  // Null only when no tier of this type carries the flag, which is a
+  // misconfiguration the database logs and allows rather than enforces. The
+  // caller shows nothing instead of naming a plan nobody is on.
+  return { ok: true, resolved: fallback ? { tier: fallback, fromDefault: true } : null };
+}
+
+/**
+ * How a plan is named wherever one appears.
+ *
+ * "Starter (free)" rather than "Starter", because free is the single fact
+ * about it that changes what someone does next — and because the screens this
+ * appears on otherwise show a price beside every other plan.
+ */
+export function tierLabel(tier: SubscriptionTier): string {
+  return tier.monthlyPrice === 0 ? `${tier.name} (free)` : tier.name;
+}
+
+/**
+ * "1 of 1 clients used", or "3 clients" when the plan has no cap.
+ *
+ * The noun differs by tier type because the cap does: professionals are capped
+ * on clients and businesses on employees, and the two columns are never both
+ * set on one row.
+ */
+export function capLabel(tier: SubscriptionTier, used: number): string {
+  const max = tier.maxClients ?? tier.maxEmployees;
+  const noun = tier.maxEmployees !== null ? "professionals" : "clients";
+  if (max === null || max === undefined) {
+    return `${used} ${used === 1 ? noun.replace(/s$/, "") : noun} · unlimited`;
+  }
+  return `${used} of ${max} ${max === 1 ? noun.replace(/s$/, "") : noun} used`;
 }

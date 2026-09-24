@@ -808,8 +808,11 @@ interface AppState {
   businessDirectory: BusinessDirectoryEntry[];
   updateMyBusinessTier: (tier: string) => void;
 
-  professionalTier: string;
-  setProfessionalTier: (tier: string) => void;
+  // professionalTier/setProfessionalTier are GONE. They were a localStorage
+  // string the subscription screen wrote on a demo purchase, and no client can
+  // change its own plan at all: subscription_states has no write policy or
+  // grant for any client role. The plan is read from the database now — see
+  // fetchMySubscriptionTier in services/subscription-tiers.
 
   // V8 (QA 8.0): "as a place holder add a plus sign logo that increases the
   // tier by 1000 points" — added on top of the streak-derived total.
@@ -2666,8 +2669,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!user.businessId) return;
     setBusinessDirectory((prev) => prev.map((b) => (b.id === user.businessId ? { ...b, tier } : b)));
   };
-
-  const [professionalTier, setProfessionalTier] = usePersistentState<string>("professionalTier", "starter");
 
   const [bonusPoints, setBonusPoints] = usePersistentState<number>("bonusPoints", 0);
   const addBonusPoints: AppState["addBonusPoints"] = (amount) => setBonusPoints((prev) => prev + amount);
@@ -4615,8 +4616,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       dismissMockProfessional,
       businessDirectory,
       updateMyBusinessTier,
-      professionalTier,
-      setProfessionalTier,
       bonusPoints,
       addBonusPoints,
       referralRedeemed,
@@ -4765,7 +4764,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       forumPosts,
       dismissedMockProfessionalIds,
       businessDirectory,
-      professionalTier,
       bonusPoints,
       premiumPlan,
       gymPurchases,

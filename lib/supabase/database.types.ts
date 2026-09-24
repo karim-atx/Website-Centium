@@ -4587,6 +4587,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_default: boolean
           max_clients: number | null
           max_employees: number | null
           monthly_price: number
@@ -4596,6 +4597,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_default?: boolean
           max_clients?: number | null
           max_employees?: number | null
           monthly_price: number
@@ -4605,6 +4607,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_default?: boolean
           max_clients?: number | null
           max_employees?: number | null
           monthly_price?: number

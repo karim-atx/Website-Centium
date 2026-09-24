@@ -5,6 +5,9 @@ import { PaymentMethodSheet } from "../../components/profile/PaymentMethodSheet"
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { useSubscriptionTiers } from "../../hooks/useSubscriptionTiers";
+import { useMySubscriptionTier } from "../../hooks/useMySubscriptionTier";
+import { capLabel, tierLabel } from "../../services/subscription-tiers";
+import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import {
   ChevronLeft,
   Mic,
@@ -41,45 +44,31 @@ const features = [
   { icon: Sparkles, label: "Personalized insights" },
 ];
 
+/**
+ * The professional's plan, as it stands.
+ *
+ * READ-ONLY, AND THAT IS NOT A SIMPLIFICATION. This screen used to let a
+ * professional pick a tier, walk a payment sheet and "confirm" it, which wrote
+ * a string to localStorage and nothing else — subscription_states has no write
+ * policy or grant for any client role, so nothing the browser did could change
+ * the plan the database enforces. The two then disagreed: the screen said
+ * Growth, the cap trigger still counted Starter's clients, and the refusal
+ * arrived later with no explanation.
+ *
+ * So the purchase flow is gone rather than restyled, and what replaces it is
+ * the one thing that works today — an email to support. It comes back when
+ * there is a payment process to come back for.
+ */
 function ProfessionalSubscription() {
   const navigate = useNavigate();
-  const { professionalTier, setProfessionalTier, professionalClients } = useApp();
+  const { professionalClients } = useApp();
   const { tiers, loading, error } = useSubscriptionTiers("professional");
-  const [selected, setSelected] = useState(professionalTier);
-  const [confirmed, setConfirmed] = useState(false);
-  const [paymentOpen, setPaymentOpen] = useState(false);
-  const [downgradeOpen, setDowngradeOpen] = useState(false);
-  const [downgradeFeedback, setDowngradeFeedback] = useState("");
+  const { resolved, loading: planLoading, error: planError } = useMySubscriptionTier("professional");
 
-  const currentIdx = tiers.findIndex((t) => t.id === professionalTier);
-  const selectedIdx = tiers.findIndex((t) => t.id === selected);
-  const selectedTier = selectedIdx >= 0 ? tiers[selectedIdx] : null;
-  const selectedIsFree = selectedTier?.monthlyPrice === 0;
-  // BOTH INDICES HAVE TO EXIST, which they did not have to before: the list
-  // was a literal, so findIndex always found something. It is a fetch now, so
-  // an empty or still-loading list gives -1, and `-1 < -1` would have read as
-  // "not a downgrade" while `selectedIdx < currentIdx` with one of them -1
-  // would have read as one.
-  const isDowngrade = currentIdx >= 0 && selectedIdx >= 0 && selectedIdx < currentIdx;
-
-  const confirm = () => {
-    setProfessionalTier(selected);
-    setConfirmed(true);
-  };
-
-  // QA 12.0: "The free version should not prompt you on any payment
-  // modality because it is free." / "If the user were to downgrade back
-  // to the basic and/or free package, prompt the user that we are sorry
-  // for losing you and then ask for recommendations."
-  const handlePrimaryAction = () => {
-    if (isDowngrade) {
-      setDowngradeOpen(true);
-    } else if (selectedIsFree) {
-      confirm();
-    } else {
-      setPaymentOpen(true);
-    }
-  };
+  const current = resolved?.tier ?? null;
+  // The top of the ladder has nothing to upgrade to, so it is the one plan
+  // that gets no upgrade prompt. Price ascending is the service's own order.
+  const isTopTier = !!current && tiers.length > 0 && tiers[tiers.length - 1].id === current.id;
 
   return (
     <div>
@@ -90,7 +79,7 @@ function ProfessionalSubscription() {
         <ChevronLeft size={20} />
       </button>
 
-      <div className="text-center mb-8 animate-fade-slide-up">
+      <div className="text-center mb-6 animate-fade-slide-up">
         {/* Design refinement §3c "Placements": full lockup — splash,
             subscription, share cards — replaces the icon-tile + separate
             wordmark line. */}
@@ -99,15 +88,39 @@ function ProfessionalSubscription() {
           Grow your client roster.
         </h1>
         <p className="text-charcoal-soft text-sm max-w-xs mx-auto">
-          Centium Premium for professionals scales with how many clients you manage —
-          you're currently at {professionalClients.length}.
+          Centium Premium for professionals scales with how many clients you manage.
         </p>
       </div>
 
+      {/* THE PLAN, NAMED. Never "no subscription": an account with no
+          subscription_states row is on the free default, which is a plan with
+          a name and a cap, not an absence. */}
+      <div className="rounded-2xl bg-primary-pale px-4 py-3.5 mb-6 text-center">
+        {planLoading ? (
+          <p className="text-sm text-primary-dark">Checking your plan…</p>
+        ) : planError ? (
+          <p className="text-sm font-semibold text-status-high">{planError}</p>
+        ) : current ? (
+          <>
+            <p className="text-sm text-primary-dark">
+              You're on <span className="font-bold">{tierLabel(current)}</span>
+            </p>
+            <p className="text-xs text-primary-dark/80 mt-0.5">
+              {capLabel(current, professionalClients.length)}
+            </p>
+          </>
+        ) : (
+          // Only reachable when no professional tier carries is_default, which
+          // the database treats as a misconfiguration and logs. Naming no plan
+          // is better than naming the wrong one.
+          <p className="text-sm text-primary-dark">Your plan couldn't be identified.</p>
+        )}
+      </div>
+
       {/* A FAILED READ IS SAID OUT LOUD, not rendered as an empty list. On the
-          screen where someone chooses what to pay for, "no plans" and "we
-          couldn't fetch the plans" are not the same sentence, and only one of
-          them is true. */}
+          screen where someone looks at what they could pay for, "no plans" and
+          "we couldn't fetch the plans" are not the same sentence, and only one
+          of them is true. */}
       {error && <p className="text-xs font-semibold text-status-high mb-4">{error}</p>}
 
       <div className="space-y-2.5 mb-6">
@@ -118,86 +131,51 @@ function ProfessionalSubscription() {
               <div className="h-3 w-40 rounded bg-charcoal/[0.06]" />
             </div>
           ))}
-        {tiers.map((t) => (
-          <button
-            key={t.id}
-            onClick={() => setSelected(t.id)}
-            className={clsx(
-              "tap w-full flex items-center justify-between rounded-2xl px-4 py-4 border-2 transition-colors",
-              selected === t.id ? "border-primary bg-primary-pale" : "border-charcoal/10 bg-cream-card"
-            )}
-          >
-            <div className="text-left">
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-charcoal">{t.name}</p>
-                {t.id === professionalTier && (
-                  <span className="text-[10px] font-bold text-primary-dark bg-white rounded-full px-2 py-0.5">
-                    CURRENT
-                  </span>
-                )}
+        {tiers.map((t) => {
+          const isCurrent = current?.id === t.id;
+          return (
+            <div
+              key={t.id}
+              className={clsx(
+                "w-full flex items-center justify-between rounded-2xl px-4 py-4 border-2",
+                isCurrent ? "border-primary bg-primary-pale" : "border-charcoal/10 bg-cream-card"
+              )}
+            >
+              <div className="text-left">
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-bold text-charcoal">{t.name}</p>
+                  {isCurrent && (
+                    <span className="text-[10px] font-bold text-primary-dark bg-white rounded-full px-2 py-0.5">
+                      CURRENT
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-charcoal-faint">
+                  {t.maxClients === null ? "Unlimited clients" : `Up to ${t.maxClients} client${t.maxClients === 1 ? "" : "s"}`} ·{" "}
+                  {monthlyLabel(t.monthlyPrice)}
+                </p>
               </div>
-              <p className="text-xs text-charcoal-faint">
-                {t.maxClients === null ? "Unlimited clients" : `Up to ${t.maxClients} clients`} ·{" "}
-                {monthlyLabel(t.monthlyPrice)}
-              </p>
+              {isCurrent && (
+                <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
+                  <Check size={12} className="text-white" strokeWidth={3} />
+                </div>
+              )}
             </div>
-            {selected === t.id && (
-              <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
-                <Check size={12} className="text-white" strokeWidth={3} />
-              </div>
-            )}
-          </button>
-        ))}
+          );
+        })}
       </div>
 
-      <Button
-        fullWidth
-        size="lg"
-        onClick={handlePrimaryAction}
-        // Also disabled until the tiers are known: without them the button
-        // cannot tell an upgrade from a downgrade, so it would take money for
-        // a switch it has not understood.
-        disabled={(confirmed && selected === professionalTier) || !selectedTier}
-      >
-        {confirmed && selected === professionalTier
-          ? "You're all set ✓"
-          : selected === professionalTier
-          ? "Confirm tier"
-          : isDowngrade
-          ? "Switch package"
-          : "Upgrade package"}
-      </Button>
+      {!isTopTier && (
+        <a
+          href={upgradeMailto()}
+          className="tap w-full flex items-center justify-center rounded-2xl bg-primary text-white text-base font-semibold h-14"
+        >
+          {UPGRADE_ACTION_LABEL}
+        </a>
+      )}
       <p className="text-[11px] text-charcoal-faint text-center mt-4">
-        Prototype pricing for demo purposes — no payment will be processed.
+        Plans can't be changed in the app yet — email us and we'll move you.
       </p>
-      <PaymentMethodSheet open={paymentOpen} onClose={() => setPaymentOpen(false)} onConfirm={confirm} />
-
-      <BottomSheet open={downgradeOpen} onClose={() => setDowngradeOpen(false)} title="We're sorry to see you go">
-        <div className="space-y-4 animate-fade-slide-up">
-          <p className="text-sm text-charcoal-soft leading-relaxed">
-            Before you switch to {selectedTier?.name ?? "that plan"}, would you tell us what didn't work,
-            or what would've kept you on your current plan? It helps us improve.
-          </p>
-          <textarea
-            value={downgradeFeedback}
-            onChange={(e) => setDowngradeFeedback(e.target.value)}
-            placeholder="Optional — e.g. too expensive, didn't need the extra client slots…"
-            rows={3}
-            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-          />
-          <Button
-            fullWidth
-            size="lg"
-            onClick={() => {
-              confirm();
-              setDowngradeOpen(false);
-              setDowngradeFeedback("");
-            }}
-          >
-            Confirm switch to {selectedTier?.name ?? "that plan"}
-          </Button>
-        </div>
-      </BottomSheet>
     </div>
   );
 }

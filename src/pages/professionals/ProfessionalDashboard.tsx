@@ -10,6 +10,9 @@ import {
   type HireRequestRow,
 } from "../../services/hire-inbox";
 import { AddClientSheet } from "../../components/professionals/AddClientSheet";
+import { useMySubscriptionTier } from "../../hooks/useMySubscriptionTier";
+import { tierLabel } from "../../services/subscription-tiers";
+import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { ClientDetailSheet } from "../../components/professionals/ClientDetailSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { ChevronRight, Plus, Search, HeartPulse, TrendingDown, TrendingUp, Inbox, Check, X, HeartHandshake } from "lucide-react";
@@ -57,7 +60,19 @@ export default function ProfessionalDashboard() {
    */
   const [requests, setRequests] = useState<HireRequestRow[]>([]);
   const [inboxError, setInboxError] = useState<string | null>(null);
+  /**
+   * Whether the message above is the tier cap specifically.
+   *
+   * ITS OWN FLAG RATHER THAN A STRING MATCH, because the panel does more than
+   * word this one differently: it offers a way out of it. Re-deriving "was
+   * that the cap?" by reading the sentence back would break the first time
+   * anyone edited the sentence.
+   */
+  const [atCap, setAtCap] = useState(false);
   const [answering, setAnswering] = useState<string | null>(null);
+  // Named so the cap message can say which plan ran out, rather than "your
+  // plan" — the professional has never been told they are on one.
+  const { resolved: myTier } = useMySubscriptionTier("professional");
 
   const loadInbox = useCallback(async () => {
     // Returns rather than clearing, so there is no synchronous setState on the
@@ -68,6 +83,7 @@ export default function ProfessionalDashboard() {
     if (res.status === "ok") {
       setRequests(res.requests);
       setInboxError(null);
+      setAtCap(false);
     } else {
       setInboxError(res.message);
     }
@@ -127,12 +143,21 @@ export default function ProfessionalDashboard() {
     if (res.status === "tier_limit_reached") {
       // An expected outcome, not a fault: the request is still pending and
       // still answerable once they have room, so the row stays.
+      //
+      // NAMED, NOT "your plan". Most professionals reaching this are on the
+      // free default and have never chosen a plan or been shown one, so
+      // "your plan's client limit" reads as a limit on something they do not
+      // have. The panel below adds the way out.
       setInboxError(
-        "You've reached your plan's client limit. Upgrade, or remove a client, to accept this one."
+        myTier
+          ? `You've reached the client limit on your ${tierLabel(myTier.tier)} plan.`
+          : "You've reached the client limit on your plan."
       );
+      setAtCap(true);
       return;
     }
     setInboxError(res.message);
+    setAtCap(false);
   };
   // Holds just the id, not a snapshot of the whole client object — a
   // snapshot would go stale the moment anything about the client (e.g.
@@ -407,9 +432,22 @@ export default function ProfessionalDashboard() {
             </p>
           )}
           {inboxError && (
-            <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
-              {inboxError}
-            </p>
+            <div className="rounded-xl bg-status-high-bg px-3.5 py-2.5">
+              <p className="text-xs text-status-high">{inboxError}</p>
+              {/* A MAILTO, NOT A CHECKOUT — there is nothing to buy yet. See
+                  services/subscription-tiers/upgrade. Disconnecting a client is
+                  named first because it is the one thing that works today
+                  without waiting on anybody. */}
+              {atCap && (
+                <p className="text-xs text-status-high mt-1.5">
+                  Disconnect a client to free a place, or{" "}
+                  <a href={upgradeMailto()} className="font-bold underline">
+                    {UPGRADE_ACTION_LABEL.toLowerCase()}
+                  </a>
+                  .
+                </p>
+              )}
+            </div>
           )}
           {requests.map((req) => (
             <Card key={req.id} className="flex items-center justify-between">
