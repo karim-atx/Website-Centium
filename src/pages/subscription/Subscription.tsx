@@ -242,7 +242,7 @@ function BusinessSubscription() {
   const { tiers, loading, error } = useSubscriptionTiers("business");
   const { plan, loading: planLoading, error: planError } = useBusinessPlan();
   // WHICH PLAN A SEAT IS WORTH, read from the flag rather than written as
-  // "Starter". is_business_seat_plan marks it and effective_professional_tier
+  // "Starter". is_business_seat_plan marks it and my_effective_professional_tier
   // resolves seated professionals to the same row, so naming it here would go
   // wrong the first time the seat plan moved. It is a PROFESSIONAL tier, which
   // is why this reads that list rather than the business one.

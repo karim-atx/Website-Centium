@@ -83,7 +83,7 @@ export interface SubscriptionTier {
    *
    * A FLAG ON THE ROW, not the name "Starter". A business buying seat blocks
    * entitles each seated professional to whichever tier carries this, and
-   * effective_professional_tier resolves it server-side from the same column
+   * my_effective_professional_tier resolves it server-side from the same column
    * — so naming it here would be a second opinion that goes wrong the first
    * time the seat plan changes.
    */
@@ -342,24 +342,27 @@ export type EffectiveTierResult =
  *
  * THREE WAYS TO HOLD ONE, and the order between them is not this client's to
  * decide: an own subscription, a seat in a business that bought seat blocks,
- * or the free default. effective_professional_tier(uuid) answers it in SQL —
- * the same function the client-cap trigger consults — so a professional with
- * both an own Pro plan and a business seat is told Pro by the one authority
+ * or the free default. my_effective_professional_tier() answers it in SQL,
+ * resolving in the same order the client-cap trigger does — so a professional
+ * with both an own Pro plan and a business seat is told Pro by the authority
  * that also decides how many clients they may add.
  *
  * Reimplementing that precedence here would be a second opinion, and the two
  * would disagree the first time somebody bought a plan while seated.
  */
-export async function fetchEffectiveProfessionalTier(
-  professionalId: string
-): Promise<EffectiveTierResult> {
+export async function fetchEffectiveProfessionalTier(): Promise<EffectiveTierResult> {
   const tiers = await fetchSubscriptionTiers("professional");
   if (!tiers.ok) return { ok: false, message: tiers.message };
 
   try {
-    const { data, error } = await supabase.rpc("effective_professional_tier", {
-      p_professional_id: professionalId,
-    });
+    // NO ARGUMENT, AND THAT IS THE POINT. This called
+    // effective_professional_tier(uuid), which any signed-in account could run
+    // against any professional's id — so Database-Atraxia a778aad revoked
+    // EXECUTE on it and shipped a self-only replacement that reads auth.uid()
+    // itself. Passing an id is no longer possible, which is the guarantee: a
+    // caller cannot ask about somebody else because there is nowhere to put
+    // their id.
+    const { data, error } = await supabase.rpc("my_effective_professional_tier");
     if (error) {
       return {
         ok: false,
@@ -367,6 +370,13 @@ export async function fetchEffectiveProfessionalTier(
       };
     }
     // A set-returning function comes back as an array of at most one row.
+    //
+    // ZERO ROWS MEANS "NOT A PROFESSIONAL", not "on the free plan". The
+    // function returns nothing for a customer or a business account on
+    // purpose: "Free, 1 client" is a fact about a professional, and reporting
+    // it for somebody who is not one would be an answer to a question they
+    // did not ask. Null travels up and the professional-only screens show
+    // nothing rather than naming a plan nobody is on.
     const row = Array.isArray(data) ? data[0] : data;
     if (!row) return { ok: true, effective: null };
 
@@ -381,10 +391,16 @@ export async function fetchEffectiveProfessionalTier(
     // affiliation costs them the plan. The function returns the tier, not the
     // business, so this is a second read — and a failure to name the business
     // is not a failure to resolve the plan.
+    //
+    // UNFILTERED, BECAUSE RLS ALREADY FILTERS IT. business_employees has two
+    // select policies: a business owner sees every row of their business, and
+    // a professional sees only `auth.uid() = professional_id`. This line is
+    // reached only when the RPC above reported a business_seat — which it does
+    // only for a professional — so the caller is in the second case and the
+    // query can return exactly one row: their own.
     const { data: seat } = await supabase
       .from("business_employees")
       .select("business_profiles(business_name)")
-      .eq("professional_id", professionalId)
       .limit(1)
       .maybeSingle();
     const name = (seat as { business_profiles?: { business_name?: string } } | null)

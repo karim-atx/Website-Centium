@@ -17,11 +17,15 @@ export interface EffectiveProfessionalTierState {
 /**
  * The plan a professional is actually on, as the database resolves it.
  *
- * KEYED TO THE ACCOUNT, for the reason useMySubscriptionTier gives: an answer
- * that arrives after a sign-out — or after a switch to a second account in the
- * same browser — must not be rendered against whoever is on screen now.
- * Comparing the answer's own userId means a late answer does not apply to a
- * question it was not asked.
+ * KEYED TO THE ACCOUNT, THOUGH IT NO LONGER PASSES ONE. The call reads
+ * auth.uid() server-side now, so this hook has no id to hand it — but it
+ * still records WHICH account each answer belongs to, for the reason
+ * useMySubscriptionTier gives: an answer that arrives after a sign-out, or
+ * after a switch to a second account in the same browser, must not be
+ * rendered against whoever is on screen now. Comparing the answer's own
+ * userId means a late answer does not apply to a question it was not asked —
+ * and that matters MORE without the argument, not less, since the request
+ * itself no longer carries any evidence of who asked it.
  *
  * SIGNED OUT IS NOT AN ERROR AND NOT A LOADING STATE. There is no account to
  * have a plan, so `effective` is null and `loading` is false.
@@ -33,7 +37,7 @@ export function useEffectiveProfessionalTier(): EffectiveProfessionalTierState {
   useEffect(() => {
     if (!authUserId) return;
     let cancelled = false;
-    void fetchEffectiveProfessionalTier(authUserId).then((result) => {
+    void fetchEffectiveProfessionalTier().then((result) => {
       if (!cancelled) setAnswer({ userId: authUserId, result });
     });
     return () => {

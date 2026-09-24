@@ -31,7 +31,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   // THE EFFECTIVE PLAN, not the account's own subscription. A professional
   // seated in a business holds no subscription_states row of their own, so
   // useMySubscriptionTier answered Free — one client — while the cap trigger
-  // consulted effective_professional_tier and allowed five. The sheet would
+  // consulted the effective tier and allowed five. The sheet would
   // have refused a client the database was ready to accept.
   const { effective } = useEffectiveProfessionalTier();
   const tier = effective?.tier;
