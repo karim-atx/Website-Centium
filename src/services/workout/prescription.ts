@@ -1,10 +1,12 @@
 import type {
+  BlockKind,
   EnduranceMode,
   EndurancePlan,
   EnduranceStep,
   EnduranceTarget,
   Exercise,
   ExerciseClassification,
+  WorkoutBlock,
 } from "../../types";
 
 // ONE FORMATTER, FOR EVERY PLACE A PRESCRIPTION IS SHOWN.
@@ -217,3 +219,57 @@ export function prescriptionLine(ex: Exercise, options: PrescriptionOptions = {}
 
   return parts.join(" · ");
 }
+
+// --- blocks ----------------------------------------------------------------
+
+/**
+ * A clock as coaches write it: 60 -> "1:00", 90 -> "1:30".
+ *
+ * Distinct from formatSeconds, which reads as prose ("1 min 30 s"). An EMOM
+ * interval is a clock face — "every 1:00" — and writing it as "every 1 min"
+ * loses the thing that makes it an EMOM.
+ */
+export function formatClock(total: number): string {
+  const minutes = Math.floor(total / 60);
+  const seconds = total % 60;
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+/** A, B, C… for supersets, which are told apart by letter rather than number. */
+export const supersetLetter = (index: number): string =>
+  String.fromCharCode(65 + (index % 26));
+
+/**
+ * The heading a block carries, which is also what makes it accessible.
+ *
+ * THE TEXT CARRIES THE MEANING, NOT THE COLOUR. Each kind gets its own rail
+ * colour in the card, but "AMRAP · 12 min" says what it is without any of
+ * them — so the grouping survives a screenshot in greyscale, a colour-blind
+ * reader and a screen reader, which reads this string and nothing else.
+ *
+ * `ordinal` is the block's position among the blocks of its own kind, used
+ * only to letter supersets. A user's own label wins outright when they wrote
+ * one: "Finisher" is more use than "Superset B".
+ */
+export function blockHeading(block: WorkoutBlock, ordinal = 0): string {
+  if (block.label?.trim()) return block.label.trim();
+  switch (block.kind) {
+    case "superset":
+      return `Superset ${supersetLetter(ordinal)}`;
+    case "amrap":
+      return `AMRAP · ${block.timeCapSeconds ? formatSeconds(block.timeCapSeconds) : "no cap set"}`;
+    case "emom": {
+      const every = block.intervalSeconds ? formatClock(block.intervalSeconds) : "?";
+      return `EMOM · every ${every}${block.rounds ? ` × ${block.rounds}` : ""}`;
+    }
+    case "for_time": {
+      const rounds = block.rounds ? `${block.rounds} ${block.rounds === 1 ? "round" : "rounds"}` : "for time";
+      return block.timeCapSeconds
+        ? `For Time · ${rounds} (cap ${formatSeconds(block.timeCapSeconds)})`
+        : `For Time · ${rounds}`;
+    }
+  }
+}
+
+/** Whether a block's members are prescribed per round rather than outright. */
+export const isRoundBased = (kind: BlockKind): boolean => kind !== "superset";

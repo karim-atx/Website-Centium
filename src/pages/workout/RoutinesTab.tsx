@@ -6,10 +6,23 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
 import { ExerciseSettingsSheet } from "../../components/workout/ExerciseSettingsSheet";
+import { BlockCard } from "../../components/workout/BlockCard";
+import { prescriptionLine } from "../../services/workout/prescription";
 import { ExerciseLibrarySheet, type ExercisePick } from "../../components/workout/ExerciseLibrarySheet";
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { BrowseProgramsSheet } from "../../components/workout/BrowseProgramsSheet";
-import type { Exercise, Routine, RoutineFolder } from "../../types";
+import type { Exercise, Routine, RoutineFolder, WorkoutBlock } from "../../types";
+import { BlockSettingsSheet } from "../../components/workout/BlockSettingsSheet";
+import {
+  canGroup,
+  groupIntoRuns,
+  defaultBlockParams,
+  groupExercises,
+  moveExercise,
+  newBlockId,
+  pruneBlocks,
+  ungroupBlock,
+} from "../../services/workout/blocks";
 import {
   ChevronDown,
   ChevronRight,
@@ -29,6 +42,8 @@ import {
   ArrowUp,
   ArrowDown,
   Library,
+  Check,
+  Group,
 } from "lucide-react";
 
 const SWIPE_THRESHOLD = 50;
@@ -414,6 +429,7 @@ export default function RoutinesTab() {
                 onAddExercise={(pick) =>
                   run(updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] }))
                 }
+                onArrange={(exercises, blocks) => run(updateRoutine(r.id, { exercises, blocks }))}
                 family={family}
               />
             ))}
@@ -591,6 +607,7 @@ export default function RoutinesTab() {
                   onAddExercise={(pick) =>
                     run(updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] }))
                   }
+                  onArrange={(exercises, blocks) => run(updateRoutine(r.id, { exercises, blocks }))}
                   family={PURPLE}
                 />
               ))}
@@ -784,6 +801,38 @@ export default function RoutinesTab() {
   );
 }
 
+/**
+ * One row's selection tick, during grouping.
+ *
+ * DISABLED FOR A ROW ALREADY IN A BLOCK rather than hidden, so the reason is
+ * visible: you ungroup before you regroup, and a tick that simply was not
+ * there would read as a bug.
+ */
+const SelectBox: React.FC<{
+  checked: boolean;
+  disabled?: boolean;
+  onChange: () => void;
+  label: string;
+}> = ({ checked, disabled, onChange, label }) => (
+  <button
+    onClick={onChange}
+    disabled={disabled}
+    role="checkbox"
+    aria-checked={checked}
+    aria-label={`Select ${label}`}
+    className="tap flex items-center justify-center shrink-0"
+    style={{
+      width: 20,
+      height: 20,
+      borderRadius: 6,
+      border: `2px solid ${disabled ? "#D6D2CB" : checked ? "#AEA1DC" : "rgba(36,31,27,0.2)"}`,
+      background: checked ? "#AEA1DC" : "transparent",
+    }}
+  >
+    {checked && <Check size={12} strokeWidth={3} style={{ color: "#FFFFFF" }} />}
+  </button>
+);
+
 const RoutineRow: React.FC<{
   routine: Routine;
   onStart: () => void;
@@ -792,15 +841,82 @@ const RoutineRow: React.FC<{
   onDeleteExercise: (exerciseId: string) => void;
   onReplaceExercise: (exerciseId: string, pick: ExercisePick) => void;
   onAddExercise: (pick: ExercisePick) => void;
+  /** Rewrites the whole arrangement — order and grouping travel together. */
+  onArrange: (exercises: Exercise[], blocks: WorkoutBlock[]) => void;
   /** The colours of the folder this routine sits in. */
   family: FolderFamily;
   isOngoing?: boolean;
-}> = ({ routine, onStart, onDelete, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, family, isOngoing }) => {
+}> = ({ routine, onStart, onDelete, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, onArrange, family, isOngoing }) => {
   const [expanded, setExpanded] = useState(false);
   const [revealedId, setRevealedId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
   const [addExerciseOpen, setAddExerciseOpen] = useState(false);
   const touchStart = useRef<{ x: number; y: number } | null>(null);
+
+  // --- grouping -------------------------------------------------------------
+  //
+  // SELECTION IS A MODE, entered on purpose. Adding a checkbox to every row all
+  // the time would put a second meaning on a list whose rows already open an
+  // editor, and grouping is not something anybody does by accident.
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  /** The block being created or edited, and the members it will hold. */
+  const [blockDraft, setBlockDraft] = useState<{ block: WorkoutBlock; memberIds: string[] } | null>(null);
+  const [groupProblem, setGroupProblem] = useState<string | null>(null);
+
+  const blocks = routine.blocks ?? [];
+
+  const exitSelecting = () => {
+    setSelecting(false);
+    setSelected([]);
+    setGroupProblem(null);
+  };
+
+  const startGrouping = () => {
+    const check = canGroup(routine.exercises, selected);
+    if (!check.ok) {
+      setGroupProblem(check.message);
+      return;
+    }
+    setGroupProblem(null);
+    setBlockDraft({
+      block: { id: newBlockId(), kind: "superset", ...defaultBlockParams("superset") },
+      memberIds: [...selected],
+    });
+  };
+
+  /** Saves a block — new or edited — and the membership that goes with it. */
+  const commitBlock = (block: WorkoutBlock, memberIds: string[]) => {
+    const existing = blocks.some((b) => b.id === block.id);
+    const nextExercises = existing
+      ? routine.exercises
+      : groupExercises(routine.exercises, memberIds, block);
+    const nextBlocks = existing
+      ? blocks.map((b) => (b.id === block.id ? block : b))
+      : [...blocks, block];
+    onArrange(nextExercises, pruneBlocks(nextExercises, nextBlocks));
+    exitSelecting();
+  };
+
+  const ungroup = (blockId: string) => {
+    const nextExercises = ungroupBlock(routine.exercises, blockId);
+    onArrange(nextExercises, pruneBlocks(nextExercises, blocks));
+    exitSelecting();
+  };
+
+  /**
+   * One step up or down, refused rather than fudged when it would break a
+   * block. moveExercise returns the same array when the move is unavailable,
+   * which is also what disables the control.
+   */
+  const move = (exerciseId: string, direction: "up" | "down") => {
+    const next = moveExercise(routine.exercises, exerciseId, direction);
+    if (next === routine.exercises) return;
+    onArrange(next, blocks);
+  };
+
+  const canMove = (exerciseId: string, direction: "up" | "down") =>
+    moveExercise(routine.exercises, exerciseId, direction) !== routine.exercises;
 
   // Swipe-left on an exercise row reveals Replace/Delete, Apple-UI style —
   // same pattern as the Food diary's swipe-to-delete.
@@ -821,6 +937,54 @@ const RoutineRow: React.FC<{
       setRevealedId(null);
     }
   };
+
+  /** The up/down pair, shown on every row so order is editable at all. */
+  const MoveControls: React.FC<{ exerciseId: string }> = ({ exerciseId }) => (
+    <span className="flex shrink-0" style={{ gap: 2 }}>
+      {(["up", "down"] as const).map((direction) => {
+        const enabled = canMove(exerciseId, direction);
+        const Icon = direction === "up" ? ArrowUp : ArrowDown;
+        return (
+          <button
+            key={direction}
+            onClick={() => move(exerciseId, direction)}
+            disabled={!enabled}
+            aria-label={`Move ${direction}`}
+            className="tap flex items-center justify-center"
+            style={{ width: 22, height: 22, color: enabled ? "#8C8378" : "#D6D2CB" }}
+          >
+            <Icon size={13} />
+          </button>
+        );
+      })}
+    </span>
+  );
+
+  /** A member's row action: select it, or reorder and open its settings. */
+  const memberAction = (ex: Exercise) =>
+    selecting ? (
+      <SelectBox
+        checked={selected.includes(ex.id)}
+        disabled={!!ex.blockId}
+        onChange={() =>
+          setSelected((prev) =>
+            prev.includes(ex.id) ? prev.filter((id) => id !== ex.id) : [...prev, ex.id]
+          )
+        }
+        label={ex.name}
+      />
+    ) : (
+      <span className="flex items-center shrink-0" style={{ gap: 2 }}>
+        <MoveControls exerciseId={ex.id} />
+        <button
+          onClick={() => onSettings(ex)}
+          aria-label={`Settings for ${ex.name}`}
+          className="tap text-charcoal-faint"
+        >
+          <Settings2 size={14} />
+        </button>
+      </span>
+    );
 
   return (
     // Master handover (CentiumTabFrame "Color-coded folders"): a 54px row in
@@ -862,54 +1026,129 @@ const RoutineRow: React.FC<{
         </button>
       </div>
       {expanded && (
-        <div className="border-t border-charcoal/[0.06] divide-y divide-charcoal/[0.04]">
-          {routine.exercises.map((ex) => {
-            const revealed = revealedId === ex.id;
-            return (
-              <div key={ex.id} className="relative overflow-hidden">
-                {revealed && (
-                  <div className="absolute inset-y-0 right-0 flex items-stretch z-0">
-                    <button
-                      onClick={() => setReplaceTarget(ex.id)}
-                      aria-label={`Replace ${ex.name}`}
-                      className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-primary text-white text-[10px] font-semibold"
-                    >
-                      <Repeat size={14} />
-                      Replace
-                    </button>
-                    <button
-                      onClick={() => {
-                        onDeleteExercise(ex.id);
-                        setRevealedId(null);
-                      }}
-                      aria-label={`Delete ${ex.name}`}
-                      className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-[#C0392B] text-white text-[10px] font-semibold"
-                    >
-                      <Trash2 size={14} />
-                      Delete
-                    </button>
-                  </div>
-                )}
-                <div
-                  onTouchStart={onRowTouchStart}
-                  onTouchEnd={(ev) => onRowTouchEnd(ev, ex.id)}
-                  onClick={() => revealed && setRevealedId(null)}
-                  className="relative z-10 flex items-center justify-between px-4 py-2.5 bg-cream-card transition-transform duration-200"
-                  style={{ transform: revealed ? "translateX(-128px)" : "translateX(0)" }}
-                >
-                  <div>
-                    <p className="text-sm text-charcoal">{ex.name}</p>
-                    <p className="text-[11px] text-charcoal-faint">
-                      {ex.sets} × {ex.reps} · {ex.weightKg}kg
-                    </p>
-                  </div>
-                  <button onClick={() => onSettings(ex)} className="tap text-charcoal-faint">
-                    <Settings2 size={14} />
+        <div className="border-t border-charcoal/[0.06]">
+          {/* GROUPING IS A MODE, entered here. The rows already open an
+              editor on tap, so a permanent checkbox column would give every
+              row two meanings; and nobody groups a superset by accident. */}
+          <div
+            className="flex items-center justify-between bg-cream-card px-4 py-2"
+            style={{ borderBottom: "1px solid rgba(36,31,27,0.05)" }}
+          >
+            {selecting ? (
+              <>
+                <span className="text-[11px] text-charcoal-faint">
+                  {selected.length === 0
+                    ? "Pick exercises that sit next to each other."
+                    : `${selected.length} selected`}
+                </span>
+                <span className="flex items-center" style={{ gap: 12 }}>
+                  <button onClick={exitSelecting} className="tap text-[11.5px] font-semibold text-charcoal-soft">
+                    Cancel
                   </button>
-                </div>
+                  <button
+                    onClick={startGrouping}
+                    disabled={selected.length < 2}
+                    className="tap text-[11.5px] font-semibold"
+                    style={{ color: selected.length < 2 ? "#C9C2B8" : "#5F5093" }}
+                  >
+                    Group as…
+                  </button>
+                </span>
+              </>
+            ) : (
+              <>
+                <span className="text-[11px] text-charcoal-faint">
+                  {routine.exercises.length}{" "}
+                  {routine.exercises.length === 1 ? "exercise" : "exercises"}
+                  {blocks.length > 0 && ` · ${blocks.length} ${blocks.length === 1 ? "block" : "blocks"}`}
+                </span>
+                <button
+                  onClick={() => setSelecting(true)}
+                  disabled={routine.exercises.length < 2}
+                  className="tap flex items-center gap-1 text-[11.5px] font-semibold"
+                  style={{ color: routine.exercises.length < 2 ? "#C9C2B8" : "#5F5093" }}
+                >
+                  <Group size={13} /> Group
+                </button>
+              </>
+            )}
+          </div>
+          {groupProblem && (
+            <p className="text-[11px] text-status-high bg-status-high-bg px-4 py-2">{groupProblem}</p>
+          )}
+          {/* GROUPED FOR RENDERING, FLAT UNDERNEATH. `position` is still the
+              order and the contiguity rule still governs it; groupIntoRuns
+              only walks consecutive members into runs, so a grouping the
+              database would refuse shows as two cards rather than looking
+              fine. */}
+          {groupIntoRuns(routine.exercises, routine.blocks ?? []).map((run, runIdx) =>
+            run.block ? (
+              <BlockCard
+                key={run.block.id}
+                block={run.block}
+                ordinal={run.ordinal}
+                members={run.members}
+                renderMemberAction={memberAction}
+                onHeaderClick={() =>
+                  setBlockDraft({
+                    block: run.block!,
+                    memberIds: run.members.map((m) => m.id),
+                  })
+                }
+              />
+            ) : (
+              <div key={`solo-${runIdx}`} className="divide-y divide-charcoal/[0.04]">
+                {run.members.map((ex) => {
+                  const revealed = revealedId === ex.id;
+                  const line = prescriptionLine(ex);
+                  return (
+                    <div key={ex.id} className="relative overflow-hidden">
+                      {revealed && (
+                        <div className="absolute inset-y-0 right-0 flex items-stretch z-0">
+                          <button
+                            onClick={() => setReplaceTarget(ex.id)}
+                            aria-label={`Replace ${ex.name}`}
+                            className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-primary text-white text-[10px] font-semibold"
+                          >
+                            <Repeat size={14} />
+                            Replace
+                          </button>
+                          <button
+                            onClick={() => {
+                              onDeleteExercise(ex.id);
+                              setRevealedId(null);
+                            }}
+                            aria-label={`Delete ${ex.name}`}
+                            className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-[#C0392B] text-white text-[10px] font-semibold"
+                          >
+                            <Trash2 size={14} />
+                            Delete
+                          </button>
+                        </div>
+                      )}
+                      <div
+                        onTouchStart={onRowTouchStart}
+                        onTouchEnd={(ev) => onRowTouchEnd(ev, ex.id)}
+                        onClick={() => revealed && setRevealedId(null)}
+                        className="relative z-10 flex items-center justify-between px-4 py-2.5 bg-cream-card transition-transform duration-200"
+                        style={{ transform: revealed ? "translateX(-128px)" : "translateX(0)" }}
+                      >
+                        <div className="min-w-0">
+                          <p className="text-sm text-charcoal">{ex.name}</p>
+                          {/* Was `{sets} × {reps} · {weightKg}kg`, which showed
+                              three of the twenty columns a prescription carries
+                              and rendered a coach's 3–5 × 8–12 @ 75% as
+                              "3 × 8 · 0kg". */}
+                          {line && <p className="text-[11px] text-charcoal-faint">{line}</p>}
+                        </div>
+                        {memberAction(ex)}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            )
+          )}
           <button
             onClick={() => setAddExerciseOpen(true)}
             className="tap w-full flex items-center justify-center gap-1.5 px-4 py-3 text-xs font-semibold text-primary bg-cream-card hover:bg-primary-pale/40"
@@ -918,6 +1157,20 @@ const RoutineRow: React.FC<{
           </button>
         </div>
       )}
+
+      <BlockSettingsSheet
+        key={blockDraft?.block.id ?? "none"}
+        open={!!blockDraft}
+        onClose={() => setBlockDraft(null)}
+        block={blockDraft?.block ?? null}
+        memberCount={blockDraft?.memberIds.length ?? 0}
+        onSave={(block) => commitBlock(block, blockDraft?.memberIds ?? [])}
+        onUngroup={
+          blockDraft && blocks.some((b) => b.id === blockDraft.block.id)
+            ? () => ungroup(blockDraft.block.id)
+            : undefined
+        }
+      />
 
       <ExerciseLibrarySheet
         open={!!replaceTarget}

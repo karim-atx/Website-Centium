@@ -1,7 +1,14 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { formatEndurancePlan, formatPace, formatSeconds, prescriptionLine } from "./prescription.ts";
-import type { EndurancePlan, Exercise } from "../../types";
+import {
+  blockHeading,
+  formatEndurancePlan,
+  formatPace,
+  formatSeconds,
+  isRoundBased,
+  prescriptionLine,
+} from "./prescription.ts";
+import type { EndurancePlan, Exercise, WorkoutBlock } from "../../types";
 
 // A TABLE, NOT A SCRIPT. Every rule in the formatter is one row, so a rule
 // that changes shows up as one failing case naming itself rather than as a
@@ -228,4 +235,58 @@ test("formatSeconds and formatPace", () => {
   assert.equal(formatPace(260), "4:20");
   assert.equal(formatPace(300), "5:00");
   assert.equal(formatPace(65), "1:05");
+});
+
+// ---------------------------------------------------------------------------
+// Block headings. The header text is what makes a block accessible — colour
+// alone never carries the meaning — so it is worth a table of its own.
+// ---------------------------------------------------------------------------
+
+const headingCases: { name: string; block: WorkoutBlock; ordinal?: number; expect: string }[] = [
+  { name: "the first superset", block: { id: "b", kind: "superset" }, expect: "Superset A" },
+  { name: "the second superset", block: { id: "b", kind: "superset" }, ordinal: 1, expect: "Superset B" },
+  { name: "an AMRAP names its window", block: { id: "b", kind: "amrap", timeCapSeconds: 720 }, expect: "AMRAP · 12 min" },
+  {
+    name: "an EMOM names its interval and rounds",
+    block: { id: "b", kind: "emom", intervalSeconds: 60, rounds: 10 },
+    expect: "EMOM · every 1:00 × 10",
+  },
+  {
+    name: "a 90-second EMOM is a clock, not prose",
+    block: { id: "b", kind: "emom", intervalSeconds: 90, rounds: 8 },
+    expect: "EMOM · every 1:30 × 8",
+  },
+  {
+    name: "For Time with a cap",
+    block: { id: "b", kind: "for_time", rounds: 5, timeCapSeconds: 1200 },
+    expect: "For Time · 5 rounds (cap 20 min)",
+  },
+  {
+    name: "For Time without a cap",
+    block: { id: "b", kind: "for_time", rounds: 3 },
+    expect: "For Time · 3 rounds",
+  },
+  {
+    name: "one round is singular",
+    block: { id: "b", kind: "for_time", rounds: 1 },
+    expect: "For Time · 1 round",
+  },
+  {
+    name: "a label the coach wrote wins outright",
+    block: { id: "b", kind: "amrap", timeCapSeconds: 720, label: "Finisher" },
+    expect: "Finisher",
+  },
+];
+
+for (const c of headingCases) {
+  test(`blockHeading: ${c.name}`, () => {
+    assert.equal(blockHeading(c.block, c.ordinal ?? 0), c.expect);
+  });
+}
+
+test("only a superset is not round-based", () => {
+  assert.equal(isRoundBased("superset"), false);
+  for (const kind of ["amrap", "emom", "for_time"] as const) {
+    assert.equal(isRoundBased(kind), true, kind);
+  }
 });

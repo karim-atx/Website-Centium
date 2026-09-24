@@ -19,9 +19,6 @@ import type {
 // verbatim rather than swallowing — so a drift is visible rather than silent.
 // Every rule below cites the SQL rule it mirrors.
 
-/** The default EMOM interval, in seconds. One minute, as the name says. */
-export const DEFAULT_EMOM_INTERVAL_SECONDS = 60;
-
 export const emptyTarget = (): EnduranceTarget => ({ kind: "open" });
 
 export const emptyStep = (): EnduranceStep => ({
