@@ -87,6 +87,12 @@ export const BlockSettingsSheet: React.FC<{
   const [draft, setDraft] = useState<WorkoutBlock | null>(block);
   const [problem, setProblem] = useState<string | null>(null);
 
+  // WHICH IS IT, a new block or an existing one? Not `block.kind`: a block
+  // being created arrives with its kind already chosen, so that read called
+  // every sheet an edit. Only the caller knows, and it says so by passing an
+  // Ungroup handler — there is nothing to ungroup until the block exists.
+  const creating = !onUngroup;
+
   if (!draft) return null;
 
   const setKind = (kind: BlockKind) => {
@@ -101,7 +107,7 @@ export const BlockSettingsSheet: React.FC<{
   const intervalSeconds = draft.intervalSeconds;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={block?.kind ? "Block" : "Group as"}>
+    <BottomSheet open={open} onClose={onClose} title={creating ? "Group as" : "Block"}>
       <div className="flex flex-col animate-fade-slide-up" style={{ gap: 16 }}>
         <div>
           <span style={labelStyle}>Kind</span>
@@ -197,7 +203,7 @@ export const BlockSettingsSheet: React.FC<{
             onClose();
           }}
         >
-          {block?.kind && onUngroup ? "Save block" : "Create block"}
+          {creating ? "Create block" : "Save block"}
         </Button>
 
         {onUngroup && (
