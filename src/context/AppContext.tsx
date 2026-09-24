@@ -2253,7 +2253,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return;
       }
       setWorkoutHistoryError(null);
-      setWorkoutSessions(result.sessions);
+      // OLDEST FIRST, which is what everything holding this list assumes.
+      // getWorkoutSessions returns newest-first (its query orders started_at
+      // descending, so a `limit` keeps the RECENT ones), and this was stored
+      // as it arrived — while saveWorkoutSession appends to the end and both
+      // HistoryTab and Home reverse it to get newest-first. So a freshly
+      // loaded list ran backwards: History showed the oldest session at the
+      // top, Home suggested the routine trained longest ago, and the volume
+      // sparkline drew time right-to-left with "Last logged session" naming
+      // the first one. Reversing here is the one place that fixes all four.
+      setWorkoutSessions([...result.sessions].reverse());
     });
     return () => {
       cancelled = true;
