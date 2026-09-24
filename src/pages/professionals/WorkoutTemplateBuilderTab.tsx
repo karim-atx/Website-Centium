@@ -126,8 +126,13 @@ export default function WorkoutTemplateBuilderTab() {
           const expanded = expandedId === t.id;
           // Assignments are rows now, one per client, each with its own day.
           const assignments = templateAssignments.filter((a) => a.templateId === t.id);
+          // c.clientId, NOT c.id. RosterClient.id is the
+          // professional_clients row — the RELATIONSHIP — and an assignment
+          // names the client's own user id, so comparing the two matched
+          // nothing and every template read "0 clients assigned" however many
+          // it had.
           const clients = professionalClients.filter((c) =>
-            assignments.some((a) => a.clientId === c.id)
+            !!c.clientId && assignments.some((a) => a.clientId === c.clientId)
           );
           return (
             <div key={t.id} className="relative">
@@ -249,7 +254,7 @@ export default function WorkoutTemplateBuilderTab() {
                       <div className="space-y-2">
                         {clients.map((c) => {
                           const sessions = c.access.workoutActivity
-                            ? sessionsFor(t.id, c.id)
+                            ? sessionsFor(t.id, c.clientId!)
                             : [];
                           return (
                             <div key={c.id} className="bg-cream-soft rounded-xl px-3.5 py-3">
