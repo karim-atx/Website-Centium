@@ -164,3 +164,17 @@ test("a row with no outcome falls back to the completed flag", () => {
   assert.equal(countsTowardVolume(set({ completed: true, reps: 8 })), true);
   assert.equal(countsTowardVolume(set({ completed: false, reps: 8 })), false);
 });
+
+test("an endurance effort has no set rows at all", () => {
+  // The plan replaces them: the runner shows the steps and takes a result.
+  // Seeding one gave a run a phantom row that finishing filed as skipped.
+  const run = ex({
+    classification: "cardio",
+    endurancePlan: {
+      version: 1,
+      main: { type: "steady", step: { measure: "time", seconds: 1800, target: { kind: "open" } } },
+    },
+  });
+  assert.deepEqual(seedSets(run), []);
+  assert.deepEqual(finalizeSets(seedSets(run)), []);
+});

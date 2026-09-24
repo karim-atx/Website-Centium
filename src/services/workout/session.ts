@@ -51,6 +51,11 @@ export function seedReps(ex: Exercise): number {
  * see the history.
  */
 export function seedSets(ex: Exercise): LoggedSet[] {
+  // AN ENDURANCE EFFORT HAS NO SETS. The plan replaces them outright — the
+  // runner shows the steps and takes a result — so seeding one here gave a
+  // run a phantom row that nobody could see and that finishing filed as a
+  // SKIPPED set, against a session the athlete had just recorded in full.
+  if (ex.endurancePlan) return [];
   const { offered, asked } = setRowCount(ex);
   const reps = seedReps(ex);
   return Array.from({ length: offered }).map((_, i) => ({
