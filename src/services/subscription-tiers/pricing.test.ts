@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
+  businessPlanLabel,
   businessSummary,
   effectivePlanLabel,
   formatPercent,
@@ -166,4 +167,30 @@ test("a seat whose business could not be named still says it is a seat", () => {
   // failure to name the business is not a failure to resolve the plan, and
   // the professional still needs to know the plan is not theirs.
   assert.equal(effectivePlanLabel("Starter", "business_seat"), "Starter (via your business)");
+});
+
+// --- how a business's plan is named ------------------------------------------
+
+test("a business's plan is named by its base and the seats it bought", () => {
+  assert.equal(
+    businessPlanLabel({ active: true, baseName: "Base", totalSeats: 10 }),
+    "Base · 10 seats"
+  );
+  assert.equal(businessPlanLabel({ active: true, baseName: "Base", totalSeats: 1 }), "Base · 1 seat");
+});
+
+test("a business paying the base fee with no blocks yet still HAS a plan", () => {
+  // The inference this guards against: reading "no plan" off seatBlocks === 0
+  // would tell an account being billed that it has nothing.
+  assert.equal(businessPlanLabel({ active: true, baseName: "Base", totalSeats: 0 }), "Base · 0 seats");
+});
+
+test('"No plan" is said only when the subscription is not active', () => {
+  assert.equal(businessPlanLabel({ active: false, baseName: "Base", totalSeats: 0 }), "No plan");
+  // Not even when seats somehow survive on a cancelled row.
+  assert.equal(businessPlanLabel({ active: false, baseName: "Base", totalSeats: 10 }), "No plan");
+});
+
+test("an unnamed base row falls back rather than rendering 'null · 5 seats'", () => {
+  assert.equal(businessPlanLabel({ active: true, baseName: null, totalSeats: 5 }), "Base · 5 seats");
 });

@@ -215,3 +215,23 @@ export function effectivePlanLabel(
     ? `${name} (via ${viaBusinessName})`
     : `${name} (via your business)`;
 }
+/**
+ * A business's plan, named with the seats it actually bought.
+ *
+ * THE SEAT COUNT IS THE PLAN, for a business, which is why it is in the label
+ * rather than a line below it: the base fee is the same for everyone and the
+ * blocks are what differ. Zero seats is still a plan and says so.
+ *
+ * "No plan" IS ONLY SAID WHEN THERE IS NONE — `active` comes from the
+ * subscription row's own status, not from `seatBlocks === 0`, which would tell
+ * a business paying the base fee that it has no plan.
+ */
+export function businessPlanLabel(plan: {
+  active: boolean;
+  baseName: string | null;
+  totalSeats: number;
+}): string {
+  if (!plan.active) return "No plan";
+  const base = plan.baseName ?? "Base";
+  return `${base} · ${plan.totalSeats} seat${plan.totalSeats === 1 ? "" : "s"}`;
+}

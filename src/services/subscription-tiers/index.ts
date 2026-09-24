@@ -424,8 +424,22 @@ export function effectiveTierLabel(effective: EffectiveProfessionalTier): string
 // ---------------------------------------------------------------------------
 
 export interface BusinessPlan {
+  /**
+   * The base tier ROW, which every business account can be shown — it is
+   * reference data, not evidence that this account holds anything. `active`
+   * below is what says whether they do.
+   */
   base: SubscriptionTier | null;
   seatAddon: SubscriptionTier | null;
+  /**
+   * Whether this account holds an active subscription at all.
+   *
+   * SEPARATE FROM seatBlocks, because zero blocks is a legitimate state for a
+   * business that pays the base fee and employs nobody yet. Inferring "no
+   * plan" from `seatBlocks === 0` would tell that account it has no plan while
+   * it is being billed for one.
+   */
+  active: boolean;
   /** How many blocks are held. Zero is the ordinary case. */
   seatBlocks: number;
   /** Blocks x seats per block. The denominator of "N of M seats used". */
@@ -445,6 +459,7 @@ export async function fetchBusinessPlan(ownerId: string): Promise<BusinessPlanRe
   const base = tiers.tiers.find((t) => !t.isAddon) ?? null;
   const seatAddon = tiers.tiers.find((t) => t.isAddon) ?? null;
 
+  let active = false;
   let seatBlocks = 0;
   try {
     const { data, error } = await supabase
@@ -459,8 +474,12 @@ export async function fetchBusinessPlan(ownerId: string): Promise<BusinessPlanRe
       };
     }
     // Only an active subscription entitles anyone to seats, exactly as
-    // fetchMySubscriptionTier treats a cancelled row as no row.
-    if (data?.status === "active") seatBlocks = data.seat_blocks ?? 0;
+    // fetchMySubscriptionTier treats a cancelled row as no row — and the same
+    // test decides whether there is a plan to name at all.
+    if (data?.status === "active") {
+      active = true;
+      seatBlocks = data.seat_blocks ?? 0;
+    }
   } catch (e) {
     return {
       ok: false,
@@ -474,6 +493,7 @@ export async function fetchBusinessPlan(ownerId: string): Promise<BusinessPlanRe
     plan: {
       base,
       seatAddon,
+      active,
       seatBlocks,
       totalSeats: seatBlocks * perBlock,
       monthlyTotal:
