@@ -9,6 +9,7 @@ import {
   type CycleSettings,
   type Condition,
   type CycleFlag,
+  type NotificationDetail,
   type Mood,
   type Symptom,
 } from "./types";
@@ -57,7 +58,7 @@ export type SettingsResult =
 
 // NO contraception COLUMN: 20260924470000 moved it to contraception_plans.
 const SETTINGS_COLUMNS =
-  "tracker_enabled, typical_cycle_length, typical_period_length, luteal_length, conditions";
+  "tracker_enabled, typical_cycle_length, typical_period_length, luteal_length, conditions, pill_reminder, method_reminders, notification_detail, timezone";
 
 function toSettings(row: {
   tracker_enabled: boolean;
@@ -65,6 +66,10 @@ function toSettings(row: {
   typical_period_length: number;
   luteal_length: number;
   conditions: string[];
+  pill_reminder: boolean;
+  method_reminders: boolean;
+  notification_detail: NotificationDetail;
+  timezone: string;
 }): CycleSettings {
   return {
     trackerEnabled: row.tracker_enabled,
@@ -72,6 +77,10 @@ function toSettings(row: {
     typicalPeriodLength: row.typical_period_length,
     lutealLength: row.luteal_length,
     conditions: row.conditions as Condition[],
+    pillReminder: row.pill_reminder,
+    methodReminders: row.method_reminders,
+    notificationDetail: row.notification_detail,
+    timezone: row.timezone,
   };
 }
 
@@ -155,6 +164,10 @@ export async function saveCycleSettings(
   if (patch.typicalPeriodLength !== undefined) patchRow.typical_period_length = patch.typicalPeriodLength;
   if (patch.lutealLength !== undefined) patchRow.luteal_length = patch.lutealLength;
   if (patch.conditions !== undefined) patchRow.conditions = patch.conditions;
+  if (patch.pillReminder !== undefined) patchRow.pill_reminder = patch.pillReminder;
+  if (patch.methodReminders !== undefined) patchRow.method_reminders = patch.methodReminders;
+  if (patch.notificationDetail !== undefined) patchRow.notification_detail = patch.notificationDetail;
+  if (patch.timezone !== undefined) patchRow.timezone = patch.timezone;
   if (Object.keys(patchRow).length === 0) return { ok: true };
 
   const { data: updated, error: updateError } = await supabase

@@ -16,6 +16,7 @@ export type LhResult = Enums<"lh_test_result">;
 export type PregnancyTest = Enums<"pregnancy_test_result">;
 export type SexActivity = Enums<"sex_activity">;
 export type Contraception = Enums<"contraception_method">;
+export type NotificationDetail = Enums<"notification_detail_level">;
 
 /** The flags my_cycle_prediction can raise. Every one has copy in ./guidance. */
 export const CYCLE_FLAGS = [
@@ -135,6 +136,21 @@ export interface CycleSettings {
   typicalPeriodLength: number;
   lutealLength: number;
   conditions: Condition[];
+  /** Remind about the pill at the plan's reminder_time. */
+  pillReminder: boolean;
+  /** Remind about a ring, patch, injection or device change. */
+  methodReminders: boolean;
+  /**
+   * How much a notification says on a lock screen.
+   *
+   * NEUTRAL IS THE DATABASE DEFAULT AND THE ONE THIS APP DEFENDS. A phone on a
+   * table shows its notifications to whoever is in the room, and "Time for
+   * your pill" tells them something the user may not have chosen to tell
+   * anybody. Neutral says there is a reminder; detailed says what for.
+   */
+  notificationDetail: NotificationDetail;
+  /** The IANA zone reminders are scheduled in. */
+  timezone: string;
 }
 
 export interface CycleDayLog {
