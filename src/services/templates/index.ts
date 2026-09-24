@@ -580,7 +580,22 @@ export async function assignTemplate(
   const { data, error } = await supabase.rpc("assign_template_to_client", {
     p_template_id: templateId,
     p_client_id: clientId,
-    p_assigned_day: assignedDay,
+    // NULL IS A REAL VALUE HERE, and the generated type cannot say so.
+    //
+    // `p_assigned_day date default null` comes back from the type generator as
+    // an OPTIONAL string — optional because it HAS a default, never nullable —
+    // which is how it renders every defaulted parameter. "Assigned, no day
+    // set" is exactly the null case, it is what AssignTemplateSheet sends when
+    // the day field is blank, and the function is written to take it.
+    //
+    // CAST RATHER THAN `?? undefined`, deliberately. Omitting the key would
+    // reach the same stored value through the SQL default, but it would change
+    // the request body this has always sent — and this commit is a type
+    // correction, not a behaviour change. The widening that used to live in
+    // database.types.ts (hand-edited in 5d9921e) moves here, where it is one
+    // line next to the reason rather than an invisible edit to generated
+    // output that the next regeneration silently reverts.
+    p_assigned_day: assignedDay as string | undefined,
     p_confirm_overwrite: confirmOverwrite,
   });
 
