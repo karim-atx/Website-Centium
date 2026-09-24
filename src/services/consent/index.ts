@@ -19,15 +19,28 @@ import type { Enums } from "../../../lib/supabase/database.types";
 export type AccessCategory = Enums<"access_category">;
 
 /**
- * The five categories, in display order.
+ * The seven categories this client surfaces, in display order.
  *
  * These snake_case values ARE the contract now. Two other spellings used to
  * exist — the professional side's camelCase (`foodDiary`) and the client
  * screen's display-label keys (`"Food diary"`) — and because neither matched
  * the other, toggling a switch on one side was invisible to the other. One
  * vocabulary, taken from the database enum.
+ *
+ * `access_category` gained `body_measurements` in Database-Atraxia
+ * 20260924320000, and it is deliberately NOT in the two lists below yet. The
+ * arrays drive the client's own sharing toggles, so adding a row here would
+ * put a new consent switch in front of every user as a side effect of
+ * regenerating types — and tape measurements are part 2 of the workout
+ * overhaul, with no capture screen and nothing to show a professional.
+ *
+ * Named rather than left implicit so the omission is a decision on the page
+ * instead of a gap somebody later reads as an oversight. Deleting the Exclude
+ * is what wiring it up looks like, and the compiler then demands both lists.
  */
-export const ACCESS_CATEGORIES: { category: AccessCategory; label: string; description: string }[] = [
+export type SurfacedAccessCategory = Exclude<AccessCategory, "body_measurements">;
+
+export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: string; description: string }[] = [
   { category: "food_diary", label: "Food diary", description: "Meals and nutrition you log" },
   { category: "workout_activity", label: "Workout activity", description: "Sessions, exercises and sets" },
   { category: "weight", label: "Weight", description: "Your weight entries over time" },
@@ -44,7 +57,7 @@ export const ACCESS_CATEGORIES: { category: AccessCategory; label: string; descr
 
 /** Maps the DB enum onto the key shape the professional-side UI reads. */
 export const accessKeyFor: Record<
-  AccessCategory,
+  SurfacedAccessCategory,
   "foodDiary" | "workoutActivity" | "weight" | "progress" | "healthMetrics" | "labResults" | "medicalHistory"
 > = {
   food_diary: "foodDiary",

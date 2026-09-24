@@ -55,8 +55,16 @@ const emptyAccess = (): RosterClient["access"] => ({
   medicalHistory: false,
 });
 
-/** access_category enum -> the key the app's UI uses. */
-const accessKeyFor: Record<Enums<"access_category">, keyof RosterClient["access"]> = {
+/**
+ * access_category enum -> the key the app's UI uses.
+ *
+ * PARTIAL, because the enum is ahead of this client: body_measurements exists
+ * in the database and has no key here yet (see SurfacedAccessCategory in
+ * services/consent). The lookup below already guarded against a miss, which
+ * is what makes a grant in a category this app does not model a skipped row
+ * rather than a crash.
+ */
+const accessKeyFor: Partial<Record<Enums<"access_category">, keyof RosterClient["access"]>> = {
   food_diary: "foodDiary",
   workout_activity: "workoutActivity",
   weight: "weight",

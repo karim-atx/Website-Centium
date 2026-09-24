@@ -2651,6 +2651,7 @@ export type Database = {
           owner_id: string
           secondary_muscle_groups: Database["public"]["Enums"]["muscle_group"][]
           source_custom_exercise_id: string | null
+          tags: string[]
           updated_at: string
         }
         Insert: {
@@ -2663,6 +2664,7 @@ export type Database = {
           owner_id: string
           secondary_muscle_groups?: Database["public"]["Enums"]["muscle_group"][]
           source_custom_exercise_id?: string | null
+          tags?: string[]
           updated_at?: string
         }
         Update: {
@@ -2675,6 +2677,7 @@ export type Database = {
           owner_id?: string
           secondary_muscle_groups?: Database["public"]["Enums"]["muscle_group"][]
           source_custom_exercise_id?: string | null
+          tags?: string[]
           updated_at?: string
         }
         Relationships: [
@@ -3201,6 +3204,7 @@ export type Database = {
           muscle_groups: Database["public"]["Enums"]["muscle_group"][]
           name: string
           secondary_muscle_groups: Database["public"]["Enums"]["muscle_group"][]
+          tags: string[]
           updated_at: string
         }
         Insert: {
@@ -3212,6 +3216,7 @@ export type Database = {
           muscle_groups?: Database["public"]["Enums"]["muscle_group"][]
           name: string
           secondary_muscle_groups?: Database["public"]["Enums"]["muscle_group"][]
+          tags?: string[]
           updated_at?: string
         }
         Update: {
@@ -3223,6 +3228,7 @@ export type Database = {
           muscle_groups?: Database["public"]["Enums"]["muscle_group"][]
           name?: string
           secondary_muscle_groups?: Database["public"]["Enums"]["muscle_group"][]
+          tags?: string[]
           updated_at?: string
         }
         Relationships: []
@@ -4185,8 +4191,10 @@ export type Database = {
       }
       logged_exercises: {
         Row: {
+          block_result_id: string | null
           created_at: string
           custom_exercise_id: string | null
+          endurance_result: Json | null
           exercise_id: string | null
           id: string
           name: string
@@ -4194,8 +4202,10 @@ export type Database = {
           workout_session_id: string
         }
         Insert: {
+          block_result_id?: string | null
           created_at?: string
           custom_exercise_id?: string | null
+          endurance_result?: Json | null
           exercise_id?: string | null
           id?: string
           name: string
@@ -4203,8 +4213,10 @@ export type Database = {
           workout_session_id: string
         }
         Update: {
+          block_result_id?: string | null
           created_at?: string
           custom_exercise_id?: string | null
+          endurance_result?: Json | null
           exercise_id?: string | null
           id?: string
           name?: string
@@ -4212,6 +4224,13 @@ export type Database = {
           workout_session_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "logged_exercises_block_result_id_fkey"
+            columns: ["block_result_id"]
+            isOneToOne: false
+            referencedRelation: "workout_block_results"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "logged_exercises_custom_exercise_id_fkey"
             columns: ["custom_exercise_id"]
@@ -4240,9 +4259,11 @@ export type Database = {
           completed: boolean
           created_at: string
           id: string
+          is_pr: boolean
           logged_exercise_id: string
           mood: number | null
           notes: string | null
+          outcome: Database["public"]["Enums"]["set_outcome"] | null
           pain: number | null
           reps: number | null
           rpe: number | null
@@ -4254,9 +4275,11 @@ export type Database = {
           completed?: boolean
           created_at?: string
           id?: string
+          is_pr?: boolean
           logged_exercise_id: string
           mood?: number | null
           notes?: string | null
+          outcome?: Database["public"]["Enums"]["set_outcome"] | null
           pain?: number | null
           reps?: number | null
           rpe?: number | null
@@ -4268,9 +4291,11 @@ export type Database = {
           completed?: boolean
           created_at?: string
           id?: string
+          is_pr?: boolean
           logged_exercise_id?: string
           mood?: number | null
           notes?: string | null
+          outcome?: Database["public"]["Enums"]["set_outcome"] | null
           pain?: number | null
           reps?: number | null
           rpe?: number | null
@@ -6398,8 +6423,53 @@ export type Database = {
           },
         ]
       }
+      routine_exercise_blocks: {
+        Row: {
+          created_at: string
+          id: string
+          interval_seconds: number | null
+          kind: Database["public"]["Enums"]["block_kind"]
+          label: string | null
+          rounds: number | null
+          routine_id: string
+          time_cap_seconds: number | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interval_seconds?: number | null
+          kind: Database["public"]["Enums"]["block_kind"]
+          label?: string | null
+          rounds?: number | null
+          routine_id: string
+          time_cap_seconds?: number | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interval_seconds?: number | null
+          kind?: Database["public"]["Enums"]["block_kind"]
+          label?: string | null
+          rounds?: number | null
+          routine_id?: string
+          time_cap_seconds?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "routine_exercise_blocks_routine_id_fkey"
+            columns: ["routine_id"]
+            isOneToOne: false
+            referencedRelation: "routines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       routine_exercises: {
         Row: {
+          block_id: string | null
           cardio_avg_heart_rate: number | null
           cardio_distance_km: number | null
           cardio_duration_min: number | null
@@ -6408,6 +6478,7 @@ export type Database = {
           created_at: string
           custom_exercise_id: string | null
           duration_seconds: number | null
+          endurance_plan: Json | null
           estimated_one_rep_max_kg: number | null
           exercise_id: string | null
           id: string
@@ -6430,6 +6501,7 @@ export type Database = {
           weight_kg: number | null
         }
         Insert: {
+          block_id?: string | null
           cardio_avg_heart_rate?: number | null
           cardio_distance_km?: number | null
           cardio_duration_min?: number | null
@@ -6438,6 +6510,7 @@ export type Database = {
           created_at?: string
           custom_exercise_id?: string | null
           duration_seconds?: number | null
+          endurance_plan?: Json | null
           estimated_one_rep_max_kg?: number | null
           exercise_id?: string | null
           id?: string
@@ -6460,6 +6533,7 @@ export type Database = {
           weight_kg?: number | null
         }
         Update: {
+          block_id?: string | null
           cardio_avg_heart_rate?: number | null
           cardio_distance_km?: number | null
           cardio_duration_min?: number | null
@@ -6468,6 +6542,7 @@ export type Database = {
           created_at?: string
           custom_exercise_id?: string | null
           duration_seconds?: number | null
+          endurance_plan?: Json | null
           estimated_one_rep_max_kg?: number | null
           exercise_id?: string | null
           id?: string
@@ -6490,6 +6565,13 @@ export type Database = {
           weight_kg?: number | null
         }
         Relationships: [
+          {
+            foreignKeyName: "routine_exercises_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "routine_exercise_blocks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "routine_exercises_custom_exercise_id_fkey"
             columns: ["custom_exercise_id"]
@@ -7499,6 +7581,62 @@ export type Database = {
           },
         ]
       }
+      workout_block_results: {
+        Row: {
+          capped: boolean | null
+          created_at: string
+          extra_reps: number | null
+          id: string
+          interval_seconds: number | null
+          kind: Database["public"]["Enums"]["block_kind"]
+          label: string | null
+          notes: string | null
+          rounds: number | null
+          rounds_completed: number | null
+          time_cap_seconds: number | null
+          time_seconds: number | null
+          workout_session_id: string
+        }
+        Insert: {
+          capped?: boolean | null
+          created_at?: string
+          extra_reps?: number | null
+          id?: string
+          interval_seconds?: number | null
+          kind: Database["public"]["Enums"]["block_kind"]
+          label?: string | null
+          notes?: string | null
+          rounds?: number | null
+          rounds_completed?: number | null
+          time_cap_seconds?: number | null
+          time_seconds?: number | null
+          workout_session_id: string
+        }
+        Update: {
+          capped?: boolean | null
+          created_at?: string
+          extra_reps?: number | null
+          id?: string
+          interval_seconds?: number | null
+          kind?: Database["public"]["Enums"]["block_kind"]
+          label?: string | null
+          notes?: string | null
+          rounds?: number | null
+          rounds_completed?: number | null
+          time_cap_seconds?: number | null
+          time_seconds?: number | null
+          workout_session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_block_results_workout_session_id_fkey"
+            columns: ["workout_session_id"]
+            isOneToOne: false
+            referencedRelation: "workout_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_sessions: {
         Row: {
           activity_date: string | null
@@ -7678,8 +7816,53 @@ export type Database = {
           },
         ]
       }
+      workout_template_exercise_blocks: {
+        Row: {
+          created_at: string
+          id: string
+          interval_seconds: number | null
+          kind: Database["public"]["Enums"]["block_kind"]
+          label: string | null
+          rounds: number | null
+          time_cap_seconds: number | null
+          updated_at: string
+          workout_template_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          interval_seconds?: number | null
+          kind: Database["public"]["Enums"]["block_kind"]
+          label?: string | null
+          rounds?: number | null
+          time_cap_seconds?: number | null
+          updated_at?: string
+          workout_template_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          interval_seconds?: number | null
+          kind?: Database["public"]["Enums"]["block_kind"]
+          label?: string | null
+          rounds?: number | null
+          time_cap_seconds?: number | null
+          updated_at?: string
+          workout_template_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_template_exercise_blocks_workout_template_id_fkey"
+            columns: ["workout_template_id"]
+            isOneToOne: false
+            referencedRelation: "workout_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_template_exercises: {
         Row: {
+          block_id: string | null
           cardio_avg_heart_rate: number | null
           cardio_distance_km: number | null
           cardio_duration_min: number | null
@@ -7688,6 +7871,7 @@ export type Database = {
           created_at: string
           custom_exercise_id: string | null
           duration_seconds: number | null
+          endurance_plan: Json | null
           estimated_one_rep_max_kg: number | null
           exercise_id: string | null
           id: string
@@ -7710,6 +7894,7 @@ export type Database = {
           workout_template_id: string
         }
         Insert: {
+          block_id?: string | null
           cardio_avg_heart_rate?: number | null
           cardio_distance_km?: number | null
           cardio_duration_min?: number | null
@@ -7718,6 +7903,7 @@ export type Database = {
           created_at?: string
           custom_exercise_id?: string | null
           duration_seconds?: number | null
+          endurance_plan?: Json | null
           estimated_one_rep_max_kg?: number | null
           exercise_id?: string | null
           id?: string
@@ -7740,6 +7926,7 @@ export type Database = {
           workout_template_id: string
         }
         Update: {
+          block_id?: string | null
           cardio_avg_heart_rate?: number | null
           cardio_distance_km?: number | null
           cardio_duration_min?: number | null
@@ -7748,6 +7935,7 @@ export type Database = {
           created_at?: string
           custom_exercise_id?: string | null
           duration_seconds?: number | null
+          endurance_plan?: Json | null
           estimated_one_rep_max_kg?: number | null
           exercise_id?: string | null
           id?: string
@@ -7770,6 +7958,13 @@ export type Database = {
           workout_template_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "workout_template_exercises_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "workout_template_exercise_blocks"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "workout_template_exercises_custom_exercise_id_fkey"
             columns: ["custom_exercise_id"]
@@ -9287,6 +9482,7 @@ export type Database = {
         }
       }
       advance_auto_streaks: { Args: never; Returns: number }
+      assert_workout_copy_complete: { Args: never; Returns: undefined }
       assign_template_to_client: {
         Args: {
           p_assigned_day?: string
@@ -9901,6 +10097,11 @@ export type Database = {
       trigger_health_data_storage_purge: { Args: never; Returns: number }
       trigger_message_attachment_purge: { Args: never; Returns: number }
       trigger_storage_purge: { Args: never; Returns: number }
+      valid_endurance_plan: { Args: { p: Json }; Returns: boolean }
+      valid_endurance_result: { Args: { r: Json }; Returns: boolean }
+      valid_endurance_step: { Args: { s: Json }; Returns: boolean }
+      valid_endurance_target: { Args: { t: Json }; Returns: boolean }
+      valid_exercise_tags: { Args: { t: string[] }; Returns: boolean }
     }
     Enums: {
       access_category:
@@ -9911,6 +10112,7 @@ export type Database = {
         | "health_metrics"
         | "lab_results"
         | "medical_history"
+        | "body_measurements"
       account_type: "customer" | "professional" | "business"
       activity_level:
         | "sedentary"
@@ -9921,6 +10123,7 @@ export type Database = {
       app_language: "en" | "ar"
       app_platform: "web" | "mobile"
       billing_period: "daily" | "monthly" | "annually"
+      block_kind: "superset" | "amrap" | "emom" | "for_time"
       blood_marker_status: "low" | "normal" | "high"
       business_type:
         | "gym"
@@ -9989,6 +10192,20 @@ export type Database = {
         | "sleep"
         | "water"
         | "calories_burned"
+        | "waist"
+        | "hips"
+        | "chest"
+        | "neck"
+        | "shoulders"
+        | "arm_left"
+        | "arm_right"
+        | "forearm_left"
+        | "forearm_right"
+        | "thigh_left"
+        | "thigh_right"
+        | "calf_left"
+        | "calf_right"
+        | "body_fat_pct"
       health_provider: "apple_health" | "android_health"
       meal_slot: "breakfast" | "lunch" | "snack" | "dinner"
       medication_route: "oral" | "injectable" | "topical" | "inhaled" | "other"
@@ -10042,6 +10259,7 @@ export type Database = {
         | "redeem_business_member_code"
       rep_max_update_mode: "no_update" | "prompt" | "prompt_with_estimate"
       request_status: "pending" | "accepted" | "rejected"
+      set_outcome: "completed" | "skipped" | "failed"
       set_type: "normal" | "warmup" | "failure" | "dropset" | "superset" | "pr"
       sex: "female" | "male" | "other"
       store_owner_type: "business" | "professional"
@@ -10218,6 +10436,7 @@ export const Constants = {
         "health_metrics",
         "lab_results",
         "medical_history",
+        "body_measurements",
       ],
       account_type: ["customer", "professional", "business"],
       activity_level: [
@@ -10230,6 +10449,7 @@ export const Constants = {
       app_language: ["en", "ar"],
       app_platform: ["web", "mobile"],
       billing_period: ["daily", "monthly", "annually"],
+      block_kind: ["superset", "amrap", "emom", "for_time"],
       blood_marker_status: ["low", "normal", "high"],
       business_type: [
         "gym",
@@ -10304,6 +10524,20 @@ export const Constants = {
         "sleep",
         "water",
         "calories_burned",
+        "waist",
+        "hips",
+        "chest",
+        "neck",
+        "shoulders",
+        "arm_left",
+        "arm_right",
+        "forearm_left",
+        "forearm_right",
+        "thigh_left",
+        "thigh_right",
+        "calf_left",
+        "calf_right",
+        "body_fat_pct",
       ],
       health_provider: ["apple_health", "android_health"],
       meal_slot: ["breakfast", "lunch", "snack", "dinner"],
@@ -10362,6 +10596,7 @@ export const Constants = {
       ],
       rep_max_update_mode: ["no_update", "prompt", "prompt_with_estimate"],
       request_status: ["pending", "accepted", "rejected"],
+      set_outcome: ["completed", "skipped", "failed"],
       set_type: ["normal", "warmup", "failure", "dropset", "superset", "pr"],
       sex: ["female", "male", "other"],
       store_owner_type: ["business", "professional"],

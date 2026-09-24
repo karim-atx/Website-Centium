@@ -14,10 +14,15 @@ import type { CustomExerciseLibraryItem, ExerciseClassification, MuscleGroup } f
 //
 // WHAT THIS FILE DELIBERATELY DOES NOT TOUCH. routine_exercises,
 // workout_template_exercises, logged_exercises and personal_records all carry
-// an exercise_id / custom_exercise_id pointing here, and all four are still
-// local-only state in this app. Nothing below writes an id into a routine: the
-// pick handed to a routine builder stays name-keyed exactly as it was, because
-// making routines reference real catalog rows is its own piece of work.
+// an exercise_id / custom_exercise_id pointing here, and each is written by
+// the service that owns it — ../routines, ../templates and ../workout/log
+// respectively. This one owns the DEFINITIONS and nothing that prescribes or
+// records them.
+//
+// That paragraph used to end "and all four are still local-only state in this
+// app", which stopped being true the moment those services landed. It is
+// corrected rather than deleted because the boundary it describes is still
+// real: a caller wanting to save a prescription goes to ../routines, not here.
 
 /**
  * One row of the public catalog.
