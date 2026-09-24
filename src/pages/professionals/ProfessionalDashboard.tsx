@@ -10,8 +10,8 @@ import {
   type HireRequestRow,
 } from "../../services/hire-inbox";
 import { AddClientSheet } from "../../components/professionals/AddClientSheet";
-import { useMySubscriptionTier } from "../../hooks/useMySubscriptionTier";
-import { tierLabel } from "../../services/subscription-tiers";
+import { useEffectiveProfessionalTier } from "../../hooks/useEffectiveProfessionalTier";
+import { effectiveTierLabel } from "../../services/subscription-tiers";
 import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { ClientDetailSheet } from "../../components/professionals/ClientDetailSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -72,7 +72,9 @@ export default function ProfessionalDashboard() {
   const [answering, setAnswering] = useState<string | null>(null);
   // Named so the cap message can say which plan ran out, rather than "your
   // plan" — the professional has never been told they are on one.
-  const { resolved: myTier } = useMySubscriptionTier("professional");
+  // The effective plan, for the reason AddClientSheet gives: a seated
+  // professional's cap comes from their business, not from a row they own.
+  const { effective: myTier } = useEffectiveProfessionalTier();
 
   const loadInbox = useCallback(async () => {
     // Returns rather than clearing, so there is no synchronous setState on the
@@ -150,7 +152,7 @@ export default function ProfessionalDashboard() {
       // have. The panel below adds the way out.
       setInboxError(
         myTier
-          ? `You've reached the client limit on your ${tierLabel(myTier.tier)} plan.`
+          ? `You've reached the client limit on your ${effectiveTierLabel(myTier)} plan.`
           : "You've reached the client limit on your plan."
       );
       setAtCap(true);

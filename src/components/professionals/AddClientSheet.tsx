@@ -3,8 +3,8 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
-import { useMySubscriptionTier } from "../../hooks/useMySubscriptionTier";
-import { capLabel, tierLabel } from "../../services/subscription-tiers";
+import { useEffectiveProfessionalTier } from "../../hooks/useEffectiveProfessionalTier";
+import { capLabel, effectiveTierLabel, tierLabel } from "../../services/subscription-tiers";
 import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { Check, Copy, UserPlus } from "lucide-react";
 
@@ -27,8 +27,13 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   // the free default. This used to read a localStorage string written by the
   // subscription screen's own demo purchase, so the cap shown here and the cap
   // the database enforces were two unrelated values.
-  const { resolved } = useMySubscriptionTier("professional");
-  const tier = resolved?.tier;
+  // THE EFFECTIVE PLAN, not the account's own subscription. A professional
+  // seated in a business holds no subscription_states row of their own, so
+  // useMySubscriptionTier answered Free — one client — while the cap trigger
+  // consulted effective_professional_tier and allowed five. The sheet would
+  // have refused a client the database was ready to accept.
+  const { effective } = useEffectiveProfessionalTier();
+  const tier = effective?.tier;
   /**
    * The tier whose cap has been reached, or null — one value rather than a
    * boolean plus a separately-nullable tier, so the panel below cannot render
@@ -91,7 +96,8 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
       {capReached ? (
         <div className="text-center animate-fade-slide-up py-4">
           <p className="text-sm font-bold text-charcoal mb-1.5">
-            You've reached the client limit on your {tierLabel(capReached)} plan.
+            You've reached the client limit on your{" "}
+            {effective ? effectiveTierLabel(effective) : tierLabel(capReached)} plan.
           </p>
           <p className="text-sm text-charcoal-soft mb-4">
             {capLabel(capReached, professionalClients.length)}. Disconnect a client to free a
