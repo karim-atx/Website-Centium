@@ -416,17 +416,26 @@ export const ClientDetailSheet: React.FC<{
           <div className="bg-cream-soft rounded-2xl p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1">Weight</p>
-              <p className="text-xl font-bold text-charcoal">{client.lastWeightKg} kg</p>
+              {/* NO READING, NO NUMBER. `{client.lastWeightKg} kg` rendered a
+                  bare "kg" for a client who has logged none, and the trend
+                  beside it read `?? 0` — so a client with no weight history at
+                  all was shown a downward arrow and a zero, which is a finding
+                  nobody measured. */}
+              <p className="text-xl font-bold text-charcoal">
+                {client.lastWeightKg != null ? `${client.lastWeightKg} kg` : "—"}
+              </p>
             </div>
-            <span
-              className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
-                (client.weightTrend ?? 0) <= 0
-                  ? "text-primary-deep-text bg-primary-pale"
-                  : "text-charcoal-soft dark:text-teal-deep-text bg-teal-pale"
-              }`}
-            >
-              {(client.weightTrend ?? 0) <= 0 ? "↓" : "↑"} {Math.abs(client.weightTrend ?? 0)} kg
-            </span>
+            {client.weightTrend != null && (
+              <span
+                className={`text-xs font-semibold rounded-full px-2 py-0.5 ${
+                  client.weightTrend <= 0
+                    ? "text-primary-deep-text bg-primary-pale"
+                    : "text-charcoal-soft dark:text-teal-deep-text bg-teal-pale"
+                }`}
+              >
+                {client.weightTrend <= 0 ? "↓" : "↑"} {Math.abs(client.weightTrend)} kg
+              </span>
+            )}
           </div>
         )}
 
