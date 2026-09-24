@@ -1,5 +1,6 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { effectivePlanLabel } from "./pricing";
 import type { Enums } from "../../../lib/supabase/database.types";
 
 // The subscription tiers, read from the table that defines them.
@@ -399,11 +400,7 @@ export async function fetchEffectiveProfessionalTier(
 
 /** "Starter (via Iron Works)", or just the plan name when it is their own. */
 export function effectiveTierLabel(effective: EffectiveProfessionalTier): string {
-  if (effective.source === "business_seat" && effective.viaBusinessName) {
-    return `${effective.tier.name} (via ${effective.viaBusinessName})`;
-  }
-  if (effective.source === "business_seat") return `${effective.tier.name} (via your business)`;
-  return tierLabel(effective.tier);
+  return effectivePlanLabel(effective.tier.name, effective.source, effective.viaBusinessName);
 }
 
 // ---------------------------------------------------------------------------
@@ -469,16 +466,6 @@ export async function fetchBusinessPlan(ownerId: string): Promise<BusinessPlanRe
   };
 }
 
-/**
- * How a plan is named wherever one appears.
- *
- * "Starter (free)" rather than "Starter", because free is the single fact
- * about it that changes what someone does next — and because the screens this
- * appears on otherwise show a price beside every other plan.
- */
-export function tierLabel(tier: SubscriptionTier): string {
-  return tier.monthlyPrice === 0 ? `${tier.name} (free)` : tier.name;
-}
 
 /**
  * "1 of 1 clients used", or "3 clients" when the plan has no cap.

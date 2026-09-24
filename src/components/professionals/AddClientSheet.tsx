@@ -4,7 +4,8 @@ import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { useEffectiveProfessionalTier } from "../../hooks/useEffectiveProfessionalTier";
-import { capLabel, effectiveTierLabel, tierLabel } from "../../services/subscription-tiers";
+import { capLabel, effectiveTierLabel } from "../../services/subscription-tiers";
+import { planLabel } from "../../services/subscription-tiers/pricing";
 import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { Check, Copy, UserPlus } from "lucide-react";
 
@@ -97,7 +98,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
         <div className="text-center animate-fade-slide-up py-4">
           <p className="text-sm font-bold text-charcoal mb-1.5">
             You've reached the client limit on your{" "}
-            {effective ? effectiveTierLabel(effective) : tierLabel(capReached)} plan.
+            {effective ? effectiveTierLabel(effective) : planLabel(capReached.name)} plan.
           </p>
           <p className="text-sm text-charcoal-soft mb-4">
             {capLabel(capReached, professionalClients.length)}. Disconnect a client to free a

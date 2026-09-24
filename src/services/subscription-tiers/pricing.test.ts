@@ -2,9 +2,11 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
   businessSummary,
+  effectivePlanLabel,
   formatPercent,
   formatPrice,
   monthlyEquivalent,
+  planLabel,
   priceLabel,
   professionalSummary,
   savingLabel,
@@ -130,4 +132,38 @@ test("the professional line names the free cap and the cheapest paid plan", () =
 test("an uncapped free tier, and one with nothing paid above it, both read", () => {
   assert.equal(professionalSummary(null, 14.99), "Free for unlimited clients · paid plans from $14.99");
   assert.equal(professionalSummary(1, null), "Free for 1 client");
+});
+
+// --- how a plan is named -----------------------------------------------------
+
+test("a plan is named by its name, with nothing appended", () => {
+  // It read "Free (free)" — the label appending a fact the name already was.
+  assert.equal(planLabel("Free"), "Free");
+  assert.equal(planLabel("Premium"), "Premium");
+  assert.equal(planLabel("Starter"), "Starter");
+});
+
+test("the price beside it is what says free, and priceLabel already does", () => {
+  // Which is why the suffix was a third telling: the row shows the name, the
+  // price column shows "Free", and the label used to say it again.
+  assert.equal(priceLabel(0, null, "monthly"), "Free");
+  assert.equal(planLabel("Free"), "Free");
+});
+
+test("an own plan is named plainly, whichever way it was come by", () => {
+  assert.equal(effectivePlanLabel("Pro", "own_subscription"), "Pro");
+  assert.equal(effectivePlanLabel("Free", "default"), "Free");
+  // A business name is irrelevant unless the plan actually came from a seat.
+  assert.equal(effectivePlanLabel("Pro", "own_subscription", "Iron Works"), "Pro");
+});
+
+test("a seated plan names the business it depends on", () => {
+  assert.equal(effectivePlanLabel("Starter", "business_seat", "Iron Works"), "Starter (via Iron Works)");
+});
+
+test("a seat whose business could not be named still says it is a seat", () => {
+  // The tier resolves from one call and the business name from a second; a
+  // failure to name the business is not a failure to resolve the plan, and
+  // the professional still needs to know the plan is not theirs.
+  assert.equal(effectivePlanLabel("Starter", "business_seat"), "Starter (via your business)");
 });

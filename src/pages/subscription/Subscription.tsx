@@ -6,11 +6,12 @@ import { useMySubscriptionTier } from "../../hooks/useMySubscriptionTier";
 import { useEffectiveProfessionalTier } from "../../hooks/useEffectiveProfessionalTier";
 import { useBusinessPlan } from "../../hooks/useBusinessPlan";
 import { useBusinessTeam } from "../../hooks/useBusinessTeam";
-import { capLabel, effectiveTierLabel, tierLabel } from "../../services/subscription-tiers";
+import { capLabel, effectiveTierLabel } from "../../services/subscription-tiers";
 import {
   formatPrice,
   yearlySaving,
   NO_PAYMENTS_NOTE,
+  planLabel,
   type BillingPeriod,
 } from "../../services/subscription-tiers/pricing";
 import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
@@ -124,7 +125,7 @@ function ClientSubscription() {
           <p className="text-sm font-semibold text-status-high">{planError}</p>
         ) : current ? (
           <p className="text-sm text-primary-dark">
-            You're on <span className="font-bold">{tierLabel(current)}</span>
+            You're on <span className="font-bold">{planLabel(current.name)}</span>
           </p>
         ) : (
           <p className="text-sm text-primary-dark">Your plan couldn't be identified.</p>

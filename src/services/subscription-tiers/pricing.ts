@@ -178,3 +178,40 @@ export function limitLabel(tier: {
  */
 export const NO_PAYMENTS_NOTE =
   "Payments aren't available in the app yet. We'll set up your plan for you.";
+
+/**
+ * How a plan is named wherever one appears.
+ *
+ * NO "(free)" SUFFIX. It read "Free (free)" — the label appended a fact the
+ * name already was. It existed because the screens showing it otherwise put a
+ * price beside every plan, and a free one had none; that stopped being true
+ * when priceLabel started rendering "Free" for a $0 plan, so the suffix was
+ * saying the same thing a third time.
+ *
+ * Checked against the data rather than assumed: both $0 rows — client Free and
+ * professional Free — are named exactly "Free", so a conditional suffix would
+ * have had no case in which it fired. If a $0 tier ever arrives under another
+ * name, the price beside it still reads "Free"; this is where a suffix would
+ * go back if that turned out not to be enough.
+ */
+export const planLabel = (name: string): string => name;
+
+/**
+ * A professional's plan, named with where it came from.
+ *
+ * WHOSE PLAN IT IS belongs in the label: a seated professional keeps theirs
+ * only while the affiliation lasts, which is not something to discover when
+ * it ends. The business is named when it is known, because "via Iron Works"
+ * tells somebody which relationship to protect and "via your business" does
+ * not.
+ */
+export function effectivePlanLabel(
+  name: string,
+  source: "own_subscription" | "business_seat" | "default",
+  viaBusinessName?: string
+): string {
+  if (source !== "business_seat") return planLabel(name);
+  return viaBusinessName
+    ? `${name} (via ${viaBusinessName})`
+    : `${name} (via your business)`;
+}
