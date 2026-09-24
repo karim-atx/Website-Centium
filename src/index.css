@@ -439,6 +439,18 @@ body {
   }
 }
 
+/* A personal record still reads as one without moving. The glow is the only
+   looping animation on a set row, and a pulse that never stops is exactly
+   what a reduced-motion setting is asking not to see — so the ring becomes a
+   static gold outline rather than disappearing, which would take the
+   celebration away instead of calming it. */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pr-glow {
+    animation: none !important;
+    box-shadow: 0 0 0 2px rgba(200, 145, 43, 0.55) !important;
+  }
+}
+
 /* Design refinement: the one text role repeated on nearly every screen —
    section labels ("WEIGHT GOAL", "TODAY", "BIOMARKERS"...). Quieter than
    the old 12px/600/wide-tracking convention. */

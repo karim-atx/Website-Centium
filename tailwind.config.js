@@ -265,6 +265,13 @@ export default {
           "0%": { backgroundColor: "#DED7F1" },
           "100%": { backgroundColor: "#EFECF8" },
         },
+        // A personal record, which is the one set worth celebrating on the
+        // row itself. Gold rather than the accent colour, which the theme
+        // picker swaps — a PR should look the same whoever set it.
+        "pr-glow": {
+          "0%, 100%": { boxShadow: "0 0 0 0 rgba(200,145,43,0.45)" },
+          "50%": { boxShadow: "0 0 0 4px rgba(200,145,43,0)" },
+        },
         // §7.2: streak-increase burst — the app's one emotional moment,
         // resolving in under 700ms and never looping.
         "streak-flame": {
@@ -411,6 +418,7 @@ export default {
         "set-tick-ring": "set-tick-ring 0.55s cubic-bezier(0.22,1,0.36,1) both",
         "set-tick-check": "set-tick-check 0.34s cubic-bezier(0.22,1,0.36,1) 60ms both",
         "set-row-settle": "set-row-settle 0.55s ease-out both",
+        "pr-glow": "pr-glow 2.4s ease-in-out infinite",
         "streak-flame": "streak-flame 0.6s cubic-bezier(0.22,1,0.36,1) both",
         "streak-ember-ring": "streak-ember-ring 0.62s cubic-bezier(0.22,1,0.36,1) both",
         "streak-count-roll": "streak-count-roll 0.5s cubic-bezier(0.22,1,0.36,1) both",

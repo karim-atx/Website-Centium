@@ -63,8 +63,8 @@ export default function Home() {
     .find((r) => !!r);
   const suggested = lastTrainedRoutine ?? routines[0];
   const quickWorkout = suggested
-    ? { routineId: suggested.id, name: suggested.name, exercises: suggested.exercises }
-    : { routineId: null, name: todaysWorkout.name, exercises: todaysWorkout.exercises };
+    ? { routineId: suggested.id, name: suggested.name, exercises: suggested.exercises, blocks: suggested.blocks }
+    : { routineId: null, name: todaysWorkout.name, exercises: todaysWorkout.exercises, blocks: undefined };
 
   // V5 (QA 5.0): professionals no longer have a Home/Food/Workout/Health
   // dashboard of their own — "My Clients" is their main page instead,
@@ -200,6 +200,7 @@ export default function Home() {
         routineId={quickWorkout.routineId}
         routineName={quickWorkout.name}
         exercises={quickWorkout.exercises}
+        blocks={quickWorkout.blocks}
       />
       <AddMetricSheet open={metricOpen} onClose={() => setMetricOpen(false)} />
       <GymPassesSheet open={gymPassesOpen} onClose={() => setGymPassesOpen(false)} />
