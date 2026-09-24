@@ -27,7 +27,7 @@ import {
   outcomeOf,
   setRowCount,
 } from "../../services/workout/session";
-import { isRoundBased, prescriptionLine } from "../../services/workout/prescription";
+import { formatSeconds, isRoundBased, prescriptionLine, supersetLetter } from "../../services/workout/prescription";
 import { blockProblems, blockScore, checkBlockResult } from "../../services/workout/results";
 import { groupIntoRuns } from "../../services/workout/blocks";
 import { BlockRunner } from "./BlockRunner";
@@ -335,6 +335,95 @@ export const WorkoutSessionSheet: React.FC<{
     blocks.find((b) => b.id === ex.blockId)?.kind ?? "superset";
 
 
+  /**
+   * A superset, run the way a superset is actually performed.
+   *
+   * ROUND BY ROUND, NOT EXERCISE BY EXERCISE. A1, B1, rest, A2, B2, rest —
+   * which is the entire point of grouping them. Listing each movement with
+   * its own block of sets, as every other exercise is listed, tells somebody
+   * to do three sets of bench and then three sets of rows, which is the thing
+   * a superset is not.
+   *
+   * THE ROUND COUNT IS THE LONGEST MEMBER'S. A pairing where one movement is
+   * prescribed four sets and the other three is a real prescription, and the
+   * fourth round simply has one row in it rather than two.
+   *
+   * REST BELONGS TO THE ROUND, so it is shown once after the pair rather than
+   * under each member — resting between A and B would make it two exercises
+   * again. The value is the longest rest any member asks for: whoever wrote
+   * 90 seconds on the heavier lift meant 90 seconds before going again.
+   */
+  const renderSupersetRounds = (members: Exercise[]) => {
+    const rows = members
+      .map((meta) => ({ meta, exIdx: logged.findIndex((l) => l.exerciseId === meta.id) }))
+      .filter((m) => m.exIdx >= 0);
+    if (rows.length === 0) return null;
+
+    const roundCount = Math.max(...rows.map((m) => logged[m.exIdx].sets.length));
+    const restSeconds = Math.max(0, ...members.map((m) => m.restSeconds ?? 0));
+
+    return (
+      <div>
+        {Array.from({ length: roundCount }).map((_, round) => (
+          <div key={round} style={{ marginBottom: 10 }}>
+            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-charcoal-faint mb-1">
+              Round {round + 1}
+            </p>
+            <div className="rounded-2xl border border-charcoal/[0.11] divide-y divide-charcoal/[0.06] overflow-hidden">
+              {rows.map(({ meta, exIdx }, memberIndex) => {
+                const ex = logged[exIdx];
+                const s = ex.sets[round];
+                if (!s) return null;
+                return (
+                  <div key={ex.exerciseId}>
+                    <div className="flex items-center justify-between px-3 pt-2">
+                      <span className="text-[11.5px] font-semibold text-charcoal">
+                        {/* The letter is what a coach writes on the sheet —
+                            "A1", "B1" — and is what makes the order readable
+                            without counting rows. */}
+                        {supersetLetter(memberIndex)}
+                        {round + 1} · {ex.name}
+                      </span>
+                      <span className="text-[10px] text-charcoal-faint">
+                        {prescriptionLine(meta, { perRound: false }) || ""}
+                      </span>
+                    </div>
+                    <SetRow
+                      set={s}
+                      justTicked={!!tickKey?.startsWith(`${exIdx}-${round}-t`)}
+                      tickKey={tickKey}
+                      repsPlaceholder={repsPlaceholder(meta)}
+                      weightPlaceholder={String(meta.weightKg || lastWeightFor(ex.name) || 0)}
+                      onChange={(patch) => updateSet(exIdx, round, patch)}
+                      onOutcome={(outcome) => setOutcome(exIdx, round, outcome)}
+                      onTogglePr={() => togglePr(exIdx, round)}
+                      onOptions={() => setSetOptionsTarget({ exIdx, setIdx: round })}
+                    />
+                  </div>
+                );
+              })}
+            </div>
+            {restSeconds > 0 && round < roundCount - 1 && (
+              <p className="text-[10.5px] text-charcoal-faint" style={{ marginTop: 4, paddingLeft: 2 }}>
+                Rest {formatSeconds(restSeconds)} before the next round.
+              </p>
+            )}
+          </div>
+        ))}
+        <button
+          onClick={() => rows.forEach(({ exIdx }) => addSet(exIdx))}
+          className="tap flex items-center gap-1.5 text-xs font-semibold text-primary"
+        >
+          {/* One more round, not one more set of one movement — adding a set
+              to half a superset is the same mistake as rendering it as two
+              separate exercises. */}
+          <Plus size={12} /> Add a round
+        </button>
+      </div>
+    );
+  };
+
+
   const renderExercise = (meta: Exercise, inBlock: boolean) => {
     const exIdx = logged.findIndex((l) => l.exerciseId === meta.id);
     if (exIdx < 0) return null;
@@ -555,7 +644,9 @@ export const WorkoutSessionSheet: React.FC<{
                 setStarted(true);
               }}
             >
-              {run.members.map((meta) => renderExercise(meta, true))}
+              {run.block.kind === "superset"
+                ? renderSupersetRounds(run.members)
+                : run.members.map((meta) => renderExercise(meta, true))}
             </BlockRunner>
           ) : (
             run.members.map((meta) => renderExercise(meta, false))
