@@ -145,3 +145,36 @@ export function professionalSummary(
       : `Free for ${freeCap} ${freeCap === 1 ? "client" : "clients"}`;
   return cheapestPaid == null ? free : `${free} · paid plans from ${formatPrice(cheapestPaid)}`;
 }
+
+
+/**
+ * What a plan allows, in the noun its own cap is counted in.
+ *
+ * The two columns are never both set on one row — professionals are capped
+ * on clients and businesses on employees — so this reads whichever the row
+ * carries and says nothing when neither is set, which is what unlimited
+ * looks like in this table.
+ */
+export function limitLabel(tier: {
+  maxClients: number | null;
+  maxEmployees: number | null;
+}): string | null {
+  if (tier.maxClients !== null) {
+    return `Up to ${tier.maxClients} client${tier.maxClients === 1 ? "" : "s"}`;
+  }
+  if (tier.maxEmployees !== null) {
+    return `Up to ${tier.maxEmployees} professional${tier.maxEmployees === 1 ? "" : "s"}`;
+  }
+  return null;
+}
+
+/**
+ * The one honest sentence about buying, shared by every screen that shows a
+ * plan.
+ *
+ * Said once rather than worded three ways — the three subscription screens
+ * disagreed about what was possible, one of them promising "no payment will
+ * be processed" under a button that looked exactly like a purchase.
+ */
+export const NO_PAYMENTS_NOTE =
+  "Payments aren't available in the app yet. We'll set up your plan for you.";
