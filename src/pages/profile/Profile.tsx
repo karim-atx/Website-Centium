@@ -16,7 +16,14 @@ import { AVATAR_ACCEPT, removeAvatar, uploadAvatar } from "../../services/avatar
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
 import { MembershipsCard } from "../../components/profile/MembershipsCard";
 import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
-import { updateBodyMetric, updateDateOfBirth } from "../../services/profile";
+import { updateBodyMetric, updateDateOfBirth, updateSex } from "../../services/profile";
+import type { Sex } from "../../types";
+import {
+  SEX_CHANGE_KEEP,
+  SEX_CHANGE_TRACKER_BODY,
+  SEX_CHANGE_TRACKER_TITLE,
+  SEX_CHANGE_TURN_OFF,
+} from "../../services/cycle/guidance";
 import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
 import {
   ageFromDateOfBirth,
@@ -66,6 +73,8 @@ export default function Profile() {
     setRecoverySensitiveIntroSeen,
     remindersPaused,
     setRemindersPaused,
+    cycleSettings,
+    saveCycleSettingsAndReload,
   } = useApp();
   const isAmbassador = useIsAmbassador();
   const { reviews: myReviews, loading: reviewsLoading, error: reviewsError } = useReviewsAboutMe();
@@ -82,6 +91,14 @@ export default function Profile() {
   // nowhere to put an error or a saving state. Each card therefore opens a
   // sheet, matching the date-of-birth editor.
   const [metricOpen, setMetricOpen] = useState<"weightKg" | "heightCm" | null>(null);
+  // Sex, editable after onboarding for the first time. It was collected once
+  // and then unreachable, while four things read it -- the BMR constant behind
+  // every calorie target, the test recommendations, the exercise-library
+  // figure, and now the cycle tracker's default.
+  const [sexOpen, setSexOpen] = useState(false);
+  const [sexSaving, setSexSaving] = useState(false);
+  const [sexError, setSexError] = useState<string | null>(null);
+  const [trackerPrompt, setTrackerPrompt] = useState(false);
   const [metricDraft, setMetricDraft] = useState("");
   const [metricError, setMetricError] = useState<string | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
@@ -168,6 +185,27 @@ export default function Profile() {
     // hydration reads the same value back from the server.
     updateProfile({ [metricOpen]: value });
     setMetricOpen(null);
+  };
+
+  const saveSex = async (sex: Sex) => {
+    if (!authUserId) {
+      setSexError("You need to be signed in to change this.");
+      return;
+    }
+    setSexSaving(true);
+    setSexError(null);
+    const result = await updateSex(authUserId, sex);
+    setSexSaving(false);
+    if (!result.ok) {
+      setSexError(result.message ?? "Could not save that. Try again.");
+      return;
+    }
+    // RECALCULATES, NEVER DELETES. updateProfile feeds the new value straight
+    // back into calculateTDEE and getTestRecommendations, which is the whole
+    // of what depends on it. The tracker is asked about rather than acted on.
+    updateProfile({ sex });
+    setSexOpen(false);
+    if (sex === "male" && cycleSettings?.trackerEnabled) setTrackerPrompt(true);
   };
 
   const openDobEditor = () => {
@@ -376,6 +414,22 @@ export default function Profile() {
               <p className="text-[11px] text-charcoal-faint">{f.unit}</p>
             </Card>
           ))}
+
+          {/* SEX, EDITABLE AT LAST. It was set once at onboarding and had no
+              editor anywhere, while the BMR constant behind every calorie
+              target read it. */}
+          <Card
+            key="sex"
+            interactive
+            onClick={() => {
+              setSexError(null);
+              setSexOpen(true);
+            }}
+            className="text-center animate-fade-slide-up"
+          >
+            <p className="text-lg font-bold text-charcoal capitalize">{user.sex}</p>
+            <p className="text-[11px] text-charcoal-faint">sex</p>
+          </Card>
 
           {/* Age keeps its place in the row but is no longer typed into — it
               is derived from date of birth, so editing the number directly
@@ -675,6 +729,65 @@ export default function Profile() {
       />
       {/* Weight and height. One sheet for both — the fields differ only by
           label, unit and bound, and two near-identical sheets would drift. */}
+      <BottomSheet open={sexOpen} onClose={() => setSexOpen(false)} title="Sex">
+        <div className="animate-fade-slide-up">
+          <p className="text-[12.5px] text-charcoal-soft mb-3 leading-relaxed">
+            Used to estimate your calorie needs and to suggest which health checks may be
+            relevant.
+          </p>
+          <div className="flex flex-col gap-2">
+            {(["female", "male", "other"] as Sex[]).map((option) => (
+              <button
+                key={option}
+                onClick={() => void saveSex(option)}
+                disabled={sexSaving}
+                className={`tap w-full rounded-2xl px-4 py-3 text-left text-sm font-semibold capitalize disabled:opacity-40 ${
+                  user.sex === option
+                    ? "bg-primary text-white"
+                    : "bg-cream-soft text-charcoal"
+                }`}
+              >
+                {option}
+              </button>
+            ))}
+          </div>
+          {sexError && (
+            <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
+              {sexError}
+            </p>
+          )}
+        </div>
+      </BottomSheet>
+
+      {/* ASKED, NEVER ASSUMED. Changing this field must not silently switch off
+          a tracker somebody is using, or delete anything they logged. */}
+      <BottomSheet
+        open={trackerPrompt}
+        onClose={() => setTrackerPrompt(false)}
+        title={SEX_CHANGE_TRACKER_TITLE}
+      >
+        <div className="animate-fade-slide-up">
+          <p className="text-[13px] text-charcoal-soft mb-4 leading-relaxed">
+            {SEX_CHANGE_TRACKER_BODY}
+          </p>
+          <div className="flex gap-2">
+            <Button fullWidth onClick={() => setTrackerPrompt(false)}>
+              {SEX_CHANGE_KEEP}
+            </Button>
+            <Button
+              fullWidth
+              variant="secondary"
+              onClick={() => {
+                void saveCycleSettingsAndReload({ trackerEnabled: false });
+                setTrackerPrompt(false);
+              }}
+            >
+              {SEX_CHANGE_TURN_OFF}
+            </Button>
+          </div>
+        </div>
+      </BottomSheet>
+
       <BottomSheet
         open={metricOpen !== null}
         onClose={() => setMetricOpen(null)}

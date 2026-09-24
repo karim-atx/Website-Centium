@@ -250,6 +250,30 @@ export async function updateDateOfBirth(
  * deliberately changing one value and watching for it to stick, so a silent
  * no-op is worse than an error.
  */
+/**
+ * Writes profiles.sex.
+ *
+ * ITS OWN FUNCTION, not folded into updateBodyMetric, because it is not a body
+ * metric: height and weight are measurements that feed a formula, and this is
+ * how somebody describes themselves. It happens to change the same formula,
+ * which is a consequence rather than the reason.
+ *
+ * NOTHING ELSE HAPPENS HERE. It does not touch cycle_settings, does not delete
+ * a log and does not switch a tracker off -- see SEX_CHANGE_TRACKER_BODY for
+ * why that is asked rather than assumed.
+ */
+export async function updateSex(
+  userId: string,
+  sex: Sex
+): Promise<{ ok: boolean; message?: string }> {
+  const { error } = await supabase.from("profiles").update({ sex }).eq("id", userId);
+  if (error) {
+    console.error("[profile] Could not save sex:", error.message);
+    return { ok: false, message: error.message };
+  }
+  return { ok: true };
+}
+
 export async function updateBodyMetric(
   userId: string,
   field: "weight_kg" | "height_cm",
