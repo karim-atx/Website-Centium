@@ -20,7 +20,12 @@ import {
 import { cycleStats, hasEnoughForInsights, shiftDay, symptomGrid } from "../../services/cycle/insights";
 import { daysBetween, ovulationDayFrom } from "../../services/cycle/hormones";
 import * as G from "../../services/cycle/guidance";
-import { ChevronLeft, Info, Plus, Trash2 } from "lucide-react";
+import * as PG from "../../services/pregnancy/guidance";
+import { PregnancyOverview } from "../../components/pregnancy/PregnancyOverview";
+import { StartPregnancySheet } from "../../components/pregnancy/StartPregnancySheet";
+import { EndPregnancySheet } from "../../components/pregnancy/EndPregnancySheet";
+import { gestationOn } from "../../services/pregnancy";
+import { ChevronLeft, ChevronRight, Info, Plus, Trash2 } from "lucide-react";
 
 // The cycle tracker.
 //
@@ -34,8 +39,8 @@ import { ChevronLeft, Info, Plus, Trash2 } from "lucide-react";
 // a reader can see at a glance that nothing on this page writes its own copy.
 
 type Tab = "overview" | "insights" | "settings";
-const TABS: SegmentedTabItem[] = [
-  { key: "overview", label: "Cycle" },
+const tabsFor = (pregnant: boolean): SegmentedTabItem[] => [
+  { key: "overview", label: pregnant ? "Pregnancy" : "Cycle" },
   { key: "insights", label: "Insights" },
   { key: "settings", label: "Settings" },
 ];
@@ -56,6 +61,9 @@ export default function Cycle() {
     cyclePrediction,
     reloadCycle,
     saveCycleSettingsAndReload,
+    pregnancy,
+    lastEndedPregnancy,
+    reloadPregnancy,
   } = useApp();
 
   const [tab, setTab] = useState<Tab>("overview");
@@ -63,6 +71,8 @@ export default function Cycle() {
   const [logOpen, setLogOpen] = useState(false);
   const [logDate, setLogDate] = useState(todayISO());
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [startPregnancyOpen, setStartPregnancyOpen] = useState(false);
+  const [endPregnancyOpen, setEndPregnancyOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -70,8 +80,23 @@ export default function Cycle() {
   const prediction = cyclePrediction;
   const settings = cycleSettings;
 
+  // SWITCHED OFF IS NOT THE SAME AS NEVER SET UP, and the difference decides
+  // which of the two "no prediction" screens this is. my_cycle_prediction()
+  // returns nothing in both cases, so without this test the setup screen — the
+  // one with no tabs on it — swallows anybody who turned the tracker off and
+  // leaves them no route back to the switch. After a loss, where the app
+  // switches it off on the user's behalf, that screen would also be asking
+  // when their last period started.
+  const trackerOff = settings !== null && !settings.trackerEnabled;
+
   // --- the setup / empty state ---------------------------------------------
-  if (cycleSettingsLoaded && !prediction) {
+  //
+  // A PREGNANCY OUTRANKS THE SETUP STATE. my_cycle_prediction() returns
+  // nothing while the tracker is off, which is exactly the state an
+  // after-a-loss pause leaves behind — and it is also reachable by switching
+  // the tracker off mid-pregnancy. Either way, showing "set up the tracker"
+  // to somebody who is being tracked would be wrong.
+  if (cycleSettingsLoaded && !prediction && !pregnancy && !trackerOff) {
     return (
       <div className="animate-fade-slide-up">
         <BackRow onBack={() => navigate(-1)} />
@@ -87,18 +112,39 @@ export default function Cycle() {
             <Plus size={14} /> {G.SETUP_CTA}
           </Button>
         </Card>
-        <p className="mt-3 text-[10.5px] text-charcoal-faint text-center">{G.DISCLAIMER}</p>
+        {/* THE SETUP STATE OFFERS PREGNANCY TOO. There is no Settings tab to
+            reach from here, and somebody who opens the tracker already
+            pregnant should not have to log a period first to say so. */}
+        <button
+          onClick={() => setStartPregnancyOpen(true)}
+          className="tap w-full mt-2 py-2 text-[12px] font-semibold text-primary-dark"
+        >
+          {PG.START_TITLE}
+        </button>
+        <p className="mt-2 text-[10.5px] text-charcoal-faint text-center">{G.DISCLAIMER}</p>
         <LogDaySheet
           open={logOpen}
           onClose={() => setLogOpen(false)}
           date={logDate}
           onSaved={reloadCycle}
+          onStartPregnancy={() => {
+            setLogOpen(false);
+            setStartPregnancyOpen(true);
+          }}
+        />
+        <StartPregnancySheet
+          open={startPregnancyOpen}
+          onClose={() => setStartPregnancyOpen(false)}
+          onStarted={() => {
+            reloadPregnancy();
+            reloadCycle();
+          }}
         />
       </div>
     );
   }
 
-  if (!prediction || !settings) {
+  if (!settings || (!prediction && !pregnancy && !trackerOff)) {
     return (
       <div className="animate-fade-slide-up">
         <BackRow onBack={() => navigate(-1)} />
@@ -112,18 +158,24 @@ export default function Cycle() {
   // --- the selected day -----------------------------------------------------
   const selectedDate = shiftDay(today, offsetDays);
   const cycleLength = settings.typicalCycleLength;
-  const currentDay = prediction.cycleDay ?? 1;
+  const currentDay = prediction?.cycleDay ?? 1;
   // The scrubber moves through the CYCLE, so day 1 + offset wraps at the
   // predicted length rather than running off the end of it.
   const selectedDay = ((currentDay - 1 + offsetDays) % cycleLength + cycleLength) % cycleLength + 1;
 
-  const ovulationDay = ovulationDayFrom(prediction.cycleDay, today, prediction.ovulationEstimate);
+  const ovulationDay = ovulationDayFrom(
+    prediction?.cycleDay ?? null,
+    today,
+    prediction?.ovulationEstimate ?? null
+  );
   const isNatural =
-    prediction.phase !== "hormonal_contraception" && prediction.phase !== "pregnant";
+    prediction !== null &&
+    prediction.phase !== "hormonal_contraception" &&
+    prediction.phase !== "pregnant";
 
   /** Which phase a given cycle day falls in, for colouring the ring. */
   const phaseOfDay = (day: number): CyclePhase => {
-    if (!isNatural) return prediction.phase;
+    if (!isNatural) return prediction?.phase ?? "menstrual";
     if (day <= settings.typicalPeriodLength) return "menstrual";
     if (ovulationDay !== null) {
       if (day >= ovulationDay - 1 && day <= ovulationDay + 1) return "ovulatory";
@@ -139,7 +191,9 @@ export default function Cycle() {
   // --- the headline ---------------------------------------------------------
   let headline: string;
   let subline: string | null = null;
-  if (prediction.phase === "pregnant") {
+  if (!prediction) {
+    headline = "";
+  } else if (prediction.phase === "pregnant") {
     headline = prediction.pregnancyWeek !== null ? `Week ${prediction.pregnancyWeek}` : "Pregnant";
     subline = prediction.trimester !== null ? `Trimester ${prediction.trimester}` : null;
   } else if (offsetDays !== 0) {
@@ -173,7 +227,11 @@ export default function Cycle() {
   return (
     <div className="animate-fade-slide-up">
       <BackRow onBack={() => navigate(-1)} />
-      <SegmentedTabs items={TABS} activeKey={tab} onChange={(k) => setTab(k as Tab)} />
+      <SegmentedTabs
+        items={tabsFor(pregnancy !== null)}
+        activeKey={tab}
+        onChange={(k) => setTab(k as Tab)}
+      />
 
       {error && (
         <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
@@ -182,7 +240,61 @@ export default function Cycle() {
       )}
 
       {/* ================= OVERVIEW ================= */}
-      {tab === "overview" && (
+      {/* THE PREGNANCY VIEW REPLACES THE CYCLE VIEW, rather than sitting above
+          it. A ring predicting a period beside a pregnancy week count would be
+          two answers to one question — which is also why the database's
+          prediction reports 'pregnant' and nothing else. */}
+      {tab === "overview" && pregnancy && (
+        <PregnancyOverview
+          pregnancy={pregnancy}
+          onLogDay={() => {
+            setLogDate(today);
+            setLogOpen(true);
+          }}
+        />
+      )}
+
+      {/* SWITCHED OFF. The tabs stay, so Settings — and the switch — are one
+          tap away, and after a loss this is where the copy for that lives
+          rather than in a screen the user has to go looking for. */}
+      {tab === "overview" && !pregnancy && !prediction && (
+        <div className="mt-4">
+          {lastEndedPregnancy?.outcome === "loss" ? (
+            <Card className="text-center py-7">
+              <p className="text-[15px] font-bold text-charcoal mb-1.5">{PG.LOSS_TITLE}</p>
+              <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2">
+                {PG.LOSS_BODY}
+              </p>
+              <p className="mt-2 text-[12.5px] text-charcoal-soft leading-relaxed px-2 mb-4">
+                {PG.LOSS_SUPPORT}
+              </p>
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={() => void saveSettings({ trackerEnabled: true })}
+              >
+                {PG.LOSS_RESUME}
+              </Button>
+            </Card>
+          ) : (
+            <Card className="text-center py-7">
+              <p className="text-[13px] font-bold text-charcoal mb-1.5">Cycle tracking is off</p>
+              <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2 mb-4">
+                {G.TRACKER_OFF_KEEPS_DATA}
+              </p>
+              <Button
+                variant="secondary"
+                disabled={busy}
+                onClick={() => void saveSettings({ trackerEnabled: true })}
+              >
+                Turn it back on
+              </Button>
+            </Card>
+          )}
+        </div>
+      )}
+
+      {tab === "overview" && !pregnancy && prediction && (
         <div className="mt-4">
           <CycleRing
             cycleLength={cycleLength}
@@ -337,7 +449,7 @@ export default function Cycle() {
                 <Stat label="Variation" value={stats.variationDays} unit="days" />
               </div>
 
-              {prediction.flags.length > 0 && (
+              {prediction !== null && prediction.flags.length > 0 && (
                 <Card className="mb-3">
                   <p className="text-[11px] font-bold text-charcoal mb-2">{G.FLAGS_HEADING}</p>
                   <div className="space-y-2.5">
@@ -461,12 +573,103 @@ export default function Cycle() {
             />
           </Card>
 
-          {/* CONTRACEPTION IS PART 2'S, and not because of scope:
-              20260924470000 moved it out of cycle_settings into
-              contraception_plans, where a method carries a start date, a pack
-              schedule and reminder times. A row of chips cannot express a
-              plan, and writing half of one would leave the reminders that
-              20260924480000 queues pointing at nothing. */}
+          {/* --- pregnancy --- */}
+          <Card className="mb-3">
+            {pregnancy ? (
+              <>
+                <p className="text-[13px] font-bold text-charcoal">Pregnancy tracking</p>
+                {(() => {
+                  const g = gestationOn(today, pregnancy);
+                  return g ? (
+                    <p className="mt-0.5 text-[11px] text-charcoal-faint">
+                      Week {g.week} · day {g.day} · trimester {g.trimester}
+                    </p>
+                  ) : null;
+                })()}
+                <button
+                  onClick={() => setEndPregnancyOpen(true)}
+                  className="tap mt-2.5 text-[12px] font-semibold text-primary-dark"
+                >
+                  {PG.END_TITLE}
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-[13px] font-bold text-charcoal">{PG.START_TITLE}</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-charcoal-faint">
+                  {PG.START_BODY}
+                </p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="mt-2.5"
+                  onClick={() => setStartPregnancyOpen(true)}
+                >
+                  <Plus size={13} /> Start
+                </Button>
+              </>
+            )}
+          </Card>
+
+          {/* AFTER A LOSS, THE ONE THING THIS SCREEN OFFERS IS A WAY BACK.
+              Predictions are paused by tracker_enabled being false, which is
+              the switch at the top of this tab — this card says so in words
+              and turns it back on, so nobody has to work out that the general
+              "Cycle tracking" toggle is the thing standing between them and
+              their estimates. */}
+          {!pregnancy &&
+            lastEndedPregnancy?.outcome === "loss" &&
+            !settings.trackerEnabled && (
+              <Card className="mb-3">
+                <p className="text-[13px] font-bold text-charcoal">{PG.LOSS_TITLE}</p>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-charcoal-soft">
+                  {PG.LOSS_BODY}
+                </p>
+                <p className="mt-1.5 text-[11.5px] leading-relaxed text-charcoal-soft">
+                  {PG.LOSS_SUPPORT}
+                </p>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="mt-2.5"
+                  disabled={busy}
+                  onClick={() => void saveSettings({ trackerEnabled: true })}
+                >
+                  {PG.LOSS_RESUME}
+                </Button>
+              </Card>
+            )}
+
+          {/* AFTER A BIRTH, predictions are already running again — this says
+              how rough they will be rather than offering a switch. */}
+          {!pregnancy &&
+            lastEndedPregnancy?.outcome === "birth" &&
+            lastEndedPregnancy.postpartumUntil !== null &&
+            lastEndedPregnancy.postpartumUntil >= today && (
+              <Card className="mb-3">
+                <p className="text-[13px] font-bold text-charcoal">{PG.POSTPARTUM_TITLE}</p>
+                <p className="mt-1 text-[11.5px] leading-relaxed text-charcoal-soft">
+                  {PG.POSTPARTUM_BODY}
+                </p>
+              </Card>
+            )}
+
+          {/* --- contraception --- */}
+          <button
+            onClick={() => navigate("/app/contraception")}
+            className="tap w-full mb-3"
+          >
+            <Card className="flex items-center justify-between gap-3">
+              <div className="min-w-0 text-left">
+                <p className="text-[13px] font-bold text-charcoal">Contraception</p>
+                <p className="text-[11px] text-charcoal-faint leading-snug">
+                  Set up a method, log it, and choose reminders.
+                </p>
+              </div>
+              <ChevronRight size={16} className="text-charcoal-faint shrink-0" />
+            </Card>
+          </button>
+
 
           <Card className="mb-3">
             <p className="text-[11px] font-bold text-charcoal mb-2">Conditions</p>
@@ -544,7 +747,37 @@ export default function Cycle() {
         onClose={() => setLogOpen(false)}
         date={logDate}
         onSaved={reloadCycle}
+        onStartPregnancy={
+          pregnancy
+            ? undefined
+            : () => {
+                setLogOpen(false);
+                setStartPregnancyOpen(true);
+              }
+        }
       />
+
+      <StartPregnancySheet
+        open={startPregnancyOpen}
+        onClose={() => setStartPregnancyOpen(false)}
+        onStarted={() => {
+          reloadPregnancy();
+          reloadCycle();
+          setTab("overview");
+        }}
+      />
+
+      {pregnancy && (
+        <EndPregnancySheet
+          open={endPregnancyOpen}
+          onClose={() => setEndPregnancyOpen(false)}
+          pregnancyId={pregnancy.id}
+          onEnded={() => {
+            reloadPregnancy();
+            reloadCycle();
+          }}
+        />
+      )}
 
       {/* Kept so the page reads correctly for an account whose profile says
           male — the tracker is available to anyone who switches it on. */}

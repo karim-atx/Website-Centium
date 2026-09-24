@@ -200,6 +200,17 @@ import {
   type CycleSettings,
 } from "../services/cycle";
 import {
+  getActivePregnancy,
+  getLatestEndedPregnancy,
+  type Pregnancy,
+} from "../services/pregnancy";
+import {
+  getActivePlan,
+  getEvents as getContraceptionEvents,
+  type ContraceptionEvent,
+  type ContraceptionPlan,
+} from "../services/contraception";
+import {
   addImagingRecordRemote,
   deleteImagingRecordRemote,
   getImagingRecords,
@@ -595,6 +606,28 @@ interface AppState {
   /** Re-reads settings, logs and the prediction together. */
   reloadCycle: () => void;
   saveCycleSettingsAndReload: (patch: Partial<CycleSettings>) => Promise<{ ok: boolean; message?: string }>;
+
+  /**
+   * The pregnancy being tracked, or null.
+   *
+   * SEPARATE FROM cyclePrediction.phase === "pregnant". The prediction knows a
+   * pregnancy exists because the database told it; this is the row itself,
+   * with the dates the kick counter, the contraction timer and the end flow
+   * all need. One is a phase name, the other is the thing.
+   */
+  pregnancy: Pregnancy | null;
+  /** True once the read has answered, so a screen can wait rather than guess. */
+  pregnancyLoaded: boolean;
+  /** The most recently ended one — what the postpartum and loss states read. */
+  lastEndedPregnancy: Pregnancy | null;
+  reloadPregnancy: () => void;
+
+  /** The contraception plan in use, or null when none has been set up. */
+  contraceptionPlan: ContraceptionPlan | null;
+  contraceptionPlanLoaded: boolean;
+  /** Logged events in the metric window, newest first. */
+  contraceptionEvents: ContraceptionEvent[];
+  reloadContraception: () => void;
   updateMetricValue: (
     type: "weight" | "heartRate" | "steps" | "sleepHours" | "caloriesBurned",
     value: number
@@ -4064,6 +4097,63 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  // --- pregnancy -----------------------------------------------------------
+  //
+  // THE ENDED ONE IS READ EVERY TIME, not only when there is no active
+  // pregnancy. The postpartum state and the after-a-loss state are both read
+  // from the most recent ended row, and fetching it lazily would mean the
+  // screen that most needs to be calm flickers between an empty state and the
+  // real one.
+  const [pregnancy, setPregnancy] = useState<Pregnancy | null>(null);
+  const [pregnancyLoaded, setPregnancyLoaded] = useState(false);
+  const [lastEndedPregnancy, setLastEndedPregnancy] = useState<Pregnancy | null>(null);
+
+  const readPregnancy = useCallback(() => {
+    if (!authUserId) return;
+    void getActivePregnancy(authUserId).then((r) => {
+      if (r.ok) setPregnancy(r.value);
+      setPregnancyLoaded(true);
+    });
+    void getLatestEndedPregnancy(authUserId).then((r) => {
+      if (r.ok) setLastEndedPregnancy(r.value);
+    });
+  }, [authUserId]);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    readPregnancy();
+  }, [authUserId, profileReady, readPregnancy]);
+
+  // --- contraception -------------------------------------------------------
+  //
+  // THE PLAN AND ITS EVENTS, AND NOT my_contraception_status(). The plan is
+  // what the user set up and the events are what they logged; where the plan
+  // stands today is worked out by services/contraception/schedule, on the
+  // user's own date. The function computes from Postgres's current_date
+  // without reading cycle_settings.timezone, so it answers about a different
+  // day for anybody not on UTC — the whole argument is at the top of
+  // pages/contraception/Contraception.tsx, next to the two things it got
+  // visibly wrong.
+  const [contraceptionPlan, setContraceptionPlan] = useState<ContraceptionPlan | null>(null);
+  const [contraceptionPlanLoaded, setContraceptionPlanLoaded] = useState(false);
+  const [contraceptionEvents, setContraceptionEvents] = useState<ContraceptionEvent[]>([]);
+
+  const readContraception = useCallback(() => {
+    if (!authUserId) return;
+    void getActivePlan(authUserId).then((r) => {
+      if (r.ok) setContraceptionPlan(r.value);
+      setContraceptionPlanLoaded(true);
+    });
+    void getContraceptionEvents(authUserId, metricWindowStart).then((r) => {
+      if (r.ok) setContraceptionEvents(r.value);
+    });
+  }, [authUserId, metricWindowStart]);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    readContraception();
+  }, [authUserId, profileReady, readContraception]);
+
   // Blood pressure, over the same year window the other metrics use.
   //
   // A LIST RATHER THAN A LATEST, because the widget's whole job is comparison:
@@ -4865,6 +4955,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cyclePrediction,
       reloadCycle: readCycle,
       saveCycleSettingsAndReload,
+      pregnancy,
+      pregnancyLoaded,
+      lastEndedPregnancy,
+      reloadPregnancy: readPregnancy,
+      contraceptionPlan,
+      contraceptionPlanLoaded,
+      contraceptionEvents,
+      reloadContraception: readContraception,
       updateMetricValue,
       weightLoggedDate,
       weightByDate,
@@ -5076,6 +5174,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cycleSettingsLoaded,
       cycleLogs,
       cyclePrediction,
+      pregnancy,
+      pregnancyLoaded,
+      lastEndedPregnancy,
+      readPregnancy,
+      contraceptionPlan,
+      contraceptionPlanLoaded,
+      contraceptionEvents,
+      readContraception,
       readCycle,
       weightLoggedDate,
       weightByDate,

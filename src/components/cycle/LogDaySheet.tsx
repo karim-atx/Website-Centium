@@ -25,6 +25,7 @@ import {
   LH_LABEL,
   MOOD_LABEL,
   MUCUS_LABEL,
+  POSITIVE_TEST_CTA,
   POSITIVE_TEST_PROMPT,
   PREGNANCY_TEST_LABEL,
   SEX_ACTIVITY_LABEL,
@@ -85,7 +86,13 @@ export const LogDaySheet: React.FC<{
   /** yyyy-mm-dd being logged. */
   date: string;
   onSaved: () => void;
-}> = ({ open, onClose, date, onSaved }) => {
+  /**
+   * Offered beside the positive-test note. Absent while a pregnancy is
+   * already being tracked, which is what keeps the prompt from appearing on
+   * a day logged from inside pregnancy mode.
+   */
+  onStartPregnancy?: () => void;
+}> = ({ open, onClose, date, onSaved, onStartPregnancy }) => {
   const { authUserId, cycleLogs } = useApp();
   const existing = cycleLogs.find((l) => l.date === date) ?? null;
 
@@ -295,9 +302,19 @@ export const LogDaySheet: React.FC<{
           {pregnancyTest === "positive" && (
             <div className="flex gap-2 mt-2.5 rounded-xl bg-primary-pale px-3 py-2.5">
               <Info size={14} className="text-primary-dark shrink-0 mt-0.5" />
-              <p className="text-[11.5px] leading-[1.45] text-primary-deep-text">
-                {POSITIVE_TEST_PROMPT}
-              </p>
+              <div className="min-w-0">
+                <p className="text-[11.5px] leading-[1.45] text-primary-deep-text">
+                  {POSITIVE_TEST_PROMPT}
+                </p>
+                {onStartPregnancy && (
+                  <button
+                    onClick={onStartPregnancy}
+                    className="tap mt-1.5 text-[11.5px] font-bold text-primary-dark"
+                  >
+                    {POSITIVE_TEST_CTA}
+                  </button>
+                )}
+              </div>
             </div>
           )}
         </Section>

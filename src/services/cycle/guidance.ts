@@ -297,14 +297,16 @@ export const BBT_HELP =
 /**
  * Shown when a positive pregnancy test is logged.
  *
- * GENTLE, AND IT CHANGES NOTHING. A single test result does not switch the app
- * into pregnancy mode; that is the user's decision to make, and the screens
- * for it are not built yet. Saying so plainly is better than a feature that
- * silently reinterprets everything after one tap.
+ * GENTLE, AND IT STILL CHANGES NOTHING BY ITSELF. A single test result does
+ * not switch the app into pregnancy mode. Tracking exists now and this offers
+ * it, but the button has to be pressed: a positive test is one piece of
+ * information about a day, and an app that silently reinterprets everything
+ * after one tap has made a decision that was not its to make.
  */
 export const POSITIVE_TEST_PROMPT =
-  "You've logged a positive test. Nothing changes automatically — pregnancy tracking " +
-  "is coming soon, and you'll be able to switch it on yourself.";
+  "You've logged a positive test. Nothing changes automatically — you can switch " +
+  "pregnancy tracking on whenever you're ready.";
+export const POSITIVE_TEST_CTA = "Start pregnancy tracking";
 
 // ---------------------------------------------------------------------------
 // Settings
