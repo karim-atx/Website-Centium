@@ -3,7 +3,7 @@ import { Card } from "../../components/ui/Card";
 import { marketplaceCategories } from "../../data/mockProfessionals";
 import Discover from "./Discover";
 import { useApp } from "../../context/AppContext";
-import { Sparkles, Gem, Plus, Award, Medal, Trophy, Crown, Gift } from "lucide-react";
+import { Sparkles, Gem, Plus, Award, Medal, Trophy, Crown } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import BusinessDashboard from "./BusinessDashboard";
 import ProfessionalExplore from "./ProfessionalExplore";
@@ -51,11 +51,14 @@ export default function Marketplace() {
     return <ProfessionalExplore />;
   }
 
-  // Rewards are earned strictly off the 4 core (auto-derived, "locked")
-  // streaks — a user-added custom streak never counts toward unlocking one.
+  // Points are earned strictly off the 4 core (auto-derived, "locked")
+  // streaks — a user-added custom streak never counts toward one.
+  //
+  // NO EARLY RETURN ON AN EMPTY LIST. There used to be one, because the
+  // removed reward row needed a streak to name. It meant a brand-new account,
+  // or any account whose streaks had not hydrated yet, got a blank Explore
+  // page rather than the marketplace it came for.
   const lockedStreaks = streaks.filter((s) => s.auto);
-  const streak = [...lockedStreaks].sort((a, b) => b.days - a.days)[0] ?? lockedStreaks[0];
-  if (!streak) return null;
 
   // Points are derived from total logged streak days across the core
   // streaks — a simple, transparent stand-in for a real points ledger.
@@ -141,15 +144,16 @@ export default function Marketplace() {
         </div>
       </div>
 
-      <div className="flex items-center gap-[11px] rounded-[15px] px-3.5 py-3 mb-[13px]" style={{ background: "rgba(162,200,194,.18)" }}>
-        <span className="w-8 h-8 rounded-full flex items-center justify-center shrink-0" style={{ background: "var(--gradient-teal-hero)" }}>
-          <Gift size={15} className="text-white" />
-        </span>
-        <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-extrabold text-charcoal">Your {streak.days}-day streak unlocked a reward</p>
-          <p className="text-[10px] text-team-teal-ink">10% off your next membership at partner gyms</p>
-        </div>
-      </div>
+      {/* THE "REWARD UNLOCKED" ROW IS GONE. It read "Your N-day streak
+          unlocked a reward / 10% off your next membership at partner gyms",
+          and neither half was real: no reward was unlocked by anything, the
+          10% was a fixed string rather than a business_discounts row, and
+          "partner gyms" named no business. points_ledger exists in the schema
+          but nothing in this client has ever read or written it, so there is
+          no ledger to redeem against either. The tier hero above survives
+          because its points and thresholds are at least computed from the
+          streaks actually held; this row announced a transaction that could
+          not happen. It comes back when a redeemable reward exists to name. */}
 
       {/* THE "NEAR YOU" TILES ARE GONE, and they were the worst of it: two
           rows reading `mockGyms.length` and `mockClasses.length` — "3 nearby"
