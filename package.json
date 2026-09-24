@@ -7,7 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "test": "node --test \"src/**/*.test.ts\"",
+    "test": "node --import ./scripts/register-test-hooks.mjs --test \"src/**/*.test.ts\"",
     "preview": "vite preview",
     "gen:types": "npx --yes supabase@2.117.0 gen types typescript --project-id mwnkhhyrheprugeornjl --schema public > lib/supabase/database.types.ts"
   },
