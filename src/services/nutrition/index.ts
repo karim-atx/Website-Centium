@@ -237,6 +237,25 @@ export function sumNutrientMaps(maps: (Record<string, number> | null | undefined
 // so the meal picker there stays in the same order as the diary itself.
 export const mealOrder: MealType[] = ["breakfast", "lunch", "dinner", "snack"];
 
+/**
+ * Which meal an unqualified recording belongs to.
+ *
+ * REPLACES A HARDCODED "lunch", which was not a default so much as a fixed
+ * answer: every item logged by voice landed in lunch whatever the clock said,
+ * so a breakfast logged at 8am had to be moved by hand afterwards — and
+ * nothing on the screen said it had happened.
+ *
+ * The boundaries are the ones in the brief and they are deliberately coarse.
+ * This is a starting position for the selector below, not a claim about when
+ * somebody eats.
+ */
+export function mealForHour(hour: number): MealType {
+  if (hour < 11) return "breakfast";
+  if (hour < 16) return "lunch";
+  if (hour < 22) return "dinner";
+  return "snack";
+}
+
 export const mealLabels: Record<MealType, string> = {
   breakfast: "Breakfast",
   lunch: "Lunch",

@@ -584,12 +584,79 @@ export async function getDiaryEntries(
 }
 
 /**
+ * The best food for a spoken or typed name, or null.
+ *
+ * WHY THIS REPLACED AN EXACT MATCH. The voice logger used to resolve each
+ * item with `ilike(name)` and no wildcards — a case-insensitive equality
+ * test against `foods.name` alone. Against a 92-row catalog whose rows are
+ * spelled "Chicken Breast, roasted" and "Greek Yogurt, nonfat", almost
+ * nothing anyone says matches: "chicken" missed, "greek yogurt" missed, and
+ * a matched-looking transcript produced a diary row with no nutrition. It
+ * also never looked at custom_foods at all, so a user's own foods — the ones
+ * they are most likely to name out loud — could not be found by voice.
+ *
+ * BUILT ON searchFoods, so this asks the same question the search box asks:
+ * a substring match across BOTH tables, with the personal-override rule
+ * already applied (a custom food that corrects a catalog row hides the row
+ * it corrects). One matcher, one definition of what the food list contains.
+ *
+ * THE RANKING, most specific first:
+ *
+ *   1. exact      "hummus" -> "Hummus"
+ *   2. starts-with "greek yogurt" -> "Greek Yogurt, nonfat"
+ *   3. contains    "yogurt" -> "Greek Yogurt, whole milk"
+ *
+ * Ties break toward the user's OWN food, then toward the shorter name. The
+ * shorter name is the less qualified one, which is the better answer to an
+ * unqualified phrase: "rice" should reach "White Rice, cooked" rather than
+ * "Pork sausage rice links". Sorting is stable, so searchFoods' own
+ * custom-before-catalog order survives a tie at every level.
+ *
+ * THE PLURAL RETRY is the one thing here that is not in the ranking. Speech
+ * produces plurals — "two eggs", "some almonds" — and the parse model is
+ * asked for the food alone, not for a singular. `%eggs%` matches nothing
+ * while `%egg%` matches "Egg, raw", so a single retry without a trailing
+ * "s" is what stands between a working match and an unmatched row for a
+ * whole class of ordinary sentences. It runs only when the full term found
+ * nothing, so it can never outrank a real result.
+ */
+export async function matchFoodByName(name: string): Promise<FoodSearchResult | null> {
+  const term = name.trim();
+  if (!term) return null;
+
+  let candidates = await searchFoods(term);
+  if (candidates.length === 0 && /[a-z]s$/i.test(term)) {
+    candidates = await searchFoods(term.slice(0, -1));
+  }
+  if (candidates.length === 0) return null;
+
+  const wanted = term.toLowerCase();
+  const singular = /[a-z]s$/i.test(wanted) ? wanted.slice(0, -1) : wanted;
+  const rank = (food: FoodSearchResult): number => {
+    const candidate = food.name.trim().toLowerCase();
+    if (candidate === wanted || candidate === singular) return 0;
+    if (candidate.startsWith(wanted) || candidate.startsWith(singular)) return 1;
+    return 2;
+  };
+
+  return [...candidates].sort((a, b) => {
+    const byRank = rank(a) - rank(b);
+    if (byRank !== 0) return byRank;
+    // A user's own food wins a tie: they named it themselves, so it is more
+    // likely to be the thing they just said out loud.
+    const byOwner = (a.source === "custom" ? 0 : 1) - (b.source === "custom" ? 0 : 1);
+    if (byOwner !== 0) return byOwner;
+    return a.name.length - b.name.length;
+  })[0];
+}
+
+/**
  * Looks up one catalog food by exact name, case-insensitively.
  *
- * Used to give the AI parser real provenance. Its items are prototype foods
- * with ids like "f7", but those names were seeded into the catalog, so most
- * resolve to a genuine row — and an entry pointing at one is worth more than
- * a manual entry pointing at nothing.
+ * Used by the recipe and custom-meal importers, where an ingredient line
+ * names a food that either IS a catalog row or is not one at all — there is
+ * no user in the loop to accept a near miss, so a near miss is worse than
+ * none. Voice logging wants the opposite and uses matchFoodByName above.
  *
  * `ilike` with no wildcards is an exact, case-insensitive match; the name is
  * still escaped so a food containing % or _ cannot act as a pattern.

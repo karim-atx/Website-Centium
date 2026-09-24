@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { sheetChipStyle } from "../ui/sheetChip";
+import { sheetChipStyle, sheetGreyStyle, sheetLabelStyle } from "../ui/sheetChip";
 import { Button } from "../ui/Button";
-import { Search, Mic, ScanLine, Clock, Star, Check, UtensilsCrossed, SlidersHorizontal, ChevronDown } from "lucide-react";
-import { LOGO_TONES, logoTone } from "./logoTones";
-import { NUTRIENT_SECTIONS } from "../../data/nutrientSchema";
-import { foodCategories, addFoodFilterCategories } from "../../data/mockFoods";
+import { Search, Mic, ScanLine, Clock, Star, Check, UtensilsCrossed, SlidersHorizontal } from "lucide-react";
+import { logoTone } from "./logoTones";
+import { SheetField } from "./SheetField";
+import { CustomFoodForm } from "./CustomFoodForm";
+import { addFoodFilterCategories } from "../../data/mockFoods";
 import type { Food, MealType, ServingUnit } from "../../types";
 import { servingMultiplier, targetsFromGoal } from "../../services/nutrition";
 import { NutrientDetailSections } from "./NutrientSections";
@@ -15,7 +16,6 @@ import {
   getFoodsByIds,
   lookupByBarcode,
   createFoodByBarcode,
-  createCustomFood,
   logFoodEntry,
   type FoodSearchResult,
 } from "../../services/food";
@@ -47,34 +47,6 @@ const detailMealLabels: Record<MealType, string> = {
   dinner: "Dinner",
 };
 
-// Grey sheet container and its sentence-case label (CentiumFrame addFoodBody
-// `grey` / `lbl`, and the same values as field() below).
-const sheetGreyStyle: React.CSSProperties = { background: "#F2F3F5", borderRadius: 14, padding: "12px 14px" };
-const sheetLabelStyle: React.CSSProperties = { margin: 0, fontSize: 13, fontWeight: 500, color: "#575863" };
-
-// CentiumFrame field(): a grey labelled container with a white borderless
-// input. Shared by Create Custom Food and the barcode no-match form.
-const SheetField: React.FC<{
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder: string;
-  numeric?: boolean;
-}> = ({ label, value, onChange, placeholder, numeric = false }) => (
-  <label className="block" style={{ ...sheetGreyStyle, boxSizing: "border-box" }}>
-    <span className="block" style={{ ...sheetLabelStyle, marginBottom: 8 }}>
-      {label}
-    </span>
-    <input
-      value={value}
-      onChange={(e) => onChange(numeric ? e.target.value.replace(/[^\d.]/g, "") : e.target.value)}
-      placeholder={placeholder}
-      inputMode={numeric ? "decimal" : "text"}
-      className="w-full placeholder:text-charcoal-faint focus:outline-none"
-      style={{ borderRadius: 10, background: "#FFFFFF", border: "none", padding: "11px 13px", fontSize: 14, color: "#241F1B", boxSizing: "border-box" }}
-    />
-  </label>
-);
 
 const FoodIcon: React.FC<{ category: Food["category"]; size?: number; className?: string }> = ({
   category,
@@ -105,7 +77,6 @@ export const AddFoodSheet: React.FC<{
     authUserId,
     foodLog,
     customFoods,
-    addCustomFood,
     customMeals,
     logCustomMeal,
     selectedDate,
@@ -153,24 +124,6 @@ export const AddFoodSheet: React.FC<{
   const [scanResultFood, setScanResultFood] = useState<FoodSearchResult | null>(null);
   const [justAdded, setJustAdded] = useState(false);
   const [customMode, setCustomMode] = useState(false);
-  const [customDraft, setCustomDraft] = useState({
-    name: "",
-    serving: "1 serving",
-    calories: "",
-    protein: "",
-    carbs: "",
-    fat: "",
-    category: "homemade" as Food["category"],
-  });
-  // Create Custom Food extras (master handover frame): the selected logo's
-  // colour (an index into LOGO_TONES, stepped by tapping it again), an
-  // optional barcode, and the advanced per-serving nutrients.
-  const [customLogoTone, setCustomLogoTone] = useState(0);
-  const [customBarcode, setCustomBarcode] = useState("");
-  const [customAdvOpen, setCustomAdvOpen] = useState(false);
-  const [customAdvGroups, setCustomAdvGroups] = useState<Record<string, boolean>>({ popular: true });
-  const [customNutrients, setCustomNutrients] = useState<Record<string, string>>({});
-  const [customError, setCustomError] = useState<string | null>(null);
 
   // --- real catalog -------------------------------------------------------
   const [results, setResults] = useState<FoodSearchResult[]>([]);
@@ -187,7 +140,6 @@ export const AddFoodSheet: React.FC<{
   // --- logging ------------------------------------------------------------
   const [saving, setSaving] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
-  const [savingCustom, setSavingCustom] = useState(false);
 
   // Search runs against Supabase, so it is debounced: a query per keystroke
   // would be a request per keystroke. An empty box lists the whole catalog,
@@ -331,13 +283,8 @@ export const AddFoodSheet: React.FC<{
     setScanResultFood(null);
     setJustAdded(false);
     setCustomMode(false);
-    setCustomDraft({ name: "", serving: "1 serving", calories: "", protein: "", carbs: "", fat: "", category: "homemade" });
-    setCustomLogoTone(0);
-    setCustomBarcode("");
-    setCustomAdvOpen(false);
-    setCustomAdvGroups({ popular: true });
-    setCustomNutrients({});
-    setCustomError(null);
+    // Nothing to reset for the custom-food form: it unmounts with the sheet
+    // and its state goes with it.
     setBarcode("");
     setBarcodeState("idle");
     setBarcodeDraft(emptyBarcodeDraft);
@@ -347,87 +294,6 @@ export const AddFoodSheet: React.FC<{
     onClose();
   }, [onClose]);
 
-  // Awaits the write so the food that lands in the detail view carries its
-  // real custom_foods id, which is what gives the resulting diary entry real
-  // provenance. A failed write still returns a usable local food.
-  const saveCustomFood = async () => {
-    if (!customDraft.name.trim() || !customDraft.calories || savingCustom) return;
-    setSavingCustom(true);
-    setCustomError(null);
-
-    const draft = {
-      name: customDraft.name.trim(),
-      category: customDraft.category,
-      serving: customDraft.serving || "1 serving",
-      calories: Number(customDraft.calories) || 0,
-      protein: Number(customDraft.protein) || 0,
-      carbs: Number(customDraft.carbs) || 0,
-      fat: Number(customDraft.fat) || 0,
-    };
-    // "Leave anything you do not have blank": only typed fields are kept, so
-    // a blank stays "no data" rather than becoming a zero.
-    const nutrients = Object.fromEntries(
-      Object.entries(customNutrients)
-        .filter(([, v]) => v.trim() !== "" && Number.isFinite(Number(v)))
-        .map(([k, v]) => [k, Number(v)])
-    );
-    const hasNutrients = Object.keys(nutrients).length > 0;
-
-    // WITH A BARCODE the food goes to the shared catalog through the same
-    // route a scanned product does, so "anyone scanning this pack" finds it.
-    // The colour and advanced nutrients are the user's own, so they ride on
-    // a personal correction of that row (overrides_food_id), which search
-    // and barcode lookup already prefer for its owner.
-    const code = customBarcode.trim();
-    if (code) {
-      const shared = await createFoodByBarcode({ barcode: code, servingLabel: draft.serving, ...draft });
-      if (!shared.ok || !shared.food) {
-        setSavingCustom(false);
-        setCustomError(shared.message ?? "Couldn't add that barcode. Try again, or save without it.");
-        return;
-      }
-      let chosen = shared.food;
-      if (authUserId) {
-        const mine = await createCustomFood(authUserId, {
-          ...draft,
-          logoTone: customLogoTone,
-          nutrients: hasNutrients ? nutrients : null,
-          overridesFoodId: shared.food.id,
-        });
-        if (mine.ok && mine.food) chosen = mine.food;
-      }
-      setSavingCustom(false);
-      setCustomMode(false);
-      setSelectedFood(chosen);
-      return;
-    }
-
-    const food = await addCustomFood({
-      ...draft,
-      logoTone: customLogoTone,
-      nutrients: hasNutrients ? nutrients : null,
-    });
-    setSavingCustom(false);
-    setCustomMode(false);
-    setSelectedFood({
-      id: food.id,
-      source: "custom",
-      name: food.name,
-      nameAr: food.nameAr ?? null,
-      category: food.category,
-      servingLabel: food.serving,
-      calories: food.calories,
-      protein: food.protein,
-      carbs: food.carbs,
-      fat: food.fat,
-      isLebanese: !!food.isLebanese,
-      isVerified: false,
-      barcode: null,
-      overridesFoodId: null,
-      logoTone: food.logoTone ?? null,
-      nutrients: food.nutrients ?? null,
-    });
-  };
 
   /**
    * Writes the entry to food_log_entries, then mirrors it into local state.
@@ -714,284 +580,18 @@ export const AddFoodSheet: React.FC<{
   // selected tile steps through LOGO_TONES, the macro grid, a barcode box,
   // and a save / advanced-nutrients row.
   if (customMode) {
-    const field = (
-      label: string,
-      key: keyof typeof customDraft,
-      placeholder: string,
-      numeric = false
-    ) => (
-      <SheetField
-        label={label}
-        value={customDraft[key]}
-        onChange={(v) => setCustomDraft((d) => ({ ...d, [key]: v }))}
-        placeholder={placeholder}
-        numeric={numeric}
-      />
-    );
-
-    const tone = LOGO_TONES[customLogoTone % LOGO_TONES.length];
-    const canSave = !!customDraft.name.trim() && !!customDraft.calories && !savingCustom;
-
-    // Advanced nutrients: the same sourced set the Nutrient Summary reads, so
-    // the two stay in step. Popular's four macros are already the fields
-    // above; calculated rows (net carbs, the omega ratio, total MCTs) are
-    // derived from the others, so there is nothing to type for them.
-    const DUPES = new Set(["calories", "protein", "total_fat", "total_carbohydrates"]);
-    const advGroups = NUTRIENT_SECTIONS.map((sec) => ({
-      id: sec.id,
-      name: sec.name,
-      rows: [...sec.rows, ...(sec.sub ? sec.sub.rows : [])].filter(
-        (r) => r.kind !== "calc" && !(sec.id === "popular" && DUPES.has(r.key))
-      ),
-    }));
-
     return (
       <BottomSheet open={open} onClose={resetAndClose} title="Create Custom Food" onBack={() => setCustomMode(false)}>
-        <div className="flex flex-col animate-fade-slide-up" style={{ gap: 16 }}>
-          {field("Food name", "name", "Mom's Kibbeh")}
-          {field("Serving size", "serving", "1 piece")}
-
-          <div>
-            <span className="block" style={{ fontSize: 12, fontWeight: 600, color: "#5B5349", marginBottom: 6 }}>
-              Logo
-            </span>
-            <div className="flex no-scrollbar" style={{ flexWrap: "nowrap", gap: 8, overflowX: "auto", margin: "0 -20px", padding: "0 20px" }}>
-              {foodCategories.map((c) => {
-                const Icon = foodCategoryIcon[c.id] ?? UtensilsCrossed;
-                const active = customDraft.category === c.id;
-                return (
-                  <button
-                    key={c.id}
-                    // Tapping the already-selected tile steps its colour on,
-                    // so the saved food can be told apart at a glance.
-                    onClick={() =>
-                      active
-                        ? setCustomLogoTone((t) => (t + 1) % LOGO_TONES.length)
-                        : setCustomDraft((d) => ({ ...d, category: c.id }))
-                    }
-                    aria-label={c.label}
-                    title={active ? "Tap again for another colour" : c.label}
-                    className="tap flex items-center justify-center"
-                    style={{
-                      width: 44,
-                      height: 44,
-                      flex: "none",
-                      borderRadius: 16,
-                      border: `1px solid ${active ? tone.bg : "#E7E7EC"}`,
-                      background: active ? tone.bg : "#FFFFFF",
-                      color: active ? tone.fg : "#241F1B",
-                      transition: "background-color .18s ease, border-color .18s ease",
-                    }}
-                  >
-                    <Icon size={18} />
-                  </button>
-                );
-              })}
-            </div>
-            <p style={{ margin: "7px 2px 0", fontSize: 10, color: "#8C8378" }}>
-              Tap the selected icon again to change its colour.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2" style={{ gap: 12 }}>
-            {field("Calories", "calories", "0", true)}
-            {field("Protein (g)", "protein", "0", true)}
-            {field("Carbs (g)", "carbs", "0", true)}
-            {field("Fat (g)", "fat", "0", true)}
-          </div>
-
-          {/* Barcode sits after the macros, just before the save / advanced row. */}
-          <div style={{ border: "1px solid rgba(174,161,220,0.4)", borderRadius: 14, background: "rgba(174,161,220,0.07)", padding: 12 }}>
-            <p
-              style={{
-                margin: "0 0 8px",
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: "0.1em",
-                textTransform: "uppercase",
-                color: "#5F5093",
-              }}
-            >
-              Barcode
-            </p>
-            <div className="flex" style={{ gap: 8 }}>
-              <input
-                value={customBarcode}
-                onChange={(e) => setCustomBarcode(e.target.value.replace(/[^\dA-Za-z]/g, ""))}
-                placeholder="Enter number manually"
-                inputMode="numeric"
-                aria-label="Barcode"
-                className="placeholder:text-charcoal-faint focus:outline-none"
-                style={{
-                  flex: 1,
-                  minWidth: 0,
-                  borderRadius: 10,
-                  background: "#FFFFFF",
-                  border: "1px solid rgba(36,31,27,0.1)",
-                  padding: "10px 12px",
-                  fontSize: 13,
-                  color: "#241F1B",
-                }}
-              />
-              <button
-                onClick={() => {
-                  setCustomMode(false);
-                  openBarcode();
-                }}
-                aria-label="Look up barcode"
-                className="tap flex items-center justify-center"
-                style={{ flex: "none", width: 44, height: 40, borderRadius: 10, background: "#A092E0", border: "none" }}
-              >
-                <ScanLine size={17} style={{ color: "#FFFFFF" }} />
-              </button>
-            </div>
-            <p style={{ margin: "7px 2px 0", fontSize: 10, color: "#8C8378" }}>
-              Optional. Adding it lets anyone scanning this pack find your food.
-            </p>
-          </div>
-
-          {customAdvOpen && (
-            <div className="flex flex-col animate-fade-slide-up" style={{ gap: 8 }}>
-              <p style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>
-                Per serving. Leave anything you do not have blank.
-              </p>
-              {advGroups.map((sec) => {
-                const groupOpen = !!customAdvGroups[sec.id];
-                const filled = sec.rows.filter((r) => (customNutrients[r.key] ?? "").trim() !== "").length;
-                return (
-                  <div
-                    key={sec.id}
-                    style={{ border: "1px solid rgba(174,161,220,0.34)", borderRadius: 12, overflow: "hidden", background: "#FFFFFF" }}
-                  >
-                    <button
-                      onClick={() => setCustomAdvGroups((g) => ({ ...g, [sec.id]: !g[sec.id] }))}
-                      className="tap w-full flex items-center text-left"
-                      style={{
-                        gap: 8,
-                        padding: "10px 12px",
-                        background: groupOpen ? "rgba(174,161,220,0.12)" : "#FFFFFF",
-                        border: "none",
-                      }}
-                    >
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 700, color: "#241F1B" }}>{sec.name}</span>
-                      {filled > 0 && (
-                        <span
-                          style={{
-                            fontSize: 10,
-                            fontWeight: 700,
-                            color: "#5F5093",
-                            background: "rgba(174,161,220,0.22)",
-                            borderRadius: 6,
-                            padding: "2px 6px",
-                          }}
-                        >
-                          {filled} set
-                        </span>
-                      )}
-                      <span
-                        className="flex"
-                        style={{
-                          color: "#8C8378",
-                          transform: groupOpen ? "rotate(180deg)" : "none",
-                          transition: "transform .18s ease",
-                        }}
-                      >
-                        <ChevronDown size={14} />
-                      </span>
-                    </button>
-                    {groupOpen && (
-                      <div style={{ padding: "2px 12px 10px" }}>
-                        {sec.rows.map((r, i) => (
-                          <div
-                            key={r.key}
-                            className="flex items-center"
-                            style={{ gap: 8, padding: "5px 0", borderTop: i === 0 ? "0" : "1px solid rgba(36,31,27,0.05)" }}
-                          >
-                            <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: "#241F1B" }}>{r.name}</span>
-                            <input
-                              value={customNutrients[r.key] ?? ""}
-                              onChange={(e) =>
-                                setCustomNutrients((n) => ({ ...n, [r.key]: e.target.value.replace(/[^\d.]/g, "") }))
-                              }
-                              placeholder="0"
-                              inputMode="decimal"
-                              aria-label={`${r.name}${r.unit ? ` (${r.unit})` : ""}`}
-                              className="focus:outline-none"
-                              style={{
-                                width: 62,
-                                flex: "none",
-                                borderRadius: 8,
-                                background: "#F5F5F6",
-                                border: "1px solid rgba(36,31,27,0.07)",
-                                padding: "5px 8px",
-                                fontSize: 12,
-                                color: "#241F1B",
-                                textAlign: "right",
-                              }}
-                            />
-                            <span style={{ width: 34, flex: "none", fontSize: 10.5, color: "#8C8378" }}>{r.unit || ""}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {customError && (
-            <p className="text-xs font-semibold text-status-high text-center" style={{ margin: 0 }}>
-              {customError}
-            </p>
-          )}
-
-          {/* Three-quarters save, one-quarter advanced toggle. */}
-          <div className="flex" style={{ gap: 8 }}>
-            <button
-              onClick={saveCustomFood}
-              disabled={!canSave}
-              className="tap"
-              style={{
-                flex: 3,
-                minWidth: 0,
-                height: 52,
-                borderRadius: 16,
-                background: "#AEA1DC",
-                color: "#FFFFFF",
-                fontWeight: 700,
-                fontSize: 14,
-                border: "none",
-                opacity: canSave ? 1 : 0.4,
-              }}
-            >
-              {savingCustom ? "Saving…" : "Save custom food"}
-            </button>
-            <button
-              onClick={() => setCustomAdvOpen((v) => !v)}
-              aria-pressed={customAdvOpen}
-              title={customAdvOpen ? "Hide advanced nutrients" : "Advanced nutrients"}
-              aria-label={customAdvOpen ? "Hide advanced nutrients" : "Advanced nutrients"}
-              className="tap flex items-center justify-center"
-              style={{
-                flex: 1,
-                minWidth: 0,
-                height: 52,
-                borderRadius: 16,
-                border: `1px solid ${customAdvOpen ? "#A092E0" : "rgba(36,31,27,0.11)"}`,
-                background: customAdvOpen ? "rgba(174,161,220,0.18)" : "#FFFFFF",
-                color: customAdvOpen ? "#5F5093" : "#5B5349",
-                transition: "background-color .18s ease, border-color .18s ease",
-              }}
-            >
-              <SlidersHorizontal size={20} strokeWidth={1.9} />
-            </button>
-          </div>
-          <p style={{ margin: 0, fontSize: 11, color: "#8C8378", textAlign: "center" }}>
-            Saved foods, scanned barcodes and logged items all go to your Food Library, and show up in search
-            alongside the database.
-          </p>
-        </div>
+        <CustomFoodForm
+          onLookUpBarcode={() => {
+            setCustomMode(false);
+            openBarcode();
+          }}
+          onSaved={(food) => {
+            setCustomMode(false);
+            setSelectedFood(food);
+          }}
+        />
       </BottomSheet>
     );
   }

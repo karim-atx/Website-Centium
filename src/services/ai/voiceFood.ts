@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
-import { findCatalogFoodByName } from "../food";
+import { matchFoodByName } from "../food";
 import type { FoodSearchResult } from "../food";
+import type { ServingUnit } from "../../types";
 
 // Real voice food logging: a recorded clip in, candidate foods out.
 //
@@ -15,10 +16,10 @@ import type { FoodSearchResult } from "../food";
 // interprets the answer. See Database-Atraxia supabase/functions/parse-voice-food.
 //
 // MATCHING STAYS ON THIS SIDE. The function returns names, not foods, and
-// findCatalogFoodByName resolves them against the catalog exactly as the mock
-// path already did. Keeping it here means the review step in Phase C works on
-// FoodSearchResult objects the rest of the app already understands, and that no
-// matching logic has to exist twice in two languages.
+// matchFoodByName resolves them against the same list the search box shows —
+// catalog plus the user's own foods, ranked. Keeping it here means the review
+// step works on FoodSearchResult objects the rest of the app already
+// understands, and that no matching logic has to exist twice in two languages.
 
 /**
  * What the recorder should produce, in seconds.
@@ -63,13 +64,44 @@ export function pickRecordingMimeType(): string | null {
   return PREFERRED_MIME_TYPES.find((t) => MediaRecorder.isTypeSupported(t)) ?? null;
 }
 
-/** One thing the model heard, with the catalog row it resolved to, if any. */
+/**
+ * The serving units this app can actually convert, keyed by every word the
+ * transcriber is likely to produce for them.
+ *
+ * ANYTHING NOT IN HERE IS NOT A FAILURE. "a slice of bread", "two cans",
+ * "a plate of rice" are all ordinary things to say and none of them is a
+ * unit servingMultiplier knows — there is no general slice-to-grams. Those
+ * keep their spoken word for display and log as servings, which the review
+ * screen says out loud rather than converting silently.
+ */
+const CONVERTIBLE_UNITS: Record<string, ServingUnit> = {
+  g: "g", gram: "g", grams: "g", gramme: "g", grammes: "g",
+  ml: "ml", milliliter: "ml", milliliters: "ml", millilitre: "ml", millilitres: "ml",
+  cup: "cup", cups: "cup",
+  tbsp: "tbsp", tablespoon: "tbsp", tablespoons: "tbsp",
+  tsp: "tsp", teaspoon: "tsp", teaspoons: "tsp",
+  serving: "serving", servings: "serving",
+};
+
+/** The convertible unit a spoken word names, or null. */
+export function convertibleUnit(spoken: string | null): ServingUnit | null {
+  if (!spoken) return null;
+  return CONVERTIBLE_UNITS[spoken.trim().toLowerCase()] ?? null;
+}
+
+/** One thing the model heard, with the food it resolved to, if any. */
 export interface VoiceFoodItem {
   /** As transcribed. Kept even when matched, since it is what the user said. */
   spokenName: string;
   quantity: number;
-  /** A serving word the speaker used, or null. Display only for now. */
-  unit: string | null;
+  /** The serving word the speaker used, exactly as transcribed, or null. */
+  spokenUnit: string | null;
+  /**
+   * The same word as a unit this app can convert, or null when it is not one
+   * (a slice, a can, a plate). Null means the quantity is taken as servings,
+   * which the review screen states rather than doing quietly.
+   */
+  unit: ServingUnit | null;
   /**
    * Null when nothing in the catalog matched.
    *
@@ -230,9 +262,15 @@ export async function transcribeAndParse(audio: Blob): Promise<VoiceFoodOutcome>
 
       const quantity =
         typeof e.quantity === "number" && Number.isFinite(e.quantity) && e.quantity > 0 ? e.quantity : 1;
-      const unit = typeof e.unit === "string" && e.unit.trim() ? e.unit.trim() : null;
+      const spokenUnit = typeof e.unit === "string" && e.unit.trim() ? e.unit.trim() : null;
 
-      return { spokenName, quantity, unit, food: await findCatalogFoodByName(spokenName) };
+      return {
+        spokenName,
+        quantity,
+        spokenUnit,
+        unit: convertibleUnit(spokenUnit),
+        food: await matchFoodByName(spokenName),
+      };
     })
   );
 

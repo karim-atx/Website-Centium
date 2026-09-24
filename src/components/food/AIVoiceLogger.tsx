@@ -1,9 +1,20 @@
 import React, { useEffect, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Check, Mic, Sparkles, MicOff, Square, ShieldCheck, UtensilsCrossed, X } from "lucide-react";
+import { Check, ChevronDown, Mic, Plus, Sparkles, MicOff, Square, ShieldCheck, UtensilsCrossed, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
-import { logFoodEntry, manualFood } from "../../services/food";
+import { logFoodEntry, manualFood, type FoodSearchResult } from "../../services/food";
+import { getFoodNutrients } from "../../services/food-nutrients";
+import {
+  servingMultiplier,
+  targetsFromGoal,
+  mealForHour,
+  mealOrder,
+  mealLabels,
+} from "../../services/nutrition";
+import { NutrientDetailSections } from "./NutrientSections";
+import { CustomFoodForm } from "./CustomFoodForm";
+import { sheetChipStyle, sheetGreyStyle, sheetLabelStyle } from "../ui/sheetChip";
 import {
   AUDIO_BITS_PER_SECOND,
   MAX_RECORDING_SECONDS,
@@ -12,6 +23,7 @@ import {
   type VoiceFoodItem,
 } from "../../services/ai/voiceFood";
 import { foodCategoryIcon } from "../../utils/icons";
+import type { MealType } from "../../types";
 
 // Voice logging, end to end: record, transcribe, parse, confirm, log.
 //
@@ -142,11 +154,24 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     selectedDate,
     voiceDisclosureSeen,
     setVoiceDisclosureSeen,
+    nutritionGoal,
   } = useApp();
 
   const [stage, setStage] = useState<Stage>("idle");
   const [items, setItems] = useState<ReviewItem[]>([]);
   const [transcript, setTranscript] = useState("");
+  // Seeded from the clock when the review opens, then the user's to change.
+  const [meal, setMeal] = useState<MealType>(() => mealForHour(new Date().getHours()));
+  // Per-food nutrient maps, fetched ONCE for every matched catalog id on the
+  // screen rather than per card. A four-item meal was four round trips when
+  // each card asked for its own.
+  const [nutrientsByFoodId, setNutrientsByFoodId] = useState<Record<string, Record<string, number>>>({});
+  // Which card has "More nutrients" open, by index. One at a time: these are
+  // long lists and several open at once turns the review into a scroll.
+  const [expanded, setExpanded] = useState<number | null>(null);
+  // The item whose food is being created, or null. Swaps this sheet's body
+  // for the shared Create Custom Food form and comes back with a real food.
+  const [creatingFor, setCreatingFor] = useState<number | null>(null);
   const [notice, setNotice] = useState<Notice | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -372,6 +397,32 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stage]);
 
+  /**
+   * Per-nutrient data for every matched CATALOG food on the review, in ONE
+   * request.
+   *
+   * getFoodNutrients takes a list precisely so this can be one round trip;
+   * asking per card would be a request per item for a screen that renders
+   * them all at once. Custom foods carry their own map inline (whatever the
+   * user typed into Create Custom Food) and are not part of this fetch —
+   * there is no food_nutrients row for them to have.
+   */
+  useEffect(() => {
+    const ids = items
+      .map((i) => i.food)
+      .filter((f): f is FoodSearchResult => !!f && f.source === "catalog")
+      .map((f) => f.id);
+    if (ids.length === 0) return;
+    let cancelled = false;
+    void getFoodNutrients(ids).then((result) => {
+      if (cancelled || !result.ok) return;
+      setNutrientsByFoodId(result.byFoodId);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [items]);
+
   const reset = () => {
     teardown();
     setStage("idle");
@@ -380,6 +431,9 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     setAdded(false);
     setSaveError(null);
     setElapsed(0);
+    setNutrientsByFoodId({});
+    setExpanded(null);
+    setCreatingFor(null);
   };
 
   const handleClose = () => {
@@ -396,6 +450,10 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     if (outcome.ok) {
       setTranscript(outcome.transcript);
       setItems(outcome.items.map((i) => ({ ...i, selected: i.food !== null })));
+      // Seeded HERE rather than at mount: this sheet can sit open for a long
+      // time, and the meal that matters is the one at the moment they spoke.
+      setMeal(mealForHour(new Date().getHours()));
+      setExpanded(null);
       setStage("result");
       return;
     }
@@ -537,12 +595,31 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     });
 
   /**
-   * Logs the matched items.
+   * Attaches a freshly-created food to the row it was created for.
+   *
+   * The row stops being "new food" and becomes an ordinary matched row —
+   * ticked, priced in the preview, and counted by the Add button — which is
+   * the whole point of offering Create food rather than a second logging
+   * path with no nutrition behind it.
+   */
+  const attachCreatedFood = (index: number, food: FoodSearchResult) => {
+    setItems((prev) => prev.map((it, i) => (i === index ? { ...it, food, selected: true } : it)));
+    setCreatingFor(null);
+  };
+
+  /**
+   * Logs the selected items.
    *
    * An unmatched item still logs, as a manual entry with no provenance — the
-   * user said they ate it, and the catalog not knowing the name is not a reason
-   * to drop it. Its macros are unknown, which is exactly what Phase C's editing
-   * step exists to let them fix.
+   * user said they ate it, and the food list not knowing the name is not a
+   * reason to drop it. That is the secondary path now: the row's primary
+   * action is Create food, which gives it real macros instead.
+   *
+   * THE UNIT IS THE ONE THE PREVIEW USED. `item.unit` is null unless the
+   * spoken word was something servingMultiplier can convert, and null means
+   * servings — exactly what the card says it means. Passing the raw spoken
+   * word would be a unit the type does not have and the arithmetic cannot
+   * use.
    */
   const handleAddAll = async () => {
     const chosen = items.filter((i) => i.selected);
@@ -558,7 +635,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
           id: item.spokenName,
           name: item.spokenName,
           category: "homemade",
-          serving: item.unit ?? "1 serving",
+          serving: item.spokenUnit ?? "1 serving",
           calories: 0, protein: 0, carbs: 0, fat: 0,
         });
 
@@ -566,8 +643,8 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
         userId: authUserId,
         food,
         quantity: item.quantity,
-        unit: "serving",
-        meal: "lunch",
+        unit: item.unit ?? "serving",
+        meal,
         date: selectedDate,
         loggedVia: "ai",
       });
@@ -590,6 +667,79 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
   const remaining = Math.max(0, MAX_RECORDING_SECONDS - elapsed);
   const selectedCount = items.filter((i) => i.selected).length;
+  const targets = targetsFromGoal(nutritionGoal);
+
+  /**
+   * What one matched row will actually log, at the quantity currently typed.
+   *
+   * THE SAME ARITHMETIC AS THE WRITE, deliberately: servingMultiplier is what
+   * logFoodEntry calls on its way to food_log_entries, so a preview built any
+   * other way would be a second definition of a serving and the two would
+   * drift. Null for an unmatched row, which has no serving to scale.
+   *
+   * THE UNIT IS EITHER CONVERTIBLE OR IT IS SERVINGS, and the row says which.
+   * "two cups of rice" scales by cups because servingMultiplier can do that;
+   * "two plates of rice" cannot be converted by anything, so it logs as two
+   * servings and the row states it rather than letting a plate quietly mean a
+   * serving.
+   */
+  const previewFor = (item: ReviewItem) => {
+    const food = item.food;
+    if (!food) return null;
+    const unit = item.unit ?? "serving";
+    const multiplier = servingMultiplier(food.servingLabel, item.quantity, unit);
+    const round = (n: number) => Math.round(n * multiplier);
+
+    // Catalog foods carry their nutrients in food_nutrients, fetched in one
+    // batch above; a custom food carries whatever was typed into Create Custom
+    // Food inline. Absent in both cases means no data, never zero.
+    const perServing =
+      food.source === "catalog" ? nutrientsByFoodId[food.id] : food.nutrients ?? undefined;
+    const nutrients = perServing
+      ? Object.fromEntries(Object.entries(perServing).map(([key, amount]) => [key, amount * multiplier]))
+      : null;
+
+    const plural = item.quantity === 1 ? "" : "s";
+    return {
+      multiplier,
+      calories: round(food.calories),
+      protein: round(food.protein),
+      carbs: round(food.carbs),
+      fat: round(food.fat),
+      nutrients,
+      // Shown beside the serving label only when the spoken word was dropped.
+      unitNote:
+        item.spokenUnit && !item.unit
+          ? `Logged as ${item.quantity} serving${plural} — “${item.spokenUnit}” is not a unit this can convert`
+          : null,
+      quantityLabel: item.unit && item.unit !== "serving" ? item.unit : `serving${plural}`,
+    };
+  };
+
+  // CREATING A FOOD SWAPS THIS SHEET'S BODY rather than opening another one
+  // over it. The review is already two sheets deep (Add Food -> this), and a
+  // third would bury the list the user is halfway through confirming. Back
+  // returns to that list with every other row untouched.
+  if (creatingFor !== null) {
+    const pending = items[creatingFor];
+    return (
+      <BottomSheet
+        open={open}
+        onClose={handleClose}
+        title="Create food"
+        onBack={() => setCreatingFor(null)}
+      >
+        <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3.5 py-2.5 mb-4">
+          Heard “{pending?.spokenName}”. Fill in what it is and it joins this recording with
+          its nutrition.
+        </p>
+        <CustomFoodForm
+          initialName={pending?.spokenName}
+          onSaved={(food) => attachCreatedFood(creatingFor, food)}
+        />
+      </BottomSheet>
+    );
+  }
 
   return (
     <BottomSheet
@@ -746,6 +896,27 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               </p>
             )}
 
+            {/* WHERE THE MEAL IS DECIDED. It used to be decided nowhere: every
+                voice item was logged to lunch whatever the clock said. Seeded
+                from the hour and shown, so a breakfast recorded at 8am is
+                already right and a shift worker can change it in one tap. */}
+            <div style={{ ...sheetGreyStyle, marginBottom: 12 }}>
+              <p style={sheetLabelStyle}>Meal</p>
+              <div className="flex" style={{ gap: 6, marginTop: 9 }}>
+                {mealOrder.map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setMeal(m)}
+                    aria-pressed={meal === m}
+                    className="tap transition-colors"
+                    style={{ ...sheetChipStyle(meal === m), flex: 1, minWidth: 0, padding: "8px 4px" }}
+                  >
+                    {mealLabels[m]}
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
               We found — select what to add
             </p>
@@ -754,6 +925,8 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                 const Icon = item.food
                   ? foodCategoryIcon[item.food.category] ?? UtensilsCrossed
                   : UtensilsCrossed;
+                const preview = previewFor(item);
+                const isOpen = expanded === i;
                 return (
                   <div
                     key={`${item.spokenName}-${i}`}
@@ -786,14 +959,12 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                                 heard “{item.spokenName}”
                               </p>
                             )}
-                          {/* NEITHER DROPPED NOR PRETENDED OTHERWISE. An
-                              unmatched name has no macros behind it, so the row
-                              says what logging it would actually record. */}
+                          {/* NAMED AS A NEW FOOD, not as a failure. The row has a
+                              primary action now — Create food, below — so this
+                              says what it is rather than what it lacks. */}
                           {!item.food && (
                             <p className="text-[11px] text-charcoal-faint">
-                              {item.selected
-                                ? "Not in the food database — logs with no nutrition"
-                                : "Not in the food database"}
+                              New food: not in your food list yet
                             </p>
                           )}
                         </div>
@@ -808,13 +979,48 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                       </div>
                     </div>
 
+                    {/* THE NUMBERS THAT WILL BE LOGGED, not an approximation of
+                        them. The multiplier is servingMultiplier's, the same
+                        function logFoodEntry uses on its way to the database,
+                        so this panel and the diary row cannot disagree. */}
+                    {preview && (
+                      <div className="mt-2.5 pl-11">
+                        <p className="text-[11px] text-charcoal-faint mb-1.5">
+                          {item.food!.servingLabel}
+                          {preview.unitNote ? ` · ${preview.unitNote}` : ""}
+                        </p>
+                        <div
+                          className="grid grid-cols-4"
+                          style={{ ...sheetGreyStyle, padding: "9px 0", borderRadius: 12 }}
+                        >
+                          {[
+                            { value: `${preview.calories}`, color: "#241F1B", caption: "kcal" },
+                            { value: `${preview.protein}g`, color: "#7D6BB5", caption: "protein" },
+                            { value: `${preview.carbs}g`, color: "#8175C2", caption: "carbs" },
+                            { value: `${preview.fat}g`, color: "#4274D7", caption: "fat" },
+                          ].map((cell, ci) => (
+                            <div
+                              key={cell.caption}
+                              className="text-center"
+                              style={ci > 0 ? { borderLeft: "1px solid #E2E3E7" } : undefined}
+                            >
+                              <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: cell.color }}>
+                                {cell.value}
+                              </p>
+                              <p style={{ margin: "1px 0 0", fontSize: 10, color: "#8C8378" }}>{cell.caption}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     {/* EDITING, WHICH IS WHAT "EDIT" NOW MEANS HERE. The button
                         that used to carry that name threw the recording away
                         and started over; that action still exists below, under
                         a name that says so. */}
                     <div className="flex items-center justify-between gap-3 mt-2.5 pl-11">
                       <span className="text-[11px] text-charcoal-faint">
-                        {item.unit ? `per ${item.unit}` : "servings"}
+                        {preview ? preview.quantityLabel : item.spokenUnit ? `per ${item.spokenUnit}` : "servings"}
                       </span>
                       <div
                         className="shrink-0"
@@ -832,6 +1038,63 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                         />
                       </div>
                     </div>
+
+                    {/* A NEW FOOD'S PRIMARY ACTION. Logging it with no nutrition
+                        is still offered and still honest, but it is the lesser
+                        of the two and now looks like it: creating the food once
+                        fixes every future recording that names it. */}
+                    {!item.food && (
+                      <div className="mt-2.5 pl-11 flex items-center gap-3">
+                        <Button size="sm" className="!px-3" onClick={() => setCreatingFor(i)}>
+                          <Plus size={13} /> Create food
+                        </Button>
+                        <button
+                          onClick={() => toggleItem(i)}
+                          className="tap text-[11px] font-semibold text-charcoal-faint underline"
+                        >
+                          {item.selected ? "Don't log this" : "Log without nutrition"}
+                        </button>
+                      </div>
+                    )}
+
+                    {/* The same sourced nutrient set the Nutrient Summary and
+                        Add Food's Advanced view read, scaled by the same
+                        multiplier as the macros above. A key with no data is
+                        rendered as "No data" by NutrientDetailSections, never
+                        as a zero. */}
+                    {preview && (
+                      <div className="mt-2 pl-11">
+                        <button
+                          onClick={() => setExpanded(isOpen ? null : i)}
+                          aria-expanded={isOpen}
+                          className="tap flex items-center gap-1 text-[11px] font-semibold text-primary-dark"
+                        >
+                          <ChevronDown
+                            size={13}
+                            style={{ transform: isOpen ? "rotate(180deg)" : "none", transition: "transform .18s ease" }}
+                          />
+                          {isOpen ? "Hide nutrients" : "More nutrients"}
+                        </button>
+                        {isOpen && (
+                          <div className="mt-2 animate-fade-slide-up">
+                            {preview.nutrients ? (
+                              <NutrientDetailSections
+                                totals={preview.nutrients}
+                                calorieTarget={targets.calories}
+                                proteinTarget={targets.protein}
+                                carbTarget={targets.carbs}
+                                fatTarget={targets.fat}
+                              />
+                            ) : (
+                              <p className="text-[11px] text-charcoal-faint">
+                                No per-nutrient data for this food yet — the calories and macros
+                                above are all there is.
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })}
