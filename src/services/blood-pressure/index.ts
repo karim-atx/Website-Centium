@@ -24,35 +24,14 @@ import { recordedAtFor } from "../health-metrics";
 // are fixed, and the message is gone rather than kept "just in case": a
 // sentence about an unapplied migration is not something to show a user.
 
-export type BpArm = "left" | "right";
-export type BpPosition = "sitting" | "standing" | "lying";
-
-/** Matches the table's CHECKs, so a typo becomes a sentence rather than a 23514. */
-export const BP_LIMITS = {
-  systolic: { min: 50, max: 300 },
-  diastolic: { min: 30, max: 200 },
-  pulse: { min: 25, max: 250 },
-  notesMaxLength: 500,
-} as const;
-
-export const BP_ARMS: readonly BpArm[] = ["left", "right"];
-export const BP_POSITIONS: readonly BpPosition[] = ["sitting", "standing", "lying"];
-
-export interface BloodPressureInput {
-  systolic: number;
-  diastolic: number;
-  /** Not every cuff reports one. */
-  pulse?: number | null;
-  arm?: BpArm | null;
-  position?: BpPosition | null;
-  notes?: string | null;
-}
-
-export interface BloodPressureReading extends BloodPressureInput {
-  id: string;
-  /** ISO timestamp of the measurement itself, not of the row. */
-  recordedAt: string;
-}
+export * from "./reading";
+import {
+  BP_ARMS,
+  BP_LIMITS,
+  BP_POSITIONS,
+  type BloodPressureInput,
+  type BloodPressureReading,
+} from "./reading";
 
 export type BpWriteResult = { ok: true; id?: string } | { ok: false; message: string };
 export type BpListResult =

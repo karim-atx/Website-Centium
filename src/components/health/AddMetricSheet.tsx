@@ -2,7 +2,10 @@ import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
-import { getBloodPressureForDay, logBloodPressure, validateBloodPressure } from "../../services/blood-pressure";
+import { getBloodPressureForDay, type BloodPressureReading } from "../../services/blood-pressure";
+import { classifyBloodPressure } from "../../services/blood-pressure/classify";
+import { BP_CATEGORY_LABEL } from "../../services/blood-pressure/guidance";
+import { BloodPressureSheet } from "./BloodPressureSheet";
 import { X, Camera, ChevronRight, AlertCircle } from "lucide-react";
 
 // Item 3 of the "Centium Mobile" handoff (design_handoff_centium_mobile,
@@ -175,29 +178,29 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   // slot rather than two: only one write is ever in flight at a time.
   const [error, setError] = useState<string | null>(null);
 
-  // Blood pressure, persisted in public.blood_pressure_readings (Part 4, R2).
-  // Opens on the selected day's latest reading, else the handoff's 120/80
-  // defaults. Like weight it autosaves on a short debounce — but only after
-  // the user has changed a value, so the defaults are never logged as a
-  // reading nobody took.
-  const [bpSys, setBpSys] = useState("120");
-  const [bpDia, setBpDia] = useState("80");
-  const [bpDirty, setBpDirty] = useState(false);
+  // Blood pressure, in public.blood_pressure_readings.
+  //
+  // A ROW THAT OPENS A SHEET, where two autosaving fields used to sit. The
+  // pair opened on "120/80" — a real, normal, classifiable reading in the
+  // fields of somebody who had measured nothing — and saved on a 700 ms
+  // debounce. A reading also carries a pulse, a time, an arm, a position and a
+  // note; autosaving after the numbers would have written a row and then
+  // updated it while the user was still choosing the arm. It is one event,
+  // saved once, when they say so.
+  const [bpLatest, setBpLatest] = useState<BloodPressureReading | null>(null);
+  const [bpSheetOpen, setBpSheetOpen] = useState(false);
 
   useEffect(() => {
     if (open) {
       setWeightDraft(initialWeightDraft());
       setWeightDirty(false);
       setError(null);
-      setBpSys("120");
-      setBpDia("80");
-      setBpDirty(false);
+      setBpLatest(null);
       if (authUserId) {
         let cancelled = false;
         void getBloodPressureForDay(authUserId, selectedDate).then((result) => {
-          if (cancelled || !result.ok || !result.reading) return;
-          setBpSys(String(result.reading.systolic));
-          setBpDia(String(result.reading.diastolic));
+          if (cancelled || !result.ok) return;
+          setBpLatest(result.reading);
         });
         return () => {
           cancelled = true;
@@ -207,33 +210,6 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, selectedDate]);
 
-  useEffect(() => {
-    if (!open || !bpDirty) return;
-    // Wait until both look complete (2-3 digits) so half-typed numbers aren't
-    // judged or saved.
-    if (bpSys.length < 2 || bpDia.length < 2) return;
-    const t = setTimeout(() => {
-      const reading = { systolic: Number(bpSys), diastolic: Number(bpDia) };
-      const invalid = validateBloodPressure(reading);
-      if (invalid) {
-        setError(invalid);
-        return;
-      }
-      if (!authUserId) {
-        setError("You need to be signed in to save your blood pressure.");
-        return;
-      }
-      setSaving(true);
-      setError(null);
-      void logBloodPressure({ userId: authUserId, reading, day: selectedDate, today }).then((result) => {
-        setSaving(false);
-        if (!result.ok) setError(result.message);
-        else setBpDirty(false);
-      });
-    }, 700);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bpSys, bpDia, bpDirty, open]);
 
   // Lock background scroll while the card is open — ported from
   // BottomSheet's own open-effect now that this sheet no longer renders
@@ -290,15 +266,6 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   const handleAddRecords = () => {
     onClose();
     navigate("/app/health", { state: { openRecords: true } });
-  };
-
-  const handleSysChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setBpSys(e.target.value.replace(/\D/g, "").slice(0, 3));
-    setBpDirty(true);
-  };
-  const handleDiaChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setBpDia(e.target.value.replace(/\D/g, "").slice(0, 3));
-    setBpDirty(true);
   };
 
   if (!open) return null;
@@ -434,46 +401,41 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
           </div>
 
           <p style={{ margin: "0 0 6px", fontSize: 12, letterSpacing: "0.02em", color: "#655B69" }}>BLOOD PRESSURE</p>
-          <div
-            className="flex items-center gap-[9px]"
+          {/* THE DAY'S LATEST READING, or nothing. This was two number fields
+              pre-filled with 120/80 for everybody, saving themselves on a
+              debounce. A reading needs a time, an arm and a position to be
+              comparable with the next one, so it gets a sheet of its own. */}
+          <button
+            onClick={() => setBpSheetOpen(true)}
+            className="tap w-full flex items-center gap-[9px] text-left"
             style={{ background: "#F3F3F4", borderRadius: 12, padding: "9px 11px", marginBottom: 13 }}
           >
             <CuffGlyph />
-            <input
-              value={bpSys}
-              onChange={handleSysChange}
-              inputMode="numeric"
-              className="flex-1 min-w-0 outline-none"
-              style={{
-                background: "#FBFBFD",
-                border: "1px solid rgba(36,31,27,0.06)",
-                borderRadius: 8,
-                padding: "7px 8px",
-                textAlign: "center",
-                fontSize: 15,
-                fontWeight: 600,
-                color: "#241F1B",
-              }}
-            />
-            <span style={{ fontSize: 15, color: "#655B69", flex: "none" }}>/</span>
-            <input
-              value={bpDia}
-              onChange={handleDiaChange}
-              inputMode="numeric"
-              className="flex-1 min-w-0 outline-none"
-              style={{
-                background: "#FBFBFD",
-                border: "1px solid rgba(36,31,27,0.06)",
-                borderRadius: 8,
-                padding: "7px 8px",
-                textAlign: "center",
-                fontSize: 15,
-                fontWeight: 600,
-                color: "#241F1B",
-              }}
-            />
-            <span style={{ fontSize: 11, color: "#827C9C", flex: "none" }}>mmHg</span>
-          </div>
+            <span className="flex-1 min-w-0">
+              {bpLatest ? (
+                <>
+                  <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#241F1B" }}>
+                    {bpLatest.systolic}/{bpLatest.diastolic}
+                    <span style={{ fontSize: 11, fontWeight: 500, color: "#827C9C" }}> mmHg</span>
+                  </span>
+                  <span style={{ display: "block", fontSize: 10.5, color: "#655B69" }}>
+                    {BP_CATEGORY_LABEL[classifyBloodPressure(bpLatest.systolic, bpLatest.diastolic)]}
+                    {bpLatest.pulse != null && ` · ${bpLatest.pulse} bpm`}
+                  </span>
+                </>
+              ) : (
+                <>
+                  <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#241F1B" }}>
+                    Add a reading
+                  </span>
+                  <span style={{ display: "block", fontSize: 10.5, color: "#827C9C" }}>
+                    Nothing recorded for this day
+                  </span>
+                </>
+              )}
+            </span>
+            <ChevronRight size={12} strokeWidth={2.2} style={{ color: "#4A22CE", flex: "none" }} />
+          </button>
 
           <div
             className="flex items-center gap-[9px]"
@@ -490,12 +452,33 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             <span style={{ fontSize: 12, fontWeight: 600, color: "#1A00E0" }}>{confirmationText}</span>
           </div>
 
+          {/* Steps, sleep and calories burned are not manually loggable and
+              nothing syncs them either -- device sync is not built. The old
+              line said they "sync automatically from Apple/Android Health",
+              which no account has ever done. */}
           <p style={{ margin: "13px 4px 2px", fontSize: 10, lineHeight: 1.5, color: "#827C9C", textAlign: "center" }}>
-            Body Fat, Steps, Sleep and Calories Burned sync automatically from Apple/Android Health and
-            aren't manually editable.
+            Steps, sleep and calories burned would come from a connected device. Device sync isn't
+            available yet.
           </p>
         </div>
       </div>
+
+      <BloodPressureSheet
+        open={bpSheetOpen}
+        onClose={() => setBpSheetOpen(false)}
+        // ALWAYS ADDS, never edits. The row shows the day's latest reading as
+        // information; tapping it records a NEW one, because the measurement
+        // advice this app now gives says to take two or three a minute apart.
+        // Corrections are made from the list in the detail view, where the
+        // reading being corrected is the one you tapped.
+        editing={null}
+        onSaved={() => {
+          if (!authUserId) return;
+          void getBloodPressureForDay(authUserId, selectedDate).then((r) => {
+            if (r.ok) setBpLatest(r.reading);
+          });
+        }}
+      />
     </div>,
     document.body
   );
