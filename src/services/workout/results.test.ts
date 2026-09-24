@@ -39,19 +39,34 @@ test("a For Time is a clock", () => {
   assert.equal(blockScore(result({ kind: "for_time", timeSeconds: 872 })), "14:32");
 });
 
-test("a capped For Time says it was capped, and how far they got", () => {
+// Database 20260924340000 made extra_reps legal on a CAPPED for_time, which
+// is how the piece is actually scored: "2+14" is twelve full rounds and
+// fourteen reps of the next, and it is what distinguishes two athletes who
+// both reached the same round.
+test("a capped For Time scores rounds plus reps", () => {
   assert.equal(
-    blockScore(result({ kind: "for_time", timeSeconds: 1200, capped: true, rounds: 5, roundsCompleted: 3 })),
-    "capped at 20:00, 3 of 5 rounds"
+    blockScore(result({ kind: "for_time", timeSeconds: 1200, capped: true, rounds: 5, roundsCompleted: 2, extraReps: 14 })),
+    "Capped at 20:00 · 2 rounds + 14 reps"
   );
+});
+
+test("a capped For Time with no remainder says only the rounds", () => {
   assert.equal(
     blockScore(result({ kind: "for_time", timeSeconds: 1200, capped: true, roundsCompleted: 3 })),
-    "capped at 20:00, 3 rounds"
+    "Capped at 20:00 · 3 rounds"
   );
   assert.equal(
-    blockScore(result({ kind: "for_time", timeSeconds: 1200, capped: true })),
-    "capped at 20:00"
+    blockScore(result({ kind: "for_time", timeSeconds: 1200, capped: true, roundsCompleted: 0 })),
+    "Capped at 20:00 · 0 rounds"
   );
+});
+
+test("a capped For Time that recorded nothing else is still capped", () => {
+  assert.equal(blockScore(result({ kind: "for_time", timeSeconds: 1200, capped: true })), "Capped at 20:00");
+});
+
+test("a FINISHED For Time is a clock and nothing else", () => {
+  assert.equal(blockScore(result({ kind: "for_time", timeSeconds: 872, roundsCompleted: 5 })), "14:32");
 });
 
 test("a superset scores nothing, because it is not a thing you win", () => {
@@ -65,8 +80,8 @@ test("the line pairs the block's own heading with its score", () => {
     "AMRAP · 12 min: 7 rounds + 5 reps"
   );
   assert.equal(
-    blockResultLine(result({ kind: "for_time", rounds: 5, timeCapSeconds: 1200, timeSeconds: 1200, capped: true, roundsCompleted: 3 })),
-    "For Time · 5 rounds (cap 20 min): capped at 20:00, 3 of 5 rounds"
+    blockResultLine(result({ kind: "for_time", rounds: 5, timeCapSeconds: 1200, timeSeconds: 1200, capped: true, roundsCompleted: 3, extraReps: 8 })),
+    "For Time · 5 rounds (cap 20 min): Capped at 20:00 · 3 rounds + 8 reps"
   );
 });
 
@@ -89,6 +104,24 @@ test("a For Time must carry a time above zero, which the column requires", () =>
   assert.ok(checkBlockResult(result({ kind: "for_time" })));
   assert.ok(checkBlockResult(result({ kind: "for_time", timeSeconds: 0 })));
   assert.equal(checkBlockResult(result({ kind: "for_time", timeSeconds: 1 })), null);
+});
+
+test("leftover reps are refused on a For Time that was not capped", () => {
+  // `extra_reps is null or capped is true` — a finished piece has no
+  // remainder, so a row claiming one is a client bug and this is where it
+  // surfaces rather than as a 23514 at the end of a session.
+  assert.match(
+    checkBlockResult(result({ kind: "for_time", timeSeconds: 600, extraReps: 7 })) ?? "",
+    /cap stopped/i
+  );
+  assert.match(
+    checkBlockResult(result({ kind: "for_time", timeSeconds: 600, extraReps: 7, capped: false })) ?? "",
+    /cap stopped/i
+  );
+  assert.equal(
+    checkBlockResult(result({ kind: "for_time", timeSeconds: 600, extraReps: 7, capped: true })),
+    null
+  );
 });
 
 test("a superset needs nothing", () => {

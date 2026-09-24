@@ -211,6 +211,7 @@ const ScoreBoard: React.FC<{
   const elapsed = elapsedSeconds(watch, now);
   const hitCap = cap > 0 && capReached(watch, cap, now);
   const finished = result?.timeSeconds != null;
+  const wasCapped = finished && result!.capped === true;
   return (
     <Panel>
       <Clock
@@ -220,9 +221,28 @@ const ScoreBoard: React.FC<{
       />
       {!finished && <Transport running={isRunning(watch)} onToggle={start} onReset={reset} />}
       {block.rounds ? <Counter label="Rounds" value={rounds} onChange={bump} ink={ink} /> : null}
+      {/* ROUNDS PLUS REPS IS THE SCORE OF A CAPPED PIECE, and the clock is
+          not — it reads the cap, the same value for everyone it stopped. The
+          field appears only once the cap has actually been recorded, because
+          extra_reps is legal only on a capped row: the constraint refuses it
+          on a finished one, where there is no remainder to have. */}
+      {wasCapped && (
+        <NumberBox
+          label="Reps in the unfinished round"
+          value={result?.extraReps}
+          onChange={(v) => onResult({ extraReps: v })}
+          placeholder="0"
+        />
+      )}
       {finished ? (
         <button
-          onClick={() => onResult({ timeSeconds: undefined, capped: undefined })}
+          onClick={() =>
+            // The reps go with the cap they belonged to. Leaving them behind
+            // would produce a finished For Time carrying a remainder, which
+            // the CHECK refuses and which would cost the whole session at
+            // save time.
+            onResult({ timeSeconds: undefined, capped: undefined, extraReps: undefined })
+          }
           className="tap text-[11px] font-semibold"
           style={{ color: ink }}
         >
@@ -253,6 +273,7 @@ const ScoreBoard: React.FC<{
     </Panel>
   );
 };
+
 
 const EmomPanel: React.FC<{
   pos: { round: number; remaining: number; done: boolean };

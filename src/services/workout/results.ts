@@ -11,8 +11,9 @@ import { blockHeading, formatClock, formatPace, formatSeconds } from "./prescrip
 //
 // WHICH FIELDS MEAN ANYTHING IS PER KIND, and it is the database's rule, not
 // a display preference — workout_block_results' kind/score CHECK refuses an
-// AMRAP carrying a time, or a For Time carrying leftover reps. Reading a
-// field the kind does not own would be reading a column that is always null.
+// AMRAP carrying a time, or a For Time carrying leftover reps on a result
+// that did not say the cap stopped it. Reading a field the kind does not own
+// would be reading a column that is always null.
 
 /** A block's score, as a sentence: "AMRAP · 12 min: 7 rounds + 5 reps". */
 export function blockResultLine(result: BlockResult, ordinal = 0): string {
@@ -47,16 +48,23 @@ export function blockScore(result: BlockResult): string {
       const time = formatClock(result.timeSeconds ?? 0);
       if (!result.capped) return time;
       // THE CAP STOPPED IT, which is a different fact from finishing in that
-      // time, and has to read as one. How far they got is rounds — leftover
-      // reps are a column this kind does not own.
-      const got = result.roundsCompleted != null
-        ? result.rounds
-          ? `, ${result.roundsCompleted} of ${result.rounds} rounds`
-          : `, ${roundWord(result.roundsCompleted)}`
-        : "";
-      return `capped at ${time}${got}`;
+      // time and has to read as one — the clock reads the cap, the same value
+      // for everyone it stopped, so it is no longer the score.
+      //
+      // ROUNDS PLUS REPS IS THE SCORE, which is what Database 20260924340000
+      // made storable: "2 rounds + 14 reps" is how far into the work the
+      // athlete got, and it is the number that distinguishes two people who
+      // both reached round 2. Until that migration extra_reps was forbidden
+      // on this kind and the "+ 14" had to be rounded away.
+      const parts = [`Capped at ${time}`];
+      if (result.roundsCompleted != null) parts.push(roundWord(result.roundsCompleted));
+      if (result.extraReps) parts.push(`${result.extraReps} reps`);
+      // "2 rounds + 14 reps" joins with a plus; the clock with a middot.
+      const score = parts.slice(1).join(" + ");
+      return score ? `${parts[0]} · ${score}` : parts[0];
     }
   }
+
 }
 
 const roundWord = (n: number): string => `${n} ${n === 1 ? "round" : "rounds"}`;
@@ -155,7 +163,14 @@ export function checkBlockResult(result: BlockResult): string | null {
     case "for_time":
       // time_seconds is NOT NULL for this kind AND must be > 0, so a For Time
       // that was never started cannot be recorded at all.
-      return result.timeSeconds ? null : "Start the clock before finishing this block.";
+      if (!result.timeSeconds) return "Start the clock before finishing this block.";
+      // extra_reps is legal ONLY on a capped result — a finished For Time has
+      // no remainder, so a row claiming one is this client's bug and the
+      // constraint is where it would surface. Caught here instead.
+      if (result.extraReps != null && result.capped !== true) {
+        return "Leftover reps only make sense when the cap stopped the block.";
+      }
+      return null;
   }
 }
 
