@@ -234,3 +234,71 @@ export function groupIntoRuns(exercises: Exercise[], blocks: WorkoutBlock[]): Re
   }
   return runs;
 }
+
+/**
+ * A drag-and-drop reorder that cannot land inside somebody else's block.
+ *
+ * DRAGGING IS THE DANGEROUS ONE. The up/down arrows are a single considered
+ * step; a drag crosses the whole list and the drop index is wherever a finger
+ * happened to lift. A plain splice would put an exercise in the middle of a
+ * superset — changing what the athlete is asked to do — and then fail at
+ * COMMIT with ATX27, taking the template's whole prescription list with it.
+ *
+ * THE RULES, which are the drag equivalent of moveExercise's:
+ *
+ *   a member dropped inside its own block   lands where it was dropped
+ *   a member dropped anywhere else          refused; leaving is Ungroup
+ *   a solo dropped inside a block           snapped to the nearer EDGE of it
+ *   a solo dropped anywhere else            lands where it was dropped
+ *
+ * Snapping rather than refusing, because a drag that visibly does nothing
+ * reads as a broken control; landing next to the block is what was almost
+ * certainly meant. Returns the list unchanged when the move is refused.
+ */
+export function reorderByDrag(
+  exercises: Exercise[],
+  fromIndex: number,
+  toIndex: number
+): Exercise[] {
+  if (
+    fromIndex === toIndex ||
+    fromIndex < 0 ||
+    toIndex < 0 ||
+    fromIndex >= exercises.length ||
+    toIndex >= exercises.length
+  ) {
+    return exercises;
+  }
+
+  const moved = exercises[fromIndex];
+  const target = exercises[toIndex];
+
+  if (moved.blockId) {
+    // Only among its own. Anywhere else would either break this block or
+    // silently join another.
+    if (target.blockId !== moved.blockId) return exercises;
+    const next = [...exercises];
+    next.splice(fromIndex, 1);
+    next.splice(toIndex, 0, moved);
+    return next;
+  }
+
+  const without = exercises.filter((_, i) => i !== fromIndex);
+  if (!target.blockId) {
+    const at = without.findIndex((e) => e === target);
+    const insertAt = toIndex > fromIndex ? at + 1 : at;
+    const next = [...without];
+    next.splice(insertAt, 0, moved);
+    return next;
+  }
+
+  // Into a block: snap to whichever edge the drop was nearer.
+  const range = blockRange(without, target.blockId);
+  if (!range) return exercises;
+  const targetAt = without.findIndex((e) => e === target);
+  const nearerEnd = targetAt - range.start >= range.end - targetAt;
+  const insertAt = nearerEnd ? range.end + 1 : range.start;
+  const next = [...without];
+  next.splice(insertAt, 0, moved);
+  return next;
+}

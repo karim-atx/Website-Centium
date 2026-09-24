@@ -8,6 +8,9 @@ import { CreateWorkoutTemplateSheet } from "../../components/professionals/Creat
 import type { WorkoutTemplate } from "../../types";
 import { AssignTemplateSheet } from "../../components/professionals/AssignTemplateSheet";
 import { UnverifiedProgramNotice } from "../../components/workout/UnverifiedProgramNotice";
+import { BlockCard } from "../../components/workout/BlockCard";
+import { groupIntoRuns } from "../../services/workout/blocks";
+import { prescriptionLine } from "../../services/workout/prescription";
 import { Plus, Trash2, ChevronDown, ChevronUp, Folder, FolderPlus, MoreVertical, Copy, Pencil, Settings2, Send } from "lucide-react";
 import clsx from "clsx";
 
@@ -153,23 +156,30 @@ export default function WorkoutTemplateBuilderTab() {
                         with something more expansive that not only shows
                         the exercise, but the sets, reps, and anything else
                         used when adding exercise." */}
+                    {/* The fourth copy of a prescription renderer is gone with
+                        the others. This one could not say a rep RANGE, which is
+                        the field a professional is most likely to use — a
+                        coach writing 8–12 saw "3 sets × 0 reps". */}
                     <div className="space-y-1.5">
-                      {t.exercises.map((ex) => (
-                        <div key={ex.id} className="bg-cream-soft rounded-xl px-3 py-2">
-                          <p className="text-sm font-medium text-charcoal">{ex.name}</p>
-                          <p className="text-[11px] text-charcoal-faint">
-                            {[
-                              `${ex.sets} sets × ${ex.reps} reps`,
-                              ex.weightKg ? `${ex.weightKg}kg` : null,
-                              ex.restSeconds ? `Rest ${ex.restSeconds}s` : null,
-                              ex.rpe ? `RPE ${ex.rpe}` : null,
-                              ex.tempo ? `Tempo ${ex.tempo}` : null,
-                            ]
-                              .filter(Boolean)
-                              .join(" · ")}
-                          </p>
-                        </div>
-                      ))}
+                      {groupIntoRuns(t.exercises, t.blocks ?? []).map((run) =>
+                        run.block ? (
+                          <div key={run.block.id} style={{ margin: "0 -12px" }}>
+                            <BlockCard block={run.block} ordinal={run.ordinal} members={run.members} />
+                          </div>
+                        ) : (
+                          run.members.map((ex) => {
+                            const line = prescriptionLine(ex);
+                            return (
+                              <div key={ex.id} className="bg-cream-soft rounded-xl px-3 py-2">
+                                <p className="text-sm font-medium text-charcoal">{ex.name}</p>
+                                {line && (
+                                  <p className="text-[11px] text-charcoal-faint">{line}</p>
+                                )}
+                              </div>
+                            );
+                          })
+                        )
+                      )}
                     </div>
                   </div>
 

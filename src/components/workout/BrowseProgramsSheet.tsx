@@ -4,8 +4,11 @@ import { Button } from "../ui/Button";
 import { useApp } from "../../context/AppContext";
 import { getPublicTemplates } from "../../services/templates";
 import { UnverifiedProgramNotice } from "./UnverifiedProgramNotice";
-import type { Exercise, WorkoutTemplate } from "../../types";
+import type { WorkoutTemplate } from "../../types";
 import { ChevronLeft, ChevronRight, Check, Clock, Dumbbell } from "lucide-react";
+import { BlockCard } from "./BlockCard";
+import { groupIntoRuns } from "../../services/workout/blocks";
+import { prescriptionLine } from "../../services/workout/prescription";
 
 // Browsing the curated starter programs, and taking one for yourself.
 //
@@ -26,38 +29,11 @@ import { ChevronLeft, ChevronRight, Check, Clock, Dumbbell } from "lucide-react"
 // the general template read fail for anon). Adoption needs an account, so the
 // action degrades to a sign-in prompt rather than a button that fails.
 
-/**
- * What one line of a program actually prescribes.
- *
- * REPS ARE NOT PRINTED FOR CARDIO, and this was worth fixing rather than
- * copying from the other exercise lists. The reader defaults a missing `reps`
- * to 10 so strength surfaces always have a number; Runner's Program prescribes
- * `reps` null and `cardio_duration_min` 20, and printing "1 sets × 10 reps"
- * for an easy run both invented a number and hid the real one. On a screen
- * whose whole point is being straight about unreviewed programming, that is
- * exactly the wrong place to show a made-up figure.
- */
-function prescription(ex: Exercise): string {
-  const isCardio = ex.classification === "cardio" || ex.classification === "duration";
-  const parts = isCardio
-    ? [
-        ex.sets && ex.sets > 1 ? `${ex.sets} ×` : null,
-        ex.cardioDurationMin ? `${ex.cardioDurationMin} min` : null,
-        ex.cardioDistanceKm ? `${ex.cardioDistanceKm} km` : null,
-        ex.cardioInclinePct ? `${ex.cardioInclinePct}% incline` : null,
-        ex.cardioPaceMinPerKm ? `${ex.cardioPaceMinPerKm} min/km` : null,
-      ]
-    : [
-        `${ex.sets} sets × ${ex.reps} reps`,
-        ex.weightKg ? `${ex.weightKg}kg` : null,
-        ex.rpe ? `RPE ${ex.rpe}` : null,
-        ex.tempo ? `Tempo ${ex.tempo}` : null,
-      ];
-
-  const body = parts.filter(Boolean).join(" ").trim();
-  const rest = ex.restSeconds ? `Rest ${ex.restSeconds}s` : null;
-  return [body || null, rest].filter(Boolean).join(" · ");
-}
+// The local prescription renderer that used to live here is gone. It showed
+// `${sets} sets × ${reps} reps` and the five legacy cardio numbers, so a
+// curated program with a rep range or an endurance plan read as neither —
+// and it was the third such renderer in the app. services/workout/prescription
+// is the one that all of them use now.
 
 export const BrowseProgramsSheet: React.FC<{
   open: boolean;
@@ -157,13 +133,30 @@ export const BrowseProgramsSheet: React.FC<{
 
             <div>
               <p className="section-label text-charcoal-faint mb-2">Exercises</p>
+              {/* BLOCKS RENDER HERE TOO, and "no blocks" is the ordinary case
+                  rather than an error: a curated program written before blocks
+                  existed has none, and anon cannot read the curated block rows
+                  until the database follow-up lands. groupIntoRuns simply
+                  returns one solo run per exercise then, which is exactly what
+                  this used to draw. */}
               <div className="space-y-1.5">
-                {selected.exercises.map((ex) => (
-                  <div key={ex.id} className="bg-cream-soft rounded-xl px-3 py-2">
-                    <p className="text-sm font-medium text-charcoal">{ex.name}</p>
-                    <p className="text-[11px] text-charcoal-faint">{prescription(ex)}</p>
-                  </div>
-                ))}
+                {groupIntoRuns(selected.exercises, selected.blocks ?? []).map((run) =>
+                  run.block ? (
+                    <div key={run.block.id} style={{ margin: "0 -12px" }}>
+                      <BlockCard block={run.block} ordinal={run.ordinal} members={run.members} />
+                    </div>
+                  ) : (
+                    run.members.map((ex) => {
+                      const line = prescriptionLine(ex);
+                      return (
+                        <div key={ex.id} className="bg-cream-soft rounded-xl px-3 py-2">
+                          <p className="text-sm font-medium text-charcoal">{ex.name}</p>
+                          {line && <p className="text-[11px] text-charcoal-faint">{line}</p>}
+                        </div>
+                      );
+                    })
+                  )
+                )}
               </div>
             </div>
 

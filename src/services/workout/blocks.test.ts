@@ -8,6 +8,7 @@ import {
   moveExercise,
   normalizeBlock,
   pruneBlocks,
+  reorderByDrag,
   ungroupBlock,
 } from "./blocks.ts";
 import type { Exercise, WorkoutBlock } from "../../types";
@@ -163,4 +164,53 @@ test("pruneBlocks drops the ones nothing points at", () => {
     { id: "b2", kind: "amrap", timeCapSeconds: 600 },
   ];
   assert.deepEqual(pruneBlocks(list, blocks).map((b) => b.id), ["b1"]);
+});
+
+// --- dragging --------------------------------------------------------------
+
+test("a solo dropped into a block snaps to the nearer edge", () => {
+  const list = [ex("a"), ex("b", "b1"), ex("c", "b1"), ex("d", "b1")];
+  // Dropped on `b`, the first member — nearer the start, so it lands before it.
+  assert.equal(ids(reorderByDrag(list, 0, 1)), "a b c d", "no visible move: it was already there");
+  // Dropped on `d`, the last member — nearer the end, so it lands after.
+  assert.equal(ids(reorderByDrag(list, 0, 3)), "b c d a");
+});
+
+test("a solo dragged past a solo lands where it was dropped", () => {
+  const list = [ex("a"), ex("b"), ex("c")];
+  assert.equal(ids(reorderByDrag(list, 0, 2)), "b c a");
+  assert.equal(ids(reorderByDrag(list, 2, 0)), "c a b");
+});
+
+test("a member can be dragged only inside its own block", () => {
+  const list = [ex("a"), ex("b", "b1"), ex("c", "b1"), ex("d", "b1")];
+  assert.equal(ids(reorderByDrag(list, 3, 1)), "a d b c", "within the block, fine");
+  assert.equal(reorderByDrag(list, 1, 0), list, "out of the block, refused");
+});
+
+test("a member cannot be dragged into a different block", () => {
+  const list = [ex("a", "b1"), ex("b", "b1"), ex("c", "b2"), ex("d", "b2")];
+  assert.equal(reorderByDrag(list, 0, 3), list);
+});
+
+test("every block survives a storm of drags", () => {
+  const start = [ex("a"), ex("b", "b1"), ex("c", "b1"), ex("d"), ex("e", "b2"), ex("f", "b2"), ex("g")];
+  let list = start;
+  for (let from = 0; from < 7; from++) {
+    for (let to = 0; to < 7; to++) {
+      const next = reorderByDrag(list, from, to);
+      for (const blockId of ["b1", "b2"]) {
+        const range = blockRange(next, blockId);
+        const members = next.filter((e) => e.blockId === blockId).length;
+        assert.ok(range, blockId);
+        assert.equal(
+          range!.end - range!.start + 1,
+          members,
+          `${blockId} broke after drag ${from}->${to}: ${ids(next)} / ${groups(next)}`
+        );
+      }
+      assert.equal(next.length, 7, "nothing lost or duplicated");
+      list = next;
+    }
+  }
 });

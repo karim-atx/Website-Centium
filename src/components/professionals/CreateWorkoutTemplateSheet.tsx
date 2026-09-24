@@ -1,10 +1,23 @@
 import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import type { Exercise, WorkoutTemplate } from "../../types";
+import type { Exercise, WorkoutBlock, WorkoutTemplate } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { ExerciseLibrarySheet, type ExercisePick } from "../workout/ExerciseLibrarySheet";
 import { ExerciseSettingsSheet } from "../workout/ExerciseSettingsSheet";
+import { BlockCard } from "../workout/BlockCard";
+import { BlockSettingsSheet } from "../workout/BlockSettingsSheet";
+import {
+  canGroup,
+  defaultBlockParams,
+  groupExercises,
+  groupIntoRuns,
+  newBlockId,
+  pruneBlocks,
+  reorderByDrag,
+  ungroupBlock,
+} from "../../services/workout/blocks";
+import { prescriptionLine } from "../../services/workout/prescription";
 import { GripVertical, Library, Search, Settings2, X } from "lucide-react";
 import clsx from "clsx";
 
@@ -40,6 +53,11 @@ export const CreateWorkoutTemplateSheet: React.FC<{
   const { addWorkoutTemplate, updateWorkoutTemplate, customExercises, exerciseCatalog, workoutTemplateFolders } = useApp();
   const [name, setName] = useState(editTemplate?.name ?? "");
   const [exercises, setExercises] = useState<Exercise[]>(editTemplate?.exercises ?? []);
+  const [blocks, setBlocks] = useState<WorkoutBlock[]>(editTemplate?.blocks ?? []);
+  const [selecting, setSelecting] = useState(false);
+  const [selected, setSelected] = useState<string[]>([]);
+  const [blockDraft, setBlockDraft] = useState<{ block: WorkoutBlock; memberIds: string[] } | null>(null);
+  const [groupProblem, setGroupProblem] = useState<string | null>(null);
   const [notes, setNotes] = useState(editTemplate?.coachNote ?? "");
   const [searchQuery, setSearchQuery] = useState("");
   const [libraryOpen, setLibraryOpen] = useState(false);
@@ -53,6 +71,10 @@ export const CreateWorkoutTemplateSheet: React.FC<{
     if (open) {
       setName(editTemplate?.name ?? "");
       setExercises(editTemplate?.exercises ?? []);
+      setBlocks(editTemplate?.blocks ?? []);
+      setSelecting(false);
+      setSelected([]);
+      setGroupProblem(null);
       setNotes(editTemplate?.coachNote ?? "");
       setFolderId(editTemplate?.folderId ?? defaultFolderId);
       setError(null);
@@ -63,6 +85,10 @@ export const CreateWorkoutTemplateSheet: React.FC<{
   const reset = () => {
     setName("");
     setExercises([]);
+    setBlocks([]);
+    setSelecting(false);
+    setSelected([]);
+    setGroupProblem(null);
     setNotes("");
     setSearchQuery("");
     setFolderId(defaultFolderId);
@@ -74,16 +100,25 @@ export const CreateWorkoutTemplateSheet: React.FC<{
     setSearchQuery("");
   };
 
-  const removeExercise = (id: string) => setExercises((prev) => prev.filter((e) => e.id !== id));
-
-  const handleDrop = (targetIdx: number) => {
-    if (dragIndex === null || dragIndex === targetIdx) return;
+  const removeExercise = (id: string) =>
     setExercises((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(dragIndex, 1);
-      next.splice(targetIdx, 0, moved);
+      const next = prev.filter((e) => e.id !== id);
+      // Removing a member can leave a superset with one exercise, which the
+      // database refuses. Pruning here means the refusal never reaches it.
+      setBlocks((current) => pruneBlocks(next, current));
       return next;
     });
+
+  /**
+   * BLOCK-AWARE SINCE BLOCKS EXISTED. A plain splice — which this was — drops
+   * an exercise wherever the finger lifted, including the middle of somebody
+   * else's superset. That changes what the athlete is asked to do, and then
+   * fails at COMMIT with ATX27 and takes every prescription with it. See
+   * reorderByDrag for the four rules and the tests that hold them.
+   */
+  const handleDrop = (targetIdx: number) => {
+    if (dragIndex === null || dragIndex === targetIdx) return;
+    setExercises((prev) => reorderByDrag(prev, dragIndex, targetIdx));
     setDragIndex(null);
   };
 
@@ -113,6 +148,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{
     const payload = {
       name: name.trim(),
       exercises,
+      blocks: pruneBlocks(exercises, blocks),
       folderId,
       coachNote: notes.trim() || undefined,
     };
@@ -153,32 +189,142 @@ export const CreateWorkoutTemplateSheet: React.FC<{
           </label>
 
           <div>
-            <span className="text-xs font-semibold text-charcoal-soft mb-2 block">
-              Exercises {exercises.length > 0 && `(drag to reorder, tap for settings)`}
-            </span>
-            <div className="space-y-1.5 mb-3">
-              {exercises.map((ex, i) => (
-                <div
-                  key={ex.id}
-                  draggable
-                  onDragStart={() => setDragIndex(i)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => handleDrop(i)}
-                  className="tap flex items-center gap-2 bg-cream-soft rounded-xl px-3 py-2.5 cursor-grab active:cursor-grabbing"
-                >
-                  <GripVertical size={14} className="text-charcoal-faint shrink-0" />
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold text-charcoal-soft">
+                Exercises {exercises.length > 0 && `(drag to reorder, tap for settings)`}
+              </span>
+              {exercises.length >= 2 &&
+                (selecting ? (
+                  <span className="flex items-center" style={{ gap: 12 }}>
+                    <button
+                      onClick={() => {
+                        setSelecting(false);
+                        setSelected([]);
+                        setGroupProblem(null);
+                      }}
+                      className="tap text-[11.5px] font-semibold text-charcoal-soft"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => {
+                        const check = canGroup(exercises, selected);
+                        if (!check.ok) {
+                          setGroupProblem(check.message);
+                          return;
+                        }
+                        setGroupProblem(null);
+                        setBlockDraft({
+                          block: { id: newBlockId(), kind: "superset", ...defaultBlockParams("superset") },
+                          memberIds: [...selected],
+                        });
+                      }}
+                      disabled={selected.length < 2}
+                      className="tap text-[11.5px] font-semibold"
+                      style={{ color: selected.length < 2 ? "#C9C2B8" : "#5F5093" }}
+                    >
+                      Group as…
+                    </button>
+                  </span>
+                ) : (
                   <button
-                    onClick={() => setSettingsIndex(i)}
-                    className="flex-1 flex items-center justify-between text-left min-w-0"
+                    onClick={() => setSelecting(true)}
+                    className="tap text-[11.5px] font-semibold text-primary-dark"
                   >
-                    <span className="text-sm font-medium text-charcoal truncate">{ex.name}</span>
-                    <Settings2 size={13} className="text-charcoal-faint shrink-0 ml-2" />
+                    Group
                   </button>
-                  <button onClick={() => removeExercise(ex.id)} className="tap text-charcoal-faint shrink-0">
-                    <X size={14} />
-                  </button>
-                </div>
-              ))}
+                ))}
+            </div>
+            {groupProblem && (
+              <p className="text-[11px] text-status-high mb-2">{groupProblem}</p>
+            )}
+            <div className="space-y-1.5 mb-3">
+              {groupIntoRuns(exercises, blocks).map((run) =>
+                run.block ? (
+                  <div key={run.block.id} style={{ margin: "0 -12px" }}>
+                    <BlockCard
+                      block={run.block}
+                      ordinal={run.ordinal}
+                      members={run.members}
+                      onHeaderClick={() =>
+                        setBlockDraft({ block: run.block!, memberIds: run.members.map((m) => m.id) })
+                      }
+                      renderMemberAction={(ex) => (
+                        <button
+                          onClick={() => setSettingsIndex(exercises.findIndex((e) => e.id === ex.id))}
+                          aria-label={`Settings for ${ex.name}`}
+                          className="tap text-charcoal-faint shrink-0"
+                        >
+                          <Settings2 size={13} />
+                        </button>
+                      )}
+                    />
+                  </div>
+                ) : (
+                  run.members.map((ex) => {
+                    const i = exercises.findIndex((e) => e.id === ex.id);
+                    const line = prescriptionLine(ex);
+                    return (
+                      <div
+                        key={ex.id}
+                        draggable={!selecting}
+                        onDragStart={() => setDragIndex(i)}
+                        onDragOver={(e) => e.preventDefault()}
+                        onDrop={() => handleDrop(i)}
+                        className="tap flex items-center gap-2 bg-cream-soft rounded-xl px-3 py-2.5 cursor-grab active:cursor-grabbing"
+                      >
+                        {selecting ? (
+                          <button
+                            onClick={() =>
+                              setSelected((prev) =>
+                                prev.includes(ex.id)
+                                  ? prev.filter((id) => id !== ex.id)
+                                  : [...prev, ex.id]
+                              )
+                            }
+                            role="checkbox"
+                            aria-checked={selected.includes(ex.id)}
+                            aria-label={`Select ${ex.name}`}
+                            className="tap flex items-center justify-center shrink-0"
+                            style={{
+                              width: 18,
+                              height: 18,
+                              borderRadius: 5,
+                              border: `2px solid ${selected.includes(ex.id) ? "#AEA1DC" : "rgba(36,31,27,0.2)"}`,
+                              background: selected.includes(ex.id) ? "#AEA1DC" : "transparent",
+                            }}
+                          />
+                        ) : (
+                          <GripVertical size={14} className="text-charcoal-faint shrink-0" />
+                        )}
+                        <button
+                          onClick={() => setSettingsIndex(i)}
+                          className="flex-1 flex items-center justify-between text-left min-w-0"
+                        >
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium text-charcoal truncate">
+                              {ex.name}
+                            </span>
+                            {line && (
+                              <span className="block text-[11px] text-charcoal-faint truncate">
+                                {line}
+                              </span>
+                            )}
+                          </span>
+                          <Settings2 size={13} className="text-charcoal-faint shrink-0 ml-2" />
+                        </button>
+                        <button
+                          onClick={() => removeExercise(ex.id)}
+                          aria-label={`Remove ${ex.name}`}
+                          className="tap text-charcoal-faint shrink-0"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    );
+                  })
+                )
+              )}
             </div>
 
             <div className="relative mb-2.5">
@@ -284,6 +430,38 @@ export const CreateWorkoutTemplateSheet: React.FC<{
         onClose={() => setLibraryOpen(false)}
         onPick={(pick) => addExercise(pick)}
         alreadyAdded={exercises.map((e) => e.name)}
+      />
+
+      <BlockSettingsSheet
+        key={blockDraft?.block.id ?? "none"}
+        open={!!blockDraft}
+        onClose={() => setBlockDraft(null)}
+        block={blockDraft?.block ?? null}
+        memberCount={blockDraft?.memberIds.length ?? 0}
+        onSave={(block) => {
+          const existing = blocks.some((b) => b.id === block.id);
+          const nextExercises = existing
+            ? exercises
+            : groupExercises(exercises, blockDraft?.memberIds ?? [], block);
+          const nextBlocks = existing
+            ? blocks.map((b) => (b.id === block.id ? block : b))
+            : [...blocks, block];
+          setExercises(nextExercises);
+          setBlocks(pruneBlocks(nextExercises, nextBlocks));
+          setSelecting(false);
+          setSelected([]);
+        }}
+        onUngroup={
+          blockDraft && blocks.some((b) => b.id === blockDraft.block.id)
+            ? () => {
+                const nextExercises = ungroupBlock(exercises, blockDraft.block.id);
+                setExercises(nextExercises);
+                setBlocks(pruneBlocks(nextExercises, blocks));
+                setSelecting(false);
+                setSelected([]);
+              }
+            : undefined
+        }
       />
 
       <ExerciseSettingsSheet
