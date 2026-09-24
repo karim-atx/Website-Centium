@@ -303,6 +303,8 @@ export interface ProfessionalClient {
     medicalHistory: boolean;
     bodyMeasurements: boolean;
     bloodPressure: boolean;
+    cyclePhase: boolean;
+    pregnancy: boolean;
   };
   assignedProgramName?: string;
   assignedFoodTemplateName?: string;
@@ -328,6 +330,16 @@ export interface ProfessionalClient {
    * measurements draw above.
    */
   bloodPressure?: BloodPressureReading[];
+  /**
+   * The client's cycle phase — ONE WORD, from client_cycle_phase().
+   *
+   * Undefined is "not fetched"; "unavailable" is the function's own answer for
+   * a client who HAS shared and has no phase to report (no logs, tracker off,
+   * or a pregnancy they have not also shared). Those are different sentences.
+   */
+  cyclePhase?: string;
+  /** "Pregnant" and a trimester, from client_pregnancy_status(). */
+  pregnancy?: { status: string; trimester: number | null };
   /**
    * Latest tape measurements and body fat, behind the `body_measurements`
    * grant — its own category, never the vitals one. Undefined means not yet

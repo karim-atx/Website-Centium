@@ -44,6 +44,8 @@ export interface RosterClient {
     medicalHistory: boolean;
     bodyMeasurements: boolean;
     bloodPressure: boolean;
+    cyclePhase: boolean;
+    pregnancy: boolean;
   };
 }
 
@@ -57,6 +59,8 @@ const emptyAccess = (): RosterClient["access"] => ({
   medicalHistory: false,
   bodyMeasurements: false,
   bloodPressure: false,
+  cyclePhase: false,
+  pregnancy: false,
 });
 
 /**
@@ -77,6 +81,8 @@ const accessKeyFor: Partial<Record<Enums<"access_category">, keyof RosterClient[
   medical_history: "medicalHistory",
   body_measurements: "bodyMeasurements",
   blood_pressure: "bloodPressure",
+  cycle_phase: "cyclePhase",
+  pregnancy: "pregnancy",
 };
 
 /**

@@ -23,6 +23,7 @@ import {
   Droplet,
   Stethoscope,
   Ruler,
+  Moon,
 } from "lucide-react";
 import {
   averageReading,
@@ -36,6 +37,14 @@ import {
   BP_NONE_LOGGED,
   BP_NOT_SHARED,
 } from "../../services/blood-pressure/guidance";
+import {
+  PHASE_COLOR,
+  PHASE_LABEL,
+  PHASE_NOT_SHARED,
+  PHASE_UNAVAILABLE,
+  PREGNANCY_NOT_SHARED,
+} from "../../services/cycle/guidance";
+import type { CyclePhase } from "../../services/cycle/types";
 import { ACCESS_CATEGORIES, accessKeyFor } from "../../services/consent";
 import { MEASUREMENT_SITES } from "../../services/measurements/sites";
 import { PERSON_ICON } from "../../utils/icons";
@@ -465,6 +474,8 @@ export const ClientDetailSheet: React.FC<{
           client.access.medicalHistory ||
           client.access.labResults ||
           client.access.bloodPressure ||
+          client.access.cyclePhase ||
+          client.access.pregnancy ||
           activeNotes.length > 0) && (
           <div className="bg-cream-soft rounded-2xl p-4">
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
@@ -614,6 +625,58 @@ export const ClientDetailSheet: React.FC<{
                 })()
               )}
             </div>
+
+            {/* Cycle phase — ONE WORD, and only when it was granted.
+                client_cycle_phase() returns a single enum value and this reads
+                nothing else: no dates, no cycle day, no logs, no symptoms. The
+                tables are never queried from here, and RLS would refuse it if
+                they were. */}
+            {(client.access.cyclePhase || client.access.pregnancy) && (
+              <div className="mt-3 pt-3 border-t border-charcoal/[0.06]">
+                <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
+                  <Moon size={13} /> Cycle
+                </p>
+                {!client.access.cyclePhase ? (
+                  <p className="text-xs text-charcoal-faint">{PHASE_NOT_SHARED}</p>
+                ) : client.cyclePhase === undefined ? (
+                  <p className="text-xs text-charcoal-faint">Loading…</p>
+                ) : client.cyclePhase === "unavailable" ? (
+                  // SHARED, BUT NOTHING TO SHOW — different from not sharing,
+                  // and reporting it as "not sharing" would blame the client
+                  // for a gap they did not create.
+                  <p className="text-xs text-charcoal-faint">{PHASE_UNAVAILABLE}</p>
+                ) : (
+                  <span
+                    className="inline-block text-[11px] font-bold rounded-full px-2.5 py-1"
+                    style={{
+                      color: PHASE_COLOR[client.cyclePhase as CyclePhase],
+                      background: `${PHASE_COLOR[client.cyclePhase as CyclePhase]}1F`,
+                    }}
+                  >
+                    {PHASE_LABEL[client.cyclePhase as CyclePhase]}
+                  </span>
+                )}
+
+                {client.access.pregnancy && (
+                  <div className="mt-2.5">
+                    {client.pregnancy === undefined ? (
+                      <p className="text-xs text-charcoal-faint">Loading…</p>
+                    ) : client.pregnancy.status === "active" ? (
+                      <span className="inline-block text-[11px] font-bold rounded-full px-2.5 py-1 bg-cream-soft text-charcoal">
+                        Pregnant
+                        {client.pregnancy.trimester !== null &&
+                          ` · trimester ${client.pregnancy.trimester}`}
+                      </span>
+                    ) : (
+                      <p className="text-xs text-charcoal-faint">No pregnancy recorded.</p>
+                    )}
+                  </div>
+                )}
+                {!client.access.pregnancy && client.access.cyclePhase && (
+                  <p className="mt-2 text-[10.5px] text-charcoal-faint">{PREGNANCY_NOT_SHARED}</p>
+                )}
+              </div>
+            )}
 
             {/* QA 13.0: "Anything added by the client in the health tab
                 from past comorbidities, previous surgeries, medications...

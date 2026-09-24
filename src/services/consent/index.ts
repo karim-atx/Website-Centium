@@ -1,6 +1,12 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import { BP_SHARING_DESCRIPTION } from "../blood-pressure/guidance";
+import {
+  SHARE_PHASE_DESCRIPTION,
+  SHARE_PHASE_LABEL,
+  SHARE_PREGNANCY_DESCRIPTION,
+  SHARE_PREGNANCY_LABEL,
+} from "../cycle/guidance";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums } from "../../../lib/supabase/database.types";
 
@@ -77,6 +83,22 @@ export const ACCESS_CATEGORIES: { category: SurfacedAccessCategory; label: strin
     // one place to review it rather than two that can drift apart.
     description: BP_SHARING_DESCRIPTION,
   },
+  // TWO CATEGORIES, NOT ONE, and each shares exactly one word. Cycle phase is
+  // "Luteal"; pregnancy is "Pregnant" and a trimester. A single "cycle"
+  // switch would have made telling a trainer which phase you are in
+  // inseparable from telling them you are pregnant, which are not remotely
+  // the same disclosure. The functions behind them return nothing else --
+  // no dates, no logs, no symptoms.
+  {
+    category: "cycle_phase",
+    label: SHARE_PHASE_LABEL,
+    description: SHARE_PHASE_DESCRIPTION,
+  },
+  {
+    category: "pregnancy",
+    label: SHARE_PREGNANCY_LABEL,
+    description: SHARE_PREGNANCY_DESCRIPTION,
+  },
 ];
 
 /** Maps the DB enum onto the key shape the professional-side UI reads. */
@@ -91,6 +113,8 @@ export const accessKeyFor: Record<
   | "medicalHistory"
   | "bodyMeasurements"
   | "bloodPressure"
+  | "cyclePhase"
+  | "pregnancy"
 > = {
   food_diary: "foodDiary",
   workout_activity: "workoutActivity",
@@ -101,6 +125,8 @@ export const accessKeyFor: Record<
   medical_history: "medicalHistory",
   body_measurements: "bodyMeasurements",
   blood_pressure: "bloodPressure",
+  cycle_phase: "cyclePhase",
+  pregnancy: "pregnancy",
 };
 
 export interface LinkedProfessional {
