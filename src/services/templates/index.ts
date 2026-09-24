@@ -376,6 +376,15 @@ function prescriptionOf(
     rpe: ex.rpe ?? null,
     tempo: ex.tempo ?? null,
     estimated_one_rep_max_kg: ex.estimatedOneRepMaxKg ?? null,
+    // THE LEGACY CARDIO COLUMNS ARE CARRIED, NEVER AUTHORED. Nothing produces
+    // these any more — the editor writes endurance_plan — so what appears here
+    // is whatever was read back, passed through unchanged.
+    //
+    // NOT NULLED ON SAVE, deliberately. 20260924270000 demoted them with the
+    // note that shipped client code in TWO repos still reads them, so blanking
+    // them would make a cardio prescription vanish in the other app the moment
+    // somebody opened this one and pressed Save. They go when both clients are
+    // off them, which is a migration rather than a line here.
     cardio_duration_min: ex.cardioDurationMin ?? null,
     cardio_distance_km: ex.cardioDistanceKm ?? null,
     cardio_incline_pct: ex.cardioInclinePct ?? null,

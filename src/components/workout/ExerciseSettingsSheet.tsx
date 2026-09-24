@@ -5,6 +5,8 @@ import { useApp } from "../../context/AppContext";
 import type { Exercise, RepMaxUpdateMode, MuscleGroup, ExerciseClassification } from "../../types";
 import { ONE_RM_CLASSIFICATIONS } from "../../types";
 import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet";
+import { EndurancePlanBuilder } from "./EndurancePlanBuilder";
+import { checkPlan, emptyPlan, serializePlan } from "../../services/workout/endurance";
 import { X, ChevronRight, Trash2 } from "lucide-react";
 import clsx from "clsx";
 
@@ -67,12 +69,15 @@ export const ExerciseSettingsSheet: React.FC<{
   const [oneRmDraft, setOneRmDraft] = useState("");
   const [replaceOpen, setReplaceOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  /** Whatever stopped the last save — ours or the server's. */
+  const [planProblem, setPlanProblem] = useState<string | null>(null);
 
   React.useEffect(() => {
     if (exercise) {
       setDraft(exercise);
       setOneRmDraft(String(personalRecords[exercise.name] ?? ""));
       setConfirmDelete(false);
+      setPlanProblem(null);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [exercise]);
@@ -116,18 +121,36 @@ export const ExerciseSettingsSheet: React.FC<{
 
   const save = () => {
     const finalName = exercise.name;
-    onSave(draft);
+
+    // THE PLAN IS CHECKED AND CLEANED BEFORE IT LEAVES. checkPlan mirrors the
+    // database validator so a mistake is named beside the field rather than
+    // arriving as a constraint violation; serializePlan strips the keys the
+    // editor keeps in state but the validator counts — a zone left behind
+    // when the target went back to None, a `meters` left behind when the
+    // measure switched to time.
+    let next = draft;
+    if (draft.classification === "cardio" && draft.endurancePlan) {
+      const problem = checkPlan(draft.endurancePlan);
+      if (problem) {
+        setPlanProblem(problem);
+        return;
+      }
+      next = { ...draft, endurancePlan: serializePlan(draft.endurancePlan) };
+    }
+    setPlanProblem(null);
+
+    onSave(next);
     if (isOneRmEligible && oneRmDraft) setPersonalRecord(finalName, Number(oneRmDraft));
 
     // V6 (QA 6.0): editing Min/Max sets should change an already-started
     // routine — resize the live/paused session's logged sets for this
     // exercise to match the new max, keeping already-entered values.
-    if (routineId && draft.maxSets && pausedSessions[routineId]) {
+    if (routineId && next.maxSets && pausedSessions[routineId]) {
       const paused = pausedSessions[routineId];
       const exIdx = paused.logged.findIndex((e) => e.exerciseId === exercise.id);
       if (exIdx !== -1) {
         const current = paused.logged[exIdx].sets;
-        const target = draft.maxSets;
+        const target = next.maxSets;
         let nextSets = current;
         if (target > current.length) {
           const last = current[current.length - 1];
@@ -225,37 +248,34 @@ export const ExerciseSettingsSheet: React.FC<{
             </label>
           )}
 
-          {/* QA 11.0: "When editing an exercise that falls under cardio,
-              replace things like min/max sets, min/max reps, intensity/rep
-              max/RPE tempo etc. with something more relevant to cardio
-              training." Strength-only programming detail makes no sense
-              for a treadmill run, so cardio gets its own field set. */}
+          {/* QA 11.0 asked for cardio fields "more relevant to cardio
+              training", and the first answer was five loose numbers: duration,
+              distance, incline, pace and average heart rate. Between them they
+              could not express "6 × 800 m at 4:20–4:30 with 2 minutes' jog",
+              which is the most ordinary session a running coach writes — there
+              was nowhere to put the repeats. Average heart rate was the
+              clearest sign the shape was wrong: it is a RESULT.
+
+              This writes endurance_plan instead, and the legacy cardio_*
+              columns are no longer written by anything. Rows that predate the
+              plan still read through the formatter's fallback. */}
           {draft.classification === "cardio" ? (
-            <div className="grid grid-cols-2 gap-3">
-              <label className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Duration", "min")}</span>
-                {num("cardioDurationMin")}
-              </label>
-              <label className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Distance", "km")}</span>
-                {num("cardioDistanceKm")}
-              </label>
-              <label className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Incline", "%")}</span>
-                {num("cardioInclinePct")}
-              </label>
-              <label className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Pace", "min/km")}</span>
-                {num("cardioPaceMinPerKm")}
-              </label>
-              <label className="block">
-                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Avg heart rate", "bpm")}</span>
-                {num("cardioAvgHeartRate")}
-              </label>
+            <div className="flex flex-col" style={{ gap: 12 }}>
+              <EndurancePlanBuilder
+                plan={draft.endurancePlan ?? emptyPlan()}
+                onChange={(endurancePlan) => setDraft((d) => ({ ...d, endurancePlan }))}
+              />
               <label className="block">
                 <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Rest", "sec")}</span>
                 {num("restSeconds")}
               </label>
+              {/* THE SERVER'S REFUSAL, VERBATIM. checkPlan mirrors
+                  valid_endurance_plan(), but the database is the authority and
+                  the two could drift; showing what it actually said is what
+                  makes a drift visible instead of silent. */}
+              {planProblem && (
+                <p className="text-xs font-semibold text-status-high">{planProblem}</p>
+              )}
             </div>
           ) : (
             <>
@@ -276,6 +296,17 @@ export const ExerciseSettingsSheet: React.FC<{
                   <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Max reps")}</span>
                   {num("maxReps")}
                 </label>
+              </div>
+              {/* SAID WHERE IT IS DECIDED. An empty max used to mean nothing at
+                  all — the field saved and no screen rendered it — so there was
+                  no way to learn that leaving it blank was how you ask for as
+                  many as possible. The formatter now reads it as "8+ reps
+                  (AMRAP)", and this is the only place anyone would look to find
+                  that out. */}
+              <p className="text-[11px] text-charcoal-faint -mt-1">
+                Leave max reps empty for AMRAP.
+              </p>
+              <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Intensity", "%")}</span>
                   {num("intensityPct")}
