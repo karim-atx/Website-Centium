@@ -106,7 +106,10 @@ export function canGroup(
     return { ok: false, message: "Something in that selection is no longer here." };
   }
   if (indices[indices.length - 1] - indices[0] + 1 !== indices.length) {
-    return { ok: false, message: "Pick exercises that sit next to each other." };
+    // Deliberately not the toolbar’s idle hint, which says the same thing in
+    // the same words: a refusal that reads identically to the standing
+    // instruction looks like the tap did nothing at all.
+    return { ok: false, message: "There is a gap in that selection — a block has to be one unbroken run." };
   }
   if (indices.some((i) => exercises[i].blockId)) {
     return { ok: false, message: "Ungroup those first — they're already in a block." };

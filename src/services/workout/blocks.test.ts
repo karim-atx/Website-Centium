@@ -39,7 +39,7 @@ test("canGroup refuses a selection with a hole", () => {
   const list = [ex("a"), ex("b"), ex("c")];
   const result = canGroup(list, ["a", "c"]);
   assert.equal(result.ok, false);
-  if (!result.ok) assert.match(result.message, /next to each other/);
+  if (!result.ok) assert.match(result.message, /unbroken run/);
 });
 
 test("canGroup refuses rows already in a block", () => {
