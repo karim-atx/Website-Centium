@@ -702,8 +702,21 @@ export interface WorkoutBlock {
 export interface Exercise {
   id: string;
   name: string;
-  sets: number;
-  reps: number;
+  /**
+   * WHAT WAS PRESCRIBED, or nothing at all.
+   *
+   * Both were once required, and the routine reader invented `3` and `10` for
+   * a row that left them null. That made "not prescribed" unsayable: the
+   * prescription formatter has a case for an exercise with no rep target —
+   * it reads AMRAP — that could never be reached, and a session seeded five
+   * rows of ten reps for a coach who had deliberately written none.
+   *
+   * Absent means absent. Every reader decides for itself what to do with
+   * that, at the point where it knows what it is for: the formatter says
+   * nothing, and the session seeds a single row the athlete fills in.
+   */
+  sets?: number;
+  reps?: number;
   weightKg: number;
   /**
    * WHICH LIBRARY ROW THIS PRESCRIBES, carried explicitly rather than guessed.
@@ -866,13 +879,48 @@ export interface Routine {
 // V3: per-set classification + notes + RPE, added via the "..." menu.
 // QA 11.0: "When editing a routine, add more buttons like super set and
 // PR" — sibling flags to the existing warmup/failure/dropset set types.
+//
+// WHAT KIND OF SET IT WAS, and nothing else. `failure`, `superset` and `pr`
+// are LEGACY members kept so sessions logged before 20260924280000 still
+// read: how a set went is `SetOutcome` now, whether it was notable is
+// `isPr`, and a superset is a block. Nothing writes those three any more —
+// one nullable enum was answering three questions, which is why a set could
+// never be both a warmup and a failure, or both a failure and a PR.
 export type SetType = "normal" | "warmup" | "failure" | "dropset" | "superset" | "pr";
+
+/** The writable kinds, which is what the set-options sheet offers. */
+export const SET_TYPES: SetType[] = ["normal", "warmup", "dropset"];
+
+/**
+ * How a set went, as distinct from what kind it was.
+ *
+ * ABSENT MEANS NOT YET LOGGED — a row sitting in a running session that
+ * nobody has done — which is exactly why this could not replace `completed`.
+ * `completed` is DERIVED from this by a database trigger whenever it is set,
+ * so the two cannot disagree: completed and failed both happened, skipped
+ * did not.
+ */
+export type SetOutcome = "completed" | "skipped" | "failed";
 
 export interface LoggedSet {
   setNumber: number;
   reps: number;
   weightKg: number;
   completed: boolean;
+  outcome?: SetOutcome;
+  /**
+   * A personal record. Its own flag rather than a set type, because the most
+   * interesting set anybody logs — a rep-max attempt that ended in a genuine
+   * grind — is a PR AND a failure at once.
+   */
+  isPr?: boolean;
+  /**
+   * An extra row offered beyond what was prescribed, e.g. sets 4 and 5 of a
+   * "3–5 sets". Shown lighter, and DROPPED rather than recorded as skipped
+   * if it is still untouched when the session is finished — nobody skipped a
+   * set that was only ever an offer.
+   */
+  optional?: boolean;
   setType?: SetType;
   notes?: string;
   rpe?: number;
@@ -880,6 +928,53 @@ export interface LoggedSet {
   mood?: number;
   // V9 (QA 9.0): 0 (no injury) to 10 (severe pain), shown above mood.
   pain?: number;
+}
+
+/**
+ * What an endurance effort actually produced, against the plan that asked
+ * for it. Every field optional — a treadmill reports a duration and nothing
+ * else, a watch distance and no heart rate — but an empty result is not one,
+ * and every value present is a non-negative whole number.
+ *
+ * A type alias rather than an interface, for the same reason EndurancePlan
+ * is one: it has to be assignable to `Json` when it goes to the column, and
+ * an interface has no implicit index signature.
+ */
+export type EnduranceResult = {
+  duration_seconds?: number;
+  distance_meters?: number;
+  avg_pace_sec_per_km?: number;
+  avg_hr?: number;
+  intervals_completed?: number;
+};
+
+/**
+ * What a block scored in one session.
+ *
+ * ITS SHAPE IS SNAPSHOTTED, not pointed at. The routine can be edited or
+ * deleted afterwards, and a result reading "12 rounds" against a block whose
+ * cap has since changed would be a lie — the same reasoning that puts
+ * routineName on a session rather than only routineId.
+ *
+ * WHICH SCORE FIELDS MEAN ANYTHING IS PER KIND, and the database enforces
+ * it: a superset scores nothing at all (it is a way of arranging work, not
+ * a thing you win), an AMRAP scores rounds plus leftover reps, an EMOM
+ * scores rounds held, and a For Time scores a clock plus whether the cap
+ * stopped it.
+ */
+export interface BlockResult {
+  /** The local block id while the session runs; the row id once saved. */
+  id: string;
+  kind: BlockKind;
+  label?: string;
+  timeCapSeconds?: number;
+  intervalSeconds?: number;
+  rounds?: number;
+  roundsCompleted?: number;
+  extraReps?: number;
+  timeSeconds?: number;
+  capped?: boolean;
+  notes?: string;
 }
 
 export interface LoggedExercise {
@@ -900,12 +995,22 @@ export interface LoggedExercise {
   customExerciseId?: string;
   name: string;
   sets: LoggedSet[];
+  /**
+   * The block this exercise was performed inside, if any — the local block
+   * id while the session runs, and the workout_block_results row id once it
+   * has been saved. ON DELETE SET NULL on the column: removing a block
+   * result ungroups the exercises rather than deleting what somebody did.
+   */
+  blockResultId?: string;
+  /** What the endurance effort produced, against the plan that asked for it. */
+  enduranceResult?: EnduranceResult;
 }
 
 // V6 (QA 6.0): the in-progress state of a routine that was quit (not
 // finished) — enough to restore WorkoutSessionSheet exactly as it was.
 export interface PausedWorkoutSession {
   logged: LoggedExercise[];
+  blockResults?: BlockResult[];
   elapsedSec: number;
   startedAt: string;
   started: boolean;
@@ -921,6 +1026,11 @@ export interface WorkoutSession {
   durationSec: number;
   totalVolumeKg: number;
   exercises: LoggedExercise[];
+  /**
+   * What each block in this session scored, with the exercises pointing back
+   * at these by blockResultId. A session with no blocks carries none.
+   */
+  blockResults?: BlockResult[];
   notes?: string;
 }
 
