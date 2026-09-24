@@ -11,6 +11,16 @@ import { ImagingCaptureFlow } from "../../components/health/ImagingCaptureFlow";
 import { ShareImagingSheet } from "../../components/health/ShareImagingSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { HeartRateEKG } from "../../components/health/HeartRateEKG";
+import { BloodPressureSheet } from "../../components/health/BloodPressureSheet";
+import { BloodPressureDetailSheet } from "../../components/health/BloodPressureDetailSheet";
+import type { BloodPressureReading } from "../../services/blood-pressure";
+import { averageReading, classifyBloodPressure, isSevere } from "../../services/blood-pressure/classify";
+import {
+  BP_CATEGORY_COLOR,
+  BP_CATEGORY_LABEL,
+  BP_NO_READINGS,
+  SEVERE_READING_MESSAGE,
+} from "../../services/blood-pressure/guidance";
 import { CalorieFlame } from "../../components/health/CalorieFlame";
 import { detectPlatform } from "../../components/health/IntegrationsCard";
 import {
@@ -41,6 +51,25 @@ import type { BloodMarker, ImagingRecord } from "../../types";
 // IntegrationsCard.
 
 
+/**
+ * "20 min ago", "Yesterday", "Sep 18" — how long ago a reading was taken.
+ *
+ * A reading two weeks old and one from this morning mean different things
+ * about the same numbers, and a bare timestamp makes the reader do that
+ * arithmetic. Falls back to the date once counting days stops being useful.
+ */
+function relativeWhen(iso: string): string {
+  const minutes = Math.round((Date.now() - new Date(iso).getTime()) / 60000);
+  if (minutes < 1) return "Just now";
+  if (minutes < 60) return `${minutes} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"} ago`;
+  const days = Math.round(hours / 24);
+  if (days === 1) return "Yesterday";
+  if (days < 7) return `${days} days ago`;
+  return new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+}
+
 export default function Health() {
   const {
     user,
@@ -48,6 +77,8 @@ export default function Health() {
     waterGoalMl,
     metricValues,
     healthSeries,
+    bloodPressure,
+    reloadBloodPressure,
     today,
     bloodMarkers,
     stepsGoal,
@@ -69,6 +100,10 @@ export default function Health() {
   // WHICH ROW WAS PRESSED, not just that one was. Both rows used to set a
   // bare boolean and the sheet always opened on Biomarkers.
   const [recordsTab, setRecordsTab] = useState<"biomarkers" | "imaging" | null>(null);
+  const [bpDetailOpen, setBpDetailOpen] = useState(false);
+  // Null means "add"; a reading means "correct this one".
+  const [bpEditing, setBpEditing] = useState<BloodPressureReading | null>(null);
+  const [bpSheetOpen, setBpSheetOpen] = useState(false);
   const recordsOpen = recordsTab !== null;
   const [scanImagingOpen, setScanImagingOpen] = useState(false);
   const [shareImagingRecord, setShareImagingRecord] = useState<ImagingRecord | null>(null);
@@ -407,6 +442,81 @@ export default function Health() {
         )}
       </button>
 
+      {/* Blood pressure, in the same large-card shape as heart rate above —
+          the closest sibling on this page, and the pattern the brief names.
+          Two numbers rather than one, so the category does the work the bpm
+          figure does there. */}
+      {(() => {
+        const latest = bloodPressure[0] ?? null;
+        if (!latest) {
+          return (
+            <button
+              onClick={() => {
+                setBpEditing(null);
+                setBpSheetOpen(true);
+              }}
+              className="tap w-full box-border rounded-[15px] px-4 py-3.5 flex flex-col text-left mb-[13px]"
+              style={{ background: "rgba(74,61,160,.08)" }}
+            >
+              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-charcoal/[0.48]">
+                Blood pressure
+              </p>
+              <p className="mt-2 text-[13px] font-semibold text-charcoal-tertiary">{BP_NO_READINGS}</p>
+              <p className="mt-1 text-[11px] text-charcoal-faint">Tap to add one</p>
+            </button>
+          );
+        }
+
+        const category = classifyBloodPressure(latest.systolic, latest.diastolic);
+        const week = bloodPressure.filter(
+          (r) => new Date(r.recordedAt).getTime() >= Date.now() - 7 * 86400000
+        );
+        const weekAvg = averageReading(week);
+        const severe = isSevere(latest.systolic, latest.diastolic);
+
+        return (
+          <button
+            onClick={() => setBpDetailOpen(true)}
+            className="tap w-full box-border rounded-[15px] px-4 py-3.5 flex flex-col text-left mb-[13px]"
+            style={{ background: "rgba(74,61,160,.08)" }}
+          >
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-charcoal/[0.48]">
+                Blood pressure
+              </p>
+              {/* THE CATEGORY IN WORDS, not as a colour. The chip is tinted
+                  too, but the label is what carries the meaning. */}
+              <span
+                className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap"
+                style={{ color: BP_CATEGORY_COLOR[category], background: `${BP_CATEGORY_COLOR[category]}1F` }}
+              >
+                {BP_CATEGORY_LABEL[category]}
+              </span>
+            </div>
+            <div className="flex items-baseline gap-2 mt-[9px]">
+              <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">
+                {latest.systolic}/{latest.diastolic}
+              </span>
+              <span className="text-[11px] font-bold text-charcoal-soft">mmHg</span>
+            </div>
+            <p className="mt-[7px] text-[10.5px] text-charcoal-faint">
+              {relativeWhen(latest.recordedAt)}
+              {latest.pulse != null && ` · ${latest.pulse} bpm`}
+              {weekAvg && ` · 7-day avg ${weekAvg.systolic}/${weekAvg.diastolic}`}
+            </p>
+            {severe && (
+              <p
+                role="alert"
+                className="mt-2.5 text-[11px] leading-[1.45] font-semibold rounded-xl px-2.5 py-2"
+                style={{ background: "rgba(164,35,28,0.08)", color: "#7E1B15" }}
+              >
+                {SEVERE_READING_MESSAGE}
+              </p>
+            )}
+          </button>
+        );
+      })()}
+
       {/* QA 11.0: "Based on the information provided by the client...
           provide recommendations on what tests might be important...
           Make sure to state that this is not for diagnosis or prognosis
@@ -522,6 +632,24 @@ export default function Health() {
         onEditStepsGoal={setStepsGoal}
       />
       <BiomarkerDetailSheet open={!!detailMarker} onClose={() => setDetailMarker(null)} marker={detailMarker} />
+      <BloodPressureDetailSheet
+        open={bpDetailOpen}
+        onClose={() => setBpDetailOpen(false)}
+        onAdd={() => {
+          setBpEditing(null);
+          setBpSheetOpen(true);
+        }}
+        onEdit={(reading) => {
+          setBpEditing(reading);
+          setBpSheetOpen(true);
+        }}
+      />
+      <BloodPressureSheet
+        open={bpSheetOpen}
+        onClose={() => setBpSheetOpen(false)}
+        editing={bpEditing}
+        onSaved={reloadBloodPressure}
+      />
     </div>
   );
 }

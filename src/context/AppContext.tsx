@@ -184,6 +184,11 @@ import {
 } from "../services/health-metrics/series";
 import { getSleepDetails, latestNight, type SleepDetail } from "../services/sleep-details";
 import {
+  fetchClientBloodPressure,
+  getBloodPressureReadings,
+  type BloodPressureReading,
+} from "../services/blood-pressure";
+import {
   addImagingRecordRemote,
   deleteImagingRecordRemote,
   getImagingRecords,
@@ -557,6 +562,10 @@ interface AppState {
   sleepDetail: SleepDetail | null;
   /** Every night on record in the metric window, oldest first. Empty is normal. */
   sleepNights: SleepDetail[];
+  /** Blood-pressure readings in the metric window, NEWEST FIRST. Empty is normal. */
+  bloodPressure: BloodPressureReading[];
+  /** Re-reads them, for after a save, an edit or a delete. */
+  reloadBloodPressure: () => void;
   updateMetricValue: (
     type: "weight" | "heartRate" | "steps" | "sleepHours" | "caloriesBurned",
     value: number
@@ -2913,11 +2922,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const labIds = mapped
       .filter((c) => c.access.labResults && c.clientId)
       .map((c) => c.clientId!);
+    // Blood pressure is its own category too, for the same reason body
+    // measurements is: Database 20260924410000 gave it a separate policy so
+    // that a client already sharing "steps, sleep, water" did not start
+    // sharing their blood pressure the moment the column existed.
+    const bpIds = mapped
+      .filter((c) => c.access.bloodPressure && c.clientId)
+      .map((c) => c.clientId!);
 
     // Both reads are issued together rather than in sequence — they are
     // independent, and a professional opening the dashboard should not wait
     // for one before the other starts.
-    const [nutrition, workouts, weights, medical, labs, imaging, vitals, measurements] =
+    const [nutrition, workouts, weights, medical, labs, imaging, vitals, measurements, bloodPressures] =
       await Promise.all([
       consentedIds.length > 0 ? fetchClientNutrition(consentedIds) : null,
       workoutIds.length > 0 ? fetchClientWorkoutActivity(workoutIds) : null,
@@ -2927,6 +2943,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       imagingIds.length > 0 ? fetchClientImaging(imagingIds) : null,
       vitalsIds.length > 0 ? fetchClientVitals(vitalsIds) : null,
       measurementIds.length > 0 ? fetchClientMeasurements(measurementIds) : null,
+      bpIds.length > 0 ? fetchClientBloodPressure(bpIds, metricWindowStart) : null,
     ]);
 
     // On failure each field is left undefined, which renders as "loading"
@@ -2936,6 +2953,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((c) => {
         if (!c.clientId) return c;
         let next = c;
+        if (bloodPressures?.ok && c.clientId in bloodPressures.byClient) {
+          // An empty array is a real answer here -- "sharing, nothing logged"
+          // -- and is distinct from undefined, which is "not fetched". The
+          // section renders a different sentence for each.
+          next = { ...next, bloodPressure: bloodPressures.byClient[c.clientId] };
+        }
         if (nutrition?.ok && c.clientId in nutrition.byClient) {
           next = { ...next, nutrition: nutrition.byClient[c.clientId] };
         }
@@ -2977,7 +3000,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         return next;
       })
     );
-  }, [authUserId, user.accountType]);
+  }, [authUserId, user.accountType, metricWindowStart]);
 
   useEffect(() => {
     void refreshRoster();
@@ -3922,6 +3945,26 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [authUserId, profileReady, metricWindowStart]);
   const sleepDetail = latestNight(sleepNights);
 
+  // Blood pressure, over the same year window the other metrics use.
+  //
+  // A LIST RATHER THAN A LATEST, because the widget's whole job is comparison:
+  // a 7-day average, morning against evening, and a count per category. One
+  // reading tells you almost nothing, which is why the measurement advice asks
+  // for several.
+  const [bloodPressure, setBloodPressure] = useState<BloodPressureReading[]>([]);
+  const readBloodPressure = useCallback(() => {
+    if (!authUserId) return;
+    void getBloodPressureReadings(authUserId, metricWindowStart).then((result) => {
+      // A failed read leaves what is on screen alone, the rule the metric and
+      // streak reads follow: empty and unreachable mean opposite things.
+      if (result.ok) setBloodPressure(result.readings);
+    });
+  }, [authUserId, metricWindowStart]);
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    readBloodPressure();
+  }, [authUserId, profileReady, readBloodPressure]);
+
   const logWeightForToday: AppState["logWeightForToday"] = async (value) => {
     if (!authUserId) return { ok: false, message: "You need to be signed in to log your weight." };
     const result = await logHealthMetric({
@@ -4695,6 +4738,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       healthSeries,
       sleepDetail,
       sleepNights,
+      bloodPressure,
+      reloadBloodPressure: readBloodPressure,
       updateMetricValue,
       weightLoggedDate,
       weightByDate,
@@ -4900,6 +4945,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       healthSeries,
       sleepDetail,
       sleepNights,
+      bloodPressure,
+      readBloodPressure,
       weightLoggedDate,
       weightByDate,
       stepsGoal,
