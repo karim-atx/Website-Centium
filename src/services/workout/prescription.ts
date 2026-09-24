@@ -186,18 +186,21 @@ export interface PrescriptionOptions {
 export function prescriptionLine(ex: Exercise, options: PrescriptionOptions = {}): string {
   const parts: string[] = [];
 
+  // NO SET COUNT INSIDE A ROUND-BASED BLOCK. What repeats there is the ROUND,
+  // counted by the block — an AMRAP that also said "4 sets" would contradict
+  // its own heading, and an EMOM fixes its rounds by the interval count.
+  const setsClause = options.perRound ? "" : formatSets(ex);
+
   if (ex.classification === "cardio") {
     const plan = ex.endurancePlan
       ? formatEndurancePlan(ex.endurancePlan)
       : formatLegacyCardio(ex);
     if (plan) parts.push(plan);
   } else if (ex.classification === "duration") {
-    const sets = formatSets(ex);
-    if (sets) parts.push(sets);
+    if (setsClause) parts.push(setsClause);
     if (ex.durationSeconds) parts.push(`${formatSeconds(ex.durationSeconds)} hold`);
   } else {
-    const sets = formatSets(ex);
-    if (sets) parts.push(sets);
+    if (setsClause) parts.push(setsClause);
     if (isRepBased(ex.classification)) {
       const reps = formatReps(ex);
       parts.push(options.perRound ? `${reps} per round` : reps);

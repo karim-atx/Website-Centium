@@ -97,6 +97,14 @@ const cases: { name: string; exercise: Exercise; perRound?: boolean; expect: str
     expect: "8–12 reps per round",
   },
   {
+    // The block counts the rounds, so a set count here would contradict the
+    // heading right above it.
+    name: "a set count is dropped inside a round-based block",
+    exercise: ex({ sets: 4, reps: 8, weightKg: 60 }),
+    perRound: true,
+    expect: "8 reps per round · 60 kg",
+  },
+  {
     name: "per round applies to AMRAP reps too",
     exercise: ex({ minReps: 8 }),
     perRound: true,
