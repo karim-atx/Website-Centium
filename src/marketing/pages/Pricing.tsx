@@ -1,3 +1,16 @@
+import { PricingUnavailable } from "../components/PricingUnavailable";
+// Aliased: this module already exports a component called Pricing.
+import { usePricing, type Pricing as PricingData } from "../hooks/usePricing";
+import type { SubscriptionTier, TierType } from "../../services/subscription-tiers";
+import {
+  businessSummary,
+  formatPercent,
+  formatPrice,
+  limitLabel,
+  priceLabel,
+  savingLabel,
+  yearlySaving,
+} from "../../services/subscription-tiers/pricing";
 import React, { useState } from "react";
 import { Check } from "lucide-react";
 import clsx from "clsx";
@@ -15,42 +28,61 @@ const audiences: {
   audienceLabel: string;
   name: string;
   description: string;
-  priceLabel: string;
+  /** Which tier_type in subscription_tiers this audience's prices come from. */
+  tierType: TierType;
   features: string[];
   ctaLabel: string;
   ctaHref: string;
 }[] = [
   {
     key: "clients",
+    tierType: "client" as const,
     audienceLabel: "I'm an individual",
     name: "Clients",
     description: "For individuals tracking their own health.",
-    priceLabel: "One subscription",
     features: ["Nutrition & workout logging", "Health tracking & trends", "AI-powered guidance", "Community access"],
     ctaLabel: "Get Started",
     ctaHref: "/app",
   },
   {
     key: "professionals",
+    tierType: "professional" as const,
     audienceLabel: "I'm a professional",
     name: "Professionals",
     description: "Personal trainers, dietitians, physiotherapists & other professionals.",
-    priceLabel: "Per seat",
     features: ["Client roster & booking", "Professional dashboard", "Client sharing controls", "Seat-based billing"],
     ctaLabel: "Get Started",
     ctaHref: "/app",
   },
   {
     key: "business",
+    tierType: "business" as const,
     audienceLabel: "I'm a business",
     name: "Business",
     description: "Gyms, studios and other businesses.",
-    priceLabel: "Plan + revenue share",
     features: ["Business dashboard", "Marketplace listing", "Employee & class management", "Analytics"],
     ctaLabel: "Talk to us",
     ctaHref: "/contact",
   },
 ];
+
+/** The tiers of one audience, add-ons excluded — they are not plans anyone is on. */
+const tiersFor = (pricing: PricingData, type: TierType): SubscriptionTier[] =>
+  (type === "client" ? pricing.client : type === "professional" ? pricing.professional : pricing.business)
+    .filter((t) => !t.isAddon);
+
+/** The business line, assembled from the base row, the add-on row and the share. */
+function businessLine(pricing: PricingData): string {
+  const base = pricing.business.find((t) => !t.isAddon);
+  const seat = pricing.business.find((t) => t.isAddon);
+  if (!base || !seat) return "";
+  return businessSummary({
+    basePrice: base.monthlyPrice,
+    seatPrice: seat.monthlyPrice,
+    seatsPerBlock: seat.seatsPerUnit ?? 0,
+    revenueSharePct: pricing.revenueSharePct,
+  });
+}
 
 const comparisonRows: ComparisonRow[] = [
   { label: "Nutrition & workout logging", clients: true, professionals: true, business: false },
@@ -63,34 +95,68 @@ const comparisonRows: ComparisonRow[] = [
   { label: "Community access", clients: true, professionals: true, business: true },
 ];
 
-const faqs: FaqItem[] = [
-  {
-    q: "Why isn't there a price yet?",
-    lead: "Why",
-    color: "#7D67D9",
-    a: "Centium hasn't launched. Rates for each plan will be announced at launch — the structure above (what's included in each plan, and how billing works) is final even though the numbers aren't set yet.",
-  },
-  {
-    q: "What's the difference between monthly and yearly billing?",
-    lead: "What's",
-    color: "#5E9E95",
-    a: "Every plan can be billed monthly or yearly. Yearly billing will offer a discount versus paying monthly — the exact discount is confirmed at launch alongside pricing.",
-  },
-  {
-    q: "How does business revenue share work?",
-    lead: "How",
-    color: "#7D67D9",
-    a: "Business accounts pay a plan fee plus a share of the revenue generated through bookings and sales made via Centium's marketplace. Percentages are confirmed at launch.",
-  },
-  {
-    q: "Can I switch between plans later?",
-    lead: "Can",
-    color: "#5E9E95",
-    a: "Yes — clients, professionals and businesses are separate account types, and you'll be able to change your plan or account type from inside the app once it's live.",
-  },
-];
+/**
+ * The questions, answered with the numbers rather than around them.
+ *
+ * The first one used to be "Why isn't there a price yet?", answered with
+ * "Centium hasn't launched. Rates will be announced at launch." They have
+ * been. The monthly-versus-yearly answer said the discount was "confirmed at
+ * launch" and the revenue-share answer said the same of its percentage —
+ * both are columns now, so both are quoted.
+ *
+ * BUILT FROM THE DATA, which is why this is a function. An FAQ that states a
+ * price is a price that has to be maintained, and the only maintenance that
+ * survives contact with a pricing change is not writing it down twice.
+ */
+function buildFaqs(pricing: PricingData): FaqItem[] {
+  const client = pricing.client.find((t) => t.monthlyPrice > 0);
+  const saving = client ? yearlySaving(client.monthlyPrice, client.yearlyPrice) : null;
+  const base = pricing.business.find((t) => !t.isAddon);
+  const seat = pricing.business.find((t) => t.isAddon);
+  const seatPlan = pricing.professional.find((t) => t.isBusinessSeatPlan);
+  const share = formatPercent(pricing.revenueSharePct);
+
+  return [
+    {
+      q: "How much do I save by paying yearly?",
+      lead: "How",
+      color: "#7D67D9",
+      a: saving
+        ? `Every paid plan is cheaper by the year. ${client!.name} is ${formatPrice(client!.monthlyPrice)} a month, or ${formatPrice(client!.yearlyPrice!)} for twelve — ${formatPrice(saving.amount)} less than paying monthly, which is ${saving.percent}% off. The other plans work the same way; the exact saving is shown beside each one.`
+        : "Every paid plan can be billed monthly or yearly, and the yearly price is shown beside the monthly one on each plan above.",
+    },
+    {
+      q: "How do business seats work?",
+      lead: "How",
+      color: "#5E9E95",
+      a:
+        base && seat
+          ? `A business pays ${formatPrice(base.monthlyPrice)} a month for the account itself, then buys seats in blocks: ${formatPrice(seat.monthlyPrice)} a month per block of ${seat.seatsPerUnit ?? 0} professionals. Buy as many blocks as you need. Every professional sitting in one of your seats gets the ${seatPlan ? seatPlan.name : "seat"} plan for as long as they're on your team — they don't pay separately, and they keep their own clients.`
+          : "Business accounts buy professional seats in blocks, and each seated professional gets a full plan for as long as they are on the team.",
+    },
+    {
+      q: "How does the marketplace revenue share work?",
+      lead: "How",
+      color: "#7D67D9",
+      a: `${share} of what you sell through the Centium marketplace — bookings, classes, products — is deducted monthly, calculated on the items sold in that period. It is separate from your subscription and in addition to it: a month with no marketplace sales costs you the plan fee and nothing else.`,
+    },
+    {
+      q: "How do I pay?",
+      lead: "How",
+      color: "#5E9E95",
+      a: "For now, with our team. There is no checkout in the app yet — tell us which plan you want and we'll set it up for you, and you'll be billed from there. Everything above is what you'll be quoted.",
+    },
+    {
+      q: "Can I switch between plans later?",
+      lead: "Can",
+      color: "#7D67D9",
+      a: "Yes — clients, professionals and businesses are separate account types, and you can change your plan or account type at any time. While payments are handled by our team, that means telling us; plans move immediately either way.",
+    },
+  ];
+}
 
 export const Pricing: React.FC = () => {
+  const { pricing, error: pricingError, retry: retryPricing } = usePricing();
   useSEO("Pricing", "Centium pricing for clients, professionals and businesses — monthly or yearly plans.");
   const [audience, setAudience] = useState(0);
   const [billing, setBilling] = useState<Billing>("monthly");
@@ -151,8 +217,40 @@ export const Pricing: React.FC = () => {
                   ))}
                 </div>
               </div>
-              <div className="font-display font-extrabold text-3xl text-mkt-ink tracking-tight mt-6">{focused.priceLabel}</div>
-              <p className="text-[13px] text-mkt-faint mt-1.5 font-mono">"Announced at launch — join the list"</p>
+              {/* THE PRICES, FROM THE ROWS. What stood here was a phrase —
+                  "One subscription", "Per seat", "Plan + revenue share" —
+                  under the line "Announced at launch". They are announced. */}
+              {pricingError ? (
+                <div className="mt-6">
+                  <PricingUnavailable message={pricingError} onRetry={retryPricing} />
+                </div>
+              ) : !pricing ? (
+                <p className="text-sm text-mkt-soft mt-6">Loading prices…</p>
+              ) : (
+                <div className="mt-6 flex flex-col" style={{ gap: 10 }}>
+                  {tiersFor(pricing, focused.tierType).map((t) => (
+                    <div key={t.id} className="flex items-baseline justify-between flex-wrap" style={{ gap: 8 }}>
+                      <span className="font-display font-bold text-[17px] text-mkt-ink">
+                        {t.name}
+                        {limitLabel(t) && (
+                          <span className="font-sans font-normal text-[13px] text-mkt-faint"> · {limitLabel(t)}</span>
+                        )}
+                      </span>
+                      <span className="font-display font-extrabold text-[19px] text-mkt-ink tracking-tight">
+                        {priceLabel(t.monthlyPrice, t.yearlyPrice, billing)}
+                        {billing === "yearly" && yearlySaving(t.monthlyPrice, t.yearlyPrice) && (
+                          <span className="font-sans font-bold text-[11px] text-mkt-accent"> {savingLabel(yearlySaving(t.monthlyPrice, t.yearlyPrice)!)}</span>
+                        )}
+                      </span>
+                    </div>
+                  ))}
+                  {focused.tierType === "business" && (
+                    <p className="text-[13px] text-mkt-soft mt-1 leading-relaxed">
+                      {businessLine(pricing)}
+                    </p>
+                  )}
+                </div>
+              )}
               <ul className="flex flex-col gap-2.5 mt-6 flex-1">
                 {focused.features.map((f) => (
                   <li key={f} className="flex items-start gap-2.5 text-sm text-mkt-ink/85">
@@ -197,7 +295,7 @@ export const Pricing: React.FC = () => {
 
         <Reveal delay={0.14} className="mt-16 max-w-2xl">
           <h2 className="font-display font-bold text-xl text-mkt-ink tracking-tight mb-2">Frequently asked</h2>
-          <FaqAccordion items={faqs} />
+          {pricing && <FaqAccordion items={buildFaqs(pricing)} />}
         </Reveal>
       </Section>
 

@@ -19,7 +19,7 @@ const steps = [
 export const Business: React.FC = () => {
   useSEO(
     "For Professionals & Businesses",
-    "Centium for personal trainers, dietitians, physiotherapists, gyms and businesses — client tools, listings and seat- or revenue-based billing."
+    "Centium for personal trainers, dietitians, physiotherapists, gyms and businesses — client tools, marketplace listings, professional seats and revenue share."
   );
 
   return (
@@ -59,7 +59,9 @@ export const Business: React.FC = () => {
               <Eyebrow>PROFESSIONALS</Eyebrow>
               <h2 className="font-display font-bold text-xl text-mkt-ink mt-3">For professionals</h2>
               <p className="text-base leading-relaxed text-mkt-soft mt-2.5">
-                Manage your client roster, bookings and shared health data — billed monthly or yearly, per seat.
+                Manage your client roster, bookings and shared health data — billed monthly or yearly.
+                Free for your first client; paid plans scale with your roster. If a business you work with
+                buys you a seat, your plan comes with it.
               </p>
               <ul className="flex flex-wrap gap-2 mt-5">
                 {professionals.map((p) => (
@@ -78,8 +80,9 @@ export const Business: React.FC = () => {
               <Eyebrow tone="teal">BUSINESSES</Eyebrow>
               <h2 className="font-display font-bold text-xl text-mkt-ink mt-3">For businesses</h2>
               <p className="text-base leading-relaxed text-mkt-soft mt-2.5">
-                List your gym, store or service — billed monthly or yearly, plus a share of the revenue generated
-                through Centium.
+                List your gym, store or service — a base plan billed monthly or yearly, plus seats for the
+                professionals on your team, bought in blocks. A share of what you sell through Centium is
+                deducted monthly on top.
               </p>
               <ul className="flex flex-wrap gap-2 mt-5">
                 {businesses.map((b) => (
