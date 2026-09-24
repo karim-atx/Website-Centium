@@ -3,6 +3,8 @@ import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPr
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import { fetchMyTeam, removeTeamMember, type TeamMember } from "../../services/business-team";
+import { useBusinessPlan } from "../../hooks/useBusinessPlan";
+import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { professionalTypeIcon } from "../../utils/icons";
 import { Copy, Check, UserMinus, UserCheck } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
@@ -28,6 +30,7 @@ export default function BusinessEmployeesTab() {
   const { user, authUserId, profileReady } = useApp();
   const [copied, setCopied] = useState(false);
   const [employees, setEmployees] = useState<TeamMember[]>([]);
+  const { plan } = useBusinessPlan();
   const [businessId, setBusinessId] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [removing, setRemoving] = useState<string | null>(null);
@@ -109,6 +112,34 @@ export default function BusinessEmployeesTab() {
           </button>
         </div>
       </Card>
+
+      {/* SEATS, WHERE THE TEAM IS. The brief asks for an at-cap message when
+          adding an employee; there is no add-employee flow anywhere in the app
+          (services/business-team's header says so, and business_employees'
+          insert policy is the OWNER's), so the message lives where a business
+          actually looks at its team and can see it is full. */}
+      {plan && plan.totalSeats > 0 && (
+        <div className="rounded-2xl bg-cream-soft px-4 py-3.5 mb-5">
+          <p className="text-sm font-semibold text-charcoal">
+            {employees.length} of {plan.totalSeats} seat{plan.totalSeats === 1 ? "" : "s"} used
+          </p>
+          {employees.length >= plan.totalSeats && plan.seatAddon && (
+            <>
+              <p className="text-xs text-charcoal-soft mt-1">
+                All {plan.totalSeats} seats are in use. Add a seat block for{" "}
+                {plan.seatAddon.seatsPerUnit} more professional
+                {plan.seatAddon.seatsPerUnit === 1 ? "" : "s"}.
+              </p>
+              <a
+                href={upgradeMailto()}
+                className="tap inline-flex items-center mt-2.5 text-xs font-bold text-primary-dark"
+              >
+                {UPGRADE_ACTION_LABEL}
+              </a>
+            </>
+          )}
+        </div>
+      )}
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         Affiliated professionals

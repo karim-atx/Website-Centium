@@ -54,6 +54,13 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
 }) => {
   const [selected, setSelected] = useState(defaultSelected);
   const [yearly, setYearly] = useState(false);
+  // THE BEST SAVING ON OFFER, across the plans this picker was given. The
+  // chip said a flat −15% whatever the data; the cards beneath it now each
+  // state their own, and the two disagreeing would be worse than either.
+  const bestSaving = Math.max(
+    0,
+    ...plans.map((p) => yearlySaving(p.monthly, p.yearlyPrice)?.percent ?? 0)
+  );
   const gridRef = useRef<HTMLDivElement>(null);
 
   // `.dc.html` `_centrePlanOrphan()`: the desktop/tablet grid is a fluid
@@ -232,18 +239,20 @@ export const PlanPicker: React.FC<{ plans: Plan[]; defaultSelected?: number; cla
             style={yearly ? { background: "#7D67D9", boxShadow: "0 6px 16px rgba(125,103,217,.28)" } : undefined}
           >
             Yearly
-            <span
-              className="text-[10.5px] font-bold tracking-[.04em] px-[7px] py-[3px] rounded-full"
-              style={{
-                background: yearly ? "rgba(255,255,255,.9)" : "rgba(125,103,217,.14)",
-                // Handoff: the chip's text color swaps with the toggle state
-                // too, not just its background (rendered/08b: #427C76 on
-                // yearly vs rendered/08: #6A54C4 on monthly).
-                color: yearly ? "#427C76" : "#6A54C4",
-              }}
-            >
-              −15%
-            </span>
+            {bestSaving > 0 && (
+              <span
+                className="text-[10.5px] font-bold tracking-[.04em] px-[7px] py-[3px] rounded-full"
+                style={{
+                  background: yearly ? "rgba(255,255,255,.9)" : "rgba(125,103,217,.14)",
+                  // Handoff: the chip's text color swaps with the toggle state
+                  // too, not just its background (rendered/08b: #427C76 on
+                  // yearly vs rendered/08: #6A54C4 on monthly).
+                  color: yearly ? "#427C76" : "#6A54C4",
+                }}
+              >
+                −{bestSaving}%
+              </span>
+            )}
           </button>
         </div>
       </div>
