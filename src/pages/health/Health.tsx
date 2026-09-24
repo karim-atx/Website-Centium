@@ -12,6 +12,7 @@ import { ShareImagingSheet } from "../../components/health/ShareImagingSheet";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { HeartRateEKG } from "../../components/health/HeartRateEKG";
 import { BloodPressureSheet } from "../../components/health/BloodPressureSheet";
+import { PHASE_COLOR, PHASE_LABEL } from "../../services/cycle/guidance";
 import { BloodPressureDetailSheet } from "../../components/health/BloodPressureDetailSheet";
 import type { BloodPressureReading } from "../../services/blood-pressure";
 import { averageReading, classifyBloodPressure, isSevere } from "../../services/blood-pressure/classify";
@@ -36,7 +37,7 @@ import {
 import { dayLetter } from "../../utils/week";
 import { useApp } from "../../context/AppContext";
 import { getTestRecommendations } from "../../utils/biomarkerRecommendations";
-import { ChevronRight, Flame, Stethoscope, FileText } from "lucide-react";
+import { ChevronRight, Flame, Stethoscope, FileText, Moon } from "lucide-react";
 import clsx from "clsx";
 import type { BloodMarker, ImagingRecord } from "../../types";
 
@@ -79,6 +80,8 @@ export default function Health() {
     healthSeries,
     bloodPressure,
     reloadBloodPressure,
+    cycleSettings,
+    cyclePrediction,
     today,
     bloodMarkers,
     stepsGoal,
@@ -546,6 +549,40 @@ export default function Health() {
           Records sheet, just as the single row did before); the manifest's
           two-row split is a visual regrouping, not a request to give
           Biomarkers and Imaging separate deep-linked destinations. */}
+      {/* THE TRACKER'S WAY IN. Shown when it is switched on -- which for a
+          female or other profile happens on first open, and for anybody else
+          when they switch it on in its own Settings. Sex decides the default,
+          never the availability. */}
+      {cycleSettings?.trackerEnabled && (
+        <button
+          onClick={() => navigate("/app/cycle")}
+          className="tap w-full flex items-center gap-[11px] rounded-[15px] px-3.5 py-3 mb-[13px]"
+          style={{
+            background: cyclePrediction
+              ? `${PHASE_COLOR[cyclePrediction.phase]}14`
+              : "rgba(174,161,220,.13)",
+          }}
+        >
+          <span
+            className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0"
+            style={{ background: cyclePrediction ? PHASE_COLOR[cyclePrediction.phase] : "#AEA1DC" }}
+          >
+            <Moon size={14} className="text-white" />
+          </span>
+          <span className="flex-1 min-w-0 text-left">
+            <span className="block text-[12.5px] font-bold text-charcoal">Cycle</span>
+            <span className="block text-[10px] text-charcoal-tertiary truncate">
+              {cyclePrediction
+                ? `${PHASE_LABEL[cyclePrediction.phase]}${
+                    cyclePrediction.cycleDay !== null ? ` · day ${cyclePrediction.cycleDay}` : ""
+                  }`
+                : "Log a period to start"}
+            </span>
+          </span>
+          <ChevronRight size={14} className="text-primary-deep-text/60 shrink-0" />
+        </button>
+      )}
+
       <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Records</p>
       <div className="flex flex-col gap-[7px] mb-3">
         <button

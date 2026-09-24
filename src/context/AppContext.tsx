@@ -189,6 +189,17 @@ import {
   type BloodPressureReading,
 } from "../services/blood-pressure";
 import {
+  fetchClientCyclePhase,
+  fetchClientPregnancy,
+  getCycleLogs,
+  getCyclePrediction,
+  getCycleSettings,
+  saveCycleSettings,
+  type CycleDayLog,
+  type CyclePrediction,
+  type CycleSettings,
+} from "../services/cycle";
+import {
   addImagingRecordRemote,
   deleteImagingRecordRemote,
   getImagingRecords,
@@ -566,6 +577,24 @@ interface AppState {
   bloodPressure: BloodPressureReading[];
   /** Re-reads them, for after a save, an edit or a delete. */
   reloadBloodPressure: () => void;
+
+  /**
+   * The cycle tracker's settings, or null when this account has no row.
+   *
+   * NULL IS NOT "OFF". No row means never opened, and opening the tracker
+   * creates one enabled for a female or other profile. A row with
+   * trackerEnabled false means switched off deliberately, and must stay off.
+   */
+  cycleSettings: CycleSettings | null;
+  /** True once the settings read has answered, so the UI can wait rather than guess. */
+  cycleSettingsLoaded: boolean;
+  /** Every logged day in the metric window, oldest first. */
+  cycleLogs: CycleDayLog[];
+  /** my_cycle_prediction() for today, or null when there is nothing to predict. */
+  cyclePrediction: CyclePrediction | null;
+  /** Re-reads settings, logs and the prediction together. */
+  reloadCycle: () => void;
+  saveCycleSettingsAndReload: (patch: Partial<CycleSettings>) => Promise<{ ok: boolean; message?: string }>;
   updateMetricValue: (
     type: "weight" | "heartRate" | "steps" | "sleepHours" | "caloriesBurned",
     value: number
@@ -2929,11 +2958,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const bpIds = mapped
       .filter((c) => c.access.bloodPressure && c.clientId)
       .map((c) => c.clientId!);
+    // TWO SEPARATE LISTS, because they are two separate disclosures: a client
+    // can tell their trainer which phase they are in without telling them they
+    // are pregnant, and the reverse. Each function checks its own category.
+    const phaseIds = mapped
+      .filter((c) => c.access.cyclePhase && c.clientId)
+      .map((c) => c.clientId!);
+    const pregnancyIds = mapped
+      .filter((c) => c.access.pregnancy && c.clientId)
+      .map((c) => c.clientId!);
 
     // Both reads are issued together rather than in sequence — they are
     // independent, and a professional opening the dashboard should not wait
     // for one before the other starts.
-    const [nutrition, workouts, weights, medical, labs, imaging, vitals, measurements, bloodPressures] =
+    const [nutrition, workouts, weights, medical, labs, imaging, vitals, measurements, bloodPressures, phases, pregnancies] =
       await Promise.all([
       consentedIds.length > 0 ? fetchClientNutrition(consentedIds) : null,
       workoutIds.length > 0 ? fetchClientWorkoutActivity(workoutIds) : null,
@@ -2944,6 +2982,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       vitalsIds.length > 0 ? fetchClientVitals(vitalsIds) : null,
       measurementIds.length > 0 ? fetchClientMeasurements(measurementIds) : null,
       bpIds.length > 0 ? fetchClientBloodPressure(bpIds, metricWindowStart) : null,
+      // ONE CALL PER CLIENT, because both functions take a single id rather
+      // than a set — they return one word each, and batching them would mean
+      // a view or a second function that returns several clients' phases at
+      // once, which is a wider disclosure than the one that was granted.
+      Promise.all(
+        phaseIds.map(async (id) => [id, await fetchClientCyclePhase(id)] as const)
+      ),
+      Promise.all(
+        pregnancyIds.map(async (id) => [id, await fetchClientPregnancy(id)] as const)
+      ),
     ]);
 
     // On failure each field is left undefined, which renders as "loading"
@@ -2953,6 +3001,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       prev.map((c) => {
         if (!c.clientId) return c;
         let next = c;
+        const phase = phases.find(([id]) => id === c.clientId)?.[1];
+        if (phase?.ok) next = { ...next, cyclePhase: phase.phase };
+        const pregnancy = pregnancies.find(([id]) => id === c.clientId)?.[1];
+        if (pregnancy?.ok) {
+          next = { ...next, pregnancy: { status: pregnancy.status, trimester: pregnancy.trimester } };
+        }
         if (bloodPressures?.ok && c.clientId in bloodPressures.byClient) {
           // An empty array is a real answer here -- "sharing, nothing logged"
           // -- and is distinct from undefined, which is "not fetched". The
@@ -3945,6 +3999,71 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   }, [authUserId, profileReady, metricWindowStart]);
   const sleepDetail = latestNight(sleepNights);
 
+  // --- the cycle tracker ---------------------------------------------------
+  //
+  // THREE READS, ONE RELOAD. Settings, logs and the prediction move together:
+  // logging a day changes what the prediction says, and changing the luteal
+  // length changes which phase a past day falls in. Reloading one without the
+  // others puts a ring and a headline on screen that disagree.
+  const [cycleSettings, setCycleSettings] = useState<CycleSettings | null>(null);
+  const [cycleSettingsLoaded, setCycleSettingsLoaded] = useState(false);
+  const [cycleLogs, setCycleLogs] = useState<CycleDayLog[]>([]);
+  const [cyclePrediction, setCyclePrediction] = useState<CyclePrediction | null>(null);
+
+  const readCycle = useCallback(() => {
+    if (!authUserId) return;
+    void getCycleSettings(authUserId).then((r) => {
+      if (r.ok) setCycleSettings(r.settings);
+      setCycleSettingsLoaded(true);
+    });
+    void getCycleLogs(authUserId, metricWindowStart).then((r) => {
+      if (r.ok) setCycleLogs(r.logs);
+    });
+    // NO ARGUMENT, so the database decides what "today" is. Passing a date
+    // computed here would make the prediction depend on the browser's clock
+    // where every other answer depends on the server's.
+    void getCyclePrediction().then((r) => {
+      if (r.ok) setCyclePrediction(r.prediction);
+    });
+  }, [authUserId, metricWindowStart]);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    readCycle();
+  }, [authUserId, profileReady, readCycle]);
+
+  // ON BY DEFAULT FOR female AND other, AND ONLY ON THE FIRST VISIT.
+  //
+  // The distinction the null settings row carries is the whole mechanism:
+  // no row means the tracker has never been opened, so one is created
+  // enabled; a row with tracker_enabled false means somebody switched it OFF,
+  // and must stay off. Collapsing the two would switch it back on every time
+  // they opened the tab, which is the worst possible behaviour for a feature
+  // somebody has declined.
+  //
+  // A male profile gets no row created for it, and can still switch the
+  // tracker on from Settings — sex decides the DEFAULT, never the
+  // availability.
+  const seededCycleFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!profileReady || !authUserId || !cycleSettingsLoaded) return;
+    if (cycleSettings !== null) return;
+    if (user.sex !== "female" && user.sex !== "other") return;
+    if (seededCycleFor.current === authUserId) return;
+    seededCycleFor.current = authUserId;
+    void saveCycleSettings(authUserId, { trackerEnabled: true }).then((r) => {
+      if (r.ok) readCycle();
+    });
+  }, [authUserId, profileReady, cycleSettingsLoaded, cycleSettings, user.sex, readCycle]);
+
+  const saveCycleSettingsAndReload = async (patch: Partial<CycleSettings>) => {
+    if (!authUserId) return { ok: false, message: "You need to be signed in." };
+    const result = await saveCycleSettings(authUserId, patch);
+    if (!result.ok) return result;
+    readCycle();
+    return { ok: true };
+  };
+
   // Blood pressure, over the same year window the other metrics use.
   //
   // A LIST RATHER THAN A LATEST, because the widget's whole job is comparison:
@@ -4740,6 +4859,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sleepNights,
       bloodPressure,
       reloadBloodPressure: readBloodPressure,
+      cycleSettings,
+      cycleSettingsLoaded,
+      cycleLogs,
+      cyclePrediction,
+      reloadCycle: readCycle,
+      saveCycleSettingsAndReload,
       updateMetricValue,
       weightLoggedDate,
       weightByDate,
@@ -4947,6 +5072,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       sleepNights,
       bloodPressure,
       readBloodPressure,
+      cycleSettings,
+      cycleSettingsLoaded,
+      cycleLogs,
+      cyclePrediction,
+      readCycle,
       weightLoggedDate,
       weightByDate,
       stepsGoal,
