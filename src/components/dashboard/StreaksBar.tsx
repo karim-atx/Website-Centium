@@ -4,6 +4,7 @@ import { useApp } from "../../context/AppContext";
 import type { PlantSpecies } from "../../context/AppContext";
 import { mondayFirstWeek } from "../../utils/week";
 import { localDayOf } from "../../utils/date";
+import { currentDayStreak, subGoalsMet } from "../../services/streaks/dayStreak";
 
 const WEEKDAY_CAPS = ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"];
 
@@ -39,14 +40,14 @@ export const StreaksBar: React.FC = () => {
   const navigate = useNavigate();
 
   const week = mondayFirstWeek(today);
+  // The sub-goal arithmetic and the backwards walk below both live in
+  // services/streaks/dayStreak now. They were inline here, which was fine
+  // while this was the only surface showing the number — the sidebar claimed
+  // to show it too and printed a hardcoded "7 day streak" instead. Two
+  // surfaces naming one number have to read one function.
+  const sources = { foodLog, waterByDate, workoutLog, journalEntries };
   const dayState = (d: string) => {
-    const subGoals = [
-      foodLog.some((e) => e.date === d),
-      (waterByDate[d] ?? 0) > 0,
-      workoutLog.some((w) => w.date === d && w.completed),
-      journalEntries.some((e) => e.date === d),
-    ];
-    const met = subGoals.filter(Boolean).length;
+    const met = subGoalsMet(sources, d);
     return { met, earned: met >= 2, partial: met === 1 };
   };
 
@@ -55,39 +56,10 @@ export const StreaksBar: React.FC = () => {
 
   // The unified day streak: consecutive earned days walking back from
   // today (a real computation, not the old 4-category auto-streak numbers,
-  // which the redesign's single headline number no longer represents).
-  //
-  // Dates are serialised with `localDayOf`, not `.toISOString()` — the
-  // latter converts to UTC first, which shifts every date back a day for
-  // anyone east of UTC (e.g. Beirut, UTC+3) and misaligns the streak from
-  // the weekday it's paired with. Today is `continue`d past rather than
-  // `break`ing the loop when it isn't earned yet: today is very often
-  // not-yet-earned whenever this runs (most of the day, until the last
-  // sub-goal lands), and breaking there zeroed the streak most mornings
-  // even when yesterday's run was intact. Only a completed PAST day that
-  // wasn't earned actually ends the streak.
-  let dayStreak = 0;
-  {
-    const cursor = new Date(`${today}T00:00:00`);
-    for (;;) {
-      const d = localDayOf(cursor);
-      const subGoals = [
-        foodLog.some((e) => e.date === d),
-        (waterByDate[d] ?? 0) > 0,
-        workoutLog.some((w) => w.date === d && w.completed),
-        journalEntries.some((e) => e.date === d),
-      ].filter(Boolean).length;
-      if (subGoals < 2) {
-        if (d === today) {
-          cursor.setDate(cursor.getDate() - 1);
-          continue;
-        }
-        break;
-      }
-      dayStreak++;
-      cursor.setDate(cursor.getDate() - 1);
-    }
-  }
+  // which the redesign's single headline number no longer represents). The
+  // walk itself, and why today is skipped past rather than broken on, are
+  // documented on currentDayStreak.
+  const dayStreak = currentDayStreak(sources, today);
 
   const earnedThisWeek = days.filter((d) => !d.isFuture && d.earned).length;
 
