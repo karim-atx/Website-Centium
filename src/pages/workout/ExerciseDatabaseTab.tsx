@@ -3,8 +3,9 @@ import { Chip } from "../../components/ui/Chip";
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
 import { MUSCLE_GROUP_LABEL } from "../../utils/muscleGroups";
-import type { MuscleGroup, ExerciseClassification } from "../../types";
-import { List, User, Search, RefreshCw } from "lucide-react";
+import { EXERCISE_TAG_LABEL, tagsPresentIn } from "../../utils/exerciseTags";
+import type { MuscleGroup, ExerciseClassification, ExerciseTag } from "../../types";
+import { List, User, Search, RefreshCw, Plus } from "lucide-react";
 import clsx from "clsx";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "../../components/workout/CreateCustomExerciseSheet";
 import { BODY_ZONES } from "../../data/bodyZones";
@@ -25,6 +26,7 @@ interface DbExercise {
   muscleGroups: MuscleGroup[];
   secondaryMuscleGroups: MuscleGroup[];
   classification: ExerciseClassification;
+  tags: ExerciseTag[];
   isCustom: boolean;
 }
 
@@ -137,11 +139,16 @@ export default function ExerciseDatabaseTab() {
     updateCustomExercise,
     removeCustomExercise,
     user,
+    routines,
+    workoutTemplates,
+    personalRecords,
   } = useApp();
   const [view, setView] = useState<ViewMode>("list");
   const [sort, setSort] = useState<SortMode>("alphabetical");
   const [query, setQuery] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null);
+  const [selectedTags, setSelectedTags] = useState<ExerciseTag[]>([]);
+  const [creating, setCreating] = useState(false);
   const [bodySide, setBodySide] = useState<BodySide>("front");
   const sideZoneKeys = bodySide === "front" ? FRONT_ZONE_KEYS : BACK_ZONE_KEYS;
   const selectedZoneKey = sideZoneKeys.find((k) => ZONE_KEY_TO_GROUP[k] === selectedGroup);
@@ -168,6 +175,7 @@ export default function ExerciseDatabaseTab() {
       muscleGroups: e.muscleGroups,
       secondaryMuscleGroups: e.secondaryMuscleGroups,
       classification: e.classification,
+      tags: e.tags,
       isCustom: false,
     }));
     const custom = customExercises.map((e) => ({
@@ -178,10 +186,14 @@ export default function ExerciseDatabaseTab() {
       muscleGroups: e.muscleGroups ?? [],
       secondaryMuscleGroups: e.secondaryMuscleGroups ?? [],
       classification: e.classification,
+      tags: e.tags ?? [],
       isCustom: true,
     }));
     return [...custom, ...library];
   }, [exerciseCatalog, customExercises]);
+
+  /** Only the tags something actually carries — see tagsPresentIn. */
+  const availableTags = useMemo(() => tagsPresentIn(all), [all]);
 
   const searched = useMemo(
     () => all.filter((e) => e.name.toLowerCase().includes(query.toLowerCase())),
@@ -195,13 +207,28 @@ export default function ExerciseDatabaseTab() {
     [searched, selectedGroup]
   );
 
+  /**
+   * The three filters narrow together rather than replacing one another.
+   *
+   * SEVERAL TAGS ARE AN "ANY", not an "all". Picking CrossFit and Running
+   * asks for the movements from either discipline — nothing is both, so an
+   * "all" would return an empty list from two perfectly reasonable taps.
+   */
+  const filtered = useMemo(
+    () =>
+      selectedTags.length === 0
+        ? filteredByGroup
+        : filteredByGroup.filter((e) => e.tags.some((t) => selectedTags.includes(t))),
+    [filteredByGroup, selectedTags]
+  );
+
   const groups = useMemo(() => {
     if (sort === "alphabetical") {
-      return [{ label: null, items: [...filteredByGroup].sort((a, b) => a.name.localeCompare(b.name)) }];
+      return [{ label: null, items: [...filtered].sort((a, b) => a.name.localeCompare(b.name)) }];
     }
     if (sort === "classification") {
       const byClass = new Map<ExerciseClassification, DbExercise[]>();
-      filteredByGroup.forEach((e) => {
+      filtered.forEach((e) => {
         const list = byClass.get(e.classification) ?? [];
         list.push(e);
         byClass.set(e.classification, list);
@@ -216,7 +243,7 @@ export default function ExerciseDatabaseTab() {
     // muscleGroup — the generic "Other" catch-all is excluded from this
     // grouping per QA.
     const byGroup = new Map<MuscleGroup, DbExercise[]>();
-    filteredByGroup.forEach((e) => {
+    filtered.forEach((e) => {
       e.muscleGroups
         .filter((mg) => mg !== "other")
         .forEach((mg) => {
@@ -231,13 +258,35 @@ export default function ExerciseDatabaseTab() {
         label: MUSCLE_GROUP_LABEL[key],
         items: items.sort((a, b) => a.name.localeCompare(b.name)),
       }));
-  }, [filteredByGroup, sort]);
+  }, [filtered, sort]);
 
   // Design refinement §6.4.2: highlight fills — idle transparent, hover a
   // translucent lavender wash, selected a stronger lavender fill. Values
   // differ slightly by theme so they hold against the dark ground too.
   // Item 12: front/back have different zone sets, so the current selection
   // clears on every flip rather than being carried over.
+  /**
+   * What deleting one of the user's movements would take with it.
+   *
+   * Counted rather than described: "removed from 2 routines" is a fact the
+   * user can weigh, and "removed from any routines that use it" is a form of
+   * words. The routines and templates are already in memory; the FK
+   * behaviour behind each number is documented on deleteCustomExercise.
+   */
+  const deleteImpact = (customExerciseId: string) => ({
+    routines: routines.filter((r) =>
+      r.exercises.some((ex) => ex.customExerciseId === customExerciseId)
+    ).length,
+    templates: workoutTemplates.filter((t) =>
+      t.exercises.some((ex) => ex.customExerciseId === customExerciseId)
+    ).length,
+    // personal_records CASCADEs on this column, so a record for the movement
+    // goes when the movement does.
+    hasPersonalRecord: Object.keys(personalRecords).some(
+      (name) => name === customExercises.find((c) => c.id === customExerciseId)?.name
+    ),
+  });
+
   const flipSide = () => {
     setSelectedGroup(null);
     setBodySide((s) => (s === "front" ? "back" : "front"));
@@ -245,15 +294,81 @@ export default function ExerciseDatabaseTab() {
 
   return (
     <div className="animate-fade-slide-up">
-      <div className="relative mb-4">
+      {/* CREATING A MOVEMENT IS A TOP-LEVEL ACTION, not something you reach
+          by opening a stock exercise and saving it under another name — which
+          was the only route to it from this tab. */}
+      <div className="flex items-center justify-between mb-3">
+        <p className="section-label text-charcoal-faint">
+          {filtered.length} {filtered.length === 1 ? "exercise" : "exercises"}
+        </p>
+        <button
+          onClick={() => setCreating(true)}
+          className="tap flex items-center gap-1.5 text-xs font-bold text-white bg-primary rounded-full"
+          style={{ padding: "7px 13px" }}
+        >
+          <Plus size={13} /> Create exercise
+        </button>
+      </div>
+
+      <div className="relative mb-3">
         <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search exercises…"
+          aria-label="Search exercises"
           className="w-full rounded-2xl bg-cream-soft pl-9 pr-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </div>
+
+      {/* THE CHIPS ARE THE TAGS THE DATA HAS, not the tags the schema allows.
+          `mobility` is legal and carried by nothing, and a chip that always
+          returns an empty list is a control the user has to try before
+          learning it does nothing. It appears by itself the day something
+          carries it.
+
+          A DISCIPLINE IS NOT A MUSCLE, so these sit apart from the body view's
+          selection and narrow alongside it rather than replacing it. */}
+      {availableTags.length > 0 && (
+        <div className="flex flex-wrap mb-4" style={{ gap: 6 }}>
+          {availableTags.map((tag) => {
+            const on = selectedTags.includes(tag);
+            return (
+              <button
+                key={tag}
+                onClick={() =>
+                  setSelectedTags((prev) =>
+                    on ? prev.filter((t) => t !== tag) : [...prev, tag]
+                  )
+                }
+                aria-pressed={on}
+                className="tap transition-colors"
+                style={{
+                  borderRadius: 999,
+                  padding: "6px 12px",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  border: `1px solid ${on ? "#7D6BB5" : "#E7E7EC"}`,
+                  background: on ? "#7D6BB5" : "#FFFFFF",
+                  color: on ? "#FFFFFF" : "#241F1B",
+                }}
+              >
+                {EXERCISE_TAG_LABEL[tag]}
+              </button>
+            );
+          })}
+          {selectedTags.length > 0 && (
+            <button
+              onClick={() => setSelectedTags([])}
+              className="tap text-[11.5px] font-semibold text-charcoal-soft"
+              style={{ padding: "6px 4px" }}
+            >
+              Clear
+            </button>
+          )}
+        </div>
+      )}
+
 
       <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit mb-4">
         {(["list", "body"] as ViewMode[]).map((v) => (
@@ -295,11 +410,42 @@ export default function ExerciseDatabaseTab() {
                       key={e.id}
                       onClick={() => setEditingExercise(e)}
                       className="tap w-full flex items-center justify-between px-4 py-3 text-left"
+                      style={{ gap: 10 }}
                     >
-                      <span className="text-sm font-medium text-charcoal">{e.name}</span>
-                      {e.isCustom && <span className="text-[10px] font-semibold text-gold shrink-0">Custom</span>}
+                      <span className="min-w-0">
+                        <span className="flex items-center" style={{ gap: 6 }}>
+                          {/* YOUR OWN MOVEMENT, MARKED BY A BADGE rather than
+                              by a word in the corner. The list mixes 60-odd
+                              catalog rows with a handful of the user's own,
+                              and the one thing they can edit and delete
+                              should be the one thing that looks different. */}
+                          {e.isCustom && (
+                            <span
+                              style={{
+                                fontSize: 9,
+                                fontWeight: 800,
+                                letterSpacing: "0.06em",
+                                textTransform: "uppercase",
+                                color: "#8A6318",
+                                background: "rgba(200,145,43,0.16)",
+                                borderRadius: 5,
+                                padding: "2px 5px",
+                              }}
+                            >
+                              Yours
+                            </span>
+                          )}
+                          <span className="text-sm font-medium text-charcoal truncate">{e.name}</span>
+                        </span>
+                        {e.tags.length > 0 && (
+                          <span className="block text-[10.5px] text-charcoal-faint truncate">
+                            {e.tags.map((t) => EXERCISE_TAG_LABEL[t]).join(" · ")}
+                          </span>
+                        )}
+                      </span>
                     </button>
                   ))}
+
                 </Card>
               </div>
             ))}
@@ -454,13 +600,13 @@ export default function ExerciseDatabaseTab() {
           {selectedGroup && (
             <div style={{ marginTop: 16, animation: "cb-fade .3s ease both" }}>
               <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: "#241F1B" }}>
-                {`${selectedMuscleLabel} · ${filteredByGroup.length} ${filteredByGroup.length === 1 ? "exercise" : "exercises"}`}
+                {`${selectedMuscleLabel} · ${filtered.length} ${filtered.length === 1 ? "exercise" : "exercises"}`}
               </p>
-              {filteredByGroup.length === 0 ? (
+              {filtered.length === 0 ? (
                 <p className="text-sm text-charcoal-faint text-center py-6">No exercises for this group.</p>
               ) : (
                 <div className="flex flex-col" style={{ gap: 6 }}>
-                  {filteredByGroup.map((e) => (
+                  {filtered.map((e) => (
                     <button
                       key={e.id}
                       onClick={() => setEditingExercise(e)}
@@ -483,6 +629,15 @@ export default function ExerciseDatabaseTab() {
         </>
       )}
 
+      {/* Creating from scratch and opening an existing one are two states of
+          the same sheet, kept apart so the create form never inherits the
+          fields of whatever was opened last. */}
+      <CreateCustomExerciseSheet
+        open={creating}
+        onClose={() => setCreating(false)}
+        onSave={(data: CustomExerciseData) => void addCustomExercise(data)}
+      />
+
       <CreateCustomExerciseSheet
         open={!!editingExercise}
         onClose={() => setEditingExercise(null)}
@@ -498,6 +653,7 @@ export default function ExerciseDatabaseTab() {
               }
             : undefined
         }
+        impact={editingExercise?.isCustom ? deleteImpact(editingExercise.id) : undefined}
         onSave={(data: CustomExerciseData) => {
           if (!editingExercise) return;
           if (editingExercise.isCustom) {
@@ -509,6 +665,7 @@ export default function ExerciseDatabaseTab() {
           }
         }}
       />
+
     </div>
   );
 }
