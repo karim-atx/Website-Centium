@@ -6,6 +6,7 @@ import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { MacroSplitEditor, MACRO_REBALANCE_NOTE } from "../../components/food/MacroSplitEditor";
 import { WeightTrendChart } from "../../components/health/WeightTrendChart";
 import { useApp } from "../../context/AppContext";
+import { PregnancyNutritionCard } from "../../components/pregnancy/PregnancyGuidance";
 import {
   calculateTDEE,
   isReferenceOnlyTarget,
@@ -44,7 +45,7 @@ interface GoalsPanelProps {
 }
 
 export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
-  const { user, healthSeries, metricValues, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, dietaryRestriction, setDietaryRestriction, today } =
+  const { user, healthSeries, metricValues, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, dietaryRestriction, setDietaryRestriction, today, pregnancy } =
     useApp();
   const [calorieDraft, setCalorieDraft] = useState(String(nutritionGoal.targetCalories));
   const [planError, setPlanError] = useState<string | null>(null);
@@ -208,6 +209,12 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
   return (
     <div className="flex flex-col gap-[5px] animate-fade-slide-up">
       <SegmentedTabs items={foodTabs} activeKey="goals" onChange={(key) => onTabChange(key as Tab)} />
+
+      {/* PREGNANCY GUIDANCE SITS WITH THE TARGET IT OFFERS TO CHANGE. "Apply
+          to my targets" writes into the calorie goal two cards below, so it
+          belongs on the same screen as that number rather than somewhere the
+          user has to remember what it did. */}
+      {pregnancy && <PregnancyNutritionCard pregnancy={pregnancy} />}
 
       <Card padded={false} className={cardClass}>
         <p className={`${capsLabel} text-charcoal-faint mb-1.5`}>Weight goal</p>
@@ -435,6 +442,16 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
             {REFERENCE_INTAKE_NOTE}
           </p>
         )}
+        {/* WHAT ELSE IS IN THE NUMBER. The field above edits the base target;
+            a pregnancy addition the user applied sits on top of it, and would
+            otherwise be an unexplained gap between this card and every ring
+            in the app. */}
+        {(nutritionGoal.pregnancyKcal ?? 0) > 0 && (
+          <p className="mt-1.5 text-[10.5px] leading-[1.4] text-charcoal-faint">
+            Plus {nutritionGoal.pregnancyKcal} kcal a day for pregnancy — {targets.calories} kcal in
+            total. The pregnancy card at the top of this tab takes it off again.
+          </p>
+        )}
         {!locked && Number(calorieDraft || 0) !== nutritionGoal.targetCalories && (
           <Button
             size="sm"
@@ -454,7 +471,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
         <p className={`${capsLabel} text-charcoal-faint mb-[7px]`}>Macro distribution</p>
         <MacroSplitEditor
           split={nutritionGoal.macroSplit}
-          calories={nutritionGoal.targetCalories}
+          calories={targets.calories}
           onChange={setMacroSplit}
           disabled={locked}
           compact

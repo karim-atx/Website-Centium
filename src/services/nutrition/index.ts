@@ -382,8 +382,13 @@ export function suggestNutritionGoal(
 }
 
 export function targetsFromGoal(goal: NutritionGoal) {
-  const macros = macroGramsFromSplit(goal.targetCalories, goal.macroSplit);
-  return { calories: goal.targetCalories, ...macros };
+  // THE PREGNANCY ADDITION IS PART OF THE TARGET, not a note beside it: every
+  // ring, remaining-calories figure and macro gram in the app reads this one
+  // function, so adding it here is what makes "Apply to my targets" mean
+  // something. It is 0 unless the user pressed the button.
+  const calories = goal.targetCalories + (goal.pregnancyKcal ?? 0);
+  const macros = macroGramsFromSplit(calories, goal.macroSplit);
+  return { calories, ...macros };
 }
 
 export function normalizeMacroSplit(split: MacroSplit): MacroSplit {

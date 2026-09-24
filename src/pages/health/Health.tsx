@@ -13,6 +13,9 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { HeartRateEKG } from "../../components/health/HeartRateEKG";
 import { BloodPressureSheet } from "../../components/health/BloodPressureSheet";
 import { PHASE_COLOR, PHASE_LABEL } from "../../services/cycle/guidance";
+import { PregnancyHealthCard } from "../../components/pregnancy/PregnancyGuidance";
+import { PREGNANCY_COLOR } from "../../components/pregnancy/PregnancyRing";
+import { gestationOn } from "../../services/pregnancy";
 import { BloodPressureDetailSheet } from "../../components/health/BloodPressureDetailSheet";
 import type { BloodPressureReading } from "../../services/blood-pressure";
 import { averageReading, classifyBloodPressure, isSevere } from "../../services/blood-pressure/classify";
@@ -82,6 +85,7 @@ export default function Health() {
     reloadBloodPressure,
     cycleSettings,
     cyclePrediction,
+    pregnancy,
     today,
     bloodMarkers,
     stepsGoal,
@@ -553,35 +557,58 @@ export default function Health() {
           female or other profile happens on first open, and for anybody else
           when they switch it on in its own Settings. Sex decides the default,
           never the availability. */}
-      {cycleSettings?.trackerEnabled && (
+      {/* THE ROW SAYS WHAT IS BEING TRACKED. During a pregnancy it reads
+          "Pregnancy · week N" rather than a cycle phase, for the same reason
+          the tracker itself swaps its overview: a phase and a pregnancy are
+          two answers to one question. It is shown whenever there is a
+          pregnancy, even if the cycle tracker itself has been switched off. */}
+      {(cycleSettings?.trackerEnabled || pregnancy) && (
         <button
           onClick={() => navigate("/app/cycle")}
           className="tap w-full flex items-center gap-[11px] rounded-[15px] px-3.5 py-3 mb-[13px]"
           style={{
-            background: cyclePrediction
-              ? `${PHASE_COLOR[cyclePrediction.phase]}14`
-              : "rgba(174,161,220,.13)",
+            background: pregnancy
+              ? `${PREGNANCY_COLOR}14`
+              : cyclePrediction
+                ? `${PHASE_COLOR[cyclePrediction.phase]}14`
+                : "rgba(174,161,220,.13)",
           }}
         >
           <span
             className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0"
-            style={{ background: cyclePrediction ? PHASE_COLOR[cyclePrediction.phase] : "#AEA1DC" }}
+            style={{
+              background: pregnancy
+                ? PREGNANCY_COLOR
+                : cyclePrediction
+                  ? PHASE_COLOR[cyclePrediction.phase]
+                  : "#AEA1DC",
+            }}
           >
             <Moon size={14} className="text-white" />
           </span>
           <span className="flex-1 min-w-0 text-left">
-            <span className="block text-[12.5px] font-bold text-charcoal">Cycle</span>
+            <span className="block text-[12.5px] font-bold text-charcoal">
+              {pregnancy ? "Pregnancy" : "Cycle"}
+            </span>
             <span className="block text-[10px] text-charcoal-tertiary truncate">
-              {cyclePrediction
-                ? `${PHASE_LABEL[cyclePrediction.phase]}${
-                    cyclePrediction.cycleDay !== null ? ` · day ${cyclePrediction.cycleDay}` : ""
-                  }`
-                : "Log a period to start"}
+              {pregnancy
+                ? (() => {
+                    const g = gestationOn(today, pregnancy);
+                    return g ? `Week ${g.week} · trimester ${g.trimester}` : "Being tracked";
+                  })()
+                : cyclePrediction
+                  ? `${PHASE_LABEL[cyclePrediction.phase]}${
+                      cyclePrediction.cycleDay !== null ? ` · day ${cyclePrediction.cycleDay}` : ""
+                    }`
+                  : "Log a period to start"}
             </span>
           </span>
           <ChevronRight size={14} className="text-primary-deep-text/60 shrink-0" />
         </button>
       )}
+
+      {/* The pregnancy guidance for this tab. */}
+      {pregnancy && <PregnancyHealthCard pregnancy={pregnancy} />}
 
       <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Records</p>
       <div className="flex flex-col gap-[7px] mb-3">

@@ -1365,6 +1365,17 @@ export interface NutritionGoal {
   // used to project a reach-by date on the weight trend graph.
   desiredWeightKg?: number;
   desiredWeightConfirmed?: boolean;
+  /**
+   * Extra daily energy for a pregnancy, added ONLY when the user taps "Apply
+   * to my targets" and removed when they tap it again.
+   *
+   * A SEPARATE FIELD RATHER THAN A BIGGER targetCalories, for two reasons.
+   * It survives every recalculation of the base target (changing weight goal,
+   * re-applying the TDEE suggestion), which a folded-in number would not; and
+   * removing it is deleting a field rather than trying to subtract back out a
+   * figure that may have moved trimester since. targetsFromGoal adds it.
+   */
+  pregnancyKcal?: number;
 }
 
 // V4: Meal Prep reworked — a custom meal is just a named group of existing
