@@ -24,6 +24,18 @@ import {
   Stethoscope,
   Ruler,
 } from "lucide-react";
+import {
+  averageReading,
+  BP_CATEGORIES,
+  categoryCounts,
+  classifyBloodPressure,
+} from "../../services/blood-pressure/classify";
+import {
+  BP_CATEGORY_COLOR,
+  BP_CATEGORY_LABEL,
+  BP_NONE_LOGGED,
+  BP_NOT_SHARED,
+} from "../../services/blood-pressure/guidance";
 import { ACCESS_CATEGORIES, accessKeyFor } from "../../services/consent";
 import { MEASUREMENT_SITES } from "../../services/measurements/sites";
 import { PERSON_ICON } from "../../utils/icons";
@@ -539,6 +551,68 @@ export const ClientDetailSheet: React.FC<{
               )}
             </div>
 
+            {/* Blood pressure, on its own grant for the same reason body
+                measurements is: 20260924410000 gave it a separate policy so a
+                client already sharing vitals did not begin sharing this the
+                moment the column existed. Sharing vitals shows nothing here. */}
+            <div className="mt-3 pt-3 border-t border-charcoal/[0.06]">
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
+                <Activity size={13} /> Blood pressure
+              </p>
+              {/* FOUR STATES, FOUR SENTENCES — not sharing, not fetched,
+                  sharing with nothing recorded, and data. Collapsing the
+                  middle two would tell a professional their client has
+                  measured nothing when the request simply has not returned. */}
+              {!client.access.bloodPressure ? (
+                <p className="text-xs text-charcoal-faint">{BP_NOT_SHARED}</p>
+              ) : !client.bloodPressure ? (
+                <p className="text-xs text-charcoal-faint">Loading…</p>
+              ) : client.bloodPressure.length === 0 ? (
+                <p className="text-xs text-charcoal-faint">{BP_NONE_LOGGED}</p>
+              ) : (
+                (() => {
+                  const readings = client.bloodPressure;
+                  const latest = readings[0];
+                  const week = readings.filter(
+                    (r) => new Date(r.recordedAt).getTime() >= Date.now() - 7 * 86400000
+                  );
+                  const weekAvg = averageReading(week);
+                  const counts = categoryCounts(readings);
+                  const latestCategory = classifyBloodPressure(latest.systolic, latest.diastolic);
+                  return (
+                    <>
+                      <div className="grid grid-cols-2 gap-2 mb-2.5">
+                        <div className="text-center bg-cream-card rounded-xl py-2">
+                          <p className="text-sm font-bold text-charcoal tabular-nums">
+                            {latest.systolic}/{latest.diastolic}
+                          </p>
+                          <p className="text-[10px]" style={{ color: BP_CATEGORY_COLOR[latestCategory] }}>
+                            {BP_CATEGORY_LABEL[latestCategory]}
+                          </p>
+                        </div>
+                        <div className="text-center bg-cream-card rounded-xl py-2">
+                          <p className="text-sm font-bold text-charcoal tabular-nums">
+                            {weekAvg ? `${weekAvg.systolic}/${weekAvg.diastolic}` : "—"}
+                          </p>
+                          <p className="text-[10px] text-charcoal-faint">7-day average</p>
+                        </div>
+                      </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        {BP_CATEGORIES.filter((c) => counts[c] > 0).map((c) => (
+                          <span
+                            key={c}
+                            className="text-[10px] font-semibold rounded-full px-2 py-0.5"
+                            style={{ color: BP_CATEGORY_COLOR[c], background: `${BP_CATEGORY_COLOR[c]}1A` }}
+                          >
+                            {BP_CATEGORY_LABEL[c]} · {counts[c]}
+                          </span>
+                        ))}
+                      </div>
+                    </>
+                  );
+                })()
+              )}
+            </div>
 
             {/* QA 13.0: "Anything added by the client in the health tab
                 from past comorbidities, previous surgeries, medications...

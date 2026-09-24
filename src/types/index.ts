@@ -1,3 +1,4 @@
+import type { BloodPressureReading } from "../services/blood-pressure/reading";
 // Core data model for the Centium prototype.
 // Deliberately simple — a real backend can replace these shapes later
 // without changing how the UI consumes them.
@@ -301,6 +302,7 @@ export interface ProfessionalClient {
     labResults: boolean;
     medicalHistory: boolean;
     bodyMeasurements: boolean;
+    bloodPressure: boolean;
   };
   assignedProgramName?: string;
   assignedFoodTemplateName?: string;
@@ -316,6 +318,16 @@ export interface ProfessionalClient {
    * that metric, which is a different thing from a zero.
    */
   vitals?: { sleepHours?: number; stepsAvg?: number };
+  /**
+   * The client's blood-pressure readings, behind the `blood_pressure` grant.
+   *
+   * UNDEFINED IS "NOT FETCHED" AND [] IS "SHARING, NOTHING LOGGED". The two
+   * get different sentences, because telling a professional their client has
+   * recorded nothing when in fact the request has not returned is a
+   * fabricated clinical observation -- the same distinction vitals and
+   * measurements draw above.
+   */
+  bloodPressure?: BloodPressureReading[];
   /**
    * Latest tape measurements and body fat, behind the `body_measurements`
    * grant — its own category, never the vitals one. Undefined means not yet
