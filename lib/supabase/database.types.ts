@@ -14,6 +14,308 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_emails: {
+        Row: {
+          attempts: number
+          created_at: string
+          first_name: string | null
+          id: string
+          initiated_by: string
+          kind: string
+          last_attempt_at: string | null
+          last_error: string | null
+          profile_id: string
+          provider_id: string | null
+          recipient_email: string | null
+          scheduled_for: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          initiated_by: string
+          kind: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          profile_id: string
+          provider_id?: string | null
+          recipient_email?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          created_at?: string
+          first_name?: string | null
+          id?: string
+          initiated_by?: string
+          kind?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          profile_id?: string
+          provider_id?: string | null
+          recipient_email?: string | null
+          scheduled_for?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: []
+      }
+      admin_actions: {
+        Row: {
+          action: string
+          actor_id: string | null
+          created_at: string
+          details: Json
+          id: string
+          target_account_id: string | null
+        }
+        Insert: {
+          action: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          target_account_id?: string | null
+        }
+        Update: {
+          action?: string
+          actor_id?: string | null
+          created_at?: string
+          details?: Json
+          id?: string
+          target_account_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "admin_actions_target_account_id_fkey"
+            columns: ["target_account_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_actions_target_account_id_fkey"
+            columns: ["target_account_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_actions_target_account_id_fkey"
+            columns: ["target_account_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_actions_target_account_id_fkey"
+            columns: ["target_account_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "admin_actions_target_account_id_fkey"
+            columns: ["target_account_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "admin_actions_target_account_id_fkey"
+            columns: ["target_account_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      admin_users: {
+        Row: {
+          granted_at: string
+          id: string
+          note: string | null
+          owner_id: string
+        }
+        Insert: {
+          granted_at?: string
+          id?: string
+          note?: string | null
+          owner_id: string
+        }
+        Update: {
+          granted_at?: string
+          id?: string
+          note?: string | null
+          owner_id?: string
+        }
+        Relationships: []
+      }
+      ambassador_grants: {
+        Row: {
+          granted_at: string
+          granted_by: string | null
+          id: string
+          profile_id: string
+          reason: string
+          revoke_reason: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+        }
+        Insert: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          profile_id: string
+          reason: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Update: {
+          granted_at?: string
+          granted_by?: string | null
+          id?: string
+          profile_id?: string
+          reason?: string
+          revoke_reason?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ambassador_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_granted_by_fkey"
+            columns: ["granted_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ambassador_grants_revoked_by_fkey"
+            columns: ["revoked_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       app_preferences: {
         Row: {
           created_at: string
@@ -62,6 +364,13 @@ export type Database = {
             foreignKeyName: "app_preferences_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_preferences_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -86,6 +395,13 @@ export type Database = {
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "app_preferences_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
         ]
       }
       app_reviews: {
@@ -96,7 +412,7 @@ export type Database = {
           review_text: string | null
           route: string | null
           user_agent: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -105,7 +421,7 @@ export type Database = {
           review_text?: string | null
           route?: string | null
           user_agent?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -114,15 +430,50 @@ export type Database = {
           review_text?: string | null
           route?: string | null
           user_agent?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "app_reviews_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "app_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "app_reviews_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -175,6 +526,13 @@ export type Database = {
             foreignKeyName: "blood_markers_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blood_markers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -198,6 +556,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "blood_markers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -228,6 +593,13 @@ export type Database = {
             foreignKeyName: "blood_panels_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blood_panels_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -252,6 +624,86 @@ export type Database = {
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "blood_panels_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      blood_pressure_readings: {
+        Row: {
+          created_at: string
+          diastolic: number
+          id: string
+          recorded_at: string
+          source: string
+          systolic: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          diastolic: number
+          id?: string
+          recorded_at: string
+          source?: string
+          systolic: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          diastolic?: number
+          id?: string
+          recorded_at?: string
+          source?: string
+          systolic?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "blood_pressure_readings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blood_pressure_readings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blood_pressure_readings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blood_pressure_readings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "blood_pressure_readings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "blood_pressure_readings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
         ]
       }
       bug_reports: {
@@ -261,7 +713,7 @@ export type Database = {
           id: string
           route: string | null
           user_agent: string | null
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -269,7 +721,7 @@ export type Database = {
           id?: string
           route?: string | null
           user_agent?: string | null
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -277,15 +729,50 @@ export type Database = {
           id?: string
           route?: string | null
           user_agent?: string | null
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "bug_reports_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bug_reports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bug_reports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bug_reports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bug_reports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "bug_reports_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -317,6 +804,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "business_class_bookings_business_class_id_fkey"
+            columns: ["business_class_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_classes"
+            referencedColumns: ["class_id"]
+          },
+          {
+            foreignKeyName: "business_class_bookings_business_class_id_fkey"
+            columns: ["business_class_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["class_id"]
+          },
+          {
+            foreignKeyName: "business_class_bookings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "business_class_bookings_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
@@ -343,6 +851,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_class_bookings_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -404,6 +919,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "business_classes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "business_classes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "business_classes_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
@@ -430,6 +959,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_classes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -481,6 +1017,13 @@ export type Database = {
             referencedRelation: "business_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "business_discounts_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
         ]
       }
       business_employees: {
@@ -511,6 +1054,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "business_employees_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "business_employees_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "business_employees_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: true
@@ -537,6 +1094,348 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_employees_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      business_member_codes: {
+        Row: {
+          business_id: string
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          issued_by: string | null
+          membership_plan_id: string | null
+          redeemed: boolean
+          redeemed_at: string | null
+          redeemed_by: string | null
+        }
+        Insert: {
+          business_id: string
+          code: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          issued_by?: string | null
+          membership_plan_id?: string | null
+          redeemed?: boolean
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+        }
+        Update: {
+          business_id?: string
+          code?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          issued_by?: string | null
+          membership_plan_id?: string | null
+          redeemed?: boolean
+          redeemed_at?: string | null
+          redeemed_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_member_codes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_issued_by_fkey"
+            columns: ["issued_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_membership_plan_id_fkey"
+            columns: ["membership_plan_id"]
+            isOneToOne: false
+            referencedRelation: "membership_plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_redeemed_by_fkey"
+            columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_redeemed_by_fkey"
+            columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_redeemed_by_fkey"
+            columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_redeemed_by_fkey"
+            columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_redeemed_by_fkey"
+            columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_member_codes_redeemed_by_fkey"
+            columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      business_members: {
+        Row: {
+          accepted: boolean | null
+          business_id: string
+          created_at: string
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          invited_at: string
+          invited_by: string | null
+          member_id: string
+          membership_plan_id: string | null
+          responded_at: string | null
+        }
+        Insert: {
+          accepted?: boolean | null
+          business_id: string
+          created_at?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          member_id: string
+          membership_plan_id?: string | null
+          responded_at?: string | null
+        }
+        Update: {
+          accepted?: boolean | null
+          business_id?: string
+          created_at?: string
+          ended_at?: string | null
+          ended_by?: string | null
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          member_id?: string
+          membership_plan_id?: string | null
+          responded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_members_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "business_members_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_members_ended_by_fkey"
+            columns: ["ended_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "business_members_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_members_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "business_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "business_members_membership_plan_id_fkey"
+            columns: ["membership_plan_id"]
+            isOneToOne: false
+            referencedRelation: "membership_plans"
+            referencedColumns: ["id"]
           },
         ]
       }
@@ -578,6 +1477,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "business_profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_offerings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
           },
         ]
       }
@@ -638,6 +1544,13 @@ export type Database = {
             foreignKeyName: "business_profiles_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -662,11 +1575,141 @@ export type Database = {
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "business_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      calendar_event_invitees: {
+        Row: {
+          accepted: boolean | null
+          calendar_event_id: string
+          id: string
+          invited_at: string
+          invited_by: string | null
+          invited_user_id: string
+          responded_at: string | null
+        }
+        Insert: {
+          accepted?: boolean | null
+          calendar_event_id: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          invited_user_id: string
+          responded_at?: string | null
+        }
+        Update: {
+          accepted?: boolean | null
+          calendar_event_id?: string
+          id?: string
+          invited_at?: string
+          invited_by?: string | null
+          invited_user_id?: string
+          responded_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "calendar_event_invitees_calendar_event_id_fkey"
+            columns: ["calendar_event_id"]
+            isOneToOne: false
+            referencedRelation: "calendar_events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_invitees_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_invitees_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_invitees_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_invitees_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_invitees_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "calendar_event_invitees_invited_by_fkey"
+            columns: ["invited_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "calendar_event_invitees_invited_user_id_fkey"
+            columns: ["invited_user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_invitees_invited_user_id_fkey"
+            columns: ["invited_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_invitees_invited_user_id_fkey"
+            columns: ["invited_user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_invitees_invited_user_id_fkey"
+            columns: ["invited_user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_event_invitees_invited_user_id_fkey"
+            columns: ["invited_user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "calendar_event_invitees_invited_user_id_fkey"
+            columns: ["invited_user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
         ]
       }
       calendar_events: {
         Row: {
           all_day: boolean
+          attachment_path: string | null
           color: string | null
           created_at: string
           created_by_client: boolean
@@ -685,6 +1728,7 @@ export type Database = {
         }
         Insert: {
           all_day?: boolean
+          attachment_path?: string | null
           color?: string | null
           created_at?: string
           created_by_client?: boolean
@@ -703,6 +1747,7 @@ export type Database = {
         }
         Update: {
           all_day?: boolean
+          attachment_path?: string | null
           color?: string | null
           created_at?: string
           created_by_client?: boolean
@@ -724,6 +1769,13 @@ export type Database = {
             foreignKeyName: "calendar_events_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calendar_events_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -747,81 +1799,19 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "calendar_events_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
           {
             foreignKeyName: "calendar_events_source_template_assignment_id_fkey"
             columns: ["source_template_assignment_id"]
             isOneToOne: false
             referencedRelation: "workout_template_assignments"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      cart_items: {
-        Row: {
-          created_at: string
-          id: string
-          item_name: string
-          owner_id: string
-          price: number
-          quantity: number
-          store_item_id: string | null
-          store_name: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          item_name: string
-          owner_id: string
-          price: number
-          quantity?: number
-          store_item_id?: string | null
-          store_name: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          item_name?: string
-          owner_id?: string
-          price?: number
-          quantity?: number
-          store_item_id?: string | null
-          store_name?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "cart_items_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cart_items_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "public_profile_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cart_items_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "related_profile_summary"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "cart_items_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "storage_purge_stalls"
-            referencedColumns: ["user_id"]
-          },
-          {
-            foreignKeyName: "cart_items_store_item_id_fkey"
-            columns: ["store_item_id"]
-            isOneToOne: false
-            referencedRelation: "store_items"
             referencedColumns: ["id"]
           },
         ]
@@ -874,6 +1864,13 @@ export type Database = {
             foreignKeyName: "calls_callee_id_fkey"
             columns: ["callee_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_callee_id_fkey"
+            columns: ["callee_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -899,6 +1896,20 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "calls_callee_id_fkey"
+            columns: ["callee_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "calls_caller_id_fkey"
+            columns: ["caller_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "calls_caller_id_fkey"
             columns: ["caller_id"]
             isOneToOne: false
@@ -925,6 +1936,20 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "calls_caller_id_fkey"
+            columns: ["caller_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "calls_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "admin_account_threads"
+            referencedColumns: ["thread_id"]
           },
           {
             foreignKeyName: "calls_thread_id_fkey"
@@ -932,6 +1957,214 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "message_threads"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "calls_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["thread_id"]
+          },
+        ]
+      }
+      cart_items: {
+        Row: {
+          created_at: string
+          id: string
+          item_name: string
+          owner_id: string
+          price: number
+          quantity: number
+          store_item_id: string | null
+          store_name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          item_name: string
+          owner_id: string
+          price: number
+          quantity?: number
+          store_item_id?: string | null
+          store_name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          item_name?: string
+          owner_id?: string
+          price?: number
+          quantity?: number
+          store_item_id?: string | null
+          store_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cart_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cart_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "cart_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "cart_items_store_item_id_fkey"
+            columns: ["store_item_id"]
+            isOneToOne: false
+            referencedRelation: "store_items"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      certification_reviews: {
+        Row: {
+          approved_at: string | null
+          certification_path: string
+          id: string
+          professional_id: string
+          rejected_at: string | null
+          rejection_reason: string | null
+          reviewed_by: string | null
+          submitted_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          certification_path: string
+          id?: string
+          professional_id: string
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          reviewed_by?: string | null
+          submitted_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          certification_path?: string
+          id?: string
+          professional_id?: string
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          reviewed_by?: string | null
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "certification_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "certification_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "certification_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "certification_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "certification_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -971,6 +2204,13 @@ export type Database = {
             foreignKeyName: "client_access_grants_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_access_grants_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -996,6 +2236,20 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "client_access_grants_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "client_access_grants_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_access_grants_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
@@ -1022,6 +2276,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "client_access_grants_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -1061,6 +2322,13 @@ export type Database = {
             foreignKeyName: "client_codes_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_codes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1086,6 +2354,20 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "client_codes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "client_codes_redeemed_by_fkey"
+            columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_codes_redeemed_by_fkey"
             columns: ["redeemed_by"]
             isOneToOne: false
@@ -1112,6 +2394,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "client_codes_redeemed_by_fkey"
+            columns: ["redeemed_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -1157,6 +2446,13 @@ export type Database = {
             foreignKeyName: "client_health_notes_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_health_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1182,6 +2478,20 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "client_health_notes_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "client_health_notes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "client_health_notes_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
@@ -1208,6 +2518,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "client_health_notes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -1235,6 +2552,13 @@ export type Database = {
             foreignKeyName: "comorbidities_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "comorbidities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1259,7 +2583,62 @@ export type Database = {
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "comorbidities_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
         ]
+      }
+      contact_submissions: {
+        Row: {
+          ack_sent_at: string | null
+          ack_skipped_reason: string | null
+          created_at: string
+          email: string
+          id: string
+          ip_hash: string
+          message: string
+          name: string
+          notified_at: string | null
+          notify_suppressed_reason: string | null
+          status: string
+          status_changed_at: string | null
+          topic: string
+        }
+        Insert: {
+          ack_sent_at?: string | null
+          ack_skipped_reason?: string | null
+          created_at?: string
+          email: string
+          id?: string
+          ip_hash: string
+          message: string
+          name: string
+          notified_at?: string | null
+          notify_suppressed_reason?: string | null
+          status?: string
+          status_changed_at?: string | null
+          topic: string
+        }
+        Update: {
+          ack_sent_at?: string | null
+          ack_skipped_reason?: string | null
+          created_at?: string
+          email?: string
+          id?: string
+          ip_hash?: string
+          message?: string
+          name?: string
+          notified_at?: string | null
+          notify_suppressed_reason?: string | null
+          status?: string
+          status_changed_at?: string | null
+          topic?: string
+        }
+        Relationships: []
       }
       custom_exercise_library_items: {
         Row: {
@@ -1303,6 +2682,13 @@ export type Database = {
             foreignKeyName: "custom_exercise_library_items_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_exercise_library_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1326,6 +2712,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "custom_exercise_library_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
           {
             foreignKeyName: "custom_exercise_library_items_source_custom_exercise_id_fkey"
@@ -1403,6 +2796,13 @@ export type Database = {
             foreignKeyName: "custom_foods_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_foods_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1428,6 +2828,20 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "custom_foods_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "custom_foods_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "custom_foods_scoped_to_client_id_fkey"
             columns: ["scoped_to_client_id"]
             isOneToOne: false
@@ -1454,6 +2868,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "custom_foods_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -1545,6 +2966,13 @@ export type Database = {
             foreignKeyName: "custom_meals_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "custom_meals_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1570,6 +2998,20 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "custom_meals_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "custom_meals_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "custom_meals_scoped_to_client_id_fkey"
             columns: ["scoped_to_client_id"]
             isOneToOne: false
@@ -1596,6 +3038,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "custom_meals_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -1638,6 +3087,13 @@ export type Database = {
             foreignKeyName: "device_presentation_settings_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "device_presentation_settings_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1661,6 +3117,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "device_presentation_settings_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -1688,6 +3151,13 @@ export type Database = {
             foreignKeyName: "dietary_restrictions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dietary_restrictions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1711,6 +3181,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "dietary_restrictions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -1786,6 +3263,13 @@ export type Database = {
             foreignKeyName: "extracted_biomarkers_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "extracted_biomarkers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1809,6 +3293,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "extracted_biomarkers_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -1895,6 +3386,13 @@ export type Database = {
             foreignKeyName: "food_log_entries_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "food_log_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -1918,6 +3416,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "food_log_entries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -1952,147 +3457,6 @@ export type Database = {
             columns: ["food_id"]
             isOneToOne: true
             referencedRelation: "foods"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      blood_pressure_readings: {
-        Row: {
-          created_at: string
-          diastolic: number
-          id: string
-          recorded_at: string
-          source: string
-          systolic: number
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          diastolic: number
-          id?: string
-          recorded_at: string
-          source?: string
-          systolic: number
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          diastolic?: number
-          id?: string
-          recorded_at?: string
-          source?: string
-          systolic?: number
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "blood_pressure_readings_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      recipes: {
-        Row: {
-          created_at: string
-          id: string
-          owner_id: string
-          scoped_to_client_id: string | null
-          servings: number
-          steps: string | null
-          title: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          owner_id: string
-          scoped_to_client_id?: string | null
-          servings: number
-          steps?: string | null
-          title: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          owner_id?: string
-          scoped_to_client_id?: string | null
-          servings?: number
-          steps?: string | null
-          title?: string
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "recipes_owner_id_fkey"
-            columns: ["owner_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recipes_scoped_to_client_id_fkey"
-            columns: ["scoped_to_client_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      recipe_items: {
-        Row: {
-          custom_food_id: string | null
-          food_id: string | null
-          id: string
-          note: string | null
-          position: number
-          quantity: number
-          recipe_id: string
-          unit: Database["public"]["Enums"]["food_unit"]
-        }
-        Insert: {
-          custom_food_id?: string | null
-          food_id?: string | null
-          id?: string
-          note?: string | null
-          position: number
-          quantity: number
-          recipe_id: string
-          unit?: Database["public"]["Enums"]["food_unit"]
-        }
-        Update: {
-          custom_food_id?: string | null
-          food_id?: string | null
-          id?: string
-          note?: string | null
-          position?: number
-          quantity?: number
-          recipe_id?: string
-          unit?: Database["public"]["Enums"]["food_unit"]
-        }
-        Relationships: [
-          {
-            foreignKeyName: "recipe_items_custom_food_id_fkey"
-            columns: ["custom_food_id"]
-            isOneToOne: false
-            referencedRelation: "custom_foods"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recipe_items_food_id_fkey"
-            columns: ["food_id"]
-            isOneToOne: false
-            referencedRelation: "foods"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "recipe_items_recipe_id_fkey"
-            columns: ["recipe_id"]
-            isOneToOne: false
-            referencedRelation: "recipes"
             referencedColumns: ["id"]
           },
         ]
@@ -2226,6 +3590,13 @@ export type Database = {
             foreignKeyName: "gym_purchases_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gym_purchases_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2249,6 +3620,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "gym_purchases_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -2350,6 +3728,13 @@ export type Database = {
             foreignKeyName: "habit_items_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "habit_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2373,6 +3758,101 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "habit_items_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      health_data_reset_requests: {
+        Row: {
+          cancelled_at: string | null
+          execute_after: string
+          executed_at: string | null
+          id: string
+          purge_storage: boolean
+          requested_at: string
+          requested_by: string | null
+          scope_all: boolean
+          scope_tables: string[]
+          storage_purged_at: string | null
+          storage_targets: Json
+          target_user_id: string
+        }
+        Insert: {
+          cancelled_at?: string | null
+          execute_after: string
+          executed_at?: string | null
+          id?: string
+          purge_storage?: boolean
+          requested_at?: string
+          requested_by?: string | null
+          scope_all?: boolean
+          scope_tables: string[]
+          storage_purged_at?: string | null
+          storage_targets?: Json
+          target_user_id: string
+        }
+        Update: {
+          cancelled_at?: string | null
+          execute_after?: string
+          executed_at?: string | null
+          id?: string
+          purge_storage?: boolean
+          requested_at?: string
+          requested_by?: string | null
+          scope_all?: boolean
+          scope_tables?: string[]
+          storage_purged_at?: string | null
+          storage_targets?: Json
+          target_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "health_data_reset_requests_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_data_reset_requests_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_data_reset_requests_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_data_reset_requests_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_data_reset_requests_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "health_data_reset_requests_target_user_id_fkey"
+            columns: ["target_user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -2412,6 +3892,13 @@ export type Database = {
             foreignKeyName: "health_integrations_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_integrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2435,6 +3922,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "health_integrations_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -2471,6 +3965,13 @@ export type Database = {
             foreignKeyName: "health_metrics_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2494,6 +3995,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "health_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -2530,6 +4038,13 @@ export type Database = {
             foreignKeyName: "imaging_records_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "imaging_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2553,6 +4068,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "imaging_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -2621,6 +4143,13 @@ export type Database = {
             foreignKeyName: "journal_folders_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_folders_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2644,6 +4173,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "journal_folders_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -2676,6 +4212,13 @@ export type Database = {
           workout_session_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "logged_exercises_custom_exercise_id_fkey"
+            columns: ["custom_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "custom_exercise_library_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "logged_exercises_exercise_id_fkey"
             columns: ["exercise_id"]
@@ -2787,6 +4330,13 @@ export type Database = {
             foreignKeyName: "medications_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "medications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2810,6 +4360,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "medications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -2852,6 +4409,130 @@ export type Database = {
             referencedRelation: "business_profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "membership_plans_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+        ]
+      }
+      message_attachment_purges: {
+        Row: {
+          message_id: string
+          object_name: string
+          purged_at: string | null
+          requested_at: string
+          requested_by: string | null
+        }
+        Insert: {
+          message_id: string
+          object_name: string
+          purged_at?: string | null
+          requested_at?: string
+          requested_by?: string | null
+        }
+        Update: {
+          message_id?: string
+          object_name?: string
+          purged_at?: string | null
+          requested_at?: string
+          requested_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_attachment_purges_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_attachment_purges_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: true
+            referencedRelation: "messages_visible"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      message_flags: {
+        Row: {
+          created_at: string
+          flag: Database["public"]["Enums"]["message_flag"]
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          flag: Database["public"]["Enums"]["message_flag"]
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          flag?: Database["public"]["Enums"]["message_flag"]
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_flags_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_flags_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages_visible"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "message_flags_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
         ]
       }
       message_threads: {
@@ -2881,6 +4562,13 @@ export type Database = {
             foreignKeyName: "message_threads_participant_one_id_fkey"
             columns: ["participant_one_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_one_id_fkey"
+            columns: ["participant_one_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -2906,6 +4594,20 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "message_threads_participant_one_id_fkey"
+            columns: ["participant_one_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_two_id_fkey"
+            columns: ["participant_two_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "message_threads_participant_two_id_fkey"
             columns: ["participant_two_id"]
             isOneToOne: false
@@ -2932,6 +4634,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_two_id_fkey"
+            columns: ["participant_two_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -2939,6 +4648,7 @@ export type Database = {
         Row: {
           attachment_purged_at: string | null
           attachment_url: string | null
+          authored_by: string | null
           created_at: string
           forwarded: boolean
           id: string
@@ -2953,6 +4663,7 @@ export type Database = {
         Insert: {
           attachment_purged_at?: string | null
           attachment_url?: string | null
+          authored_by?: string | null
           created_at?: string
           forwarded?: boolean
           id?: string
@@ -2967,6 +4678,7 @@ export type Database = {
         Update: {
           attachment_purged_at?: string | null
           attachment_url?: string | null
+          authored_by?: string | null
           created_at?: string
           forwarded?: boolean
           id?: string
@@ -2987,6 +4699,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages_visible"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "messages_sender_id_fkey"
             columns: ["sender_id"]
             isOneToOne: false
@@ -3015,11 +4741,32 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "admin_account_threads"
+            referencedColumns: ["thread_id"]
+          },
+          {
             foreignKeyName: "messages_thread_id_fkey"
             columns: ["thread_id"]
             isOneToOne: false
             referencedRelation: "message_threads"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["thread_id"]
           },
         ]
       }
@@ -3028,27 +4775,39 @@ export type Database = {
           content_type: Database["public"]["Enums"]["mind_content_type"]
           created_at: string
           description: string | null
+          difficulty: Database["public"]["Enums"]["mind_difficulty"] | null
           id: string
           name: string
           phases: Json | null
+          seconds: number | null
+          stretch_type: Database["public"]["Enums"]["mind_stretch_type"] | null
+          target: string | null
           updated_at: string
         }
         Insert: {
           content_type: Database["public"]["Enums"]["mind_content_type"]
           created_at?: string
           description?: string | null
+          difficulty?: Database["public"]["Enums"]["mind_difficulty"] | null
           id?: string
           name: string
           phases?: Json | null
+          seconds?: number | null
+          stretch_type?: Database["public"]["Enums"]["mind_stretch_type"] | null
+          target?: string | null
           updated_at?: string
         }
         Update: {
           content_type?: Database["public"]["Enums"]["mind_content_type"]
           created_at?: string
           description?: string | null
+          difficulty?: Database["public"]["Enums"]["mind_difficulty"] | null
           id?: string
           name?: string
           phases?: Json | null
+          seconds?: number | null
+          stretch_type?: Database["public"]["Enums"]["mind_stretch_type"] | null
+          target?: string | null
           updated_at?: string
         }
         Relationships: []
@@ -3104,6 +4863,13 @@ export type Database = {
             foreignKeyName: "nutrition_goals_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "nutrition_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3127,6 +4893,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "nutrition_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -3173,6 +4946,13 @@ export type Database = {
             foreignKeyName: "paused_workout_sessions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "paused_workout_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3196,6 +4976,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "paused_workout_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -3229,6 +5016,13 @@ export type Database = {
             foreignKeyName: "pending_client_requests_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pending_client_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3254,6 +5048,20 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "pending_client_requests_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "pending_client_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "pending_client_requests_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
@@ -3280,6 +5088,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pending_client_requests_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -3316,6 +5131,13 @@ export type Database = {
         }
         Relationships: [
           {
+            foreignKeyName: "personal_records_custom_exercise_id_fkey"
+            columns: ["custom_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "custom_exercise_library_items"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "personal_records_exercise_id_fkey"
             columns: ["exercise_id"]
             isOneToOne: false
@@ -3327,6 +5149,13 @@ export type Database = {
             columns: ["source_logged_set_id"]
             isOneToOne: false
             referencedRelation: "logged_sets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
             referencedColumns: ["id"]
           },
           {
@@ -3356,6 +5185,112 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "personal_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      pinned_messages: {
+        Row: {
+          message_id: string
+          pinned_at: string
+          pinned_by: string
+          thread_id: string
+        }
+        Insert: {
+          message_id: string
+          pinned_at?: string
+          pinned_by: string
+          thread_id: string
+        }
+        Update: {
+          message_id?: string
+          pinned_at?: string
+          pinned_by?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pinned_messages_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinned_messages_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages_visible"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinned_messages_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinned_messages_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinned_messages_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinned_messages_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinned_messages_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "pinned_messages_pinned_by_fkey"
+            columns: ["pinned_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "pinned_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: true
+            referencedRelation: "admin_account_threads"
+            referencedColumns: ["thread_id"]
+          },
+          {
+            foreignKeyName: "pinned_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: true
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "pinned_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["thread_id"]
           },
         ]
       }
@@ -3389,6 +5324,13 @@ export type Database = {
             foreignKeyName: "points_ledger_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3412,6 +5354,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "points_ledger_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -3466,6 +5415,13 @@ export type Database = {
             foreignKeyName: "professional_clients_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3491,6 +5447,20 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "professional_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "professional_clients_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "professional_clients_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
@@ -3517,6 +5487,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_clients_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -3525,6 +5502,7 @@ export type Database = {
           affiliated_business_id: string | null
           bio: string | null
           certification_url: string | null
+          certification_verified: boolean
           consultation_rate: number | null
           created_at: string
           facebook: string | null
@@ -3545,6 +5523,7 @@ export type Database = {
           affiliated_business_id?: string | null
           bio?: string | null
           certification_url?: string | null
+          certification_verified?: boolean
           consultation_rate?: number | null
           created_at?: string
           facebook?: string | null
@@ -3565,6 +5544,7 @@ export type Database = {
           affiliated_business_id?: string | null
           bio?: string | null
           certification_url?: string | null
+          certification_verified?: boolean
           consultation_rate?: number | null
           created_at?: string
           facebook?: string | null
@@ -3590,6 +5570,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "professional_profiles_affiliated_business_id_fkey"
+            columns: ["affiliated_business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "professional_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "professional_profiles_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: true
@@ -3616,6 +5610,188 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      professional_reviews: {
+        Row: {
+          body: string | null
+          created_at: string
+          edited_at: string | null
+          id: string
+          professional_id: string
+          rating: number
+          redacted_at: string | null
+          redacted_body: string | null
+          redacted_by: string | null
+          redaction_reason: string | null
+          reviewer_id: string
+          reviewer_name_visible: boolean
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          professional_id: string
+          rating: number
+          redacted_at?: string | null
+          redacted_body?: string | null
+          redacted_by?: string | null
+          redaction_reason?: string | null
+          reviewer_id: string
+          reviewer_name_visible?: boolean
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          edited_at?: string | null
+          id?: string
+          professional_id?: string
+          rating?: number
+          redacted_at?: string | null
+          redacted_body?: string | null
+          redacted_by?: string | null
+          redaction_reason?: string | null
+          reviewer_id?: string
+          reviewer_name_visible?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_redacted_by_fkey"
+            columns: ["redacted_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_redacted_by_fkey"
+            columns: ["redacted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_redacted_by_fkey"
+            columns: ["redacted_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_redacted_by_fkey"
+            columns: ["redacted_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_redacted_by_fkey"
+            columns: ["redacted_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_redacted_by_fkey"
+            columns: ["redacted_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_reviewer_id_fkey"
+            columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -3709,32 +5885,45 @@ export type Database = {
       push_subscriptions: {
         Row: {
           auth: string
+          consecutive_failures: number
           created_at: string
           endpoint: string
           id: string
+          last_failure_at: string | null
           last_success_at: string | null
           owner_id: string
           p256dh: string
         }
         Insert: {
           auth: string
+          consecutive_failures?: number
           created_at?: string
           endpoint: string
           id?: string
+          last_failure_at?: string | null
           last_success_at?: string | null
           owner_id: string
           p256dh: string
         }
         Update: {
           auth?: string
+          consecutive_failures?: number
           created_at?: string
           endpoint?: string
           id?: string
+          last_failure_at?: string | null
           last_success_at?: string | null
           owner_id?: string
           p256dh?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "push_subscriptions_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "push_subscriptions_owner_id_fkey"
             columns: ["owner_id"]
@@ -3762,6 +5951,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "push_subscriptions_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -3789,6 +5985,13 @@ export type Database = {
             foreignKeyName: "rate_limit_attempts_actor_id_fkey"
             columns: ["actor_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rate_limit_attempts_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3812,6 +6015,189 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "rate_limit_attempts_actor_id_fkey"
+            columns: ["actor_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      recipe_items: {
+        Row: {
+          created_at: string
+          custom_food_id: string | null
+          food_id: string | null
+          id: string
+          note: string | null
+          position: number
+          quantity: number
+          recipe_id: string
+          unit: Database["public"]["Enums"]["food_unit"]
+        }
+        Insert: {
+          created_at?: string
+          custom_food_id?: string | null
+          food_id?: string | null
+          id?: string
+          note?: string | null
+          position: number
+          quantity: number
+          recipe_id: string
+          unit?: Database["public"]["Enums"]["food_unit"]
+        }
+        Update: {
+          created_at?: string
+          custom_food_id?: string | null
+          food_id?: string | null
+          id?: string
+          note?: string | null
+          position?: number
+          quantity?: number
+          recipe_id?: string
+          unit?: Database["public"]["Enums"]["food_unit"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipe_items_custom_food_id_fkey"
+            columns: ["custom_food_id"]
+            isOneToOne: false
+            referencedRelation: "custom_foods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_items_food_id_fkey"
+            columns: ["food_id"]
+            isOneToOne: false
+            referencedRelation: "foods"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipe_items_recipe_id_fkey"
+            columns: ["recipe_id"]
+            isOneToOne: false
+            referencedRelation: "recipes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      recipes: {
+        Row: {
+          created_at: string
+          id: string
+          owner_id: string
+          scoped_to_client_id: string | null
+          servings: number
+          steps: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          owner_id: string
+          scoped_to_client_id?: string | null
+          servings: number
+          steps?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          owner_id?: string
+          scoped_to_client_id?: string | null
+          servings?: number
+          steps?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "recipes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "recipes_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "recipes_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recipes_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "recipes_scoped_to_client_id_fkey"
+            columns: ["scoped_to_client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -3845,6 +6231,13 @@ export type Database = {
             foreignKeyName: "recovery_mode_settings_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "recovery_mode_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3868,6 +6261,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "recovery_mode_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -3916,6 +6316,13 @@ export type Database = {
             foreignKeyName: "referrals_referee_id_fkey"
             columns: ["referee_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "referrals_referee_id_fkey"
+            columns: ["referee_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -3941,6 +6348,20 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "referrals_referee_id_fkey"
+            columns: ["referee_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "referrals_referrer_id_fkey"
             columns: ["referrer_id"]
             isOneToOne: false
@@ -3967,6 +6388,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey"
+            columns: ["referrer_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -3979,6 +6407,7 @@ export type Database = {
           cardio_pace_min_per_km: number | null
           created_at: string
           custom_exercise_id: string | null
+          duration_seconds: number | null
           estimated_one_rep_max_kg: number | null
           exercise_id: string | null
           id: string
@@ -4008,6 +6437,7 @@ export type Database = {
           cardio_pace_min_per_km?: number | null
           created_at?: string
           custom_exercise_id?: string | null
+          duration_seconds?: number | null
           estimated_one_rep_max_kg?: number | null
           exercise_id?: string | null
           id?: string
@@ -4037,6 +6467,7 @@ export type Database = {
           cardio_pace_min_per_km?: number | null
           created_at?: string
           custom_exercise_id?: string | null
+          duration_seconds?: number | null
           estimated_one_rep_max_kg?: number | null
           exercise_id?: string | null
           id?: string
@@ -4115,6 +6546,13 @@ export type Database = {
             foreignKeyName: "routine_folders_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routine_folders_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4138,6 +6576,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "routine_folders_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
           {
             foreignKeyName: "routine_folders_parent_id_fkey"
@@ -4193,6 +6638,13 @@ export type Database = {
             foreignKeyName: "routines_assigned_by_professional_id_fkey"
             columns: ["assigned_by_professional_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routines_assigned_by_professional_id_fkey"
+            columns: ["assigned_by_professional_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4216,6 +6668,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "routines_assigned_by_professional_id_fkey"
+            columns: ["assigned_by_professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
           {
             foreignKeyName: "routines_folder_id_fkey"
@@ -4228,6 +6687,13 @@ export type Database = {
             foreignKeyName: "routines_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "routines_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4251,6 +6717,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "routines_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
           {
             foreignKeyName: "routines_source_template_id_fkey"
@@ -4303,6 +6776,13 @@ export type Database = {
             foreignKeyName: "sleep_details_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sleep_details_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4327,7 +6807,32 @@ export type Database = {
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "sleep_details_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
         ]
+      }
+      storage_purge_buckets: {
+        Row: {
+          bucket_id: string
+          path_shape: string
+          uid_segment: number
+        }
+        Insert: {
+          bucket_id: string
+          path_shape: string
+          uid_segment: number
+        }
+        Update: {
+          bucket_id?: string
+          path_shape?: string
+          uid_segment?: number
+        }
+        Relationships: []
       }
       store_items: {
         Row: {
@@ -4410,6 +6915,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "store_listings_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "store_listings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "store_listings_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
@@ -4436,6 +6955,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "store_listings_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -4485,6 +7011,13 @@ export type Database = {
             foreignKeyName: "streaks_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "streaks_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4508,6 +7041,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "streaks_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -4550,6 +7090,13 @@ export type Database = {
             foreignKeyName: "subscription_states_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_states_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4573,6 +7120,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "subscription_states_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
           {
             foreignKeyName: "subscription_states_tier_id_fkey"
@@ -4616,6 +7170,49 @@ export type Database = {
         }
         Relationships: []
       }
+      support_thread_reads: {
+        Row: {
+          last_logged_read_at: string | null
+          last_read_at: string
+          last_read_by: string | null
+          thread_id: string
+        }
+        Insert: {
+          last_logged_read_at?: string | null
+          last_read_at?: string
+          last_read_by?: string | null
+          thread_id: string
+        }
+        Update: {
+          last_logged_read_at?: string | null
+          last_read_at?: string
+          last_read_by?: string | null
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_thread_reads_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: true
+            referencedRelation: "admin_account_threads"
+            referencedColumns: ["thread_id"]
+          },
+          {
+            foreignKeyName: "support_thread_reads_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: true
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "support_thread_reads_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["thread_id"]
+          },
+        ]
+      }
       surgeries: {
         Row: {
           created_at: string
@@ -4643,6 +7240,13 @@ export type Database = {
             foreignKeyName: "surgeries_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "surgeries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4666,6 +7270,153 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "surgeries_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      system_identities: {
+        Row: {
+          created_at: string
+          label: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          label: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          label?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "system_identities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_identities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_identities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_identities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "system_identities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "system_identities_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      welcome_emails: {
+        Row: {
+          attempts: number
+          last_attempt_at: string | null
+          last_error: string | null
+          profile_id: string
+          provider_id: string | null
+          queued_at: string
+          sent_at: string | null
+          skipped_reason: string | null
+          status: string
+        }
+        Insert: {
+          attempts?: number
+          last_attempt_at?: string | null
+          last_error?: string | null
+          profile_id: string
+          provider_id?: string | null
+          queued_at?: string
+          sent_at?: string | null
+          skipped_reason?: string | null
+          status?: string
+        }
+        Update: {
+          attempts?: number
+          last_attempt_at?: string | null
+          last_error?: string | null
+          profile_id?: string
+          provider_id?: string | null
+          queued_at?: string
+          sent_at?: string | null
+          skipped_reason?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "welcome_emails_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "welcome_emails_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "welcome_emails_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "welcome_emails_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "welcome_emails_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "welcome_emails_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -4708,6 +7459,13 @@ export type Database = {
             foreignKeyName: "widget_configs_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "widget_configs_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4731,6 +7489,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "widget_configs_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -4786,6 +7551,13 @@ export type Database = {
             foreignKeyName: "workout_sessions_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4809,6 +7581,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "workout_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -4845,6 +7624,13 @@ export type Database = {
             foreignKeyName: "workout_template_assignments_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_template_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -4868,6 +7654,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "workout_template_assignments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
           {
             foreignKeyName: "workout_template_assignments_routine_id_fkey"
@@ -4894,6 +7687,7 @@ export type Database = {
           cardio_pace_min_per_km: number | null
           created_at: string
           custom_exercise_id: string | null
+          duration_seconds: number | null
           estimated_one_rep_max_kg: number | null
           exercise_id: string | null
           id: string
@@ -4923,6 +7717,7 @@ export type Database = {
           cardio_pace_min_per_km?: number | null
           created_at?: string
           custom_exercise_id?: string | null
+          duration_seconds?: number | null
           estimated_one_rep_max_kg?: number | null
           exercise_id?: string | null
           id?: string
@@ -4952,6 +7747,7 @@ export type Database = {
           cardio_pace_min_per_km?: number | null
           created_at?: string
           custom_exercise_id?: string | null
+          duration_seconds?: number | null
           estimated_one_rep_max_kg?: number | null
           exercise_id?: string | null
           id?: string
@@ -5030,6 +7826,13 @@ export type Database = {
             foreignKeyName: "workout_template_folders_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_template_folders_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -5053,6 +7856,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "workout_template_folders_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
           {
             foreignKeyName: "workout_template_folders_parent_id_fkey"
@@ -5121,6 +7931,13 @@ export type Database = {
             foreignKeyName: "workout_templates_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_templates_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -5145,129 +7962,17 @@ export type Database = {
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "workout_templates_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
         ]
-      }
-      message_flags: {
-        Row: {
-          created_at: string
-          flag: Database["public"]["Enums"]["message_flag"]
-          message_id: string
-          user_id: string
-        }
-        Insert: {
-          created_at?: string
-          flag: Database["public"]["Enums"]["message_flag"]
-          message_id: string
-          user_id: string
-        }
-        Update: {
-          created_at?: string
-          flag?: Database["public"]["Enums"]["message_flag"]
-          message_id?: string
-          user_id?: string
-        }
-        Relationships: []
-      }
-      pinned_messages: {
-        Row: {
-          message_id: string
-          pinned_at: string
-          pinned_by: string | null
-          thread_id: string
-        }
-        Insert: {
-          message_id: string
-          pinned_at?: string
-          pinned_by?: string | null
-          thread_id: string
-        }
-        Update: {
-          message_id?: string
-          pinned_at?: string
-          pinned_by?: string | null
-          thread_id?: string
-        }
-        Relationships: []
       }
     }
     Views: {
-      messages_visible: {
-        Row: {
-          attachment_purged_at: string | null
-          attachment_url: string | null
-          created_at: string | null
-          forwarded: boolean | null
-          id: string | null
-          read_at: string | null
-          redacted_at: string | null
-          reply_to_id: string | null
-          sender_id: string | null
-          text: string | null
-          thread_id: string | null
-          voice_note_seconds: number | null
-        }
-        Relationships: []
-      }
-      thread_participant_summary: {
-        Row: {
-          avatar_url: string | null
-          first_name: string | null
-          kind: Database["public"]["Enums"]["thread_kind"] | null
-          participant_id: string | null
-          thread_id: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          first_name?: string | null
-          kind?: Database["public"]["Enums"]["thread_kind"] | null
-          participant_id?: string | null
-          thread_id?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          first_name?: string | null
-          kind?: Database["public"]["Enums"]["thread_kind"] | null
-          participant_id?: string | null
-          thread_id?: string | null
-        }
-        Relationships: []
-      }
-      connected_professional_summary: {
-        Row: {
-          avatar_url: string | null
-          bio: string | null
-          first_name: string | null
-          id: string | null
-          location: string | null
-          professional_subtype:
-            | Database["public"]["Enums"]["professional_subtype"]
-            | null
-          specialty: string | null
-        }
-        Insert: {
-          avatar_url?: string | null
-          bio?: string | null
-          first_name?: string | null
-          id?: string | null
-          location?: string | null
-          professional_subtype?:
-            | Database["public"]["Enums"]["professional_subtype"]
-            | null
-          specialty?: string | null
-        }
-        Update: {
-          avatar_url?: string | null
-          bio?: string | null
-          first_name?: string | null
-          id?: string | null
-          location?: string | null
-          professional_subtype?:
-            | Database["public"]["Enums"]["professional_subtype"]
-            | null
-          specialty?: string | null
-        }
-        Relationships: []
-      }
       active_professional_clients: {
         Row: {
           assigned_food_template_id: string | null
@@ -5319,6 +8024,13 @@ export type Database = {
             foreignKeyName: "professional_clients_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -5344,6 +8056,20 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
           {
+            foreignKeyName: "professional_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "professional_clients_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "professional_clients_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
@@ -5370,8 +8096,131 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_clients_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
+      }
+      admin_account_threads: {
+        Row: {
+          attachment_count: number | null
+          created_at: string | null
+          last_message_at: string | null
+          message_count: number | null
+          participant_one_email: string | null
+          participant_one_first_name: string | null
+          participant_one_id: string | null
+          participant_two_email: string | null
+          participant_two_first_name: string | null
+          participant_two_id: string | null
+          redacted_count: number | null
+          thread_id: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_threads_participant_one_id_fkey"
+            columns: ["participant_one_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_one_id_fkey"
+            columns: ["participant_one_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_one_id_fkey"
+            columns: ["participant_one_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_one_id_fkey"
+            columns: ["participant_one_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_one_id_fkey"
+            columns: ["participant_one_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_one_id_fkey"
+            columns: ["participant_one_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_two_id_fkey"
+            columns: ["participant_two_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_two_id_fkey"
+            columns: ["participant_two_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_two_id_fkey"
+            columns: ["participant_two_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_two_id_fkey"
+            columns: ["participant_two_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_two_id_fkey"
+            columns: ["participant_two_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "message_threads_participant_two_id_fkey"
+            columns: ["participant_two_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      connected_professional_summary: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          first_name: string | null
+          id: string | null
+          location: string | null
+          professional_subtype:
+            | Database["public"]["Enums"]["professional_subtype"]
+            | null
+          specialty: string | null
+        }
+        Relationships: []
       }
       current_health_metrics: {
         Row: {
@@ -5388,6 +8237,13 @@ export type Database = {
             foreignKeyName: "health_metrics_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "health_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -5412,6 +8268,13 @@ export type Database = {
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "health_metrics_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
         ]
       }
       current_personal_records: {
@@ -5426,6 +8289,13 @@ export type Database = {
           user_id: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "personal_records_custom_exercise_id_fkey"
+            columns: ["custom_exercise_id"]
+            isOneToOne: false
+            referencedRelation: "custom_exercise_library_items"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "personal_records_exercise_id_fkey"
             columns: ["exercise_id"]
@@ -5444,6 +8314,13 @@ export type Database = {
             foreignKeyName: "personal_records_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -5467,6 +8344,333 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "personal_records_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      marketplace_classes: {
+        Row: {
+          booked_count: number | null
+          business_id: string | null
+          business_name: string | null
+          class_id: string | null
+          class_type: string | null
+          end_time: string | null
+          event_date: string | null
+          is_full: boolean | null
+          location: string | null
+          max_capacity: number | null
+          notes: string | null
+          payment_type: string | null
+          price: number | null
+          spots_remaining: number | null
+          start_time: string | null
+          title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_classes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_classes_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+        ]
+      }
+      marketplace_venues: {
+        Row: {
+          bio: string | null
+          can_host_classes: boolean | null
+          created_at: string | null
+          kind: string | null
+          lat: number | null
+          lng: number | null
+          location: string | null
+          name: string | null
+          perk: string | null
+          upcoming_class_count: number | null
+          venue_id: string | null
+          venue_type: string | null
+        }
+        Relationships: []
+      }
+      messages_visible: {
+        Row: {
+          attachment_purged_at: string | null
+          attachment_url: string | null
+          created_at: string | null
+          forwarded: boolean | null
+          id: string | null
+          read_at: string | null
+          redacted_at: string | null
+          reply_to_id: string | null
+          sender_id: string | null
+          text: string | null
+          thread_id: string | null
+          voice_note_seconds: number | null
+        }
+        Insert: {
+          attachment_purged_at?: string | null
+          attachment_url?: string | null
+          created_at?: string | null
+          forwarded?: boolean | null
+          id?: string | null
+          read_at?: never
+          redacted_at?: string | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+          text?: string | null
+          thread_id?: string | null
+          voice_note_seconds?: number | null
+        }
+        Update: {
+          attachment_purged_at?: string | null
+          attachment_url?: string | null
+          created_at?: string | null
+          forwarded?: boolean | null
+          id?: string | null
+          read_at?: never
+          redacted_at?: string | null
+          reply_to_id?: string | null
+          sender_id?: string | null
+          text?: string | null
+          thread_id?: string | null
+          voice_note_seconds?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_reply_to_id_fkey"
+            columns: ["reply_to_id"]
+            isOneToOne: false
+            referencedRelation: "messages_visible"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "admin_account_threads"
+            referencedColumns: ["thread_id"]
+          },
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["thread_id"]
+          },
+        ]
+      }
+      my_business_memberships: {
+        Row: {
+          accepted: boolean | null
+          business_active: boolean | null
+          business_id: string | null
+          business_name: string | null
+          ended_at: string | null
+          id: string | null
+          invited_at: string | null
+          member_id: string | null
+          membership_plan_id: string | null
+          plan_name: string | null
+          responded_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_members_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "business_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "my_class_schedule"
+            referencedColumns: ["business_id"]
+          },
+          {
+            foreignKeyName: "business_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_members_member_id_fkey"
+            columns: ["member_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "business_members_membership_plan_id_fkey"
+            columns: ["membership_plan_id"]
+            isOneToOne: false
+            referencedRelation: "membership_plans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      my_class_schedule: {
+        Row: {
+          booked_at: string | null
+          booking_id: string | null
+          business_active: boolean | null
+          business_id: string | null
+          business_name: string | null
+          class_id: string | null
+          class_type: string | null
+          end_time: string | null
+          event_date: string | null
+          max_capacity: number | null
+          notes: string | null
+          payment_type: string | null
+          price: number | null
+          professional_id: string | null
+          start_time: string | null
+          title: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_classes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_classes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_classes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_classes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "business_classes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "business_classes_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -5482,6 +8686,13 @@ export type Database = {
             foreignKeyName: "points_ledger_owner_id_fkey"
             columns: ["owner_id"]
             isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "points_ledger_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -5506,11 +8717,155 @@ export type Database = {
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
           },
+          {
+            foreignKeyName: "points_ledger_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      professional_rating_summary: {
+        Row: {
+          average_rating: number | null
+          professional_id: string | null
+          review_count: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      professional_reviews_readable: {
+        Row: {
+          body: string | null
+          created_at: string | null
+          edited_at: string | null
+          id: string | null
+          professional_id: string | null
+          rating: number | null
+          redacted_at: string | null
+          redaction_reason: string | null
+          reviewer_id: string | null
+          reviewer_name_visible: boolean | null
+          updated_at: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string | null
+          professional_id?: string | null
+          rating?: number | null
+          redacted_at?: string | null
+          redaction_reason?: string | null
+          reviewer_id?: never
+          reviewer_name_visible?: boolean | null
+          updated_at?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string | null
+          edited_at?: string | null
+          id?: string | null
+          professional_id?: string | null
+          rating?: number | null
+          redacted_at?: string | null
+          redaction_reason?: string | null
+          reviewer_id?: never
+          reviewer_name_visible?: boolean | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
         ]
       }
       public_professional_directory: {
         Row: {
           avatar_url: string | null
+          average_rating: number | null
           bio: string | null
           consultation_rate: number | null
           created_at: string | null
@@ -5527,12 +8882,20 @@ export type Database = {
             | Database["public"]["Enums"]["professional_subtype"]
             | null
           profile_id: string | null
+          review_count: number | null
           specialty: string | null
           updated_at: string | null
           website: string | null
           x: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "professional_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "professional_profiles_profile_id_fkey"
             columns: ["profile_id"]
@@ -5560,6 +8923,13 @@ export type Database = {
             isOneToOne: true
             referencedRelation: "storage_purge_stalls"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
           },
         ]
       }
@@ -5605,6 +8975,16 @@ export type Database = {
         }
         Relationships: []
       }
+      storage_purge_bucket_coverage: {
+        Row: {
+          bucket_exists: boolean | null
+          bucket_id: string | null
+          path_shape: string | null
+          purge_covered: boolean | null
+          uid_segment: number | null
+        }
+        Relationships: []
+      }
       storage_purge_stalls: {
         Row: {
           deletion_requested_at: string | null
@@ -5623,6 +9003,16 @@ export type Database = {
           objects_remaining?: never
           pending_for?: never
           user_id?: string | null
+        }
+        Relationships: []
+      }
+      thread_participant_summary: {
+        Row: {
+          avatar_url: string | null
+          first_name: string | null
+          kind: Database["public"]["Enums"]["thread_kind"] | null
+          participant_id: string | null
+          thread_id: string | null
         }
         Relationships: []
       }
@@ -5652,10 +9042,230 @@ export type Database = {
           isSetofReturn: false
         }
       }
-      adopt_workout_template: {
+      account_erasure_date: {
+        Args: { p_requested_at: string }
+        Returns: string
+      }
+      admin_approve_certification: {
+        Args: { p_note?: string; p_professional_id: string }
+        Returns: Json
+      }
+      admin_cancel_deletion: {
+        Args: { reason?: string; target_user_id: string }
+        Returns: string
+      }
+      admin_cancel_health_data_reset: {
+        Args: { reason?: string; request_id: string }
+        Returns: string
+      }
+      admin_clear_subscription_tier: {
+        Args: { reason?: string; target_user_id: string }
+        Returns: string
+      }
+      admin_contact_submissions: {
+        Args: never
+        Returns: {
+          ack_sent_at: string
+          ack_skipped_reason: string
+          created_at: string
+          email: string
+          id: string
+          message: string
+          name: string
+          notified_at: string
+          notify_suppressed_reason: string
+          status: string
+          status_changed_at: string
+          topic: string
+        }[]
+      }
+      admin_delete_contact_submission: {
+        Args: { reason: string; submission_id: string }
+        Returns: string
+      }
+      admin_grant_ambassador_status: {
+        Args: { p_profile_id: string; p_reason: string }
+        Returns: Json
+      }
+      admin_health_data_reset_requests: {
+        Args: never
+        Returns: {
+          cancelled_at: string
+          execute_after: string
+          executed_at: string
+          id: string
+          is_due: boolean
+          purge_storage: boolean
+          requested_at: string
+          requested_by: string
+          requested_by_email: string
+          scope_all: boolean
+          scope_tables: string[]
+          status: string
+          storage_objects_pending: number
+          storage_purged_at: string
+          table_count: number
+          target_email: string
+          target_first_name: string
+          target_user_id: string
+        }[]
+      }
+      admin_log_certification_view: {
+        Args: { p_path: string; p_professional_id: string; p_reason: string }
+        Returns: undefined
+      }
+      admin_read_professional_reviews: {
+        Args: { p_professional_id: string; p_reason: string }
+        Returns: {
+          body: string
+          created_at: string
+          edited_at: string
+          professional_id: string
+          rating: number
+          redacted_at: string
+          redacted_body: string
+          redacted_by: string
+          redaction_reason: string
+          redactor_email: string
+          review_id: string
+          reviewer_email: string
+          reviewer_first_name: string
+          reviewer_id: string
+        }[]
+      }
+      admin_read_support_thread: {
+        Args: { thread_id: string }
+        Returns: {
+          authored_by: string
+          created_at: string
+          id: string
+          read_at: string
+          redacted_at: string
+          sender_email: string
+          sender_first_name: string
+          sender_id: string
+          sender_is_support: boolean
+          text: string
+        }[]
+      }
+      admin_read_thread_messages: {
+        Args: { reason: string; thread_id: string }
+        Returns: {
+          attachment_purge_queued_at: string
+          attachment_purged_at: string
+          created_at: string
+          forwarded: boolean
+          has_attachment: boolean
+          id: string
+          redacted_at: string
+          reply_to_id: string
+          sender_email: string
+          sender_first_name: string
+          sender_id: string
+          text: string
+          voice_note_seconds: number
+        }[]
+      }
+      admin_redact_message: {
         Args: {
-          p_template_id: string
+          clear_attachment: boolean
+          clear_text: boolean
+          message_id: string
+          reason?: string
         }
+        Returns: string
+      }
+      admin_redact_professional_review: {
+        Args: { p_reason: string; p_review_id: string }
+        Returns: Json
+      }
+      admin_reject_certification: {
+        Args: { p_professional_id: string; p_reason: string }
+        Returns: Json
+      }
+      admin_request_health_data_reset: {
+        Args: {
+          purge_storage?: boolean
+          reason?: string
+          scope: Json
+          target_user_id: string
+        }
+        Returns: string
+      }
+      admin_reset_mfa: {
+        Args: { p_factor_ids?: string[]; p_reason: string; p_user_id: string }
+        Returns: Json
+      }
+      admin_reset_onboarding: {
+        Args: { reason?: string; target_user_id: string }
+        Returns: string
+      }
+      admin_revoke_ambassador_status: {
+        Args: { p_profile_id: string; p_reason: string }
+        Returns: Json
+      }
+      admin_schedule_deletion: {
+        Args: { reason?: string; target_user_id: string }
+        Returns: string
+      }
+      admin_send_support_message: {
+        Args: { body: string; reason?: string; thread_id: string }
+        Returns: string
+      }
+      admin_set_contact_status: {
+        Args: { new_status: string; reason?: string; submission_id: string }
+        Returns: string
+      }
+      admin_set_subscription_tier: {
+        Args: {
+          force?: boolean
+          reason?: string
+          target_user_id: string
+          tier_id: string
+        }
+        Returns: string
+      }
+      admin_start_support_thread: {
+        Args: { reason: string; target_user_id: string }
+        Returns: string
+      }
+      admin_suspend_account: {
+        Args: { reason?: string; target_user_id: string }
+        Returns: string
+      }
+      admin_unsuspend_account: {
+        Args: { reason?: string; target_user_id: string }
+        Returns: string
+      }
+      admin_user_overview: {
+        Args: never
+        Returns: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          active_clients: number
+          active_professionals: number
+          banned_until: string
+          call_count: number
+          certification_path: string
+          certification_status: string
+          customer_subtype: Database["public"]["Enums"]["customer_subtype"]
+          deletion_requested_at: string
+          email: string
+          first_name: string
+          id: string
+          last_active_at: string
+          message_count: number
+          onboarded: boolean
+          premium_plan: Database["public"]["Enums"]["premium_plan"]
+          professional_subtype: Database["public"]["Enums"]["professional_subtype"]
+          shared_consent_categories: string[]
+          signed_up_at: string
+          subscription_renews_at: string
+          subscription_status: string
+          subscription_tier: string
+        }[]
+      }
+      adopt_workout_template: {
+        Args: { p_template_id: string }
         Returns: {
           assigned_by_professional_id: string | null
           coach_note: string | null
@@ -5676,9 +9286,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      advance_auto_streaks: { Args: never; Returns: number }
       assign_template_to_client: {
         Args: {
-          p_assigned_day?: string | null
+          p_assigned_day?: string
           p_client_id: string
           p_confirm_overwrite?: boolean
           p_template_id: string
@@ -5702,6 +9313,49 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      business_invite_member: {
+        Args: {
+          p_business_id: string
+          p_member_id: string
+          p_membership_plan_id?: string
+        }
+        Returns: {
+          accepted: boolean | null
+          business_id: string
+          created_at: string
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          invited_at: string
+          invited_by: string | null
+          member_id: string
+          membership_plan_id: string | null
+          responded_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "business_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      business_is_listed: { Args: { p_business_id: string }; Returns: boolean }
+      can_enroll_client_in_class: {
+        Args: { p_class_id: string; p_client_id: string }
+        Returns: boolean
+      }
+      can_invite_to_calendar: {
+        Args: { p_invitee: string; p_inviter: string }
+        Returns: boolean
+      }
+      can_review_professional: {
+        Args: { p_professional: string; p_reviewer: string }
+        Returns: boolean
+      }
+      can_see_store_listing: {
+        Args: { p_listing_id: string }
+        Returns: boolean
       }
       cancel_account_deletion: {
         Args: never
@@ -5747,6 +9401,32 @@ export type Database = {
           p_window: string
         }
         Returns: undefined
+      }
+      class_booked_count: { Args: { p_class_id: string }; Returns: number }
+      create_business_member_code: {
+        Args: {
+          p_business_id: string
+          p_membership_plan_id?: string
+          p_valid_for?: string
+        }
+        Returns: {
+          business_id: string
+          code: string
+          created_at: string
+          expires_at: string
+          id: string
+          issued_by: string | null
+          membership_plan_id: string | null
+          redeemed: boolean
+          redeemed_at: string | null
+          redeemed_by: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "business_member_codes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       create_client_code: {
         Args: { p_valid_for?: string }
@@ -5813,6 +9493,37 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      end_business_membership: {
+        Args: { p_membership_id: string }
+        Returns: {
+          accepted: boolean | null
+          business_id: string
+          created_at: string
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          invited_at: string
+          invited_by: string | null
+          member_id: string
+          membership_plan_id: string | null
+          responded_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "business_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      expire_stale_ringing_calls: { Args: never; Returns: number }
+      finalize_health_data_storage_purge: {
+        Args: { p_request_id: string }
+        Returns: boolean
+      }
+      finalize_message_attachment_purge: {
+        Args: { p_message_id: string }
+        Returns: boolean
+      }
       finalize_storage_purge: { Args: { p_user_id: string }; Returns: boolean }
       find_or_create_food_by_barcode: {
         Args: {
@@ -5850,14 +9561,49 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      generate_business_member_code: {
+        Args: { p_prefix: string }
+        Returns: string
+      }
       generate_client_code: { Args: { p_prefix: string }; Returns: string }
       generate_referral_code: { Args: { p_prefix: string }; Returns: string }
+      has_class_booking: { Args: { p_class_id: string }; Returns: boolean }
       has_client_access: {
         Args: {
           p_category: Database["public"]["Enums"]["access_category"]
           p_client_id: string
         }
         Returns: boolean
+      }
+      health_data_reset_eligible_tables: { Args: never; Returns: string[] }
+      health_data_reset_storage_map: {
+        Args: never
+        Returns: {
+          bucket_id: string
+          file_column: string
+          table_name: string
+        }[]
+      }
+      is_admin: { Args: never; Returns: boolean }
+      is_ambassador: { Args: { p_profile_id: string }; Returns: boolean }
+      is_business_insider: { Args: { p_business_id: string }; Returns: boolean }
+      is_calendar_invitee: { Args: { p_event_id: string }; Returns: boolean }
+      list_pending_health_data_storage_purges: {
+        Args: never
+        Returns: {
+          bucket_id: string
+          object_name: string
+          request_id: string
+          user_id: string
+        }[]
+      }
+      list_pending_message_attachment_purges: {
+        Args: never
+        Returns: {
+          bucket_id: string
+          message_id: string
+          object_name: string
+        }[]
       }
       list_pending_storage_purges: {
         Args: never
@@ -5891,11 +9637,18 @@ export type Database = {
           referrer_id: string
         }[]
       }
+      process_health_data_resets: { Args: never; Returns: number }
       process_scheduled_account_deletions: { Args: never; Returns: number }
       professional_is_affiliated: {
         Args: { p_professional_id: string }
         Returns: boolean
       }
+      professional_is_listed: {
+        Args: { p_professional_id: string }
+        Returns: boolean
+      }
+      purge_contact_submissions: { Args: never; Returns: Json }
+      queue_account_email: { Args: { p_id: string }; Returns: boolean }
       reconcile_storage_usage: {
         Args: { p_user_id?: string }
         Returns: {
@@ -5904,6 +9657,28 @@ export type Database = {
           stored_bytes: number
           user_id: string
         }[]
+      }
+      record_push_failure: {
+        Args: { p_subscription_id: string }
+        Returns: undefined
+      }
+      redact_admin_actions_for_erasure: {
+        Args: { p_user_id: string }
+        Returns: number
+      }
+      redact_erased_identifiers: {
+        Args: { p_details: Json; p_scrub_text: boolean; p_user_id: string }
+        Returns: Json
+      }
+      redeem_business_member_code: {
+        Args: { p_code: string }
+        Returns: Database["public"]["CompositeTypes"]["redeem_business_member_code_result"]
+        SetofOptions: {
+          from: "*"
+          to: "redeem_business_member_code_result"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       redeem_client_code: {
         Args: { p_code: string }
@@ -5979,12 +9754,68 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      respond_to_business_membership: {
+        Args: { p_accept: boolean; p_membership_id: string }
+        Returns: {
+          accepted: boolean | null
+          business_id: string
+          created_at: string
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          invited_at: string
+          invited_by: string | null
+          member_id: string
+          membership_plan_id: string | null
+          responded_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "business_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      retry_account_emails: { Args: never; Returns: number }
+      retry_welcome_emails: { Args: never; Returns: number }
+      review_author_names: {
+        Args: { p_review_ids: string[] }
+        Returns: {
+          first_name: string
+          review_id: string
+        }[]
+      }
+      review_reviewer_id: { Args: { p_review_id: string }; Returns: string }
+      scrub_account_email_personal_data: { Args: never; Returns: number }
+      set_business_member_plan: {
+        Args: { p_membership_id: string; p_plan_id: string }
+        Returns: {
+          accepted: boolean | null
+          business_id: string
+          created_at: string
+          ended_at: string | null
+          ended_by: string | null
+          id: string
+          invited_at: string
+          invited_by: string | null
+          member_id: string
+          membership_plan_id: string | null
+          responded_at: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "business_members"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       set_public_listing: {
         Args: { p_listed: boolean }
         Returns: {
           affiliated_business_id: string | null
           bio: string | null
           certification_url: string | null
+          certification_verified: boolean
           consultation_rate: number | null
           created_at: string
           facebook: string | null
@@ -6013,6 +9844,7 @@ export type Database = {
         Returns: {
           created_at: string
           id: string
+          kind: Database["public"]["Enums"]["thread_kind"]
           participant_one_id: string | null
           participant_two_id: string | null
         }
@@ -6027,6 +9859,13 @@ export type Database = {
       storage_object_owner: {
         Args: { p_bucket: string; p_name: string }
         Returns: string
+      }
+      storage_objects_for_user: {
+        Args: { p_user_id: string }
+        Returns: {
+          bucket_id: string
+          object_name: string
+        }[]
       }
       storage_path_token: {
         Args: { p_index: number; p_name: string }
@@ -6044,28 +9883,26 @@ export type Database = {
           used_bytes: number
         }[]
       }
+      system_support_identity: { Args: never; Returns: string }
       thread_allows_attachments: {
         Args: { p_thread_id: string }
         Returns: boolean
       }
       thread_allows_calls: {
-        Args: { p_thread_id: string; p_caller_id: string }
+        Args: { p_caller_id: string; p_thread_id: string }
+        Returns: boolean
+      }
+      thread_shows_read_receipts: {
+        Args: { p_thread_id: string }
         Returns: boolean
       }
       touch_last_active: { Args: never; Returns: string }
+      trigger_call_cap_sweep: { Args: never; Returns: number }
+      trigger_health_data_storage_purge: { Args: never; Returns: number }
+      trigger_message_attachment_purge: { Args: never; Returns: number }
       trigger_storage_purge: { Args: never; Returns: number }
     }
     Enums: {
-      message_flag: "starred" | "hidden"
-      call_kind: "video" | "voice"
-      call_status:
-        | "ringing"
-        | "answered"
-        | "declined"
-        | "missed"
-        | "completed"
-        | "cap_ended"
-        | "failed"
       access_category:
         | "food_diary"
         | "workout_activity"
@@ -6094,6 +9931,15 @@ export type Database = {
         | "clothing_store"
         | "meal_prep_service"
       calendar_repeat: "none" | "daily" | "weekly" | "monthly"
+      call_kind: "video" | "voice"
+      call_status:
+        | "ringing"
+        | "answered"
+        | "declined"
+        | "missed"
+        | "completed"
+        | "cap_ended"
+        | "failed"
       color_theme: "centium" | "ocean" | "sunset" | "berry"
       customer_subtype: "client" | "regular" | "athlete" | "general"
       dietary_restriction:
@@ -6146,7 +9992,10 @@ export type Database = {
       health_provider: "apple_health" | "android_health"
       meal_slot: "breakfast" | "lunch" | "snack" | "dinner"
       medication_route: "oral" | "injectable" | "topical" | "inhaled" | "other"
+      message_flag: "starred" | "hidden"
       mind_content_type: "breathing" | "stretch" | "yoga"
+      mind_difficulty: "beginner" | "intermediate" | "advanced"
+      mind_stretch_type: "static" | "dynamic"
       muscle_group:
         | "back"
         | "bicep"
@@ -6189,6 +10038,8 @@ export type Database = {
         | "redeem_referral"
         | "preview_referral"
         | "create_food_by_barcode"
+        | "create_business_member_code"
+        | "redeem_business_member_code"
       rep_max_update_mode: "no_update" | "prompt" | "prompt_with_estimate"
       request_status: "pending" | "accepted" | "rejected"
       set_type: "normal" | "warmup" | "failure" | "dropset" | "superset" | "pr"
@@ -6216,6 +10067,13 @@ export type Database = {
         | "gym_passes"
     }
     CompositeTypes: {
+      redeem_business_member_code_result: {
+        success: boolean | null
+        message: string | null
+        membership:
+          | Database["public"]["Tables"]["business_members"]["Row"]
+          | null
+      }
       redeem_client_code_result: {
         success: boolean | null
         message: string | null
@@ -6383,6 +10241,16 @@ export const Constants = {
         "meal_prep_service",
       ],
       calendar_repeat: ["none", "daily", "weekly", "monthly"],
+      call_kind: ["video", "voice"],
+      call_status: [
+        "ringing",
+        "answered",
+        "declined",
+        "missed",
+        "completed",
+        "cap_ended",
+        "failed",
+      ],
       color_theme: ["centium", "ocean", "sunset", "berry"],
       customer_subtype: ["client", "regular", "athlete", "general"],
       dietary_restriction: [
@@ -6440,7 +10308,10 @@ export const Constants = {
       health_provider: ["apple_health", "android_health"],
       meal_slot: ["breakfast", "lunch", "snack", "dinner"],
       medication_route: ["oral", "injectable", "topical", "inhaled", "other"],
+      message_flag: ["starred", "hidden"],
       mind_content_type: ["breathing", "stretch", "yoga"],
+      mind_difficulty: ["beginner", "intermediate", "advanced"],
+      mind_stretch_type: ["static", "dynamic"],
       muscle_group: [
         "back",
         "bicep",
@@ -6486,6 +10357,8 @@ export const Constants = {
         "redeem_referral",
         "preview_referral",
         "create_food_by_barcode",
+        "create_business_member_code",
+        "redeem_business_member_code",
       ],
       rep_max_update_mode: ["no_update", "prompt", "prompt_with_estimate"],
       request_status: ["pending", "accepted", "rejected"],
