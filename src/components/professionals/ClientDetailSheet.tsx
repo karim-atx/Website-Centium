@@ -22,8 +22,10 @@ import {
   MessageCircle,
   Droplet,
   Stethoscope,
+  Ruler,
 } from "lucide-react";
 import { ACCESS_CATEGORIES, accessKeyFor } from "../../services/consent";
+import { MEASUREMENT_SITES } from "../../services/measurements/sites";
 import { PERSON_ICON } from "../../utils/icons";
 import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "./HealthDataPending";
@@ -446,34 +448,88 @@ export const ClientDetailSheet: React.FC<{
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
               <HeartPulse size={13} /> Health Metrics
             </p>
+            {/* SLEEP AND STEPS, AVERAGED FROM REAL ROWS. What stood here was
+                `healthSummary` — a body fat percentage, a sleep average and a
+                step average, typed as optional and assigned by nothing, so
+                the figures never appeared and the type promised them anyway.
+                Body fat moves out of this block entirely: it is a
+                body-measurement and rides on that grant, not on vitals. */}
             {client.access.healthMetrics ? (
-              client.healthSummary ? (
-                <div className={client.recoverySensitive ? "grid grid-cols-2 gap-2 text-center" : "grid grid-cols-3 gap-2 text-center"}>
-                  {/* QA 12.0: body-composition (body fat %) is exactly the
-                      kind of body-measurement figure to hide by default. */}
-                  {!client.recoverySensitive && (
-                    <div>
-                      <p className="text-sm font-bold text-charcoal">{client.healthSummary.bodyFatPct}%</p>
-                      <p className="text-[10px] text-charcoal-faint">Body fat</p>
-                    </div>
-                  )}
+              client.vitals ? (
+                <div className="grid grid-cols-2 gap-2 text-center">
                   <div>
-                    <p className="text-sm font-bold text-charcoal">{client.healthSummary.sleepHours}h</p>
+                    <p className="text-sm font-bold text-charcoal">
+                      {client.vitals.sleepHours != null ? `${client.vitals.sleepHours}h` : "—"}
+                    </p>
                     <p className="text-[10px] text-charcoal-faint">Sleep avg</p>
                   </div>
                   <div>
                     <p className="text-sm font-bold text-charcoal">
-                      {client.healthSummary.stepsAvg.toLocaleString()}
+                      {client.vitals.stepsAvg != null ? client.vitals.stepsAvg.toLocaleString() : "—"}
                     </p>
                     <p className="text-[10px] text-charcoal-faint">Steps avg</p>
                   </div>
                 </div>
               ) : (
-                <p className="text-xs text-charcoal-faint">No health data shared yet.</p>
+                <p className="text-xs text-charcoal-faint">Loading…</p>
               )
             ) : (
-              <p className="text-xs text-charcoal-faint">Client isn't sharing auto-synced health data.</p>
+              <p className="text-xs text-charcoal-faint">Not sharing activity &amp; vitals.</p>
             )}
+
+            {/* BODY MEASUREMENTS, BEHIND THEIR OWN CATEGORY. Database
+                20260924320000 kept these out of the vitals policy on purpose:
+                adding them would have retroactively widened every existing
+                health_metrics grant, so a client who ticked a box meaning
+                "steps, water, sleep" would have started sharing their waist
+                without touching anything. Sharing vitals shows nothing here. */}
+            <div className="mt-3 pt-3 border-t border-charcoal/[0.06]">
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
+                <Ruler size={13} /> Body measurements
+              </p>
+              {!client.access.bodyMeasurements ? (
+                <p className="text-xs text-charcoal-faint">Not sharing body measurements.</p>
+              ) : !client.measurements ? (
+                <p className="text-xs text-charcoal-faint">Loading…</p>
+              ) : Object.keys(client.measurements).length === 0 ? (
+                <p className="text-xs text-charcoal-faint">No measurements logged yet.</p>
+              ) : (
+                <div className="flex flex-wrap" style={{ gap: 8 }}>
+                  {MEASUREMENT_SITES.filter((site) => client.measurements?.[site.type]).map((site) => {
+                    const reading = client.measurements![site.type]!;
+                    return (
+                      <div
+                        key={site.type}
+                        className="bg-cream-soft rounded-xl"
+                        style={{ padding: "8px 11px", minWidth: 86 }}
+                      >
+                        <p className="text-sm font-bold text-charcoal">
+                          {reading.value}
+                          <span className="text-[10px] font-medium text-charcoal-faint">
+                            {site.unit === "%" ? "%" : " cm"}
+                          </span>
+                        </p>
+                        <p className="text-[10px] text-charcoal-faint">{site.label}</p>
+                        {/* Null on a first reading: there is nothing to have
+                            changed from, and +0.0 would claim a stability
+                            nobody measured. */}
+                        {reading.change != null && reading.change !== 0 && (
+                          <p
+                            className="text-[10px] font-semibold"
+                            style={{ color: reading.change > 0 ? "#8A5878" : "#3C6B65" }}
+                          >
+                            {reading.change > 0 ? "+" : ""}
+                            {reading.change}
+                            {site.unit === "%" ? "%" : " cm"}
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
 
             {/* QA 13.0: "Anything added by the client in the health tab
                 from past comorbidities, previous surgeries, medications...

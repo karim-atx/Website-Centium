@@ -75,35 +75,60 @@ export default function HealthMetricsTab() {
 
               {expanded && (
                 <div className="border-t border-charcoal/[0.06] px-4 py-4 space-y-4">
-                  {c.access.healthMetrics && c.healthSummary ? (
+                  {/* EACH TILE BEHIND ITS OWN GRANT. Weight, vitals and body
+                      fat are three different consents — the RLS policies
+                      split on metric_type — and a row that renders them
+                      together must not imply one switch covers them. A tile
+                      with no grant is not shown; a tile with a grant and no
+                      readings shows a dash, never a zero. */}
+                  {c.access.healthMetrics || c.access.weight || c.access.bodyMeasurements ? (
                     <div>
                       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-                        Auto-synced
+                        Logged
                       </p>
                       <div className="grid grid-cols-4 gap-2 text-center">
-                        <div className="bg-cream-soft rounded-xl py-2.5">
-                          <Scale size={13} className="mx-auto mb-1 text-charcoal-soft" />
-                          <p className="text-sm font-bold text-charcoal">{c.lastWeightKg}kg</p>
-                        </div>
-                        <div className="bg-cream-soft rounded-xl py-2.5">
-                          <HeartPulse size={13} className="mx-auto mb-1 text-charcoal-soft" />
-                          <p className="text-sm font-bold text-charcoal">{c.healthSummary.bodyFatPct}%</p>
-                        </div>
-                        <div className="bg-cream-soft rounded-xl py-2.5">
-                          <Moon size={13} className="mx-auto mb-1 text-charcoal-soft" />
-                          <p className="text-sm font-bold text-charcoal">{c.healthSummary.sleepHours}h</p>
-                        </div>
-                        <div className="bg-cream-soft rounded-xl py-2.5">
-                          <Footprints size={13} className="mx-auto mb-1 text-charcoal-soft" />
-                          <p className="text-sm font-bold text-charcoal">
-                            {Math.round(c.healthSummary.stepsAvg / 1000)}k
-                          </p>
-                        </div>
+                        {c.access.weight && (
+                          <div className="bg-cream-soft rounded-xl py-2.5">
+                            <Scale size={13} className="mx-auto mb-1 text-charcoal-soft" />
+                            <p className="text-sm font-bold text-charcoal">
+                              {c.lastWeightKg != null ? `${c.lastWeightKg}kg` : "—"}
+                            </p>
+                          </div>
+                        )}
+                        {c.access.bodyMeasurements && (
+                          <div className="bg-cream-soft rounded-xl py-2.5">
+                            <HeartPulse size={13} className="mx-auto mb-1 text-charcoal-soft" />
+                            <p className="text-sm font-bold text-charcoal">
+                              {c.measurements?.body_fat_pct
+                                ? `${c.measurements.body_fat_pct.value}%`
+                                : "—"}
+                            </p>
+                          </div>
+                        )}
+                        {c.access.healthMetrics && (
+                          <>
+                            <div className="bg-cream-soft rounded-xl py-2.5">
+                              <Moon size={13} className="mx-auto mb-1 text-charcoal-soft" />
+                              <p className="text-sm font-bold text-charcoal">
+                                {c.vitals?.sleepHours != null ? `${c.vitals.sleepHours}h` : "—"}
+                              </p>
+                            </div>
+                            <div className="bg-cream-soft rounded-xl py-2.5">
+                              <Footprints size={13} className="mx-auto mb-1 text-charcoal-soft" />
+                              <p className="text-sm font-bold text-charcoal">
+                                {c.vitals?.stepsAvg != null
+                                  ? `${Math.round(c.vitals.stepsAvg / 1000)}k`
+                                  : "—"}
+                              </p>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   ) : (
-                    <p className="text-xs text-charcoal-faint">No auto-synced health data shared yet.</p>
+                    <p className="text-xs text-charcoal-faint">No health data shared yet.</p>
                   )}
+
 
                   {/* QA 13.0: "Anything added by the client in the health
                       tab from past comorbidities, previous surgeries,

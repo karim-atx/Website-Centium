@@ -292,13 +292,28 @@ export interface ProfessionalClient {
     healthMetrics: boolean;
     labResults: boolean;
     medicalHistory: boolean;
+    bodyMeasurements: boolean;
   };
   assignedProgramName?: string;
   assignedFoodTemplateName?: string;
-  // V4 (QA 4.0): a small health-metrics summary the professional can see once
-  // the client grants `access.healthMetrics` — mocked, stands in for a real
-  // sync of the client's Health page data.
-  healthSummary?: { bodyFatPct: number; sleepHours: number; stepsAvg: number };
+  /**
+   * Averages from the client's OWN health_metrics rows, behind the
+   * `health_metrics` grant.
+   *
+   * REPLACES `healthSummary`, which was three invented numbers — a body fat
+   * percentage, a sleep average and a step average — typed as optional and
+   * assigned by nothing, so the professional in fact saw "No health data
+   * shared yet" while the type promised figures. Undefined here means NOT YET
+   * FETCHED; a field inside it is absent when the client has logged none of
+   * that metric, which is a different thing from a zero.
+   */
+  vitals?: { sleepHours?: number; stepsAvg?: number };
+  /**
+   * Latest tape measurements and body fat, behind the `body_measurements`
+   * grant — its own category, never the vitals one. Undefined means not yet
+   * fetched; an empty object means the grant is held and nothing is logged.
+   */
+  measurements?: Partial<Record<string, { value: number; change: number | null }>>;
   // QA 12.0: "When the client toggles the recovery sensitive experience,
   // it should show a small status badge in the professional dashboard for
   // that specific client." This prototype has no live bridge from a

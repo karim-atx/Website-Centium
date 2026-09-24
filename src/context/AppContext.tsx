@@ -156,6 +156,8 @@ import {
   fetchClientNutrition,
   fetchClientWeight,
   fetchClientWorkoutActivity,
+  fetchClientVitals,
+  fetchClientMeasurements,
 } from "../services/professional-client";
 import {
   addComorbidityRemote,
@@ -2816,6 +2818,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // client can share their medication list while withholding their bloods,
     // or the reverse, and each list is built from its own flag.
     const imagingIds = medicalIds;
+    // Vitals — sleep and steps — ride on health_metrics, which is the
+    // category that does NOT cover tape measurements.
+    const vitalsIds = mapped
+      .filter((c) => c.access.healthMetrics && c.clientId)
+      .map((c) => c.clientId!);
+    // Body measurements are their own grant, and deliberately not derived
+    // from the vitals one: Database 20260924320000 kept them out of the
+    // vitals policy so that sharing step counts could never start sharing a
+    // waist. This list is built from that flag alone.
+    const measurementIds = mapped
+      .filter((c) => c.access.bodyMeasurements && c.clientId)
+      .map((c) => c.clientId!);
     const labIds = mapped
       .filter((c) => c.access.labResults && c.clientId)
       .map((c) => c.clientId!);
@@ -2823,13 +2837,16 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // Both reads are issued together rather than in sequence — they are
     // independent, and a professional opening the dashboard should not wait
     // for one before the other starts.
-    const [nutrition, workouts, weights, medical, labs, imaging] = await Promise.all([
+    const [nutrition, workouts, weights, medical, labs, imaging, vitals, measurements] =
+      await Promise.all([
       consentedIds.length > 0 ? fetchClientNutrition(consentedIds) : null,
       workoutIds.length > 0 ? fetchClientWorkoutActivity(workoutIds) : null,
       weightIds.length > 0 ? fetchClientWeight(weightIds) : null,
       medicalIds.length > 0 ? fetchClientMedicalHistory(medicalIds) : null,
       labIds.length > 0 ? fetchClientLabs(labIds) : null,
       imagingIds.length > 0 ? fetchClientImaging(imagingIds) : null,
+      vitalsIds.length > 0 ? fetchClientVitals(vitalsIds) : null,
+      measurementIds.length > 0 ? fetchClientMeasurements(measurementIds) : null,
     ]);
 
     // On failure each field is left undefined, which renders as "loading"
@@ -2859,6 +2876,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         if (imaging?.ok && c.clientId in imaging.byClient) {
           next = { ...next, imaging: imaging.byClient[c.clientId] };
+        }
+        if (vitals?.ok && c.clientId in vitals.byClient) {
+          // Assigned even when empty: the sheet reads undefined as "not
+          // loaded" and {} as "granted, nothing logged", which are different
+          // sentences on screen.
+          next = { ...next, vitals: vitals.byClient[c.clientId] };
+        }
+        if (measurements?.ok && c.clientId in measurements.byClient) {
+          next = { ...next, measurements: measurements.byClient[c.clientId] };
         }
         if (medical?.ok && c.clientId in medical.byClient) {
           const h = medical.byClient[c.clientId];

@@ -1,5 +1,10 @@
 import { supabase } from "../../../lib/supabase/client";
 import { SESSION_SELECT, toWorkoutSession } from "../workout/log";
+import {
+  MEASUREMENT_TYPES,
+  isMeasurementType,
+  type MeasurementType,
+} from "../measurements/sites";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type {
   BloodMarker,
@@ -229,6 +234,136 @@ export async function fetchClientSessionsForRoutines(
   for (const row of data ?? []) {
     const userId = (row as { user_id: string }).user_id;
     (byClient[userId] ??= []).push(toWorkoutSession(row));
+  }
+  return { ok: true, byClient };
+}
+
+
+// ---------------------------------------------------------------------------
+// Vitals averages and body measurements
+// ---------------------------------------------------------------------------
+
+export interface ClientVitals {
+  /** Mean hours per night over the window, absent when nothing is logged. */
+  sleepHours?: number;
+  /** Mean steps per day over the window, absent when nothing is logged. */
+  stepsAvg?: number;
+}
+
+export type ClientVitalsResult =
+  | { ok: true; byClient: Record<string, ClientVitals> }
+  | { ok: false; message: string };
+
+/**
+ * Sleep and step averages, for clients who have granted `health_metrics`.
+ *
+ * WHAT MAKES THESE REAL. The numbers a professional used to see here were
+ * three constants on a type nothing assigned. These are means of the client's
+ * own health_metrics rows over the same lookback window the rest of this file
+ * uses, and a client with no rows produces NO FIELD rather than a zero — an
+ * average of nothing is not nought hours of sleep.
+ *
+ * THE FILTER IS RLS'S, NOT THIS FUNCTION'S. health_metrics carries three
+ * separate professional SELECT policies — weight, vitals, body measurements —
+ * each gated on its own grant, so a client who has not granted vitals simply
+ * yields no rows. Which is exactly why the caller must decide "not sharing"
+ * from the GRANT and never from an empty result.
+ */
+export async function fetchClientVitals(clientIds: string[]): Promise<ClientVitalsResult> {
+  if (clientIds.length === 0) return { ok: true, byClient: {} };
+
+  const { data, error } = await supabase
+    .from("health_metrics")
+    .select("user_id, metric_type, value")
+    .in("user_id", clientIds)
+    .in("metric_type", ["sleep", "steps"])
+    .gte("recorded_at", `${isoDaysAgo(LOOKBACK_DAYS)}T00:00:00Z`);
+
+  if (error) {
+    console.error("[professional-client] Could not read client vitals:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+
+  const totals: Record<string, { sleep: number[]; steps: number[] }> = {};
+  for (const id of clientIds) totals[id] = { sleep: [], steps: [] };
+  for (const row of data ?? []) {
+    const bucket = totals[row.user_id];
+    if (!bucket) continue;
+    if (row.metric_type === "sleep") bucket.sleep.push(Number(row.value));
+    else if (row.metric_type === "steps") bucket.steps.push(Number(row.value));
+  }
+
+  const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  const byClient: Record<string, ClientVitals> = {};
+  for (const id of clientIds) {
+    const { sleep, steps } = totals[id];
+    byClient[id] = {
+      ...(sleep.length > 0 ? { sleepHours: Math.round(mean(sleep) * 10) / 10 } : {}),
+      ...(steps.length > 0 ? { stepsAvg: Math.round(mean(steps)) } : {}),
+    };
+  }
+  return { ok: true, byClient };
+}
+
+/** The latest reading per site, and how it moved since the one before it. */
+export type ClientMeasurements = Partial<Record<MeasurementType, { value: number; change: number | null }>>;
+
+export type ClientMeasurementsResult =
+  | { ok: true; byClient: Record<string, ClientMeasurements> }
+  | { ok: false; message: string };
+
+/**
+ * Latest tape measurements per client, with the change since the previous one.
+ *
+ * GATED ON ITS OWN CATEGORY. `body_measurements` is deliberately not part of
+ * the vitals policy: folding it in would have retroactively widened every
+ * existing health_metrics grant, so somebody who ticked a box meaning "steps,
+ * water, sleep" would have started sharing their waist without touching
+ * anything. A professional holding vitals and weight and nothing else gets
+ * zero rows from this query, which is the behaviour the verification checks.
+ *
+ * `change` is null on a first reading — there is nothing to have changed from,
+ * and rendering that as +0.0 cm would claim a stability nobody measured.
+ */
+export async function fetchClientMeasurements(
+  clientIds: string[]
+): Promise<ClientMeasurementsResult> {
+  if (clientIds.length === 0) return { ok: true, byClient: {} };
+
+  const { data, error } = await supabase
+    .from("health_metrics")
+    .select("user_id, metric_type, value, recorded_at")
+    .in("user_id", clientIds)
+    .in("metric_type", MEASUREMENT_TYPES)
+    // Newest first, so the first two rows seen for a (client, site) are the
+    // latest reading and the one it should be compared against.
+    .order("recorded_at", { ascending: false })
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("[professional-client] Could not read client measurements:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+
+  const seen: Record<string, Partial<Record<MeasurementType, number[]>>> = {};
+  for (const id of clientIds) seen[id] = {};
+  for (const row of data ?? []) {
+    const bucket = seen[row.user_id];
+    if (!bucket || !isMeasurementType(row.metric_type)) continue;
+    const list = (bucket[row.metric_type] ??= []);
+    if (list.length < 2) list.push(Number(row.value));
+  }
+
+  const byClient: Record<string, ClientMeasurements> = {};
+  for (const id of clientIds) {
+    const out: ClientMeasurements = {};
+    for (const [type, values] of Object.entries(seen[id]) as [MeasurementType, number[]][]) {
+      out[type] = {
+        value: values[0],
+        change: values.length > 1 ? Math.round((values[0] - values[1]) * 10) / 10 : null,
+      };
+    }
+    byClient[id] = out;
   }
   return { ok: true, byClient };
 }
