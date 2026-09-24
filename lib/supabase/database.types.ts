@@ -9860,6 +9860,15 @@ export type Database = {
           user_id: string
         }[]
       }
+      my_effective_professional_tier: {
+        Args: never
+        Returns: {
+          max_clients: number
+          source: Database["public"]["Enums"]["professional_plan_source"]
+          tier_id: string
+          tier_name: string
+        }[]
+      }
       preview_client_code: {
         Args: { p_code: string }
         Returns: {
