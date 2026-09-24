@@ -20,6 +20,7 @@ import {
   Bell,
   Clock,
   FileText,
+  Stethoscope,
 } from "lucide-react";
 import clsx from "clsx";
 
@@ -72,6 +73,17 @@ export const MedicalRecordsSection: React.FC<{
   // already carries its own "Records" title, so the internal label is
   // redundant there.
   hideLabel?: boolean;
+  /**
+   * Which tab to open on.
+   *
+   * WITHOUT THIS, "Imaging & history" SHOWED BIOMARKERS. Health.tsx has two
+   * entry rows and both called the same setRecordsOpen(true); this component
+   * then opened on "biomarkers" whichever one had been pressed, so the row
+   * labelled Imaging & history led to a list of blood markers. Keyed on the
+   * open (see the `key` on the caller) so re-opening from the other row moves
+   * to that tab rather than staying where the last visit left it.
+   */
+  initialTab?: RecordsTab;
 }> = ({
   bloodMarkers,
   onShareAll,
@@ -82,6 +94,7 @@ export const MedicalRecordsSection: React.FC<{
   onShareAllImaging,
   onShareImagingRecord,
   hideLabel,
+  initialTab = "biomarkers",
 }) => {
   const {
     imagingRecords,
@@ -122,7 +135,7 @@ export const MedicalRecordsSection: React.FC<{
     if (!result.ok) setRecordError(result.message ?? "That couldn't be saved.");
     return result.ok;
   };
-  const [tab, setTab] = useState<RecordsTab>("biomarkers");
+  const [tab, setTab] = useState<RecordsTab>(initialTab);
   const [addImagingOpen, setAddImagingOpen] = useState(false);
   const [imagingType, setImagingType] = useState(imagingTypes[0]);
   const [imagingDate, setImagingDate] = useState("");
@@ -243,7 +256,22 @@ export const MedicalRecordsSection: React.FC<{
         </Card>
       )}
 
-      {tab === "biomarkers" && (
+      {/* AN EMPTY LIST IS NOT A BLANK PANEL. bloodMarkers starts at [] and
+          the tab rendered an empty Card — a few pixels of nothing under the
+          chips, with no way to tell "no results yet" from "still loading" or
+          "this is broken". Imaging and Medications have both had an empty
+          state all along; biomarkers had none. */}
+      {tab === "biomarkers" && bloodMarkers.length === 0 && (
+        <Card className="text-center py-8 mb-6">
+          <Stethoscope size={22} className="text-charcoal-faint mx-auto mb-2" />
+          <p className="text-sm text-charcoal-faint">No lab results yet.</p>
+          <p className="text-[11.5px] text-charcoal-tertiary mt-1">
+            Add a result, or scan a report, and its markers appear here.
+          </p>
+        </Card>
+      )}
+
+      {tab === "biomarkers" && bloodMarkers.length > 0 && (
         <Card padded={false} className="mb-6 divide-y divide-charcoal/[0.04]">
           {bloodMarkers.map((m) => (
             <div
