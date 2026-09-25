@@ -1,4 +1,5 @@
 import type { BloodPressureReading } from "../services/blood-pressure/reading";
+import type { ClientPregnancyStatus } from "../services/cycle/types";
 // Core data model for the Centium prototype.
 // Deliberately simple — a real backend can replace these shapes later
 // without changing how the UI consumes them.
@@ -339,7 +340,18 @@ export interface ProfessionalClient {
    */
   cyclePhase?: string;
   /** "Pregnant" and a trimester, from client_pregnancy_status(). */
-  pregnancy?: { status: string; trimester: number | null };
+  /**
+   * What client_pregnancy_status() answered.
+   *
+   * THE VOCABULARY IS THE FUNCTION'S, NOT pregnancies.status'S, and the two
+   * look alike enough to have cost a bug: the table stores 'active' | 'ended',
+   * while the function returns the literal 'pregnant' or no row at all
+   * (rendered here as 'unavailable'). The sheet tested for 'active' and so
+   * showed "No pregnancy recorded." to a professional looking at a client who
+   * was 20 weeks pregnant and had granted exactly that. A union rather than
+   * a plain string makes the next such test a compile error.
+   */
+  pregnancy?: { status: ClientPregnancyStatus; trimester: number | null };
   /**
    * Latest tape measurements and body fat, behind the `body_measurements`
    * grant — its own category, never the vitals one. Undefined means not yet

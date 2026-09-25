@@ -18,6 +18,18 @@ export type SexActivity = Enums<"sex_activity">;
 export type Contraception = Enums<"contraception_method">;
 export type NotificationDetail = Enums<"notification_detail_level">;
 
+/**
+ * client_pregnancy_status()'s own words, and NOT pregnancies.status's.
+ *
+ * The table stores 'active' | 'ended'. The function returns the literal
+ * 'pregnant', or no row at all — read here as 'unavailable'. The two
+ * vocabularies look alike enough to have cost a bug: the professional's sheet
+ * tested for 'active' and so told somebody looking at a client 20 weeks
+ * pregnant, who had granted exactly that, "No pregnancy recorded." A union
+ * makes the next such test fail to compile.
+ */
+export type ClientPregnancyStatus = "pregnant" | "unavailable";
+
 /** The flags my_cycle_prediction can raise. Every one has copy in ./guidance. */
 export const CYCLE_FLAGS = [
   "cycle_under_21",

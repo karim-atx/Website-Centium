@@ -44,6 +44,7 @@ import {
   PHASE_UNAVAILABLE,
   PREGNANCY_NOT_SHARED,
 } from "../../services/cycle/guidance";
+import { TRIMESTER_ORDINAL } from "../../services/pregnancy/guidance";
 import type { CyclePhase } from "../../services/cycle/types";
 import { ACCESS_CATEGORIES, accessKeyFor } from "../../services/consent";
 import { MEASUREMENT_SITES } from "../../services/measurements/sites";
@@ -661,11 +662,14 @@ export const ClientDetailSheet: React.FC<{
                   <div className="mt-2.5">
                     {client.pregnancy === undefined ? (
                       <p className="text-xs text-charcoal-faint">Loading…</p>
-                    ) : client.pregnancy.status === "active" ? (
+                    ) : client.pregnancy.status === "pregnant" ? (
                       <span className="inline-block text-[11px] font-bold rounded-full px-2.5 py-1 bg-cream-soft text-charcoal">
                         Pregnant
                         {client.pregnancy.trimester !== null &&
-                          ` · trimester ${client.pregnancy.trimester}`}
+                          ` · ${
+                            TRIMESTER_ORDINAL[client.pregnancy.trimester as 1 | 2 | 3] ??
+                            `trimester ${client.pregnancy.trimester}`
+                          }`}
                       </span>
                     ) : (
                       <p className="text-xs text-charcoal-faint">No pregnancy recorded.</p>

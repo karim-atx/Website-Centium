@@ -8,6 +8,7 @@ import {
   type CyclePrediction,
   type CycleSettings,
   type Condition,
+  type ClientPregnancyStatus,
   type CycleFlag,
   type NotificationDetail,
   type Mood,
@@ -450,17 +451,22 @@ export async function fetchClientCyclePhase(
 export async function fetchClientPregnancy(
   clientId: string
 ): Promise<
-  { ok: true; status: string; trimester: number | null } | { ok: false; message: string }
+  | { ok: true; status: ClientPregnancyStatus; trimester: number | null }
+  | { ok: false; message: string }
 > {
   const { data, error } = await supabase.rpc("client_pregnancy_status", { p_client: clientId });
   if (error) {
     console.error("[cycle] Could not read the client's pregnancy status:", error.message);
     return { ok: false, message: describe(error) };
   }
+  // ONE ROW MEANS PREGNANT, NO ROWS MEANS NOTHING TO SAY — the function
+  // returns `select 'pregnant', trimester ... where phase = 'pregnant'`, so
+  // there is no third answer and no 'active' anywhere in it. That word belongs
+  // to pregnancies.status, which a professional never reads.
   const row = Array.isArray(data) ? data[0] : data;
   return {
     ok: true,
-    status: (row?.status as string) ?? "unavailable",
+    status: row?.status === "pregnant" ? "pregnant" : "unavailable",
     trimester: (row?.trimester as number | null) ?? null,
   };
 }
