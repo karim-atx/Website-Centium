@@ -10385,6 +10385,7 @@ export type Database = {
           trimester: number
         }[]
       }
+      cycle_today: { Args: { p_user: string }; Returns: string }
       delete_my_cycle_data: { Args: never; Returns: undefined }
       disconnect_client_relationship: {
         Args: { p_relationship_id: string }
