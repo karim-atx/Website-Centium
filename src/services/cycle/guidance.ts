@@ -312,6 +312,21 @@ export const POSITIVE_TEST_CTA = "Start pregnancy tracking";
 // Settings
 // ---------------------------------------------------------------------------
 
+/**
+ * The time-zone row.
+ *
+ * IT IS NOT A PREFERENCE, IT IS WHERE THE PHONE IS — the app keeps it in step
+ * with the browser on every load, and says so, because a value that changes
+ * itself without explanation is worse than one that never changed. It is still
+ * editable: somebody travelling who wants their pill reminder on home time is
+ * making a real choice, and once made it is kept until they change it back.
+ */
+export const TIMEZONE_TITLE = "Time zone";
+export const TIMEZONE_BODY =
+  "Reminders are sent at your local time in this zone. It follows this device unless " +
+  "you pick one yourself.";
+export const TIMEZONE_USE_DEVICE = "Use this device's zone";
+
 export const CONTRACEPTION_LABEL: Record<string, string> = {
   none: "None",
   pill_combined: "Combined pill",

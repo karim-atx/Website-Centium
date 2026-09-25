@@ -193,6 +193,7 @@ import {
   fetchClientPregnancy,
   getCycleLogs,
   getCyclePrediction,
+  browserTimezone,
   getCycleSettings,
   saveCycleSettings,
   type CycleDayLog,
@@ -207,8 +208,10 @@ import {
 import {
   getActivePlan,
   getEvents as getContraceptionEvents,
+  getStatus as getContraceptionStatus,
   type ContraceptionEvent,
   type ContraceptionPlan,
+  type ContraceptionStatus,
 } from "../services/contraception";
 import {
   addImagingRecordRemote,
@@ -625,6 +628,14 @@ interface AppState {
   /** The contraception plan in use, or null when none has been set up. */
   contraceptionPlan: ContraceptionPlan | null;
   contraceptionPlanLoaded: boolean;
+  /**
+   * my_contraception_status() — the database's answer for today.
+   *
+   * READ IT THROUGH statusIsCurrent(). It computes from current_date without
+   * reading cycle_settings.timezone, so it can be a day out for anybody not
+   * on UTC; services/contraception/schedule says what to do about that.
+   */
+  contraceptionStatus: ContraceptionStatus | null;
   /** Logged events in the metric window, newest first. */
   contraceptionEvents: ContraceptionEvent[];
   reloadContraception: () => void;
@@ -4065,7 +4076,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     readCycle();
   }, [authUserId, profileReady, readCycle]);
 
-  // ON BY DEFAULT FOR female AND other, AND ONLY ON THE FIRST VISIT.
+  // ON BY DEFAULT FOR female AND other, ONLY WHEN NO ROW HAS EVER EXISTED.
   //
   // The distinction the null settings row carries is the whole mechanism:
   // no row means the tracker has never been opened, so one is created
@@ -4074,9 +4085,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // they opened the tab, which is the worst possible behaviour for a feature
   // somebody has declined.
   //
+  // WHICH IS ALSO WHY "DELETE ALL CYCLE DATA" IS SAFE NOW and was not before.
+  // delete_my_cycle_data() used to remove the settings row; this effect then
+  // saw null, could not tell "deleted" from "never opened", and switched the
+  // tracker back on for somebody who had just turned it off and wiped their
+  // data. 20260925000000 made the function RESET the row in place, keeping
+  // tracker_enabled and timezone, so the row is never null after a delete and
+  // this branch is never reached by one.
+  //
   // A male profile gets no row created for it, and can still switch the
   // tracker on from Settings — sex decides the DEFAULT, never the
   // availability.
+  //
+  // The browser's zone goes in with the first write rather than being left at
+  // the column's 'UTC' default, so the reminder queue is right from the start.
   const seededCycleFor = useRef<string | null>(null);
   useEffect(() => {
     if (!profileReady || !authUserId || !cycleSettingsLoaded) return;
@@ -4084,10 +4106,42 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (user.sex !== "female" && user.sex !== "other") return;
     if (seededCycleFor.current === authUserId) return;
     seededCycleFor.current = authUserId;
-    void saveCycleSettings(authUserId, { trackerEnabled: true }).then((r) => {
+    const zone = browserTimezone();
+    void saveCycleSettings(authUserId, {
+      trackerEnabled: true,
+      ...(zone ? { timezone: zone } : {}),
+    }).then((r) => {
       if (r.ok) readCycle();
+      // A failed write leaves the guard set, so this does not retry in a loop
+      // against a database that is refusing it; the next session tries again.
     });
   }, [authUserId, profileReady, cycleSettingsLoaded, cycleSettings, user.sex, readCycle]);
+
+  // THE ZONE IS CORRECTED ONCE PER LOAD, QUIETLY, because it is not a
+  // preference — it is where the phone is, and the reminder queue schedules
+  // from it (queue_contraception_reminders computes timezone(tz, now())).
+  // Somebody who set the tracker up in Amsterdam and opens the app in Beirut
+  // should not get their pill reminder at the wrong hour, and should not have
+  // to be told about it either.
+  //
+  // THE GUARD IS SET ON THE FIRST LOOK, NOT ON THE FIRST WRITE, and that
+  // distinction is the whole correctness of this effect. Setting it only when
+  // the zones differed left the effect armed for the rest of the session, so
+  // the next mismatch it saw was the user's OWN choice in Settings — picking
+  // Tokyo in Beirut saved Tokyo, reloaded, and was overwritten back within the
+  // second. Looking once means a deliberate pick survives, which is the
+  // difference between a setting and a display.
+  const syncedZoneFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (!authUserId || !cycleSettings) return;
+    if (syncedZoneFor.current === authUserId) return;
+    syncedZoneFor.current = authUserId;
+    const zone = browserTimezone();
+    if (!zone || cycleSettings.timezone === zone) return;
+    void saveCycleSettings(authUserId, { timezone: zone }).then((r) => {
+      if (r.ok) readCycle();
+    });
+  }, [authUserId, cycleSettings, readCycle]);
 
   const saveCycleSettingsAndReload = async (patch: Partial<CycleSettings>) => {
     if (!authUserId) return { ok: false, message: "You need to be signed in." };
@@ -4126,16 +4180,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   // --- contraception -------------------------------------------------------
   //
-  // THE PLAN AND ITS EVENTS, AND NOT my_contraception_status(). The plan is
-  // what the user set up and the events are what they logged; where the plan
-  // stands today is worked out by services/contraception/schedule, on the
-  // user's own date. The function computes from Postgres's current_date
-  // without reading cycle_settings.timezone, so it answers about a different
-  // day for anybody not on UTC — the whole argument is at the top of
-  // pages/contraception/Contraception.tsx, next to the two things it got
-  // visibly wrong.
+  // THREE READS, ONE RELOAD, and they answer different questions: the plan is
+  // what the user set up (and what the edit sheet needs), the events are what
+  // they logged, and the status is where the database says that plan stands
+  // today. All three move together — logging an injection fires a trigger that
+  // moves the plan's last_given_on, so re-reading the events without the plan
+  // would leave a countdown running to the previous date.
   const [contraceptionPlan, setContraceptionPlan] = useState<ContraceptionPlan | null>(null);
   const [contraceptionPlanLoaded, setContraceptionPlanLoaded] = useState(false);
+  const [contraceptionStatus, setContraceptionStatus] = useState<ContraceptionStatus | null>(null);
   const [contraceptionEvents, setContraceptionEvents] = useState<ContraceptionEvent[]>([]);
 
   const readContraception = useCallback(() => {
@@ -4143,6 +4196,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     void getActivePlan(authUserId).then((r) => {
       if (r.ok) setContraceptionPlan(r.value);
       setContraceptionPlanLoaded(true);
+    });
+    void getContraceptionStatus().then((r) => {
+      if (r.ok) setContraceptionStatus(r.value);
     });
     void getContraceptionEvents(authUserId, metricWindowStart).then((r) => {
       if (r.ok) setContraceptionEvents(r.value);
@@ -4961,6 +5017,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       reloadPregnancy: readPregnancy,
       contraceptionPlan,
       contraceptionPlanLoaded,
+      contraceptionStatus,
       contraceptionEvents,
       reloadContraception: readContraception,
       updateMetricValue,
@@ -5180,6 +5237,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       readPregnancy,
       contraceptionPlan,
       contraceptionPlanLoaded,
+      contraceptionStatus,
       contraceptionEvents,
       readContraception,
       readCycle,
