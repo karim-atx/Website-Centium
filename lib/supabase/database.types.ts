@@ -7004,31 +7004,40 @@ export type Database = {
       }
       reminder_sends: {
         Row: {
+          attempts: number
           body: string
           delivered_at: string | null
           due_date: string
           id: string
           kind: string
+          last_attempt_at: string | null
+          last_error: string | null
           queued_at: string
           title: string
           user_id: string
         }
         Insert: {
+          attempts?: number
           body: string
           delivered_at?: string | null
           due_date: string
           id?: string
           kind: string
+          last_attempt_at?: string | null
+          last_error?: string | null
           queued_at?: string
           title: string
           user_id: string
         }
         Update: {
+          attempts?: number
           body?: string
           delivered_at?: string | null
           due_date?: string
           id?: string
           kind?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
           queued_at?: string
           title?: string
           user_id?: string
@@ -10752,6 +10761,7 @@ export type Database = {
         }
       }
       retry_account_emails: { Args: never; Returns: number }
+      retry_undelivered_reminders: { Args: never; Returns: number }
       retry_welcome_emails: { Args: never; Returns: number }
       review_author_names: {
         Args: { p_review_ids: string[] }
