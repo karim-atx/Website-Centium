@@ -321,6 +321,21 @@ export const POSITIVE_TEST_CTA = "Start pregnancy tracking";
  * editable: somebody travelling who wants their pill reminder on home time is
  * making a real choice, and once made it is kept until they change it back.
  */
+/**
+ * The way in for an account the tracker was never switched on for.
+ *
+ * SEX DECIDES THE DEFAULT, NEVER THE AVAILABILITY — which was the stated rule
+ * from the start, and was not true in practice: a male profile gets no
+ * cycle_settings row, and with no row there was no Settings tab, so there was
+ * nothing to switch. The offer has to live on the one screen that renders
+ * without a row.
+ */
+export const TRACKER_OFF_TITLE = "Cycle tracking is off";
+export const TRACKER_OFF_BODY =
+  "It's off by default for this profile. Switch it on if you want to track a cycle — " +
+  "everything stays private to you unless you share it.";
+export const TRACKER_OFF_CTA = "Turn on cycle tracking";
+
 export const TIMEZONE_TITLE = "Time zone";
 export const TIMEZONE_BODY =
   "Reminders are sent at your local time in this zone. It follows this device unless " +

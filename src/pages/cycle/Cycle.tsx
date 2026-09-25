@@ -80,6 +80,19 @@ export default function Cycle() {
   const prediction = cyclePrediction;
   const settings = cycleSettings;
 
+  // DECLARED ABOVE EVERY EARLY RETURN, because the no-settings-row branch
+  // below calls it. A const arrow declared after a `return` sits in the
+  // temporal dead zone whenever that branch renders, and TypeScript does not
+  // catch it through a JSX callback: the button would throw on click rather
+  // than fail to compile.
+  const saveSettings = async (patch: Parameters<typeof saveCycleSettingsAndReload>[0]) => {
+    setBusy(true);
+    setError(null);
+    const result = await saveCycleSettingsAndReload(patch);
+    setBusy(false);
+    if (!result.ok) setError(result.message ?? "Couldn't save that.");
+  };
+
   // SWITCHED OFF IS NOT THE SAME AS NOTHING LOGGED YET, and the difference
   // decides which of the three "no prediction" screens this is.
   // my_cycle_prediction() returns nothing for all of them.
@@ -97,15 +110,18 @@ export default function Cycle() {
       <div className="animate-fade-slide-up">
         <BackRow onBack={() => navigate(-1)} />
         <Card className="text-center py-8">
-          <p className="text-[15px] font-bold text-charcoal mb-1.5">{G.SETUP_TITLE}</p>
-          <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2 mb-4">{G.SETUP_BODY}</p>
-          <Button
-            onClick={() => {
-              setLogDate(today);
-              setLogOpen(true);
-            }}
-          >
-            <Plus size={14} /> {G.SETUP_CTA}
+          <p className="text-[15px] font-bold text-charcoal mb-1.5">{G.TRACKER_OFF_TITLE}</p>
+          <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2 mb-4">
+            {G.TRACKER_OFF_BODY}
+          </p>
+          {/* THE ONLY SWITCH THIS ACCOUNT CAN REACH. Writing the row is what
+              brings the tab bar — and Settings, and everything behind it —
+              into existence, so it cannot itself live in Settings. Without
+              this a male profile had no way to turn the tracker on at all,
+              which made "sex decides the default, never the availability" a
+              statement about intent rather than about the app. */}
+          <Button disabled={busy} onClick={() => void saveSettings({ trackerEnabled: true })}>
+            {G.TRACKER_OFF_CTA}
           </Button>
         </Card>
         <button
@@ -208,14 +224,6 @@ export default function Cycle() {
   const stats = cycleStats(cycleLogs);
   const grid = symptomGrid(cycleLogs, settings.lutealLength);
   const enoughForInsights = hasEnoughForInsights(cycleLogs);
-
-  const saveSettings = async (patch: Parameters<typeof saveCycleSettingsAndReload>[0]) => {
-    setBusy(true);
-    setError(null);
-    const result = await saveCycleSettingsAndReload(patch);
-    setBusy(false);
-    if (!result.ok) setError(result.message ?? "Couldn't save that.");
-  };
 
   return (
     <div className="animate-fade-slide-up">
