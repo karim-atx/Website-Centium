@@ -10,7 +10,7 @@ import { CycleRing, PhaseBar } from "../../components/cycle/CycleRing";
 import { PHASE_COLOR } from "../../services/cycle/guidance";
 import { HormoneGraph } from "../../components/cycle/HormoneGraph";
 import { LogDaySheet } from "../../components/cycle/LogDaySheet";
-import { deleteAllCycleData } from "../../services/cycle";
+import { browserTimezone, deleteAllCycleData, knownTimezones } from "../../services/cycle";
 import {
   CONDITIONS,
   SETTINGS_LIMITS,
@@ -80,23 +80,19 @@ export default function Cycle() {
   const prediction = cyclePrediction;
   const settings = cycleSettings;
 
-  // SWITCHED OFF IS NOT THE SAME AS NEVER SET UP, and the difference decides
-  // which of the two "no prediction" screens this is. my_cycle_prediction()
-  // returns nothing in both cases, so without this test the setup screen — the
-  // one with no tabs on it — swallows anybody who turned the tracker off and
-  // leaves them no route back to the switch. After a loss, where the app
-  // switches it off on the user's behalf, that screen would also be asking
-  // when their last period started.
+  // SWITCHED OFF IS NOT THE SAME AS NOTHING LOGGED YET, and the difference
+  // decides which of the three "no prediction" screens this is.
+  // my_cycle_prediction() returns nothing for all of them.
   const trackerOff = settings !== null && !settings.trackerEnabled;
 
-  // --- the setup / empty state ---------------------------------------------
+  // --- no settings row at all ----------------------------------------------
   //
-  // A PREGNANCY OUTRANKS THE SETUP STATE. my_cycle_prediction() returns
-  // nothing while the tracker is off, which is exactly the state an
-  // after-a-loss pause leaves behind — and it is also reachable by switching
-  // the tracker off mid-pregnancy. Either way, showing "set up the tracker"
-  // to somebody who is being tracked would be wrong.
-  if (cycleSettingsLoaded && !prediction && !pregnancy && !trackerOff) {
+  // NEVER OPENED THE TRACKER, which for a female or other profile lasts about
+  // one render — the seeding effect in AppContext creates the row. It persists
+  // for a male profile, which gets no row created for it, and that is the case
+  // this branch is really for: a full-page setup card, because there is no row
+  // for a Settings tab to edit yet.
+  if (cycleSettingsLoaded && !settings && !pregnancy) {
     return (
       <div className="animate-fade-slide-up">
         <BackRow onBack={() => navigate(-1)} />
@@ -112,9 +108,6 @@ export default function Cycle() {
             <Plus size={14} /> {G.SETUP_CTA}
           </Button>
         </Card>
-        {/* THE SETUP STATE OFFERS PREGNANCY TOO. There is no Settings tab to
-            reach from here, and somebody who opens the tracker already
-            pregnant should not have to log a period first to say so. */}
         <button
           onClick={() => setStartPregnancyOpen(true)}
           className="tap w-full mt-2 py-2 text-[12px] font-semibold text-primary-dark"
@@ -144,7 +137,7 @@ export default function Cycle() {
     );
   }
 
-  if (!settings || (!prediction && !pregnancy && !trackerOff)) {
+  if (!settings) {
     return (
       <div className="animate-fade-slide-up">
         <BackRow onBack={() => navigate(-1)} />
@@ -254,12 +247,40 @@ export default function Cycle() {
         />
       )}
 
-      {/* SWITCHED OFF. The tabs stay, so Settings — and the switch — are one
-          tap away, and after a loss this is where the copy for that lives
-          rather than in a screen the user has to go looking for. */}
+      {/* NO PREDICTION YET, WITH THE TABS STILL THERE. This used to be a
+          page-wide takeover, which hid Settings — and with it the tracker
+          switch, the time zone and the way in to contraception — from anybody
+          who had not logged a period, and stranded anybody who switched the
+          tracker off with no route back to the switch. It is tab content now.
+          Three different cards, because "off", "after a loss" and "nothing
+          logged yet" are three different things to say. */}
       {tab === "overview" && !pregnancy && !prediction && (
         <div className="mt-4">
-          {lastEndedPregnancy?.outcome === "loss" ? (
+          {!trackerOff ? (
+            <>
+              <Card className="text-center py-8">
+                <p className="text-[15px] font-bold text-charcoal mb-1.5">{G.SETUP_TITLE}</p>
+                <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2 mb-4">
+                  {G.SETUP_BODY}
+                </p>
+                <Button
+                  onClick={() => {
+                    setLogDate(today);
+                    setLogOpen(true);
+                  }}
+                >
+                  <Plus size={14} /> {G.SETUP_CTA}
+                </Button>
+              </Card>
+              <button
+                onClick={() => setStartPregnancyOpen(true)}
+                className="tap w-full mt-2 py-2 text-[12px] font-semibold text-primary-dark"
+              >
+                {PG.START_TITLE}
+              </button>
+              <p className="mt-2 text-[10.5px] text-charcoal-faint text-center">{G.DISCLAIMER}</p>
+            </>
+          ) : lastEndedPregnancy?.outcome === "loss" ? (
             <Card className="text-center py-7">
               <p className="text-[15px] font-bold text-charcoal mb-1.5">{PG.LOSS_TITLE}</p>
               <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-2">
@@ -654,6 +675,19 @@ export default function Cycle() {
               </Card>
             )}
 
+          {/* --- time zone --- */}
+          <Card className="mb-3">
+            <p className="text-[13px] font-bold text-charcoal">{G.TIMEZONE_TITLE}</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-charcoal-faint">
+              {G.TIMEZONE_BODY}
+            </p>
+            <TimezoneRow
+              value={settings.timezone}
+              disabled={busy}
+              onChange={(tz) => void saveSettings({ timezone: tz })}
+            />
+          </Card>
+
           {/* --- contraception --- */}
           <button
             onClick={() => navigate("/app/contraception")}
@@ -793,6 +827,60 @@ function BackRow({ onBack }: { onBack: () => void }) {
     <button onClick={onBack} className="tap flex items-center gap-1 mb-2 text-[12px] font-semibold text-charcoal-soft">
       <ChevronLeft size={15} /> Back
     </button>
+  );
+}
+
+/**
+ * The zone picker.
+ *
+ * A <select> OF THE ENGINE'S OWN LIST, not a hand-kept one, because the
+ * database validates against pg_timezone_names and a stale hard-coded list
+ * would offer names the write then refuses. Where the engine cannot enumerate
+ * them, the only options are whatever is stored and the device's own — which
+ * is what almost everybody wants anyway, and is reachable in one tap either
+ * way.
+ */
+function TimezoneRow({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string;
+  disabled?: boolean;
+  onChange: (tz: string) => void;
+}) {
+  const device = browserTimezone();
+  const all = knownTimezones();
+  const options = all.length > 0 ? all : [...new Set([value, device].filter(Boolean) as string[])];
+
+  return (
+    <>
+      <select
+        value={value}
+        disabled={disabled}
+        aria-label={G.TIMEZONE_TITLE}
+        onChange={(e) => onChange(e.target.value)}
+        className="w-full mt-2.5 rounded-xl bg-cream-soft px-3.5 py-2.5 text-[13px] text-charcoal disabled:opacity-50"
+      >
+        {/* A zone the engine does not list — set on another device, or since
+            renamed — would otherwise vanish from its own picker. */}
+        {!options.includes(value) && <option value={value}>{value}</option>}
+        {options.map((tz) => (
+          <option key={tz} value={tz}>
+            {tz.replace(/_/g, " ")}
+          </option>
+        ))}
+      </select>
+      {device && device !== value && (
+        <button
+          onClick={() => onChange(device)}
+          disabled={disabled}
+          className="tap mt-1.5 text-[11.5px] font-semibold text-primary-dark disabled:opacity-40"
+        >
+          {G.TIMEZONE_USE_DEVICE} ({device.replace(/_/g, " ")})
+        </button>
+      )}
+    </>
   );
 }
 
