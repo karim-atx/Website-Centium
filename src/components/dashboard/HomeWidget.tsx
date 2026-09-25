@@ -12,7 +12,7 @@ import {
   trendLabel,
   withinDays,
 } from "../../services/health-metrics/series";
-import { todaysWorkout } from "../../data/mockWorkouts";
+import { nextRoutine } from "../../services/workout/nextRoutine";
 import {
   isReferenceOnlyTarget,
   REFERENCE_INTAKE_NOTE,
@@ -303,7 +303,7 @@ export const HomeWidget: React.FC<{
   editMode?: boolean;
 }> = ({ widget, onWaterClick, onGymPassesClick, editMode = false }) => {
   const navigate = useNavigate();
-  const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, habits, journalEntries, gymPurchases, today, selectedDate } =
+  const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, workoutSessions, routines, habits, journalEntries, gymPurchases, today, selectedDate } =
     useApp();
   const isLarge = widget.size === "large";
   // Per-instance clip id for the small water bottle, so two water tiles on
@@ -643,8 +643,20 @@ export const HomeWidget: React.FC<{
     }
 
     // -------------------------------------------------------------- Workout
+    //
+    // THE USER'S NEXT ROUTINE, OR NOTHING. This printed
+    // `data/mockWorkouts.todaysWorkout` — "Upper Body", four exercises, ~52
+    // min — for every account on every day, beside a "Completed" badge driven
+    // by a seeded log entry for a session nobody did. Two invented facts
+    // propping each other up.
+    //
+    // nextRoutine() is the same rule Home's quick-start button uses, so the
+    // widget and the button can no longer name different workouts on one
+    // screen. Null is an answer: an account with no routines is offered one to
+    // make rather than one it does not have.
     case "workout": {
       const done = !!todaysWorkoutLog?.completed;
+      const suggested = nextRoutine(routines, workoutSessions);
       const onClick = () => navigate("/app/workout");
       if (!isLarge) {
         return wrap(
@@ -654,13 +666,23 @@ export const HomeWidget: React.FC<{
             <>
               <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Workout</p>
               <div className="flex-1 flex items-center justify-center min-h-0">
-                <span className="flex flex-col items-center text-center leading-[1.25]">
-                  <span className={`${badge} text-team-teal-ink bg-teal/[0.42]`}>{done ? "Completed" : "Up next"}</span>
-                  <span className="mt-1.5 text-[15px] font-extrabold tracking-[-0.02em] text-charcoal">{todaysWorkout.name}</span>
-                  <span className="mt-[5px] text-[8.5px] font-semibold text-team-teal-ink/[0.72]">
-                    {todaysWorkout.exercises.length} exercises
+                {suggested ? (
+                  <span className="flex flex-col items-center text-center leading-[1.25]">
+                    <span className={`${badge} text-team-teal-ink bg-teal/[0.42]`}>
+                      {done ? "Completed" : "Up next"}
+                    </span>
+                    <span className="mt-1.5 text-[15px] font-extrabold tracking-[-0.02em] text-charcoal line-clamp-2">
+                      {suggested.name}
+                    </span>
+                    <span className="mt-[5px] text-[8.5px] font-semibold text-team-teal-ink/[0.72]">
+                      {suggested.exercises.length} exercises
+                    </span>
                   </span>
-                </span>
+                ) : (
+                  <span className="text-[10px] font-semibold text-center leading-snug text-team-teal-ink/[0.72] px-1">
+                    No workout planned — pick a routine
+                  </span>
+                )}
               </div>
             </>
           )
@@ -673,20 +695,39 @@ export const HomeWidget: React.FC<{
           <>
             <div className="flex items-center justify-between gap-3">
               <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Workout</p>
-              <span className={`${badge} text-team-teal-ink bg-teal/[0.42]`}>{done ? "Completed" : "Up next"}</span>
+              {suggested && (
+                <span className={`${badge} text-team-teal-ink bg-teal/[0.42]`}>
+                  {done ? "Completed" : "Up next"}
+                </span>
+              )}
             </div>
             <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[20px] font-extrabold tracking-[-0.03em] text-charcoal truncate">{todaysWorkout.name}</p>
-                  <p className="mt-1 text-[10px] text-team-teal-ink/[0.72]">
-                    {todaysWorkout.exercises.length} exercises · ~{todaysWorkout.durationMin} min
-                  </p>
+                  {suggested ? (
+                    <>
+                      <p className="text-[20px] font-extrabold tracking-[-0.03em] text-charcoal truncate">
+                        {suggested.name}
+                      </p>
+                      <p className="mt-1 text-[10px] text-team-teal-ink/[0.72]">
+                        {suggested.exercises.length} exercises
+                        {suggested.estimatedDurationMin
+                          ? ` · ~${suggested.estimatedDurationMin} min`
+                          : ""}
+                      </p>
+                    </>
+                  ) : (
+                    <p className="text-[13px] font-bold leading-snug text-charcoal">
+                      No workout planned — pick a routine
+                    </p>
+                  )}
                 </div>
                 <span className="w-[38px] h-[38px] rounded-full bg-teal-dark flex items-center justify-center shrink-0">
                   <Play size={15} className="text-white" fill="currentColor" />
                 </span>
               </div>
+              {/* The week strip stays either way: it counts logged sessions,
+                  which are real, rather than a plan. */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-[9px] font-bold tracking-[.12em] uppercase text-team-teal-ink/[0.72]">This week</span>
@@ -1204,11 +1245,20 @@ export const HomeWidget: React.FC<{
     }
 
     // ---------------------------------------------------------- Meditation
+    //
+    // EVERY NUMBER THIS WIDGET SHOWED WAS INVENTED, and there were four:
+    // "12 min" today (a literal, beside a comment admitting no duration is
+    // tracked), "3 sessions this week", a percentage of a 20-minute weekly
+    // goal nobody set, and "Box breathing · 4-4-4-4" as though it were the
+    // pattern they had just finished.
+    //
+    // Nothing records a meditation session anywhere. MeditationSheet runs its
+    // breathing timer in component state and persists nothing;
+    // public.mind_content is a catalogue of patterns, stretches and poses, not
+    // a log. There is no table and no local array to read — so this is a way
+    // in rather than a report, and the lotus is decoration rather than a gauge.
     case "meditation": {
       const onClick = () => navigate("/app/mind");
-      const weeklyGoalMin = 20;
-      const todayMin = 12; // No real per-day meditation duration is tracked yet.
-      const weekPct = Math.min(1, todayMin / weeklyGoalMin);
       if (!isLarge) {
         return wrap(
           onClick,
@@ -1219,10 +1269,7 @@ export const HomeWidget: React.FC<{
               <div className="flex-1 flex items-center justify-center min-h-0">
                 <span className="flex flex-col items-center gap-2">
                   <LotusGlyph size={40} stroke="rgb(var(--c-teal-dark))" />
-                  <span className="flex items-baseline gap-[3px]">
-                    <span className="text-[20px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">{todayMin}</span>
-                    <span className="text-[9px] font-bold text-team-teal-ink/[0.72]">min</span>
-                  </span>
+                  <span className="text-[9px] font-bold text-team-teal-ink/[0.72]">Start a session</span>
                 </span>
               </div>
             </>
@@ -1234,22 +1281,16 @@ export const HomeWidget: React.FC<{
         shell(
           "rgba(162,200,194,.18)",
           <>
-            <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Meditation</p>
-              <span className={`${badge} text-team-teal-ink bg-teal/[0.42]`}>3 sessions this week</span>
-            </div>
+            <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Meditation</p>
             <div className="flex-1 flex items-center gap-4 min-h-0 mt-[9px]">
-              <LotusGlyph size={66} progress={weekPct} stroke="rgb(var(--c-teal-dark))" />
+              <LotusGlyph size={66} stroke="rgb(var(--c-teal-dark))" />
               <div className="flex-1 min-w-0">
-                <div className="flex items-baseline gap-2">
-                  <span className="text-[24px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">{todayMin} min</span>
-                  <span className="text-[10px] font-bold text-team-teal-ink/[0.72]">today</span>
-                </div>
-                <p className="mt-[7px] mb-2.5 text-[10px] text-team-teal-ink/[0.72]">Box breathing · 4-4-4-4</p>
-                <div className="h-[7px] rounded-full bg-teal-dark/20 overflow-hidden">
-                  <div className="h-full rounded-full bg-teal-dark" style={{ width: `${weekPct * 100}%` }} />
-                </div>
-                <p className="mt-1.5 text-[8.5px] font-bold text-team-teal-ink/[0.72]">{Math.round(weekPct * 100)}% of your weekly goal</p>
+                <p className="text-[15px] font-extrabold leading-tight tracking-[-0.02em] text-charcoal">
+                  Breathing, stretching &amp; yoga
+                </p>
+                <p className="mt-[7px] text-[10px] leading-snug text-team-teal-ink/[0.72]">
+                  Sessions aren't recorded yet, so there's nothing to total up.
+                </p>
               </div>
             </div>
           </>

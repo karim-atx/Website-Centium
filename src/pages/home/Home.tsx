@@ -12,7 +12,7 @@ import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { GymPassesSheet } from "../../components/marketplace/GymPassesSheet";
 import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { todaysWorkout } from "../../data/mockWorkouts";
+import { nextRoutine } from "../../services/workout/nextRoutine";
 import ProfessionalDashboard from "../professionals/ProfessionalDashboard";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
 
@@ -57,14 +57,15 @@ export default function Home() {
    * — routine_id is nullable and a workout with no routine is a real workout,
    * which is exactly why it is nullable.
    */
-  const lastTrainedRoutine = [...workoutSessions]
-    .reverse()
-    .map((s) => routines.find((r) => r.id === s.routineId))
-    .find((r) => !!r);
-  const suggested = lastTrainedRoutine ?? routines[0];
+  const suggested = nextRoutine(routines, workoutSessions);
+  // NULL RATHER THAN A BORROWED PROGRAM. The old fallback handed an account
+  // with no routines `todaysWorkout` from data/mockWorkouts — "Upper Body",
+  // four exercises at named weights — so the first tap of a brand-new
+  // account's start button logged somebody else's session. The button now
+  // sends them to pick a routine instead.
   const quickWorkout = suggested
     ? { routineId: suggested.id, name: suggested.name, exercises: suggested.exercises, blocks: suggested.blocks }
-    : { routineId: null, name: todaysWorkout.name, exercises: todaysWorkout.exercises, blocks: undefined };
+    : null;
 
   // V5 (QA 5.0): professionals no longer have a Home/Food/Workout/Health
   // dashboard of their own — "My Clients" is their main page instead,
@@ -164,7 +165,7 @@ export default function Home() {
       <div className="mb-3.5">
         <QuickActions
           onLogFood={() => setAddFoodOpen(true)}
-          onLogWorkout={() => setWorkoutOpen(true)}
+          onLogWorkout={() => (quickWorkout ? setWorkoutOpen(true) : navigate("/app/workout"))}
           onAddMetric={() => setMetricOpen(true)}
           onVoiceLog={() => setVoiceOpen(true)}
         />
@@ -194,14 +195,16 @@ export default function Home() {
 
       <AddFoodSheet open={addFoodOpen} onClose={() => setAddFoodOpen(false)} />
       <AIVoiceLogger open={voiceOpen} onClose={() => setVoiceOpen(false)} />
-      <WorkoutSessionSheet
-        open={workoutOpen}
-        onClose={() => setWorkoutOpen(false)}
-        routineId={quickWorkout.routineId}
-        routineName={quickWorkout.name}
-        exercises={quickWorkout.exercises}
-        blocks={quickWorkout.blocks}
-      />
+      {quickWorkout && (
+        <WorkoutSessionSheet
+          open={workoutOpen}
+          onClose={() => setWorkoutOpen(false)}
+          routineId={quickWorkout.routineId}
+          routineName={quickWorkout.name}
+          exercises={quickWorkout.exercises}
+          blocks={quickWorkout.blocks}
+        />
+      )}
       <AddMetricSheet open={metricOpen} onClose={() => setMetricOpen(false)} />
       <GymPassesSheet open={gymPassesOpen} onClose={() => setGymPassesOpen(false)} />
     </div>

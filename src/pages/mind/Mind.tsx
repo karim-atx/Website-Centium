@@ -287,10 +287,14 @@ export default function Mind() {
               <div className="flex-1 flex items-center justify-center min-h-0">
                 <span className="flex flex-col items-center gap-2">
                   <LotusGlyph size={40} stroke="rgb(var(--c-teal-dark))" />
-                  <span className="flex items-baseline gap-[3px]">
-                    <span className="text-[20px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">12</span>
-                    <span className="text-[9px] font-bold text-team-teal-ink/[0.72]">min</span>
-                  </span>
+                  {/* NO NUMBER, BECAUSE NOTHING COUNTS ONE. This read a
+                      hardcoded 12 min for every account on every day. Nothing
+                      records a meditation session anywhere — not in app state,
+                      not in the database: MeditationSheet runs a breathing
+                      timer and persists nothing, and public.mind_content is a
+                      catalogue of patterns and stretches, not a log. So the
+                      tile is a way in rather than a total, and says so. */}
+                  <span className="text-[9px] font-bold text-team-teal-ink/[0.72]">Start a session</span>
                 </span>
               </div>
             </button>
