@@ -85,13 +85,93 @@ function encodeKey(buffer: ArrayBuffer | null): string | null {
   return btoa(binary);
 }
 
-function pushSupported(): boolean {
+/**
+ * Whether this browser can receive Web Push at all.
+ *
+ * FEATURE DETECTION, NEVER PLATFORM DETECTION. `detectPlatform()` in
+ * IntegrationsCard answers this shape of question with
+ * `/android/i.test(userAgent) ? "android" : "ios"` — every desktop browser is
+ * "ios" to it. That is fine for choosing between two integration logos and
+ * wrong here, where the question is whether three specific APIs exist. A
+ * user-agent test would tell a Chrome-on-Windows user to add the app to their
+ * Home Screen.
+ *
+ * ALL THREE ARE REQUIRED, AND THE THIRD IS THE ONE THAT IS EASY TO MISS.
+ * `Notification` is what actually displays the thing; iOS shipped
+ * `serviceWorker` years before a web app there could show a notification, so
+ * checking only the first two reports success on exactly the platform most
+ * likely to fail. Settings used to carry this test privately, one clause
+ * stricter than the copy in here — they are one function now, and it is the
+ * strict one.
+ */
+export function pushSupported(): boolean {
   return (
     typeof navigator !== "undefined" &&
     typeof window !== "undefined" &&
     "serviceWorker" in navigator &&
-    "PushManager" in window
+    "PushManager" in window &&
+    "Notification" in window
   );
+}
+
+/** Notification.permission's three states, as a boolean with an undecided. */
+export function permissionTriState(p: NotificationPermission): boolean | null {
+  if (p === "granted") return true;
+  if (p === "denied") return false;
+  return null;
+}
+
+export type EnableResult =
+  | { status: "ok"; endpoint: string; created: boolean }
+  | { status: "unsupported"; message: string }
+  | { status: "denied"; message: string }
+  | { status: "dismissed"; message: string }
+  | { status: "claimed"; message: string }
+  | { status: "error"; message: string };
+
+/**
+ * Asks the OS, then registers this browser — the whole flow, in one place.
+ *
+ * TWO STEPS, AND THEY FAIL DIFFERENTLY, which is why this returns a status
+ * rather than a boolean. Permission is the browser's answer about
+ * notifications; the subscription is a row in push_subscriptions that lets the
+ * server address this specific browser. Granting the first and failing the
+ * second leaves somebody who has seen "Granted" and will never be rung, so the
+ * subscribe failure keeps its own outcome instead of being folded into the
+ * permission state — which would either lie, or show "Denied" for something
+ * the user did allow.
+ *
+ * SUBSCRIBE ONLY AFTER "granted". subscribeToPush() says the same thing from
+ * the other side: subscribe() with userVisibleOnly raises the prompt itself on
+ * an undecided permission, from a service layer, with nothing on screen
+ * explaining it.
+ *
+ * MUST BE CALLED FROM A USER GESTURE. Some engines reject rather than resolve
+ * when requestPermission() is called outside one, which is the "dismissed"
+ * branch below rather than a thrown error the caller has to catch.
+ */
+export async function enablePush(ownerId: string | null): Promise<EnableResult> {
+  if (!pushSupported()) {
+    return { status: "unsupported", message: "This browser can't receive notifications." };
+  }
+
+  let permission: NotificationPermission;
+  try {
+    permission = await Notification.requestPermission();
+  } catch {
+    return {
+      status: "dismissed",
+      message: "Couldn't ask for notification permission here. Try from Settings.",
+    };
+  }
+
+  if (permission !== "granted") {
+    return { status: "denied", message: "Notifications are blocked for Centium." };
+  }
+  if (!ownerId) {
+    return { status: "error", message: "Sign in to receive notifications on this device." };
+  }
+  return subscribeToPush(ownerId);
 }
 
 /**

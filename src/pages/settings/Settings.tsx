@@ -14,7 +14,7 @@ import { StorageUsageCard } from "../../components/profile/StorageUsageCard";
 import { TermsOfServiceSheet } from "../../components/profile/TermsOfServiceSheet";
 import { TwoFactorSheet } from "../../components/profile/TwoFactorSheet";
 import { useApp } from "../../context/AppContext";
-import { subscribeToPush } from "../../services/push";
+import { enablePush, permissionTriState, pushSupported } from "../../services/push";
 import { getMfaStatus } from "../../services/mfa";
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
@@ -37,33 +37,6 @@ import {
   FileText,
   ShieldCheck,
 } from "lucide-react";
-
-/**
- * Whether this browser can receive a push notification at all.
- *
- * FEATURE DETECTION, NEVER PLATFORM DETECTION, and the distinction is the
- * entire design of this row. `detectPlatform()` in IntegrationsCard answers
- * this shape of question with `/android/i.test(userAgent) ? "android" : "ios"`
- * — every desktop browser is "ios" to it. That is fine for choosing between
- * two integration logos and wrong here, where the question is whether three
- * specific APIs exist. A user-agent test would have told a Chrome-on-Windows
- * user to add the app to their Home Screen.
- *
- * ALL THREE ARE REQUIRED, and the third is the one that is easy to miss.
- * `Notification` is what actually displays the thing; iOS shipped
- * `serviceWorker` years before a web app there could show a notification, so
- * checking only the first two reports success on exactly the platform most
- * likely to fail.
- */
-function pushSupported(): boolean {
-  return (
-    typeof navigator !== "undefined" &&
-    typeof window !== "undefined" &&
-    "serviceWorker" in navigator &&
-    "PushManager" in window &&
-    "Notification" in window
-  );
-}
 
 /**
  * Whether the app is running installed rather than in a browser tab.
@@ -94,13 +67,6 @@ function isIosLike(): boolean {
   if (typeof navigator === "undefined") return false;
   if (/iPad|iPhone|iPod/.test(navigator.userAgent)) return true;
   return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
-}
-
-/** Notification.permission's three states in this card's boolean|null shape. */
-function permissionTriState(p: NotificationPermission): boolean | null {
-  if (p === "granted") return true;
-  if (p === "denied") return false;
-  return null;
 }
 
 export default function Settings() {
@@ -212,29 +178,18 @@ export default function Settings() {
    */
   const requestNotifications = async () => {
     if (!pushAvailable) return;
-
-    let permission: NotificationPermission;
-    try {
-      permission = await Notification.requestPermission();
-    } catch {
-      // Some engines reject rather than resolve when called outside a user
-      // gesture or in a context where notifications are disallowed outright.
-      setNotificationsAllowed(false);
-      return;
-    }
-
-    setNotificationsAllowed(permissionTriState(permission));
     setPushError(null);
-    if (permission !== "granted") return;
-
-    if (!authUserId) {
-      setPushError("Sign in to receive notifications on this device.");
-      return;
-    }
-
     setSubscribing(true);
-    const result = await subscribeToPush(authUserId);
+    const result = await enablePush(authUserId);
     setSubscribing(false);
+
+    // The permission row reflects the OS answer; the error line reflects the
+    // subscription. "dismissed" is neither granted nor denied — the engine
+    // refused to ask — so it leaves the tri-state undecided.
+    if (result.status === "denied") setNotificationsAllowed(false);
+    else if (result.status === "ok") setNotificationsAllowed(true);
+    else setNotificationsAllowed(permissionTriState(Notification.permission));
+
     // "ok" is the only outcome that leaves the row reading plain "Granted".
     if (result.status !== "ok") setPushError(result.message);
   };
