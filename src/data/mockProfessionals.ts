@@ -1,77 +1,18 @@
-import type { Professional, Gym } from "../types";
+import type { Gym } from "../types";
 
-export const mockProfessionals: Professional[] = [
-  {
-    id: "pr1",
-    name: "Maya Haddad",
-    type: "dietitian",
-    specialty: "Registered Dietitian · Weight Management",
-    location: "Midtown",
-    rating: 4.9,
-    reviews: 128,
-    bio: "Helps clients build sustainable eating habits rooted in real food — no extreme diets.",
-    connected: true,
-    monthlyRate: 65,
-  },
-  {
-    id: "pr2",
-    name: "Karim Abou Zeid",
-    type: "trainer",
-    specialty: "Certified Personal Trainer · Strength",
-    location: "Uptown",
-    rating: 4.8,
-    reviews: 94,
-    bio: "Strength & conditioning coach for recreational lifters and athletes alike.",
-    monthlyRate: 55,
-  },
-  {
-    id: "pr3",
-    name: "Dr. Rana Fakhoury",
-    type: "doctor",
-    specialty: "General Practitioner",
-    location: "Northside",
-    rating: 4.9,
-    reviews: 210,
-    bio: "Family medicine physician focused on preventive care and longevity.",
-    monthlyRate: 80,
-  },
-  {
-    id: "pr4",
-    name: "Elie Sarkis",
-    type: "physiotherapist",
-    specialty: "Sports Physiotherapist",
-    location: "Harbor District",
-    rating: 4.7,
-    reviews: 61,
-    bio: "Injury recovery and mobility work for athletes and everyday movers.",
-    monthlyRate: 60,
-  },
-  {
-    id: "pr5",
-    name: "Layal Choueiri",
-    type: "trainer",
-    specialty: "Certified Personal Trainer · Mobility",
-    location: "Riverside",
-    rating: 4.9,
-    reviews: 77,
-    bio: "Builds beginner-friendly programs that stick — form first, always.",
-    monthlyRate: 50,
-  },
-  {
-    id: "pr6",
-    name: "Tony Khoury",
-    type: "dietitian",
-    specialty: "Sports Nutritionist",
-    location: "Eastgate",
-    rating: 4.6,
-    reviews: 52,
-    bio: "Works with athletes and lifters on performance nutrition.",
-    monthlyRate: 70,
-  },
-];
+// mockProfessionals USED TO LIVE HERE, and one of its five entries shipped
+// with `connected: true` — so every account in the app opened already
+// attached to a dietitian it had never hired, complete with a rating, a
+// review count and a monthly rate. None of the five were accounts, so no
+// query could confirm or deny the relationship; that is why switching it off
+// needed a local "dismissed" list rather than a write, and why the list is
+// gone with it.
+//
+// Whether somebody is your professional is decided by professional_clients,
+// and the directory the Professionals tab lists comes from
+// public_professional_directory. Both were already in place. This array was
+// the last thing in the app claiming otherwise.
 
-// Approximate real-world coordinates for each location, used to compute a
-// mock "distance from you" in the Explore page.
 export const mockGyms: Gym[] = [
   {
     id: "g1",

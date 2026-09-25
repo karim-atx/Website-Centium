@@ -96,7 +96,6 @@ import {
 } from "../services/routines";
 import { mockForumPosts } from "../data/mockForum";
 import { defaultHabits } from "../data/mockHealthData";
-import { todaysWorkout, workoutPrograms } from "../data/mockWorkouts";
 import { estimate1RM } from "../services/workout";
 import {
   clearPausedSession as clearPausedSessionRemote,
@@ -258,20 +257,6 @@ const defaultUser: UserProfile = {
   customerSubtype: "general",
 };
 
-function seedWorkoutLog(): WorkoutLogEntry[] {
-  return [
-    {
-      id: "wseed1",
-      workoutId: todaysWorkout.id,
-      workoutName: todaysWorkout.name,
-      date: todayLocal(),
-      durationMin: todaysWorkout.durationMin,
-      completed: true,
-      exercises: todaysWorkout.exercises,
-    },
-  ];
-}
-
 // Pre-onboarding fallback shape for the persisted "widgets" state — real
 // seeding happens in widgetsForGoals once the user's tracking prefs exist.
 const defaultWidgets: WidgetConfig[] = [
@@ -318,21 +303,22 @@ function widgetsForGoals(goals: UserProfile["goals"], tracking: TrackPreference[
   return board.sort((a, b) => priority(a.type) - priority(b.type));
 }
 
-const defaultRoutineFolders: RoutineFolder[] = [
-  { id: "rf-strength", name: "Strength" },
-  { id: "rf-hypertrophy", name: "Hypertrophy" },
-];
-
-function seedRoutines(): Routine[] {
-  return workoutPrograms.slice(0, 4).map((p, i) => ({
-    id: `routine-${p.id}`,
-    folderId: i < 2 ? "rf-strength" : "rf-hypertrophy",
-    name: p.name,
-    color: ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C"][i % 4],
-    estimatedDurationMin: p.durationMin,
-    exercises: p.exercises,
-  }));
-}
+// NO SEEDED ROUTINES, AND NO FOLDERS TO PUT THEM IN.
+//
+// seedRoutines() built four routines out of `workoutPrograms` — Beginner
+// Full Body, Upper/Lower, Push Pull Legs, Strength Foundations — with
+// prescribed exercises, weights and durations, filed into two folders the
+// user never made. They looked exactly like something the account had set up,
+// and the Routines tab opened on them.
+//
+// A routine is a plan somebody wrote. Handing over four and calling them
+// yours is the same class of thing as a streak nobody earned.
+//
+// data/mockWorkouts.ts GOES WITH IT. "Browse starter programs" reads real
+// workout_templates rows through getPublicTemplates(), not this array — so
+// with seedRoutines and seedWorkoutLog gone, nothing imported the file at
+// all.
+const defaultRoutineFolders: RoutineFolder[] = [];
 
 const defaultJournalFolders: JournalFolder[] = [
   { id: "jf-personal", name: "Personal" },
@@ -922,21 +908,6 @@ interface AppState {
   addForumPost: (category: ForumCategory, title: string, body: string) => void;
   toggleForumLike: (postId: string) => void;
   addForumComment: (postId: string, text: string) => void;
-
-  // WHICH SEEDED MOCK PROFESSIONALS THE USER HAS DISMISSED.
-  //
-  // This was an ADDED list — ids the mock hire flow had "connected" — until
-  // that flow was removed for creating no state a server ever saw. Inverted
-  // rather than deleted, because `mockProfessionals` ships one entry already
-  // flagged `connected: true` and Remove had no way to turn it off: it
-  // filtered an array the seed flag never appeared in, so the button
-  // navigated away and the entry was connected again on the next visit.
-  //
-  // ONLY MOCK IDS EVER LAND HERE. Whether a real professional is connected is
-  // decided by `professional_clients`, which this browser cannot edit; the
-  // page reads that separately and never consults this list.
-  dismissedMockProfessionalIds: string[];
-  dismissMockProfessional: (id: string) => void;
 
   // V7 (QA 7.0): Professional UI — Explore reframes categories as job
   // postings for hiring the professional, gated by a unique-ID affiliation
@@ -1793,10 +1764,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // A browser blocking site data is not a reason to fail startup.
     }
   }, []);
-  const [workoutLog, setWorkoutLog] = usePersistentState<WorkoutLogEntry[]>(
-    "workoutLog",
-    seedWorkoutLog()
-  );
+  // EMPTY, BECAUSE NOBODY HAS TRAINED YET. seedWorkoutLog() used to put one
+  // entry here on every new account: "Upper Body", 52 minutes, completed,
+  // dated today, with four exercises at named weights. It drove the Home
+  // widget's "Completed" badge and counted towards the week strip, so a
+  // brand-new account opened on a workout it had not done.
+  const [workoutLog, setWorkoutLog] = usePersistentState<WorkoutLogEntry[]>("workoutLog", []);
   const [workoutSessions, setWorkoutSessions] = usePersistentState<WorkoutSession[]>(
     "workoutSessions",
     []
@@ -1893,7 +1866,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "routineFolders",
     defaultRoutineFolders
   );
-  const [routines, setRoutines] = usePersistentState<Routine[]>("routines", seedRoutines());
+  const [routines, setRoutines] = usePersistentState<Routine[]>("routines", []);
 
   const [waterGoalMl, setWaterGoalState] = usePersistentState<number>("waterGoalMl", 2500);
   const [habits, setHabits] = usePersistentState<HabitItem[]>("habits", defaultHabits);
@@ -2800,13 +2773,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // contents over would mark exactly the wrong entries as dismissed. Anything
   // still in the old key is abandoned, which costs nothing: its only writer
   // was the mock hire flow, and the ids in it were never accounts.
-  const [dismissedMockProfessionalIds, setDismissedMockProfessionalIds] = usePersistentState<
-    string[]
-  >("dismissedMockProfessionalIds", []);
-  // V10 (QA 10.0): "a hired professional should have a remove professional
-  // button... should prompt you to make sure you want to remove."
-  const dismissMockProfessional: AppState["dismissMockProfessional"] = (id) =>
-    setDismissedMockProfessionalIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
 
   const [businessDirectory, setBusinessDirectory] = usePersistentState<BusinessDirectoryEntry[]>(
     "businessDirectory",
@@ -5116,8 +5082,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addForumPost,
       toggleForumLike,
       addForumComment,
-      dismissedMockProfessionalIds,
-      dismissMockProfessional,
       businessDirectory,
       updateMyBusinessTier,
       bonusPoints,
@@ -5284,7 +5248,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customExercises,
       customExercisesError,
       forumPosts,
-      dismissedMockProfessionalIds,
       businessDirectory,
       bonusPoints,
       premiumPlan,

@@ -4,7 +4,6 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { MessageProfessionalButton } from "../../components/messages/MessageProfessionalButton";
-import { mockProfessionals } from "../../data/mockProfessionals";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
 import { isActiveClientOf } from "../../services/connected-professional";
 import {
@@ -16,7 +15,7 @@ import type { ProfessionalType } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
 import { ReviewItem } from "../../components/professionals/ReviewItem";
-import { ChevronLeft, Star, Lock, Pencil, Trash2 } from "lucide-react";
+import { ChevronLeft, Star, Lock, Pencil } from "lucide-react";
 import { professionalTypeIcon } from "../../utils/icons";
 import { UserCheck } from "lucide-react";
 
@@ -38,20 +37,18 @@ const iconFor = (t: string) => (t in professionalTypeIcon ? professionalTypeIcon
 export default function ProfessionalDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { dismissedMockProfessionalIds, dismissMockProfessional, authUserId } = useApp();
-  const [removeConfirm, setRemoveConfirm] = useState(false);
+  const { authUserId } = useApp();
 
-  // Real listings arrive from public_professional_directory keyed by account
-  // uuid; the seeded mockProfessionals entries are keyed "pr1". Both routes
-  // land here, so both have to resolve — before this, a real listing's
-  // "View Profile" hit the mock lookup, missed, and rendered "Professional
-  // not found."
+  // ONE SOURCE NOW: public_professional_directory, keyed by account uuid.
+  // The seeded mockProfessionals entries — keyed "pr1" — are gone, and with
+  // them the branch that resolved them. Nothing links to such an id any more;
+  // a stale bookmark carrying one falls through to "Professional not found",
+  // which is the truthful answer for a profile that never was an account.
   const [listing, setListing] = useState<DirectoryListing | null>(null);
   const [listingLoading, setListingLoading] = useState(true);
-  const mockProfessional = mockProfessionals.find((p) => p.id === id);
 
   useEffect(() => {
-    if (!id || mockProfessional) {
+    if (!id) {
       setListingLoading(false);
       return;
     }
@@ -65,13 +62,12 @@ export default function ProfessionalDetail() {
     return () => {
       cancelled = true;
     };
-  }, [id, mockProfessional]);
+  }, [id]);
 
-  // One shape for the page, whichever source it came from. `isReal` gates the
-  // things only a real account can do.
-  const professional = mockProfessional
-    ? mockProfessional
-    : listing
+  // One shape for the page. `isReal` used to gate what only a real account
+  // could do, back when a seeded entry could reach this screen; every listing
+  // is a real account now, so it is simply whether one loaded.
+  const professional = listing
     ? {
         id: listing.profileId,
         name: listing.name,
@@ -88,11 +84,8 @@ export default function ProfessionalDetail() {
         connected: undefined as boolean | undefined,
       }
     : undefined;
-  const isReal = !mockProfessional && !!listing;
-
-  // Null for a mock entry, whose id ("pr1") is not an account and so can never
-  // appear in professional_clients. One value to depend on, rather than two.
-  const realProfessionalId = isReal ? professional?.id ?? null : null;
+  const isReal = !!listing;
+  const realProfessionalId = professional?.id ?? null;
 
   /**
    * Whether the caller is actually this professional's client.
@@ -201,9 +194,12 @@ export default function ProfessionalDetail() {
    * REAL LISTINGS DO NOT CONSULT IT AT ALL. `activeClient` comes from
    * `professional_clients`, and this branch never runs for them.
    */
-  const isConnected: boolean = isReal
-    ? activeClient === true
-    : !!professional?.connected && !dismissedMockProfessionalIds.includes(professional.id);
+  // professional_clients with disconnected_at null is the only thing that
+  // decides whether somebody is a client, and it is what the roster and the
+  // consent screen already read. The local "dismissed" list that used to sit
+  // beside it existed solely to switch off a seed flag on an entry that was
+  // never an account; both are gone.
+  const isConnected: boolean = activeClient === true;
   const [reviewOpen, setReviewOpen] = useState(false);
   const [allReviewsOpen, setAllReviewsOpen] = useState(false);
   const [savingReview, setSavingReview] = useState(false);
@@ -419,45 +415,13 @@ export default function ProfessionalDetail() {
               firstName={professional.name.split(" ")[0]}
             />
           )}
-          {/* V10 (QA 10.0): "a hired professional should have a remove
-              professional button under message... prompt you to make sure
-              you want to remove" — tap-again-to-confirm, same pattern used
-              for other destructive actions in this app.
-
-              MOCK ONLY, NOW THAT REAL CONNECTION COMES FROM THE DATABASE.
-              dismissMockProfessional edits a local list and nothing else, so
-              on a real listing this button ended a relationship only in this
-              browser's opinion of it: the professional_clients row stayed
-              active, the roster still listed the client, and reopening the
-              page would have shown them connected again the moment the page
-              read the database instead of localStorage.
-              Hidden rather than shown-and-explained, because a disabled
-              control still advertises an action this page cannot perform.
-              Ending a real relationship belongs on a write path
-              (disconnect_client_relationship), which is deliberately out of
-              scope here — see the commit message. */}
-          {!isReal && (
-          <Button
-            fullWidth
-            variant="outline"
-            className="!border-teal/30 !text-teal-dark mt-2.5"
-            onClick={() => {
-              if (removeConfirm) {
-                // ADDS to the dismissed list. isConnected reads this as a
-                // subtraction from the seed flag, so adding the id is what
-                // turns the connected layout off — and, unlike the old
-                // filter-it-out version, it survives a reload.
-                dismissMockProfessional(professional.id);
-                navigate("/app/professionals");
-              } else {
-                setRemoveConfirm(true);
-                setTimeout(() => setRemoveConfirm(false), 3000);
-              }
-            }}
-          >
-            <Trash2 size={14} /> {removeConfirm ? "Tap again to confirm" : "Remove professional"}
-          </Button>
-          )}
+          {/* NO "REMOVE PROFESSIONAL" BUTTON HERE. It only ever applied to
+              the seeded mockProfessionals entries, and it worked by adding an
+              id to a local "dismissed" list — which ended the relationship in
+              this browser's opinion and nowhere else. Both the entries and the
+              list are gone. Ending a real relationship is a write
+              (disconnect_client_relationship) and belongs on a path that makes
+              it, not on a profile page that would only appear to. */}
         </>
       ) : (
         isReal ? (
