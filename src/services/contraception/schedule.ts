@@ -7,26 +7,28 @@ import type { Enums } from "../../../lib/supabase/database.types";
 // a DIFFERENT SET OF COLUMNS PER METHOD and getting one wrong is a constraint
 // violation rather than a wrong answer.
 //
-// THE DATABASE ANSWERS FIRST, AND THIS MODULE CHECKS ITS WATCH.
+// THE DATABASE ANSWERS, AND THIS MODULE DOES NOT SECOND IT.
 // `my_contraception_status()` gives the pack day, the pack phase, whether a
-// pill was logged today and what is next — and the screen shows exactly that,
-// except when the function's idea of "today" is not the user's. It computes
-// from Postgres's `current_date`, which is UTC, and does not read
-// cycle_settings.timezone (the reminder queue does, via timezone(tz, now())).
-// So for the hours where the two dates differ it answers about a different
-// day, and that is not a rounding error:
+// pill is logged today and what comes next, on the user's OWN date —
+// Database-Atraxia 20260925010000 replaced `current_date` with
+// `cycle_today(user)`, which resolves cycle_settings.timezone. That was the
+// last reason this module carried a second opinion, and the second opinion is
+// gone with it.
 //
-//   - the pack grid put the "today" ring on day 10 while the pill just logged
-//     sat on day 11, because an event is stored under the user's own date;
-//   - a ring inserted that afternoon came back as "Put a new ring in — in 1
-//     day", because inserted_on was in the future by the function's reckoning
-//     and the modulo wrapped to the last day of the ring-free week.
+// WHAT WENT WITH IT: nextEvent(), which recomputed every countdown the
+// function already returns, and the statusDate()/statusIsCurrent() pair that
+// existed only to decide which of the two to believe. A countdown computed
+// twice is a countdown that can disagree, and the reconciliation was scaffold
+// around a hole the database has now filled.
 //
-// statusDate() below recovers the date the function used, from its own
-// next_event_on and days_until. When it matches the user's, the function's
-// answers are used verbatim. When it does not, nextEvent() and packDays()
-// answer the same questions on the date the user is living in. Either way the
-// screen shows one day, not two.
+// WHAT IS LEFT IS WHAT THE FUNCTION DOES NOT RETURN:
+//   packDays()   the shape of the pack — which days are active, which are
+//                break, and what calendar date each one falls on. The
+//                function returns the pack DAY, not the grid.
+//   validatePlan(), planRow()
+//                writing a plan, mirroring
+//                contraception_plans_schedule_shape_check branch for branch.
+//   DbStatus     the shape of the function's own row.
 
 export type Method = Enums<"contraception_method">;
 export type EventKind = Enums<"contraception_event">;
@@ -107,7 +109,7 @@ export function packDays(
 }
 
 // ---------------------------------------------------------------------------
-// Reconciling my_contraception_status() with the user's own date
+// The shape my_contraception_status() answers in
 // ---------------------------------------------------------------------------
 
 /** One row of my_contraception_status(), in this app's shape. */
@@ -121,44 +123,19 @@ export interface DbStatus {
   daysUntil: number | null;
 }
 
-/**
- * The date the function computed from, recovered from its own answer.
- *
- * It never returns `current_date` directly, but it returns both a date and the
- * days until it, and one minus the other is the day it was standing on. Null
- * when it gave neither — a method with no schedule, where there is nothing to
- * reconcile because there is nothing to show.
- */
-export function statusDate(status: Pick<DbStatus, "nextEventOn" | "daysUntil">): string | null {
-  if (!status.nextEventOn || status.daysUntil == null) return null;
-  return shiftDay(status.nextEventOn, -status.daysUntil);
-}
-
-/**
- * Whether the function's answers can be shown as they are.
- *
- * NULL COUNTS AS AGREEING. A plan with no schedule gives no date to check, and
- * refusing the function's answer there would mean refusing an answer it never
- * gave. Everything that has a date is checked against the user's.
- */
-export function statusIsCurrent(status: DbStatus | null, today: string): boolean {
-  if (!status) return false;
-  const on = statusDate(status);
-  return on === null || on === today;
-}
-
 // ---------------------------------------------------------------------------
-// What is next, per method
+// Writing a plan
 // ---------------------------------------------------------------------------
 
-export interface NextEvent {
-  kind: string;
-  /** Plain words for the card. */
-  label: string;
-  date: string;
-  daysUntil: number;
-}
-
+/**
+ * A plan, in the app's shape — every method's columns in one optional set.
+ *
+ * ONE TYPE RATHER THAN A UNION PER METHOD, because the edit sheet holds a
+ * draft that is mid-change between two of them: picking "ring" while a pill's
+ * pack fields are still in state is the ordinary case, not an invalid one.
+ * validatePlan() and planRow() are what narrow it, and they narrow it the way
+ * the CHECK constraint does.
+ */
 export interface PlanShape {
   method: Method;
   startedOn: string;
@@ -175,98 +152,6 @@ export interface PlanShape {
   intervalWeeks?: number | null;
   replaceBy?: string | null;
   reminderTime?: string | null;
-}
-
-/**
- * The next scheduled event, or null for a method that has none.
- *
- * ONE BRANCH PER SHAPE THE CHECK CONSTRAINT DEFINES, in the same order, so a
- * reader can hold this beside `contraception_plans_schedule_shape_check` and
- * see that the two agree. Anything the constraint allows to be null is
- * guarded here rather than asserted.
- */
-export function nextEvent(plan: PlanShape, on: string): NextEvent | null {
-  const { method } = plan;
-
-  if (isPill(method)) {
-    if (!plan.packStartDate || plan.activeDays == null || plan.breakDays == null) return null;
-    if (plan.breakDays === 0) return null; // continuous pack: no break to announce
-    const pack = packDays(
-      { packStartDate: plan.packStartDate, activeDays: plan.activeDays, breakDays: plan.breakDays },
-      on
-    );
-    if (!pack) return null;
-    const firstBreakIndex = plan.activeDays; // 0-based
-    const nextIndex = pack.currentDay - 1 < firstBreakIndex ? firstBreakIndex : pack.days.length;
-    const date =
-      nextIndex < pack.days.length
-        ? pack.days[nextIndex].date
-        : shiftDay(pack.days[pack.days.length - 1].date, 1);
-    return {
-      kind: nextIndex < pack.days.length ? "break_starts" : "pack_starts",
-      label: nextIndex < pack.days.length ? "Break week starts" : "Next pack starts",
-      date,
-      daysUntil: daysBetween(on, date),
-    };
-  }
-
-  if (method === "ring") {
-    if (!plan.insertedOn || plan.weeksIn == null || plan.weeksOut == null) return null;
-    const cycleDays = (plan.weeksIn + plan.weeksOut) * 7;
-    if (cycleDays <= 0) return null;
-    const elapsed = daysBetween(plan.insertedOn, on);
-    const index = ((elapsed % cycleDays) + cycleDays) % cycleDays;
-    const inDays = plan.weeksIn * 7;
-    const date = index < inDays ? shiftDay(on, inDays - index) : shiftDay(on, cycleDays - index);
-    return {
-      kind: index < inDays ? "ring_removed" : "ring_inserted",
-      label: index < inDays ? "Take the ring out" : "Put a new ring in",
-      date,
-      daysUntil: daysBetween(on, date),
-    };
-  }
-
-  if (method === "patch") {
-    if (!plan.firstAppliedOn || plan.changeWeekday == null) return null;
-    // A patch is changed weekly; with a patch-free week, the fourth is skipped.
-    const elapsed = daysBetween(plan.firstAppliedOn, on);
-    const weekIndex = Math.floor(elapsed / 7);
-    const cycleWeeks = plan.patchFreeWeek ? 4 : 1;
-    const weekInCycle = ((weekIndex % cycleWeeks) + cycleWeeks) % cycleWeeks;
-    const daysIntoWeek = ((elapsed % 7) + 7) % 7;
-    const date = shiftDay(on, 7 - daysIntoWeek);
-    const startingFreeWeek = plan.patchFreeWeek && weekInCycle === 2;
-    const endingFreeWeek = plan.patchFreeWeek && weekInCycle === 3;
-    return {
-      kind: endingFreeWeek || !plan.patchFreeWeek ? "patch_applied" : startingFreeWeek ? "patch_removed" : "patch_applied",
-      label: startingFreeWeek ? "Patch-free week starts" : endingFreeWeek ? "Put a new patch on" : "Change your patch",
-      date,
-      daysUntil: daysBetween(on, date),
-    };
-  }
-
-  if (method === "injection") {
-    if (!plan.lastGivenOn || plan.intervalWeeks == null) return null;
-    const date = shiftDay(plan.lastGivenOn, plan.intervalWeeks * 7);
-    return {
-      kind: "injection_given",
-      label: "Next injection due",
-      date,
-      daysUntil: daysBetween(on, date),
-    };
-  }
-
-  if (isDevice(method)) {
-    if (!plan.replaceBy) return null;
-    return {
-      kind: "device_removed",
-      label: "Replace by",
-      date: plan.replaceBy,
-      daysUntil: daysBetween(on, plan.replaceBy),
-    };
-  }
-
-  return null;
 }
 
 /**

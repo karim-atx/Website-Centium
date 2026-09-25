@@ -12,8 +12,6 @@ import {
   isDevice,
   isPill,
   logEvent,
-  nextEvent,
-  statusIsCurrent,
   type EventKind,
   type Method,
 } from "../../services/contraception";
@@ -22,28 +20,23 @@ import { ChevronLeft, Info, Plus } from "lucide-react";
 
 // The contraception tracker.
 //
-// THE DATABASE ANSWERS, AND THE SCREEN CHECKS ITS WATCH.
-// `my_contraception_status()` gives the pack day, the pack phase, whether
-// today's pill is logged and what comes next, and all of that is shown as it
-// stands — EXCEPT in the hours where the function is not on the user's date.
-// It computes from Postgres's `current_date`, which is UTC, and does not read
-// cycle_settings.timezone the way the reminder queue does. Two things went
-// visibly wrong before this check existed, at 00:42 in UTC+3:
+// ONE SOURCE OF TRUTH FOR TODAY, AND IT IS `my_contraception_status()`.
+// The pack day, the pack phase, whether today's pill is logged and what comes
+// next are all its answers, shown as they stand.
 //
-//   - the pack grid put the "today" ring on day 10 and the pill just logged on
-//     day 11, because an event is stored under the user's own date;
-//   - a ring inserted that afternoon came back as "Put a new ring in — in 1
-//     day", because inserted_on was in the future by the function's reckoning
-//     and the modulo wrapped to the last day of the ring-free week.
+// That was not safe until Database-Atraxia 20260925010000. The function used
+// to compute from Postgres's `current_date` — UTC — so for anyone not on UTC
+// it could be answering about a different day: measured at 00:42 in UTC+3, the
+// pack grid put the "today" ring on day 10 with the pill just logged on day
+// 11, and a ring inserted that afternoon came back as "Put a new ring in — in
+// 1 day". It now asks `cycle_today(user)`, which resolves
+// cycle_settings.timezone — the zone this app writes on every load.
 //
-// statusIsCurrent() recovers the function's own date from next_event_on minus
-// days_until and compares it. When they match — almost always — its answers
-// are used verbatim. When they do not, ./schedule.ts answers the same
-// questions on the date the user is living in. Either way this screen shows
-// ONE day, never two.
-//
-// The zone itself is set and corrected in AppContext, on every load, and is
-// editable in the tracker's own Settings.
+// So the reconciliation this screen used to do is GONE, along with the
+// nextEvent() that stood in for the function. Two places computing one
+// countdown is two countdowns that can disagree, and the screen is no longer
+// one of them. schedule.ts keeps only the pack GRID, which the function does
+// not return.
 //
 // EVERY SENTENCE COMES FROM services/contraception/guidance, imported as `G`,
 // including the one about a missed pill — which is a pointer to the leaflet
@@ -143,20 +136,23 @@ export default function Contraception() {
     );
   }
 
-  // THE FUNCTION'S ANSWER, LABEL AND ALL, when it is standing on today. Its
-  // kinds are its own — a pill user's next event is the next PACK, where
-  // ./schedule.ts announces the break that comes first — so the wording has to
-  // travel with the date rather than being borrowed from the other source.
-  const dbIsCurrent = statusIsCurrent(contraceptionStatus, today);
-  const next =
-    dbIsCurrent && contraceptionStatus?.nextEventOn
-      ? {
-          label: G.NEXT_KIND_LABEL[contraceptionStatus.nextEventKind ?? ""] ?? G.NEXT_TITLE,
-          date: contraceptionStatus.nextEventOn,
-          daysUntil: contraceptionStatus.daysUntil ?? 0,
-        }
-      : nextEvent(plan, today);
+  // THE FUNCTION'S ANSWER, LABEL AND ALL. No second opinion is computed, so
+  // there is nothing to reconcile: a status read that failed shows no countdown
+  // rather than one worked out here, which would be a number the reminder queue
+  // has never heard of.
+  const next = contraceptionStatus?.nextEventOn
+    ? {
+        label: G.NEXT_KIND_LABEL[contraceptionStatus.nextEventKind ?? ""] ?? G.NEXT_TITLE,
+        date: contraceptionStatus.nextEventOn,
+        daysUntil: contraceptionStatus.daysUntil ?? 0,
+      }
+    : null;
 
+  // WHICH of the three, which the function does not say. pill_taken_today is
+  // a boolean over the same contraception_events row this reads — true only
+  // for pill_taken, so it cannot tell "missed" from "not logged". Reading the
+  // row itself is the same fact at finer grain, not a second source: there is
+  // no arithmetic here to disagree with the function about.
   const pillToday = contraceptionEvents.find(
     (e) => e.occurredOn === today && PILL_CHOICES.includes(e.event)
   );
@@ -199,9 +195,7 @@ export default function Contraception() {
             <PillPack
               plan={plan}
               today={today}
-              // The function's pack day when it is on today's date, and null
-              // when it is not — PillPack then counts the pack itself.
-              packDay={dbIsCurrent ? (contraceptionStatus?.packDay ?? null) : null}
+              packDay={contraceptionStatus?.packDay ?? null}
               events={contraceptionEvents}
             />
             <p className="mt-2.5 text-[10px] text-charcoal-faint">{G.PACK_LEGEND}</p>

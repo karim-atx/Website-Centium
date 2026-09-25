@@ -1,16 +1,15 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
+import { packDays, planRow, validatePlan } from "./schedule.ts";
+
+const base = { startedOn: "2026-09-01" };
 import {
-  nextEvent,
-  packDays,
-  planRow,
-  statusDate,
-  statusIsCurrent,
-  validatePlan,
-  type DbStatus,
-  type PlanShape,
-} from "./schedule.ts";
-import { expectedGainByWeek, gainRangeFor, gainSoFar, gainVerdict } from "../pregnancy/weight.ts";
+  bmiApplies,
+  expectedGainByWeek,
+  gainRangeFor,
+  gainSoFar,
+  gainVerdict,
+} from "../pregnancy/weight.ts";
 
 // --- the pack -----------------------------------------------------------------
 
@@ -49,66 +48,6 @@ test("a continuous pack has no break days at all", () => {
   const p = packDays({ packStartDate: "2026-09-01", activeDays: 28, breakDays: 0 }, "2026-09-28")!;
   assert.equal(p.days.filter((d) => d.phase === "break").length, 0);
   assert.equal(p.phase, "active");
-});
-
-// --- what is next, per method -------------------------------------------------
-
-const base = { startedOn: "2026-09-01" };
-
-test("the pill announces the break, then the next pack", () => {
-  const plan: PlanShape = { ...base, method: "pill_combined", ...camel(pack21) };
-  const inActive = nextEvent(plan, "2026-09-10")!;
-  assert.equal(inActive.label, "Break week starts");
-  assert.equal(inActive.date, "2026-09-22");
-  const inBreak = nextEvent(plan, "2026-09-24")!;
-  assert.equal(inBreak.label, "Next pack starts");
-  assert.equal(inBreak.date, "2026-09-29");
-});
-
-test("a continuous pill pack announces nothing, rather than a break that never comes", () => {
-  const plan: PlanShape = {
-    ...base,
-    method: "pill_combined",
-    packStartDate: "2026-09-01",
-    activeDays: 28,
-    breakDays: 0,
-  };
-  assert.equal(nextEvent(plan, "2026-09-10"), null);
-});
-
-test("the ring alternates in and out on its own weeks", () => {
-  const plan: PlanShape = { ...base, method: "ring", insertedOn: "2026-09-01", weeksIn: 3, weeksOut: 1 };
-  const inPlace = nextEvent(plan, "2026-09-10")!;
-  assert.equal(inPlace.label, "Take the ring out");
-  assert.equal(inPlace.date, "2026-09-22", "three weeks after it went in");
-  const outOfPlace = nextEvent(plan, "2026-09-24")!;
-  assert.equal(outOfPlace.label, "Put a new ring in");
-  assert.equal(outOfPlace.date, "2026-09-29");
-});
-
-test("the injection counts from the last one by its own interval", () => {
-  const plan: PlanShape = { ...base, method: "injection", lastGivenOn: "2026-09-01", intervalWeeks: 12 };
-  const n = nextEvent(plan, "2026-09-24")!;
-  assert.equal(n.date, "2026-11-24");
-  assert.equal(n.daysUntil, 61);
-});
-
-test("a device counts down to its replace-by date", () => {
-  const plan: PlanShape = { ...base, method: "iud_hormonal", insertedOn: "2021-09-01", replaceBy: "2029-09-01" };
-  const n = nextEvent(plan, "2026-09-24")!;
-  assert.equal(n.date, "2029-09-01");
-  assert.ok(n.daysUntil > 1000);
-});
-
-test("methods with no schedule announce nothing", () => {
-  assert.equal(nextEvent({ ...base, method: "condom" }, "2026-09-24"), null);
-  assert.equal(nextEvent({ ...base, method: "none" }, "2026-09-24"), null);
-});
-
-test("a plan missing the columns its method needs yields null, not a crash", () => {
-  assert.equal(nextEvent({ ...base, method: "pill_combined" }, "2026-09-24"), null);
-  assert.equal(nextEvent({ ...base, method: "ring" }, "2026-09-24"), null);
-  assert.equal(nextEvent({ ...base, method: "injection" }, "2026-09-24"), null);
 });
 
 // --- the shape the CHECK constraint demands -----------------------------------
@@ -168,53 +107,6 @@ test("validation mirrors each branch's bounds", () => {
   );
 });
 
-// --- reconciling my_contraception_status() with the user's date ---------------
-
-const status = (over: Partial<DbStatus> = {}): DbStatus => ({
-  method: "pill_combined",
-  packDay: 11,
-  packPhase: "active",
-  pillTakenToday: false,
-  nextEventKind: "pack_restart",
-  nextEventOn: "2026-10-13",
-  daysUntil: 18,
-  ...over,
-});
-
-test("the function's own date is recovered from its answer", () => {
-  // It never returns current_date, but a date and the days until it are the
-  // same fact twice: 2026-10-13 minus 18 days.
-  assert.equal(statusDate(status()), "2026-09-25");
-});
-
-test("THE UTC SKEW IS CAUGHT, which is the whole point of the check", () => {
-  // Same next date, one more day until it: the function was standing on the
-  // 24th while the user is on the 25th. Observed at 00:42 in UTC+3.
-  const stale = status({ daysUntil: 19 });
-  assert.equal(statusDate(stale), "2026-09-24");
-  assert.equal(statusIsCurrent(stale, "2026-09-25"), false);
-  assert.equal(statusIsCurrent(status(), "2026-09-25"), true);
-});
-
-test("a status with no date to check is taken at its word", () => {
-  // A condom or 'none' plan: the function gives no next event, so there is
-  // nothing to disagree about and nothing to show either.
-  const none = status({ method: "condom", nextEventKind: null, nextEventOn: null, daysUntil: null });
-  assert.equal(statusDate(none), null);
-  assert.equal(statusIsCurrent(none, "2026-09-25"), true);
-});
-
-test("no status at all is not current", () => {
-  assert.equal(statusIsCurrent(null, "2026-09-25"), false);
-});
-
-test("a date days_until cannot explain is still recovered exactly", () => {
-  // A device's replace-by is years out; the subtraction has to survive that.
-  const device = status({ method: "iud_hormonal", nextEventKind: "device_replacement", nextEventOn: "2029-09-01", daysUntil: 1072 });
-  assert.equal(statusDate(device), "2026-09-25");
-  assert.equal(statusIsCurrent(device, "2026-09-25"), true);
-});
-
 // --- pregnancy weight gain ----------------------------------------------------
 
 test("the IOM band is picked by pre-pregnancy BMI", () => {
@@ -264,6 +156,29 @@ test("gain so far needs both weights", () => {
   assert.equal(gainSoFar(60, 66.4), 6.4);
   assert.equal(gainSoFar(null, 66), null);
   assert.equal(gainSoFar(60, null), null);
+});
+
+// --- when a BMI means anything ------------------------------------------------
+
+test("BMI DOES NOT APPLY DURING A PREGNANCY, which is the whole point", () => {
+  assert.equal(bmiApplies({ pregnancyActive: true, postpartumUntil: null }, "2026-09-25"), false);
+});
+
+test("nor through the postpartum window, up to and including its last day", () => {
+  const after = { pregnancyActive: false, postpartumUntil: "2026-12-18" };
+  assert.equal(bmiApplies(after, "2026-09-25"), false);
+  assert.equal(bmiApplies(after, "2026-12-18"), false, "the last day is still inside it");
+  assert.equal(bmiApplies(after, "2026-12-19"), true, "the day after, it reads again");
+});
+
+test("a loss leaves no postpartum window, so BMI is not withheld", () => {
+  // postpartum_until is only set for a birth — endPregnancy() nulls it
+  // otherwise — so this is the shape an ended-in-loss pregnancy leaves behind.
+  assert.equal(bmiApplies({ pregnancyActive: false, postpartumUntil: null }, "2026-09-25"), true);
+});
+
+test("no pregnancy at all is the ordinary case", () => {
+  assert.equal(bmiApplies({ pregnancyActive: false, postpartumUntil: null }, "2026-01-01"), true);
 });
 
 function camel(p: { packStartDate: string; activeDays: number; breakDays: number }) {

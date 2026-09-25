@@ -4,15 +4,16 @@ import * as G from "../../services/contraception/guidance";
 
 // The pack, day by day.
 //
-// THE PACK DAY COMES FROM my_contraception_status() WHEN IT IS ON TODAY'S
-// DATE, and from counting the pack when it is not — the caller decides which,
-// and passes null for the second case. See the note at the top of
-// pages/contraception/Contraception.tsx.
+// THE PACK DAY COMES FROM my_contraception_status(), which since
+// Database-Atraxia 20260925010000 computes it on the user's own date via
+// cycle_today(). NOTHING HERE COUNTS IT A SECOND TIME: when the function has
+// not answered, no day is marked as today rather than a different reckoning
+// being substituted for it.
 //
 // It matters here more than anywhere, because this grid shows two things at
 // once: which day is today, and which days have been logged. Logged days are
-// stored under the user's own date, so mixing clocks put the "today" ring on
-// one square and the pill on the next one along.
+// stored under the user's own date, so mixing clocks used to put the "today"
+// ring on one square and the pill on the next one along.
 //
 // A LOGGED DAY IS FILLED, AN UNLOGGED ONE IS NOT, and a missed one is marked
 // differently from a taken one. There is no "you are 3 days behind" summary:
@@ -41,7 +42,6 @@ export const PillPack: React.FC<{
   );
   if (!pack) return null;
 
-  const day = packDay ?? pack.currentDay;
   const byDate = new Map(events.map((e) => [e.occurredOn, e.event]));
 
   return (
@@ -51,7 +51,7 @@ export const PillPack: React.FC<{
           const logged = byDate.get(d.date);
           const taken = logged === "pill_taken" || logged === "pill_late";
           const missed = logged === "pill_missed";
-          const isToday = d.day === day;
+          const isToday = packDay !== null && d.day === packDay;
           return (
             <div
               key={d.day}
