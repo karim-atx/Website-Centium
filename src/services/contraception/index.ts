@@ -1,6 +1,13 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
-import { planRow, validatePlan, type EventKind, type Method, type PlanShape } from "./schedule";
+import {
+  planRow,
+  validatePlan,
+  type DbStatus,
+  type EventKind,
+  type Method,
+  type PlanShape,
+} from "./schedule";
 
 export * from "./schedule";
 
@@ -11,12 +18,13 @@ export * from "./schedule";
 // 42501 that part 1 shipped on cycle_day_logs. Every write here is an explicit
 // INSERT or an explicit UPDATE.
 //
-// TODAY'S ANSWER COMES FROM ./schedule.ts, NOT FROM THE DATABASE, and that is
-// the opposite of how services/cycle works. `my_contraception_status()`
-// computes from Postgres's `current_date` and never reads
-// cycle_settings.timezone, so away from UTC it answers about a different day
-// than the user is in. The full argument, with the two things it got visibly
-// wrong, is on getStatus below.
+// TODAY'S ANSWER COMES FROM `my_contraception_status()`, CHECKED AGAINST THE
+// USER'S OWN DATE. The function computes from Postgres's `current_date` and
+// does not read cycle_settings.timezone, so away from UTC it can be answering
+// about yesterday; schedule.ts's statusIsCurrent() catches that from the
+// function's own answer, and ./schedule.ts stands in for the hours where it
+// does. The argument, and the two things that went visibly wrong before the
+// check existed, is at the top of schedule.ts.
 
 export interface ContraceptionPlan extends PlanShape {
   id: string;
@@ -32,15 +40,7 @@ export interface ContraceptionEvent {
 }
 
 /** One row of my_contraception_status(), or nothing. */
-export interface ContraceptionStatus {
-  method: Method;
-  packDay: number | null;
-  packPhase: string | null;
-  pillTakenToday: boolean;
-  nextEventKind: string | null;
-  nextEventOn: string | null;
-  daysUntil: number | null;
-}
+export type ContraceptionStatus = DbStatus;
 
 export type Result<T> = { ok: true; value: T } | { ok: false; message: string };
 export type WriteResult = { ok: true } | { ok: false; message: string };
@@ -276,17 +276,12 @@ export async function deleteEvent(id: string): Promise<WriteResult> {
 /**
  * Where the plan stands today, according to the database.
  *
- * NO SCREEN READS THIS YET, DELIBERATELY. my_contraception_status() computes
- * from Postgres's `current_date` and does not read cycle_settings.timezone,
- * so away from UTC it answers about a different day than the one the user is
- * in — it put the pack grid's "today" ring one square off the pill that had
- * just been logged, and reported "put a new ring in tomorrow" for a ring
- * inserted the same afternoon. ./schedule.ts answers the same questions on
- * the user's own date, and is what the screens use.
- *
- * This stays because it is the answer the reminder queue acts on, and because
- * the moment the function takes a timezone the screens should go back to it —
- * one answer is better than two.
+ * READ IT WITH statusIsCurrent(). The function is the authority on the pack
+ * day, the pack phase, today's pill and what comes next — and it is right
+ * whenever its date is the user's, which is almost always. It is not right in
+ * the hours where UTC and the user's zone are on different dates, because it
+ * uses `current_date` and never reads cycle_settings.timezone. That check is
+ * one comparison, and it keeps the screen from ever showing two days at once.
  *
  * NO ROWS MEANS NO PLAN, which is the ordinary case rather than an error.
  */

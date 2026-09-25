@@ -1,6 +1,15 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { nextEvent, packDays, planRow, validatePlan, type PlanShape } from "./schedule.ts";
+import {
+  nextEvent,
+  packDays,
+  planRow,
+  statusDate,
+  statusIsCurrent,
+  validatePlan,
+  type DbStatus,
+  type PlanShape,
+} from "./schedule.ts";
 import { expectedGainByWeek, gainRangeFor, gainSoFar, gainVerdict } from "../pregnancy/weight.ts";
 
 // --- the pack -----------------------------------------------------------------
@@ -157,6 +166,53 @@ test("validation mirrors each branch's bounds", () => {
     validatePlan({ ...base, method: "implant", insertedOn: "2026-09-01", replaceBy: "2026-08-01" })!,
     /after it was fitted/
   );
+});
+
+// --- reconciling my_contraception_status() with the user's date ---------------
+
+const status = (over: Partial<DbStatus> = {}): DbStatus => ({
+  method: "pill_combined",
+  packDay: 11,
+  packPhase: "active",
+  pillTakenToday: false,
+  nextEventKind: "pack_restart",
+  nextEventOn: "2026-10-13",
+  daysUntil: 18,
+  ...over,
+});
+
+test("the function's own date is recovered from its answer", () => {
+  // It never returns current_date, but a date and the days until it are the
+  // same fact twice: 2026-10-13 minus 18 days.
+  assert.equal(statusDate(status()), "2026-09-25");
+});
+
+test("THE UTC SKEW IS CAUGHT, which is the whole point of the check", () => {
+  // Same next date, one more day until it: the function was standing on the
+  // 24th while the user is on the 25th. Observed at 00:42 in UTC+3.
+  const stale = status({ daysUntil: 19 });
+  assert.equal(statusDate(stale), "2026-09-24");
+  assert.equal(statusIsCurrent(stale, "2026-09-25"), false);
+  assert.equal(statusIsCurrent(status(), "2026-09-25"), true);
+});
+
+test("a status with no date to check is taken at its word", () => {
+  // A condom or 'none' plan: the function gives no next event, so there is
+  // nothing to disagree about and nothing to show either.
+  const none = status({ method: "condom", nextEventKind: null, nextEventOn: null, daysUntil: null });
+  assert.equal(statusDate(none), null);
+  assert.equal(statusIsCurrent(none, "2026-09-25"), true);
+});
+
+test("no status at all is not current", () => {
+  assert.equal(statusIsCurrent(null, "2026-09-25"), false);
+});
+
+test("a date days_until cannot explain is still recovered exactly", () => {
+  // A device's replace-by is years out; the subtraction has to survive that.
+  const device = status({ method: "iud_hormonal", nextEventKind: "device_replacement", nextEventOn: "2029-09-01", daysUntil: 1072 });
+  assert.equal(statusDate(device), "2026-09-25");
+  assert.equal(statusIsCurrent(device, "2026-09-25"), true);
 });
 
 // --- pregnancy weight gain ----------------------------------------------------

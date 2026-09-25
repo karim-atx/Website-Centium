@@ -82,6 +82,26 @@ export const HISTORY_EMPTY = "Nothing logged yet.";
 /** The countdown card's verb, per method. */
 export const NEXT_TITLE = "Next";
 
+/**
+ * THE LABELS FOR my_contraception_status()'s OWN KINDS, which are not the
+ * strings ./schedule.ts uses.
+ *
+ * The function answers 'pack_restart', 'ring_removal', 'ring_insertion',
+ * 'patch_change', 'injection_due' and 'device_replacement'. Notably a pill
+ * user's next event is the next PACK, where schedule.ts announces the break
+ * that comes first — both are true, they are just different questions, which
+ * is why the wording travels with whichever date is being shown rather than
+ * being shared between the two.
+ */
+export const NEXT_KIND_LABEL: Record<string, string> = {
+  pack_restart: "Next pack starts",
+  ring_removal: "Take the ring out",
+  ring_insertion: "Put a new ring in",
+  patch_change: "Change your patch",
+  injection_due: "Next injection due",
+  device_replacement: "Replace by",
+};
+
 export const NEXT_TODAY = "Today";
 export const NEXT_OVERDUE = (days: number) =>
   `${days} day${days === 1 ? "" : "s"} ago — overdue`;
@@ -105,6 +125,23 @@ export const METHOD_REMINDER_HELP =
   "Ring changes, patch days, injections and replace-by dates.";
 
 export const REMINDER_TIME_LABEL = "Reminder time";
+
+/**
+ * A REMINDER NEEDS PUSH, and saying so beats a switch that does nothing.
+ *
+ * queue_contraception_reminders() writes its row and sends an id-only push;
+ * without permission and a push_subscriptions row the queue fills and nothing
+ * arrives. None of this mentions what the reminder is for — the prompt itself
+ * is the browser's, and the lock screen is governed by DETAIL_LABEL below.
+ */
+export const PUSH_NEEDED =
+  "Reminders arrive as notifications, so this device needs permission first.";
+export const PUSH_ENABLE = "Turn on notifications";
+export const PUSH_BLOCKED =
+  "Notifications are blocked for Centium in this browser. You can allow them again " +
+  "in your browser's site settings.";
+export const PUSH_UNSUPPORTED =
+  "This browser can't receive notifications, so reminders aren't available here.";
 
 export const DETAIL_TITLE = "What the notification says";
 

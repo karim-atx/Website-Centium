@@ -3,7 +3,9 @@ import { Card } from "../ui/Card";
 import { useApp } from "../../context/AppContext";
 import { isPill, updatePlan, type ContraceptionPlan } from "../../services/contraception";
 import type { NotificationDetail } from "../../services/cycle/types";
+import { enablePush, permissionTriState, pushSupported } from "../../services/push";
 import * as G from "../../services/contraception/guidance";
+import { BellOff } from "lucide-react";
 
 // Reminders: what is sent, when, and how much it says.
 //
@@ -17,6 +19,14 @@ import * as G from "../../services/contraception/guidance";
 // it, so a time field on a ring plan would be a control that silently does
 // nothing. A ring has no daily dose to be reminded of either.
 //
+// A SWITCH WITHOUT PUSH IS A SWITCH THAT DOES NOTHING.
+// queue_contraception_reminders() writes a row and sends an id-only push; with
+// no permission and no push_subscriptions row, the queue fills and nothing
+// ever arrives. So the switches are disabled until push is on, and the prompt
+// is raised by services/push's enablePush — the same two-step flow Settings
+// uses, from a real button press, because some engines reject
+// requestPermission() outside a user gesture.
+//
 // NEUTRAL IS THE DEFAULT AND IT IS EXPLAINED RATHER THAN ASSUMED. A phone on a
 // table shows its notifications to whoever is in the room, and what somebody
 // takes is not the app's to disclose to a flatmate reading over a shoulder.
@@ -26,9 +36,15 @@ import * as G from "../../services/contraception/guidance";
 const DETAILS: readonly NotificationDetail[] = ["neutral", "detailed"];
 
 export const ReminderSettings: React.FC<{ plan: ContraceptionPlan }> = ({ plan }) => {
-  const { cycleSettings, saveCycleSettingsAndReload, reloadContraception } = useApp();
+  const { authUserId, cycleSettings, saveCycleSettingsAndReload, reloadContraception } = useApp();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [supported] = useState(pushSupported);
+  const [pushAllowed, setPushAllowed] = useState<boolean | null>(() =>
+    pushSupported() ? permissionTriState(Notification.permission) : null
+  );
+  const [pushError, setPushError] = useState<string | null>(null);
 
   // No settings row yet means nothing to switch — the tracker creates one on
   // first open, and guessing a default here would write somebody's preference
@@ -55,24 +71,69 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan }> = ({ plan }
     reloadContraception();
   };
 
+  const turnPushOn = async () => {
+    setBusy(true);
+    setPushError(null);
+    const result = await enablePush(authUserId);
+    setBusy(false);
+    if (result.status === "ok") {
+      setPushAllowed(true);
+      return;
+    }
+    if (result.status === "denied") setPushAllowed(false);
+    else setPushAllowed(permissionTriState(Notification.permission));
+    setPushError(result.message);
+  };
+
+  // GRANTED IS THE ONLY STATE THE SWITCHES OPEN ON. Undecided is not "probably
+  // fine" — it means the browser has not been asked yet.
+  const reminders = pushAllowed === true;
+
   return (
     <Card className="mb-3">
       <p className="text-[11px] font-bold text-charcoal mb-2">{G.REMINDERS_TITLE}</p>
+
+      {!reminders && (
+        <div className="flex gap-2.5 rounded-xl bg-cream-soft px-3.5 py-3 mb-2.5">
+          <BellOff size={15} className="text-charcoal-faint shrink-0 mt-0.5" />
+          <div className="min-w-0">
+            <p className="text-[11.5px] leading-relaxed text-charcoal-soft">
+              {!supported
+                ? G.PUSH_UNSUPPORTED
+                : pushAllowed === false
+                  ? G.PUSH_BLOCKED
+                  : G.PUSH_NEEDED}
+            </p>
+            {supported && pushAllowed !== false && (
+              <button
+                onClick={() => void turnPushOn()}
+                disabled={busy}
+                className="tap mt-1.5 text-[11.5px] font-bold text-primary-dark disabled:opacity-40"
+              >
+                {G.PUSH_ENABLE}
+              </button>
+            )}
+            {pushError && (
+              <p className="mt-1.5 text-[11px] font-semibold text-status-high">{pushError}</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {isPill(plan.method) && (
         <Row
           label={G.PILL_REMINDER_LABEL}
           help={G.PILL_REMINDER_HELP}
-          on={cycleSettings.pillReminder}
-          disabled={busy}
+          on={cycleSettings.pillReminder && reminders}
+          disabled={busy || !reminders}
           onToggle={() => void save({ pillReminder: !cycleSettings.pillReminder })}
         />
       )}
       <Row
         label={G.METHOD_REMINDER_LABEL}
         help={G.METHOD_REMINDER_HELP}
-        on={cycleSettings.methodReminders}
-        disabled={busy}
+        on={cycleSettings.methodReminders && reminders}
+        disabled={busy || !reminders}
         onToggle={() => void save({ methodReminders: !cycleSettings.methodReminders })}
       />
 
@@ -81,10 +142,10 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan }> = ({ plan }
           <p className="text-[12.5px] text-charcoal">{G.REMINDER_TIME_LABEL}</p>
           <input
             type="time"
-            disabled={busy}
+            disabled={busy || !reminders}
             value={(plan.reminderTime ?? "").slice(0, 5)}
             onChange={(e) => void saveTime(e.target.value)}
-            className="shrink-0 rounded-lg bg-cream-soft px-2.5 py-1.5 text-[12.5px] text-charcoal"
+            className="shrink-0 rounded-lg bg-cream-soft px-2.5 py-1.5 text-[12.5px] text-charcoal disabled:opacity-50"
           />
         </div>
       )}
@@ -112,6 +173,9 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan }> = ({ plan }
         {G.DETAIL_HELP[cycleSettings.notificationDetail]}
       </p>
 
+      {/* The zone is set and changed in the tracker's own Settings tab, which
+          is where it belongs — it governs every reminder, not just this plan's
+          — so this only says which one is in force. */}
       <p className="mt-2 text-[10px] leading-[1.45] text-charcoal-faint">
         {G.TIMEZONE_HELP} ({cycleSettings.timezone})
       </p>
@@ -128,7 +192,7 @@ const Row: React.FC<{
   disabled?: boolean;
   onToggle: () => void;
 }> = ({ label, help, on, disabled, onToggle }) => (
-  <div className="flex items-center justify-between gap-3 py-2">
+  <div className={`flex items-center justify-between gap-3 py-2 ${disabled ? "opacity-55" : ""}`}>
     <div className="min-w-0">
       <p className="text-[12.5px] text-charcoal">{label}</p>
       <p className="text-[10.5px] text-charcoal-faint leading-snug">{help}</p>
@@ -139,7 +203,7 @@ const Row: React.FC<{
       aria-label={label}
       disabled={disabled}
       onClick={onToggle}
-      className={`tap shrink-0 w-11 h-6 rounded-full transition-colors ${
+      className={`tap shrink-0 w-11 h-6 rounded-full transition-colors disabled:cursor-not-allowed ${
         on ? "bg-primary" : "bg-charcoal/20"
       }`}
     >

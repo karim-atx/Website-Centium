@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -13,6 +13,7 @@ import {
   isPill,
   logEvent,
   nextEvent,
+  statusIsCurrent,
   type EventKind,
   type Method,
 } from "../../services/contraception";
@@ -21,31 +22,28 @@ import { ChevronLeft, Info, Plus } from "lucide-react";
 
 // The contraception tracker.
 //
-// ONE CLOCK FOR THE WHOLE SCREEN, AND IT IS THE USER'S — which means this
-// screen does NOT read my_contraception_status(), and that decision is the
-// opposite of the cycle tracker's, so it needs its reason written down.
+// THE DATABASE ANSWERS, AND THE SCREEN CHECKS ITS WATCH.
+// `my_contraception_status()` gives the pack day, the pack phase, whether
+// today's pill is logged and what comes next, and all of that is shown as it
+// stands — EXCEPT in the hours where the function is not on the user's date.
+// It computes from Postgres's `current_date`, which is UTC, and does not read
+// cycle_settings.timezone the way the reminder queue does. Two things went
+// visibly wrong before this check existed, at 00:42 in UTC+3:
 //
-// The function computes everything from Postgres's `current_date`. That is
-// UTC, and it does not read cycle_settings.timezone, so for the hours where
-// the user's local date and UTC differ it answers about a different day. Two
-// things went visibly wrong when this screen took it at its word, at 00:42 in
-// UTC+3:
+//   - the pack grid put the "today" ring on day 10 and the pill just logged on
+//     day 11, because an event is stored under the user's own date;
+//   - a ring inserted that afternoon came back as "Put a new ring in — in 1
+//     day", because inserted_on was in the future by the function's reckoning
+//     and the modulo wrapped to the last day of the ring-free week.
 //
-//   - the pack grid put the "today" ring on day 10 and the pill the user had
-//     just logged on day 11, because an event is stored under the user's own
-//     date;
-//   - a ring inserted today came back as "Put a new ring in — in 1 day",
-//     because inserted_on was in the future by the function's reckoning and
-//     the modulo wrapped to the last day of the ring-free week.
+// statusIsCurrent() recovers the function's own date from next_event_on minus
+// days_until and compares it. When they match — almost always — its answers
+// are used verbatim. When they do not, ./schedule.ts answers the same
+// questions on the date the user is living in. Either way this screen shows
+// ONE day, never two.
 //
-// ./schedule.ts is pure, unit-tested against the same constraint branches, and
-// computes on the date the user is actually living in, so every number here
-// comes from it. The function remains the right thing for the reminder queue
-// to act on; it is not yet the right thing to show somebody.
-//
-// The gap is the function's to close — the timezone column exists and it does
-// not read it. Until it does, this screen writes the browser's zone into that
-// column (see below) so the queue at least has it.
+// The zone itself is set and corrected in AppContext, on every load, and is
+// editable in the tracker's own Settings.
 //
 // EVERY SENTENCE COMES FROM services/contraception/guidance, imported as `G`,
 // including the one about a missed pill — which is a pointer to the leaflet
@@ -65,10 +63,10 @@ export default function Contraception() {
     authUserId,
     contraceptionPlan,
     contraceptionPlanLoaded,
+    contraceptionStatus,
     contraceptionEvents,
     reloadContraception,
-    cycleSettings,
-    saveCycleSettingsAndReload,
+    reloadCycle,
   } = useApp();
 
   const [setupOpen, setSetupOpen] = useState(false);
@@ -79,18 +77,20 @@ export default function Contraception() {
   const today = todayISO();
   const plan = contraceptionPlan;
 
-  // THE BROWSER'S ZONE, WRITTEN ONCE, because it is the only place that knows
-  // it and the reminder queue is scheduled from it. Not a preference the user
-  // picked, so it is not a setting — it is corrected whenever it is wrong, and
-  // the guard keeps that to one write rather than one per render.
-  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-  const syncedZone = useRef(false);
-  useEffect(() => {
-    if (!cycleSettings || syncedZone.current) return;
-    if (!zone || cycleSettings.timezone === zone) return;
-    syncedZone.current = true;
-    void saveCycleSettingsAndReload({ timezone: zone });
-  }, [cycleSettings, zone, saveCycleSettingsAndReload]);
+  /**
+   * A PLAN CHANGE RELOADS THE CYCLE TOO, and this is not belt and braces.
+   * my_cycle_prediction() asks contraception_is_hormonal(), so starting a pill
+   * changes the phase to 'hormonal_contraception' and stopping it hands the
+   * natural cycle back — the overview's ring, its fertile window and its
+   * hormone illustration all move. Reloading only this screen's own state
+   * would leave the tracker showing the previous answer until something else
+   * happened to refresh it.
+   */
+  const planChanged = () => {
+    reloadContraception();
+    reloadCycle();
+  };
+
 
   const log = async (event: EventKind) => {
     if (!authUserId) return;
@@ -126,7 +126,7 @@ export default function Contraception() {
           open={setupOpen}
           onClose={() => setSetupOpen(false)}
           plan={null}
-          onSaved={reloadContraception}
+          onSaved={planChanged}
         />
       </div>
     );
@@ -143,7 +143,19 @@ export default function Contraception() {
     );
   }
 
-const next = nextEvent(plan, today);
+  // THE FUNCTION'S ANSWER, LABEL AND ALL, when it is standing on today. Its
+  // kinds are its own — a pill user's next event is the next PACK, where
+  // ./schedule.ts announces the break that comes first — so the wording has to
+  // travel with the date rather than being borrowed from the other source.
+  const dbIsCurrent = statusIsCurrent(contraceptionStatus, today);
+  const next =
+    dbIsCurrent && contraceptionStatus?.nextEventOn
+      ? {
+          label: G.NEXT_KIND_LABEL[contraceptionStatus.nextEventKind ?? ""] ?? G.NEXT_TITLE,
+          date: contraceptionStatus.nextEventOn,
+          daysUntil: contraceptionStatus.daysUntil ?? 0,
+        }
+      : nextEvent(plan, today);
 
   const pillToday = contraceptionEvents.find(
     (e) => e.occurredOn === today && PILL_CHOICES.includes(e.event)
@@ -184,7 +196,14 @@ const next = nextEvent(plan, today);
         <>
           <Card className="mb-3">
             <p className="text-[11px] font-bold text-charcoal mb-2.5">{G.PACK_TITLE}</p>
-            <PillPack plan={plan} today={today} events={contraceptionEvents} />
+            <PillPack
+              plan={plan}
+              today={today}
+              // The function's pack day when it is on today's date, and null
+              // when it is not — PillPack then counts the pack itself.
+              packDay={dbIsCurrent ? (contraceptionStatus?.packDay ?? null) : null}
+              events={contraceptionEvents}
+            />
             <p className="mt-2.5 text-[10px] text-charcoal-faint">{G.PACK_LEGEND}</p>
           </Card>
 
@@ -311,7 +330,7 @@ const next = nextEvent(plan, today);
         open={setupOpen}
         onClose={() => setSetupOpen(false)}
         plan={plan}
-        onSaved={reloadContraception}
+        onSaved={planChanged}
       />
 
       <BottomSheet open={stopOpen} onClose={() => setStopOpen(false)} title={G.STOP_TITLE}>
@@ -333,7 +352,7 @@ const next = nextEvent(plan, today);
                   setError(result.message);
                   return;
                 }
-                reloadContraception();
+                planChanged();
               }}
             >
               {G.STOP_CONFIRM}

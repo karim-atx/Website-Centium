@@ -7,11 +7,26 @@ import type { Enums } from "../../../lib/supabase/database.types";
 // a DIFFERENT SET OF COLUMNS PER METHOD and getting one wrong is a constraint
 // violation rather than a wrong answer.
 //
-// THE DATABASE IS STILL THE AUTHORITY FOR TODAY. `my_contraception_status()`
-// answers pack day, pack phase, whether a pill was taken and what is next;
-// this module exists for what that function does not do — drawing the pack
-// grid, and validating a plan before it is written. Where both could answer,
-// the screen reads the function.
+// THE DATABASE ANSWERS FIRST, AND THIS MODULE CHECKS ITS WATCH.
+// `my_contraception_status()` gives the pack day, the pack phase, whether a
+// pill was logged today and what is next — and the screen shows exactly that,
+// except when the function's idea of "today" is not the user's. It computes
+// from Postgres's `current_date`, which is UTC, and does not read
+// cycle_settings.timezone (the reminder queue does, via timezone(tz, now())).
+// So for the hours where the two dates differ it answers about a different
+// day, and that is not a rounding error:
+//
+//   - the pack grid put the "today" ring on day 10 while the pill just logged
+//     sat on day 11, because an event is stored under the user's own date;
+//   - a ring inserted that afternoon came back as "Put a new ring in — in 1
+//     day", because inserted_on was in the future by the function's reckoning
+//     and the modulo wrapped to the last day of the ring-free week.
+//
+// statusDate() below recovers the date the function used, from its own
+// next_event_on and days_until. When it matches the user's, the function's
+// answers are used verbatim. When it does not, nextEvent() and packDays()
+// answer the same questions on the date the user is living in. Either way the
+// screen shows one day, not two.
 
 export type Method = Enums<"contraception_method">;
 export type EventKind = Enums<"contraception_event">;
@@ -89,6 +104,47 @@ export function packDays(
   }));
 
   return { days, currentDay: index + 1, phase: days[index].phase };
+}
+
+// ---------------------------------------------------------------------------
+// Reconciling my_contraception_status() with the user's own date
+// ---------------------------------------------------------------------------
+
+/** One row of my_contraception_status(), in this app's shape. */
+export interface DbStatus {
+  method: Method;
+  packDay: number | null;
+  packPhase: string | null;
+  pillTakenToday: boolean;
+  nextEventKind: string | null;
+  nextEventOn: string | null;
+  daysUntil: number | null;
+}
+
+/**
+ * The date the function computed from, recovered from its own answer.
+ *
+ * It never returns `current_date` directly, but it returns both a date and the
+ * days until it, and one minus the other is the day it was standing on. Null
+ * when it gave neither — a method with no schedule, where there is nothing to
+ * reconcile because there is nothing to show.
+ */
+export function statusDate(status: Pick<DbStatus, "nextEventOn" | "daysUntil">): string | null {
+  if (!status.nextEventOn || status.daysUntil == null) return null;
+  return shiftDay(status.nextEventOn, -status.daysUntil);
+}
+
+/**
+ * Whether the function's answers can be shown as they are.
+ *
+ * NULL COUNTS AS AGREEING. A plan with no schedule gives no date to check, and
+ * refusing the function's answer there would mean refusing an answer it never
+ * gave. Everything that has a date is checked against the user's.
+ */
+export function statusIsCurrent(status: DbStatus | null, today: string): boolean {
+  if (!status) return false;
+  const on = statusDate(status);
+  return on === null || on === today;
 }
 
 // ---------------------------------------------------------------------------

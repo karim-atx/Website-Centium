@@ -4,12 +4,15 @@ import * as G from "../../services/contraception/guidance";
 
 // The pack, day by day.
 //
-// DRAWN ON THE USER'S OWN DATE, like the rest of the screen — see the note at
-// the top of pages/contraception/Contraception.tsx for why that is not
-// my_contraception_status()'s date. It matters here more than anywhere,
-// because this grid shows two things at once: which day is today, and which
-// days have been logged. Logged days are stored under the user's date, so
-// mixing clocks put the ring on one square and the pill on the next.
+// THE PACK DAY COMES FROM my_contraception_status() WHEN IT IS ON TODAY'S
+// DATE, and from counting the pack when it is not — the caller decides which,
+// and passes null for the second case. See the note at the top of
+// pages/contraception/Contraception.tsx.
+//
+// It matters here more than anywhere, because this grid shows two things at
+// once: which day is today, and which days have been logged. Logged days are
+// stored under the user's own date, so mixing clocks put the "today" ring on
+// one square and the pill on the next one along.
 //
 // A LOGGED DAY IS FILLED, AN UNLOGGED ONE IS NOT, and a missed one is marked
 // differently from a taken one. There is no "you are 3 days behind" summary:
@@ -23,8 +26,10 @@ export const PillPack: React.FC<{
   plan: ContraceptionPlan;
   /** The user's local date, the same one events are logged under. */
   today: string;
+  /** my_contraception_status().pack_day, or null when it is not on that date. */
+  packDay: number | null;
   events: ContraceptionEvent[];
-}> = ({ plan, today, events }) => {
+}> = ({ plan, today, packDay, events }) => {
   if (!plan.packStartDate || plan.activeDays == null || plan.breakDays == null) return null;
   const pack = packDays(
     {
@@ -36,7 +41,7 @@ export const PillPack: React.FC<{
   );
   if (!pack) return null;
 
-  const day = pack.currentDay;
+  const day = packDay ?? pack.currentDay;
   const byDate = new Map(events.map((e) => [e.occurredOn, e.event]));
 
   return (
