@@ -12,7 +12,16 @@ export interface TestRecommendation {
   reason: string;
 }
 
-export function getTestRecommendations(user: UserProfile): TestRecommendation[] {
+/**
+ * @param bmiMeaningful false during a pregnancy and the postpartum window,
+ *   where a BMI is arithmetic about the wrong body. The caller decides, from
+ *   services/pregnancy's bmiApplies(); the default keeps every other caller
+ *   unchanged.
+ */
+export function getTestRecommendations(
+  user: UserProfile,
+  bmiMeaningful = true
+): TestRecommendation[] {
   const recs: TestRecommendation[] = [];
   const age = user.age ?? 0;
   const isFemale = user.sex === "female";
@@ -21,8 +30,14 @@ export function getTestRecommendations(user: UserProfile): TestRecommendation[] 
   // account with a height and no weigh-in still got a BMI — and with both
   // defaulting to a stand-in body, every account got 33.6 and a sentence
   // about the obese range.
+  //
+  // AND NO BMI AT ALL IN PREGNANCY. The one recommendation below that reads it
+  // prints the number and the words "in the obese range" — which on a
+  // pregnancy weight is both wrong and the last thing worth saying to somebody
+  // at 30 weeks. Nulling it here drops that recommendation and leaves the
+  // age-based ones alone.
   const bmi =
-    user.heightCm && user.weightKg
+    bmiMeaningful && user.heightCm && user.weightKg
       ? user.weightKg / ((user.heightCm / 100) * (user.heightCm / 100))
       : null;
 

@@ -207,6 +207,36 @@ export const WEIGHT_GAIN_RANGES: readonly WeightGainRange[] = [
  */
 export const FIRST_TRIMESTER_GAIN_KG = { min: 0.5, max: 2 };
 
+/**
+ * WHY BMI DISAPPEARS, said in one sentence wherever it used to be.
+ *
+ * BMI is weight over height squared, and in pregnancy the weight includes a
+ * baby, a placenta, amniotic fluid and around 50% more blood. The number goes
+ * up because the pregnancy is working, and the WHO bands it is read against
+ * were never drawn for a pregnant body — so "overweight" or "obese" on a
+ * pregnancy weight is not a finding, it is a category error, and a distressing
+ * one to be shown by an app.
+ *
+ * The right answer for this body IS on screen: the IOM gain range, which is
+ * picked by the PRE-pregnancy BMI and says how much gain is expected by this
+ * week. So this points there rather than just hiding something.
+ */
+/**
+ * What a professional sees, and the whole of it.
+ *
+ * ORDINAL, BECAUSE IT READS AS A STAGE RATHER THAN A COUNT. "trimester 2" is
+ * an index; "2nd trimester" is how it is said out loud and in a note. There is
+ * no week number here on purpose — the grant covers a stage, not a due date.
+ */
+export const TRIMESTER_ORDINAL: Record<1 | 2 | 3, string> = {
+  1: "1st trimester",
+  2: "2nd trimester",
+  3: "3rd trimester",
+};
+
+export const BMI_NOT_USED =
+  "BMI isn't used during pregnancy. See your weight-gain range in Pregnancy.";
+
 export const WEIGHT_GAIN_SINGLETON_NOTE =
   "Ranges are for a single pregnancy. Ask your provider if you're expecting more than one.";
 

@@ -16,6 +16,8 @@ import { PHASE_COLOR, PHASE_LABEL } from "../../services/cycle/guidance";
 import { PregnancyHealthCard } from "../../components/pregnancy/PregnancyGuidance";
 import { PREGNANCY_COLOR } from "../../components/pregnancy/PregnancyRing";
 import { gestationOn } from "../../services/pregnancy";
+import { bmiApplies } from "../../services/pregnancy/weight";
+import { BMI_NOT_USED } from "../../services/pregnancy/guidance";
 import { BloodPressureDetailSheet } from "../../components/health/BloodPressureDetailSheet";
 import type { BloodPressureReading } from "../../services/blood-pressure";
 import { averageReading, classifyBloodPressure, isSevere } from "../../services/blood-pressure/classify";
@@ -86,6 +88,7 @@ export default function Health() {
     cycleSettings,
     cyclePrediction,
     pregnancy,
+    lastEndedPregnancy,
     today,
     bloodMarkers,
     stepsGoal,
@@ -93,7 +96,6 @@ export default function Health() {
     recoverySensitive,
     imagingRecords,
   } = useApp();
-  const testRecommendations = useMemo(() => getTestRecommendations(user), [user]);
   const platformLabel = detectPlatform() === "ios" ? "Apple Health" : "Android Health";
   const [waterOpen, setWaterOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
@@ -145,9 +147,25 @@ export default function Health() {
   // editable in Profile, so this is a substitution rather than new plumbing.
   // Missing either height or a weight reading yields null, and the footer
   // says what to add rather than computing around the gap.
+  //
+  // AND NOT AT ALL DURING A PREGNANCY OR THE POSTPARTUM WINDOW. BMI is weight
+  // over height squared; a pregnancy adds a baby, a placenta, fluid and half
+  // as much blood again, and the WHO bands were never drawn for that body. The
+  // number rises BECAUSE the pregnancy is going well, so printing it — and
+  // calling it "overweight" — states something false to somebody who has no
+  // reason to doubt it. bmiApplies() holds the rule and is unit-tested; the
+  // figure that does apply to this body is the gain range in the Pregnancy
+  // card, which BMI_NOT_USED points at.
+  const showBmi = bmiApplies(
+    {
+      pregnancyActive: pregnancy !== null,
+      postpartumUntil: lastEndedPregnancy?.postpartumUntil ?? null,
+    },
+    today
+  );
   const heightM = user.heightCm && user.heightCm > 0 ? user.heightCm / 100 : null;
   const bmiValue =
-    heightM !== null && metricValues.weight !== null
+    showBmi && heightM !== null && metricValues.weight !== null
       ? metricValues.weight / (heightM * heightM)
       : null;
   const bmi = bmiValue === null ? null : bmiValue.toFixed(1);
@@ -167,6 +185,15 @@ export default function Health() {
   // 1.85/0.65/0.5/1 = under/normal/over/obese, a linear 0–40 scale) with a
   // downward triangle marker pinned at the reading's position."
   const bmiBandPct = bmiValue === null ? 0 : Math.max(0, Math.min(100, (bmiValue / 40) * 100));
+
+  // AFTER showBmi, because it takes it: the one BMI-derived recommendation
+  // names the number and the words "in the obese range", which on a pregnancy
+  // weight is both wrong and the last thing worth saying to somebody at 30
+  // weeks.
+  const testRecommendations = useMemo(
+    () => getTestRecommendations(user, showBmi),
+    [user, showBmi]
+  );
 
   // Iteration 6 "Team" §5 Health: the weight-trend hero's sparkline, real
   // 7-day history scaled into the dc.html's own 130×44 viewBox.
@@ -274,10 +301,12 @@ export default function Health() {
                 </span>
               </>
             ) : (
-              // No band and no category, because both would be drawn from a
-              // height this app does not know.
+              // TWO DIFFERENT SILENCES. Without a height there is nothing to
+              // compute and the fix is in Profile; during a pregnancy there is
+              // something to compute and it would be wrong, so it says why and
+              // points at the figure that is right.
               <span className="flex-1 text-[11px] font-semibold text-white/[0.78]">
-                Add your height in Profile to see your BMI
+                {!showBmi ? BMI_NOT_USED : "Add your height in Profile to see your BMI"}
               </span>
             )}
           </div>

@@ -89,6 +89,35 @@ export function gainVerdict(
   return "within";
 }
 
+/**
+ * Whether a BMI reading means anything for this body today.
+ *
+ * FALSE WHILE PREGNANT AND THROUGH THE POSTPARTUM WINDOW. BMI reads weight
+ * over height squared; a pregnancy adds a baby, a placenta, fluid and roughly
+ * half as much blood again, and the WHO bands were never drawn for that. The
+ * number rises because the pregnancy is going well, so showing it — and
+ * especially its category — states something false about the person reading
+ * it. The gain range in the Pregnancy card is the figure that does apply, and
+ * it is picked by the PRE-pregnancy BMI.
+ *
+ * POSTPARTUM IS INCLUDED, and the end of it is a date the app already stores:
+ * pregnancies.postpartum_until, set to twelve weeks after a birth. A body six
+ * weeks after giving birth is not yet one the bands describe either, and the
+ * column exists precisely so this does not have to be guessed at.
+ *
+ * STRUCTURAL ARGUMENTS, NOT A Pregnancy, so this module stays free of the one
+ * that opens a Supabase client — the same reason weeks.ts and this file are
+ * separate from ./index.ts.
+ */
+export function bmiApplies(
+  state: { pregnancyActive: boolean; postpartumUntil: string | null },
+  today: string
+): boolean {
+  if (state.pregnancyActive) return false;
+  if (state.postpartumUntil !== null && state.postpartumUntil >= today) return false;
+  return true;
+}
+
 /** Gain so far, or null without a pre-pregnancy weight and a current one. */
 export function gainSoFar(
   prePregnancyKg: number | null,
