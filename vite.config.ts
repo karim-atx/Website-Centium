@@ -65,6 +65,8 @@ export default defineConfig({
         // and a notification click may land on either.
         scope: '/',
         display: 'standalone',
+        // Handover 2026-09-29, 01 GLOBAL (j): phones are portrait only.
+        orientation: 'portrait',
         // Both values are the ones index.html already declares as
         // <meta name="theme-color">, which are themselves --c-primary
         // (174 161 220) and light-mode --c-cream (255 255 255) from

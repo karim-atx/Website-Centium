@@ -304,7 +304,7 @@ export default function Onboarding() {
   };
 
   return (
-    <div className="min-h-screen bg-cream flex flex-col">
+    <div className="min-h-[100dvh] bg-cream flex flex-col">
       {/* Design refinement (canvas turn 2 note): "Onboarding's step bar
           tightens to 3px with the completed span in one continuous
           lavender run." */}

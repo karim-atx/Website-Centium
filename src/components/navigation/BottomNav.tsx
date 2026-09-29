@@ -137,7 +137,10 @@ export const BottomNav: React.FC = () => {
   return (
     <nav
       className={clsx(
-        "lg:hidden fixed z-40 left-[22px] right-[22px] h-[58px] rounded-full",
+        // Handover 2026-09-29, 01 GLOBAL: the client app keeps this nav at
+        // every width (there is no client sidebar any more), inside the
+        // centred 430px column — 22px in from its edges, not the window's.
+        "fixed z-40 left-[calc(var(--app-gutter)+22px)] right-[calc(var(--app-gutter)+22px)] h-[58px] rounded-full",
         // 18px above the viewport edge, plus the home-indicator/gesture-bar
         // inset on notched devices — the design canvas has no device chrome
         // to account for this, but the bar this replaces did.

@@ -76,7 +76,7 @@ const Toast: React.FC<{ text: string; onDismiss: () => void; label: string }> = 
   <button
     onClick={onDismiss}
     aria-label={label}
-    className="tap fixed bottom-24 left-1/2 -translate-x-1/2 z-[60] max-w-[92vw] rounded-2xl bg-charcoal text-cream text-xs font-semibold px-4 py-3 shadow-lift text-left"
+    className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+96px)] left-1/2 -translate-x-1/2 z-[60] max-w-[min(92vw,398px)] rounded-2xl bg-charcoal text-cream text-xs font-semibold px-4 py-3 shadow-lift text-left"
   >
     {text}
   </button>

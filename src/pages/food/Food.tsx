@@ -529,7 +529,9 @@ export default function Food() {
         <button
           onClick={() => openAdd(mealForCurrentTime())}
           aria-label="Add Food"
-          className="tap fixed bottom-[104px] right-5 z-30 w-14 h-14 rounded-full bg-primary text-white shadow-fab flex items-center justify-center"
+          // 104px over the nav plus the home-indicator inset, and 20px in from
+          // the right edge of the centred 430px app column (01 GLOBAL).
+          className="tap fixed bottom-[calc(env(safe-area-inset-bottom)+104px)] right-[calc(var(--app-gutter)+20px)] z-30 w-14 h-14 rounded-full bg-primary text-white shadow-fab flex items-center justify-center"
         >
           <Plus size={22} />
         </button>

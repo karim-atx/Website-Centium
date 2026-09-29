@@ -100,7 +100,7 @@ export const FileViewerSheet: React.FC<{
             // connection, and a bad path yields a 400 the <img> swallows into
             // a broken-image icon. Say so instead.
             onError={() => setError("That file couldn't be loaded.")}
-            className="w-full max-h-[60vh] object-contain rounded-2xl border border-charcoal/10 bg-cream-soft"
+            className="w-full max-h-[60dvh] object-contain rounded-2xl border border-charcoal/10 bg-cream-soft"
           />
         )}
 
@@ -108,7 +108,7 @@ export const FileViewerSheet: React.FC<{
           <iframe
             title={label}
             src={url}
-            className="w-full h-[60vh] rounded-2xl border border-charcoal/10 bg-cream-soft"
+            className="w-full h-[60dvh] rounded-2xl border border-charcoal/10 bg-cream-soft"
           />
         )}
 

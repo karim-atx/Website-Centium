@@ -13,6 +13,19 @@
    gold/sky/berry stay as their original hues, used only for a few small
    semantic accents (ratings, water, journal) that don't read as "the app's
    colors". */
+/* Handover 2026-09-29, 01 GLOBAL: the client app is a phone-width column,
+   at most 430px wide and centred on wider screens. Fixed-position UI that
+   belongs to that column (FABs, the active-workout bar, toasts) positions
+   itself with --app-gutter, the empty space either side of it, so it stays
+   inside the column on a desktop browser. --kb-inset is the height the
+   on-screen keyboard currently covers (set from visualViewport in Layout),
+   so pinned buttons ride above it. */
+:root {
+  --app-col: min(100vw, 430px);
+  --app-gutter: calc((100vw - var(--app-col)) / 2);
+  --kb-inset: 0px;
+}
+
 :root {
   --c-cream: 255 255 255;
   --c-cream-soft: 245 245 246;

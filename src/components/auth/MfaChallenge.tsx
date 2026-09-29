@@ -80,7 +80,7 @@ export const MfaChallenge: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-cream px-6">
+    <div className="min-h-[100dvh] flex items-center justify-center bg-cream px-6">
       <div className="w-full max-w-sm text-center space-y-4">
         <div className="w-12 h-12 rounded-2xl bg-primary-pale flex items-center justify-center mx-auto">
           <ShieldCheck size={22} className="text-primary-dark" />

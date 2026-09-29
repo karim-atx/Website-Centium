@@ -142,7 +142,7 @@ export default function ResetPassword() {
 
   if (!authReady) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-cream">
+      <div className="min-h-[100dvh] flex items-center justify-center bg-cream">
         <p className="text-sm text-charcoal-faint">Loading…</p>
       </div>
     );
@@ -154,7 +154,7 @@ export default function ResetPassword() {
   // browser — cannot complete. Saying so beats a blank screen.
   if (!authUserId) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-cream px-6 text-center">
+      <div className="min-h-[100dvh] flex flex-col items-center justify-center bg-cream px-6 text-center">
         <h1 className="font-display text-2xl font-bold text-charcoal mb-2">This link didn't open</h1>
         <p className="text-sm text-charcoal-soft max-w-sm mb-6">
           Password reset links only work in the same browser you requested them from. Open
@@ -168,7 +168,7 @@ export default function ResetPassword() {
   }
 
   return (
-    <div className="min-h-screen bg-cream px-6 py-12 flex flex-col justify-center">
+    <div className="min-h-[100dvh] bg-cream px-6 py-12 flex flex-col justify-center">
       <div className="w-full max-w-md mx-auto">
         <h1 className="font-display text-2xl font-bold text-charcoal mb-2">
           {needsMfa ? "Confirm it's you" : "Set a new password"}

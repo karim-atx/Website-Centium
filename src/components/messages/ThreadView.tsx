@@ -571,7 +571,7 @@ export const ThreadView: React.FC<{
   };
 
   return (
-    <div className="flex flex-col min-h-[60vh]">
+    <div className="flex flex-col min-h-[60dvh]">
       <div className="flex items-center gap-2.5 mb-4">
         <button
           onClick={onBack}

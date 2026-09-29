@@ -31,7 +31,7 @@ export const Sidebar: React.FC = () => {
       : sidebarNavItems;
 
   return (
-    <aside className="hidden lg:flex flex-col w-64 shrink-0 h-screen sticky top-0 border-r border-charcoal/[0.06] bg-cream-card/60 px-4 py-6">
+    <aside className="hidden lg:flex flex-col w-64 shrink-0 h-[100dvh] sticky top-0 border-r border-charcoal/[0.06] bg-cream-card/60 px-4 py-6">
       {/* Design refinement §3c "Placements": the redrawn-SVG mark is
           replaced with the real brand asset wherever it appears. */}
       <div className="flex items-center gap-2.5 px-2 mb-8">

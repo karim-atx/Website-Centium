@@ -65,7 +65,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         onClick={onClose}
       />
       {hideHeader ? (
-        <div className="relative w-full sm:max-w-md bg-cream rounded-t-4xl sm:rounded-4xl shadow-lift max-h-[88vh] overflow-y-auto animate-sheet-up sm:animate-pop">
+        <div className="relative w-full sm:max-w-md bg-cream rounded-t-4xl sm:rounded-4xl shadow-lift max-h-[88dvh] overflow-y-auto animate-sheet-up sm:animate-pop">
           <div className="p-5">{children}</div>
         </div>
       ) : (
@@ -75,7 +75,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         // white panel is flush (no side inset) with a 22px top radius, so
         // the shell colour reads through at its rounded top corners.
         <div
-          className="relative w-full sm:max-w-md rounded-t-4xl sm:rounded-4xl shadow-lift max-h-[88vh] overflow-y-auto animate-sheet-up sm:animate-pop"
+          className="relative w-full sm:max-w-md rounded-t-4xl sm:rounded-4xl shadow-lift max-h-[88dvh] overflow-y-auto animate-sheet-up sm:animate-pop"
           style={{ background: "#F0EEFD", border: "1px solid #7248F8", borderBottom: "none" }}
         >
           <div
