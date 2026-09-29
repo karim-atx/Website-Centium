@@ -4419,7 +4419,7 @@ export type Database = {
         Insert: {
           body: string
           created_at?: string
-          entry_date?: string
+          entry_date: string
           folder_id: string
           id?: string
           title: string
@@ -4451,6 +4451,7 @@ export type Database = {
           name: string
           owner_id: string
           position: number
+          updated_at: string
         }
         Insert: {
           created_at?: string
@@ -4458,6 +4459,7 @@ export type Database = {
           name: string
           owner_id: string
           position: number
+          updated_at?: string
         }
         Update: {
           created_at?: string
@@ -4465,6 +4467,7 @@ export type Database = {
           name?: string
           owner_id?: string
           position?: number
+          updated_at?: string
         }
         Relationships: [
           {
