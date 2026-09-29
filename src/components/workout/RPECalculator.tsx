@@ -15,7 +15,7 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
   }, [oneRm, reps, rpe]);
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="RPE Calculator" variant="session">
+    <BottomSheet open={open} onClose={onClose} title="RPE Calculator">
       <div className="space-y-5 animate-fade-slide-up">
         <label className="block">
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Known 1RM (kg)</span>

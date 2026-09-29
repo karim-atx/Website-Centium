@@ -13,6 +13,7 @@ import { ExerciseLibrarySheet, type ExercisePick } from "../../components/workou
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { BrowseProgramsSheet } from "../../components/workout/BrowseProgramsSheet";
 import type { Exercise, Routine, RoutineFolder, WorkoutBlock } from "../../types";
+import { folderFamily, routineFamily, type FolderFamily } from "../../data/folderColors";
 import { BlockSettingsSheet } from "../../components/workout/BlockSettingsSheet";
 import {
   canGroup,
@@ -70,44 +71,8 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
 const folderColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
 
 
-// Colour-coded folders (master handover, CentiumTabFrame "Color-coded
-// folders"): each folder is a solid bar with a darker icon tile, and its
-// routines sit beneath it as rows in a lighter shade of the same hue, with a
-// matching accent bar and play button. A family is those five shades.
-interface FolderFamily {
-  head: string;
-  tile: string;
-  row: string;
-  bar: string;
-  play: string;
-}
-
-// The two families the handover specifies, literally.
-const PURPLE: FolderFamily = { head: "#A797E3", tile: "#6E56C5", row: "#F0EEFE", bar: "#7C66CF", play: "#836BD6" };
-const TEAL: FolderFamily = { head: "#8ABFB5", tile: "#4B786F", row: "#EBF4F3", bar: "#61958C", play: "#63968B" };
-
-// A folder can still be given any of the six picker colours. The handover
-// only has shades for lavender and teal; the other four are DERIVED, not
-// from the handover: each keeps its picker colour's hue, and takes the
-// saturation step and lightness the two specified families use for each
-// role on average (saturation capped at the handover's own ~58%).
-const FOLDER_FAMILIES: Record<string, FolderFamily> = {
-  "#7D6BB5": PURPLE,
-  "#6F9993": TEAL,
-  "#4C8FD1": { head: "#84B1DE", tile: "#3277BB", row: "#EBF2FA", bar: "#488BCE", play: "#4E8FD0" },
-  "#9C4F7C": { head: "#DE85B9", tile: "#AE3F80", row: "#FAEBF4", bar: "#C15594", play: "#C45998" },
-  "#D9A441": { head: "#DEBF84", tile: "#BB8B32", row: "#FAF5EB", bar: "#CE9F48", play: "#D0A24E" },
-  "#241F1B": { head: "#C4AF9E", tile: "#8E745F", row: "#F7F2ED", bar: "#A28974", play: "#A68D78" },
-};
-
-// A folder nobody has coloured (the seeded Strength and Hypertrophy among
-// them) alternates the two handover families in folder order: Strength
-// purple, Hypertrophy teal. Unfiled routines take purple.
-const folderFamily = (folder: RoutineFolder | undefined, order: number): FolderFamily => {
-  if (folder?.color && FOLDER_FAMILIES[folder.color]) return FOLDER_FAMILIES[folder.color];
-  if (!folder) return PURPLE;
-  return order % 2 === 0 ? PURPLE : TEAL;
-};
+// Folder colour families live in data/folderColors (handover 2026-09-29 02),
+// shared with the logger, History and the active-workout bar.
 
 export default function RoutinesTab() {
   const {
@@ -619,7 +584,7 @@ export default function RoutinesTab() {
                     run(updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] }))
                   }
                   onArrange={(exercises, blocks) => run(updateRoutine(r.id, { exercises, blocks }))}
-                  family={PURPLE}
+                  family={routineFamily(r, routineFolders)}
                 />
               ))}
             </div>

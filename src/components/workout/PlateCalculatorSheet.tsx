@@ -70,7 +70,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
   const collarHeight = plateCollar === 5 ? 34 : plateCollar === 2.5 ? 26 : 0;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Plate Calculator" variant="session">
+    <BottomSheet open={open} onClose={onClose} title="Plate Calculator">
       <div className="space-y-5 animate-fade-slide-up">
         <div className="flex items-center gap-2 w-fit" style={{ background: "#F5F5F6", borderRadius: 10, padding: 4 }}>
           {(["kg", "lb"] as const).map((u) => (

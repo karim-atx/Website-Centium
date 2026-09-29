@@ -26,18 +26,40 @@ function toIso(d: Date) {
 // panel beneath holding a #F6F4FE month bar, #5B3FE4 weekday letters and
 // chevrons, and the selected day filled #AB9ED7. There is no close button;
 // tapping the backdrop closes it.
+//
+// Handover 2026-09-29, 02 "CalendarPickerSheet": the shared picker gains
+// optional, off-by-default extras so Home and Food are unaffected —
+//   title      replaces "Choose a date" ("Change workout date", "Measured on")
+//   markers    a 4px #AB9ED7 dot under each listed day (white on the selected day)
+//   maxDate    later days greyed #CFCBD6 and unselectable; next-month arrow
+//              disabled past it
+//   confirm    tapping a day only selects it; a filled lavender "Done" footer
+//              applies it (children render between the grid and Done — e.g. the
+//              WO4.1 wheel time picker)
 export const CalendarPickerSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   selectedDate: string;
   today: string;
   onSelect: (date: string) => void;
-}> = ({ open, onClose, selectedDate, onSelect }) => {
+  title?: string;
+  markers?: ReadonlySet<string> | readonly string[];
+  maxDate?: string;
+  confirm?: boolean;
+  confirmLabel?: string;
+  children?: React.ReactNode;
+}> = ({ open, onClose, selectedDate, onSelect, title = "Choose a date", markers, maxDate, confirm, confirmLabel = "Done", children }) => {
   const [cursor, setCursor] = useState(() => new Date(`${selectedDate}T00:00:00`));
+  const [pending, setPending] = useState(selectedDate);
 
   useEffect(() => {
-    if (open) setCursor(new Date(`${selectedDate}T00:00:00`));
+    if (open) {
+      setCursor(new Date(`${selectedDate}T00:00:00`));
+      setPending(selectedDate);
+    }
   }, [open, selectedDate]);
+
+  const markerSet = markers ? new Set(markers) : null;
 
   if (!open) return null;
 
@@ -53,18 +75,21 @@ export const CalendarPickerSheet: React.FC<{
   ];
 
   const monthLabel = cursor.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+  const shown = confirm ? pending : selectedDate;
+  // The next month is out of reach once its first day is past maxDate.
+  const nextMonthBlocked = !!maxDate && toIso(new Date(year, month + 1, 1)) > maxDate;
 
   return createPortal(
-    <div className="fixed inset-0 z-50">
+    <div className="fixed inset-0 z-[70]">
       <div className="absolute inset-0 bg-charcoal/40 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
-      <div className="absolute inset-x-0 top-0 flex justify-center px-4 pt-20 sm:pt-24">
+      <div className="absolute inset-x-0 top-0 flex justify-center px-4 pt-[calc(env(safe-area-inset-top)+80px)]">
         <div
-          className="relative w-full sm:max-w-sm shadow-lift overflow-hidden animate-drop-down"
+          className="relative w-full max-w-[398px] shadow-lift overflow-hidden animate-drop-down"
           style={{ background: "#EDEAFE", borderRadius: 28, border: "1px solid #7155CA" }}
         >
           <div className="flex items-center justify-center" style={{ height: 37 }}>
             <p style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em", color: "#7155CA" }}>
-              Choose a date
+              {title}
             </p>
           </div>
 
@@ -84,7 +109,8 @@ export const CalendarPickerSheet: React.FC<{
               <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#241F1B" }}>{monthLabel}</p>
               <button
                 onClick={() => setCursor(new Date(year, month + 1, 1))}
-                className="tap flex items-center justify-center"
+                disabled={nextMonthBlocked}
+                className="tap flex items-center justify-center disabled:opacity-30"
                 style={{ width: 26, height: 26, color: "#5B3FE4" }}
                 aria-label="Next month"
               >
@@ -107,28 +133,55 @@ export const CalendarPickerSheet: React.FC<{
               {cells.map((d, i) => {
                 if (!d) return <div key={i} />;
                 const iso = toIso(d);
-                const isSelected = iso === selectedDate;
+                const isSelected = iso === shown;
+                const isFuture = !!maxDate && iso > maxDate;
+                const marked = !!markerSet?.has(iso);
                 return (
                   <button
                     key={i}
+                    disabled={isFuture}
                     onClick={() => {
+                      if (confirm) {
+                        setPending(iso);
+                        return;
+                      }
                       onSelect(iso);
                       onClose();
                     }}
-                    className="tap aspect-square flex items-center justify-center"
+                    className="tap relative aspect-square flex items-center justify-center"
                     style={{
                       borderRadius: 12,
                       fontSize: 15,
                       fontWeight: isSelected ? 600 : 500,
                       background: isSelected ? "#AB9ED7" : "transparent",
-                      color: isSelected ? "#FFFFFF" : "#000000",
+                      color: isSelected ? "#FFFFFF" : isFuture ? "#CFCBD6" : "#000000",
                     }}
                   >
                     {d.getDate()}
+                    {marked && (
+                      <span
+                        aria-hidden
+                        className="absolute left-1/2 -translate-x-1/2 rounded-full"
+                        style={{ bottom: 5, width: 4, height: 4, background: isSelected ? "#FFFFFF" : "#AB9ED7" }}
+                      />
+                    )}
                   </button>
                 );
               })}
             </div>
+            {children}
+            {confirm && (
+              <button
+                onClick={() => {
+                  onSelect(pending);
+                  onClose();
+                }}
+                className="tap w-full flex items-center justify-center"
+                style={{ marginTop: 14, height: 44, borderRadius: 14, background: "#AEA1DC", color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+              >
+                {confirmLabel}
+              </button>
+            )}
           </div>
         </div>
       </div>

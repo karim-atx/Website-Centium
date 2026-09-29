@@ -23,6 +23,27 @@ export function volumeForSession(exercises: LoggedExercise[]): number {
   return exercises.reduce((sum, ex) => sum + volumeForSets(ex.sets), 0);
 }
 
+/**
+ * Handover 2026-09-29, 02 "Compact duration format" — the one formatter for
+ * every workout duration shown as a total (Time taken, session durations):
+ * the two largest units with short labels, rounded down, a zero second unit
+ * dropped. <1h → "52m"; <1d → "4h 50m"; <30d → "7d 4h"; <365d → "1mo 7d";
+ * ≥365d → "1y 2mo" (month = 30 days, year = 365). The live logger timer
+ * keeps formatDuration's clock format.
+ */
+export function formatCompactDuration(totalSeconds: number): string {
+  const minutes = Math.max(0, Math.floor(totalSeconds / 60));
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  const pair = (big: number, bigUnit: string, small: number, smallUnit: string) =>
+    small > 0 ? `${big}${bigUnit} ${small}${smallUnit}` : `${big}${bigUnit}`;
+  if (hours < 1) return `${minutes}m`;
+  if (days < 1) return pair(hours, "h", minutes % 60, "m");
+  if (days < 30) return pair(days, "d", hours % 24, "h");
+  if (days < 365) return pair(Math.floor(days / 30), "mo", days % 30, "d");
+  return pair(Math.floor(days / 365), "y", Math.floor((days % 365) / 30), "mo");
+}
+
 export function formatDuration(totalSeconds: number): string {
   const h = Math.floor(totalSeconds / 3600);
   const m = Math.floor((totalSeconds % 3600) / 60);

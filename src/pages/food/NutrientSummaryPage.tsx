@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { PopupMenu } from "../../components/ui/PopupMenu";
 import { NutrientSections, type NutrientFilter } from "../../components/food/NutrientSections";
 import { useApp } from "../../context/AppContext";
 import { sumNutrientMaps, targetsFromGoal } from "../../services/nutrition";
@@ -27,6 +27,7 @@ export default function NutrientSummaryPage() {
   const navigate = useNavigate();
   const [filter, setFilter] = useState<NutrientFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
+  const [filterButton, setFilterButton] = useState<HTMLButtonElement | null>(null);
 
   const todaysEntries = useMemo(() => foodLog.filter((e) => e.date === selectedDate), [foodLog, selectedDate]);
   // Master handover item 10: amounts are the day's sum across every logged
@@ -87,6 +88,7 @@ export default function NutrientSummaryPage() {
           </div>
         </div>
         <button
+          ref={setFilterButton}
           onClick={() => setFilterOpen(true)}
           aria-label="Filter nutrients"
           aria-haspopup="menu"
@@ -126,65 +128,16 @@ export default function NutrientSummaryPage() {
         </button>
       </div>
 
-      {filterOpen &&
-        createPortal(
-          <div className="fixed inset-0" style={{ zIndex: 50 }}>
-            <style>{`@keyframes nutrient-filter-pop-in { 0% { opacity: 0; transform: translateY(-6px) scale(0.96); } 100% { opacity: 1; transform: translateY(0) scale(1); } }`}</style>
-            <div
-              className="absolute inset-0"
-              onClick={() => setFilterOpen(false)}
-              style={{ background: "rgba(36,31,27,0.18)", animation: "fade-in .2s ease both" }}
-            />
-            <div
-              role="menu"
-              className="absolute"
-              style={{
-                top: 66,
-                right: 16,
-                width: 168,
-                boxSizing: "content-box",
-                background: "#FFFFFF",
-                border: "1px solid rgba(174,161,220,0.5)",
-                borderRadius: 14,
-                boxShadow: "0 12px 32px rgba(95,80,147,0.18)",
-                padding: 8,
-                animation: "nutrient-filter-pop-in .22s cubic-bezier(.22,1,.36,1) both",
-                transformOrigin: "top right",
-              }}
-            >
-              {filterOptions.map((opt, i) => {
-                const on = filter === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    role="menuitemradio"
-                    aria-checked={on}
-                    onClick={() => {
-                      setFilter(opt.value);
-                      setFilterOpen(false);
-                    }}
-                    className="tap w-full flex items-center text-left"
-                    style={{
-                      gap: 9,
-                      borderRadius: 8,
-                      padding: "9px 10px",
-                      marginTop: i > 0 ? 6 : 0,
-                      border: `1px solid ${on ? "#A092E0" : "#E5E6EB"}`,
-                      background: on ? "#A092E0" : "#FAFAFB",
-                      color: on ? "#FFFFFF" : "#241F1B",
-                      fontSize: 12.5,
-                      fontWeight: on ? 700 : 500,
-                    }}
-                  >
-                    <span className="flex-1 min-w-0">{opt.label}</span>
-                    {on && <Check size={13} strokeWidth={3} className="flex-none" style={{ display: "block" }} />}
-                  </button>
-                );
-              })}
-            </div>
-          </div>,
-          document.body
-        )}
+      {/* Handover 2026-09-29: the shared PopupMenu (02 "Popup / dropdown"),
+          which this filter is the reference for. */}
+      <PopupMenu
+        open={filterOpen}
+        onClose={() => setFilterOpen(false)}
+        anchor={filterButton}
+        options={filterOptions}
+        selected={filter}
+        onSelect={setFilter}
+      />
 
       {loggedOnly && (
         <div

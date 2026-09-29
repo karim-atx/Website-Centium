@@ -7,26 +7,43 @@ interface BottomSheetProps {
   onClose: () => void;
   title?: string;
   children: React.ReactNode;
-  // V6 (QA 6.0): suppresses the sticky title bar entirely, for sheets that
-  // render their own first-item name + close control as part of the
-  // scrollable content instead (e.g. ExerciseSettingsSheet).
+  // V6 (QA 6.0): suppresses the title bar entirely, for sheets that render
+  // their own first-item name + close control as part of the scrollable
+  // content instead (e.g. ExerciseSettingsSheet).
   hideHeader?: boolean;
-  // Mobile handoff item 1: the header back arrow, shown only when there is
-  // somewhere to go back to (e.g. a food is selected in Add Food, or a
-  // nutrient-details step is open). Replaces the old pattern of a "Back"
-  // button rendered at the bottom of a sheet's own content — every caller
-  // that had one should pass onBack here and drop its own button instead.
+  // The header back arrow, shown only when there is somewhere to go back to
+  // inside the sheet. A back chevron never closes the sheet.
   onBack?: () => void;
   // Extra header control rendered immediately left of the close ring (e.g.
-  // Meal Prep's 26px pencil). Spacing to the ring is CentiumMealPrep.dc.html's
-  // 6px gap.
+  // Meal Prep's 26px pencil), 6px from it.
   headerAction?: React.ReactNode;
-  // "session" = the workout session's calculator/set-options chrome
-  // (CentiumFrame ovSessionSheetLav): #EBE9FE header strip, 0 20px padding,
-  // #7155CA title and 1.5px close ring, never a back arrow.
-  variant?: "default" | "session";
+  /**
+   * Handover 2026-09-29, 02 "Bottom sheet": the primary action row, pinned
+   * to the bottom of the sheet (sticky footer) while the body scrolls. It
+   * stays above the home indicator and rides above the on-screen keyboard.
+   */
+  footer?: React.ReactNode;
+  /**
+   * "tall" raises the max height to nearly the full viewport, minus a small
+   * top inset (FO8). The default max is 88% of the dynamic viewport. Either
+   * way the sheet hugs its content up to that max.
+   */
+  size?: "default" | "tall";
 }
 
+/**
+ * The app's one bottom sheet, per handover 2026-09-29, 02 "Bottom sheet":
+ * header band #F0EEFD with a 1px #7248F8 border (none at the bottom) and
+ * 32px top radius; title centred #7248F8 20px/800; close = 26px circle with
+ * a 1.6px #7248F8 outline and an X; optional back chevron on the left. Body
+ * white, top radius 22, padding 20 (34 at the bottom). Height hugs the
+ * content up to a viewport-relative max, past which the body scrolls and the
+ * footer stays pinned. Backdrop rgba(36,31,27,0.4) + 2px blur.
+ *
+ * 01 GLOBAL: max width 430 (the app column), dvh heights, never over the
+ * status area, safe-area aware, above the keyboard (--kb-inset), and the
+ * 26px header controls sit on 44px hit areas.
+ */
 export const BottomSheet: React.FC<BottomSheetProps> = ({
   open,
   onClose,
@@ -35,7 +52,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   hideHeader,
   onBack,
   headerAction,
-  variant = "default",
+  footer,
+  size = "default",
 }) => {
   useEffect(() => {
     if (open) {
@@ -50,6 +68,15 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
 
   if (!open) return null;
 
+  // The whole sheet never reaches the status area (notch / Dynamic Island),
+  // and shrinks by whatever the keyboard currently covers.
+  const statusGap = "calc(env(safe-area-inset-top) + 12px)";
+  const maxHeight =
+    size === "tall"
+      ? `calc(100dvh - ${statusGap} - var(--kb-inset))`
+      : `min(calc(88dvh - var(--kb-inset)), calc(100dvh - ${statusGap} - var(--kb-inset)))`;
+  const bottomPad = "max(34px, calc(env(safe-area-inset-bottom) + 20px))";
+
   // Portaled to <body>: several call sites render this inside a container
   // carrying `animate-fade-slide-up` (a transform-based animation). Any
   // transform on an ancestor turns it into the containing block for
@@ -58,39 +85,41 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   // "cut in half, blur misaligned" bug. Portaling sidesteps the ancestor
   // chain entirely.
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center sm:justify-center">
+    <div className="fixed inset-0 z-50 flex items-end justify-center" style={{ paddingBottom: "var(--kb-inset)" }}>
       <div
         className="absolute inset-0 backdrop-blur-[2px] animate-fade-in"
         style={{ background: "rgba(36,31,27,0.4)" }}
         onClick={onClose}
       />
       {hideHeader ? (
-        <div className="relative w-full sm:max-w-md bg-cream rounded-t-4xl sm:rounded-4xl shadow-lift max-h-[88dvh] overflow-y-auto animate-sheet-up sm:animate-pop">
-          <div className="p-5">{children}</div>
-        </div>
-      ) : (
-        // CentiumFrame.dc.html ovSheetLav / ovSessionSheetLav: #F0EEFD shell
-        // with a 1px #7248F8 hairline on top and both sides (none at the
-        // bottom); the whole shell scrolls under a sticky 53px header; the
-        // white panel is flush (no side inset) with a 22px top radius, so
-        // the shell colour reads through at its rounded top corners.
         <div
-          className="relative w-full sm:max-w-md rounded-t-4xl sm:rounded-4xl shadow-lift max-h-[88dvh] overflow-y-auto animate-sheet-up sm:animate-pop"
-          style={{ background: "#F0EEFD", border: "1px solid #7248F8", borderBottom: "none" }}
+          className="relative w-full max-w-[430px] bg-cream rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up"
+          style={{ maxHeight }}
         >
           <div
-            className="sticky top-0 z-10 flex items-center justify-between rounded-t-4xl"
-            style={{
-              height: 53,
-              padding: variant === "session" ? "0 20px" : "0 18px",
-              background: variant === "session" ? "#EBE9FE" : "#F0EEFD",
-            }}
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+            style={{ padding: 20, paddingBottom: footer ? 20 : bottomPad }}
           >
+            {children}
+          </div>
+          {footer && (
+            <div className="shrink-0 bg-cream" style={{ padding: `12px 20px ${bottomPad}` }}>
+              {footer}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div
+          className="relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up"
+          style={{ maxHeight, background: "#F0EEFD", border: "1px solid #7248F8", borderBottom: "none" }}
+        >
+          <div className="shrink-0 flex items-center justify-between" style={{ height: 53, padding: "0 18px" }}>
             <div className="flex items-center shrink-0" style={{ width: 26 }}>
-              {onBack && variant !== "session" && (
+              {onBack && (
+                // 26px visual on a 44px hit area (01 GLOBAL touch targets).
                 <button
                   onClick={onBack}
-                  className="tap w-[26px] h-[26px] rounded-full flex items-center justify-center"
+                  className="tap relative w-[26px] h-[26px] rounded-full flex items-center justify-center before:absolute before:-inset-[9px] before:content-['']"
                   style={{ color: "#241F1B" }}
                   aria-label="Back"
                 >
@@ -101,36 +130,36 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             {title && (
               <h2
                 className="flex-1 min-w-0 text-center truncate"
-                style={{
-                  color: variant === "session" ? "#7155CA" : "#7248F8",
-                  fontSize: 20,
-                  fontWeight: 800,
-                  letterSpacing: "-0.015em",
-                }}
+                style={{ color: "#7248F8", fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em" }}
               >
                 {title}
               </h2>
             )}
-            {/* 26px slot like CentiumMealPrep's close span: headerAction
-                overflows leftward so the title stays centred. */}
+            {/* 26px slot: headerAction overflows leftward so the title stays
+                centred. */}
             <div className="flex items-center justify-end shrink-0" style={{ width: 26, gap: 6 }}>
               {headerAction && <span className="flex shrink-0">{headerAction}</span>}
               <button
                 onClick={onClose}
-                className="tap w-[26px] h-[26px] shrink-0 rounded-full flex items-center justify-center"
-                style={{
-                  border: variant === "session" ? "1.5px solid #7155CA" : "1.6px solid #7248F8",
-                  color: variant === "session" ? "#7155CA" : "#7248F8",
-                }}
+                className="tap relative w-[26px] h-[26px] shrink-0 rounded-full flex items-center justify-center before:absolute before:-inset-[9px] before:content-['']"
+                style={{ border: "1.6px solid #7248F8", color: "#7248F8" }}
                 aria-label="Close"
               >
-                <X size={12} strokeWidth={variant === "session" ? 2.4 : 2.6} />
+                <X size={12} strokeWidth={2.6} />
               </button>
             </div>
           </div>
-          <div className="bg-white" style={{ borderRadius: "22px 22px 0 0", margin: 0, padding: 20, minHeight: 220 }}>
+          <div
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-white"
+            style={{ borderRadius: "22px 22px 0 0", padding: 20, paddingBottom: footer ? 20 : bottomPad }}
+          >
             {children}
           </div>
+          {footer && (
+            <div className="shrink-0 bg-white" style={{ padding: `12px 20px ${bottomPad}` }}>
+              {footer}
+            </div>
+          )}
         </div>
       )}
     </div>,

@@ -59,7 +59,7 @@ export const SetOptionsSheet: React.FC<{
   })();
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={`Set ${set.setNumber} options`} variant="session">
+    <BottomSheet open={open} onClose={onClose} title={`Set ${set.setNumber} options`}>
       <div className="space-y-5 animate-fade-slide-up">
         <div>
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
