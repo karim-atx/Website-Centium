@@ -9,7 +9,8 @@ import { CreateCustomExerciseSheet, type CustomExerciseData } from "../../compon
 import { BuiltInExerciseSheet } from "../../components/workout/BuiltInExerciseSheet";
 import { ExerciseInfoSheet } from "../../components/workout/ExerciseInfoSheet";
 import { ExerciseHistorySheet } from "../../components/workout/ExerciseHistorySheet";
-import { BODY_ZONES } from "../../data/bodyZones";
+import type { FigureKey, ZoneKey } from "../../data/bodyZones";
+import { BodyFigure } from "../../components/workout/BodyFigure";
 
 type ViewMode = "list" | "body";
 type SortMode = "alphabetical" | "muscleGroup" | "classification";
@@ -42,17 +43,16 @@ const classificationLabel: Record<ExerciseClassification, string> = {
   duration: "Duration",
 };
 
-// Item 12 (Workout › Library › Body view): six plain-color figure PNGs (see
-// public/body/) with zone overlays positioned by the handoff's own literal
-// per-figure percentages in src/data/bodyZones.ts — no currentColor
-// masking, which would strip the artwork's line work and teal leaf mark.
+// WO5 / WO6 (Library › Body view): six figures — male, female, androgynous,
+// front and back — chosen by the Profile sex setting, live (bodyMapVariant).
+// Zones are per-figure masks traced to each figure's own art; see
+// src/data/bodyZones.ts and scripts/body-zones/.
 type FigureGender = "male" | "female" | "andro";
 type BodySide = "front" | "back";
-type FigureKey = keyof typeof BODY_ZONES;
 
-// BODY_ZONES keys are the handoff's own (plural) zone names; MuscleGroup
-// uses singular bicep/tricep. This is the only place that reconciles them.
-const ZONE_KEY_TO_GROUP: Record<keyof (typeof BODY_ZONES)[FigureKey], MuscleGroup> = {
+// Zone keys are the handoff's own (plural) muscle names; MuscleGroup uses
+// singular bicep/tricep. This is the only place that reconciles them.
+const ZONE_KEY_TO_GROUP: Record<ZoneKey, MuscleGroup> = {
   shoulders: "shoulders",
   chest: "chest",
   back: "back",
@@ -66,10 +66,9 @@ const ZONE_KEY_TO_GROUP: Record<keyof (typeof BODY_ZONES)[FigureKey], MuscleGrou
   calves: "calves",
 };
 
-// Master handover item 12: the Body view's muscle names (zone buttons'
-// aria-labels, chips, list header) — plural Biceps/Triceps, unlike the
-// catalog's singular MUSCLE_GROUP_LABEL used by the List view.
-const ZONE_LABEL: Record<keyof (typeof BODY_ZONES)[FigureKey], string> = {
+// The Body view's muscle names (chips, list header, zone buttons) — plural
+// Biceps/Triceps, unlike the catalog's singular MUSCLE_GROUP_LABEL.
+const ZONE_LABEL: Record<ZoneKey, string> = {
   shoulders: "Shoulders",
   chest: "Chest",
   back: "Back",
@@ -83,53 +82,20 @@ const ZONE_LABEL: Record<keyof (typeof BODY_ZONES)[FigureKey], string> = {
   calves: "Calves",
 };
 
-// Item 12: each figure renders in a 376px-tall box whose width is
-// imageWidth x 376 / imageHeight (public/body/*.png natural sizes), rounded
-// to a whole pixel as CentiumBodyView.dc.html's figW does.
-const FIGURE_BOX_WIDTH: Record<FigureKey, number> = {
-  "male-front": Math.round(245 * (376 / 593)),
-  "male-back": Math.round(282 * (376 / 595)),
-  "female-front": Math.round(278 * (376 / 579)),
-  "female-back": Math.round(282 * (376 / 584)),
-  "andro-front": Math.round(308 * (376 / 593)),
-  "andro-back": Math.round(298 * (376 / 593)),
-};
-
-// CentiumBodyView.dc.html: the figure's caption and img alt, built as
-// NAME[sex] + " " + ("Front" | "Back").
+// The figure's caption and img alt: NAME[sex] + " " + ("Front" | "Back").
 const FIGURE_NAME: Record<FigureGender, string> = {
   male: "Male",
   female: "Female",
   andro: "Androgynous",
 };
 
-// CentiumBodyView.dc.html's cb-fade entrance (figure panel and selected
-// list): no existing Tailwind animation matches it (fade-slide-up moves 12px
-// over 0.45s), so its keyframes are carried verbatim.
+// The cb-fade entrance of the figure panel and the selected list.
 const CB_FADE_KEYFRAMES =
   "@keyframes cb-fade { 0% { opacity: 0; transform: translateY(8px); } 100% { opacity: 1; transform: translateY(0); } }";
 
-// Zone keys valid per side — front and back have asymmetric pairs
-// (chest/back, biceps/triceps); BODY_ZONES carries both uniformly per
-// figure, so this list is what filters to the visually-correct set.
-const FRONT_ZONE_KEYS: (keyof (typeof BODY_ZONES)[FigureKey])[] = [
-  "shoulders",
-  "chest",
-  "biceps",
-  "forearms",
-  "core",
-  "quads",
-  "calves",
-];
-const BACK_ZONE_KEYS: (keyof (typeof BODY_ZONES)[FigureKey])[] = [
-  "shoulders",
-  "back",
-  "triceps",
-  "forearms",
-  "glutes",
-  "hamstrings",
-  "calves",
-];
+// The zones each side shows (front and back differ: chest/back, biceps/triceps).
+const FRONT_ZONE_KEYS: ZoneKey[] = ["shoulders", "chest", "biceps", "forearms", "core", "quads", "calves"];
+const BACK_ZONE_KEYS: ZoneKey[] = ["shoulders", "back", "triceps", "forearms", "glutes", "hamstrings", "calves"];
 
 /** WO2.1 control: a 30px smooth rounded rectangle; selected = #AEA1DC fill, white text. */
 const controlStyle = (on: boolean): React.CSSProperties => ({
@@ -152,7 +118,7 @@ export default function ExerciseDatabaseTab() {
     addCustomExercise,
     updateCustomExercise,
     removeCustomExercise,
-    user,
+    bodyMapVariant,
     routines,
     workoutTemplates,
     personalRecords,
@@ -183,10 +149,9 @@ export default function ExerciseDatabaseTab() {
     : selectedGroup
       ? MUSCLE_GROUP_LABEL[selectedGroup]
       : "";
-  // Item 12: male → male figure pair, female → female figure pair, anything
-  // else (other/unset/no sex on record) → the androgynous pair.
-  const figureGender: FigureGender =
-    user.sex === "male" ? "male" : user.sex === "female" ? "female" : "andro";
+  // 03 bodyMapVariant: Male → male, Female → female, Other → androgynous,
+  // derived from the Profile sex setting so it switches live.
+  const figureGender: FigureGender = bodyMapVariant === "androgynous" ? "andro" : bodyMapVariant;
   const figureKey = `${figureGender}-${bodySide}` as FigureKey;
   const figureAlt = `${FIGURE_NAME[figureGender]} ${bodySide === "front" ? "Front" : "Back"}`;
   // The exercise opened from the list or the Body view: one of the user's
@@ -503,11 +468,10 @@ export default function ExerciseDatabaseTab() {
             </button>
           </div>
 
-          {/* Master handover item 12: figure panel — a plain <img> (never a
-              CSS mask or currentColor, which would recolour the line art and
-              lose the teal leaf) in a 376px-tall box sized to the image's own
-              proportions, zone overlays centred on each zone's x/y, and the
-              figure's name captioned bottom-left. */}
+          {/* WO5 / WO6 figure panel: the figure's own line art over its own
+              zone masks (the highlight sits beneath the lines), in a
+              376px-tall box sized to the art's proportions, and the figure's
+              name captioned bottom-left. */}
           <div
             className="relative w-full flex items-center justify-center overflow-hidden"
             style={{
@@ -518,41 +482,15 @@ export default function ExerciseDatabaseTab() {
               animation: "cb-fade .3s ease both",
             }}
           >
-            <div className="relative" style={{ width: FIGURE_BOX_WIDTH[figureKey], height: 376 }}>
-              <img
-                key={figureKey}
-                src={`/body/${figureKey}.png`}
-                alt={figureAlt}
-                draggable={false}
-                className="absolute inset-0 block w-full h-full select-none pointer-events-none"
-                style={{ objectFit: "contain" }}
-              />
-              {sideZoneKeys.map((zoneKey) => {
-                const group = ZONE_KEY_TO_GROUP[zoneKey];
-                const selected = selectedGroup === group;
-                return BODY_ZONES[figureKey][zoneKey].map((rect, i) => (
-                  <button
-                    key={`${zoneKey}-${i}`}
-                    title={ZONE_LABEL[zoneKey]}
-                    aria-label={ZONE_LABEL[zoneKey]}
-                    onClick={() => setSelectedGroup(selected ? null : group)}
-                    className="tap absolute"
-                    style={{
-                      left: `${rect.x}%`,
-                      top: `${rect.y}%`,
-                      width: `${rect.w}%`,
-                      height: `${rect.h}%`,
-                      transform: "translate(-50%,-50%)",
-                      borderRadius: "50%",
-                      padding: 0,
-                      backgroundColor: selected ? "rgba(143,104,246,0.34)" : "rgba(143,104,246,0)",
-                      border: selected ? "1.5px solid rgba(95,80,147,0.75)" : "1.5px solid rgba(143,104,246,0)",
-                      transition: "background-color .18s ease, border-color .18s ease",
-                    }}
-                  />
-                ));
-              })}
-            </div>
+            <BodyFigure
+              key={figureKey}
+              figure={figureKey}
+              zones={sideZoneKeys}
+              selected={selectedZoneKey ?? null}
+              onSelect={(zone) => setSelectedGroup(zone ? ZONE_KEY_TO_GROUP[zone] : null)}
+              alt={figureAlt}
+              label={(zone) => ZONE_LABEL[zone]}
+            />
             <p className="absolute" style={{ left: 12, bottom: 10, margin: 0, fontSize: 10, color: "#A79E93" }}>
               {figureAlt}
             </p>
