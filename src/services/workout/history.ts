@@ -96,3 +96,53 @@ export function comparisonPhrase(totalKg: number): string | null {
   );
   return `That's the equivalent of lifting ${c.label} ${c.emoji}`;
 }
+
+// --- WO14: one exercise across sessions ------------------------------------
+
+export interface ExerciseHistoryEntry {
+  sessionId: string;
+  date: string;
+  routineName: string;
+  sets: number;
+  top: { weightKg: number; reps: number } | null;
+  volumeKg: number;
+  /** "120×5 · 120×5 · 115×6" (reps alone when there is no load). */
+  line: string;
+}
+
+/**
+ * The sessions that included an exercise, newest first: completed sets only,
+ * the top set (heaviest working set), and weight × reps summed over them.
+ * Matched by library row, else by name (legacy rows logged before ids).
+ */
+export function exerciseHistory(
+  sessions: WorkoutSession[],
+  match: { catalogId?: string; customId?: string; name: string }
+): ExerciseHistoryEntry[] {
+  const is = (ex: LoggedExercise) =>
+    (match.catalogId && ex.catalogExerciseId === match.catalogId) ||
+    (match.customId && ex.customExerciseId === match.customId) ||
+    (!ex.catalogExerciseId && !ex.customExerciseId && ex.name.trim().toLowerCase() === match.name.trim().toLowerCase());
+  const out: ExerciseHistoryEntry[] = [];
+  for (const s of [...sessions].sort(byNewest)) {
+    const logged = s.exercises.filter(is);
+    if (logged.length === 0) continue;
+    const done = logged.flatMap((ex) => ex.sets.filter((set) => set.completed));
+    if (done.length === 0) continue;
+    const tops = logged.map(topSet).filter((t): t is { weightKg: number; reps: number } => !!t);
+    const top = tops.reduce<{ weightKg: number; reps: number } | null>(
+      (best, t) => (!best || t.weightKg > best.weightKg || (t.weightKg === best.weightKg && t.reps > best.reps) ? t : best),
+      null
+    );
+    out.push({
+      sessionId: s.id,
+      date: s.date,
+      routineName: s.routineName,
+      sets: done.length,
+      top,
+      volumeKg: done.reduce((n, set) => n + set.weightKg * set.reps, 0),
+      line: done.map((set) => (set.weightKg > 0 ? `${set.weightKg}×${set.reps}` : `${set.reps} reps`)).join(" · "),
+    });
+  }
+  return out;
+}

@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { byNewest, comparisonPhrase, historySummary, inRange, periodRange, topSet } from "./history";
+import { byNewest, comparisonPhrase, exerciseHistory, historySummary, inRange, periodRange, topSet } from "./history";
 import type { LoggedExercise, LoggedSet, WorkoutSession } from "../../types";
 
 const set = (weightKg: number, reps: number, extra: Partial<LoggedSet> = {}) =>
@@ -44,4 +44,28 @@ test("summary sums volume, time, workouts and completed sets; newest first by da
   assert.deepEqual(historySummary(list), { volumeKg: 200, seconds: 1200, workouts: 2, sets: 2 });
   // "a" was moved to the 20th: it sorts by its new day, not its start time.
   assert.deepEqual([...list].sort(byNewest).map((x) => x.id), ["b", "a"]);
+});
+
+test("exercise history: sessions that included it, newest first, completed sets only", () => {
+  const ses = (id: string, date: string, exs: LoggedExercise[]) =>
+    ({ id, date, startedAt: `${date}T10:00:00Z`, routineName: `R ${id}`, exercises: exs }) as unknown as WorkoutSession;
+  const squat = (sets: LoggedSet[]) => ({ name: "Back Squat", catalogExerciseId: "sq", sets }) as unknown as LoggedExercise;
+  const bench = { name: "Bench Press", catalogExerciseId: "bp", sets: [set(60, 5)] } as unknown as LoggedExercise;
+  const list = [
+    ses("a", "2026-09-14", [squat([set(112.5, 5), set(112.5, 5), set(110, 5)])]),
+    ses("b", "2026-09-24", [bench, squat([set(120, 5), set(120, 5), set(115, 6), set(130, 1, { completed: false })])]),
+    ses("c", "2026-09-20", [bench]),
+  ];
+  const h = exerciseHistory(list, { catalogId: "sq", name: "Back Squat" });
+  assert.deepEqual(h.map((e) => e.sessionId), ["b", "a"]);
+  assert.deepEqual(h[0], {
+    sessionId: "b",
+    date: "2026-09-24",
+    routineName: "R b",
+    sets: 3,
+    top: { weightKg: 120, reps: 5 },
+    volumeKg: 1890,
+    line: "120×5 · 120×5 · 115×6",
+  });
+  assert.deepEqual(exerciseHistory(list, { catalogId: "nope", name: "Ab Wheel Rollout" }), []);
 });
