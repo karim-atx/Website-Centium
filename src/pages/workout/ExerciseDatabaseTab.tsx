@@ -648,7 +648,6 @@ export default function ExerciseDatabaseTab() {
         open={!!editingExercise}
         onClose={() => setEditingExercise(null)}
         initial={editingExercise ?? undefined}
-        duplicateFromStock={!!editingExercise && !editingExercise.isCustom}
         // Only a custom exercise can be deleted, and only from here: this tab
         // is the one place the user's own movements are listed and opened.
         onDelete={

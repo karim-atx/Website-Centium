@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
+import { PopupMenu } from "../ui/PopupMenu";
 import type { MuscleGroup, ExerciseClassification, ExerciseTag } from "../../types";
-import { Trash2 } from "lucide-react";
+import { BookOpen, ChevronDown, Eye, Trash2 } from "lucide-react";
 import { MUSCLE_GROUP_LABEL, SELECTABLE_MUSCLE_GROUPS } from "../../utils/muscleGroups";
 import { EXERCISE_TAGS, EXERCISE_TAG_LABEL } from "../../utils/exerciseTags";
 import clsx from "clsx";
@@ -13,7 +14,7 @@ import clsx from "clsx";
 const muscleGroupOptions: { value: MuscleGroup; label: string }[] =
   SELECTABLE_MUSCLE_GROUPS.map((value) => ({ value, label: MUSCLE_GROUP_LABEL[value] }));
 
-const classificationOptions: { value: ExerciseClassification; label: string }[] = [
+export const classificationOptions: { value: ExerciseClassification; label: string }[] = [
   { value: "barbell", label: "Barbell" },
   { value: "dumbbell", label: "Dumbbell" },
   { value: "machine_other", label: "Machine / Other" },
@@ -36,20 +37,45 @@ export interface CustomExerciseData {
   tags: ExerciseTag[];
 }
 
-// V4: Custom Exercise creation overhaul, Strong-app inspired (not copied) —
-// Name, "Muscle Group" (renamed from Body Part, multi-select), and
-// "Classification" (renamed from Category). Reused for both creating a new
-// custom exercise and editing an existing one's parameters (always
-// available, per QA).
+/** WO11 dropdown button: 40px, white, 1px rgba(36,31,27,0.11), placeholder in #8C8378. */
+const dropdownStyle: React.CSSProperties = {
+  height: 40,
+  borderRadius: 12,
+  border: "1px solid rgba(36,31,27,0.11)",
+  background: "#FFFFFF",
+  padding: "0 14px 0 14px",
+  gap: 8,
+  fontSize: 14,
+};
+
+/** WO11 square button beside the Name field (eye) and the Save button (book). */
+const squareStyle = (size: number, tinted: boolean): React.CSSProperties => ({
+  width: size,
+  height: size,
+  borderRadius: 14,
+  border: `1px solid ${tinted ? "#D6CFED" : "#E4E4E9"}`,
+  background: tinted ? "#F0EDF9" : "#FFFFFF",
+  color: "#5F5093",
+});
+
+/**
+ * WO11 · the custom exercise popup, for creating one and editing one of the
+ * user's own (prefilled). The title follows the Name field live ("New Custom
+ * Exercise" while it is empty). A square eye button beside Name opens
+ * Exercise information (WO13); Classification (single) and Discipline
+ * (multi) are dropdown buttons opening the shared filter popup; the footer's
+ * square book button opens Exercise history (WO14). Built-in exercises open
+ * the view-only popup (WO12), never this one.
+ */
 export const CreateCustomExerciseSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   onSave: (data: CustomExerciseData) => void;
   initial?: Partial<CustomExerciseData>;
-  // V8 (QA 8.0): editing a stock library exercise can't mutate the shared
-  // built-in data, so it saves as a new custom exercise instead — this
-  // makes that distinction clear instead of implying an in-place edit.
-  duplicateFromStock?: boolean;
+  /** Opens Exercise information (WO13). */
+  onInfo?: () => void;
+  /** Opens Exercise history (WO14). */
+  onHistory?: () => void;
   /**
    * Supplied only when editing one of the user's OWN movements, which is the
    * only kind that can be deleted: a catalog row is shared reference data and
@@ -63,13 +89,14 @@ export const CreateCustomExerciseSheet: React.FC<{
    * says "some routines" is not a confirm.
    */
   impact?: { routines: number; templates: number; hasPersonalRecord: boolean };
-}> = ({ open, onClose, onSave, initial, duplicateFromStock, onDelete, impact }) => {
+}> = ({ open, onClose, onSave, initial, onInfo, onHistory, onDelete, impact }) => {
   const [name, setName] = useState("");
   const [muscleGroups, setMuscleGroups] = useState<MuscleGroup[]>([]);
   const [secondaryMuscleGroups, setSecondaryMuscleGroups] = useState<MuscleGroup[]>([]);
   const [classification, setClassification] = useState<ExerciseClassification>("machine_other");
   const [tags, setTags] = useState<ExerciseTag[]>([]);
-  const [classificationOpen, setClassificationOpen] = useState(false);
+  const [classAnchor, setClassAnchor] = useState<HTMLElement | null>(null);
+  const [tagAnchor, setTagAnchor] = useState<HTMLElement | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   useEffect(() => {
@@ -79,7 +106,8 @@ export const CreateCustomExerciseSheet: React.FC<{
       setSecondaryMuscleGroups(initial?.secondaryMuscleGroups ?? []);
       setClassification(initial?.classification ?? "machine_other");
       setTags(initial?.tags ?? []);
-      setClassificationOpen(false);
+      setClassAnchor(null);
+      setTagAnchor(null);
       // Armed state never survives the sheet closing, so reopening on a
       // different exercise cannot inherit a tap meant for the previous one.
       setConfirmDelete(false);
@@ -112,25 +140,34 @@ export const CreateCustomExerciseSheet: React.FC<{
     <BottomSheet
       open={open}
       onClose={onClose}
-      title={duplicateFromStock ? "Save as Custom Exercise" : initial?.name ? "Edit Custom Exercise" : "Create New Exercise"}
+      title={name.trim() || "New Custom Exercise"}
     >
       <div className="space-y-5 animate-fade-slide-up">
-        {duplicateFromStock && (
-          <p className="text-[11px] text-charcoal-faint -mt-2">
-            This is a built-in exercise — saving will add your changes as a new custom exercise instead of
-            changing the original.
-          </p>
-        )}
-        <label className="block">
-          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Name</span>
-          <input
-            autoFocus
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Abdallah's Bungees"
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </label>
+        <div>
+          <label htmlFor="custom-exercise-name" className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
+            Name
+          </label>
+          <div className="flex" style={{ gap: 9 }}>
+            <input
+              id="custom-exercise-name"
+              autoFocus
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Abdallah's Bungees"
+              className="flex-1 min-w-0 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+              style={{ height: 46, borderRadius: 16, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.1)", padding: "0 16px", fontSize: 14 }}
+            />
+            <button
+              onClick={onInfo}
+              disabled={!onInfo}
+              aria-label="Exercise information"
+              className="tap flex-none flex items-center justify-center disabled:opacity-40"
+              style={squareStyle(46, true)}
+            >
+              <Eye size={18} />
+            </button>
+          </div>
+        </div>
 
         <div>
           <span className="text-xs font-semibold text-charcoal-soft mb-1 block">Muscle Group</span>
@@ -162,77 +199,81 @@ export const CreateCustomExerciseSheet: React.FC<{
           </div>
         </div>
 
-        <div className="relative">
-          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Classification</span>
-          <button
-            onClick={() => setClassificationOpen((v) => !v)}
-            className="tap w-full flex items-center justify-between rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-left text-sm text-charcoal"
-          >
-            {classificationOptions.find((c) => c.value === classification)?.label}
-            <span className="text-charcoal-faint">{classificationOpen ? "▲" : "▼"}</span>
-          </button>
-          {classificationOpen && (
-            <div className="mt-1.5 rounded-2xl bg-charcoal shadow-lift overflow-hidden animate-fade-slide-up">
-              {classificationOptions.map((c) => (
-                <button
-                  key={c.value}
-                  onClick={() => {
-                    setClassification(c.value);
-                    setClassificationOpen(false);
-                  }}
-                  className={clsx(
-                    "tap w-full text-left px-4 py-2.5 text-sm border-b border-white/5 last:border-0",
-                    classification === c.value ? "text-primary font-semibold" : "text-cream/90"
-                  )}
-                >
-                  {c.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div>
-          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-            Discipline
-          </span>
-          {/* A TAG IS NOT A MUSCLE, which is why this is a separate control
-              rather than more chips in the list above. "Is this an Olympic
-              lift" has no anatomical answer — a Snatch trains shoulders and
-              so does a lateral raise — and a movement can belong to more than
-              one discipline at once. */}
-          <div className="flex flex-wrap" style={{ gap: 6 }}>
-            {EXERCISE_TAGS.map((tag) => {
-              const on = tags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  onClick={() =>
-                    setTags((prev) => (on ? prev.filter((t) => t !== tag) : [...prev, tag]))
-                  }
-                  aria-pressed={on}
-                  className="tap transition-colors"
-                  style={{
-                    borderRadius: 999,
-                    padding: "6px 12px",
-                    fontSize: 12,
-                    fontWeight: 600,
-                    border: `1px solid ${on ? "#A299DE" : "#E7E7EC"}`,
-                    background: on ? "#A299DE" : "#FFFFFF",
-                    color: on ? "#FFFFFF" : "#241F1B",
-                  }}
-                >
-                  {EXERCISE_TAG_LABEL[tag]}
-                </button>
-              );
-            })}
+        {/* A TAG IS NOT A MUSCLE, which is why Discipline is its own control
+            rather than more chips above: "is this an Olympic lift" has no
+            anatomical answer, and a movement can belong to several. */}
+        <div className="grid grid-cols-2" style={{ gap: 11 }}>
+          <div className="min-w-0">
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Classification</span>
+            <button
+              onClick={(e) => setClassAnchor(e.currentTarget)}
+              aria-haspopup="menu"
+              className="tap w-full flex items-center justify-between text-left"
+              style={{ ...dropdownStyle, color: "#241F1B" }}
+            >
+              <span className="truncate">{classificationOptions.find((c) => c.value === classification)?.label}</span>
+              <ChevronDown size={14} className="flex-none" style={{ color: "#A9A29A" }} />
+            </button>
+          </div>
+          <div className="min-w-0">
+            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Discipline</span>
+            <button
+              onClick={(e) => setTagAnchor(e.currentTarget)}
+              aria-haspopup="menu"
+              className="tap w-full flex items-center justify-between text-left"
+              style={{ ...dropdownStyle, color: tags.length ? "#241F1B" : "#8C8378" }}
+            >
+              <span className="truncate">
+                {tags.length === 0
+                  ? "Select"
+                  : `${EXERCISE_TAG_LABEL[EXERCISE_TAGS.find((t) => tags.includes(t))!]}${tags.length > 1 ? ` +${tags.length - 1}` : ""}`}
+              </span>
+              <ChevronDown size={14} className="flex-none" style={{ color: "#A9A29A" }} />
+            </button>
           </div>
         </div>
 
+        <PopupMenu<ExerciseClassification>
+          open={!!classAnchor}
+          anchor={classAnchor}
+          align="left"
+          onClose={() => setClassAnchor(null)}
+          options={classificationOptions}
+          selected={classification}
+          variant="filled"
+          onSelect={setClassification}
+        />
+        <PopupMenu<ExerciseTag>
+          open={!!tagAnchor}
+          anchor={tagAnchor}
+          align="left"
+          onClose={() => setTagAnchor(null)}
+          options={EXERCISE_TAGS.map((t) => ({ value: t, label: EXERCISE_TAG_LABEL[t] }))}
+          selected={tags}
+          multiSelect
+          variant="filled"
+          onSelect={(t) => setTags((prev) => (prev.includes(t) ? prev.filter((x) => x !== t) : [...prev, t]))}
+        />
 
-        <Button fullWidth size="lg" onClick={save} disabled={!name.trim()}>
-          Save exercise
-        </Button>
+        <div className="flex" style={{ gap: 9 }}>
+          <button
+            onClick={save}
+            disabled={!name.trim()}
+            className="tap flex-1 flex items-center justify-center disabled:opacity-60"
+            style={{ height: 52, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", fontSize: 14, fontWeight: 700 }}
+          >
+            Save exercise
+          </button>
+          <button
+            onClick={onHistory}
+            disabled={!onHistory}
+            aria-label="Exercise history"
+            className="tap flex-none flex items-center justify-center disabled:opacity-40"
+            style={squareStyle(52, false)}
+          >
+            <BookOpen size={18} />
+          </button>
+        </div>
 
         {/* WHAT DELETING ACTUALLY DOES, said before it happens rather than a
             bare "tap again to confirm" that names no consequence. The
