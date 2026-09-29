@@ -446,27 +446,8 @@ export type WorkoutMutationResult = { ok: boolean; message?: string };
  * trap deleteDiaryEntry documents.
  */
 export async function deleteWorkoutSession(sessionId: string): Promise<WorkoutMutationResult> {
-  // WO3.1: deleting a workout updates personal records. A record keeps its row
-  // when its source set goes (the FK is ON DELETE SET NULL), so the records
-  // this session's sets set are removed first; current_personal_records then
-  // falls back to the next best. Records with no source set are left alone.
-  const { data: sets, error: setsError } = await supabase
-    .from("logged_sets")
-    .select("id, logged_exercises!inner(workout_session_id)")
-    .eq("logged_exercises.workout_session_id", sessionId);
-  if (setsError) {
-    console.error("[workout] Could not read the session's sets:", setsError.message);
-    return { ok: false, message: describe(setsError) };
-  }
-  const setIds = (sets ?? []).map((s) => (s as { id: string }).id);
-  if (setIds.length > 0) {
-    const { error: prError } = await supabase.from("personal_records").delete().in("source_logged_set_id", setIds);
-    if (prError) {
-      console.error("[workout] Could not remove the session's records:", prError.message);
-      return { ok: false, message: describe(prError) };
-    }
-  }
-
+  // Its personal records go with it: Database-Atraxia 71cbb2e cascades the
+  // records a session's sets set, so this is a single delete.
   const { data, error } = await supabase
     .from("workout_sessions")
     .delete()
