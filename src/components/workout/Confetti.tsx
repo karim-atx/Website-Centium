@@ -5,7 +5,24 @@ const COLORS = ["#AEA1DC", "#A2C8C2", "#D9A441", "#C0392B", "#4C8FD1", "#7D6BB5"
 // QA 11.0: "If a set was selected as a PR and the checkmark was selected
 // confetti flies through the page as a celebration." A lightweight
 // CSS-only burst — no animation library needed for a one-shot effect.
+//
+// prefers-reduced-motion IS HONOURED HERE, not at each call site. Forty
+// elements falling across the viewport is exactly what that setting is asking
+// not to see, and putting the check inside means every caller — the PR
+// celebration, the achievement unlock, anything later — gets it without having
+// to remember. The caller is still told the burst is over, so a sheet waiting
+// on onDone does not hang waiting for an animation that never ran.
 export const Confetti: React.FC<{ onDone: () => void }> = ({ onDone }) => {
+  const reducedMotion =
+    typeof window !== "undefined" &&
+    (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
+
+  React.useEffect(() => {
+    if (reducedMotion) onDone();
+    // Once, on the mount that decided not to animate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reducedMotion]);
+
   const pieces = useMemo(
     () =>
       Array.from({ length: 40 }, (_, i) => ({
@@ -20,6 +37,8 @@ export const Confetti: React.FC<{ onDone: () => void }> = ({ onDone }) => {
       })),
     []
   );
+
+  if (reducedMotion) return null;
 
   return (
     <div

@@ -8,6 +8,7 @@ import { BottomNav } from "./BottomNav";
 import { UnreadProvider } from "../../context/UnreadContext";
 import { CallProvider } from "../../context/CallContext";
 import { CallSurface } from "../calls/CallSurface";
+import { AchievementUnlockSheet } from "../mind/AchievementUnlockSheet";
 
 export const Layout: React.FC = () => {
   // This app uses plain BrowserRouter, which — unlike the newer data
@@ -53,6 +54,12 @@ export const Layout: React.FC = () => {
       {/* Outside the layout div and portaled from there: a call must cover the
           navs too, and must not be clipped by any transformed ancestor. */}
       <CallSurface />
+      {/* HERE RATHER THAN IN Mind, because an achievement is earned where the
+          thing that earned it happened. Finishing a workout, saving a food log
+          or writing a journal entry can all unlock one, and the celebration
+          belongs on that screen rather than waiting for somebody to next open
+          the Mind tab. Renders nothing while the queue is empty. */}
+      <AchievementUnlockSheet />
       </CallProvider>
     </UnreadProvider>
   );

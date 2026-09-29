@@ -8,16 +8,40 @@ import { MeditationSheet } from "../../components/mind/MeditationSheet";
 import { LotusGlyph } from "../../components/dashboard/LotusGlyph";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
-import { Flame, Plus, BookOpen, Pencil, Gift, Check, ChevronLeft } from "lucide-react";
+import AchievementsTab from "./AchievementsTab";
+import { earnedCount } from "../../services/achievements";
+import { Flame, Plus, BookOpen, Pencil, Trophy, Check, ChevronLeft } from "lucide-react";
 import type { Streak } from "../../types";
 import { flameColor } from "../../utils/flameColor";
 import { streakProgress } from "../../utils/streakProgress";
 import clsx from "clsx";
 
-type Tab = "overview" | "habits" | "journal";
+type Tab = "overview" | "habits" | "journal" | "achievements";
+
+// The takeover header, for the three tabs that have one. Keyed rather than
+// nested ternaries, which is what adding a third to the pair turned into.
+const TAB_TITLE: Record<Exclude<Tab, "overview">, string> = {
+  habits: "Habits",
+  journal: "Journal",
+  achievements: "Achievements",
+};
+const TAB_SUBTITLE: Record<Exclude<Tab, "overview">, string> = {
+  habits: "Track your daily habits",
+  journal: "Your thoughts, logged",
+  achievements: "What you've earned so far",
+};
 
 export default function Mind() {
-  const { streaks, habits, toggleHabit, journalEntries } = useApp();
+  const {
+    streaks,
+    habits,
+    toggleHabit,
+    journalEntries,
+    achievements,
+    pointsSummary,
+    refreshAchievements,
+    noteFeatureMilestone,
+  } = useApp();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("overview");
   const [editingStreak, setEditingStreak] = useState<Streak | null>(null);
@@ -28,6 +52,23 @@ export default function Mind() {
   // streaks, which can't be logged by hand.
   const [burstKey, setBurstKey] = useState<string | null>(null);
   const burstNonce = React.useRef(0);
+
+  // OPENING MIND EVALUATES. my_achievements() awards before it returns, so this
+  // is the sweep for anything earned on a screen that does not itself trigger
+  // one — and the tile below cannot show a count until something has read it.
+  // Debounced in the context, so arriving here alongside another trigger costs
+  // one call rather than two.
+  React.useEffect(() => {
+    refreshAchievements();
+  }, [refreshAchievements]);
+
+  // Explorer milestone: "Quiet corner". Recorded the first time the journal is
+  // actually opened, not on every visit to Mind — the badge is for finding it.
+  React.useEffect(() => {
+    if (tab === "journal") noteFeatureMilestone("mind_journal");
+  }, [tab, noteFeatureMilestone]);
+
+  const achievementCounts = earnedCount(achievements ?? []);
 
   // A user-added streak's `days` mirrors its linked habit's `streakDays`
   // (see AppContext) — "tap to log" means checking off today's habit, not
@@ -97,8 +138,8 @@ export default function Mind() {
         </div>
       ) : (
         <PageHeader
-          title={tab === "habits" ? "Habits" : "Journal"}
-          subtitle={tab === "habits" ? "Track your daily habits" : "Your thoughts, logged"}
+          title={TAB_TITLE[tab]}
+          subtitle={TAB_SUBTITLE[tab]}
           showBack
           onBack={() => setTab("overview")}
         />
@@ -299,19 +340,42 @@ export default function Mind() {
               </div>
             </button>
 
-            <div className="flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col justify-between" style={{ background: "rgba(162,200,194,.18)" }}>
-              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-teal-ink/[0.72]">Rewards</p>
+            {/* THE "REWARDS" TILE IS GONE. It was a static Gift icon over
+                "Soon — from Centium partners": no count, no link, nothing to
+                tap, and it named partners that do not exist. Achievements are
+                real and earned server-side, so the tile is now a way into them
+                and carries the three numbers that say where the account
+                stands. Rewards for the points are still coming — the
+                Achievements tab says so, once, where the points are. */}
+            <button
+              onClick={() => setTab("achievements")}
+              className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col justify-between text-left"
+              style={{ background: "rgba(217,164,65,.15)" }}
+            >
+              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-gold-ink/[0.78]">Achievements</p>
               <div>
-                <Gift size={17} className="text-team-teal-deep mb-1.5" />
-                <p className="text-[10px] leading-[1.35] text-team-teal-ink">Soon — from Centium partners</p>
+                <Trophy size={17} className="text-team-gold-deep mb-1.5" />
+                {/* NOTHING IS SHOWN UNTIL SOMETHING HAS BEEN READ. A count of
+                    "0 of 0" before the first call would be a number nobody
+                    earned, and a tier before my_points_summary() answers would
+                    be a guess at one. */}
+                {achievements === null || pointsSummary === null ? (
+                  <p className="text-[10px] leading-[1.35] text-team-gold-ink/[0.72]">Loading…</p>
+                ) : (
+                  <p className="text-[10px] leading-[1.35] text-team-gold-ink tabular-nums">
+                    {achievementCounts.earned} of {achievementCounts.total} ·{" "}
+                    {pointsSummary.balance.toLocaleString()} pts · {pointsSummary.tierName}
+                  </p>
+                )}
               </div>
-            </div>
+            </button>
           </div>
         </div>
       )}
 
       {tab === "habits" && <HabitsTab />}
       {tab === "journal" && <JournalTab />}
+      {tab === "achievements" && <AchievementsTab />}
 
       <StreakEditSheet open={!!editingStreak} onClose={() => setEditingStreak(null)} streak={editingStreak} />
       <AddStreakSheet open={addStreakOpen} onClose={() => setAddStreakOpen(false)} />

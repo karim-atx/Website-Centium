@@ -351,6 +351,14 @@ export default {
           "0%": { transform: "translate(0, 0) rotate(0deg)", opacity: 1 },
           "100%": { transform: "translate(var(--confetti-drift), 100vh) rotate(var(--confetti-rotate))", opacity: 0.2 },
         },
+        // The achievement unlock sheet's badge: overshoots slightly and
+        // settles, so the medal lands rather than simply appearing. Suppressed
+        // entirely under prefers-reduced-motion, with the confetti.
+        "badge-pop": {
+          "0%": { transform: "scale(0.4)", opacity: 0 },
+          "62%": { transform: "scale(1.14)", opacity: 1 },
+          "100%": { transform: "scale(1)", opacity: 1 },
+        },
         // v2 Centium landing handoff: the reviews conveyor belt (duplicated
         // card list, translated exactly -50% of its own width minus the
         // gap so the loop seam is invisible) and the two drifting decorative
@@ -442,6 +450,7 @@ export default {
         "calorie-glow": "calorie-glow 2.4s ease-out infinite",
         "ekg-scroll": "ekg-scroll 3s linear infinite",
         "confetti-fall": "confetti-fall 1.8s ease-in both",
+        "badge-pop": "badge-pop 0.5s cubic-bezier(0.22,1,0.36,1) both",
         "mkt-belt": "mkt-belt 46s linear infinite",
         "mkt-drift-a": "mkt-drift-a 22s ease-in-out infinite",
         "mkt-drift-b": "mkt-drift-b 27s ease-in-out infinite",
