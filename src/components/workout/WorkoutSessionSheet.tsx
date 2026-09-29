@@ -689,7 +689,9 @@ export const WorkoutSessionSheet: React.FC<{
             </button>
           </div>
           <div className="text-center min-w-0">
-            <p className="truncate" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#241F1B", lineHeight: "19px" }}>
+            {/* Wraps to two lines rather than cutting the name to "Regres…" when the
+                cycle chip takes room (as the WO8 frame wraps "Push Pull / Legs"). */}
+            <p className="line-clamp-2 break-words" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#241F1B", lineHeight: "19px" }}>
               {routineName}
             </p>
             <p className="tabular-nums" style={{ margin: 0, fontSize: 10.5, fontWeight: 500, color: "#A79E93", lineHeight: "14px" }}>
@@ -699,9 +701,13 @@ export const WorkoutSessionSheet: React.FC<{
                 ? `Paused · ${formatDuration(elapsed)} elapsed`
                 : "Not started"}
             </p>
+            {/* The cycle phase sits under the status line, not in the button row,
+                where it squeezed the routine name to "Regres…" at 393px. */}
+            <div className="flex justify-center empty:hidden" style={{ marginTop: 3 }}>
+              <CyclePhaseChip />
+            </div>
           </div>
           <div className="flex items-center justify-end" style={{ gap: 8 }}>
-            <CyclePhaseChip />
             <button
               onClick={toggleClock}
               aria-label={started ? "Pause elapsed time" : "Start elapsed time"}

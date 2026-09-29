@@ -114,7 +114,7 @@ export const CyclePhaseChip: React.FC = () => {
   if (pregnant) {
     return (
       <span
-        className="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 h-[34px] text-[10.5px] font-bold whitespace-nowrap"
+        className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 h-[20px] text-[10px] font-bold whitespace-nowrap"
         style={{ background: `${PREGNANCY_COLOR}1F`, color: PREGNANCY_COLOR }}
         title={PG.WORKOUT_STRIP_NOTE}
       >
@@ -128,7 +128,7 @@ export const CyclePhaseChip: React.FC = () => {
 
   return (
     <span
-      className="shrink-0 inline-flex items-center gap-1 rounded-full px-2.5 h-[34px] text-[10.5px] font-bold whitespace-nowrap"
+      className="shrink-0 inline-flex items-center gap-1 rounded-full px-2 h-[20px] text-[10px] font-bold whitespace-nowrap"
       style={{ background: `${color}1F`, color }}
       title={strip.note}
     >
