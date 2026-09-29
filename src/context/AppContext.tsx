@@ -89,11 +89,21 @@ import {
   getRoutineFolders,
   getRoutines,
   setFolderPositions,
+  setRoutinePlacements,
   updateRoutine as updateRoutineRemote,
   markCoachNoteRead as markCoachNoteReadRemote,
   updateRoutineFolder as updateRoutineFolderRemote,
   type ExerciseLookup,
 } from "../services/routines";
+import {
+  applyPlacements,
+  nextPosition,
+  placeBelow,
+  placeRoutine as placeRoutineOrder,
+  routinesIn,
+  type Placement,
+} from "../services/routines/order";
+import { cleanRoutineCopy } from "../services/routines/duplicate";
 import { mockForumPosts } from "../data/mockForum";
 import { estimate1RM } from "../services/workout";
 import {
@@ -535,7 +545,14 @@ interface AppState {
   // shuffle and re-order them" + the "⋮" menu should have an Edit option
   // for things like folder color.
   updateRoutineFolder: (id: string, patch: Partial<RoutineFolder>) => Promise<string | undefined>;
-  moveRoutineFolder: (id: string, direction: "up" | "down") => Promise<string | undefined>;
+  /** WO1.1: folder drag and drop — the sibling group under parentId, in its new order. */
+  reorderRoutineFolders: (parentId: string | null, orderedIds: string[]) => Promise<string | undefined>;
+  /** WO1.1: a routine dropped at index in a folder (null = Unfiled). */
+  placeRoutine: (id: string, folderId: string | null, index: number) => Promise<string | undefined>;
+  /** WO1.1: a clean copy directly below the original, named "[name] (copy)". */
+  duplicateRoutine: (id: string) => Promise<string | undefined>;
+  /** WO1.1: the folder with its routines and subfolders, directly below the original. */
+  duplicateRoutineFolder: (id: string) => Promise<string | undefined>;
   /** Null until the first folder/routine hydration finishes or fails. */
   routinesError: string | null;
   routines: Routine[];
@@ -3922,69 +3939,164 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     applyLocal();
     return undefined;
   };
-  // Reorders among siblings sharing the same parentId — top-level folders
-  // and each folder's own subfolders each keep their own independent order.
-  const moveRoutineFolder: AppState["moveRoutineFolder"] = async (id, direction) => {
-    const folder = routineFolders.find((f) => f.id === id);
-    if (!folder) return undefined;
-    const siblings = routineFolders.filter((f) => f.parentId === folder.parentId);
-    const siblingIds = siblings.map((f) => f.id);
-    const from = siblingIds.indexOf(id);
-    const to = direction === "up" ? from - 1 : from + 1;
-    if (to < 0 || to >= siblingIds.length) return undefined;
-
-    const reorderedSiblingIds = [...siblingIds];
-    [reorderedSiblingIds[from], reorderedSiblingIds[to]] = [
-      reorderedSiblingIds[to],
-      reorderedSiblingIds[from],
-    ];
-
-    const applyLocal = () =>
-      setRoutineFolders((prev) => {
-        // Rebuild the full array in the new sibling order, preserving the
-        // relative position of every other (non-sibling) folder. A lookup
-        // map (not a nested `.find` re-run per outer iteration, which was
-        // the original bug here — `.find`'s own internal iteration bumped a
-        // shared `cursor` far past where the outer `.map` intended) makes
-        // each slot resolve independently and correctly.
-        const byId = new Map(prev.map((f) => [f.id, f]));
-        let cursor = 0;
-        return prev.map((f) => {
-          if (f.parentId !== folder.parentId) return f;
-          const nextId = reorderedSiblingIds[cursor];
-          cursor += 1;
-          return byId.get(nextId) ?? f;
-        });
-      });
-
-    // ORDER IS A COLUMN NOW, not just an array index, and THE WHOLE SIBLING
-    // GROUP IS REWRITTEN rather than just the two that swapped.
-    //
-    // Writing only the pair leaves the others holding whatever position they
-    // were created with, which is not a dense 0..n-1 sequence — a folder
-    // created as a subfolder and later moved to the root keeps a position its
-    // new siblings already use. Measured: one "move up" produced two folders
-    // both at position 2, and the order the user had just arranged came back
-    // differently on the next load, because ties break by created_at. Renumber
-    // the group and there are no ties to break.
-    const renumbered = reorderedSiblingIds
-      .map((sid, index) => ({ id: sid, position: index }))
+  // WO1.1: folders reorder by drag and drop, only among siblings sharing a
+  // parent. The whole sibling group is renumbered 0..n-1 (the Move up/down
+  // this replaced learned that writing only the moved pair leaves ties).
+  const reorderRoutineFolders: AppState["reorderRoutineFolders"] = async (parentId, orderedIds) => {
+    const parent = parentId ?? null;
+    const isSibling = (f: RoutineFolder) => (f.parentId ?? null) === parent;
+    const before = routineFolders;
+    setRoutineFolders((prev) => {
+      const byId = new Map(prev.map((f) => [f.id, f]));
+      const queue = orderedIds.filter((id) => byId.has(id));
+      let cursor = 0;
+      return prev.map((f) => (isSibling(f) ? byId.get(queue[cursor++]) ?? f : f));
+    });
+    const renumbered = orderedIds
+      .map((id, position) => ({ id, position }))
       .filter((s) => isRemoteRoutineId(s.id));
-
-    if (!authUserId || renumbered.length === 0) {
-      applyLocal();
-      return undefined;
-    }
+    if (!authUserId || renumbered.length === 0) return undefined;
     const result = await setFolderPositions(renumbered);
-    if (!result.ok) return result.message ?? "Could not reorder those folders.";
-    applyLocal();
+    if (!result.ok) {
+      setRoutineFolders(before);
+      return result.message ?? "Could not reorder those folders.";
+    }
+    return undefined;
+  };
+
+  // WO1.1: routine placements are applied at once, so the list and the folder
+  // counts update on drop; then one PATCH per row that changed (a move between
+  // folders is folder_id + position on the moved row). A refused write puts
+  // those rows back where they were.
+  const writePlacements = async (placements: Placement[]) => {
+    if (placements.length === 0) return undefined;
+    const prior = new Map(routines.map((r) => [r.id, { folderId: r.folderId, position: r.position }]));
+    setRoutines((prev) => applyPlacements(prev, placements));
+    const remote = placements.filter((p) => {
+      const r = routines.find((x) => x.id === p.id);
+      return isRemoteRoutineId(p.id) && !r?.sourceTemplateId;
+    });
+    if (!authUserId || remote.length === 0) return undefined;
+    const result = await setRoutinePlacements(remote);
+    if (!result.ok) {
+      setRoutines((prev) =>
+        prev.map((r) => {
+          const was = placements.some((x) => x.id === r.id) ? prior.get(r.id) : undefined;
+          return was ? { ...r, folderId: was.folderId, position: was.position } : r;
+        })
+      );
+      return result.message ?? "Could not move that routine.";
+    }
+    return undefined;
+  };
+
+  const placeRoutine: AppState["placeRoutine"] = (id, folderId, index) =>
+    writePlacements(placeRoutineOrder(routines, id, folderId, index));
+
+  const localRoutineId = () => `routine${Date.now()}${Math.random().toString(16).slice(2)}`;
+
+  // WO1.1 Duplicate: a clean template copy named "[name] (copy)", directly
+  // below the original in the same folder; the rows after it shift down.
+  const duplicateRoutine: AppState["duplicateRoutine"] = async (id) => {
+    const original = routines.find((r) => r.id === id);
+    if (!original) return undefined;
+    const copy = {
+      ...cleanRoutineCopy(original, `${original.name} (copy)`, original.folderId),
+      position: (original.position ?? nextPosition(routines, original.folderId)) + 1,
+    };
+    let created: Routine;
+    if (!authUserId) {
+      created = { ...copy, id: localRoutineId(), createdAt: new Date().toISOString() };
+    } else {
+      const result = await createRoutineRemote(authUserId, copy, exerciseLookupRef.current);
+      if (!result.ok || !result.routine) return result.message ?? "Could not duplicate that routine.";
+      created = result.routine;
+    }
+    const placements = placeBelow([...routines, created], id, created);
+    setRoutines((prev) => applyPlacements([...prev, created], placements));
+    const shifted = placements.filter((p) => p.id !== created.id && isRemoteRoutineId(p.id));
+    if (authUserId && shifted.length > 0) {
+      const result = await setRoutinePlacements(shifted);
+      if (!result.ok) return result.message ?? "The copy was saved, but its place in the list was not.";
+    }
+    return undefined;
+  };
+
+  // WO1.1 Duplicate on a folder: the folder with its structure (routines and
+  // subfolders); the top one is named "[name] (copy)", keeps its colour and
+  // goes directly below the original among its siblings. Everything inside
+  // keeps its name and order, and each routine is copied fresh.
+  const duplicateRoutineFolder: AppState["duplicateRoutineFolder"] = async (id) => {
+    const original = routineFolders.find((f) => f.id === id);
+    if (!original) return undefined;
+    const parent = original.parentId ?? null;
+    const siblingIds = routineFolders.filter((f) => (f.parentId ?? null) === parent).map((f) => f.id);
+    const at = siblingIds.indexOf(id) + 1;
+    const newFolders: RoutineFolder[] = [];
+    const newRoutines: Routine[] = [];
+
+    const copyFolder = async (
+      source: RoutineFolder,
+      parentId: string | null,
+      name: string,
+      position: number
+    ): Promise<string | undefined> => {
+      let folder: RoutineFolder;
+      if (!authUserId) {
+        folder = { id: `rf${Date.now()}${Math.random().toString(16).slice(2)}`, name, parentId, color: source.color };
+      } else {
+        const result = await createRoutineFolderRemote(authUserId, { name, parentId, color: source.color, position });
+        if (!result.ok || !result.folder) return result.message ?? "Could not duplicate that folder.";
+        folder = result.folder;
+      }
+      newFolders.push(folder);
+      const inside = routinesIn(routines, source.id);
+      for (let i = 0; i < inside.length; i++) {
+        const copy = { ...cleanRoutineCopy(inside[i], inside[i].name, folder.id), position: i };
+        if (!authUserId) {
+          newRoutines.push({ ...copy, id: localRoutineId(), createdAt: new Date().toISOString() });
+          continue;
+        }
+        const result = await createRoutineRemote(authUserId, copy, exerciseLookupRef.current);
+        if (!result.ok || !result.routine) return result.message ?? "Could not copy a routine in that folder.";
+        newRoutines.push(result.routine);
+      }
+      const subs = routineFolders.filter((f) => f.parentId === source.id);
+      for (let i = 0; i < subs.length; i++) {
+        const failed = await copyFolder(subs[i], folder.id, subs[i].name, i);
+        if (failed) return failed;
+      }
+      return undefined;
+    };
+
+    const failed = await copyFolder(original, parent, `${original.name} (copy)`, at);
+    // Whatever was created is shown, even when a later step failed.
+    if (newFolders.length > 0) {
+      setRoutineFolders((prev) => {
+        const i = prev.findIndex((f) => f.id === id);
+        return [...prev.slice(0, i + 1), ...newFolders, ...prev.slice(i + 1)];
+      });
+      setRoutines((prev) => [...prev, ...newRoutines]);
+    }
+    if (failed) return failed;
+    // The siblings after the original each move down one.
+    const shifted = siblingIds
+      .slice(at)
+      .map((fid, i) => ({ id: fid, position: at + 1 + i }))
+      .filter((s) => isRemoteRoutineId(s.id));
+    if (authUserId && shifted.length > 0) {
+      const result = await setFolderPositions(shifted);
+      if (!result.ok) return result.message ?? "The copy was saved, but its place in the list was not.";
+    }
     return undefined;
   };
 
   const addRoutine: AppState["addRoutine"] = async (routine) => {
+    // WO1.1: a new routine goes to the end of its folder.
+    routine = { ...routine, position: routine.position ?? nextPosition(routines, routine.folderId) };
     if (!authUserId) {
-      const id = `routine${Date.now()}${Math.random().toString(16).slice(2)}`;
-      setRoutines((prev) => [...prev, { ...routine, id }]);
+      const id = localRoutineId();
+      setRoutines((prev) => [...prev, { ...routine, id, createdAt: new Date().toISOString() }]);
       return id;
     }
     const result = await createRoutineRemote(authUserId, routine, exerciseLookupRef.current);
@@ -5514,7 +5626,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       renameRoutineFolder,
       deleteRoutineFolder,
       updateRoutineFolder,
-      moveRoutineFolder,
+      reorderRoutineFolders,
+      placeRoutine,
+      duplicateRoutine,
+      duplicateRoutineFolder,
       routines,
       addRoutine,
       updateRoutine,

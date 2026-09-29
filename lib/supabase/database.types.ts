@@ -7482,6 +7482,7 @@ export type Database = {
           id: string
           name: string
           owner_id: string
+          position: number
           source_template_id: string | null
           updated_at: string
         }
@@ -7497,6 +7498,7 @@ export type Database = {
           id?: string
           name: string
           owner_id: string
+          position?: number
           source_template_id?: string | null
           updated_at?: string
         }
@@ -7512,6 +7514,7 @@ export type Database = {
           id?: string
           name?: string
           owner_id?: string
+          position?: number
           source_template_id?: string | null
           updated_at?: string
         }

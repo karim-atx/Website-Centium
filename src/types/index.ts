@@ -934,6 +934,9 @@ export interface RoutineFolder {
 export interface Routine {
   id: string;
   folderId: string | null;
+  /** WO1.1: 0-based order within its folder (Unfiled is its own group); absent for a routine with no row yet. */
+  position?: number;
+  createdAt?: string;
   name: string;
   color: string;
   estimatedDurationMin: number;

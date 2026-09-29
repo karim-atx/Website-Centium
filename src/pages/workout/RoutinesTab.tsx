@@ -5,6 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { CyclePhaseStrip } from "../../components/cycle/CyclePhaseStrip";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { PopupMenu } from "../../components/ui/PopupMenu";
 import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
 import { ExerciseSettingsSheet } from "../../components/workout/ExerciseSettingsSheet";
 import { BlockCard } from "../../components/workout/BlockCard";
@@ -15,6 +16,8 @@ import { BrowseProgramsSheet } from "../../components/workout/BrowseProgramsShee
 import type { Exercise, Routine, RoutineFolder, WorkoutBlock } from "../../types";
 import { folderFamily, routineFamily, type FolderFamily } from "../../data/folderColors";
 import { BlockSettingsSheet } from "../../components/workout/BlockSettingsSheet";
+import { moveId, routinesIn } from "../../services/routines/order";
+import { useRoutineDrag, type DragItem, type DropTarget } from "./useRoutineDrag";
 import {
   canGroup,
   groupIntoRuns,
@@ -28,13 +31,14 @@ import {
 import {
   ChevronDown,
   ChevronRight,
+  Copy,
   Folder,
   FolderPlus,
+  GripVertical,
   MoreVertical,
   Play,
   Settings2,
   Trash2,
-  X,
   Pencil,
   FolderTree,
   Plus,
@@ -69,9 +73,41 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
 
 const folderColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
 
-
 // Folder colour families live in data/folderColors (handover 2026-09-29 02),
 // shared with the logger, History and the active-workout bar.
+
+// WO1.1 menus, on the shared popup (02 "Popup / dropdown": row/folder ⋮ menus).
+type FolderAction = "rename" | "color" | "duplicate" | "subfolder" | "routine" | "delete";
+type RoutineAction = "rename" | "duplicate" | "delete";
+const MENU_ICON = 15;
+const FOLDER_MENU: { value: FolderAction; label: string; icon: React.ReactNode; destructive?: boolean }[] = [
+  { value: "rename", label: "Rename", icon: <Pencil size={MENU_ICON} /> },
+  { value: "color", label: "Edit color", icon: <Palette size={MENU_ICON} /> },
+  { value: "duplicate", label: "Duplicate", icon: <Copy size={MENU_ICON} /> },
+  { value: "subfolder", label: "Add subfolder", icon: <FolderTree size={MENU_ICON} /> },
+  { value: "routine", label: "Add routine", icon: <Plus size={MENU_ICON} /> },
+  { value: "delete", label: "Delete", icon: <Trash2 size={MENU_ICON} />, destructive: true },
+];
+const ROUTINE_MENU: { value: RoutineAction; label: string; icon: React.ReactNode; destructive?: boolean }[] = [
+  { value: "rename", label: "Rename", icon: <Pencil size={MENU_ICON} /> },
+  { value: "duplicate", label: "Duplicate", icon: <Copy size={MENU_ICON} /> },
+  { value: "delete", label: "Delete", icon: <Trash2 size={MENU_ICON} />, destructive: true },
+];
+
+/** The gap where a dragged item will land (WO1.1 "placeholder gap"). */
+const Placeholder: React.FC<{ height: number }> = ({ height }) => (
+  <div
+    data-dnd-placeholder
+    data-flip="placeholder"
+    aria-hidden
+    style={{
+      height,
+      borderRadius: 14,
+      background: "rgba(174,161,220,0.12)",
+      border: "1.5px dashed rgba(143,104,246,0.35)",
+    }}
+  />
+);
 
 export default function RoutinesTab() {
   const {
@@ -81,7 +117,10 @@ export default function RoutinesTab() {
     renameRoutineFolder,
     deleteRoutineFolder,
     updateRoutineFolder,
-    moveRoutineFolder,
+    reorderRoutineFolders,
+    placeRoutine,
+    duplicateRoutine,
+    duplicateRoutineFolder,
     updateRoutine,
     deleteRoutine,
     routinesError,
@@ -109,9 +148,10 @@ export default function RoutinesTab() {
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
   const [newFolderColor, setNewFolderColor] = useState(folderColorOptions[0]);
+  // A folder or a routine being renamed in place (ids are unique across both).
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
-  const [menuFolderId, setMenuFolderId] = useState<string | null>(null);
+  const [menu, setMenu] = useState<{ kind: "folder" | "routine"; id: string; anchor: HTMLElement } | null>(null);
   // QA 11.0: "The three dots here should show an 'edit' option, to edit
   // things like Folder Color."
   const [editingColorId, setEditingColorId] = useState<string | null>(null);
@@ -135,9 +175,42 @@ export default function RoutinesTab() {
       return next;
     });
 
-  const unfiled = routines.filter((r) => !r.folderId);
-  const topLevelFolders = routineFolders.filter((f) => !f.parentId);
-  const childrenOf = (parentId: string) => routineFolders.filter((f) => f.parentId === parentId);
+  const siblingsOf = (parentId: string | null) => routineFolders.filter((f) => (f.parentId ?? null) === parentId);
+  const unfiled = routinesIn(routines, null);
+
+  // --- WO1.1 drag and drop ----------------------------------------------------
+  const listRef = useRef<HTMLDivElement>(null);
+  const onDrop = (item: DragItem, target: DropTarget) => {
+    if (item.kind === "routine") {
+      if (target.kind === "header") run(placeRoutine(item.id, target.folderId, Number.MAX_SAFE_INTEGER));
+      else if (target.kind === "group") run(placeRoutine(item.id, target.folderId, target.index));
+    } else if (target.kind === "folders") {
+      const ids = siblingsOf(item.parentId).map((f) => f.id);
+      const next = moveId(ids, item.id, target.index);
+      if (next.some((id, i) => id !== ids[i])) run(reorderRoutineFolders(item.parentId, next));
+    }
+  };
+  const { drag, pressProps, gripProps, onClickCapture } = useRoutineDrag(listRef, onDrop);
+  const draggingRoutine = drag?.item.kind === "routine" ? drag.item.id : null;
+  const draggingFolder = drag?.item.kind === "folder" ? drag.item.id : null;
+
+  /**
+   * A group's rows as rendered while dragging: the placeholder at the drop
+   * index (counted without the dragged item), and the dragged item kept in
+   * its original place, hidden (see useRoutineDrag).
+   */
+  function withPlaceholder<T extends { id: string }>(items: T[], draggedId: string | null, at: number | null) {
+    const rest = items.filter((x) => x.id !== draggedId);
+    const out: ({ kind: "item"; item: T; hidden: boolean } | { kind: "placeholder" })[] = rest.map((item) => ({
+      kind: "item" as const,
+      item,
+      hidden: false,
+    }));
+    if (at !== null) out.splice(Math.min(at, out.length), 0, { kind: "placeholder" });
+    const dragged = items.findIndex((x) => x.id === draggedId);
+    if (dragged !== -1) out.splice(Math.min(dragged, out.length), 0, { kind: "item", item: items[dragged], hidden: true });
+    return out;
+  }
 
   // V7 (QA 7.0): "No two routines can be played simultaneously" — starting
   // a routine while a different one has an ongoing (paused) session warns
@@ -160,220 +233,173 @@ export default function RoutinesTab() {
     setPendingRoutine(null);
   };
 
-  const closeMenu = () => setMenuFolderId(null);
+  const onFolderAction = (folder: RoutineFolder, action: FolderAction) => {
+    if (action === "rename") {
+      setRenamingId(folder.id);
+      setRenameDraft(folder.name);
+    } else if (action === "color") setEditingColorId(folder.id);
+    else if (action === "duplicate") run(duplicateRoutineFolder(folder.id));
+    else if (action === "subfolder") {
+      setAddingSubfolderTo(folder.id);
+      setSubfolderName("");
+    } else if (action === "routine") {
+      setCreateFolder(folder.id);
+      setCreateOpen(true);
+    } else run(deleteRoutineFolder(folder.id));
+  };
 
-  const FolderNode: React.FC<{ folder: RoutineFolder; depth: number }> = ({ folder, depth }) => {
-    const folderRoutines = routines.filter((r) => r.folderId === folder.id);
-    const subfolders = childrenOf(folder.id);
+  const onRoutineAction = (routine: Routine, action: RoutineAction) => {
+    if (action === "rename") {
+      setRenamingId(routine.id);
+      setRenameDraft(routine.name);
+    } else if (action === "duplicate") run(duplicateRoutine(routine.id));
+    else setPendingDeleteRoutine(routine);
+  };
+
+  const commitRename = (kind: "folder" | "routine", id: string) => {
+    const name = renameDraft.trim();
+    if (name) run(kind === "folder" ? renameRoutineFolder(id, name) : updateRoutine(id, { name }));
+    setRenamingId(null);
+  };
+
+  const renderRoutine = (r: Routine, index: number, family: FolderFamily, hidden: boolean) => (
+    <RoutineRow
+      key={r.id}
+      routine={r}
+      hidden={hidden}
+      onStart={() => startRoutine(r)}
+      isOngoing={!!pausedSessions[r.id]}
+      onMenu={(anchor) => setMenu({ kind: "routine", id: r.id, anchor })}
+      renaming={renamingId === r.id}
+      renameDraft={renameDraft}
+      onRenameDraft={setRenameDraft}
+      onRenameCommit={() => commitRename("routine", r.id)}
+      press={pressProps({ kind: "routine", id: r.id, folderId: r.folderId, index }, renamingId !== r.id)}
+      grip={gripProps({ kind: "routine", id: r.id, folderId: r.folderId, index })}
+      onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
+      onDeleteExercise={(exId) =>
+        run(updateRoutine(r.id, { exercises: r.exercises.filter((e) => e.id !== exId) }))
+      }
+      onReplaceExercise={(exId, pick) =>
+        run(updateRoutine(r.id, {
+          exercises: r.exercises.map((e) =>
+            e.id === exId
+              ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, secondaryMuscleGroups: pick.secondaryMuscleGroups, classification: pick.classification, isCustom: pick.isCustom, exerciseId: pick.exerciseId, customExerciseId: pick.customExerciseId }
+              : e
+          ),
+        }))
+      }
+      onAddExercise={(pick) =>
+        run(updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] }))
+      }
+      onArrange={(exercises, blocks) => run(updateRoutine(r.id, { exercises, blocks }))}
+      family={family}
+    />
+  );
+
+  /** A folder's routines (or Unfiled's), with the drop placeholder while dragging. */
+  const renderGroup = (folderId: string | null, familyOf: (r: Routine) => FolderFamily) => {
+    const group = routinesIn(routines, folderId);
+    const at =
+      drag?.item.kind === "routine" && drag.target.kind === "group" && drag.target.folderId === folderId
+        ? drag.target.index
+        : null;
+    const rest = group.filter((r) => r.id !== draggingRoutine);
+    return withPlaceholder(group, draggingRoutine, at).map((entry) =>
+      entry.kind === "placeholder" ? (
+        <Placeholder key="placeholder" height={drag!.height} />
+      ) : (
+        renderRoutine(entry.item, entry.hidden ? group.indexOf(entry.item) : rest.indexOf(entry.item), familyOf(entry.item), entry.hidden)
+      )
+    );
+  };
+
+  /** A sibling group of folders, with the drop placeholder while a folder is dragged. */
+  const renderFolders = (parentId: string | null, depth: number) => {
+    const siblings = siblingsOf(parentId);
+    const at =
+      drag?.item.kind === "folder" && drag.target.kind === "folders" && drag.target.parentId === parentId
+        ? drag.target.index
+        : null;
+    const rest = siblings.filter((f) => f.id !== draggingFolder);
+    return withPlaceholder(siblings, draggingFolder, at).map((entry) =>
+      entry.kind === "placeholder" ? (
+        <Placeholder key="placeholder" height={drag!.height} />
+      ) : (
+        renderFolder(entry.item, depth, entry.hidden ? siblings.indexOf(entry.item) : rest.indexOf(entry.item), entry.hidden)
+      )
+    );
+  };
+
+  // A render function, not a component defined in here: a component created
+  // during render remounts its whole subtree on every render, which would drop
+  // a drag (and every routine's expanded state) on each pointer move.
+  const renderFolder = (folder: RoutineFolder, depth: number, index: number, hidden: boolean): React.ReactNode => {
+    const folderRoutines = routinesIn(routines, folder.id);
     const collapsed = collapsedFolders.has(folder.id);
     // Folder order: the folder's position in the account's folder list.
     const family = folderFamily(folder, routineFolders.indexOf(folder));
+    const item: DragItem = { kind: "folder", id: folder.id, parentId: folder.parentId ?? null, index };
 
     return (
-      <div className="flex flex-col gap-1.5" style={{ marginLeft: depth * 16 }}>
-        <div
-          className="flex items-center gap-[13px] justify-between rounded-[14px]"
-          style={{ background: family.head, minHeight: 54, padding: "0 14px" }}
-        >
-          {renamingId === folder.id ? (
-            <div className="flex items-center gap-2 flex-1">
-              <input
-                autoFocus
-                value={renameDraft}
-                onChange={(e) => setRenameDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && renameDraft.trim()) {
-                    run(renameRoutineFolder(folder.id, renameDraft.trim()));
-                    setRenamingId(null);
-                  }
-                }}
-                className="flex-1 rounded-lg bg-cream-card border border-charcoal/10 px-2 py-1 text-sm"
-              />
-              <button
-                onClick={() => {
-                  if (renameDraft.trim()) run(renameRoutineFolder(folder.id, renameDraft.trim()));
-                  setRenamingId(null);
-                }}
-                className="text-xs font-semibold text-primary"
+      <div
+        key={folder.id}
+        data-dnd-folder-block
+        data-flip={`f:${folder.id}`}
+        className="flex flex-col gap-1.5"
+        style={{ marginLeft: depth * 16, display: hidden ? "none" : undefined }}
+      >
+        <FolderHeader
+          folder={folder}
+          family={family}
+          count={folderRoutines.length}
+          collapsed={collapsed}
+          highlighted={drag?.target.kind === "header" && drag.target.folderId === folder.id}
+          onToggle={() => toggleFolderCollapsed(folder.id)}
+          onMenu={(anchor) => setMenu({ kind: "folder", id: folder.id, anchor })}
+          renaming={renamingId === folder.id}
+          renameDraft={renameDraft}
+          onRenameDraft={setRenameDraft}
+          onRenameCommit={() => commitRename("folder", folder.id)}
+          press={pressProps(item, renamingId !== folder.id)}
+          grip={gripProps(item)}
+          colorEditor={
+            editingColorId === folder.id && (
+              <div
+                className="absolute right-0 top-7 z-20 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] p-3 animate-fade-slide-up"
+                onClick={(ev) => ev.stopPropagation()}
               >
-                Save
-              </button>
-            </div>
-          ) : (
-            <>
-              <button
-                onClick={() => toggleFolderCollapsed(folder.id)}
-                className="tap flex items-center gap-[13px] flex-1 text-left min-w-0 self-stretch"
-              >
-                <span
-                  className="w-[33px] h-[33px] rounded-[10px] flex items-center justify-center shrink-0"
-                  style={{ background: family.tile }}
-                >
-                  <Folder size={16} style={{ color: "#FFFFFF" }} />
-                </span>
-                <span className="flex-1 min-w-0">
-                  <span className="flex items-center gap-[7px]">
-                    <span className="text-[15px] font-extrabold text-white truncate">{folder.name}</span>
-                    {collapsed ? (
-                      <ChevronRight size={15} strokeWidth={2.4} className="shrink-0" style={{ color: "#FFFFFF" }} />
-                    ) : (
-                      <ChevronDown size={15} strokeWidth={2.4} className="shrink-0" style={{ color: "#FFFFFF" }} />
-                    )}
-                  </span>
-                  <span className="block text-[11.5px] mt-px" style={{ color: "rgba(255,255,255,0.86)" }}>
-                    {folderRoutines.length} {folderRoutines.length === 1 ? "routine" : "routines"}
-                  </span>
-                </span>
-              </button>
-              <div className="relative">
+                <div className="flex gap-2 mb-2">
+                  {folderColorOptions.map((c) => (
+                    <button
+                      key={c}
+                      onClick={() => run(updateRoutineFolder(folder.id, { color: c }))}
+                      aria-label={`Color ${c}`}
+                      className="tap w-7 h-7 rounded-full"
+                      style={{
+                        background: c,
+                        outline: folder.color === c ? "2px solid rgb(var(--c-charcoal))" : "none",
+                        outlineOffset: 2,
+                      }}
+                    />
+                  ))}
+                </div>
                 <button
-                  onClick={() => setMenuFolderId(menuFolderId === folder.id ? null : folder.id)}
-                  className="tap flex shrink-0"
-                  style={{ color: "#FFFFFF" }}
-                  aria-label={`Options for ${folder.name}`}
+                  onClick={() => setEditingColorId(null)}
+                  className="tap w-full text-center text-xs font-semibold text-charcoal-soft"
                 >
-                  <MoreVertical size={17} />
+                  Done
                 </button>
-                {menuFolderId === folder.id && (
-                  <div className="absolute right-0 top-7 z-20 w-48 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] overflow-hidden animate-fade-slide-up">
-                    <button
-                      onClick={() => {
-                        setRenamingId(folder.id);
-                        setRenameDraft(folder.name);
-                        closeMenu();
-                      }}
-                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-charcoal hover:bg-cream-soft"
-                    >
-                      <Pencil size={13} /> Rename
-                    </button>
-                    {/* QA 11.0: "The three dots here should show an 'edit'
-                        option, to edit things like Folder Color, or Routine
-                        color." */}
-                    <button
-                      onClick={() => {
-                        setEditingColorId(folder.id);
-                        closeMenu();
-                      }}
-                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-charcoal hover:bg-cream-soft"
-                    >
-                      <Palette size={13} /> Edit color
-                    </button>
-                    {/* QA 11.0: "The folders in routines should be given the
-                        option to shuffle and re-order them." */}
-                    <button
-                      onClick={() => {
-                        run(moveRoutineFolder(folder.id, "up"));
-                        closeMenu();
-                      }}
-                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-charcoal hover:bg-cream-soft"
-                    >
-                      <ArrowUp size={13} /> Move up
-                    </button>
-                    <button
-                      onClick={() => {
-                        run(moveRoutineFolder(folder.id, "down"));
-                        closeMenu();
-                      }}
-                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-charcoal hover:bg-cream-soft"
-                    >
-                      <ArrowDown size={13} /> Move down
-                    </button>
-                    <button
-                      onClick={() => {
-                        setAddingSubfolderTo(folder.id);
-                        setSubfolderName("");
-                        closeMenu();
-                      }}
-                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-charcoal hover:bg-cream-soft"
-                    >
-                      <FolderTree size={13} /> Add subfolder
-                    </button>
-                    <button
-                      onClick={() => {
-                        setCreateFolder(folder.id);
-                        setCreateOpen(true);
-                        closeMenu();
-                      }}
-                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-charcoal hover:bg-cream-soft"
-                    >
-                      <Plus size={13} /> Add routine
-                    </button>
-                    <button
-                      onClick={() => {
-                        run(deleteRoutineFolder(folder.id));
-                        closeMenu();
-                      }}
-                      className="tap w-full flex items-center gap-2 px-4 py-2.5 text-sm text-status-high hover:bg-cream-soft"
-                    >
-                      <Trash2 size={13} /> Delete
-                    </button>
-                  </div>
-                )}
-                {editingColorId === folder.id && (
-                  <div className="absolute right-0 top-7 z-20 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] p-3 animate-fade-slide-up">
-                    <div className="flex gap-2 mb-2">
-                      {folderColorOptions.map((c) => (
-                        <button
-                          key={c}
-                          onClick={(ev) => {
-                            ev.stopPropagation();
-                            run(updateRoutineFolder(folder.id, { color: c }));
-                          }}
-                          aria-label={`Color ${c}`}
-                          className="tap w-7 h-7 rounded-full"
-                          style={{
-                            background: c,
-                            outline: folder.color === c ? "2px solid rgb(var(--c-charcoal))" : "none",
-                            outlineOffset: 2,
-                          }}
-                        />
-                      ))}
-                    </div>
-                    <button
-                      onClick={(ev) => {
-                        ev.stopPropagation();
-                        setEditingColorId(null);
-                      }}
-                      className="tap w-full text-center text-xs font-semibold text-charcoal-soft"
-                    >
-                      Done
-                    </button>
-                  </div>
-                )}
               </div>
-            </>
-          )}
-        </div>
+            )
+          }
+        />
 
         {!collapsed && (
           <div className="flex flex-col gap-1.5">
-            {folderRoutines.map((r) => (
-              <RoutineRow
-                key={r.id}
-                routine={r}
-                onStart={() => startRoutine(r)}
-                isOngoing={!!pausedSessions[r.id]}
-                onDelete={() => setPendingDeleteRoutine(r)}
-                onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
-                onDeleteExercise={(exId) =>
-                  run(updateRoutine(r.id, { exercises: r.exercises.filter((e) => e.id !== exId) }))
-                }
-                onReplaceExercise={(exId, pick) =>
-                  run(updateRoutine(r.id, {
-                    exercises: r.exercises.map((e) =>
-                      e.id === exId
-                        ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, secondaryMuscleGroups: pick.secondaryMuscleGroups, classification: pick.classification, isCustom: pick.isCustom, exerciseId: pick.exerciseId, customExerciseId: pick.customExerciseId }
-                        : e
-                    ),
-                  }))
-                }
-                onAddExercise={(pick) =>
-                  run(updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] }))
-                }
-                onArrange={(exercises, blocks) => run(updateRoutine(r.id, { exercises, blocks }))}
-                family={family}
-              />
-            ))}
+            <div data-dnd-group={folder.id} className="flex flex-col gap-1.5">
+              {renderGroup(folder.id, () => family)}
+            </div>
 
             {addingSubfolderTo === folder.id && (
               <div className="mb-2" style={{ marginLeft: 16 }}>
@@ -419,20 +445,24 @@ export default function RoutinesTab() {
               </div>
             )}
 
-            {subfolders.map((sf) => (
-              <FolderNode key={sf.id} folder={sf} depth={depth + 1} />
-            ))}
+            <div data-dnd-folders={folder.id} className="flex flex-col gap-1.5 empty:hidden">
+              {renderFolders(folder.id, depth + 1)}
+            </div>
           </div>
         )}
       </div>
     );
   };
 
+  const menuFolder = menu?.kind === "folder" ? routineFolders.find((f) => f.id === menu.id) : undefined;
+  const menuRoutine = menu?.kind === "routine" ? routines.find((r) => r.id === menu.id) : undefined;
+  const dragFolder = draggingFolder ? routineFolders.find((f) => f.id === draggingFolder) : undefined;
+  const dragRoutine = draggingRoutine ? routines.find((r) => r.id === draggingRoutine) : undefined;
+
   return (
     <div
       className="animate-fade-slide-up"
       onClick={() => {
-        if (menuFolderId) closeMenu();
         if (editingColorId) setEditingColorId(null);
       }}
     >
@@ -522,42 +552,28 @@ export default function RoutinesTab() {
         </div>
       )}
 
-      <div className="flex flex-col gap-3.5 mb-[17px]">
-        {topLevelFolders.map((folder) => (
-          <FolderNode key={folder.id} folder={folder} depth={0} />
-        ))}
+      <div ref={listRef} onClickCapture={onClickCapture} className="flex flex-col gap-3.5 mb-[17px]">
+        <div data-dnd-folders="" className="flex flex-col gap-3.5 empty:hidden">
+          {renderFolders(null, 0)}
+        </div>
 
-        {unfiled.length > 0 && (
-          <div>
+        {/* Shown while a routine is dragged even when empty, so a routine
+            can be dropped out of every folder. */}
+        {(unfiled.length > 0 || draggingRoutine) && (
+          <div data-flip="unfiled">
             <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Unfiled</p>
-            <div className="flex flex-col gap-1.5">
-              {unfiled.map((r) => (
-                <RoutineRow
-                  key={r.id}
-                  routine={r}
-                  onStart={() => startRoutine(r)}
-                isOngoing={!!pausedSessions[r.id]}
-                  onDelete={() => setPendingDeleteRoutine(r)}
-                  onSettings={(ex) => setSettingsExercise({ routineId: r.id, exercise: ex })}
-                  onDeleteExercise={(exId) =>
-                    run(updateRoutine(r.id, { exercises: r.exercises.filter((e) => e.id !== exId) }))
-                  }
-                  onReplaceExercise={(exId, pick) =>
-                    run(updateRoutine(r.id, {
-                      exercises: r.exercises.map((e) =>
-                        e.id === exId
-                          ? { ...e, name: pick.name, muscleGroups: pick.muscleGroups, secondaryMuscleGroups: pick.secondaryMuscleGroups, classification: pick.classification, isCustom: pick.isCustom, exerciseId: pick.exerciseId, customExerciseId: pick.customExerciseId }
-                          : e
-                      ),
-                    }))
-                  }
-                  onAddExercise={(pick) =>
-                    run(updateRoutine(r.id, { exercises: [...r.exercises, blankExerciseFromPick(pick)] }))
-                  }
-                  onArrange={(exercises, blocks) => run(updateRoutine(r.id, { exercises, blocks }))}
-                  family={routineFamily(r, routineFolders)}
-                />
-              ))}
+            <div
+              data-dnd-group=""
+              className="flex flex-col gap-1.5"
+              style={
+                draggingRoutine &&
+                unfiled.every((r) => r.id === draggingRoutine) &&
+                !(drag?.target.kind === "group" && drag.target.folderId === null)
+                  ? { minHeight: 54, borderRadius: 14, border: "1.5px dashed rgba(36,31,27,0.14)" }
+                  : undefined
+              }
+            >
+              {renderGroup(null, (r) => routineFamily(r, routineFolders))}
             </div>
           </div>
         )}
@@ -604,6 +620,63 @@ export default function RoutinesTab() {
           </button>
         )}
       </div>
+
+      <PopupMenu<FolderAction>
+        open={!!menuFolder}
+        anchor={menu?.anchor ?? null}
+        onClose={() => setMenu(null)}
+        options={FOLDER_MENU}
+        onSelect={(action) => menuFolder && onFolderAction(menuFolder, action)}
+      />
+      <PopupMenu<RoutineAction>
+        open={!!menuRoutine}
+        anchor={menu?.anchor ?? null}
+        onClose={() => setMenu(null)}
+        options={ROUTINE_MENU}
+        onSelect={(action) => menuRoutine && onRoutineAction(menuRoutine, action)}
+      />
+
+      {/* The lifted card follows the pointer (WO1.1 "While dragging"). */}
+      {drag &&
+        (dragRoutine || dragFolder) &&
+        createPortal(
+          <div
+            aria-hidden
+            className="fixed pointer-events-none"
+            style={{
+              zIndex: 55,
+              left: drag.left,
+              width: drag.width,
+              top: drag.y - drag.offsetY,
+              transform: "scale(1.03)",
+              borderRadius: 14,
+              boxShadow: "0 14px 30px rgba(36,31,27,0.18)",
+            }}
+          >
+            {dragRoutine ? (
+              <RoutineCardFace
+                routine={dragRoutine}
+                family={
+                  dragRoutine.folderId
+                    ? folderFamily(
+                        routineFolders.find((f) => f.id === dragRoutine.folderId)!,
+                        routineFolders.findIndex((f) => f.id === dragRoutine.folderId)
+                      )
+                    : routineFamily(dragRoutine, routineFolders)
+                }
+                isOngoing={!!pausedSessions[dragRoutine.id]}
+              />
+            ) : (
+              <FolderHeader
+                folder={dragFolder!}
+                family={folderFamily(dragFolder!, routineFolders.indexOf(dragFolder!))}
+                count={routinesIn(routines, dragFolder!.id).length}
+                collapsed={collapsedFolders.has(dragFolder!.id)}
+              />
+            )}
+          </div>,
+          document.body
+        )}
 
       <CreateRoutineSheet open={createOpen} onClose={() => setCreateOpen(false)} folderId={createFolder} />
 
@@ -717,6 +790,205 @@ export default function RoutinesTab() {
   );
 }
 
+
+type PressProps = Record<string, unknown>;
+type GripProps = Record<string, unknown>;
+
+/** The inline rename field (folders and routines rename the same way). */
+const RenameField: React.FC<{ value: string; onChange: (v: string) => void; onCommit: () => void; tone: "light" | "dark" }> = ({
+  value,
+  onChange,
+  onCommit,
+  tone,
+}) => (
+  <div className="flex items-center gap-2 flex-1 min-w-0" data-no-drag>
+    <input
+      autoFocus
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" && value.trim()) onCommit();
+      }}
+      className="flex-1 min-w-0 rounded-lg bg-cream-card border border-charcoal/10 px-2 py-1 text-sm"
+    />
+    <button onClick={onCommit} className={clsx("text-xs font-semibold", tone === "light" ? "text-white" : "text-primary")}>
+      Save
+    </button>
+  </div>
+);
+
+/**
+ * A folder header (WO1.1 frame): folder tile, name + chevron, routine count,
+ * then ⋮ and the six-dot grip 13px apart, 14px from the right edge. Tapping
+ * the name toggles the folder; a long-press or the grip drags it. Rendered
+ * bare (no handlers) as the lifted card while dragging.
+ */
+const FolderHeader: React.FC<{
+  folder: RoutineFolder;
+  family: FolderFamily;
+  count: number;
+  collapsed: boolean;
+  highlighted?: boolean;
+  onToggle?: () => void;
+  onMenu?: (anchor: HTMLElement) => void;
+  renaming?: boolean;
+  renameDraft?: string;
+  onRenameDraft?: (v: string) => void;
+  onRenameCommit?: () => void;
+  press?: PressProps;
+  grip?: GripProps;
+  colorEditor?: React.ReactNode;
+}> = ({ folder, family, count, collapsed, highlighted, onToggle, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip, colorEditor }) => {
+  const gripProps = grip;
+  return (
+    <div
+      data-drag-card
+      data-dnd-header={onToggle ? folder.id : undefined}
+      {...press}
+      className="flex items-center gap-[13px] justify-between rounded-[14px] select-none transition-shadow"
+      style={{
+        background: family.head,
+        minHeight: 54,
+        padding: "0 14px",
+        WebkitTouchCallout: "none",
+        // A routine dragged over this folder: dropping adds it to the end.
+        boxShadow: highlighted ? `0 0 0 2px #FFFFFF inset, 0 0 0 2px ${family.tile}` : undefined,
+      }}
+    >
+      {renaming ? (
+        <RenameField value={renameDraft ?? ""} onChange={(v) => onRenameDraft?.(v)} onCommit={() => onRenameCommit?.()} tone="light" />
+      ) : (
+        <>
+          <button onClick={onToggle} className="tap flex items-center gap-[13px] flex-1 text-left min-w-0 self-stretch">
+            <span
+              className="w-[33px] h-[33px] rounded-[10px] flex items-center justify-center shrink-0"
+              style={{ background: family.tile }}
+            >
+              <Folder size={16} style={{ color: "#FFFFFF" }} />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="flex items-center gap-[7px]">
+                <span className="text-[15px] font-extrabold text-white truncate">{folder.name}</span>
+                {collapsed ? (
+                  <ChevronRight size={15} strokeWidth={2.4} className="shrink-0" style={{ color: "#FFFFFF" }} />
+                ) : (
+                  <ChevronDown size={15} strokeWidth={2.4} className="shrink-0" style={{ color: "#FFFFFF" }} />
+                )}
+              </span>
+              <span className="block text-[11.5px] mt-px" style={{ color: "rgba(255,255,255,0.86)" }}>
+                {count} {count === 1 ? "routine" : "routines"}
+              </span>
+            </span>
+          </button>
+          <div className="relative flex shrink-0" data-no-drag>
+            <button
+              onClick={(e) => onMenu?.(e.currentTarget)}
+              className="tap flex shrink-0"
+              style={{ color: "#FFFFFF" }}
+              aria-label={`Options for ${folder.name}`}
+            >
+              <MoreVertical size={17} />
+            </button>
+            {colorEditor}
+          </div>
+          <span
+            {...gripProps}
+            role="button"
+            aria-label={`Drag ${folder.name}`}
+            className="flex shrink-0"
+            style={{ color: "#FFFFFF", ...(gripProps?.style as React.CSSProperties | undefined) }}
+          >
+            <GripVertical size={17} />
+          </span>
+        </>
+      )}
+    </div>
+  );
+};
+
+/**
+ * The routine card's top row (WO1.1 frame): accent bar, name and meta, play,
+ * then ⋮ (replacing the ×, same icon, size and spacing as the folder's, in
+ * the × grey) and the six-dot grip. Rendered bare as the lifted card.
+ */
+const RoutineCardFace: React.FC<{
+  routine: Routine;
+  family: FolderFamily;
+  isOngoing?: boolean;
+  onToggle?: () => void;
+  onStart?: () => void;
+  onMenu?: (anchor: HTMLElement) => void;
+  renaming?: boolean;
+  renameDraft?: string;
+  onRenameDraft?: (v: string) => void;
+  onRenameCommit?: () => void;
+  press?: PressProps;
+  grip?: GripProps;
+}> = ({ routine, family, isOngoing, onToggle, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip }) => {
+  const gripProps = grip;
+  return (
+    <div
+      data-drag-card
+      {...press}
+      className="flex items-center gap-[13px] min-h-[54px] rounded-[14px] select-none"
+      style={{ padding: "0 14px 0 0", background: family.row, WebkitTouchCallout: "none" }}
+    >
+      <span
+        className={clsx("w-1 h-8 rounded-full shrink-0 block", isOngoing && "animate-pulse")}
+        style={{ marginLeft: 15, background: isOngoing ? "#E9736A" : family.bar }}
+      />
+      {renaming ? (
+        <RenameField value={renameDraft ?? ""} onChange={(v) => onRenameDraft?.(v)} onCommit={() => onRenameCommit?.()} tone="dark" />
+      ) : (
+        <button onClick={onToggle} className="flex-1 text-left min-w-0">
+          <p className="text-[14.5px] font-bold text-charcoal flex items-center gap-1.5 truncate">
+            {routine.name}
+            {isOngoing && (
+              <span className="text-[10px] font-bold uppercase text-[#E9736A] flex items-center gap-1 shrink-0">
+                <Pause size={10} fill="currentColor" /> Ongoing
+              </span>
+            )}
+          </p>
+          <p className="text-[11.5px] mt-0.5" style={{ color: "#8C8378" }}>
+            {routine.exercises.length} exercises • ~{routine.estimatedDurationMin} min
+          </p>
+        </button>
+      )}
+      <button
+        data-no-drag
+        onClick={onStart}
+        aria-label={isOngoing ? `Resume ${routine.name}` : `Start ${routine.name}`}
+        className={clsx("tap w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0", isOngoing && "animate-pulse")}
+        style={{ background: isOngoing ? "#E9736A" : family.play }}
+      >
+        {isOngoing ? (
+          <Pause size={13} fill="#FFFFFF" style={{ color: "#FFFFFF" }} />
+        ) : (
+          <Play size={13} fill="#FFFFFF" style={{ color: "#FFFFFF", marginLeft: 1 }} />
+        )}
+      </button>
+      <button
+        data-no-drag
+        onClick={(e) => onMenu?.(e.currentTarget)}
+        aria-label={`Options for ${routine.name}`}
+        className="tap flex shrink-0"
+        style={{ color: "#8C8378" }}
+      >
+        <MoreVertical size={17} />
+      </button>
+      <span
+        {...gripProps}
+        role="button"
+        aria-label={`Drag ${routine.name}`}
+        className="flex shrink-0"
+        style={{ color: "#8C8378", ...(gripProps?.style as React.CSSProperties | undefined) }}
+      >
+        <GripVertical size={17} />
+      </span>
+    </div>
+  );
+};
+
 /**
  * One row's selection tick, during grouping.
  *
@@ -751,8 +1023,16 @@ const SelectBox: React.FC<{
 
 const RoutineRow: React.FC<{
   routine: Routine;
+  /** The one being dragged stays mounted, hidden (see useRoutineDrag). */
+  hidden?: boolean;
   onStart: () => void;
-  onDelete: () => void;
+  onMenu: (anchor: HTMLElement) => void;
+  renaming: boolean;
+  renameDraft: string;
+  onRenameDraft: (v: string) => void;
+  onRenameCommit: () => void;
+  press: PressProps;
+  grip: GripProps;
   onSettings: (ex: Exercise) => void;
   onDeleteExercise: (exerciseId: string) => void;
   onReplaceExercise: (exerciseId: string, pick: ExercisePick) => void;
@@ -762,7 +1042,7 @@ const RoutineRow: React.FC<{
   /** The colours of the folder this routine sits in. */
   family: FolderFamily;
   isOngoing?: boolean;
-}> = ({ routine, onStart, onDelete, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, onArrange, family, isOngoing }) => {
+}> = ({ routine, hidden, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, onArrange, family, isOngoing }) => {
   const [expanded, setExpanded] = useState(false);
   const [revealedId, setRevealedId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
@@ -906,41 +1186,28 @@ const RoutineRow: React.FC<{
     // Master handover (CentiumTabFrame "Color-coded folders"): a 54px row in
     // the lighter shade of its folder's hue, with the folder's accent bar
     // and play button. An ongoing (paused) routine keeps its coral pulse.
-    <div className="rounded-[14px] overflow-hidden" style={{ background: family.row }}>
-      <div className="flex items-center gap-[13px] min-h-[54px]" style={{ padding: "0 14px 0 0" }}>
-        <span
-          className={clsx("w-1 h-8 rounded-full shrink-0 block", isOngoing && "animate-pulse")}
-          style={{ marginLeft: 15, background: isOngoing ? "#E9736A" : family.bar }}
-        />
-        <button onClick={() => setExpanded((v) => !v)} className="flex-1 text-left min-w-0">
-          <p className="text-[14.5px] font-bold text-charcoal flex items-center gap-1.5 truncate">
-            {routine.name}
-            {isOngoing && (
-              <span className="text-[10px] font-bold uppercase text-[#E9736A] flex items-center gap-1 shrink-0">
-                <Pause size={10} fill="currentColor" /> Ongoing
-              </span>
-            )}
-          </p>
-          <p className="text-[11.5px] mt-0.5" style={{ color: "#8C8378" }}>
-            {routine.exercises.length} exercises • ~{routine.estimatedDurationMin} min
-          </p>
-        </button>
-        <button
-          onClick={onStart}
-          aria-label={isOngoing ? `Resume ${routine.name}` : `Start ${routine.name}`}
-          className={clsx("tap w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0", isOngoing && "animate-pulse")}
-          style={{ background: isOngoing ? "#E9736A" : family.play }}
-        >
-          {isOngoing ? (
-            <Pause size={13} fill="#FFFFFF" style={{ color: "#FFFFFF" }} />
-          ) : (
-            <Play size={13} fill="#FFFFFF" style={{ color: "#FFFFFF", marginLeft: 1 }} />
-          )}
-        </button>
-        <button onClick={onDelete} aria-label={`Remove ${routine.name}`} className="tap flex shrink-0" style={{ color: "#8C8378" }}>
-          <X size={16} />
-        </button>
-      </div>
+    // WO1.1: ⋮ (Rename, Duplicate, Delete) replaces the ×; long-press or the
+    // grip drags it.
+    <div
+      data-dnd-row
+      data-flip={`r:${routine.id}`}
+      className="rounded-[14px] overflow-hidden"
+      style={{ background: family.row, display: hidden ? "none" : undefined }}
+    >
+      <RoutineCardFace
+        routine={routine}
+        family={family}
+        isOngoing={isOngoing}
+        onToggle={() => setExpanded((v) => !v)}
+        onStart={onStart}
+        onMenu={onMenu}
+        renaming={renaming}
+        renameDraft={renameDraft}
+        onRenameDraft={onRenameDraft}
+        onRenameCommit={onRenameCommit}
+        press={press}
+        grip={grip}
+      />
       {expanded && (
         <div className="border-t border-charcoal/[0.06]">
           {/* GROUPING IS A MODE, entered here. The rows already open an

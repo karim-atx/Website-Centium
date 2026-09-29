@@ -176,7 +176,7 @@ const BLOCK_COLUMNS = "id, kind, label, time_cap_seconds, interval_seconds, roun
 const DEFINITION_COLUMNS = "id, name, classification, muscle_groups, secondary_muscle_groups";
 
 const ROUTINE_SELECT =
-  "id, folder_id, name, color, estimated_duration_min, coach_note, coach_note_updated_at, coach_note_read_at, assigned_by_professional_id, " +
+  "id, folder_id, position, created_at, name, color, estimated_duration_min, coach_note, coach_note_updated_at, coach_note_read_at, assigned_by_professional_id, " +
   `routine_exercise_blocks(${BLOCK_COLUMNS}), ` +
   `routine_exercises(${PRESCRIPTION_COLUMNS}, ` +
   `exercises(${DEFINITION_COLUMNS}), ` +
@@ -232,6 +232,8 @@ interface BlockRow {
 interface RoutineRow {
   id: string;
   folder_id: string | null;
+  position: number;
+  created_at: string;
   name: string;
   color: string | null;
   estimated_duration_min: number | null;
@@ -316,6 +318,8 @@ function toRoutine(r: RoutineRow): Routine {
   return {
     id: r.id,
     folderId: r.folder_id,
+    position: r.position,
+    createdAt: r.created_at,
     name: r.name,
     // The row permits null; the client type does not, and every routine this
     // app writes carries one. A colourless row renders with the app's default
@@ -336,6 +340,8 @@ export async function getRoutines(userId: string): Promise<RoutinesResult> {
     .from("routines")
     .select(ROUTINE_SELECT)
     .eq("owner_id", userId)
+    // WO1.1: 0-based within (owner, folder); not unique mid-reorder, so created_at breaks ties.
+    .order("position", { ascending: true })
     .order("created_at", { ascending: true });
 
   if (error) {
@@ -529,6 +535,8 @@ export async function createRoutine(
     .insert({
       owner_id: userId,
       folder_id: routine.folderId,
+      // WO1.1: the caller places it (the end of its folder, or below an original).
+      position: routine.position ?? 0,
       name: routine.name.trim(),
       color: routine.color ?? null,
       estimated_duration_min: routine.estimatedDurationMin ?? null,
@@ -536,7 +544,7 @@ export async function createRoutine(
       // only the professional's server functions (assign / adopt) set them,
       // and Database-Atraxia removes both from the client INSERT grant.
     })
-    .select("id")
+    .select("id, created_at")
     .single();
 
   if (error || !data) {
@@ -575,6 +583,8 @@ export async function createRoutine(
     routine: {
       ...routine,
       id: data.id,
+      position: routine.position ?? 0,
+      createdAt: data.created_at,
       blocks: blockWrite.saved,
       exercises: remapBlockIds(routine.exercises, blockWrite.idByLocalId),
     },
@@ -657,6 +667,27 @@ export async function updateRoutine(
       exercises: remapBlockIds(exercises, blockWrite.idByLocalId),
     },
   };
+}
+
+/**
+ * Writes routine placements (WO1.1): folder_id + position per row, one PATCH
+ * each, because PostgREST cannot write different values in one statement. A
+ * move between folders is a single PATCH; a reorder writes the rows it shifted.
+ */
+export async function setRoutinePlacements(
+  placements: { id: string; folderId: string | null; position: number }[]
+): Promise<WriteResult> {
+  const results = await Promise.all(
+    placements.map((p) =>
+      supabase.from("routines").update({ folder_id: p.folderId, position: p.position }).eq("id", p.id)
+    )
+  );
+  const failed = results.find((r) => r.error);
+  if (failed?.error) {
+    console.error("[routines] Could not reorder routines:", failed.error.message);
+    return { ok: false, message: describe(failed.error) };
+  }
+  return { ok: true };
 }
 
 /** Prescriptions go with it: routine_exercises.routine_id is ON DELETE CASCADE. */
