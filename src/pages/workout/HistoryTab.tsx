@@ -1,8 +1,8 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/ui/Card";
 import { formatDuration } from "../../services/workout";
-import { WorkoutCalendarSheet } from "../../components/workout/WorkoutCalendarSheet";
+import { CalendarPickerSheet } from "../../components/dashboard/CalendarPickerSheet";
 import { ChevronDown, ChevronUp, Calendar, BarChart3, Clock } from "lucide-react";
 import type { WorkoutSession } from "../../types";
 import { SessionDetail } from "../../components/workout/SessionDetail";
@@ -31,9 +31,13 @@ function closestComparison(totalKg: number) {
 }
 
 export default function HistoryTab() {
-  const { workoutSessions } = useApp();
+  const { workoutSessions, today } = useApp();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [calendarOpen, setCalendarOpen] = useState(false);
+  // WO9: a day picked in the shared "Choose a date" picker shows that day's sessions.
+  const [day, setDay] = useState<string | null>(null);
+  const sessionDays = useMemo(() => new Set(workoutSessions.map((s) => s.date)), [workoutSessions]);
+  const listed = day ? workoutSessions.filter((s) => s.date === day) : workoutSessions;
 
   const totalVolume = workoutSessions.reduce((s, w) => s + w.totalVolumeKg, 0);
   const totalSeconds = workoutSessions.reduce((s, w) => s + w.durationSec, 0);
@@ -82,13 +86,29 @@ export default function HistoryTab() {
         )}
       </Card>
 
-      {workoutSessions.length > 0 && (
-        <div>
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-            Logged sessions
+      {day && (
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
+            {new Date(`${day}T00:00:00`).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })}
           </p>
+          <button onClick={() => setDay(null)} className="tap text-xs font-semibold text-primary">
+            Show all
+          </button>
+        </div>
+      )}
+      {day && listed.length === 0 && (
+        <p className="text-center text-sm text-charcoal-faint py-4">No workouts logged on this day.</p>
+      )}
+
+      {listed.length > 0 && (
+        <div>
+          {!day && (
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+              Logged sessions
+            </p>
+          )}
           <div className="space-y-2.5">
-            {[...workoutSessions].reverse().map((s) => (
+            {[...listed].reverse().map((s) => (
               <SessionRow
                 key={s.id}
                 session={s}
@@ -106,7 +126,16 @@ export default function HistoryTab() {
         </p>
       )}
 
-      <WorkoutCalendarSheet open={calendarOpen} onClose={() => setCalendarOpen(false)} />
+      {/* WO9: the app's standard date picker (as on Home and Food), with a dot
+          under each day that has a logged session. */}
+      <CalendarPickerSheet
+        open={calendarOpen}
+        onClose={() => setCalendarOpen(false)}
+        selectedDate={day ?? today}
+        today={today}
+        markers={sessionDays}
+        onSelect={setDay}
+      />
     </div>
   );
 }
