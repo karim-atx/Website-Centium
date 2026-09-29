@@ -65,6 +65,51 @@ export type Database = {
         }
         Relationships: []
       }
+      achievements: {
+        Row: {
+          active: boolean
+          category: Database["public"]["Enums"]["achievement_category"]
+          created_at: string
+          description: string
+          group_key: string | null
+          icon: string
+          key: string
+          level: Database["public"]["Enums"]["achievement_level"] | null
+          points: number
+          sort_order: number
+          threshold: number
+          title: string
+        }
+        Insert: {
+          active?: boolean
+          category: Database["public"]["Enums"]["achievement_category"]
+          created_at?: string
+          description: string
+          group_key?: string | null
+          icon: string
+          key: string
+          level?: Database["public"]["Enums"]["achievement_level"] | null
+          points: number
+          sort_order: number
+          threshold: number
+          title: string
+        }
+        Update: {
+          active?: boolean
+          category?: Database["public"]["Enums"]["achievement_category"]
+          created_at?: string
+          description?: string
+          group_key?: string | null
+          icon?: string
+          key?: string
+          level?: Database["public"]["Enums"]["achievement_level"] | null
+          points?: number
+          sort_order?: number
+          threshold?: number
+          title?: string
+        }
+        Relationships: []
+      }
       admin_actions: {
         Row: {
           action: string
@@ -3631,6 +3676,67 @@ export type Database = {
         }
         Relationships: []
       }
+      feature_milestones: {
+        Row: {
+          first_at: string
+          milestone: string
+          user_id: string
+        }
+        Insert: {
+          first_at?: string
+          milestone: string
+          user_id: string
+        }
+        Update: {
+          first_at?: string
+          milestone?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "feature_milestones_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_milestones_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_milestones_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_milestones_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "feature_milestones_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "feature_milestones_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       food_log_entries: {
         Row: {
           calories: number
@@ -5659,6 +5765,24 @@ export type Database = {
           id?: boolean
           marketplace_revenue_share_pct?: number
           updated_at?: string
+        }
+        Relationships: []
+      }
+      point_tiers: {
+        Row: {
+          min_points: number
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          min_points: number
+          name: string
+          sort_order: number
+        }
+        Update: {
+          min_points?: number
+          name?: string
+          sort_order?: number
         }
         Relationships: []
       }
@@ -8105,6 +8229,77 @@ export type Database = {
           },
         ]
       }
+      user_achievements: {
+        Row: {
+          achievement_key: string
+          earned_at: string
+          points_awarded: number
+          user_id: string
+        }
+        Insert: {
+          achievement_key: string
+          earned_at?: string
+          points_awarded: number
+          user_id: string
+        }
+        Update: {
+          achievement_key?: string
+          earned_at?: string
+          points_awarded?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_achievements_achievement_key_fkey"
+            columns: ["achievement_key"]
+            isOneToOne: false
+            referencedRelation: "achievements"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_achievements_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       welcome_emails: {
         Row: {
           attempts: number
@@ -9923,6 +10118,13 @@ export type Database = {
         Args: { p_requested_at: string }
         Returns: string
       }
+      achievement_progress: {
+        Args: { p_user: string }
+        Returns: {
+          achievement_key: string
+          current_value: number
+        }[]
+      }
       admin_approve_certification: {
         Args: { p_note?: string; p_professional_id: string }
         Returns: Json
@@ -10445,6 +10647,13 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      evaluate_achievements: {
+        Args: { p_user: string }
+        Returns: {
+          awarded_key: string
+          awarded_points: number
+        }[]
+      }
       expire_stale_ringing_calls: { Args: never; Returns: number }
       finalize_health_data_storage_purge: {
         Args: { p_request_id: string }
@@ -10550,6 +10759,24 @@ export type Database = {
           user_id: string
         }[]
       }
+      my_achievements: {
+        Args: never
+        Returns: {
+          category: Database["public"]["Enums"]["achievement_category"]
+          current_value: number
+          description: string
+          earned_at: string
+          group_key: string
+          icon: string
+          key: string
+          level: Database["public"]["Enums"]["achievement_level"]
+          newly_earned: boolean
+          points: number
+          sort_order: number
+          threshold: number
+          title: string
+        }[]
+      }
       my_business_seat_capacity: {
         Args: never
         Returns: {
@@ -10597,6 +10824,21 @@ export type Database = {
           max_clients: number
           source: Database["public"]["Enums"]["professional_plan_source"]
           tier_id: string
+          tier_name: string
+        }[]
+      }
+      my_points_summary: {
+        Args: never
+        Returns: {
+          achievement_points: number
+          achievements_earned: number
+          balance: number
+          next_tier_min_points: number
+          next_tier_name: string
+          other_points: number
+          points_to_next_tier: number
+          referral_points: number
+          tier_min_points: number
           tier_name: string
         }[]
       }
@@ -10872,6 +11114,7 @@ export type Database = {
           used_bytes: number
         }[]
       }
+      sweep_achievements: { Args: never; Returns: number }
       system_support_identity: { Args: never; Returns: string }
       thread_allows_attachments: {
         Args: { p_thread_id: string }
@@ -10890,6 +11133,8 @@ export type Database = {
       trigger_health_data_storage_purge: { Args: never; Returns: number }
       trigger_message_attachment_purge: { Args: never; Returns: number }
       trigger_storage_purge: { Args: never; Returns: number }
+      user_timezone: { Args: { p_user: string }; Returns: string }
+      user_today: { Args: { p_user: string }; Returns: string }
       valid_endurance_plan: { Args: { p: Json }; Returns: boolean }
       valid_endurance_result: { Args: { r: Json }; Returns: boolean }
       valid_endurance_step: { Args: { s: Json }; Returns: boolean }
@@ -10914,6 +11159,16 @@ export type Database = {
         | "cycle_phase"
         | "pregnancy"
       account_type: "customer" | "professional" | "business"
+      achievement_category:
+        | "getting_started"
+        | "nutrition"
+        | "training"
+        | "health"
+        | "mind"
+        | "consistency"
+        | "community"
+        | "explorer"
+      achievement_level: "bronze" | "silver" | "gold"
       activity_level:
         | "sedentary"
         | "light"
@@ -11075,7 +11330,12 @@ export type Database = {
         | "wellness"
         | "meal_prep"
       payment_modality: "cash" | "card" | "whish"
-      points_source: "streak" | "referral" | "manual_adjustment" | "other"
+      points_source:
+        | "streak"
+        | "referral"
+        | "manual_adjustment"
+        | "other"
+        | "achievement"
       pregnancy_outcome: "birth" | "loss" | "other"
       pregnancy_status: "active" | "ended"
       pregnancy_test_result: "negative" | "positive"
@@ -11283,6 +11543,17 @@ export const Constants = {
         "pregnancy",
       ],
       account_type: ["customer", "professional", "business"],
+      achievement_category: [
+        "getting_started",
+        "nutrition",
+        "training",
+        "health",
+        "mind",
+        "consistency",
+        "community",
+        "explorer",
+      ],
+      achievement_level: ["bronze", "silver", "gold"],
       activity_level: [
         "sedentary",
         "light",
@@ -11457,7 +11728,13 @@ export const Constants = {
         "meal_prep",
       ],
       payment_modality: ["cash", "card", "whish"],
-      points_source: ["streak", "referral", "manual_adjustment", "other"],
+      points_source: [
+        "streak",
+        "referral",
+        "manual_adjustment",
+        "other",
+        "achievement",
+      ],
       pregnancy_outcome: ["birth", "loss", "other"],
       pregnancy_status: ["active", "ended"],
       pregnancy_test_result: ["negative", "positive"],
