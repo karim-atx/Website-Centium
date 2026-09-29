@@ -468,3 +468,36 @@ body {
   color: var(--ph);
   opacity: 0.46;
 }
+
+/* WO10 Set options sliders (Pain level, Mood): a light #E5E5EA track with the
+   filled part drawn by an inline gradient, and a 16px thumb in --thumb. The
+   native accent-color track paints the unfilled part dark, which the frame
+   does not. */
+.set-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+}
+.set-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--thumb);
+  border: none;
+  cursor: pointer;
+}
+.set-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--thumb);
+  border: none;
+  cursor: pointer;
+}
+.set-slider:focus-visible {
+  box-shadow: 0 0 0 3px rgba(174, 161, 220, 0.45);
+}
