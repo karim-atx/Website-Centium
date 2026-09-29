@@ -93,7 +93,6 @@ import {
   type ExerciseLookup,
 } from "../services/routines";
 import { mockForumPosts } from "../data/mockForum";
-import { defaultHabits } from "../data/mockHealthData";
 import { estimate1RM } from "../services/workout";
 import {
   clearPausedSession as clearPausedSessionRemote,
@@ -115,6 +114,31 @@ import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
 import { unsubscribeFromPush } from "../services/push";
 import { usePushSubscriptionSync } from "../hooks/usePushSubscriptionSync";
+import {
+  createHabit,
+  deleteHabitRemote,
+  getHabits,
+  habitStreak,
+  isDoneOn,
+  renameHabitRemote,
+  setCompletion,
+  type HabitsSnapshot,
+} from "../services/habits";
+import {
+  createJournalEntry,
+  createJournalFolder,
+  deleteJournalEntryRemote,
+  getJournalEntries,
+  getJournalFolders,
+  updateJournalEntryRemote,
+} from "../services/journal";
+import {
+  IMPORT_MARKER,
+  importHabits,
+  importJournal,
+  isUntouchedStarter,
+  type ImportReport,
+} from "../services/mind-import";
 import {
   cancelAccountDeletion as cancelAccountDeletionRemote,
   onPasswordRecovery,
@@ -315,13 +339,6 @@ function widgetsForGoals(goals: UserProfile["goals"], tracking: TrackPreference[
 // all.
 const defaultRoutineFolders: RoutineFolder[] = [];
 
-const defaultJournalFolders: JournalFolder[] = [
-  { id: "jf-personal", name: "Personal" },
-  { id: "jf-training", name: "Training" },
-  { id: "jf-nutrition", name: "Nutrition" },
-  { id: "jf-general", name: "General" },
-];
-
 interface AppState {
   user: UserProfile;
   setUser: React.Dispatch<React.SetStateAction<UserProfile>>;
@@ -520,6 +537,19 @@ interface AppState {
   setWaterGoal: (ml: number) => void;
 
   habits: HabitItem[];
+  /** True until the first habit read answers, so the UI waits rather than showing "none". */
+  habitsLoading: boolean;
+  /** Set when habits could not be read or written. Never means "you have none". */
+  habitsError: string | null;
+  /**
+   * The starter habits, offered rather than created.
+   *
+   * These used to BE the account's habits: five rows seeded into localStorage
+   * on first load, indistinguishable from ones somebody had made. They are a
+   * suggestion the app makes, so the Habits tab offers them and creates
+   * nothing until one is tapped.
+   */
+  habitSuggestions: { label: string; icon: HabitIconKey }[];
   toggleHabit: (id: string) => void;
   addHabit: (label: string, icon: HabitIconKey) => void;
   removeHabit: (id: string) => void;
@@ -785,6 +815,8 @@ interface AppState {
   logRecipe: (recipeId: string, servingsToLog: number, meal: MealType, date: string) => Promise<void>;
 
   journalFolders: JournalFolder[];
+  journalLoading: boolean;
+  journalError: string | null;
   journalEntries: JournalEntry[];
   addJournalEntry: (folderId: string, title: string, text: string) => void;
   updateJournalEntry: (id: string, patch: Partial<Pick<JournalEntry, "title" | "text">>) => void;
@@ -1106,6 +1138,21 @@ interface AppState {
 
 const AppContext = createContext<AppState | undefined>(undefined);
 
+// THE STARTER HABITS, AS SUGGESTIONS RATHER THAN ROWS.
+//
+// data/mockHealthData's defaultHabits seeded these five into every new
+// account's localStorage, where they were indistinguishable from habits the
+// user had written — that file is gone with them — which is why the one-time import refuses to upload an
+// untouched set. They live here now as a list the Habits tab OFFERS: nothing
+// is created until somebody taps one, and then it is theirs.
+const HABIT_SUGGESTIONS: { label: string; icon: HabitIconKey }[] = [
+  { label: "Drink water", icon: "water" },
+  { label: "10,000 steps", icon: "steps" },
+  { label: "Workout", icon: "workout" },
+  { label: "Journal", icon: "journal" },
+  { label: "Meditate", icon: "meditation" },
+];
+
 const STORAGE_KEY = "centium-state";
 
 // Iteration 6 "Team" §8: the five streak-board plant species — tulip is
@@ -1120,6 +1167,31 @@ function loadPersisted<T>(key: string, fallback: T): T {
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
+  }
+}
+
+/**
+ * Writing and forgetting one persisted key, for the one-time Mind import.
+ *
+ * usePersistentState owns the reading and writing of everything else under
+ * this prefix; these two exist because the import has to reach keys that no
+ * longer have a hook behind them — habits and the journal are server state
+ * now, and what is left in localStorage is the copy being moved.
+ */
+function writePersisted<T>(key: string, value: T): void {
+  try {
+    localStorage.setItem(`${STORAGE_KEY}:${key}`, JSON.stringify(value));
+  } catch {
+    // A browser blocking site data is not a reason to fail the import; the
+    // rows are already on the server by the time this runs.
+  }
+}
+
+function forgetPersisted(key: string): void {
+  try {
+    localStorage.removeItem(`${STORAGE_KEY}:${key}`);
+  } catch {
+    // As above.
   }
 }
 
@@ -1864,7 +1936,35 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [routines, setRoutines] = usePersistentState<Routine[]>("routines", []);
 
   const [waterGoalMl, setWaterGoalState] = usePersistentState<number>("waterGoalMl", 2500);
-  const [habits, setHabits] = usePersistentState<HabitItem[]>("habits", defaultHabits);
+  // HABITS LIVE ON THE SERVER NOW, in habit_items and habit_completions.
+  //
+  // They were usePersistentState, which meant a habit ticked on a phone was
+  // invisible on a laptop and a cleared cache was the end of them. `done` and
+  // `streakDays` are DERIVED here rather than stored: done is "is there a
+  // completion row for today", and the streak is a real run of consecutive
+  // days from services/habits/streak — not the old tap counter, which added 1
+  // per tick and never reset on a missed day.
+  //
+  // The shape handed to consumers is unchanged, so HabitsTab, the Home widget
+  // and AddStreakSheet did not have to move with it.
+  const [habitSnapshot, setHabitSnapshot] = useState<HabitsSnapshot>({ items: [], completions: {} });
+  const [habitsLoading, setHabitsLoading] = useState(true);
+  const [habitsError, setHabitsError] = useState<string | null>(null);
+
+  const habits: HabitItem[] = useMemo(
+    () =>
+      habitSnapshot.items.map((h) => {
+        const dates = habitSnapshot.completions[h.id] ?? [];
+        return {
+          id: h.id,
+          label: h.label,
+          icon: h.icon,
+          done: isDoneOn(dates, today),
+          streakDays: habitStreak(dates, today),
+        };
+      }),
+    [habitSnapshot, today]
+  );
   // EMPTY UNTIL THE DATABASE ANSWERS. This used to start from a seed of
   // 7/12/4/21 days, which every account saw on its first paint and kept
   // forever if the read below failed — an invented streak is worse than no
@@ -1938,14 +2038,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [customMeals, setCustomMeals] = usePersistentState<CustomMeal[]>("customMeals", []);
   const [recipes, setRecipes] = usePersistentState<Recipe[]>("recipes", []);
 
-  const [journalFolders, setJournalFolders] = usePersistentState<JournalFolder[]>(
-    "journalFolders",
-    defaultJournalFolders
-  );
-  const [journalEntries, setJournalEntries] = usePersistentState<JournalEntry[]>(
-    "journalEntries",
-    []
-  );
+  // THE JOURNAL LIVES ON THE SERVER NOW, in journal_folders and
+  // journal_entries — same reason as habits, and the same shapes out.
+  const [journalFolders, setJournalFolders] = useState<JournalFolder[]>([]);
+  const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
+  const [journalLoading, setJournalLoading] = useState(true);
+  const [journalError, setJournalError] = useState<string | null>(null);
 
   // NO LONGER SEEDED FROM THE MOCK PANEL. Those five markers carried invented
   // values, ranges, statuses and three-point histories that the server has
@@ -3738,23 +3836,89 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const setWaterAmount: AppState["setWaterAmount"] = (ml) => writeWater(ml);
   const setWaterGoal = (ml: number) => setWaterGoalState(Math.max(500, Math.min(ml, 6000)));
 
-  const toggleHabit = (id: string) =>
-    setHabits((prev) =>
-      prev.map((h) =>
-        h.id === id
-          ? {
-              ...h,
-              done: !h.done,
-              streakDays: !h.done ? h.streakDays + 1 : Math.max(0, h.streakDays - 1),
-            }
-          : h
-      )
+  // OPTIMISTIC, THEN CORRECTED BY THE WRITE. Ticking a box should feel
+  // instant; a failed write puts the box back and says why, rather than
+  // leaving a tick the server never accepted.
+  //
+  // THE DATE IS `today` — the user's own local date, which is what the
+  // completion is stored under. Not the server's: that lesson cost the cycle
+  // read path a whole migration.
+  const toggleHabit = (id: string) => {
+    const dates = habitSnapshot.completions[id] ?? [];
+    const nowDone = !isDoneOn(dates, today);
+
+    setHabitSnapshot((prev) => {
+      const current = prev.completions[id] ?? [];
+      return {
+        ...prev,
+        completions: {
+          ...prev.completions,
+          [id]: nowDone ? [...current, today] : current.filter((d) => d !== today),
+        },
+      };
+    });
+
+    void setCompletion(id, today, nowDone).then((result) => {
+      if (result.ok) return;
+      setHabitsError(result.message);
+      setHabitSnapshot((prev) => {
+        const current = prev.completions[id] ?? [];
+        return {
+          ...prev,
+          completions: {
+            ...prev.completions,
+            [id]: nowDone ? current.filter((d) => d !== today) : [...current, today],
+          },
+        };
+      });
+    });
+  };
+
+  const addHabit = (label: string, icon: HabitIconKey) => {
+    if (!authUserId) return;
+    void createHabit(authUserId, { label, icon, position: habitSnapshot.items.length }).then(
+      (result) => {
+        if (!result.ok) {
+          setHabitsError(result.message);
+          return;
+        }
+        setHabitsError(null);
+        setHabitSnapshot((prev) => ({
+          items: [...prev.items, result.value],
+          completions: { ...prev.completions, [result.value.id]: [] },
+        }));
+      }
     );
-  const addHabit = (label: string, icon: HabitIconKey) =>
-    setHabits((prev) => [...prev, { id: `h${Date.now()}`, label, icon, done: false, streakDays: 0 }]);
-  const removeHabit = (id: string) => setHabits((prev) => prev.filter((h) => h.id !== id));
-  const renameHabit = (id: string, label: string) =>
-    setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, label } : h)));
+  };
+
+  const removeHabit = (id: string) => {
+    void deleteHabitRemote(id).then((result) => {
+      if (!result.ok) {
+        setHabitsError(result.message);
+        return;
+      }
+      setHabitsError(null);
+      setHabitSnapshot((prev) => {
+        const completions = { ...prev.completions };
+        delete completions[id];
+        return { items: prev.items.filter((h) => h.id !== id), completions };
+      });
+    });
+  };
+
+  const renameHabit = (id: string, label: string) => {
+    void renameHabitRemote(id, label).then((result) => {
+      if (!result.ok) {
+        setHabitsError(result.message);
+        return;
+      }
+      setHabitsError(null);
+      setHabitSnapshot((prev) => ({
+        ...prev,
+        items: prev.items.map((h) => (h.id === id ? { ...h, label: label.trim() } : h)),
+      }));
+    });
+  };
 
   const updateStreak = (id: string, patch: Partial<Streak>) =>
     setStreaks((prev) => prev.map((s) => (s.id === id && !s.auto ? { ...s, ...patch } : s)));
@@ -3768,9 +3932,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
   const removeStreak = (id: string) => setStreaks((prev) => prev.filter((s) => s.id !== id));
 
-  // V4 (QA 4.0): a streak linked to a habit tracks that habit's own
-  // streakDays automatically — including its label, if the habit gets
-  // renamed — instead of drifting out of sync as a separate counter.
+  // A streak linked to a habit tracks that habit's own run automatically,
+  // including its label if the habit is renamed, instead of drifting out of
+  // sync as a separate counter.
+  //
+  // THE NUMBER IT COPIES IS A DIFFERENT NUMBER NOW. habit.streakDays used to
+  // be a tap counter kept in localStorage — +1 per tick, -1 per untick, never
+  // reset on a missed day. It is a real run of consecutive days from
+  // habit_completions, so a linked streak can now go down, which is what a
+  // streak is supposed to do.
   useEffect(() => {
     setStreaks((prev) =>
       prev.map((s) => {
@@ -3810,6 +3980,155 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // does. That is the honest behaviour: a streak is a claim about days, and
   // the old liveliness was bought by computing a different thing.
   const [streaksError, setStreaksError] = useState<string | null>(null);
+
+  // --- habits and the journal: read, then move anything still local ---------
+  //
+  // ONE EFFECT FOR BOTH READS AND THE IMPORT, because the import's first
+  // condition is what the reads just answered: a kind is imported only when
+  // its read SUCCEEDED and came back empty. A failed read is not an empty
+  // account, and importing on top of one would duplicate everything.
+  //
+  // HABITS AND THE JOURNAL ARE JUDGED SEPARATELY. An account with server
+  // habits and a local-only journal still gets its journal moved.
+  //
+  // COMPLETIONS ARE READ OVER THE SAME WINDOW AS THE OTHER METRICS, which is
+  // long enough for any streak worth showing and short enough that a year of
+  // ticks is not fetched to render five checkboxes.
+  const mindImportedFor = useRef<string | null>(null);
+
+  useEffect(() => {
+    if (!profileReady || !authUserId) return;
+    let cancelled = false;
+
+    void (async () => {
+      const [habitResult, folderResult, entryResult] = await Promise.all([
+        getHabits(authUserId, metricWindowStart),
+        getJournalFolders(authUserId),
+        getJournalEntries(),
+      ]);
+      if (cancelled) return;
+
+      if (habitResult.ok) {
+        setHabitsError(null);
+        setHabitSnapshot(habitResult.value);
+      } else {
+        setHabitsError(habitResult.message);
+      }
+      setHabitsLoading(false);
+
+      const journalOk = folderResult.ok && entryResult.ok;
+      if (journalOk) {
+        setJournalError(null);
+        setJournalFolders(folderResult.value.map((f) => ({ id: f.id, name: f.name })));
+        setJournalEntries(
+          entryResult.value.map((e) => ({
+            id: e.id,
+            folderId: e.folderId,
+            title: e.title,
+            text: e.body,
+            date: e.entryDate,
+            createdAt: e.createdAt,
+          }))
+        );
+      } else {
+        setJournalError(
+          (!folderResult.ok && folderResult.message) ||
+            (!entryResult.ok && entryResult.message) ||
+            "Couldn't load your journal."
+        );
+      }
+      setJournalLoading(false);
+
+      // --- the one-time move -------------------------------------------------
+      if (mindImportedFor.current === authUserId) return;
+      mindImportedFor.current = authUserId;
+      if (loadPersisted<boolean>(IMPORT_MARKER, false)) return;
+
+      const localHabits = loadPersisted<HabitItem[]>("habits", []);
+      const localFolders = loadPersisted<JournalFolder[]>("journalFolders", []);
+      const localEntries = loadPersisted<JournalEntry[]>("journalEntries", []);
+
+      const report: ImportReport = {
+        habitsCreated: 0,
+        completionsCreated: 0,
+        foldersCreated: 0,
+        entriesCreated: 0,
+        starterHabitsSkipped: 0,
+        failures: [],
+      };
+
+      const habitsAreMine = localHabits.some((h) => !isUntouchedStarter(h));
+      if (habitResult.ok && habitResult.value.items.length === 0 && habitsAreMine) {
+        const done = await importHabits(authUserId, localHabits, today);
+        report.habitsCreated = done.habitsCreated;
+        report.completionsCreated = done.completionsCreated;
+        report.starterHabitsSkipped = done.starterHabitsSkipped;
+        report.failures.push(...done.failures);
+      } else if (localHabits.length > 0) {
+        report.starterHabitsSkipped = localHabits.filter(isUntouchedStarter).length;
+      }
+
+      const journalIsMine = localFolders.length > 0 || localEntries.length > 0;
+      if (journalOk && folderResult.value.length === 0 && entryResult.value.length === 0 && journalIsMine) {
+        const done = await importJournal(authUserId, localFolders, localEntries);
+        report.foldersCreated = done.foldersCreated;
+        report.entriesCreated = done.entriesCreated;
+        report.failures.push(...done.failures);
+      }
+
+      if (cancelled) return;
+
+      const movedSomething =
+        report.habitsCreated + report.foldersCreated + report.entriesCreated > 0;
+      if (movedSomething) {
+        // Re-read rather than splice the uploaded rows in by hand: the server
+        // assigned every id and every position, and one round trip beats a
+        // second implementation of the same mapping.
+        const [again, foldersAgain, entriesAgain] = await Promise.all([
+          getHabits(authUserId, metricWindowStart),
+          getJournalFolders(authUserId),
+          getJournalEntries(),
+        ]);
+        if (cancelled) return;
+        if (again.ok) setHabitSnapshot(again.value);
+        if (foldersAgain.ok) setJournalFolders(foldersAgain.value.map((f) => ({ id: f.id, name: f.name })));
+        if (entriesAgain.ok) {
+          setJournalEntries(
+            entriesAgain.value.map((e) => ({
+              id: e.id,
+              folderId: e.folderId,
+              title: e.title,
+              text: e.body,
+              date: e.entryDate,
+              createdAt: e.createdAt,
+            }))
+          );
+        }
+      }
+
+      if (report.failures.length > 0) {
+        console.warn("[mind-import] Some rows could not be moved:", report.failures);
+      }
+      console.info("[mind-import]", report);
+
+      // THE LOCAL COPIES GO ONLY WHEN THE SERVER DEMONSTRABLY HAS THEM — after
+      // a successful upload, or after a successful read that found rows. A
+      // failed read clears nothing, so a bad connection can never cost
+      // somebody their journal.
+      if (habitResult.ok && (movedSomething || habitResult.value.items.length > 0 || !habitsAreMine)) {
+        forgetPersisted("habits");
+      }
+      if (journalOk && (movedSomething || folderResult.value.length > 0 || !journalIsMine)) {
+        forgetPersisted("journalFolders");
+        forgetPersisted("journalEntries");
+      }
+      writePersisted(IMPORT_MARKER, true);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, profileReady, metricWindowStart, today]);
 
   useEffect(() => {
     if (!profileReady || !authUserId || isAdmin !== false) return;
@@ -4424,26 +4743,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
+  // WRITE FIRST, THEN SHOW IT. An entry is a paragraph somebody typed; adding
+  // it to the list before the insert lands would mean a failed save leaves a
+  // convincing row that disappears on the next reload. The id comes back from
+  // the insert, so the row on screen is the row in the table.
+  //
+  // `today` IS SENT EXPLICITLY. journal_entries.entry_date has no default any
+  // more, deliberately: it used to be current_date, which filed a 9am entry in
+  // Auckland under yesterday.
   const addJournalEntry = (folderId: string, title: string, text: string) => {
-    const now = new Date();
-    setJournalEntries((prev) => [
-      ...prev,
-      {
-        id: `j${Date.now()}${Math.random().toString(16).slice(2)}`,
-        folderId,
-        title,
-        text,
-        date: today,
-        createdAt: now.toISOString(),
-      },
-    ]);
+    void createJournalEntry({ folderId, title, body: text, entryDate: today }).then((result) => {
+      if (!result.ok) {
+        setJournalError(result.message);
+        return;
+      }
+      setJournalError(null);
+      const e = result.value;
+      setJournalEntries((prev) => [
+        { id: e.id, folderId: e.folderId, title: e.title, text: e.body, date: e.entryDate, createdAt: e.createdAt },
+        ...prev,
+      ]);
+    });
   };
-  const updateJournalEntry = (id: string, patch: Partial<Pick<JournalEntry, "title" | "text">>) =>
-    setJournalEntries((prev) => prev.map((e) => (e.id === id ? { ...e, ...patch } : e)));
-  const removeJournalEntry = (id: string) =>
-    setJournalEntries((prev) => prev.filter((e) => e.id !== id));
-  const addJournalFolder = (name: string) =>
-    setJournalFolders((prev) => [...prev, { id: `jf${Date.now()}`, name }]);
+
+  const updateJournalEntry = (id: string, patch: Partial<Pick<JournalEntry, "title" | "text">>) => {
+    const existing = journalEntries.find((e) => e.id === id);
+    if (!existing) return;
+    const title = patch.title ?? existing.title;
+    const text = patch.text ?? existing.text;
+    void updateJournalEntryRemote(id, { title, body: text }).then((result) => {
+      if (!result.ok) {
+        setJournalError(result.message);
+        return;
+      }
+      setJournalError(null);
+      setJournalEntries((prev) =>
+        prev.map((e) => (e.id === id ? { ...e, title: title.trim(), text: text.trim() } : e))
+      );
+    });
+  };
+
+  const removeJournalEntry = (id: string) => {
+    void deleteJournalEntryRemote(id).then((result) => {
+      if (!result.ok) {
+        setJournalError(result.message);
+        return;
+      }
+      setJournalError(null);
+      setJournalEntries((prev) => prev.filter((e) => e.id !== id));
+    });
+  };
+
+  const addJournalFolder = (name: string) => {
+    if (!authUserId) return;
+    void createJournalFolder(authUserId, name, journalFolders.length).then((result) => {
+      if (!result.ok) {
+        setJournalError(result.message);
+        return;
+      }
+      setJournalError(null);
+      setJournalFolders((prev) => [...prev, { id: result.value.id, name: result.value.name }]);
+    });
+  };
 
   const recordBiomarkers: AppState["recordBiomarkers"] = async (entries, file) => {
     if (!authUserId) return { ok: false, message: "You need to be signed in to save results." };
@@ -4917,6 +5278,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       waterGoalMl,
       setWaterGoal,
       habits,
+      habitsLoading,
+      habitsError,
+      habitSuggestions: HABIT_SUGGESTIONS,
       toggleHabit,
       addHabit,
       removeHabit,
@@ -5000,6 +5364,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       removeClientRecipe,
       logRecipe,
       journalFolders,
+      journalLoading,
+      journalError,
       journalEntries,
       addJournalEntry,
       updateJournalEntry,
@@ -5138,6 +5504,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       waterByDate,
       waterGoalMl,
       habits,
+      habitsLoading,
+      habitsError,
       streaks,
       plantStage,
       plantSpecies,
@@ -5182,6 +5550,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       referralDiscountPct,
       referralNextMonthDiscountPct,
       journalFolders,
+      journalLoading,
+      journalError,
       journalEntries,
       bloodMarkers,
       // Was missing since labReports was added to the context, which made the

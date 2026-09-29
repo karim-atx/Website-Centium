@@ -7,8 +7,24 @@ import clsx from "clsx";
 import { habitIcon, habitIconOptions } from "../../utils/icons";
 import type { HabitIconKey } from "../../types";
 
+// The Habits tab.
+//
+// HABITS ARE SERVER ROWS NOW (habit_items + habit_completions), so this screen
+// has the three states every other server-backed screen has: loading, empty,
+// and an error that never reads as "you have none". A tick is a row dated with
+// the user's own local date, which is why the same five boxes look the same on
+// a phone and a laptop.
 export default function HabitsTab() {
-  const { habits, toggleHabit, addHabit, removeHabit, renameHabit } = useApp();
+  const {
+    habits,
+    habitsLoading,
+    habitsError,
+    habitSuggestions,
+    toggleHabit,
+    addHabit,
+    removeHabit,
+    renameHabit,
+  } = useApp();
   const [adding, setAdding] = useState(false);
   const [newLabel, setNewLabel] = useState("");
   const [newIcon, setNewIcon] = useState<HabitIconKey>(habitIconOptions[0].key);
@@ -23,8 +39,41 @@ export default function HabitsTab() {
     setAdding(false);
   };
 
+  // WHAT IS STILL ON OFFER. A suggestion the account already has a habit for
+  // is not offered again, matched on the label the suggestion would create.
+  const taken = new Set(habits.map((h) => h.label.trim().toLowerCase()));
+  const suggestions = habitSuggestions.filter((s) => !taken.has(s.label.toLowerCase()));
+
+  if (habitsLoading) {
+    return (
+      <div className="animate-fade-slide-up">
+        <Card className="text-center py-8">
+          <p className="text-sm text-charcoal-faint">Loading…</p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="animate-fade-slide-up">
+      {/* A FAILED READ OR WRITE SAYS SO, and leaves whatever is on screen
+          alone. "No habits" and "the request failed" look identical once
+          rendered, and only one of them is true. */}
+      {habitsError && (
+        <p className="mb-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
+          {habitsError}
+        </p>
+      )}
+
+      {habits.length === 0 && !habitsError && (
+        <Card className="text-center py-7 mb-4">
+          <p className="text-sm font-semibold text-charcoal mb-1">No habits yet</p>
+          <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-4">
+            Add one of your own below, or start from a suggestion.
+          </p>
+        </Card>
+      )}
+
       <Card padded={false} className="mb-4 divide-y divide-charcoal/[0.04]">
         {habits.map((h) => (
           <div key={h.id} className="flex items-center justify-between px-4 py-3.5">
@@ -104,10 +153,34 @@ export default function HabitsTab() {
             )}
           </div>
         ))}
-        {habits.length === 0 && (
-          <p className="text-center text-sm text-charcoal-faint py-8">No habits yet — add one below.</p>
-        )}
       </Card>
+
+      {/* SUGGESTIONS, NOT SEEDED ROWS. These five used to be written into every
+          new account as habits it appeared to have made. Tapping one creates
+          it — at which point it is the user's, and stops being offered. */}
+      {suggestions.length > 0 && (
+        <div className="mb-3">
+          <p className="mb-[7px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">
+            Suggestions
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {suggestions.map((s) => {
+              const Icon = habitIcon[s.icon];
+              return (
+                <button
+                  key={s.label}
+                  onClick={() => addHabit(s.label, s.icon)}
+                  className="tap flex items-center gap-1.5 rounded-full bg-cream-soft px-3 py-1.5 text-[12px] font-semibold text-charcoal-soft"
+                >
+                  <Icon size={13} className="text-primary-dark" />
+                  {s.label}
+                  <Plus size={12} className="text-charcoal-faint" />
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {adding ? (
         <Card>

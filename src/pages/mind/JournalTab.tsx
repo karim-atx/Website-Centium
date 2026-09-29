@@ -9,10 +9,25 @@ import type { JournalEntry } from "../../types";
 
 const SWIPE_THRESHOLD = 50;
 
+// The Journal tab.
+//
+// FOLDERS AND ENTRIES ARE SERVER ROWS NOW (journal_folders +
+// journal_entries), which changes two things on this screen. The folder list
+// arrives asynchronously, so the selected folder cannot be chosen at mount;
+// and there are no longer four folders seeded into every account, so an
+// account that has never journalled has none and is asked to make the first.
 export default function JournalTab() {
-  const { journalFolders, journalEntries, addJournalEntry, updateJournalEntry, removeJournalEntry, addJournalFolder } =
-    useApp();
-  const [activeFolder, setActiveFolder] = useState(journalFolders[0]?.id ?? "");
+  const {
+    journalFolders,
+    journalEntries,
+    journalLoading,
+    journalError,
+    addJournalEntry,
+    updateJournalEntry,
+    removeJournalEntry,
+    addJournalFolder,
+  } = useApp();
+  const [activeFolder, setActiveFolder] = useState("");
   const [composing, setComposing] = useState(false);
   const [title, setTitle] = useState("");
   const [text, setText] = useState("");
@@ -23,8 +38,16 @@ export default function JournalTab() {
   const [newFolderName, setNewFolderName] = useState("");
   const touchStart = useRef<{ x: number; y: number } | null>(null);
 
+  // THE SELECTION FOLLOWS THE LIST. Folders load after the first render, and
+  // a folder can be deleted from another device — either way, a selection
+  // pointing at nothing falls back to the first real folder rather than
+  // showing an empty list that looks like an empty folder.
+  const selected = journalFolders.some((f) => f.id === activeFolder)
+    ? activeFolder
+    : journalFolders[0]?.id ?? "";
+
   const entries = journalEntries
-    .filter((e) => e.folderId === activeFolder)
+    .filter((e) => e.folderId === selected)
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
   const resetCompose = () => {
@@ -39,7 +62,7 @@ export default function JournalTab() {
     if (editingEntry) {
       updateJournalEntry(editingEntry.id, { title: title.trim(), text: text.trim() });
     } else {
-      addJournalEntry(activeFolder, title.trim(), text.trim());
+      addJournalEntry(selected, title.trim(), text.trim());
     }
     resetCompose();
   };
@@ -75,12 +98,55 @@ export default function JournalTab() {
     }
   };
 
+  if (journalLoading) {
+    return (
+      <div className="animate-fade-slide-up">
+        <Card className="text-center py-8">
+          <p className="text-sm text-charcoal-faint">Loading…</p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="animate-fade-slide-up">
+      {/* A FAILED READ OR WRITE SAYS SO. An empty journal and an unreachable
+          one look identical once rendered, and only one of them is true. */}
+      {journalError && (
+        <p className="mb-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
+          {journalError}
+        </p>
+      )}
+
+      {/* NO FOLDERS IS A REAL STARTING STATE NOW. Four were seeded into every
+          account before — Personal, Training, Nutrition, General — as though
+          somebody had made them. An entry needs a folder to live in, so this
+          asks for the first one rather than inventing it. */}
+      {journalFolders.length === 0 && !journalError && (
+        <Card className="text-center py-7 mb-4">
+          <p className="text-sm font-semibold text-charcoal mb-1">No folders yet</p>
+          <p className="text-[12.5px] text-charcoal-soft leading-relaxed px-4 mb-4">
+            Entries live in folders. Make the first one to start writing.
+          </p>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {["Personal", "Training", "Nutrition"].map((name) => (
+              <button
+                key={name}
+                onClick={() => addJournalFolder(name)}
+                className="tap flex items-center gap-1.5 rounded-full bg-cream-soft px-3 py-1.5 text-[12px] font-semibold text-charcoal-soft"
+              >
+                {name}
+                <Plus size={12} className="text-charcoal-faint" />
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+
       <div className="flex items-center justify-between mb-3">
         <div className="flex gap-2 overflow-x-auto no-scrollbar">
           {journalFolders.map((f) => (
-            <Chip key={f.id} active={activeFolder === f.id} onClick={() => setActiveFolder(f.id)}>
+            <Chip key={f.id} active={selected === f.id} onClick={() => setActiveFolder(f.id)}>
               {f.name}
             </Chip>
           ))}
@@ -148,9 +214,14 @@ export default function JournalTab() {
           </div>
         </Card>
       ) : (
+        // NOT OFFERED WITHOUT A FOLDER TO SAVE INTO. folder_id is NOT NULL, so
+        // composing before the first folder exists could only end in a foreign
+        // key error after the user had written something.
+        selected !== "" && (
         <Button variant="outline" fullWidth onClick={() => setComposing(true)} className="mb-4">
           <Plus size={15} /> New entry
         </Button>
+        )
       )}
 
       <div className="space-y-2.5">
