@@ -7,6 +7,7 @@ import type { MuscleGroup, ExerciseClassification, ExerciseTag } from "../../typ
 import { List, User, Search, RefreshCw, Plus, ChevronDown } from "lucide-react";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "../../components/workout/CreateCustomExerciseSheet";
 import { BuiltInExerciseSheet } from "../../components/workout/BuiltInExerciseSheet";
+import { ExerciseInfoSheet } from "../../components/workout/ExerciseInfoSheet";
 import { BODY_ZONES } from "../../data/bodyZones";
 
 type ViewMode = "list" | "body";
@@ -191,6 +192,11 @@ export default function ExerciseDatabaseTab() {
   // own opens the editable popup (WO11), a built-in one the view-only popup
   // (WO12) — catalog rows are no longer edited or duplicated from here.
   const [editingExercise, setEditingExercise] = useState<DbExercise | null>(null);
+  // WO13: Exercise information, over whichever exercise popup opened it.
+  const [info, setInfo] = useState<{ name: string; source: { id: string; kind: "catalog" | "custom" } | null } | null>(null);
+  // A custom exercise not yet on the server (local id) has no row to read.
+  const customSource = (e: DbExercise | null) =>
+    e && /^[0-9a-f-]{36}$/i.test(e.id) ? { id: e.id, kind: "custom" as const } : null;
 
   const all: DbExercise[] = useMemo(() => {
     const library = exerciseCatalog.map((e) => ({
@@ -641,6 +647,7 @@ export default function ExerciseDatabaseTab() {
           fields of whatever was opened last. */}
       <CreateCustomExerciseSheet
         open={creating}
+        onInfo={(name) => setInfo({ name, source: null })}
         onClose={() => setCreating(false)}
         onSave={(data: CustomExerciseData) => void addCustomExercise(data)}
       />
@@ -649,10 +656,12 @@ export default function ExerciseDatabaseTab() {
         open={!!editingExercise && !editingExercise.isCustom}
         onClose={() => setEditingExercise(null)}
         exercise={editingExercise && !editingExercise.isCustom ? editingExercise : null}
+        onInfo={() => editingExercise && setInfo({ name: editingExercise.name, source: { id: editingExercise.id, kind: "catalog" } })}
       />
 
       <CreateCustomExerciseSheet
         open={!!editingExercise?.isCustom}
+        onInfo={(name) => setInfo({ name, source: customSource(editingExercise) })}
         onClose={() => setEditingExercise(null)}
         initial={editingExercise ?? undefined}
         // Only a custom exercise can be deleted, and only from here: this tab
@@ -670,6 +679,8 @@ export default function ExerciseDatabaseTab() {
           if (editingExercise?.isCustom) void updateCustomExercise(editingExercise.id, data);
         }}
       />
+
+      <ExerciseInfoSheet open={!!info} onClose={() => setInfo(null)} name={info?.name ?? ""} source={info?.source ?? null} />
 
     </div>
   );

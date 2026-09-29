@@ -63,8 +63,8 @@ export const CreateCustomExerciseSheet: React.FC<{
   onClose: () => void;
   onSave: (data: CustomExerciseData) => void;
   initial?: Partial<CustomExerciseData>;
-  /** Opens Exercise information (WO13). */
-  onInfo?: () => void;
+  /** Opens Exercise information (WO13), titled with the name as typed. */
+  onInfo?: (name: string) => void;
   /** Opens Exercise history (WO14). */
   onHistory?: () => void;
   /**
@@ -149,7 +149,7 @@ export const CreateCustomExerciseSheet: React.FC<{
               style={{ height: 46, borderRadius: 16, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.1)", padding: "0 16px", fontSize: 14 }}
             />
             <button
-              onClick={onInfo}
+              onClick={() => onInfo?.(name.trim() || "New Custom Exercise")}
               disabled={!onInfo}
               aria-label="Exercise information"
               className="tap flex-none flex items-center justify-center disabled:opacity-40"

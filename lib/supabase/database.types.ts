@@ -2905,6 +2905,16 @@ export type Database = {
           source_custom_exercise_id: string | null
           tags: string[]
           updated_at: string
+          breathing: string | null
+          common_mistakes: string[]
+          cues: string[]
+          difficulty: Database["public"]["Enums"]["exercise_difficulty"] | null
+          easier_variation: string | null
+          harder_variation: string | null
+          instructions_reviewed: boolean
+          safety_notes: string[]
+          setup: string[]
+          steps: string[]
         }
         Insert: {
           category?: Database["public"]["Enums"]["muscle_group"] | null
@@ -2918,6 +2928,16 @@ export type Database = {
           source_custom_exercise_id?: string | null
           tags?: string[]
           updated_at?: string
+          breathing?: string | null
+          common_mistakes?: string[]
+          cues?: string[]
+          difficulty?: Database["public"]["Enums"]["exercise_difficulty"] | null
+          easier_variation?: string | null
+          harder_variation?: string | null
+          instructions_reviewed?: boolean
+          safety_notes?: string[]
+          setup?: string[]
+          steps?: string[]
         }
         Update: {
           category?: Database["public"]["Enums"]["muscle_group"] | null
@@ -2931,6 +2951,16 @@ export type Database = {
           source_custom_exercise_id?: string | null
           tags?: string[]
           updated_at?: string
+          breathing?: string | null
+          common_mistakes?: string[]
+          cues?: string[]
+          difficulty?: Database["public"]["Enums"]["exercise_difficulty"] | null
+          easier_variation?: string | null
+          harder_variation?: string | null
+          instructions_reviewed?: boolean
+          safety_notes?: string[]
+          setup?: string[]
+          steps?: string[]
         }
         Relationships: [
           {
@@ -3649,6 +3679,16 @@ export type Database = {
           secondary_muscle_groups: Database["public"]["Enums"]["muscle_group"][]
           tags: string[]
           updated_at: string
+          breathing: string | null
+          common_mistakes: string[]
+          cues: string[]
+          difficulty: Database["public"]["Enums"]["exercise_difficulty"] | null
+          easier_variation: string | null
+          harder_variation: string | null
+          instructions_reviewed: boolean
+          safety_notes: string[]
+          setup: string[]
+          steps: string[]
         }
         Insert: {
           category: Database["public"]["Enums"]["muscle_group"]
@@ -3661,6 +3701,16 @@ export type Database = {
           secondary_muscle_groups?: Database["public"]["Enums"]["muscle_group"][]
           tags?: string[]
           updated_at?: string
+          breathing?: string | null
+          common_mistakes?: string[]
+          cues?: string[]
+          difficulty?: Database["public"]["Enums"]["exercise_difficulty"] | null
+          easier_variation?: string | null
+          harder_variation?: string | null
+          instructions_reviewed?: boolean
+          safety_notes?: string[]
+          setup?: string[]
+          steps?: string[]
         }
         Update: {
           category?: Database["public"]["Enums"]["muscle_group"]
@@ -3673,6 +3723,16 @@ export type Database = {
           secondary_muscle_groups?: Database["public"]["Enums"]["muscle_group"][]
           tags?: string[]
           updated_at?: string
+          breathing?: string | null
+          common_mistakes?: string[]
+          cues?: string[]
+          difficulty?: Database["public"]["Enums"]["exercise_difficulty"] | null
+          easier_variation?: string | null
+          harder_variation?: string | null
+          instructions_reviewed?: boolean
+          safety_notes?: string[]
+          setup?: string[]
+          steps?: string[]
         }
         Relationships: []
       }
@@ -11254,6 +11314,7 @@ export type Database = {
         | "nut_free"
         | "low_carb"
         | "pescatarian"
+      exercise_difficulty: "beginner" | "intermediate" | "advanced"
       exercise_classification:
         | "barbell"
         | "dumbbell"

@@ -301,3 +301,86 @@ export async function deleteCustomExercise(id: string): Promise<CustomExerciseWr
   }
   return { ok: true };
 }
+
+// --- WO13: how to do an exercise -------------------------------------------
+
+export type ExerciseDifficulty = "beginner" | "intermediate" | "advanced";
+
+/** The instruction columns (Database 20260929122000 / 124000), on catalog and custom rows alike. */
+export interface ExerciseInstructions {
+  setup: string[];
+  steps: string[];
+  breathing: string | null;
+  cues: string[];
+  commonMistakes: string[];
+  safetyNotes: string[];
+  easierVariation: string | null;
+  harderVariation: string | null;
+  difficulty: ExerciseDifficulty | null;
+  /** Signed off by a qualified trainer; false on all seeded rows so far. */
+  reviewed: boolean;
+}
+
+const INSTRUCTION_COLUMNS =
+  "setup, steps, breathing, cues, common_mistakes, safety_notes, easier_variation, harder_variation, difficulty, instructions_reviewed";
+
+interface InstructionRow {
+  setup: string[] | null;
+  steps: string[] | null;
+  breathing: string | null;
+  cues: string[] | null;
+  common_mistakes: string[] | null;
+  safety_notes: string[] | null;
+  easier_variation: string | null;
+  harder_variation: string | null;
+  difficulty: ExerciseDifficulty | null;
+  instructions_reviewed: boolean | null;
+}
+
+/** True when there is nothing to show ("Instructions coming soon"). */
+export const hasNoInstructions = (i: ExerciseInstructions | null): boolean =>
+  !i ||
+  (i.steps.length === 0 &&
+    i.setup.length === 0 &&
+    i.cues.length === 0 &&
+    !i.breathing &&
+    i.commonMistakes.length === 0 &&
+    i.safetyNotes.length === 0 &&
+    !i.easierVariation &&
+    !i.harderVariation);
+
+/**
+ * One exercise's instructions, read when the information popup opens rather
+ * than with the catalog: 95 rows of text nobody asked to see yet.
+ */
+export async function getExerciseInstructions(
+  id: string,
+  kind: "catalog" | "custom"
+): Promise<{ ok: boolean; instructions: ExerciseInstructions | null; message?: string }> {
+  const { data, error } = await supabase
+    .from(kind === "catalog" ? "exercises" : "custom_exercise_library_items")
+    .select(INSTRUCTION_COLUMNS)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) {
+    console.error("[exercises] Could not read instructions:", error.message);
+    return { ok: false, instructions: null, message: describe(error) };
+  }
+  if (!data) return { ok: true, instructions: null };
+  const r = data as unknown as InstructionRow;
+  return {
+    ok: true,
+    instructions: {
+      setup: r.setup ?? [],
+      steps: r.steps ?? [],
+      breathing: r.breathing,
+      cues: r.cues ?? [],
+      commonMistakes: r.common_mistakes ?? [],
+      safetyNotes: r.safety_notes ?? [],
+      easierVariation: r.easier_variation,
+      harderVariation: r.harder_variation,
+      difficulty: r.difficulty,
+      reviewed: !!r.instructions_reviewed,
+    },
+  };
+}
