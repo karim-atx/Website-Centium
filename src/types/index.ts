@@ -863,6 +863,12 @@ export interface Exercise {
    * on another table.
    */
   endurancePlan?: EndurancePlan | null;
+  /**
+   * The athlete's note pinned to this exercise in their routine (handover
+   * 2026-09-29 WO8/WO10), shown as a banner under its header in the logger.
+   * Client-only: never copied by duplicating or from a template.
+   */
+  pinnedNote?: string;
   /** The block this belongs to, or absent for a standalone exercise. */
   blockId?: string | null;
 }

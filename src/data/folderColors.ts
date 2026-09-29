@@ -53,3 +53,41 @@ export function routineFamily(routine: Pick<Routine, "folderId" | "color"> | nul
   if (folder) return folderFamily(folder, folders.indexOf(folder));
   return (routine.color && FOLDER_FAMILIES[routine.color]) || PURPLE;
 }
+
+/**
+ * The logger's shades of a folder family (WO8): weight/reps field fill,
+ * field border, typed-number ink, pinned-note banner and rest-divider line.
+ * Lavender and teal are measured literally from the WO8 frame (teal: fields
+ * #E3F0ED / #CEDFDB / #3F6F66, banner #EEF6F4, rest line #C9DAD7; lavender:
+ * fields #E9E5FB / #D8D1F3 / #5B47BF). The frame has no lavender banner or
+ * rest line, and no shades for the other four picker colours, so those are
+ * DERIVED with the ratios the teal frame values sit at: banner 10% and rest
+ * line 34.6% of `play` on white, border 31.4%, field 18%, ink = tile 15%
+ * toward black.
+ */
+export interface LoggerShades {
+  field: string;
+  fieldBorder: string;
+  ink: string;
+  banner: string;
+  restLine: string;
+}
+
+function mixHex(a: string, b: string, t: number): string {
+  const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
+  const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
+  return "#" + pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, "0")).join("").toUpperCase();
+}
+
+export function loggerShades(family: FolderFamily): LoggerShades {
+  const derived: LoggerShades = {
+    field: mixHex("#FFFFFF", family.play, 0.18),
+    fieldBorder: mixHex("#FFFFFF", family.play, 0.314),
+    ink: mixHex(family.tile, "#000000", 0.15),
+    banner: mixHex("#FFFFFF", family.play, 0.1),
+    restLine: mixHex("#FFFFFF", family.play, 0.346),
+  };
+  if (family === TEAL) return { field: "#E3F0ED", fieldBorder: "#CEDFDB", ink: "#3F6F66", banner: "#EEF6F4", restLine: "#C9DAD7" };
+  if (family === PURPLE) return { ...derived, field: "#E9E5FB", fieldBorder: "#D8D1F3", ink: "#5B47BF" };
+  return derived;
+}

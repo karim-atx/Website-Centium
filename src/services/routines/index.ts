@@ -166,7 +166,7 @@ function remapBlockIds(exercises: Exercise[], idByLocalId: Map<string, string>):
 const PRESCRIPTION_COLUMNS =
   "id, position, sets, reps, weight_kg, min_sets, max_sets, min_reps, max_reps, " +
   "intensity_pct, rep_max_kg, rep_max_update_mode, rest_seconds, rpe, tempo, " +
-  "estimated_one_rep_max_kg, duration_seconds, endurance_plan, block_id, " +
+  "estimated_one_rep_max_kg, duration_seconds, endurance_plan, block_id, pinned_note, " +
   "cardio_duration_min, cardio_distance_km, " +
   "cardio_incline_pct, cardio_pace_min_per_km, cardio_avg_heart_rate";
 
@@ -210,6 +210,7 @@ interface PrescriptionRow {
   duration_seconds: number | null;
   endurance_plan: EndurancePlan | null;
   block_id: string | null;
+  pinned_note: string | null;
   cardio_duration_min: number | null;
   cardio_distance_km: number | null;
   cardio_incline_pct: number | null;
@@ -290,6 +291,7 @@ function toExercise(r: PrescriptionRow): Exercise | null {
     durationSeconds: num(r.duration_seconds),
     endurancePlan: r.endurance_plan ?? null,
     blockId: r.block_id,
+    pinnedNote: r.pinned_note ?? undefined,
   };
 }
 
@@ -390,6 +392,8 @@ function prescriptionOf(
     // whose classification just changed is exactly what that trigger is for.
     endurance_plan: ex.classification === "cardio" ? ex.endurancePlan ?? null : null,
     block_id: blockId,
+    // The athlete's own note (WO8/WO10); 20260929130000. Blank is stored as null.
+    pinned_note: ex.pinnedNote?.trim() || null,
   };
 }
 

@@ -10,6 +10,8 @@ export interface PopupMenuOption<V extends string = string> {
   /** Destructive option: text in rgb(192,57,43). */
   destructive?: boolean;
   disabled?: boolean;
+  /** Optional right-hand detail, e.g. the current rest time (WO8 exercise menu). */
+  trailing?: React.ReactNode;
 }
 
 interface PopupMenuProps<V extends string> {
@@ -32,6 +34,12 @@ interface PopupMenuProps<V extends string> {
   align?: "left" | "right";
   /** Optional caption row above the options. */
   heading?: string;
+  /**
+   * How the selected row reads. "tint" is the Nutrient Summary filter (02);
+   * "filled" is the WO8 set-type dropdown frame: #A092E0 fill, white bold
+   * text and check.
+   */
+  variant?: "tint" | "filled";
 }
 
 const GAP = 6; // between trigger and card
@@ -60,6 +68,7 @@ export function PopupMenu<V extends string>({
   width = 168,
   align = "right",
   heading,
+  variant = "tint",
 }: PopupMenuProps<V>) {
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; maxHeight: number; up: boolean } | null>(null);
 
@@ -129,6 +138,7 @@ export function PopupMenu<V extends string>({
         )}
         {options.map((opt, i) => {
           const on = isOn(opt.value);
+          const filled = on && variant === "filled";
           return (
             <button
               key={opt.value}
@@ -145,16 +155,17 @@ export function PopupMenu<V extends string>({
                 borderRadius: 8,
                 padding: "9px 10px",
                 marginTop: i > 0 ? 6 : 0,
-                border: `1px solid ${on ? "#AEA1DC" : "#E5E6EB"}`,
-                background: on ? "#F0EDF9" : "#FAFAFB",
-                color: opt.destructive ? "rgb(192,57,43)" : "#241F1B",
+                border: `1px solid ${filled ? "#A092E0" : on ? "#AEA1DC" : "#E5E6EB"}`,
+                background: filled ? "#A092E0" : on ? "#F0EDF9" : "#FAFAFB",
+                color: filled ? "#FFFFFF" : opt.destructive ? "rgb(192,57,43)" : "#241F1B",
                 fontSize: 12.5,
                 fontWeight: on ? 700 : 500,
               }}
             >
               {opt.icon && <span className="flex-none flex">{opt.icon}</span>}
               <span className="flex-1 min-w-0">{opt.label}</span>
-              {on && <Check size={13} strokeWidth={3} className="flex-none" style={{ display: "block", color: "#7D6BB5" }} />}
+              {opt.trailing && <span className="flex-none">{opt.trailing}</span>}
+              {on && <Check size={13} strokeWidth={3} className="flex-none" style={{ display: "block", color: filled ? "#FFFFFF" : "#7D6BB5" }} />}
             </button>
           );
         })}

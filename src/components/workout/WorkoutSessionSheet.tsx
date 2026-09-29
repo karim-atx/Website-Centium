@@ -1,15 +1,22 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { X, Plus, Check, Calculator, Square, MoreHorizontal, Play, Pause, Weight, MessageSquareText } from "lucide-react";
-import type {
-  BlockResult,
-  BlockKind,
-  Exercise,
-  LoggedExercise,
-  LoggedSet,
-  SetOutcome,
-  WorkoutBlock,
-} from "../../types";
+import {
+  X,
+  Plus,
+  Check,
+  Calculator,
+  Square,
+  EllipsisVertical,
+  Play,
+  Pause,
+  MessageSquareText,
+  ChevronDown,
+  Pin,
+  Timer,
+  Link2,
+  Unlink,
+} from "lucide-react";
+import type { BlockResult, BlockKind, Exercise, LoggedExercise, LoggedSet, WorkoutBlock } from "../../types";
 import { ONE_RM_CLASSIFICATIONS } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { CyclePhaseChip } from "../cycle/CyclePhaseStrip";
@@ -17,71 +24,54 @@ import { Metronome } from "./Metronome";
 import { RPECalculator } from "./RPECalculator";
 import { PlateCalculatorSheet } from "./PlateCalculatorSheet";
 import { SetOptionsSheet } from "./SetOptionsSheet";
-import { Confetti } from "./Confetti";
+import { PrBurst } from "./Confetti";
 import { Button } from "../ui/Button";
+import { BottomSheet } from "../ui/BottomSheet";
+import { PopupMenu, type PopupMenuOption } from "../ui/PopupMenu";
 import { formatDuration, estimate1RM } from "../../services/workout";
 import { localDayOf } from "../../utils/date";
-import {
-  countsTowardVolume,
-  finalizeExercises,
-  initLoggedExercises,
-  outcomeOf,
-  setRowCount,
-} from "../../services/workout/session";
-import { formatSeconds, isRoundBased, prescriptionLine, supersetLetter } from "../../services/workout/prescription";
+import { countsTowardVolume, finalizeExercises, initLoggedExercises, setRowCount } from "../../services/workout/session";
+import { formatClock, isRoundBased, prescriptionLine } from "../../services/workout/prescription";
 import { blockProblems, blockScore, checkBlockResult } from "../../services/workout/results";
 import { groupIntoRuns } from "../../services/workout/blocks";
+import { exerciseKey, kindFields, lastSessionPrefill, setKind, HANDOVER_SET_TYPES, type HandoverSetType } from "../../services/workout/stats";
+import { loggerShades, routineFamily, type FolderFamily, type LoggerShades } from "../../data/folderColors";
 import { BlockRunner } from "./BlockRunner";
 import { EnduranceRunner } from "./EnduranceRunner";
 import clsx from "clsx";
 
-const setTypeBadge: Record<string, string> = {
-  warmup: "W",
-  dropset: "D",
-  // LEGACY, still rendered because sessions logged before 20260924280000
-  // carry them. Nothing writes these any more: a failure is an outcome, a PR
-  // is its own flag, and a superset is a block.
-  failure: "F",
-  superset: "S",
-  pr: "PR",
+// Handover 2026-09-29 WO8, "One example row per type", measured from the
+// frame. Normal takes the folder's shades instead (see loggerShades); every
+// other type overrides the folder colour.
+type TypeStyle = { row: string; field: string; border: string; ink: string; label: string; dot: string; short: string };
+const TYPE_STYLE: Record<Exclude<HandoverSetType, "normal">, TypeStyle> = {
+  warmup: { row: "#F0F5FA", field: "#E2EDF8", border: "#C5D6E6", ink: "#3F6E93", label: "#3F6E93", dot: "#6FA0CF", short: "Warm" },
+  failed: { row: "#FBEDEB", field: "#F6E2DF", border: "#E8C2BC", ink: "#8E3325", label: "#B0402F", dot: "#C0392B", short: "Fail" },
+  skipped: { row: "transparent", field: "#F1F1F3", border: "#E1E1E2", ink: "#A39D95", label: "#8C8378", dot: "#A39D95", short: "Skip" },
+  pr: { row: "#F8F1E4", field: "#F5E6C6", border: "#E9D09E", ink: "#8A6318", label: "#8A6318", dot: "#C8912B", short: "PR" },
+  drop: { row: "#F9F1F6", field: "#F6E4EF", border: "#E6C9DA", ink: "#9C4F7C", label: "#9C4F7C", dot: "#C877A6", short: "DS" },
 };
+const PR_BAR = "#C8912B";
+// Super set (exercise level only) = soft coral: bracket #DB885D, badge
+// #FBE7DC / #B4602F, from the frame.
+const SS_BRACKET = "#DB885D";
 
-// HOW A SET WENT, as three toggles rather than a classification.
-//
-// Skipped, failed and PR answer different questions and combine freely — the
-// most interesting set anybody logs is a rep-max attempt that ended in a
-// grind, which is a PR AND a failure. The old enum could hold only one of
-// them at a time, which is exactly why the column was split.
-//
-// NOT COLOUR ALONE. Each state has a letter or word on the row as well as its
-// treatment, so a failed set is still legible in greyscale, to a colour-blind
-// reader, and to a screen reader — which reads the row's label and never its
-// background.
-const OUTCOME_STYLE: Record<SetOutcome, { row: string; ink: string; label: string }> = {
-  completed: { row: "#EFECF8", ink: "#4B3F7A", label: "" },
-  skipped: { row: "transparent", ink: "#8C8378", label: "Skipped" },
-  failed: { row: "#FBEDEB", ink: "#B0402F", label: "F" },
-};
+// Rest timer: 0:30–5:00 in 15 s steps, or Off (WO8 exercise ⋮ menu).
+const REST_OPTIONS: PopupMenuOption[] = [
+  { value: "0", label: "Off" },
+  ...Array.from({ length: 19 }, (_, i) => 30 + i * 15).map((s) => ({ value: String(s), label: formatClock(s) })),
+];
 
-/** The gold a PR row wears. Fixed, not --c-primary, which the accent picker swaps. */
-const PR_GOLD = "#C8912B";
-const PR_GOLD_PALE = "rgba(200,145,43,0.13)";
-
-
-
-/**
- * The prescription, as a placeholder rather than a pre-filled answer.
- *
- * "8–12" in a grey placeholder is guidance; 8 typed into the box is a logged
- * set of eight that nobody did. The difference matters most for exactly the
- * prescriptions a coach writes as a range.
- */
+/** The prescription as a placeholder, never pre-filled: "8–12" is guidance. */
 function repsPlaceholder(ex: Exercise): string {
   if (ex.minReps != null && ex.maxReps != null) return `${ex.minReps}–${ex.maxReps}`;
   if (ex.minReps != null) return `${ex.minReps}+`;
   if (ex.maxReps != null) return `up to ${ex.maxReps}`;
   return ex.reps != null ? String(ex.reps) : "reps";
 }
+
+/** A placeholder that is a plain number, for "checking without typing logs it as-is". */
+const numericOf = (s: string): number => (/^\d+(\.\d+)?$/.test(s) ? Number(s) : 0);
 
 /** A block result seeded from the block's own shape — the snapshot the row keeps. */
 function blockFrom(block: WorkoutBlock): BlockResult {
@@ -95,6 +85,28 @@ function blockFrom(block: WorkoutBlock): BlockResult {
   };
 }
 
+/**
+ * A fresh session's rows: the template's shape with EMPTY fields, because
+ * the values now live in greyed placeholders (last session's, else the
+ * template's) until the athlete types or checks the set (WO8 prefill).
+ */
+function freshLogged(exercises: Exercise[]): LoggedExercise[] {
+  return initLoggedExercises(exercises).map((ex) => ({
+    ...ex,
+    sets: ex.sets.map((s) => ({ ...s, weightKg: 0, reps: 0 })),
+  }));
+}
+
+/** Working-set numbers: only Normal, PR and Drop set count (02 Set types). */
+function workingNumbers(sets: LoggedSet[]): (number | null)[] {
+  let n = 0;
+  return sets.map((s) => {
+    const k = setKind(s);
+    return k === "normal" || k === "pr" || k === "drop" ? ++n : null;
+  });
+}
+
+let localBlockSeq = 0;
 
 export const WorkoutSessionSheet: React.FC<{
   open: boolean;
@@ -104,72 +116,120 @@ export const WorkoutSessionSheet: React.FC<{
   exercises: Exercise[];
   /** The groups these exercises are gathered into, if any. */
   blocks?: WorkoutBlock[];
-  // V10 (QA 10.0): "a notepad that the client cannot edit, that the hired
-  // professional can write his notes to the client" — read-only here.
+  // V10 (QA 10.0): a read-only note from the hired professional.
   coachNote?: string;
 }> = ({ open, onClose, routineId, routineName, exercises, blocks = [], coachNote }) => {
-  const { saveWorkoutSession, logWorkout, pausedSessions, savePausedSession, clearPausedSession, personalRecords, setPersonalRecord, exerciseCatalog, customExercises, workoutSessions } =
-    useApp();
-  const [startedAt, setStartedAt] = useState(() => new Date());
-  const [elapsed, setElapsed] = useState(0);
-  const [logged, setLogged] = useState<LoggedExercise[]>(() => initLoggedExercises(exercises));
-  // WHAT EACH BLOCK SCORED, keyed by the block id the exercises point at.
-  // Separate from `logged` because a block result is one row per block, not
-  // per exercise — the same split the schema makes.
+  const {
+    saveWorkoutSession,
+    logWorkout,
+    pausedSessions,
+    savePausedSession,
+    clearPausedSession,
+    personalRecords,
+    setPersonalRecord,
+    exerciseCatalog,
+    customExercises,
+    workoutSessions,
+    routines,
+    routineFolders,
+    updateRoutine,
+    activeSession,
+    setActiveSession,
+  } = useApp();
+
+  const routineRow = routineId ? routines.find((r) => r.id === routineId) ?? null : null;
+  // 02 Folder colour tokens: parent folder → routine's own colour → lavender.
+  const family: FolderFamily = routineFamily(routineRow, routineFolders);
+  const shades: LoggerShades = loggerShades(family);
+
+  // THE TEMPLATE THE LOGGER EDITS (pinned notes, rest timers, super sets are
+  // stored per exercise in the routine template — WO8 data). A local mirror,
+  // because a routine save replaces its exercise rows; logged exercises are
+  // matched to it BY POSITION, which a save never changes.
+  const [template, setTemplate] = useState<{ exercises: Exercise[]; blocks: WorkoutBlock[] }>({ exercises, blocks });
+  const [logged, setLogged] = useState<LoggedExercise[]>(() => freshLogged(exercises));
   const [blockResults, setBlockResults] = useState<Record<string, BlockResult>>({});
+  const [startedAt, setStartedAt] = useState(() => new Date());
+  // THE CLOCK IS TIMESTAMP-BASED so it keeps running while the logger is
+  // minimised (WO17): elapsed = base + (now − runSince) while running.
+  const [baseElapsed, setBaseElapsed] = useState(0);
+  const [runSince, setRunSince] = useState<number | null>(null);
+  const [, setNow] = useState(Date.now());
+  const started = runSince !== null;
+  const elapsed = Math.floor(baseElapsed + (runSince !== null ? (Date.now() - runSince) / 1000 : 0));
+
   const [rpeOpen, setRpeOpen] = useState(false);
   const [plateCalcOpen, setPlateCalcOpen] = useState(false);
   const [finished, setFinished] = useState(false);
   const [setOptionsTarget, setSetOptionsTarget] = useState<{ exIdx: number; setIdx: number } | null>(null);
-  // V6 (QA 6.0): the elapsed-time clock no longer starts the instant the
-  // sheet opens — a separate Start button (next to the metronome) begins it.
-  const [started, setStarted] = useState(false);
   const [quitConfirmOpen, setQuitConfirmOpen] = useState(false);
   const [emptyFinishOpen, setEmptyFinishOpen] = useState(false);
-  // The workout is not saved anywhere until the write lands: there is no local
-  // fallback for training data, so a failure has to be shown and retryable
-  // rather than absorbed. Losing a finished session silently is the one
-  // outcome worth designing against here.
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [coachNoteOpen, setCoachNoteOpen] = useState(false);
-  // §7.1: which set just animated a completion tick — a per-tap nonce so
-  // re-checking the same set re-fires the (CSS-animation, remount-only)
-  // sequence instead of doing nothing on a second tap.
   const [tickKey, setTickKey] = useState<string | null>(null);
-  const tickNonce = React.useRef(0);
-  // QA 11.0: "If a set was selected as a PR and the checkmark was
-  // selected confetti flies through the page as a celebration."
-  const [confettiActive, setConfettiActive] = useState(false);
+  const tickNonce = useRef(0);
+  const [burst, setBurst] = useState<{ key: number; rect: { left: number; top: number; width: number; height: number } } | null>(null);
+  // Set-type dropdown, anchored to the set-number slot.
+  const [typeMenu, setTypeMenu] = useState<{ exIdx: number; setIdx: number; anchor: HTMLElement } | null>(null);
+  // Exercise ⋮ menu and its two follow-ups (rest times, super-set partner).
+  const [exMenu, setExMenu] = useState<{ exIdx: number; anchor: HTMLElement; view: "main" | "rest" | "superset" } | null>(null);
+  // The follow-up a main-menu pick asked for. PopupMenu calls onSelect and
+  // then onClose, so onClose reads this to switch views instead of closing.
+  const exMenuNext = useRef<"rest" | "superset" | null>(null);
+  const [pinEditor, setPinEditor] = useState<{ exIdx: number; text: string } | null>(null);
+  // The rest divider under the last checked set counts down.
+  const [rest, setRest] = useState<{ exIdx: number; setIdx: number; endsAt: number } | null>(null);
+  const rowRefs = useRef(new Map<string, HTMLDivElement>());
+
+  const prefill = useMemo(
+    () => (routineId ? lastSessionPrefill(workoutSessions, routineId) : new Map<string, { weight: number | null; reps: number | null }[]>()),
+    // Read once per opening: finishing this session must not re-seed its own placeholders.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [open, routineId]
+  );
 
   useEffect(() => {
-    if (!open || finished || !started) return;
-    const id = window.setInterval(() => setElapsed((e) => e + 1), 1000);
+    if (!open || finished || (runSince === null && !rest)) return;
+    const id = window.setInterval(() => {
+      setNow(Date.now());
+      // A finished countdown goes back to showing the rest time.
+      setRest((r) => (r && Date.now() >= r.endsAt ? null : r));
+    }, 1000);
     return () => window.clearInterval(id);
-  }, [open, finished, started]);
+  }, [open, finished, runSince, rest]);
 
   useEffect(() => {
-    if (open) {
-      // V6 (QA 6.0): a routine that was quit mid-session (not finished)
-      // resumes exactly where it was left off — logged sets, elapsed time,
-      // and whether the clock had been started.
-      const paused = routineId ? pausedSessions[routineId] : undefined;
-      if (paused) {
-        setLogged(paused.logged);
-        setBlockResults(Object.fromEntries((paused.blockResults ?? []).map((r) => [r.id, r])));
-        setElapsed(paused.elapsedSec);
-        setStarted(paused.started);
-        setStartedAt(new Date(paused.startedAt));
+    if (!open) return;
+    const now = Date.now();
+    const act = activeSession && activeSession.routineId === routineId ? activeSession : null;
+    const paused = routineId ? pausedSessions[routineId] : undefined;
+    setTemplate({ exercises, blocks });
+    if (paused) {
+      setLogged(paused.logged);
+      setBlockResults(Object.fromEntries((paused.blockResults ?? []).map((r) => [r.id, r])));
+      const start = new Date(paused.startedAt);
+      setStartedAt(start);
+      if (act && act.status === "running") {
+        setBaseElapsed(Math.max(0, (now - Date.parse(act.startedAt) - act.pausedMs) / 1000));
+        setRunSince(now);
+      } else if (act && act.status === "paused" && act.pausedAt) {
+        setBaseElapsed(Math.max(0, (Date.parse(act.pausedAt) - Date.parse(act.startedAt) - act.pausedMs) / 1000));
+        setRunSince(null);
       } else {
-        setLogged(initLoggedExercises(exercises));
-        setBlockResults({});
-        setElapsed(0);
-        setStarted(false);
-        setStartedAt(new Date());
+        setBaseElapsed(paused.elapsedSec);
+        setRunSince(paused.started ? now : null);
       }
-      setFinished(false);
-      setQuitConfirmOpen(false);
+    } else {
+      setLogged(freshLogged(exercises));
+      setBlockResults({});
+      setBaseElapsed(0);
+      setRunSince(null);
+      setStartedAt(new Date());
     }
+    setFinished(false);
+    setQuitConfirmOpen(false);
+    setRest(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, routineId]);
 
@@ -177,66 +237,137 @@ export const WorkoutSessionSheet: React.FC<{
     () => logged.reduce((sum, ex) => sum + ex.sets.filter(countsTowardVolume).reduce((v, s) => v + s.reps * s.weightKg, 0), 0),
     [logged]
   );
-  // ANY OUTCOME IS PROGRESS, including a skip: deciding not to do a set is a
-  // decision worth not losing when the sheet is closed by accident.
-  const hasProgress = started || logged.some((ex) => ex.sets.some((s) => s.outcome != null || s.completed));
+  const hasProgress = started || elapsed > 0 || logged.some((ex) => ex.sets.some((s) => s.outcome != null || s.completed));
+  // The first exercise with a set still to log, for "Exercise X of Y" (WO17).
+  const currentExercise = Math.max(
+    0,
+    logged.findIndex((ex) => ex.sets.some((s) => !s.completed && s.outcome == null))
+  );
 
-  /**
-   * What this movement was loaded with last time, for the weight placeholder.
-   *
-   * A HINT, NOT A PRE-FILL. Putting last session's 60 kg in the box logs 60 kg
-   * for anyone who taps the tick without reading it, which is how a
-   * deload week quietly becomes a record of a normal one. Matched by name
-   * because that is what logged_exercises always carries; the library
-   * reference can be absent on a movement created offline.
-   */
-  const lastWeightByName = useMemo(() => {
-    const byName = new Map<string, number>();
-    // Newest first, so the first sighting of a name is the most recent.
-    for (const session of [...workoutSessions].sort((a, b) => b.startedAt.localeCompare(a.startedAt))) {
-      for (const ex of session.exercises) {
-        if (byName.has(ex.name)) continue;
-        const heaviest = Math.max(0, ...ex.sets.filter(countsTowardVolume).map((s) => s.weightKg));
-        if (heaviest > 0) byName.set(ex.name, heaviest);
-      }
-    }
-    return byName;
-  }, [workoutSessions]);
-  const lastWeightFor = (name: string): number => lastWeightByName.get(name) ?? 0;
+  // THE ACTIVE SESSION (03, WO17): mirrored whenever the clock or progress
+  // changes, so the bar and the Routines row read the same state.
+  const pushActive = (status: "running" | "paused", minimised = false, at = Date.now(), el = elapsed) => {
+    if (!routineId) return;
+    const startMs = startedAt.getTime();
+    setActiveSession({
+      routineId,
+      currentExercise,
+      startedAt: startedAt.toISOString(),
+      pausedAt: status === "paused" ? new Date(at).toISOString() : null,
+      pausedMs: Math.max(0, at - startMs - el * 1000),
+      status,
+      minimised,
+    });
+  };
+  useEffect(() => {
+    if (!open || finished || !routineId || !hasProgress) return;
+    pushActive(started ? "running" : "paused");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, started, currentExercise, hasProgress]);
 
   if (!open) return null;
+
+  const clearActive = () => {
+    setActiveSession((prev) => (prev?.routineId === routineId ? null : prev));
+  };
+
+  const startClock = () => {
+    if (runSince !== null) return;
+    if (elapsed === 0) setStartedAt(new Date());
+    setRunSince(Date.now());
+  };
+  const toggleClock = () => {
+    if (runSince !== null) {
+      setBaseElapsed(elapsed);
+      setRunSince(null);
+    } else startClock();
+  };
+
+  const snapshot = () => {
+    if (!routineId) return;
+    savePausedSession(routineId, {
+      blockResults: Object.values(blockResults),
+      logged,
+      elapsedSec: elapsed,
+      startedAt: startedAt.toISOString(),
+      started,
+    });
+  };
 
   const requestClose = () => {
     if (finished) {
       onClose();
       return;
     }
-    if (hasProgress) {
-      setQuitConfirmOpen(true);
-    } else {
+    if (hasProgress) setQuitConfirmOpen(true);
+    else {
       if (routineId) clearPausedSession(routineId);
+      clearActive();
       onClose();
     }
   };
 
+  // Quit saves progress and removes the active-workout bar; the session stays
+  // resumable from its Routines row (WO8 quit dialog, WO17 g).
   const confirmQuit = () => {
-    if (routineId) {
-      savePausedSession(routineId, {
-        blockResults: Object.values(blockResults),
-        logged,
-        elapsedSec: elapsed,
-        startedAt: startedAt.toISOString(),
-        started,
-      });
-    }
+    snapshot();
+    clearActive();
     setQuitConfirmOpen(false);
     onClose();
   };
 
-  // Portaled to <body> — this can be opened from RoutinesTab, whose wrapper
-  // carries `animate-fade-slide-up` (a transform), which would otherwise
-  // clip this full-screen `fixed inset-0` sheet to that container instead
-  // of the viewport. See BottomSheet.tsx for the same fix + full rationale.
+  // ⌄ minimise (approved decision 17): the session keeps going behind the
+  // WO17 bar. Progress is saved so nothing is lost if the app is closed.
+  const minimise = () => {
+    if (!hasProgress) {
+      requestClose();
+      return;
+    }
+    snapshot();
+    pushActive(started ? "running" : "paused", true);
+    onClose();
+  };
+
+  // --- template edits (pinned note, rest timer, super set) ---------------
+
+  const saveTemplate = (next: { exercises: Exercise[]; blocks: WorkoutBlock[] }) => {
+    setTemplate(next);
+    if (!routineRow) return;
+    void updateRoutine(routineRow.id, { exercises: next.exercises, blocks: next.blocks }).then((msg) => {
+      if (msg) setSaveError(msg);
+    });
+  };
+  const patchExercise = (exIdx: number, patch: Partial<Exercise>) =>
+    saveTemplate({
+      ...template,
+      exercises: template.exercises.map((e, i) => (i === exIdx ? { ...e, ...patch } : e)),
+    });
+  const pairSuperset = (a: number, b: number) => {
+    const id = `blk${Date.now()}${localBlockSeq++}`;
+    const [lo, hi] = a < b ? [a, b] : [b, a];
+    saveTemplate({
+      blocks: [...template.blocks, { id, kind: "superset" }],
+      exercises: template.exercises.map((e, i) => (i === lo || i === hi ? { ...e, blockId: id } : e)),
+    });
+  };
+  const removeSuperset = (exIdx: number) => {
+    const id = template.exercises[exIdx]?.blockId;
+    if (!id) return;
+    saveTemplate({
+      blocks: template.blocks.filter((b) => b.id !== id),
+      exercises: template.exercises.map((e) => (e.blockId === id ? { ...e, blockId: null } : e)),
+    });
+  };
+  const blockOf = (ex: Exercise | undefined) => (ex?.blockId ? template.blocks.find((b) => b.id === ex.blockId) ?? null : null);
+  // Super sets pair ADJACENT exercises only, as a two-member block (approved
+  // decision 16): the partners on offer are the neighbours not already grouped.
+  const partnersFor = (exIdx: number) =>
+    [exIdx - 1, exIdx + 1].filter((i) => {
+      const e = template.exercises[i];
+      return e && !e.blockId && !e.endurancePlan && i !== exIdx;
+    });
+
+  // --- sets ----------------------------------------------------------------
 
   const updateSet = (exIdx: number, setIdx: number, patch: Partial<LoggedSet>) => {
     setLogged((prev) => {
@@ -252,284 +383,222 @@ export const WorkoutSessionSheet: React.FC<{
     setLogged((prev) => {
       const next = [...prev];
       const sets = next[exIdx].sets;
-      const last = sets[sets.length - 1];
-      next[exIdx] = {
-        ...next[exIdx],
-        sets: [
-          ...sets,
-          // A ROW THE ATHLETE ASKED FOR IS NEVER OPTIONAL, so it is never
-          // dropped at the end: leaving it blank is a real skip, whereas an
-          // untouched row that was only ever offered is not.
-          { setNumber: sets.length + 1, reps: last?.reps ?? 0, weightKg: last?.weightKg ?? 0, completed: false },
-        ],
-      };
+      // A row the athlete asked for is never optional (never dropped at the
+      // end); it starts empty, with the template's values as placeholders.
+      next[exIdx] = { ...next[exIdx], sets: [...sets, { setNumber: sets.length + 1, reps: 0, weightKg: 0, completed: false }] };
       return next;
     });
   };
 
-  /**
-   * Toggles one of the three outcomes on a set.
-   *
-   * TOGGLEABLE, because every one of these is a thing somebody taps by
-   * mistake: pressing the same action again clears it and the row goes back
-   * to not-yet-logged. PR is deliberately NOT one of the three — it is a
-   * separate flag that combines with any of them, which is the whole reason
-   * the column was split out of set_type.
-   */
-  const setOutcome = (exIdx: number, setIdx: number, outcome: SetOutcome) => {
-    const current = logged[exIdx].sets[setIdx];
-    const next = current.outcome === outcome ? undefined : outcome;
-    updateSet(exIdx, setIdx, {
-      outcome: next,
-      // Kept in step with what the database's trigger will derive, so the row
-      // on screen and the row that comes back agree.
-      completed: next != null && next !== "skipped",
-    });
-    if (next === "completed" || next === "failed") {
-      tickNonce.current += 1;
-      setTickKey(`${exIdx}-${setIdx}-t${tickNonce.current}`);
-    }
-    // V10 (QA 10.0): logging anything starts the clock, on the assumption
-    // that the routine is under way.
-    if (next && !started) {
-      if (elapsed === 0) setStartedAt(new Date());
-      setStarted(true);
-    }
+  /** The greyed values a set shows: last session's, else the template's. */
+  const placeholdersFor = (exIdx: number, setIdx: number) => {
+    const meta = template.exercises[exIdx];
+    const ex = logged[exIdx];
+    const last = ex ? prefill.get(exerciseKey(ex))?.[setIdx] : undefined;
+    return {
+      weight: last?.weight != null ? String(last.weight) : meta?.weightKg ? String(meta.weightKg) : "0",
+      reps: last?.reps != null ? String(last.reps) : meta ? repsPlaceholder(meta) : "reps",
+    };
   };
 
-  const togglePr = (exIdx: number, setIdx: number) => {
+  const recordPr = (exIdx: number, s: LoggedSet) => {
     const ex = logged[exIdx];
-    const s = ex.sets[setIdx];
-    const nowPr = !s.isPr;
-    updateSet(exIdx, setIdx, { isPr: nowPr });
-    if (!nowPr) return;
-    // QA 11.0: the confetti, kept.
-    setConfettiActive(true);
-    // QA 12.0: "When choosing PR for a set it automatically gets added to the
-    // one rep max if it fits the criteria of barbell, dumbbell or weighted
-    // bodyweight" — immediate, rather than at the end of the whole workout.
-    // The catalog OR the user's own movements: both carry a classification,
-    // and personal_records can reference either since 20260916210000.
-    const libEntry =
-      exerciseCatalog.find((l) => l.name === ex.name) ??
-      customExercises.find((l) => l.name === ex.name);
+    // QA 12.0: a PR on a barbell, dumbbell or weighted-bodyweight movement
+    // updates the one-rep max immediately.
+    const libEntry = exerciseCatalog.find((l) => l.name === ex.name) ?? customExercises.find((l) => l.name === ex.name);
     if (libEntry && ONE_RM_CLASSIFICATIONS.includes(libEntry.classification) && s.weightKg > 0) {
       const est = estimate1RM(s.weightKg, s.reps);
       if (est > (personalRecords[ex.name] ?? 0)) {
-        setPersonalRecord(ex.name, est, {
-          catalogExerciseId: ex.catalogExerciseId,
-          customExerciseId: ex.customExerciseId,
-        });
+        setPersonalRecord(ex.name, est, { catalogExerciseId: ex.catalogExerciseId, customExerciseId: ex.customExerciseId });
       }
     }
   };
 
-  /**
-   * One exercise: its heading, the prescription it was given, and its rows.
-   *
-   * `inBlock` is passed down to the prescription formatter so a member of an
-   * AMRAP reads "8 reps per round" and drops the set count the block already
-   * governs — the same rule part 1 applies in the routine views.
-   */
-  /** The kind of block an exercise sits in, for the per-round prescription rule. */
-  const blockKindOf = (ex: Exercise): BlockKind =>
-    blocks.find((b) => b.id === ex.blockId)?.kind ?? "superset";
-
-
-  /**
-   * A superset, run the way a superset is actually performed.
-   *
-   * ROUND BY ROUND, NOT EXERCISE BY EXERCISE. A1, B1, rest, A2, B2, rest —
-   * which is the entire point of grouping them. Listing each movement with
-   * its own block of sets, as every other exercise is listed, tells somebody
-   * to do three sets of bench and then three sets of rows, which is the thing
-   * a superset is not.
-   *
-   * THE ROUND COUNT IS THE LONGEST MEMBER'S. A pairing where one movement is
-   * prescribed four sets and the other three is a real prescription, and the
-   * fourth round simply has one row in it rather than two.
-   *
-   * REST BELONGS TO THE ROUND, so it is shown once after the pair rather than
-   * under each member — resting between A and B would make it two exercises
-   * again. The value is the longest rest any member asks for: whoever wrote
-   * 90 seconds on the heavier lift meant 90 seconds before going again.
-   */
-  const renderSupersetRounds = (members: Exercise[]) => {
-    const rows = members
-      .map((meta) => ({ meta, exIdx: logged.findIndex((l) => l.exerciseId === meta.id) }))
-      .filter((m) => m.exIdx >= 0);
-    if (rows.length === 0) return null;
-
-    const roundCount = Math.max(...rows.map((m) => logged[m.exIdx].sets.length));
-    const restSeconds = Math.max(0, ...members.map((m) => m.restSeconds ?? 0));
-
-    return (
-      <div>
-        {Array.from({ length: roundCount }).map((_, round) => (
-          <div key={round} style={{ marginBottom: 10 }}>
-            <p className="text-[10px] font-bold uppercase tracking-[0.08em] text-charcoal-faint mb-1">
-              Round {round + 1}
-            </p>
-            <div className="rounded-2xl border border-charcoal/[0.11] divide-y divide-charcoal/[0.06] overflow-hidden">
-              {rows.map(({ meta, exIdx }, memberIndex) => {
-                const ex = logged[exIdx];
-                const s = ex.sets[round];
-                if (!s) return null;
-                return (
-                  <div key={ex.exerciseId}>
-                    <div className="flex items-center justify-between px-3 pt-2">
-                      <span className="text-[11.5px] font-semibold text-charcoal">
-                        {/* The letter is what a coach writes on the sheet —
-                            "A1", "B1" — and is what makes the order readable
-                            without counting rows. */}
-                        {supersetLetter(memberIndex)}
-                        {round + 1} · {ex.name}
-                      </span>
-                      <span className="text-[10px] text-charcoal-faint">
-                        {prescriptionLine(meta, { perRound: false }) || ""}
-                      </span>
-                    </div>
-                    <SetRow
-                      set={s}
-                      justTicked={!!tickKey?.startsWith(`${exIdx}-${round}-t`)}
-                      tickKey={tickKey}
-                      repsPlaceholder={repsPlaceholder(meta)}
-                      weightPlaceholder={String(meta.weightKg || lastWeightFor(ex.name) || 0)}
-                      onChange={(patch) => updateSet(exIdx, round, patch)}
-                      onOutcome={(outcome) => setOutcome(exIdx, round, outcome)}
-                      onTogglePr={() => togglePr(exIdx, round)}
-                      onOptions={() => setSetOptionsTarget({ exIdx, setIdx: round })}
-                    />
-                  </div>
-                );
-              })}
-            </div>
-            {restSeconds > 0 && round < roundCount - 1 && (
-              <p className="text-[10.5px] text-charcoal-faint" style={{ marginTop: 4, paddingLeft: 2 }}>
-                Rest {formatSeconds(restSeconds)} before the next round.
-              </p>
-            )}
-          </div>
-        ))}
-        <button
-          onClick={() => rows.forEach(({ exIdx }) => addSet(exIdx))}
-          className="tap flex items-center gap-1.5 text-xs font-semibold text-primary"
-        >
-          {/* One more round, not one more set of one movement — adding a set
-              to half a superset is the same mistake as rendering it as two
-              separate exercises. */}
-          <Plus size={12} /> Add a round
-        </button>
-      </div>
-    );
+  const setType = (exIdx: number, setIdx: number, kind: HandoverSetType) => {
+    const current = logged[exIdx].sets[setIdx];
+    const fields = kindFields(kind, current);
+    const next: LoggedSet = {
+      ...current,
+      ...fields,
+      completed: fields.outcome != null && fields.outcome !== "skipped",
+    };
+    updateSet(exIdx, setIdx, next);
+    if (fields.outcome && !started) startClock();
+    if (kind === "pr" && setKind(current) !== "pr") {
+      const row = rowRefs.current.get(`${exIdx}-${setIdx}`);
+      if (row) {
+        const r = row.getBoundingClientRect();
+        setBurst({ key: Date.now(), rect: { left: r.left, top: r.top, width: r.width, height: r.height } });
+      }
+      recordPr(exIdx, next);
+    }
   };
 
+  const toggleCheck = (exIdx: number, setIdx: number) => {
+    const s = logged[exIdx].sets[setIdx];
+    const kind = setKind(s);
+    if (kind === "skipped") return;
+    if (s.completed) {
+      // Unchecking a set that failed keeps it failed; anything else goes back to not logged.
+      updateSet(exIdx, setIdx, kind === "failed" ? { completed: false } : { completed: false, outcome: undefined });
+      if (rest?.exIdx === exIdx && rest.setIdx === setIdx) setRest(null);
+      return;
+    }
+    // CHECKING WITHOUT TYPING LOGS THE PLACEHOLDERS AS-IS (WO8 prefill).
+    const ph = placeholdersFor(exIdx, setIdx);
+    updateSet(exIdx, setIdx, {
+      completed: true,
+      outcome: kind === "failed" ? "failed" : "completed",
+      weightKg: s.weightKg || numericOf(ph.weight),
+      reps: s.reps || numericOf(ph.reps),
+    });
+    tickNonce.current += 1;
+    setTickKey(`${exIdx}-${setIdx}-t${tickNonce.current}`);
+    if (!started) startClock();
+    const restSec = template.exercises[exIdx]?.restSeconds ?? 0;
+    if (restSec > 0 && setIdx < logged[exIdx].sets.length - 1) {
+      setRest({ exIdx, setIdx, endsAt: Date.now() + restSec * 1000 });
+    }
+  };
 
-  const renderExercise = (meta: Exercise, inBlock: boolean) => {
-    const exIdx = logged.findIndex((l) => l.exerciseId === meta.id);
-    if (exIdx < 0) return null;
+  const blockKindOf = (ex: Exercise): BlockKind => template.blocks.find((b) => b.id === ex.blockId)?.kind ?? "superset";
+
+  // --- rendering -----------------------------------------------------------
+
+  const renderExercise = (exIdx: number, inRoundBlock: boolean, superset: boolean) => {
+    const meta = template.exercises[exIdx];
     const ex = logged[exIdx];
-    const line = prescriptionLine(meta, { perRound: inBlock && isRoundBased(blockKindOf(meta)) });
+    if (!meta || !ex) return null;
+    const line = prescriptionLine(meta, { perRound: inRoundBlock && isRoundBased(blockKindOf(meta)), noRest: true });
     const { asked } = setRowCount(meta);
-    const repsHint = repsPlaceholder(meta);
-    const weightHint = meta.weightKg || lastWeightFor(ex.name);
+    const numbers = workingNumbers(ex.sets);
+    const restSec = meta.restSeconds ?? 0;
 
     return (
-      <div key={ex.exerciseId} className="mb-6">
-        <div className="flex items-center justify-between mb-1">
-          <p className="font-semibold text-[15px] text-charcoal">{ex.name}</p>
-          <span className="text-[10.5px] font-medium text-charcoal-tertiary tabular-nums">
+      <div
+        key={exIdx}
+        className="bg-white"
+        style={{ border: "1px solid rgba(36,31,27,0.08)", borderRadius: 16, overflow: "hidden", paddingBottom: 12 }}
+      >
+        <div className="flex items-center" style={{ gap: 6, padding: "13px 14px 8px" }}>
+          <p className="whitespace-nowrap" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#241F1B", letterSpacing: "-0.01em" }}>
+            {ex.name}
+          </p>
+          {superset && (
+            <span
+              className="flex-none"
+              style={{ fontSize: 9, fontWeight: 800, color: "#B4602F", background: "#FBE7DC", borderRadius: 4, padding: "1px 5px", lineHeight: "13px" }}
+            >
+              SS
+            </span>
+          )}
+          <span className="flex-1 min-w-0 truncate" style={{ fontSize: 11, fontWeight: 500, color: "#8C8378" }}>
+            {line}
+          </span>
+          <button
+            onClick={(e) => setExMenu({ exIdx, anchor: e.currentTarget, view: "main" })}
+            aria-label={`${ex.name} options`}
+            className="tap relative flex-none flex items-center justify-center before:absolute before:-inset-[9px] before:content-['']"
+            style={{ width: 26, height: 26, color: "#8C8378" }}
+          >
+            <EllipsisVertical size={16} />
+          </button>
+          <span className="flex-none tabular-nums" style={{ fontSize: 10.5, fontWeight: 500, color: "#A79E93" }}>
             {exIdx + 1} of {logged.length}
           </span>
         </div>
-        {/* THE PRESCRIPTION, from part 1's formatter rather than a second
-            hand-rolled list of the same fields. It used to appear only once
-            the clock was running and only for rest/RPE/tempo, so an athlete
-            reading the screen before starting could not see what they had
-            been asked to do. */}
-        {line && <p className="text-[11px] text-charcoal-faint mb-1">{line}</p>}
-        {meta.endurancePlan ? (
-          <EnduranceRunner
-            plan={meta.endurancePlan}
-            result={ex.enduranceResult}
-            onResult={(enduranceResult) =>
-              setLogged((prev) => prev.map((l, n) => (n === exIdx ? { ...l, enduranceResult } : l)))
-            }
-            onStarted={() => {
-              if (started) return;
-              if (elapsed === 0) setStartedAt(new Date());
-              setStarted(true);
-            }}
-          />
-        ) : (
-        <>
-        <div
-          className="grid gap-2 items-center text-[9.5px] font-semibold text-charcoal-tertiary uppercase tracking-[0.09em] mb-1.5 px-1 mt-2"
-          style={{ gridTemplateColumns: "34px 1fr 1fr 30px 30px" }}
-        >
-          <span>Set</span>
-          <span>Weight (kg)</span>
-          <span>Reps</span>
-          <span></span>
-          <span></span>
-        </div>
-        {/* Design refinement §6.6: "one hairline card with dividers" — no
-            per-row shadow. The outcome gives the row its treatment. */}
-        <div className="rounded-2xl border border-charcoal/[0.11] divide-y divide-charcoal/[0.06] overflow-hidden">
-          {ex.sets.map((s, setIdx) => (
-            <SetRow
-              key={setIdx}
-              set={s}
-              justTicked={!!tickKey?.startsWith(`${exIdx}-${setIdx}-t`)}
-              tickKey={tickKey}
-              repsPlaceholder={repsHint}
-              weightPlaceholder={weightHint ? String(weightHint) : "0"}
-              onChange={(patch) => updateSet(exIdx, setIdx, patch)}
-              onOutcome={(outcome) => setOutcome(exIdx, setIdx, outcome)}
-              onTogglePr={() => togglePr(exIdx, setIdx)}
-              onOptions={() => setSetOptionsTarget({ exIdx, setIdx })}
-            />
-          ))}
-        </div>
-        {asked > 0 && ex.sets.some((s) => s.optional) && (
-          <p className="text-[10.5px] text-charcoal-faint mt-1.5">
-            {asked} asked for · the rest are yours if you want them.
-          </p>
+        {/* The divider in the folder's dark shade (WO8). */}
+        <div style={{ height: 2, margin: "0 14px", background: family.play, borderRadius: 1 }} />
+        {meta.pinnedNote && (
+          <div className="flex items-start" style={{ gap: 8, padding: "8px 14px", background: shades.banner, color: shades.ink }}>
+            <Pin size={13} className="flex-none" style={{ marginTop: 2 }} />
+            <p style={{ margin: 0, fontSize: 13, fontWeight: 500, lineHeight: "17px" }}>{meta.pinnedNote}</p>
+          </div>
         )}
-        <button
-          onClick={() => addSet(exIdx)}
-          className="tap flex items-center gap-1.5 text-xs font-semibold text-primary mt-2"
-        >
-          <Plus size={12} /> Add set
-        </button>
-        </>
+        {meta.endurancePlan ? (
+          <div style={{ padding: "10px 14px 0" }}>
+            <EnduranceRunner
+              plan={meta.endurancePlan}
+              result={ex.enduranceResult}
+              onResult={(enduranceResult) => setLogged((prev) => prev.map((l, n) => (n === exIdx ? { ...l, enduranceResult } : l)))}
+              onStarted={startClock}
+            />
+          </div>
+        ) : (
+          <>
+            <div
+              className="flex items-center uppercase"
+              style={{ padding: "9px 15px 1px", fontSize: 9.5, fontWeight: 600, letterSpacing: "0.08em", color: "#A79E93" }}
+            >
+              <span style={{ width: 58 }}>Set</span>
+              <span className="flex-1">Weight (kg)</span>
+              <span className="flex-1" style={{ marginLeft: 8 }}>Reps</span>
+              <span style={{ width: 75 }} />
+            </div>
+            {ex.sets.map((s, setIdx) => {
+              const ph = placeholdersFor(exIdx, setIdx);
+              const showRest = restSec > 0 && setIdx < ex.sets.length - 1;
+              const counting = rest && rest.exIdx === exIdx && rest.setIdx === setIdx ? Math.max(0, Math.ceil((rest.endsAt - Date.now()) / 1000)) : null;
+              return (
+                <React.Fragment key={setIdx}>
+                  <SetRow
+                    rowRef={(el) => {
+                      if (el) rowRefs.current.set(`${exIdx}-${setIdx}`, el);
+                      else rowRefs.current.delete(`${exIdx}-${setIdx}`);
+                    }}
+                    set={s}
+                    number={numbers[setIdx]}
+                    separator={setIdx > 0 && !(restSec > 0)}
+                    family={family}
+                    shades={shades}
+                    weightPlaceholder={ph.weight}
+                    repsPlaceholder={ph.reps}
+                    justTicked={!!tickKey?.startsWith(`${exIdx}-${setIdx}-t`)}
+                    tickKey={tickKey}
+                    onChange={(patch) => updateSet(exIdx, setIdx, patch)}
+                    onType={(anchor) => setTypeMenu({ exIdx, setIdx, anchor })}
+                    onCheck={() => toggleCheck(exIdx, setIdx)}
+                    onOptions={() => setSetOptionsTarget({ exIdx, setIdx })}
+                  />
+                  {showRest && (
+                    <div className="flex items-center" style={{ gap: 10, padding: "0 15px", height: 19 }}>
+                      <span className="flex-1" style={{ height: 1, background: shades.restLine }} />
+                      <span className="tabular-nums" style={{ fontSize: 10.5, fontWeight: 600, color: family.play }}>
+                        {formatClock(counting !== null && counting > 0 ? counting : restSec)}
+                      </span>
+                      <span className="flex-1" style={{ height: 1, background: shades.restLine }} />
+                    </div>
+                  )}
+                </React.Fragment>
+              );
+            })}
+            {asked > 0 && ex.sets.some((s) => s.optional) && (
+              <p style={{ margin: "6px 15px 0", fontSize: 10.5, color: "#A79E93" }}>{asked} asked for · the rest are yours if you want them.</p>
+            )}
+            <button
+              onClick={() => addSet(exIdx)}
+              className="tap flex items-center"
+              style={{ gap: 6, margin: "8px 15px 0", fontSize: 12, fontWeight: 600, color: "#AEA1DC" }}
+            >
+              <Plus size={12} /> Add set
+            </button>
+          </>
         )}
       </div>
     );
   };
 
-
-  // SOMETHING HAPPENED, which is not the same as "a set was ticked". A block
-  // scored and an endurance effort recorded are both real sessions with no
-  // completed set in them — an AMRAP of three movements can be a whole
-  // workout, and refusing to save it would throw the session away.
   const hasCompletedSet =
     logged.some((ex) => ex.sets.some((s) => s.completed) || ex.enduranceResult) ||
     Object.values(blockResults).some((r) => checkBlockResult(r) === null && blockScore(r) !== "");
 
-
   const finishWorkout = async () => {
-    // V10 (QA 10.0): "If you press finish workout and no set is checked,
-    // it prompts you that nothing has been added and will instead exit
-    // out of the routine without logging it."
+    // V10 (QA 10.0): nothing checked → prompt and exit without logging.
     if (!hasCompletedSet) {
       setEmptyFinishOpen(true);
       return;
     }
-    // Caught here rather than at the insert: a CHECK violation at the end of
-    // a workout costs the whole session, and the message it raises names a
-    // constraint rather than telling anybody what to do about it.
-    const problems = blockProblems(blocks, blockResults);
+    const problems = blockProblems(template.blocks, blockResults);
     if (problems.length > 0) {
       setSaveError(`${problems[0].heading}: ${problems[0].message}`);
       return;
@@ -540,21 +609,13 @@ export const WorkoutSessionSheet: React.FC<{
     const result = await saveWorkoutSession({
       routineId,
       routineName,
-      // DERIVED FROM startedAt, not from "what day is it now". A session begun
-      // at 23:40 and finished at 00:10 belongs to the day it started, which is
-      // also the day the professional dashboard will read off started_at —
-      // the column this same object writes. Taking today's date here instead
-      // would make the two disagree for exactly the sessions that straddle
-      // midnight.
+      // The day the session STARTED, which is what started_at says too.
       date: localDayOf(startedAt),
       startedAt: startedAt.toISOString(),
       endedAt: endedAt.toISOString(),
       durationSec: elapsed,
       totalVolumeKg: totalVolume,
-      // FINALIZED, not as they sit on screen: rows that were only ever
-      // offered and never touched are dropped rather than filed as skipped,
-      // and every row that survives gets the outcome it earned. A complete
-      // 3-of-3-5 session must not read as two fifths abandoned.
+      // Untouched optional rows dropped; every surviving row gets an outcome.
       exercises: finalizeExercises(logged),
       blockResults: Object.values(blockResults),
     });
@@ -568,142 +629,298 @@ export const WorkoutSessionSheet: React.FC<{
       workoutName: routineName,
       durationMin: Math.max(1, Math.round(elapsed / 60)),
       completed: true,
-      exercises,
+      exercises: template.exercises,
     });
     if (routineId) clearPausedSession(routineId);
+    clearActive();
     setFinished(true);
+    setRunSince(null);
     setTimeout(onClose, 900);
   };
 
+  const circle = "tap relative flex-none flex items-center justify-center rounded-full";
+  const exMenuEx = exMenu ? template.exercises[exMenu.exIdx] : undefined;
+  const exMenuBlock = blockOf(exMenuEx);
+
   return createPortal(
-    <div className="fixed inset-0 z-50 bg-cream flex flex-col animate-fade-in">
-      <div className="flex items-center justify-between px-5 pt-5 pb-3 border-b border-charcoal/5 shrink-0">
-        <button
-          onClick={requestClose}
-          className="tap w-[34px] h-[34px] rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft"
+    <div className="fixed inset-0 z-50 bg-white flex flex-col animate-fade-in">
+      <div className="mx-auto w-full max-w-[430px] flex flex-col flex-1 min-h-0">
+        {/* Header: × and ⌄ | routine name + status | play, metronome, note. */}
+        <div
+          className="grid items-center flex-none"
+          style={{
+            gridTemplateColumns: "auto 1fr auto",
+            gap: 8,
+            padding: "max(21px, calc(env(safe-area-inset-top) + 8px)) 20px 14px",
+            borderBottom: "1px solid rgba(36,31,27,0.05)",
+          }}
         >
-          <X size={16} />
-        </button>
-        <div className="text-center">
-          <p className="font-display text-[15px] font-bold text-charcoal">{routineName}</p>
-          <p className="text-[10.5px] font-medium text-charcoal-faint tabular-nums">
-            {started
-              ? `Started ${startedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${formatDuration(elapsed)} elapsed`
-              : elapsed > 0
-              ? `Paused · ${formatDuration(elapsed)} elapsed`
-              : "Not started"}
-          </p>
+          <div className="flex items-center" style={{ gap: 8 }}>
+            <button onClick={requestClose} aria-label="Close workout" className={circle} style={{ width: 34, height: 34, background: "#F5F5F6", color: "#5B5349" }}>
+              <X size={16} />
+            </button>
+            <button onClick={minimise} aria-label="Minimise workout" className={circle} style={{ width: 34, height: 34, background: "#F5F5F6", color: "#5B5349" }}>
+              <ChevronDown size={17} />
+            </button>
+          </div>
+          <div className="text-center min-w-0">
+            <p className="truncate" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#241F1B", lineHeight: "19px" }}>
+              {routineName}
+            </p>
+            <p className="tabular-nums" style={{ margin: 0, fontSize: 10.5, fontWeight: 500, color: "#A79E93", lineHeight: "14px" }}>
+              {started
+                ? `Started ${startedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${formatDuration(elapsed)} elapsed`
+                : elapsed > 0
+                ? `Paused · ${formatDuration(elapsed)} elapsed`
+                : "Not started"}
+            </p>
+          </div>
+          <div className="flex items-center justify-end" style={{ gap: 8 }}>
+            <CyclePhaseChip />
+            <button
+              onClick={toggleClock}
+              aria-label={started ? "Pause elapsed time" : "Start elapsed time"}
+              className={circle}
+              style={{ width: 34, height: 34, background: family.play, color: "#FFFFFF" }}
+            >
+              {started ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" />}
+            </button>
+            <Metronome />
+            <button
+              onClick={() => setCoachNoteOpen(true)}
+              aria-label="Coach's note"
+              className={circle}
+              style={{ width: 34, height: 34, background: "#F5F5F6", color: "#8C8378" }}
+            >
+              <MessageSquareText size={15} />
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {/* Beside Play/Pause, the metronome and the coach's note — where
-              phase actually informs a decision, mid-session. */}
-          <CyclePhaseChip />
-          <button
-            onClick={() => {
-              if (!started && elapsed === 0) setStartedAt(new Date());
-              setStarted((v) => !v);
-            }}
-            aria-label={started ? "Pause elapsed time" : "Start elapsed time"}
-            className="tap w-[34px] h-[34px] rounded-full bg-primary text-white flex items-center justify-center"
-          >
-            {started ? <Pause size={14} fill="white" /> : <Play size={14} fill="white" />}
-          </button>
-          <Metronome />
-          {/* V10 (QA 10.0): "a small button with a minimalistic logo of a
-              coach, that changes color depending if the coach wrote a
-              message for that routine." */}
-          <button
-            onClick={() => setCoachNoteOpen(true)}
-            aria-label="Coach's note"
-            className={clsx(
-              "tap w-[34px] h-[34px] rounded-full flex items-center justify-center",
-              coachNote ? "bg-primary text-white" : "bg-cream-soft text-charcoal-faint"
-            )}
-          >
-            <MessageSquareText size={14} />
-          </button>
-        </div>
-      </div>
 
-      <div className="flex-1 overflow-y-auto px-5 py-4">
-        {/* GROUPED THE WAY THE ROUTINE IS. An exercise inside a superset or an
-            AMRAP is not a free-standing thing with its own set count, and
-            showing it as one loses the instruction the coach actually gave. */}
-        {groupIntoRuns(exercises, blocks).map((run) =>
-          run.block ? (
-            <BlockRunner
-              key={run.block.id}
-              block={run.block}
-              ordinal={run.ordinal}
-              result={blockResults[run.block.id]}
-              onResult={(patch) =>
-                setBlockResults((prev) => ({
-                  ...prev,
-                  [run.block!.id]: { ...blockFrom(run.block!), ...prev[run.block!.id], ...patch },
-                }))
+        <div className="flex-1 overflow-y-auto" style={{ padding: 12 }}>
+          <div className="flex flex-col" style={{ gap: 12 }}>
+            {groupIntoRuns(template.exercises, template.blocks).map((run) => {
+              const indices = run.members.map((m) => template.exercises.indexOf(m));
+              if (run.block?.kind === "superset") {
+                // Paired exercises: an SS badge and a coral bracket along their left edges.
+                return (
+                  <div key={run.block.id} className="relative flex flex-col" style={{ gap: 12 }}>
+                    <span
+                      aria-hidden
+                      className="absolute pointer-events-none"
+                      style={{
+                        left: -8,
+                        top: 4,
+                        bottom: 30,
+                        width: 5,
+                        borderLeft: `1.5px solid ${SS_BRACKET}`,
+                        borderTop: `1.5px solid ${SS_BRACKET}`,
+                        borderBottom: `1.5px solid ${SS_BRACKET}`,
+                        borderRadius: "5px 0 0 5px",
+                      }}
+                    />
+                    {indices.map((i) => renderExercise(i, false, true))}
+                  </div>
+                );
               }
-              onStarted={() => {
-                if (started) return;
-                if (elapsed === 0) setStartedAt(new Date());
-                setStarted(true);
-              }}
-            >
-              {run.block.kind === "superset"
-                ? renderSupersetRounds(run.members)
-                : run.members.map((meta) => renderExercise(meta, true))}
-            </BlockRunner>
-          ) : (
-            run.members.map((meta) => renderExercise(meta, false))
-          )
-        )}
-      </div>
-
-
-      <div className="border-t border-charcoal/5 px-5 py-4 shrink-0 bg-cream-card">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="section-label text-charcoal-faint">Total volume</p>
-            <p className="text-[24px] font-extrabold text-charcoal tracking-[-0.03em] tabular-nums">{totalVolume.toLocaleString()} kg</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setRpeOpen(true)}
-              className="tap flex items-center justify-center gap-1.5 text-xs font-semibold text-charcoal-soft bg-cream-soft rounded-full h-8 px-3.5"
-            >
-              <Calculator size={13} /> RPE
-            </button>
-            <button
-              onClick={() => setPlateCalcOpen(true)}
-              aria-label="Plate calculator"
-              className="tap flex items-center justify-center w-8 h-8 text-charcoal-soft bg-cream-soft rounded-full"
-            >
-              <Weight size={14} />
-            </button>
+              if (run.block) {
+                return (
+                  <BlockRunner
+                    key={run.block.id}
+                    block={run.block}
+                    ordinal={run.ordinal}
+                    result={blockResults[run.block.id]}
+                    onResult={(patch) =>
+                      setBlockResults((prev) => ({
+                        ...prev,
+                        [run.block!.id]: { ...blockFrom(run.block!), ...prev[run.block!.id], ...patch },
+                      }))
+                    }
+                    onStarted={startClock}
+                  >
+                    <div className="flex flex-col" style={{ gap: 12, padding: "0 8px 8px" }}>
+                      {indices.map((i) => renderExercise(i, true, false))}
+                    </div>
+                  </BlockRunner>
+                );
+              }
+              return indices.map((i) => renderExercise(i, false, false));
+            })}
           </div>
         </div>
-        {saveError && (
-          <p className="text-[11.5px] font-semibold text-status-high text-center mb-2">{saveError}</p>
-        )}
-        <Button fullWidth size="lg" onClick={() => void finishWorkout()} disabled={finished || saving}>
-          {finished ? (
-            "Workout Saved ✓"
-          ) : saving ? (
-            "Saving…"
-          ) : saveError ? (
-            <>
-              <Square size={14} /> Try again
-            </>
-          ) : (
-            <>
-              <Square size={14} /> Finish Workout
-            </>
+
+        <div
+          className="flex-none bg-white"
+          style={{ borderTop: "1px solid rgba(36,31,27,0.05)", padding: "14px 20px max(28px, calc(env(safe-area-inset-bottom) + 12px))" }}
+        >
+          <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
+            <div>
+              <p className="uppercase" style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "#8C8378" }}>
+                Total volume
+              </p>
+              <p className="tabular-nums" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#241F1B", letterSpacing: "-0.03em", lineHeight: "30px" }}>
+                {totalVolume.toLocaleString()} kg
+              </p>
+            </div>
+            <div className="flex items-center" style={{ gap: 8 }}>
+              <button
+                onClick={() => setRpeOpen(true)}
+                className="tap flex items-center justify-center"
+                style={{ gap: 6, height: 32, padding: "0 12px", borderRadius: 16, background: "#F5F5F6", color: "#5B5349", fontSize: 12, fontWeight: 600 }}
+              >
+                <Calculator size={13} /> RPE
+              </button>
+              <button
+                onClick={() => setPlateCalcOpen(true)}
+                aria-label="Plate calculator"
+                className="tap flex items-center justify-center rounded-full"
+                style={{ width: 32, height: 32, background: "#F5F5F6", color: "#5B5349" }}
+              >
+                <PlateIcon size={15} />
+              </button>
+            </div>
+          </div>
+          {saveError && (
+            <p className="text-center" style={{ margin: "0 0 8px", fontSize: 11.5, fontWeight: 600, color: "#B4372C" }}>
+              {saveError}
+            </p>
           )}
-        </Button>
+          <button
+            onClick={() => void finishWorkout()}
+            disabled={finished || saving}
+            className="tap w-full flex items-center justify-center disabled:opacity-70"
+            style={{ gap: 8, height: 52, borderRadius: 14, background: family.play, color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+          >
+            {finished ? (
+              "Workout Saved ✓"
+            ) : saving ? (
+              "Saving…"
+            ) : (
+              <>
+                <Square size={14} /> {saveError ? "Try again" : "Finish Workout"}
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <RPECalculator open={rpeOpen} onClose={() => setRpeOpen(false)} />
       <PlateCalculatorSheet open={plateCalcOpen} onClose={() => setPlateCalcOpen(false)} />
-      {confettiActive && <Confetti onDone={() => setConfettiActive(false)} />}
+      {burst && <PrBurst key={burst.key} rect={burst.rect} onDone={() => setBurst(null)} />}
+
+      {/* Set-type dropdown: tap the set number (approved decision 15). */}
+      <PopupMenu
+        open={!!typeMenu}
+        onClose={() => setTypeMenu(null)}
+        anchor={typeMenu?.anchor ?? null}
+        align="left"
+        width={176}
+        variant="filled"
+        selected={typeMenu ? setKind(logged[typeMenu.exIdx].sets[typeMenu.setIdx]) : null}
+        onSelect={(v) => typeMenu && setType(typeMenu.exIdx, typeMenu.setIdx, v as HandoverSetType)}
+        options={HANDOVER_SET_TYPES.map((t) => ({
+          value: t.value,
+          label: t.label,
+          icon: (
+            <span
+              style={{
+                display: "block",
+                width: 8,
+                height: 8,
+                borderRadius: 4,
+                background: t.value === "normal" ? family.play : TYPE_STYLE[t.value].dot,
+                boxShadow: "0 0 0 1.5px #FFFFFF",
+              }}
+            />
+          ),
+        }))}
+      />
+
+      {/* Exercise ⋮: Pinned note · Rest timer · Super set. */}
+      <PopupMenu
+        open={!!exMenu && exMenu.view === "main"}
+        onClose={() => {
+          const next = exMenuNext.current;
+          exMenuNext.current = null;
+          setExMenu((m) => (m && next ? { ...m, view: next } : null));
+        }}
+        anchor={exMenu?.anchor ?? null}
+        width={176}
+        onSelect={(v) => {
+          if (!exMenu) return;
+          if (v === "note") setPinEditor({ exIdx: exMenu.exIdx, text: exMenuEx?.pinnedNote ?? "" });
+          if (v === "rest" || v === "superset") exMenuNext.current = v;
+          if (v === "unpair") removeSuperset(exMenu.exIdx);
+        }}
+        options={[
+          { value: "note", label: "Pinned note", icon: <Pin size={15} style={{ color: "#5B5349" }} /> },
+          {
+            value: "rest",
+            label: "Rest timer",
+            icon: <Timer size={15} style={{ color: "#5B5349" }} />,
+            trailing: (
+              <span className="tabular-nums" style={{ fontSize: 12, fontWeight: 600, color: family.play }}>
+                {exMenuEx?.restSeconds ? formatClock(exMenuEx.restSeconds) : "Off"}
+              </span>
+            ),
+          },
+          exMenuBlock?.kind === "superset"
+            ? { value: "unpair", label: "Remove super set", icon: <Unlink size={15} style={{ color: "#5B5349" }} /> }
+            : {
+                value: "superset",
+                label: "Super set",
+                icon: <Link2 size={15} style={{ color: "#5B5349" }} />,
+                disabled: !exMenu || !!exMenuBlock || partnersFor(exMenu.exIdx).length === 0,
+              },
+        ]}
+      />
+      <PopupMenu
+        open={!!exMenu && exMenu.view === "rest"}
+        onClose={() => setExMenu(null)}
+        anchor={exMenu?.anchor ?? null}
+        width={176}
+        heading="Rest timer"
+        selected={String(exMenuEx?.restSeconds ?? 0)}
+        onSelect={(v) => exMenu && patchExercise(exMenu.exIdx, { restSeconds: Number(v) || undefined })}
+        options={REST_OPTIONS}
+      />
+      <PopupMenu
+        open={!!exMenu && exMenu.view === "superset"}
+        onClose={() => setExMenu(null)}
+        anchor={exMenu?.anchor ?? null}
+        width={176}
+        heading="Super set with"
+        onSelect={(v) => exMenu && pairSuperset(exMenu.exIdx, Number(v))}
+        options={exMenu ? partnersFor(exMenu.exIdx).map((i) => ({ value: String(i), label: template.exercises[i].name })) : []}
+      />
+
+      <BottomSheet
+        open={!!pinEditor}
+        onClose={() => setPinEditor(null)}
+        title="Pinned note"
+        footer={
+          <Button
+            fullWidth
+            size="lg"
+            onClick={() => {
+              if (!pinEditor) return;
+              patchExercise(pinEditor.exIdx, { pinnedNote: pinEditor.text.trim() || undefined });
+              setPinEditor(null);
+            }}
+          >
+            Save
+          </Button>
+        }
+      >
+        <textarea
+          value={pinEditor?.text ?? ""}
+          onChange={(e) => setPinEditor((p) => (p ? { ...p, text: e.target.value.slice(0, 500) } : p))}
+          placeholder="e.g. Pin safety rack at level 3"
+          rows={3}
+          className="w-full focus:outline-none"
+          style={{ border: "1px solid #E7E7EC", borderRadius: 12, padding: "10px 12px", fontSize: 14, color: "#241F1B", resize: "none" }}
+        />
+      </BottomSheet>
 
       <SetOptionsSheet
         open={!!setOptionsTarget}
@@ -728,6 +945,7 @@ export const WorkoutSessionSheet: React.FC<{
               onClick={() => {
                 setEmptyFinishOpen(false);
                 if (routineId) clearPausedSession(routineId);
+                clearActive();
                 onClose();
               }}
             >
@@ -759,9 +977,7 @@ export const WorkoutSessionSheet: React.FC<{
           <div className="absolute inset-0 bg-charcoal/40" onClick={() => setQuitConfirmOpen(false)} />
           <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
             <p className="font-display font-semibold text-lg text-charcoal mb-1.5">Quit workout?</p>
-            <p className="text-sm text-charcoal-soft mb-5">
-              Your progress will be saved — you can resume this workout anytime.
-            </p>
+            <p className="text-sm text-charcoal-soft mb-5">Your progress will be saved. You can resume this workout anytime.</p>
             <div className="flex gap-2.5">
               <Button variant="outline" fullWidth onClick={() => setQuitConfirmOpen(false)}>
                 Keep going
@@ -778,217 +994,151 @@ export const WorkoutSessionSheet: React.FC<{
   );
 };
 
+/** WO8: the plate calculator icon is a weight plate (assets/icons/plate-calculator.svg). */
+const PlateIcon: React.FC<{ size?: number }> = ({ size = 15 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="9" />
+    <circle cx="12" cy="12" r="5.2" style={{ strokeWidth: 1.4, opacity: 0.55 }} />
+    <circle cx="12" cy="12" r="1.8" />
+  </svg>
+);
 
 /**
- * One set row: its numbers, how it went, and whether it was a record.
+ * One compact set row (WO8): the set-number slot (tap for the type dropdown),
+ * weight and reps, vertical ⋮ for set options, and the check.
  *
- * FOUR ACTIONS, NOT ONE CHECKBOX. ✓, skip, fail and PR are separate answers —
- * the first three are the outcome (one at a time, each toggleable because
- * each is a thing somebody taps by mistake) and PR is a flag that combines
- * with any of them. A rep-max attempt that ended in a grind is a PR AND a
- * failure, and it is the most interesting set anybody logs.
- *
- * EVERY STATE IS LEGIBLE WITHOUT COLOUR. A skipped row is struck through, a
- * failed one carries "Failed", a record carries "PR" — so the row survives
- * greyscale, colour blindness and a screen reader, which reads the labels and
- * never the background.
- *
- * REDUCED MOTION IS HANDLED IN CSS, not by a branch here: `animate-pr-glow`
- * resolves to a static gold inside the stylesheet's prefers-reduced-motion
- * block, so this component has one appearance and the setting decides whether
- * it moves.
+ * Normal rows take the folder's shades; every other type overrides them with
+ * its own row, field and ink colours. Skipped reads as one continuous
+ * strike-through across the row; PR carries a gold accent bar.
  */
 const SetRow: React.FC<{
+  rowRef: (el: HTMLDivElement | null) => void;
   set: LoggedSet;
+  number: number | null;
+  separator: boolean;
+  family: FolderFamily;
+  shades: LoggerShades;
+  weightPlaceholder: string;
+  repsPlaceholder: string;
   justTicked: boolean;
   tickKey: string | null;
-  repsPlaceholder: string;
-  weightPlaceholder: string;
   onChange: (patch: Partial<LoggedSet>) => void;
-  onOutcome: (outcome: SetOutcome) => void;
-  onTogglePr: () => void;
+  onType: (anchor: HTMLElement) => void;
+  onCheck: () => void;
   onOptions: () => void;
-}> = ({
-  set: s,
-  justTicked,
-  tickKey,
-  repsPlaceholder,
-  weightPlaceholder,
-  onChange,
-  onOutcome,
-  onTogglePr,
-  onOptions,
-}) => {
-  const outcome = outcomeOf(s);
-  const style = outcome ? OUTCOME_STYLE[outcome] : null;
-  const skipped = outcome === "skipped";
-  // An offered row nobody has touched is quieter than a prescribed one, so
-  // "you were asked for this" and "this is here if you want it" are told
-  // apart before either is filled in.
-  const muted = (!!s.optional && !outcome) || skipped;
-
-  // The row's colour, and the deeper tint the completion animation starts
-  // from. BOTH ARE HANDED TO THE KEYFRAMES, because the animation's fill mode
-  // is `both` — whatever it ends on wins over this inline background for as
-  // long as the class is applied, so a hard-coded end frame repainted a
-  // failed set and a personal record as completed.
-  const rowBackground = s.isPr ? PR_GOLD_PALE : outcome ? OUTCOME_STYLE[outcome].row : "transparent";
-  const settleFrom = s.isPr
-    ? "rgba(200,145,43,0.30)"
-    : outcome === "failed"
-    ? "#F3D9D4"
-    : "#DED7F1";
-
-  const field = clsx(
-    "w-full rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 border",
-    skipped && "line-through",
-    outcome === "failed"
-      ? "bg-[#F6E2DF] border-[#B0402F]/20 text-[#8E3325]"
-      : outcome === "completed"
-      ? "bg-[#E4DFF3] border-primary/[0.16] text-primary-deep-text"
-      : "bg-cream-soft border-charcoal/[0.07] text-charcoal"
-  );
+}> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, onChange, onType, onCheck, onOptions }) => {
+  const kind = setKind(s);
+  const t = kind === "normal" ? null : TYPE_STYLE[kind];
+  const field = t?.field ?? shades.field;
+  const border = t?.border ?? shades.fieldBorder;
+  const ink = t?.ink ?? shades.ink;
+  const muted = !!s.optional && !s.completed && s.outcome == null;
+  const done = s.completed || s.outcome === "failed";
+  const inputStyle: React.CSSProperties = {
+    height: 31,
+    minWidth: 0,
+    borderRadius: 8,
+    border: `1px solid ${border}`,
+    background: field,
+    color: ink,
+    padding: "0 10px",
+    fontSize: 14,
+    fontWeight: 600,
+    ["--ph" as string]: ink,
+  };
+  const label = s.setNumber;
 
   return (
     <div
-      className={clsx("grid gap-2 items-center px-3 py-2", justTicked && "animate-set-row-settle")}
+      ref={rowRef}
+      className={clsx("relative flex items-center", justTicked && "animate-set-row-settle")}
       style={{
-        gridTemplateColumns: "34px 1fr 1fr 30px 30px",
-        background: rowBackground,
-        ["--settle-from" as string]: settleFrom,
-        ["--settle-to" as string]: rowBackground,
+        padding: "5px 15px",
+        background: t?.row ?? "transparent",
+        borderTop: separator ? "1px solid rgba(36,31,27,0.05)" : undefined,
         opacity: muted ? 0.62 : 1,
-        ...(s.isPr ? { boxShadow: `inset 3px 0 0 ${PR_GOLD}` } : {}),
+        ["--settle-from" as string]: t?.row && t.row !== "transparent" ? t.row : shades.banner,
+        ["--settle-to" as string]: t?.row ?? "transparent",
       }}
     >
-      <span className="text-sm font-bold text-charcoal-faint flex items-center gap-1">
-        <span className={clsx("tabular-nums", skipped && "line-through")}>{s.setNumber}</span>
-        {s.setType && s.setType !== "normal" && (
-          <span className="text-[9px] font-bold text-charcoal-soft dark:text-teal-deep-text bg-teal-pale rounded-full w-4 h-4 flex items-center justify-center">
-            {setTypeBadge[s.setType]}
-          </span>
-        )}
-      </span>
-      <input
-        value={s.weightKg || ""}
-        onChange={(e) => onChange({ weightKg: Number(e.target.value) || 0 })}
-        placeholder={weightPlaceholder}
-        inputMode="decimal"
-        aria-label={`Set ${s.setNumber} weight`}
-        className={field}
-      />
-      <input
-        value={s.reps || ""}
-        onChange={(e) => onChange({ reps: Number(e.target.value) || 0 })}
-        placeholder={repsPlaceholder}
-        inputMode="numeric"
-        aria-label={`Set ${s.setNumber} reps`}
-        className={field}
-      />
+      {kind === "pr" && <span aria-hidden className="absolute left-0 top-0 bottom-0" style={{ width: 3, background: PR_BAR }} />}
+      <button
+        onClick={(e) => onType(e.currentTarget)}
+        aria-label={`Set ${label} type: ${HANDOVER_SET_TYPES.find((x) => x.value === kind)?.label}`}
+        className="tap relative flex-none flex items-center before:absolute before:-inset-y-[7px] before:inset-x-0 before:content-['']"
+        style={{ width: 40, height: 31, borderRight: "none" }}
+      >
+        <span className="flex items-center" style={{ gap: 2 }}>
+          {number !== null ? (
+            <span className="flex flex-col items-center" style={{ lineHeight: 1 }}>
+              <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 700, color: t?.label ?? "#8C8378" }}>
+                {number}
+              </span>
+              {t && (
+                <span style={{ fontSize: 7.5, fontWeight: 800, color: t.label, marginTop: 1 }}>{t.short}</span>
+              )}
+            </span>
+          ) : (
+            <span style={{ fontSize: 10.5, fontWeight: 600, color: t?.label }}>{t?.short}</span>
+          )}
+          <ChevronDown size={10} style={{ color: t?.label ?? "#A79E93" }} />
+        </span>
+        <span aria-hidden className="absolute right-0" style={{ top: 7, bottom: 7, width: 1, background: "#E0DFDF" }} />
+      </button>
+      <div className="flex-1 flex min-w-0" style={{ gap: 8, marginLeft: 18 }}>
+        <input
+          value={s.weightKg || ""}
+          onChange={(e) => onChange({ weightKg: Number(e.target.value) || 0 })}
+          placeholder={weightPlaceholder}
+          inputMode="decimal"
+          aria-label={`Set ${label} weight`}
+          className="logger-field flex-1 focus:outline-none"
+          style={inputStyle}
+        />
+        <input
+          value={s.reps || ""}
+          onChange={(e) => onChange({ reps: Number(e.target.value) || 0 })}
+          placeholder={repsPlaceholder}
+          inputMode="numeric"
+          aria-label={`Set ${label} reps`}
+          className="logger-field flex-1 focus:outline-none"
+          style={inputStyle}
+        />
+      </div>
       <button
         onClick={onOptions}
-        className={clsx(
-          "tap w-7 h-7 rounded-full flex items-center justify-center shrink-0 text-charcoal-faint",
-          (s.notes || s.rpe) && "bg-primary-pale text-primary-dark"
-        )}
-        aria-label={`Set ${s.setNumber} options`}
+        aria-label={`Set ${label} options`}
+        className="tap relative flex-none flex items-center justify-center before:absolute before:-inset-[8px] before:content-['']"
+        style={{ width: 28, height: 28, marginLeft: 8, color: s.notes || s.rpe ? family.play : "#8C8378" }}
       >
-        <MoreHorizontal size={15} />
+        <EllipsisVertical size={15} />
       </button>
-      {/* §7.1: a bare colour swap becomes a 420ms three-part confirmation —
-          tick squash/overshoot, an expanding ring, and a delayed check-glyph
-          draw-in. Keyed on a per-tap nonce so CSS animations (which only
-          replay on remount) re-fire on every completion, not just the
-          first. */}
-      <div className="relative w-7 h-7 shrink-0">
+      <div className="relative flex-none" style={{ width: 28, height: 28, marginLeft: 11 }}>
         {justTicked && (
           <span
             key={tickKey}
             className="absolute inset-0 rounded-full border-2 pointer-events-none animate-set-tick-ring"
-            style={{ borderColor: outcome === "failed" ? "#D49A8E" : "#AEA1DC" }}
+            style={{ borderColor: family.play }}
           />
         )}
         <button
           key={justTicked ? `${tickKey}-btn` : "btn"}
-          onClick={() => onOutcome("completed")}
-          aria-pressed={outcome === "completed"}
-          aria-label={`Mark set ${s.setNumber} complete`}
+          onClick={onCheck}
+          aria-pressed={done}
+          aria-disabled={kind === "skipped"}
+          aria-label={`Mark set ${label} complete`}
           className={clsx(
-            "tap relative w-7 h-7 rounded-full flex items-center justify-center shrink-0",
-            outcome === "completed" ? "bg-primary text-white" : "bg-cream-soft text-charcoal-disabled",
+            "tap relative w-7 h-7 rounded-full flex items-center justify-center before:absolute before:-inset-[8px] before:content-['']",
             justTicked && "animate-set-tick"
           )}
+          style={{ background: done ? family.play : "#F5F5F6", color: done ? "#FFFFFF" : "#C9C2B8" }}
         >
-          <Check
-            key={justTicked ? tickKey : "check"}
-            size={13}
-            strokeWidth={3}
-            className={justTicked ? "animate-set-tick-check" : undefined}
-          />
+          <Check key={justTicked ? tickKey : "check"} size={13} strokeWidth={3} className={justTicked ? "animate-set-tick-check" : undefined} />
         </button>
       </div>
-      {/* The three that do not fit the grid's five columns sit under it, where
-          they are reachable without a long-press or a hidden menu. */}
-      <div className="col-span-5 flex items-center" style={{ gap: 6, paddingTop: 2 }}>
-        <OutcomeChip
-          active={outcome === "skipped"}
-          onClick={() => onOutcome("skipped")}
-          label="Skip"
-          aria={`Mark set ${s.setNumber} skipped`}
-          activeStyle={{ background: "#EDEAE5", color: "#5B5349" }}
-        />
-        <OutcomeChip
-          active={outcome === "failed"}
-          onClick={() => onOutcome("failed")}
-          label="Fail"
-          aria={`Mark set ${s.setNumber} failed`}
-          activeStyle={{ background: "#F3D9D4", color: "#8E3325" }}
-        />
-        <OutcomeChip
-          active={!!s.isPr}
-          onClick={onTogglePr}
-          label="PR"
-          aria={`Mark set ${s.setNumber} a personal record`}
-          activeStyle={{ background: PR_GOLD_PALE, color: "#8A6318" }}
-          className={s.isPr ? "animate-pr-glow" : undefined}
-        />
-        <span className="ml-auto flex items-center" style={{ gap: 6 }}>
-          {style?.label && outcome !== "completed" && (
-            <span className="text-[10px] font-bold" style={{ color: style.ink }}>
-              {outcome === "failed" ? "Failed" : style.label}
-            </span>
-          )}
-          {s.isPr && (
-            <span className="text-[10px] font-bold" style={{ color: "#8A6318" }}>
-              PR
-            </span>
-          )}
-        </span>
-      </div>
+      {kind === "skipped" && (
+        <span aria-hidden className="absolute pointer-events-none" style={{ left: 15, right: 15, top: "50%", height: 1, background: "#8A8887" }} />
+      )}
     </div>
   );
 };
-
-const OutcomeChip: React.FC<{
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  aria: string;
-  activeStyle: React.CSSProperties;
-  className?: string;
-}> = ({ active, onClick, label, aria, activeStyle, className }) => (
-  <button
-    onClick={onClick}
-    aria-pressed={active}
-    aria-label={aria}
-    className={clsx("tap text-[10px] font-bold transition-colors", className)}
-    style={{
-      borderRadius: 999,
-      padding: "3px 9px",
-      border: "1px solid rgba(36,31,27,0.12)",
-      ...(active ? activeStyle : { background: "transparent", color: "#8C8378" }),
-    }}
-  >
-    {label}
-  </button>
-);

@@ -1,4 +1,4 @@
-import type { Exercise, LoggedExercise, LoggedSet, SetOutcome } from "../../types";
+import type { Exercise, LoggedExercise, LoggedSet } from "../../types";
 
 // Turning a prescription into the rows an athlete fills in, and turning those
 // rows back into what actually happened.
@@ -142,10 +142,4 @@ export function finalizeExercises(exercises: LoggedExercise[]): LoggedExercise[]
 export function countsTowardVolume(s: LoggedSet): boolean {
   if (s.outcome) return s.outcome !== "skipped";
   return s.completed;
-}
-
-/** The outcome a row displays, treating an unlogged row as nothing yet. */
-export function outcomeOf(s: LoggedSet): SetOutcome | null {
-  if (s.outcome) return s.outcome;
-  return s.completed ? "completed" : null;
 }

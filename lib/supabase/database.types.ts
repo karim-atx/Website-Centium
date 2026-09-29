@@ -7278,6 +7278,7 @@ export type Database = {
           max_sets: number | null
           min_reps: number | null
           min_sets: number | null
+          pinned_note: string | null
           position: number
           rep_max_kg: number | null
           rep_max_update_mode:
@@ -7310,6 +7311,7 @@ export type Database = {
           max_sets?: number | null
           min_reps?: number | null
           min_sets?: number | null
+          pinned_note?: string | null
           position: number
           rep_max_kg?: number | null
           rep_max_update_mode?:
@@ -7342,6 +7344,7 @@ export type Database = {
           max_sets?: number | null
           min_reps?: number | null
           min_sets?: number | null
+          pinned_note?: string | null
           position?: number
           rep_max_kg?: number | null
           rep_max_update_mode?:

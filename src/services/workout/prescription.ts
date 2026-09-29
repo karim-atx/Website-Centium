@@ -175,6 +175,11 @@ export interface PrescriptionOptions {
    * one ROUND asks for rather than the whole exercise.
    */
   perRound?: boolean;
+  /**
+   * Leave the rest out: the WO8 logger shows rest as dividers between the
+   * sets, so its exercise header reads "4 sets · 8 reps · 60 kg".
+   */
+  noRest?: boolean;
 }
 
 /**
@@ -218,7 +223,7 @@ export function prescriptionLine(ex: Exercise, options: PrescriptionOptions = {}
     if (ex.rpe) parts.push(`RPE ${ex.rpe}`);
     if (ex.tempo) parts.push(`Tempo ${ex.tempo}`);
   }
-  if (ex.restSeconds) parts.push(`Rest ${formatSeconds(ex.restSeconds)}`);
+  if (ex.restSeconds && !options.noRest) parts.push(`Rest ${formatSeconds(ex.restSeconds)}`);
 
   return parts.join(" · ");
 }
