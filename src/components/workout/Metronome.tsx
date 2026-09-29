@@ -14,17 +14,72 @@ const MetronomeIcon: React.FC<{ size?: number }> = ({ size = 16 }) => (
   </svg>
 );
 
-/** Small metronome control meant for the corner of the workout logger.
- * Uses the Web Audio API directly — no audio files needed. */
+/**
+ * WO22's pendulum, from the handover's assets/icons/metronome.svg (120×112):
+ * lavender body, purple arm with a teal weight pivoting at (60, 92), base,
+ * and the beat dot at the top. The arm and dot are driven from outside.
+ */
+const Pendulum: React.FC<{ angle: number; swingSeconds: number; beat: number; showDot: boolean; pulse: boolean; soft: boolean }> = ({
+  angle,
+  swingSeconds,
+  beat,
+  showDot,
+  pulse,
+  soft,
+}) => (
+  <svg width={120} height={112} viewBox="0 0 120 112" aria-hidden style={{ display: "block", margin: "0 auto" }}>
+    <path d="M44 10 H76 L98 104 H22 Z" fill="#C3B3FB" />
+    <path d="M49 18 H71 L88 96 H32 Z" fill="#E4DDFD" />
+    <g
+      style={{
+        transform: `rotate(${angle}deg)`,
+        transformOrigin: "60px 92px",
+        transition: `transform ${swingSeconds}s ease-in-out`,
+      }}
+    >
+      <line x1="60" y1="92" x2="60" y2="22" stroke="#7D67D9" strokeWidth={3.5} strokeLinecap="round" />
+      <rect x="52" y="40" width="16" height="11" rx="3.5" fill="#4F8F8A" />
+    </g>
+    <circle cx="60" cy="92" r="5" fill="#7D67D9" />
+    <rect x="18" y="102" width="84" height="6" rx="3" fill="#AEA1DC" />
+    {showDot && (
+      // Re-keyed on every beat so the pulse replays in time with the click.
+      <circle
+        key={beat}
+        cx="60"
+        cy="6"
+        r="3.5"
+        fill="#8F68F6"
+        style={pulse ? { transformOrigin: "60px 6px", animation: soft ? "metro-beat-soft 0.45s ease-out" : "metro-beat 0.35s ease-out" } : undefined}
+      />
+    )}
+  </svg>
+);
+
+/**
+ * WO22 · Metronome popup, from the metronome icon in the logger header.
+ *
+ * Stopped: arm upright and still. Running: one swing per beat, 60 / BPM
+ * seconds per side, driven by the SAME interval that plays the click so the
+ * picture and the sound stay in step (03 WO22), with a subtle pulse of the
+ * beat dot; − / + change the speed immediately; Start becomes Stop. Reduced
+ * motion: no swing, a soft pulse of the dot on each beat. Web Audio only —
+ * no audio files. The popup keeps its width and only grows by the
+ * illustration's height.
+ */
 export const Metronome: React.FC = () => {
   const [open, setOpen] = useState(false);
   const [bpm, setBpm] = useState(60);
   const [running, setRunning] = useState(false);
+  const [beat, setBeat] = useState(0);
   const ctxRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<number | null>(null);
+  const reducedMotion =
+    typeof window !== "undefined" && (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
 
   const tick = () => {
     const ctx = ctxRef.current;
+    setBeat((b) => b + 1);
     if (!ctx) return;
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
@@ -45,9 +100,12 @@ export const Metronome: React.FC = () => {
       }
       tick();
       intervalRef.current = window.setInterval(tick, (60 / bpm) * 1000);
-    } else if (intervalRef.current) {
-      window.clearInterval(intervalRef.current);
-      intervalRef.current = null;
+    } else {
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+      setBeat(0);
     }
     return () => {
       if (intervalRef.current) window.clearInterval(intervalRef.current);
@@ -55,44 +113,71 @@ export const Metronome: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, bpm]);
 
+  const swingSeconds = 60 / bpm;
+  // One swing per beat: each tick sends the arm to the other side.
+  const angle = running && !reducedMotion && beat > 0 ? (beat % 2 === 1 ? -14 : 14) : 0;
+
+  const stepButton = "tap relative flex items-center justify-center rounded-full before:absolute before:-inset-[8px] before:content-['']";
+
   return (
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
         className={clsx(
-          "tap w-9 h-9 rounded-full flex items-center justify-center shadow-soft",
-          running ? "bg-teal text-white" : "bg-cream-card text-charcoal-soft"
+          "tap w-[34px] h-[34px] rounded-full flex items-center justify-center shadow-soft",
+          running ? "bg-teal text-white" : "bg-white text-charcoal-soft"
         )}
         aria-label="Metronome"
+        aria-expanded={open}
       >
         <MetronomeIcon size={16} />
       </button>
       {open && (
-        <div className="absolute right-0 top-11 z-20 bg-cream-card rounded-2xl shadow-lift p-4 w-48 animate-fade-slide-up">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+        <div
+          className="absolute right-0 top-11 z-20 w-48 animate-fade-slide-up"
+          style={{ background: "#FFFFFF", borderRadius: 20, padding: 16, boxShadow: "0 12px 32px rgba(0,0,0,0.18)" }}
+        >
+          <style>{`@keyframes metro-beat { 0% { transform: scale(1.7); opacity: 1; } 100% { transform: scale(1); opacity: 0.85; } } @keyframes metro-beat-soft { 0% { opacity: 0.25; } 100% { opacity: 1; } }`}</style>
+          <p
+            className="uppercase"
+            style={{ margin: "0 0 8px", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em", color: "#8C8378" }}
+          >
             Metronome
           </p>
-          <div className="flex items-center justify-between mb-3">
+          <Pendulum angle={angle} swingSeconds={swingSeconds} beat={beat} showDot={running} pulse={beat > 0} soft={reducedMotion} />
+          <div className="flex items-center justify-between" style={{ margin: "12px 0" }}>
             <button
               onClick={() => setBpm((b) => Math.max(30, b - 5))}
-              className="tap w-7 h-7 rounded-full bg-cream-soft flex items-center justify-center text-charcoal"
+              aria-label="Slower"
+              className={stepButton}
+              style={{ width: 28, height: 28, background: "#F5F5F6", color: "#8A8594" }}
             >
-              <Minus size={12} />
+              <Minus size={13} />
             </button>
-            <span className="text-lg font-bold text-charcoal">{bpm} BPM</span>
+            <span className="tabular-nums" style={{ fontSize: 20, fontWeight: 800, color: "#241F1B" }}>
+              {bpm} BPM
+            </span>
             <button
               onClick={() => setBpm((b) => Math.min(200, b + 5))}
-              className="tap w-7 h-7 rounded-full bg-cream-soft flex items-center justify-center text-charcoal"
+              aria-label="Faster"
+              className={stepButton}
+              style={{ width: 28, height: 28, background: "#F5F5F6", color: "#8A8594" }}
             >
-              <Plus size={12} />
+              <Plus size={13} />
             </button>
           </div>
           <button
             onClick={() => setRunning((r) => !r)}
-            className={clsx(
-              "tap w-full rounded-xl py-2 text-sm font-semibold",
-              running ? "bg-teal text-white" : "bg-primary text-white"
-            )}
+            aria-pressed={running}
+            className="tap w-full"
+            style={{
+              height: 44,
+              borderRadius: 12,
+              background: running ? "#7D67D9" : "#AEA1DC",
+              color: "#FFFFFF",
+              fontSize: 14,
+              fontWeight: 700,
+            }}
           >
             {running ? "Stop" : "Start"}
           </button>
