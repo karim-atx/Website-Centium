@@ -133,6 +133,16 @@ import {
   updateJournalEntryRemote,
 } from "../services/journal";
 import {
+  getAchievements,
+  getPointsSummary,
+  getPointTiers,
+  recordFeatureMilestone,
+  type Achievement,
+  type PointsSummary,
+  type PointTier,
+  type FeatureMilestone,
+} from "../services/achievements";
+import {
   IMPORT_MARKER,
   importHabits,
   importJournal,
@@ -948,10 +958,36 @@ interface AppState {
   // grant for any client role. The plan is read from the database now — see
   // fetchMySubscriptionTier in services/subscription-tiers.
 
-  // V8 (QA 8.0): "as a place holder add a plus sign logo that increases the
-  // tier by 1000 points" — added on top of the streak-derived total.
-  bonusPoints: number;
-  addBonusPoints: (amount: number) => void;
+  // THE POINT TOTAL IS THE LEDGER'S, AND NOTHING ELSE'S.
+  //
+  // bonusPoints / addBonusPoints are gone: a localStorage integer a "+" button
+  // on the Explore hero added 1,000 to, on top of a total derived as "streak
+  // days x 100". Neither half was a point anybody had earned — no ledger was
+  // read or written, and points_ledger has since been closed to clients
+  // entirely (no INSERT grant, no INSERT policy). The balance, the tier and
+  // the gap to the next one now come from my_points_summary().
+  /** Every active achievement with the server's own progress, or null before the first read. */
+  achievements: Achievement[] | null;
+  /** Balance, tier and the split by source, or null before the first read. */
+  pointsSummary: PointsSummary | null;
+  /** The tier ladder behind the pips, read from point_tiers rather than hardcoded. */
+  pointTiers: PointTier[];
+  achievementsLoading: boolean;
+  achievementsError: string | null;
+  /**
+   * Re-read after something that could have earned an achievement.
+   *
+   * DEBOUNCED AND RATE-LIMITED, because my_achievements() evaluates every
+   * achievement in one query and a keystroke is not a reason to run it. Calls
+   * inside the debounce window collapse into one.
+   */
+  refreshAchievements: () => void;
+  /** Unlocks this session has not celebrated yet, oldest first. */
+  unlockQueue: Achievement[];
+  /** Drop the front of the queue once its sheet has been dismissed. */
+  dismissUnlock: () => void;
+  /** Record first use of a feature. Fire-and-forget; no UI of its own. */
+  noteFeatureMilestone: (milestone: FeatureMilestone) => void;
   // QA 11.0: "Put a referral tab... gives you a code when another client,
   // professional and/or business subscribes to Centium. The code applies
   // a 10% discount to the subscription model for a one time use per
@@ -1152,6 +1188,17 @@ const HABIT_SUGGESTIONS: { label: string; icon: HabitIconKey }[] = [
   { label: "Journal", icon: "journal" },
   { label: "Meditate", icon: "meditation" },
 ];
+
+// HOW OFTEN THE ACHIEVEMENT EVALUATOR MAY RUN.
+//
+// my_achievements() is not a cheap read: it evaluates all 55 achievements
+// against a dozen activity tables and inserts what has been earned. The
+// debounce collapses a burst of saves into one call; the minimum gap stops a
+// steady drip of small writes -- a set logged, then another -- from turning
+// into one evaluation each. Neither delays anything the user is waiting on:
+// the unlock sheet is a celebration, not a confirmation.
+const ACHIEVEMENT_DEBOUNCE_MS = 1_200;
+const ACHIEVEMENT_MIN_GAP_MS = 8_000;
 
 const STORAGE_KEY = "centium-state";
 
@@ -2893,8 +2940,149 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setBusinessDirectory((prev) => prev.map((b) => (b.id === user.businessId ? { ...b, tier } : b)));
   };
 
-  const [bonusPoints, setBonusPoints] = usePersistentState<number>("bonusPoints", 0);
-  const addBonusPoints: AppState["addBonusPoints"] = (amount) => setBonusPoints((prev) => prev + amount);
+  // =========================================================================
+  // ACHIEVEMENTS AND POINTS.
+  //
+  // bonusPoints WAS HERE: usePersistentState<number>("bonusPoints", 0), added
+  // to by a "+" button on the Explore tier hero. It is gone, along with the
+  // "streak days x 100" rate it was added to. Both were client-side arithmetic
+  // presented as a balance; the balance is points_ledger's sum, and no client
+  // can write a row of it.
+  // =========================================================================
+
+  const [achievements, setAchievements] = useState<Achievement[] | null>(null);
+  const [pointsSummary, setPointsSummary] = useState<PointsSummary | null>(null);
+  const [pointTiers, setPointTiers] = useState<PointTier[]>([]);
+  const [achievementsLoading, setAchievementsLoading] = useState(false);
+  const [achievementsError, setAchievementsError] = useState<string | null>(null);
+  const [unlockQueue, setUnlockQueue] = useState<Achievement[]>([]);
+
+  // WHAT HAS ALREADY BEEN CELEBRATED THIS SESSION. newly_earned is true only
+  // for rows the call that returned them actually inserted, so the server
+  // already guarantees a badge is announced once. This guards the other way in:
+  // a response processed twice -- a double effect in development, a retry that
+  // resolves after its replacement -- would otherwise queue the same sheet
+  // again from the same payload.
+  const celebrated = useRef<Set<string>>(new Set());
+  const refreshTimer = useRef<number | null>(null);
+  const lastEvaluated = useRef(0);
+  const evaluating = useRef(false);
+
+  // A call that EVALUATES: my_achievements() awards, so this is what runs
+  // after something that might have earned one. The points summary is re-read
+  // with it, because an award changes the balance.
+  const runAchievementRead = React.useCallback(async () => {
+    if (!authUserId || evaluating.current) return;
+    evaluating.current = true;
+    lastEvaluated.current = Date.now();
+    try {
+      // SEQUENTIAL, NOT Promise.all, AND THE ORDER IS THE WHOLE POINT.
+      //
+      // my_achievements() EVALUATES and may insert ledger rows;
+      // my_points_summary() is a pure read of the sum. Fired together they
+      // race, and the race is not rare -- it is the normal case, because the
+      // read is the shorter query. A brand-new account showed "1 of 55 · 0
+      // pts" while its ledger already held the 25 points that first
+      // achievement had just credited, and it stayed wrong until something
+      // else triggered another read.
+      //
+      // This is the same lesson the engine migration records about
+      // data-modifying CTEs -- the effects of a write are not visible to
+      // anything running alongside it -- one layer out. Awarding finishes
+      // first; the balance is read after.
+      const rows = await getAchievements();
+      const summary = await getPointsSummary();
+      if (rows.ok) {
+        setAchievements(rows.value);
+        setAchievementsError(null);
+        const fresh = rows.value.filter(
+          (a) => a.newlyEarned && !celebrated.current.has(a.key)
+        );
+        if (fresh.length > 0) {
+          for (const a of fresh) celebrated.current.add(a.key);
+          // QUEUED, NOT REPLACED. Finishing a workout can earn first_workout,
+          // a rung of the workouts ladder and a streak rung in one call, and
+          // each of those is its own moment.
+          setUnlockQueue((prev) => [...prev, ...fresh]);
+        }
+      } else {
+        setAchievementsError(rows.message);
+      }
+      if (summary.ok) setPointsSummary(summary.value);
+    } finally {
+      evaluating.current = false;
+      setAchievementsLoading(false);
+    }
+  }, [authUserId]);
+
+  /**
+   * COALESCE THE CALLS, DON'T MAKE ONE PER KEYSTROKE.
+   *
+   * my_achievements() evaluates all 55 achievements against a dozen activity
+   * tables. Saving a food log is worth one; saving a food log while three other
+   * effects also fire is still worth one. Calls inside the window collapse, and
+   * a burst that arrives while one is already in flight waits for the next
+   * window rather than stacking.
+   */
+  const refreshAchievements: AppState["refreshAchievements"] = React.useCallback(() => {
+    if (!authUserId) return;
+    if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current);
+    const sinceLast = Date.now() - lastEvaluated.current;
+    const wait = Math.max(ACHIEVEMENT_DEBOUNCE_MS, ACHIEVEMENT_MIN_GAP_MS - sinceLast);
+    refreshTimer.current = window.setTimeout(() => {
+      refreshTimer.current = null;
+      void runAchievementRead();
+    }, wait);
+  }, [authUserId, runAchievementRead]);
+
+  const dismissUnlock: AppState["dismissUnlock"] = React.useCallback(
+    () => setUnlockQueue((prev) => prev.slice(1)),
+    []
+  );
+
+  const noteFeatureMilestone: AppState["noteFeatureMilestone"] = React.useCallback(
+    (milestone) => {
+      if (!authUserId) return;
+      // FIRE AND FORGET. The row is idempotent by primary key, the badge it
+      // unlocks is worth zero points, and nothing on screen waits for it. The
+      // refresh is debounced with everything else, so eight milestones fired
+      // in a row cost one evaluation.
+      void recordFeatureMilestone(authUserId, milestone).then(() => refreshAchievements());
+    },
+    [authUserId, refreshAchievements]
+  );
+
+  // The tier ladder: five rows, unchanging, read once per session. Separate
+  // from the summary because the pips need every tier, not only the two the
+  // balance sits between.
+  useEffect(() => {
+    if (!authUserId) return;
+    let cancelled = false;
+    void getPointTiers().then((r) => {
+      if (!cancelled && r.ok) setPointTiers(r.value);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId]);
+
+  // Signing out clears everything, including what has been celebrated: a
+  // different account on the same device has its own unlocks to see.
+  useEffect(() => {
+    if (authUserId) return;
+    celebrated.current.clear();
+    setAchievements(null);
+    setPointsSummary(null);
+    setUnlockQueue([]);
+    setAchievementsError(null);
+  }, [authUserId]);
+
+  useEffect(
+    () => () => {
+      if (refreshTimer.current !== null) window.clearTimeout(refreshTimer.current);
+    },
+    []
+  );
 
   const [referralRedeemed, setReferralRedeemed] = usePersistentState<boolean>("referralRedeemed", false);
   const [referralDiscountPct, setReferralDiscountPct] = usePersistentState<number>("referralDiscountPct", 0);
@@ -2909,6 +3097,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const applyReferralReward: AppState["applyReferralReward"] = (discountPct) => {
     setReferralRedeemed(true);
     setReferralDiscountPct(discountPct);
+    // redeem_referral() credits 1,500 points to the REFERRER, not to this
+    // account -- so this re-read is for the balance the redeemer's own ledger
+    // may already have had, and for anything the redemption itself completed.
+    // The referrer sees their own credit on their next read.
+    refreshAchievements();
   };
 
   // The referrer-side reward is earned by someone ELSE redeeming this
@@ -3424,8 +3617,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // Already written to food_log_entries by the food service, so this keeps
   // the row's real id. Idempotent by id, so a re-render or a retry cannot
   // double-insert the same row.
-  const addFoodEntryRecord: AppState["addFoodEntryRecord"] = (entry) =>
+  const addFoodEntryRecord: AppState["addFoodEntryRecord"] = (entry) => {
     setFoodLog((prev) => (prev.some((e) => e.id === entry.id) ? prev : [...prev, entry]));
+    // THE ONE PLACE A SERVER-SIDE FOOD ROW LANDS. Every path that writes
+    // food_log_entries -- a search result, a custom meal, a recipe, the voice
+    // logger -- comes back through here with the row's real id, so hooking it
+    // once covers all of them and the debounce collapses a multi-item save
+    // into a single evaluation.
+    refreshAchievements();
+  };
 
   // Editing quantity or unit has to rescale the snapshot, because an entry
   // carries totals rather than per-serving values. The ratio of the new
@@ -3472,6 +3672,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!result.ok) return { ok: false, message: result.message };
 
     setWorkoutSessions((prev) => [...prev, { ...session, id: result.id! }]);
+
+    // The richest moment in the app for this: one finished session can earn
+    // first_workout, a rung of the workouts ladder, block_completed,
+    // wod_formats, endurance_completed and a PR rung at once. The queue is why
+    // they are shown one after another rather than the last one winning.
+    refreshAchievements();
 
     // Auto-update estimated 1RMs for barbell/dumbbell/weighted-bodyweight
     // exercises from this session's heaviest completed set.
@@ -3859,7 +4065,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
 
     void setCompletion(id, today, nowDone).then((result) => {
-      if (result.ok) return;
+      // Only a tick can earn one: the habit_days ladder counts distinct days
+      // with a completion, and un-ticking removes the row it would count.
+      if (result.ok) {
+        if (nowDone) refreshAchievements();
+        return;
+      }
       setHabitsError(result.message);
       setHabitSnapshot((prev) => {
         const current = prev.completions[id] ?? [];
@@ -4493,6 +4704,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // The live current weight still only moves when logging for today —
     // backfilling last Tuesday should not rewrite what the user weighs now.
     if (selectedDate === today) updateMetricValue("weight", value);
+    refreshAchievements();
     setWeightLoggedDate(selectedDate);
     return { ok: true };
   };
@@ -4500,11 +4712,17 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [stepsGoal, setStepsGoal] = usePersistentState<number>("stepsGoal", 10000);
 
 
-  const addWidget: AppState["addWidget"] = (type, size = "small") =>
+  const addWidget: AppState["addWidget"] = (type, size = "small") => {
     setWidgets((prev) => [
       ...prev,
       { id: `widget${Date.now()}${Math.random().toString(16).slice(2)}`, type, size, visible: true },
     ]);
+    // Explorer milestone: "Make it yours". Here rather than in WidgetBoard,
+    // because this is the one function every way of adding a widget goes
+    // through. One row per account for ever; a repeat is a primary-key
+    // conflict the service treats as the success it is.
+    noteFeatureMilestone("add_widget");
+  };
   const removeWidget = (id: string) => setWidgets((prev) => prev.filter((w) => w.id !== id));
   const reorderWidgets = (fromIndex: number, toIndex: number) =>
     setWidgets((prev) => {
@@ -4763,6 +4981,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         { id: e.id, folderId: e.folderId, title: e.title, text: e.body, date: e.entryDate, createdAt: e.createdAt },
         ...prev,
       ]);
+      refreshAchievements();
     });
   };
 
@@ -5414,8 +5633,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addForumComment,
       businessDirectory,
       updateMyBusinessTier,
-      bonusPoints,
-      addBonusPoints,
+      achievements,
+      pointsSummary,
+      pointTiers,
+      achievementsLoading,
+      achievementsError,
+      refreshAchievements,
+      unlockQueue,
+      dismissUnlock,
+      noteFeatureMilestone,
       referralRedeemed,
       referralDiscountPct,
       referralNextMonthDiscountPct,
@@ -5575,7 +5801,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customExercisesError,
       forumPosts,
       businessDirectory,
-      bonusPoints,
+      achievements,
+      pointsSummary,
+      pointTiers,
+      achievementsLoading,
+      achievementsError,
+      refreshAchievements,
+      unlockQueue,
+      dismissUnlock,
+      noteFeatureMilestone,
       premiumPlan,
       professionalClients,
       calendarEvents,
