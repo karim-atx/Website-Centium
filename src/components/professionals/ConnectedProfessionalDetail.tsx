@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import { MapPin } from "lucide-react";
 import {
   fetchConnectedProfessional,
+  professionalRole,
   type ConnectedProfessional,
 } from "../../services/connected-professional";
-import type { Enums } from "../../../lib/supabase/database.types";
 
 /**
  * Bio and specialty for the professional whose sharing sheet is open.
@@ -26,19 +26,6 @@ import type { Enums } from "../../../lib/supabase/database.types";
  * something is there — the same failure as printing 0 kcal for a diary nobody
  * has filled in. Silence is the honest rendering of an absence.
  */
-// Keyed on the database enum rather than the app's ProfessionalType, which is
-// the narrower of the two — see the README follow-up on those being
-// unreconciled. Typing it as a total Record is what caught `doctor` missing
-// here, and is why this will not silently render a blank chip if a sixth
-// subtype is ever added.
-const subtypeLabel: Record<Enums<"professional_subtype">, string> = {
-  trainer: "Personal trainer",
-  physiotherapist: "Physiotherapist",
-  dietitian: "Dietitian",
-  doctor: "Doctor",
-  other: "Health professional",
-};
-
 export const ConnectedProfessionalDetail: React.FC<{ professionalId: string }> = ({
   professionalId,
 }) => {
@@ -65,7 +52,7 @@ export const ConnectedProfessionalDetail: React.FC<{ professionalId: string }> =
   // The subtype alone is not worth a block: it is already implied by where the
   // client is standing, and rendering "Health professional" over a sharing
   // sheet tells them nothing they did not know.
-  const role = specialty?.trim() || (subtype ? subtypeLabel[subtype] : null);
+  const role = professionalRole({ specialty, subtype });
   const hasBio = !!bio?.trim();
   if (!hasBio && !specialty?.trim() && !location?.trim()) return null;
 

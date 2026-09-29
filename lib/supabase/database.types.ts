@@ -7473,6 +7473,8 @@ export type Database = {
         Row: {
           assigned_by_professional_id: string | null
           coach_note: string | null
+          coach_note_read_at: string | null
+          coach_note_updated_at: string | null
           color: string | null
           created_at: string
           estimated_duration_min: number | null
@@ -7486,6 +7488,8 @@ export type Database = {
         Insert: {
           assigned_by_professional_id?: string | null
           coach_note?: string | null
+          coach_note_read_at?: string | null
+          coach_note_updated_at?: string | null
           color?: string | null
           created_at?: string
           estimated_duration_min?: number | null
@@ -7499,6 +7503,8 @@ export type Database = {
         Update: {
           assigned_by_professional_id?: string | null
           coach_note?: string | null
+          coach_note_read_at?: string | null
+          coach_note_updated_at?: string | null
           color?: string | null
           created_at?: string
           estimated_duration_min?: number | null

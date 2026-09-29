@@ -114,3 +114,21 @@ export async function fetchConnectedProfessional(
     },
   };
 }
+
+// Keyed on the database enum rather than the app's ProfessionalType, which is
+// the narrower of the two — see the README follow-up on those being
+// unreconciled. Typing it as a total Record is what caught `doctor` missing,
+// and is why this will not silently render a blank label if a sixth subtype
+// is ever added.
+const SUBTYPE_LABEL: Record<Enums<"professional_subtype">, string> = {
+  trainer: "Personal trainer",
+  physiotherapist: "Physiotherapist",
+  dietitian: "Dietitian",
+  doctor: "Doctor",
+  other: "Health professional",
+};
+
+/** How a professional is described: their own specialty first, else their subtype's label. */
+export function professionalRole(p: Pick<ConnectedProfessional, "specialty" | "subtype">): string | null {
+  return p.specialty?.trim() || (p.subtype ? SUBTYPE_LABEL[p.subtype] : null);
+}

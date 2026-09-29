@@ -25,6 +25,7 @@ import { RPECalculator } from "./RPECalculator";
 import { PlateCalculatorSheet } from "./PlateCalculatorSheet";
 import { SetOptionsSheet } from "./SetOptionsSheet";
 import { PrBurst } from "./Confetti";
+import { CoachNotePopup } from "./CoachNotePopup";
 import { Button } from "../ui/Button";
 import { BottomSheet } from "../ui/BottomSheet";
 import { PopupMenu, type PopupMenuOption } from "../ui/PopupMenu";
@@ -120,6 +121,7 @@ export const WorkoutSessionSheet: React.FC<{
     routines,
     routineFolders,
     updateRoutine,
+    markCoachNoteRead,
     activeSession,
     setActiveSession,
   } = useApp();
@@ -154,6 +156,12 @@ export const WorkoutSessionSheet: React.FC<{
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [coachNoteOpen, setCoachNoteOpen] = useState(false);
+  // WO25: unread = a note exists and (never read, or read before it last changed).
+  const noteText = routineRow?.coachNote ?? coachNote;
+  const noteUnread =
+    !!noteText &&
+    (!routineRow?.coachNoteReadAt ||
+      (!!routineRow.coachNoteUpdatedAt && routineRow.coachNoteReadAt < routineRow.coachNoteUpdatedAt));
   const [tickKey, setTickKey] = useState<string | null>(null);
   const tickNonce = useRef(0);
   const [burst, setBurst] = useState<{ key: number; rect: { left: number; top: number; width: number; height: number } } | null>(null);
@@ -718,12 +726,23 @@ export const WorkoutSessionSheet: React.FC<{
             </button>
             <Metronome />
             <button
-              onClick={() => setCoachNoteOpen(true)}
-              aria-label="Coach's note"
+              onClick={() => {
+                setCoachNoteOpen(true);
+                // Opening the note clears its unread dot (WO25).
+                if (noteUnread && routineRow) markCoachNoteRead(routineRow.id);
+              }}
+              aria-label={noteUnread ? "Coach's note, unread" : "Coach's note"}
               className={circle}
               style={{ width: 34, height: 34, background: "#F5F5F6", color: "#8C8378" }}
             >
               <MessageSquareText size={15} />
+              {noteUnread && (
+                <span
+                  aria-hidden
+                  className="absolute rounded-full"
+                  style={{ top: 3, right: 3, width: 8, height: 8, background: "#8F68F6", boxShadow: "0 0 0 1.5px #FFFFFF" }}
+                />
+              )}
             </button>
           </div>
         </div>
@@ -999,20 +1018,12 @@ export const WorkoutSessionSheet: React.FC<{
       )}
 
       {coachNoteOpen && (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center px-6">
-          <div className="absolute inset-0 bg-charcoal/40" onClick={() => setCoachNoteOpen(false)} />
-          <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
-            <p className="font-display font-semibold text-lg text-charcoal mb-1.5 flex items-center gap-2">
-              <MessageSquareText size={16} className="text-primary" /> Coach's note
-            </p>
-            <p className="text-sm text-charcoal-soft mb-5 whitespace-pre-wrap">
-              {coachNote || "Your professional hasn't left a note for this routine yet."}
-            </p>
-            <Button fullWidth onClick={() => setCoachNoteOpen(false)}>
-              Close
-            </Button>
-          </div>
-        </div>
+        <CoachNotePopup
+          note={noteText}
+          updatedAt={routineRow?.coachNoteUpdatedAt}
+          professionalId={routineRow?.assignedByProfessionalId}
+          onClose={() => setCoachNoteOpen(false)}
+        />
       )}
 
       {quitConfirmOpen && (

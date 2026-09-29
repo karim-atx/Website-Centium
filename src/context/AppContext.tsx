@@ -90,6 +90,7 @@ import {
   getRoutines,
   setFolderPositions,
   updateRoutine as updateRoutineRemote,
+  markCoachNoteRead as markCoachNoteReadRemote,
   updateRoutineFolder as updateRoutineFolderRemote,
   type ExerciseLookup,
 } from "../services/routines";
@@ -541,6 +542,8 @@ interface AppState {
   /** Resolves to the new routine's id, or null when the write failed. */
   addRoutine: (routine: Omit<Routine, "id">) => Promise<string | null>;
   updateRoutine: (id: string, patch: Partial<Routine>) => Promise<string | undefined>;
+  /** WO25: opening the coach note clears its unread dot (writes coach_note_read_at). */
+  markCoachNoteRead: (id: string) => void;
   deleteRoutine: (id: string) => Promise<string | undefined>;
 
   water: number;
@@ -4024,6 +4027,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return undefined;
   };
 
+  const markCoachNoteRead: AppState["markCoachNoteRead"] = (id) => {
+    const at = new Date().toISOString();
+    // The dot clears at once; the write follows. A failed write only means the
+    // dot can come back on the next load, which is the honest outcome.
+    setRoutines((prev) => prev.map((r) => (r.id === id ? { ...r, coachNoteReadAt: at } : r)));
+    if (authUserId && isRemoteRoutineId(id)) void markCoachNoteReadRemote(id, at);
+  };
+
   const deleteRoutine: AppState["deleteRoutine"] = async (id) => {
     const routine = routines.find((r) => r.id === id);
     if (authUserId && isRemoteRoutineId(id) && !routine?.sourceTemplateId) {
@@ -5507,6 +5518,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       routines,
       addRoutine,
       updateRoutine,
+      markCoachNoteRead,
       deleteRoutine,
       water,
       waterByDate,

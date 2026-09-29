@@ -176,7 +176,7 @@ const BLOCK_COLUMNS = "id, kind, label, time_cap_seconds, interval_seconds, roun
 const DEFINITION_COLUMNS = "id, name, classification, muscle_groups, secondary_muscle_groups";
 
 const ROUTINE_SELECT =
-  "id, folder_id, name, color, estimated_duration_min, coach_note, " +
+  "id, folder_id, name, color, estimated_duration_min, coach_note, coach_note_updated_at, coach_note_read_at, assigned_by_professional_id, " +
   `routine_exercise_blocks(${BLOCK_COLUMNS}), ` +
   `routine_exercises(${PRESCRIPTION_COLUMNS}, ` +
   `exercises(${DEFINITION_COLUMNS}), ` +
@@ -236,6 +236,9 @@ interface RoutineRow {
   color: string | null;
   estimated_duration_min: number | null;
   coach_note: string | null;
+  coach_note_updated_at: string | null;
+  coach_note_read_at: string | null;
+  assigned_by_professional_id: string | null;
   routine_exercise_blocks: BlockRow[];
   routine_exercises: PrescriptionRow[];
 }
@@ -321,6 +324,9 @@ function toRoutine(r: RoutineRow): Routine {
     estimatedDurationMin: r.estimated_duration_min ?? 30,
     exercises,
     coachNote: r.coach_note ?? undefined,
+    coachNoteUpdatedAt: r.coach_note_updated_at ?? undefined,
+    coachNoteReadAt: r.coach_note_read_at ?? undefined,
+    assignedByProfessionalId: r.assigned_by_professional_id ?? undefined,
     blocks: (r.routine_exercise_blocks ?? []).map(toBlock),
   };
 }
@@ -526,7 +532,9 @@ export async function createRoutine(
       name: routine.name.trim(),
       color: routine.color ?? null,
       estimated_duration_min: routine.estimatedDurationMin ?? null,
-      coach_note: routine.coachNote ?? null,
+      // NEVER coach_note or assigned_by_professional_id, not even as null:
+      // only the professional's server functions (assign / adopt) set them,
+      // and Database-Atraxia removes both from the client INSERT grant.
     })
     .select("id")
     .single();
@@ -596,7 +604,6 @@ export async function updateRoutine(
     name?: string;
     color?: string | null;
     estimated_duration_min?: number | null;
-    coach_note?: string | null;
   } = {};
   if (patch.folderId !== undefined) payload.folder_id = patch.folderId;
   if (patch.name !== undefined) payload.name = patch.name.trim();
@@ -604,7 +611,8 @@ export async function updateRoutine(
   if (patch.estimatedDurationMin !== undefined) {
     payload.estimated_duration_min = patch.estimatedDurationMin;
   }
-  if (patch.coachNote !== undefined) payload.coach_note = patch.coachNote ?? null;
+  // coach_note is the professional's: the client UPDATE grant no longer
+  // includes it, so a patch carrying coachNote never writes it.
 
   if (Object.keys(payload).length > 0) {
     const { error } = await supabase.from("routines").update(payload).eq("id", id);
@@ -656,6 +664,20 @@ export async function deleteRoutine(id: string): Promise<WriteResult> {
   const { error } = await supabase.from("routines").delete().eq("id", id);
   if (error) {
     console.error("[routines] Could not delete routine:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  return { ok: true };
+}
+
+/**
+ * Marks the routine's coach note as read (WO25): the ONE coach-note column
+ * the client may write. Unread = coach_note is set and (coach_note_read_at is
+ * null or older than coach_note_updated_at).
+ */
+export async function markCoachNoteRead(id: string, at: string): Promise<WriteResult> {
+  const { error } = await supabase.from("routines").update({ coach_note_read_at: at }).eq("id", id);
+  if (error) {
+    console.error("[routines] Could not mark the coach note read:", error.message);
     return { ok: false, message: describe(error) };
   }
   return { ok: true };

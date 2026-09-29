@@ -942,6 +942,12 @@ export interface Routine {
   // routine (via an assigned workout template), shown in a coach-note
   // button during the session.
   coachNote?: string;
+  /** When the coach note last changed (set by the database, WO25). */
+  coachNoteUpdatedAt?: string;
+  /** When this client last opened the note; unread = no read, or read before the update. */
+  coachNoteReadAt?: string;
+  /** The professional who assigned this routine (their name and role come from connected_professional_summary). */
+  assignedByProfessionalId?: string;
   // V10 (QA 10.0): set when this routine came from a professional's
   // assigned template, so it can be identified/cleaned up if the
   // client-professional relationship ends.
