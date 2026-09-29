@@ -5,10 +5,12 @@ import { useApp } from "../../context/AppContext";
 import { getPublicTemplates } from "../../services/templates";
 import { UnverifiedProgramNotice } from "./UnverifiedProgramNotice";
 import type { WorkoutTemplate } from "../../types";
-import { ChevronLeft, ChevronRight, Check, Clock, Dumbbell } from "lucide-react";
+import { ChevronLeft, Check } from "lucide-react";
 import { BlockCard } from "./BlockCard";
 import { groupIntoRuns } from "../../services/workout/blocks";
 import { prescriptionLine } from "../../services/workout/prescription";
+import { formatCompactDuration } from "../../services/workout";
+import { LEVEL_COLORS, LEVEL_ORDER, levelColors, levelName } from "../../data/levelColors";
 
 // Browsing the curated starter programs, and taking one for yourself.
 //
@@ -34,6 +36,13 @@ import { prescriptionLine } from "../../services/workout/prescription";
 // curated program with a rep range or an endurance plan read as neither —
 // and it was the third such renderer in the app. services/workout/prescription
 // is the one that all of them use now.
+
+// Handover 2026-09-29 WO20: the list is a two-column grid of level-coloured
+// tiles; the unreviewed-program notice is removed from the tiles.
+
+/** "~45m", "~1h 10m" (the compact duration format, 02). */
+const aboutDuration = (p: WorkoutTemplate) => (p.durationMin ? `~${formatCompactDuration(p.durationMin * 60)}` : null);
+const exerciseCount = (p: WorkoutTemplate) => `${p.exercises.length} exercise${p.exercises.length === 1 ? "" : "s"}`;
 
 export const BrowseProgramsSheet: React.FC<{
   open: boolean;
@@ -185,59 +194,70 @@ export const BrowseProgramsSheet: React.FC<{
           </>
         ) : (
           <>
-            <p className="text-[12.5px] text-charcoal-soft leading-relaxed">
-              Ready-made programs to start from. Adding one copies it into your own routines, where
-              you can change anything — the original never changes underneath you.
+            <p className="text-[12.5px] leading-[20px]" style={{ margin: 0, color: "#5B5349" }}>
+              Ready-made programs to start from. Adding one copies it into your routines, where you can change anything. The
+              original stays as it is.
             </p>
 
-            {loading && (
-              <p className="text-center text-sm text-charcoal-faint py-6">Loading programs…</p>
-            )}
-            {loadError && !loading && (
-              <p className="text-center text-sm text-status-high py-6">{loadError}</p>
-            )}
+            {/* WO20: what the tile colours mean. */}
+            <div className="flex items-center flex-wrap" style={{ columnGap: 14, rowGap: 4 }}>
+              {LEVEL_ORDER.map((level) => (
+                <span key={level} className="flex items-center" style={{ gap: 6, fontSize: 10, lineHeight: "14px", color: "#5B5349" }}>
+                  <span aria-hidden className="rounded-full flex-none" style={{ width: 8, height: 8, background: LEVEL_COLORS[level].dot }} />
+                  {levelName(level)}
+                </span>
+              ))}
+            </div>
+
+            {loading && <p className="text-center text-sm text-charcoal-faint py-6">Loading programs…</p>}
+            {loadError && !loading && <p className="text-center text-sm text-status-high py-6">{loadError}</p>}
             {!loading && !loadError && programs.length === 0 && (
-              <p className="text-center text-sm text-charcoal-faint py-6">
-                No starter programs available yet.
-              </p>
+              <p className="text-center text-sm text-charcoal-faint py-6">No starter programs available yet.</p>
             )}
 
-            <div className="space-y-2">
-              {programs.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setSelected(p);
-                    setAdoptError(null);
-                  }}
-                  className="tap w-full flex items-center justify-between gap-3 bg-cream-soft rounded-2xl px-3.5 py-3 text-left"
-                >
-                  <div className="min-w-0">
-                    <p className="text-sm font-semibold text-charcoal truncate flex items-center gap-1.5">
-                      <Dumbbell size={13} className="text-primary-dark shrink-0" />
+            {/* Two columns; tiles hug their content and each row takes its
+                taller tile's height (grid stretch). The whole tile is the button. */}
+            <div className="grid grid-cols-2" style={{ gap: 10 }}>
+              {programs.map((p) => {
+                const c = levelColors(p.level);
+                const duration = aboutDuration(p);
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => {
+                      setSelected(p);
+                      setAdoptError(null);
+                    }}
+                    className="tap flex flex-col items-start text-left min-w-0"
+                    style={{ background: c.tile, borderRadius: 16, padding: "12px 13px 13px" }}
+                  >
+                    <span
+                      className="line-clamp-2"
+                      style={{ fontSize: 14.5, lineHeight: "19px", fontWeight: 600, color: "#241F1B" }}
+                    >
                       {p.name}
-                      {added.includes(p.id) && (
-                        <span className="text-[10px] font-bold text-primary flex items-center gap-0.5">
-                          <Check size={10} strokeWidth={3} /> Added
-                        </span>
+                    </span>
+                    {(p.level || added.includes(p.id)) && (
+                      <span className="flex items-center" style={{ gap: 6, marginTop: 6, fontSize: 11, lineHeight: "14px", fontWeight: 700, color: c.label }}>
+                        {p.level && levelName(p.level)}
+                        {added.includes(p.id) && (
+                          <span className="flex items-center" style={{ gap: 2 }}>
+                            <Check size={10} strokeWidth={3} /> Added
+                          </span>
+                        )}
+                      </span>
+                    )}
+                    <span style={{ marginTop: 2, fontSize: 11, lineHeight: "14px", color: "#5B5349" }}>
+                      {duration && (
+                        <>
+                          <span className="whitespace-nowrap">{duration}</span> ·{" "}
+                        </>
                       )}
-                    </p>
-                    <p className="text-[11px] text-charcoal-faint flex items-center gap-1">
-                      <Clock size={10} className="shrink-0" />
-                      {meta(p)}
-                    </p>
-                    {/* Compact form on every row, so the caveat is visible
-                        while scanning rather than only after opening one. */}
-                    <UnverifiedProgramNotice
-                      isVerified={p.isVerified}
-                      isPublic={p.isPublic}
-                      variant="compact"
-                      className="mt-0.5"
-                    />
-                  </div>
-                  <ChevronRight size={16} className="text-charcoal-faint shrink-0" />
-                </button>
-              ))}
+                      <span className="whitespace-nowrap">{exerciseCount(p)}</span>
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </>
         )}
