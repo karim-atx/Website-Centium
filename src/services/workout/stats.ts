@@ -151,7 +151,8 @@ export function lastSessionPrefill(
   let latest: WorkoutSession | null = null;
   for (const s of sessions) {
     if (s.routineId !== routineId) continue;
-    if (!latest || s.startedAt > latest.startedAt) latest = s;
+    // By the day it counts on (WO3.1 can move it), then by start time.
+    if (!latest || s.date > latest.date || (s.date === latest.date && s.startedAt > latest.startedAt)) latest = s;
   }
   if (!latest) return out;
   for (const ex of latest.exercises) {

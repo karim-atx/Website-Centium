@@ -12,10 +12,13 @@ export const HeroCard: React.FC<{
   top: React.ReactNode;
   bottom?: React.ReactNode;
   className?: string;
-}> = ({ top, bottom, className }) => (
+  /** Per-screen padding, measured from each frame (WO3.1 differs from WO4.1). */
+  topPadding?: string;
+  bottomPadding?: string;
+}> = ({ top, bottom, className, topPadding = "16px 16px 14px", bottomPadding = "12px 16px" }) => (
   <div className={`overflow-hidden ${className ?? ""}`} style={{ borderRadius: 20 }}>
-    <div style={{ background: "linear-gradient(180deg,#A79AD5,#A194D1)", color: "#FFFFFF", padding: "16px 16px 14px" }}>{top}</div>
-    {bottom && <div style={{ background: "#E4DDFD", padding: "12px 16px" }}>{bottom}</div>}
+    <div style={{ background: "linear-gradient(180deg,#A79AD5,#A194D1)", color: "#FFFFFF", padding: topPadding }}>{top}</div>
+    {bottom && <div style={{ background: "#E4DDFD", padding: bottomPadding }}>{bottom}</div>}
   </div>
 );
 

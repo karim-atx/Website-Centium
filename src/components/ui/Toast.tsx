@@ -20,7 +20,9 @@ export const Toast: React.FC<{
   /** The toast timed out or was replaced without Undo. */
   onExpire?: () => void;
   duration?: number;
-}> = ({ open, message, onUndo, onExpire, duration = TOAST_MS }) => {
+  /** Replaces the teal check (WO3.1 "Workout deleted." shows a bin). */
+  icon?: React.ReactNode;
+}> = ({ open, message, onUndo, onExpire, duration = TOAST_MS, icon }) => {
   // Latest callbacks, so the timer doesn't restart on every render.
   const expire = useRef(onExpire);
   expire.current = onExpire;
@@ -49,7 +51,7 @@ export const Toast: React.FC<{
         fontWeight: 600,
       }}
     >
-      <Check size={15} strokeWidth={2.6} className="flex-none" style={{ color: "#A2C8C2" }} />
+      {icon ?? <Check size={15} strokeWidth={2.6} className="flex-none" style={{ color: "#A2C8C2" }} />}
       <span className="flex-1 min-w-0 truncate">{message}</span>
       {onUndo && (
         <button onClick={onUndo} className="tap flex-none" style={{ color: "#C3B3FB", fontWeight: 700, minHeight: 32 }}>

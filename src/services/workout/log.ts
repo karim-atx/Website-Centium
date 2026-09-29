@@ -282,6 +282,8 @@ type SessionRow = {
   id: string;
   routine_name: string;
   started_at: string;
+  /** The day the workout counts on (WO3.1 moves it); null on rows written before it existed. */
+  activity_date?: string | null;
   ended_at: string | null;
   duration_sec: number | null;
   total_volume_kg: number | null;
@@ -328,7 +330,7 @@ const toBlockResult = (b: BlockResultRow): BlockResult => ({
 
 /** The columns every session read needs, in one place so they cannot drift. */
 export const SESSION_SELECT =
-  "id, routine_id, routine_name, started_at, ended_at, duration_sec, total_volume_kg, notes," +
+  "id, routine_id, routine_name, started_at, activity_date, ended_at, duration_sec, total_volume_kg, notes," +
   " workout_block_results(id, kind, label, time_cap_seconds, interval_seconds, rounds, rounds_completed, extra_reps, time_seconds, capped, notes)," +
   " logged_exercises(id, name, position, exercise_id, custom_exercise_id, block_result_id, endurance_result," +
   " logged_sets(set_number, reps, weight_kg, completed, set_type, outcome, is_pr, notes, rpe, mood, pain))";
@@ -381,11 +383,11 @@ export function toWorkoutSession(row: unknown): WorkoutSession {
     id: r.id,
     routineId: r.routine_id,
     routineName: r.routine_name,
-    // The table has no date column; the day is whatever started_at fell on
-    // LOCALLY. Slicing the ISO string instead would give the UTC day, which
-    // is a different day for part of every night and would not match what
-    // WorkoutSessionSheet wrote or what the streak anchors compare against.
-    date: localDayOf(r.started_at),
+    // activity_date is the day the workout counts on: written at save as the
+    // LOCAL day started_at fell on, and changed by WO3.1's "Change date".
+    // Rows without one fall back to that local day (slicing the ISO string
+    // would give the UTC day, a different day for part of every night).
+    date: r.activity_date ?? localDayOf(r.started_at),
     startedAt: r.started_at,
     endedAt: r.ended_at ?? undefined,
     durationSec: r.duration_sec ?? 0,
@@ -444,6 +446,27 @@ export type WorkoutMutationResult = { ok: boolean; message?: string };
  * trap deleteDiaryEntry documents.
  */
 export async function deleteWorkoutSession(sessionId: string): Promise<WorkoutMutationResult> {
+  // WO3.1: deleting a workout updates personal records. A record keeps its row
+  // when its source set goes (the FK is ON DELETE SET NULL), so the records
+  // this session's sets set are removed first; current_personal_records then
+  // falls back to the next best. Records with no source set are left alone.
+  const { data: sets, error: setsError } = await supabase
+    .from("logged_sets")
+    .select("id, logged_exercises!inner(workout_session_id)")
+    .eq("logged_exercises.workout_session_id", sessionId);
+  if (setsError) {
+    console.error("[workout] Could not read the session's sets:", setsError.message);
+    return { ok: false, message: describe(setsError) };
+  }
+  const setIds = (sets ?? []).map((s) => (s as { id: string }).id);
+  if (setIds.length > 0) {
+    const { error: prError } = await supabase.from("personal_records").delete().in("source_logged_set_id", setIds);
+    if (prError) {
+      console.error("[workout] Could not remove the session's records:", prError.message);
+      return { ok: false, message: describe(prError) };
+    }
+  }
+
   const { data, error } = await supabase
     .from("workout_sessions")
     .delete()
@@ -469,11 +492,13 @@ export async function deleteWorkoutSession(sessionId: string): Promise<WorkoutMu
  */
 export async function updateWorkoutSession(
   sessionId: string,
-  patch: { routineName?: string; notes?: string | null }
+  patch: { routineName?: string; notes?: string | null; date?: string }
 ): Promise<WorkoutMutationResult> {
   const row = {
     ...(patch.routineName !== undefined && { routine_name: patch.routineName }),
     ...(patch.notes !== undefined && { notes: patch.notes }),
+    // WO3.1 "Change date": the record's date only; everything date-based reads it.
+    ...(patch.date !== undefined && { activity_date: patch.date }),
   };
   if (Object.keys(row).length === 0) return { ok: true };
 

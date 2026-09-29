@@ -263,7 +263,12 @@ import {
 } from "../services/imaging";
 import { deleteLabPanel, getBloodMarkers, getLabReports, recordPanel } from "../services/labs";
 import { touchLastActive } from "../services/activity";
-import { getWorkoutSessions, saveWorkoutSession as saveWorkoutSessionRemote } from "../services/workout/log";
+import {
+  deleteWorkoutSession as deleteWorkoutSessionRemote,
+  getWorkoutSessions,
+  saveWorkoutSession as saveWorkoutSessionRemote,
+  updateWorkoutSession as updateWorkoutSessionRemote,
+} from "../services/workout/log";
 import { todayLocal } from "../utils/date";
 
 // How much history the diary loads from Supabase in one read. Chosen so the
@@ -473,6 +478,14 @@ interface AppState {
   // preserves logged sets + elapsed time, keyed by routine, so reopening it
   // resumes exactly where the user left off.
   pausedSessions: Record<string, PausedWorkoutSession>;
+  /** WO3.1 "Change date": the session's day only; reverts if the write fails. */
+  moveWorkoutSession: (id: string, date: string) => Promise<string | undefined>;
+  /**
+   * WO3.1 Delete: hides the session at once (every summary re-reads the list)
+   * and hands back Undo, which restores it exactly, and commit, which deletes
+   * it on the server when the Undo toast expires (approved decision 4).
+   */
+  removeWorkoutSession: (id: string) => { undo: () => void; commit: () => Promise<string | undefined> } | null;
   savePausedSession: (routineId: string, session: PausedWorkoutSession) => void;
   clearPausedSession: (routineId: string) => void;
 
@@ -3697,6 +3710,58 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   //
   // So a failed save is reported, not silently absorbed. The caller shows it
   // and offers a retry; nothing is added to history until the write lands.
+  // The latest list, for callbacks kept past a render (an Undo toast's).
+  const workoutSessionsRef = useRef(workoutSessions);
+  useEffect(() => {
+    workoutSessionsRef.current = workoutSessions;
+  }, [workoutSessions]);
+
+  const moveWorkoutSession: AppState["moveWorkoutSession"] = async (id, date) => {
+    const before = workoutSessionsRef.current.find((w) => w.id === id);
+    if (!before || before.date === date) return undefined;
+    setWorkoutSessions((prev) => prev.map((w) => (w.id === id ? { ...w, date } : w)));
+    if (!authUserId) return undefined;
+    const result = await updateWorkoutSessionRemote(id, { date });
+    if (!result.ok) {
+      setWorkoutSessions((prev) => prev.map((w) => (w.id === id ? { ...w, date: before.date } : w)));
+      return result.message ?? "Could not move that workout.";
+    }
+    return undefined;
+  };
+
+  const removeWorkoutSession: AppState["removeWorkoutSession"] = (id) => {
+    const index = workoutSessionsRef.current.findIndex((w) => w.id === id);
+    if (index === -1) return null;
+    const removed = workoutSessionsRef.current[index];
+    const restore = () =>
+      setWorkoutSessions((prev) => {
+        if (prev.some((w) => w.id === id)) return prev;
+        const next = [...prev];
+        next.splice(Math.min(index, next.length), 0, removed);
+        return next;
+      });
+    setWorkoutSessions((prev) => prev.filter((w) => w.id !== id));
+    return {
+      undo: restore,
+      commit: async () => {
+        if (!authUserId) return undefined;
+        const result = await deleteWorkoutSessionRemote(id);
+        if (!result.ok) {
+          restore();
+          return result.message ?? "That workout couldn't be deleted.";
+        }
+        // Records set by this session are gone; take the current best again.
+        const records = await getPersonalRecords(authUserId);
+        if (records.ok) {
+          const byName: Record<string, number> = {};
+          for (const r of records.records) byName[r.name] = r.estimatedOneRepMaxKg;
+          setPersonalRecords(byName);
+        }
+        return undefined;
+      },
+    };
+  };
+
   const saveWorkoutSession: AppState["saveWorkoutSession"] = async (session) => {
     if (!authUserId) {
       return { ok: false, message: "You need to be signed in to save a workout." };
@@ -5606,6 +5671,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       workoutLog,
       logWorkout,
       workoutSessions,
+      moveWorkoutSession,
+      removeWorkoutSession,
       saveWorkoutSession,
       pausedSessions,
       savePausedSession,
