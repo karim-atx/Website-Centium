@@ -155,7 +155,7 @@ export const EnduranceRunner: React.FC<{
         />
         <Field
           label="Distance (m)"
-          placeholder="5000"
+          placeholder=""
           value={result?.distance_meters ? String(result.distance_meters) : ""}
           onChange={(raw) => patch({ distance_meters: digits(raw) })}
         />

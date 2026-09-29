@@ -394,7 +394,9 @@ export const WorkoutSessionSheet: React.FC<{
     const ex = logged[exIdx];
     const last = ex ? prefill.get(exerciseKey(ex))?.[setIdx] : undefined;
     return {
-      weight: last?.weight != null ? String(last.weight) : meta?.weightKg ? String(meta.weightKg) : "0",
+      // No last value and no prescribed load: an empty field, not a greyed
+      // "0" (a blank weight still logs as 0, i.e. bodyweight).
+      weight: last?.weight != null ? String(last.weight) : meta?.weightKg ? String(meta.weightKg) : "",
       reps: last?.reps != null ? String(last.reps) : meta ? repsPlaceholder(meta) : "reps",
     };
   };

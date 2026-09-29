@@ -178,7 +178,6 @@ const ScoreBoard: React.FC<{
           label="Extra reps"
           value={result?.extraReps}
           onChange={(v) => onResult({ extraReps: v })}
-          placeholder="0"
         />
       </Panel>
     );
@@ -231,7 +230,6 @@ const ScoreBoard: React.FC<{
           label="Reps in the unfinished round"
           value={result?.extraReps}
           onChange={(v) => onResult({ extraReps: v })}
-          placeholder="0"
         />
       )}
       {finished ? (
