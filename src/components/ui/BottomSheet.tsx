@@ -29,6 +29,11 @@ interface BottomSheetProps {
    * way the sheet hugs its content up to that max.
    */
   size?: "default" | "tall";
+  /**
+   * Recolours the chrome (WO21: a starter program takes its level's colours):
+   * header band, border, title and close ring, and the body/footer fill.
+   */
+  tone?: { band: string; border: string; title: string; body: string };
 }
 
 /**
@@ -54,7 +59,12 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   headerAction,
   footer,
   size = "default",
+  tone,
 }) => {
+  const band = tone?.band ?? "#F0EEFD";
+  const border = tone?.border ?? "#7248F8";
+  const titleColor = tone?.title ?? "#7248F8";
+  const body = tone?.body ?? "#FFFFFF";
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -111,7 +121,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       ) : (
         <div
           className="relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up"
-          style={{ maxHeight, background: "#F0EEFD", border: "1px solid #7248F8", borderBottom: "none" }}
+          style={{ maxHeight, background: band, border: `1px solid ${border}`, borderBottom: "none" }}
         >
           <div className="shrink-0 flex items-center justify-between" style={{ height: 53, padding: "0 18px" }}>
             <div className="flex items-center shrink-0" style={{ width: 26 }}>
@@ -130,7 +140,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             {title && (
               <h2
                 className="flex-1 min-w-0 text-center truncate"
-                style={{ color: "#7248F8", fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em" }}
+                style={{ color: titleColor, fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em" }}
               >
                 {title}
               </h2>
@@ -142,7 +152,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               <button
                 onClick={onClose}
                 className="tap relative w-[26px] h-[26px] shrink-0 rounded-full flex items-center justify-center before:absolute before:-inset-[9px] before:content-['']"
-                style={{ border: "1.6px solid #7248F8", color: "#7248F8" }}
+                style={{ border: `1.6px solid ${border}`, color: border }}
                 aria-label="Close"
               >
                 <X size={12} strokeWidth={2.6} />
@@ -150,13 +160,13 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             </div>
           </div>
           <div
-            className="flex-1 min-h-0 overflow-y-auto overscroll-contain bg-white"
-            style={{ borderRadius: "22px 22px 0 0", padding: 20, paddingBottom: footer ? 20 : bottomPad }}
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+            style={{ background: body, borderRadius: "22px 22px 0 0", padding: 20, paddingBottom: footer ? 20 : bottomPad }}
           >
             {children}
           </div>
           {footer && (
-            <div className="shrink-0 bg-white" style={{ padding: `12px 20px ${bottomPad}` }}>
+            <div className="shrink-0" style={{ background: body, padding: `12px 20px ${bottomPad}` }}>
               {footer}
             </div>
           )}
