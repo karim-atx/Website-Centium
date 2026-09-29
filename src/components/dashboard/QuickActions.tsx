@@ -14,11 +14,20 @@ interface QuickActionsProps {
 // placed as-is; only four transparent hit areas are added on top, each
 // wired to the same handler the old CSS pills used to call.
 //
-// The artwork (2164x727 source, ~2.977 aspect) is rendered at a literal
-// 411.64px width, which is taller than the 358x95.9 visible block — the
-// block is a crop window over the artwork's own built-in padding, so the
-// container clips with `overflow: hidden` while the image is positioned at
-// the handoff's literal left/top offset inside it.
+// The artwork (2164x727 source, ~2.977 aspect) was laid out on a 358x95.9
+// crop window: rendered 411.64px wide at a -26.82 / -21.69 offset, with the
+// hit areas at literal px positions inside it.
+//
+// FLUID, NOT 358px. Those px values are kept as the design grid and turned
+// into fractions of the box, which takes the column's full width at a fixed
+// aspect ratio. At 360px the column is 328px wide; the old fixed-px image and
+// hit areas overflowed the capped box, cutting off "Log workout" and part of
+// its tap target. Now the whole cluster scales as one piece.
+const W = 358;
+const H = 95.9;
+const x = (px: number) => `${(px / W) * 100}%`;
+const y = (px: number) => `${(px / H) * 100}%`;
+
 export const QuickActions: React.FC<QuickActionsProps> = ({
   onLogFood,
   onLogWorkout,
@@ -40,18 +49,18 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
 
       <div
         className="relative overflow-hidden"
-        // Master handover item 6: 358px wide, capped to the column so a phone
-        // narrower than 390px never pushes it past the page edge.
-        style={{ width: 358, maxWidth: "100%", height: 95.9, marginTop: -8, marginBottom: -12 }}
+        // Vertical margins in % resolve against the width, so the crop's
+        // -8 / -12 offsets scale with the cluster too.
+        style={{ width: "100%", aspectRatio: `${W} / ${H}`, marginTop: x(-8), marginBottom: x(-12) }}
       >
         <img
           src="/qa-cluster-ref-teal.png"
           alt=""
           style={{
             position: "absolute",
-            left: -26.82,
-            top: -21.69,
-            width: 411.64,
+            left: x(-26.82),
+            top: y(-21.69),
+            width: x(411.64),
             height: "auto",
             maxWidth: "none",
             display: "block",
@@ -63,28 +72,28 @@ export const QuickActions: React.FC<QuickActionsProps> = ({
         <button
           onClick={onLogFood}
           aria-label="Log food"
-          style={{ ...hitAreaStyle, left: 0, top: 14.5, width: 137.7, height: 45.7 }}
+          style={{ ...hitAreaStyle, left: 0, top: y(14.5), width: x(137.7), height: y(45.7) }}
         />
 
         {/* Log workout */}
         <button
           onClick={onLogWorkout}
           aria-label="Log workout"
-          style={{ ...hitAreaStyle, left: 219.6, top: 14.5, width: 138.4, height: 45.7 }}
+          style={{ ...hitAreaStyle, left: x(219.6), top: y(14.5), width: x(138.4), height: y(45.7) }}
         />
 
         {/* Add metric */}
         <button
           onClick={onAddMetric}
           aria-label="Add metric"
-          style={{ ...hitAreaStyle, left: 129.1, top: 72.3, width: 100, height: 23.5 }}
+          style={{ ...hitAreaStyle, left: x(129.1), top: y(72.3), width: x(100), height: y(23.5) }}
         />
 
         {/* Voice hub */}
         <button
           onClick={onVoiceLog}
           aria-label="Tell Centium what you ate"
-          style={{ ...hitAreaStyle, left: 142.3, top: -1.5, width: 72.9, height: 72.9, borderRadius: 9999 }}
+          style={{ ...hitAreaStyle, left: x(142.3), top: y(-1.5), width: x(72.9), height: y(72.9), borderRadius: 9999 }}
         />
       </div>
     </div>
