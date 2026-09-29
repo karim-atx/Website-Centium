@@ -9,7 +9,6 @@ import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { AIVoiceLogger } from "../../components/food/AIVoiceLogger";
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
-import { GymPassesSheet } from "../../components/marketplace/GymPassesSheet";
 import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { nextRoutine } from "../../services/workout/nextRoutine";
@@ -39,7 +38,6 @@ export default function Home() {
   const [voiceOpen, setVoiceOpen] = useState(false);
   const [workoutOpen, setWorkoutOpen] = useState(false);
   const [metricOpen, setMetricOpen] = useState(false);
-  const [gymPassesOpen, setGymPassesOpen] = useState(false);
 
   const isBusiness = user.accountType === "business";
 
@@ -172,7 +170,7 @@ export default function Home() {
       </div>
 
       <div className="mb-[13px]">
-        <WidgetBoard onWaterClick={() => setMetricOpen(true)} onGymPassesClick={() => setGymPassesOpen(true)} />
+        <WidgetBoard onWaterClick={() => setMetricOpen(true)} />
       </div>
 
       {/* Iteration 6 "Team" §1.5: context-only, token restyle — a lighter
@@ -206,7 +204,6 @@ export default function Home() {
         />
       )}
       <AddMetricSheet open={metricOpen} onClose={() => setMetricOpen(false)} />
-      <GymPassesSheet open={gymPassesOpen} onClose={() => setGymPassesOpen(false)} />
     </div>
   );
 }

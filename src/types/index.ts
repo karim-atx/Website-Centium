@@ -1243,39 +1243,6 @@ export interface Professional {
   monthlyRate: number;
 }
 
-export interface Gym {
-  id: string;
-  name: string;
-  location: string;
-  perk: string;
-  rating: number;
-  distanceKm?: number;
-  lat: number;
-  lng: number;
-  // V7 (QA 7.0): shown in the gym detail sheet.
-  bio: string;
-  reviewCount: number;
-  pricing: { plan: string; price: string }[];
-}
-
-// V8 (QA 8.0): a purchased gym plan — a day pass expires 24h after
-// purchase and stacks alongside an active monthly/annual membership,
-// which instead stays active until explicitly cancelled.
-export interface GymPurchase {
-  plan: string;
-  purchasedAt: number;
-  oneTime: boolean;
-}
-
-// V8 (QA 8.0): a marketplace store-item in the cart, ready for checkout.
-export interface CartItem {
-  itemId: string;
-  itemName: string;
-  storeId: string;
-  storeName: string;
-  price: number;
-  quantity: number;
-}
 
 // V4: a small curated set of minimalistic icon choices for habits, replacing
 // the free-form emoji picker. See utils/icons.tsx for the icon lookup.
@@ -1344,7 +1311,7 @@ export type WidgetType =
   | "habits"
   | "journal"
   | "meditation"
-  | "gymPasses";
+;
 export type WidgetSize = "small" | "large";
 
 // Future Supabase migration: device_presentation_settings (per-platform,

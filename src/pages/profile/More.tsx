@@ -4,8 +4,6 @@ import { useApp } from "../../context/AppContext";
 import { ReferralSheet } from "../../components/profile/ReferralSheet";
 import { PaymentsSheet } from "../../components/profile/PaymentsSheet";
 import { PublicListingSheet } from "../../components/profile/PublicListingSheet";
-import { GymPassesSheet } from "../../components/marketplace/GymPassesSheet";
-import { QrPattern } from "../../components/marketplace/GymDetailSheet";
 import { LotusGlyph } from "../../components/dashboard/LotusGlyph";
 import { useUnread } from "../../context/UnreadContext";
 import { UnreadBadge } from "../../components/messages/UnreadBadge";
@@ -25,7 +23,6 @@ import {
   Gift,
   Banknote,
   Globe2,
-  KeyRound,
   BookOpen,
 } from "lucide-react";
 
@@ -61,17 +58,14 @@ const rowBg = (label: string) => {
 
 export default function More() {
   const navigate = useNavigate();
-  const { user, gymPurchases, journalEntries } = useApp();
+  const { user, journalEntries } = useApp();
   const unread = useUnread();
   const isProfessional = user.accountType === "professional";
   const isBusiness = user.accountType === "business";
   const [referralOpen, setReferralOpen] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [listingOpen, setListingOpen] = useState(false);
-  const [gymPassesOpen, setGymPassesOpen] = useState(false);
 
-  const passCount = Object.values(gymPurchases).reduce((n, arr) => n + arr.length, 0);
-  const firstPass = Object.entries(gymPurchases).flatMap(([gymId, arr]) => arr.map((p) => ({ gymId, plan: p.plan })))[0];
   let journalStreak = 0;
   {
     const cursor = new Date();
@@ -179,26 +173,15 @@ export default function More() {
           of the manifest's captured client frame as a concept before this
           — it's genuinely new content, built from real state rather than
           the mockup's example numbers. */}
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Your passes</p>
-      <div className="flex gap-[7px] mb-[13px]">
-        <button
-          onClick={() => setGymPassesOpen(true)}
-          className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left"
-          style={{ background: "rgba(36,31,27,.05)" }}
-        >
-          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-charcoal/50">Gym passes</p>
-          <div className="flex-1 flex items-center justify-center min-h-0">
-            <span className="flex flex-col items-center gap-[7px]">
-              {firstPass ? (
-                <QrPattern seed={`${firstPass.gymId}-${firstPass.plan}`} className="w-10 h-10" />
-              ) : (
-                <KeyRound size={38} className="text-charcoal/55" />
-              )}
-              <span className="text-[24px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">{passCount}</span>
-            </span>
-          </div>
-        </button>
+      {/* THE GYM-PASSES TILE IS GONE, with the rest of gym passes. It counted
+          rows in a localStorage map keyed by invented gym ids and drew a
+          decorative QR square for the first of them — a pass to a gym that did
+          not exist, bought with a prototype payment. Payments (Tap) are the
+          prerequisite for any of it coming back.
 
+          The row is titled for what is actually in it now. */}
+      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Mind</p>
+      <div className="flex gap-[7px] mb-[13px]">
         <button
           onClick={() => navigate("/app/mind")}
           className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left"
@@ -225,10 +208,10 @@ export default function More() {
           <div className="flex-1 flex items-center justify-center min-h-0">
             <span className="flex flex-col items-center gap-2">
               <LotusGlyph size={40} stroke="rgb(var(--c-teal-dark))" />
-              <span className="flex items-baseline gap-[3px]">
-                <span className="text-[20px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">12</span>
-                <span className="text-[9px] font-bold text-team-teal-ink/[0.72]">min</span>
-              </span>
+              {/* The same invented "12 min" the Mind tile and the Home widget
+                  carried. Nothing records a meditation session, so there is no
+                  total to print here either. */}
+              <span className="text-[9px] font-bold text-team-teal-ink/[0.72]">Start a session</span>
             </span>
           </div>
         </button>
@@ -254,7 +237,6 @@ export default function More() {
         <ChevronRight size={14} style={{ color: "#C8BFE9" }} className="shrink-0" />
       </button>
 
-      <GymPassesSheet open={gymPassesOpen} onClose={() => setGymPassesOpen(false)} />
 
       <ReferralSheet open={referralOpen} onClose={() => setReferralOpen(false)} />
       {isProfessional && <PaymentsSheet open={paymentsOpen} onClose={() => setPaymentsOpen(false)} />}

@@ -3,10 +3,12 @@ import React from "react";
 /**
  * Tells a business owner that these screens are not wired to anything.
  *
- * WHY THIS EXISTS. Every other prototype surface in this app says so on screen
- * — CartSheet's "Prototype checkout for demo purposes — no payment will be
- * processed", GymDetailSheet's "Prototype payment — no real charge is made",
- * and the three on Subscription. The business account type had nine
+ * WHY THIS EXISTS. Every other prototype surface in this app said so on screen
+ * — the three notices on Subscription, and, until gym passes and the cart were
+ * removed, a checkout that said "no payment will be processed" and a Buy
+ * button that said "no real charge is made". Those two are gone rather than
+ * disclosed, because nothing could ever be bought through them; the wording
+ * below is still modelled on them. The business account type had nine
  * data-bearing screens saying nothing at all, while offering to edit a public
  * profile, a team, class schedules, pricing and offerings. All of it is
  * usePersistentState: it never leaves the browser. BusinessAnalyticsTab then

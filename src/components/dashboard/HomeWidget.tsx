@@ -4,7 +4,6 @@ import type { WidgetConfig } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { LotusGlyph } from "./LotusGlyph";
 import { HeartRateEKG } from "../health/HeartRateEKG";
-import { QrPattern, DAY_MS, isOneTimePlan } from "../marketplace/GymDetailSheet";
 import {
   averageOf,
   emptyHint,
@@ -19,8 +18,7 @@ import {
   sumNutrition,
   targetsFromGoal,
 } from "../../services/nutrition";
-import { BookOpen, KeyRound, Play, AlertCircle, Check } from "lucide-react";
-import { mockGyms } from "../../data/mockProfessionals";
+import { BookOpen, Play, Check } from "lucide-react";
 import { mondayFirstWeek, DAY_LETTERS, dayLetter } from "../../utils/week";
 
 // Iteration 6.2 "Team" canonical widget library — 11 metrics, small (fixed
@@ -301,9 +299,9 @@ export const HomeWidget: React.FC<{
   // tile), threaded through here since HomeWidget previously had no notion
   // of edit mode at all.
   editMode?: boolean;
-}> = ({ widget, onWaterClick, onGymPassesClick, editMode = false }) => {
+}> = ({ widget, onWaterClick, editMode = false }) => {
   const navigate = useNavigate();
-  const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, workoutSessions, routines, habits, journalEntries, gymPurchases, today, selectedDate } =
+  const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, workoutSessions, routines, habits, journalEntries, today, selectedDate } =
     useApp();
   const isLarge = widget.size === "large";
   // Per-instance clip id for the small water bottle, so two water tiles on
@@ -1298,87 +1296,16 @@ export const HomeWidget: React.FC<{
       );
     }
 
-    // ------------------------------------------------------------ Gym passes
-    case "gymPasses": {
-      type Pass = { gymId: string; gymName: string; plan: string; purchasedAt: number; oneTime: boolean };
-      const now = Date.now();
-      const passes: Pass[] = Object.entries(gymPurchases).flatMap(([gymId, arr]) =>
-        arr
-          .filter((p) => !p.oneTime || now - p.purchasedAt < DAY_MS)
-          .map((p) => ({ gymId, gymName: mockGyms.find((g) => g.id === gymId)?.name ?? "Gym", plan: p.plan, purchasedAt: p.purchasedAt, oneTime: p.oneTime }))
-      );
-      const onClick = onGymPassesClick ?? (() => {});
-      if (!isLarge) {
-        return wrap(
-          onClick,
-          shell(
-            "rgba(36,31,27,.05)",
-            <>
-              <p className={`${capsLabel} text-charcoal/50`}>Gym passes</p>
-              <div className="flex-1 flex items-center justify-center min-h-0">
-                <span className="flex flex-col items-center gap-[7px]">
-                  <KeyRound size={38} className="text-charcoal/55" />
-                  <span className="text-[24px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">{passes.length}</span>
-                </span>
-              </div>
-            </>
-          )
-        );
-      }
-      const current = passes[0];
-      // A one-time pass has a real 24h expiry; a monthly/annual membership
-      // doesn't expire in this app's data model at all, so there is no real
-      // date to show for it — the design's "Ends <date>" row only renders
-      // for the former.
-      const remainingMs = current && current.oneTime ? current.purchasedAt + DAY_MS - now : null;
-      const soon = remainingMs !== null && remainingMs < 6 * 60 * 60 * 1000;
-      return wrap(
-        onClick,
-        shell(
-          "rgba(36,31,27,.05)",
-          <>
-            <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-charcoal/50`}>Gym passes</p>
-              <span className={`${badge} text-charcoal/[0.62] bg-charcoal/[0.09]`}>{passes.length} active</span>
-            </div>
-            {current ? (
-              <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
-                <div className="flex items-center gap-[13px]">
-                  <QrPattern seed={`${current.gymId}-${current.plan}`} className="w-[52px] h-[52px] shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-extrabold tracking-[-0.02em] text-charcoal truncate">{current.gymName}</p>
-                    <p className="mt-[3px] text-[10px] text-charcoal-tertiary">{current.plan}</p>
-                    {remainingMs !== null && (
-                      <p className={`mt-[5px] flex items-center gap-[5px] text-[10px] font-extrabold ${soon ? "text-status-high" : "text-charcoal-soft"}`}>
-                        <AlertCircle size={11} />
-                        {isOneTimePlan(current.plan) ? "Day pass" : current.plan} · expires{" "}
-                        {new Date(current.purchasedAt + DAY_MS).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {passes.length > 1 && (
-                  <div className="flex items-center justify-between gap-2.5">
-                    <span className="text-[8.5px] font-semibold whitespace-nowrap text-charcoal-tertiary">
-                      Swipe for {passes[1].gymName}
-                    </span>
-                    <span className="flex gap-1">
-                      {passes.map((_, i) => (
-                        <span key={i} className={`w-1.5 h-1.5 rounded-full shrink-0 ${i === 0 ? "bg-charcoal/55" : "bg-charcoal/20"}`} />
-                      ))}
-                    </span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex-1 flex items-center justify-center min-h-0">
-                <p className="text-[11px] font-semibold text-charcoal-tertiary">No active passes</p>
-              </div>
-            )}
-          </>
-        )
-      );
-    }
+    // GYM PASSES USED TO BE A WIDGET HERE, and it drew a QR square, a plan
+    // name and a countdown for a pass bought from an invented gym with a
+    // prototype payment — three fabrications stacked on one tile. The
+    // purchases were a localStorage map keyed by mock gym ids; nothing was
+    // ever sold, charged or redeemable.
+    //
+    // PAYMENTS ARE THE PREREQUISITE. A pass is a receipt, and a receipt needs
+    // a charge behind it — the Tap integration is what makes that possible.
+    // When it lands, a pass becomes a row a server can issue and verify, and
+    // this widget can come back reading that row rather than a local map.
 
     default:
       return null;

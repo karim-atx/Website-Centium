@@ -3,7 +3,7 @@ import { useApp } from "../../context/AppContext";
 import { WidgetShell } from "./WidgetShell";
 import { HomeWidget } from "./HomeWidget";
 import type { WidgetType, WidgetConfig, WidgetSize } from "../../types";
-import { Pencil, Check, Plus, Footprints, Scale, Droplet, Moon, Utensils, Dumbbell, CheckSquare, BookOpen, Sparkles, KeyRound, HeartPulse } from "lucide-react";
+import { Pencil, Check, Plus, Footprints, Scale, Droplet, Moon, Utensils, Dumbbell, CheckSquare, BookOpen, Sparkles, HeartPulse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 
@@ -22,7 +22,6 @@ const allWidgetTypes: { type: WidgetType; label: string; icon: LucideIcon }[] = 
   { type: "habits", label: "Habits", icon: CheckSquare },
   { type: "journal", label: "Journal", icon: BookOpen },
   { type: "meditation", label: "Meditation", icon: Sparkles },
-  { type: "gymPasses", label: "Gym Passes", icon: KeyRound },
 ];
 
 // Handoff §7b — a drag in progress. Kept out of `widgets`/`visibleWidgets`
@@ -48,9 +47,8 @@ interface DragInfo {
   dropIndex: number;
 }
 
-export const WidgetBoard: React.FC<{ onWaterClick?: () => void; onGymPassesClick?: () => void }> = ({
+export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
   onWaterClick,
-  onGymPassesClick,
 }) => {
   const { widgets, removeWidget, reorderWidgets, resizeWidget, addWidget, recoverySensitive } = useApp();
   const [editMode, setEditMode] = useState(false);
@@ -315,7 +313,6 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void; onGymPassesClick
                 widget={item}
                 editMode={editMode}
                 onWaterClick={item.type === "water" ? onWaterClick : undefined}
-                onGymPassesClick={item.type === "gymPasses" ? onGymPassesClick : undefined}
               />
             </WidgetShell>
           )

@@ -41,8 +41,6 @@ import type {
   ClientHealthNote,
   ProfessionalMessage,
   BusinessMessage,
-  GymPurchase,
-  CartItem,
   ForumPost,
   ForumCategory,
   HealthMetric,
@@ -279,9 +277,6 @@ const trackableWidgets: { type: WidgetType; size: WidgetSize; trackKey?: TrackPr
   { type: "nutrition", size: "large", trackKey: "nutrition" },
   { type: "workout", size: "small", trackKey: "workouts" },
   { type: "habits", size: "small", trackKey: "habits" },
-  // V9 (QA 9.0): "a widget in the homescreen that has a logo of a
-  // minimalistic key" — no tracking equivalent, same as Water.
-  { type: "gymPasses", size: "small" },
 ];
 
 /** Seeds the board from the user's "What do you want to track?" selections
@@ -946,23 +941,23 @@ interface AppState {
   // V8 (QA 8.0): gym membership purchases — day passes expire after 24h and
   // stack with an active monthly/annual plan, which stays active until
   // explicitly cancelled.
-  gymPurchases: Record<string, GymPurchase[]>;
-  purchaseGymPlan: (gymId: string, plan: string, oneTime: boolean) => void;
-  cancelGymPlan: (gymId: string, plan: string) => void;
-
-  // V8 (QA 8.0): "If I choose a subscription plan, it gets saved and a
-  // small minimalistic logo appears next to my name" — client-only
-  // Centium Premium status, persisted so the badge survives a reload.
   premiumPlan: "monthly" | "yearly" | null;
   setPremiumPlan: (plan: "monthly" | "yearly" | null) => void;
 
-  // V8 (QA 8.0): "When bought it goes to a cart that adopts the same
-  // features of checkout most store pages have."
-  cart: CartItem[];
-  addToCart: (item: Omit<CartItem, "quantity">, quantity: number) => void;
-  updateCartQuantity: (itemId: string, quantity: number) => void;
-  removeFromCart: (itemId: string) => void;
-  clearCart: () => void;
+  // GYM PASSES AND THE CART ARE GONE, and payments are why.
+  //
+  // gymPurchases was a localStorage map keyed by invented gym ids, written by
+  // a "Buy" button labelled "Prototype payment — no real charge is made". The
+  // cart was the same shape one step earlier: addToCart / updateCartQuantity /
+  // clearCart and a checkout that said "no payment will be processed". Neither
+  // ever reached a server, so a pass was a receipt for nothing and an order
+  // could not be placed.
+  //
+  // PAYMENTS (Tap) ARE THE PREREQUISITE for either coming back. A pass is a
+  // receipt and an order is a commitment; both need a charge behind them and a
+  // row a server can issue, verify and refund. When that exists, these become
+  // reads of it rather than local maps.
+
 
   // Issues a real invite code via create_client_code(). Takes no client
   // details: `client_codes` stores provenance only, and the client's profile
@@ -2835,37 +2830,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const [premiumPlan, setPremiumPlan] = usePersistentState<"monthly" | "yearly" | null>("premiumPlan", null);
 
-  const [gymPurchases, setGymPurchases] = usePersistentState<Record<string, GymPurchase[]>>(
-    "gymPurchases",
-    {}
-  );
-  const purchaseGymPlan: AppState["purchaseGymPlan"] = (gymId, plan, oneTime) =>
-    setGymPurchases((prev) => {
-      const existing = (prev[gymId] ?? []).filter((p) => p.plan !== plan);
-      return { ...prev, [gymId]: [...existing, { plan, purchasedAt: Date.now(), oneTime }] };
-    });
-  const cancelGymPlan: AppState["cancelGymPlan"] = (gymId, plan) =>
-    setGymPurchases((prev) => ({
-      ...prev,
-      [gymId]: (prev[gymId] ?? []).filter((p) => p.plan !== plan),
-    }));
-
-  const [cart, setCart] = usePersistentState<CartItem[]>("cart", []);
-  const addToCart: AppState["addToCart"] = (item, quantity) =>
-    setCart((prev) => {
-      const existing = prev.find((c) => c.itemId === item.itemId);
-      if (existing) {
-        return prev.map((c) => (c.itemId === item.itemId ? { ...c, quantity: c.quantity + quantity } : c));
-      }
-      return [...prev, { ...item, quantity }];
-    });
-  const updateCartQuantity: AppState["updateCartQuantity"] = (itemId, quantity) =>
-    setCart((prev) =>
-      quantity <= 0 ? prev.filter((c) => c.itemId !== itemId) : prev.map((c) => (c.itemId === itemId ? { ...c, quantity } : c))
-    );
-  const removeFromCart: AppState["removeFromCart"] = (itemId) =>
-    setCart((prev) => prev.filter((c) => c.itemId !== itemId));
-  const clearCart: AppState["clearCart"] = () => setCart([]);
   // `membershipPlans` and `discounts` are gone from here — real
   // membership_plans and business_discounts rows now. The plans in particular
   // were not merely unpersisted but INVENTED: two seeded entries every business
@@ -5092,14 +5056,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       applyReferralReward,
       premiumPlan,
       setPremiumPlan,
-      gymPurchases,
-      purchaseGymPlan,
-      cancelGymPlan,
-      cart,
-      addToCart,
-      updateCartQuantity,
-      removeFromCart,
-      clearCart,
       generateClientCode,
       rosterLoading,
       rosterError,
@@ -5251,8 +5207,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       businessDirectory,
       bonusPoints,
       premiumPlan,
-      gymPurchases,
-      cart,
       professionalClients,
       calendarEvents,
       workoutTemplates,

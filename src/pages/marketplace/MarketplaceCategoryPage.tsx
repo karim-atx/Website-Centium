@@ -9,15 +9,10 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { marketplaceCategories } from "../../data/mockProfessionals";
-import { useApp } from "../../context/AppContext";
 import { getCurrentPosition, type Coords } from "../../services/geo";
-import { MapPin, Building2, ShoppingBag, SlidersHorizontal, Check } from "lucide-react";
+import { MapPin, Building2, SlidersHorizontal, Check } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
-import type { MarketplaceCategoryId, Gym } from "../../types";
-import type { StoreItem } from "../../data/mockProfessionals";
-import { GymDetailSheet } from "../../components/marketplace/GymDetailSheet";
-import { StoreDetailSheet } from "../../components/marketplace/StoreDetailSheet";
-import { CartSheet } from "../../components/marketplace/CartSheet";
+import type { MarketplaceCategoryId } from "../../types";
 
 type FilterMode = "rating" | "proximity" | "discount";
 const filterOptions: { value: FilterMode; label: string }[] = [
@@ -31,7 +26,6 @@ const filterOptions: { value: FilterMode; label: string }[] = [
 // unfiltered "browse everything" list.
 export default function MarketplaceCategoryPage() {
   const { category } = useParams<{ category: string }>();
-  const { cart } = useApp();
   const id = (category ?? "gyms") as MarketplaceCategoryId;
   const meta = marketplaceCategories.find((c) => c.id === id);
   const Icon = marketplaceCategoryIcon[id] ?? marketplaceCategoryIcon.gyms;
@@ -41,13 +35,14 @@ export default function MarketplaceCategoryPage() {
   const [, setPosition] = useState<Coords | null>(null);
   const [filter, setFilter] = useState<FilterMode>("rating");
   const [filterOpen, setFilterOpen] = useState(false);
-  const [activeGym, setActiveGym] = useState<Gym | null>(null);
-  const [activeStore, setActiveStore] = useState<
-    { id: string; name: string; location: string; rating: number; offer?: string; items: StoreItem[] } | null
-  >(null);
-  const [cartOpen, setCartOpen] = useState(false);
-  const cartCount = cart.reduce((sum, c) => sum + c.quantity, 0);
-  const isStoreCategory = id !== "gyms" && id !== "classes";
+  // THREE DEAD CONTROLS LIVED HERE. `activeGym` and `activeStore` had setters
+  // nothing ever called — the fabricated lists that used to open those sheets
+  // were removed earlier, and the sheets stayed mounted permanently closed. The
+  // cart button went with them: the only thing that could ever add to the cart
+  // was the store sheet, so it opened an order that could never have anything
+  // in it. All three are gone rather than wired to real data, because the two
+  // categories they served (gyms, classes) are answered by Explore, which reads
+  // marketplace_venues and marketplace_classes.
 
   useEffect(() => {
     getCurrentPosition().then(setPosition);
@@ -86,27 +81,7 @@ export default function MarketplaceCategoryPage() {
 
   return (
     <div>
-      <PageHeader
-        title={meta?.label ?? "Explore"}
-        subtitle="Ranked by rating"
-        showBack
-        right={
-          isStoreCategory && (
-            <button
-              onClick={() => setCartOpen(true)}
-              aria-label="Cart"
-              className="tap relative w-10 h-10 rounded-full bg-cream-card flex items-center justify-center text-charcoal-soft shadow-soft"
-            >
-              <ShoppingBag size={17} />
-              {cartCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-4.5 h-4.5 min-w-[18px] rounded-full bg-teal text-white text-[10px] font-bold flex items-center justify-center px-1">
-                  {cartCount}
-                </span>
-              )}
-            </button>
-          )
-        }
-      />
+      <PageHeader title={meta?.label ?? "Explore"} subtitle="Ranked by rating" showBack />
 
       {/* V9 (QA 9.0): "this filter logo instead of the separate tabs that
           shows you what the filters are when pressed" — one icon button
@@ -197,9 +172,6 @@ export default function MarketplaceCategoryPage() {
         )}
       </div>
 
-      <GymDetailSheet open={!!activeGym} onClose={() => setActiveGym(null)} gym={activeGym} />
-      <StoreDetailSheet open={!!activeStore} onClose={() => setActiveStore(null)} store={activeStore} />
-      <CartSheet open={cartOpen} onClose={() => setCartOpen(false)} />
     </div>
   );
 }
