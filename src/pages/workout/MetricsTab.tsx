@@ -50,7 +50,16 @@ export default function MetricsTab() {
     exerciseCatalog,
     customExercises,
     authUserId,
+    noteFeatureMilestone,
+    refreshAchievements,
   } = useApp();
+
+  // Explorer milestone: "By the numbers". One row per account for ever — the repeat is
+  // a primary-key conflict the service treats as the success it is. 
+  useEffect(() => {
+    noteFeatureMilestone("workout_metrics");
+  }, [noteFeatureMilestone]);
+
   const [oneRmOpen, setOneRmOpen] = useState(false);
   const [balanceOpen, setBalanceOpen] = useState(false);
 
@@ -417,6 +426,9 @@ export default function MetricsTab() {
         onSave={async (values, recordedAt) => {
           if (!authUserId) return "You need to be signed in to save measurements.";
           const result = await logMeasurements({ userId: authUserId, values, recordedAt });
+          // first_measurements is earned from health_metrics, so a successful
+          // save is a moment an achievement can land.
+          if (result.ok) refreshAchievements();
           if (!result.ok) return result.message ?? "Couldn't save that.";
           await loadMeasurements();
           return null;

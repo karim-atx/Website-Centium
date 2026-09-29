@@ -110,7 +110,14 @@ const HOUR_PX = 56;
 // would put two sources behind one screen; it is used below for one thing
 // only — carrying pre-existing local events up to the server once.
 export default function ClientCalendarTab() {
-  const { calendarEvents, updateCalendarEvent, authUserId, profileReady } = useApp();
+  const { calendarEvents, updateCalendarEvent, authUserId, profileReady, noteFeatureMilestone } =
+    useApp();
+
+  // Explorer milestone: "Looking ahead". One row per account for ever — the repeat is
+  // a primary-key conflict the service treats as the success it is. 
+  useEffect(() => {
+    noteFeatureMilestone("calendar");
+  }, [noteFeatureMilestone]);
   const today = new Date();
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState({ year: today.getFullYear(), month: today.getMonth() });

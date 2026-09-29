@@ -80,9 +80,13 @@ export const Sidebar: React.FC = () => {
             <Flame size={16} className="text-teal" />
             {dayStreakLabel(dayStreak)}
           </div>
+          {/* "Keep logging to unlock rewards 🎁" PROMISED A REWARD, and there
+              is not one to unlock. Logging does earn something real now — the
+              consistency ladder runs 3 / 7 / 14 / 30 / 60 / 100 / 365 days and
+              credits points at every rung — so the line names that instead. */}
           <p className="text-xs text-primary-dark/70">
             {dayStreak > 0
-              ? "Keep logging to unlock rewards 🎁"
+              ? "Keep logging to earn achievements 🏆"
               : "Log two of food, water, a workout or a journal entry."}
           </p>
         </div>

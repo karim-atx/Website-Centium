@@ -155,7 +155,15 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     voiceDisclosureSeen,
     setVoiceDisclosureSeen,
     nutritionGoal,
+    noteFeatureMilestone,
   } = useApp();
+
+  // Explorer milestone: "Say it out loud". One row per account for ever — the repeat is
+  // a primary-key conflict the service treats as the success it is. Recorded on opening, not on a
+  // successful transcription: the badge is for finding the feature.
+  useEffect(() => {
+    if (open) noteFeatureMilestone("voice_logger");
+  }, [open, noteFeatureMilestone]);
 
   const [stage, setStage] = useState<Stage>("idle");
   const [items, setItems] = useState<ReviewItem[]>([]);

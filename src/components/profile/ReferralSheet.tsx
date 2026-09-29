@@ -100,9 +100,16 @@ export const ReferralSheet: React.FC<{ open: boolean; onClose: () => void }> = (
             <Gift size={15} className="text-primary-dark" />
             <p className="text-sm font-bold text-primary-deep-text">Your referral code</p>
           </div>
+          {/* THE POINTS ARE REAL AND THE SENTENCE AFTER THEM IS NEW.
+              redeem_referral() writes 1,500 to points_ledger with source
+              'referral', and both tier displays now show it under "from
+              referrals" — so this is the one points claim in the app that was
+              already true. What it never said is what points are for, which is
+              a tier and, so far, nothing else. */}
           <p className="text-xs text-charcoal-soft mb-3">
             Share this code — when someone subscribes to Centium using it, they get 10% off their
-            subscription, and you get 1,500 points plus 15% off your next month.
+            subscription, and you get 1,500 points plus 15% off your next month. Points count toward
+            your tier; rewards for them are coming soon.
           </p>
           <div className="flex items-center gap-2">
             <span className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3.5 py-2.5 text-sm font-bold text-charcoal tracking-wide text-center">

@@ -95,6 +95,7 @@ export default function Health() {
     setStepsGoal,
     recoverySensitive,
     imagingRecords,
+    noteFeatureMilestone,
   } = useApp();
   const platformLabel = detectPlatform() === "ios" ? "Apple Health" : "Android Health";
   const [waterOpen, setWaterOpen] = useState(false);
@@ -114,6 +115,13 @@ export default function Health() {
   const [bpEditing, setBpEditing] = useState<BloodPressureReading | null>(null);
   const [bpSheetOpen, setBpSheetOpen] = useState(false);
   const recordsOpen = recordsTab !== null;
+
+  // Explorer milestone: "Paperwork". One row per account for ever — the repeat is
+  // a primary-key conflict the service treats as the success it is. Recorded when the Records sheet actually
+  // opens, not on every visit to Health — the badge is for finding it.
+  useEffect(() => {
+    if (recordsOpen) noteFeatureMilestone("health_records");
+  }, [recordsOpen, noteFeatureMilestone]);
   const [scanImagingOpen, setScanImagingOpen] = useState(false);
   const [shareImagingRecord, setShareImagingRecord] = useState<ImagingRecord | null>(null);
   const [shareAllImagingOpen, setShareAllImagingOpen] = useState(false);

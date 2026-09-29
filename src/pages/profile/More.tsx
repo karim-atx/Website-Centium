@@ -131,7 +131,11 @@ export default function More() {
     // UI) + "Apply the same referral program found in the client UI"
     // (Professional/Business) — one sheet, reachable from every account
     // type's More page.
-    { icon: Gift, label: "Referral", desc: "Share your code, earn rewards", onClick: () => setReferralOpen(true) },
+    // "earn rewards" WAS A CLAIM ABOUT SOMETHING THAT DOES NOT EXIST. A
+    // successful referral earns points and a subscription discount, both of
+    // which are real; there is nothing to redeem points against yet, so the
+    // row names the two things it actually gives.
+    { icon: Gift, label: "Referral", desc: "Share your code for points & a discount", onClick: () => setReferralOpen(true) },
     { icon: Settings, label: "Settings", desc: "Appearance, notifications & more", to: "/app/settings" },
   ].filter(Boolean) as { icon: typeof Sparkles; label: string; desc: string; to?: string; onClick?: () => void }[];
 
@@ -231,7 +235,10 @@ export default function More() {
           </div>
           <div>
             <p className="text-[12.5px] font-extrabold text-white">Centium Premium</p>
-            <p className="text-[10px] text-white/60">AI logging, deeper insights &amp; rewards</p>
+            {/* "& rewards" named a third thing Premium includes, and it does
+                not include one — the subscription's own feature list had the
+                same problem, from the same string. */}
+            <p className="text-[10px] text-white/60">AI logging, deeper insights &amp; analytics</p>
           </div>
         </div>
         <ChevronRight size={14} style={{ color: "#C8BFE9" }} className="shrink-0" />

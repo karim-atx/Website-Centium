@@ -94,8 +94,13 @@ export default function BusinessDashboard() {
           />
         </div>
         <label className="block">
+          {/* "Streak reward /" IS GONE FROM THE LABEL. The perk itself is real
+              — marketplace_venues.perk, shown on the Explore listing — but
+              nothing ties it to a streak, and calling it a streak reward said a
+              user unlocks it by logging. They do not; the business offers it to
+              everyone who sees the listing. */}
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-            Streak reward / perk shown to Centium users
+            Perk shown on your Explore listing
           </span>
           {editingPerk ? (
             <div className="flex gap-2">

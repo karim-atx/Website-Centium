@@ -63,7 +63,7 @@ export const BloodPressureSheet: React.FC<{
   /** Called after a successful save or delete, so the caller can re-read. */
   onSaved: () => void;
 }> = ({ open, onClose, editing, onSaved }) => {
-  const { authUserId, selectedDate, today } = useApp();
+  const { authUserId, selectedDate, today, refreshAchievements } = useApp();
 
   const [sys, setSys] = useState("");
   const [dia, setDia] = useState("");
@@ -144,6 +144,9 @@ export const BloodPressureSheet: React.FC<{
     const result = editing
       ? await updateBloodPressure({ id: editing.id, reading, recordedAt })
       : await logBloodPressure({ userId: authUserId, reading, day: selectedDate, today, recordedAt });
+    // first_bp and the bp_days count both read blood_pressure_readings, so a
+    // saved reading is a moment an achievement can land.
+    if (result.ok) refreshAchievements();
     setSaving(false);
 
     if (!result.ok) {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Chip } from "../../components/ui/Chip";
 import { Card } from "../../components/ui/Card";
 import { useApp } from "../../context/AppContext";
@@ -142,7 +142,17 @@ export default function ExerciseDatabaseTab() {
     routines,
     workoutTemplates,
     personalRecords,
+    noteFeatureMilestone,
   } = useApp();
+
+  // Explorer milestone: "Browsing the shelves". One row per account for ever — the repeat is
+  // a primary-key conflict the service treats as the success it is. This tab is the browsable library;
+  // ExerciseLibrarySheet is a picker inside routine-building, which is being
+  // handed a list rather than going to look at one.
+  useEffect(() => {
+    noteFeatureMilestone("exercise_library");
+  }, [noteFeatureMilestone]);
+
   const [view, setView] = useState<ViewMode>("list");
   const [sort, setSort] = useState<SortMode>("alphabetical");
   const [query, setQuery] = useState("");

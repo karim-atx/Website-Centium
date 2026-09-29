@@ -49,7 +49,12 @@ const features = [
   { icon: Droplet, label: "Bloodwork history" },
   { icon: Dumbbell, label: "Advanced workout analytics" },
   { icon: Users, label: "Professional sharing" },
-  { icon: Flame, label: "Streak rewards" },
+  // "Streak rewards" WAS A PAID FEATURE THAT DOES NOT EXIST. Nothing is
+  // awarded for a streak, to a subscriber or to anyone else — streaks feed the
+  // consistency achievements, which every account earns on the same terms and
+  // which are not part of a plan. Listing it under what Premium buys made it a
+  // claim about the purchase.
+  { icon: Flame, label: "Streak & achievement tracking" },
   { icon: Sparkles, label: "Personalized insights" },
 ];
 
