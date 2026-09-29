@@ -143,3 +143,26 @@ export function countsTowardVolume(s: LoggedSet): boolean {
   if (s.outcome) return s.outcome !== "skipped";
   return s.completed;
 }
+
+/** A hint that is one exact number ("10", "60", "62.5"), not a range or "8+". */
+const exactHint = (hint: string): number | null => (/^\d+(\.\d+)?$/.test(hint.trim()) ? Number(hint) : null);
+
+/**
+ * The weight and reps a set is logged with when it is ticked (or marked
+ * Failed/PR) with blank fields.
+ *
+ * A blank field takes its greyed hint ONLY when the hint is one exact number:
+ * last session's value or a fixed prescription. A range ("8–12"), an AMRAP
+ * ("8+"), "up to 12" or a bare "reps" is a question, not an answer, so the
+ * set is not logged at all (`null`) and the caller asks for reps rather than
+ * saving 0 or guessing a number. Weight has no ranges; a blank weight with no
+ * exact hint logs 0 (bodyweight).
+ */
+export function resolveLoggedValues(
+  set: Pick<LoggedSet, "weightKg" | "reps">,
+  hints: { weight: string; reps: string }
+): { weightKg: number; reps: number } | null {
+  const reps = set.reps || exactHint(hints.reps);
+  if (!reps) return null;
+  return { weightKg: set.weightKg || (exactHint(hints.weight) ?? 0), reps };
+}

@@ -4,6 +4,7 @@ import {
   countsTowardVolume,
   finalizeSets,
   isTouched,
+  resolveLoggedValues,
   seedReps,
   seedSets,
   setRowCount,
@@ -193,4 +194,22 @@ test("a note or an RPE alone keeps an optional row", () => {
   const rows = seedSets(ex({ minSets: 1, maxSets: 2, weightKg: 60 }));
   assert.equal(isTouched({ ...rows[1], notes: "felt heavy" }), true);
   assert.equal(isTouched({ ...rows[1], rpe: 8 }), true);
+});
+
+test("a blank set with an exact reps hint logs the hint", () => {
+  assert.deepEqual(resolveLoggedValues({ weightKg: 0, reps: 0 }, { weight: "60", reps: "10" }), { weightKg: 60, reps: 10 });
+});
+
+test("a blank set with a range or AMRAP hint is not logged: reps must be entered", () => {
+  for (const reps of ["8–12", "8+", "up to 12", "reps"]) {
+    assert.equal(resolveLoggedValues({ weightKg: 0, reps: 0 }, { weight: "60", reps }), null, reps);
+  }
+});
+
+test("typed reps win over any hint, and typed weight over the weight hint", () => {
+  assert.deepEqual(resolveLoggedValues({ weightKg: 65, reps: 9 }, { weight: "60", reps: "8–12" }), { weightKg: 65, reps: 9 });
+});
+
+test("a blank weight with no exact hint logs 0 (bodyweight)", () => {
+  assert.deepEqual(resolveLoggedValues({ weightKg: 0, reps: 9 }, { weight: "", reps: "8+" }), { weightKg: 0, reps: 9 });
 });

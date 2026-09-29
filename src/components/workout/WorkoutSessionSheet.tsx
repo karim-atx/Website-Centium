@@ -30,7 +30,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { PopupMenu, type PopupMenuOption } from "../ui/PopupMenu";
 import { formatDuration, estimate1RM } from "../../services/workout";
 import { localDayOf } from "../../utils/date";
-import { countsTowardVolume, finalizeExercises, initLoggedExercises, setRowCount } from "../../services/workout/session";
+import { countsTowardVolume, finalizeExercises, initLoggedExercises, resolveLoggedValues, setRowCount } from "../../services/workout/session";
 import { formatClock, isRoundBased, prescriptionLine } from "../../services/workout/prescription";
 import { blockProblems, blockScore, checkBlockResult } from "../../services/workout/results";
 import { groupIntoRuns } from "../../services/workout/blocks";
@@ -69,9 +69,6 @@ function repsPlaceholder(ex: Exercise): string {
   if (ex.maxReps != null) return `up to ${ex.maxReps}`;
   return ex.reps != null ? String(ex.reps) : "reps";
 }
-
-/** A placeholder that is a plain number, for "checking without typing logs it as-is". */
-const numericOf = (s: string): number => (/^\d+(\.\d+)?$/.test(s) ? Number(s) : 0);
 
 /** A block result seeded from the block's own shape — the snapshot the row keeps. */
 function blockFrom(block: WorkoutBlock): BlockResult {
@@ -180,6 +177,7 @@ export const WorkoutSessionSheet: React.FC<{
   const [pinEditor, setPinEditor] = useState<{ exIdx: number; text: string } | null>(null);
   // The rest divider under the last checked set counts down.
   const [rest, setRest] = useState<{ exIdx: number; setIdx: number; endsAt: number } | null>(null);
+  const [needReps, setNeedReps] = useState<string | null>(null);
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
 
   const prefill = useMemo(
@@ -414,21 +412,29 @@ export const WorkoutSessionSheet: React.FC<{
     }
   };
 
+  // The set whose reps must be typed before it can be logged (range/AMRAP hint).
+  const askForReps = (exIdx: number, setIdx: number) => {
+    setNeedReps(`${exIdx}-${setIdx}`);
+    // After the popup (if any) has closed, so focus is not stolen back.
+    window.setTimeout(() => {
+      rowRefs.current.get(`${exIdx}-${setIdx}`)?.querySelector<HTMLInputElement>("input[data-field='reps']")?.focus();
+    }, 50);
+  };
+
   const setType = (exIdx: number, setIdx: number, kind: HandoverSetType) => {
     const current = logged[exIdx].sets[setIdx];
     const fields = kindFields(kind, current);
     const logs = fields.outcome != null && fields.outcome !== "skipped";
-    // A type that LOGS the set (Failed, or PR on a set) takes the greyed
-    // values for any blank field, exactly as the check does: otherwise a
-    // failed 6-rep set at a prefilled 60 kg was saved at 0 kg and dropped
-    // out of the volume (found in the real-UI regression run).
-    const ph = logs ? placeholdersFor(exIdx, setIdx) : null;
-    const next: LoggedSet = {
-      ...current,
-      ...fields,
-      completed: logs,
-      ...(ph ? { weightKg: current.weightKg || numericOf(ph.weight), reps: current.reps || numericOf(ph.reps) } : {}),
-    };
+    // A type that LOGS the set (Failed, or PR on a set) resolves blank fields
+    // exactly as the check does: an exact hint fills in, a range or AMRAP hint
+    // means the athlete has to say how many reps, so the type is not applied
+    // and the reps field asks instead of saving 0.
+    const values = logs ? resolveLoggedValues(current, placeholdersFor(exIdx, setIdx)) : undefined;
+    if (values === null) {
+      askForReps(exIdx, setIdx);
+      return;
+    }
+    const next: LoggedSet = { ...current, ...fields, completed: logs, ...(values ?? {}) };
     updateSet(exIdx, setIdx, next);
     if (fields.outcome && !started) startClock();
     if (kind === "pr" && setKind(current) !== "pr") {
@@ -451,13 +457,17 @@ export const WorkoutSessionSheet: React.FC<{
       if (rest?.exIdx === exIdx && rest.setIdx === setIdx) setRest(null);
       return;
     }
-    // CHECKING WITHOUT TYPING LOGS THE PLACEHOLDERS AS-IS (WO8 prefill).
-    const ph = placeholdersFor(exIdx, setIdx);
+    // CHECKING WITHOUT TYPING LOGS AN EXACT HINT AS-IS (WO8 prefill); a range
+    // or AMRAP hint is never guessed, so the reps field asks instead.
+    const values = resolveLoggedValues(s, placeholdersFor(exIdx, setIdx));
+    if (!values) {
+      askForReps(exIdx, setIdx);
+      return;
+    }
     updateSet(exIdx, setIdx, {
       completed: true,
       outcome: kind === "failed" ? "failed" : "completed",
-      weightKg: s.weightKg || numericOf(ph.weight),
-      reps: s.reps || numericOf(ph.reps),
+      ...values,
     });
     tickNonce.current += 1;
     setTickKey(`${exIdx}-${setIdx}-t${tickNonce.current}`);
@@ -562,7 +572,11 @@ export const WorkoutSessionSheet: React.FC<{
                     repsPlaceholder={ph.reps}
                     justTicked={!!tickKey?.startsWith(`${exIdx}-${setIdx}-t`)}
                     tickKey={tickKey}
-                    onChange={(patch) => updateSet(exIdx, setIdx, patch)}
+                    needsReps={needReps === `${exIdx}-${setIdx}`}
+                    onChange={(patch) => {
+                      updateSet(exIdx, setIdx, patch);
+                      if (patch.reps && needReps === `${exIdx}-${setIdx}`) setNeedReps(null);
+                    }}
                     onType={(anchor) => setTypeMenu({ exIdx, setIdx, anchor })}
                     onCheck={() => toggleCheck(exIdx, setIdx)}
                     onOptions={() => setSetOptionsTarget({ exIdx, setIdx })}
@@ -1029,11 +1043,13 @@ const SetRow: React.FC<{
   repsPlaceholder: string;
   justTicked: boolean;
   tickKey: string | null;
+  /** The tick needs typed reps (the hint is a range or AMRAP). */
+  needsReps: boolean;
   onChange: (patch: Partial<LoggedSet>) => void;
   onType: (anchor: HTMLElement) => void;
   onCheck: () => void;
   onOptions: () => void;
-}> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, onChange, onType, onCheck, onOptions }) => {
+}> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, needsReps, onChange, onType, onCheck, onOptions }) => {
   const kind = setKind(s);
   const t = kind === "normal" ? null : TYPE_STYLE[kind];
   const field = t?.field ?? shades.field;
@@ -1058,7 +1074,7 @@ const SetRow: React.FC<{
   return (
     <div
       ref={rowRef}
-      className={clsx("relative flex items-center", justTicked && "animate-set-row-settle")}
+      className={clsx("relative flex flex-wrap items-center", justTicked && "animate-set-row-settle")}
       style={{
         padding: "5px 15px",
         background: t?.row ?? "transparent",
@@ -1108,8 +1124,11 @@ const SetRow: React.FC<{
           placeholder={repsPlaceholder}
           inputMode="numeric"
           aria-label={`Set ${label} reps`}
+          aria-invalid={needsReps || undefined}
+          aria-describedby={needsReps ? `need-reps-${label}` : undefined}
+          data-field="reps"
           className="logger-field flex-1 focus:outline-none"
-          style={inputStyle}
+          style={needsReps ? { ...inputStyle, borderColor: "#B4372C" } : inputStyle}
         />
       </div>
       <button
@@ -1145,6 +1164,11 @@ const SetRow: React.FC<{
       </div>
       {kind === "skipped" && (
         <span aria-hidden className="absolute pointer-events-none" style={{ left: 15, right: 15, top: "50%", height: 1, background: "#8A8887" }} />
+      )}
+      {needsReps && (
+        <p id={`need-reps-${label}`} role="alert" className="basis-full" style={{ margin: "4px 0 0 58px", fontSize: 10.5, fontWeight: 600, color: "#B4372C" }}>
+          Enter the reps you did to log this set.
+        </p>
       )}
     </div>
   );
