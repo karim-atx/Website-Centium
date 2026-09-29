@@ -5,7 +5,8 @@ import { PopupMenu } from "../ui/PopupMenu";
 import type { MuscleGroup, ExerciseClassification, ExerciseTag } from "../../types";
 import { BookOpen, ChevronDown, Eye, Trash2 } from "lucide-react";
 import { MUSCLE_GROUP_LABEL, SELECTABLE_MUSCLE_GROUPS } from "../../utils/muscleGroups";
-import { EXERCISE_TAGS, EXERCISE_TAG_LABEL } from "../../utils/exerciseTags";
+import { EXERCISE_TAGS, EXERCISE_TAG_LABEL, disciplineSummary } from "../../utils/exerciseTags";
+import { classificationOptions } from "../../utils/exerciseClassification";
 import clsx from "clsx";
 
 // Derived from SELECTABLE_MUSCLE_GROUPS rather than listed again here. The
@@ -14,16 +15,6 @@ import clsx from "clsx";
 const muscleGroupOptions: { value: MuscleGroup; label: string }[] =
   SELECTABLE_MUSCLE_GROUPS.map((value) => ({ value, label: MUSCLE_GROUP_LABEL[value] }));
 
-export const classificationOptions: { value: ExerciseClassification; label: string }[] = [
-  { value: "barbell", label: "Barbell" },
-  { value: "dumbbell", label: "Dumbbell" },
-  { value: "machine_other", label: "Machine / Other" },
-  { value: "weighted_bodyweight", label: "Weighted Bodyweight" },
-  { value: "assisted_bodyweight", label: "Assisted Bodyweight" },
-  { value: "reps_only", label: "Reps Only" },
-  { value: "cardio", label: "Cardio" },
-  { value: "duration", label: "Duration" },
-];
 
 export interface CustomExerciseData {
   name: string;
@@ -224,9 +215,7 @@ export const CreateCustomExerciseSheet: React.FC<{
               style={{ ...dropdownStyle, color: tags.length ? "#241F1B" : "#8C8378" }}
             >
               <span className="truncate">
-                {tags.length === 0
-                  ? "Select"
-                  : `${EXERCISE_TAG_LABEL[EXERCISE_TAGS.find((t) => tags.includes(t))!]}${tags.length > 1 ? ` +${tags.length - 1}` : ""}`}
+                {disciplineSummary(tags) ?? "Select"}
               </span>
               <ChevronDown size={14} className="flex-none" style={{ color: "#A9A29A" }} />
             </button>

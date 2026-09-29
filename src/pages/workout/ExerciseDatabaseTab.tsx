@@ -6,6 +6,7 @@ import { EXERCISE_TAGS, EXERCISE_TAG_LABEL } from "../../utils/exerciseTags";
 import type { MuscleGroup, ExerciseClassification, ExerciseTag } from "../../types";
 import { List, User, Search, RefreshCw, Plus, ChevronDown } from "lucide-react";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "../../components/workout/CreateCustomExerciseSheet";
+import { BuiltInExerciseSheet } from "../../components/workout/BuiltInExerciseSheet";
 import { BODY_ZONES } from "../../data/bodyZones";
 
 type ViewMode = "list" | "body";
@@ -186,9 +187,9 @@ export default function ExerciseDatabaseTab() {
     user.sex === "male" ? "male" : user.sex === "female" ? "female" : "andro";
   const figureKey = `${figureGender}-${bodySide}` as FigureKey;
   const figureAlt = `${FIGURE_NAME[figureGender]} ${bodySide === "front" ? "Front" : "Back"}`;
-  // V8 (QA 8.0): "ability to edit each exercise if pressed on in the
-  // library" — a custom exercise is edited in place; a stock library
-  // exercise is saved as a new custom one instead of mutating shared data.
+  // The exercise opened from the list or the Body view: one of the user's
+  // own opens the editable popup (WO11), a built-in one the view-only popup
+  // (WO12) — catalog rows are no longer edited or duplicated from here.
   const [editingExercise, setEditingExercise] = useState<DbExercise | null>(null);
 
   const all: DbExercise[] = useMemo(() => {
@@ -644,8 +645,14 @@ export default function ExerciseDatabaseTab() {
         onSave={(data: CustomExerciseData) => void addCustomExercise(data)}
       />
 
+      <BuiltInExerciseSheet
+        open={!!editingExercise && !editingExercise.isCustom}
+        onClose={() => setEditingExercise(null)}
+        exercise={editingExercise && !editingExercise.isCustom ? editingExercise : null}
+      />
+
       <CreateCustomExerciseSheet
-        open={!!editingExercise}
+        open={!!editingExercise?.isCustom}
         onClose={() => setEditingExercise(null)}
         initial={editingExercise ?? undefined}
         // Only a custom exercise can be deleted, and only from here: this tab
@@ -660,14 +667,7 @@ export default function ExerciseDatabaseTab() {
         }
         impact={editingExercise?.isCustom ? deleteImpact(editingExercise.id) : undefined}
         onSave={(data: CustomExerciseData) => {
-          if (!editingExercise) return;
-          if (editingExercise.isCustom) {
-            void updateCustomExercise(editingExercise.id, data);
-          } else {
-            // A catalog row is shared and no client role can write to it, so
-            // editing one has always saved a new custom exercise instead.
-            void addCustomExercise(data);
-          }
+          if (editingExercise?.isCustom) void updateCustomExercise(editingExercise.id, data);
         }}
       />
 

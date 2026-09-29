@@ -43,3 +43,10 @@ export const isKnownTag = (value: string): value is ExerciseTag =>
 
 export const readTags = (raw: string[] | null | undefined): ExerciseTag[] =>
   (raw ?? []).filter(isKnownTag);
+
+/** WO11 / WO12: the first discipline (in list order) plus a count, e.g. "CrossFit +1"; null for none. */
+export function disciplineSummary(tags: ExerciseTag[]): string | null {
+  const first = EXERCISE_TAGS.find((t) => tags.includes(t));
+  if (!first) return null;
+  return tags.length > 1 ? `${EXERCISE_TAG_LABEL[first]} +${tags.length - 1}` : EXERCISE_TAG_LABEL[first];
+}
