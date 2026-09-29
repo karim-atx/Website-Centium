@@ -2,13 +2,13 @@ import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { sessionOptionStyle } from "./sessionSheetStyles";
 import { AlertTriangle } from "lucide-react";
+import { perSideKg, plateBreakdown } from "../../services/workout/plates";
 
 const BAR_OPTIONS: { value: "20" | "15" | "other"; label: string; kg?: number }[] = [
   { value: "20", label: "20kg", kg: 20 },
   { value: "15", label: "15kg", kg: 15 },
   { value: "other", label: "Other" },
 ];
-const IPF_PLATES_KG = [25, 20, 15, 10, 5, 2.5, 1.25];
 const KG_TO_LB = 2.20462;
 
 // V10 (QA 10.0) / Design refinement §6.9b: IPF powerlifting plate colours
@@ -26,44 +26,24 @@ const PLATE_SPEC: Record<number, { color: string; height: number; width: number;
 };
 const COLLAR_COLOR = "#B9BEC4"; // silver
 
-// Greedy per-side plate breakdown from the standard IPF powerlifting set.
-function plateBreakdown(perSideKg: number) {
-  let remaining = perSideKg;
-  const plates: { kg: number; count: number }[] = [];
-  for (const plate of IPF_PLATES_KG) {
-    const count = Math.floor(remaining / plate + 1e-6);
-    if (count > 0) {
-      plates.push({ kg: plate, count });
-      remaining = +(remaining - count * plate).toFixed(2);
-    }
-  }
-  return { plates, remainderKg: remaining };
-}
-
 export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const [unit, setUnit] = useState<"kg" | "lb">("kg");
   const [targetDraft, setTargetDraft] = useState("100");
   const [pct, setPct] = useState(100);
   const [barChoice, setBarChoice] = useState<"20" | "15" | "other">("20");
   const [customBarDraft, setCustomBarDraft] = useState("10");
-  // Design refinement §6.9b: "Collars become a three-way mutually-exclusive
-  // selector: 5kg/2.5kg/None... default to 2.5kg — that is what makes the
-  // default 100kg loadout 25+10+2.5+1.25 and puts all four plate sizes,
-  // including the grey 1.25kg, in play."
+  // Design refinement §6.9b: collars are a three-way selector (5 kg / 2.5 kg /
+  // None) defaulting to 2.5 kg. The value is ONE collar; there is one per side.
   const [plateCollar, setPlateCollar] = useState<5 | 2.5 | 0>(2.5);
 
   const barKg = barChoice === "other" ? Number(customBarDraft) || 0 : BAR_OPTIONS.find((b) => b.value === barChoice)!.kg!;
-  // §6.9b: the selector stores the collar PAIR mass (5|2.5|0) — per-side is
-  // half of that. 100kg with the default 2.5kg pair → 38.75kg/side →
-  // 25+10+2.5+1.25, every plate size in play; 101kg → 39.25kg/side, the
-  // doc's canonical case where 0.50kg/side can't be made.
-  const collarsPairKg = plateCollar;
-
+  // One collar per sleeve, as the selector's "(per side)" label says: per
+  // side = (working − bar − 2 × collar) / 2 (handover 2026-09-29, 03).
   const targetInput = Number(targetDraft) || 0;
   const targetKg = unit === "kg" ? targetInput : targetInput / KG_TO_LB;
   const workingKg = (targetKg * pct) / 100;
-  const perSideKg = Math.max(0, (workingKg - barKg - collarsPairKg) / 2);
-  const { plates, remainderKg } = plateBreakdown(perSideKg);
+  const perSide = perSideKg(workingKg, barKg, plateCollar);
+  const { plates, remainderKg } = plateBreakdown(perSide);
 
   const displayKg = (kg: number) => (unit === "kg" ? kg : +(kg * KG_TO_LB).toFixed(1));
 
@@ -184,7 +164,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
             </div>
             <div>
               <p className="text-[22px] font-extrabold text-primary-deep-text leading-none tracking-[-0.03em] tabular-nums">
-                {displayKg(perSideKg).toLocaleString()}
+                {displayKg(perSide).toLocaleString()}
               </p>
               <p className="text-[10px] font-semibold text-primary-deep-text/70 mt-1 uppercase tracking-wide">Per side ({unit})</p>
             </div>
@@ -196,7 +176,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
 
         <div>
           <p className="text-[10.5px] font-medium text-charcoal-faint mb-2">
-            {barKg}kg bar{collarsPairKg > 0 ? ` + ${collarsPairKg}kg collars` : ""} + {displayKg(perSideKg * 2).toLocaleString()}
+            {barKg}kg bar{plateCollar > 0 ? ` + ${plateCollar * 2}kg collars` : ""} + {displayKg(perSide * 2).toLocaleString()}
             {unit} plates
           </p>
           {plates.length === 0 ? (
