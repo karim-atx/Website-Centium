@@ -66,11 +66,15 @@ const RPE_TABLE: Record<number, number[]> = {
   6: [86.6, 85, 83.3, 81.5, 80, 78.5, 77.2, 75.9, 74.7, 73.5],
 };
 
-export function weightFromRpe(oneRepMax: number, reps: number, rpe: number): number {
+/** The chart's %1RM for a rep count at an RPE (the number weightFromRpe applies). */
+export function percentFromRpe(reps: number, rpe: number): number {
   const col = Math.max(0, Math.min(9, reps - 1));
   const row = RPE_TABLE[rpe as keyof typeof RPE_TABLE] ?? RPE_TABLE[8];
-  const pct = row[col] ?? row[row.length - 1];
-  return Math.round(oneRepMax * (pct / 100) * 10) / 10;
+  return row[col] ?? row[row.length - 1];
+}
+
+export function weightFromRpe(oneRepMax: number, reps: number, rpe: number): number {
+  return Math.round(oneRepMax * (percentFromRpe(reps, rpe) / 100) * 10) / 10;
 }
 
 export const rpeOptions = [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6];
