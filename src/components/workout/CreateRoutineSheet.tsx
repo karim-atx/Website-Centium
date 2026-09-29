@@ -21,7 +21,7 @@ const blankExercise = (pick: ExercisePick): Exercise => ({
   classification: pick.classification,
   isCustom: pick.isCustom,
   // Carried from the pick so the save knows which library row this
-  // prescribes â routine_exercises stores the reference, not the name.
+  // prescribes — routine_exercises stores the reference, not the name.
   exerciseId: pick.exerciseId,
   customExerciseId: pick.customExerciseId,
 });
@@ -98,7 +98,7 @@ export const CreateRoutineSheet: React.FC<{
     setSaving(false);
     // THE SHEET STAYS OPEN ON FAILURE, holding everything the user typed. It
     // used to close unconditionally, which was harmless while this was local
-    // state and is not now that the save can be refused â closing would throw
+    // state and is not now that the save can be refused — closing would throw
     // away a routine that was never stored.
     if (!id) {
       setError("Couldn't save that routine. Check your connection and try again.");
@@ -189,7 +189,7 @@ export const CreateRoutineSheet: React.FC<{
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search for exerciseâ¦"
+                placeholder="Search for exercise…"
                 className="w-full rounded-xl bg-cream-soft border border-charcoal/10 pl-9 pr-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
