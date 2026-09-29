@@ -3,7 +3,9 @@ import { Card } from "../../components/ui/Card";
 import { marketplaceCategories } from "../../data/mockProfessionals";
 import Discover from "./Discover";
 import { useApp } from "../../context/AppContext";
-import { Sparkles, Gem, Plus, Award, Medal, Trophy, Crown } from "lucide-react";
+import { useEffect } from "react";
+import { Sparkles, Gem, Award, Medal, Trophy, Crown } from "lucide-react";
+import { tierProgress, tierReached } from "../../services/achievements";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import BusinessDashboard from "./BusinessDashboard";
 import ProfessionalExplore from "./ProfessionalExplore";
@@ -23,22 +25,33 @@ const CATEGORY_STYLE: Record<string, { icon: string; bg: string }> = {
   meal_prep: { icon: "#6F9993", bg: "rgba(162,200,194,.18)" },
 };
 
-// V7 (QA 7.0): "The reward counter should be a series of points that goes
-// from bronze to silver to gold to platinum to diamond. With each stage
-// start with 5000 and increase increments of 5000."
+// THE THRESHOLDS ARE THE DATABASE'S NOW. This list held its own ladder —
+// 0 / 5,000 / 10,000 / 15,000 / 20,000 — and point_tiers says 0 / 1,000 /
+// 3,000 / 7,500 / 15,000. Two copies of a ladder is two answers to "what tier
+// am I", and my_points_summary() resolves the tier server-side, so the client
+// copy had to go rather than be corrected. What is left here is the ICON per
+// tier, which is presentation and lives nowhere in the schema; a tier the
+// catalogue adds later falls back to the medal rather than disappearing.
 // V9 (QA 9.0): "Each tier should have a different minimalistic logo based
-// on their tier level" — was a single fixed Gem icon for every tier.
-const rewardTiers = [
-  { name: "Bronze", threshold: 0, color: "#B08D57", icon: Award },
-  { name: "Silver", threshold: 5000, color: "#A8A9AD", icon: Medal },
-  { name: "Gold", threshold: 10000, color: "#D9A441", icon: Trophy },
-  { name: "Platinum", threshold: 15000, color: "#8FA6A3", icon: Crown },
-  { name: "Diamond", threshold: 20000, color: "#6FA8DC", icon: Gem },
-];
+// on their tier level."
+const TIER_ICON: Record<string, typeof Award> = {
+  Bronze: Award,
+  Silver: Medal,
+  Gold: Trophy,
+  Platinum: Crown,
+  Diamond: Gem,
+};
 
 export default function Marketplace() {
-  const { streaks, user, bonusPoints, addBonusPoints } = useApp();
+  const { user, pointsSummary, pointTiers, noteFeatureMilestone } = useApp();
   const navigate = useNavigate();
+
+  // Explorer milestone: "Out and about". Recorded once per account for ever —
+  // a repeat is a primary-key conflict the service treats as the success it
+  // is. Worth zero points, like every self-reported achievement.
+  useEffect(() => {
+    noteFeatureMilestone("explore_page");
+  }, [noteFeatureMilestone]);
 
   // Businesses get a management dashboard here instead of the consumer
   // browse experience — separate UI per QA, not just a banner.
@@ -51,25 +64,17 @@ export default function Marketplace() {
     return <ProfessionalExplore />;
   }
 
-  // Points are earned strictly off the 4 core (auto-derived, "locked")
-  // streaks — a user-added custom streak never counts toward one.
+  // NOTHING IS COMPUTED HERE ANY MORE, and that is the point of the change.
   //
-  // NO EARLY RETURN ON AN EMPTY LIST. There used to be one, because the
-  // removed reward row needed a streak to name. It meant a brand-new account,
-  // or any account whose streaks had not hydrated yet, got a blank Explore
-  // page rather than the marketplace it came for.
-  const lockedStreaks = streaks.filter((s) => s.auto);
-
-  // Points are derived from total logged streak days across the core
-  // streaks — a simple, transparent stand-in for a real points ledger.
-  // V8 (QA 8.0): plus a placeholder bonus, added via the "+" button below.
-  const points = lockedStreaks.reduce((sum, s) => sum + s.days, 0) * 100 + bonusPoints;
-  const tierIdx = [...rewardTiers].reverse().findIndex((t) => points >= t.threshold);
-  const tier = rewardTiers[rewardTiers.length - 1 - tierIdx];
-  const nextTier = rewardTiers[rewardTiers.length - tierIdx];
-  const progressPct = nextTier
-    ? Math.min(100, ((points - tier.threshold) / (nextTier.threshold - tier.threshold)) * 100)
-    : 100;
+  // The balance used to be `sum of auto-streak days x 100 + bonusPoints`: a
+  // rate nobody set, applied to streaks, plus a localStorage integer a "+"
+  // button incremented by 1,000. It read like a ledger and was arithmetic.
+  // Every figure below now comes from my_points_summary(), which sums
+  // points_ledger and resolves the tier against point_tiers — and the ledger
+  // has no client write path at all, so the number cannot be self-credited.
+  //
+  // NO EARLY RETURN ON AN EMPTY SUMMARY. A brand-new account, or one whose
+  // summary has not arrived yet, still came here for the marketplace.
 
   // "Your passes" used to live here, reading gymPurchases and resolving each
   // gym's NAME out of mockGyms. Both halves were fabricated: the purchases
@@ -88,52 +93,73 @@ export default function Marketplace() {
         <p className="mt-[3px] text-[11px] text-charcoal-tertiary">The future Centium ecosystem</p>
       </div>
 
-      {/* Iteration 6 "Team" §5 Explore: the tier card and streak-reward row
-          split back into two pieces — a gradient hero (matching Home/
-          Health/Mind) plus its own tinted row — reversing the "merge into
-          one hairline panel" refinement from an earlier round. Real tier/
-          points/progress values throughout, not the mockup's fixed
-          "Silver · 6,000 · 4,000 to Gold" example. */}
+      {/* Iteration 6 "Team" §5 Explore: the tier card — a gradient hero
+          matching Home/Health/Mind. Every value in it is my_points_summary()'s.
+
+          THE "+" BUTTON IS GONE. It read "as a place holder add a plus sign
+          logo that increases the tier by 1000 points" (V8/QA 8.0) and did
+          exactly that, into a localStorage integer. points_ledger now has no
+          INSERT grant and no INSERT policy for any client role, so there is no
+          longer a way to write a point from this side even in principle — and
+          nothing to fake, since achievements credit real ones. */}
+      {pointsSummary && (
       <div
         className="relative overflow-hidden rounded-[22px] px-[17px] py-4 mb-[13px]"
         style={{ background: "var(--gradient-board)" }}
       >
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66]">{tier.name} tier</p>
-          <div className="flex items-center gap-1.5">
-            {/* V8 (QA 8.0): "as a place holder add a plus sign logo that
-                increases the tier by 1000 points" */}
-            <button
-              onClick={() => addBonusPoints(1000)}
-              aria-label="Add 1000 points (placeholder)"
-              className="tap w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-white"
-            >
-              <Plus size={11} />
-            </button>
-            <span className="text-[9.5px] font-bold text-white bg-white/20 rounded-full px-[9px] py-1 whitespace-nowrap">
-              {nextTier ? `${(nextTier.threshold - points).toLocaleString()} to ${nextTier.name}` : "Highest tier"}
-            </span>
-          </div>
+          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66]">
+            {pointsSummary.tierName} tier
+          </p>
+          <span className="text-[9.5px] font-bold text-white bg-white/20 rounded-full px-[9px] py-1 whitespace-nowrap">
+            {pointsSummary.nextTierName && pointsSummary.pointsToNextTier !== null
+              ? `${pointsSummary.pointsToNextTier.toLocaleString()} to ${pointsSummary.nextTierName}`
+              : "Highest tier"}
+          </span>
         </div>
         <p className="mt-[10px] flex items-baseline gap-[5px]">
-          <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">{points.toLocaleString()}</span>
+          <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
+            {pointsSummary.balance.toLocaleString()}
+          </span>
           <span className="text-[11px] font-semibold text-white/[0.74]">pts</span>
         </p>
         <div className="my-[11px]">
           <div className="h-[5px] rounded-full bg-white/[0.26] overflow-hidden">
             <div
               className="h-full rounded-full bg-white"
-              style={{ width: `${progressPct}%`, transition: "width 0.7s cubic-bezier(0.22,1,0.36,1)" }}
+              style={{
+                width: `${tierProgress(pointsSummary) * 100}%`,
+                transition: "width 0.7s cubic-bezier(0.22,1,0.36,1)",
+              }}
             />
           </div>
         </div>
-        <div className="flex gap-1 pt-[11px] border-t border-white/[0.24]">
-          {rewardTiers.map((t) => {
-            const reached = points >= t.threshold;
+
+        {/* WHERE THE BALANCE CAME FROM, which the old hero could not say
+            because it came from nowhere. Both halves are the ledger's own
+            sums by source; "other" only appears if a source outside these two
+            ever credits anything, so it is never a zero row nobody can
+            explain. */}
+        <div className="flex items-center gap-3 flex-wrap text-[9.5px] font-semibold text-white/[0.74]">
+          <span>{pointsSummary.achievementPoints.toLocaleString()} from achievements</span>
+          <span className="w-1 h-1 rounded-full bg-white/40" />
+          <span>{pointsSummary.referralPoints.toLocaleString()} from referrals</span>
+          {pointsSummary.otherPoints !== 0 && (
+            <>
+              <span className="w-1 h-1 rounded-full bg-white/40" />
+              <span>{pointsSummary.otherPoints.toLocaleString()} other</span>
+            </>
+          )}
+        </div>
+
+        <div className="flex gap-1 mt-[11px] pt-[11px] border-t border-white/[0.24]">
+          {pointTiers.map((t) => {
+            const reached = tierReached(t, pointsSummary);
+            const Icon = TIER_ICON[t.name] ?? Medal;
             return (
               <div key={t.name} className="flex-1 flex flex-col items-center gap-1">
                 <span className="w-7 h-7 rounded-full flex items-center justify-center" style={{ background: reached ? "rgba(255,255,255,.24)" : "rgba(255,255,255,.1)" }}>
-                  <t.icon size={13} className="text-white" style={{ opacity: reached ? 1 : 0.5 }} />
+                  <Icon size={13} className="text-white" style={{ opacity: reached ? 1 : 0.5 }} />
                 </span>
                 <span className="text-[8px] font-extrabold text-white" style={{ opacity: reached ? 1 : 0.55 }}>
                   {t.name}
@@ -142,18 +168,17 @@ export default function Marketplace() {
             );
           })}
         </div>
-      </div>
 
-      {/* THE "REWARD UNLOCKED" ROW IS GONE. It read "Your N-day streak
-          unlocked a reward / 10% off your next membership at partner gyms",
-          and neither half was real: no reward was unlocked by anything, the
-          10% was a fixed string rather than a business_discounts row, and
-          "partner gyms" named no business. points_ledger exists in the schema
-          but nothing in this client has ever read or written it, so there is
-          no ledger to redeem against either. The tier hero above survives
-          because its points and thresholds are at least computed from the
-          streaks actually held; this row announced a transaction that could
-          not happen. It comes back when a redeemable reward exists to name. */}
+        {/* SAYING SO, RATHER THAN IMPLYING ONE. The row that used to sit under
+            this hero read "Your N-day streak unlocked a reward / 10% off your
+            next membership at partner gyms", and named a discount, a partner
+            and a transaction that did not exist. Points are real and a tier is
+            real; a reward to spend them on is not, yet. */}
+        <p className="mt-[11px] text-[10px] leading-[1.4] text-white/[0.66]">
+          Points count toward your tier. Rewards for your points are coming soon.
+        </p>
+      </div>
+      )}
 
       {/* THE "NEAR YOU" TILES ARE GONE, and they were the worst of it: two
           rows reading `mockGyms.length` and `mockClasses.length` — "3 nearby"
