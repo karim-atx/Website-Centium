@@ -404,23 +404,32 @@ export function toWorkoutSession(row: unknown): WorkoutSession {
  * caller replaces local history with this, and treating a network error as
  * "you have never trained" would erase the screen.
  */
-export async function getWorkoutSessions(
-  userId: string,
-  limit = 100
-): Promise<WorkoutHistoryResult> {
-  const { data, error } = await supabase
-    .from("workout_sessions")
-    .select(SESSION_SELECT)
-    .eq("user_id", userId)
-    .order("started_at", { ascending: false })
-    .limit(limit);
+export async function getWorkoutSessions(userId: string): Promise<WorkoutHistoryResult> {
+  // THE WHOLE HISTORY, in pages. This used to stop at the latest 100, which
+  // left "All time" totals (WO3.1), exercise history (WO14) and every 1RM
+  // figure (WO18/WO19) silently short for anyone with more sessions than
+  // that. PostgREST caps a single response, so the rows are read a page at
+  // a time until a short page says there are no more.
+  const PAGE = 500;
+  const rows: unknown[] = [];
+  for (let from = 0; ; from += PAGE) {
+    const { data, error } = await supabase
+      .from("workout_sessions")
+      .select(SESSION_SELECT)
+      .eq("user_id", userId)
+      .order("started_at", { ascending: false })
+      .order("id", { ascending: false })
+      .range(from, from + PAGE - 1);
 
-  if (error) {
-    console.error("[workout] Could not read history:", error.message);
-    return { ok: false, message: describe(error) };
+    if (error) {
+      console.error("[workout] Could not read history:", error.message);
+      return { ok: false, message: describe(error) };
+    }
+    rows.push(...(data ?? []));
+    if (!data || data.length < PAGE) break;
   }
 
-  return { ok: true, sessions: (data ?? []).map(toWorkoutSession) };
+  return { ok: true, sessions: (rows as Parameters<typeof toWorkoutSession>[0][]).map(toWorkoutSession) };
 }
 
 

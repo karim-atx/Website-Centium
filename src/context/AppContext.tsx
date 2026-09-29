@@ -20,6 +20,7 @@ import type {
   Routine,
   WorkoutSession,
   PausedWorkoutSession,
+  ActiveSession,
   JournalFolder,
   JournalEntry,
   BloodMarker,
@@ -463,6 +464,18 @@ interface AppState {
   pausedSessions: Record<string, PausedWorkoutSession>;
   savePausedSession: (routineId: string, session: PausedWorkoutSession) => void;
   clearPausedSession: (routineId: string) => void;
+
+  // Handover 2026-09-29, 03 "Active workout session" (WO8, WO17, WO1.1):
+  // the one workout in progress, persisted to localStorage so it survives
+  // a reload and drives the active-workout bar while the logger is closed.
+  activeSession: ActiveSession;
+  setActiveSession: (session: ActiveSession | ((prev: ActiveSession) => ActiveSession)) => void;
+
+  // Handover 2026-09-29, 03 "Sex-driven derived values" (MO11, WO5/WO6):
+  // read reactively by everything that shows cycle / pregnancy content and
+  // by the Library body map. Never used to add or remove persisted items.
+  hasCycleFeatures: boolean;
+  bodyMapVariant: "male" | "female" | "androgynous";
 
   // V4: estimated 1RM per exercise name (barbell/dumbbell/weighted-bodyweight
   // only) — auto-updated from logged sets, editable from History/Metrics.
@@ -1944,6 +1957,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     "pausedSessions",
     {}
   );
+  const [activeSession, setActiveSession] = usePersistentState<ActiveSession>("activeSession", null);
 
   // A paused session belongs to a ROUTINE ROW. routine_id is NOT NULL on
   // paused_workout_sessions and a uuid, so a freeform session (no routine at
@@ -2521,7 +2535,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setWorkoutHistoryError(null);
       // OLDEST FIRST, which is what everything holding this list assumes.
       // getWorkoutSessions returns newest-first (its query orders started_at
-      // descending, so a `limit` keeps the RECENT ones), and this was stored
+      // descending), and this was stored
       // as it arrived — while saveWorkoutSession appends to the end and both
       // HistoryTab and Home reverse it to get newest-first. So a freshly
       // loaded list ran backwards: History showed the oldest session at the
@@ -5473,6 +5487,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       pausedSessions,
       savePausedSession,
       clearPausedSession,
+      activeSession,
+      setActiveSession,
+      hasCycleFeatures: user.sex === "female" || user.sex === "other",
+      bodyMapVariant: user.sex === "male" ? "male" : user.sex === "female" ? "female" : "androgynous",
       personalRecords,
       setPersonalRecord,
       pendingPersonalRecords,
@@ -5723,6 +5741,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       personalRecordsReviewItems,
       personalRecordsReviewDone,
       pausedSessions,
+      activeSession,
       routineFolders,
       routinesError,
       routines,

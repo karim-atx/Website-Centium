@@ -1082,6 +1082,23 @@ export interface LoggedExercise {
   enduranceResult?: EnduranceResult;
 }
 
+/**
+ * Handover 2026-09-29, 03: the one workout in progress (WO8, WO17, WO1.1's
+ * ONGOING row). Time left = the routine's estimated duration − elapsed,
+ * excluding paused time; negative shows elapsed instead ("1h 5m elapsed").
+ * Null when no workout is running.
+ */
+export type ActiveSession = {
+  routineId: string;
+  currentExercise: number;
+  startedAt: string;
+  pausedAt?: string | null;
+  pausedMs: number;
+  status: "running" | "paused";
+  /** The logger is minimised to the WO17 bar (approved decision 17). */
+  minimised?: boolean;
+} | null;
+
 // V6 (QA 6.0): the in-progress state of a routine that was quit (not
 // finished) — enough to restore WorkoutSessionSheet exactly as it was.
 export interface PausedWorkoutSession {
