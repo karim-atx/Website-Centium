@@ -104,6 +104,7 @@ import {
   type Placement,
 } from "../services/routines/order";
 import { cleanRoutineCopy } from "../services/routines/duplicate";
+import { displayedFolderColor, needsSavedColor } from "../data/folderColors";
 import { mockForumPosts } from "../data/mockForum";
 import { estimate1RM } from "../services/workout";
 import {
@@ -2796,7 +2797,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           const written = await createRoutineFolderRemote(authUserId, {
             name: folder.name,
             parentId,
-            color: folder.color,
+            // Its place in the hydrated list is `position`: save the colour it shows there.
+            color: displayedFolderColor(folder, position),
             position: position++,
           });
           if (written.ok && written.folder) {
@@ -2831,7 +2833,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         }
         if (cancelled) return;
 
-        setRoutineFolders(() => [...folderResult.folders, ...uploadedFolders, ...keptFolders]);
+        // A folder without a saved family colour showed the alternation by its
+        // position; write that colour once so reordering never repaints it.
+        const hydratedFolders = [...folderResult.folders, ...uploadedFolders, ...keptFolders].map((f, i) =>
+          needsSavedColor(f) ? { ...f, color: displayedFolderColor(f, i), backfill: true } : f
+        );
+        for (const f of hydratedFolders) {
+          if ("backfill" in f && isUuid(f.id)) void updateRoutineFolderRemote(f.id, { color: f.color });
+        }
+        setRoutineFolders(() => hydratedFolders.map(({ backfill: _b, ...f }: RoutineFolder & { backfill?: boolean }) => f));
         // Template mirrors are preserved for the same reason they are not
         // uploaded: they are local state that nothing on the server knows
         // about, and dropping them here would delete a hired professional's
@@ -3942,6 +3952,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setRoutineFolders((prev) => [...prev, { id: `rf${Date.now()}`, name, parentId, color }]);
       return undefined;
     }
+    // Saved, never left to the alternation, so a later reorder cannot repaint it.
+    color = displayedFolderColor({ color }, routineFolders.length);
     const result = await createRoutineFolderRemote(authUserId, { name, parentId, color, position });
     if (!result.ok || !result.folder) return result.message ?? "Could not create that folder.";
     setRoutineFolders((prev) => [...prev, result.folder!]);
@@ -4108,9 +4120,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ): Promise<string | undefined> => {
       let folder: RoutineFolder;
       if (!authUserId) {
-        folder = { id: `rf${Date.now()}${Math.random().toString(16).slice(2)}`, name, parentId, color: source.color };
+        folder = {
+          id: `rf${Date.now()}${Math.random().toString(16).slice(2)}`,
+          name,
+          parentId,
+          color: displayedFolderColor(source, routineFolders.indexOf(source)),
+        };
       } else {
-        const result = await createRoutineFolderRemote(authUserId, { name, parentId, color: source.color, position });
+        const result = await createRoutineFolderRemote(authUserId, {
+          name,
+          parentId,
+          color: displayedFolderColor(source, routineFolders.indexOf(source)),
+          position,
+        });
         if (!result.ok || !result.folder) return result.message ?? "Could not duplicate that folder.";
         folder = result.folder;
       }

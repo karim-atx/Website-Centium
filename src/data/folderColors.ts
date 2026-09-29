@@ -43,6 +43,21 @@ export function folderFamily(folder: RoutineFolder, order: number): FolderFamily
 }
 
 /**
+ * The picker colour a folder shows: its saved colour when that is one of the
+ * families, else the alternation by its place in the folder list (the seeded
+ * Strength lavender, Hypertrophy teal). Saved on creation, and written once
+ * for older folders, so a reorder never repaints a folder.
+ */
+export function displayedFolderColor(folder: Pick<RoutineFolder, "color">, order: number): string {
+  if (folder.color && FOLDER_FAMILIES[folder.color]) return folder.color;
+  return order % 2 === 0 ? "#7D6BB5" : "#6F9993";
+}
+
+/** A folder whose colour is not saved as one of the families (so it would follow its position). */
+export const needsSavedColor = (folder: Pick<RoutineFolder, "color">): boolean =>
+  !folder.color || !FOLDER_FAMILIES[folder.color];
+
+/**
  * A routine's family, per handover 03 `resolveColor`: its parent folder's
  * colour → the routine's own colour (unfiled) → Primary Lavender #AEA1DC,
  * whose family is the lavender one.
