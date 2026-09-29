@@ -417,10 +417,17 @@ export const WorkoutSessionSheet: React.FC<{
   const setType = (exIdx: number, setIdx: number, kind: HandoverSetType) => {
     const current = logged[exIdx].sets[setIdx];
     const fields = kindFields(kind, current);
+    const logs = fields.outcome != null && fields.outcome !== "skipped";
+    // A type that LOGS the set (Failed, or PR on a set) takes the greyed
+    // values for any blank field, exactly as the check does: otherwise a
+    // failed 6-rep set at a prefilled 60 kg was saved at 0 kg and dropped
+    // out of the volume (found in the real-UI regression run).
+    const ph = logs ? placeholdersFor(exIdx, setIdx) : null;
     const next: LoggedSet = {
       ...current,
       ...fields,
-      completed: fields.outcome != null && fields.outcome !== "skipped",
+      completed: logs,
+      ...(ph ? { weightKg: current.weightKg || numericOf(ph.weight), reps: current.reps || numericOf(ph.reps) } : {}),
     };
     updateSet(exIdx, setIdx, next);
     if (fields.outcome && !started) startClock();
