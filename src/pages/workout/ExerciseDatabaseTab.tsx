@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
-import { Chip } from "../../components/ui/Chip";
-import { Card } from "../../components/ui/Card";
+import { PopupMenu } from "../../components/ui/PopupMenu";
 import { useApp } from "../../context/AppContext";
 import { MUSCLE_GROUP_LABEL } from "../../utils/muscleGroups";
-import { EXERCISE_TAG_LABEL, tagsPresentIn } from "../../utils/exerciseTags";
+import { EXERCISE_TAGS, EXERCISE_TAG_LABEL } from "../../utils/exerciseTags";
 import type { MuscleGroup, ExerciseClassification, ExerciseTag } from "../../types";
-import { List, User, Search, RefreshCw, Plus } from "lucide-react";
-import clsx from "clsx";
+import { List, User, Search, RefreshCw, Plus, ChevronDown } from "lucide-react";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "../../components/workout/CreateCustomExerciseSheet";
 import { BODY_ZONES } from "../../data/bodyZones";
 
@@ -130,6 +128,19 @@ const BACK_ZONE_KEYS: (keyof (typeof BODY_ZONES)[FigureKey])[] = [
   "calves",
 ];
 
+/** WO2.1 control: a 30px smooth rounded rectangle; selected = #AEA1DC fill, white text. */
+const controlStyle = (on: boolean): React.CSSProperties => ({
+  height: 30,
+  borderRadius: 10,
+  padding: "0 11px",
+  fontSize: 11.5,
+  fontWeight: 600,
+  whiteSpace: "nowrap",
+  border: `1px solid ${on ? "#AEA1DC" : "rgba(36,31,27,0.11)"}`,
+  background: on ? "#AEA1DC" : "#FFFFFF",
+  color: on ? "#FFFFFF" : "#5B5349",
+});
+
 export default function ExerciseDatabaseTab() {
   const {
     exerciseCatalog,
@@ -157,7 +168,9 @@ export default function ExerciseDatabaseTab() {
   const [sort, setSort] = useState<SortMode>("alphabetical");
   const [query, setQuery] = useState("");
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null);
-  const [selectedTags, setSelectedTags] = useState<ExerciseTag[]>([]);
+  // WO2.1: one discipline at a time, from the Discipline popup (null = All).
+  const [discipline, setDiscipline] = useState<ExerciseTag | null>(null);
+  const [disciplineAnchor, setDisciplineAnchor] = useState<HTMLElement | null>(null);
   const [creating, setCreating] = useState(false);
   const [bodySide, setBodySide] = useState<BodySide>("front");
   const sideZoneKeys = bodySide === "front" ? FRONT_ZONE_KEYS : BACK_ZONE_KEYS;
@@ -202,9 +215,6 @@ export default function ExerciseDatabaseTab() {
     return [...custom, ...library];
   }, [exerciseCatalog, customExercises]);
 
-  /** Only the tags something actually carries — see tagsPresentIn. */
-  const availableTags = useMemo(() => tagsPresentIn(all), [all]);
-
   const searched = useMemo(
     () => all.filter((e) => e.name.toLowerCase().includes(query.toLowerCase())),
     [all, query]
@@ -217,19 +227,10 @@ export default function ExerciseDatabaseTab() {
     [searched, selectedGroup]
   );
 
-  /**
-   * The three filters narrow together rather than replacing one another.
-   *
-   * SEVERAL TAGS ARE AN "ANY", not an "all". Picking CrossFit and Running
-   * asks for the movements from either discipline — nothing is both, so an
-   * "all" would return an empty list from two perfectly reasonable taps.
-   */
+  /** Search, muscle group and discipline narrow together rather than replacing one another. */
   const filtered = useMemo(
-    () =>
-      selectedTags.length === 0
-        ? filteredByGroup
-        : filteredByGroup.filter((e) => e.tags.some((t) => selectedTags.includes(t))),
-    [filteredByGroup, selectedTags]
+    () => (discipline ? filteredByGroup.filter((e) => e.tags.includes(discipline)) : filteredByGroup),
+    [filteredByGroup, discipline]
   );
 
   const groups = useMemo(() => {
@@ -304,123 +305,102 @@ export default function ExerciseDatabaseTab() {
 
   return (
     <div className="animate-fade-slide-up">
-      {/* CREATING A MOVEMENT IS A TOP-LEVEL ACTION, not something you reach
-          by opening a stock exercise and saving it under another name — which
-          was the only route to it from this tab. */}
-      <div className="flex items-center justify-between mb-3">
-        <p className="section-label text-charcoal-faint">
-          {filtered.length} {filtered.length === 1 ? "exercise" : "exercises"}
-        </p>
+      {/* WO2.1: the List/Body toggle and "+ Create exercise" share one row
+          (both views). CREATING A MOVEMENT IS A TOP-LEVEL ACTION, not
+          something you reach by opening a stock exercise and saving it under
+          another name — which was the only route to it from this tab. */}
+      <div className="flex items-center justify-between" style={{ gap: 10, marginBottom: 12 }}>
+        <div className="flex" style={{ height: 34, padding: 3, borderRadius: 12, background: "#F5F5F6" }}>
+          {(["list", "body"] as ViewMode[]).map((v) => {
+            const on = view === v;
+            return (
+              <button
+                key={v}
+                onClick={() => {
+                  setView(v);
+                  // V10 (QA 10.0): "switching between body and list resets selection"
+                  setSelectedGroup(null);
+                }}
+                aria-pressed={on}
+                className="tap flex items-center"
+                style={{
+                  height: 28,
+                  borderRadius: 9,
+                  padding: "0 13px",
+                  gap: 6,
+                  fontSize: 12,
+                  fontWeight: 700,
+                  background: on ? "#AEA1DC" : "transparent",
+                  color: on ? "#FFFFFF" : "#8C8378",
+                }}
+              >
+                {v === "list" ? <List size={13} /> : <User size={13} />}
+                {v === "list" ? "List" : "Body"}
+              </button>
+            );
+          })}
+        </div>
         <button
           onClick={() => setCreating(true)}
-          className="tap flex items-center gap-1.5 text-xs font-bold text-white bg-primary rounded-full"
-          style={{ padding: "7px 13px" }}
+          className="tap flex items-center"
+          style={{ height: 34, borderRadius: 12, padding: "0 16px", gap: 8, background: "#AEA1DC", color: "#FFFFFF", fontSize: 12.5, fontWeight: 700 }}
         >
-          <Plus size={13} /> Create exercise
+          <Plus size={13} strokeWidth={2.4} /> Create exercise
         </button>
       </div>
 
-      <div className="relative mb-3">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
+      <div className="relative" style={{ marginBottom: 10 }}>
+        <Search size={15} className="absolute top-1/2 -translate-y-1/2" style={{ left: 14, color: "#8C8378" }} />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search exercises…"
           aria-label="Search exercises"
-          className="w-full rounded-2xl bg-cream-soft pl-9 pr-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="w-full text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+          style={{ height: 40, borderRadius: 16, background: "#F5F5F6", paddingLeft: 36, paddingRight: 14, fontSize: 14 }}
         />
-      </div>
-
-      {/* THE CHIPS ARE THE TAGS THE DATA HAS, not the tags the schema allows.
-          `mobility` is legal and carried by nothing, and a chip that always
-          returns an empty list is a control the user has to try before
-          learning it does nothing. It appears by itself the day something
-          carries it.
-
-          A DISCIPLINE IS NOT A MUSCLE, so these sit apart from the body view's
-          selection and narrow alongside it rather than replacing it. */}
-      {availableTags.length > 0 && (
-        <div className="flex flex-wrap mb-4" style={{ gap: 6 }}>
-          {availableTags.map((tag) => {
-            const on = selectedTags.includes(tag);
-            return (
-              <button
-                key={tag}
-                onClick={() =>
-                  setSelectedTags((prev) =>
-                    on ? prev.filter((t) => t !== tag) : [...prev, tag]
-                  )
-                }
-                aria-pressed={on}
-                className="tap transition-colors"
-                style={{
-                  borderRadius: 999,
-                  padding: "6px 12px",
-                  fontSize: 12,
-                  fontWeight: 600,
-                  border: `1px solid ${on ? "#7D6BB5" : "#E7E7EC"}`,
-                  background: on ? "#7D6BB5" : "#FFFFFF",
-                  color: on ? "#FFFFFF" : "#241F1B",
-                }}
-              >
-                {EXERCISE_TAG_LABEL[tag]}
-              </button>
-            );
-          })}
-          {selectedTags.length > 0 && (
-            <button
-              onClick={() => setSelectedTags([])}
-              className="tap text-[11.5px] font-semibold text-charcoal-soft"
-              style={{ padding: "6px 4px" }}
-            >
-              Clear
-            </button>
-          )}
-        </div>
-      )}
-
-
-      <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit mb-4">
-        {(["list", "body"] as ViewMode[]).map((v) => (
-          <button
-            key={v}
-            onClick={() => {
-              setView(v);
-              // V10 (QA 10.0): "switching between body and list resets selection"
-              setSelectedGroup(null);
-            }}
-            className={clsx(
-              "tap flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold",
-              view === v ? "bg-primary text-white" : "text-charcoal-faint"
-            )}
-          >
-            {v === "list" ? <List size={13} /> : <User size={13} />}
-            {v === "list" ? "List" : "Body"}
-          </button>
-        ))}
       </div>
 
       {view === "list" && (
         <>
-          <div className="flex gap-2 mb-4">
-            {(["alphabetical", "muscleGroup", "classification"] as SortMode[]).map((s) => (
-              <Chip key={s} active={sort === s} onClick={() => setSort(s)}>
-                {s === "alphabetical" ? "A–Z" : s === "muscleGroup" ? "Muscle Group" : "Classification"}
-              </Chip>
+          {/* WO2.1: sort and Discipline on one row, as smooth rounded
+              rectangles. A DISCIPLINE IS NOT A MUSCLE, so it narrows
+              alongside the body view's selection rather than replacing it. */}
+          <div className="flex overflow-x-auto no-scrollbar" style={{ gap: 7, marginBottom: 12 }}>
+            {(["alphabetical", "muscleGroup", "classification"] as SortMode[]).map((srt) => (
+              <button key={srt} onClick={() => setSort(srt)} aria-pressed={sort === srt} className="tap flex-none" style={controlStyle(sort === srt)}>
+                {srt === "alphabetical" ? "A–Z" : srt === "muscleGroup" ? "Muscle Group" : "Classification"}
+              </button>
             ))}
+            <button
+              onClick={(e) => setDisciplineAnchor(e.currentTarget)}
+              aria-haspopup="menu"
+              className="tap flex-none flex items-center"
+              style={{ ...controlStyle(!!discipline), gap: 5 }}
+            >
+              {discipline ? `Discipline: ${EXERCISE_TAG_LABEL[discipline]}` : "Discipline"}
+              <ChevronDown size={12} style={{ color: discipline ? "#FFFFFF" : "#ADA9A4" }} />
+            </button>
           </div>
+
+          <p style={{ margin: "0 0 8px 2px", fontSize: 11, fontWeight: 500, color: "#8C8378" }}>
+            {filtered.length} {filtered.length === 1 ? "exercise" : "exercises"}
+          </p>
 
           <div className="space-y-5">
             {groups.map((g, i) => (
               <div key={g.label ?? i}>
                 {g.label && <p className="section-label text-charcoal-faint mb-2">{g.label}</p>}
-                <Card padded={false} className="divide-y divide-charcoal/[0.06]">
+                <div
+                  className="overflow-hidden bg-white divide-y divide-[rgba(36,31,27,0.07)]"
+                  style={{ border: "1px solid rgba(36,31,27,0.11)", borderRadius: 18 }}
+                >
                   {g.items.map((e) => (
                     <button
                       key={e.id}
                       onClick={() => setEditingExercise(e)}
-                      className="tap w-full flex items-center justify-between px-4 py-3 text-left"
-                      style={{ gap: 10 }}
+                      className="tap w-full flex items-center justify-between text-left"
+                      style={{ gap: 10, padding: "11px 16px" }}
                     >
                       <span className="min-w-0">
                         <span className="flex items-center" style={{ gap: 6 }}>
@@ -445,18 +425,19 @@ export default function ExerciseDatabaseTab() {
                               Yours
                             </span>
                           )}
-                          <span className="text-sm font-medium text-charcoal truncate">{e.name}</span>
+                          <span className="truncate" style={{ fontSize: 14, lineHeight: "18px", fontWeight: 500, color: "#241F1B" }}>
+                            {e.name}
+                          </span>
                         </span>
                         {e.tags.length > 0 && (
-                          <span className="block text-[10.5px] text-charcoal-faint truncate">
+                          <span className="block truncate" style={{ fontSize: 11, lineHeight: "14px", color: "#8C8378" }}>
                             {e.tags.map((t) => EXERCISE_TAG_LABEL[t]).join(" · ")}
                           </span>
                         )}
                       </span>
                     </button>
                   ))}
-
-                </Card>
+                </div>
               </div>
             ))}
             {/* SAID WHENEVER IT HAPPENED, not only when nothing is left to
@@ -638,6 +619,21 @@ export default function ExerciseDatabaseTab() {
           )}
         </>
       )}
+
+      {/* WO2.1: the Nutrient Summary filter popup — All plus every discipline
+          the code knows, Mobility included. */}
+      <PopupMenu<ExerciseTag | "all">
+        open={!!disciplineAnchor}
+        anchor={disciplineAnchor}
+        onClose={() => setDisciplineAnchor(null)}
+        options={[
+          { value: "all", label: "All" },
+          ...EXERCISE_TAGS.map((t) => ({ value: t, label: EXERCISE_TAG_LABEL[t] })),
+        ]}
+        selected={discipline ?? "all"}
+        variant="filled"
+        onSelect={(v) => setDiscipline(v === "all" ? null : v)}
+      />
 
       {/* Creating from scratch and opening an existing one are two states of
           the same sheet, kept apart so the create form never inherits the

@@ -16,9 +16,9 @@ export const EXERCISE_TAGS: ExerciseTag[] = [
   "crossfit",
   "running",
   "plyometric",
-  // Allowed by the validator and carried by nothing yet. It is in the list so
-  // the picker can offer it; the FILTER chips are derived from the tags the
-  // data actually has, so an empty one never appears as a chip nobody can use.
+  // Allowed by the validator and carried by nothing yet. The picker and the
+  // Library's Discipline filter (WO2.1: "All + every discipline, including
+  // Mobility") both offer it.
   "mobility",
 ];
 
@@ -29,29 +29,6 @@ export const EXERCISE_TAG_LABEL: Record<ExerciseTag, string> = {
   plyometric: "Plyometric",
   mobility: "Mobility",
 };
-
-/** The order chips appear in, which is the order the brief names them. */
-const TAG_ORDER: ExerciseTag[] = [
-  "olympic_weightlifting",
-  "crossfit",
-  "running",
-  "plyometric",
-  "mobility",
-];
-
-/**
- * The tags worth offering as filters: the ones something actually carries.
- *
- * DERIVED FROM THE DATA, NOT FROM THE VOCABULARY. `mobility` is a legal tag
- * with zero rows today, and a chip that always returns an empty list is a
- * dead control — one the user has to try before learning it does nothing.
- * When the library gains a mobility movement the chip appears on its own.
- */
-export function tagsPresentIn(items: { tags?: ExerciseTag[] }[]): ExerciseTag[] {
-  const seen = new Set<ExerciseTag>();
-  for (const item of items) for (const tag of item.tags ?? []) seen.add(tag);
-  return TAG_ORDER.filter((tag) => seen.has(tag));
-}
 
 /**
  * Whether a value from the database is one this build knows.
