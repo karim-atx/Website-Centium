@@ -9,40 +9,32 @@ import {
   leaveAffiliation,
   type Affiliation,
 } from "../../services/professional-profile";
-import { mockGyms, mockClasses, mockMarketplaceListings } from "../../data/mockProfessionals";
-import { Briefcase, Building2, LogOut, MapPin, Calendar, MessageCircle, BadgeCheck, Send } from "lucide-react";
-import { BottomSheet } from "../../components/ui/BottomSheet";
+import { Building2, LogOut } from "lucide-react";
 import { CertificationSheet } from "../../components/profile/CertificationSheet";
 
-// V7 (QA 7.0): the professional's own Explore tab is not a consumer
-// marketplace — it's a set of job postings from businesses hiring, gated
-// behind a unique-ID affiliation (a professional can only be affiliated
-// with one business at a time, and hides the postings while affiliated).
-const jobCategories = [
-  { id: "gyms", label: "Gyms" },
-  { id: "classes", label: "Classes" },
-  { id: "wellness", label: "Wellness Services" },
-  { id: "meal_prep", label: "Meal Prepping" },
-] as const;
-
-function hash(input: string) {
-  let h = 0;
-  for (let i = 0; i < input.length; i++) h = (h * 31 + input.charCodeAt(i)) >>> 0;
-  return h;
-}
-
-// Mock postings, but their deadlines are generated forward from the real
-// date rather than a fixed one, so a demo run never shows a job closing in
-// the past.
-const deadlineFor = (h: number) => {
-  const d = new Date();
-  d.setDate(d.getDate() + (7 + (h % 21)));
-  return d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-};
+// The professional's Explore tab: their affiliation with a business, and
+// nothing else.
+//
+// THE JOB POSTINGS ARE GONE, AND REMOVED RATHER THAN EMPTIED. Four categories
+// listed "businesses hiring", built from mockGyms, mockClasses and
+// mockMarketplaceListings — invented venues — and then invented three more
+// facts per row on top of them: Part-time/Full-time, Hiring/Not hiring, and an
+// "Apply by" date, all derived from `hash(id)`. The detail sheet behind a card
+// offered "Message business", which set a local flag and sent nothing, and
+// "Share credentials directly", which did the same.
+//
+// AN EMPTY STATE WOULD HAVE BEEN A DIFFERENT LIE. "No openings yet" promises a
+// list that fills in, and there is no job, vacancy or posting table anywhere in
+// the schema for one to fill from — nor a way for a business to write one. So
+// the section is gone until a business can actually post a vacancy, and the
+// page keeps what was always real: the affiliation, read from the server, and
+// the credentials sheet.
+//
+// Navigation is unaffected: /app/explore still renders this page, which still
+// has content.
 
 export default function ProfessionalExplore() {
-  const { user, authUserId } = useApp();
-  const [category, setCategory] = useState<(typeof jobCategories)[number]["id"]>("gyms");
+  const { authUserId } = useApp();
   const [error, setError] = useState<string | null>(null);
   /**
    * THE REAL AFFILIATION, read from the server rather than local state.
@@ -56,26 +48,10 @@ export default function ProfessionalExplore() {
    */
   const [affiliation, setAffiliation] = useState<Affiliation | null>(null);
   const [leaving, setLeaving] = useState(false);
-  // V10 (QA 10.0): "Pressing on a job listing in the Job hiring, would go
-  // into the detail of that listing."
-  const [detailPosting, setDetailPosting] = useState<{
-    id: string;
-    name: string;
-    location: string;
-    type: string;
-    hiring: boolean;
-    deadline: string;
-  } | null>(null);
-  // QA 12.0: "When accessing a specific gym, you should be able to access
-  // the business without any ID. Upon entering... have the professional
-  // request messaging to the business as well as being able to submit
-  // credentials if not already submitted. If submitted he can just share
-  // them directly."
-  const [messageOpen, setMessageOpen] = useState(false);
-  const [messageText, setMessageText] = useState("");
-  const [messageSent, setMessageSent] = useState(false);
+  // The credentials sheet stays: submitting a certification is a real write
+  // (professional_profiles.certification_url), independent of the postings
+  // that used to link to it.
   const [certOpen, setCertOpen] = useState(false);
-  const [credentialsShared, setCredentialsShared] = useState(false);
 
   const affiliated = !!affiliation;
 
@@ -116,15 +92,13 @@ export default function ProfessionalExplore() {
     setAffiliation(null);
   };
 
-  const postingsFor = (id: (typeof jobCategories)[number]["id"]) => {
-    if (id === "gyms") return mockGyms.map((g) => ({ id: g.id, name: g.name, location: g.location }));
-    if (id === "classes") return mockClasses.map((c) => ({ id: c.id, name: c.gymName, location: c.location }));
-    return mockMarketplaceListings[id].map((l) => ({ id: l.id, name: l.name, location: l.location }));
-  };
-
   return (
     <div>
-      <PageHeader title="Explore" subtitle={affiliated ? "Your affiliation" : "Job postings hiring professionals"} showBack />
+      <PageHeader
+        title="Explore"
+        subtitle={affiliated ? "Your affiliation" : "Your business affiliation"}
+        showBack
+      />
 
       {/* QA 12.0: "you should be able to access the business without any
           ID" — browsing and opening a listing's detail (message/submit
@@ -172,169 +146,11 @@ export default function ProfessionalExplore() {
             Not affiliated with a business
           </p>
           <p className="text-[11px] text-charcoal-faint">
-            A business adds you to their team from their own account. Reach out to one below and they
-            can add you — there is nothing to enter here.
+            A business adds you to their team from their own account. Reach out to one directly and
+            they can add you — there is nothing to enter here.
           </p>
         </Card>
       )}
-
-      {/* V8 (QA 8.0): "add a 'for job hiring' title above the filters" */}
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-        For job hiring
-      </p>
-      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-5">
-        {jobCategories.map((c) => (
-          <button
-            key={c.id}
-            onClick={() => setCategory(c.id)}
-            className={`tap shrink-0 rounded-full px-4 py-2 text-xs font-bold transition-colors ${
-              category === c.id ? "bg-primary text-white" : "bg-cream-soft text-charcoal-faint"
-            }`}
-          >
-            {c.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="space-y-2.5">
-        {postingsFor(category).map((p) => {
-          const h = hash(p.id + category);
-          const type = h % 2 === 0 ? "Part-time" : "Full-time";
-          // V8 (QA 8.0): "show establishment name + green 'hiring'/red
-          // 'not hiring' text above the part-time/full-time badge + a
-          // job-listing deadline line under location."
-          const hiring = h % 3 !== 0;
-          return (
-            <Card
-              key={p.id}
-              interactive
-              onClick={() => {
-                setMessageSent(false);
-                setCredentialsShared(false);
-                setDetailPosting({ id: p.id, name: p.name, location: p.location, type, hiring, deadline: deadlineFor(h) });
-              }}
-              className="flex items-start gap-3 animate-fade-slide-up"
-            >
-              <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
-                <Briefcase size={18} className="text-primary-dark" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-charcoal truncate">{p.name}</p>
-                <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
-                  <MapPin size={11} /> {p.location}
-                </p>
-                <p className="text-[11px] text-charcoal-faint mt-0.5">Apply by {deadlineFor(h)}</p>
-              </div>
-              <div className="flex flex-col items-end gap-1 shrink-0">
-                <span
-                  className="text-[10px] font-bold"
-                  style={{ color: hiring ? "#3F9165" : "#C0392B" }}
-                >
-                  {hiring ? "Hiring" : "Not hiring"}
-                </span>
-                <span className="text-xs font-bold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1.5">
-                  {type}
-                </span>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      <BottomSheet open={!!detailPosting} onClose={() => setDetailPosting(null)} title={detailPosting?.name}>
-        {detailPosting && (
-          <div className="space-y-4 animate-fade-slide-up">
-            <div className="flex items-center gap-3">
-              <span className="w-12 h-12 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
-                <Briefcase size={20} className="text-primary-dark" />
-              </span>
-              <div>
-                <p className="flex items-center gap-1 text-sm text-charcoal-soft">
-                  <MapPin size={13} /> {detailPosting.location}
-                </p>
-                <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
-                  <Calendar size={11} /> Apply by {detailPosting.deadline}
-                </p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span
-                className="text-xs font-bold rounded-full px-2.5 py-1.5"
-                style={{
-                  color: detailPosting.hiring ? "#3F9165" : "#C0392B",
-                  background: detailPosting.hiring ? "#E3F3E9" : "#FBE7E4",
-                }}
-              >
-                {detailPosting.hiring ? "Hiring" : "Not hiring"}
-              </span>
-              <span className="text-xs font-bold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1.5">
-                {detailPosting.type}
-              </span>
-            </div>
-            <p className="text-sm text-charcoal-soft leading-relaxed">
-              This business is looking for an affiliated professional to run sessions/classes for their
-              members. Formally joining still uses their unique ID below — but you can reach out and share
-              your credentials right away.
-            </p>
-
-            <div className="space-y-2.5">
-              <Button
-                fullWidth
-                variant={messageSent ? "secondary" : "primary"}
-                onClick={() => setMessageOpen(true)}
-                disabled={messageSent}
-              >
-                <MessageCircle size={15} /> {messageSent ? "Message sent ✓" : "Message business"}
-              </Button>
-
-              {user.certificationUrl ? (
-                <Button
-                  fullWidth
-                  variant={credentialsShared ? "secondary" : "outline"}
-                  onClick={() => setCredentialsShared(true)}
-                  disabled={credentialsShared}
-                >
-                  <BadgeCheck size={15} /> {credentialsShared ? "Credentials shared ✓" : "Share credentials directly"}
-                </Button>
-              ) : (
-                <Button fullWidth variant="outline" onClick={() => setCertOpen(true)}>
-                  <BadgeCheck size={15} /> Submit credentials
-                </Button>
-              )}
-            </div>
-
-            {!detailPosting.hiring && (
-              <p className="text-xs text-charcoal-faint text-center">
-                Not currently hiring, but you can still introduce yourself for when they are.
-              </p>
-            )}
-          </div>
-        )}
-      </BottomSheet>
-
-      <BottomSheet open={messageOpen} onClose={() => setMessageOpen(false)} title={`Message ${detailPosting?.name ?? ""}`}>
-        <div className="space-y-4 animate-fade-slide-up">
-          <textarea
-            value={messageText}
-            onChange={(e) => setMessageText(e.target.value)}
-            placeholder={`Hi, I'm interested in the opening at ${detailPosting?.name ?? "your business"}...`}
-            rows={4}
-            className="w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3.5 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-          />
-          <Button
-            fullWidth
-            size="lg"
-            disabled={!messageText.trim()}
-            onClick={() => {
-              setMessageSent(true);
-              setMessageText("");
-              setMessageOpen(false);
-            }}
-          >
-            <Send size={14} /> Send
-          </Button>
-        </div>
-      </BottomSheet>
 
       <CertificationSheet open={certOpen} onClose={() => setCertOpen(false)} />
     </div>
