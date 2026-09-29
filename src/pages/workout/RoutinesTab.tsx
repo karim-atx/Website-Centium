@@ -25,7 +25,6 @@ import {
   pruneBlocks,
   ungroupBlock,
 } from "../../services/workout/blocks";
-import { setRowCount } from "../../services/workout/session";
 import {
   ChevronDown,
   ChevronRight,
@@ -162,34 +161,6 @@ export default function RoutinesTab() {
   };
 
   const closeMenu = () => setMenuFolderId(null);
-
-  // Iteration 6 "Team" §3.1: the floating "now playing" tile above the
-  // bottom nav. The dc.html markup for this screen is a compact mini-
-  // player (name, "Exercise N of total · ~M min left", a single
-  // pause/resume control, one thin progress bar) — CHANGE_MANIFEST.md's
-  // prose describes a much larger hero with separate Resume/Discard
-  // buttons and a weekly-completion strip that isn't in the markup at
-  // all, so this follows the markup (the literal-spec rule in CLAUDE.md).
-  const pausedRoutineId = Object.keys(pausedSessions)[0];
-  const pausedRoutine = pausedRoutineId ? routines.find((r) => r.id === pausedRoutineId) : undefined;
-  const pausedSession = pausedRoutineId ? pausedSessions[pausedRoutineId] : undefined;
-  let resumeInfo: { routine: Routine; exerciseIndex: number; minutesLeft: number; progress: number } | null = null;
-  if (pausedRoutine && pausedSession) {
-    const totalExercises = pausedRoutine.exercises.length || 1;
-    // setRowCount rather than `e.sets`, which is optional now and absent for
-    // an exercise nobody prescribed — the progress ring would have divided by
-    // the number of exercises instead of the number of sets.
-    const totalSets = pausedRoutine.exercises.reduce((s, e) => s + setRowCount(e).offered, 0) || 1;
-    const completedSets = pausedSession.logged.reduce((s, e) => s + e.sets.filter((set) => set.completed).length, 0);
-    const doneExercises = pausedSession.logged.filter((e) => e.sets.length > 0 && e.sets.every((set) => set.completed)).length;
-    const progress = Math.min(1, completedSets / totalSets);
-    resumeInfo = {
-      routine: pausedRoutine,
-      exerciseIndex: Math.min(totalExercises, doneExercises + 1),
-      minutesLeft: Math.max(1, Math.round(pausedRoutine.estimatedDurationMin * (1 - progress))),
-      progress,
-    };
-  }
 
   const FolderNode: React.FC<{ folder: RoutineFolder; depth: number }> = ({ folder, depth }) => {
     const folderRoutines = routines.filter((r) => r.folderId === folder.id);
@@ -742,38 +713,6 @@ export default function RoutinesTab() {
           document.body
         )}
 
-      {resumeInfo &&
-        createPortal(
-          <button
-            onClick={() => startRoutine(resumeInfo!.routine)}
-            className="tap fixed left-7 right-7 z-30 rounded-2xl bg-[#241F1B] px-[11px] py-[9px] text-left shadow-[0_10px_26px_rgba(0,0,0,0.22)]"
-            style={{ bottom: "calc(env(safe-area-inset-bottom) + 76px)" }}
-          >
-            <div className="flex items-center gap-2.5">
-              <span
-                className="w-[34px] h-[34px] rounded-[10px] flex items-center justify-center shrink-0"
-                style={{ background: "var(--gradient-teal-hero)" }}
-              >
-                <img src="/icon-workFilled-white.png" alt="" className="w-[18px] h-[18px] object-contain block" />
-              </span>
-              <span className="flex-1 min-w-0 block">
-                <span className="block text-[12px] font-bold tracking-[-0.01em] text-white whitespace-nowrap overflow-hidden text-ellipsis">
-                  {resumeInfo.routine.name}
-                </span>
-                <span className="block mt-0.5 text-[9.5px] font-medium text-white/[0.58]">
-                  Exercise {resumeInfo.exerciseIndex} of {resumeInfo.routine.exercises.length} · {resumeInfo.minutesLeft} min left
-                </span>
-              </span>
-              <span className="w-[30px] h-[30px] rounded-full bg-teal flex items-center justify-center shrink-0">
-                <Pause size={13} className="text-[#1D3B37]" fill="currentColor" />
-              </span>
-            </div>
-            <div className="mt-2 h-0.5 rounded-full bg-white/[0.18] overflow-hidden">
-              <div className="h-full bg-teal" style={{ width: `${Math.max(4, resumeInfo.progress * 100)}%` }} />
-            </div>
-          </button>,
-          document.body
-        )}
     </div>
   );
 }

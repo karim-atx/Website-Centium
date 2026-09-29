@@ -9,6 +9,7 @@ import { UnreadProvider } from "../../context/UnreadContext";
 import { CallProvider } from "../../context/CallContext";
 import { CallSurface } from "../calls/CallSurface";
 import { AchievementUnlockSheet } from "../mind/AchievementUnlockSheet";
+import { ActiveWorkoutBar } from "../workout/ActiveWorkoutBar";
 import { useApp } from "../../context/AppContext";
 
 /**
@@ -111,8 +112,9 @@ export const Layout: React.FC = () => {
             className={
               isClient
                 ? // Notch / Dynamic Island above, home indicator plus the
-                  // floating nav (and the WO17 bar) below.
-                  "max-w-[430px] mx-auto px-4 pt-[calc(env(safe-area-inset-top)+24px)] pb-[calc(env(safe-area-inset-bottom)+112px)]"
+                  // floating nav below, plus the WO17 bar while it shows
+                  // (--active-bar is its height + gap, else 0).
+                  "max-w-[430px] mx-auto px-4 pt-[calc(env(safe-area-inset-top)+24px)] pb-[calc(env(safe-area-inset-bottom)+112px+var(--active-bar,0px))]"
                 : "max-w-3xl mx-auto px-4 sm:px-6 pt-6 pb-28 lg:pb-12"
             }
           >
@@ -127,6 +129,7 @@ export const Layout: React.FC = () => {
           </main>
         </div>
         <BottomNav />
+        {isClient && <ActiveWorkoutBar />}
       </div>
       {/* Outside the layout div and portaled from there: a call must cover the
           navs too, and must not be clipped by any transformed ancestor. */}

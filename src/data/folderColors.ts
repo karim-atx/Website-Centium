@@ -91,3 +91,23 @@ export function loggerShades(family: FolderFamily): LoggerShades {
   if (family === PURPLE) return { ...derived, field: "#E9E5FB", fieldBorder: "#D8D1F3", ink: "#5B47BF" };
   return derived;
 }
+
+/**
+ * The WO17 active-workout bar: the folder family's dark (tile) shade behind
+ * white text, and a lighter tint for the progress line. Per 03 "WO17" a
+ * routine with no folder falls back to #7D67D9. The lighter tints are
+ * measured from the WO17 frame (teal #A2C8C2, lavender #C2B3FA); the frame
+ * has none for the other folder colours or the no-folder fallback, so those
+ * are DERIVED: the bar colour 55% of the way to white.
+ */
+export function activeBarShades(
+  routine: Pick<Routine, "folderId"> | null | undefined,
+  folders: RoutineFolder[]
+): { bg: string; line: string } {
+  const folder = routine?.folderId ? folders.find((f) => f.id === routine.folderId) : undefined;
+  if (!folder) return { bg: "#7D67D9", line: mixHex("#7D67D9", "#FFFFFF", 0.55) };
+  const family = folderFamily(folder, folders.indexOf(folder));
+  if (family === TEAL) return { bg: TEAL.tile, line: "#A2C8C2" };
+  if (family === PURPLE) return { bg: PURPLE.tile, line: "#C2B3FA" };
+  return { bg: family.tile, line: mixHex(family.tile, "#FFFFFF", 0.55) };
+}

@@ -177,6 +177,9 @@ export const WorkoutSessionSheet: React.FC<{
   const [rest, setRest] = useState<{ exIdx: number; setIdx: number; endsAt: number } | null>(null);
   const [needReps, setNeedReps] = useState<string | null>(null);
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
+  const scrollRef = useRef<HTMLDivElement>(null);
+  // The restored list, until the logger has scrolled to its current exercise.
+  const scrollToCurrent = useRef<LoggedExercise[] | null>(null);
 
   const prefill = useMemo(
     () => (routineId ? lastSessionPrefill(workoutSessions, routineId) : new Map<string, { weight: number | null; reps: number | null }[]>()),
@@ -202,6 +205,7 @@ export const WorkoutSessionSheet: React.FC<{
     const paused = routineId ? pausedSessions[routineId] : undefined;
     setTemplate({ exercises, blocks });
     if (paused) {
+      scrollToCurrent.current = paused.logged;
       setLogged(paused.logged);
       setBlockResults(Object.fromEntries((paused.blockResults ?? []).map((r) => [r.id, r])));
       const start = new Date(paused.startedAt);
@@ -234,11 +238,20 @@ export const WorkoutSessionSheet: React.FC<{
     [logged]
   );
   const hasProgress = started || elapsed > 0 || logged.some((ex) => ex.sets.some((s) => s.outcome != null || s.completed));
-  // The first exercise with a set still to log, for "Exercise X of Y" (WO17).
-  const currentExercise = Math.max(
-    0,
-    logged.findIndex((ex) => ex.sets.some((s) => !s.completed && s.outcome == null))
-  );
+  // The first exercise with a set still to log, for "Exercise X of Y" (WO17);
+  // once every set is logged, the last exercise.
+  const firstOpen = logged.findIndex((ex) => ex.sets.some((s) => !s.completed && s.outcome == null));
+  const currentExercise = firstOpen === -1 ? Math.max(0, logged.length - 1) : firstOpen;
+
+  // A resumed session (the WO17 bar, a Routines row) reopens at the current exercise.
+  useEffect(() => {
+    // Only once the restored list has rendered (the first pass still shows a fresh one).
+    if (!open || !scrollToCurrent.current || logged !== scrollToCurrent.current) return;
+    scrollToCurrent.current = null;
+    if (currentExercise === 0) return;
+    scrollRef.current?.querySelector(`[data-ex="${currentExercise}"]`)?.scrollIntoView({ block: "start" });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, logged]);
 
   // THE ACTIVE SESSION (03, WO17): mirrored whenever the clock or progress
   // changes, so the bar and the Routines row read the same state.
@@ -506,8 +519,9 @@ export const WorkoutSessionSheet: React.FC<{
     return (
       <div
         key={exIdx}
+        data-ex={exIdx}
         className="bg-white"
-        style={{ border: "1px solid rgba(36,31,27,0.08)", borderRadius: 16, overflow: "hidden", paddingBottom: 12 }}
+        style={{ border: "1px solid rgba(36,31,27,0.08)", borderRadius: 16, overflow: "hidden", paddingBottom: 12, scrollMarginTop: 12 }}
       >
         <div className="flex items-center" style={{ gap: 6, padding: "13px 14px 8px" }}>
           <p className="whitespace-nowrap" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#241F1B", letterSpacing: "-0.01em" }}>
@@ -747,7 +761,7 @@ export const WorkoutSessionSheet: React.FC<{
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto" style={{ padding: 12 }}>
+        <div ref={scrollRef} className="flex-1 overflow-y-auto" style={{ padding: 12 }}>
           <div className="flex flex-col" style={{ gap: 12 }}>
             {groupIntoRuns(template.exercises, template.blocks).map((run) => {
               const indices = run.members.map((m) => template.exercises.indexOf(m));

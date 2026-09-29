@@ -39,7 +39,7 @@ export const Toast: React.FC<{
       style={{
         left: "calc(var(--app-gutter) + 16px)",
         right: "calc(var(--app-gutter) + 16px)",
-        bottom: "calc(env(safe-area-inset-bottom) + 88px)",
+        bottom: "calc(env(safe-area-inset-bottom) + 88px + var(--active-bar, 0px))",
         gap: 10,
         background: "#241F1B",
         borderRadius: 12,
