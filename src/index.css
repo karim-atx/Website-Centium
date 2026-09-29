@@ -501,3 +501,11 @@ body {
 .set-slider:focus-visible {
   box-shadow: 0 0 0 3px rgba(174, 161, 220, 0.45);
 }
+
+/* WO24 Percentage slider: a white thumb ringed in #AEA1DC on the grey track. */
+.plate-slider::-webkit-slider-thumb {
+  border: 1.5px solid #aea1dc;
+}
+.plate-slider::-moz-range-thumb {
+  border: 1.5px solid #aea1dc;
+}

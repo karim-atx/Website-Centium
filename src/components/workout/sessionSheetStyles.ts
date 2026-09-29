@@ -1,7 +1,7 @@
 import type React from "react";
 
-// CentiumFrame.dc.html sessionSheetBody(): the option buttons shared by the
-// RPE calculator, plate calculator and set-options sheets. Selected = #A299DE
+// CentiumFrame.dc.html sessionSheetBody(): option-button styling. Since the
+// 2026-09-29 handover (WO23, WO24) only the Set options RPE chips use it. Selected = #A299DE
 // fill + white ink; idle = white with a 1px #E7E7EC border. Radius and
 // padding differ per row, so callers pass them.
 export const sessionOptionStyle = (
