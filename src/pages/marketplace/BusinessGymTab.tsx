@@ -7,7 +7,7 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { useMembershipPlans } from "../../hooks/useBusinessCatalog";
 import type { MembershipPlanRow } from "../../services/membership-plans";
-import { QrPattern } from "../../components/marketplace/GymDetailSheet";
+import { QrPattern } from "../../components/marketplace/QrPattern";
 import { Plus, Pencil, Trash2, KeyRound } from "lucide-react";
 import clsx from "clsx";
 import type { MembershipBilling } from "../../types";

@@ -8,7 +8,7 @@ import { useApp } from "../../context/AppContext";
 import { useBusinessTeam } from "../../hooks/useBusinessTeam";
 import { useBusinessClasses } from "../../hooks/useBusinessCatalog";
 import { Plus, Trash2, Users, Clock } from "lucide-react";
-import { QrPattern } from "../../components/marketplace/GymDetailSheet";
+import { QrPattern } from "../../components/marketplace/QrPattern";
 
 const classTypeOptions = ["Group fitness", "Yoga", "Spin", "HIIT", "Personal training", "Physio session"];
 const paymentOptions = ["Card", "Cash", "Whish Money"];
