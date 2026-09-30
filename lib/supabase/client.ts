@@ -1,3 +1,6 @@
+// First, so a sign-in error in the return URL is read before the client
+// initialises (see oauthReturn.ts).
+import './oauthReturn'
 import { createBrowserClient, parseCookieHeader, serializeCookieHeader } from '@supabase/ssr'
 import { getSupabaseConfig } from './config'
 import { getRememberMe } from './rememberMe'

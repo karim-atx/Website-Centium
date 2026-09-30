@@ -13,10 +13,13 @@ import {
   signUpWithEmail,
   isDisposableEmail,
   DISPOSABLE_EMAIL_MESSAGE,
+  consumeReturnedAuthError,
+  describeReturnedAuthError,
 } from "../../services/auth";
 import { setRememberMe as setRememberMePreference } from "../../../lib/supabase/rememberMe";
 import { clearSessionArrived, sessionArrivedPending } from "../../../lib/supabase/tabIdentity";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
+import { useSingleFlight } from "../../hooks/useSingleFlight";
 import {
   passwordChecks,
   meetsMinimumPassword,
@@ -88,9 +91,16 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
    * Without it the user would simply reappear at sign-in and fail again with
    * the same code.
    */
-  const [error, setError] = useState<string | null>(() =>
-    consumeAccountSuspended() ? SUSPENDED_MESSAGE : null
-  );
+  //
+  // The same goes for a Google sign-in refused on the way back (a burner
+  // domain, a suspension, a cancel at Google): the reason only exists in the
+  // redirect URL, read and cleared by lib/supabase/oauthReturn.ts.
+  const [error, setError] = useState<string | null>(() => {
+    if (consumeAccountSuspended()) return SUSPENDED_MESSAGE;
+    const returned = consumeReturnedAuthError();
+    return returned ? describeReturnedAuthError(returned) : null;
+  });
+  const singleFlight = useSingleFlight();
   const [busy, setBusy] = useState(false);
 
   const email = draft.email;
@@ -155,6 +165,9 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
       ? "rgb(var(--c-status-caution))"
       : "rgb(var(--c-status-good))";
   const meetsMinimum = meetsMinimumPassword(password);
+  // Sign up stays disabled until the password meets the enforced rule and the
+  // confirmation matches it, as the checklist below shows.
+  const signUpReady = meetsMinimum && confirmPassword === password;
 
   const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
@@ -385,8 +398,16 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   }
 
   if (mode === "forgot") {
+    const canSendReset = !resetSent && isValidEmail(forgotEmail) && !busy;
     return (
-      <div className="flex-1 flex flex-col animate-fade-slide-up">
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (canSendReset) void singleFlight(handleSendReset);
+        }}
+        className="flex-1 flex flex-col animate-fade-slide-up"
+      >
         <h1 className="font-display text-2xl font-bold text-charcoal mb-2">Reset your password</h1>
         <p className="text-charcoal-soft text-sm mb-6">
           Enter the email on your account and we'll send a reset link.
@@ -412,21 +433,17 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
         <div className="mt-8">
           {error && <p className="text-xs font-semibold text-status-high mb-3 text-center">{error}</p>}
           {!resetSent ? (
-            <Button
-              fullWidth
-              size="lg"
-              disabled={!isValidEmail(forgotEmail) || busy}
-              onClick={handleSendReset}
-            >
+            <Button type="submit" fullWidth size="lg" disabled={!canSendReset}>
               {busy ? "Sending…" : "Send reset link"}
             </Button>
           ) : (
-            <Button fullWidth size="lg" onClick={() => { setMode("signIn"); setResetSent(false); }}>
+            <Button type="button" fullWidth size="lg" onClick={() => { setMode("signIn"); setResetSent(false); }}>
               Back to sign in
             </Button>
           )}
           {!resetSent && (
             <button
+              type="button"
               onClick={() => setMode("signIn")}
               className="tap w-full text-center text-sm font-semibold text-charcoal-soft mt-4"
             >
@@ -434,12 +451,23 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
             </button>
           )}
         </div>
-      </div>
+      </form>
     );
   }
 
+  // One rule for the button and for Enter / the keyboard's Go key: a real
+  // form submit, refused while the button is disabled or a request is out.
+  const submitDisabled = busy || (mode === "signUp" && (isBurner || !signUpReady));
   return (
-    <div className="flex-1 flex flex-col animate-fade-slide-up">
+    <form
+      noValidate
+      onSubmit={(e) => {
+        e.preventDefault();
+        if (submitDisabled) return;
+        void singleFlight(mode === "signIn" ? handleSignIn : handleSignUp);
+      }}
+      className="flex-1 flex flex-col animate-fade-slide-up"
+    >
       <h1 className="font-display text-2xl font-bold text-charcoal mb-2">
         {mode === "signIn" ? "Welcome back" : "Create your account"}
       </h1>
@@ -499,7 +527,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
               />
               <span className="text-xs font-semibold text-charcoal-soft">Remember me</span>
             </label>
-            <button onClick={() => setMode("forgot")} className="tap text-xs font-semibold text-primary">
+            <button type="button" onClick={() => setMode("forgot")} className="tap text-xs font-semibold text-primary">
               Forgot password?
             </button>
           </div>
@@ -562,12 +590,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
 
       <div className="mt-8">
         {error && <p className="text-xs font-semibold text-status-high mb-3 text-center">{error}</p>}
-        <Button
-          fullWidth
-          size="lg"
-          disabled={busy || isBurner}
-          onClick={mode === "signIn" ? handleSignIn : handleSignUp}
-        >
+        <Button type="submit" fullWidth size="lg" disabled={submitDisabled}>
           {busy ? "Please wait…" : mode === "signIn" ? "Sign in" : "Sign up"}
         </Button>
 
@@ -577,11 +600,12 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
           <div className="flex-1 h-px bg-charcoal/10" />
         </div>
 
-        <Button fullWidth size="lg" variant="outline" disabled={busy} onClick={handleGoogle}>
+        <Button type="button" fullWidth size="lg" variant="outline" disabled={busy} onClick={handleGoogle}>
           Continue with Google
         </Button>
 
         <button
+          type="button"
           onClick={() => {
             setError(null);
             // Otherwise leaving sign-up mid-mismatch and coming back shows the
@@ -596,6 +620,6 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
         </button>
 
       </div>
-    </div>
+    </form>
   );
 };

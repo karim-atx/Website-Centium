@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { ShieldCheck } from "lucide-react";
 import { Button } from "../ui/Button";
+import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { useApp } from "../../context/AppContext";
 import { getMfaStatus, verifyTotp } from "../../services/mfa";
 
@@ -31,6 +32,13 @@ export const MfaChallenge: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const singleFlight = useSingleFlight();
+  // autoFocus alone misses: the field is disabled until the factor loads, and
+  // a disabled field cannot take focus. Focus it the moment it is usable.
+  const codeRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!loading && factorId) codeRef.current?.focus();
+  }, [loading, factorId]);
   const [error, setError] = useState<string | null>(null);
 
   // Which factor to challenge. mfaPending already told the guard that one
@@ -81,7 +89,16 @@ export const MfaChallenge: React.FC = () => {
 
   return (
     <div className="min-h-[100dvh] flex items-center justify-center bg-cream px-6">
-      <div className="w-full max-w-sm text-center space-y-4">
+      {/* A real form: Enter, and the keyboard's Go key, verify exactly as the
+          button does, and never while it is disabled. */}
+      <form
+        noValidate
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (!busy && code.length === 6) void singleFlight(submit);
+        }}
+        className="w-full max-w-sm text-center space-y-4"
+      >
         <div className="w-12 h-12 rounded-2xl bg-primary-pale flex items-center justify-center mx-auto">
           <ShieldCheck size={22} className="text-primary-dark" />
         </div>
@@ -93,11 +110,9 @@ export const MfaChallenge: React.FC = () => {
         </p>
 
         <input
+          ref={codeRef}
           value={code}
           onChange={(e) => setCode(e.target.value.replace(/[^\d]/g, "").slice(0, 6))}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") void submit();
-          }}
           // inputMode over type="number": a phone gets the numeric keypad
           // without the spinner, the scroll-to-change behaviour, or the
           // silent value loss that type="number" brings to a padded code.
@@ -112,7 +127,7 @@ export const MfaChallenge: React.FC = () => {
 
         {error && <p className="text-[11.5px] font-semibold text-status-high">{error}</p>}
 
-        <Button fullWidth size="lg" onClick={() => void submit()} disabled={busy || code.length < 6}>
+        <Button type="submit" fullWidth size="lg" disabled={busy || code.length < 6}>
           {busy ? "Checking…" : "Verify"}
         </Button>
 
@@ -127,12 +142,13 @@ export const MfaChallenge: React.FC = () => {
         </p>
 
         <button
+          type="button"
           onClick={() => void signOut()}
           className="tap w-full text-center text-sm font-semibold text-charcoal-soft"
         >
           Not you? <span className="text-primary">Sign out</span>
         </button>
-      </div>
+      </form>
     </div>
   );
 };

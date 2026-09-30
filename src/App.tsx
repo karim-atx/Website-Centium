@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from "react";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { Button } from "./components/ui/Button";
 import { MfaChallenge } from "./components/auth/MfaChallenge";
 import { TabIdentityNotice } from "./components/auth/TabIdentityNotice";
+import { hasReturnedAuthError } from "./services/auth";
 import { Layout } from "./components/navigation/Layout";
 import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
 import { Home as MarketingHome } from "./marketing/pages/Home";
@@ -310,8 +311,23 @@ const RedirectIfOnboarded: React.FC<{ children: React.ReactNode }> = ({ children
   return <>{children}</>;
 };
 
+// GoTrue sends a refused sign-in to the Site URL when it cannot use
+// redirect_to; the explanation lives on the auth step, so go there. Once,
+// on first load only.
+function ReturnedAuthErrorRoute() {
+  const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const [elsewhere] = useState(() => hasReturnedAuthError() && pathname !== "/app/onboarding");
+  useEffect(() => {
+    if (elsewhere) navigate("/app/onboarding", { replace: true });
+  }, [elsewhere, navigate]);
+  return null;
+}
+
 function AppRoutes() {
   return (
+    <>
+    <ReturnedAuthErrorRoute />
     <Routes>
       {/* Public marketing site */}
       <Route element={<MarketingLayout />}>
@@ -395,6 +411,7 @@ function AppRoutes() {
           marketing 404 — is what catches an unmatched /app/... path. */}
       <Route path="/app/*" element={<Navigate to="/" replace />} />
     </Routes>
+    </>
   );
 }
 

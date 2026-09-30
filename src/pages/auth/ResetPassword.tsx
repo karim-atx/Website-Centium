@@ -5,6 +5,7 @@ import { Lock, Eye, EyeOff, Check, X, ShieldCheck } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { updatePassword } from "../../services/auth";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
+import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { getMfaStatus, verifyTotp } from "../../services/mfa";
 import {
   passwordChecks,
@@ -34,6 +35,7 @@ export default function ResetPassword() {
   const passwordVisibility = usePasswordVisibility();
   const showPassword = passwordVisibility.shown;
   const [busy, setBusy] = useState(false);
+  const singleFlight = useSingleFlight();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
 
@@ -193,7 +195,14 @@ export default function ResetPassword() {
           // replaced under them a moment later.
           <p className="text-sm text-charcoal-faint">Checking your account…</p>
         ) : needsMfa ? (
-          <div className="space-y-4">
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!busy && mfaCode.length === 6) void singleFlight(submitMfa);
+            }}
+            className="space-y-4"
+          >
             <div className="flex items-center gap-2.5 rounded-2xl bg-primary-pale px-4 py-3.5">
               <ShieldCheck size={16} className="shrink-0 text-primary-dark" />
               <span className="text-sm text-primary-dark">
@@ -206,9 +215,6 @@ export default function ResetPassword() {
             <input
               value={mfaCode}
               onChange={(e) => setMfaCode(e.target.value.replace(/[^\d]/g, "").slice(0, 6))}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void submitMfa();
-              }}
               inputMode="numeric"
               autoComplete="one-time-code"
               autoFocus
@@ -219,12 +225,7 @@ export default function ResetPassword() {
 
             {error && <p className="text-xs font-semibold text-status-high text-center">{error}</p>}
 
-            <Button
-              fullWidth
-              size="lg"
-              onClick={() => void submitMfa()}
-              disabled={busy || mfaCode.length < 6}
-            >
+            <Button type="submit" fullWidth size="lg" disabled={busy || mfaCode.length < 6}>
               {busy ? "Checking…" : "Continue"}
             </Button>
 
@@ -236,6 +237,7 @@ export default function ResetPassword() {
             </p>
 
             <button
+              type="button"
               onClick={() => {
                 clearRecovery();
                 void signOut();
@@ -245,19 +247,30 @@ export default function ResetPassword() {
             >
               Cancel and sign out
             </button>
-          </div>
+          </form>
         ) : (
-          <div className="space-y-4">
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (canSubmit) void singleFlight(handleSubmit);
+            }}
+            className="space-y-4"
+          >
             <label className="block relative">
               <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
               <input
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="New password"
+                // First field of the step, so Enter-to-submit works without a
+                // pointer, including straight after the code step unmounts.
+                autoFocus
                 type={showPassword ? "text" : "password"}
                 className={inputClass}
               />
               <button
+                type="button"
                 onClick={passwordVisibility.toggle}
                 className="tap absolute right-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
                 aria-label={showPassword ? "Hide password" : "Show password"}
@@ -325,13 +338,14 @@ export default function ResetPassword() {
               <p className="text-xs font-semibold text-status-high text-center">{error}</p>
             )}
 
-            <Button fullWidth size="lg" onClick={handleSubmit} disabled={!canSubmit}>
+            <Button type="submit" fullWidth size="lg" disabled={!canSubmit}>
               {busy ? "Saving…" : "Set new password"}
             </Button>
 
             {/* The way out for someone who opened the link by mistake. Signing
                 out ends the recovery session rather than leaving it usable. */}
             <button
+              type="button"
               onClick={() => {
                 clearRecovery();
                 void signOut();
@@ -341,7 +355,7 @@ export default function ResetPassword() {
             >
               Cancel and sign out
             </button>
-          </div>
+          </form>
         )}
       </div>
     </div>

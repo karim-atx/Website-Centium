@@ -5,10 +5,13 @@ import {
   consumeAccountSuspended,
 } from "../../../lib/supabase/suspension";
 import type { AuthError, Session } from "@supabase/supabase-js";
+import { DISPOSABLE_EMAIL_MESSAGE, isDisposableEmailText } from "./messages";
 
 // Re-exported so the auth UI has one import for everything auth-shaped, and
 // so nothing outside this layer needs to know the detection lives in lib/.
 export { SUSPENDED_MESSAGE, consumeAccountSuspended };
+export { DISPOSABLE_EMAIL_MESSAGE, describeReturnedAuthError } from "./messages";
+export { consumeReturnedAuthError, hasReturnedAuthError } from "../../../lib/supabase/oauthReturn";
 
 // Real Supabase auth, replacing the format-validation-only "prototype auth"
 // this screen used to run on. Everything here is a thin wrapper whose job is
@@ -139,16 +142,9 @@ function isEmailNotConfirmed(error: AuthError): boolean {
 // in the field; that is a courtesy, the hook is the control, and a failed
 // pre-flight never stops a sign-up.
 
-/** The one sentence, word for word the hook's own. */
-export const DISPOSABLE_EMAIL_MESSAGE =
-  "Please use a permanent email address. Temporary email addresses can't be used to create an account.";
-
-/**
- * The hook's refusal: a 400 whose code GoTrue reports as "unknown", so the
- * sentence is the only thing that identifies it.
- */
+/** The hook's refusal at submit: a 400 identified by its sentence (see messages.ts). */
 export function isDisposableEmailRefusal(error: AuthError): boolean {
-  return /temporary email address|permanent email address/i.test(error.message ?? "");
+  return isDisposableEmailText(error.message);
 }
 
 /** The pre-flight. False when it cannot answer: the hook still decides at submit. */

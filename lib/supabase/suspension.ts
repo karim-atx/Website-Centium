@@ -28,12 +28,8 @@
  * are accepted here for the same reason it accepts both.
  */
 
-/** The one sentence a suspended user should ever see, wherever they hit it. */
-export const SUSPENDED_MESSAGE =
-  "Your account has been suspended. Contact support if you believe this is a mistake.";
-
-/** Supabase's error code for a banned user, as shipped in auth-js's ErrorCode union. */
-export const USER_BANNED_CODE = "user_banned";
+import { USER_BANNED_CODE } from "./suspensionMessage";
+export { SUSPENDED_MESSAGE, USER_BANNED_CODE } from "./suspensionMessage";
 
 /**
  * Survives the forced sign-out and the remount that follows it.

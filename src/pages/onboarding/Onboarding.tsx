@@ -23,6 +23,7 @@ import { ActivityStep } from "./ActivityStep";
 import { RecoveryStep } from "./RecoveryStep";
 import { TrackingStep } from "./TrackingStep";
 import { ReadyStep } from "./ReadyStep";
+import { hasReturnedAuthError } from "../../services/auth";
 
 export interface OnboardingDraft {
   email: string;
@@ -159,7 +160,10 @@ function clearPersistedDraft() {
 }
 
 export default function Onboarding() {
-  const [step, setStep] = useState(loadStep);
+  // A sign-in that came back refused opens on the auth step, where it is explained.
+  const [step, setStep] = useState(() =>
+    hasReturnedAuthError() ? stepsFor(null, false).indexOf("auth") : loadStep()
+  );
   const [draft, setDraft] = useState<OnboardingDraft>(loadDraft);
   const {
     completeOnboarding,

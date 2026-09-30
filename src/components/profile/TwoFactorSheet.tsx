@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
+import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { useApp } from "../../context/AppContext";
 import {
   enrollTotp,
@@ -39,6 +40,7 @@ export const TwoFactorSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   const [enrollment, setEnrollment] = useState<TotpEnrollment | null>(null);
   const [code, setCode] = useState("");
   const [busy, setBusy] = useState(false);
+  const singleFlight = useSingleFlight();
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [removing, setRemoving] = useState(false);
@@ -272,7 +274,14 @@ export const TwoFactorSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             </Button>
           </>
         ) : step === "verify" ? (
-          <>
+          <form
+            noValidate
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!busy && code.length === 6) void singleFlight(confirm);
+            }}
+            className="space-y-4"
+          >
             <p className="text-[12.5px] text-charcoal-soft leading-relaxed">
               Enter the 6-digit code your authenticator app is showing now. This confirms it's set
               up correctly before we switch anything on.
@@ -280,9 +289,6 @@ export const TwoFactorSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             <input
               value={code}
               onChange={(e) => setCode(e.target.value.replace(/[^\d]/g, "").slice(0, 6))}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void confirm();
-              }}
               inputMode="numeric"
               autoComplete="one-time-code"
               autoFocus
@@ -291,15 +297,11 @@ export const TwoFactorSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-center text-xl font-semibold tracking-[0.4em] text-charcoal placeholder:text-charcoal-faint placeholder:tracking-[0.4em] focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
             />
             {error && <p className="text-xs font-semibold text-status-high text-center">{error}</p>}
-            <Button
-              fullWidth
-              size="lg"
-              onClick={() => void confirm()}
-              disabled={busy || code.length < 6}
-            >
+            <Button type="submit" fullWidth size="lg" disabled={busy || code.length < 6}>
               {busy ? "Checking…" : "Confirm"}
             </Button>
             <button
+              type="button"
               onClick={() => {
                 setError(null);
                 setStep("scan");
@@ -308,7 +310,7 @@ export const TwoFactorSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             >
               Back to the code
             </button>
-          </>
+          </form>
         ) : step === "recovery" ? (
           <>
             {/* AFTER IT IS ON, NOT BEFORE, and that is the deliberate part.
