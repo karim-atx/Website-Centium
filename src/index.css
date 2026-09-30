@@ -431,11 +431,18 @@ body {
    a 24px chevron, a 24px-tall switch) keep the size they were drawn at.
    :where() keeps both rules at zero specificity, so a positioning utility
    (absolute, fixed, sticky) on the same element always wins. .hit is the same
-   for a control that should not get the press animation of .tap. */
+   for a control that should not get the press animation of .tap.
+
+   ONLY ON LEAF CONTROLS. The box is painted last, over the element's own
+   children, so on a tappable CONTAINER (the Home streak board, a diary meal
+   header) it swallowed every tap meant for a control inside it: the plant's
+   species button and the meal "options" buttons opened the container instead.
+   A control with an interactive descendant is a container, and big enough
+   already, so it gets no hit box. */
 :where(.tap, .hit) {
   position: relative;
 }
-:where(.tap, .hit)::after {
+:where(.tap, .hit):where(:not(:has(button, a[href], input, select, textarea, [role="button"])))::after {
   content: "";
   position: absolute;
   left: 50%;
