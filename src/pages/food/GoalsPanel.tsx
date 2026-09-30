@@ -1,7 +1,8 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useState } from "react";
 import type React from "react";
 import { Chip } from "../../components/ui/Chip";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
+import { PopupMenu } from "../../components/ui/PopupMenu";
 import { MacroSplitEditor, MACRO_REBALANCE_NOTE } from "../../components/food/MacroSplitEditor";
 import { WeightTrendChart } from "../../components/health/WeightTrendChart";
 import { useApp } from "../../context/AppContext";
@@ -63,29 +64,10 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
   const calorieDraft = calorieEdit ?? String(nutritionGoal.targetCalories);
   const setCalorieDraft = (v: string | null) => setCalorieEdit(v);
   const [planError, setPlanError] = useState<string | null>(null);
-  const [restrictionOpen, setRestrictionOpen] = useState(false);
-  const restrictionContentRef = useRef<HTMLDivElement>(null);
-  // The picker, its "no selection" empty state, and its "X restriction
-  // active" summary line are three different heights of the SAME slot —
-  // previously the summary line was a separate element that popped in
-  // instantly the moment an option was tapped, right next to the picker
-  // box which was still mid-collapse from its own separate animation, so
-  // the two uncoordinated layout changes landing at once looked like a
-  // glitch. Measuring this slot's actual content height and animating a
-  // single max-height/margin between whatever it was and whatever it
-  // becomes makes every transition between all three states one smooth
-  // motion, regardless of what triggered it.
-  const [restrictionSlotHeight, setRestrictionSlotHeight] = useState(0);
-  useLayoutEffect(() => {
-    setRestrictionSlotHeight(restrictionContentRef.current?.scrollHeight ?? 0);
-  }, [restrictionOpen, dietaryRestriction]);
-  // This dropdown sits at the bottom of the page, and when it opens while
-  // already scrolled near the end, the browser doesn't auto-scroll to
-  // reveal the new content — it opens partly hidden behind the fixed
-  // bottom nav (which also swallows taps in the overlap zone).
-  useEffect(() => {
-    if (restrictionOpen) restrictionContentRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [restrictionOpen]);
+  // FO6: the options open in the shared floating popup (PopupMenu, the
+  // Nutrient Summary filter style) anchored to the chip, not inline.
+  const [restrictionAnchor, setRestrictionAnchor] = useState<HTMLElement | null>(null);
+  const restrictionOpen = !!restrictionAnchor;
   // The desired-weight field shows the saved goal until edited (never the
   // current weight: FO4.2 confirms on blur, and blurring an untouched field
   // must not try to confirm a goal equal to where the user already is).
@@ -580,7 +562,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
           <Chip
             active={!!dietaryRestriction || restrictionOpen}
             className="!px-2.5 !py-[5px] !text-[11px] !leading-[14px] !gap-[5px]"
-            onClick={() => setRestrictionOpen((v) => !v)}
+            onClick={(e) => setRestrictionAnchor(restrictionOpen ? null : e.currentTarget)}
           >
             <span className="flex items-center gap-1">
               Dietary restriction
@@ -595,42 +577,30 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
             active — weight goal, calorie target and macro distribution can only be changed by them.
           </p>
         )}
-        {/* One slot, one animated height — see the state comment above for
-            why this used to glitch. */}
-        <div
-          className="overflow-hidden transition-[height,margin-top] duration-300 ease-out"
-          style={{ height: restrictionSlotHeight, marginTop: restrictionSlotHeight > 0 ? 8 : 0 }}
-        >
-          <div ref={restrictionContentRef}>
-            {restrictionOpen ? (
-              <div className="bg-cream-soft rounded-2xl p-2 space-y-1 scroll-mb-24">
-                {dietaryRestrictionOptions.map((r) => (
-                  <button
-                    key={r.value}
-                    onClick={() => {
-                      setDietaryRestriction(dietaryRestriction === r.value ? null : r.value);
-                      setRestrictionOpen(false);
-                    }}
-                    className={`tap w-full text-left rounded-xl px-3 py-2 text-sm font-medium transition-colors ${
-                      dietaryRestriction === r.value ? "bg-primary text-white" : "text-charcoal hover:bg-cream-card"
-                    }`}
-                  >
-                    {r.label}
-                  </button>
-                ))}
-              </div>
-            ) : dietaryRestriction ? (
-              <button
-                onClick={() => setDietaryRestriction(null)}
-                className="tap flex items-center gap-1.5 text-xs font-semibold text-charcoal-faint"
-              >
-                <X size={12} />
-                {dietaryRestrictionOptions.find((r) => r.value === dietaryRestriction)?.label} active —
-                incompatible Diary items are highlighted. Tap to clear.
-              </button>
-            ) : null}
-          </div>
-        </div>
+        <PopupMenu
+          open={restrictionOpen}
+          anchor={restrictionAnchor}
+          onClose={() => setRestrictionAnchor(null)}
+          options={dietaryRestrictionOptions}
+          selected={dietaryRestriction}
+          onSelect={(value) => {
+            // Unchanged: tapping the active restriction clears it.
+            setDietaryRestriction(dietaryRestriction === value ? null : value);
+            setRestrictionAnchor(null);
+          }}
+          width={160}
+          align="right"
+        />
+        {dietaryRestriction && (
+          <button
+            onClick={() => setDietaryRestriction(null)}
+            className="tap flex items-center gap-1.5 text-xs font-semibold text-charcoal-faint mt-2"
+          >
+            <X size={12} />
+            {dietaryRestrictionOptions.find((r) => r.value === dietaryRestriction)?.label} active — incompatible Diary
+            items are highlighted. Tap to clear.
+          </button>
+        )}
       </section>
     </div>
   );
