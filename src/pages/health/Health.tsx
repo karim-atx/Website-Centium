@@ -16,6 +16,7 @@ import { PHASE_COLOR, PHASE_LABEL } from "../../services/cycle/guidance";
 import { PregnancyHealthCard } from "../../components/pregnancy/PregnancyGuidance";
 import { PREGNANCY_COLOR } from "../../components/pregnancy/PregnancyRing";
 import { gestationOn } from "../../services/pregnancy";
+import { daysBetween } from "../../services/cycle/hormones";
 import { bmiApplies } from "../../services/pregnancy/weight";
 import { BMI_NOT_USED } from "../../services/pregnancy/guidance";
 import { BloodPressureDetailSheet } from "../../components/health/BloodPressureDetailSheet";
@@ -644,6 +645,17 @@ export default function Health() {
                     }`
                   : "Log a period to start"}
             </span>
+            {/* Decision 5 (MO11 frame): the next period, only when there is a
+                prediction (this card only renders when the section is shown). */}
+            {!pregnancy && cyclePrediction?.nextPeriodStart && (() => {
+              const n = daysBetween(today, cyclePrediction.nextPeriodStart);
+              if (n < 0) return null;
+              return (
+                <span className="block text-[10px] text-charcoal-tertiary truncate">
+                  {n === 0 ? "Next period expected today" : `Next period in about ${n} ${n === 1 ? "day" : "days"}`}
+                </span>
+              );
+            })()}
           </span>
           <ChevronRight size={14} className="text-primary-deep-text/60 shrink-0" />
         </button>
