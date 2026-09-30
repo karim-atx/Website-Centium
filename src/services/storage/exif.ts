@@ -1,4 +1,5 @@
 import piexif from "piexifjs";
+import { stripPngMetadata, stripWebpMetadata } from "./imageMetadata";
 
 // Removing location and device identifiers from an image before it is stored.
 //
@@ -38,6 +39,22 @@ const EXIF_TO_REMOVE = [
   piexif.ExifIFD.LensSerialNumber,
 ] as const;
 
+/** PNG/WebP: drop the metadata chunks; same never-block rule as the JPEG path. */
+async function stripChunks(file: File): Promise<File> {
+  try {
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const stripped = file.type === "image/png" ? stripPngMetadata(bytes) : stripWebpMetadata(bytes);
+    if (!stripped) return file;
+    return new File([stripped as BlobPart], file.name, { type: file.type, lastModified: file.lastModified });
+  } catch (error) {
+    console.warn(
+      "[storage] Could not strip metadata, uploading the original:",
+      error instanceof Error ? error.message : String(error)
+    );
+    return file;
+  }
+}
+
 function fileToDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -61,11 +78,13 @@ function dataUrlToFile(dataUrl: string, original: File): File {
 /**
  * Returns the file with location and device identifiers removed.
  *
- * JPEG ONLY, BY DESIGN. It is the only format these buckets accept that
- * carries EXIF in a form piexifjs can rewrite — `load()` throws outright on a
- * PNG — and it is the format every phone camera produces, so it covers the
- * case this exists for. PNG, WebP and PDF are returned untouched rather than
- * run through a parser that would either fail or, worse, corrupt them.
+ * JPEG, PNG AND WEBP. JPEG is rewritten selectively through piexifjs (keeping
+ * Orientation and DateTimeOriginal). PNG and WebP keep their metadata in
+ * separate chunks, so those chunks are dropped whole and the pixels are copied
+ * unchanged — no re-encode, no quality loss (see imageMetadata). This used to
+ * be JPEG only, which left a PNG screenshot's XMP location, or a WebP photo's
+ * Exif GPS block, in every copy that was sent. PDF and other files are
+ * returned untouched.
  *
  * NEVER BLOCKS AN UPLOAD, AND THIS IS DELIBERATE. Every failure path returns
  * the ORIGINAL file rather than throwing, and a future reader should resist
@@ -75,6 +94,7 @@ function dataUrlToFile(dataUrl: string, original: File): File {
  * A failure is logged so a systematic one is visible rather than silent.
  */
 export async function stripPrivateExif(file: File): Promise<File> {
+  if (file.type === "image/png" || file.type === "image/webp") return stripChunks(file);
   if (file.type !== "image/jpeg") return file;
 
   try {
