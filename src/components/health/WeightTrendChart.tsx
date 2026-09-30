@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useId } from "react";
 
 // V4 (QA 4.0): a labeled line graph — y-axis in kg, x-axis by date — that
 // plots the actual recent weight history (solid) continuing as a projected
@@ -24,7 +24,10 @@ export const WeightTrendChart: React.FC<{
    *  Macros draws in 260×110 and squeezes it into 192×56). */
   displayWidth?: number;
   displayHeight?: number;
-}> = ({ history, desiredWeightKg, reachDate, width = 280, height = 120, displayWidth, displayHeight }) => {
+  /** FO4.2 / FO5.2: a gradient fill under the recorded line. */
+  fill?: boolean;
+}> = ({ history, desiredWeightKg, reachDate, width = 280, height = 120, displayWidth, displayHeight, fill }) => {
+  const gradientId = useId();
   const points: Point[] = history.map((h) => ({ ...h, projected: false }));
   if (desiredWeightKg !== undefined && reachDate) {
     points.push({ date: reachDate, value: desiredWeightKg, projected: true });
@@ -78,6 +81,20 @@ export const WeightTrendChart: React.FC<{
         </g>
       ))}
 
+      {fill && (
+        <>
+          <defs>
+            <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#7D6BB5" stopOpacity={0.22} />
+              <stop offset="100%" stopColor="#7D6BB5" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <path
+            d={`${pathFor(0, splitIndex)} L${x(splitIndex)},${padding.top + plotH} L${x(0)},${padding.top + plotH} Z`}
+            fill={`url(#${gradientId})`}
+          />
+        </>
+      )}
       {/* actual history — solid */}
       <path d={pathFor(0, splitIndex)} fill="none" stroke="#7D6BB5" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" />
       {/* projected trajectory to goal — dashed */}

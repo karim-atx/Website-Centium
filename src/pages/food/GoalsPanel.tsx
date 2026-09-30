@@ -86,9 +86,12 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
   useEffect(() => {
     if (restrictionOpen) restrictionContentRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [restrictionOpen]);
-  const [desiredWeightDraft, setDesiredWeightDraft] = useState(
-    String(nutritionGoal.desiredWeightKg ?? user.weightKg)
-  );
+  // The desired-weight field shows the saved goal until edited (never the
+  // current weight: FO4.2 confirms on blur, and blurring an untouched field
+  // must not try to confirm a goal equal to where the user already is).
+  const [desiredWeightEdit, setDesiredWeightEdit] = useState<string | null>(null);
+  const desiredWeightDraft = desiredWeightEdit ?? (nutritionGoal.desiredWeightKg != null ? String(nutritionGoal.desiredWeightKg) : "");
+  const setDesiredWeightDraft = (v: string | null) => setDesiredWeightEdit(v);
   const [weightGoalError, setWeightGoalError] = useState<string | null>(null);
 
   // V6 (QA 6.0): "Existing plan" is a dietitian-provided plan — the client
@@ -125,12 +128,6 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
     current: metricValues.weight,
     history: weightMeta.history,
   };
-  // TDEE at the goal weight — adapts as the weight goal / desired weight
-  // change, since a lighter or heavier body has a different BMR.
-  const tdeeAtGoal =
-    nutritionGoal.weightGoal !== "maintain" && nutritionGoal.desiredWeightKg
-      ? calculateTDEE({ ...user, weightKg: nutritionGoal.desiredWeightKg })
-      : null;
 
   const rate = nutritionGoal.weeklyRateKg || 0.5;
   const desiredWeightKg = nutritionGoal.desiredWeightKg ?? user.weightKg;
@@ -154,14 +151,18 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
   // V7 (QA 7.0): a desired weight that contradicts the chosen direction
   // (e.g. wanting to "lose" but entering a heavier target) is rejected with
   // an explanation instead of silently accepted.
+  // FO4.2 / FO5.2: the field has no check button; the weight is confirmed
+  // when the user presses Enter or leaves the field. Unchanged does nothing;
+  // cleared un-confirms it (the weekly rate locks again).
   const confirmDesiredWeight = () => {
-    if (nutritionGoal.desiredWeightConfirmed) {
-      setNutritionGoal({ ...nutritionGoal, desiredWeightConfirmed: false });
+    if (desiredWeightEdit === null) return;
+    setDesiredWeightDraft(null);
+    const kg = Number(desiredWeightDraft);
+    if (!desiredWeightDraft.trim() || !kg) {
       setWeightGoalError(null);
+      setNutritionGoal({ ...nutritionGoal, desiredWeightConfirmed: false });
       return;
     }
-    const kg = Number(desiredWeightDraft);
-    if (!kg) return;
     if (nutritionGoal.weightGoal === "lose" && user.weightKg !== null && kg >= user.weightKg) {
       setWeightGoalError(`Desired weight must be lower than your current weight (${user.weightKg}kg) to lose weight.`);
       return;
@@ -179,7 +180,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
   // the stored value; this just resets the on-screen draft to match).
   const changeWeightGoal = (g: WeightGoalType) => {
     setWeightGoal(g, nutritionGoal.weeklyRateKg || 0.5);
-    setDesiredWeightDraft("");
+    setDesiredWeightDraft(null);
     setWeightGoalError(null);
   };
 
@@ -212,6 +213,11 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
   };
 
   const maintain = nutritionGoal.weightGoal === "maintain";
+  // FO4.2 / FO5.2: one colour token for the weekly-rate slider and Target
+  // calories, red to lose, green to gain; the slider fills with it at 50%.
+  const rateColor = nutritionGoal.weightGoal === "gain" ? "#3F9165" : "#C0392B";
+  const rateTint = nutritionGoal.weightGoal === "gain" ? "#9FC8B2" : "#DF9C95";
+  const rateFrac = (((nutritionGoal.weeklyRateKg || 0.5) - 0.1) / 0.9) * 100;
 
   const useSuggestedButton = (
     <button
@@ -264,64 +270,61 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
         </div>
 
         {!maintain && (
-          <>
-            <label className="block mt-3">
-              <span className="text-[10.5px] font-semibold text-charcoal-soft mb-0.5 block">Desired weight</span>
-              <div className="flex items-center gap-2">
+          // FO4.2 / FO5.2: desired weight (narrowed, no check button) and the
+          // weekly rate share one row; the slider fills in its goal colour.
+          <div className="flex items-end" style={{ gap: 18, marginTop: 14 }}>
+            <label className="block flex-none">
+              <span className="block" style={{ fontSize: 12, fontWeight: 600, color: "#5B5349", marginBottom: 6 }}>
+                Desired weight
+              </span>
+              <span className="flex items-center" style={{ gap: 7 }}>
                 <input
                   value={desiredWeightDraft}
                   onChange={(e) => setDesiredWeightDraft(e.target.value.replace(/[^\d.]/g, ""))}
-                  disabled={nutritionGoal.desiredWeightConfirmed || locked}
-                  inputMode="decimal"
-                  className="flex-1 rounded-[9px] bg-cream-soft border border-charcoal/10 px-2.5 py-1 text-[13px] font-semibold text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
-                />
-                <span className="text-[11px] text-charcoal-faint">kg</span>
-                <button
-                  onClick={confirmDesiredWeight}
+                  onBlur={confirmDesiredWeight}
+                  onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
                   disabled={locked}
-                  aria-label={nutritionGoal.desiredWeightConfirmed ? "Edit desired weight" : "Confirm desired weight"}
-                  className={`tap w-7 h-7 rounded-full flex items-center justify-center shrink-0 border-2 transition-colors disabled:opacity-50 ${
-                    nutritionGoal.desiredWeightConfirmed
-                      ? "bg-charcoal/10 border-transparent text-charcoal-faint"
-                      : "bg-primary border-primary text-white"
-                  }`}
-                >
-                  <Check size={14} strokeWidth={3} />
-                </button>
-              </div>
-              {weightGoalError && (
-                <p className="text-[10.5px] font-semibold text-[#C0392B] mt-0.5">{weightGoalError}</p>
-              )}
+                  inputMode="decimal"
+                  enterKeyHint="done"
+                  aria-label="Desired weight in kg"
+                  className="text-center focus:outline-none focus:ring-2 focus:ring-primary/20 disabled:opacity-60"
+                  style={{ width: 64, height: 28, borderRadius: 8, background: "#F5F5F6", border: "1px solid #E0DFE0", fontSize: 13, fontWeight: 600, color: "#241F1B" }}
+                />
+                <span style={{ fontSize: 11.5, color: "#8C8378" }}>kg</span>
+              </span>
             </label>
-
-            <label className="block mt-2">
-              <span className="flex items-baseline justify-between">
-                <span className="text-[10.5px] font-semibold text-charcoal-soft">Desired weekly rate (kg/week)</span>
-                <span className="text-[10px] text-charcoal-faint">
+            <label className="block flex-1 min-w-0">
+              <span className="block" style={{ fontSize: 12, fontWeight: 600, color: "#5B5349", marginBottom: 6 }}>
+                Desired weekly rate
+              </span>
+              <span className="flex items-center" style={{ gap: 8, height: 28 }}>
+                <input
+                  type="range"
+                  min={0.1}
+                  max={1}
+                  step={0.1}
+                  value={nutritionGoal.weeklyRateKg || 0.5}
+                  onChange={(e) => setWeightGoal(nutritionGoal.weightGoal, Number(e.target.value))}
+                  // V8 (QA 8.0): the weekly rate can only be edited once a
+                  // desired weight is confirmed.
+                  disabled={locked || !nutritionGoal.desiredWeightConfirmed}
+                  aria-label="Desired weekly rate"
+                  className="flex-1 min-w-0 h-[6px] rounded-full appearance-none disabled:opacity-50"
+                  style={{
+                    accentColor: rateTint,
+                    backgroundImage: `linear-gradient(to right, ${rateTint} ${rateFrac}%, #F5F5F6 ${rateFrac}%)`,
+                  }}
+                />
+                <span className="flex-none" style={{ fontSize: 11, color: "#8C8378", whiteSpace: "nowrap" }}>
                   {nutritionGoal.weightGoal === "gain" ? "+" : "-"}
                   {(nutritionGoal.weeklyRateKg || 0.5).toFixed(1)} kg / week
                 </span>
               </span>
-              <input
-                type="range"
-                min={0.1}
-                max={1}
-                step={0.1}
-                value={nutritionGoal.weeklyRateKg || 0.5}
-                onChange={(e) => setWeightGoal(nutritionGoal.weightGoal, Number(e.target.value))}
-                disabled={locked || !nutritionGoal.desiredWeightConfirmed}
-                className="w-full disabled:opacity-50"
-                style={{ accentColor: nutritionGoal.weightGoal === "gain" ? "#3F9165" : "#C0392B" }}
-              />
-              {/* V8 (QA 8.0): "desired weekly rate can only be edited once
-                  desired weight is added." */}
-              {!locked && !nutritionGoal.desiredWeightConfirmed && (
-                <p className="text-[10px] text-charcoal-faint">
-                  Add and confirm a desired weight above to set your weekly rate.
-                </p>
-              )}
             </label>
-          </>
+          </div>
+        )}
+        {!maintain && weightGoalError && (
+          <p className="text-[10.5px] font-semibold text-[#C0392B] mt-1.5">{weightGoalError}</p>
         )}
 
         {locked && (
@@ -388,7 +391,10 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
                   <p className="text-[13px] font-semibold text-charcoal-tertiary leading-[1.1]">No weigh-ins yet</p>
                 ) : (
                   <>
-                    <p className="text-[19px] font-bold leading-[1.1] text-charcoal">{weight.current} kg</p>
+                    <p style={{ margin: 0, fontSize: 24, fontWeight: 800, lineHeight: 1.1, color: "#241F1B" }}>
+                      {weight.current}
+                      <span style={{ fontSize: 13, fontWeight: 700, marginLeft: 3 }}>kg</span>
+                    </p>
                     {trendLabel(weightMeta) && <p className="text-[10px] text-charcoal-faint">{trendLabel(weightMeta)}</p>}
                   </>
                 )}
@@ -403,6 +409,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
                   height={110}
                   displayWidth={192}
                   displayHeight={56}
+                  fill
                 />
               )}
             </div>
@@ -414,41 +421,41 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
           </section>
 
           <section style={CARD}>
-            <p style={{ ...TITLE, marginBottom: 6 }}>TDEE estimate</p>
-            <div className="flex items-center justify-between gap-2.5">
-              <div className="min-w-0">
-                {tdee === null ? (
-                  <>
-                    <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">Needs your height and weight</p>
-                    <p className="mt-px text-[8px] leading-[1.3] text-charcoal-faint">
-                      Mifflin-St Jeor is a formula in both — add them in Profile for a maintenance estimate.
+            <p style={{ ...TITLE, marginBottom: 10 }}>TDEE estimate</p>
+            {tdee === null ? (
+              <>
+                <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">Needs your height and weight</p>
+                <p className="mt-1 text-[8.5px] leading-[1.3] text-charcoal-faint">
+                  Mifflin-St Jeor is a formula in both — add them in Profile for a maintenance estimate.
+                </p>
+              </>
+            ) : (
+              <>
+                {/* FO4.2 / FO5.2: Maintenance and Target calories, two equal
+                    labelled stats on one row with Use suggested. */}
+                <div className="flex items-center" style={{ gap: 10 }}>
+                  {/* Content-sized: one line from 390 up, the label wraps at 360. */}
+                  <div className="min-w-0" style={{ flex: "1 1 auto" }}>
+                    <p style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>Maintenance calories</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 19, fontWeight: 800, color: "#241F1B", whiteSpace: "nowrap" }}>
+                      {tdee.toLocaleString()}
+                      <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 3 }}>kcal</span>
                     </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-[19px] font-bold leading-[1.1] text-charcoal">{tdee.toLocaleString()} kcal</p>
-                    <p className="mt-px text-[8px] leading-[1.3] text-charcoal-faint">
-                      Estimated maintenance calories at your current weight (Mifflin-St Jeor) — a prototype estimate,
-                      adjust as needed.
+                  </div>
+                  <div className="min-w-0 self-stretch" style={{ flex: "1 1 auto", borderLeft: "1px solid #E7E6E6", paddingLeft: 10 }}>
+                    <p style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>Target calories</p>
+                    <p style={{ margin: "2px 0 0", fontSize: 19, fontWeight: 800, color: rateColor, whiteSpace: "nowrap" }}>
+                      {(suggestedForGoal ?? tdee).toLocaleString()}
+                      <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 3 }}>kcal</span>
                     </p>
-                  </>
-                )}
-              </div>
-              {useSuggestedButton}
-            </div>
-            {(suggestedForGoal !== null || tdeeAtGoal !== null) && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {suggestedForGoal !== null && (
-                  <p className="text-[10px] text-charcoal bg-cream-soft rounded-full px-2.5 py-0.5">
-                    {suggestedForGoal.toLocaleString()} kcal to {nutritionGoal.weightGoal} weight at your current rate
-                  </p>
-                )}
-                {tdeeAtGoal !== null && (
-                  <p className="text-[10px] text-primary-dark bg-primary-pale rounded-full px-2.5 py-0.5">
-                    ≈ {tdeeAtGoal.toLocaleString()} kcal once you reach {nutritionGoal.desiredWeightKg}kg
-                  </p>
-                )}
-              </div>
+                    <p style={{ margin: "1px 0 0", fontSize: 10.5, color: rateColor, opacity: 0.6 }}>
+                      to {nutritionGoal.weightGoal} weight
+                    </p>
+                  </div>
+                  {useSuggestedButton}
+                </div>
+                <p style={{ margin: "8px 0 0", fontSize: 8.5, color: "#8C8378" }}>Based on the Mifflin-St Jeor Formula</p>
+              </>
             )}
           </section>
         </>
