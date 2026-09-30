@@ -13,7 +13,6 @@ import { NutrientDetailSections } from "./NutrientSections";
 import {
   searchFoods,
   getFoodsByIds,
-  lookupByBarcode,
   createFoodByBarcode,
   logFoodEntry,
   type FoodSearchResult,
@@ -26,6 +25,9 @@ import { foodSuggestions, historyIds, type FoodSuggestion } from "../../services
 import { todayLocal } from "../../utils/date";
 import { Toast } from "../ui/Toast";
 import { PopupMenu } from "../ui/PopupMenu";
+import { BarcodeScanner } from "./BarcodeScanner";
+import { OffProductCard } from "./OffProductCard";
+import { offAsFood, resolveBarcode, type OffProduct } from "../../services/barcode/lookup";
 import { mealForCurrentTime } from "../../utils/mealForTime";
 
 // V4: preset serving units offered as tap targets — only the quantity number
@@ -157,6 +159,12 @@ export const AddFoodSheet: React.FC<{
   const [barcodeDraft, setBarcodeDraft] = useState(emptyBarcodeDraft);
   const [barcodeError, setBarcodeError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  // HO2.1: the camera scanner over this sheet, and an Open Food Facts product
+  // waiting for the user to confirm it. The attribution travels with the one
+  // food it belongs to, onto the user's own diary row.
+  const [scanOpen, setScanOpen] = useState(false);
+  const [offProduct, setOffProduct] = useState<OffProduct | null>(null);
+  const [offAttribution, setOffAttribution] = useState<{ foodId: string; attribution: OffProduct["attribution"] } | null>(null);
 
   // --- logging ------------------------------------------------------------
   const [saving, setSaving] = useState(false);
@@ -387,6 +395,9 @@ export const AddFoodSheet: React.FC<{
     // Nothing to reset for the custom-food form: it unmounts with the sheet
     // and its state goes with it.
     setBarcode("");
+    setScanOpen(false);
+    setOffProduct(null);
+    setOffAttribution(null);
     setBarcodeState("idle");
     setBarcodeDraft(emptyBarcodeDraft);
     setBarcodeError(null);
@@ -424,6 +435,14 @@ export const AddFoodSheet: React.FC<{
       meal,
       date: selectedDate,
       loggedVia: selectedFood.barcode ? "barcode" : "search",
+      external:
+        offAttribution?.foodId === selectedFood.id
+          ? {
+              source: offAttribution.attribution.source,
+              ref: offAttribution.attribution.ref,
+              fetchedAt: offAttribution.attribution.fetchedAt,
+            }
+          : undefined,
     });
 
     setSaving(false);
@@ -440,25 +459,45 @@ export const AddFoodSheet: React.FC<{
   const openBarcode = () => {
     setBarcodeOpen(true);
     setScanResultFood(null);
+    setOffProduct(null);
+    setBarcodeError(null);
+    setBarcodeState("idle");
+    setScanOpen(true);
   };
 
-  // Lookup only. Creating a shared catalog row is a separate, explicit step —
-  // see handleCreateBarcodeFood.
-  const handleBarcodeLookup = async () => {
-    const code = barcode.trim();
-    if (!code) return;
+  // HO2.1 lookup order for a scanned or typed code (services/barcode/lookup):
+  // our catalogue, then Open Food Facts (confirmed by the user, never written
+  // to the shared catalogue), then the manual form. Creating a shared catalog
+  // row stays a separate, explicit step — see handleCreateBarcodeFood.
+  const handleScannedCode = async (gtin: string) => {
+    setScanOpen(false);
+    setBarcode(gtin);
     setBarcodeError(null);
+    setScanResultFood(null);
+    setOffProduct(null);
     setBarcodeState("looking");
-    const hit = await lookupByBarcode(code);
-    if (hit) {
-      setScanResultFood(hit);
+    const result = await resolveBarcode(gtin);
+    if (result.kind === "catalog") {
+      setScanResultFood(result.food);
       setBarcodeState("idle");
-      return;
+    } else if (result.kind === "off") {
+      setOffProduct(result.product);
+      setBarcodeState("idle");
+    } else if (result.kind === "miss") {
+      setBarcodeDraft(emptyBarcodeDraft);
+      setBarcodeState("miss");
+    } else {
+      setBarcodeError(result.kind === "error" ? result.message : "That isn't a valid barcode.");
+      setBarcodeState("idle");
     }
-    // Miss: offer to add it, with the values the user will have to read off
-    // the package. Stage (d) fills these in from Open Food Facts.
-    setBarcodeDraft(emptyBarcodeDraft);
-    setBarcodeState("miss");
+  };
+
+  const chooseOffProduct = (product: OffProduct) => {
+    const food = offAsFood(product);
+    setOffAttribution({ foodId: food.id, attribution: product.attribution });
+    setSelectedFood(food);
+    setBarcodeOpen(false);
+    setOffProduct(null);
   };
 
   const handleCreateBarcodeFood = async () => {
@@ -737,84 +776,49 @@ export const AddFoodSheet: React.FC<{
       />
     );
 
+    const scanAgain = () => {
+      setBarcodeError(null);
+      setScanResultFood(null);
+      setOffProduct(null);
+      setBarcodeState("idle");
+      setScanOpen(true);
+    };
+    const enterManually = () => {
+      setOffProduct(null);
+      setBarcodeError(null);
+      setBarcodeDraft(emptyBarcodeDraft);
+      setBarcodeState("miss");
+    };
+
     return (
+      <>
       <BottomSheet
-        open={open}
+        open={open && !scanOpen}
         onClose={resetAndClose}
-        title="Enter barcode"
+        title="Barcode"
         // Master handover (CentiumFrame sheetCanBack): this step has somewhere
         // to return to — the food list.
         onBack={() => {
           setBarcodeOpen(false);
           setScanResultFood(null);
+          setOffProduct(null);
           setBarcodeState("idle");
         }}
       >
-        <div className="flex flex-col items-center text-center py-4">
-          {/* THE VIEWFINDER IS GONE, and that is the point of this screen now.
-              A 4:3 charcoal panel with a dashed frame and a pulsing scanner
-              glyph is a camera as far as anyone looking at it is concerned,
-              so the feature read as a broken scanner rather than as the
-              keyed-in lookup it has always been. Camera scanning needs a
-              scanning library, a camera permission and a video pipeline;
-              until those exist the screen says so in one line instead of
-              miming them. The lookup and creation paths below are real. */}
-          {!scanResultFood && (
-            <div className="w-full text-left mb-4">
-              <div className="flex gap-2">
-                <input
-                  value={barcode}
-                  onChange={(e) => {
-                    setBarcode(e.target.value.replace(/[^\dA-Za-z]/g, ""));
-                    setBarcodeState("idle");
-                    setBarcodeError(null);
-                  }}
-                  placeholder="e.g. 5449000000996"
-                  inputMode="numeric"
-                  className="flex-1 rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-                />
-                <Button
-                  onClick={handleBarcodeLookup}
-                  disabled={!barcode.trim() || barcodeState === "looking"}
-                >
-                  {barcodeState === "looking" ? "…" : "Look up"}
-                </Button>
-              </div>
-
-              {barcodeState === "miss" && (
-                <div className="mt-4 space-y-3 animate-fade-slide-up">
-                  <p className="text-[11px] text-charcoal-faint">
-                    Not in the catalog yet. Add it from the package label and everyone
-                    scanning this barcode will find it.
-                  </p>
-                  {barcodeField("Product name", "name", "Coca-Cola 330ml")}
-                  {barcodeField("Serving size", "serving", "1 can (330 ml)")}
-                  <div className="grid grid-cols-2 gap-3">
-                    {barcodeField("Calories", "calories", "0", true)}
-                    {barcodeField("Protein (g)", "protein", "0", true)}
-                    {barcodeField("Carbs (g)", "carbs", "0", true)}
-                    {barcodeField("Fat (g)", "fat", "0", true)}
-                  </div>
-                  {barcodeError && (
-                    <p className="text-xs font-semibold text-status-high text-center">{barcodeError}</p>
-                  )}
-                  <Button
-                    fullWidth
-                    onClick={handleCreateBarcodeFood}
-                    disabled={creating || !barcodeDraft.name.trim() || !barcodeDraft.calories}
-                  >
-                    {creating ? "Adding…" : "Add to catalog"}
-                  </Button>
-                </div>
-              )}
-
-              {barcodeError && barcodeState !== "miss" && (
-                <p className="text-xs font-semibold text-status-high mt-2">{barcodeError}</p>
-              )}
+        <div className="flex flex-col animate-fade-slide-up" style={{ gap: 14 }}>
+          {barcode && (
+            <div className="flex items-center justify-between" style={{ background: "#F4F4F6", borderRadius: 12, padding: "11px 14px" }}>
+              <span style={{ fontSize: 13, color: "#575863" }}>Barcode</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "#241F1B", fontVariantNumeric: "tabular-nums" }}>{barcode}</span>
             </div>
           )}
 
-          {scanResultFood ? (
+          {barcodeState === "looking" && (
+            <p className="text-center text-sm text-charcoal-faint py-6">Looking it up…</p>
+          )}
+
+          {/* 1. In our catalogue. */}
+          {scanResultFood && (
             <div className="w-full animate-fade-slide-up">
               <div className="flex items-center gap-3 bg-cream-soft rounded-2xl px-4 py-3 mb-4">
                 <span className="w-9 h-9 rounded-xl bg-primary-pale flex items-center justify-center shrink-0">
@@ -835,11 +839,75 @@ export const AddFoodSheet: React.FC<{
                 Use this result
               </Button>
             </div>
-          ) : (
-            <p className="text-xs text-charcoal-faint max-w-xs">Camera scanning is coming soon.</p>
+          )}
+
+          {/* 2. Found on Open Food Facts: confirmed before anything is logged. */}
+          {offProduct && (
+            <OffProductCard product={offProduct} onConfirm={() => chooseOffProduct(offProduct)} onManual={enterManually} />
+          )}
+
+          {/* 3. Nowhere: the user reads the pack. */}
+          {barcodeState === "miss" && (
+            <div className="space-y-3 animate-fade-slide-up">
+              <p className="text-[11px] text-charcoal-faint">
+                Not in the catalog yet. Add it from the package label and everyone scanning this barcode will
+                find it.
+              </p>
+              {barcodeField("Product name", "name", "Coca-Cola 330ml")}
+              {barcodeField("Serving size", "serving", "1 can (330 ml)")}
+              <div className="grid grid-cols-2 gap-3">
+                {barcodeField("Calories", "calories", "0", true)}
+                {barcodeField("Protein (g)", "protein", "0", true)}
+                {barcodeField("Carbs (g)", "carbs", "0", true)}
+                {barcodeField("Fat (g)", "fat", "0", true)}
+              </div>
+              {barcodeError && <p className="text-xs font-semibold text-status-high text-center">{barcodeError}</p>}
+              <Button
+                fullWidth
+                onClick={handleCreateBarcodeFood}
+                disabled={creating || !barcodeDraft.name.trim() || !barcodeDraft.calories}
+              >
+                {creating ? "Adding…" : "Add to catalog"}
+              </Button>
+            </div>
+          )}
+
+          {barcodeError && barcodeState !== "miss" && (
+            <p className="text-xs font-semibold text-status-high">{barcodeError}</p>
+          )}
+
+          {barcodeState !== "looking" && (
+            <div className="flex" style={{ gap: 10 }}>
+              <button
+                onClick={scanAgain}
+                className="tap flex-1"
+                style={{ height: 44, borderRadius: 14, background: "#FFFFFF", border: "1px solid #E4E4E9", color: "#241F1B", fontSize: 13.5, fontWeight: 600 }}
+              >
+                Scan again
+              </button>
+              {barcodeError && barcodeState !== "miss" && (
+                <button
+                  onClick={enterManually}
+                  className="tap flex-1"
+                  style={{ height: 44, borderRadius: 14, background: "#FFFFFF", border: "1px solid #E4E4E9", color: "#241F1B", fontSize: 13.5, fontWeight: 600 }}
+                >
+                  Enter it myself
+                </button>
+              )}
+            </div>
           )}
         </div>
       </BottomSheet>
+      <BarcodeScanner
+        open={open && scanOpen}
+        onClose={() => {
+          setScanOpen(false);
+          // Closed before anything was scanned: back to the food list.
+          if (!barcode) setBarcodeOpen(false);
+        }}
+        onCode={(gtin) => void handleScannedCode(gtin)}
+      />
+      </>
     );
   }
 
