@@ -4854,6 +4854,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
   const hasCycleFeatures = user.sex === "female" || user.sex === "other";
   const cycleOffered = hasCycleFeatures || !!cycleSettings?.shownForAnySex;
+  // MO11: the pregnancy calorie addition follows the same visibility rule as
+  // every other cycle or pregnancy feature. Hidden, it is 0 in what the app
+  // reads (targets, rings, the Goals note) but kept in storage, so it comes
+  // back unchanged when the section is shown again.
+  const visibleNutritionGoal = useMemo(
+    () => (cycleOffered || !nutritionGoal.pregnancyKcal ? nutritionGoal : { ...nutritionGoal, pregnancyKcal: 0 }),
+    [nutritionGoal, cycleOffered]
+  );
   const setCycleTracking = (on: boolean) =>
     saveCycleSettingsAndReload(
       on ? { trackerEnabled: true, ...(hasCycleFeatures ? {} : { shownForAnySex: true }) } : { trackerEnabled: false }
@@ -4982,7 +4990,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const resizeWidget = (id: string, size: WidgetSize) =>
     setWidgets((prev) => prev.map((w) => (w.id === id ? withFixedSize({ ...w, size }) : w)));
 
-  const setNutritionGoal = (goal: NutritionGoal) => setNutritionGoalState(goal);
+  // MO11: while the cycle section is hidden, the pregnancy addition is hidden
+  // too, so a write from this profile never changes the stored value.
+  const setNutritionGoal = (goal: NutritionGoal) =>
+    setNutritionGoalState((prev) => (cycleOffered ? goal : { ...goal, pregnancyKcal: prev.pregnancyKcal }));
   const setWeightGoal = (weightGoal: WeightGoalType, weeklyRateKg: number) =>
     setNutritionGoalState((prev) => {
       const suggested = suggestNutritionGoal(user, weightGoal, weeklyRateKg);
@@ -5807,7 +5818,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       removeWidget,
       reorderWidgets,
       resizeWidget,
-      nutritionGoal,
+      nutritionGoal: visibleNutritionGoal,
       setNutritionGoal,
       setWeightGoal,
       setMacroSplit,
@@ -6023,7 +6034,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       weightByDate,
       stepsGoal,
       widgets,
-      nutritionGoal,
+      visibleNutritionGoal,
       customMeals,
       customMealsError,
       clientCustomMeals,
