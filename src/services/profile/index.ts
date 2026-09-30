@@ -78,6 +78,8 @@ export async function ensureProfileRow(
 export interface FetchedProfile {
   onboarded: boolean;
   profile: Partial<UserProfile>;
+  /** The Home flower's species (profiles.plant_species); null = not chosen yet. */
+  plantSpecies: PlantSpeciesValue | null;
   /**
    * Set when this account is inside its 30-day deletion grace period. Read on
    * every hydration so a returning user is told, rather than having to
@@ -104,7 +106,7 @@ export async function fetchProfile(userId: string): Promise<FetchedProfile | nul
     const { data, error } = await supabase
       .from("profiles")
       .select(
-        "id, first_name, email, phone, date_of_birth, sex, height_cm, weight_kg, goals, tracking_preferences, activity_level, account_type, customer_subtype, professional_subtype, avatar_url, onboarded, deletion_requested_at"
+        "id, first_name, email, phone, date_of_birth, sex, height_cm, weight_kg, goals, tracking_preferences, activity_level, account_type, customer_subtype, professional_subtype, avatar_url, onboarded, deletion_requested_at, plant_species"
       )
       .eq("id", userId)
       .maybeSingle();
@@ -155,6 +157,7 @@ export async function fetchProfile(userId: string): Promise<FetchedProfile | nul
       onboarded: data.onboarded,
       profile,
       deletionRequestedAt: data.deletion_requested_at,
+      plantSpecies: isPlantSpecies(data.plant_species) ? data.plant_species : null,
     };
   } catch (e) {
     console.error("[profile] Could not read profile:", e);
@@ -270,6 +273,28 @@ export async function updateSex(
   if (error) {
     console.error("[profile] Could not save sex:", error.message);
     return { ok: false, message: error.message };
+  }
+  return { ok: true };
+}
+
+// --- the Home flower ----------------------------------------------------------
+//
+// profiles.plant_species (Database 20260930110000): which flower the Home
+// streak board grows, so the choice follows the account to every device.
+// The column's CHECK allows exactly these five; null means never chosen.
+export const PLANT_SPECIES = ["tulip", "rose", "sunflower", "daisy", "lily"] as const;
+export type PlantSpeciesValue = (typeof PLANT_SPECIES)[number];
+export const isPlantSpecies = (v: unknown): v is PlantSpeciesValue =>
+  typeof v === "string" && (PLANT_SPECIES as readonly string[]).includes(v);
+
+export async function updatePlantSpecies(
+  userId: string,
+  species: PlantSpeciesValue
+): Promise<{ ok: boolean; message?: string }> {
+  const { error } = await supabase.from("profiles").update({ plant_species: species }).eq("id", userId);
+  if (error) {
+    console.error("[profile] Could not save the flower:", error.message);
+    return { ok: false, message: "Couldn't save your flower. Try again." };
   }
   return { ok: true };
 }

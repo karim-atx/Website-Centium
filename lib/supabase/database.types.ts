@@ -6638,6 +6638,7 @@ export type Database = {
           last_active_at: string
           onboarded: boolean
           phone: string | null
+          plant_species: string | null
           professional_subtype:
             | Database["public"]["Enums"]["professional_subtype"]
             | null
@@ -6666,6 +6667,7 @@ export type Database = {
           last_active_at?: string
           onboarded?: boolean
           phone?: string | null
+          plant_species?: string | null
           professional_subtype?:
             | Database["public"]["Enums"]["professional_subtype"]
             | null
@@ -6694,6 +6696,7 @@ export type Database = {
           last_active_at?: string
           onboarded?: boolean
           phone?: string | null
+          plant_species?: string | null
           professional_subtype?:
             | Database["public"]["Enums"]["professional_subtype"]
             | null

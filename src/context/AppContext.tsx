@@ -183,7 +183,7 @@ import {
 import { isAdminAccount } from "../services/admin";
 import { isMfaChallengePending } from "../services/mfa";
 import { isLocalOnlyAvatar, migrateLocalAvatar } from "../services/avatar";
-import { ensureProfileRow, fetchProfile } from "../services/profile";
+import { ensureProfileRow, fetchProfile, updatePlantSpecies } from "../services/profile";
 import {
   AUTO_STREAK_CATEGORIES,
   AUTO_STREAK_LABEL_BY_CATEGORY,
@@ -1906,6 +1906,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [authUserId, profileReady, isAdmin]);
 
+  // THE FLOWER FOLLOWS THE ACCOUNT (profiles.plant_species, 2026-09-30).
+  // This is the screen's copy: null until the person picks one (the board
+  // shows the tulip), the stored choice once profile hydration reads it, and
+  // what a signed-out device remembers. A tap saves to the profile as well.
+  const [plantChoice, setPlantChoice] = usePersistentState<PlantSpecies | null>("plantSpecies", null);
+  const plantSpecies: PlantSpecies = plantChoice ?? "tulip";
+  const cyclePlantSpecies = () => {
+    const order: PlantSpecies[] = ["tulip", "rose", "sunflower", "daisy", "lily"];
+    const next = order[(order.indexOf(plantSpecies) + 1) % order.length];
+    setPlantChoice(next);
+    if (authUserId) void updatePlantSpecies(authUserId, next);
+  };
+
   useEffect(() => {
     if (!authReady) return;
     if (!authUserId) {
@@ -1918,6 +1931,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       if (cancelled) return;
       if (result) {
         setUser((prev) => ({ ...prev, ...result.profile }));
+        // The stored flower wins. None stored yet: this device's own choice,
+        // if it ever made one, goes up once (the column being null is what
+        // makes it once: after this it is set).
+        if (result.plantSpecies) setPlantChoice(result.plantSpecies);
+        else {
+          const local = loadPersisted<PlantSpecies | null>("plantSpecies", null);
+          if (local) void updatePlantSpecies(authUserId, local);
+        }
         // Deliberately NOT cleared on sign-in. Reviving an account because
         // someone happened to log in would undo a deliberate request without
         // them asking; cancelling is an explicit action.
@@ -1930,7 +1951,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return () => {
       cancelled = true;
     };
-  }, [authUserId, authReady, setUser]);
+  }, [authUserId, authReady, setUser, setPlantChoice]);
 
   // --- rescuing profile pictures that never reached the server -------------
   //
@@ -2190,11 +2211,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // this backward. Species choice is purely cosmetic and independent of
   // growth stage.
   const [plantStage, setPlantStage] = usePersistentState<number>("plantStage", 1);
-  const [plantSpecies, setPlantSpecies] = usePersistentState<PlantSpecies>("plantSpecies", "tulip");
-  const cyclePlantSpecies = () => {
-    const order: PlantSpecies[] = ["tulip", "rose", "sunflower", "daisy", "lily"];
-    setPlantSpecies((s) => order[(order.indexOf(s) + 1) % order.length]);
-  };
 
   // NOTHING UNTIL THE DATABASE ANSWERS. This was a usePersistentState seed of
   // 106.4 kg, 68 bpm, 8,421 steps, 7.7 hours and 2,340 kcal — rendered to
