@@ -7,11 +7,10 @@ import { WidgetBoard } from "../../components/dashboard/WidgetBoard";
 import { Card } from "../../components/ui/Card";
 import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { AIVoiceLogger } from "../../components/food/AIVoiceLogger";
-import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
+import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
 import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { nextRoutine } from "../../services/workout/nextRoutine";
 import ProfessionalDashboard from "../professionals/ProfessionalDashboard";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
 
@@ -30,40 +29,15 @@ export default function Home() {
     recoverySensitive,
     recoverySensitiveIntroSeen,
     setRecoverySensitiveIntroSeen,
-    routines,
-    workoutSessions,
   } = useApp();
   const navigate = useNavigate();
   const [addFoodOpen, setAddFoodOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
-  const [workoutOpen, setWorkoutOpen] = useState(false);
+  // Quick Actions' Workout starts a NEW routine: the create-routine flow.
+  const [createRoutineOpen, setCreateRoutineOpen] = useState(false);
   const [metricOpen, setMetricOpen] = useState(false);
 
   const isBusiness = user.accountType === "business";
-
-  /**
-   * What "Log Workout" starts.
-   *
-   * IT USED TO PASS THE MOCK ROUTINE'S ID, "w-today", into a uuid column.
-   * That was harmless only because log.ts wrote routine_id as null regardless;
-   * now that it writes the id for real, a made-up one would either be
-   * discarded or, without the guard there, lose the session.
-   *
-   * THE MOST RECENTLY TRAINED ROUTINE, which is the simplest mapping that is
-   * also usually right: this button is "log the thing I normally log". Falls
-   * back to the first routine, and to a FREEFORM session when there are none
-   * — routine_id is nullable and a workout with no routine is a real workout,
-   * which is exactly why it is nullable.
-   */
-  const suggested = nextRoutine(routines, workoutSessions);
-  // NULL RATHER THAN A BORROWED PROGRAM. The old fallback handed an account
-  // with no routines `todaysWorkout` from data/mockWorkouts — "Upper Body",
-  // four exercises at named weights — so the first tap of a brand-new
-  // account's start button logged somebody else's session. The button now
-  // sends them to pick a routine instead.
-  const quickWorkout = suggested
-    ? { routineId: suggested.id, name: suggested.name, exercises: suggested.exercises, blocks: suggested.blocks }
-    : null;
 
   // V5 (QA 5.0): professionals no longer have a Home/Food/Workout/Health
   // dashboard of their own — "My Clients" is their main page instead,
@@ -163,7 +137,7 @@ export default function Home() {
       <div className="mb-3.5">
         <QuickActions
           onLogFood={() => setAddFoodOpen(true)}
-          onLogWorkout={() => (quickWorkout ? setWorkoutOpen(true) : navigate("/app/workout"))}
+          onLogWorkout={() => setCreateRoutineOpen(true)}
           onAddMetric={() => setMetricOpen(true)}
           onVoiceLog={() => setVoiceOpen(true)}
         />
@@ -193,16 +167,7 @@ export default function Home() {
 
       <AddFoodSheet open={addFoodOpen} onClose={() => setAddFoodOpen(false)} />
       <AIVoiceLogger open={voiceOpen} onClose={() => setVoiceOpen(false)} />
-      {quickWorkout && (
-        <WorkoutSessionSheet
-          open={workoutOpen}
-          onClose={() => setWorkoutOpen(false)}
-          routineId={quickWorkout.routineId}
-          routineName={quickWorkout.name}
-          exercises={quickWorkout.exercises}
-          blocks={quickWorkout.blocks}
-        />
-      )}
+      <CreateRoutineSheet open={createRoutineOpen} onClose={() => setCreateRoutineOpen(false)} folderId={null} />
       <AddMetricSheet open={metricOpen} onClose={() => setMetricOpen(false)} />
     </div>
   );

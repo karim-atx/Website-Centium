@@ -652,10 +652,9 @@ export const HomeWidget: React.FC<{
     // by a seeded log entry for a session nobody did. Two invented facts
     // propping each other up.
     //
-    // nextRoutine() is the same rule Home's quick-start button uses, so the
-    // widget and the button can no longer name different workouts on one
-    // screen. Null is an answer: an account with no routines is offered one to
-    // make rather than one it does not have.
+    // nextRoutine() picks the routine to suggest. Null is an answer: an
+    // account with no routines is offered one to make rather than one it does
+    // not have.
     case "workout": {
       const done = !!todaysWorkoutLog?.completed;
       const suggested = nextRoutine(routines, workoutSessions);
