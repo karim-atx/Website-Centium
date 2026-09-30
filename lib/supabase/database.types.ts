@@ -12419,6 +12419,7 @@ export type Database = {
         }
       }
       advance_auto_streaks: { Args: never; Returns: number }
+      am_i_blocked_with: { Args: { p_other: string }; Returns: boolean }
       assert_health_reset_coverage: { Args: never; Returns: undefined }
       assert_subscription_price_list: { Args: never; Returns: undefined }
       assert_workout_copy_complete: { Args: never; Returns: undefined }

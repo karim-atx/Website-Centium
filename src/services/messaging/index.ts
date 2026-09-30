@@ -810,14 +810,17 @@ export interface BlockState {
  *
  * TWO QUESTIONS, because the caller may only see their own blocks: whether
  * THEY blocked comes from their user_blocks rows, and whether anything blocks
- * the conversation comes from users_are_blocked(), which is direction-free. The
- * difference is shown only as "you blocked them" versus "you can't message
- * this person" — the app never says the other side blocked the caller.
+ * the conversation comes from am_i_blocked_with(), which is direction-free but
+ * can only be asked about a pair the caller is in (Database 20261001080000).
+ * It replaced users_are_blocked(a, b), which let anyone ask about two OTHER
+ * people. The difference is shown only as "you blocked them" versus "you
+ * can't message this person" — the app never says the other side blocked the
+ * caller.
  */
 export async function fetchBlockState(me: string, other: string): Promise<BlockState> {
   const [mine, either] = await Promise.all([
     supabase.from("user_blocks").select("blocked_id").eq("blocker_id", me).eq("blocked_id", other).maybeSingle(),
-    supabase.rpc("users_are_blocked", { p_one: me, p_two: other }),
+    supabase.rpc("am_i_blocked_with", { p_other: other }),
   ]);
   const iBlocked = !mine.error && !!mine.data;
   const blocked = iBlocked || (!either.error && either.data === true);
