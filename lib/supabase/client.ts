@@ -7,6 +7,7 @@ import {
   isRecoveryExchangeInFlight,
 } from './recovery'
 import { suspensionAwareFetch } from './suspension'
+import { identityGuardFetch } from './tabIdentity'
 import type { Database } from './database.types'
 
 // Single browser client for the whole app. createBrowserClient memoises
@@ -38,7 +39,9 @@ export const supabase = createBrowserClient<Database>(url, anonKey, {
   // bare SIGNED_OUT with no error, so this wrapper is the last point at which
   // the reason still exists. It inspects nothing but failed /auth/v1/ calls.
   // See ./suspension.
-  global: { fetch: suspensionAwareFetch() },
+  // The identity guard is outermost: a request from a tab bound to another
+  // account never reaches the suspension handling, or the network.
+  global: { fetch: identityGuardFetch(suspensionAwareFetch()) },
   cookies: {
     getAll() {
       return parseCookieHeader(document.cookie)

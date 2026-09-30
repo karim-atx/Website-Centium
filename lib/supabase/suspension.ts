@@ -61,6 +61,15 @@ export function markAccountSuspended(): void {
   }
 }
 
+/** Whether a suspension is waiting to be explained, without consuming it. */
+export function accountSuspendedPending(): boolean {
+  try {
+    return sessionStorage.getItem(FLAG) !== null;
+  } catch {
+    return false;
+  }
+}
+
 /** Reads the flag and clears it, so it explains one sign-out and no more. */
 export function consumeAccountSuspended(): boolean {
   try {

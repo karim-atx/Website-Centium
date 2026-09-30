@@ -4,6 +4,7 @@ import { ShieldCheck } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
 import { Button } from "./components/ui/Button";
 import { MfaChallenge } from "./components/auth/MfaChallenge";
+import { TabIdentityNotice } from "./components/auth/TabIdentityNotice";
 import { Layout } from "./components/navigation/Layout";
 import { MarketingLayout } from "./marketing/layouts/MarketingLayout";
 import { Home as MarketingHome } from "./marketing/pages/Home";
@@ -410,6 +411,8 @@ export default function App() {
       <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>
+      {/* Above everything: another tab changed the account (tabIdentity.ts). */}
+      <TabIdentityNotice />
     </AppProvider>
   );
 }

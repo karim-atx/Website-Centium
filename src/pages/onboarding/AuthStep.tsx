@@ -13,6 +13,7 @@ import {
   signUpWithEmail,
 } from "../../services/auth";
 import { setRememberMe as setRememberMePreference } from "../../../lib/supabase/rememberMe";
+import { clearSessionArrived, sessionArrivedPending } from "../../../lib/supabase/tabIdentity";
 import {
   passwordChecks,
   meetsMinimumPassword,
@@ -97,11 +98,17 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   // made the back button on the next step look broken. Seeding the ref with
   // whatever session is present at mount means an already-signed-in user
   // stays put and gets the "signed in as" screen below instead.
-  const prevSession = useRef<Session | null>(session);
+  //
+  // One exception: a session that arrived while this tab was signed out
+  // reloads the page to re-bind the tab (lib/supabase/tabIdentity.ts), so it
+  // is already in place at mount. The re-bind leaves a mark, and that counts
+  // as the transition.
+  const prevSession = useRef<Session | null>(sessionArrivedPending() ? null : session);
   useEffect(() => {
     const had = prevSession.current;
     prevSession.current = session;
     if (!session || had) return;
+    clearSessionArrived();
     // Google (and a confirmation return) carry the authoritative address;
     // adopt it so the rest of onboarding shows what they actually signed in
     // with rather than whatever was half-typed in the field.

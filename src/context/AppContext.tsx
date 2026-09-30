@@ -126,6 +126,8 @@ import { translations, type Language } from "../i18n/translations";
 import type { DietaryRestriction } from "../utils/dietaryRestrictions";
 import type { Session } from "@supabase/supabase-js";
 import { getCurrentSession, hasStoredSessionToken, onAuthChange, signOutRemote } from "../services/auth";
+import { TAB_USER_ID, legacyMoves, lockTab, markSessionArrived, storageKeyFor } from "../../lib/supabase/tabIdentity";
+import { accountSuspendedPending } from "../../lib/supabase/suspension";
 import { unsubscribeFromPush } from "../services/push";
 import { usePushSubscriptionSync } from "../hooks/usePushSubscriptionSync";
 import {
@@ -1259,6 +1261,65 @@ const ACHIEVEMENT_MIN_GAP_MS = 8_000;
 
 const STORAGE_KEY = "centium-state";
 
+// ACCOUNT-SCOPED LOCAL STATE. Every persisted key except the device's own
+// preferences lives under the account this tab loaded with
+// (`centium-state:u:<id>:<key>`, or `anon` for a signed-out tab), so one
+// account's cache is never read by, or written over by, another — including
+// from a second tab that is still showing the previous account. See
+// lib/supabase/tabIdentity.ts.
+const persistKey = (key: string) => storageKeyFor(key, TAB_USER_ID);
+
+// The old, un-namespaced cache moves once, to the account that wrote it.
+function migrateLegacyStorage(): void {
+  try {
+    const moves = legacyMoves(Object.keys(localStorage), localStorage.getItem(`${STORAGE_KEY}:user`));
+    for (const [from, to] of moves) {
+      const value = localStorage.getItem(from);
+      if (value !== null && localStorage.getItem(to) === null) localStorage.setItem(to, value);
+      localStorage.removeItem(from);
+    }
+  } catch {
+    // Storage refused (private mode): nothing cached to move.
+  }
+}
+if (typeof window !== "undefined") migrateLegacyStorage();
+
+// A tab that loaded signed out re-binds to the account that signs in by
+// reloading. Guarded, so a session the cookie parser cannot read never loops.
+const REBIND_MARK = "centium-tab-rebind";
+function reloadToRebind(): boolean {
+  try {
+    const last = Number(sessionStorage.getItem(REBIND_MARK) ?? 0);
+    if (Date.now() - last < 10_000) return false;
+    sessionStorage.setItem(REBIND_MARK, String(Date.now()));
+  } catch {
+    return false;
+  }
+  markSessionArrived();
+  window.location.reload();
+  return true;
+}
+if (typeof window !== "undefined" && TAB_USER_ID !== null) {
+  try {
+    sessionStorage.removeItem(REBIND_MARK);
+  } catch {
+    /* storage refused */
+  }
+}
+
+/** "first name or email" for the account another tab switched to. */
+function accountLabel(session: Session): string {
+  const meta = (session.user.user_metadata ?? {}) as Record<string, unknown>;
+  const name = [meta.first_name, meta.firstName, meta.given_name, meta.name, meta.full_name].find(
+    (v): v is string => typeof v === "string" && v.trim() !== ""
+  );
+  return name?.trim().split(/\s+/)[0] ?? session.user.email ?? "another account";
+}
+
+// Set while this tab is signing itself out, so its own SIGNED_OUT is not
+// mistaken for another tab's.
+let signingOutHere = false;
+
 // Iteration 6 "Team" §8: the five streak-board plant species — tulip is
 // the shipped default, the other four are the tap-to-cycle exploration set
 // (README → Interactions). Purely cosmetic; see plantStage below for the
@@ -1267,7 +1328,7 @@ export type PlantSpecies = "tulip" | "rose" | "sunflower" | "daisy" | "lily";
 
 function loadPersisted<T>(key: string, fallback: T): T {
   try {
-    const raw = localStorage.getItem(`${STORAGE_KEY}:${key}`);
+    const raw = localStorage.getItem(persistKey(key));
     return raw ? (JSON.parse(raw) as T) : fallback;
   } catch {
     return fallback;
@@ -1284,7 +1345,7 @@ function loadPersisted<T>(key: string, fallback: T): T {
  */
 function writePersisted<T>(key: string, value: T): void {
   try {
-    localStorage.setItem(`${STORAGE_KEY}:${key}`, JSON.stringify(value));
+    localStorage.setItem(persistKey(key), JSON.stringify(value));
   } catch {
     // A browser blocking site data is not a reason to fail the import; the
     // rows are already on the server by the time this runs.
@@ -1293,7 +1354,7 @@ function writePersisted<T>(key: string, value: T): void {
 
 function forgetPersisted(key: string): void {
   try {
-    localStorage.removeItem(`${STORAGE_KEY}:${key}`);
+    localStorage.removeItem(persistKey(key));
   } catch {
     // As above.
   }
@@ -1337,7 +1398,7 @@ function usePersistentState<T>(key: string, initial: T) {
   });
   useEffect(() => {
     try {
-      localStorage.setItem(`${STORAGE_KEY}:${key}`, JSON.stringify(state));
+      localStorage.setItem(persistKey(key), JSON.stringify(state));
     } catch (e) {
       // AN UNCAUGHT THROW HERE WOULD TAKE THE APP DOWN, not just lose a
       // write: this runs inside a React effect, on every persisted key in the
@@ -1414,6 +1475,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // never shown the auth screen again.
     void getCurrentSession().then((existing) => {
       if (cancelled) return;
+      // Loaded signed out but a session exists (the cookie arrived after the
+      // tab's identity was read): re-bind by reloading, once.
+      if (TAB_USER_ID === null && existing?.user && reloadToRebind()) return;
       setSession(existing);
       setAuthReady(true);
     });
@@ -1425,6 +1489,28 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     // call sites that can drift apart.
     const unsubscribe = onAuthChange((next) => {
       if (cancelled) return;
+      // THE TAB IS BOUND TO THE ACCOUNT IT LOADED WITH. A session for anyone
+      // else never replaces it here: a refresh for the SAME user passes
+      // through; a tab that loaded signed out re-binds by reloading; any
+      // other change came from another tab (the cookie is shared), so this
+      // tab locks — every data request is refused at the fetch layer and a
+      // blocking notice offers the reload.
+      const nextId = next?.user?.id ?? null;
+      if (nextId !== TAB_USER_ID) {
+        if (TAB_USER_ID === null) {
+          if (nextId && reloadToRebind()) return;
+        } else {
+          if (signingOutHere) return;
+          // Suspended mid-session: auth-js dropped the session in THIS tab.
+          // Not another tab's doing; reload to the auth screen, which explains.
+          if (!next && accountSuspendedPending()) {
+            window.location.reload();
+            return;
+          }
+          lockTab(next ? { kind: "switched", label: accountLabel(next) } : { kind: "signedOut" });
+          return;
+        }
+      }
       setSession(next);
       setAuthReady(true);
       if (next?.user) {
@@ -1521,7 +1607,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     let cacheBelongsToAnAccount = false;
     try {
-      const raw = localStorage.getItem(`${STORAGE_KEY}:user`);
+      const raw = localStorage.getItem(persistKey("user"));
       const cached = raw ? (JSON.parse(raw) as Partial<UserProfile>) : null;
       cacheBelongsToAnAccount = !!cached && (!!cached.email || cached.onboarded === true);
     } catch {
@@ -5614,6 +5700,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     ]);
 
   const signOut = async () => {
+    signingOutHere = true;
     // Local cache is cleared FIRST and unconditionally. On a shared device
     // the cached profile/health data is the thing that actually matters, so
     // it must not be left behind by a network failure on the way to
@@ -5661,6 +5748,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
 
     await signOutRemote();
+    // A fresh page, bound to "signed out": no in-memory state of this account
+    // survives into the next sign-in on this tab.
+    window.location.reload();
   };
 
   // QA 12.0: "put the ability to delete account". This schedules a real
