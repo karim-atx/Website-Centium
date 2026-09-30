@@ -279,6 +279,39 @@ export const ExerciseSettingsSheet: React.FC<{
             </div>
           ) : (
             <>
+              {/* THE PRESCRIBED LOAD (2026-09-30). One weight per exercise, as
+                  routine_exercises stores it: blank = no weight (null), a number
+                  = kg, Bodyweight = 0. Typing 0 is bodyweight too. */}
+              <div className="block">
+                <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Weight", "kg")}</span>
+                <div className="flex items-center gap-2">
+                  <input
+                    value={draft.weightKg === undefined || draft.weightKg === null || draft.weightKg === 0 ? "" : String(draft.weightKg)}
+                    onChange={(e) => {
+                      const cleaned = e.target.value.replace(/[^\d.]/g, "");
+                      const n = Number(cleaned);
+                      setDraft((d) => ({ ...d, weightKg: cleaned === "" ? null : Number.isFinite(n) ? n : d.weightKg }));
+                    }}
+                    placeholder={draft.weightKg === 0 ? "Bodyweight" : "No weight"}
+                    inputMode="decimal"
+                    aria-label="Weight in kg"
+                    className="flex-1 min-w-0 rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <button
+                    type="button"
+                    aria-pressed={draft.weightKg === 0}
+                    onClick={() => setDraft((d) => ({ ...d, weightKg: d.weightKg === 0 ? null : 0 }))}
+                    className="tap shrink-0 rounded-xl px-3 py-2.5 text-xs font-bold"
+                    style={
+                      draft.weightKg === 0
+                        ? { background: "#AEA1DC", color: "#FFFFFF" }
+                        : { background: "rgba(174,161,220,0.14)", color: "#5F5093" }
+                    }
+                  >
+                    Bodyweight
+                  </button>
+                </div>
+              </div>
               <div className="grid grid-cols-2 gap-3">
                 <label className="block">
                   <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">{field("Min sets")}</span>

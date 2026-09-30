@@ -48,6 +48,7 @@ function qualifiers(ex: Exercise): string[] {
   const out: string[] = [];
   if (ex.intensityPct) out.push(`@ ${ex.intensityPct}%`);
   if (ex.repMaxKg) out.push(`${ex.repMaxKg} kg rep max`);
+  else if (ex.weightKg === 0) out.push("Bodyweight");
   else if (ex.weightKg) out.push(`${ex.weightKg} kg`);
   if (ex.rpe) out.push(`RPE ${ex.rpe}`);
   if (ex.tempo) out.push(`Tempo ${ex.tempo}`);

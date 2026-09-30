@@ -61,7 +61,8 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
   name: pick.name,
   sets: 3,
   reps: 10,
-  weightKg: 20,
+  // No weight until one is set: never a silent 20 kg (2026-09-30).
+  weightKg: null,
   muscleGroups: pick.muscleGroups,
   secondaryMuscleGroups: pick.secondaryMuscleGroups,
   classification: pick.classification,

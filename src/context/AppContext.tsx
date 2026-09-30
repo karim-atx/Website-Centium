@@ -2933,9 +2933,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               (isUuid(routine.folderId) ? routine.folderId : null)
             : null;
           const { id: _ignored, ...rest } = routine;
+          // A local routine could never hold bodyweight (there was no way to
+          // set it before 2026-09-30), so a 0 here is a missing weight: it
+          // goes up as null, never as 0.
+          const exercises = rest.exercises.map((ex) => (ex.weightKg === 0 ? { ...ex, weightKg: null } : ex));
           const written = await createRoutineRemote(
             authUserId,
-            { ...rest, folderId },
+            { ...rest, exercises, folderId },
             exerciseLookupRef.current
           );
           if (written.ok && written.routine) uploadedRoutines.push(written.routine);

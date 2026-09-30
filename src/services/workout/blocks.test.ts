@@ -22,7 +22,7 @@ const ex = (id: string, blockId?: string): Exercise => ({
   name: id.toUpperCase(),
   sets: 3,
   reps: 10,
-  weightKg: 0,
+  weightKg: null,
   classification: "barbell",
   ...(blockId ? { blockId } : {}),
 });

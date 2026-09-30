@@ -25,7 +25,7 @@ const base: Exercise = {
   name: "Back Squat",
   sets: 0,
   reps: 0,
-  weightKg: 0,
+  weightKg: null,
   classification: "barbell",
 };
 
@@ -85,9 +85,14 @@ const cases: { name: string; exercise: Exercise; perRound?: boolean; expect: str
     expect: "3 sets · 5 reps · 100 kg",
   },
   {
-    name: "a zero weight is not a prescription",
-    exercise: ex({ sets: 3, reps: 8, weightKg: 0 }),
+    name: "no weight (null) is not a prescription",
+    exercise: ex({ sets: 3, reps: 8, weightKg: null }),
     expect: "3 sets · 8 reps",
+  },
+  {
+    name: "a zero weight is bodyweight",
+    exercise: ex({ sets: 3, reps: 8, weightKg: 0 }),
+    expect: "3 sets · 8 reps · Bodyweight",
   },
 
   // --- per round ------------------------------------------------------------

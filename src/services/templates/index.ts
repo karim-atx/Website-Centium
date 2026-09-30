@@ -235,7 +235,9 @@ function toExercise(r: PrescriptionRow): Exercise | null {
     // say, and every reader now decides for itself what to do with that.
     sets: r.sets ?? undefined,
     reps: r.reps ?? undefined,
-    weightKg: num(r.weight_kg) ?? 0,
+    // null stays null (no weight prescribed); 0 is bodyweight. It used to be
+    // `?? 0`, and the next save wrote that 0 back as if it were a weight.
+    weightKg: r.weight_kg === null ? null : Number(r.weight_kg),
     muscleGroups: def.muscle_groups,
     secondaryMuscleGroups: def.secondary_muscle_groups,
     classification: def.classification,
@@ -855,7 +857,7 @@ interface ClientRoutineRow {
 /** "5×5 @ 100kg" — the shape a coach reads at a glance. */
 function summarise(sets: number | null, reps: number | null, weightKg: number | null): string {
   const scheme = `${sets ?? "?"}×${reps ?? "?"}`;
-  const weight = weightKg === null ? null : `${Number(weightKg)}kg`;
+  const weight = weightKg === null ? null : Number(weightKg) === 0 ? "bodyweight" : `${Number(weightKg)}kg`;
   return weight ? `${scheme} @ ${weight}` : scheme;
 }
 

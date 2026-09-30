@@ -219,6 +219,7 @@ export function prescriptionLine(ex: Exercise, options: PrescriptionOptions = {}
   if (ex.classification !== "cardio") {
     if (ex.intensityPct) parts.push(`@ ${ex.intensityPct}%`);
     if (ex.repMaxKg) parts.push(`${ex.repMaxKg} kg rep max`);
+    else if (ex.weightKg === 0) parts.push("Bodyweight");
     else if (ex.weightKg) parts.push(`${ex.weightKg} kg`);
     if (ex.rpe) parts.push(`RPE ${ex.rpe}`);
     if (ex.tempo) parts.push(`Tempo ${ex.tempo}`);

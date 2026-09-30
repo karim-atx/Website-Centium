@@ -61,7 +61,8 @@ export function seedSets(ex: Exercise): LoggedSet[] {
   return Array.from({ length: offered }).map((_, i) => ({
     setNumber: i + 1,
     reps,
-    weightKg: ex.weightKg ?? 0,
+    // The prescription as it is: null (none) stays null, never a 0 that would read as bodyweight.
+    weightKg: ex.weightKg ?? null,
     completed: false,
     // Rows past what was asked for are an offer, not an expectation.
     ...(asked > 0 && i >= asked ? { optional: true } : {}),

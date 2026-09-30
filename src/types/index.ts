@@ -791,7 +791,12 @@ export interface Exercise {
    */
   sets?: number;
   reps?: number;
-  weightKg: number;
+  /**
+   * The prescribed load. null = no weight prescribed (the logger shows no
+   * hint); 0 = BODYWEIGHT (shown "Bodyweight"; the logger hints "BW"); >0 = kg.
+   * Never a stand-in 0 for "none": routine_exercises.weight_kg is nullable.
+   */
+  weightKg: number | null;
   /**
    * WHICH LIBRARY ROW THIS PRESCRIBES, carried explicitly rather than guessed.
    *
