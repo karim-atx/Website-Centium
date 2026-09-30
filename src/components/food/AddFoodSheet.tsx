@@ -21,7 +21,7 @@ import { getFoodNutrientsById } from "../../services/food-nutrients";
 import { useApp } from "../../context/AppContext";
 import { AIVoiceLogger } from "./AIVoiceLogger";
 import { foodCategoryIcon } from "../../utils/icons";
-import { foodSuggestions, historyIds, type FoodSuggestion } from "../../services/food/suggestions";
+import { foodSuggestions, historyIds, lastUsed, type FoodSuggestion } from "../../services/food/suggestions";
 import { todayLocal } from "../../utils/date";
 import { Toast } from "../ui/Toast";
 import { PopupMenu } from "../ui/PopupMenu";
@@ -228,10 +228,12 @@ export const AddFoodSheet: React.FC<{
 
   // --- FO9 multi-select ---------------------------------------------------
   const multi = picked.size > 0;
-  /** A food's quantity when picked: its last-used one (FO7), else one serving. */
+  /** A food's quantity when picked: its last-used one (FO7), from the whole log, else one serving. */
   const defaultsFor = (id: string): { quantity: number; unit: ServingUnit } => {
     const sg = suggestions.find((x) => x.id === id);
-    return sg ? { quantity: sg.quantity, unit: sg.unit } : { quantity: 1, unit: "serving" };
+    if (sg) return { quantity: sg.quantity, unit: sg.unit };
+    const last = lastUsed(foodLog, id, suggestMeal, todayLocal());
+    return last ? { quantity: last.quantity, unit: last.unit as ServingUnit } : { quantity: 1, unit: "serving" };
   };
   const togglePick = (food: FoodSearchResult) =>
     setPicked((prev) => {

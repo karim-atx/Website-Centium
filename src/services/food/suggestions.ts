@@ -65,6 +65,28 @@ export function foodSuggestions(log: FoodLogEntry[], meal: MealType | null, toda
     }));
 }
 
+/**
+ * FO9: the quantity and unit a food was last logged with, from the whole
+ * diary (not only the top suggestions), preferring the same meal when one is
+ * known. Null when the food was never logged.
+ */
+export function lastUsed(
+  log: FoodLogEntry[],
+  id: string,
+  meal: MealType | null,
+  today: string
+): { quantity: number; unit: FoodLogEntry["unit"] } | null {
+  let any: FoodLogEntry | null = null;
+  let atMeal: FoodLogEntry | null = null;
+  for (const e of log) {
+    if (sourceId(e) !== id || e.date > today) continue;
+    if (!any || e.date >= any.date) any = e;
+    if (meal && e.meal === meal && (!atMeal || e.date >= atMeal.date)) atMeal = e;
+  }
+  const last = atMeal ?? any;
+  return last ? { quantity: last.quantity, unit: last.unit } : null;
+}
+
 /** Every food id in the user's history, so search can rank their own foods first. */
 export function historyIds(log: FoodLogEntry[]): Set<string> {
   const ids = new Set<string>();

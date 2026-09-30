@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { amountLabel, foodSuggestions, historyIds } from "./suggestions";
+import { amountLabel, foodSuggestions, historyIds, lastUsed } from "./suggestions";
 import type { FoodLogEntry } from "../../types";
 
 let n = 0;
@@ -62,4 +62,14 @@ test("the last-used quantity and its kcal come with each suggestion; hand-typed 
 
 test("a new user has no suggestions", () => {
   assert.deepEqual(foodSuggestions([], "breakfast", today), []);
+});
+
+test("lastUsed finds a food's latest quantity anywhere in the log, same meal first", () => {
+  const e = (date: string, meal: string, quantity: number) =>
+    ({ id: date + meal, foodId: "oats", date, meal, quantity, unit: "g", name: "Oats", calories: 100, display: { serving: "1 cup" } }) as unknown as FoodLogEntry;
+  const log = [e("2026-09-01", "breakfast", 60), e("2026-09-20", "lunch", 90), e("2026-09-10", "breakfast", 70)];
+  assert.deepEqual(lastUsed(log, "oats", "breakfast", "2026-09-30"), { quantity: 70, unit: "g" });
+  assert.deepEqual(lastUsed(log, "oats", "dinner", "2026-09-30"), { quantity: 90, unit: "g" });
+  assert.deepEqual(lastUsed(log, "oats", null, "2026-09-30"), { quantity: 90, unit: "g" });
+  assert.equal(lastUsed(log, "rice", null, "2026-09-30"), null);
 });
