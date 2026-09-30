@@ -9,8 +9,16 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObje
 //     whose direct [data-dnd-row] children are the routines in order
 //   [data-dnd-folders="<parentId>"]      a sibling group of folders, whose
 //     direct [data-dnd-folder-block] children are the folders in order
-//   [data-dnd-placeholder]               the gap where the item will land
+//   [data-dnd-placeholder]               the insertion line where the item will land
 //   [data-flip="<key>"]                  anything that slides when the list shifts
+//
+// THREE ZONES PER ROW (2026-09-30), read from the POINTER, not the card:
+//   the top quarter of a folder header drops ABOVE that folder, the bottom
+//   quarter BELOW it (after everything inside it), and the middle half drops
+//   INSIDE it (the header highlights). A routine row has only halves: the top
+//   half above, the bottom half below. A folder may move under a new parent
+//   only where canNest allows (five levels deep, never into itself); a routine
+//   over a folder header's top or bottom quarter takes the nearest routine slot.
 //
 // THE DRAGGED ITEM STAYS MOUNTED (hidden) where it started. A touch that began
 // on an element that leaves the DOM stops delivering touchmove to the window,
@@ -23,13 +31,14 @@ export type DragItem =
 export type DropTarget =
   | { kind: "group"; folderId: string | null; index: number }
   | { kind: "header"; folderId: string }
-  | { kind: "folders"; parentId: string | null; index: number };
+  | { kind: "folders"; parentId: string | null; index: number }
+  /** A folder dropped on the middle of another folder's header: inside it, at the end. */
+  | { kind: "into"; folderId: string };
 
 export interface DragState {
   item: DragItem;
   target: DropTarget;
-  /** The lifted card: its size and where it follows the pointer. */
-  height: number;
+  /** The lifted card: its width and where it follows the pointer. */
   width: number;
   left: number;
   offsetY: number;
@@ -42,7 +51,6 @@ const EDGE_TOP = 96;
 // The navbar, and the active-workout bar when it shows, cover the bottom.
 const EDGE_BOTTOM = 170;
 
-const attr = (id: string | null) => id ?? "";
 const fromAttr = (v: string | undefined) => (v ? v : null);
 
 /** Layout position (ignores transforms, so in-flight slide animations don't move the targets). */
@@ -67,16 +75,23 @@ function slots(items: HTMLElement[], container: HTMLElement): number[] {
   return ys;
 }
 
+/** The middle of a header, as a share of its height, that means "inside". */
+const EDGE_ZONE = 0.25;
+
 export function useRoutineDrag(
   listRef: RefObject<HTMLElement | null>,
-  onDrop: (item: DragItem, target: DropTarget) => void
+  onDrop: (item: DragItem, target: DropTarget) => void,
+  /** Whether the dragged folder may sit under this parent (null = top level). */
+  canNest: (folderId: string, parentId: string | null) => boolean = () => true
 ) {
   const [drag, setDragState] = useState<DragState | null>(null);
   // Mirrors of the latest drag and drop handler for the window listeners.
   const dragRef = useRef<DragState | null>(null);
   const onDropRef = useRef(onDrop);
+  const canNestRef = useRef(canNest);
   useLayoutEffect(() => {
     onDropRef.current = onDrop;
+    canNestRef.current = canNest;
   });
   const setDrag = useCallback((s: DragState | null) => {
     dragRef.current = s;
@@ -91,43 +106,68 @@ export function useRoutineDrag(
     (state: DragState, y: number): DropTarget => {
       const root = listRef.current;
       if (!root) return state.target;
-      const center = y - state.offsetY + state.height / 2;
-      const ph = root.querySelector<HTMLElement>("[data-dnd-placeholder]");
-      if (ph && shown(ph)) {
-        const r = layoutRect(ph);
-        if (center >= r.top && center <= r.bottom) return state.target;
-      }
+      const within = (r: { top: number; bottom: number }) => y >= r.top && y <= r.bottom;
+      const headers = [...root.querySelectorAll<HTMLElement>("[data-dnd-header]")].filter(shown);
       let best: { d: number; target: DropTarget } | null = null;
       const consider = (d: number, target: DropTarget) => {
         if (!best || d < best.d) best = { d, target };
       };
 
       if (state.item.kind === "routine") {
-        // Over a folder header (collapsed or not): the end of that folder.
-        for (const h of root.querySelectorAll<HTMLElement>("[data-dnd-header]")) {
-          if (!shown(h)) continue;
-          const r = layoutRect(h);
-          if (y >= r.top + 4 && y <= r.bottom - 4) return { kind: "header", folderId: h.dataset.dndHeader! };
+        const groups = [...root.querySelectorAll<HTMLElement>("[data-dnd-group]")].filter(shown);
+        const rowsOf = (g: HTMLElement) =>
+          [...g.children].filter((c): c is HTMLElement => c.hasAttribute("data-dnd-row") && shown(c));
+        // Over a routine row: its top half is above it, its bottom half below.
+        for (const g of groups) {
+          const rows = rowsOf(g);
+          for (let i = 0; i < rows.length; i++) {
+            const r = layoutRect(rows[i]);
+            if (within(r)) {
+              const folderId = fromAttr(g.dataset.dndGroup);
+              return { kind: "group", folderId, index: y < (r.top + r.bottom) / 2 ? i : i + 1 };
+            }
+          }
         }
-        for (const g of root.querySelectorAll<HTMLElement>("[data-dnd-group]")) {
-          if (!shown(g)) continue;
-          const rows = [...g.children].filter(
-            (c): c is HTMLElement => c.hasAttribute("data-dnd-row") && shown(c)
-          );
-          slots(rows, g).forEach((sy, index) =>
-            consider(Math.abs(center - sy), { kind: "group", folderId: fromAttr(g.dataset.dndGroup), index })
+        // Over the middle of a folder header: inside that folder, at the end.
+        for (const h of headers) {
+          const r = layoutRect(h);
+          if (!within(r)) continue;
+          const t = (y - r.top) / Math.max(1, r.bottom - r.top);
+          if (t >= EDGE_ZONE && t <= 1 - EDGE_ZONE) return { kind: "header", folderId: h.dataset.dndHeader! };
+        }
+        // Anywhere else (a gap, a header's edge): the nearest routine slot.
+        for (const g of groups) {
+          slots(rowsOf(g), g).forEach((sy, index) =>
+            consider(Math.abs(y - sy), { kind: "group", folderId: fromAttr(g.dataset.dndGroup), index })
           );
         }
       } else {
-        const container = root.querySelector<HTMLElement>(`[data-dnd-folders="${attr(state.item.parentId)}"]`);
-        if (container) {
-          const blocks = [...container.children].filter(
-            (c): c is HTMLElement => c.hasAttribute("data-dnd-folder-block") && shown(c)
-          );
-          const parentId = state.item.parentId;
-          slots(blocks, container).forEach((sy, index) =>
-            consider(Math.abs(center - sy), { kind: "folders", parentId, index })
-          );
+        const dragged = state.item.id;
+        const nest = (parentId: string | null) => canNestRef.current(dragged, parentId);
+        const blocksOf = (c: HTMLElement) =>
+          [...c.children].filter((b): b is HTMLElement => b.hasAttribute("data-dnd-folder-block") && shown(b));
+        // Over a folder header: top quarter above it, bottom quarter below
+        // it, the middle inside it — each only where the folder may nest.
+        for (const h of headers) {
+          const r = layoutRect(h);
+          if (!within(r)) continue;
+          const folderId = h.dataset.dndHeader!;
+          const block = h.closest<HTMLElement>("[data-dnd-folder-block]");
+          const container = block?.parentElement;
+          if (!block || !container?.hasAttribute("data-dnd-folders")) continue;
+          const parentId = fromAttr(container.dataset.dndFolders);
+          const index = blocksOf(container).indexOf(block);
+          const t = (y - r.top) / Math.max(1, r.bottom - r.top);
+          if (t >= EDGE_ZONE && t <= 1 - EDGE_ZONE && nest(folderId)) return { kind: "into", folderId };
+          if (nest(parentId)) return { kind: "folders", parentId, index: t < 0.5 ? index : index + 1 };
+          return state.target;
+        }
+        // Anywhere else: the nearest slot in any folder list it may join.
+        for (const c of root.querySelectorAll<HTMLElement>("[data-dnd-folders]")) {
+          if (!shown(c)) continue;
+          const parentId = fromAttr(c.dataset.dndFolders);
+          if (!nest(parentId)) continue;
+          slots(blocksOf(c), c).forEach((sy, index) => consider(Math.abs(y - sy), { kind: "folders", parentId, index }));
         }
       }
       return (best as { d: number; target: DropTarget } | null)?.target ?? state.target;
@@ -141,7 +181,7 @@ export function useRoutineDrag(
       item.kind === "routine"
         ? { kind: "group", folderId: item.folderId, index: item.index }
         : { kind: "folders", parentId: item.parentId, index: item.index };
-    setDrag({ item, target, height: r.height, width: r.width, left: r.left, offsetY: clientY - r.top, y: clientY });
+    setDrag({ item, target, width: r.width, left: r.left, offsetY: clientY - r.top, y: clientY });
   }, [setDrag]);
 
   const cancelPress = () => {

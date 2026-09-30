@@ -1,4 +1,4 @@
-import React, { useRef, useState } from "react";
+import React, { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { useApp } from "../../context/AppContext";
@@ -18,7 +18,7 @@ import { FOLDER_SWATCHES, folderFamily, routineFamily, type FolderFamily } from 
 import { BlockSettingsSheet } from "../../components/workout/BlockSettingsSheet";
 import { moveId, routinesIn } from "../../services/routines/order";
 import { useRoutineDrag, type DragItem, type DropTarget } from "./useRoutineDrag";
-import { MAX_DEPTH_NOTE, canAddSubfolder } from "../../services/routines/folderDepth";
+import { MAX_DEPTH_NOTE, canAddSubfolder, canMoveFolder } from "../../services/routines/folderDepth";
 import {
   canGroup,
   groupIntoRuns,
@@ -96,20 +96,60 @@ const ROUTINE_MENU: { value: RoutineAction; label: string; icon: React.ReactNode
   { value: "delete", label: "Delete", icon: <Trash2 size={MENU_ICON} />, destructive: true },
 ];
 
-/** The gap where a dragged item will land (WO1.1 "placeholder gap"). */
-const Placeholder: React.FC<{ height: number }> = ({ height }) => (
-  <div
-    data-dnd-placeholder
-    data-flip="placeholder"
-    aria-hidden
-    style={{
-      height,
-      borderRadius: 14,
-      background: "rgba(174,161,220,0.12)",
-      border: "1.5px dashed rgba(143,104,246,0.35)",
-    }}
-  />
+/**
+ * Where a dragged item will land (2026-09-30, replacing WO1.1's "placeholder
+ * gap"): an invisible marker centred in the gap between two rows. Its negative
+ * margins cancel its own height and the list's flex gap, so nothing shifts
+ * while it moves. The line itself is drawn by InsertionLine, above the lifted
+ * card, which would otherwise cover it.
+ */
+const Placeholder: React.FC<{ gap: number }> = ({ gap }) => (
+  <div data-dnd-placeholder aria-hidden style={{ height: 2, margin: `${-(gap + 2) / 2}px 0` }} />
 );
+
+/**
+ * The visible insertion line, in the same layer as the lifted card and just
+ * above it, placed on the list's [data-dnd-placeholder] marker after every
+ * render of a drag. Positioned by writing its own style (it has no state).
+ */
+const InsertionLine: React.FC<{ listRef: React.RefObject<HTMLDivElement | null> }> = ({ listRef }) => {
+  const ref = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const marker = listRef.current?.querySelector<HTMLElement>("[data-dnd-placeholder]");
+    if (!el) return;
+    if (!marker) {
+      el.style.display = "none";
+      return;
+    }
+    // Layout position, ignoring transforms, as useRoutineDrag measures drop
+    // targets: the line never jumps while rows slide.
+    let top = 0;
+    let left = 0;
+    for (let n: HTMLElement | null = marker; n; n = n.offsetParent as HTMLElement | null) {
+      top += n.offsetTop;
+      left += n.offsetLeft;
+    }
+    el.style.display = "block";
+    el.style.top = `${top - window.scrollY + marker.offsetHeight / 2 - 1.5}px`;
+    el.style.left = `${left - window.scrollX}px`;
+    el.style.width = `${marker.offsetWidth}px`;
+  });
+  return createPortal(
+    <div
+      ref={ref}
+      aria-hidden
+      className="fixed pointer-events-none"
+      style={{ display: "none", zIndex: 56, height: 3, borderRadius: 2, background: "#7D6BB5", boxShadow: "0 0 0 1.5px #FFFFFF" }}
+    >
+      <span
+        className="absolute rounded-full"
+        style={{ left: -5, top: -3.5, width: 10, height: 10, border: "2.5px solid #7D6BB5", background: "#FFFFFF" }}
+      />
+    </div>,
+    document.body
+  );
+};
 
 export default function RoutinesTab() {
   const {
@@ -120,6 +160,7 @@ export default function RoutinesTab() {
     deleteRoutineFolder,
     updateRoutineFolder,
     reorderRoutineFolders,
+    moveRoutineFolder,
     placeRoutine,
     duplicateRoutine,
     duplicateRoutineFolder,
@@ -204,13 +245,19 @@ export default function RoutinesTab() {
     if (item.kind === "routine") {
       if (target.kind === "header") run(placeRoutine(item.id, target.folderId, Number.MAX_SAFE_INTEGER));
       else if (target.kind === "group") run(placeRoutine(item.id, target.folderId, target.index));
+    } else if (target.kind === "into") {
+      run(moveRoutineFolder(item.id, target.folderId, Number.MAX_SAFE_INTEGER));
     } else if (target.kind === "folders") {
-      const ids = siblingsOf(item.parentId).map((f) => f.id);
-      const next = moveId(ids, item.id, target.index);
-      if (next.some((id, i) => id !== ids[i])) run(reorderRoutineFolders(item.parentId, next));
+      if (target.parentId === item.parentId) {
+        const ids = siblingsOf(item.parentId).map((f) => f.id);
+        const next = moveId(ids, item.id, target.index);
+        if (next.some((id, i) => id !== ids[i])) run(reorderRoutineFolders(item.parentId, next));
+      } else run(moveRoutineFolder(item.id, target.parentId, target.index));
     }
   };
-  const { drag, pressProps, gripProps, onClickCapture } = useRoutineDrag(listRef, onDrop);
+  // Five levels deep at most, never into itself (folderDepth).
+  const canNest = (folderId: string, parentId: string | null) => canMoveFolder(folderId, parentId, routineFolders);
+  const { drag, pressProps, gripProps, onClickCapture } = useRoutineDrag(listRef, onDrop, canNest);
   const draggingRoutine = drag?.item.kind === "routine" ? drag.item.id : null;
   const draggingFolder = drag?.item.kind === "folder" ? drag.item.id : null;
 
@@ -333,7 +380,7 @@ export default function RoutinesTab() {
     const rest = group.filter((r) => r.id !== draggingRoutine);
     return withPlaceholder(group, draggingRoutine, at).map((entry) =>
       entry.kind === "placeholder" ? (
-        <Placeholder key="placeholder" height={drag!.height} />
+        <Placeholder key="placeholder" gap={6} />
       ) : (
         renderRoutine(entry.item, entry.hidden ? group.indexOf(entry.item) : rest.indexOf(entry.item), familyOf(entry.item), entry.hidden)
       )
@@ -350,7 +397,7 @@ export default function RoutinesTab() {
     const rest = siblings.filter((f) => f.id !== draggingFolder);
     return withPlaceholder(siblings, draggingFolder, at).map((entry) =>
       entry.kind === "placeholder" ? (
-        <Placeholder key="placeholder" height={drag!.height} />
+        <Placeholder key="placeholder" gap={parentId === null ? 14 : 6} />
       ) : (
         renderFolder(entry.item, depth, entry.hidden ? siblings.indexOf(entry.item) : rest.indexOf(entry.item), entry.hidden)
       )
@@ -380,7 +427,7 @@ export default function RoutinesTab() {
           family={family}
           count={folderRoutines.length}
           collapsed={collapsed}
-          highlighted={drag?.target.kind === "header" && drag.target.folderId === folder.id}
+          highlighted={(drag?.target.kind === "header" || drag?.target.kind === "into") && drag.target.folderId === folder.id}
           onToggle={() => toggleFolderCollapsed(folder.id)}
           onMenu={(anchor) => setMenu({ kind: "folder", id: folder.id, anchor })}
           renaming={renamingId === folder.id}
@@ -675,6 +722,7 @@ export default function RoutinesTab() {
         onSelect={(action) => menuRoutine && onRoutineAction(menuRoutine, action)}
       />
 
+      {drag && <InsertionLine listRef={listRef} />}
       {/* The lifted card follows the pointer (WO1.1 "While dragging"). */}
       {drag &&
         (dragRoutine || dragFolder) &&
