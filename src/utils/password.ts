@@ -11,12 +11,18 @@ export const passwordChecks = [
 ];
 
 /**
- * Length + a number + a letter. The special character is a bonus that lifts
- * the "Strong" label but is not required, matching what sign-up has always
- * enforced.
+ * THE password rule: every item on the checklist above, and nothing else.
+ * Sign-up's button and submit, and the reset page's, all ask this, so the
+ * list the user is shown is exactly what is enforced; a password is never
+ * accepted while an item still shows a cross.
+ *
+ * Supabase Auth checks its own configured requirements on the server as well
+ * (see the report on 2026-09-30: locally 6 characters and nothing required);
+ * where it is weaker this is the stricter of the two, and a server refusal
+ * still reads as "That password is too weak" through describeAuthError.
  */
-export function meetsMinimumPassword(password: string): boolean {
-  return passwordChecks[0].test(password) && passwordChecks[2].test(password) && /[A-Za-z]/.test(password);
+export function meetsPasswordRule(password: string): boolean {
+  return passwordChecks.every((c) => c.test(password));
 }
 
 /**

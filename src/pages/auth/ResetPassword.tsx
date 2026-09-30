@@ -9,7 +9,7 @@ import { useSingleFlight } from "../../hooks/useSingleFlight";
 import { getMfaStatus, verifyTotp } from "../../services/mfa";
 import {
   passwordChecks,
-  meetsMinimumPassword,
+  meetsPasswordRule,
   shouldWarnPasswordMismatch,
 } from "../../utils/password";
 
@@ -121,7 +121,7 @@ export default function ResetPassword() {
       : "rgb(var(--c-status-good))";
 
   const canSubmit =
-    !busy && meetsMinimumPassword(password) && confirmPassword === password && !!authUserId;
+    !busy && meetsPasswordRule(password) && confirmPassword === password && !!authUserId;
 
   const handleSubmit = async () => {
     if (!canSubmit) return;

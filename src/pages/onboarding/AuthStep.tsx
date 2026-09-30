@@ -22,7 +22,7 @@ import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
 import {
   passwordChecks,
-  meetsMinimumPassword,
+  meetsPasswordRule,
   shouldWarnPasswordMismatch,
 } from "../../utils/password";
 
@@ -49,7 +49,7 @@ type Mode = "signIn" | "signUp" | "forgot" | "checkEmail";
 // step only advances once a real session exists, which is why the advance
 // is driven by the session in AppContext rather than by the submit handler.
 
-// passwordChecks, the minimum rule and the confirm-match rule all live in
+// passwordChecks, the one password rule and the confirm-match rule all live in
 // utils/password now, shared with the reset-password screen so the two
 // screens cannot end up accepting different passwords.
 
@@ -164,10 +164,10 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
       : passedChecks <= 3
       ? "rgb(var(--c-status-caution))"
       : "rgb(var(--c-status-good))";
-  const meetsMinimum = meetsMinimumPassword(password);
-  // Sign up stays disabled until the password meets the enforced rule and the
-  // confirmation matches it, as the checklist below shows.
-  const signUpReady = meetsMinimum && confirmPassword === password;
+  const meetsRule = meetsPasswordRule(password);
+  // Sign up stays disabled until every checklist item passes (meetsPasswordRule)
+  // and the confirmation matches.
+  const signUpReady = meetsRule && confirmPassword === password;
 
   const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
@@ -235,7 +235,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   const handleSignUp = async () => {
     if (!isValidEmail(email)) return setError("Enter a valid email address.");
     if (isBurner) return;
-    if (!meetsMinimum) return setError("Choose a stronger password — see the checklist below.");
+    if (!meetsRule) return setError("Choose a stronger password — see the checklist below.");
     if (password !== confirmPassword) return setError("Passwords don't match.");
     setError(null);
     setBusy(true);
