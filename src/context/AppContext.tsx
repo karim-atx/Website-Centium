@@ -756,18 +756,6 @@ interface AppState {
   recoverySensitiveIntroSeen: boolean;
   setRecoverySensitiveIntroSeen: (seen: boolean) => void;
   /**
-   * Whether the voice-logging privacy notice has been acknowledged.
-   *
-   * Voice is the first feature that sends anything a user produces to a
-   * company other than Supabase, and a microphone permission prompt says
-   * "this page wants your mic" -- not "this audio leaves for a third party".
-   * Nobody should learn the second part from a network tab, so it is said once
-   * before the first recording. Same shape as recoverySensitiveIntroSeen: a
-   * persisted boolean gating a dismissible notice, not a blocking modal.
-   */
-  voiceDisclosureSeen: boolean;
-  setVoiceDisclosureSeen: (seen: boolean) => void;
-  /**
    * The professional has dismissed the "turn on two-factor" nudge.
    *
    * SAME SHAPE AS THE TWO FLAGS ABOVE — a persisted boolean gating a
@@ -2123,10 +2111,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 
   const [recoverySensitive, setRecoverySensitive] = usePersistentState<boolean>("recoverySensitive", false);
-  const [voiceDisclosureSeen, setVoiceDisclosureSeen] = usePersistentState<boolean>(
-    "voiceDisclosureSeen",
-    false
-  );
   const [recoverySensitiveIntroSeen, setRecoverySensitiveIntroSeen] = usePersistentState<boolean>(
     "recoverySensitiveIntroSeen",
     false
@@ -5798,10 +5782,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setRecoverySensitive,
       streaksError,
       recoverySensitiveIntroSeen,
-      voiceDisclosureSeen,
       twoFactorNudgeDismissed,
       setTwoFactorNudgeDismissed,
-      setVoiceDisclosureSeen,
       setRecoverySensitiveIntroSeen,
       remindersPaused,
       setRemindersPaused,
@@ -6022,10 +6004,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recoverySensitive,
       streaksError,
       recoverySensitiveIntroSeen,
-      voiceDisclosureSeen,
       twoFactorNudgeDismissed,
       setTwoFactorNudgeDismissed,
-      setVoiceDisclosureSeen,
       remindersPaused,
       referralRedeemed,
       referralDiscountPct,

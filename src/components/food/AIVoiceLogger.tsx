@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Check, ChevronDown, Mic, Plus, Sparkles, MicOff, Square, ShieldCheck, UtensilsCrossed, X } from "lucide-react";
+import { Check, ChevronDown, Mic, Plus, Sparkles, MicOff, Square, UtensilsCrossed } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { logFoodEntry, manualFood, type FoodSearchResult } from "../../services/food";
 import { getFoodNutrients } from "../../services/food-nutrients";
@@ -152,8 +152,6 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     addFoodEntryRecord,
     authUserId,
     selectedDate,
-    voiceDisclosureSeen,
-    setVoiceDisclosureSeen,
     nutritionGoal,
     noteFeatureMilestone,
   } = useApp();
@@ -800,33 +798,6 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
       <div className="min-h-[280px] flex flex-col items-center justify-center text-center py-4">
         {stage === "idle" && (
           <>
-            {/* SAID ONCE, BEFORE THE FIRST RECORDING. The mic prompt asks to
-                listen; it does not say the audio leaves for another company,
-                and that is the part worth knowing in advance. Dismissible
-                rather than blocking — the same shape as the recovery-sensitive
-                intro on Home. */}
-            {!voiceDisclosureSeen && (
-              <div className="w-full flex items-start gap-3 bg-teal-pale rounded-2xl px-4 py-3.5 mb-5 text-left animate-fade-slide-up">
-                <ShieldCheck size={17} className="text-charcoal-soft dark:text-teal-deep-text shrink-0 mt-0.5" />
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-charcoal-soft dark:text-teal-deep-text mb-0.5">
-                    Your recording is sent for transcription
-                  </p>
-                  <p className="text-xs text-charcoal-soft leading-relaxed">
-                    Centium sends voice recordings to Groq, a third-party service, to turn them into
-                    text and find the foods. Nothing is logged until you confirm it.
-                  </p>
-                </div>
-                <button
-                  onClick={() => setVoiceDisclosureSeen(true)}
-                  aria-label="Dismiss"
-                  className="tap text-charcoal-faint shrink-0"
-                >
-                  <X size={15} />
-                </button>
-              </div>
-            )}
-
             {notice && (
               <p
                 className={`w-full text-xs rounded-xl px-3.5 py-2.5 mb-5 ${
@@ -866,6 +837,11 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
             </p>
             <p className="text-sm text-charcoal-soft max-w-xs">
               Centium needs your mic to hear what you ate.
+            </p>
+            {/* HO5.1 / decision 9: the transcription notice card is gone; the
+                disclosure is one line at the mic-permission step instead. */}
+            <p className="text-[11px] text-charcoal-faint max-w-xs mt-3">
+              Recordings are sent to Groq, a third-party service, to be transcribed.
             </p>
           </>
         )}

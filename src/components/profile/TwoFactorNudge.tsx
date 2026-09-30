@@ -81,8 +81,7 @@ export const TwoFactorNudge: React.FC = () => {
           Set it up
         </button>
       </div>
-      {/* Dismissal is permanent on this device and reversible from Settings —
-          the same bargain voiceDisclosureSeen makes. */}
+      {/* Dismissal is permanent on this device and reversible from Settings. */}
       <button
         onClick={() => setTwoFactorNudgeDismissed(true)}
         aria-label="Dismiss this reminder"
