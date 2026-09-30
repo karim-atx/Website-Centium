@@ -11,6 +11,8 @@ interface WidgetShellProps {
   onGripPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
   /** HO1.1: the tile's grid-column span on the widget board (6 tracks). */
   span?: number;
+  /** Decision 7: Water and Food are always large, so they get no size toggle. */
+  resizable?: boolean;
   children: React.ReactNode;
 }
 
@@ -34,7 +36,7 @@ interface WidgetShellProps {
 // (lift, live reflow, placeholder, auto-scroll, settle) since it needs
 // sibling tile rects and the board's own bounds.
 export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
-  ({ size, editMode, onRemove, onResize, onGripPointerDown, span, children }, ref) => {
+  ({ size, editMode, onRemove, onResize, onGripPointerDown, span, resizable = true, children }, ref) => {
     return (
       <div
         ref={ref}
@@ -47,6 +49,7 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
         {editMode && (
           <>
             <div style={{ position: "absolute", top: 7, right: 7, display: "flex", gap: 4, zIndex: 10 }}>
+              {resizable && (
               <button
                 onClick={onResize}
                 className="tap"
@@ -66,6 +69,7 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
               >
                 {size === "small" ? <Maximize2 size={11} /> : <Minimize2 size={11} />}
               </button>
+              )}
               <button
                 onClick={onRemove}
                 className="tap"

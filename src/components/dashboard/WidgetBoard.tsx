@@ -6,7 +6,7 @@ import type { WidgetType, WidgetConfig, WidgetSize } from "../../types";
 import { Pencil, Check, Plus, Footprints, Scale, Droplet, Moon, Utensils, Dumbbell, CheckSquare, BookOpen, Sparkles, HeartPulse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { widgetColumns, widgetSpans } from "../../utils/widgetGrid";
+import { ALWAYS_LARGE, widgetColumns, widgetSpans } from "../../utils/widgetGrid";
 
 // HO1.1: 2 small widgets per row below a 400px-wide viewport, 3 from 400.
 function useWidgetColumns() {
@@ -325,6 +325,7 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
               ref={setTileRef(item.id)}
               size={item.size}
               span={spans[i]}
+              resizable={!ALWAYS_LARGE.has(item.type)}
               editMode={editMode}
               onRemove={() => removeWidget(item.id)}
               onResize={() => resizeWidget(item.id, item.size === "small" ? "large" : "small")}

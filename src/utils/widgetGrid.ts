@@ -1,4 +1,4 @@
-import type { WidgetSize } from "../types";
+import type { WidgetConfig, WidgetSize, WidgetType } from "../types";
 
 // Handover 2026-09-29 HO1.1 (01_GLOBAL / 03): the Home widget board is a
 // CSS grid of 6 tracks. Small widgets sit `columns` to a row (2 below a
@@ -30,4 +30,12 @@ export function widgetSpans(sizes: WidgetSize[], columns: 2 | 3): number[] {
     i += run;
   }
   return spans;
+}
+
+// Approved decision 7: Water and Food are always large, with no size toggle.
+export const ALWAYS_LARGE: ReadonlySet<WidgetType> = new Set<WidgetType>(["water", "nutrition"]);
+
+/** A widget with its size forced where decision 7 fixes it (also migrates saved boards). */
+export function withFixedSize<T extends Pick<WidgetConfig, "type" | "size">>(w: T): T {
+  return ALWAYS_LARGE.has(w.type) && w.size !== "large" ? { ...w, size: "large" } : w;
 }
