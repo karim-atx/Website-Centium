@@ -4,12 +4,10 @@ import { useApp } from "../../context/AppContext";
 import { ReferralSheet } from "../../components/profile/ReferralSheet";
 import { PaymentsSheet } from "../../components/profile/PaymentsSheet";
 import { PublicListingSheet } from "../../components/profile/PublicListingSheet";
-import { LotusGlyph } from "../../components/dashboard/LotusGlyph";
 import { useUnread } from "../../context/UnreadContext";
 import { UnreadBadge } from "../../components/messages/UnreadBadge";
 import { CommunityLeafIcon, ExploreLeafIcon, ReferralLeafIcon, PremiumLeafIcon } from "../../components/icons/MoreLeafIcons";
 import {
-  Sparkles,
   Users,
   Store,
   User as UserIcon,
@@ -21,201 +19,191 @@ import {
   Building2,
   Banknote,
   Globe2,
-  BookOpen,
 } from "lucide-react";
 
-// Iteration 6 "Team" §5 More: each row's icon-well tile colour and, for the
-// primary items, a matching light row tint — lifted from the dc.html
-// markup for the 8 items it actually shows. Items the captured client
-// frame doesn't have (Messages, and the professional/business-only rows)
-// extend the same two families rather than inventing new ones.
-const TILE_COLOR: Record<string, string> = {
-  Profile: "#7D6BB5",
-  Mind: "#9B8AD0",
-  Calendar: "#6F9993",
-  Professionals: "#7D6BB5",
-  Community: "#4F7F78",
-  Messages: "#4C8FD1",
-  "Business messages": "#4C8FD1",
-  "Health Metrics": "#9C4F7C",
-  Payments: "#D9A441",
-  "Your public listing": "#4F7F78",
-  "Business Profile": "#7D6BB5",
-  Explore: "#C29A3D",
-  Referral: "#9C4F7C",
-  Settings: "#7E7568",
-};
-const TINTED_ROWS = new Set(["Profile", "Mind", "Calendar", "Professionals", "Community", "Messages", "Business messages"]);
-const rowBg = (label: string) => {
-  if (!TINTED_ROWS.has(label)) return "rgba(36,31,27,.05)";
-  const tile = TILE_COLOR[label];
-  if (tile === "#6F9993" || tile === "#4F7F78") return "rgba(162,200,194,.18)";
-  if (tile === "#4C8FD1") return "rgba(76,143,209,.14)";
-  return "rgba(174,161,220,.16)";
+// MO1.4 · More (handover 2026-09-30 More supplement, assets/MO1.4.png, built in
+// full on 2026-09-30). Every measurement below is taken from the frame, which
+// is 1:1 at 390 wide (content 16 to 374):
+//   Mind hero      358 x 169, radius 18, #ECF5F3; "Mind" 38px bold #32544D with
+//                  an 18px chevron 14px after it; subtitle 17px #869595 on a
+//                  22px line, wrapping after "Habits, journal &"; the supplied
+//                  brain illustration at 0.61 scale (214 x 169) flush top-right
+//   tile row       three tiles, gap 9, height 120, radius 14, #EBF5F2; a 30px
+//                  #4F8F8A icon well 18px from the top; 12.5px bold title with
+//                  a chevron, 10px #8A9796 subtitle on a 14px line, centred
+//   grouped list   radius 18, #F7F7FC, 4px padding; rows 56.6 high, 30px
+//                  #8E7FD0 wells 14px in, 11px to the text; 12px bold title,
+//                  10px #9A94B3 subtitle and chevron; 1px #EBEAF6 dividers from
+//                  the text to 15px short of the edge
+//   spacing        7 between hero, tiles and list; 13 before Premium
+//   Premium        unchanged (60 high, as the frame measures)
+// The frame is a client account's page. The frame has no dark mode, so dark
+// mode takes the app's tint families (teal .12, lavender .10) at the same
+// geometry. Font sizes and weights are fitted to the frame's text widths.
+
+type Entry = {
+  icon: ComponentType<{ size?: number; className?: string }>;
+  label: string;
+  desc: string;
+  to?: string;
+  onClick?: () => void;
 };
 
 export default function More() {
   const navigate = useNavigate();
-  const { user, journalEntries } = useApp();
+  const { user } = useApp();
   const unread = useUnread();
   const isProfessional = user.accountType === "professional";
   const isBusiness = user.accountType === "business";
+  const isClient = !isProfessional && !isBusiness;
   const [referralOpen, setReferralOpen] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [listingOpen, setListingOpen] = useState(false);
 
-  let journalStreak = 0;
-  {
-    const cursor = new Date();
-    for (;;) {
-      const d = cursor.toISOString().slice(0, 10);
-      if (!journalEntries.some((e) => e.date === d)) break;
-      journalStreak++;
-      cursor.setDate(cursor.getDate() - 1);
-    }
-  }
+  const go = (e: Entry) => (e.onClick ? e.onClick() : navigate(e.to!));
 
-  // Profile shifted to the top per QA — first widget in the More list.
-  // V6 (QA 6.0): Mind and the client-facing "browse professionals" directory
-  // don't apply to a professional or business account, so they're removed
-  // for those account types; Meal Plans and Health Metrics (their
-  // bottom-nav doesn't have room for every tab) are added for professionals.
-  // V8 (QA 8.0): Certification moved into My Profile — professionals already
-  // reach it from there now, so it's no longer duplicated here.
-  // Design refinement §6.7 removed the six per-item icon-well hues in favour
-  // of one neutral well; Iteration 6 "Team" §5 brings coloured wells back
-  // (TILE_COLOR/rowBg above) as its own, unrelated decision — not a revert
-  // of that refinement, a newer one replacing it.
-  const items = [
-    // V9 (QA 9.0): "Business profile and profile should be merged into just
-    // business profile" — business accounts no longer get a separate
-    // generic "Profile" entry; "Business Profile" below covers it.
-    !isBusiness && { icon: UserIcon, label: "Profile", desc: "Your account & settings", to: "/app/profile" },
-    !isProfessional && !isBusiness && { icon: Sparkles, label: "Mind", desc: "Habits, journal & meditation", to: "/app/mind" },
-    // V9 (QA 9.0): "Copy the calendar tab found in the Professional's UI
-    // here in a button found in the More's page" — client-side calendar,
-    // syncing events a connected professional/gym adds that involve them.
-    !isProfessional && !isBusiness && { icon: CalendarDays, label: "Calendar", desc: "Your events, synced with your professional & gym", to: "/app/calendar" },
-    !isProfessional && !isBusiness && { icon: Users, label: "Professionals", desc: "Trainers, dietitians & doctors", to: "/app/professionals" },
-    // V9 (QA 9.0): "Make a new button, under professionals in more called
-    // forum that acts like a hub for all clients to share information
-    // publicly."
-    // QA 11.0: renamed from "Forum" — the destination now has two tabs,
-    // Forum and Courses.
-    !isProfessional && !isBusiness && { icon: CommunityLeafIcon, label: "Community", desc: "Forum discussions & fitness courses", to: "/app/forum" },
-    // Both account types: a thread is two people, and the client half had no
-    // destination at all before this.
-    { icon: MessageCircle, label: "Messages", desc: isProfessional ? "Chat with your clients" : "Chat with your professionals", to: "/app/messages" },
-    isProfessional && { icon: Store, label: "Business messages", desc: "Your affiliated business thread", to: "/app/professionals/messages" },
-    isProfessional && { icon: HeartPulse, label: "Health Metrics", desc: "Client health data & clinical notes", to: "/app/professionals/health-metrics" },
-    // QA 12.0: "a button called payments, whereby the professional can add
-    // what his monthly rate is to be hired, alongside other types like
-    // consultations... payment modality (cash, card or whish)."
-    isProfessional && { icon: Banknote, label: "Payments", desc: "Your rates & accepted payment methods", onClick: () => setPaymentsOpen(true) },
-    // The listing content and the switch that publishes it live together, so
-    // nobody can turn on public visibility without seeing what becomes
-    // visible. See PublicListingSheet.
-    isProfessional && { icon: Globe2, label: "Your public listing", desc: "Specialty, bio & whether clients can find you", onClick: () => setListingOpen(true) },
-    isBusiness && { icon: Building2, label: "Business Profile", desc: "Name, bio, location & reviews", to: "/app/business/profile" },
-    // V9 (QA 9.0): "Add the messages tab in the More tab" + "Copy the
-    // calendar tab... in a button found in the More's page" — Messages
-    // moved out of the bottom nav to make room for Operations there.
-    isBusiness && { icon: MessageCircle, label: "Messages", desc: "Chat with clients & affiliated professionals", to: "/app/business/messages" },
-    isBusiness && { icon: CalendarDays, label: "Calendar", desc: "Schedule clients to professionals & classes", to: "/app/business/calendar" },
-    // V9 (QA 9.0): "Remove the explore button on in the More tab" (Business
-    // UI only — Client/Professional keep theirs).
-    !isBusiness && { icon: ExploreLeafIcon, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/app/marketplace" },
-    // QA 11.0: "Put a referral tab in the tab you see fits most" (Client
-    // UI) + "Apply the same referral program found in the client UI"
-    // (Professional/Business) — one sheet, reachable from every account
-    // type's More page.
-    // Approved decision 9 (2026-09-30): reward wording follows the handover
-    // (MO1.4), so the row reads "Share your code, earn rewards". A referral
-    // earns points and a subscription discount.
-    { icon: ReferralLeafIcon, label: "Referral", desc: "Share your code, earn rewards", onClick: () => setReferralOpen(true) },
-    { icon: Settings, label: "Settings", desc: "Appearance, notifications & more", to: "/app/settings" },
-  ].filter(Boolean) as { icon: ComponentType<{ size?: number; className?: string }>; label: string; desc: string; to?: string; onClick?: () => void }[];
+  // The three tiles under the Mind hero (clients: the directory, Community and
+  // Explore). Professionals and businesses have no Mind, directory or
+  // Community (V6 / V9), so their page is the grouped list alone.
+  const tiles: Entry[] = [
+    { icon: Users, label: "Professionals", desc: "Trainers, dietitians & doctors", to: "/app/professionals" },
+    { icon: CommunityLeafIcon, label: "Community", desc: "Forum discussions & fitness courses", to: "/app/forum" },
+    { icon: ExploreLeafIcon, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/app/marketplace" },
+  ];
+
+  // The grouped list. The client rows are the frame's five, in its order;
+  // the professional and business rows are the ones those accounts had
+  // before (V6 / V8 / V9 / QA 12.0), in the same list style.
+  const rows = (
+    isClient
+      ? [
+          { icon: UserIcon, label: "Profile", desc: "Your account & settings", to: "/app/profile" },
+          { icon: CalendarDays, label: "Calendar", desc: "Your events, synced with your professional & gym", to: "/app/calendar" },
+          { icon: MessageCircle, label: "Messages", desc: "Chat with your professionals", to: "/app/messages" },
+          // Approved decision 9: the handover's reward wording.
+          { icon: ReferralLeafIcon, label: "Referral", desc: "Share your code, earn rewards", onClick: () => setReferralOpen(true) },
+          { icon: Settings, label: "Settings", desc: "Appearance, notifications & more", to: "/app/settings" },
+        ]
+      : [
+          isProfessional && { icon: UserIcon, label: "Profile", desc: "Your account & settings", to: "/app/profile" },
+          isBusiness && { icon: Building2, label: "Business Profile", desc: "Name, bio, location & reviews", to: "/app/business/profile" },
+          isProfessional && { icon: MessageCircle, label: "Messages", desc: "Chat with your clients", to: "/app/messages" },
+          isProfessional && { icon: Store, label: "Business messages", desc: "Your affiliated business thread", to: "/app/professionals/messages" },
+          isProfessional && { icon: HeartPulse, label: "Health Metrics", desc: "Client health data & clinical notes", to: "/app/professionals/health-metrics" },
+          isProfessional && { icon: Banknote, label: "Payments", desc: "Your rates & accepted payment methods", onClick: () => setPaymentsOpen(true) },
+          isProfessional && { icon: Globe2, label: "Your public listing", desc: "Specialty, bio & whether clients can find you", onClick: () => setListingOpen(true) },
+          isBusiness && { icon: MessageCircle, label: "Messages", desc: "Chat with clients & affiliated professionals", to: "/app/business/messages" },
+          isBusiness && { icon: CalendarDays, label: "Calendar", desc: "Schedule clients to professionals & classes", to: "/app/business/calendar" },
+          isProfessional && { icon: ExploreLeafIcon, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/app/marketplace" },
+          { icon: ReferralLeafIcon, label: "Referral", desc: "Share your code, earn rewards", onClick: () => setReferralOpen(true) },
+          { icon: Settings, label: "Settings", desc: "Appearance, notifications & more", to: "/app/settings" },
+        ]
+  ).filter(Boolean) as Entry[];
 
   return (
     <div>
-      {/* Iteration 6 "Team": compact 19px title in place of PageHeader's
-          27px default — see the identical note in Food.tsx. The consent-
-          review hero the manifest shows above this is ConsentReviewBanner,
-          already rendered site-wide by Layout.tsx — restyled at its own
-          definition rather than duplicated here. */}
       <p className="mb-[13px] text-[19px] font-bold tracking-[-0.03em] text-charcoal">More</p>
 
-      <div className="flex flex-col gap-[7px] mb-[13px]">
-        {items.map((item) => (
+      {isClient && (
+        <>
+          {/* THE BRAIN IN DARK MODE. The asset is drawn for the light card: its
+              leaves are dark teal at ~28% alpha, and its transparent area
+              carries ~3,000 faint near-white specks. On a dark card the leaves
+              sink and the specks show as grain. This matrix drops the alpha of
+              anything with red in it (the specks; the leaves have none) and
+              brightens the leaves 1.9x. A dark variant of the asset would
+              still be cleaner; reported. */}
+          <svg width="0" height="0" aria-hidden className="absolute">
+            <filter id="more-brain-dark" colorInterpolationFilters="sRGB">
+              <feColorMatrix type="matrix" values="1.9 0 0 0 0  0 1.9 0 0 0  0 0 1.9 0 0  -0.6 0 0 1 0" />
+            </filter>
+          </svg>
+          {/* Mind: the hero. Habits, Journal and Meditation are all inside it. */}
           <button
-            key={item.label}
-            onClick={() => (item.onClick ? item.onClick() : navigate(item.to!))}
-            className="tap w-full flex items-center gap-[11px] rounded-[15px] px-3.5 py-3 text-left animate-fade-slide-up"
-            style={{ background: rowBg(item.label) }}
+            onClick={() => navigate("/app/mind")}
+            className="tap relative w-full overflow-hidden text-left block bg-[#ECF5F3] dark:bg-[rgba(162,200,194,0.12)] animate-fade-slide-up"
+            style={{ minHeight: 169, borderRadius: 18, marginBottom: 7 }}
           >
-            <div className="w-[30px] h-[30px] rounded-[10px] flex items-center justify-center shrink-0" style={{ background: TILE_COLOR[item.label] ?? "#7E7568" }}>
-              <item.icon size={14} className="text-white" />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[12.5px] font-bold text-charcoal">{item.label}</p>
-              <p className="text-[10px] text-charcoal-tertiary truncate">{item.desc}</p>
-            </div>
+            <img
+              src="/more-mind-brain.png"
+              alt=""
+              aria-hidden
+              draggable={false}
+              className="absolute pointer-events-none select-none dark:[filter:url(#more-brain-dark)]"
+              style={{ top: 0, right: 0, width: 214, height: 169 }}
+            />
+            <span className="relative flex flex-col justify-center" style={{ minHeight: 169, padding: "16px 20px" }}>
+              <span className="flex items-center" style={{ gap: 14 }}>
+                <span className="text-[#32544D] dark:text-[#D5EAE5]" style={{ fontSize: 38, fontWeight: 700, lineHeight: 1, letterSpacing: "-0.02em" }}>
+                  Mind
+                </span>
+                <ChevronRight size={18} strokeWidth={2.6} className="shrink-0 text-[#32544D] dark:text-[#D5EAE5]" />
+              </span>
+              <span className="block text-[#869595] dark:text-[#A5BDB9]" style={{ marginTop: 12, maxWidth: 160, fontSize: 17, fontWeight: 500, lineHeight: "22px" }}>
+                Habits, journal &amp; meditation
+              </span>
+            </span>
+          </button>
+
+          <div className="grid grid-cols-3" style={{ gap: 9, marginBottom: 7 }}>
+            {tiles.map((t) => (
+              <button
+                key={t.label}
+                onClick={() => go(t)}
+                className="tap flex flex-col items-center text-center bg-[#EBF5F2] dark:bg-[rgba(162,200,194,0.12)] animate-fade-slide-up"
+                style={{ minHeight: 120, borderRadius: 14, padding: "18px 6px 12px" }}
+              >
+                <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: "#4F8F8A" }}>
+                  <t.icon size={14} className="text-white" />
+                </span>
+                <span className="flex items-center justify-center text-charcoal" style={{ marginTop: 8, gap: 2, fontSize: 12.5, fontWeight: 700, lineHeight: "16px" }}>
+                  {t.label}
+                  <ChevronRight size={12} strokeWidth={2.6} className="shrink-0" />
+                </span>
+                <span className="text-[#8A9796] dark:text-[#9CB0AD]" style={{ marginTop: 2, fontSize: 10, lineHeight: "14px" }}>
+                  {t.desc}
+                </span>
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
+      <div
+        className="bg-[#F7F7FC] dark:bg-[rgba(174,161,220,0.10)] animate-fade-slide-up"
+        style={{ borderRadius: 18, padding: "4px 0", marginBottom: 13 }}
+      >
+        {rows.map((r, i) => (
+          <button
+            key={r.label}
+            onClick={() => go(r)}
+            className="tap relative w-full flex items-center text-left"
+            style={{ minHeight: 56.6, padding: "6.7px 15px 9.3px 14px", gap: 11 }}
+          >
+            {i > 0 && (
+              <span
+                aria-hidden
+                className="absolute top-0 bg-[#EBEAF6] dark:bg-[rgba(174,161,220,0.16)]"
+                style={{ left: 55, right: 15, height: 1 }}
+              />
+            )}
+            <span className="flex items-center justify-center shrink-0" style={{ width: 30, height: 30, borderRadius: 10, background: "#8E7FD0" }}>
+              <r.icon size={14} className="text-white" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-charcoal" style={{ fontSize: 12, fontWeight: 700, lineHeight: "16px" }}>
+                {r.label}
+              </span>
+              <span className="block truncate" style={{ marginTop: 5, fontSize: 10, lineHeight: "13px", color: "#9A94B3" }}>
+                {r.desc}
+              </span>
+            </span>
             <span className="flex items-center gap-2 shrink-0">
-              {item.to === "/app/messages" && <UnreadBadge count={unread.total} />}
-              <ChevronRight size={14} className="text-primary-deep-text/60" />
+              {r.to === "/app/messages" && <UnreadBadge count={unread.total} />}
+              <ChevronRight size={14} style={{ color: "#9A94B3" }} />
             </span>
           </button>
         ))}
-      </div>
-
-      {/* "Your passes" — real gym-passes, journal and meditation data,
-          reusing the exact canonical small-widget markup from the Home
-          widget library (see the identical note in Health.tsx). Not part
-          of the manifest's captured client frame as a concept before this
-          — it's genuinely new content, built from real state rather than
-          the mockup's example numbers. */}
-      {/* THE GYM-PASSES TILE IS GONE, with the rest of gym passes. It counted
-          rows in a localStorage map keyed by invented gym ids and drew a
-          decorative QR square for the first of them — a pass to a gym that did
-          not exist, bought with a prototype payment. Payments (Tap) are the
-          prerequisite for any of it coming back.
-
-          The row is titled for what is actually in it now. */}
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Mind</p>
-      <div className="flex gap-[7px] mb-[13px]">
-        <button
-          onClick={() => navigate("/app/mind")}
-          className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left"
-          style={{ background: "rgba(217,164,65,.14)" }}
-        >
-          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-gold-ink/[0.82]">Journal</p>
-          <div className="flex-1 flex items-center justify-center min-h-0">
-            <span className="flex flex-col items-center gap-[7px]">
-              <BookOpen size={30} className="text-team-gold-deep" />
-              <span className="flex flex-col items-center leading-none">
-                <span className="text-[20px] font-extrabold tracking-[-0.04em] text-charcoal tabular-nums">{journalStreak}</span>
-                <span className="mt-1 text-[8.5px] font-bold text-team-gold-ink/[0.82]">day streak</span>
-              </span>
-            </span>
-          </div>
-        </button>
-
-        <button
-          onClick={() => navigate("/app/mind")}
-          className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left"
-          style={{ background: "rgba(162,200,194,.18)" }}
-        >
-          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-teal-ink/[0.72]">Meditation</p>
-          <div className="flex-1 flex items-center justify-center min-h-0">
-            <span className="flex flex-col items-center gap-2">
-              <LotusGlyph size={40} stroke="rgb(var(--c-teal-dark))" />
-              {/* The same invented "12 min" the Mind tile and the Home widget
-                  carried. Nothing records a meditation session, so there is no
-                  total to print here either. */}
-              <span className="text-[9px] font-bold text-team-teal-ink/[0.72]">Start a session</span>
-            </span>
-          </div>
-        </button>
       </div>
 
       <button
@@ -228,18 +216,20 @@ export default function More() {
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-[11px] flex items-center justify-center shrink-0" style={{ background: "rgba(174,161,220,.26)" }}>
-            {/* MO1.4: the leaf-crown mark; same size and colour as the crown it replaces. */}
             <PremiumLeafIcon size={15} style={{ color: "#C8BFE9" }} />
           </div>
           <div>
             <p className="text-[12.5px] font-extrabold text-white">Centium Premium</p>
-            {/* Approved decision 9: the handover's MO1.4 wording. */}
+            {/* Approved decision 9: the handover's MO1.4 wording. One line, as
+                before: the frame wraps it, but its card is still 60 high with
+                the second line 3px off the bottom edge (a wrap artifact; the
+                frame note keeps Premium unchanged), and one line gives the
+                same 60. */}
             <p className="text-[10px] text-white/60">AI logging, deeper insights &amp; rewards</p>
           </div>
         </div>
         <ChevronRight size={14} style={{ color: "#C8BFE9" }} className="shrink-0" />
       </button>
-
 
       <ReferralSheet open={referralOpen} onClose={() => setReferralOpen(false)} />
       {isProfessional && <PaymentsSheet open={paymentsOpen} onClose={() => setPaymentsOpen(false)} />}
