@@ -1,6 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Card } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
+import type React from "react";
 import { Chip } from "../../components/ui/Chip";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { MacroSplitEditor, MACRO_REBALANCE_NOTE } from "../../components/food/MacroSplitEditor";
@@ -15,17 +14,27 @@ import {
 } from "../../services/nutrition";
 import { canDrawSparkline, trendLabel, withinDays } from "../../services/health-metrics/series";
 import type { WeightGoalType, PlanType } from "../../types";
-import { Check, Minus, Plus, ChevronDown, X } from "lucide-react";
+import { Check, Minus, Plus, ChevronDown, X, TrendingDown, TrendingUp, Equal } from "lucide-react";
 import { dietaryRestrictionOptions } from "../../utils/dietaryRestrictions";
 // Item 8 shares Food's own tab bar (labels + literal flex-weights) instead
 // of a second, drifting copy of them.
 import { foodTabs, type Tab } from "./foodTabs";
 
-const goalOptions: { value: WeightGoalType; label: string }[] = [
-  { value: "lose", label: "Lose weight" },
-  { value: "maintain", label: "Maintain" },
-  { value: "gain", label: "Gain weight" },
+// FO2.2 / FO4.2 / FO5.2: each Weight Goal button carries its trend icon.
+const goalOptions: { value: WeightGoalType; label: string; Icon: typeof Equal }[] = [
+  { value: "lose", label: "Lose weight", Icon: TrendingDown },
+  { value: "maintain", label: "Maintain", Icon: Equal },
+  { value: "gain", label: "Gain weight", Icon: TrendingUp },
 ];
+
+// Handover 2026-09-29 FO2.2 / FO4.2 / FO5.2 card system, measured from the
+// frames: white cards with a 1px #E7E6E6 (rgba(36,31,27,0.11)) hairline,
+// radius 16, 14px sides, 10px apart; titles are bold purple caps with no icon.
+const CARD: React.CSSProperties = { background: "#FFFFFF", border: "1px solid #E7E6E6", borderRadius: 16, padding: "11px 14px 12px" };
+const TITLE: React.CSSProperties = { margin: 0, fontSize: 10.5, fontWeight: 800, letterSpacing: "0.1em", textTransform: "uppercase", color: "#6D50D3" };
+// "Use suggested" and "Use custom": one size (FO2.2 "both buttons the same size").
+// Both measure 92 x 28 in the frame.
+const ACTION: React.CSSProperties = { width: 92, height: 28, padding: 0, borderRadius: 10, fontSize: 12, fontWeight: 700, whiteSpace: "nowrap" };
 
 // V4: "Existing plan" applies a dietitian-provided target — a plausible
 // stand-in preset, since the prototype doesn't wire real template content
@@ -47,7 +56,12 @@ interface GoalsPanelProps {
 export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
   const { user, healthSeries, metricValues, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, dietaryRestriction, setDietaryRestriction, today, pregnancy } =
     useApp();
-  const [calorieDraft, setCalorieDraft] = useState(String(nutritionGoal.targetCalories));
+  // What the stepper shows: the user's edit, or (null) the saved target, so it
+  // never shows a figure from before the goal loaded — with "Use custom"
+  // always on screen, that stale figure would be one tap from being saved.
+  const [calorieEdit, setCalorieEdit] = useState<string | null>(null);
+  const calorieDraft = calorieEdit ?? String(nutritionGoal.targetCalories);
+  const setCalorieDraft = (v: string | null) => setCalorieEdit(v);
   const [planError, setPlanError] = useState<string | null>(null);
   const [restrictionOpen, setRestrictionOpen] = useState(false);
   const restrictionContentRef = useRef<HTMLDivElement>(null);
@@ -180,7 +194,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
       targetCalories: Math.round(suggested + existingPlanPreset.calorieAdjust),
       macroSplit: existingPlanPreset.macroSplit,
     });
-    setCalorieDraft(String(Math.round(suggested + existingPlanPreset.calorieAdjust)));
+    setCalorieDraft(null);
   };
 
   const applySuggested = () => {
@@ -194,20 +208,24 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
         ? suggested + delta
         : suggested;
     setNutritionGoal({ ...nutritionGoal, targetCalories: Math.round(cals) });
-    setCalorieDraft(String(Math.round(cals)));
+    setCalorieDraft(null);
   };
 
-  // Master handover item 9: the whole panel fits one 390x844 screen in the
-  // Maintain state, using the compact Goals & Macros frame in the handoff's
-  // reference (CentiumTabFrame): cards 14px radius with 8px/11px padding,
-  // 5px apart, 9.5px caps labels, 19px figures, and the weight-trend chart,
-  // TDEE button and calorie stepper beside their values. Every field, value
-  // and control is kept; the Lose/Gain extras compact the same way.
-  const cardClass = "rounded-[14px] px-[11px] py-2";
-  const capsLabel = "text-[9.5px] font-bold uppercase tracking-[0.1em]";
+  const maintain = nutritionGoal.weightGoal === "maintain";
+
+  const useSuggestedButton = (
+    <button
+      onClick={applySuggested}
+      disabled={locked || tdee === null}
+      className="tap shrink-0 inline-flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
+      style={{ ...ACTION, background: "#F5F5F6", color: "#241F1B" }}
+    >
+      Use suggested
+    </button>
+  );
 
   return (
-    <div className="flex flex-col gap-[5px] animate-fade-slide-up">
+    <div className="flex flex-col animate-fade-slide-up" style={{ gap: 10 }}>
       <SegmentedTabs items={foodTabs} activeKey="goals" onChange={(key) => onTabChange(key as Tab)} />
 
       {/* PREGNANCY GUIDANCE SITS WITH THE TARGET IT OFFERS TO CHANGE. "Apply
@@ -216,28 +234,38 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
           user has to remember what it did. */}
       {pregnancy && <PregnancyNutritionCard pregnancy={pregnancy} />}
 
-      <Card padded={false} className={cardClass}>
-        <p className={`${capsLabel} text-charcoal-faint mb-1.5`}>Weight goal</p>
-        <div className="grid grid-cols-3 gap-1.5">
-          {goalOptions.map((g) => (
-            <button
-              key={g.value}
-              onClick={() => changeWeightGoal(g.value)}
-              disabled={locked}
-              className={`tap rounded-[9px] py-1.5 text-[11px] font-semibold border transition-colors disabled:opacity-50 ${
-                nutritionGoal.weightGoal === g.value
-                  ? "bg-primary text-white border-primary"
-                  : "bg-cream-soft border-transparent text-charcoal-soft"
-              }`}
-            >
-              {g.label}
-            </button>
-          ))}
+      <section style={CARD}>
+        <p style={{ ...TITLE, marginBottom: 12 }}>Weight goal</p>
+        <div className="grid grid-cols-3" style={{ gap: 6 }}>
+          {goalOptions.map((g) => {
+            const on = nutritionGoal.weightGoal === g.value;
+            return (
+              <button
+                key={g.value}
+                onClick={() => changeWeightGoal(g.value)}
+                disabled={locked}
+                className="tap inline-flex items-center justify-center disabled:opacity-50"
+                style={{
+                  height: 29,
+                  gap: 5,
+                  borderRadius: 8,
+                  background: on ? "#AEA1DC" : "#F5F5F6",
+                  color: on ? "#FFFFFF" : "#5B5349",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  whiteSpace: "nowrap",
+                }}
+              >
+                <g.Icon size={13} strokeWidth={2.2} />
+                {g.label}
+              </button>
+            );
+          })}
         </div>
 
-        {nutritionGoal.weightGoal !== "maintain" && (
+        {!maintain && (
           <>
-            <label className="block mt-2">
+            <label className="block mt-3">
               <span className="text-[10.5px] font-semibold text-charcoal-soft mb-0.5 block">Desired weight</span>
               <div className="flex items-center gap-2">
                 <input
@@ -266,7 +294,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
               )}
             </label>
 
-            <label className="block mt-1.5">
+            <label className="block mt-2">
               <span className="flex items-baseline justify-between">
                 <span className="text-[10.5px] font-semibold text-charcoal-soft">Desired weekly rate (kg/week)</span>
                 <span className="text-[10px] text-charcoal-faint">
@@ -297,207 +325,218 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
         )}
 
         {locked && (
-          <p className="text-[10.5px] text-charcoal-faint mt-1.5">
+          <p className="text-[10.5px] text-charcoal-faint mt-2">
             Locked — only your dietitian can edit this plan.
           </p>
         )}
-      </Card>
+      </section>
 
-      <Card padded={false} className={cardClass}>
-        <div className="flex items-center justify-between mb-0.5">
-          {/* "WEIGHT TREND" in #6D50D3; the figure below stays charcoal
-              (#241F1B), per the reference markup. */}
-          <p className={capsLabel} style={{ color: "#6D50D3" }}>Weight trend</p>
-          <span className="text-[10px] text-charcoal-faint">{reachDate ? "To goal" : "7 days"}</span>
-        </div>
-        <div className="flex items-end justify-between gap-2.5">
-          <div className="shrink-0">
+      {maintain ? (
+        // FO2.2: in Maintain, the last logged weight (no chart) beside a
+        // compact TDEE card; the target equals maintenance, so no separate
+        // Target calories stat.
+        <div className="flex" style={{ gap: 6 }}>
+          <section style={{ ...CARD, flex: 138, minWidth: 0 }}>
+            <p style={{ ...TITLE, marginBottom: 10 }}>Current weight</p>
+            <p style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>Last logged</p>
             {weight.current === null ? (
-              <p className="text-[13px] font-semibold text-charcoal-tertiary leading-[1.1]">
+              <p className="text-[13px] font-semibold text-charcoal-tertiary" style={{ marginTop: 2 }}>
                 No weigh-ins yet
               </p>
             ) : (
-              <>
-                <p className="text-[19px] font-bold leading-[1.1] text-charcoal">{weight.current} kg</p>
-                {trendLabel(weightMeta) && (
-                  <p className="text-[10px] text-charcoal-faint">{trendLabel(weightMeta)}</p>
-                )}
-              </>
+              <p style={{ margin: "1px 0 0", fontSize: 19, fontWeight: 800, color: "#241F1B" }}>
+                {weight.current}
+                <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 3 }}>kg</span>
+              </p>
             )}
-          </div>
-          {/* A LINE NEEDS TWO POINTS. One weigh-in drew a flat week. */}
-          {canDrawSparkline(weightMeta) && (
-          <WeightTrendChart
-            history={weight.history}
-            desiredWeightKg={reachDate ? desiredWeightKg ?? undefined : undefined}
-            reachDate={reachDateIso}
-            width={260}
-            height={110}
-            displayWidth={192}
-            displayHeight={56}
-          />
-          )}
-        </div>
-        {reachDate && (
-          <p className="text-[10px] text-primary-dark bg-primary-pale rounded-full px-2.5 py-0.5 mt-1 inline-block">
-            At this rate, reach {desiredWeightKg}kg by {reachDate}
-          </p>
-        )}
-      </Card>
-
-      <Card padded={false} className={cardClass}>
-        {/* Item 9: no icon on the TDEE card. */}
-        <p className={`${capsLabel} text-charcoal-faint mb-1`}>TDEE estimate</p>
-        <div className="flex items-center justify-between gap-2.5">
-          <div className="min-w-0">
+          </section>
+          <section style={{ ...CARD, flex: 215, minWidth: 0 }}>
+            <p style={{ ...TITLE, marginBottom: 10 }}>TDEE estimate</p>
             {tdee === null ? (
               <>
-                <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">
-                  Needs your height and weight
-                </p>
-                <p className="mt-px text-[8px] leading-[1.3] text-charcoal-faint">
-                  Mifflin-St Jeor is a formula in both — add them in Profile for a maintenance
-                  estimate.
+                <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">Needs your height and weight</p>
+                <p className="mt-1 text-[8.5px] leading-[1.3] text-charcoal-faint">
+                  Mifflin-St Jeor is a formula in both — add them in Profile for a maintenance estimate.
                 </p>
               </>
             ) : (
               <>
-                <p className="text-[19px] font-bold leading-[1.1] text-charcoal">{tdee.toLocaleString()} kcal</p>
-                <p className="mt-px text-[8px] leading-[1.3] text-charcoal-faint">
-                  Estimated maintenance calories at your current weight (Mifflin-St Jeor) — a prototype
-                  estimate, adjust as needed.
-                </p>
+                <p style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>Maintenance calories</p>
+                {/* Wraps at 360, where the figure and the button don't both fit. */}
+                <div className="flex items-center justify-between flex-wrap" style={{ columnGap: 8, rowGap: 6, marginTop: 1 }}>
+                  <p style={{ margin: 0, fontSize: 19, fontWeight: 800, color: "#241F1B", whiteSpace: "nowrap" }}>
+                    {tdee.toLocaleString()}
+                    <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 3 }}>kcal</span>
+                  </p>
+                  {useSuggestedButton}
+                </div>
+                <p style={{ margin: "6px 0 0", fontSize: 8.5, color: "#8C8378" }}>Based on the Mifflin-St Jeor Formula</p>
               </>
             )}
-          </div>
-          <button
-            onClick={applySuggested}
-            disabled={locked || tdee === null}
-            className="tap shrink-0 h-[30px] px-[11px] rounded-[9px] bg-cream-soft text-charcoal text-[11px] font-bold whitespace-nowrap inline-flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
-          >
-            Use suggested
-          </button>
+          </section>
         </div>
-        {(nutritionGoal.weightGoal !== "maintain" || tdeeAtGoal !== null) && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {nutritionGoal.weightGoal !== "maintain" && suggestedForGoal !== null && (
-              <p className="text-[10px] text-charcoal bg-cream-soft rounded-full px-2.5 py-0.5">
-                {suggestedForGoal.toLocaleString()} kcal to {nutritionGoal.weightGoal} weight at your
-                current rate
+      ) : (
+        <>
+          <section style={CARD}>
+            <div className="flex items-center justify-between mb-1">
+              <p style={TITLE}>Weight trend</p>
+              <span className="text-[10px] text-charcoal-faint">{reachDate ? "To goal" : "7 days"}</span>
+            </div>
+            <div className="flex items-end justify-between gap-2.5">
+              <div className="shrink-0">
+                {weight.current === null ? (
+                  <p className="text-[13px] font-semibold text-charcoal-tertiary leading-[1.1]">No weigh-ins yet</p>
+                ) : (
+                  <>
+                    <p className="text-[19px] font-bold leading-[1.1] text-charcoal">{weight.current} kg</p>
+                    {trendLabel(weightMeta) && <p className="text-[10px] text-charcoal-faint">{trendLabel(weightMeta)}</p>}
+                  </>
+                )}
+              </div>
+              {/* A LINE NEEDS TWO POINTS. One weigh-in drew a flat week. */}
+              {canDrawSparkline(weightMeta) && (
+                <WeightTrendChart
+                  history={weight.history}
+                  desiredWeightKg={reachDate ? desiredWeightKg ?? undefined : undefined}
+                  reachDate={reachDateIso}
+                  width={260}
+                  height={110}
+                  displayWidth={192}
+                  displayHeight={56}
+                />
+              )}
+            </div>
+            {reachDate && (
+              <p className="text-[10px] text-primary-dark bg-primary-pale rounded-full px-2.5 py-0.5 mt-1 inline-block">
+                At this rate, reach {desiredWeightKg}kg by {reachDate}
               </p>
             )}
-            {tdeeAtGoal !== null && (
-              <p className="text-[10px] text-primary-dark bg-primary-pale rounded-full px-2.5 py-0.5">
-                ≈ {tdeeAtGoal.toLocaleString()} kcal once you reach {nutritionGoal.desiredWeightKg}kg
-              </p>
-            )}
-          </div>
-        )}
-      </Card>
+          </section>
 
-      <Card padded={false} className={cardClass}>
-        {/* V10 (QA 10.0): "I want another better way to edit daily calorie
-            target instead of pressing a pencil icon" — a +/- stepper plus
-            direct typing, with an explicit Save that only appears once the
-            value changes. */}
-        <div className="flex items-center justify-between gap-2.5">
-          <p className={`${capsLabel} min-w-0`} style={{ color: "#9891A8" }}>
-            Daily target
-          </p>
-          <div className="flex items-center gap-[11px] shrink-0">
-            <span className="flex items-stretch h-9 rounded-full overflow-hidden" style={{ background: "#F5F5FE" }}>
-              <button
-                onClick={() => !locked && setCalorieDraft(String(Math.max(0, Number(calorieDraft || 0) - 50)))}
-                disabled={locked}
-                aria-label="Decrease by 50 kcal"
-                className="tap w-[54px] flex items-center justify-center disabled:opacity-50"
-                style={{ color: "#1D167D" }}
-              >
-                <Minus size={15} strokeWidth={2.2} />
-              </button>
+          <section style={CARD}>
+            <p style={{ ...TITLE, marginBottom: 6 }}>TDEE estimate</p>
+            <div className="flex items-center justify-between gap-2.5">
+              <div className="min-w-0">
+                {tdee === null ? (
+                  <>
+                    <p className="text-[13px] font-semibold leading-[1.1] text-charcoal-tertiary">Needs your height and weight</p>
+                    <p className="mt-px text-[8px] leading-[1.3] text-charcoal-faint">
+                      Mifflin-St Jeor is a formula in both — add them in Profile for a maintenance estimate.
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-[19px] font-bold leading-[1.1] text-charcoal">{tdee.toLocaleString()} kcal</p>
+                    <p className="mt-px text-[8px] leading-[1.3] text-charcoal-faint">
+                      Estimated maintenance calories at your current weight (Mifflin-St Jeor) — a prototype estimate,
+                      adjust as needed.
+                    </p>
+                  </>
+                )}
+              </div>
+              {useSuggestedButton}
+            </div>
+            {(suggestedForGoal !== null || tdeeAtGoal !== null) && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {suggestedForGoal !== null && (
+                  <p className="text-[10px] text-charcoal bg-cream-soft rounded-full px-2.5 py-0.5">
+                    {suggestedForGoal.toLocaleString()} kcal to {nutritionGoal.weightGoal} weight at your current rate
+                  </p>
+                )}
+                {tdeeAtGoal !== null && (
+                  <p className="text-[10px] text-primary-dark bg-primary-pale rounded-full px-2.5 py-0.5">
+                    ≈ {tdeeAtGoal.toLocaleString()} kcal once you reach {nutritionGoal.desiredWeightKg}kg
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+        </>
+      )}
+
+      <section style={CARD}>
+        {/* V10 (QA 10.0): a +/- stepper plus direct typing. FO2.2: the save
+            is "Use custom", beside it and the same size as "Use suggested". */}
+        {/* One line from 390 up; at 360 the stepper and Use custom wrap under the title together. */}
+        <div className="flex items-center justify-between flex-wrap" style={{ columnGap: 8, rowGap: 8 }}>
+          <p style={{ ...TITLE, minWidth: 0, whiteSpace: "nowrap" }}>Daily target</p>
+          <div className="flex items-center ml-auto" style={{ gap: 8 }}>
+          <span className="flex items-stretch rounded-full overflow-hidden flex-none" style={{ height: 30, background: "#F5F4FE" }}>
+            <button
+              onClick={() => !locked && setCalorieDraft(String(Math.max(0, Number(calorieDraft || 0) - 50)))}
+              disabled={locked}
+              aria-label="Decrease by 50 kcal"
+              className="tap flex items-center justify-center disabled:opacity-50"
+              style={{ width: 28, color: "#1D167D" }}
+            >
+              <Minus size={14} strokeWidth={2.2} />
+            </button>
+            <span
+              className="flex items-baseline justify-center"
+              style={{ width: 66, background: "#F2F2FE", borderLeft: "1px solid #EEECFE", borderRight: "1px solid #EEECFE", gap: 3 }}
+            >
               <input
                 value={calorieDraft}
                 onChange={(e) => setCalorieDraft(e.target.value.replace(/\D/g, ""))}
                 inputMode="numeric"
                 disabled={locked}
-                className="w-[72px] text-center text-[15px] font-extrabold focus:outline-none disabled:opacity-60"
-                style={{ background: "#F2F2FE", borderLeft: "1px solid #EEECFE", borderRight: "1px solid #EEECFE", color: "#01012A" }}
+                aria-label="Daily calorie target"
+                className="text-right focus:outline-none disabled:opacity-60 bg-transparent self-center"
+                style={{ width: 38, padding: 0, fontSize: 14, fontWeight: 800, color: "#01012A" }}
               />
-              <button
-                onClick={() => !locked && setCalorieDraft(String(Number(calorieDraft || 0) + 50))}
-                disabled={locked}
-                aria-label="Increase by 50 kcal"
-                className="tap w-[54px] flex items-center justify-center disabled:opacity-50"
-                style={{ color: "#1D167D" }}
-              >
-                <Plus size={15} strokeWidth={2.2} />
-              </button>
+              <span className="self-center" style={{ fontSize: 9.5, color: "#8A8594" }}>kcal</span>
             </span>
-            <span className="text-[12px]" style={{ color: "#898597" }}>kcal</span>
+            <button
+              onClick={() => !locked && setCalorieDraft(String(Number(calorieDraft || 0) + 50))}
+              disabled={locked}
+              aria-label="Increase by 50 kcal"
+              className="tap flex items-center justify-center disabled:opacity-50"
+              style={{ width: 28, color: "#1D167D" }}
+            >
+              <Plus size={14} strokeWidth={2.2} />
+            </button>
+          </span>
+          <button
+            onClick={() => {
+              const kcal = Number(calorieDraft);
+              if (!kcal) return;
+              setNutritionGoal({ ...nutritionGoal, targetCalories: kcal });
+              setCalorieDraft(null);
+            }}
+            disabled={locked}
+            className="tap inline-flex items-center justify-center flex-none disabled:opacity-40 disabled:pointer-events-none"
+            style={{ ...ACTION, gap: 5, background: "#AEA1DC", color: "#FFFFFF" }}
+          >
+            <Check size={13} /> Use custom
+          </button>
           </div>
         </div>
         {/* WHAT THIS NUMBER IS, when it is not this user's. */}
         {isReferenceOnlyTarget(user) && (
-          <p className="mt-1.5 text-[10.5px] leading-[1.4] text-charcoal-faint">
-            {REFERENCE_INTAKE_NOTE}
-          </p>
+          <p className="mt-2 text-[10.5px] leading-[1.4] text-charcoal-faint">{REFERENCE_INTAKE_NOTE}</p>
         )}
         {/* WHAT ELSE IS IN THE NUMBER. The field above edits the base target;
             a pregnancy addition the user applied sits on top of it, and would
             otherwise be an unexplained gap between this card and every ring
             in the app. */}
         {(nutritionGoal.pregnancyKcal ?? 0) > 0 && (
-          <p className="mt-1.5 text-[10.5px] leading-[1.4] text-charcoal-faint">
-            Plus {nutritionGoal.pregnancyKcal} kcal a day for pregnancy — {targets.calories} kcal in
-            total. The pregnancy card at the top of this tab takes it off again.
+          <p className="mt-2 text-[10.5px] leading-[1.4] text-charcoal-faint">
+            Plus {nutritionGoal.pregnancyKcal} kcal a day for pregnancy — {targets.calories} kcal in total. The
+            pregnancy card at the top of this tab takes it off again.
           </p>
         )}
-        {!locked && Number(calorieDraft || 0) !== nutritionGoal.targetCalories && (
-          <Button
-            size="sm"
-            className="mt-1.5"
-            onClick={() => {
-              const kcal = Number(calorieDraft);
-              if (!kcal) return;
-              setNutritionGoal({ ...nutritionGoal, targetCalories: kcal });
-            }}
-          >
-            <Check size={13} /> Save target
-          </Button>
-        )}
-      </Card>
+      </section>
 
-      <Card padded={false} className={cardClass}>
-        <p className={`${capsLabel} text-charcoal-faint mb-[7px]`}>Macro distribution</p>
-        <MacroSplitEditor
-          split={nutritionGoal.macroSplit}
-          calories={targets.calories}
-          onChange={setMacroSplit}
-          disabled={locked}
-          compact
-        />
-        {/* Item 9: the dashboard's nutrition trio. Protein #7D6BB5; carbs on
-            #F0EDF9 with #8175C2; fat on #EAF4F2 with #6F9993, per the
-            reference markup. */}
-        <div className="grid grid-cols-3 gap-1.5 mt-[7px]">
-          <div className="text-center rounded-[9px] py-1" style={{ background: "#F0EDF9" }}>
-            <p className="text-[12px] font-bold" style={{ color: "#7D6BB5" }}>{targets.protein}g</p>
-            <p className="text-[9px]" style={{ color: "rgba(125,107,181,0.7)" }}>Protein</p>
-          </div>
-          <div className="text-center rounded-[9px] py-1" style={{ background: "#F0EDF9" }}>
-            <p className="text-[12px] font-bold" style={{ color: "#8175C2" }}>{targets.carbs}g</p>
-            <p className="text-[9px]" style={{ color: "rgba(129,117,194,0.75)" }}>Carbs</p>
-          </div>
-          <div className="text-center rounded-[9px] py-1" style={{ background: "#EAF4F2" }}>
-            <p className="text-[12px] font-bold" style={{ color: "#6F9993" }}>{targets.fat}g</p>
-            <p className="text-[9px]" style={{ color: "rgba(111,153,147,0.7)" }}>Fat</p>
-          </div>
-        </div>
-        <p className="mt-1.5 text-[9.5px] leading-[1.35] text-charcoal-faint">{MACRO_REBALANCE_NOTE}</p>
-      </Card>
+      <section style={CARD}>
+        <p style={{ ...TITLE, marginBottom: 12 }}>Macro distribution</p>
+        <MacroSplitEditor split={nutritionGoal.macroSplit} calories={targets.calories} onChange={setMacroSplit} disabled={locked} squares />
+        <p className="text-charcoal-faint" style={{ margin: "12px 0 0", fontSize: 9.5, lineHeight: 1.4 }}>
+          {MACRO_REBALANCE_NOTE}
+        </p>
+      </section>
 
-      <Card padded={false} className={cardClass}>
-        <p className={`${capsLabel} text-charcoal-faint mb-1.5`}>Plan</p>
+      <section style={CARD}>
+        <p style={{ ...TITLE, marginBottom: 12 }}>Plan</p>
         <div className="flex gap-1.5 flex-wrap">
           {(["custom", "existing"] as PlanType[]).map((p) => (
             <Chip
@@ -585,7 +624,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
             ) : null}
           </div>
         </div>
-      </Card>
+      </section>
     </div>
   );
 }

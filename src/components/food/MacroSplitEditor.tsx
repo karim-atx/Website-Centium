@@ -9,10 +9,12 @@ import type { MacroSplit } from "../../types";
 // Mobile handoff item 8: the dashboard's own nutrition-bar trio colors,
 // replacing the previous gold (carbs) and teal (fat) — protein was already
 // on-spec.
+// `ink` / `tint`: the value square at the end of each line on Goals & Macros
+// (FO2.2 / FO4.2 / FO5.2), measured from the frames.
 const macroMeta = [
-  { key: "proteinPct" as const, label: "Protein", color: "#7D6BB5", kcalPerG: 4, min: 10, max: 35 },
-  { key: "carbsPct" as const, label: "Carbs", color: "#AEA1DC", kcalPerG: 4, min: 30, max: 65 },
-  { key: "fatPct" as const, label: "Fat", color: "#A2C8C2", kcalPerG: 9, min: 20, max: 40 },
+  { key: "proteinPct" as const, label: "Protein", color: "#7D6BB5", ink: "#7D6BB5", tint: "#F0EDF9", kcalPerG: 4, min: 10, max: 35 },
+  { key: "carbsPct" as const, label: "Carbs", color: "#AEA1DC", ink: "#8175C2", tint: "#F0EDF9", kcalPerG: 4, min: 30, max: 65 },
+  { key: "fatPct" as const, label: "Fat", color: "#A2C8C2", ink: "#6F9993", tint: "#EAF4F2", kcalPerG: 9, min: 20, max: 40 },
 ];
 
 type MacroMeta = (typeof macroMeta)[number];
@@ -27,16 +29,19 @@ interface Props {
   calories: number;
   onChange: (split: MacroSplit) => void;
   disabled?: boolean;
-  /** Master handover item 9: the Goals & Macros compact sizes (7px apart,
-   *  12px labels, 5px tracks). The caller renders MACRO_REBALANCE_NOTE itself
-   *  (below its swatches). Off by default, so other callers are unchanged. */
-  compact?: boolean;
+  /**
+   * Goals & Macros (FO2.2 / FO4.2 / FO5.2): each macro's grams and share sit
+   * in a square at the end of its line and the slider is shortened to make
+   * room. The caller renders MACRO_REBALANCE_NOTE itself. Off by default, so
+   * the meal-plan builder is unchanged.
+   */
+  squares?: boolean;
 }
 
 /** Editing one slider rescales the other two proportionally to their current
  * ratio, then clamps both to their AMDR range so no macro can be dragged to
  * a scientifically unreasonable extreme just to make room for another. */
-export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, disabled, compact }) => {
+export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, disabled, squares }) => {
   const handleSlide = (key: keyof MacroSplit, rawValue: number) => {
     const m = macroMeta.find((mm) => mm.key === key)!;
     const value = clamp(rawValue, m);
@@ -55,17 +60,57 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
     onChange({ ...split, [key]: value, [o1.key]: v1, [o2.key]: v2 });
   };
 
+  if (squares) {
+    return (
+      <div className={`flex flex-col${disabled ? " opacity-50 pointer-events-none" : ""}`} style={{ gap: 12 }}>
+        {macroMeta.map((m) => {
+          const pct = split[m.key];
+          const grams = Math.round((calories * (pct / 100)) / m.kcalPerG);
+          const frac = ((pct - m.min) / (m.max - m.min)) * 100;
+          return (
+            <div key={m.key} className="flex items-center" style={{ gap: 13 }}>
+              <div className="flex-1 min-w-0">
+                <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 500, color: "#241F1B" }}>{m.label}</p>
+                <input
+                  type="range"
+                  min={m.min}
+                  max={m.max}
+                  value={pct}
+                  onChange={(e) => handleSlide(m.key, Number(e.target.value))}
+                  disabled={disabled}
+                  aria-label={`${m.label} share`}
+                  className="w-full block h-[4px] rounded-full appearance-none"
+                  style={{
+                    accentColor: m.color,
+                    backgroundImage: `linear-gradient(to right, ${m.color} ${frac}%, #F5F5F6 ${frac}%)`,
+                  }}
+                />
+              </div>
+              <div
+                className="flex flex-col items-center justify-center flex-none"
+                style={{ width: 50, height: 36, borderRadius: 9, background: m.tint }}
+              >
+                <span style={{ fontSize: 12.5, fontWeight: 800, color: m.ink, lineHeight: 1.15 }}>{grams}g</span>
+                <span style={{ fontSize: 9.5, color: m.ink, opacity: 0.6, lineHeight: 1.15 }}>{pct}%</span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  }
+
   return (
-    <div className={`${compact ? "space-y-[7px]" : "space-y-5"}${disabled ? " opacity-50 pointer-events-none" : ""}`}>
+    <div className={`space-y-5${disabled ? " opacity-50 pointer-events-none" : ""}`}>
       {macroMeta.map((m) => {
         const pct = split[m.key];
         const grams = Math.round((calories * (pct / 100)) / m.kcalPerG);
         const frac = ((pct - m.min) / (m.max - m.min)) * 100;
         return (
           <div key={m.key}>
-            <div className={`flex items-baseline justify-between ${compact ? "mb-[3px]" : "mb-1.5"}`}>
-              <span className={`${compact ? "text-[12px]" : "text-sm"} font-semibold text-charcoal`}>{m.label}</span>
-              <span className={`${compact ? "text-[10px]" : "text-xs"} text-charcoal-faint`}>
+            <div className="flex items-baseline justify-between mb-1.5">
+              <span className="text-sm font-semibold text-charcoal">{m.label}</span>
+              <span className="text-xs text-charcoal-faint">
                 {pct}% · {grams}g
               </span>
             </div>
@@ -82,9 +127,7 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
               value={pct}
               onChange={(e) => handleSlide(m.key, Number(e.target.value))}
               disabled={disabled}
-              // Compact: block, so the inline line box doesn't add ~19px of
-              // text line-height under each 5px track.
-              className={`w-full ${compact ? "block h-[5px]" : "h-2"} rounded-full appearance-none`}
+              className="w-full h-2 rounded-full appearance-none"
               style={{
                 accentColor: m.color,
                 backgroundImage: `linear-gradient(to right, ${m.color} ${frac}%, rgb(var(--c-cream-soft)) ${frac}%)`,
@@ -93,7 +136,7 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
           </div>
         );
       })}
-      {!compact && <p className="text-xs text-charcoal-faint">{MACRO_REBALANCE_NOTE}</p>}
+      <p className="text-xs text-charcoal-faint">{MACRO_REBALANCE_NOTE}</p>
     </div>
   );
 };
