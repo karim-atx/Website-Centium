@@ -467,6 +467,11 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
           </p>
         </div>
 
+        {/* Decision 6 (FO3.2 frame c): in edit mode the per-serving note shows
+            under the barcode block; with More nutrients open it heads that list. */}
+        {editing && !advOpen && (
+          <p style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>Per serving. Leave anything you do not have blank.</p>
+        )}
         {advOpen && (
           <div className="flex flex-col animate-fade-slide-up" style={{ gap: 8 }}>
             <p style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>
