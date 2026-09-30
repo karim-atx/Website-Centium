@@ -126,7 +126,25 @@ export default function RoutinesTab() {
     routinesError,
     pausedSessions,
     clearPausedSession,
+    activeSession,
+    setActiveSession,
   } = useApp();
+  // WO17: the ONGOING row mirrors the bar. A minimised session can be paused
+  // and resumed from here; the clock is timestamps (startedAt, pausedAt,
+  // pausedMs), so the logger and the bar read the same state back.
+  const pauseActive = () =>
+    setActiveSession((a) => (a && a.status === "running" ? { ...a, status: "paused", pausedAt: new Date().toISOString() } : a));
+  const resumeActive = () =>
+    setActiveSession((a) =>
+      a && a.status === "paused"
+        ? {
+            ...a,
+            status: "running",
+            pausedMs: a.pausedMs + (a.pausedAt ? Math.max(0, Date.now() - Date.parse(a.pausedAt)) : 0),
+            pausedAt: null,
+          }
+        : a
+    );
   /**
    * The last thing a folder or routine write refused to do.
    *
@@ -267,8 +285,14 @@ export default function RoutinesTab() {
       key={r.id}
       routine={r}
       hidden={hidden}
-      onStart={() => startRoutine(r)}
+      onStart={() =>
+        // A minimised session that is paused resumes its clock here; anything
+        // else (a quit session, or a new start) opens the logger as before.
+        activeSession?.routineId === r.id && activeSession.status === "paused" ? resumeActive() : startRoutine(r)
+      }
       isOngoing={!!pausedSessions[r.id]}
+      running={activeSession?.routineId === r.id && activeSession.status === "running"}
+      onPause={pauseActive}
       onMenu={(anchor) => setMenu({ kind: "routine", id: r.id, anchor })}
       renaming={renamingId === r.id}
       renameDraft={renameDraft}
@@ -915,6 +939,8 @@ const RoutineCardFace: React.FC<{
   routine: Routine;
   family: FolderFamily;
   isOngoing?: boolean;
+  running?: boolean;
+  onPause?: () => void;
   onToggle?: () => void;
   onStart?: () => void;
   onMenu?: (anchor: HTMLElement) => void;
@@ -924,7 +950,7 @@ const RoutineCardFace: React.FC<{
   onRenameCommit?: () => void;
   press?: PressProps;
   grip?: GripProps;
-}> = ({ routine, family, isOngoing, onToggle, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip }) => {
+}> = ({ routine, family, isOngoing, running, onPause, onToggle, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip }) => {
   const gripProps = grip;
   return (
     <div
@@ -934,7 +960,7 @@ const RoutineCardFace: React.FC<{
       style={{ padding: "0 14px 0 0", background: family.row, WebkitTouchCallout: "none" }}
     >
       <span
-        className={clsx("w-1 h-8 rounded-full shrink-0 block", isOngoing && "animate-pulse")}
+        className={clsx("w-1 h-8 rounded-full shrink-0 block", isOngoing && running && "animate-pulse")}
         style={{ marginLeft: 15, background: isOngoing ? "#E9736A" : family.bar }}
       />
       {renaming ? (
@@ -944,8 +970,17 @@ const RoutineCardFace: React.FC<{
           <p className="text-[14.5px] font-bold text-charcoal flex items-center gap-1.5 truncate">
             {routine.name}
             {isOngoing && (
+              // WO17: the same running / paused state the bar shows.
               <span className="text-[10px] font-bold uppercase text-[#E9736A] flex items-center gap-1 shrink-0">
-                <Pause size={10} fill="currentColor" /> Ongoing
+                {running ? (
+                  <>
+                    <Play size={10} fill="currentColor" /> Ongoing
+                  </>
+                ) : (
+                  <>
+                    <Pause size={10} fill="currentColor" /> Paused
+                  </>
+                )}
               </span>
             )}
           </p>
@@ -956,12 +991,12 @@ const RoutineCardFace: React.FC<{
       )}
       <button
         data-no-drag
-        onClick={onStart}
-        aria-label={isOngoing ? `Resume ${routine.name}` : `Start ${routine.name}`}
-        className={clsx("tap w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0", isOngoing && "animate-pulse")}
+        onClick={isOngoing && running ? onPause : onStart}
+        aria-label={isOngoing ? (running ? `Pause ${routine.name}` : `Resume ${routine.name}`) : `Start ${routine.name}`}
+        className={clsx("tap w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0", isOngoing && running && "animate-pulse")}
         style={{ background: isOngoing ? "#E9736A" : family.play }}
       >
-        {isOngoing ? (
+        {isOngoing && running ? (
           <Pause size={13} fill="#FFFFFF" style={{ color: "#FFFFFF" }} />
         ) : (
           <Play size={13} fill="#FFFFFF" style={{ color: "#FFFFFF", marginLeft: 1 }} />
@@ -1042,7 +1077,10 @@ const RoutineRow: React.FC<{
   /** The colours of the folder this routine sits in. */
   family: FolderFamily;
   isOngoing?: boolean;
-}> = ({ routine, hidden, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, onArrange, family, isOngoing }) => {
+  /** The ongoing session's clock is running (minimised to the WO17 bar). */
+  running?: boolean;
+  onPause?: () => void;
+}> = ({ routine, hidden, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, onArrange, family, isOngoing, running, onPause }) => {
   const [expanded, setExpanded] = useState(false);
   const [revealedId, setRevealedId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
@@ -1198,6 +1236,8 @@ const RoutineRow: React.FC<{
         routine={routine}
         family={family}
         isOngoing={isOngoing}
+        running={running}
+        onPause={onPause}
         onToggle={() => setExpanded((v) => !v)}
         onStart={onStart}
         onMenu={onMenu}
