@@ -21,6 +21,7 @@ import {
 import { BookOpen, Play, Check } from "lucide-react";
 import { mondayFirstWeek, DAY_LETTERS, dayLetter } from "../../utils/week";
 import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
+import { HabitPages } from "../mind/HabitPages";
 
 // Iteration 6.2 "Team" canonical widget library — 11 metrics, small (fixed
 // 114 tall) and large (150 tall), fluid in width (HO1.1), one flat tinted ground and accent
@@ -1040,8 +1041,6 @@ export const HomeWidget: React.FC<{
           )
         );
       }
-      const shown = habits.slice(0, 6);
-      const more = habits.length > 6;
       return wrap(
         onClick,
         shell(
@@ -1053,40 +1052,7 @@ export const HomeWidget: React.FC<{
                 {done} of {habits.length} today
               </span>
             </div>
-            <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
-              <div className="grid grid-cols-2 gap-x-2.5 gap-y-[5px]">
-                {shown.map((h) => (
-                  <div
-                    key={h.id}
-                    className="flex items-center justify-between gap-2 rounded-lg px-2 py-[5px]"
-                    style={{ background: h.done ? "rgba(125,107,181,.14)" : "rgba(255,255,255,.45)" }}
-                  >
-                    <span className={`flex-1 min-w-0 text-[9.5px] truncate ${h.done ? "font-bold text-charcoal" : "font-medium text-charcoal-faint"}`}>
-                      {h.label}
-                    </span>
-                    <span
-                      className="w-3.5 h-3.5 rounded shrink-0 flex items-center justify-center"
-                      style={
-                        h.done
-                          ? { background: "rgb(var(--c-team-lavender-deep))", border: "1.5px solid rgb(var(--c-team-lavender-deep))" }
-                          : { background: "transparent", border: "1.5px solid rgba(125,107,181,.3)" }
-                      }
-                    >
-                      {h.done && <Check size={9} className="text-white" strokeWidth={3} />}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              {more && (
-                <div className="flex items-center justify-between gap-2.5 pt-1 pb-px">
-                  <span className="text-[8.5px] font-semibold whitespace-nowrap text-primary-deep-text/[0.68]">For more habits, swipe.</span>
-                  <span className="flex gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-team-lavender-deep shrink-0" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-team-lavender-deep/[0.28] shrink-0" />
-                  </span>
-                </div>
-              )}
-            </div>
+            <HabitPages habits={habits} />
           </>
         )
       );

@@ -10,12 +10,13 @@ import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
 import AchievementsTab from "./AchievementsTab";
 import { earnedCount } from "../../services/achievements";
-import { Flame, Plus, BookOpen, Pencil, Trophy, Check, ChevronLeft } from "lucide-react";
+import { Flame, Plus, BookOpen, Pencil, Trophy, ChevronLeft } from "lucide-react";
 import type { Streak } from "../../types";
 import { flameColor } from "../../utils/flameColor";
 import { streakProgress } from "../../utils/streakProgress";
 import clsx from "clsx";
 import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
+import { HabitPages } from "../../components/mind/HabitPages";
 
 type Tab = "overview" | "habits" | "journal" | "achievements";
 
@@ -263,36 +264,7 @@ export default function Mind() {
                 {doneHabits} of {habits.length} today
               </span>
             </div>
-            <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
-              <div className="grid grid-cols-2 gap-x-2.5 gap-y-[5px]">
-                {habits.slice(0, 6).map((h) => (
-                  <div
-                    key={h.id}
-                    className="flex items-center justify-between gap-2 rounded-lg px-2 py-[5px]"
-                    style={{ background: h.done ? "rgba(125,107,181,.14)" : "rgba(255,255,255,.45)" }}
-                  >
-                    <span className={clsx("flex-1 min-w-0 text-[9.5px] truncate", h.done ? "font-bold text-charcoal" : "font-medium text-charcoal-faint")}>
-                      {h.label}
-                    </span>
-                    <span
-                      className="w-3.5 h-3.5 rounded shrink-0 flex items-center justify-center"
-                      style={h.done ? { background: "rgb(var(--c-team-lavender-deep))", border: "1.5px solid rgb(var(--c-team-lavender-deep))" } : { background: "transparent", border: "1.5px solid rgba(125,107,181,.3)" }}
-                    >
-                      {h.done && <Check size={9} className="text-white" strokeWidth={3} />}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              {habits.length > 6 && (
-                <div className="flex items-center justify-between gap-2.5 pt-1 pb-px">
-                  <span className="text-[8.5px] font-semibold whitespace-nowrap text-primary-deep-text/[0.68]">For more habits, swipe.</span>
-                  <span className="flex gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-team-lavender-deep shrink-0" />
-                    <span className="w-1.5 h-1.5 rounded-full bg-team-lavender-deep/[0.28] shrink-0" />
-                  </span>
-                </div>
-              )}
-            </div>
+            <HabitPages habits={habits} />
           </button>
 
           <div className="flex gap-[7px] mb-[13px]">
