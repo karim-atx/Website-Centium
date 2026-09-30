@@ -116,9 +116,10 @@ export const FileViewerSheet: React.FC<{
           <div className="flex flex-col items-center gap-2 py-10 text-center">
             <FileWarning size={22} className="text-charcoal-faint" />
             <p className="text-sm font-semibold text-charcoal">This file can't be previewed here.</p>
+            {/* Word documents land here: the certifications bucket takes
+                them, and a browser cannot render one inline. */}
             <p className="text-[11px] text-charcoal-faint max-w-[16rem]">
-              Only images and PDFs can be shown, which is everything these
-              records accept — so this is unexpected rather than routine.
+              Only images and PDFs can be shown here. The file itself is stored and unchanged.
             </p>
           </div>
         )}

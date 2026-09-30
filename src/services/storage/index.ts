@@ -82,19 +82,23 @@ export type PrivateBucket = OwnerScopedBucket | ThreadScopedBucket | EventScoped
  */
 const BUCKETS: Record<
   PrivateBucket,
-  { maxBytes: number; mimeTypes: string[]; label: string; accepts: string }
+  // `refused`: what a storage-policy refusal means on THIS bucket. Storage
+  // only knows the path was not allowed; why depends on whose folder it is.
+  { maxBytes: number; mimeTypes: string[]; label: string; accepts: string; refused: string }
 > = {
   "lab-reports": {
     maxBytes: 10 * 1024 * 1024,
     mimeTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
     label: "lab report",
     accepts: "a JPEG, PNG, WebP or PDF",
+    refused: "That file couldn't be saved to your account.",
   },
   "medical-imaging": {
     maxBytes: 25 * 1024 * 1024,
     mimeTypes: ["image/jpeg", "image/png", "image/webp", "application/pdf"],
     label: "imaging file",
     accepts: "a JPEG, PNG, WebP or PDF",
+    refused: "That file couldn't be saved to your account.",
   },
   // The only bucket taking Word documents, and it is not an oversight: a
   // qualification arrives as whatever the awarding body sent, which is as
@@ -115,6 +119,7 @@ const BUCKETS: Record<
     ],
     label: "attachment",
     accepts: "an image, a PDF or a Word document",
+    refused: "That file couldn't be attached to this event.",
   },
   certifications: {
     maxBytes: 10 * 1024 * 1024,
@@ -128,6 +133,7 @@ const BUCKETS: Record<
     ],
     label: "certification",
     accepts: "an image, a PDF or a Word document",
+    refused: "That document couldn't be saved to your account.",
   },
   // 10 MB, matching the migration. Audio is here because a recorded voice
   // note arrives through this same function as an audio/* blob; it is NOT
@@ -146,6 +152,7 @@ const BUCKETS: Record<
     ],
     label: "attachment",
     accepts: "an image or a voice note",
+    refused: "That file couldn't be attached to this conversation.",
   },
 };
 
@@ -559,13 +566,14 @@ export async function uploadPrivateFile(params: UploadParams): Promise<UploadRes
       return { ok: false, reason: "cap", message: await capExceededMessage() };
     }
     // Checked AFTER the cap, because ATX04 also arrives as a 4xx and has its
-    // own, actionable answer. Whoever calls this owns the wording — Storage
-    // has no idea a "policy refusal" here means "you have not hired them".
+    // own, actionable answer. The wording is the bucket's own: Storage has no
+    // idea whether a refusal means "not your conversation" or "not your
+    // folder", and one sentence about conversations used to be shown for all.
     if (isPolicyRefusal(error)) {
       return {
         ok: false,
         reason: "refused",
-        message: "That file couldn't be attached to this conversation.",
+        message: BUCKETS[bucket].refused,
       };
     }
     return {

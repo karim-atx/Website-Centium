@@ -10,7 +10,6 @@ import {
   type Affiliation,
 } from "../../services/professional-profile";
 import { Building2, LogOut } from "lucide-react";
-import { CertificationSheet } from "../../components/profile/CertificationSheet";
 
 // The professional's Explore tab: their affiliation with a business, and
 // nothing else.
@@ -48,11 +47,6 @@ export default function ProfessionalExplore() {
    */
   const [affiliation, setAffiliation] = useState<Affiliation | null>(null);
   const [leaving, setLeaving] = useState(false);
-  // The credentials sheet stays: submitting a certification is a real write
-  // (professional_profiles.certification_url), independent of the postings
-  // that used to link to it.
-  const [certOpen, setCertOpen] = useState(false);
-
   const affiliated = !!affiliation;
 
   // Read once when the screen opens, from the same pair PublicListingSheet
@@ -152,7 +146,6 @@ export default function ProfessionalExplore() {
         </Card>
       )}
 
-      <CertificationSheet open={certOpen} onClose={() => setCertOpen(false)} />
     </div>
   );
 }
