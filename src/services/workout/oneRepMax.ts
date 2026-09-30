@@ -120,3 +120,17 @@ export function sortLifts(lifts: LiftMax[], sort: LiftSort): LiftMax[] {
 
 /** Whole kilograms, as every 1RM surface shows them. */
 export const kgWhole = (n: number) => Math.round(n);
+
+export type LiftRange = "3M" | "6M" | "All";
+
+/** A lift's sessions in the WO19 chart range, oldest first. */
+export function sessionsInRange(lift: LiftMax, range: LiftRange, today: string): LiftSession[] {
+  if (range === "All") return lift.sessions;
+  const d = new Date(`${today}T00:00:00Z`);
+  d.setUTCMonth(d.getUTCMonth() - (range === "3M" ? 3 : 6));
+  const from = d.toISOString().slice(0, 10);
+  return lift.sessions.filter((s) => s.date >= from);
+}
+
+/** "80 kg × 5", "72.5 kg × 6". */
+export const setLine = (set: { weightKg: number; reps: number }) => `${set.weightKg} kg × ${set.reps}`;

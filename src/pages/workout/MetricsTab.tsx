@@ -4,6 +4,8 @@ import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Sparkline } from "../../components/health/Sparkline";
 import { OneRepMaxesSheet } from "../../components/workout/OneRepMaxesSheet";
+import { LiftDetailSheet } from "../../components/workout/LiftDetailSheet";
+import type { LiftMax } from "../../services/workout/oneRepMax";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { TrendingUp, Dumbbell, Scale3D, Flame, Scale, Ruler, Plus } from "lucide-react";
 import { countsTowardVolume } from "../../services/workout/session";
@@ -65,6 +67,7 @@ export default function MetricsTab() {
   }, [noteFeatureMilestone]);
 
   const [oneRmOpen, setOneRmOpen] = useState(false);
+  const [liftDetail, setLiftDetail] = useState<LiftMax | null>(null);
   const [balanceOpen, setBalanceOpen] = useState(false);
 
   // REAL SESSIONS ONLY. This used to begin with six invented numbers —
@@ -465,7 +468,8 @@ export default function MetricsTab() {
         More statistics — like session-frequency heatmaps — are coming to this prototype.
       </p>
 
-      <OneRepMaxesSheet open={oneRmOpen} onClose={() => setOneRmOpen(false)} />
+      <OneRepMaxesSheet open={oneRmOpen} onClose={() => setOneRmOpen(false)} onSelect={setLiftDetail} />
+      <LiftDetailSheet key={liftDetail?.key} lift={liftDetail} onClose={() => setLiftDetail(null)} />
 
       <AddMeasurementsSheet
         key={addMeasurementsOpen ? "open" : "closed"}

@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { daysBefore, liftMaxes, sortLifts } from "./oneRepMax";
+import { daysBefore, liftMaxes, sessionsInRange, setLine, sortLifts } from "./oneRepMax";
 import type { LoggedSet, WorkoutSession } from "../../types";
 
 const set = (weightKg: number, reps: number, extra: Partial<LoggedSet> = {}) =>
@@ -74,4 +74,17 @@ test("sorts: highest, recently trained, biggest change (none last), A–Z", () =
   assert.deepEqual(sortLifts(lifts, "recent").map((l) => l.name), ["C", "A", "B"]);
   assert.deepEqual(sortLifts(lifts, "change").map((l) => l.name), ["B", "A", "C"]);
   assert.deepEqual(sortLifts(lifts, "az").map((l) => l.name), ["A", "B", "C"]);
+});
+
+test("chart ranges are calendar months back from today; All is everything", () => {
+  const [bench] = liftMaxes(
+    ["2026-03-29", "2026-04-01", "2026-06-30", "2026-07-01", "2026-09-24"].map((d, i) =>
+      session(String(i), d, [{ name: "Bench Press", sets: [set(80, 5)] }])
+    ),
+    "2026-09-30"
+  );
+  assert.deepEqual(sessionsInRange(bench, "3M", "2026-09-30").map((s) => s.date), ["2026-06-30", "2026-07-01", "2026-09-24"]);
+  assert.equal(sessionsInRange(bench, "6M", "2026-09-30").length, 4);
+  assert.equal(sessionsInRange(bench, "All", "2026-09-30").length, 5);
+  assert.equal(setLine({ weightKg: 72.5, reps: 6 }), "72.5 kg × 6");
 });
