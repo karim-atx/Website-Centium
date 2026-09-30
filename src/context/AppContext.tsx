@@ -3716,6 +3716,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       (f) => (f.parentId ?? null) === (parentId ?? null)
     ).length;
     if (!authUserId) return "You need to be signed in to create a folder.";
+    // Five levels, as for routine folders (the server refuses the rest: ATX33).
+    if (parentId && !canAddSubfolder(parentId, workoutTemplateFolders)) return `${MAX_DEPTH_NOTE}.`;
     const result = await createTemplateFolder(authUserId, { name, parentId, color, position });
     if (!result.ok || !result.folder) return result.message ?? "Could not create that folder.";
     setWorkoutTemplateFolders((prev) => [...prev, result.folder!]);

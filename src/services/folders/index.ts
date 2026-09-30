@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { isOffline, OFFLINE_MESSAGE } from "../network-error";
 import type { PostgrestError } from "@supabase/supabase-js";
+import { MAX_DEPTH_NOTE } from "../routines/folderDepth";
 
 // The folder tree, once, for both tables that have one.
 //
@@ -67,6 +68,9 @@ export function describeFolderError(error: PostgrestError): string {
   if (code === "ATX17") {
     return "That folder belongs to a different account, so it can't be used as a parent.";
   }
+  // The server's depth ceiling (Database 20260930100000), on routine and
+  // template folders alike: the same sentence the UI limit shows.
+  if (code === "ATX33") return `${MAX_DEPTH_NOTE}.`;
   if (code === "42501") return "You don't have permission to do that.";
   if (code === "23503") return "Something this refers to no longer exists. Try again.";
   if (isOffline(error)) return OFFLINE_MESSAGE;
