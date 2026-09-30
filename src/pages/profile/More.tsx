@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ComponentType } from "react";
 import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { ReferralSheet } from "../../components/profile/ReferralSheet";
@@ -7,20 +7,18 @@ import { PublicListingSheet } from "../../components/profile/PublicListingSheet"
 import { LotusGlyph } from "../../components/dashboard/LotusGlyph";
 import { useUnread } from "../../context/UnreadContext";
 import { UnreadBadge } from "../../components/messages/UnreadBadge";
+import { CommunityLeafIcon, ExploreLeafIcon, ReferralLeafIcon, PremiumLeafIcon } from "../../components/icons/MoreLeafIcons";
 import {
   Sparkles,
   Users,
   Store,
   User as UserIcon,
-  Crown,
   ChevronRight,
   Settings,
   HeartPulse,
   MessageCircle,
-  MessageSquare,
   CalendarDays,
   Building2,
-  Gift,
   Banknote,
   Globe2,
   BookOpen,
@@ -104,7 +102,7 @@ export default function More() {
     // publicly."
     // QA 11.0: renamed from "Forum" — the destination now has two tabs,
     // Forum and Courses.
-    !isProfessional && !isBusiness && { icon: MessageSquare, label: "Community", desc: "Forum discussions & fitness courses", to: "/app/forum" },
+    !isProfessional && !isBusiness && { icon: CommunityLeafIcon, label: "Community", desc: "Forum discussions & fitness courses", to: "/app/forum" },
     // Both account types: a thread is two people, and the client half had no
     // destination at all before this.
     { icon: MessageCircle, label: "Messages", desc: isProfessional ? "Chat with your clients" : "Chat with your professionals", to: "/app/messages" },
@@ -126,7 +124,7 @@ export default function More() {
     isBusiness && { icon: CalendarDays, label: "Calendar", desc: "Schedule clients to professionals & classes", to: "/app/business/calendar" },
     // V9 (QA 9.0): "Remove the explore button on in the More tab" (Business
     // UI only — Client/Professional keep theirs).
-    !isBusiness && { icon: Store, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/app/marketplace" },
+    !isBusiness && { icon: ExploreLeafIcon, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/app/marketplace" },
     // QA 11.0: "Put a referral tab in the tab you see fits most" (Client
     // UI) + "Apply the same referral program found in the client UI"
     // (Professional/Business) — one sheet, reachable from every account
@@ -135,9 +133,9 @@ export default function More() {
     // successful referral earns points and a subscription discount, both of
     // which are real; there is nothing to redeem points against yet, so the
     // row names the two things it actually gives.
-    { icon: Gift, label: "Referral", desc: "Share your code for points & a discount", onClick: () => setReferralOpen(true) },
+    { icon: ReferralLeafIcon, label: "Referral", desc: "Share your code for points & a discount", onClick: () => setReferralOpen(true) },
     { icon: Settings, label: "Settings", desc: "Appearance, notifications & more", to: "/app/settings" },
-  ].filter(Boolean) as { icon: typeof Sparkles; label: string; desc: string; to?: string; onClick?: () => void }[];
+  ].filter(Boolean) as { icon: ComponentType<{ size?: number; className?: string }>; label: string; desc: string; to?: string; onClick?: () => void }[];
 
   return (
     <div>
@@ -231,7 +229,8 @@ export default function More() {
       >
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-[11px] flex items-center justify-center shrink-0" style={{ background: "rgba(174,161,220,.26)" }}>
-            <Crown size={15} style={{ color: "#C8BFE9" }} />
+            {/* MO1.4: the leaf-crown mark; same size and colour as the crown it replaces. */}
+            <PremiumLeafIcon size={15} style={{ color: "#C8BFE9" }} />
           </div>
           <div>
             <p className="text-[12.5px] font-extrabold text-white">Centium Premium</p>
