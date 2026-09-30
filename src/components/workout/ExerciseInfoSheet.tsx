@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { ImageIcon } from "lucide-react";
 import {
   getExerciseInstructions,
   hasNoInstructions,
@@ -23,8 +22,9 @@ const Bullets: React.FC<{ items: string[] }> = ({ items }) => (
 
 /**
  * WO13 · Exercise information, over the exercise popup (closing returns to
- * it). The exercise's name as the title, the demo placeholder (there is no
- * exercise media yet, and no image is borrowed from another movement), then
+ * it). The exercise's name as the title, its demo image only when it has one
+ * (approved: no empty placeholder box; no exercise has media yet, and no image
+ * is borrowed from another movement), then
  * the real instructions (approved decision): How to do it (setup, then the
  * numbered steps), Tips (coaching cues), Breathing, Common mistakes, Safety,
  * easier / harder variations and the difficulty. "Instructions coming soon"
@@ -36,7 +36,9 @@ export const ExerciseInfoSheet: React.FC<{
   name: string;
   /** The row to read: a catalog exercise or one of the user's own. */
   source: { id: string; kind: "catalog" | "custom" } | null;
-}> = ({ open, onClose, name, source }) => {
+  /** The exercise's own demo image, when it has one. */
+  imageUrl?: string | null;
+}> = ({ open, onClose, name, source, imageUrl }) => {
   const [state, setState] = useState<{ key: string; instructions: ExerciseInstructions | null; error?: string } | null>(null);
   const key = source ? `${source.kind}:${source.id}` : "";
 
@@ -57,25 +59,26 @@ export const ExerciseInfoSheet: React.FC<{
   return (
     <BottomSheet open={open} onClose={onClose} title={name}>
       <div className="animate-fade-slide-up">
-        <div
-          className="flex items-center justify-center"
-          style={{ height: 190, borderRadius: 16, background: "#F4F2FA", border: "1.5px dashed #D9D2F0" }}
-          aria-hidden
-        >
-          <ImageIcon size={22} style={{ color: "#7D6BB5" }} />
-        </div>
+        {imageUrl && (
+          <img
+            src={imageUrl}
+            alt={`${name} demonstration`}
+            className="w-full object-cover"
+            style={{ height: 190, borderRadius: 16, background: "#F4F2FA", marginBottom: 22 }}
+          />
+        )}
 
         {!source ? (
-          <p className="text-center" style={{ ...body, marginTop: 24 }}>Instructions coming soon</p>
+          <p className="text-center" style={{ ...body, marginTop: 2 }}>Instructions coming soon</p>
         ) : !loaded ? (
-          <p className="text-center text-sm text-charcoal-faint" style={{ marginTop: 24 }}>Loading…</p>
+          <p className="text-center text-sm text-charcoal-faint" style={{ marginTop: 2 }}>Loading…</p>
         ) : loaded.error ? (
-          <p className="text-center text-sm text-status-high" style={{ marginTop: 24 }}>{loaded.error}</p>
+          <p className="text-center text-sm text-status-high" style={{ marginTop: 2 }}>{loaded.error}</p>
         ) : hasNoInstructions(i) ? (
-          <p className="text-center" style={{ ...body, marginTop: 24 }}>Instructions coming soon</p>
+          <p className="text-center" style={{ ...body, marginTop: 2 }}>Instructions coming soon</p>
         ) : (
           i && (
-            <div className="flex flex-col" style={{ gap: 22, marginTop: 22 }}>
+            <div className="flex flex-col" style={{ gap: 22 }}>
               {i.difficulty && (
                 <p style={{ margin: "-8px 0 -8px", fontSize: 11.5, fontWeight: 700, color: "#5F5093" }}>
                   {i.difficulty[0].toUpperCase() + i.difficulty.slice(1)}
