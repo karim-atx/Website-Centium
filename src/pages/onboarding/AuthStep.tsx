@@ -11,6 +11,8 @@ import {
   signInWithEmail,
   signInWithGoogle,
   signUpWithEmail,
+  isDisposableEmail,
+  DISPOSABLE_EMAIL_MESSAGE,
 } from "../../services/auth";
 import { setRememberMe as setRememberMePreference } from "../../../lib/supabase/rememberMe";
 import { clearSessionArrived, sessionArrivedPending } from "../../../lib/supabase/tabIdentity";
@@ -156,6 +158,27 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
 
   const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
+
+  // BURNER ADDRESSES, sign-up only (sign-in for an existing account is never
+  // checked). The address last found disposable, by the pre-flight on blur or
+  // by the server's refusal at submit; the message and the disabled button
+  // follow it, so editing the email clears both until the next check.
+  const [burnerEmail, setBurnerEmail] = useState<string | null>(null);
+  const normalizedEmail = email.trim().toLowerCase();
+  const isBurner = mode === "signUp" && burnerEmail === normalizedEmail;
+  const burnerTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(burnerTimer.current), []);
+  const checkBurnerSoon = () => {
+    window.clearTimeout(burnerTimer.current);
+    if (mode !== "signUp" || !isValidEmail(normalizedEmail)) return;
+    const value = normalizedEmail;
+    burnerTimer.current = window.setTimeout(() => {
+      void isDisposableEmail(value).then((burner) => {
+        if (burner) setBurnerEmail(value);
+      });
+    }, 300);
+  };
+
   // Google needs no confirmation step — this navigates away to Google and
   // the session lands on the return trip, picked up by the effect above.
   const handleGoogle = async () => {
@@ -198,12 +221,24 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
 
   const handleSignUp = async () => {
     if (!isValidEmail(email)) return setError("Enter a valid email address.");
+    if (isBurner) return;
     if (!meetsMinimum) return setError("Choose a stronger password — see the checklist below.");
     if (password !== confirmPassword) return setError("Passwords don't match.");
     setError(null);
     setBusy(true);
+    // Asked again here: the blur check may not have run or finished yet.
+    if (await isDisposableEmail(normalizedEmail)) {
+      setBusy(false);
+      setBurnerEmail(normalizedEmail);
+      return;
+    }
     const result = await signUpWithEmail(email, password);
     setBusy(false);
+
+    if (result.status === "disposable_email") {
+      setBurnerEmail(normalizedEmail);
+      return;
+    }
 
     if (result.status === "error") {
       setError(result.message);
@@ -223,7 +258,8 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
     setBusy(true);
     const result = await signUpWithEmail(email, password);
     setBusy(false);
-    if (result.status === "error") setError(result.message);
+    if (result.status === "disposable_email") setError(DISPOSABLE_EMAIL_MESSAGE);
+    else if (result.status === "error") setError(result.message);
   };
 
   const handleSendReset = async () => {
@@ -417,11 +453,19 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
           <input
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            onFocus={() => window.clearTimeout(burnerTimer.current)}
+            onBlur={checkBurnerSoon}
             placeholder="you@email.com"
             type="email"
+            aria-invalid={isBurner || undefined}
             className={inputClass}
           />
         </label>
+        {isBurner && (
+          <p role="alert" className="text-[11px] font-semibold text-status-high -mt-1.5 pl-1">
+            {DISPOSABLE_EMAIL_MESSAGE}
+          </p>
+        )}
 
         <label className="block relative">
           <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
@@ -521,7 +565,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
         <Button
           fullWidth
           size="lg"
-          disabled={busy}
+          disabled={busy || isBurner}
           onClick={mode === "signIn" ? handleSignIn : handleSignUp}
         >
           {busy ? "Please wait…" : mode === "signIn" ? "Sign in" : "Sign up"}

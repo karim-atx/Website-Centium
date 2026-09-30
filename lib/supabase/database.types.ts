@@ -10839,6 +10839,7 @@ export type Database = {
       is_ambassador: { Args: { p_profile_id: string }; Returns: boolean }
       is_business_insider: { Args: { p_business_id: string }; Returns: boolean }
       is_calendar_invitee: { Args: { p_event_id: string }; Returns: boolean }
+      is_disposable_email: { Args: { email: string }; Returns: boolean }
       list_pending_health_data_storage_purges: {
         Args: never
         Returns: {

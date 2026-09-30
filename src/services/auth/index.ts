@@ -57,6 +57,8 @@ export function describeAuthError(error: AuthError): string {
   const code = error.code ?? "";
   const message = error.message ?? "";
 
+  if (isDisposableEmailRefusal(error)) return DISPOSABLE_EMAIL_MESSAGE;
+
   // --- two-factor -------------------------------------------------------
   //
   // FIRST, because these are the ones a user meets under pressure — standing
@@ -130,9 +132,35 @@ function isEmailNotConfirmed(error: AuthError): boolean {
   return error.code === "email_not_confirmed" || /email not confirmed/i.test(error.message ?? "");
 }
 
+// --- burner email addresses ------------------------------------------------
+//
+// Refused server-side by the before_user_created auth hook (Database
+// 20260930080000). The form asks is_disposable_email first so it can say so
+// in the field; that is a courtesy, the hook is the control, and a failed
+// pre-flight never stops a sign-up.
+
+/** The one sentence, word for word the hook's own. */
+export const DISPOSABLE_EMAIL_MESSAGE =
+  "Please use a permanent email address. Temporary email addresses can't be used to create an account.";
+
+/**
+ * The hook's refusal: a 400 whose code GoTrue reports as "unknown", so the
+ * sentence is the only thing that identifies it.
+ */
+export function isDisposableEmailRefusal(error: AuthError): boolean {
+  return /temporary email address|permanent email address/i.test(error.message ?? "");
+}
+
+/** The pre-flight. False when it cannot answer: the hook still decides at submit. */
+export async function isDisposableEmail(email: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc("is_disposable_email", { email: email.trim() });
+  return !error && data === true;
+}
+
 export type SignUpResult =
   | { status: "confirmation_required"; email: string }
   | { status: "signed_in" }
+  | { status: "disposable_email" }
   | { status: "error"; message: string };
 
 /**
@@ -148,7 +176,10 @@ export async function signUpWithEmail(email: string, password: string): Promise<
     options: { emailRedirectTo: authRedirectUrl() },
   });
 
-  if (error) return { status: "error", message: describeAuthError(error) };
+  if (error) {
+    if (isDisposableEmailRefusal(error)) return { status: "disposable_email" };
+    return { status: "error", message: describeAuthError(error) };
+  }
   // Belt and braces: if confirmations are ever turned off on the project,
   // signUp returns a live session and we should just proceed.
   if (data.session) return { status: "signed_in" };
