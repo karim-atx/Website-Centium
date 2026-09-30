@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { JumpToToday, calendarJump } from "../../components/ui/JumpToToday";
+import { JumpToToday } from "../../components/ui/JumpToToday";
+import { calendarJump } from "../../components/ui/calendarJump";
 import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";

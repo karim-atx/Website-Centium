@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
-import { JumpToToday, calendarJump } from "../../components/ui/JumpToToday";
+import { JumpToToday } from "../../components/ui/JumpToToday";
+import { calendarJump } from "../../components/ui/calendarJump";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
