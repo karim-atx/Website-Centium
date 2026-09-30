@@ -161,7 +161,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
     : `${fmt(bar)} ${u} bar${collar > 0 ? ` · ${fmt(collar)} ${u} collars` : ""} · ${fmt(load.perSide * 2)} ${u} plates`;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Plate Calculator">
+    <BottomSheet light open={open} onClose={onClose} title="Plate Calculator">
       <div className="flex flex-col" style={{ gap: 16 }}>
         <div>
           <span style={label}>Target weight ({u})</span>

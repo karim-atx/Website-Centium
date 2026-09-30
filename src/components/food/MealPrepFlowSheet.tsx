@@ -132,6 +132,7 @@ export const MealPrepFlowSheet: React.FC<{
   return (
     <>
       <BottomSheet
+        light
         open
         onClose={close}
         onBack={screen === "edit" ? leaveEdit : screen === "advanced" ? () => setScreen("detail") : undefined}

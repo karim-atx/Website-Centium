@@ -57,7 +57,7 @@ export const ExerciseInfoSheet: React.FC<{
   const i = loaded?.instructions ?? null;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={name}>
+    <BottomSheet light open={open} onClose={onClose} title={name}>
       <div className="animate-fade-slide-up">
         {imageUrl && (
           <img

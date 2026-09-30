@@ -184,6 +184,7 @@ export const EditFoodEntrySheet: React.FC<{
 
   return (
     <BottomSheet
+      light
       open={open}
       onClose={onClose}
       title={advancedOpen ? "Nutrient details" : "Edit Logged Food"}

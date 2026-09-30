@@ -46,7 +46,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
   const recent = [...lift.sessions].reverse().slice(0, RECENT);
 
   return (
-    <BottomSheet open onClose={onClose} title={lift.name} handle>
+    <BottomSheet light open onClose={onClose} title={lift.name} handle>
       <div className="animate-fade-slide-up">
         <div className="flex items-baseline" style={{ gap: 10 }}>
           <p style={{ color: "#241F1B", fontSize: 30, fontWeight: 800, lineHeight: 1 }}>

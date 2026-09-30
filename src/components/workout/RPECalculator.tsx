@@ -43,7 +43,7 @@ export const RPECalculator: React.FC<{ open: boolean; onClose: () => void }> = (
   const pct = ready ? Math.round(percentFromRpe(r, rpe)) : null;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="RPE Calculator">
+    <BottomSheet light open={open} onClose={onClose} title="RPE Calculator">
       <div className="flex flex-col" style={{ gap: 18 }}>
         <div className="grid grid-cols-2" style={{ gap: 11 }}>
           <label className="block min-w-0">

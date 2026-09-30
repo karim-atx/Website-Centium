@@ -92,7 +92,7 @@ export const MeasurementHistorySheet: React.FC<{
   };
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={site.label}>
+    <BottomSheet light open={open} onClose={onClose} title={site.label}>
       <div className="animate-fade-slide-up">
         {latest && (
           <div className="flex items-start justify-between" style={{ gap: 12 }}>

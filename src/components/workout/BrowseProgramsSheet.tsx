@@ -101,6 +101,7 @@ export const BrowseProgramsSheet: React.FC<{
 
   return (
     <BottomSheet
+      light
       open={open}
       onClose={close}
       title={selected ? selected.name : "Starter programs"}

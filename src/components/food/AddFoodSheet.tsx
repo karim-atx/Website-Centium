@@ -556,6 +556,7 @@ export const AddFoodSheet: React.FC<{
 
     return (
       <BottomSheet
+        light
         open={open}
         onClose={resetAndClose}
         title={advancedOpen ? "Nutrient details" : "Add Food"}
@@ -795,6 +796,7 @@ export const AddFoodSheet: React.FC<{
     return (
       <>
       <BottomSheet
+        light
         open={open && !scanOpen}
         onClose={resetAndClose}
         title="Barcode"
@@ -974,6 +976,7 @@ export const AddFoodSheet: React.FC<{
   return (
     <>
       <BottomSheet
+        light
         open={open}
         onClose={resetAndClose}
         title="Add Food"

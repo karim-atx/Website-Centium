@@ -97,7 +97,7 @@ export const BarcodeScanner: React.FC<{
   const showCamera = camera === "starting" || camera === "scanning";
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={title}>
+    <BottomSheet light open={open} onClose={onClose} title={title}>
       <div className="animate-fade-slide-up">
         {showCamera ? (
           <div className="relative overflow-hidden" style={{ borderRadius: 18, background: "#1E1834", aspectRatio: "4 / 3" }}>

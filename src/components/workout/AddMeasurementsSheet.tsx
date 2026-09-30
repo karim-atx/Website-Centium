@@ -108,7 +108,7 @@ export const AddMeasurementsSheet: React.FC<{
   const now = new Date();
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="Add measurements">
+    <BottomSheet light open={open} onClose={onClose} title="Add measurements">
       <div className="animate-fade-slide-up">
         {/* WO4.1: "Measured" centred, bold and purple; the field opens the
             calendar popup with a wheel time picker (no future). */}

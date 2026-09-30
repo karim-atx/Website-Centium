@@ -39,7 +39,7 @@ export const OneRepMaxesSheet: React.FC<{
   const lifts = useMemo(() => sortLifts(liftMaxes(workoutSessions, todayLocal()), sort), [workoutSessions, sort]);
 
   return (
-    <BottomSheet open={open} onClose={onClose} title="One-rep maxes" titleIcon={<OrmIcon size={26} />} handle>
+    <BottomSheet light open={open} onClose={onClose} title="One-rep maxes" titleIcon={<OrmIcon size={26} />} handle>
       <div className="animate-fade-slide-up">
         {lifts.length === 0 ? (
           <div className="flex flex-col items-center text-center" style={{ padding: "28px 12px", gap: 14 }}>

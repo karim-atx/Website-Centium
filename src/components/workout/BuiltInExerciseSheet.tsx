@@ -40,7 +40,7 @@ export const BuiltInExerciseSheet: React.FC<{
   onInfo?: () => void;
   onHistory?: () => void;
 }> = ({ open, onClose, exercise, onInfo, onHistory }) => (
-  <BottomSheet open={open && !!exercise} onClose={onClose} title={exercise?.name ?? ""}>
+  <BottomSheet light open={open && !!exercise} onClose={onClose} title={exercise?.name ?? ""}>
     {exercise && (
       <div className="space-y-5 animate-fade-slide-up">
         <button

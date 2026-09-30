@@ -588,7 +588,7 @@ export default function MetricsTab() {
         }}
       />
 
-      <BottomSheet open={balanceOpen} onClose={() => setBalanceOpen(false)} title="Training balance">
+      <BottomSheet light open={balanceOpen} onClose={() => setBalanceOpen(false)} title="Training balance">
         <div className="space-y-2.5 animate-fade-slide-up">
           <p className="text-xs text-charcoal-faint mb-1">Completed sets by primary muscle group, all time.</p>
           {sortedGroups.map(([group, count]) => (

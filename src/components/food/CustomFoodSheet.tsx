@@ -81,6 +81,7 @@ export const CustomFoodSheet: React.FC<{
   return (
     <>
       <BottomSheet
+        light
         open
         onClose={close}
         onBack={editing ? leaveEditing : undefined}

@@ -107,7 +107,7 @@ export const BlockSettingsSheet: React.FC<{
   const intervalSeconds = draft.intervalSeconds;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={creating ? "Group as" : "Block"}>
+    <BottomSheet light open={open} onClose={onClose} title={creating ? "Group as" : "Block"}>
       <div className="flex flex-col animate-fade-slide-up" style={{ gap: 16 }}>
         <div>
           <span style={labelStyle}>Kind</span>

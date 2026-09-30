@@ -26,7 +26,7 @@ export const ExerciseHistorySheet: React.FC<{
   );
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={`${name} history`}>
+    <BottomSheet light open={open} onClose={onClose} title={`${name} history`}>
       {entries.length === 0 ? (
         <div className="flex flex-col items-center text-center animate-fade-slide-up" style={{ padding: "26px 12px 10px", gap: 10 }}>
           <BookOpen size={20} style={{ color: "#AEA1DC" }} />

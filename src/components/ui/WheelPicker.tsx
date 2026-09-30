@@ -25,7 +25,8 @@ const VISIBLE = 5; // selected row plus two neighbours either side
  * columns with a highlighted selection band #F3F3FD (radius 10, 36px rows);
  * the selected row 17px/700 near-black, neighbours fading to 0.55 then 0.25.
  * Always fits within the sheet width. Used for Day + Meal (FO1.1 Copy to…)
- * and Hours / Minutes / AM-PM (WO4.1 Measured on).
+ * and Hours / Minutes / AM-PM (WO4.1 Measured on). Colours come from the
+ * --wheel-* variables in index.css, which have a dark-mode set.
  */
 export function WheelPicker({ columns }: { columns: WheelColumn<string | number>[] }) {
   return (
@@ -34,7 +35,7 @@ export function WheelPicker({ columns }: { columns: WheelColumn<string | number>
       <div
         aria-hidden
         className="absolute inset-x-0 pointer-events-none"
-        style={{ top: ROW * 2, height: ROW, background: "#F3F3FD", borderRadius: 10 }}
+        style={{ top: ROW * 2, height: ROW, background: "var(--wheel-band)", borderRadius: 10 }}
       />
       <div className="relative flex h-full">
         {columns.map((col) => (
@@ -108,7 +109,7 @@ function WheelColumnView({ column }: { column: WheelColumn<string | number> }) {
               scrollSnapAlign: "center",
               fontSize: on ? 17 : 15,
               fontWeight: on ? 700 : 500,
-              color: opt.disabled ? "#CFCBD6" : "#241F1B",
+              color: opt.disabled ? "var(--wheel-disabled)" : "var(--wheel-text)",
               opacity: opt.disabled ? 1 : on ? 1 : d < 1.5 ? 0.55 : 0.25,
               fontVariantNumeric: "tabular-nums",
             }}

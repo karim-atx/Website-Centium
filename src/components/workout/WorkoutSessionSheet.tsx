@@ -1005,6 +1005,7 @@ export const WorkoutSessionSheet: React.FC<{
       />
 
       <BottomSheet
+        light
         open={!!pinEditor}
         onClose={() => setPinEditor(null)}
         title="Pinned note"

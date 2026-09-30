@@ -1,5 +1,6 @@
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
+import clsx from "clsx";
 import { X, ChevronLeft } from "lucide-react";
 
 interface BottomSheetProps {
@@ -43,6 +44,13 @@ interface BottomSheetProps {
   handle?: boolean;
   /** WO18: an icon left of the title, the pair centred. */
   titleIcon?: React.ReactNode;
+  /**
+   * Keeps the sheet in its light-mode colours under dark mode, for sheets
+   * whose content is drawn with literal light-mode hex (#241F1B text, white
+   * cards). Its content becomes a `.theme-light` island, so any token colour
+   * inside resolves to its light value too. A `tone` sheet is always light.
+   */
+  light?: boolean;
 }
 
 /**
@@ -57,6 +65,10 @@ interface BottomSheetProps {
  * 01 GLOBAL: max width 430 (the app column), dvh heights, never over the
  * status area, safe-area aware, above the keyboard (--kb-inset), and the
  * 26px header controls sit on 44px hit areas.
+ *
+ * Dark mode (only designed in light; README open question 4) swaps the chrome
+ * to the --sheet-* dark set so token-coloured content stays readable. Sheets
+ * drawn with literal light hex pass `light` to stay light instead.
  */
 export const BottomSheet: React.FC<BottomSheetProps> = ({
   open,
@@ -72,11 +84,17 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   handle,
   titleIcon,
   footerRule,
+  light,
 }) => {
-  const band = tone?.band ?? "#F0EEFD";
-  const border = tone?.border ?? "#7248F8";
-  const titleColor = tone?.title ?? "#7248F8";
-  const body = tone?.body ?? "#FFFFFF";
+  // The handover's light chrome, and its dark-mode counterpart, come from the
+  // --sheet-* variables in index.css.
+  const band = tone?.band ?? "var(--sheet-band)";
+  const border = tone?.border ?? "var(--sheet-border)";
+  const titleColor = tone?.title ?? "var(--sheet-title)";
+  const body = tone?.body ?? "var(--sheet-body)";
+  // A light island re-sets the text colour too: plain text inherits body's
+  // colour, which is already resolved to the dark theme's light grey.
+  const island = light || tone ? "theme-light text-charcoal" : undefined;
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -115,7 +133,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       />
       {hideHeader ? (
         <div
-          className="relative w-full max-w-[430px] bg-cream rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up"
+          className={clsx("relative w-full max-w-[430px] bg-cream rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up", island)}
           style={{ maxHeight }}
         >
           <div
@@ -132,12 +150,12 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         </div>
       ) : (
         <div
-          className="relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up"
+          className={clsx("relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up", island)}
           style={{ maxHeight, background: band, border: `1px solid ${border}`, borderBottom: "none" }}
         >
           {handle && (
             <div aria-hidden className="shrink-0 flex justify-center" style={{ paddingTop: 8 }}>
-              <span style={{ width: 36, height: 4, borderRadius: 2, background: "#CABCFB" }} />
+              <span style={{ width: 36, height: 4, borderRadius: 2, background: "var(--sheet-handle)" }} />
             </div>
           )}
           <div className="shrink-0 flex items-center justify-between" style={{ height: handle ? 46 : 53, padding: "0 18px" }}>
@@ -147,7 +165,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
                 <button
                   onClick={onBack}
                   className="tap relative w-[26px] h-[26px] rounded-full flex items-center justify-center before:absolute before:-inset-[9px] before:content-['']"
-                  style={{ color: "#241F1B" }}
+                  style={{ color: "var(--sheet-back)" }}
                   aria-label="Back"
                 >
                   <ChevronLeft size={17} strokeWidth={2.6} />
@@ -189,7 +207,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
               style={{
                 background: body,
                 padding: `${footerRule ? 8 : 12}px 20px ${bottomPad}`,
-                borderTop: footerRule ? "1px solid #F2F2F2" : undefined,
+                borderTop: footerRule ? "1px solid var(--sheet-rule)" : undefined,
               }}
             >
               {footer}

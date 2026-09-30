@@ -104,6 +104,7 @@ export const SetOptionsSheet: React.FC<{
 
   return (
     <BottomSheet
+      light
       open={open}
       onClose={onClose}
       title={title}

@@ -129,6 +129,7 @@ export const CreateCustomExerciseSheet: React.FC<{
 
   return (
     <BottomSheet
+      light
       open={open}
       onClose={onClose}
       title={name.trim() || "New Custom Exercise"}

@@ -786,6 +786,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
   return (
     <BottomSheet
+      light
       open={open}
       onClose={handleClose}
       title="Tell Centium what you ate"
