@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/Button";
 import { Lock, Eye, EyeOff, Check, X, ShieldCheck } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { updatePassword } from "../../services/auth";
+import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
 import { getMfaStatus, verifyTotp } from "../../services/mfa";
 import {
   passwordChecks,
@@ -30,7 +31,8 @@ export default function ResetPassword() {
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [confirmBlurred, setConfirmBlurred] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const passwordVisibility = usePasswordVisibility();
+  const showPassword = passwordVisibility.shown;
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -256,7 +258,7 @@ export default function ResetPassword() {
                 className={inputClass}
               />
               <button
-                onClick={() => setShowPassword((v) => !v)}
+                onClick={passwordVisibility.toggle}
                 className="tap absolute right-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >

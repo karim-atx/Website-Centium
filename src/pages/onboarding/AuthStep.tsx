@@ -14,6 +14,7 @@ import {
 } from "../../services/auth";
 import { setRememberMe as setRememberMePreference } from "../../../lib/supabase/rememberMe";
 import { clearSessionArrived, sessionArrivedPending } from "../../../lib/supabase/tabIdentity";
+import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
 import {
   passwordChecks,
   meetsMinimumPassword,
@@ -52,7 +53,15 @@ const inputClass =
 
 export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   const { session, authReady, signOut } = useApp();
-  const [mode, setMode] = useState<Mode>("signIn");
+  const [mode, setModeState] = useState<Mode>("signIn");
+  // Every screen switch inside this step (sign in / sign up / forgot / check
+  // email, and back) starts with the password hidden again.
+  const passwordVisibility = usePasswordVisibility();
+  const showPassword = passwordVisibility.shown;
+  const setMode = (next: Mode) => {
+    passwordVisibility.hide();
+    setModeState(next);
+  };
   // Why we're on the check-email screen, which changes what we may say.
   // After a sign-up we must not reveal whether the address already has an
   // account; after a sign-in that came back `email_not_confirmed`, Supabase
@@ -65,7 +74,6 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   const [confirmBlurred, setConfirmBlurred] = useState(false);
   // Default on: the persistent session everyone had before this existed.
   const [rememberMe, setRememberMe] = useState(true);
-  const [showPassword, setShowPassword] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [resetSent, setResetSent] = useState(false);
   /**
@@ -426,7 +434,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
           />
           <button
             type="button"
-            onClick={() => setShowPassword((v) => !v)}
+            onClick={passwordVisibility.toggle}
             className="tap absolute right-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint"
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
