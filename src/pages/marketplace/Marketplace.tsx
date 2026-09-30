@@ -4,7 +4,7 @@ import { marketplaceCategories } from "../../data/mockProfessionals";
 import Discover from "./Discover";
 import { useApp } from "../../context/AppContext";
 import { useEffect } from "react";
-import { Sparkles, Gem, Award, Medal, Trophy, Crown } from "lucide-react";
+import { Sparkles, Gem, Award, Medal, Trophy, Crown, ChevronLeft } from "lucide-react";
 import { tierProgress, tierReached } from "../../services/achievements";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import BusinessDashboard from "./BusinessDashboard";
@@ -88,9 +88,20 @@ export default function Marketplace() {
     <div>
       {/* Iteration 6 "Team": compact 19px title in place of PageHeader's
           27px default — see the identical note in Food.tsx. */}
-      <div className="mb-[13px]">
-        <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal">Explore</p>
-        <p className="mt-[3px] text-[11px] text-charcoal-tertiary">The future Centium ecosystem</p>
+      {/* Handover 2026-09-29 MO8.1: a back arrow beside the title, the
+          same button Mind's header uses (Explore opens from More and Home). */}
+      <div className="flex items-start gap-2.5 mb-[13px]">
+        <button
+          onClick={() => ((window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate("/app/more"))}
+          aria-label="Back"
+          className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-1.5 mt-0.5 transition-colors"
+        >
+          <ChevronLeft size={18} />
+        </button>
+        <div className="mt-[5px]">
+          <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal">Explore</p>
+          <p className="mt-[3px] text-[11px] text-charcoal-tertiary">The future Centium ecosystem</p>
+        </div>
       </div>
 
       {/* Iteration 6 "Team" §5 Explore: the tier card — a gradient hero
@@ -105,7 +116,9 @@ export default function Marketplace() {
       {pointsSummary && (
       <div
         className="relative overflow-hidden rounded-[22px] px-[17px] py-4 mb-[13px]"
-        style={{ background: "var(--gradient-board)" }}
+        // MO8.1: the tier card is all teal (#A2C8C2 → #4F7F78), the
+        // existing teal hero token, which carries its own dark-mode value.
+        style={{ background: "var(--gradient-teal-hero)" }}
       >
         <div className="flex items-center justify-between gap-3">
           <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66]">
