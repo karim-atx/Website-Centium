@@ -4,7 +4,8 @@ import { marketplaceCategories } from "../../data/mockProfessionals";
 import Discover from "./Discover";
 import { useApp } from "../../context/AppContext";
 import { useEffect } from "react";
-import { Sparkles, Gem, Award, Medal, Trophy, Crown, ChevronLeft } from "lucide-react";
+import { Sparkles, Gem, Award, Medal, Trophy, Crown, ChevronLeft, Gift } from "lucide-react";
+import { rewardForUser, type EarnedReward } from "../../services/rewards";
 import { tierProgress, tierReached } from "../../services/achievements";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import BusinessDashboard from "./BusinessDashboard";
@@ -193,6 +194,15 @@ export default function Marketplace() {
       </div>
       )}
 
+      {/* MO8.1 reward row, in the handover's design, shown ONLY for a reward
+          this user has really earned. There is no source yet (see
+          services/rewards: partner offers / business_discounts), so it stays
+          hidden; the frame's example discount is never shown. */}
+      {(() => {
+        const reward = rewardForUser();
+        return reward ? <RewardRow reward={reward} /> : null;
+      })()}
+
       {/* THE "NEAR YOU" TILES ARE GONE, and they were the worst of it: two
           rows reading `mockGyms.length` and `mockClasses.length` — "3 nearby"
           for gyms that do not exist. Real classes and real venues now live in
@@ -233,6 +243,35 @@ export default function Marketplace() {
           built around your streaks and progress.
         </p>
       </Card>
+    </div>
+  );
+}
+
+/**
+ * MO8.1 · the earned-reward row under the tier card: a light teal card
+ * (rgba(162,200,194,.18)), a teal gift tile, the reason on one line and the
+ * real offer below it (frame colours: #241F1B title, #4F7F78 detail).
+ */
+function RewardRow({ reward }: { reward: EarnedReward }) {
+  return (
+    <div
+      className="flex items-center mb-[13px]"
+      style={{ gap: 11, padding: "12px 14px", borderRadius: 15, background: "rgba(162,200,194,.18)" }}
+    >
+      <span
+        className="flex-none flex items-center justify-center"
+        style={{ width: 30, height: 30, borderRadius: 10, background: "var(--gradient-teal-hero)" }}
+      >
+        <Gift size={15} className="text-white" />
+      </span>
+      <span className="min-w-0">
+        <span className="block" style={{ fontSize: 12.5, fontWeight: 700, color: "#241F1B" }}>
+          {reward.title}
+        </span>
+        <span className="block" style={{ fontSize: 10.5, color: "#4F7F78", marginTop: 1 }}>
+          {reward.detail}
+        </span>
+      </span>
     </div>
   );
 }
