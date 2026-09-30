@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -110,6 +111,7 @@ const HOUR_PX = 56;
 // would put two sources behind one screen; it is used below for one thing
 // only — carrying pre-existing local events up to the server once.
 export default function ClientCalendarTab() {
+  const navigate = useNavigate();
   const { calendarEvents, updateCalendarEvent, authUserId, profileReady, noteFeatureMilestone } =
     useApp();
 
@@ -579,8 +581,19 @@ export default function ClientCalendarTab() {
           27px default — see the identical note in Food.tsx. The circular
           "+" keeps its exact meaning (openCompose), just a gradient chip
           instead of a flat primary fill. */}
+      {/* Handover 2026-09-29 MO4.1: a back arrow beside the title, the
+          same button Mind's header uses. */}
       <div className="flex items-start justify-between gap-3 mb-[13px]">
-        <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal">Calendar</p>
+        <div className="flex items-start gap-2.5">
+          <button
+            onClick={() => ((window.history.state?.idx ?? 0) > 0 ? navigate(-1) : navigate("/app/more"))}
+            aria-label="Back"
+            className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-card hover:shadow-soft shrink-0 -ml-1.5 mt-0.5 transition-colors"
+          >
+            <ChevronLeft size={18} />
+          </button>
+          <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal mt-[5px]">Calendar</p>
+        </div>
         <button
           onClick={openCompose}
           aria-label="New event"
