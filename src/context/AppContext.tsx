@@ -945,6 +945,13 @@ interface AppState {
 
   customFoods: CustomFood[];
   addCustomFood: (food: Omit<CustomFood, "id" | "isCustom">) => Promise<CustomFood>;
+  /**
+   * FO3.2: keeps this device's copy of a custom food (the one Add Food search
+   * merges in) in step with an edit or a delete made through the Custom Foods
+   * list, which reads custom_foods itself.
+   */
+  syncCustomFood: (food: Omit<CustomFood, "isCustom">) => void;
+  forgetCustomFood: (id: string) => void;
 
   // V7 (QA 7.0): a food a professional creates while building a specific
   // client's meal plan goes only into that client's own food database, not
@@ -5374,6 +5381,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomFoods((prev) => [...prev, custom]);
     return custom;
   };
+  const syncCustomFood: AppState["syncCustomFood"] = (food) =>
+    setCustomFoods((prev) => prev.map((f) => (f.id === food.id ? { ...food, isCustom: true } : f)));
+  const forgetCustomFood: AppState["forgetCustomFood"] = (id) => setCustomFoods((prev) => prev.filter((f) => f.id !== id));
 
   const [clientCustomFoods, setClientCustomFoods] = usePersistentState<Record<string, CustomFood[]>>(
     "clientCustomFoods",
@@ -5852,6 +5862,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setColorTheme,
       customFoods,
       addCustomFood,
+      syncCustomFood,
+      forgetCustomFood,
       clientCustomFoods,
       addClientCustomFood,
       exerciseCatalog,
@@ -5998,6 +6010,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       customMeals,
       customMealsError,
       clientCustomMeals,
+      // FO3.2: these were missing, so a recipe added or deleted only reached
+      // the screen when some other dependency happened to change.
+      recipes,
+      recipesError,
+      clientRecipes,
+      rosterLoading,
+      rosterError,
+      today,
       dietaryRestriction,
       recoverySensitive,
       streaksError,

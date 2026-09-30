@@ -711,10 +711,6 @@ export const AddFoodSheet: React.FC<{
         onClose={resetAndClose}
         title="Create Custom Food"
         onBack={() => setCustomMode(false)}
-        onLookUpBarcode={() => {
-          setCustomMode(false);
-          openBarcode();
-        }}
         onSaved={(food) => {
           setCustomMode(false);
           setSelectedFood(food);

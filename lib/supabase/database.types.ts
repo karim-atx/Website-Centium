@@ -3799,6 +3799,9 @@ export type Database = {
       }
       food_log_entries: {
         Row: {
+          external_fetched_at: string | null
+          external_ref: string | null
+          external_source: Database["public"]["Enums"]["external_food_source"] | null
           calories: number
           carbs_g: number
           category: Database["public"]["Enums"]["food_category"] | null
@@ -3820,6 +3823,9 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          external_fetched_at?: string | null
+          external_ref?: string | null
+          external_source?: Database["public"]["Enums"]["external_food_source"] | null
           calories: number
           carbs_g: number
           category?: Database["public"]["Enums"]["food_category"] | null
@@ -3841,6 +3847,9 @@ export type Database = {
           user_id: string
         }
         Update: {
+          external_fetched_at?: string | null
+          external_ref?: string | null
+          external_source?: Database["public"]["Enums"]["external_food_source"] | null
           calories?: number
           carbs_g?: number
           category?: Database["public"]["Enums"]["food_category"] | null
@@ -11336,6 +11345,7 @@ export type Database = {
         | "low_carb"
         | "pescatarian"
       exercise_difficulty: "beginner" | "intermediate" | "advanced"
+      external_food_source: "open_food_facts"
       exercise_classification:
         | "barbell"
         | "dumbbell"

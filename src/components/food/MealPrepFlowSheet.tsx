@@ -1,5 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
+import { ConfirmCard } from "../ui/ConfirmCard";
+import { usePrepForm } from "./usePrepForm";
 import { Pencil, SlidersHorizontal } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import type { CustomMeal, MealType, Recipe } from "../../types";
@@ -7,12 +9,9 @@ import { sumNutrientMaps, servingMultiplier, targetsFromGoal } from "../../servi
 import { getFoodNutrients } from "../../services/food-nutrients";
 import { NutrientDetailSections } from "./NutrientSections";
 import {
-  MacroBar,
   MacroStrip,
   sumItems,
   divideTotals,
-  PREP_TEAL,
-  PREP_LAV,
   PREP_FAINT,
   PREP_SOFT,
   PREP_CHARCOAL,
@@ -27,93 +26,60 @@ export type PrepKind = "meals" | "recipes";
 // Grey sheet container (00-FOUNDATIONS §0.3).
 const GREY_CONTAINER: React.CSSProperties = { background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" };
 
-type Screen = "list" | "detail" | "advanced";
+type Screen = "detail" | "advanced" | "edit";
 
 /**
- * List → Detail → (Advanced) for one card (Custom Meals or Recipes),
- * mirroring CentiumMealPrep.dc.html's `listScreen`/`detailScreen`/
- * `advancedScreen`. One BottomSheet, internal screen state — `onBack` steps
- * one level (detail → list, advanced → detail); the sheet's own X always
- * calls `onClose`, which is the handoff's "the X closes from anywhere back
- * to the Meal Prep tab" (detail → list → tab is three levels; `onBack`
- * covers the first two, `onClose` covers all of them at once).
- *
- * Create/edit stays a SEPARATE sheet (CreateMealSheet/CreateRecipeSheet,
- * already their own self-contained BottomSheet) rather than a third screen
- * here, matching how CreateMealSheet already worked before this handoff.
- * Both sheets can be mounted at once — Create stacks on top of this one.
- * The handoff's Create always steps back (and saves) to the List
- * (`goBack` / Save → `kind.list`), so MealPrepPanel reopens this sheet on
- * its list by bumping `resetKey` whenever Create leaves that way.
+ * One saved meal or recipe (handover 2026-09-29 FO3.2): Detail → (Advanced),
+ * and Edit IN THE SAME POPUP. The Custom tab's sub-tab lists replace the old
+ * List screen; the header pencil is replaced by an Edit button in the footer,
+ * which turns this sheet into the same form as creating the item (usePrepForm),
+ * prefilled, titled "Edit …". Save returns to the detail; the back chevron
+ * leaves edit mode without saving, asking first if anything changed; delete
+ * asks, then removes the item and closes.
  */
 export const MealPrepFlowSheet: React.FC<{
   kind: PrepKind;
-  open: boolean;
-  initialScreen: Screen;
-  initialItemId?: string;
-  /** Bumped by the parent to force a return to `initialScreen`. */
-  resetKey?: number;
+  itemId: string;
+  /** Opened from a row's ⋮ Edit. */
+  startEditing?: boolean;
   onClose: () => void;
-  onEdit: (id: string) => void;
-  onCreate: () => void;
-}> = ({ kind, open, initialScreen, initialItemId, resetKey, onClose, onEdit, onCreate }) => {
-  const { customMeals, customMealsError, recipes, recipesError, selectedDate, logCustomMeal, logRecipe } = useApp();
+}> = ({ kind, itemId, startEditing = false, onClose }) => {
+  const { customMeals, recipes, selectedDate, logCustomMeal, logRecipe, removeCustomMeal, removeRecipe } = useApp();
   const isR = kind === "recipes";
-  const accentText = isR ? PREP_LAV.text : PREP_TEAL.text;
-  // Item 11: the flow's own primaries are solid (#79A8A1 / #A198DF); the
-  // translucent card CTA colours stay on the Meal Prep tab's cards.
+  // Item 11: the flow's own primaries are solid (#79A8A1 / #A198DF).
   const accentCta = PREP_PRIMARY[kind];
 
-  const [screen, setScreen] = useState<Screen>(initialScreen);
-  const [itemId, setItemId] = useState<string | undefined>(initialItemId);
-  const [query, setQuery] = useState("");
+  const [screen, setScreen] = useState<Screen>(startEditing ? "edit" : "detail");
   const [qty, setQty] = useState("1");
   // CentiumMealPrep.dc.html's state starts `meal: "lunch"` and never resets
   // it per item, so Add to Diary is enabled from the first frame.
   const [meal, setMeal] = useState<MealType>("lunch");
   const [logging, setLogging] = useState(false);
   const [logError, setLogError] = useState<string | null>(null);
+  const [confirm, setConfirm] = useState<null | "delete" | "discard-back" | "discard-close">(null);
+  const [busy, setBusy] = useState(false);
 
-  // Newest first: recipes already arrive that way (getRecipes orders
-  // descending, item 11); custom meals keep their ascending query and are
-  // reversed here instead (Part 4 Q2).
-  const entries = useMemo<(CustomMeal | Recipe)[]>(
-    () => (isR ? recipes : customMeals.slice().reverse()),
-    [isR, recipes, customMeals]
-  );
-  const readError = isR ? recipesError : customMealsError;
+  const item: CustomMeal | Recipe | null = isR
+    ? recipes.find((r) => r.id === itemId) ?? null
+    : customMeals.find((m) => m.id === itemId) ?? null;
 
-  useEffect(() => {
-    if (!open) return;
-    setScreen(initialScreen);
-    setItemId(initialItemId);
-    setQuery("");
-    setLogError(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, initialScreen, initialItemId, resetKey]);
-
-  const item = entries.find((e) => e.id === itemId) ?? null;
+  const form = usePrepForm({
+    kind,
+    active: screen === "edit",
+    editMeal: isR ? null : (item as CustomMeal | null),
+    editRecipe: isR ? (item as Recipe | null) : null,
+    onDone: () => setScreen("detail"),
+    onDeleteRequest: () => setConfirm("delete"),
+  });
 
   useEffect(() => {
     setQty("1");
     setLogError(null);
   }, [itemId]);
 
-  if (!open) return null;
-
   const total = item ? sumItems(item.items as PrepItem[]) : { kcal: 0, p: 0, c: 0, f: 0 };
   const servings = item && "servings" in item ? item.servings : 1;
   const per = isR ? divideTotals(total, servings) : total;
-
-  const goBack = () => {
-    if (screen === "advanced") setScreen("detail");
-    else if (screen === "detail") setScreen("list");
-  };
-
-  const openDetail = (id: string) => {
-    setItemId(id);
-    setScreen("detail");
-  };
 
   const doLog = async () => {
     if (!item || logging) return;
@@ -141,162 +107,96 @@ export const MealPrepFlowSheet: React.FC<{
     }
   };
 
+  const doDelete = async () => {
+    if (!item) return;
+    setBusy(true);
+    if (isR) await removeRecipe(item.id);
+    else await removeCustomMeal(item.id);
+    setBusy(false);
+    setConfirm(null);
+    onClose();
+  };
+
+  const leaveEdit = () => {
+    if (form.searchBack) return form.searchBack();
+    if (form.dirty) setConfirm("discard-back");
+    else setScreen("detail");
+  };
+  const close = () => (screen === "edit" && form.dirty ? setConfirm("discard-close") : onClose());
+
   // Titles per screen, literal from CentiumMealPrep.dc.html's `titles` map:
-  // the list carries the card's own name, the detail step is generic
-  // ("Meal"/"Recipe" — the item's own name is shown in the body instead).
-  const title =
-    screen === "advanced" ? "Nutrient details" : screen === "detail" ? (isR ? "Recipe" : "Meal") : isR ? "Recipes" : "Custom Meals";
+  // the detail step is generic ("Meal"/"Recipe" — the item's own name is shown
+  // in the body instead).
+  const title = screen === "edit" ? form.title : screen === "advanced" ? "Nutrient details" : isR ? "Recipe" : "Meal";
 
   return (
-    <BottomSheet
-      open={open}
-      onClose={onClose}
-      // Item 11 back steps: advanced → detail → list → the Meal Prep tab.
-      onBack={screen === "list" ? onClose : goBack}
-      title={title}
-      // The handoff's `canEdit` pencil sits in the header, just left of the
-      // close ring: 26px, no fill, #9C7EF8, 15px icon at stroke 2.1.
-      headerAction={
-        screen === "detail" && item ? (
-          <button
-            onClick={() => onEdit(item.id)}
-            aria-label="Edit"
-            className="tap shrink-0 flex items-center justify-center"
-            style={{ width: 26, height: 26, borderRadius: 9999, background: "none", border: "none", padding: 0, color: "#9C7EF8" }}
-          >
-            <Pencil size={15} strokeWidth={2.1} />
-          </button>
-        ) : undefined
-      }
-    >
-      {screen === "list" && (
-        <ListScreen
-          kind={kind}
-          entries={entries}
-          readError={readError}
-          query={query}
-          setQuery={setQuery}
-          accentText={accentText}
-          accentCta={accentCta}
-          onOpen={openDetail}
-          onCreate={onCreate}
-        />
-      )}
-      {screen === "detail" && item && (
-        <DetailScreen
-          kind={kind}
-          item={item}
-          total={total}
-          per={per}
-          qty={qty}
-          setQty={setQty}
-          meal={meal}
-          setMeal={setMeal}
-          onAdvanced={() => setScreen("advanced")}
-          onLog={() => void doLog()}
-          logging={logging}
-          logError={logError}
-        />
-      )}
-      {screen === "detail" && !item && (
-        <p style={{ margin: 0, fontSize: 13, color: PREP_FAINT }}>Nothing saved yet.</p>
-      )}
-      {screen === "advanced" && (
-        <AdvancedScreen kind={kind} item={item} qty={qty} />
-      )}
-    </BottomSheet>
-  );
-};
-
-// ------------------------------------------------------------ List screen
-const ListScreen: React.FC<{
-  kind: PrepKind;
-  entries: (CustomMeal | Recipe)[];
-  readError: string | null;
-  query: string;
-  setQuery: (v: string) => void;
-  accentText: string;
-  accentCta: string;
-  onOpen: (id: string) => void;
-  onCreate: () => void;
-}> = ({ kind, entries, readError, query, setQuery, accentText, accentCta, onOpen, onCreate }) => {
-  const isR = kind === "recipes";
-  const filtered = entries.filter((e) => !query.trim() || e.title.toLowerCase().includes(query.trim().toLowerCase()));
-
-  return (
-    <div className="flex flex-col gap-3 animate-fade-slide-up">
-      <input
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder={isR ? "Search recipes…" : "Search meals…"}
-        className="w-full focus:outline-none placeholder:text-charcoal-faint"
-        style={{ background: "#F4F4F6", border: "none", borderRadius: 14, padding: "11px 14px", fontSize: 14, color: PREP_CHARCOAL }}
-      />
-
-      {/* A failed read must never look empty (Part 4 Q7): the error line
-          replaces the rows. */}
-      {readError ? (
-        <p style={{ margin: 0, fontSize: 13, color: PREP_SOFT }}>
-          {isR ? "Couldn't load your recipes. Pull to retry." : "Couldn't load your meals. Pull to retry."}
-        </p>
-      ) : filtered.length > 0 ? (
-        <div className="flex flex-col gap-2">
-          {filtered.map((x) => {
-            const total = sumItems(x.items as PrepItem[]);
-            const servings = "servings" in x ? x.servings : 1;
-            const per = isR ? divideTotals(total, servings) : total;
-            return (
-              <button
-                key={x.id}
-                onClick={() => onOpen(x.id)}
-                className="tap w-full flex items-center justify-between rounded-[14px] bg-white text-left"
-                style={{ border: "1px solid rgba(36,31,27,0.1)", padding: "13px 12px", gap: 9 }}
-              >
-                <span className="flex-1 min-w-0">
-                  <span className="block text-sm font-bold truncate" style={{ color: PREP_CHARCOAL }}>
-                    {x.title}
-                  </span>
-                  <span className="block mt-0.5 text-[11px]" style={{ color: PREP_FAINT }}>
-                    {isR
-                      ? `${(x as Recipe).servings} servings · ${x.items.length} ingredients`
-                      : `${x.items.length} food${x.items.length !== 1 ? "s" : ""}`}
-                  </span>
-                </span>
-                <MacroBar p={per.p} c={per.c} f={per.f} />
-                <span className="flex-none text-right">
-                  <span className="block text-sm font-bold tabular-nums" style={{ color: accentText }}>
-                    {Math.round(per.kcal)} kcal
-                  </span>
-                  {isR && <span className="block text-[10px]" style={{ color: PREP_FAINT }}>per serving</span>}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : (
-        <p className="text-center text-[13.5px] py-6" style={{ color: PREP_FAINT }}>
-          {query.trim()
-            ? "Nothing matches that search."
-            : isR
-              ? "No recipes yet — create your first one."
-              : "No custom meals yet — create your first one."}
-        </p>
-      )}
-
-      <button
-        onClick={onCreate}
-        className="tap w-full h-[52px] rounded-[14px] text-[15.5px] font-bold text-white"
-        style={{ background: accentCta }}
+    <>
+      <BottomSheet
+        open
+        onClose={close}
+        onBack={screen === "edit" ? leaveEdit : screen === "advanced" ? () => setScreen("detail") : undefined}
+        title={title}
+        footer={
+          screen === "detail" && item ? (
+            <button
+              onClick={() => setScreen("edit")}
+              className="tap w-full inline-flex items-center justify-center"
+              style={{ height: 48, gap: 8, borderRadius: 14, background: "#FFFFFF", border: `1.5px solid ${accentCta}`, color: accentCta, fontSize: 15, fontWeight: 700 }}
+            >
+              <Pencil size={15} /> Edit
+            </button>
+          ) : undefined
+        }
       >
-        {isR ? "Create Recipe" : "Create Meal"}
-      </button>
-    </div>
+        {screen === "edit" && item && form.body}
+        {screen === "detail" && item && (
+          <DetailScreen
+            kind={kind}
+            item={item}
+            total={total}
+            per={per}
+            qty={qty}
+            setQty={setQty}
+            meal={meal}
+            setMeal={setMeal}
+            onAdvanced={() => setScreen("advanced")}
+            onLog={() => void doLog()}
+            logging={logging}
+            logError={logError}
+          />
+        )}
+        {!item && <p style={{ margin: 0, fontSize: 13, color: PREP_FAINT }}>Nothing saved yet.</p>}
+        {screen === "advanced" && <AdvancedScreen kind={kind} item={item} qty={qty} />}
+      </BottomSheet>
+
+      <ConfirmCard
+        open={confirm === "delete"}
+        title={`Delete ${item?.title ?? (isR ? "this recipe" : "this meal")}?`}
+        subtitle={isR ? "The recipe is removed. Past diary entries stay." : "The meal is removed. Past diary entries stay."}
+        busy={busy}
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => void doDelete()}
+      />
+      <ConfirmCard
+        open={confirm === "discard-back" || confirm === "discard-close"}
+        title="Discard your changes?"
+        subtitle="What you changed won't be saved."
+        confirmLabel="Discard"
+        onCancel={() => setConfirm(null)}
+        onConfirm={() => {
+          const closing = confirm === "discard-close";
+          setConfirm(null);
+          if (closing) onClose();
+          else {
+            form.leaveForm();
+            setScreen("detail");
+          }
+        }}
+      />
+    </>
   );
 };
 
-// ---------------------------------------------------------- Detail screen
-// CentiumMealPrep.dc.html's `pill(on, accent)`: the selected meal fills with
-// the kind's colour (#79A8A1 meals / #A198DF recipes).
 const prepPillStyle = (on: boolean, accent: string): React.CSSProperties => ({
   borderRadius: 8,
   padding: "8px 14px",

@@ -5,6 +5,7 @@ import type { Enums } from "../../../lib/supabase/database.types";
 import type { FoodLogEntry, MealType, ServingUnit } from "../../types";
 import { servingMultiplier, rescaleEntry } from "../nutrition";
 import { getFoodNutrientsById } from "../food-nutrients";
+import { normalizeGtin } from "../../utils/gtin";
 
 // Reads and writes the real food catalog and diary.
 //
@@ -330,7 +331,9 @@ export async function createFoodByBarcode(
  * their own numbers rather than whatever the first scanner entered.
  */
 export async function lookupByBarcode(barcode: string): Promise<FoodSearchResult | null> {
-  const code = barcode.trim();
+  // foods.barcode holds normalised GTINs (public.normalize_gtin), so a UPC-A
+  // or UPC-E has to become the same 13 digits before it can match.
+  const code = normalizeGtin(barcode);
   if (!code) return null;
 
   const { data, error } = await supabase
@@ -347,10 +350,14 @@ export async function lookupByBarcode(barcode: string): Promise<FoodSearchResult
 
   const shared = fromCatalog(data as CatalogRow);
 
+  // Nothing makes the link unique per owner, so take the most recently
+  // edited version rather than failing on two.
   const { data: override } = await supabase
     .from("custom_foods")
     .select(CUSTOM_COLUMNS)
     .eq("overrides_food_id", shared.id)
+    .order("updated_at", { ascending: false })
+    .limit(1)
     .maybeSingle();
 
   return override ? fromCustom(override as CustomRow) : shared;
@@ -365,6 +372,12 @@ export interface LogFoodEntryParams {
   /** yyyy-mm-dd. The diary's selected date, not necessarily today. */
   date: string;
   loggedVia: Enums<"food_log_source">;
+  /**
+   * Where a product from outside our catalogue came from (Open Food Facts via
+   * lookup-barcode): recorded on the user's own row, which is what the ODbL
+   * decision rests on.
+   */
+  external?: { source: "open_food_facts"; ref: string; fetchedAt: string };
 }
 
 export interface LogFoodEntryResult {
@@ -385,7 +398,7 @@ export interface LogFoodEntryResult {
  * them believing they had logged something they had not.
  */
 export async function logFoodEntry(params: LogFoodEntryParams): Promise<LogFoodEntryResult> {
-  const { userId, food, quantity, unit, meal, date, loggedVia } = params;
+  const { userId, food, quantity, unit, meal, date, loggedVia, external } = params;
 
   if (!(quantity > 0)) return { ok: false, message: "Quantity must be greater than zero." };
 
@@ -448,6 +461,9 @@ export async function logFoodEntry(params: LogFoodEntryParams): Promise<LogFoodE
       serving_label: food.servingLabel,
       category: food.category,
       is_lebanese: food.source === "catalog" ? food.isLebanese : null,
+      external_source: external?.source ?? null,
+      external_ref: external?.ref ?? null,
+      external_fetched_at: external?.fetchedAt ?? null,
     })
     .select("id")
     .single();
@@ -976,5 +992,97 @@ export async function updateDiaryEntry(
     console.error("[food] Update affected no rows:", entry.id);
     return { ok: false, message: "That change could not be saved." };
   }
+  return { ok: true };
+}
+
+// --- Custom Foods list, edit and delete (FO3.2) ----------------------------
+
+/**
+ * The user's own custom foods, newest first, each with the barcode of the
+ * shared product it is a version of (foods.barcode through overrides_food_id).
+ * Client-scoped foods a professional made for someone are not "mine".
+ */
+export async function listCustomFoods(
+  ownerId: string
+): Promise<{ ok: true; foods: FoodSearchResult[] } | { ok: false; message: string }> {
+  const { data, error } = await supabase
+    .from("custom_foods")
+    .select(CUSTOM_COLUMNS)
+    .eq("owner_id", ownerId)
+    .is("scoped_to_client_id", null)
+    .order("created_at", { ascending: false });
+  if (error) {
+    console.error("[food] Could not list custom foods:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  const foods = (data ?? []).map((r) => fromCustom(r as CustomRow));
+  const linked = [...new Set(foods.map((f) => f.overridesFoodId).filter((x): x is string => !!x))];
+  if (linked.length > 0) {
+    const { data: shared } = await supabase.from("foods").select("id, barcode").in("id", linked);
+    const byId = new Map((shared ?? []).map((r) => [r.id, r.barcode]));
+    for (const f of foods) if (f.overridesFoodId) f.barcode = byId.get(f.overridesFoodId) ?? null;
+  }
+  return { ok: true, foods };
+}
+
+export interface CustomFoodEdit {
+  name: string;
+  category: Enums<"food_category">;
+  serving: string;
+  calories: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  logoTone: number | null;
+  nutrients: Record<string, number> | null;
+  /** Undefined leaves the barcode link alone; null clears it; an id links it. */
+  overridesFoodId?: string | null;
+}
+
+/**
+ * Saves an edited custom food. Only the columns in the UPDATE grant are sent
+ * (never owner_id). A row-policy refusal on UPDATE is silent — zero rows — so
+ * the returned rows are what says it happened. ATX32 is the trigger refusing a
+ * link to a product with no barcode.
+ */
+export async function updateCustomFood(
+  id: string,
+  edit: CustomFoodEdit
+): Promise<{ ok: boolean; message?: string; food?: FoodSearchResult }> {
+  const row = {
+    name: edit.name,
+    category: edit.category,
+    serving_label: edit.serving,
+    calories: edit.calories,
+    protein_g: edit.protein,
+    carbs_g: edit.carbs,
+    fat_g: edit.fat,
+    logo_tone: edit.logoTone,
+    nutrients: edit.nutrients && Object.keys(edit.nutrients).length > 0 ? edit.nutrients : null,
+    ...(edit.overridesFoodId !== undefined ? { overrides_food_id: edit.overridesFoodId } : {}),
+  };
+  const { data, error } = await supabase.from("custom_foods").update(row).eq("id", id).select(CUSTOM_COLUMNS);
+  if (error) {
+    console.error("[food] Could not update custom food:", error.message);
+    if (error.code === "ATX32") return { ok: false, message: "That barcode isn't a product in the catalogue yet." };
+    return { ok: false, message: describe(error) };
+  }
+  if (!data || data.length === 0) return { ok: false, message: "That food couldn't be updated." };
+  return { ok: true, food: fromCustom(data[0] as CustomRow) };
+}
+
+/**
+ * Deletes one of the user's custom foods. The shared barcode product it may
+ * override is its parent and is never touched; the ingredient lines using it
+ * in meal preps and recipes go with it (ON DELETE CASCADE); diary entries keep
+ * their snapshot and only lose the link (ON DELETE SET NULL).
+ */
+export async function deleteCustomFood(id: string): Promise<{ ok: boolean; message?: string }> {
+  const { data, error } = await supabase.from("custom_foods").delete().eq("id", id).select("id");
+  if (error) {
+    console.error("[food] Could not delete custom food:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  if (!data || data.length === 0) return { ok: false, message: "That food couldn't be deleted." };
   return { ok: true };
 }

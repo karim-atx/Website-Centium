@@ -1,30 +1,79 @@
-import { useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type React from "react";
-import { Plus } from "lucide-react";
+import { EllipsisVertical, Package, Pencil, Plus, Soup, Trash2, UtensilsCrossed } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { CreateMealSheet } from "../../components/food/CreateMealSheet";
 import { CreateRecipeSheet } from "../../components/food/CreateRecipeSheet";
+import { CustomFoodForm } from "../../components/food/CustomFoodForm";
+import { CustomFoodSheet } from "../../components/food/CustomFoodSheet";
 import { MealPrepFlowSheet, type PrepKind } from "../../components/food/MealPrepFlowSheet";
-import { sumItems, divideTotals, PREP_TEAL, PREP_LAV, type PrepItem } from "../../components/food/mealPrepShared";
-import type { CustomMeal, Recipe } from "../../types";
+import { PopupMenu } from "../../components/ui/PopupMenu";
+import { ConfirmCard } from "../../components/ui/ConfirmCard";
+import { sumItems, divideTotals, PREP_PRIMARY, type PrepItem } from "../../components/food/mealPrepShared";
+import { logoTone } from "../../components/food/logoTones";
+import { foodCategoryIcon } from "../../utils/icons";
+import { deleteCustomFood, listCustomFoods, type FoodSearchResult } from "../../services/food";
 
 // Pull-to-refresh, the same gesture and threshold as the Health page's: the
 // load-error lines ask the user to "Pull to retry" (Part 4 Q7).
 const PULL_THRESHOLD = 70;
 
-// Mobile handoff item 10 (README lines 613-774, CentiumMealPrep.dc.html):
-// the tab is now two widget cards modelled on the Habits widget — tinted
-// container, caps title top-left, count badge top-right, up to three
-// newest-first preview rows (name and kcal only, as the master handover's
-// frames draw them), then a CTA. Tapping the card
-// body opens that item's List screen; tapping a preview row (stopping
-// propagation so the card body's own handler doesn't also fire) opens that
-// item's Detail screen directly; the CTA (also stopping propagation) opens
-// Create. List/Detail/Advanced live in MealPrepFlowSheet; Create/Edit stays
-// its own sheet (CreateMealSheet already worked this way before this
-// handoff; CreateRecipeSheet mirrors it).
+type SubTab = "meals" | "recipes" | "foods";
+
+// Handover 2026-09-29 FO3.2: each sub-tab's colour, its rows' lighter tint
+// and its icon colour, measured from the frame. Custom Foods is Dark Lavender.
+const SUB: Record<SubTab, { label: string; color: string; row: string; icon: string; create: string; empty: string; emptyText: string }> = {
+  meals: { label: "Meal Prep", color: PREP_PRIMARY.meals, row: "#ECF4F3", icon: "#4F7F78", create: "Create Meal", empty: "No meal prep yet", emptyText: "#5F8681" },
+  recipes: { label: "Recipes", color: PREP_PRIMARY.recipes, row: "#F0EEF9", icon: "#816FB7", create: "Create Recipe", empty: "No recipes yet", emptyText: "#7A6DB0" },
+  foods: { label: "Custom Foods", color: "#7D67D9", row: "#F1EEFB", icon: "#7D67D9", create: "Create Custom Food", empty: "No custom foods yet", emptyText: "#7D67D9" },
+};
+const SUB_ORDER: SubTab[] = ["meals", "recipes", "foods"];
+
+type Opened =
+  | { kind: "meals" | "recipes"; id: string; edit: boolean }
+  | { kind: "foods"; food: FoodSearchResult; edit: boolean };
+
+/**
+ * The Food tab's Custom tab (FO3.2, renamed from Meal Prep): three sub-tabs,
+ * Meal Prep, Recipes and Custom Foods, each a scrollable list with its create
+ * button pinned at the bottom above the nav bar. Every row has a ⋮ menu (Edit,
+ * Delete); tapping a row opens its detail popup, where Edit changes the same
+ * popup into the item's create form, prefilled.
+ */
 export default function MealPrepPanel() {
-  const { customMeals, customMealsError, recipes, recipesError, reloadMealPrep } = useApp();
+  const { customMeals, customMealsError, recipes, recipesError, reloadMealPrep, authUserId, removeCustomMeal, removeRecipe, forgetCustomFood } =
+    useApp();
+  const [sub, setSub] = useState<SubTab>("meals");
+
+  // Custom Foods reads custom_foods itself: this device's copy only holds
+  // what was created here.
+  const [foods, setFoods] = useState<FoodSearchResult[]>([]);
+  const [foodsError, setFoodsError] = useState<string | null>(null);
+  const loadFoods = useCallback(async () => {
+    if (!authUserId) return;
+    const result = await listCustomFoods(authUserId);
+    if (!result.ok) {
+      setFoodsError(result.message);
+      return;
+    }
+    setFoodsError(null);
+    setFoods(result.foods);
+  }, [authUserId]);
+  useEffect(() => {
+    if (!authUserId) return;
+    let cancelled = false;
+    void listCustomFoods(authUserId).then((result) => {
+      if (cancelled) return;
+      if (result.ok) {
+        setFoodsError(null);
+        setFoods(result.foods);
+      } else setFoodsError(result.message);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId]);
 
   const [pullY, setPullY] = useState(0);
   const [refreshing, setRefreshing] = useState(false);
@@ -43,47 +92,81 @@ export default function MealPrepPanel() {
     pullStartY.current = null;
     if (pullY >= PULL_THRESHOLD) {
       setRefreshing(true);
-      void reloadMealPrep().finally(() => setRefreshing(false));
+      void Promise.all([reloadMealPrep(), loadFoods()]).finally(() => setRefreshing(false));
     }
     setPullY(0);
   };
 
-  // `reset` is bumped to force the flow sheet back onto its initial screen
-  // even when kind/screen/itemId are unchanged.
-  const [flow, setFlow] = useState<null | { kind: PrepKind; screen: "list" | "detail"; itemId?: string; reset: number }>(null);
-  const openFlow = (kind: PrepKind, screen: "list" | "detail", itemId?: string) =>
-    setFlow((prev) => ({ kind, screen, itemId, reset: (prev?.reset ?? 0) + 1 }));
-  const [createKind, setCreateKind] = useState<PrepKind | null>(null);
-  const [editMeal, setEditMeal] = useState<CustomMeal | null>(null);
-  const [editRecipe, setEditRecipe] = useState<Recipe | null>(null);
+  const [opened, setOpened] = useState<Opened | null>(null);
+  const [creating, setCreating] = useState<SubTab | null>(null);
+  const [menu, setMenu] = useState<{ anchor: HTMLElement; open: Opened } | null>(null);
+  const [deleting, setDeleting] = useState<{ open: Opened; name: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
-  // CentiumMealPrep.dc.html: Create always has the back chevron, and it and
-  // Save both go to the kind's List (`goBack`/Save → `kind.list`) — even when
-  // Create was opened straight from a card's CTA — while the X leaves to the
-  // tab. So the card CTA puts the List underneath Create too.
-  const openCreate = (kind: PrepKind, fromFlow = false) => {
-    if (kind === "meals") setEditMeal(null);
-    else setEditRecipe(null);
-    if (!fromFlow) openFlow(kind, "list");
-    setCreateKind(kind);
+  const doDelete = async () => {
+    if (!deleting) return;
+    setBusy(true);
+    setDeleteError(null);
+    const target = deleting.open;
+    if (target.kind === "foods") {
+      const result = await deleteCustomFood(target.food.id);
+      if (!result.ok) setDeleteError(result.message ?? "Couldn't delete that food.");
+      else {
+        forgetCustomFood(target.food.id);
+        setFoods((prev) => prev.filter((f) => f.id !== target.food.id));
+      }
+    } else if (target.kind === "recipes") await removeRecipe(target.id);
+    else await removeCustomMeal(target.id);
+    setBusy(false);
+    setDeleting(null);
   };
-  const openEdit = (kind: PrepKind, id: string) => {
-    if (kind === "meals") setEditMeal(customMeals.find((m) => m.id === id) ?? null);
-    else setEditRecipe(recipes.find((r) => r.id === id) ?? null);
-    setCreateKind(kind);
-  };
-  const createBack = (kind: PrepKind) => {
-    setCreateKind(null);
-    openFlow(kind, "list");
-  };
-  const createClose = () => {
-    setCreateKind(null);
-    setFlow(null);
-  };
+
+  const t = SUB[sub];
+  // Newest first: recipes already arrive that way (getRecipes orders
+  // descending); custom meals keep their ascending query and are reversed.
+  const mealsNewest = customMeals.slice().reverse();
+
+  const rows: { open: Opened; name: string; detail: string; icon: React.ReactNode; iconBg: string }[] =
+    sub === "meals"
+      ? mealsNewest.map((m) => ({
+          open: { kind: "meals", id: m.id, edit: false },
+          name: m.title,
+          // Decision 12: "N ingredients · kcal"; there is no servings column.
+          detail: `${m.items.length} ingredient${m.items.length === 1 ? "" : "s"} · ${Math.round(sumItems(m.items as PrepItem[]).kcal)} kcal`,
+          icon: <Package size={16} />,
+          iconBg: "#FFFFFF",
+        }))
+      : sub === "recipes"
+        ? recipes.map((r) => ({
+            open: { kind: "recipes", id: r.id, edit: false },
+            name: r.title,
+            detail: `${r.items.length} ingredient${r.items.length === 1 ? "" : "s"} · ${Math.round(divideTotals(sumItems(r.items as PrepItem[]), r.servings).kcal)} kcal / serving`,
+            icon: <Soup size={16} />,
+            iconBg: "#FFFFFF",
+          }))
+        : foods.map((f) => {
+            const Icon = foodCategoryIcon[f.category] ?? UtensilsCrossed;
+            const tone = logoTone(f.logoTone);
+            return {
+              open: { kind: "foods", food: f, edit: false },
+              name: f.name,
+              detail: `${f.servingLabel} · ${Math.round(f.calories)} kcal`,
+              icon: <Icon size={16} style={tone ? { color: tone.fg } : undefined} />,
+              iconBg: tone ? tone.bg : "#FFFFFF",
+            };
+          });
+  const error = sub === "meals" ? customMealsError : sub === "recipes" ? recipesError : foodsError;
+  const errorText =
+    sub === "meals"
+      ? "Couldn't load your meals. Pull to retry."
+      : sub === "recipes"
+        ? "Couldn't load your recipes. Pull to retry."
+        : "Couldn't load your custom foods. Pull to retry.";
 
   return (
     <div
-      className="space-y-3 animate-fade-slide-up"
+      className="animate-fade-slide-up"
       onTouchStart={(e) => handlePullStart(e.touches[0].clientY)}
       onTouchMove={(e) => handlePullMove(e.touches[0].clientY)}
       onTouchEnd={handlePullEnd}
@@ -99,166 +182,174 @@ export default function MealPrepPanel() {
           </p>
         </div>
       )}
-      <PrepCard
-        kind="meals"
-        entries={customMeals}
-        error={customMealsError}
-        onOpenList={() => openFlow("meals", "list")}
-        onOpenDetail={(id) => openFlow("meals", "detail", id)}
-        onCreate={() => openCreate("meals")}
-      />
-      <PrepCard
-        kind="recipes"
-        entries={recipes}
-        error={recipesError}
-        onOpenList={() => openFlow("recipes", "list")}
-        onOpenDetail={(id) => openFlow("recipes", "detail", id)}
-        onCreate={() => openCreate("recipes")}
-      />
 
-      <MealPrepFlowSheet
-        kind="meals"
-        open={flow?.kind === "meals"}
-        initialScreen={flow?.kind === "meals" ? flow.screen : "list"}
-        initialItemId={flow?.kind === "meals" ? flow.itemId : undefined}
-        resetKey={flow?.kind === "meals" ? flow.reset : undefined}
-        onClose={() => setFlow(null)}
-        onEdit={(id) => openEdit("meals", id)}
-        onCreate={() => openCreate("meals", true)}
-      />
-      <MealPrepFlowSheet
-        kind="recipes"
-        open={flow?.kind === "recipes"}
-        initialScreen={flow?.kind === "recipes" ? flow.screen : "list"}
-        initialItemId={flow?.kind === "recipes" ? flow.itemId : undefined}
-        resetKey={flow?.kind === "recipes" ? flow.reset : undefined}
-        onClose={() => setFlow(null)}
-        onEdit={(id) => openEdit("recipes", id)}
-        onCreate={() => openCreate("recipes", true)}
-      />
-
-      <CreateMealSheet
-        open={createKind === "meals"}
-        onClose={createClose}
-        onBack={() => createBack("meals")}
-        editMeal={editMeal}
-      />
-      <CreateRecipeSheet
-        open={createKind === "recipes"}
-        onClose={createClose}
-        onBack={() => createBack("recipes")}
-        editRecipe={editRecipe}
-      />
-    </div>
-  );
-}
-
-const PrepCard: React.FC<{
-  kind: PrepKind;
-  entries: (CustomMeal | Recipe)[];
-  error: string | null;
-  onOpenList: () => void;
-  onOpenDetail: (id: string) => void;
-  onCreate: () => void;
-}> = ({ kind, entries, error, onOpenList, onOpenDetail, onCreate }) => {
-  const isR = kind === "recipes";
-  const c = isR ? PREP_LAV : PREP_TEAL;
-  // Newest first: recipes already arrive that way (getRecipes orders
-  // descending, item 11); custom meals keep their ascending query and are
-  // reversed here instead (Part 4 Q2).
-  const newestFirst = isR ? entries : entries.slice().reverse();
-  const preview = newestFirst.slice(0, 3);
-  const count = entries.length;
-
-  const cta = (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        onCreate();
-      }}
-      data-cta="1"
-      className="tap flex items-center justify-center gap-1.5 w-full rounded-xl text-[13px] font-bold text-white"
-      style={{ background: c.cta, padding: "12px 0" }}
-    >
-      <Plus size={14} strokeWidth={2} /> {isR ? "Create Recipe" : "Create Meal"}
-    </button>
-  );
-
-  return (
-    <div
-      role="button"
-      tabIndex={0}
-      onClick={onOpenList}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") onOpenList();
-      }}
-      className="block w-full text-left rounded-[20px] cursor-pointer"
-      style={{ padding: 16, background: c.container }}
-    >
-      <div className="flex items-center justify-between gap-2.5 mb-3">
-        <span
-          className="whitespace-nowrap"
-          style={{ fontSize: 11, fontWeight: 700, letterSpacing: "0.16em", textTransform: "uppercase", color: c.caps }}
-        >
-          {isR ? "Recipes" : "Custom Meals"}
-        </span>
-        {/* Item 11: the badge hides while the read has failed. */}
-        {!error && (
-          <span
-            className="flex-none whitespace-nowrap"
-            style={{ fontSize: 10.5, fontWeight: 700, color: c.text, background: c.badgeBg, borderRadius: 9999, padding: "4px 10px" }}
+      <div role="tablist" aria-label="Custom" className="flex" style={{ background: "#F4F3F9", borderRadius: 12, padding: 4, gap: 4 }}>
+        {SUB_ORDER.map((k) => (
+          <button
+            key={k}
+            role="tab"
+            aria-selected={sub === k}
+            onClick={() => setSub(k)}
+            className="tap flex-1 min-w-0 truncate"
+            style={{
+              height: 32,
+              borderRadius: 9,
+              background: sub === k ? SUB[k].color : "transparent",
+              color: sub === k ? "#FFFFFF" : "#5B5349",
+              fontSize: 12,
+              fontWeight: sub === k ? 700 : 600,
+            }}
           >
-            {count ? `${count} saved` : "None yet"}
-          </span>
-        )}
+            {SUB[k].label}
+          </button>
+        ))}
       </div>
 
-      {/* A failed read must never look empty (Part 4 Q7): the error line
-          replaces the rows, then the CTA. */}
-      {error ? (
-        <div>
-          <p className="mb-[9px]" style={{ fontSize: 13, color: "#5B5349" }}>
-            {isR ? "Couldn't load your recipes. Pull to retry." : "Couldn't load your meals. Pull to retry."}
-          </p>
-          {cta}
-        </div>
-      ) : count > 0 ? (
-        <>
-          <div className="flex flex-col gap-[7px]">
-            {preview.map((x) => {
-              const total = sumItems(x.items as PrepItem[]);
-              const servings = "servings" in x ? x.servings : 1;
-              const per = isR ? divideTotals(total, servings) : total;
-              return (
-                <button
-                  key={x.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenDetail(x.id);
-                  }}
-                  className="tap flex items-center justify-between gap-2.5 rounded-xl w-full text-left"
-                  style={{ background: c.rowBg, padding: "11px 13px" }}
-                >
-                  <span className="flex-1 min-w-0 text-[13.5px] font-bold truncate" style={{ color: "#241F1B" }}>
-                    {x.title}
-                  </span>
-                  <span className="flex-none text-[12px] font-semibold tabular-nums whitespace-nowrap" style={{ color: c.text }}>
-                    {Math.round(per.kcal)}{isR ? " /srv" : " kcal"}
-                  </span>
-                </button>
-              );
-            })}
+      <div className="flex flex-col" style={{ gap: 8, marginTop: 12, paddingBottom: 72 }}>
+        {error ? (
+          <p style={{ margin: 0, fontSize: 13, color: "#5B5349", padding: "8px 2px" }}>{errorText}</p>
+        ) : rows.length === 0 ? (
+          <div className="flex items-center justify-center" style={{ height: 76, borderRadius: 16, background: t.row }}>
+            <p style={{ margin: 0, fontSize: 13, color: t.emptyText }}>{t.empty}</p>
           </div>
-          <div className="mt-[9px]">{cta}</div>
-        </>
-      ) : (
-        <div>
-          <p className="mb-[9px]" style={{ fontSize: 13, color: isR ? "rgba(95,80,147,0.8)" : "rgba(60,107,101,0.8)" }}>
-            {isR ? "No recipes yet" : "No custom meals yet"}
-          </p>
-          {cta}
-        </div>
+        ) : (
+          rows.map((r) => (
+            <div key={r.open.kind === "foods" ? r.open.food.id : r.open.id} className="flex items-center" style={{ background: t.row, borderRadius: 12 }}>
+              <button
+                onClick={() => setOpened(r.open)}
+                className="tap flex-1 min-w-0 flex items-center text-left"
+                style={{ gap: 12, padding: "10px 0 10px 12px", minHeight: 56 }}
+              >
+                <span
+                  className="flex items-center justify-center flex-none"
+                  style={{ width: 34, height: 34, borderRadius: 10, background: r.iconBg, color: t.icon }}
+                >
+                  {r.icon}
+                </span>
+                <span className="min-w-0">
+                  <span className="block truncate" style={{ fontSize: 14, fontWeight: 700, color: "#241F1B" }}>
+                    {r.name}
+                  </span>
+                  <span className="block truncate" style={{ fontSize: 11, color: "#8C8378" }}>
+                    {r.detail}
+                  </span>
+                </span>
+              </button>
+              <button
+                onClick={(e) => setMenu({ anchor: e.currentTarget, open: r.open })}
+                aria-label={`${r.name} options`}
+                className="tap flex items-center justify-center flex-none"
+                style={{ width: 40, height: 44, color: "#8C8378" }}
+              >
+                <EllipsisVertical size={16} />
+              </button>
+            </div>
+          ))
+        )}
+        {deleteError && <p className="text-xs font-semibold text-status-high">{deleteError}</p>}
+      </div>
+
+      {/* The create button, pinned above the nav bar. Portaled: the tab's
+          animate-fade-slide-up transform would otherwise become the containing
+          block for position: fixed and pin it to the panel instead. */}
+      {createPortal(
+      <button
+        onClick={() => setCreating(sub)}
+        className="tap fixed z-20 inline-flex items-center justify-center"
+        style={{
+          left: "calc(var(--app-gutter) + 16px)",
+          right: "calc(var(--app-gutter) + 16px)",
+          bottom: "calc(env(safe-area-inset-bottom) + 96px + var(--active-bar, 0px))",
+          height: 44,
+          gap: 7,
+          borderRadius: 12,
+          background: t.color,
+          color: "#FFFFFF",
+          fontSize: 13.5,
+          fontWeight: 700,
+        }}
+      >
+        <Plus size={15} /> {t.create}
+      </button>,
+        document.body
+      )}
+
+      {menu && (
+        <PopupMenu
+          open
+          anchor={menu.anchor}
+          onClose={() => setMenu(null)}
+          width={132}
+          options={[
+            { value: "edit", label: "Edit", icon: <Pencil size={14} /> },
+            { value: "delete", label: "Delete", icon: <Trash2 size={14} />, destructive: true },
+          ]}
+          onSelect={(v) => {
+            const target = menu.open;
+            setMenu(null);
+            if (v === "edit") setOpened({ ...target, edit: true });
+            else {
+              const name =
+                target.kind === "foods"
+                  ? target.food.name
+                  : (target.kind === "recipes" ? recipes : customMeals).find((x) => x.id === target.id)?.title ?? "";
+              setDeleting({ open: target, name });
+            }
+          }}
+        />
+      )}
+
+      <ConfirmCard
+        open={!!deleting}
+        title={`Delete ${deleting?.name || "this item"}?`}
+        subtitle={
+          deleting?.open.kind === "foods"
+            ? "It's removed from your foods and from any recipes and meals that use it. Past diary entries stay."
+            : deleting?.open.kind === "recipes"
+              ? "The recipe is removed. Past diary entries stay."
+              : "The meal is removed. Past diary entries stay."
+        }
+        busy={busy}
+        onCancel={() => setDeleting(null)}
+        onConfirm={() => void doDelete()}
+      />
+
+      {opened && opened.kind !== "foods" && (
+        <MealPrepFlowSheet
+          key={`${opened.kind}-${opened.id}-${opened.edit}`}
+          kind={opened.kind as PrepKind}
+          itemId={opened.id}
+          startEditing={opened.edit}
+          onClose={() => setOpened(null)}
+        />
+      )}
+      {opened && opened.kind === "foods" && (
+        <CustomFoodSheet
+          key={`${opened.food.id}-${opened.edit}`}
+          food={opened.food}
+          startEditing={opened.edit}
+          onClose={() => setOpened(null)}
+          onSaved={(saved) => setFoods((prev) => prev.map((f) => (f.id === saved.id ? saved : f)))}
+          onDeleted={(id) => {
+            setFoods((prev) => prev.filter((f) => f.id !== id));
+            setOpened(null);
+          }}
+        />
+      )}
+
+      <CreateMealSheet open={creating === "meals"} onClose={() => setCreating(null)} />
+      <CreateRecipeSheet open={creating === "recipes"} onClose={() => setCreating(null)} />
+      {creating === "foods" && (
+        <CustomFoodForm
+          open
+          title="Create Custom Food"
+          onClose={() => setCreating(null)}
+          onSaved={() => {
+            setCreating(null);
+            void loadFoods();
+          }}
+        />
       )}
     </div>
   );
-};
+}

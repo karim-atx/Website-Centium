@@ -55,36 +55,6 @@ export function divideTotals(t: MacroTotals, by: number): MacroTotals {
 export const PREP_CHARCOAL = "#241F1B";
 export const PREP_SOFT = "#5B5349";
 export const PREP_FAINT = "#8C8378";
-export const PREP_TEAL = { text: "#3C6B65", container: "rgba(162,200,194,0.17)", caps: "rgba(60,107,101,0.78)", badgeBg: "rgba(162,200,194,0.45)", rowBg: "rgba(162,200,194,0.34)", cta: "rgba(121,168,161,0.9)" };
-export const PREP_LAV = { text: "#5F5093", container: "rgba(174,161,220,0.17)", caps: "rgba(95,80,147,0.78)", badgeBg: "rgba(174,161,220,0.45)", rowBg: "rgba(174,161,220,0.32)", cta: "rgba(161,152,223,0.95)" };
-
-/**
- * The 104x8 macro bar used on both the widget-card preview rows and the List
- * rows — three segments sized by each macro's share of TOTAL GRAMS, not
- * calories. Master handover item 11: segment width = grams / totalGrams x
- * 100% of the 104px track, unrounded, so a 16/61/22 g item reads 16.8, 64.1
- * and 23.1px.
- */
-export const MacroBar: React.FC<{ p: number; c: number; f: number }> = ({ p, c, f }) => {
-  const total = p + c + f;
-  const w = (g: number) => (total > 0 ? `${(g / total) * 100}%` : 0);
-  return (
-    <span style={{ display: "flex", flexDirection: "column", gap: 4, width: 104, flex: "none" }}>
-      <span style={{ display: "flex", height: 8, borderRadius: 3, overflow: "hidden", background: "rgba(36,31,27,0.07)" }}>
-        <span style={{ width: w(p), background: "#7D6BB5" }} />
-        <span style={{ width: w(c), background: "#AEA1DC" }} />
-        <span style={{ width: w(f), background: "#A2C8C2" }} />
-      </span>
-      <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 8.5, fontWeight: 700, fontVariantNumeric: "tabular-nums", whiteSpace: "nowrap" }}>
-        <span style={{ color: "#A79E93" }}>P {Math.round(p)}g</span>
-        <span style={{ color: "rgba(36,31,27,0.2)" }}>|</span>
-        <span style={{ color: "#A79E93" }}>C {Math.round(c)}g</span>
-        <span style={{ color: "rgba(36,31,27,0.2)" }}>|</span>
-        <span style={{ color: "#A79E93" }}>F {Math.round(f)}g</span>
-      </span>
-    </span>
-  );
-};
 
 /**
  * The grey 4-column macro strip on the Detail and Create screens (00-
