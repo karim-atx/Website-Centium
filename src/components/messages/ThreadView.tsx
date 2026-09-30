@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, EyeOff, Forward, ImageIcon, Mic, Paperclip, Phone, Pin, PinOff, Send, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
+import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, EyeOff, FileText, Forward, ImageIcon, Mic, Paperclip, Phone, Pin, PinOff, Send, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useCall } from "../../context/CallContext";
 import { threadAllowsCalls, type CallKind } from "../../services/calling";
@@ -11,6 +11,9 @@ import { useThreadRealtime } from "../../hooks/useThreadRealtime";
 import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
 import { BottomSheet } from "../ui/BottomSheet";
 import { FileViewerSheet } from "../health/FileViewerSheet";
+import { InlineImage } from "./InlineImage";
+import { ImageLightbox } from "./ImageLightbox";
+import { attachmentUrl, isImagePath } from "../../services/messaging/attachmentUrls";
 import { ForwardSheet } from "./ForwardSheet";
 import { QuotedMessage } from "./QuotedMessage";
 import { VoiceNoteBubble } from "./VoiceNoteBubble";
@@ -116,7 +119,9 @@ export const ThreadView: React.FC<{
   const [loaded, setLoaded] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // A non-image file opens in the file viewer; a photo opens full screen.
   const [viewing, setViewing] = useState<string | null>(null);
+  const [photo, setPhoto] = useState<{ path: string; url: string } | null>(null);
   /**
    * The message currently in flight, as a rendering concern only.
    *
@@ -817,23 +822,30 @@ export const ThreadView: React.FC<{
                     mine={mine}
                   />
                 ) : (
-                  m.attachmentPath && (
-                    // A TILE, NOT A THUMBNAIL. Rendering the image inline needs
-                    // a signed URL per attachment at list render, and
-                    // signedUrlFor caps its TTL at ten minutes — so an open
-                    // thread would fill with broken images, and the 8s poll
-                    // would re-sign every one of them on every tick. Signing on
-                    // tap is what FileViewerSheet already does everywhere else.
+                  m.attachmentPath &&
+                  (isImagePath(m.attachmentPath) ? (
+                    // THE PHOTO ITSELF, INLINE. Signed when it nears the
+                    // screen and re-signed before expiry by a cache
+                    // (services/messaging/attachmentUrls), so the 8s poll does
+                    // not mint a URL per image per tick — the reason this used
+                    // to be a "Photo" tile that had to be tapped to be seen.
+                    <InlineImage
+                      path={m.attachmentPath}
+                      onOpen={(url) => setPhoto({ path: m.attachmentPath!, url })}
+                      className={m.text ? "mt-1.5" : ""}
+                    />
+                  ) : (
+                    // Anything else stays a file card, opened in the viewer.
                     <button
                       onClick={() => setViewing(m.attachmentPath)}
                       className={`tap flex items-center gap-2 rounded-xl bg-black/10 px-3 py-2 text-left ${
                         m.text ? "mt-1.5" : ""
                       }`}
                     >
-                      <ImageIcon size={15} className="shrink-0" />
-                      <span className="text-[12.5px] font-semibold">Photo</span>
+                      <FileText size={15} className="shrink-0" />
+                      <span className="text-[12.5px] font-semibold">File</span>
                     </button>
-                  )
+                  ))
                 )}
                 {/* ON EVERY BUBBLE, NOT ONLY YOUR OWN — a deliberate departure
                     from the usual convention, which puts ticks sender-side
@@ -1076,8 +1088,17 @@ export const ThreadView: React.FC<{
         onClose={() => setViewing(null)}
         path={viewing}
         bucket="message-attachments"
-        label="Photo"
+        label="File"
       />
+
+      {photo && (
+        <ImageLightbox
+          url={photo.url}
+          path={photo.path}
+          onClose={() => setPhoto(null)}
+          refresh={() => attachmentUrl(photo.path, true)}
+        />
+      )}
 
       {/* A sheet rather than a floating menu, matching every other choice in
           this app. Only the actions that exist are listed: forward, star, pin
