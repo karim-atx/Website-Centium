@@ -8,6 +8,7 @@ import { TrendChart } from "../charts/TrendChart";
 import { formatDisplayDate } from "../../utils/date";
 import { checkValue, siteFor, type MeasurementType } from "../../services/measurements/sites";
 import type { MeasurementReading } from "../../services/measurements";
+import { localDay } from "../../services/measurements/measuredAt";
 import {
   GOAL_COLOR,
   GOAL_LABEL,
@@ -31,7 +32,9 @@ const GOAL_OPTIONS = (["decrease", "increase", "maintain", "none"] as const).map
 }));
 
 const shortDate = (t: number) => new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
-const dayOf = (r: MeasurementReading) => r.recordedAt.slice(0, 10);
+// The day it was measured, in the user's own time: a reading taken at 2:45 on
+// Sep 28 is a Sep 28 reading even where that instant is still Sep 27 in UTC.
+const dayOf = (r: MeasurementReading) => localDay(new Date(r.recordedAt));
 const timeOf = (r: MeasurementReading) => Date.parse(`${dayOf(r)}T00:00:00Z`);
 
 export const MeasurementHistorySheet: React.FC<{
