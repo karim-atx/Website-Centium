@@ -144,6 +144,15 @@ export default function Food() {
   };
 
   // --- FO1.1 select, delete and copy ------------------------------------
+  // Leaving the Diary tab or changing day ENDS the selection rather than
+  // hiding it, so coming back never restores selection mode (reset during
+  // render when the tab/day key changes, React's pattern for derived state).
+  const selectionKey = `${tab}|${selectedDate}`;
+  const [selectionKeySeen, setSelectionKeySeen] = useState(selectionKey);
+  if (selectionKeySeen !== selectionKey) {
+    setSelectionKeySeen(selectionKey);
+    if (selecting) setSelecting(null);
+  }
   const activeSelection = selecting && selecting.date === selectedDate && tab === "diary" ? selecting : null;
   const selectedEntries = activeSelection ? todaysEntries.filter((e) => activeSelection.ids.has(e.id)) : [];
   const startSelecting = (meal: MealType, all: boolean) =>
