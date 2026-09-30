@@ -4,7 +4,8 @@ import { useApp } from "../../context/AppContext";
 import { MUSCLE_GROUP_LABEL } from "../../utils/muscleGroups";
 import { EXERCISE_TAGS, EXERCISE_TAG_LABEL } from "../../utils/exerciseTags";
 import type { MuscleGroup, ExerciseClassification, ExerciseTag } from "../../types";
-import { List, User, Search, RefreshCw, Plus, ChevronDown } from "lucide-react";
+import { List, User, Search, RefreshCw, ChevronDown } from "lucide-react";
+import { CreateExerciseButton } from "../../components/workout/CreateExerciseButton";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "../../components/workout/CreateCustomExerciseSheet";
 import { BuiltInExerciseSheet } from "../../components/workout/BuiltInExerciseSheet";
 import { ExerciseInfoSheet } from "../../components/workout/ExerciseInfoSheet";
@@ -328,13 +329,7 @@ export default function ExerciseDatabaseTab() {
             );
           })}
         </div>
-        <button
-          onClick={() => setCreating(true)}
-          className="tap flex items-center"
-          style={{ height: 34, borderRadius: 12, padding: "0 16px", gap: 8, background: "#AEA1DC", color: "#FFFFFF", fontSize: 12.5, fontWeight: 700 }}
-        >
-          <Plus size={13} strokeWidth={2.4} /> Create exercise
-        </button>
+        <CreateExerciseButton onClick={() => setCreating(true)} />
       </div>
 
       <div className="relative" style={{ marginBottom: 10 }}>

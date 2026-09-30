@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Chip } from "../ui/Chip";
-import { Search, Plus, Sparkles } from "lucide-react";
+import { Search, Sparkles } from "lucide-react";
+import { CreateExerciseButton } from "./CreateExerciseButton";
 import { muscleGroupIcon } from "../../utils/icons";
 import { MUSCLE_GROUP_LABEL } from "../../utils/muscleGroups";
 import { CreateCustomExerciseSheet, type CustomExerciseData } from "./CreateCustomExerciseSheet";
@@ -85,6 +86,11 @@ export const ExerciseLibrarySheet: React.FC<{
         title="Exercise Library"
       >
         <div className="animate-fade-slide-up">
+          {/* WO2.1's "+ Create exercise" (the Library tab's header row), in
+              place of the old black square "+" beside the search. */}
+          <div className="flex justify-end" style={{ marginBottom: 12 }}>
+            <CreateExerciseButton onClick={() => setCustomOpen(true)} />
+          </div>
           <div className="flex items-center gap-2 mb-4">
             <div className="relative flex-1">
               <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
@@ -95,14 +101,6 @@ export const ExerciseLibrarySheet: React.FC<{
                 className="w-full rounded-2xl bg-cream-soft pl-9 pr-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
               />
             </div>
-            <button
-              onClick={() => setCustomOpen(true)}
-              className="tap w-10 h-10 rounded-2xl bg-charcoal text-cream flex items-center justify-center shrink-0"
-              aria-label="Add custom exercise"
-              title="Add a custom exercise"
-            >
-              <Plus size={17} />
-            </button>
           </div>
 
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-4">
@@ -173,7 +171,7 @@ export const ExerciseLibrarySheet: React.FC<{
             )}
             {!exerciseCatalogError && filtered.length === 0 && filteredCustom.length === 0 && (
               <p className="text-center text-sm text-charcoal-faint py-8">
-                No matches — use the + button above to add a custom exercise.
+                No matches. Use Create exercise above to add your own.
               </p>
             )}
           </div>
