@@ -1,6 +1,18 @@
 import { useMemo, useState } from "react";
+import { CalendarDays } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { Button } from "../ui/Button";
+import { CalendarPickerSheet } from "../dashboard/CalendarPickerSheet";
+import { WheelPicker } from "../ui/WheelPicker";
+import {
+  floorToFive,
+  formatMeasured,
+  laterThanNow,
+  localDay,
+  pickedInstant,
+  timeParts,
+  type Meridiem,
+  type TimeParts,
+} from "../../services/measurements/measuredAt";
 import {
   GROUP_LABEL,
   MEASUREMENT_SITES,
@@ -24,11 +36,9 @@ import {
 
 const GROUP_ORDER: MeasurementGroup[] = ["torso", "arms", "legs", "composition"];
 
-/** yyyy-mm-ddThh:mm for a datetime-local input, in the user's own timezone. */
-function toLocalInput(d: Date): string {
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
+const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
+const MERIDIEMS: Meridiem[] = ["AM", "PM"];
 
 export const AddMeasurementsSheet: React.FC<{
   open: boolean;
@@ -36,7 +46,9 @@ export const AddMeasurementsSheet: React.FC<{
   /** Resolves to an error message, or null when the entry was written. */
   onSave: (values: Partial<Record<MeasurementType, number>>, recordedAt: string) => Promise<string | null>;
 }> = ({ open, onClose, onSave }) => {
-  const [when, setWhen] = useState(() => toLocalInput(new Date()));
+  const [when, setWhen] = useState(() => floorToFive(new Date()));
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [draftTime, setDraftTime] = useState<TimeParts>(() => timeParts(when));
   const [raw, setRaw] = useState<Partial<Record<MeasurementType, string>>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -83,9 +95,8 @@ export const AddMeasurementsSheet: React.FC<{
     }
     setSaving(true);
     setError(null);
-    // The input is local wall-clock time; the column is timestamptz. new Date
-    // reads it in the user's own zone, which is the instant they meant.
-    const message = await onSave(values, new Date(when).toISOString());
+    // Picked in local wall-clock time; the column is timestamptz.
+    const message = await onSave(values, when.toISOString());
     setSaving(false);
     if (message) {
       setError(message);
@@ -94,29 +105,63 @@ export const AddMeasurementsSheet: React.FC<{
     onClose();
   };
 
+  const now = new Date();
+
   return (
     <BottomSheet open={open} onClose={onClose} title="Add measurements">
-      <div className="space-y-4 animate-fade-slide-up">
-        <label className="block">
-          <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Measured</span>
-          <input
-            type="datetime-local"
-            value={when}
-            onChange={(e) => setWhen(e.target.value)}
-            aria-label="When these were measured"
-            className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
-          />
-        </label>
+      <div className="animate-fade-slide-up">
+        {/* WO4.1: "Measured" centred, bold and purple; the field opens the
+            calendar popup with a wheel time picker (no future). */}
+        <p className="text-center" style={{ color: "#8F68F6", fontSize: 13, fontWeight: 700 }}>
+          Measured
+        </p>
+        <button
+          onClick={() => {
+            setDraftTime(timeParts(when));
+            setPickerOpen(true);
+          }}
+          aria-label="When these were measured"
+          className="tap w-full flex items-center justify-between"
+          style={{
+            marginTop: 10,
+            height: 46,
+            padding: "0 16px",
+            borderRadius: 23,
+            background: "#F5F5F6",
+            border: "1px solid #E0DFE0",
+            color: "#241F1B",
+            fontSize: 14,
+          }}
+        >
+          {formatMeasured(when)}
+          <CalendarDays size={16} style={{ color: "#8F68F6" }} />
+        </button>
 
         {GROUP_ORDER.map((group) => (
-          <div key={group}>
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-              {GROUP_LABEL[group]}
-            </span>
-            <div className="grid grid-cols-2" style={{ gap: 8 }}>
+          <div key={group} style={{ marginTop: 16 }}>
+            {/* A light purple rounded label with a rule in the same purple
+                running from it to the field edge. */}
+            <div className="flex items-end">
+              <span
+                style={{
+                  background: "#E4DDFD",
+                  borderRadius: "10px 10px 0 0",
+                  padding: "4px 11px 3px",
+                  color: "#241F1B",
+                  fontSize: 12,
+                  fontWeight: 800,
+                }}
+              >
+                {GROUP_LABEL[group]}
+              </span>
+              <span className="flex-1" style={{ height: 2, background: "#E4DDFD" }} />
+            </div>
+            <div className="grid grid-cols-2" style={{ gap: "10px 8px", marginTop: 10 }}>
               {MEASUREMENT_SITES.filter((s) => s.group === group).map((site) => (
                 <label key={site.type} className="block">
-                  <span className="text-[10.5px] text-charcoal-faint mb-1 block">{site.label}</span>
+                  <span className="block" style={{ color: "#8C8378", fontSize: 11, marginBottom: 5 }}>
+                    {site.label}
+                  </span>
                   <span className="relative block">
                     <input
                       value={raw[site.type] ?? ""}
@@ -124,15 +169,23 @@ export const AddMeasurementsSheet: React.FC<{
                       placeholder="—"
                       inputMode="decimal"
                       aria-label={site.label}
-                      className="w-full rounded-xl bg-cream-soft border border-charcoal/[0.07] text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-                      style={{ padding: "9px 30px 9px 11px" }}
+                      className="w-full placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+                      style={{
+                        height: 39,
+                        padding: "0 30px 0 12px",
+                        borderRadius: 10,
+                        background: "#F5F5F6",
+                        border: "1px solid #E6E6E7",
+                        color: "#241F1B",
+                        fontSize: 14,
+                      }}
                     />
                     {/* The unit is stated on every field rather than once in a
                         heading: health_metrics stores no unit, so what the
                         number means is only ever what the label says. */}
                     <span
-                      className="absolute text-[10.5px] text-charcoal-faint pointer-events-none"
-                      style={{ right: 10, top: "50%", transform: "translateY(-50%)" }}
+                      className="absolute pointer-events-none"
+                      style={{ right: 10, top: "50%", transform: "translateY(-50%)", color: "#8C8378", fontSize: 10.5 }}
                     >
                       {site.unit}
                     </span>
@@ -143,16 +196,72 @@ export const AddMeasurementsSheet: React.FC<{
           </div>
         ))}
 
-        {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
+        {error && (
+          <p className="text-xs font-semibold text-status-high" style={{ marginTop: 12 }}>
+            {error}
+          </p>
+        )}
 
-        <Button fullWidth size="lg" onClick={() => void save()} disabled={saving || filled === 0}>
+        <button
+          onClick={() => void save()}
+          disabled={saving || filled === 0}
+          className="tap w-full flex items-center justify-center disabled:opacity-60"
+          style={{ marginTop: 18, height: 48, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+        >
           {saving
             ? "Saving…"
             : filled === 0
               ? "Fill in at least one"
               : `Save ${filled} measurement${filled === 1 ? "" : "s"}`}
-        </Button>
+        </button>
       </div>
+
+      <CalendarPickerSheet
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        title="Measured on"
+        selectedDate={localDay(when)}
+        today={localDay(now)}
+        maxDate={localDay(now)}
+        confirm
+        onSelect={(day) => setWhen(pickedInstant(day, draftTime, new Date()))}
+      >
+        {(day: string) => {
+          const later = laterThanNow(day, draftTime, now);
+          return (
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(36,31,27,0.07)" }}>
+              <p
+                className="text-center"
+                style={{ color: "#9A94B3", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.12em", marginBottom: 4 }}
+              >
+                TIME
+              </p>
+              <WheelPicker
+                columns={[
+                  {
+                    label: "Hours",
+                    value: draftTime.hour,
+                    options: HOURS.map((h) => ({ value: h, label: String(h), disabled: later.hour(h) })),
+                    onChange: (v) => setDraftTime((t) => ({ ...t, hour: Number(v) })),
+                  },
+                  {
+                    label: "Minutes",
+                    value: draftTime.minute,
+                    options: MINUTES.map((m) => ({ value: m, label: String(m).padStart(2, "0"), disabled: later.minute(m) })),
+                    onChange: (v) => setDraftTime((t) => ({ ...t, minute: Number(v) })),
+                  },
+                  {
+                    label: "AM or PM",
+                    value: draftTime.meridiem,
+                    options: MERIDIEMS.map((m) => ({ value: m, label: m, disabled: later.meridiem(m) })),
+                    onChange: (v) => setDraftTime((t) => ({ ...t, meridiem: v as Meridiem })),
+                  },
+                ]}
+              />
+            </div>
+          );
+        }}
+      </CalendarPickerSheet>
     </BottomSheet>
   );
 };

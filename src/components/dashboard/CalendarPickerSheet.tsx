@@ -47,7 +47,8 @@ export const CalendarPickerSheet: React.FC<{
   maxDate?: string;
   confirm?: boolean;
   confirmLabel?: string;
-  children?: React.ReactNode;
+  /** Rendered above Done; a function receives the day currently picked (WO4.1's time wheel greys later times on today). */
+  children?: React.ReactNode | ((pendingDate: string) => React.ReactNode);
 }> = ({ open, onClose, selectedDate, onSelect, title = "Choose a date", markers, maxDate, confirm, confirmLabel = "Done", children }) => {
   const [cursor, setCursor] = useState(() => new Date(`${selectedDate}T00:00:00`));
   const [pending, setPending] = useState(selectedDate);
@@ -169,7 +170,7 @@ export const CalendarPickerSheet: React.FC<{
                 );
               })}
             </div>
-            {children}
+            {typeof children === "function" ? children(pending) : children}
             {confirm && (
               <button
                 onClick={() => {

@@ -1,13 +1,23 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
-import { Card } from "../../components/ui/Card";
-import { Button } from "../../components/ui/Button";
 import { Sparkline } from "../../components/health/Sparkline";
 import { OneRepMaxesSheet } from "../../components/workout/OneRepMaxesSheet";
 import { LiftDetailSheet } from "../../components/workout/LiftDetailSheet";
-import type { LiftMax } from "../../services/workout/oneRepMax";
+import { kgWhole, liftMaxes, sortLifts, type LiftMax } from "../../services/workout/oneRepMax";
+import {
+  chipColors,
+  kiloTick,
+  pointStats,
+  trainingFrequency,
+  volumePoints,
+  volumeTicks,
+  type VolumeMode,
+} from "../../services/workout/metrics";
+import { HeroCard } from "../../components/ui/HeroCard";
+import { TrendChart, type TrendGeometry } from "../../components/charts/TrendChart";
+import { todayLocal } from "../../utils/date";
 import { BottomSheet } from "../../components/ui/BottomSheet";
-import { TrendingUp, Dumbbell, Scale3D, Flame, Scale, Ruler, Plus } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 import { countsTowardVolume } from "../../services/workout/session";
 import {
   deleteMeasurement,
@@ -24,14 +34,11 @@ import { MEASUREMENT_SITES, type MeasurementType } from "../../services/measurem
 import { AddMeasurementsSheet } from "../../components/workout/AddMeasurementsSheet";
 import { MeasurementHistorySheet } from "../../components/workout/MeasurementHistorySheet";
 
-// QA 12.0: "Rework the metrics tab... Limiting the default view to 3-5
-// primary metrics (rather than overwhelming users with everything at
-// once)... deeper analytics available via drill-down." The reference
-// table's 6 categories (Strength/Volume/Balance/Recovery/Adherence/Body
-// composition) collapse into 4 cards here — Recovery folds into Adherence
-// since this prototype's only real "did they show up" signal is the
-// workout streak, which is also the explicit "Adherence should be
-// connected to the streaks tab" ask.
+// Handover 2026-09-29 WO4.1: the volume hero (per workout or per week, with
+// the scrubbed point's stats), One-rep maxes (the six highest; All opens
+// WO18, a tile WO19), Balance, Training frequency (the last 8 weeks) and Body
+// measurements (WO16). Body composition and the Adherence card are gone; no
+// data is deleted by removing them.
 
 const balanceColors: Record<string, string> = {
   back: "#7D6BB5",
@@ -50,9 +57,6 @@ const balanceColors: Record<string, string> = {
 export default function MetricsTab() {
   const {
     workoutSessions,
-    personalRecords,
-    streaks,
-    weightByDate,
     exerciseCatalog,
     customExercises,
     authUserId,
@@ -69,34 +73,8 @@ export default function MetricsTab() {
   const [oneRmOpen, setOneRmOpen] = useState(false);
   const [liftDetail, setLiftDetail] = useState<LiftMax | null>(null);
   const [balanceOpen, setBalanceOpen] = useState(false);
-
-  // REAL SESSIONS ONLY. This used to begin with six invented numbers —
-  // 4200, 4550, 4100, 4820, 5010, 4700 — so a brand-new account opened the
-  // Metrics tab to a volume trend it had never produced, and the first real
-  // session was compared against an average of fiction. A chart with one
-  // point is honest; a chart with six borrowed ones is not.
-  const volumePoints = workoutSessions.map((s) => s.totalVolumeKg);
-  const lastVolume = volumePoints.length > 0 ? volumePoints[volumePoints.length - 1] : 0;
-
-  /**
-   * How many sessions before "vs your recent average" means anything.
-   *
-   * THREE PRIOR SESSIONS PLUS THE ONE BEING COMPARED. With one prior, the
-   * "average" is that single session and a normal week-to-week swing reads as
-   * a 30% collapse; the deload advice this card gives would then be triggered
-   * by noise. Four is the smallest number where the comparison is a trend
-   * rather than a pair.
-   */
-  const MIN_SESSIONS_FOR_TREND = 4;
-  const hasTrend = volumePoints.length >= MIN_SESSIONS_FOR_TREND;
-  const priorAvg =
-    volumePoints.length > 1
-      ? volumePoints.slice(0, -1).reduce((a, b) => a + b, 0) / (volumePoints.length - 1)
-      : lastVolume;
-  const volumeChangePct =
-    hasTrend && priorAvg > 0 ? Math.round(((lastVolume - priorAvg) / priorAvg) * 100) : 0;
-  const prCount = Object.keys(personalRecords).length;
-
+  const [volumeMode, setVolumeMode] = useState<VolumeMode>("workout");
+  const [heroPick, setHeroPick] = useState<number | null>(null);
 
   /**
    * Completed sets per primary muscle group, across every logged session.
@@ -138,11 +116,6 @@ export default function MetricsTab() {
   const sortedGroups = Object.entries(muscleGroupTally).sort((a, b) => b[1] - a[1]);
   const topGroup = sortedGroups[0];
   const dominantShare = topGroup && totalSets > 0 ? topGroup[1] / totalSets : 0;
-
-  // By category first — "s3" was the mock seed's id and a hydrated row carries
-  // a uuid. The label match stays as the fallback for a pre-hydration render.
-  const workoutStreak =
-    streaks.find((s) => s.category === "workout") ?? streaks.find((s) => /workout/i.test(s.label));
 
   // Body measurements, read here rather than held in AppContext.
   //
@@ -250,223 +223,290 @@ export default function MetricsTab() {
   );
 
 
-  const weightSeries = Object.entries(weightByDate)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([, v]) => v);
+  const today = todayLocal();
+  const hero = useMemo(() => volumePoints(workoutSessions, volumeMode), [workoutSessions, volumeMode]);
+  const heroSel = heroPick !== null && heroPick < hero.length ? heroPick : hero.length - 1;
+  const stats = hero.length ? pointStats(hero[heroSel].sessions) : null;
+  const heroTicks = volumeTicks(Math.max(0, ...hero.map((p) => p.volumeKg)));
+  const lifts = useMemo(() => sortLifts(liftMaxes(workoutSessions, today), "highest"), [workoutSessions, today]);
+  const frequency = useMemo(() => trainingFrequency(workoutSessions, today), [workoutSessions, today]);
+  const freqMax = Math.max(3, ...frequency.weeks);
+  const dominant = topGroup && dominantShare > 0.45 ? topGroup[0] : null;
+  const chip = dominant ? chipColors(balanceColors[dominant] ?? "#B8AFC8") : null;
+  const groupLabel = (g: string) => g.charAt(0).toUpperCase() + g.slice(1).replace(/_/g, " ");
 
   return (
-    <div className="animate-fade-slide-up space-y-5">
-      <Card>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Volume trend</p>
-          <TrendingUp size={14} className="text-primary" />
-        </div>
-        {volumePoints.length === 0 ? (
-          <p className="text-sm text-charcoal-faint">
-            Finish a workout and the volume you lifted appears here.
-          </p>
-        ) : (
+    <div className="animate-fade-slide-up flex flex-col" style={{ gap: 10 }}>
+      {/* WO4.1 hero: volume per workout or per Monday–Sunday week, with the
+          selected point's stats in the band below. */}
+      <HeroCard
+        topPadding="16px 0 0"
+        bottomPadding="0"
+        top={
           <>
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-2xl font-bold text-charcoal">{lastVolume.toLocaleString()} kg</p>
-                <p className="text-xs text-charcoal-faint">Last logged session</p>
+            <div className="flex items-center justify-between" style={{ padding: "0 17px", height: 26 }}>
+              <span style={{ color: "rgba(255,255,255,0.75)", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.14em" }}>
+                VOLUME
+              </span>
+              <div
+                role="tablist"
+                aria-label="Volume by"
+                className="flex"
+                style={{ height: 26, padding: 2, gap: 2, borderRadius: 9, background: "rgba(255,255,255,0.22)" }}
+              >
+                {(["workout", "week"] as const).map((m) => (
+                  <button
+                    key={m}
+                    role="tab"
+                    aria-selected={volumeMode === m}
+                    onClick={() => {
+                      setVolumeMode(m);
+                      setHeroPick(null);
+                    }}
+                    className="tap"
+                    style={{
+                      padding: "0 9px",
+                      borderRadius: 7,
+                      fontSize: 11,
+                      fontWeight: 700,
+                      background: volumeMode === m ? "#FFFFFF" : "transparent",
+                      color: volumeMode === m ? "#463A80" : "#FFFFFF",
+                    }}
+                  >
+                    {m === "workout" ? "By workout" : "By week"}
+                  </button>
+                ))}
               </div>
-              <Sparkline values={volumePoints} color="#7D6BB5" width={140} height={44} />
             </div>
-            {/* QA 12.0: "Every visualization should ideally suggest a next
-                action (e.g., 'volume dropped 15% — consider a deload')." Said
-                only once there is enough to compare against: with two or three
-                sessions the "average" is one or two numbers, and an ordinary
-                week-to-week swing would trigger deload advice. */}
-            {!hasTrend ? (
-              <p className="text-xs text-charcoal-faint mt-3">
-                Log a few more sessions to see trends.
-              </p>
-            ) : volumeChangePct <= -15 ? (
-              <p className="text-xs font-semibold text-status-high bg-status-high-bg rounded-full px-3 py-1.5 mt-3 inline-block">
-                Volume dropped {Math.abs(volumeChangePct)}% — consider a deload week
-              </p>
-            ) : volumeChangePct >= 15 ? (
-              <p className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-3 py-1.5 mt-3 inline-block">
-                Volume is up {volumeChangePct}% vs your recent average — trending well
-              </p>
-            ) : null}
+            <TrendChart
+              key={volumeMode}
+              points={hero.map((p) => ({ t: p.t, value: p.volumeKg, label: shortDay(p.day) }))}
+              color="#FFFFFF"
+              unit="kg"
+              formatDate={(t) => shortDay(new Date(t).toISOString().slice(0, 10))}
+              ariaLabel={volumeMode === "workout" ? "Volume by workout" : "Volume by week"}
+              tone="card"
+              geometry={HERO_GEOMETRY}
+              unitOnAxis={false}
+              evenX
+              dots="selected"
+              ticks={heroTicks}
+              formatTick={kiloTick}
+              scrubText={(p) => p.label}
+              dateCount={4}
+              emptyText="No sessions yet"
+              selected={heroPick}
+              onSelect={setHeroPick}
+            />
+          </>
+        }
+        bottom={
+          <div className="flex overflow-x-auto no-scrollbar" style={{ gap: 18, padding: "12px 16px" }}>
+            <HeroFigure value={stats ? stats.volumeKg.toLocaleString() : null} unit="kg" label="Volume" accent />
+            <HeroFigure value={stats?.oneRmKg != null ? kgWhole(stats.oneRmKg) : null} unit="kg" label="1RM" />
+            <HeroFigure value={stats?.maxWeightKg ?? null} unit="kg" label="Max weight" />
+            <HeroFigure value={stats ? stats.sets : null} label="Sets" />
+            <HeroFigure value={stats ? stats.reps : null} label="Reps" />
+            <HeroFigure value={stats?.seconds ?? null} label="Seconds" />
+          </div>
+        }
+      />
+
+      <MetricCard
+        icon="/metrics/orm-teal.png"
+        title="One-rep maxes"
+        right={
+          lifts.length === 0 ? (
+            <span style={{ color: "#8C8378", fontSize: 11 }}>None yet</span>
+          ) : (
+            <button
+              onClick={() => setOneRmOpen(true)}
+              className="tap flex items-center"
+              style={{ color: "#3B7570", fontSize: 12.5, fontWeight: 600, gap: 3 }}
+            >
+              All {lifts.length} <ChevronRight size={13} />
+            </button>
+          )
+        }
+      >
+        {lifts.length > 0 && (
+          <div className="grid grid-cols-3" style={{ gap: "6px 7px", marginTop: 11 }}>
+            {lifts.slice(0, 6).map((lift) => (
+              <button
+                key={lift.key}
+                onClick={() => setLiftDetail(lift)}
+                className="tap text-left min-w-0"
+                style={{ background: "#F2F7F6", borderRadius: 10, padding: "8px 9px", minHeight: 55 }}
+              >
+                <span className="block truncate" style={{ color: "#3B7570", fontSize: 11, fontWeight: 500 }}>
+                  {lift.name}
+                </span>
+                <span className="block" style={{ color: "#3B7570", fontSize: 15, fontWeight: 800, marginTop: 2 }}>
+                  {kgWhole(lift.oneRm)}
+                  <span style={{ color: "#86B3AD", fontSize: 10, fontWeight: 600, marginLeft: 2 }}>kg</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
+      </MetricCard>
+
+      <MetricCard
+        icon="/metrics/balance.png"
+        title="Balance"
+        right={
+          totalSets === 0 ? (
+            <span style={{ color: "#8C8378", fontSize: 11 }}>No sets yet</span>
+          ) : chip ? (
+            <span
+              style={{ ...chip, borderRadius: 6, padding: "2px 7px", fontSize: 11.5, fontWeight: 600 }}
+            >
+              {groupLabel(dominant!)}-heavy lately
+            </span>
+          ) : null
+        }
+      >
+        <div className="flex overflow-hidden" style={{ height: 10, borderRadius: 5, gap: 2, marginTop: 12, background: totalSets === 0 ? "#F2F2F2" : undefined }}>
+          {sortedGroups.map(([group, count]) => (
+            <div key={group} style={{ width: `${(count / totalSets) * 100}%`, background: balanceColors[group] ?? "#B8AFC8" }} />
+          ))}
+        </div>
+        {totalSets > 0 && (
+          <>
+            <div className="grid grid-cols-4" style={{ marginTop: 10, gap: 6 }}>
+              {sortedGroups.slice(0, 4).map(([group, count]) => (
+                <div key={group} className="min-w-0">
+                  <span className="flex items-center truncate" style={{ gap: 4, color: "#8C8378", fontSize: 10.5 }}>
+                    <span className="flex-none" style={{ width: 6, height: 6, borderRadius: 3, background: balanceColors[group] ?? "#B8AFC8" }} />
+                    {groupLabel(group)}
+                  </span>
+                  <span className="block" style={{ color: "#241F1B", fontSize: 13, fontWeight: 800, marginTop: 2 }}>
+                    {Math.round((count / totalSets) * 100)}%
+                  </span>
+                </div>
+              ))}
+            </div>
+            <div className="flex justify-end" style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(36,31,27,0.07)" }}>
+              <button
+                onClick={() => setBalanceOpen(true)}
+                className="tap flex items-center"
+                style={{ color: "#8F68F6", fontSize: 12, fontWeight: 700, gap: 3 }}
+              >
+                Full breakdown <ChevronRight size={13} />
+              </button>
+            </div>
           </>
         )}
-      </Card>
+      </MetricCard>
 
-
-      <Card className="flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-2xl bg-teal-pale flex items-center justify-center shrink-0">
-            <Dumbbell size={16} className="text-teal-dark" />
-          </div>
-          <div>
-            <p className="text-sm font-bold text-charcoal">{prCount} tracked</p>
-            <p className="text-[11px] text-charcoal-faint">Strength · One Rep Maxes</p>
-          </div>
+      <MetricCard
+        icon="/metrics/freq.png"
+        title="Training frequency"
+        right={
+          workoutSessions.length === 0 ? (
+            <span style={{ color: "#8C8378", fontSize: 11 }}>No sessions yet</span>
+          ) : (
+            <span style={{ color: "#241F1B", fontSize: 20, fontWeight: 800 }}>
+              {frequency.perWeek}
+              <span style={{ color: "#8C8378", fontSize: 11, fontWeight: 500, marginLeft: 3 }}>/ week</span>
+            </span>
+          )
+        }
+      >
+        <div className="flex items-end" style={{ height: 33, gap: 6, marginTop: 11 }} aria-label="Sessions per week, last 8 weeks">
+          {frequency.weeks.map((count, i) => (
+            <span
+              key={i}
+              className="flex-1"
+              style={{
+                height: count ? Math.max(4, Math.round((count / freqMax) * 33)) : 2,
+                borderRadius: count ? 4 : 1,
+                background: i === 7 && count ? "#8F68F6" : "#E6DEFD",
+              }}
+            />
+          ))}
         </div>
-        <Button size="sm" variant="secondary" onClick={() => setOneRmOpen(true)}>
-          View
-        </Button>
-      </Card>
-
-      {totalSets > 0 && (
-        <Card>
-          <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Balance</p>
-            <Scale3D size={14} className="text-primary" />
-          </div>
-          <div className="flex h-2.5 rounded-full overflow-hidden mb-2.5">
-            {sortedGroups.map(([group, count]) => (
-              <div
-                key={group}
-                style={{ width: `${(count / totalSets) * 100}%`, background: balanceColors[group] ?? "#B8AFC8" }}
-              />
-            ))}
-          </div>
-          <div className="flex flex-wrap gap-x-3 gap-y-1 mb-1">
-            {sortedGroups.slice(0, 4).map(([group, count]) => (
-              <span key={group} className="flex items-center gap-1 text-[11px] text-charcoal-faint">
-                <span className="w-2 h-2 rounded-full" style={{ background: balanceColors[group] ?? "#B8AFC8" }} />
-                {group.replace(/_/g, " ")} · {Math.round((count / totalSets) * 100)}%
-              </span>
-            ))}
-          </div>
-          {dominantShare > 0.45 && (
-            <p className="text-xs font-semibold text-status-caution bg-status-caution-bg rounded-full px-3 py-1.5 mt-2 inline-block">
-              {topGroup![0].replace(/_/g, " ")} is {Math.round(dominantShare * 100)}% of recent sets — other
-              muscle groups may be falling behind
-            </p>
-          )}
-          <button onClick={() => setBalanceOpen(true)} className="tap text-xs font-semibold text-primary mt-3 block">
-            View full breakdown
-          </button>
-        </Card>
-      )}
-
-      {workoutStreak && (
-        <Card className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
-              <Flame size={16} className="text-primary-dark" />
-            </div>
-            <div>
-              <p className="text-sm font-bold text-charcoal">
-                {/* An auto streak has no goal to count toward, so it states
-                    the run instead of a fraction with nothing under it. */}
-                {workoutStreak.goalDays
-                  ? `${workoutStreak.days} / ${workoutStreak.goalDays} days`
-                  : `${workoutStreak.days} days`}
-              </p>
-              <p className="text-[11px] text-charcoal-faint">Adherence · from your Workout streak</p>
-            </div>
-          </div>
-          {workoutStreak.days === 0 && (
-            <span className="text-[11px] font-semibold text-status-caution">Log a session to restart</span>
-          )}
-        </Card>
-      )}
-
-      <Card>
-        <div className="flex items-center justify-between mb-3">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
-            Body measurements
-          </p>
-          <Ruler size={14} className="text-primary" />
+        <div className="flex justify-between" style={{ marginTop: 6, fontSize: 9.5 }}>
+          <span style={{ color: "#8C8378" }}>8 wks ago</span>
+          <span style={{ color: "#8F68F6", fontWeight: 700 }}>
+            This week{workoutSessions.length ? ` · ${frequency.weeks[7]}` : ""}
+          </span>
         </div>
+      </MetricCard>
+
+      <MetricCard
+        icon="/metrics/body.png"
+        title="Body measurements"
+        right={
+          measuredSites.length === 0 && !measurementsError ? (
+            <button
+              onClick={() => setAddMeasurementsOpen(true)}
+              className="tap flex items-center"
+              style={{ height: 26, padding: "0 10px", gap: 4, borderRadius: 8, background: "#6F9993", color: "#FFFFFF", fontSize: 12, fontWeight: 700 }}
+            >
+              <Plus size={12} /> Add
+            </button>
+          ) : (
+            <button
+              onClick={() => setAddMeasurementsOpen(true)}
+              className="tap flex items-center"
+              style={{ color: "#3B7570", fontSize: 12.5, fontWeight: 700, gap: 4 }}
+            >
+              <Plus size={13} /> Add
+            </button>
+          )
+        }
+      >
         {measurementsError ? (
-          <p className="text-sm text-status-high">{measurementsError}</p>
-        ) : measuredSites.length === 0 ? (
-          <div>
-            <p className="text-sm text-charcoal-faint mb-3">Add your first measurements</p>
-            <Button size="sm" onClick={() => setAddMeasurementsOpen(true)}>
-              <Plus size={13} /> Add measurements
-            </Button>
-          </div>
+          <p className="text-sm text-status-high" style={{ marginTop: 10 }}>
+            {measurementsError}
+          </p>
         ) : (
-          <>
-            <div className="flex flex-wrap" style={{ gap: 8 }}>
+          measuredSites.length > 0 && (
+            <div className="grid grid-cols-3" style={{ gap: "6px 7px", marginTop: 11 }}>
               {measuredSites.map(({ site, readings }) => {
                 const latest = readings[0];
                 // Null on a first reading: there is nothing to have changed
                 // from, and rendering +0.0 would claim a stability nobody
                 // measured.
                 const change =
-                  readings.length > 1
-                    ? Math.round((latest.value - readings[1].value) * 10) / 10
-                    : null;
-                const unit = site.unit === "%" ? "%" : " cm";
+                  readings.length > 1 ? Math.round((latest.value - readings[1].value) * 10) / 10 : null;
+                const unit = site.unit === "%" ? "%" : "cm";
                 return (
                   <button
                     key={site.type}
                     onClick={() => setHistoryType(site.type)}
                     aria-label={`${site.label} history`}
-                    className="tap bg-cream-soft rounded-xl text-left"
-                    style={{ padding: "9px 12px", minWidth: 96 }}
+                    className="tap text-left min-w-0"
+                    style={{ background: "#F2F7F6", borderRadius: 10, padding: "9px 10px" }}
                   >
-                    <span className="flex items-baseline" style={{ gap: 5 }}>
-                      <span className="text-base font-bold text-charcoal">
+                    <span className="flex items-start justify-between" style={{ gap: 4 }}>
+                      <span style={{ color: "#241F1B", fontSize: 16, fontWeight: 800, whiteSpace: "nowrap" }}>
                         {latest.value}
-                        <span className="text-[10px] font-medium text-charcoal-faint">{unit}</span>
+                        <span style={{ color: "#8C8378", fontSize: 10, fontWeight: 500, marginLeft: 2 }}>{unit}</span>
                       </span>
                       {/* The trend, where there is one to draw. Two points is
                           the minimum that says anything. */}
                       {readings.length >= 2 && (
-                        <Sparkline
-                          values={[...readings].reverse().map((r) => r.value)}
-                          color="#6F9993"
-                          width={38}
-                          height={14}
-                        />
+                        <Sparkline values={[...readings].reverse().map((r) => r.value)} color="#6F9993" width={34} height={12} />
                       )}
                     </span>
-                    <span className="block text-[10.5px] text-charcoal-faint">{site.label}</span>
+                    <span className="block truncate" style={{ color: "#8C8378", fontSize: 10.5, marginTop: 3 }}>
+                      {site.label}
+                    </span>
                     {change != null && change !== 0 && (
-                      <span
-                        className="block text-[10px] font-semibold"
-                        style={{ color: change > 0 ? "#8A5878" : "#3C6B65" }}
-                      >
-                        {change > 0 ? "+" : ""}
-                        {change}
-                        {unit}
+                      <span className="block" style={{ color: change > 0 ? "#8A5878" : "#3C6B65", fontSize: 10.5, fontWeight: 700 }}>
+                        {change > 0 ? "+" : "−"}
+                        {Math.abs(change)} {unit}
                       </span>
                     )}
                   </button>
                 );
               })}
             </div>
-            <button
-              onClick={() => setAddMeasurementsOpen(true)}
-              className="tap flex items-center gap-1.5 text-xs font-semibold text-primary mt-3"
-            >
-              <Plus size={12} /> Add measurements
-            </button>
-          </>
+          )
         )}
-      </Card>
-
-
-      {weightSeries.length >= 2 && (
-        <Card>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Body composition</p>
-            <Scale size={14} className="text-primary" />
-          </div>
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-2xl font-bold text-charcoal">{weightSeries[weightSeries.length - 1]} kg</p>
-              <p className="text-xs text-charcoal-faint">Weight trend (smoothed)</p>
-            </div>
-            <Sparkline values={weightSeries} color="#6F9993" width={140} height={44} />
-          </div>
-        </Card>
-      )}
-
-      <p className="text-[11px] text-charcoal-faint text-center">
-        More statistics — like session-frequency heatmaps — are coming to this prototype.
-      </p>
+      </MetricCard>
 
       <OneRepMaxesSheet open={oneRmOpen} onClose={() => setOneRmOpen(false)} onSelect={setLiftDetail} />
       <LiftDetailSheet key={liftDetail?.key} lift={liftDetail} onClose={() => setLiftDetail(null)} />
@@ -563,5 +603,52 @@ export default function MetricsTab() {
         </div>
       </BottomSheet>
     </div>
+  );
+}
+
+// The hero chart's place in the purple card, measured from the WO4.1 frame.
+const HERO_GEOMETRY: TrendGeometry = {
+  labelX: 17,
+  left: 44,
+  right: 21,
+  scrubY: 15,
+  plotTop: 40,
+  plotH: 85,
+  datesY: 141,
+  height: 157,
+};
+
+const shortDay = (day: string) =>
+  new Date(`${day}T00:00:00Z`).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+
+/** One figure in the hero's band: "—" when the point has none. */
+function HeroFigure({ value, unit, label, accent }: { value: React.ReactNode; unit?: string; label: string; accent?: boolean }) {
+  const ink = accent ? "#5B3FE4" : "#2E2560";
+  return (
+    <div className="flex-none">
+      <p style={{ color: ink, fontSize: 17, fontWeight: 800, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
+        {value ?? "—"}
+        {value != null && unit && <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2 }}>{unit}</span>}
+      </p>
+      <p style={{ color: accent ? "#5B3FE4" : "#463A80", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", marginTop: 2 }}>
+        {label.toUpperCase()}
+      </p>
+    </div>
+  );
+}
+
+/** A WO4.1 card: white, 1px #EEEDED border, radius 16, padding 14; icon, title and a right slot. */
+function MetricCard({ icon, title, right, children }: { icon: string; title: string; right?: React.ReactNode; children?: React.ReactNode }) {
+  return (
+    <section style={{ background: "#FFFFFF", border: "1px solid #EEEDED", borderRadius: 16, padding: 14 }}>
+      <div className="flex items-center" style={{ gap: 10 }}>
+        <img src={icon} alt="" width={30} height={30} style={{ borderRadius: 8 }} />
+        <h3 className="flex-1 min-w-0 truncate" style={{ color: "#241F1B", fontSize: 14, fontWeight: 700 }}>
+          {title}
+        </h3>
+        {right}
+      </div>
+      {children}
+    </section>
   );
 }

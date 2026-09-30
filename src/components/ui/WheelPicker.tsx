@@ -3,6 +3,8 @@ import React, { useEffect, useRef } from "react";
 export interface WheelOption<V extends string | number = string> {
   value: V;
   label: string;
+  /** Shown greyed #CFCBD6 and never selected (WO4.1: times later than now). */
+  disabled?: boolean;
 }
 
 export interface WheelColumn<V extends string | number = string> {
@@ -63,7 +65,14 @@ function WheelColumnView({ column }: { column: WheelColumn<string | number> }) {
     setTop(el.scrollTop);
     if (settle.current) window.clearTimeout(settle.current);
     settle.current = window.setTimeout(() => {
-      const i = Math.min(column.options.length - 1, Math.max(0, Math.round(el.scrollTop / ROW)));
+      let i = Math.min(column.options.length - 1, Math.max(0, Math.round(el.scrollTop / ROW)));
+      // A disabled row can't hold the selection: back to the nearest enabled one.
+      if (column.options[i]?.disabled) {
+        const back = column.options.slice(0, i).map((o) => !o.disabled).lastIndexOf(true);
+        i = back >= 0 ? back : column.options.findIndex((o) => !o.disabled);
+        if (i < 0) return;
+        el.scrollTo({ top: i * ROW, behavior: "smooth" });
+      }
       const next = column.options[i];
       if (next && next.value !== column.value) column.onChange(next.value);
     }, 110);
@@ -87,7 +96,9 @@ function WheelColumnView({ column }: { column: WheelColumn<string | number> }) {
             key={String(opt.value)}
             role="option"
             aria-selected={opt.value === column.value}
+            aria-disabled={opt.disabled || undefined}
             onClick={() => {
+              if (opt.disabled) return;
               ref.current?.scrollTo({ top: i * ROW, behavior: "smooth" });
               column.onChange(opt.value);
             }}
@@ -97,8 +108,8 @@ function WheelColumnView({ column }: { column: WheelColumn<string | number> }) {
               scrollSnapAlign: "center",
               fontSize: on ? 17 : 15,
               fontWeight: on ? 700 : 500,
-              color: "#241F1B",
-              opacity: on ? 1 : d < 1.5 ? 0.55 : 0.25,
+              color: opt.disabled ? "#CFCBD6" : "#241F1B",
+              opacity: opt.disabled ? 1 : on ? 1 : d < 1.5 ? 0.55 : 0.25,
               fontVariantNumeric: "tabular-nums",
             }}
           >
