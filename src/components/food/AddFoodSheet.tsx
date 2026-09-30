@@ -25,6 +25,8 @@ import { foodCategoryIcon } from "../../utils/icons";
 import { foodSuggestions, historyIds, type FoodSuggestion } from "../../services/food/suggestions";
 import { todayLocal } from "../../utils/date";
 import { Toast } from "../ui/Toast";
+import { PopupMenu } from "../ui/PopupMenu";
+import { mealForCurrentTime } from "../../utils/mealForTime";
 
 // V4: preset serving units offered as tap targets — only the quantity number
 // is typed. The relevant subset differs a little by food category (a plate
@@ -139,6 +141,15 @@ export const AddFoodSheet: React.FC<{
   const [loading, setLoading] = useState(false);
   const [suggestionFoods, setSuggestionFoods] = useState<Map<string, FoodSearchResult>>(new Map());
   const [scanNotice, setScanNotice] = useState(false);
+  // FO9 multi-select: each picked food with the quantity it will log at.
+  // Kept across searches; empty means multi-select is off.
+  const [picked, setPicked] = useState<Map<string, { food: FoodSearchResult; quantity: number; unit: ServingUnit }>>(new Map());
+  // The add step opened from multi-select: Confirm returns to the list.
+  const [adjusting, setAdjusting] = useState(false);
+  const [mealAnchor, setMealAnchor] = useState<HTMLElement | null>(null);
+  const [addedMessage, setAddedMessage] = useState<string | null>(null);
+  const [multiError, setMultiError] = useState<string | null>(null);
+  const [multiSaving, setMultiSaving] = useState(false);
 
   // --- barcode ------------------------------------------------------------
   const [barcode, setBarcode] = useState("");
@@ -205,6 +216,71 @@ export const AddFoodSheet: React.FC<{
     setSelectedFood(food);
     setQuantity(sg.quantity);
     setUnit(sg.unit);
+  };
+
+  // --- FO9 multi-select ---------------------------------------------------
+  const multi = picked.size > 0;
+  /** A food's quantity when picked: its last-used one (FO7), else one serving. */
+  const defaultsFor = (id: string): { quantity: number; unit: ServingUnit } => {
+    const sg = suggestions.find((x) => x.id === id);
+    return sg ? { quantity: sg.quantity, unit: sg.unit } : { quantity: 1, unit: "serving" };
+  };
+  const togglePick = (food: FoodSearchResult) =>
+    setPicked((prev) => {
+      const next = new Map(prev);
+      if (next.has(food.id)) next.delete(food.id);
+      else next.set(food.id, { food, ...defaultsFor(food.id) });
+      return next;
+    });
+  /** While multi-select is on, a name opens the quantity step for that pick. */
+  const openAdjust = (food: FoodSearchResult) => {
+    const cur = picked.get(food.id) ?? { food, ...defaultsFor(food.id) };
+    setSelectedFood(food);
+    setQuantity(cur.quantity);
+    setUnit(cur.unit);
+    setAdjusting(true);
+  };
+  const confirmAdjust = () => {
+    if (!selectedFood) return;
+    const food = selectedFood;
+    setPicked((prev) => new Map(prev).set(food.id, { food, quantity, unit }));
+    setSelectedFood(null);
+    setAdjusting(false);
+    setQuantity(1);
+    setUnit("serving");
+  };
+
+  /** Logs every pick to one meal, then closes with "Added n foods to Meal." */
+  const logPicked = async (target: MealType) => {
+    if (!authUserId || multiSaving) return;
+    setMultiSaving(true);
+    setMultiError(null);
+    const failed = new Map(picked);
+    for (const [id, p] of picked) {
+      const result = await logFoodEntry({
+        userId: authUserId,
+        food: p.food,
+        quantity: p.quantity,
+        unit: p.unit,
+        meal: target,
+        date: selectedDate,
+        loggedVia: p.food.barcode ? "barcode" : "search",
+      });
+      if (result.ok && result.entry) {
+        addFoodEntryRecord(result.entry);
+        failed.delete(id);
+      }
+    }
+    setMultiSaving(false);
+    const added = picked.size - failed.size;
+    if (failed.size > 0) {
+      // What didn't save stays selected, so trying again logs only those.
+      setPicked(failed);
+      setMultiError(`${failed.size} of ${picked.size} couldn't be saved. Try again.`);
+      return;
+    }
+    setAddedMessage(`Added ${added} food${added === 1 ? "" : "s"} to ${detailMealLabels[target]}.`);
+    resetAndClose();
   };
 
   // Fetched as soon as a food is selected (not lazily on Advanced tap) so the
@@ -294,6 +370,10 @@ export const AddFoodSheet: React.FC<{
     setQuery("");
     setCategory(null);
     setSelectedFood(null);
+    setPicked(new Map());
+    setAdjusting(false);
+    setMealAnchor(null);
+    setMultiError(null);
     setQuantity(1);
     setQuantityDraft("1");
     setUnit("serving");
@@ -444,6 +524,7 @@ export const AddFoodSheet: React.FC<{
             : () => {
                 // A suggestion prefilled its last quantity; the next pick starts fresh.
                 setSelectedFood(null);
+                setAdjusting(false);
                 setQuantity(1);
                 setUnit("serving");
               }
@@ -493,8 +574,9 @@ export const AddFoodSheet: React.FC<{
                     spec; kept (restyled) because it tells the user whether the
                     figures are sourced or approximate. */}
                 <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "#8C8378" }}>
-                  {selectedFood.servingLabel}
-                  {selectedFood.isVerified ? " · USDA verified" : " · estimate"}
+                  {adjusting
+                    ? `${unit === "serving" ? (quantity === 1 ? selectedFood.servingLabel : `${quantity} × ${selectedFood.servingLabel}`) : `${quantity} ${unit}`} · selected`
+                    : `${selectedFood.servingLabel}${selectedFood.isVerified ? " · USDA verified" : " · estimate"}`}
                 </p>
               </div>
             </div>
@@ -538,6 +620,7 @@ export const AddFoodSheet: React.FC<{
               </div>
             </div>
 
+            {!adjusting && (
             <div style={{ ...sheetGreyStyle, marginBottom: 10 }}>
               <p style={sheetLabelStyle}>Meal</p>
               <div className="flex" style={{ gap: 6, marginTop: 9 }}>
@@ -553,6 +636,7 @@ export const AddFoodSheet: React.FC<{
                 ))}
               </div>
             </div>
+            )}
 
             <div className="grid grid-cols-4" style={{ ...sheetGreyStyle, padding: "13px 0", marginBottom: 16 }}>
               {[
@@ -578,6 +662,16 @@ export const AddFoodSheet: React.FC<{
               </p>
             )}
 
+            {adjusting ? (
+              <button
+                type="button"
+                onClick={confirmAdjust}
+                className="tap w-full inline-flex items-center justify-center gap-2"
+                style={{ height: 52, borderRadius: 14, border: "none", background: "#A198DF", color: "#FFFFFF", fontSize: 15.5, fontWeight: 700 }}
+              >
+                <Check size={16} /> Confirm
+              </button>
+            ) : (
             <div className="flex" style={{ gap: 10 }}>
               <button
                 type="button"
@@ -599,6 +693,7 @@ export const AddFoodSheet: React.FC<{
                 <SlidersHorizontal size={20} strokeWidth={1.9} />
               </button>
             </div>
+            )}
           </div>
         )}
       </BottomSheet>
@@ -752,10 +847,117 @@ export const AddFoodSheet: React.FC<{
     );
   }
 
+  /**
+   * One food row (FO7 suggestions and search results). FO9: the icon selects
+   * the food and starts multi-select, turning every icon into a circle
+   * (filled lavender with a check when picked); the rest of the row opens the
+   * single-food step, or, while multi-select is on, that pick's quantity.
+   */
+  const renderRow = (r: {
+    key: string;
+    food: FoodSearchResult | undefined;
+    name: string;
+    sub: string;
+    kcal: number;
+    star?: boolean;
+    open: () => void;
+  }) => {
+    const on = !!r.food && picked.has(r.food.id);
+    // A custom food keeps the logo colour it was saved with, so it can be
+    // told apart in the list at a glance.
+    const tone = r.food?.source === "custom" ? logoTone(r.food.logoTone) : null;
+    return (
+      <div
+        key={r.key}
+        className="flex items-center shrink-0"
+        style={{ margin: "0 -11px", padding: "10px 13px", gap: 12, borderRadius: 14, background: on ? "#F7F5FB" : undefined }}
+      >
+        <button
+          onClick={() => r.food && togglePick(r.food)}
+          disabled={!r.food}
+          aria-pressed={on}
+          aria-label={on ? `Deselect ${r.name}` : `Select ${r.name}`}
+          className="tap flex items-center justify-center shrink-0"
+          style={
+            multi
+              ? { width: 34, height: 34, borderRadius: 17, background: on ? "#AEA1DC" : "#FFFFFF", border: on ? "none" : "1.5px solid #D1CAEB", color: "#FFFFFF" }
+              : { width: 36, height: 36, borderRadius: 12, background: tone ? tone.bg : "#F0EDF9", color: tone ? tone.fg : "#7D6BB5" }
+          }
+        >
+          {multi ? on && <Check size={17} strokeWidth={2.6} /> : <FoodIcon category={r.food?.category ?? "homemade"} size={16} />}
+        </button>
+        <button onClick={r.open} disabled={!r.food} className="tap flex-1 min-w-0 flex items-center justify-between text-left" style={{ gap: 10 }}>
+          <span className="min-w-0">
+            <span className="flex items-center gap-1.5 truncate" style={{ fontSize: 14, fontWeight: 600, color: "#241F1B" }}>
+              {r.name}
+              {r.star && <Star size={10} className="text-gold fill-gold shrink-0" />}
+            </span>
+            <span className="block truncate" style={{ fontSize: 11, color: "#8C8378" }}>
+              {r.sub}
+            </span>
+          </span>
+          <span className="shrink-0" style={{ fontSize: 12, fontWeight: 600, color: "#5B5349" }}>
+            {r.kcal} kcal
+          </span>
+        </button>
+      </div>
+    );
+  };
+
   // Browse view
   return (
     <>
-      <BottomSheet open={open} onClose={resetAndClose} title="Add Food">
+      <BottomSheet
+        open={open}
+        onClose={resetAndClose}
+        title="Add Food"
+        footerRule
+        footer={
+          multi ? (
+            <div>
+              <p style={{ margin: "0 0 8px", fontSize: 11, color: "#8C8378" }}>{picked.size} selected</p>
+              {multiError && (
+                <p className="text-xs font-semibold text-status-high" style={{ margin: "0 0 8px" }}>
+                  {multiError}
+                </p>
+              )}
+              <div className="flex items-center" style={{ gap: 12 }}>
+                <button
+                  onClick={(e) => (suggestMeal ? void logPicked(meal) : setMealAnchor(e.currentTarget))}
+                  disabled={multiSaving}
+                  className="tap flex-1 inline-flex items-center justify-center disabled:opacity-60"
+                  style={{ height: 50, gap: 8, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+                >
+                  <Plus size={16} /> {multiSaving ? "Adding…" : `Add food (${picked.size})`}
+                </button>
+                <button
+                  onClick={() => {
+                    setPicked(new Map());
+                    setMultiError(null);
+                  }}
+                  className="tap"
+                  style={{ padding: "0 10px", height: 44, color: "#8C8378", fontSize: 14, fontWeight: 500 }}
+                >
+                  Cancel
+                </button>
+              </div>
+              <PopupMenu
+                open={!!mealAnchor}
+                anchor={mealAnchor}
+                onClose={() => setMealAnchor(null)}
+                heading="Add to"
+                options={detailMealOrder.map((m) => ({ value: m, label: detailMealLabels[m] }))}
+                selected={mealForCurrentTime()}
+                onSelect={(m) => {
+                  setMealAnchor(null);
+                  void logPicked(m);
+                }}
+                align="left"
+              />
+            </div>
+          ) : undefined
+        }
+      >
         <div className="animate-fade-slide-up">
           {/* V10 (QA 10.0): "Only the circled part in the attached picture
               should scroll the rest is locked in add food" — search, the
@@ -891,65 +1093,29 @@ export const AddFoodSheet: React.FC<{
                   </p>
                   {suggestions.map((sg) => {
                     const food = suggestionFoods.get(sg.id);
-                    const tone = food?.source === "custom" ? logoTone(food.logoTone) : null;
-                    return (
-                      <button
-                        key={sg.id}
-                        onClick={() => pickSuggestion(sg)}
-                        disabled={!food}
-                        className="tap w-full flex items-center justify-between text-left shrink-0"
-                        style={{ borderRadius: 16, padding: "10px 12px", gap: 10 }}
-                      >
-                        <div className="flex items-center gap-3 min-w-0">
-                          <span
-                            className="flex items-center justify-center shrink-0"
-                            style={{ width: 36, height: 36, borderRadius: 12, background: tone ? tone.bg : "#F0EDF9", color: tone ? tone.fg : "#7D6BB5" }}
-                          >
-                            <FoodIcon category={food?.category ?? "homemade"} size={16} />
-                          </span>
-                          <div className="min-w-0">
-                            <p className="truncate" style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#241F1B" }}>
-                              {sg.name}
-                            </p>
-                            <p className="truncate" style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>{sg.amount}</p>
-                          </div>
-                        </div>
-                        <span className="shrink-0" style={{ fontSize: 12, fontWeight: 600, color: "#5B5349" }}>{sg.kcal} kcal</span>
-                      </button>
-                    );
+                    return renderRow({
+                      key: sg.id,
+                      food,
+                      name: sg.name,
+                      sub: sg.amount,
+                      kcal: sg.kcal,
+                      open: () => (food ? (multi ? openAdjust(food) : pickSuggestion(sg)) : undefined),
+                    });
                   })}
                 </>
               ))}
-            {query.trim() !== "" && filtered.map((f) => {
-              // A custom food keeps the logo colour it was saved with, so it
-              // can be told apart in the list at a glance.
-              const tone = f.source === "custom" ? logoTone(f.logoTone) : null;
-              return (
-              <button
-                key={`${f.source}-${f.id}`}
-                onClick={() => setSelectedFood(f)}
-                className="tap w-full flex items-center justify-between text-left shrink-0"
-                style={{ borderRadius: 16, padding: "10px 12px" }}
-              >
-                <div className="flex items-center gap-3">
-                  <span
-                    className="flex items-center justify-center shrink-0"
-                    style={{ width: 36, height: 36, borderRadius: 12, background: tone ? tone.bg : "#F0EDF9", color: tone ? tone.fg : "#7D6BB5" }}
-                  >
-                    <FoodIcon category={f.category} size={16} />
-                  </span>
-                  <div>
-                    <p className="flex items-center gap-1.5" style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#241F1B" }}>
-                      {f.name}
-                      {f.isLebanese && <Star size={10} className="text-gold fill-gold" />}
-                    </p>
-                    <p style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>{f.servingLabel}</p>
-                  </div>
-                </div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: "#5B5349" }}>{f.calories} kcal</span>
-              </button>
-              );
-            })}
+            {query.trim() !== "" &&
+              filtered.map((f) =>
+                renderRow({
+                  key: `${f.source}-${f.id}`,
+                  food: f,
+                  name: f.name,
+                  sub: f.servingLabel,
+                  kcal: f.calories,
+                  star: f.isLebanese,
+                  open: () => (multi ? openAdjust(f) : setSelectedFood(f)),
+                })
+              )}
             {query.trim() !== "" && loading && filtered.length === 0 && (
               <p className="text-center text-sm text-charcoal-faint py-8">Searching…</p>
             )}
@@ -967,6 +1133,7 @@ export const AddFoodSheet: React.FC<{
         icon={<Camera size={15} className="flex-none" style={{ color: "#A2C8C2" }} />}
         onExpire={() => setScanNotice(false)}
       />
+      <Toast open={!!addedMessage} message={addedMessage ?? ""} onExpire={() => setAddedMessage(null)} />
 
       <AIVoiceLogger open={voiceOpen} onClose={() => { setVoiceOpen(false); resetAndClose(); }} />
     </>

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/ui/Card";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
+import { mealForCurrentTime } from "../../utils/mealForTime";
 import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { EditFoodEntrySheet } from "../../components/food/EditFoodEntrySheet";
 import { DateSelector } from "../../components/dashboard/DateSelector";
@@ -39,17 +40,6 @@ const quickAddTiles: Record<MealType, { label: string; fill: string; Icon: typeo
 };
 
 const SWIPE_THRESHOLD = 60;
-
-// V5 (QA 5.0): the global floating "+" has no specific meal section to
-// anchor to, so it defaults to whichever meal makes sense for the current
-// time of day, rather than being hardcoded to lunch.
-function mealForCurrentTime(): MealType {
-  const hour = new Date().getHours();
-  if (hour < 11) return "breakfast";
-  if (hour < 15) return "lunch";
-  if (hour < 18) return "snack";
-  return "dinner";
-}
 
 export default function Food() {
   const { user, foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, diaryError } =
