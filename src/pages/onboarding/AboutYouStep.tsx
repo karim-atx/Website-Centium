@@ -1,10 +1,10 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { OnboardingShell } from "./OnboardingShell";
 import { Button } from "../../components/ui/Button";
 import type { OnboardingDraft } from "./Onboarding";
 import type { Sex } from "../../types";
 import clsx from "clsx";
-import { Camera, FileText, Check, Venus, Mars, VenusAndMars } from "lucide-react";
+import { Check, Venus, Mars, VenusAndMars } from "lucide-react";
 import {
   ageFromDateOfBirth,
   isoDateYearsAgo,
@@ -14,8 +14,8 @@ import {
 } from "../../utils/date";
 import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
 import { useApp } from "../../context/AppContext";
-import { uploadCertification } from "../../services/certification";
-import { acceptFor } from "../../services/storage";
+import { fetchCertificationPath, uploadCertification } from "../../services/certification";
+import { AttachDocument } from "../../components/ui/AttachDocument";
 
 interface Props {
   draft: OnboardingDraft;
@@ -43,11 +43,31 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
   const canContinue = draft.firstName.trim().length > 0;
   const [error, setError] = useState<string | null>(null);
 
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
-  const [certError, setCertError] = useState<string | null>(null);
   const { authUserId } = useApp();
+
+  // THE SERVER'S CERTIFICATE, NOT THE DRAFT'S. The draft lives in this
+  // browser, so onboarding resumed on another device (or after the browser's
+  // storage was cleared) used to replace a file it did not know about and
+  // leave the old one in the bucket. The stored path is read first, and a
+  // replace deletes what is actually there. `undefined` = not read yet.
+  const [serverPath, setServerPath] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (!isProfessional || !authUserId) return;
+    let cancelled = false;
+    void fetchCertificationPath(authUserId).then((result) => {
+      if (cancelled) return;
+      // A failed read must not lock the buttons: treat it as no known file.
+      if (!result.ok) {
+        setServerPath(null);
+        return;
+      }
+      setServerPath(result.path);
+      setDraft((d) => (d.certificationFile === result.path ? d : { ...d, certificationFile: result.path }));
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isProfessional, authUserId, setDraft]);
 
   // A REAL UPLOAD, at the moment the file is picked.
   //
@@ -64,19 +84,18 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
   // being told they are finished. Storing it now costs an early
   // professional_profiles row for someone who abandons the flow, which is
   // their own data and harmless.
+  //
+  // The database turns this certificate into licence #1 of the CV (a trigger
+  // on professional_profiles), which is how it appears on the next step.
   const handleCertificationFile = async (file: File) => {
-    if (!authUserId || uploading) return;
-    setUploading(true);
-    setCertError(null);
-    const result = await uploadCertification(authUserId, file, draft.certificationFile);
-    setUploading(false);
-    if (!result.ok) {
-      setCertError(result.message);
-      return;
-    }
-    // The draft now carries the object PATH, not the bytes — the same value
-    // the column holds, which is what Onboarding hands to profile state.
+    if (!authUserId) return { ok: false as const, message: "You're signed out. Go back and sign in again." };
+    const result = await uploadCertification(authUserId, file, serverPath ?? null);
+    if (!result.ok) return result;
+    // The draft carries the object PATH, not the bytes — the same value the
+    // column holds, which is what Onboarding hands to profile state.
+    setServerPath(result.path);
     setDraft((d) => ({ ...d, certificationFile: result.path }));
+    return { ok: true as const };
   };
 
   const handleContinue = () => {
@@ -144,55 +163,15 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
           // profile — replaced with a certification upload instead.
           <div>
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Certification</span>
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept={acceptFor("certifications", true)}
-              capture="environment"
-              className="hidden"
-              onChange={(e) => e.target.files?.[0] && void handleCertificationFile(e.target.files[0])}
+            <AttachDocument
+              bucket="certifications"
+              path={serverPath ?? null}
+              onFile={handleCertificationFile}
+              label="Certificate"
+              disabled={serverPath === undefined}
             />
-            <input
-              ref={fileInputRef}
-              type="file"
-              // Derived from the bucket: the old list offered HEIC and other
-              // types it refuses, and hid the Word documents it takes.
-              accept={acceptFor("certifications")}
-              className="hidden"
-              onChange={(e) => e.target.files?.[0] && void handleCertificationFile(e.target.files[0])}
-            />
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                onClick={() => cameraInputRef.current?.click()}
-                disabled={uploading}
-                className="tap flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-charcoal/10 bg-cream-card py-5 disabled:opacity-40"
-              >
-                <Camera size={20} className="text-primary" />
-                <span className="text-xs font-semibold text-charcoal-soft">Use camera</span>
-              </button>
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploading}
-                className="tap flex flex-col items-center justify-center gap-1.5 rounded-2xl border border-charcoal/10 bg-cream-card py-5 disabled:opacity-40"
-              >
-                <FileText size={20} className="text-primary" />
-                <span className="text-xs font-semibold text-charcoal-soft">
-                  {draft.certificationFile ? "Replace file" : "Upload file"}
-                </span>
-              </button>
-            </div>
-            {uploading && (
-              <p className="text-xs font-semibold text-charcoal-faint mt-2.5">Uploading…</p>
-            )}
-            {certError && (
-              <p className="text-xs font-semibold text-status-high mt-2.5">{certError}</p>
-            )}
-            {/* PROVISIONAL COPY — REVISIT WHEN THE REVIEW FLOW SHIPS. It said
-                "Submitted — pending authentication", which claimed a review
-                that does not exist about a file that was never uploaded. The
-                upload is real now; the review is still not built. */}
-            {draft.certificationFile && !uploading && (
-              <p className="flex items-center gap-1.5 text-xs text-primary-dark mt-2.5">
+            {serverPath && (
+              <p className="flex items-center gap-1.5 text-xs text-primary-dark">
                 <Check size={13} /> Saved to your account
               </p>
             )}

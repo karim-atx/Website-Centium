@@ -4692,6 +4692,67 @@ export type Database = {
           },
         ]
       }
+      legacy_certificate_quarantine: {
+        Row: {
+          byte_length: number
+          noted_at: string
+          professional_id: string
+        }
+        Insert: {
+          byte_length: number
+          noted_at?: string
+          professional_id: string
+        }
+        Update: {
+          byte_length?: number
+          noted_at?: string
+          professional_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "legacy_certificate_quarantine_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legacy_certificate_quarantine_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legacy_certificate_quarantine_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legacy_certificate_quarantine_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "legacy_certificate_quarantine_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "legacy_certificate_quarantine_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       logged_exercises: {
         Row: {
           block_result_id: string | null
@@ -6188,6 +6249,85 @@ export type Database = {
           },
         ]
       }
+      professional_awards: {
+        Row: {
+          awarded_on: string | null
+          created_at: string
+          description: string | null
+          id: string
+          issuer: string | null
+          position: number
+          professional_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          awarded_on?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          issuer?: string | null
+          position: number
+          professional_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          awarded_on?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          issuer?: string | null
+          position?: number
+          professional_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_awards_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_awards_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_awards_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_awards_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_awards_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_awards_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       professional_clients: {
         Row: {
           assigned_food_template_id: string | null
@@ -6321,6 +6461,554 @@ export type Database = {
           },
         ]
       }
+      professional_education: {
+        Row: {
+          created_at: string
+          degree: string | null
+          description: string | null
+          end_on: string | null
+          field: string | null
+          id: string
+          institution: string
+          position: number
+          professional_id: string
+          start_on: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          degree?: string | null
+          description?: string | null
+          end_on?: string | null
+          field?: string | null
+          id?: string
+          institution: string
+          position: number
+          professional_id: string
+          start_on?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          degree?: string | null
+          description?: string | null
+          end_on?: string | null
+          field?: string | null
+          id?: string
+          institution?: string
+          position?: number
+          professional_id?: string
+          start_on?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_education_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_education_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_education_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_education_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_education_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_education_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      professional_experience: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_on: string | null
+          id: string
+          location: string | null
+          organisation: string
+          position: number
+          professional_id: string
+          start_on: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_on?: string | null
+          id?: string
+          location?: string | null
+          organisation: string
+          position: number
+          professional_id: string
+          start_on: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_on?: string | null
+          id?: string
+          location?: string | null
+          organisation?: string
+          position?: number
+          professional_id?: string
+          start_on?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_experience_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_experience_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_experience_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_experience_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_experience_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_experience_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      professional_languages: {
+        Row: {
+          created_at: string
+          id: string
+          language: string
+          position: number
+          professional_id: string
+          proficiency: Database["public"]["Enums"]["language_proficiency"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          language: string
+          position: number
+          professional_id: string
+          proficiency: Database["public"]["Enums"]["language_proficiency"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          language?: string
+          position?: number
+          professional_id?: string
+          proficiency?: Database["public"]["Enums"]["language_proficiency"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_languages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_languages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_languages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_languages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_languages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_languages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      professional_licence_reviews: {
+        Row: {
+          approved_at: string | null
+          document_path: string
+          id: string
+          licence_id: string
+          professional_id: string
+          rejected_at: string | null
+          rejection_reason: string | null
+          reviewed_by: string | null
+          submitted_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          document_path: string
+          id?: string
+          licence_id: string
+          professional_id: string
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          reviewed_by?: string | null
+          submitted_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          document_path?: string
+          id?: string
+          licence_id?: string
+          professional_id?: string
+          rejected_at?: string | null
+          rejection_reason?: string | null
+          reviewed_by?: string | null
+          submitted_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_licence_reviews_licence_id_fkey"
+            columns: ["licence_id"]
+            isOneToOne: false
+            referencedRelation: "professional_licences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_licence_id_fkey"
+            columns: ["licence_id"]
+            isOneToOne: false
+            referencedRelation: "public_professional_licences"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_licence_reviews_reviewed_by_fkey"
+            columns: ["reviewed_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      professional_licences: {
+        Row: {
+          created_at: string
+          credential_id: string | null
+          credential_url: string | null
+          document_path: string | null
+          expires_on: string | null
+          id: string
+          issued_on: string | null
+          issuing_body: string | null
+          mirrors_certification_url: boolean
+          name: string | null
+          no_expiry: boolean
+          position: number
+          professional_id: string
+          show_when_expired: boolean
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          credential_id?: string | null
+          credential_url?: string | null
+          document_path?: string | null
+          expires_on?: string | null
+          id?: string
+          issued_on?: string | null
+          issuing_body?: string | null
+          mirrors_certification_url?: boolean
+          name?: string | null
+          no_expiry?: boolean
+          position: number
+          professional_id: string
+          show_when_expired?: boolean
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          credential_id?: string | null
+          credential_url?: string | null
+          document_path?: string | null
+          expires_on?: string | null
+          id?: string
+          issued_on?: string | null
+          issuing_body?: string | null
+          mirrors_certification_url?: boolean
+          name?: string | null
+          no_expiry?: boolean
+          position?: number
+          professional_id?: string
+          show_when_expired?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_licences_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licences_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licences_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licences_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licences_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_licences_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      professional_links: {
+        Row: {
+          created_at: string
+          id: string
+          label: string
+          position: number
+          professional_id: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label: string
+          position: number
+          professional_id: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string
+          position?: number
+          professional_id?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       professional_profiles: {
         Row: {
           affiliated_business_id: string | null
@@ -6330,6 +7018,7 @@ export type Database = {
           consultation_rate: number | null
           created_at: string
           facebook: string | null
+          headline: string | null
           id: string
           instagram: string | null
           listed_publicly: boolean
@@ -6338,6 +7027,8 @@ export type Database = {
           payment_modalities: Database["public"]["Enums"]["payment_modality"][]
           phone: string | null
           profile_id: string
+          show_volunteering: boolean
+          skills: string[]
           specialty: string | null
           updated_at: string
           website: string | null
@@ -6351,6 +7042,7 @@ export type Database = {
           consultation_rate?: number | null
           created_at?: string
           facebook?: string | null
+          headline?: string | null
           id?: string
           instagram?: string | null
           listed_publicly?: boolean
@@ -6359,6 +7051,8 @@ export type Database = {
           payment_modalities?: Database["public"]["Enums"]["payment_modality"][]
           phone?: string | null
           profile_id: string
+          show_volunteering?: boolean
+          skills?: string[]
           specialty?: string | null
           updated_at?: string
           website?: string | null
@@ -6372,6 +7066,7 @@ export type Database = {
           consultation_rate?: number | null
           created_at?: string
           facebook?: string | null
+          headline?: string | null
           id?: string
           instagram?: string | null
           listed_publicly?: boolean
@@ -6380,6 +7075,8 @@ export type Database = {
           payment_modalities?: Database["public"]["Enums"]["payment_modality"][]
           phone?: string | null
           profile_id?: string
+          show_volunteering?: boolean
+          skills?: string[]
           specialty?: string | null
           updated_at?: string
           website?: string | null
@@ -6439,6 +7136,88 @@ export type Database = {
             foreignKeyName: "professional_profiles_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      professional_publications: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          position: number
+          professional_id: string
+          published_on: string | null
+          publisher: string | null
+          title: string
+          updated_at: string
+          url: string | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          position: number
+          professional_id: string
+          published_on?: string | null
+          publisher?: string | null
+          title: string
+          updated_at?: string
+          url?: string | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          position?: number
+          professional_id?: string
+          published_on?: string | null
+          publisher?: string | null
+          title?: string
+          updated_at?: string
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_publications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_publications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_publications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_publications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_publications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_publications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
           },
@@ -6613,6 +7392,88 @@ export type Database = {
           {
             foreignKeyName: "professional_reviews_reviewer_id_fkey"
             columns: ["reviewer_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      professional_volunteering: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_on: string | null
+          id: string
+          organisation: string
+          position: number
+          professional_id: string
+          role: string
+          start_on: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_on?: string | null
+          id?: string
+          organisation: string
+          position: number
+          professional_id: string
+          role: string
+          start_on?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_on?: string | null
+          id?: string
+          organisation?: string
+          position?: number
+          professional_id?: string
+          role?: string
+          start_on?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_volunteering_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_volunteering_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_volunteering_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_volunteering_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_volunteering_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_volunteering_professional_id_fkey"
+            columns: ["professional_id"]
             isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
@@ -9393,11 +10254,14 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           first_name: string | null
+          has_verified_licence: boolean | null
+          headline: string | null
           id: string | null
           location: string | null
           professional_subtype:
             | Database["public"]["Enums"]["professional_subtype"]
             | null
+          skills: string[] | null
           specialty: string | null
         }
         Relationships: []
@@ -10042,6 +10906,79 @@ export type Database = {
           },
         ]
       }
+      public_professional_awards: {
+        Row: {
+          awarded_month: string | null
+          description: string | null
+          id: string | null
+          issuer: string | null
+          position: number | null
+          professional_id: string | null
+          title: string | null
+        }
+        Insert: {
+          awarded_month?: never
+          description?: string | null
+          id?: string | null
+          issuer?: string | null
+          position?: number | null
+          professional_id?: string | null
+          title?: string | null
+        }
+        Update: {
+          awarded_month?: never
+          description?: string | null
+          id?: string | null
+          issuer?: string | null
+          position?: number | null
+          professional_id?: string | null
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_awards_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_awards_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_awards_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_awards_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_awards_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_awards_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       public_professional_directory: {
         Row: {
           avatar_url: string | null
@@ -10051,6 +10988,8 @@ export type Database = {
           created_at: string | null
           facebook: string | null
           first_name: string | null
+          has_verified_licence: boolean | null
+          headline: string | null
           id: string | null
           instagram: string | null
           location: string | null
@@ -10063,6 +11002,7 @@ export type Database = {
             | null
           profile_id: string | null
           review_count: number | null
+          skills: string[] | null
           specialty: string | null
           updated_at: string | null
           website: string | null
@@ -10108,6 +11048,521 @@ export type Database = {
             foreignKeyName: "professional_profiles_profile_id_fkey"
             columns: ["profile_id"]
             isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      public_professional_education: {
+        Row: {
+          degree: string | null
+          description: string | null
+          end_month: string | null
+          field: string | null
+          id: string | null
+          institution: string | null
+          position: number | null
+          professional_id: string | null
+          start_month: string | null
+        }
+        Insert: {
+          degree?: string | null
+          description?: string | null
+          end_month?: never
+          field?: string | null
+          id?: string | null
+          institution?: string | null
+          position?: number | null
+          professional_id?: string | null
+          start_month?: never
+        }
+        Update: {
+          degree?: string | null
+          description?: string | null
+          end_month?: never
+          field?: string | null
+          id?: string | null
+          institution?: string | null
+          position?: number | null
+          professional_id?: string | null
+          start_month?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_education_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_education_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_education_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_education_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_education_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_education_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      public_professional_experience: {
+        Row: {
+          description: string | null
+          end_month: string | null
+          id: string | null
+          location: string | null
+          organisation: string | null
+          position: number | null
+          professional_id: string | null
+          start_month: string | null
+          title: string | null
+        }
+        Insert: {
+          description?: string | null
+          end_month?: never
+          id?: string | null
+          location?: string | null
+          organisation?: string | null
+          position?: number | null
+          professional_id?: string | null
+          start_month?: never
+          title?: string | null
+        }
+        Update: {
+          description?: string | null
+          end_month?: never
+          id?: string | null
+          location?: string | null
+          organisation?: string | null
+          position?: number | null
+          professional_id?: string | null
+          start_month?: never
+          title?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_experience_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_experience_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_experience_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_experience_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_experience_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_experience_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      public_professional_languages: {
+        Row: {
+          id: string | null
+          language: string | null
+          position: number | null
+          professional_id: string | null
+          proficiency:
+            | Database["public"]["Enums"]["language_proficiency"]
+            | null
+        }
+        Insert: {
+          id?: string | null
+          language?: string | null
+          position?: number | null
+          professional_id?: string | null
+          proficiency?:
+            | Database["public"]["Enums"]["language_proficiency"]
+            | null
+        }
+        Update: {
+          id?: string | null
+          language?: string | null
+          position?: number | null
+          professional_id?: string | null
+          proficiency?:
+            | Database["public"]["Enums"]["language_proficiency"]
+            | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_languages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_languages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_languages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_languages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_languages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_languages_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      public_professional_licences: {
+        Row: {
+          credential_url: string | null
+          expired: boolean | null
+          expires_month: string | null
+          id: string | null
+          issued_month: string | null
+          issuing_body: string | null
+          name: string | null
+          no_expiry: boolean | null
+          position: number | null
+          professional_id: string | null
+          verified: boolean | null
+        }
+        Insert: {
+          credential_url?: string | null
+          expired?: never
+          expires_month?: never
+          id?: string | null
+          issued_month?: never
+          issuing_body?: string | null
+          name?: string | null
+          no_expiry?: boolean | null
+          position?: number | null
+          professional_id?: string | null
+          verified?: never
+        }
+        Update: {
+          credential_url?: string | null
+          expired?: never
+          expires_month?: never
+          id?: string | null
+          issued_month?: never
+          issuing_body?: string | null
+          name?: string | null
+          no_expiry?: boolean | null
+          position?: number | null
+          professional_id?: string | null
+          verified?: never
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_licences_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licences_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licences_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licences_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_licences_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_licences_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      public_professional_links: {
+        Row: {
+          id: string | null
+          label: string | null
+          position: number | null
+          professional_id: string | null
+          url: string | null
+        }
+        Insert: {
+          id?: string | null
+          label?: string | null
+          position?: number | null
+          professional_id?: string | null
+          url?: string | null
+        }
+        Update: {
+          id?: string | null
+          label?: string | null
+          position?: number | null
+          professional_id?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_links_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      public_professional_publications: {
+        Row: {
+          description: string | null
+          id: string | null
+          position: number | null
+          professional_id: string | null
+          published_month: string | null
+          publisher: string | null
+          title: string | null
+          url: string | null
+        }
+        Insert: {
+          description?: string | null
+          id?: string | null
+          position?: number | null
+          professional_id?: string | null
+          published_month?: never
+          publisher?: string | null
+          title?: string | null
+          url?: string | null
+        }
+        Update: {
+          description?: string | null
+          id?: string | null
+          position?: number | null
+          professional_id?: string | null
+          published_month?: never
+          publisher?: string | null
+          title?: string | null
+          url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_publications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_publications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_publications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_publications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_publications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_publications_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      public_professional_volunteering: {
+        Row: {
+          description: string | null
+          end_month: string | null
+          id: string | null
+          organisation: string | null
+          position: number | null
+          professional_id: string | null
+          role: string | null
+          start_month: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_volunteering_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_volunteering_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_volunteering_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_volunteering_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_volunteering_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_volunteering_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
           },
@@ -10237,6 +11692,10 @@ export type Database = {
         Args: { p_note?: string; p_professional_id: string }
         Returns: Json
       }
+      admin_approve_licence: {
+        Args: { p_licence_id: string; p_note?: string }
+        Returns: Json
+      }
       admin_cancel_deletion: {
         Args: { reason?: string; target_user_id: string }
         Returns: string
@@ -10300,6 +11759,29 @@ export type Database = {
       admin_log_certification_view: {
         Args: { p_path: string; p_professional_id: string; p_reason: string }
         Returns: undefined
+      }
+      admin_log_licence_view: {
+        Args: { p_licence_id: string; p_reason: string }
+        Returns: {
+          document_path: string
+          professional_id: string
+        }[]
+      }
+      admin_pending_licence_reviews: {
+        Args: never
+        Returns: {
+          document_path: string
+          is_legacy_certificate: boolean
+          issuing_body: string
+          licence_id: string
+          licence_name: string
+          previous_attempts: number
+          professional_email: string
+          professional_id: string
+          professional_name: string
+          review_id: string
+          submitted_at: string
+        }[]
       }
       admin_read_professional_reviews: {
         Args: { p_professional_id: string; p_reason: string }
@@ -10368,6 +11850,10 @@ export type Database = {
       }
       admin_reject_certification: {
         Args: { p_professional_id: string; p_reason: string }
+        Returns: Json
+      }
+      admin_reject_licence: {
+        Args: { p_licence_id: string; p_reason: string }
         Returns: Json
       }
       admin_request_health_data_reset: {
@@ -10843,6 +12329,7 @@ export type Database = {
       is_business_insider: { Args: { p_business_id: string }; Returns: boolean }
       is_calendar_invitee: { Args: { p_event_id: string }; Returns: boolean }
       is_disposable_email: { Args: { email: string }; Returns: boolean }
+      licence_is_verified: { Args: { p_licence_id: string }; Returns: boolean }
       list_pending_health_data_storage_purges: {
         Args: never
         Returns: {
@@ -10977,6 +12464,14 @@ export type Database = {
       }
       process_health_data_resets: { Args: never; Returns: number }
       process_scheduled_account_deletions: { Args: never; Returns: number }
+      professional_cv_is_visible: {
+        Args: { p_professional_id: string }
+        Returns: boolean
+      }
+      professional_has_verified_licence: {
+        Args: { p_professional_id: string }
+        Returns: boolean
+      }
       professional_is_affiliated: {
         Args: { p_professional_id: string }
         Returns: boolean
@@ -11407,6 +12902,12 @@ export type Database = {
         | "calf_right"
         | "body_fat_pct"
       health_provider: "apple_health" | "android_health"
+      language_proficiency:
+        | "native"
+        | "fluent"
+        | "professional"
+        | "conversational"
+        | "basic"
       lh_test_result: "negative" | "positive" | "peak"
       meal_slot: "breakfast" | "lunch" | "snack" | "dinner"
       measurement_goal: "decrease" | "increase" | "maintain"
@@ -11804,6 +13305,13 @@ export const Constants = {
         "body_fat_pct",
       ],
       health_provider: ["apple_health", "android_health"],
+      language_proficiency: [
+        "native",
+        "fluent",
+        "professional",
+        "conversational",
+        "basic",
+      ],
       lh_test_result: ["negative", "positive", "peak"],
       meal_slot: ["breakfast", "lunch", "snack", "dinner"],
       measurement_goal: ["decrease", "increase", "maintain"],

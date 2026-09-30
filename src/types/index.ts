@@ -88,7 +88,6 @@ export interface UserProfile {
   linkedProfessionalCode?: string;
   linkedProfessionalName?: string;
   linkedProfessionalSubtype?: ProfessionalSubtype;
-  linkedProfessionalCertificationUrl?: string;
   // V7 (QA 7.0): a business account's own unique ID (shown to professionals
   // who want to affiliate) and, for a professional account, which business
   // they've affiliated with by entering one.
@@ -100,32 +99,22 @@ export interface UserProfile {
   // V5 (QA 5.0): professional's uploaded certification, data URL — camera
   // or file, captured during onboarding in place of age/height/sex.
   certificationUrl?: string;
-  // V10 (QA 10.0): a professional's own bio (shown on their Explore listing,
-  // grey placeholder text until filled) and public credentials — mirrored to
-  // a linked client via the fields below, same snapshot mechanism as
-  // certification.
+  // V10 (QA 10.0): a professional's own bio. Unused since the bio moved to
+  // professional_profiles.bio (see ProfessionalBioCard).
+  //
+  // The professional's device-only phone, website and socials, and the
+  // linkedProfessional* copies a client was meant to receive, are gone: none
+  // ever left the device. The real website and socials are on
+  // professional_profiles (More › Your public listing), and a client reads a
+  // connected professional's profile and CV from the database.
   professionalBio?: string;
-  professionalPhone?: string;
-  professionalWebsite?: string;
-  // QA 12.0: "In the profile tab have the ability for the Professional to
-  // connect their socials. For now just have instagram, facebook and X."
-  professionalInstagram?: string;
-  professionalFacebook?: string;
-  professionalX?: string;
   // QA 11.0: "have a credential tab that has the client's email and phone
-  // number" — a customer-facing counterpart to professionalPhone above.
+  // number".
   phone?: string;
   // QA 12.0: "credentials which when pressed shows you all relevant info
-  // including social media you can link like Instagram and X" — client's
-  // own counterpart to professionalInstagram/X above.
+  // including social media you can link like Instagram and X".
   instagramHandle?: string;
   xHandle?: string;
-  linkedProfessionalBio?: string;
-  linkedProfessionalPhone?: string;
-  linkedProfessionalWebsite?: string;
-  linkedProfessionalInstagram?: string;
-  linkedProfessionalFacebook?: string;
-  linkedProfessionalX?: string;
   // QA 12.0: "a button called payments, whereby the professional can add
   // what his monthly rate is to be hired, alongside other types like
   // consultations and how much they cost. Also let the professional

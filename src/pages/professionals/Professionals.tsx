@@ -12,8 +12,16 @@ import { fetchLinkedProfessionals } from "../../services/consent";
 import type { ProfessionalType } from "../../types";
 import type { Enums } from "../../../lib/supabase/database.types";
 import { BottomSheet } from "../../components/ui/BottomSheet";
-import { Star, ShieldCheck, UserCheck, Pencil, BadgeCheck, AtSign, Globe2, XIcon } from "lucide-react";
+import { Star, ShieldCheck, UserCheck, Pencil } from "lucide-react";
 import ProfessionalDashboard from "./ProfessionalDashboard";
+import { VerifiedCheck, VerifiedExplainer } from "../../components/cv/CvBadges";
+import { CvView } from "../../components/cv/CvView";
+import { cvIsEmpty, fetchPublicCv, type PublicCv } from "../../services/professional-cv";
+import {
+  fetchConnectedProfessional,
+  professionalRole,
+  type ConnectedProfessional,
+} from "../../services/connected-professional";
 import { professionalTypeIcon } from "../../utils/icons";
 
 // LINKED_PROFESSIONAL_REVIEW_ID USED TO LIVE HERE, and it was the literal
@@ -73,6 +81,51 @@ export default function Professionals() {
       cancelled = true;
     };
   }, []);
+
+  // The linked professional's profile and CV, read when the sheet opens.
+  const [linkedDetail, setLinkedDetail] = useState<ConnectedProfessional | null>(null);
+  const [linkedCv, setLinkedCv] = useState<PublicCv | null>(null);
+  const [linkedError, setLinkedError] = useState<string | null>(null);
+
+  // The profile is read as soon as the relationship is known — the card shows
+  // the real name — and the CV when the sheet opens.
+  useEffect(() => {
+    if (!linkedProfessionalId) return;
+    let cancelled = false;
+    void fetchConnectedProfessional(linkedProfessionalId).then((detail) => {
+      if (cancelled) return;
+      if (!detail.ok) setLinkedError(detail.message);
+      else setLinkedDetail(detail.professional);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [linkedProfessionalId]);
+
+  useEffect(() => {
+    if (!linkedProfileOpen || !linkedProfessionalId) return;
+    let cancelled = false;
+    void fetchPublicCv(linkedProfessionalId).then((cv) => {
+      if (cancelled) return;
+      if (!cv.ok) {
+        setLinkedError(cv.message);
+        return;
+      }
+      setLinkedError(null);
+      setLinkedCv(cv.cv);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [linkedProfileOpen, linkedProfessionalId]);
+
+  // THE CARD FOLLOWS THE REAL RELATIONSHIP. It used to render only from
+  // `user.linkedProfessionalCode`, which is set when a code is redeemed during
+  // onboarding on this device — so a client connected any other way (an
+  // accepted hire request, another device) never saw it at all.
+  const hasLinkedProfessional = !!linkedProfessionalId || !!user.linkedProfessionalCode;
+  const linkedName = linkedDetail?.firstName ?? user.linkedProfessionalName ?? "Your professional";
+  const linkedSubtype = linkedDetail?.subtype ?? user.linkedProfessionalSubtype;
 
   const {
     mine: myLinkedReview,
@@ -165,7 +218,7 @@ export default function Professionals() {
       {/* V7 (QA 7.0): a professional who added this client via a client code
           shows up here automatically — a separate identity from the static
           browse directory below, since it's not one of those listings. */}
-      {user.linkedProfessionalCode && (
+      {hasLinkedProfessional && (
         <Card
           interactive
           onClick={() => setLinkedProfileOpen(true)}
@@ -174,13 +227,13 @@ export default function Professionals() {
           <div className="flex items-center gap-3 mb-3">
             <span className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center shrink-0">
               {(() => {
-                const Icon = linkedIcon(user.linkedProfessionalSubtype);
+                const Icon = linkedIcon(linkedSubtype);
                 return <Icon size={22} className="text-white" />;
               })()}
             </span>
             <div>
               <p className="text-xs text-white/70 font-semibold uppercase tracking-wide">Your professional</p>
-              <p className="font-display font-semibold text-lg">{user.linkedProfessionalName}</p>
+              <p className="font-display font-semibold text-lg">{linkedName}</p>
             </div>
           </div>
           <div className="flex items-center justify-between">
@@ -253,7 +306,13 @@ export default function Professionals() {
                 )}
               </span>
               <div className="flex-1 min-w-0">
-                <p className="font-semibold text-charcoal text-sm truncate">{p.name}</p>
+                <p className="flex items-center gap-[5px] min-w-0">
+                  <span className="font-semibold text-charcoal text-sm truncate">{p.name}</span>
+                  {p.hasVerifiedLicence && <VerifiedCheck size={16} />}
+                </p>
+                {p.headline && (
+                  <p className="text-[12.5px] font-semibold text-primary-deep-text line-clamp-2 break-words">{p.headline}</p>
+                )}
                 {(p.specialty || p.subtype) && (
                   <p className="text-xs text-primary-dark font-medium truncate">
                     {p.specialty ?? subtypeLabel(p.subtype)}
@@ -274,6 +333,10 @@ export default function Professionals() {
             </Button>
           </Card>
         ))}
+
+        {/* The check's meaning, said once under the list rather than on
+            every card — and only when a card actually carries one. */}
+        {filtered.some((p) => p.hasVerifiedLicence) && <VerifiedExplainer />}
 
         {/* Three outcomes, deliberately distinct. An empty directory is the
             expected steady state until professionals opt in, and saying so
@@ -306,7 +369,7 @@ export default function Professionals() {
       <BottomSheet
         open={reviewOpen}
         onClose={() => setReviewOpen(false)}
-        title={`Rate ${user.linkedProfessionalName?.split(" ")[0] ?? "your professional"}`}
+        title={`Rate ${linkedName.split(" ")[0]}`}
       >
         <div className="space-y-5 animate-fade-slide-up">
           <div className="flex items-center justify-center gap-2">
@@ -367,96 +430,60 @@ export default function Professionals() {
         </div>
       </BottomSheet>
 
-      {/* V8 (QA 8.0): "it should show on the professionals tab in the more
-          tab within the Client UI as well when viewing their profile" —
-          the certification the professional attached in their own UI. */}
-      <BottomSheet open={linkedProfileOpen} onClose={() => setLinkedProfileOpen(false)} title={user.linkedProfessionalName}>
-        <div className="space-y-4 animate-fade-slide-up">
+      {/* THE CONNECTED PROFESSIONAL'S REAL PROFILE AND CV. This sheet used to
+          read a certification, bio, phone, website and socials from fields on
+          this device that nothing ever wrote, so it always said "No
+          certification uploaded yet." It now reads connected_professional_summary
+          and the public CV views, which a connected client may always read —
+          the same CV and Verified marks the public profile shows. The document
+          itself is never shown to clients; the badge is what a client gets. */}
+      <BottomSheet open={linkedProfileOpen} onClose={() => setLinkedProfileOpen(false)} title={linkedName} size="tall">
+        <div className="space-y-4">
           <div className="flex items-center gap-3">
-            <span className="w-12 h-12 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
-              {(() => {
-                const Icon = linkedIcon(user.linkedProfessionalSubtype);
-                return <Icon size={22} className="text-primary-dark" />;
-              })()}
-            </span>
-            <div>
-              <p className="font-display font-semibold text-lg text-charcoal">{user.linkedProfessionalName}</p>
-              {user.linkedProfessionalSubtype && (
-                <p className="text-xs text-charcoal-faint capitalize">{user.linkedProfessionalSubtype}</p>
-              )}
-            </div>
-          </div>
-
-          <div>
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2 flex items-center gap-1.5">
-              <BadgeCheck size={13} /> Certification
-            </p>
-            {user.linkedProfessionalCertificationUrl ? (
-              user.linkedProfessionalCertificationUrl.startsWith("data:application/pdf") ? (
-                <iframe
-                  title="Certification"
-                  src={user.linkedProfessionalCertificationUrl}
-                  className="w-full h-64 rounded-2xl border border-charcoal/10"
-                />
+            <span className="w-12 h-12 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
+              {linkedDetail?.avatarUrl ? (
+                <img src={linkedDetail.avatarUrl} alt="" className="w-full h-full object-cover" />
               ) : (
-                <img
-                  src={user.linkedProfessionalCertificationUrl}
-                  alt="Certification"
-                  className="w-full max-h-64 object-contain rounded-2xl border border-charcoal/10 bg-cream-soft"
-                />
-              )
-            ) : (
-              <p className="text-sm text-charcoal-faint">No certification uploaded yet.</p>
-            )}
+                (() => {
+                  const Icon = linkedIcon(linkedSubtype);
+                  return <Icon size={22} className="text-primary-dark" />;
+                })()
+              )}
+            </span>
+            <div className="min-w-0">
+              <p className="flex items-center gap-1.5">
+                <span className="font-display font-semibold text-lg text-charcoal truncate">
+                  {linkedName}
+                </span>
+                {linkedDetail?.hasVerifiedLicence && <VerifiedCheck size={18} />}
+              </p>
+              {linkedDetail?.headline && (
+                <p className="text-[13px] font-semibold text-primary-deep-text break-words">{linkedDetail.headline}</p>
+              )}
+              <p className="text-xs text-charcoal-soft">
+                {[linkedDetail ? professionalRole(linkedDetail) : null, linkedDetail?.location].filter(Boolean).join(" · ")}
+              </p>
+            </div>
           </div>
 
-          {user.linkedProfessionalBio && (
+          {linkedError && <p className="text-sm text-status-high">{linkedError}</p>}
+          {!linkedError && !linkedCv && linkedProfessionalId && <p className="text-sm text-charcoal-faint">Loading…</p>}
+
+          {linkedDetail?.bio && (
             <div>
-              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Bio</p>
-              <p className="text-sm text-charcoal-soft leading-relaxed">{user.linkedProfessionalBio}</p>
+              <p className="text-xs font-bold text-charcoal-soft uppercase tracking-[0.06em] mb-1.5">About</p>
+              <p className="text-sm text-charcoal leading-relaxed whitespace-pre-line">{linkedDetail.bio}</p>
             </div>
           )}
 
-          {(user.linkedProfessionalPhone || user.linkedProfessionalWebsite) && (
-            <div>
-              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Contact</p>
-              <div className="space-y-1">
-                {user.linkedProfessionalPhone && (
-                  <p className="text-sm text-charcoal-soft">{user.linkedProfessionalPhone}</p>
-                )}
-                {user.linkedProfessionalWebsite && (
-                  <p className="text-sm text-charcoal-soft">{user.linkedProfessionalWebsite}</p>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* QA 12.0: "In the profile tab have the ability for the
-              Professional to connect their socials... When connecting to
-              socials it should show in the connect to a professional tab
-              in the Clients UI." */}
-          {(user.linkedProfessionalInstagram || user.linkedProfessionalFacebook || user.linkedProfessionalX) && (
-            <div>
-              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Social</p>
-              <div className="space-y-1">
-                {user.linkedProfessionalInstagram && (
-                  <p className="flex items-center gap-1.5 text-sm text-charcoal-soft">
-                    <AtSign size={13} className="text-charcoal-faint" /> {user.linkedProfessionalInstagram}
-                  </p>
-                )}
-                {user.linkedProfessionalFacebook && (
-                  <p className="flex items-center gap-1.5 text-sm text-charcoal-soft">
-                    <Globe2 size={13} className="text-charcoal-faint" /> {user.linkedProfessionalFacebook}
-                  </p>
-                )}
-                {user.linkedProfessionalX && (
-                  <p className="flex items-center gap-1.5 text-sm text-charcoal-soft">
-                    <XIcon size={13} className="text-charcoal-faint" /> {user.linkedProfessionalX}
-                  </p>
-                )}
-              </div>
-            </div>
-          )}
+          {linkedCv && (cvIsEmpty(linkedCv, linkedDetail?.skills ?? []) ? (
+            <p className="text-sm text-charcoal-faint">
+              {linkedName.split(" ")[0]} hasn't added a CV yet.
+            </p>
+          ) : (
+            <CvView cv={linkedCv} skills={linkedDetail?.skills ?? []} />
+          ))}
+          {linkedDetail?.hasVerifiedLicence && <VerifiedExplainer />}
         </div>
       </BottomSheet>
     </div>

@@ -18,6 +18,7 @@ import { WelcomeStep } from "./WelcomeStep";
 import { AuthStep } from "./AuthStep";
 import { AccountTypeStep } from "./AccountTypeStep";
 import { AboutYouStep } from "./AboutYouStep";
+import { BackgroundStep } from "./BackgroundStep";
 import { GoalStep } from "./GoalStep";
 import { ActivityStep } from "./ActivityStep";
 import { RecoveryStep } from "./RecoveryStep";
@@ -53,7 +54,8 @@ export interface OnboardingDraft {
   tracking: TrackPreference[];
   // QA 12.0: opted into a recovery-sensitive experience during onboarding.
   recoverySensitive: boolean;
-  // V5 (QA 5.0): professional's certification upload (camera or file), data URL.
+  // The professional's certificate: the storage PATH (not the bytes), read
+  // back from the server on About you and written there at pick time.
   certificationFile: string | null;
 }
 
@@ -83,6 +85,7 @@ type StepKey =
   | "auth"
   | "accountType"
   | "aboutYou"
+  | "background"
   | "goal"
   | "activity"
   | "recovery"
@@ -117,6 +120,8 @@ function stepsFor(accountType: OnboardingDraft["accountType"], skipAboutYou: boo
     "auth",
     "accountType",
     ...(skipAboutYou || isBusiness ? [] : (["aboutYou"] as StepKey[])),
+    // The optional CV step, straight after the name + certificate step.
+    ...(isProfessional ? (["background"] as StepKey[]) : []),
     // QA 13.0: "It would make sense to have the recovery sensitive
     // experience before the 'How active are you?' and 'what are you working
     // towards' page" — recovery-sensitive is now asked first so those two
@@ -333,6 +338,7 @@ export default function Onboarding() {
         {stepKey === "aboutYou" && (
           <AboutYouStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
         )}
+        {stepKey === "background" && <BackgroundStep onNext={next} onBack={back} />}
         {stepKey === "goal" && <GoalStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />}
         {stepKey === "activity" && (
           <ActivityStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />

@@ -39,8 +39,7 @@ import {
   BadgeCheck,
   Mail,
   Phone,
-  Globe,
-  Globe2,
+  FileText,
   Award,
   AtSign,
   XIcon,
@@ -351,6 +350,23 @@ export default function Profile() {
         </Card>
       )}
 
+      {/* My CV: licences, experience, education and the rest, shown on the
+          public profile. */}
+      {user.accountType === "professional" && (
+        <Card padded={false} className="mb-3 animate-fade-slide-up">
+          <button
+            onClick={() => navigate("/app/profile/cv")}
+            className="tap w-full flex items-center justify-between px-4 py-3.5"
+          >
+            <div className="flex items-center gap-3">
+              <FileText size={17} className="text-charcoal-soft" />
+              <span className="text-sm font-medium text-charcoal">My CV</span>
+            </div>
+            <ChevronRight size={16} className="text-charcoal-faint" />
+          </button>
+        </Card>
+      )}
+
       {/* V8 (QA 8.0): "move the certification button from More into My
           Profile tab instead" — was previously reachable only from More. */}
       {user.accountType === "professional" && (
@@ -368,24 +384,12 @@ export default function Profile() {
         </Card>
       )}
 
-      {/* QA 12.0: "credentials which when pressed shows you all relevant
-          info including social media" — was an always-expanded card;
-          now a single tappable summary row opening the same fields (plus
-          socials) in a sheet, for both account types. */}
-      {user.accountType === "professional" && (
-        <Card padded={false} className="mb-6 animate-fade-slide-up">
-          <button
-            onClick={() => setCredentialsOpen(true)}
-            className="tap w-full flex items-center justify-between px-4 py-3.5"
-          >
-            <div className="flex items-center gap-3">
-              <Mail size={17} className="text-charcoal-soft" />
-              <span className="text-sm font-medium text-charcoal">Credentials</span>
-            </div>
-            <ChevronRight size={16} className="text-charcoal-faint" />
-          </button>
-        </Card>
-      )}
+      {/* NO "CREDENTIALS" ROW FOR PROFESSIONALS. It edited a phone number
+          and socials that lived only on this device, under a line promising
+          they showed on the Explore listing; they never did. The real website
+          and socials are edited in More › Your public listing (stored on
+          professional_profiles), and the CV's Links section carries anything
+          else a professional wants clients to find. */}
 
       {!hidesClientFields && (
         /* Decision 4: four tiles on one row at every width (360-430), so
@@ -634,69 +638,33 @@ export default function Profile() {
           <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
             <Phone size={15} className="text-charcoal-faint shrink-0" />
             <input
-              value={user.accountType === "professional" ? user.professionalPhone ?? "" : user.phone ?? ""}
-              onChange={(e) =>
-                updateProfile(
-                  user.accountType === "professional"
-                    ? { professionalPhone: e.target.value }
-                    : { phone: e.target.value }
-                )
-              }
+              value={user.phone ?? ""}
+              onChange={(e) => updateProfile({ phone: e.target.value })}
               placeholder="Phone number"
               className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
             />
           </div>
-          {user.accountType === "professional" && (
-            <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
-              <Globe size={15} className="text-charcoal-faint shrink-0" />
-              <input
-                value={user.professionalWebsite ?? ""}
-                onChange={(e) => updateProfile({ professionalWebsite: e.target.value })}
-                placeholder="Website"
-                className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
-              />
-            </div>
-          )}
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide pt-2">Social</p>
           <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
             <AtSign size={15} className="text-charcoal-faint shrink-0" />
             <input
-              value={user.accountType === "professional" ? user.professionalInstagram ?? "" : user.instagramHandle ?? ""}
-              onChange={(e) =>
-                updateProfile(
-                  user.accountType === "professional"
-                    ? { professionalInstagram: e.target.value }
-                    : { instagramHandle: e.target.value }
-                )
-              }
+              value={user.instagramHandle ?? ""}
+              onChange={(e) => updateProfile({ instagramHandle: e.target.value })}
               placeholder="Instagram"
               className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
             />
           </div>
-          {user.accountType === "professional" && (
-            <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
-              <Globe2 size={15} className="text-charcoal-faint shrink-0" />
-              <input
-                value={user.professionalFacebook ?? ""}
-                onChange={(e) => updateProfile({ professionalFacebook: e.target.value })}
-                placeholder="Facebook"
-                className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
-              />
-            </div>
-          )}
           <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
             <XIcon size={15} className="text-charcoal-faint shrink-0" />
             <input
-              value={user.accountType === "professional" ? user.professionalX ?? "" : user.xHandle ?? ""}
-              onChange={(e) =>
-                updateProfile(user.accountType === "professional" ? { professionalX: e.target.value } : { xHandle: e.target.value })
-              }
+              value={user.xHandle ?? ""}
+              onChange={(e) => updateProfile({ xHandle: e.target.value })}
               placeholder="X (Twitter)"
               className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
             />
           </div>
           <p className="text-[11px] text-charcoal-faint pt-1">
-            Whichever of these you fill in shows on your {user.accountType === "professional" ? "Explore listing" : "profile"}.
+            Whichever of these you fill in shows on your profile.
           </p>
         </div>
       </BottomSheet>

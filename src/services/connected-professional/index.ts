@@ -24,6 +24,10 @@ export interface ConnectedProfessional {
   bio: string | null;
   specialty: string | null;
   location: string | null;
+  headline: string | null;
+  skills: string[];
+  /** Computed by the view with the database's verified rule. */
+  hasVerifiedLicence: boolean;
 }
 
 export type ConnectedProfessionalResult =
@@ -74,6 +78,27 @@ export async function isActiveClientOf(professionalId: string): Promise<boolean>
 }
 
 /**
+ * When the caller's active relationship with this professional began, or null
+ * when there is none (or the read failed — the same fail-closed direction as
+ * isActiveClientOf, so "Client since" is never shown on a guess).
+ *
+ * joined_at is the relationship row's own start, set when the code was
+ * redeemed or the request accepted.
+ */
+export async function fetchClientSince(professionalId: string): Promise<string | null> {
+  const { data, error } = await supabase
+    .from("active_professional_clients")
+    .select("joined_at")
+    .eq("professional_id", professionalId)
+    .maybeSingle();
+  if (error) {
+    console.error("[connected-professional] Could not read the relationship:", error.message);
+    return null;
+  }
+  return data?.joined_at ?? null;
+}
+
+/**
  * Profile detail for one professional the caller is an active client of.
  *
  * `professional: null` MEANS "NO ROW", NOT "FAILED". The view returns nothing
@@ -88,7 +113,7 @@ export async function fetchConnectedProfessional(
 ): Promise<ConnectedProfessionalResult> {
   const { data, error } = await supabase
     .from("connected_professional_summary")
-    .select("id, first_name, avatar_url, professional_subtype, bio, specialty, location")
+    .select("id, first_name, avatar_url, professional_subtype, bio, specialty, location, headline, skills, has_verified_licence")
     .eq("id", professionalId)
     .maybeSingle();
 
@@ -111,6 +136,9 @@ export async function fetchConnectedProfessional(
       bio: data.bio,
       specialty: data.specialty,
       location: data.location,
+      headline: data.headline,
+      skills: data.skills ?? [],
+      hasVerifiedLicence: !!data.has_verified_licence,
     },
   };
 }

@@ -5,7 +5,10 @@ import { Button } from "../../components/ui/Button";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { MessageProfessionalButton } from "../../components/messages/MessageProfessionalButton";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
-import { isActiveClientOf } from "../../services/connected-professional";
+import { fetchClientSince, isActiveClientOf, professionalRole } from "../../services/connected-professional";
+import { fetchPublicCv, type PublicCv } from "../../services/professional-cv";
+import { CvView } from "../../components/cv/CvView";
+import { VerifiedCheck } from "../../components/cv/CvBadges";
 import {
   fetchMyHireRequest,
   sendHireRequest,
@@ -81,6 +84,9 @@ export default function ProfessionalDetail() {
         reviews: listing.reviewCount,
         bio: listing.bio ?? "",
         monthlyRate: listing.monthlyRate ?? 0,
+        headline: listing.headline,
+        skills: listing.skills,
+        verified: listing.hasVerifiedLicence,
         connected: undefined as boolean | undefined,
       }
     : undefined;
@@ -118,6 +124,39 @@ export default function ProfessionalDetail() {
       cancelled = true;
     };
   }, [realProfessionalId]);
+
+  // The CV, from the public views (listed professionals are readable by
+  // anyone; a connected client can always read their own professional's).
+  // Stamped with the professional it belongs to, like the checks above.
+  const [cvState, setCvState] = useState<{ id: string | null; cv: PublicCv | null }>({ id: null, cv: null });
+  const publicCv = realProfessionalId !== null && cvState.id === realProfessionalId ? cvState.cv : null;
+
+  useEffect(() => {
+    if (!realProfessionalId) return;
+    let cancelled = false;
+    void fetchPublicCv(realProfessionalId).then((r) => {
+      if (!cancelled && r.ok) setCvState({ id: realProfessionalId, cv: r.cv });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [realProfessionalId]);
+
+  // THE REAL START OF THE RELATIONSHIP, replacing a hardcoded "Client since
+  // August 2026" that every client saw regardless of when they connected.
+  const [since, setSince] = useState<{ id: string | null; at: string | null }>({ id: null, at: null });
+  const clientSince = realProfessionalId !== null && since.id === realProfessionalId ? since.at : null;
+
+  useEffect(() => {
+    if (!realProfessionalId || activeClient !== true) return;
+    let cancelled = false;
+    void fetchClientSince(realProfessionalId).then((at) => {
+      if (!cancelled) setSince({ id: realProfessionalId, at });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [realProfessionalId, activeClient]);
 
   /**
    * Whether this client already has a hire request with this professional.
@@ -308,10 +347,19 @@ export default function ProfessionalDetail() {
             return <Icon size={28} className="text-primary-dark" />;
           })()}
         </span>
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-charcoal">{professional.name}</h1>
-          <p className="text-sm text-primary-dark font-medium">{professional.specialty}</p>
-          <p className="text-xs text-charcoal-faint">{professional.location}</p>
+        <div className="min-w-0">
+          <h1 className="flex items-center gap-1.5 font-display text-2xl font-semibold text-charcoal">
+            <span className="min-w-0 break-words">{professional.name}</span>
+            {professional.verified && <VerifiedCheck size={18} />}
+          </h1>
+          {professional.headline && (
+            <p className="text-[13px] font-semibold text-primary-deep-text break-words">{professional.headline}</p>
+          )}
+          <p className="text-[12.5px] text-charcoal-soft">
+            {[professionalRole({ specialty: professional.specialty, subtype: listing?.subtype ?? null }), professional.location]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
         </div>
       </div>
 
@@ -331,19 +379,26 @@ export default function ProfessionalDetail() {
             </button>
           </>
         )}
-        {isReal && professional.location && (
-          <span className="text-xs text-charcoal-faint">{professional.location}</span>
-        )}
-        {isConnected && (
+        {isConnected && clientSince && (
           <span className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1">
-            Client since August 2026
+            Client since {new Date(clientSince).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
           </span>
         )}
       </div>
 
-      <Card className="mb-6 animate-fade-slide-up">
-        <p className="text-sm text-charcoal-soft leading-relaxed">{professional.bio}</p>
-      </Card>
+      {/* About IS the existing bio; the CV follows it. */}
+      {professional.bio && (
+        <Card className="mb-3.5 animate-fade-slide-up">
+          <p className="text-xs font-bold text-charcoal-soft uppercase tracking-[0.06em] mb-2">About</p>
+          <p className="text-sm text-charcoal-soft leading-relaxed whitespace-pre-line">{professional.bio}</p>
+        </Card>
+      )}
+
+      {publicCv && (
+        <div className="mb-6">
+          <CvView cv={publicCv} skills={professional.skills} />
+        </div>
+      )}
 
       {/* V5 (QA 5.0): rating/reviewing is restricted to professionals you've
           actually hired — for anyone else, this section doesn't appear.

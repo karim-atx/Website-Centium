@@ -34,10 +34,19 @@ export interface DirectoryListing {
   /** From professional_rating_summary, via the view. Null until reviewed. */
   averageRating: number | null;
   reviewCount: number;
+  /** The CV's one-line headline. */
+  headline: string | null;
+  skills: string[];
+  /**
+   * At least one licence verified by the review team and still shown (not
+   * expired, or shown after expiry by choice). The view computes it with the
+   * database's own verified rule; nothing here re-derives it.
+   */
+  hasVerifiedLicence: boolean;
 }
 
 const LISTING_COLUMNS =
-  "profile_id, first_name, avatar_url, professional_subtype, specialty, location, bio, monthly_rate, consultation_rate, payment_modalities, average_rating, review_count";
+  "profile_id, first_name, avatar_url, professional_subtype, specialty, location, bio, monthly_rate, consultation_rate, payment_modalities, average_rating, review_count, headline, skills, has_verified_licence";
 
 /**
  * The view's row as it actually is.
@@ -64,6 +73,9 @@ type DirectoryRow = {
   payment_modalities: PaymentModality[] | null;
   average_rating: number | null;
   review_count: number | null;
+  headline: string | null;
+  skills: string[] | null;
+  has_verified_licence: boolean | null;
 };
 
 const toListing = (r: DirectoryRow & { profile_id: string }): DirectoryListing => ({
@@ -79,6 +91,9 @@ const toListing = (r: DirectoryRow & { profile_id: string }): DirectoryListing =
   paymentModalities: r.payment_modalities ?? [],
   averageRating: r.average_rating,
   reviewCount: r.review_count ?? 0,
+  headline: r.headline,
+  skills: r.skills ?? [],
+  hasVerifiedLicence: !!r.has_verified_licence,
 });
 
 export type DirectoryResult =
