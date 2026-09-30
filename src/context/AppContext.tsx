@@ -497,10 +497,9 @@ interface AppState {
   activeSession: ActiveSession;
   setActiveSession: (session: ActiveSession | ((prev: ActiveSession) => ActiveSession)) => void;
 
-  // Handover 2026-09-29, 03 "Sex-driven derived values" (MO11, WO5/WO6):
-  // read reactively by everything that shows cycle / pregnancy content and
-  // by the Library body map. Never used to add or remove persisted items.
-  hasCycleFeatures: boolean;
+  // Handover 2026-09-29, 03 "Sex-driven derived values" (WO5/WO6): the
+  // Library body map's figure, derived from sex at render. (Cycle and
+  // pregnancy visibility is cycleOffered, below; MO11.)
   bodyMapVariant: "male" | "female" | "androgynous";
   /**
    * MO11: whether this profile is offered the cycle and pregnancy section at
@@ -2116,6 +2115,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     caloriesBurned: null,
   });
 
+  // HO5.1 removed the voice notice card; drop its old dismissal flag from
+  // storage once (nothing reads it).
+  useEffect(() => {
+    try {
+      localStorage.removeItem("centium-state:voiceDisclosureSeen");
+    } catch {
+      /* storage unavailable: nothing to clean */
+    }
+  }, []);
   const [widgets, setWidgets] = usePersistentState<WidgetConfig[]>("widgets", defaultWidgets);
   // Decision 7: a board saved before Water and Food were fixed large is
   // migrated once, in place.
@@ -4034,8 +4042,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return undefined;
   };
   // WO1.1: folders reorder by drag and drop, only among siblings sharing a
-  // parent. The whole sibling group is renumbered 0..n-1 (the Move up/down
-  // this replaced learned that writing only the moved pair leaves ties).
+  // parent. The whole sibling group is renumbered 0..n-1: writing only the
+  // moved pair would leave ties.
   const reorderRoutineFolders: AppState["reorderRoutineFolders"] = async (parentId, orderedIds) => {
     const parent = parentId ?? null;
     const isSibling = (f: RoutineFolder) => (f.parentId ?? null) === parent;
@@ -4852,6 +4860,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  // 03's hasCycleFeatures, kept internal: surfaces read cycleOffered.
   const hasCycleFeatures = user.sex === "female" || user.sex === "other";
   const cycleOffered = hasCycleFeatures || !!cycleSettings?.shownForAnySex;
   // MO11: the pregnancy calorie addition follows the same visibility rule as
@@ -5739,7 +5748,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearPausedSession,
       activeSession,
       setActiveSession,
-      hasCycleFeatures,
       cycleOffered,
       setCycleTracking,
       bodyMapVariant: user.sex === "male" ? "male" : user.sex === "female" ? "female" : "androgynous",

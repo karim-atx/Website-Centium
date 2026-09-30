@@ -4,7 +4,7 @@ import type React from "react";
 // 2026-09-29 handover (WO23, WO24) only the Set options RPE chips use it. Selected = #A299DE
 // fill + white ink; idle = white with a 1px #E7E7EC border. Radius and
 // padding differ per row, so callers pass them.
-export const sessionOptionStyle = (
+const sessionOptionStyle = (
   selected: boolean,
   shape: { borderRadius: number; padding: string }
 ): React.CSSProperties => ({

@@ -342,20 +342,6 @@ export const TIMEZONE_BODY =
   "you pick one yourself.";
 export const TIMEZONE_USE_DEVICE = "Use this device's zone";
 
-export const CONTRACEPTION_LABEL: Record<string, string> = {
-  none: "None",
-  pill_combined: "Combined pill",
-  pill_progestin: "Progestin-only pill",
-  iud_hormonal: "Hormonal IUD",
-  iud_copper: "Copper IUD",
-  implant: "Implant",
-  injection: "Injection",
-  ring: "Ring",
-  patch: "Patch",
-  condom: "Condoms",
-  other: "Other",
-};
-
 export const CONDITION_LABEL: Record<string, string> = {
   pcos: "PCOS",
   endometriosis: "Endometriosis",

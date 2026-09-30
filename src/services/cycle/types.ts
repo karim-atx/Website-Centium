@@ -104,30 +104,6 @@ export const MUCUS_OPTIONS: readonly CervicalMucus[] = [
 export const LH_OPTIONS: readonly LhResult[] = ["negative", "positive", "peak"];
 export const PREGNANCY_TEST_OPTIONS: readonly PregnancyTest[] = ["negative", "positive"];
 export const SEX_ACTIVITY_OPTIONS: readonly SexActivity[] = ["none", "protected", "unprotected"];
-/**
- * STILL THE VOCABULARY, NO LONGER A cycle_settings COLUMN.
- *
- * Database-Atraxia 20260924470000 moved contraception out of cycle_settings
- * into contraception_plans, where a method carries a start date, a pack
- * schedule and reminder times — a plan rather than a label. The enum is
- * unchanged and this list is what part 2's contraception screens will offer;
- * part 1 does not read or write it, because a one-tap chip cannot express a
- * plan and writing half of one would be worse than not offering it.
- */
-export const CONTRACEPTION_OPTIONS: readonly Contraception[] = [
-  "none",
-  "pill_combined",
-  "pill_progestin",
-  "iud_hormonal",
-  "iud_copper",
-  "implant",
-  "injection",
-  "ring",
-  "patch",
-  "condom",
-  "other",
-];
-
 /** The bounds cycle_settings' CHECKs enforce. */
 export const SETTINGS_LIMITS = {
   cycleLength: { min: 15, max: 90 },

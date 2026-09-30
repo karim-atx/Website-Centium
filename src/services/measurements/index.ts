@@ -154,27 +154,6 @@ export async function getMeasurements(userId: string): Promise<MeasurementsResul
   return { ok: true, bySite: groupBySite(data ?? []) };
 }
 
-/** The same read, for a client a professional holds the grant for. */
-export async function getClientMeasurements(clientId: string): Promise<MeasurementsResult> {
-  const { data, error } = await supabase
-    .from("health_metrics")
-    .select(SELECT)
-    .eq("user_id", clientId)
-    .in("metric_type", MEASUREMENT_TYPES)
-    .order("recorded_at", { ascending: false })
-    .order("created_at", { ascending: false });
-
-  if (error) {
-    console.error("[measurements] Could not load a client's measurements:", error.message);
-    return { ok: false, message: describe(error) };
-  }
-  // RLS decides what came back. A client who has not granted
-  // `body_measurements` produces zero rows here rather than an error, which
-  // is why the caller must tell "not shared" from "nothing logged" by asking
-  // about the GRANT and never by counting rows.
-  return { ok: true, bySite: groupBySite(data ?? []) };
-}
-
 type Row = { id: string; metric_type: string; value: number | string; recorded_at: string };
 
 function groupBySite(rows: Row[]): Partial<Record<MeasurementType, MeasurementReading[]>> {

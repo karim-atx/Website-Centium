@@ -1,5 +1,4 @@
 import type { LoggedExercise, LoggedSet, SetOutcome, SetType, WorkoutSession } from "../../types";
-import { estimate1RM } from "./index";
 
 /**
  * Handover 2026-09-29 set types (02 "Set types and numbering"): ONE type per
@@ -74,67 +73,6 @@ export function exerciseKey(ex: Pick<LoggedExercise, "catalogExerciseId" | "cust
   if (ex.catalogExerciseId) return `c:${ex.catalogExerciseId}`;
   if (ex.customExerciseId) return `u:${ex.customExerciseId}`;
   return `n:${ex.name.trim().toLowerCase()}`;
-}
-
-/** The best estimated 1RM (Epley) among an exercise's working sets, or null. */
-export function best1RM(sets: LoggedSet[]): number | null {
-  let best: number | null = null;
-  for (const s of sets) {
-    if (!isWorkingSet(s)) continue;
-    const e = estimate1RM(s.weightKg, s.reps);
-    if (best === null || e > best) best = e;
-  }
-  return best;
-}
-
-export interface LiftSummary {
-  key: string;
-  name: string;
-  /** Best estimate across all qualifying sets ever logged. */
-  oneRepMax: number;
-  /**
-   * Approved decision 21: best of the last 30 days minus the best before
-   * that, so a drop can show. Null when either window has no working sets.
-   */
-  change30d: number | null;
-  /** Per-session best, oldest first. */
-  history: { sessionId: string; date: string; oneRepMax: number; isPr: boolean }[];
-}
-
-/** Every lift's estimated 1RM, from the logged sessions (03 Calculations). */
-export function liftSummaries(sessions: WorkoutSession[], today = new Date()): LiftSummary[] {
-  const cutoff = new Date(today);
-  cutoff.setDate(cutoff.getDate() - 30);
-  const cutoffIso = cutoff.toISOString().slice(0, 10);
-  const byKey = new Map<string, LiftSummary & { recent: number | null; before: number | null }>();
-
-  const ordered = [...sessions].sort((a, b) => a.startedAt.localeCompare(b.startedAt));
-  for (const session of ordered) {
-    for (const ex of session.exercises) {
-      const est = best1RM(ex.sets);
-      if (est === null) continue;
-      const key = exerciseKey(ex);
-      const entry =
-        byKey.get(key) ??
-        ({ key, name: ex.name, oneRepMax: 0, change30d: null, history: [], recent: null, before: null } as LiftSummary & {
-          recent: number | null;
-          before: number | null;
-        });
-      entry.name = ex.name;
-      entry.oneRepMax = Math.max(entry.oneRepMax, est);
-      entry.history.push({ sessionId: session.id, date: session.date, oneRepMax: est, isPr: ex.sets.some((s) => setKind(s) === "pr") });
-      if (session.date >= cutoffIso) entry.recent = Math.max(entry.recent ?? 0, est);
-      else entry.before = Math.max(entry.before ?? 0, est);
-      byKey.set(key, entry);
-    }
-  }
-
-  return [...byKey.values()]
-    .map(({ recent, before, ...rest }) => ({
-      ...rest,
-      change30d: recent !== null && before !== null ? Math.round((recent - before) * 10) / 10 : null,
-    }))
-    .sort((a, b) => b.oneRepMax - a.oneRepMax);
 }
 
 /**

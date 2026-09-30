@@ -1,5 +1,5 @@
 import { countsTowardVolume } from "./session";
-import type { LoggedExercise, LoggedSet } from "../../types";
+import type { LoggedSet } from "../../types";
 
 /** Epley formula — a standard, simple estimated-1RM calculation. */
 export function estimate1RM(weightKg: number, reps: number): number {
@@ -17,10 +17,6 @@ export function estimate1RM(weightKg: number, reps: number): number {
  */
 export function volumeForSets(sets: LoggedSet[]): number {
   return sets.filter(countsTowardVolume).reduce((sum, s) => sum + s.reps * s.weightKg, 0);
-}
-
-export function volumeForSession(exercises: LoggedExercise[]): number {
-  return exercises.reduce((sum, ex) => sum + volumeForSets(ex.sets), 0);
 }
 
 /**
