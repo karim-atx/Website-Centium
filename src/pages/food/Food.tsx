@@ -36,11 +36,11 @@ import { foodTabs, type Tab } from "./foodTabs";
 const diaryMealOrder: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
 
 // Master handover, CentiumTabFrame `food.diary` with quick-add "timeOfDay":
-// the quick-add tiles read "Snack" while the meal cards keep mealLabels'
-// "Snacks". Each tile carries its own sampled fill and time-of-day glyph.
+// the quick-add tiles, like the meal cards, read "Snacks" (approved
+// decision 7). Each tile carries its own sampled fill and time-of-day glyph.
 const quickAddTiles: Record<MealType, { label: string; fill: string; Icon: typeof Sunrise }> = {
   breakfast: { label: "Breakfast", fill: "#BEB4E6", Icon: Sunrise },
-  snack: { label: "Snack", fill: "#B1A5DF", Icon: Clock },
+  snack: { label: "Snacks", fill: "#B1A5DF", Icon: Clock },
   lunch: { label: "Lunch", fill: "#B1A5E0", Icon: Sun },
   dinner: { label: "Dinner", fill: "#9284C4", Icon: Sunset },
 };

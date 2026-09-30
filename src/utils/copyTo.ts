@@ -5,7 +5,7 @@ import type { MealType } from "../types";
 export const COPY_MEALS: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
 export const COPY_MEAL_LABEL: Record<MealType, string> = {
   breakfast: "Breakfast",
-  snack: "Snack",
+  snack: "Snacks",
   lunch: "Lunch",
   dinner: "Dinner",
 };

@@ -85,10 +85,10 @@ export const MacroStrip: React.FC<{ t: MacroTotals; note?: string }> = ({ t, not
   );
 };
 
-// Master handover item 11: meal chips run Breakfast, Snack, Lunch, Dinner
-// (singular "Snack"; the shared mealLabels keeps "Snacks" for other screens).
+// Master handover item 11: meal chips run Breakfast, Snacks, Lunch, Dinner
+// (approved decision 7: "Snacks" everywhere, from the shared mealLabels).
 export const PREP_MEAL_ORDER: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
-export const prepMealLabel = (m: MealType) => (m === "snack" ? "Snack" : mealLabels[m]);
+export const prepMealLabel = (m: MealType) => mealLabels[m];
 
 // Item 11: solid primary fills for the flow's own buttons (List "Create",
 // Create "Save", Detail "Add to Diary") and the selected meal pill — teal for
