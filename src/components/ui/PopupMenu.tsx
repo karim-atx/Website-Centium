@@ -10,6 +10,8 @@ export interface PopupMenuOption<V extends string = string> {
   /** Destructive option: text in rgb(192,57,43). */
   destructive?: boolean;
   disabled?: boolean;
+  /** A short line under the label, e.g. why a disabled option is unavailable. */
+  note?: string;
   /** Optional right-hand detail, e.g. the current rest time (WO8 exercise menu). */
   trailing?: React.ReactNode;
 }
@@ -163,7 +165,14 @@ export function PopupMenu<V extends string>({
               }}
             >
               {opt.icon && <span className="flex-none flex">{opt.icon}</span>}
-              <span className="flex-1 min-w-0">{opt.label}</span>
+              <span className="flex-1 min-w-0">
+                {opt.label}
+                {opt.note && (
+                  <span className="block" style={{ fontSize: 10.5, fontWeight: 500, marginTop: 1, color: "#8C8378" }}>
+                    {opt.note}
+                  </span>
+                )}
+              </span>
               {opt.trailing && <span className="flex-none">{opt.trailing}</span>}
               {on && <Check size={13} strokeWidth={3} className="flex-none" style={{ display: "block", color: filled ? "#FFFFFF" : "#7D6BB5" }} />}
             </button>

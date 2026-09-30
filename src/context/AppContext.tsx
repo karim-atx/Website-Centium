@@ -106,6 +106,7 @@ import {
 } from "../services/routines/order";
 import { cleanRoutineCopy } from "../services/routines/duplicate";
 import { displayedFolderColor, needsSavedColor } from "../data/folderColors";
+import { MAX_DEPTH_NOTE, canAddSubfolder, canMoveFolder } from "../services/routines/folderDepth";
 import { mockForumPosts } from "../data/mockForum";
 import { estimate1RM } from "../services/workout";
 import {
@@ -578,6 +579,11 @@ interface AppState {
   updateRoutineFolder: (id: string, patch: Partial<RoutineFolder>) => Promise<string | undefined>;
   /** WO1.1: folder drag and drop — the sibling group under parentId, in its new order. */
   reorderRoutineFolders: (parentId: string | null, orderedIds: string[]) => Promise<string | undefined>;
+  /**
+   * A folder (with everything in it) moved under another parent (null = top
+   * level) at index among its new siblings. Refused past five levels deep.
+   */
+  moveRoutineFolder: (id: string, parentId: string | null, index: number) => Promise<string | undefined>;
   /** WO1.1: a routine dropped at index in a folder (null = Unfiled). */
   placeRoutine: (id: string, folderId: string | null, index: number) => Promise<string | undefined>;
   /** WO1.1: a clean copy directly below the original, named "[name] (copy)". */
@@ -4055,6 +4061,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     parentId = null,
     color
   ) => {
+    // Five levels at most (folderDepth); the menu disables "Add subfolder" at
+    // level 5, and this refuses whatever gets past it.
+    if (parentId && !canAddSubfolder(parentId, routineFolders)) return `${MAX_DEPTH_NOTE}.`;
     // Position is the count of existing siblings, which is where the UI
     // appends it. The column is NOT NULL and has no default.
     const position = routineFolders.filter((f) => (f.parentId ?? null) === (parentId ?? null)).length;
@@ -4149,6 +4158,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setRoutineFolders(before);
       return result.message ?? "Could not reorder those folders.";
     }
+    return undefined;
+  };
+
+  const moveRoutineFolder: AppState["moveRoutineFolder"] = async (id, parentId, index) => {
+    const parent = parentId ?? null;
+    const moving = routineFolders.find((f) => f.id === id);
+    if (!moving) return undefined;
+    const siblingIds = (of: string | null) =>
+      routineFolders.filter((f) => (f.parentId ?? null) === of && f.id !== id).map((f) => f.id);
+    const dest = siblingIds(parent);
+    dest.splice(Math.max(0, Math.min(index, dest.length)), 0, id);
+    // Same parent: an ordinary reorder.
+    if ((moving.parentId ?? null) === parent) return reorderRoutineFolders(parent, dest);
+    if (!canMoveFolder(id, parent, routineFolders)) return `${MAX_DEPTH_NOTE}.`;
+
+    const before = routineFolders;
+    setRoutineFolders((prev) => {
+      const rest = prev.filter((f) => f.id !== id);
+      const moved = { ...moving, parentId: parent };
+      // In the array, just before the sibling that now follows it, else after
+      // the last sibling, else at the end: siblingsOf() reads array order.
+      const next = dest[dest.indexOf(id) + 1];
+      const at = next
+        ? rest.findIndex((f) => f.id === next)
+        : (() => {
+            const lastSibling = [...rest].reverse().find((f) => (f.parentId ?? null) === parent);
+            return lastSibling ? rest.indexOf(lastSibling) + 1 : rest.length;
+          })();
+      return [...rest.slice(0, at), moved, ...rest.slice(at)];
+    });
+    if (!authUserId || !isRemoteRoutineId(id)) return undefined;
+    // The trigger walks parents (ATX16/ATX17) on this write; a refusal puts
+    // the tree back as it was.
+    const moved = await updateRoutineFolderRemote(id, { parentId: parent });
+    if (!moved.ok) {
+      setRoutineFolders(before);
+      return moved.message ?? "Could not move that folder.";
+    }
+    const renumbered = dest.map((fid, position) => ({ id: fid, position })).filter((s) => isRemoteRoutineId(s.id));
+    const placed = await setFolderPositions(renumbered);
+    if (!placed.ok) return placed.message ?? "Could not place that folder.";
     return undefined;
   };
 
@@ -5854,6 +5904,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deleteRoutineFolder,
       updateRoutineFolder,
       reorderRoutineFolders,
+      moveRoutineFolder,
       placeRoutine,
       duplicateRoutine,
       duplicateRoutineFolder,

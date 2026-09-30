@@ -18,6 +18,7 @@ import { FOLDER_SWATCHES, folderFamily, routineFamily, type FolderFamily } from 
 import { BlockSettingsSheet } from "../../components/workout/BlockSettingsSheet";
 import { moveId, routinesIn } from "../../services/routines/order";
 import { useRoutineDrag, type DragItem, type DropTarget } from "./useRoutineDrag";
+import { MAX_DEPTH_NOTE, canAddSubfolder } from "../../services/routines/folderDepth";
 import {
   canGroup,
   groupIntoRuns,
@@ -659,7 +660,11 @@ export default function RoutinesTab() {
         open={!!menuFolder}
         anchor={menu?.anchor ?? null}
         onClose={() => setMenu(null)}
-        options={FOLDER_MENU}
+        options={
+          menuFolder && !canAddSubfolder(menuFolder.id, routineFolders)
+            ? FOLDER_MENU.map((o) => (o.value === "subfolder" ? { ...o, disabled: true, note: MAX_DEPTH_NOTE } : o))
+            : FOLDER_MENU
+        }
         onSelect={(action) => menuFolder && onFolderAction(menuFolder, action)}
       />
       <PopupMenu<RoutineAction>
