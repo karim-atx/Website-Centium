@@ -581,18 +581,20 @@ export const AddFoodSheet: React.FC<{
   // and a save / advanced-nutrients row.
   if (customMode) {
     return (
-      <BottomSheet open={open} onClose={resetAndClose} title="Create Custom Food" onBack={() => setCustomMode(false)}>
-        <CustomFoodForm
-          onLookUpBarcode={() => {
-            setCustomMode(false);
-            openBarcode();
-          }}
-          onSaved={(food) => {
-            setCustomMode(false);
-            setSelectedFood(food);
-          }}
-        />
-      </BottomSheet>
+      <CustomFoodForm
+        open={open}
+        onClose={resetAndClose}
+        title="Create Custom Food"
+        onBack={() => setCustomMode(false)}
+        onLookUpBarcode={() => {
+          setCustomMode(false);
+          openBarcode();
+        }}
+        onSaved={(food) => {
+          setCustomMode(false);
+          setSelectedFood(food);
+        }}
+      />
     );
   }
 

@@ -769,21 +769,20 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
   if (creatingFor !== null) {
     const pending = items[creatingFor];
     return (
-      <BottomSheet
+      <CustomFoodForm
         open={open}
         onClose={handleClose}
         title="Create food"
         onBack={() => setCreatingFor(null)}
-      >
-        <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3.5 py-2.5 mb-4">
-          Heard “{pending?.spokenName}”. Fill in what it is and it joins this recording with
-          its nutrition.
-        </p>
-        <CustomFoodForm
-          initialName={pending?.spokenName}
-          onSaved={(food) => attachCreatedFood(creatingFor, food)}
-        />
-      </BottomSheet>
+        intro={
+          <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3.5 py-2.5 mb-4">
+            Heard “{pending?.spokenName}”. Fill in what it is and it joins this recording with
+            its nutrition.
+          </p>
+        }
+        initialName={pending?.spokenName}
+        onSaved={(food) => attachCreatedFood(creatingFor, food)}
+      />
     );
   }
 

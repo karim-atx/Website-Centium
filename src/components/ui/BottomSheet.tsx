@@ -23,6 +23,8 @@ interface BottomSheetProps {
    * stays above the home indicator and rides above the on-screen keyboard.
    */
   footer?: React.ReactNode;
+  /** FO8: a full-width 1px #F2F2F2 rule above the footer, 8px over its content. */
+  footerRule?: boolean;
   /**
    * "tall" raises the max height to nearly the full viewport, minus a small
    * top inset (FO8). The default max is 88% of the dynamic viewport. Either
@@ -69,6 +71,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   tone,
   handle,
   titleIcon,
+  footerRule,
 }) => {
   const band = tone?.band ?? "#F0EEFD";
   const border = tone?.border ?? "#7248F8";
@@ -181,7 +184,14 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             {children}
           </div>
           {footer && (
-            <div className="shrink-0" style={{ background: body, padding: `12px 20px ${bottomPad}` }}>
+            <div
+              className="shrink-0"
+              style={{
+                background: body,
+                padding: `${footerRule ? 8 : 12}px 20px ${bottomPad}`,
+                borderTop: footerRule ? "1px solid #F2F2F2" : undefined,
+              }}
+            >
               {footer}
             </div>
           )}

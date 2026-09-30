@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { ChevronDown, ScanLine, SlidersHorizontal, UtensilsCrossed } from "lucide-react";
 import { SheetField } from "./SheetField";
+import { BottomSheet } from "../ui/BottomSheet";
 import { LOGO_TONES } from "./logoTones";
 import { NUTRIENT_SECTIONS } from "../../data/nutrientSchema";
 import { foodCategories } from "../../data/mockFoods";
@@ -22,10 +23,11 @@ import type { Food } from "../../types";
 // logo tones and the advanced-nutrient set in step, and they would not have
 // stayed in step.
 //
-// IT RENDERS A BODY, NOT A SHEET. Each caller already owns a BottomSheet and
-// its own idea of what "back" means: Add Food returns to the food list, the
-// voice logger returns to its review. Wrapping a sheet in here would have
-// meant either a sheet inside a sheet or a title this component cannot know.
+// IT RENDERS ITS OWN SHEET (handover 2026-09-29 FO8): near full height, with
+// the Save row pinned as a sticky footer so it is visible on open from every
+// entry point while the form scrolls above it. Each caller still says what
+// the sheet is called and what "back" means: Add Food returns to the food
+// list, the voice logger returns to its review.
 
 export interface CustomFoodFormProps {
   /** Prefills the name field — the voice logger passes what was heard. */
@@ -37,12 +39,23 @@ export interface CustomFoodFormProps {
    * logger, which has no such step.
    */
   onLookUpBarcode?: () => void;
+  open: boolean;
+  onClose: () => void;
+  onBack?: () => void;
+  title: string;
+  /** Shown above the form (the voice logger's "Heard …" note). */
+  intro?: React.ReactNode;
 }
 
 export const CustomFoodForm: React.FC<CustomFoodFormProps> = ({
   initialName,
   onSaved,
   onLookUpBarcode,
+  open,
+  onClose,
+  onBack,
+  title,
+  intro,
 }) => {
   const { authUserId, addCustomFood } = useApp();
   const [draft, setDraft] = useState({
@@ -172,210 +185,9 @@ export const CustomFoodForm: React.FC<CustomFoodFormProps> = ({
     ),
   }));
 
-  return (
-    <div className="flex flex-col animate-fade-slide-up" style={{ gap: 16 }}>
-      {field("Food name", "name", "Mom's Kibbeh")}
-      {field("Serving size", "serving", "1 piece")}
-
-      <div>
-        <span className="block" style={{ fontSize: 12, fontWeight: 600, color: "#5B5349", marginBottom: 6 }}>
-          Logo
-        </span>
-        <div className="flex no-scrollbar" style={{ flexWrap: "nowrap", gap: 8, overflowX: "auto", margin: "0 -20px", padding: "0 20px" }}>
-          {foodCategories.map((c) => {
-            const Icon = foodCategoryIcon[c.id] ?? UtensilsCrossed;
-            const active = draft.category === c.id;
-            return (
-              <button
-                key={c.id}
-                // Tapping the already-selected tile steps its colour on,
-                // so the saved food can be told apart at a glance.
-                onClick={() =>
-                  active
-                    ? setLogoTone((t) => (t + 1) % LOGO_TONES.length)
-                    : setDraft((d) => ({ ...d, category: c.id }))
-                }
-                aria-label={c.label}
-                title={active ? "Tap again for another colour" : c.label}
-                className="tap flex items-center justify-center"
-                style={{
-                  width: 44,
-                  height: 44,
-                  flex: "none",
-                  borderRadius: 16,
-                  border: `1px solid ${active ? tone.bg : "#E7E7EC"}`,
-                  background: active ? tone.bg : "#FFFFFF",
-                  color: active ? tone.fg : "#241F1B",
-                  transition: "background-color .18s ease, border-color .18s ease",
-                }}
-              >
-                <Icon size={18} />
-              </button>
-            );
-          })}
-        </div>
-        <p style={{ margin: "7px 2px 0", fontSize: 10, color: "#8C8378" }}>
-          Tap the selected icon again to change its colour.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2" style={{ gap: 12 }}>
-        {field("Calories", "calories", "0", true)}
-        {field("Protein (g)", "protein", "0", true)}
-        {field("Carbs (g)", "carbs", "0", true)}
-        {field("Fat (g)", "fat", "0", true)}
-      </div>
-
-      {/* Barcode sits after the macros, just before the save / advanced row. */}
-      <div style={{ border: "1px solid rgba(174,161,220,0.4)", borderRadius: 14, background: "rgba(174,161,220,0.07)", padding: 12 }}>
-        <p
-          style={{
-            margin: "0 0 8px",
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: "0.1em",
-            textTransform: "uppercase",
-            color: "#5F5093",
-          }}
-        >
-          Barcode
-        </p>
-        <div className="flex" style={{ gap: 8 }}>
-          <input
-            value={barcode}
-            onChange={(e) => setBarcode(e.target.value.replace(/[^\dA-Za-z]/g, ""))}
-            placeholder="Enter number manually"
-            inputMode="numeric"
-            aria-label="Barcode"
-            className="placeholder:text-charcoal-faint focus:outline-none"
-            style={{
-              flex: 1,
-              minWidth: 0,
-              borderRadius: 10,
-              background: "#FFFFFF",
-              border: "1px solid rgba(36,31,27,0.1)",
-              padding: "10px 12px",
-              fontSize: 13,
-              color: "#241F1B",
-            }}
-          />
-          {/* Only where there is a barcode screen to go to. The voice
-              logger opens this form over its own review list and has no
-              such step, so it passes no handler and the shortcut is not
-              rendered rather than being a dead control. */}
-          {onLookUpBarcode && (
-            <button
-              onClick={onLookUpBarcode}
-              aria-label="Look up barcode"
-              className="tap flex items-center justify-center"
-              style={{ flex: "none", width: 44, height: 40, borderRadius: 10, background: "#A092E0", border: "none" }}
-            >
-              <ScanLine size={17} style={{ color: "#FFFFFF" }} />
-            </button>
-          )}
-        </div>
-        <p style={{ margin: "7px 2px 0", fontSize: 10, color: "#8C8378" }}>
-          Optional. Adding it lets anyone scanning this pack find your food.
-        </p>
-      </div>
-
-      {advOpen && (
-        <div className="flex flex-col animate-fade-slide-up" style={{ gap: 8 }}>
-          <p style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>
-            Per serving. Leave anything you do not have blank.
-          </p>
-          {advGroups.map((sec) => {
-            const groupOpen = !!openGroups[sec.id];
-            const filled = sec.rows.filter((r) => (nutrients[r.key] ?? "").trim() !== "").length;
-            return (
-              <div
-                key={sec.id}
-                style={{ border: "1px solid rgba(174,161,220,0.34)", borderRadius: 12, overflow: "hidden", background: "#FFFFFF" }}
-              >
-                <button
-                  onClick={() => setOpenGroups((g) => ({ ...g, [sec.id]: !g[sec.id] }))}
-                  className="tap w-full flex items-center text-left"
-                  style={{
-                    gap: 8,
-                    padding: "10px 12px",
-                    background: groupOpen ? "rgba(174,161,220,0.12)" : "#FFFFFF",
-                    border: "none",
-                  }}
-                >
-                  <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 700, color: "#241F1B" }}>{sec.name}</span>
-                  {filled > 0 && (
-                    <span
-                      style={{
-                        fontSize: 10,
-                        fontWeight: 700,
-                        color: "#5F5093",
-                        background: "rgba(174,161,220,0.22)",
-                        borderRadius: 6,
-                        padding: "2px 6px",
-                      }}
-                    >
-                      {filled} set
-                    </span>
-                  )}
-                  <span
-                    className="flex"
-                    style={{
-                      color: "#8C8378",
-                      transform: groupOpen ? "rotate(180deg)" : "none",
-                      transition: "transform .18s ease",
-                    }}
-                  >
-                    <ChevronDown size={14} />
-                  </span>
-                </button>
-                {groupOpen && (
-                  <div style={{ padding: "2px 12px 10px" }}>
-                    {sec.rows.map((r, i) => (
-                      <div
-                        key={r.key}
-                        className="flex items-center"
-                        style={{ gap: 8, padding: "5px 0", borderTop: i === 0 ? "0" : "1px solid rgba(36,31,27,0.05)" }}
-                      >
-                        <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: "#241F1B" }}>{r.name}</span>
-                        <input
-                          value={nutrients[r.key] ?? ""}
-                          onChange={(e) =>
-                            setNutrients((n) => ({ ...n, [r.key]: e.target.value.replace(/[^\d.]/g, "") }))
-                          }
-                          placeholder="0"
-                          inputMode="decimal"
-                          aria-label={`${r.name}${r.unit ? ` (${r.unit})` : ""}`}
-                          className="focus:outline-none"
-                          style={{
-                            width: 62,
-                            flex: "none",
-                            borderRadius: 8,
-                            background: "#F5F5F6",
-                            border: "1px solid rgba(36,31,27,0.07)",
-                            padding: "5px 8px",
-                            fontSize: 12,
-                            color: "#241F1B",
-                            textAlign: "right",
-                          }}
-                        />
-                        <span style={{ width: 34, flex: "none", fontSize: 10.5, color: "#8C8378" }}>{r.unit || ""}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-
-      {error && (
-        <p className="text-xs font-semibold text-status-high text-center" style={{ margin: 0 }}>
-          {error}
-        </p>
-      )}
-
-      {/* Three-quarters save, one-quarter advanced toggle. */}
+  // Three-quarters save, one-quarter advanced toggle, and the note under them.
+  const saveRow = (
+    <div className="flex flex-col" style={{ gap: 8 }}>
       <div className="flex" style={{ gap: 8 }}>
         <button
           onClick={saveCustomFood}
@@ -421,5 +233,213 @@ export const CustomFoodForm: React.FC<CustomFoodFormProps> = ({
         alongside the database.
       </p>
     </div>
+  );
+
+  return (
+    <BottomSheet open={open} onClose={onClose} onBack={onBack} title={title} size="tall" footer={saveRow} footerRule>
+      {intro}
+      <div className="flex flex-col animate-fade-slide-up" style={{ gap: 16 }}>
+        {field("Food name", "name", "Mom's Kibbeh")}
+        {field("Serving size", "serving", "1 piece")}
+
+        <div>
+          <span className="block" style={{ fontSize: 12, fontWeight: 600, color: "#5B5349", marginBottom: 6 }}>
+            Logo
+          </span>
+          <div className="flex no-scrollbar" style={{ flexWrap: "nowrap", gap: 8, overflowX: "auto", margin: "0 -20px", padding: "0 20px" }}>
+            {foodCategories.map((c) => {
+              const Icon = foodCategoryIcon[c.id] ?? UtensilsCrossed;
+              const active = draft.category === c.id;
+              return (
+                <button
+                  key={c.id}
+                  // Tapping the already-selected tile steps its colour on,
+                  // so the saved food can be told apart at a glance.
+                  onClick={() =>
+                    active
+                      ? setLogoTone((t) => (t + 1) % LOGO_TONES.length)
+                      : setDraft((d) => ({ ...d, category: c.id }))
+                  }
+                  aria-label={c.label}
+                  title={active ? "Tap again for another colour" : c.label}
+                  className="tap flex items-center justify-center"
+                  style={{
+                    width: 44,
+                    height: 44,
+                    flex: "none",
+                    borderRadius: 16,
+                    border: `1px solid ${active ? tone.bg : "#E7E7EC"}`,
+                    background: active ? tone.bg : "#FFFFFF",
+                    color: active ? tone.fg : "#241F1B",
+                    transition: "background-color .18s ease, border-color .18s ease",
+                  }}
+                >
+                  <Icon size={18} />
+                </button>
+              );
+            })}
+          </div>
+          <p style={{ margin: "7px 2px 0", fontSize: 10, color: "#8C8378" }}>
+            Tap the selected icon again to change its colour.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2" style={{ gap: 12 }}>
+          {field("Calories", "calories", "0", true)}
+          {field("Protein (g)", "protein", "0", true)}
+          {field("Carbs (g)", "carbs", "0", true)}
+          {field("Fat (g)", "fat", "0", true)}
+        </div>
+
+        {/* Barcode sits after the macros, just before the save / advanced row. */}
+        <div style={{ border: "1px solid rgba(174,161,220,0.4)", borderRadius: 14, background: "rgba(174,161,220,0.07)", padding: 12 }}>
+          <p
+            style={{
+              margin: "0 0 8px",
+              fontSize: 11,
+              fontWeight: 700,
+              letterSpacing: "0.1em",
+              textTransform: "uppercase",
+              color: "#5F5093",
+            }}
+          >
+            Barcode
+          </p>
+          <div className="flex" style={{ gap: 8 }}>
+            <input
+              value={barcode}
+              onChange={(e) => setBarcode(e.target.value.replace(/[^\dA-Za-z]/g, ""))}
+              placeholder="Enter number manually"
+              inputMode="numeric"
+              aria-label="Barcode"
+              className="placeholder:text-charcoal-faint focus:outline-none"
+              style={{
+                flex: 1,
+                minWidth: 0,
+                borderRadius: 10,
+                background: "#FFFFFF",
+                border: "1px solid rgba(36,31,27,0.1)",
+                padding: "10px 12px",
+                fontSize: 13,
+                color: "#241F1B",
+              }}
+            />
+            {/* Only where there is a barcode screen to go to. The voice
+                logger opens this form over its own review list and has no
+                such step, so it passes no handler and the shortcut is not
+                rendered rather than being a dead control. */}
+            {onLookUpBarcode && (
+              <button
+                onClick={onLookUpBarcode}
+                aria-label="Look up barcode"
+                className="tap flex items-center justify-center"
+                style={{ flex: "none", width: 44, height: 40, borderRadius: 10, background: "#A092E0", border: "none" }}
+              >
+                <ScanLine size={17} style={{ color: "#FFFFFF" }} />
+              </button>
+            )}
+          </div>
+          <p style={{ margin: "7px 2px 0", fontSize: 10, color: "#8C8378" }}>
+            Optional. Adding it lets anyone scanning this pack find your food.
+          </p>
+        </div>
+
+        {advOpen && (
+          <div className="flex flex-col animate-fade-slide-up" style={{ gap: 8 }}>
+            <p style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>
+              Per serving. Leave anything you do not have blank.
+            </p>
+            {advGroups.map((sec) => {
+              const groupOpen = !!openGroups[sec.id];
+              const filled = sec.rows.filter((r) => (nutrients[r.key] ?? "").trim() !== "").length;
+              return (
+                <div
+                  key={sec.id}
+                  style={{ border: "1px solid rgba(174,161,220,0.34)", borderRadius: 12, overflow: "hidden", background: "#FFFFFF" }}
+                >
+                  <button
+                    onClick={() => setOpenGroups((g) => ({ ...g, [sec.id]: !g[sec.id] }))}
+                    className="tap w-full flex items-center text-left"
+                    style={{
+                      gap: 8,
+                      padding: "10px 12px",
+                      background: groupOpen ? "rgba(174,161,220,0.12)" : "#FFFFFF",
+                      border: "none",
+                    }}
+                  >
+                    <span style={{ flex: 1, minWidth: 0, fontSize: 12.5, fontWeight: 700, color: "#241F1B" }}>{sec.name}</span>
+                    {filled > 0 && (
+                      <span
+                        style={{
+                          fontSize: 10,
+                          fontWeight: 700,
+                          color: "#5F5093",
+                          background: "rgba(174,161,220,0.22)",
+                          borderRadius: 6,
+                          padding: "2px 6px",
+                        }}
+                      >
+                        {filled} set
+                      </span>
+                    )}
+                    <span
+                      className="flex"
+                      style={{
+                        color: "#8C8378",
+                        transform: groupOpen ? "rotate(180deg)" : "none",
+                        transition: "transform .18s ease",
+                      }}
+                    >
+                      <ChevronDown size={14} />
+                    </span>
+                  </button>
+                  {groupOpen && (
+                    <div style={{ padding: "2px 12px 10px" }}>
+                      {sec.rows.map((r, i) => (
+                        <div
+                          key={r.key}
+                          className="flex items-center"
+                          style={{ gap: 8, padding: "5px 0", borderTop: i === 0 ? "0" : "1px solid rgba(36,31,27,0.05)" }}
+                        >
+                          <span style={{ flex: 1, minWidth: 0, fontSize: 12, color: "#241F1B" }}>{r.name}</span>
+                          <input
+                            value={nutrients[r.key] ?? ""}
+                            onChange={(e) =>
+                              setNutrients((n) => ({ ...n, [r.key]: e.target.value.replace(/[^\d.]/g, "") }))
+                            }
+                            placeholder="0"
+                            inputMode="decimal"
+                            aria-label={`${r.name}${r.unit ? ` (${r.unit})` : ""}`}
+                            className="focus:outline-none"
+                            style={{
+                              width: 62,
+                              flex: "none",
+                              borderRadius: 8,
+                              background: "#F5F5F6",
+                              border: "1px solid rgba(36,31,27,0.07)",
+                              padding: "5px 8px",
+                              fontSize: 12,
+                              color: "#241F1B",
+                              textAlign: "right",
+                            }}
+                          />
+                          <span style={{ width: 34, flex: "none", fontSize: 10.5, color: "#8C8378" }}>{r.unit || ""}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {error && (
+          <p className="text-xs font-semibold text-status-high text-center" style={{ margin: 0 }}>
+            {error}
+          </p>
+        )}
+      </div>
+    </BottomSheet>
   );
 };
