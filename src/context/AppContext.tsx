@@ -2866,7 +2866,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // --- personal records and paused sessions --------------------------------
   //
   // PRs come back NAME-KEYED, which is what every consumer on this side reads
-  // — OneRepMaxesSheet, MetricsTab, the live-set comparison in the session
+  // — MetricsTab and the live-set comparison in the session
   // sheet. The NAME IS RESOLVED THROUGH THE REFERENCE server-side rather than
   // stored on the record, so renaming a custom movement renames its record
   // too, which is the whole argument for keying the table by id.
@@ -3822,9 +3822,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
    * safe: the explicit reference the caller already holds, then the catalog by
    * name, then the user's own movements by name.
    *
-   * The name lookups exist for the two callers that have nothing else — the
-   * manual 1RM correction in OneRepMaxesSheet, and the one-time review of PRs
-   * that were only ever name-keyed. Explicit ids come first because a custom
+   * The name lookups exist for the callers that have nothing else — the 1RM
+   * field in ExerciseSettingsSheet, and the one-time review of PRs that were
+   * only ever name-keyed. Explicit ids come first because a custom
    * movement may legitimately share a name with a catalog one, and guessing
    * that wrong is the mistake custom meals already paid for.
    *

@@ -34,6 +34,13 @@ interface BottomSheetProps {
    * header band, border, title and close ring, and the body/footer fill.
    */
   tone?: { band: string; border: string; title: string; body: string };
+  /**
+   * WO18: a 36×4 #CABCFB grab handle 8px from the top, with the title row
+   * below it (the header is 58px instead of 53).
+   */
+  handle?: boolean;
+  /** WO18: an icon left of the title, the pair centred. */
+  titleIcon?: React.ReactNode;
 }
 
 /**
@@ -60,6 +67,8 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   footer,
   size = "default",
   tone,
+  handle,
+  titleIcon,
 }) => {
   const band = tone?.band ?? "#F0EEFD";
   const border = tone?.border ?? "#7248F8";
@@ -123,7 +132,12 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
           className="relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up"
           style={{ maxHeight, background: band, border: `1px solid ${border}`, borderBottom: "none" }}
         >
-          <div className="shrink-0 flex items-center justify-between" style={{ height: 53, padding: "0 18px" }}>
+          {handle && (
+            <div aria-hidden className="shrink-0 flex justify-center" style={{ paddingTop: 8 }}>
+              <span style={{ width: 36, height: 4, borderRadius: 2, background: "#CABCFB" }} />
+            </div>
+          )}
+          <div className="shrink-0 flex items-center justify-between" style={{ height: handle ? 46 : 53, padding: "0 18px" }}>
             <div className="flex items-center shrink-0" style={{ width: 26 }}>
               {onBack && (
                 // 26px visual on a 44px hit area (01 GLOBAL touch targets).
@@ -139,10 +153,11 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
             </div>
             {title && (
               <h2
-                className="flex-1 min-w-0 text-center truncate"
-                style={{ color: titleColor, fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em" }}
+                className="flex-1 min-w-0 flex items-center justify-center"
+                style={{ color: titleColor, fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em", gap: 9 }}
               >
-                {title}
+                {titleIcon && <span className="flex shrink-0">{titleIcon}</span>}
+                <span className="min-w-0 truncate">{title}</span>
               </h2>
             )}
             {/* 26px slot: headerAction overflows leftward so the title stays
