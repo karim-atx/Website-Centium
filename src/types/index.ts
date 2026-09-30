@@ -517,21 +517,6 @@ export interface ClientHealthNote {
   personalityType?: string;
 }
 
-// V6 (QA 6.0): a professional<->client messaging board, separate from the
-// one-off message sheet already on ProfessionalDetail.
-export interface ProfessionalMessage {
-  id: string;
-  clientId: string;
-  from: "professional" | "client";
-  text: string;
-  at: string; // ISO
-  // V9 (QA 9.0): "alongside sending texts, the client should be able to
-  // send voice notes and attach files/pictures" — text stays the common
-  // case; a message carries at most one of these instead.
-  attachment?: string;
-  voiceNoteSec?: number;
-}
-
 export type MealType = "breakfast" | "lunch" | "snack" | "dinner";
 
 export interface Food {
@@ -1569,14 +1554,6 @@ export interface BusinessClass {
   // QR codes for each client."
   price?: string;
   paymentType?: string;
-}
-
-export interface BusinessMessage {
-  id: string;
-  customerId: string;
-  from: "business" | "customer";
-  text: string;
-  at: string;
 }
 
 // V9 (QA 9.0): "a hub for all clients to share information publicly" — a

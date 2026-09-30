@@ -78,13 +78,9 @@ export const professionalSidebarNavItems: NavItem[] = [
   { to: "/app/professionals/calendar", label: "Calendar", icon: CalendarDays },
   { to: "/app/professionals/templates", label: "Training", icon: ClipboardList },
   { to: "/app/professionals/meal-plans", label: "Nutrition", icon: UtensilsCrossed },
-  // "Messages" used to point at /app/professionals/messages, which since the
-  // messaging rebuild is the business-only thread — still a mock, and not what
-  // a professional means by Messages. More.tsx already drew this distinction;
-  // the sidebar did not, so one route carried two different names depending on
-  // which surface you arrived from.
+  // The "Business messages" entry is gone with the device-only mock behind it;
+  // real conversations, including any with an affiliated business, are here.
   { to: "/app/messages", label: "Messages", icon: MessageCircle },
-  { to: "/app/professionals/messages", label: "Business messages", icon: Store },
   { to: "/app/professionals/health-metrics", label: "Health Metrics", icon: HeartPulse },
   { to: "/app/marketplace", label: "Explore", icon: Store },
   { to: "/app/profile", label: "Profile", icon: UserIcon },
@@ -95,7 +91,7 @@ export const businessSidebarNavItems: NavItem[] = [
   { to: "/app/business/analytics", label: "Analytics", icon: BarChart3 },
   { to: "/app/business/operations", label: "Operations", icon: Briefcase },
   { to: "/app/business/marketplace", label: "Marketplace", icon: Tag },
-  { to: "/app/business/messages", label: "Messages", icon: MessageCircle },
+  { to: "/app/messages", label: "Messages", icon: MessageCircle },
   { to: "/app/business/employees", label: "Employees", icon: Users },
   { to: "/app/business/members", label: "Members", icon: UserPlus },
   { to: "/app/business/classes", label: "Classes", icon: CalendarDays },

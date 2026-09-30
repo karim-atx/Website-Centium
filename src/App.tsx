@@ -29,7 +29,6 @@ import ProfessionalDetail from "./pages/professionals/ProfessionalDetail";
 import CalendarTab from "./pages/professionals/CalendarTab";
 import WorkoutTemplateBuilderTab from "./pages/professionals/WorkoutTemplateBuilderTab";
 import MealPlanBuilderTab from "./pages/professionals/MealPlanBuilderTab";
-import MessagesTab from "./pages/professionals/MessagesTab";
 import Messages from "./pages/messages/Messages";
 import HealthMetricsTab from "./pages/professionals/HealthMetricsTab";
 import Marketplace from "./pages/marketplace/Marketplace";
@@ -37,7 +36,6 @@ import MarketplaceCategoryPage from "./pages/marketplace/MarketplaceCategoryPage
 import BusinessAnalyticsTab from "./pages/marketplace/BusinessAnalyticsTab";
 import BusinessMarketplaceTab from "./pages/marketplace/BusinessMarketplaceTab";
 import BusinessProfileTab from "./pages/marketplace/BusinessProfileTab";
-import BusinessMessagesTab from "./pages/marketplace/BusinessMessagesTab";
 import BusinessEmployeesTab from "./pages/marketplace/BusinessEmployeesTab";
 import BusinessMembersTab from "./pages/marketplace/BusinessMembersTab";
 import BusinessClassesTab from "./pages/marketplace/BusinessClassesTab";
@@ -384,7 +382,9 @@ function AppRoutes() {
         <Route path="/app/professionals/calendar" element={<CalendarTab />} />
         <Route path="/app/professionals/templates" element={<WorkoutTemplateBuilderTab />} />
         <Route path="/app/professionals/meal-plans" element={<MealPlanBuilderTab />} />
-        <Route path="/app/professionals/messages" element={<MessagesTab />} />
+        {/* The device-only business-messaging mocks are hidden until business
+            messaging is real; their old addresses open the real inbox. */}
+        <Route path="/app/professionals/messages" element={<Navigate to="/app/messages" replace />} />
         <Route path="/app/messages" element={<Messages />} />
         <Route path="/app/professionals/health-metrics" element={<HealthMetricsTab />} />
         <Route path="/app/professionals/:id" element={<ProfessionalDetail />} />
@@ -393,7 +393,7 @@ function AppRoutes() {
         <Route path="/app/business/analytics" element={<BusinessAnalyticsTab />} />
         <Route path="/app/business/marketplace" element={<BusinessMarketplaceTab />} />
         <Route path="/app/business/profile" element={<BusinessProfileTab />} />
-        <Route path="/app/business/messages" element={<BusinessMessagesTab />} />
+        <Route path="/app/business/messages" element={<Navigate to="/app/messages" replace />} />
         <Route path="/app/business/employees" element={<BusinessEmployeesTab />} />
         <Route path="/app/business/members" element={<BusinessMembersTab />} />
         <Route path="/app/business/classes" element={<BusinessClassesTab />} />

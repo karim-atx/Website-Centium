@@ -41,8 +41,6 @@ import type {
   WorkoutTemplate,
   WorkoutTemplateAssignment,
   ClientHealthNote,
-  ProfessionalMessage,
-  BusinessMessage,
   ForumPost,
   ForumCategory,
   HealthMetric,
@@ -1188,13 +1186,6 @@ interface AppState {
   clientHealthNotes: Record<string, ClientHealthNote>;
   updateClientHealthNote: (clientId: string, patch: Partial<ClientHealthNote>) => void;
 
-  professionalMessages: ProfessionalMessage[];
-  sendProfessionalMessage: (
-    clientId: string,
-    from: "professional" | "client",
-    text: string,
-    extra?: { attachment?: string; voiceNoteSec?: number }
-  ) => void;
 
   signOut: () => Promise<void>;
   /**
@@ -1237,9 +1228,6 @@ interface AppState {
   //
   // What stays here is what is still genuinely local: the perk, the active
   // toggle and the members-reached figure, none of which has a write path yet.
-
-  businessMessages: BusinessMessage[];
-  sendBusinessMessage: (customerId: string, from: "business" | "customer", text: string) => void;
 }
 
 const AppContext = createContext<AppState | undefined>(undefined);
@@ -3769,16 +3757,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const updateClientHealthNote: AppState["updateClientHealthNote"] = (clientId, patch) =>
     setClientHealthNotes((prev) => ({ ...prev, [clientId]: { ...prev[clientId], ...patch } }));
 
-  const [professionalMessages, setProfessionalMessages] = usePersistentState<ProfessionalMessage[]>(
-    "professionalMessages",
-    []
-  );
-  const sendProfessionalMessage: AppState["sendProfessionalMessage"] = (clientId, from, text, extra) =>
-    setProfessionalMessages((prev) => [
-      ...prev,
-      { id: `msg-${Date.now()}-${prev.length}`, clientId, from, text, at: new Date().toISOString(), ...extra },
-    ]);
-
   const completeOnboarding = (profile: Partial<UserProfile>) => {
     // V7 (QA 7.0): a business account gets its own unique ID at signup, so
     // a professional can later affiliate with it from their Explore tab.
@@ -5849,12 +5827,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // professional was read from the professional's own empty array. Both are
   // real tables now, through hooks/useBusinessCatalog.
 
-  const [businessMessages, setBusinessMessages] = usePersistentState<BusinessMessage[]>("businessMessages", []);
-  const sendBusinessMessage: AppState["sendBusinessMessage"] = (customerId, from, text) =>
-    setBusinessMessages((prev) => [
-      ...prev,
-      { id: `bmsg-${Date.now()}-${prev.length}`, customerId, from, text, at: new Date().toISOString() },
-    ]);
+  // THE DEVICE-ONLY MESSAGE MOCKS ARE GONE: `professionalMessages` (dead since
+  // real messaging) and `businessMessages`, which kept "business" threads in
+  // this browser only. Real conversations are all in /app/messages.
 
   const signOut = async () => {
     signingOutHere = true;
@@ -6207,16 +6182,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       deleteWorkoutTemplateFolder,
       clientHealthNotes,
       updateClientHealthNote,
-      professionalMessages,
-      sendProfessionalMessage,
       signOut,
       deleteAccount,
       cancelDeletion,
       deletionRequestedAt,
       businessListing,
       updateBusinessListing,
-      businessMessages,
-      sendBusinessMessage,
     }),
     [
       user,
@@ -6355,9 +6326,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       templatesError,
       workoutTemplateFolders,
       clientHealthNotes,
-      professionalMessages,
       businessListing,
-      businessMessages,
     ]
   );
 

@@ -15,7 +15,6 @@ import { fetchMyTeam, type TeamMember } from "../services/business-team";
 //   BusinessAnalyticsTab  the count, nothing else
 //   BusinessClassesTab    id + name, for the "Run by" picker
 //   BusinessCalendarTab   id + name, for the same picker and a lookup
-//   BusinessMessagesTab   id + name, for the thread list
 // None reads the subtype, which is just as well: a business cannot get it —
 // see the note in services/business-team.
 

@@ -9,7 +9,6 @@ import { UnreadBadge } from "../../components/messages/UnreadBadge";
 import { CommunityLeafIcon, ExploreLeafIcon, ReferralLeafIcon, PremiumLeafIcon } from "../../components/icons/MoreLeafIcons";
 import {
   Users,
-  Store,
   User as UserIcon,
   ChevronRight,
   Settings,
@@ -88,11 +87,10 @@ export default function More() {
           isProfessional && { icon: UserIcon, label: "Profile", desc: "Your account & settings", to: "/app/profile" },
           isBusiness && { icon: Building2, label: "Business Profile", desc: "Name, bio, location & reviews", to: "/app/business/profile" },
           isProfessional && { icon: MessageCircle, label: "Messages", desc: "Chat with your clients", to: "/app/messages" },
-          isProfessional && { icon: Store, label: "Business messages", desc: "Your affiliated business thread", to: "/app/professionals/messages" },
           isProfessional && { icon: HeartPulse, label: "Health Metrics", desc: "Client health data & clinical notes", to: "/app/professionals/health-metrics" },
           isProfessional && { icon: Banknote, label: "Payments", desc: "Your rates & accepted payment methods", onClick: () => setPaymentsOpen(true) },
           isProfessional && { icon: Globe2, label: "Your public listing", desc: "Specialty, bio & whether clients can find you", onClick: () => setListingOpen(true) },
-          isBusiness && { icon: MessageCircle, label: "Messages", desc: "Chat with clients & affiliated professionals", to: "/app/business/messages" },
+          isBusiness && { icon: MessageCircle, label: "Messages", desc: "Your conversations", to: "/app/messages" },
           isBusiness && { icon: CalendarDays, label: "Calendar", desc: "Schedule clients to professionals & classes", to: "/app/business/calendar" },
           isProfessional && { icon: ExploreLeafIcon, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/app/marketplace" },
           { icon: ReferralLeafIcon, label: "Referral", desc: "Share your code, earn rewards", onClick: () => setReferralOpen(true) },
