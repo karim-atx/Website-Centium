@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, EyeOff, FileText, Forward, ImageIcon, Mic, Paperclip, Phone, Pin, PinOff, Send, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, EyeOff, FileText, Flag, Forward, ImageIcon, Mic, MoreVertical, Paperclip, Phone, Pin, PinOff, Send, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useCall } from "../../context/CallContext";
 import { threadAllowsCalls, type CallKind } from "../../services/calling";
@@ -12,6 +12,8 @@ import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
 import { BottomSheet } from "../ui/BottomSheet";
 import { FileViewerSheet } from "../health/FileViewerSheet";
 import { InlineImage } from "./InlineImage";
+import { ConversationMenu, ReportSheet } from "./ConversationSafety";
+import { AttachmentGone } from "./AttachmentGone";
 import { ImageLightbox } from "./ImageLightbox";
 import { attachmentUrl, isImagePath } from "../../services/messaging/attachmentUrls";
 import { ForwardSheet } from "./ForwardSheet";
@@ -22,7 +24,12 @@ import {
   clearPin,
   describeMessage,
   describeRemoval,
-  fetchMessages,
+  fetchMessagePage,
+  mayOpenAttachment,
+  fetchBlockState,
+  blockUser,
+  unblockUser,
+  type BlockState,
   fetchPin,
   fetchStarred,
   hideMessage,
@@ -53,6 +60,30 @@ const SWIPE_THRESHOLD = 60;
  * unconditionally.
  */
 const FALLBACK_POLL_MS = 8000;
+
+/**
+ * A fresh newest page, laid over what is already loaded.
+ *
+ * Everything older than the page's first message is kept as it was, so older
+ * history the reader scrolled back to survives every refresh. Anything the page
+ * covers comes from the page, so a message hidden meanwhile disappears.
+ *
+ * A GAP IS NOT PAPERED OVER: if more than a page arrived since the last read,
+ * the page no longer reaches what is loaded, so the list restarts from the page
+ * rather than splicing two ranges with an unknown stretch missing between them.
+ */
+function mergeNewest(prev: Message[], page: Message[], pageHasOlder: boolean): Message[] {
+  if (page.length === 0) return pageHasOlder ? prev : [];
+  const first = page[0];
+  const before = (m: Message) => m.createdAt < first.createdAt || (m.createdAt === first.createdAt && m.id < first.id);
+  const older = prev.filter(before);
+  if (pageHasOlder && prev.length > 0 && older.length === prev.length) {
+    const newestLoaded = prev[prev.length - 1];
+    const reaches = page.some((m) => m.id === newestLoaded.id) || !before(newestLoaded);
+    if (!reaches) return page;
+  }
+  return [...older, ...page];
+}
 
 /**
  * A slow re-read that runs EVEN WHILE REALTIME IS LIVE, and it is deliberate
@@ -112,6 +143,45 @@ export const ThreadView: React.FC<{
    * See the note in fetchThreads.
    */
   const departed = thread.participantId === null;
+
+  // BLOCKING (Database 20261001020000). A block stops messages and calls both
+  // ways; the composer and call buttons give way to a plain statement of it.
+  // Official support threads cannot be blocked or reported from here.
+  const safetyApplies = !departed && thread.kind === "peer";
+  const [block, setBlock] = useState<BlockState>({ iBlocked: false, blocked: false });
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [reportFor, setReportFor] = useState<Message | null>(null);
+  const [safetyBusy, setSafetyBusy] = useState(false);
+  const [safetyError, setSafetyError] = useState<string | null>(null);
+  const refreshBlock = async () => {
+    if (!safetyApplies || !authUserId || !thread.participantId) return;
+    setBlock(await fetchBlockState(authUserId, thread.participantId));
+  };
+  useEffect(() => {
+    void refreshBlock();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [thread.id, authUserId]);
+  const doBlock = async () => {
+    if (!authUserId || !thread.participantId) return;
+    setSafetyBusy(true);
+    setSafetyError(null);
+    const r = await blockUser(authUserId, thread.participantId);
+    setSafetyBusy(false);
+    if (!r.ok) return setSafetyError(r.message);
+    setMenuOpen(false);
+    setReportFor(null);
+    await refreshBlock();
+  };
+  const doUnblock = async () => {
+    if (!authUserId || !thread.participantId) return;
+    setSafetyBusy(true);
+    setSafetyError(null);
+    const r = await unblockUser(authUserId, thread.participantId);
+    setSafetyBusy(false);
+    if (!r.ok) return setSafetyError(r.message);
+    setMenuOpen(false);
+    await refreshBlock();
+  };
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -122,6 +192,12 @@ export const ThreadView: React.FC<{
   // A non-image file opens in the file viewer; a photo opens full screen.
   const [viewing, setViewing] = useState<string | null>(null);
   const [photo, setPhoto] = useState<{ path: string; url: string } | null>(null);
+  // Files the storage rule refused to this viewer (a former professional).
+  const [goneFiles, setGoneFiles] = useState<Set<string>>(new Set());
+  const openFile = async (path: string) => {
+    if ((await mayOpenAttachment(path)) === false) setGoneFiles((g) => new Set(g).add(path));
+    else setViewing(path);
+  };
   /**
    * The message currently in flight, as a rendering concern only.
    *
@@ -211,8 +287,17 @@ export const ThreadView: React.FC<{
     await placeCallRemote(thread.id, thread.participantId, media.degradedToVoice ? "voice" : kind);
   };
 
+  // PAGED. A thread opens on its newest page and older pages load as the
+  // reader scrolls up (loadOlder). Every refresh re-reads only the newest page
+  // and merges it over what is loaded, so scrolled-back history is kept.
+  const [hasOlder, setHasOlder] = useState(false);
+  const [loadingOlder, setLoadingOlder] = useState(false);
+  const firstPageDone = useRef(false);
+  // When the caller last marked this thread read (the server's time).
+  const lastMarked = useRef<string | null>(thread.lastReadAt);
+
   const load = async () => {
-    const result = await fetchMessages(thread.id);
+    const result = await fetchMessagePage(thread.id);
     if (!result.ok) {
       // A failed poll is not worth interrupting a conversation over — the
       // history on screen is still what was last true. Only a failed SEND
@@ -220,40 +305,60 @@ export const ThreadView: React.FC<{
       setLoaded(true);
       return;
     }
-    setMessages(result.messages);
+    setMessages((prev) => mergeNewest(prev, result.messages, result.hasOlder));
+    if (!firstPageDone.current) {
+      firstPageDone.current = true;
+      setHasOlder(result.hasOlder);
+    }
     setLoaded(true);
 
-    // MARKED AFTER EVERY LOAD, NOT JUST ON OPEN. A message arriving while the
-    // thread is already open is just as read as one that was here when it
-    // opened, and marking only on mount would leave it unread forever.
+    // MARKED AFTER A LOAD THAT BROUGHT SOMETHING NEWER FROM THEM, not on every
+    // poll: the newest message they sent is compared with when this reader
+    // last marked the thread. read_at cannot be the test any more — it stays
+    // empty for ever in threads where either person turned read receipts off.
     //
-    // Guarded on there being something to mark, so an idle open conversation
-    // does not spend a write every eight seconds saying nothing changed. The
-    // check is client-side on rows already fetched, so it costs no round trip.
-    // THE IDS COME FROM WHAT WAS JUST RENDERED, which is what makes hiding and
-    // reading independent decisions. `result.messages` came through
-    // messages_visible, so a message this viewer hid is not in the list and is
-    // therefore never marked read — hiding is not a read action, and marking by
-    // thread_id would have quietly made it one.
-    const unreadFromThem = result.messages
-      .filter((m) => m.senderId !== authUserId && !m.readAt)
-      .map((m) => m.id);
-    if (unreadFromThem.length === 0) return;
+    // Hiding is still not a read action: a message hidden with "delete for me"
+    // is not in this list, so it never becomes the newest one to mark.
+    const newestFromThem = [...result.messages].reverse().find((m) => m.senderId !== authUserId);
+    if (!newestFromThem) return;
+    if (lastMarked.current && newestFromThem.createdAt <= lastMarked.current) return;
 
-    const marked = await markThreadRead(unreadFromThem);
-    // Re-read rather than patching local state: the timestamp is the server's,
-    // and inventing one here to avoid a round trip would put a value on screen
-    // that never existed in the database.
-    if (marked > 0) {
-      const after = await fetchMessages(thread.id);
-      if (after.ok) setMessages(after.messages);
-      // The badge polls every thirty seconds, which is fine for noticing a new
-      // message and far too slow for clearing one you are looking at. Nudged
-      // only when something was actually marked, so this stays off the poll
-      // path that changes nothing.
-      unread.refresh();
-    }
+    const at = await markThreadRead(thread.id);
+    if (!at) return;
+    lastMarked.current = at;
+    // Re-read rather than patching local state: the receipt time is the
+    // server's, and where receipts are off there is none to show.
+    const after = await fetchMessagePage(thread.id);
+    if (after.ok) setMessages((prev) => mergeNewest(prev, after.messages, after.hasOlder));
+    // The badge polls every thirty seconds, far too slow for clearing one you
+    // are looking at.
+    unread.refresh();
   };
+
+  // Where to put the reader back after older messages are prepended: the page
+  // height and scroll position just before, so the message they were reading
+  // stays exactly where it was.
+  const keepPlace = useRef<{ height: number; y: number } | null>(null);
+
+  const loadOlder = async () => {
+    if (loadingOlder || !hasOlder || messages.length === 0) return;
+    setLoadingOlder(true);
+    const oldest = messages[0];
+    const result = await fetchMessagePage(thread.id, { createdAt: oldest.createdAt, id: oldest.id });
+    if (result.ok) {
+      keepPlace.current = { height: document.documentElement.scrollHeight, y: window.scrollY };
+      setMessages((prev) => [...result.messages.filter((m) => !prev.some((p) => p.id === m.id)), ...prev]);
+      setHasOlder(result.hasOlder);
+    }
+    setLoadingOlder(false);
+  };
+
+  useLayoutEffect(() => {
+    const place = keepPlace.current;
+    if (!place) return;
+    keepPlace.current = null;
+    window.scrollTo(0, place.y + (document.documentElement.scrollHeight - place.height));
+  }, [messages]);
 
   useEffect(() => {
     void load();
@@ -326,15 +431,34 @@ export const ThreadView: React.FC<{
   // made here take the identical path.
   usePinRealtime(thread.id, () => void refreshPin());
 
-  // Only when the count changes, so a poll returning the same history does not
-  // yank the view down while someone is reading back through it. `pending` is
-  // in here as a boolean rather than the object: it flips exactly twice per
-  // send, so the in-flight bubble scrolls into view when it appears, and a
-  // poll returning identical history still moves nothing.
+  // Only when the NEWEST message changes, so a poll returning the same history
+  // does not yank the view down while someone is reading back through it, and
+  // loading an older page (which adds messages at the top) does not either.
+  // `pending` is in here as a boolean: it flips exactly twice per send, so the
+  // in-flight bubble scrolls into view when it appears.
   const isSending = !!pending;
+  const newestId = messages[messages.length - 1]?.id;
+  const [atBottomOnce, setAtBottomOnce] = useState(false);
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end" });
-  }, [messages.length, isSending]);
+    if (newestId) setAtBottomOnce(true);
+  }, [newestId, isSending]);
+
+  // OLDER MESSAGES LOAD AS THE TOP COMES INTO VIEW, and only once the thread
+  // has first been shown at its end — otherwise the top is on screen for the
+  // instant before that first scroll, and a second page would load unasked.
+  const topRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = topRef.current;
+    if (!el || !hasOlder || !atBottomOnce || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some((e) => e.isIntersecting)) void loadOlder();
+    }, { rootMargin: "300px 0px 0px 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+    // loadOlder reads current state; re-observing on every render would fire it twice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasOlder, atBottomOnce, messages[0]?.id]);
 
   const send = async () => {
     const body = draft.trim();
@@ -366,6 +490,8 @@ export const ThreadView: React.FC<{
       // user noticing the quote had gone.
       setReplyTo(target);
       setError(result.message);
+      // A refusal may be a block that just started: show that state rather than a composer that cannot send.
+      void refreshBlock();
       return;
     }
     // Appending the returned ROW, not the draft — the id and timestamp are the
@@ -510,6 +636,8 @@ export const ThreadView: React.FC<{
       // send must not appear to have sent, even when the file did reach the
       // bucket. See sendImageAttachment on why that object cannot be reclaimed.
       setError(result.message);
+      // A refusal may be a block that just started: show that state rather than a composer that cannot send.
+      void refreshBlock();
       return;
     }
     setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
@@ -570,6 +698,8 @@ export const ThreadView: React.FC<{
     setPending(null);
     if (!result.ok) {
       setError(result.message);
+      // A refusal may be a block that just started: show that state rather than a composer that cannot send.
+      void refreshBlock();
       return;
     }
     setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
@@ -599,7 +729,7 @@ export const ThreadView: React.FC<{
             open, failing closed, and NOT the enforcement. mint-call-token
             re-checks thread_allows_calls server-side, so a stale true costs a
             refused call rather than an unauthorised one. */}
-        {canCall && thread.participantId && (
+        {canCall && thread.participantId && !block.blocked && (
           <>
             <button
               onClick={() => void placeCall("voice")}
@@ -618,6 +748,20 @@ export const ThreadView: React.FC<{
               <Video size={15} />
             </button>
           </>
+        )}
+        {safetyApplies && (
+          <button
+            onClick={() => {
+              setSafetyError(null);
+              setMenuOpen(true);
+            }}
+            aria-label={`More options for ${thread.participantName}`}
+            className={`tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0 ${
+              canCall && !block.blocked ? "" : "ml-auto"
+            }`}
+          >
+            <MoreVertical size={15} />
+          </button>
         )}
       </div>
 
@@ -692,6 +836,21 @@ export const ThreadView: React.FC<{
         })()}
 
       <div className="flex-1 space-y-2 mb-3">
+        {/* The top of the loaded history. Scrolling up to it loads the next
+            older page; the button is the same action for anyone not scrolling
+            (a keyboard, a screen reader, a browser without the observer). */}
+        <div ref={topRef}>
+          {hasOlder && (
+            <button
+              type="button"
+              onClick={() => void loadOlder()}
+              disabled={loadingOlder}
+              className="tap mx-auto flex items-center justify-center min-h-[44px] px-4 text-xs font-semibold text-charcoal-soft disabled:opacity-60"
+            >
+              {loadingOlder ? "Loading earlier messages…" : "Load earlier messages"}
+            </button>
+          )}
+        </div>
         {loaded && messages.length === 0 && (
           <p className="text-sm text-charcoal-faint text-center py-8">
             {/* "Say hello to Deleted account" invites something impossible.
@@ -834,10 +993,12 @@ export const ThreadView: React.FC<{
                       onOpen={(url) => setPhoto({ path: m.attachmentPath!, url })}
                       className={m.text ? "mt-1.5" : ""}
                     />
+                  ) : goneFiles.has(m.attachmentPath) ? (
+                    <AttachmentGone kind="file" className={m.text ? "mt-1.5" : ""} />
                   ) : (
                     // Anything else stays a file card, opened in the viewer.
                     <button
-                      onClick={() => setViewing(m.attachmentPath)}
+                      onClick={() => void openFile(m.attachmentPath!)}
                       className={`tap flex items-center gap-2 rounded-xl bg-black/10 px-3 py-2 text-left ${
                         m.text ? "mt-1.5" : ""
                       }`}
@@ -978,6 +1139,33 @@ export const ThreadView: React.FC<{
         </p>
       )}
 
+      {/* BLOCKED: the conversation stays readable, and nothing can be sent. The
+          other side's block is stated without saying who did it. */}
+      {block.blocked ? (
+        <div className="sticky bottom-0 bg-cream pt-2">
+          <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-center">
+            <p className="text-sm font-semibold text-charcoal">
+              {block.iBlocked ? `You blocked ${thread.participantName}` : "You can't message this person"}
+            </p>
+            <p className="text-xs text-charcoal-soft mt-1 leading-relaxed">
+              {block.iBlocked
+                ? "Neither of you can message or call the other. They haven't been told."
+                : "Messages and calls aren't available in this conversation."}
+            </p>
+            {block.iBlocked && (
+              <button
+                type="button"
+                onClick={() => void doUnblock()}
+                disabled={safetyBusy}
+                className="tap mt-2 min-h-[44px] px-4 text-sm font-semibold text-primary-deep-text disabled:opacity-50"
+              >
+                Unblock
+              </button>
+            )}
+          </div>
+        </div>
+      ) : (
+      <>
       {/* Above the composer, inside the sticky footer, so it travels with the
           input rather than scrolling away from what it belongs to. */}
       {replyTo && (
@@ -1082,6 +1270,43 @@ export const ThreadView: React.FC<{
           <Send size={16} />
         </button>
       </div>
+      </>
+      )}
+
+      {safetyApplies && authUserId && (
+        <>
+          <ConversationMenu
+            open={menuOpen}
+            onClose={() => setMenuOpen(false)}
+            personName={thread.participantName}
+            iBlocked={block.iBlocked}
+            busy={safetyBusy}
+            error={safetyError}
+            onBlock={() => void doBlock()}
+            onUnblock={() => void doUnblock()}
+            onReport={(() => {
+              const theirs = [...messages].reverse().find((m) => m.senderId === thread.participantId);
+              return theirs
+                ? () => {
+                    setMenuOpen(false);
+                    setReportFor(theirs);
+                  }
+                : null;
+            })()}
+          />
+          <ReportSheet
+            key={reportFor?.id ?? "none"}
+            open={!!reportFor}
+            onClose={() => setReportFor(null)}
+            reporterId={authUserId}
+            message={reportFor}
+            reportedId={thread.participantId}
+            personName={thread.participantName}
+            canBlock={!block.iBlocked}
+            onBlock={() => void doBlock()}
+          />
+        </>
+      )}
 
       <FileViewerSheet
         open={!!viewing}
@@ -1188,6 +1413,20 @@ export const ThreadView: React.FC<{
               {pin && actionsFor && pin.messageId === actionsFor.id ? "Unpin" : "Pin"}
             </span>
           </button>
+          {/* Report: only someone else's message, and not in an official
+              thread — there is nobody to report Centium to but Centium. */}
+          {safetyApplies && actionsFor && actionsFor.senderId !== authUserId && (
+            <button
+              onClick={() => {
+                setReportFor(actionsFor);
+                setActionsFor(null);
+              }}
+              className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
+            >
+              <Flag size={17} className="text-charcoal-soft shrink-0" />
+              <span className="text-sm font-medium text-charcoal">Report</span>
+            </button>
+          )}
           {/* Last, and the only one that leads to a confirmation. It is styled
               as a caution rather than a destruction: nothing is destroyed, and
               colouring it like a delete would claim otherwise. */}

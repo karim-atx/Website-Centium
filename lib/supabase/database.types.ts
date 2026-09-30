@@ -5145,6 +5145,243 @@ export type Database = {
           },
         ]
       }
+      message_push_sends: {
+        Row: {
+          attempts: number
+          body: string
+          delivered_at: string | null
+          id: string
+          last_attempt_at: string | null
+          last_error: string | null
+          message_id: string
+          queued_at: string
+          recipient_id: string
+          title: string
+        }
+        Insert: {
+          attempts?: number
+          body: string
+          delivered_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          message_id: string
+          queued_at?: string
+          recipient_id: string
+          title: string
+        }
+        Update: {
+          attempts?: number
+          body?: string
+          delivered_at?: string | null
+          id?: string
+          last_attempt_at?: string | null
+          last_error?: string | null
+          message_id?: string
+          queued_at?: string
+          recipient_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_push_sends_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_push_sends_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages_visible"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_push_sends_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_push_sends_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_push_sends_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_push_sends_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_push_sends_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "message_push_sends_recipient_id_fkey"
+            columns: ["recipient_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      message_reports: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          detail: string | null
+          id: string
+          message_id: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          reported_id: string | null
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["report_status"]
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          message_id: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          reported_id?: string | null
+          reporter_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          message_id?: string
+          reason?: Database["public"]["Enums"]["report_reason"]
+          reported_id?: string | null
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reports_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages_visible"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "message_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "message_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "message_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       message_threads: {
         Row: {
           created_at: string
@@ -9198,6 +9435,88 @@ export type Database = {
           },
         ]
       }
+      thread_read_marks: {
+        Row: {
+          last_read_at: string
+          reader_id: string
+          thread_id: string
+        }
+        Insert: {
+          last_read_at?: string
+          reader_id: string
+          thread_id: string
+        }
+        Update: {
+          last_read_at?: string
+          reader_id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "thread_read_marks_reader_id_fkey"
+            columns: ["reader_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_read_marks_reader_id_fkey"
+            columns: ["reader_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_read_marks_reader_id_fkey"
+            columns: ["reader_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_read_marks_reader_id_fkey"
+            columns: ["reader_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_read_marks_reader_id_fkey"
+            columns: ["reader_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "thread_read_marks_reader_id_fkey"
+            columns: ["reader_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "thread_read_marks_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "admin_account_threads"
+            referencedColumns: ["thread_id"]
+          },
+          {
+            foreignKeyName: "thread_read_marks_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_read_marks_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["thread_id"]
+          },
+        ]
+      }
       user_achievements: {
         Row: {
           achievement_key: string
@@ -9263,6 +9582,109 @@ export type Database = {
           {
             foreignKeyName: "user_achievements_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      user_blocks: {
+        Row: {
+          blocked_id: string
+          blocker_id: string
+          created_at: string
+        }
+        Insert: {
+          blocked_id: string
+          blocker_id: string
+          created_at?: string
+        }
+        Update: {
+          blocked_id?: string
+          blocker_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocked_id_fkey"
+            columns: ["blocked_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "user_blocks_blocker_id_fkey"
+            columns: ["blocker_id"]
             isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
@@ -11767,6 +12189,31 @@ export type Database = {
           professional_id: string
         }[]
       }
+      admin_message_reports: {
+        Args: { p_status?: Database["public"]["Enums"]["report_status"] }
+        Returns: {
+          admin_notes: string
+          created_at: string
+          detail: string
+          message_created_at: string
+          message_has_attachment: boolean
+          message_id: string
+          message_redacted: boolean
+          message_text: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          report_id: string
+          reported_email: string
+          reported_id: string
+          reporter_email: string
+          reporter_id: string
+          reports_against_this_account: number
+          reports_for_this_message: number
+          resolved_at: string
+          resolved_by: string
+          status: Database["public"]["Enums"]["report_status"]
+          thread_id: string
+        }[]
+      }
       admin_pending_licence_reviews: {
         Args: never
         Returns: {
@@ -11872,6 +12319,14 @@ export type Database = {
       admin_reset_onboarding: {
         Args: { reason?: string; target_user_id: string }
         Returns: string
+      }
+      admin_resolve_message_report: {
+        Args: {
+          p_notes?: string
+          p_report_id: string
+          p_status: Database["public"]["Enums"]["report_status"]
+        }
+        Returns: Json
       }
       admin_revoke_ambassador_status: {
         Args: { p_profile_id: string; p_reason: string }
@@ -12210,6 +12665,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      display_name_is_reserved: { Args: { p_name: string }; Returns: boolean }
       effective_professional_tier: {
         Args: { p_professional_id: string }
         Returns: {
@@ -12355,6 +12811,11 @@ export type Database = {
           user_id: string
         }[]
       }
+      mark_thread_read: { Args: { p_thread_id: string }; Returns: string }
+      may_open_message_attachment: {
+        Args: { p_name: string }
+        Returns: boolean
+      }
       my_achievements: {
         Args: never
         Returns: {
@@ -12393,6 +12854,25 @@ export type Database = {
           pack_day: number
           pack_phase: string
           pill_taken_today: boolean
+        }[]
+      }
+      my_conversations: {
+        Args: never
+        Returns: {
+          kind: Database["public"]["Enums"]["thread_kind"]
+          last_message_at: string
+          last_message_has_attachment: boolean
+          last_message_id: string
+          last_message_is_voice_note: boolean
+          last_message_redacted: boolean
+          last_message_sender_id: string
+          last_message_text: string
+          last_read_at: string
+          other_avatar_url: string
+          other_first_name: string
+          other_participant_id: string
+          thread_id: string
+          unread_count: number
         }[]
       }
       my_cycle_prediction: {
@@ -12438,6 +12918,7 @@ export type Database = {
           tier_name: string
         }[]
       }
+      normalise_display_name: { Args: { p_name: string }; Returns: string }
       preview_client_code: {
         Args: { p_code: string }
         Returns: {
@@ -12728,6 +13209,10 @@ export type Database = {
         Args: { p_caller_id: string; p_thread_id: string }
         Returns: boolean
       }
+      thread_is_muted: {
+        Args: { p_thread_id: string; p_user: string }
+        Returns: boolean
+      }
       thread_shows_read_receipts: {
         Args: { p_thread_id: string }
         Returns: boolean
@@ -12739,6 +13224,14 @@ export type Database = {
       trigger_storage_purge: { Args: never; Returns: number }
       user_timezone: { Args: { p_user: string }; Returns: string }
       user_today: { Args: { p_user: string }; Returns: string }
+      users_are_blocked: {
+        Args: { p_one: string; p_two: string }
+        Returns: boolean
+      }
+      users_have_active_relationship: {
+        Args: { p_one: string; p_two: string }
+        Returns: boolean
+      }
       valid_endurance_plan: { Args: { p: Json }; Returns: boolean }
       valid_endurance_result: { Args: { r: Json }; Returns: boolean }
       valid_endurance_step: { Args: { s: Json }; Returns: boolean }
@@ -12970,7 +13463,18 @@ export type Database = {
         | "create_food_by_barcode"
         | "create_business_member_code"
         | "redeem_business_member_code"
+        | "lookup_barcode"
+        | "check_disposable_email"
+        | "start_conversation"
+        | "send_message"
       rep_max_update_mode: "no_update" | "prompt" | "prompt_with_estimate"
+      report_reason:
+        | "harassment"
+        | "spam"
+        | "inappropriate_content"
+        | "impersonation"
+        | "safety_concern"
+      report_status: "open" | "actioned" | "dismissed"
       request_status: "pending" | "accepted" | "rejected"
       set_outcome: "completed" | "skipped" | "failed"
       set_type: "normal" | "warmup" | "failure" | "dropset" | "superset" | "pr"
@@ -13382,8 +13886,20 @@ export const Constants = {
         "create_food_by_barcode",
         "create_business_member_code",
         "redeem_business_member_code",
+        "lookup_barcode",
+        "check_disposable_email",
+        "start_conversation",
+        "send_message",
       ],
       rep_max_update_mode: ["no_update", "prompt", "prompt_with_estimate"],
+      report_reason: [
+        "harassment",
+        "spam",
+        "inappropriate_content",
+        "impersonation",
+        "safety_concern",
+      ],
+      report_status: ["open", "actioned", "dismissed"],
       request_status: ["pending", "accepted", "rejected"],
       set_outcome: ["completed", "skipped", "failed"],
       set_type: ["normal", "warmup", "failure", "dropset", "superset", "pr"],

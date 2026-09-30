@@ -1,4 +1,5 @@
 /// <reference lib="webworker" />
+import { notificationTarget } from "./services/push/messagePushUrl";
 
 /**
  * Centium's service worker. Two handlers, and deliberately nothing else.
@@ -90,14 +91,12 @@ function readPayload(data: PushMessageData | null): PushPayload {
   const str = (v: unknown): string | undefined =>
     typeof v === "string" && v.trim() ? v.trim() : undefined;
 
-  const url = str(raw.url);
   return {
     title: str(raw.title) ?? fallback.title,
     body: str(raw.body) ?? fallback.body,
-    // Leading single slash only: "//evil.example" is protocol-relative and
-    // would leave the origin, so it is rejected along with everything else
-    // that is not a plain path.
-    url: url && url.startsWith("/") && !url.startsWith("//") ? url : fallback.url,
+    // A message notification opens its conversation; anything else a
+    // same-origin path or the fallback. See notificationTarget.
+    url: notificationTarget(raw, fallback.url),
     tag: str(raw.tag),
   };
 }

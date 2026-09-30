@@ -83,6 +83,10 @@ export interface MessageThread {
    */
   lastMessagePreview: string | null;
   lastMessageAt: string | null;
+  /** Received and not yet read, from the caller's private read mark. */
+  unreadCount: number;
+  /** When the caller last read this thread, or null if never. */
+  lastReadAt: string | null;
 }
 
 export interface Message {
@@ -264,7 +268,31 @@ function describe(error: PostgrestError): string {
   // 23514 is messages_has_content_check — an empty message. The composer
   // refuses those first, so reaching this means the two disagree.
   if (code === "23514") return "A message can't be empty.";
-  return "Something went wrong. Try again.";
+  return describeRefusal(error) ?? "Something went wrong. Try again.";
+}
+
+/**
+ * The phase-1 safety refusals, in words (Database 20261001020000-030000).
+ *
+ * ATX35 IS THE SAME SENTENCE WHOEVER BLOCKED WHOM. The database raises one
+ * code for both directions on purpose — naming the block would tell someone
+ * their target is there and reacting — so the app does not name it either.
+ */
+export function describeRefusal(error: { code?: string; message?: string }): string | null {
+  switch (error.code ?? "") {
+    case "ATX35":
+      return "You can't message this person.";
+    case "ATX36":
+      return /under 18/i.test(error.message ?? "")
+        ? "Accounts under 18 can only message professionals they already work with."
+        : "You can't start a conversation with this account. You can message professionals listed in Explore, or the people you already work with.";
+    case "ATX02":
+      return "You're sending messages too quickly. Wait a minute and try again.";
+    case "ATX37":
+      return "That name is reserved. Choose a different name.";
+    default:
+      return null;
+  }
 }
 
 /**
@@ -288,6 +316,14 @@ export async function startThread(otherUserId: string): Promise<StartThreadResul
   });
   if (error) {
     console.error("[messaging] Could not start thread:", error.message);
+    // Starting a conversation has its own, hourly allowance (ten an hour),
+    // separate from the per-minute limit on sending.
+    if (error.code === "ATX02") {
+      return {
+        ok: false,
+        message: "You've started several new conversations recently. Try again in a little while.",
+      };
+    }
     return { ok: false, message: describe(error) };
   }
   const thread = data as { id?: string } | null;
@@ -298,172 +334,159 @@ export async function startThread(otherUserId: string): Promise<StartThreadResul
 /**
  * Every conversation the caller is in, newest activity first.
  *
- * TWO QUERIES, NOT A JOIN. PostgREST cannot join `message_threads` to the
- * identity view, and the last message per thread is a per-group maximum that
- * PostgREST has no syntax for either. Fetching the caller's recent messages and
- * reducing them by thread costs one extra round trip and keeps the shape
- * obvious; a database-side view for this would be worth building only once the
- * volume makes the limit below start truncating.
+ * ONE CALL, my_conversations() (Database 20261001000000). It returns each
+ * thread's LATEST message and the caller's unread count directly. This used to
+ * fetch the newest 500 messages across all threads and reduce them here, so a
+ * thread whose last message fell outside that window lost its preview and
+ * dropped to the bottom of the list.
+ *
+ * THE UNREAD COUNT IS THE READER'S OWN, from thread_read_marks, not from
+ * messages.read_at: read_at is withheld in threads where either person turned
+ * read receipts off, so counting its nulls would leave those threads unread for
+ * ever.
  */
 export async function fetchThreads(): Promise<ThreadsResult> {
-  const participants = await supabase
-    .from("thread_participant_summary")
-    .select("thread_id, participant_id, first_name, avatar_url, kind");
-
-  if (participants.error) {
-    console.error("[messaging] Could not load threads:", participants.error.message);
-    return { ok: false, message: describe(participants.error) };
-  }
-  const rows = participants.data ?? [];
-  if (rows.length === 0) return { ok: true, threads: [] };
-
-  // Newest-first so the first row seen for a thread is its latest message.
-  const recent = await supabase
-    .from("messages_visible")
-    .select(
-      "thread_id, text, created_at, attachment_url, attachment_purged_at, redacted_at, voice_note_seconds"
-    )
-    .order("created_at", { ascending: false })
-    .limit(500);
-
-  if (recent.error) {
-    console.error("[messaging] Could not load previews:", recent.error.message);
-    return { ok: false, message: describe(recent.error) };
+  const { data, error } = await supabase.rpc("my_conversations");
+  if (error) {
+    console.error("[messaging] Could not load conversations:", error.message);
+    return { ok: false, message: describe(error) };
   }
 
-  const latest = new Map<string, { preview: string; created_at: string }>();
-  for (const m of recent.data ?? []) {
-    // created_at is NOT NULL on public.messages; the view widens every column
-    // to nullable, so it is guarded here rather than asserted. A row without a
-    // timestamp could not be placed in the ordering anyway, and skipping it
-    // costs one preview rather than an exception.
-    if (m.thread_id && m.created_at && !latest.has(m.thread_id)) {
-      // Every message describes itself as SOMETHING. A row exists, so the list
-      // must never imply it does not — the constraint messages_has_content_check
-      // guarantees at least one of these is present (or that it was purged),
-      // so the final fallback is unreachable rather than a guess.
-      // Through the shared describer, so this list and the quoted preview in
-      // a reply always say the same thing about the same message.
-      const preview = describeMessage({
-        text: m.text,
-        attachmentPath: m.attachment_url,
-        attachmentPurgedAt: m.attachment_purged_at,
-        redactedAt: m.redacted_at,
-        voiceNoteSeconds: m.voice_note_seconds,
-      });
-      latest.set(m.thread_id, { preview, created_at: m.created_at });
-    }
-  }
-
-  const threads: MessageThread[] = rows.map((r) => {
-    const last = r.thread_id ? latest.get(r.thread_id) : undefined;
-    return {
-      id: r.thread_id!,
-      // NO ASSERTION HERE ANY MORE. It was never a runtime guard — a `!` is
-      // erased at compile time, so a null arrived as a null in a field typed
-      // `string` and every reader inherited the lie silently. Correcting the
-      // type changes no behaviour; it stops the next reader trusting it.
-      participantId: r.participant_id,
-      // TWO DIFFERENT ABSENCES, AND THE DIFFERENCE IS KNOWABLE.
-      //
-      // A present id with no first_name is a real person whose profile has no
-      // name yet — "Someone" is right, because there is someone and the name
-      // may still arrive.
-      //
-      // A null id means no profiles row exists, and that is a deleted account.
-      // The claim rests on two things, both checked rather than assumed:
-      //
-      //   IN SQL, the view LEFT JOINs profiles and the foreign key guarantees a
-      //   row cannot be missing for any other reason, so participant_id is null
-      //   if and only if the counterpart deleted (migration 20260911200000).
-      //
-      //   IN THIS CLIENT, there is no half-loaded row that could imitate it.
-      //   fetchThreads is the only place a MessageThread is built and the only
-      //   place the view is queried; both awaits complete before any row
-      //   exists; a failed query returns ok:false rather than rows; and every
-      //   consumer — Messages, ThreadList, ForwardSheet — renders nothing at
-      //   all while loading rather than a placeholder row. "Not fetched yet" is
-      //   the absence of a row, never a row with an absent field.
-      //
-      // So this names the cause. It was briefly "Unnamed conversation", which
-      // was the honest label while the second half of that was unverified.
-      participantName:
-        r.participant_id === null
-          ? "Deleted account"
-          : r.first_name?.trim() || "Someone",
-      participantAvatarUrl: r.avatar_url,
-      // COMPARED, NOT CAST. A cast would launder a null -- or a value added to
-      // the enum after this build shipped -- into a ThreadKind the renderer
-      // then trusts. Only the exact string earns the official treatment.
-      kind: r.kind === "official_support" ? "official_support" : "peer",
-      lastMessagePreview: last?.preview ?? null,
-      lastMessageAt: last?.created_at ?? null,
-    };
-  });
-
-  // Threads with no messages sort last: a conversation someone opened and
-  // never wrote in is not more recent than one with real activity in it.
-  threads.sort((a, b) => (b.lastMessageAt ?? "").localeCompare(a.lastMessageAt ?? ""));
+  const threads: MessageThread[] = (data ?? []).map((r) => ({
+    id: r.thread_id,
+    // A null id means no profiles row exists, which is a deleted account (the
+    // function LEFT JOINs profiles). A present id with no first name is a real
+    // person who has not named themselves yet.
+    participantId: r.other_participant_id,
+    participantName:
+      r.other_participant_id === null ? "Deleted account" : r.other_first_name?.trim() || "Someone",
+    participantAvatarUrl: r.other_avatar_url,
+    // Compared, not cast: only the exact string earns the official treatment.
+    kind: r.kind === "official_support" ? "official_support" : "peer",
+    // Through the shared describer, so the list and a quoted preview always
+    // say the same thing about the same message. The function returns no text
+    // for a redacted message, and only whether there was an attachment.
+    lastMessagePreview: r.last_message_id
+      ? describeMessage({
+          text: r.last_message_text,
+          attachmentPath: r.last_message_has_attachment ? "attachment" : null,
+          attachmentPurgedAt: null,
+          redactedAt: r.last_message_redacted ? "redacted" : null,
+          voiceNoteSeconds: r.last_message_is_voice_note ? 1 : null,
+        })
+      : null,
+    lastMessageAt: r.last_message_at,
+    unreadCount: Number(r.unread_count ?? 0),
+    lastReadAt: r.last_read_at,
+  }));
   return { ok: true, threads };
 }
 
-/** Oldest-first, which is the order a conversation is read in. */
-export async function fetchMessages(threadId: string): Promise<MessagesResult> {
-  const { data, error } = await supabase
-    .from("messages_visible")
-    .select(
-      "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, redacted_at, voice_note_seconds, reply_to_id, forwarded"
-    )
-    .eq("thread_id", threadId)
-    .order("created_at", { ascending: true });
+const MESSAGE_COLUMNS =
+  "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, redacted_at, voice_note_seconds, reply_to_id, forwarded";
 
+type MessageRow = {
+  id: string | null;
+  thread_id: string | null;
+  sender_id: string | null;
+  text: string | null;
+  created_at: string | null;
+  read_at: string | null;
+  attachment_url: string | null;
+  attachment_purged_at: string | null;
+  redacted_at: string | null;
+  voice_note_seconds: number | null;
+  reply_to_id: string | null;
+  forwarded: boolean | null;
+};
+
+// READ THROUGH messages_visible, so a message this viewer hid is simply
+// absent. The other participant is unaffected -- the view filters on
+// auth.uid(), and the row itself is untouched.
+//
+// EVERY COLUMN OF A VIEW IS TYPED NULLABLE, because Postgres cannot promise
+// a view's output is NOT NULL even when its source column is. The asserted
+// ones below are NOT NULL on public.messages and cannot arrive null; the
+// same widening is why thread_participant_summary needs `!` on thread_id.
+//
+// sender_id IS KEPT WHEN NULL, AND USED TO BE DROPPED. The filter here read
+// `.filter((m) => !!m.sender_id)`, on the reasoning that a row without a
+// sender would make the "is this mine" comparison match on a null. It does
+// not: `null === authUserId` is false for any signed-in user, so such a row
+// simply renders as received, which is correct.
+//
+// What the filter actually did was delete the departed participant's half
+// of the conversation from the survivor's screen. account_deletion SET
+// NULLs sender_id precisely so those messages survive, and
+// 20260911200000 then made the thread reachable again — and this line threw
+// the contents away after both. Verified against a real local deletion: the
+// view returned two messages, and the client rendered none.
+//
+// A PURGED ROW IS KEPT for a different reason — sender_id survives an
+// attachment purge, only the content columns are cleared — and it must be,
+// since dropping it would shorten a conversation rather than showing that
+// something was there and is gone. Same principle, two causes.
+const toMessage = (m: MessageRow): Message => ({
+  id: m.id!,
+  threadId: m.thread_id!,
+  senderId: m.sender_id,
+  text: m.text,
+  createdAt: m.created_at!,
+  readAt: m.read_at,
+  attachmentPath: m.attachment_url,
+  attachmentPurgedAt: m.attachment_purged_at,
+  redactedAt: m.redacted_at,
+  voiceNoteSeconds: m.voice_note_seconds,
+  replyToId: m.reply_to_id,
+  forwarded: m.forwarded ?? false,
+});
+
+/** Messages per page. A thread opens on its newest page; scrolling up loads the next. */
+export const MESSAGE_PAGE = 40;
+
+export type MessagePage =
+  | { ok: true; messages: Message[]; hasOlder: boolean }
+  | { ok: false; message: string };
+
+/**
+ * One page of a thread, oldest-first for reading: the newest page when
+ * `before` is omitted, otherwise the page just older than `before`.
+ *
+ * KEYSET, NOT OFFSET. An offset shifts every time a message arrives, so the
+ * second page would repeat or skip messages in a live conversation. The key is
+ * (created_at, id): two messages can share a timestamp, and the id breaks the
+ * tie so none is skipped or repeated at a page boundary.
+ *
+ * One extra row is asked for, to know whether an older page exists without a
+ * second query.
+ */
+export async function fetchMessagePage(
+  threadId: string,
+  before?: { createdAt: string; id: string },
+  limit = MESSAGE_PAGE
+): Promise<MessagePage> {
+  let q = supabase
+    .from("messages_visible")
+    .select(MESSAGE_COLUMNS)
+    .eq("thread_id", threadId)
+    .order("created_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(limit + 1);
+  if (before) {
+    // Quoted: a timestamp carries ':' and '+', which PostgREST's or() grammar
+    // would otherwise read as syntax.
+    q = q.or(`created_at.lt."${before.createdAt}",and(created_at.eq."${before.createdAt}",id.lt.${before.id})`);
+  }
+  const { data, error } = await q;
   if (error) {
     console.error("[messaging] Could not load messages:", error.message);
     return { ok: false, message: describe(error) };
   }
+  const rows = (data ?? []) as MessageRow[];
   return {
     ok: true,
-    // READ THROUGH messages_visible, so a message this viewer hid is simply
-    // absent. The other participant is unaffected -- the view filters on
-    // auth.uid(), and the row itself is untouched.
-    //
-    // EVERY COLUMN OF A VIEW IS TYPED NULLABLE, because Postgres cannot promise
-    // a view's output is NOT NULL even when its source column is. The asserted
-    // ones below are NOT NULL on public.messages and cannot arrive null; the
-    // same widening is why thread_participant_summary needs `!` on thread_id.
-    //
-    // sender_id IS KEPT WHEN NULL, AND USED TO BE DROPPED. The filter here read
-    // `.filter((m) => !!m.sender_id)`, on the reasoning that a row without a
-    // sender would make the "is this mine" comparison match on a null. It does
-    // not: `null === authUserId` is false for any signed-in user, so such a row
-    // simply renders as received, which is correct.
-    //
-    // What the filter actually did was delete the departed participant's half
-    // of the conversation from the survivor's screen. account_deletion SET
-    // NULLs sender_id precisely so those messages survive, and
-    // 20260911200000 then made the thread reachable again — and this line threw
-    // the contents away after both. Verified against a real local deletion: the
-    // view returned two messages, and the client rendered none.
-    //
-    // A PURGED ROW IS KEPT for a different reason — sender_id survives an
-    // attachment purge, only the content columns are cleared — and it must be,
-    // since dropping it would shorten a conversation rather than showing that
-    // something was there and is gone. Same principle, two causes.
-    messages: (data ?? [])
-      .map((m) => ({
-      id: m.id!,
-      threadId: m.thread_id!,
-      senderId: m.sender_id,
-      text: m.text,
-      createdAt: m.created_at!,
-      readAt: m.read_at,
-      attachmentPath: m.attachment_url,
-      attachmentPurgedAt: m.attachment_purged_at,
-      redactedAt: m.redacted_at,
-      voiceNoteSeconds: m.voice_note_seconds,
-      replyToId: m.reply_to_id,
-      forwarded: m.forwarded ?? false,
-    })),
+    hasOlder: rows.length > limit,
+    messages: rows.slice(0, limit).reverse().map(toMessage),
   };
 }
 
@@ -716,51 +739,24 @@ export async function sendVoiceNote(
 }
 
 /**
- * Marks every unread message from the OTHER participant as read.
+ * Marks everything in one thread read for the caller.
  *
- * THE SERVER DECIDES THE TIMESTAMP, not this call. `messages_stamp_read_at`
- * ignores whatever value arrives and writes `now()` on the first transition
- * out of null, then freezes it — so the value sent here is a placeholder whose
- * only job is being non-null. A receipt either party could backdate would be
- * worse than no receipt at all, which is why the column is trigger-controlled
- * rather than merely grant-limited.
+ * ONE CALL PER THREAD, mark_thread_read (Database 20261001000000). It advances
+ * the caller's private read mark, which is what unread counts come from, and
+ * stamps read receipts on the messages only when the thread allows them — so an
+ * opted-out reader's badge still clears while the sender sees no read time.
+ * This replaced one UPDATE per message id, which wrote read_at even where the
+ * opt-out said it should not exist.
  *
- * NO `sender_id` FILTER, DELIBERATELY. `messages_mark_read_by_recipient`
- * already requires `auth.uid() <> sender_id`, and duplicating a policy in a
- * filter is how the two quietly drift apart. The `read_at is null` filter is a
- * different thing — it is functional, keeping the update off rows that are
- * already read and making the returned count mean "newly marked".
- *
- * ROW COUNT IS THE RESULT, NOT `error`. Verified against staging: updating a
- * message you sent yourself matches zero rows and returns `error: null`. A
- * caller checking only for an error would read a total refusal as success,
- * which is the same silent-rejection trap this project has hit before.
- *
- * IT TAKES IDS RATHER THAN A THREAD, BECAUSE THE WRITE CANNOT GO THROUGH
- * messages_visible. That view carries SELECT and nothing else, so marking read
- * still targets public.messages directly — and a bare thread_id filter there
- * would mark messages this viewer has HIDDEN, which is precisely what the view
- * exists to keep out of their reading. The caller passes the ids it actually
- * rendered, so what is marked read is exactly what was on screen.
- *
- * An empty list is a no-op rather than a round trip: `in ()` matches nothing,
- * and asking the database to confirm that costs a request to learn something
- * already known here.
+ * Returns the server's read time, or null on failure.
  */
-export async function markThreadRead(messageIds: string[]): Promise<number> {
-  if (messageIds.length === 0) return 0;
-  const { data, error } = await supabase
-    .from("messages")
-    .update({ read_at: new Date().toISOString() })
-    .in("id", messageIds)
-    .is("read_at", null)
-    .select("id");
-
+export async function markThreadRead(threadId: string): Promise<string | null> {
+  const { data, error } = await supabase.rpc("mark_thread_read", { p_thread_id: threadId });
   if (error) {
     console.error("[messaging] Could not mark read:", error.message);
-    return 0;
+    return null;
   }
-  return data?.length ?? 0;
+  return (data as string | null) ?? null;
 }
 
 export interface UnreadCounts {
@@ -772,54 +768,151 @@ export interface UnreadCounts {
 /**
  * How many messages the caller has received and not read, per thread.
  *
- * ONE QUERY FOR BOTH ANSWERS. Selecting the thread ids of unread rows and
- * counting them here gives the per-thread badge and the nav total together;
- * asking the database for grouped counts is not expressible through PostgREST,
- * and a `head: true` count per thread would be one round trip each for strictly
- * less information.
+ * FROM my_conversations(), the same call the list uses, so the badge and the
+ * list can never disagree. It counts against the caller's own read mark rather
+ * than read_at: read_at is withheld wherever read receipts are off, and counting
+ * its nulls would leave those threads unread for ever.
  *
- * WHAT KEEPS IT CHEAP is that the row set is unread messages, which is small by
- * nature — an inbox nobody has read is a product problem long before it is a
- * query problem. `messages_thread_unread_idx` is a partial index on
- * `(thread_id) where read_at is null`, matching this predicate exactly, and RLS
- * narrows to the caller's own threads before `sender_id` is considered.
- *
- * `sender_id` IS FILTERED HERE, AND THAT IS NOT A DUPLICATED POLICY.
- * `messages_select_participant` deliberately returns both sides of a
- * conversation, so excluding the caller's own messages is a functional
- * requirement — an unread count that included what you had just sent would
- * count your own words back at you.
- *
- * FAILS TO ZERO, NOT TO A GUESS. An error returns empty counts, so a badge
- * disappears rather than freezing at a stale number. Claiming unread messages
- * that cannot be confirmed is worse than showing none.
+ * FAILS TO ZERO, NOT TO A GUESS: a badge disappears rather than freezing at a
+ * stale number.
  */
-export async function fetchUnreadCounts(currentUserId: string): Promise<UnreadCounts> {
-  const { data, error } = await supabase
-    .from("messages_visible")
-    .select("thread_id")
-    .is("read_at", null)
-    // NOT `.neq("sender_id", currentUserId)`, WHICH SILENTLY DROPPED ROWS.
-    // `sender_id <> uuid` is NULL — not true — when sender_id is null, so every
-    // unread message from someone who has since deleted their account fell out
-    // of the count. Measured against a real local deletion: four unread
-    // messages, and the neq predicate returned zero.
-    //
-    // The null branch is spelled out because three-valued logic will not infer
-    // it. A departed sender is by definition not the caller, so their messages
-    // belong in the caller's unread count exactly as they did the day before.
-    .or(`sender_id.is.null,sender_id.neq.${currentUserId}`);
-
+export async function fetchUnreadCounts(): Promise<UnreadCounts> {
+  const { data, error } = await supabase.rpc("my_conversations");
   if (error) {
     console.error("[messaging] Could not count unread:", error.message);
     return { byThread: {}, total: 0 };
   }
-
   const byThread: Record<string, number> = {};
+  let total = 0;
   for (const row of data ?? []) {
-    if (row.thread_id) byThread[row.thread_id] = (byThread[row.thread_id] ?? 0) + 1;
+    const n = Number(row.unread_count ?? 0);
+    if (n > 0) {
+      byThread[row.thread_id] = n;
+      total += n;
+    }
   }
-  return { byThread, total: data?.length ?? 0 };
+  return { byThread, total };
+}
+
+// ---------------------------------------------------------------------------
+// Blocking and reporting (Database 20261001020000)
+// ---------------------------------------------------------------------------
+
+export interface BlockState {
+  /** The caller blocked this person, and can undo it. */
+  iBlocked: boolean;
+  /** Either side blocked the other: nothing can be sent or called. */
+  blocked: boolean;
+}
+
+/**
+ * Whether a block stands between the caller and this person.
+ *
+ * TWO QUESTIONS, because the caller may only see their own blocks: whether
+ * THEY blocked comes from their user_blocks rows, and whether anything blocks
+ * the conversation comes from users_are_blocked(), which is direction-free. The
+ * difference is shown only as "you blocked them" versus "you can't message
+ * this person" — the app never says the other side blocked the caller.
+ */
+export async function fetchBlockState(me: string, other: string): Promise<BlockState> {
+  const [mine, either] = await Promise.all([
+    supabase.from("user_blocks").select("blocked_id").eq("blocker_id", me).eq("blocked_id", other).maybeSingle(),
+    supabase.rpc("users_are_blocked", { p_one: me, p_two: other }),
+  ]);
+  const iBlocked = !mine.error && !!mine.data;
+  const blocked = iBlocked || (!either.error && either.data === true);
+  return { iBlocked, blocked };
+}
+
+export async function blockUser(me: string, other: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { error } = await supabase.from("user_blocks").insert({ blocker_id: me, blocked_id: other });
+  // Already blocked is success: the state the person asked for is the state.
+  if (error && error.code !== "23505") {
+    console.error("[messaging] Could not block:", error.message);
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't block this person. Try again." };
+  }
+  return { ok: true };
+}
+
+export async function unblockUser(me: string, other: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { error } = await supabase.from("user_blocks").delete().eq("blocker_id", me).eq("blocked_id", other);
+  if (error) {
+    console.error("[messaging] Could not unblock:", error.message);
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't unblock this person. Try again." };
+  }
+  return { ok: true };
+}
+
+export type ReportReason = "harassment" | "spam" | "inappropriate_content" | "impersonation" | "safety_concern";
+
+/** The database's report_reason enum, in the order and words the report sheet offers them. */
+export const REPORT_REASONS: { value: ReportReason; label: string; hint: string }[] = [
+  { value: "safety_concern", label: "Safety concern", hint: "Someone may be at risk of harm" },
+  { value: "harassment", label: "Harassment", hint: "Bullying, threats or unwanted contact" },
+  { value: "inappropriate_content", label: "Inappropriate content", hint: "Sexual, violent or offensive material" },
+  { value: "impersonation", label: "Impersonation", hint: "Pretending to be someone else, or Centium" },
+  { value: "spam", label: "Spam", hint: "Advertising, scams or repeated unwanted messages" },
+];
+
+/**
+ * Reports one message to Centium's team.
+ *
+ * APPEND-ONLY: a report cannot be edited or withdrawn, and only an admin sets
+ * its status. One per person per message, by unique index — a second report of
+ * the same message is answered as already reported rather than as an error.
+ */
+export async function reportMessage(input: {
+  reporterId: string;
+  messageId: string;
+  reportedId: string | null;
+  reason: ReportReason;
+  detail?: string;
+}): Promise<{ ok: true } | { ok: false; message: string; already?: boolean }> {
+  const detail = input.detail?.trim();
+  const { error } = await supabase.from("message_reports").insert({
+    reporter_id: input.reporterId,
+    message_id: input.messageId,
+    reported_id: input.reportedId,
+    reason: input.reason,
+    detail: detail ? detail.slice(0, 2000) : null,
+  });
+  if (error) {
+    if (error.code === "23505") {
+      return { ok: false, already: true, message: "You've already reported this message. Our team has it." };
+    }
+    console.error("[messaging] Could not report:", error.message);
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't send your report. Try again." };
+  }
+  return { ok: true };
+}
+
+/**
+ * Whether the caller may still open this attachment.
+ *
+ * The storage policy's own predicate (Database 20261001040000): a professional
+ * whose engagement with a client has ended can no longer open what that client
+ * sent. Asked only when signing a URL fails, to tell "no longer available" apart
+ * from a network or file problem. Null when the question itself failed.
+ */
+export async function mayOpenAttachment(path: string): Promise<boolean | null> {
+  const { data, error } = await supabase.rpc("may_open_message_attachment", { p_name: path });
+  if (error) return null;
+  return data === true;
+}
+
+/**
+ * The conversation a message notification was about, from its push id.
+ *
+ * The notification carries only that id, never who wrote or what. The
+ * recipient may read their own message_push_sends rows, and the message's
+ * thread comes through messages_visible like any other read.
+ */
+export async function threadForPush(pushId: string): Promise<string | null> {
+  const push = await supabase.from("message_push_sends").select("message_id").eq("id", pushId).maybeSingle();
+  if (push.error || !push.data) return null;
+  const msg = await supabase.from("messages_visible").select("thread_id").eq("id", push.data.message_id).maybeSingle();
+  if (msg.error || !msg.data?.thread_id) return null;
+  return msg.data.thread_id;
 }
 
 /**

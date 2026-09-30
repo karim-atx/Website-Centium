@@ -137,3 +137,67 @@ export async function setHideReadReceipts(
     };
   }
 }
+
+export type MessageNotificationsPref =
+  | { status: "ok"; enabled: boolean }
+  | { status: "error"; message: string };
+
+/**
+ * Whether new messages send a notification, as the SERVER holds it.
+ *
+ * app_preferences.notification_professional_messages is what the message-push
+ * trigger reads (Database 20261001060000): off means no notification is queued
+ * at all. No row means the column's default, which is on.
+ */
+export async function fetchMessageNotifications(): Promise<MessageNotificationsPref> {
+  const { data, error } = await supabase
+    .from("app_preferences")
+    .select("notification_professional_messages")
+    .maybeSingle();
+  if (error) {
+    console.error("[preferences] Could not read message notifications:", error.code, error.message);
+    return { status: "error", message: describe(error) };
+  }
+  return { status: "ok", enabled: data?.notification_professional_messages ?? true };
+}
+
+/**
+ * Turns message notifications on or off, on the server.
+ *
+ * UPDATE FIRST, INSERT ONLY IF NOTHING MATCHED, never upsert: the same
+ * column-scoped UPDATE grant and the same 23505 race as setHideReadReceipts.
+ */
+export async function setMessageNotifications(ownerId: string, enabled: boolean): Promise<MessageNotificationsPref> {
+  const updated = await supabase
+    .from("app_preferences")
+    .update({ notification_professional_messages: enabled })
+    .eq("owner_id", ownerId)
+    .select("notification_professional_messages");
+  if (updated.error) {
+    console.error("[preferences] Could not update:", updated.error.code, updated.error.message);
+    return { status: "error", message: describe(updated.error) };
+  }
+  if (updated.data && updated.data.length > 0) {
+    return { status: "ok", enabled: updated.data[0].notification_professional_messages };
+  }
+
+  const inserted = await supabase
+    .from("app_preferences")
+    .insert({ owner_id: ownerId, notification_professional_messages: enabled })
+    .select("notification_professional_messages")
+    .single();
+  if (!inserted.error) return { status: "ok", enabled: inserted.data.notification_professional_messages };
+
+  if (inserted.error.code === "23505") {
+    const retry = await supabase
+      .from("app_preferences")
+      .update({ notification_professional_messages: enabled })
+      .eq("owner_id", ownerId)
+      .select("notification_professional_messages");
+    if (!retry.error && retry.data && retry.data.length > 0) {
+      return { status: "ok", enabled: retry.data[0].notification_professional_messages };
+    }
+  }
+  console.error("[preferences] Could not insert:", inserted.error.code, inserted.error.message);
+  return { status: "error", message: describe(inserted.error) };
+}

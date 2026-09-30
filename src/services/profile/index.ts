@@ -352,3 +352,21 @@ export async function updateProfileFromOnboarding(
   }
   return { ok: true };
 }
+
+/**
+ * Whether a display name is reserved for Centium itself ("Centium Support" and
+ * close variants), by the database's own rule (Database 20261001050000).
+ *
+ * Asked BEFORE the name is saved, because the save that would refuse it is
+ * the end-of-onboarding profile write, which is best-effort: refused there, the
+ * whole profile update fails and nobody is told. Null when the check itself
+ * failed — the server still refuses a reserved name either way.
+ */
+export async function isReservedDisplayName(name: string): Promise<boolean | null> {
+  const { data, error } = await supabase.rpc("display_name_is_reserved", { p_name: name });
+  if (error) {
+    console.error("[profile] Could not check the name:", error.message);
+    return null;
+  }
+  return data === true;
+}

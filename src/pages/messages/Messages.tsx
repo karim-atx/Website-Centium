@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { ThreadList } from "../../components/messages/ThreadList";
 import { ThreadView } from "../../components/messages/ThreadView";
 import { useApp } from "../../context/AppContext";
-import { fetchThreads, type MessageThread } from "../../services/messaging";
+import { fetchThreads, threadForPush, type MessageThread } from "../../services/messaging";
 import { MessageCircle } from "lucide-react";
 
 /**
@@ -26,6 +26,7 @@ import { MessageCircle } from "lucide-react";
 export default function Messages() {
   const { authUserId } = useApp();
   const location = useLocation();
+  const navigate = useNavigate();
   const [threads, setThreads] = useState<MessageThread[]>([]);
   const [open, setOpen] = useState<MessageThread | null>(null);
   const [loading, setLoading] = useState(true);
@@ -42,13 +43,24 @@ export default function Messages() {
   // just left — a Back button that goes nowhere.
   const requestedThreadId = (location.state as { threadId?: string } | null)?.threadId ?? null;
   const deepLinkConsumed = useRef(false);
+  // A tapped message notification lands here as ?push=<id>: the notification
+  // carries only that id, and the thread is found with a query the recipient
+  // may make (their own message_push_sends row, then the message's thread).
+  const pushId = new URLSearchParams(location.search).get("push");
 
   const load = async () => {
     const result = await fetchThreads();
     if (result.ok) {
       setThreads(result.threads);
       setError(null);
-      if (requestedThreadId && !deepLinkConsumed.current) {
+      if (pushId && !deepLinkConsumed.current) {
+        deepLinkConsumed.current = true;
+        // The query is removed either way, so Back and a refresh land on the list.
+        navigate("/app/messages", { replace: true });
+        const threadId = await threadForPush(pushId);
+        const target = threadId ? result.threads.find((t) => t.id === threadId) : undefined;
+        if (target) setOpen(target);
+      } else if (requestedThreadId && !deepLinkConsumed.current) {
         deepLinkConsumed.current = true;
         // A miss is silent and lands on the list. The thread was created
         // moments ago and will be here; if it somehow is not, the list is a

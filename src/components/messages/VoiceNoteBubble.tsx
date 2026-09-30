@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Loader2, Mic, Play } from "lucide-react";
 import { signedUrlFor } from "../../services/storage";
+import { mayOpenAttachment } from "../../services/messaging";
+import { AttachmentGone } from "./AttachmentGone";
 
 /** mm:ss, because a voice note is read as a length before it is played. */
 function formatDuration(seconds: number): string {
@@ -39,6 +41,8 @@ export const VoiceNoteBubble: React.FC<{
   const [url, setUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [failed, setFailed] = useState(false);
+  // The storage rule refused it: see AttachmentGone.
+  const [gone, setGone] = useState(false);
 
   const load = async () => {
     if (url || loading) return;
@@ -47,11 +51,15 @@ export const VoiceNoteBubble: React.FC<{
     const result = await signedUrlFor("message-attachments", path);
     setLoading(false);
     if (!result.ok || !result.url) {
-      setFailed(true);
+      // Refused, or just failed? Only the storage rule can say.
+      if ((await mayOpenAttachment(path)) === false) setGone(true);
+      else setFailed(true);
       return;
     }
     setUrl(result.url);
   };
+
+  if (gone) return <AttachmentGone kind="voice" />;
 
   if (url) {
     return (

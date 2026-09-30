@@ -72,7 +72,7 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setCounts({ byThread: {}, total: 0 });
       return;
     }
-    setCounts(await fetchUnreadCounts(authUserId));
+    setCounts(await fetchUnreadCounts());
   }, [authUserId]);
 
   useEffect(() => {

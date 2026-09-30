@@ -15,6 +15,7 @@ import {
 import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
 import { useApp } from "../../context/AppContext";
 import { fetchCertificationPath, uploadCertification } from "../../services/certification";
+import { isReservedDisplayName } from "../../services/profile";
 import { AttachDocument } from "../../components/ui/AttachDocument";
 
 interface Props {
@@ -98,7 +99,14 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
     return { ok: true as const };
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
+    // A NAME RESERVED FOR CENTIUM ("Centium Support" and variants) is refused by
+    // the database, but only at the end-of-onboarding save, which is
+    // best-effort and would fail the whole profile silently. Asked here instead.
+    if ((await isReservedDisplayName(draft.firstName.trim())) === true) {
+      setError("That name is reserved. Choose a different name.");
+      return;
+    }
     if (!isProfessional) {
       const height = Number(draft.heightCm);
       const weight = Number(draft.weightKg);
@@ -141,7 +149,7 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
       footer={
         <div>
           {error && <p className="text-xs font-semibold text-status-high mb-3 text-center">{error}</p>}
-          <Button fullWidth size="lg" disabled={!canContinue} onClick={handleContinue}>
+          <Button fullWidth size="lg" disabled={!canContinue} onClick={() => void handleContinue()}>
             Continue
           </Button>
         </div>

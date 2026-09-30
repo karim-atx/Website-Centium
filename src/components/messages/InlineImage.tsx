@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ImageOff, RotateCw } from "lucide-react";
 import { attachmentUrl, knownRatio, rememberRatio } from "../../services/messaging/attachmentUrls";
+import { mayOpenAttachment } from "../../services/messaging";
+import { AttachmentGone } from "./AttachmentGone";
 
 // A photo in the chat log, shown as itself.
 //
@@ -32,7 +34,7 @@ export const InlineImage: React.FC<{
   // Without IntersectionObserver there is nothing to wait for: sign at once.
   const [near, setNear] = useState(() => !("IntersectionObserver" in window));
   const [url, setUrl] = useState<string | null>(null);
-  const [state, setState] = useState<"loading" | "loaded" | "failed">("loading");
+  const [state, setState] = useState<"loading" | "loaded" | "failed" | "gone">("loading");
   const [ratio, setRatio] = useState<number>(() => knownRatio(path) ?? 4 / 3);
   const retried = useRef(false);
 
@@ -56,10 +58,12 @@ export const InlineImage: React.FC<{
   useEffect(() => {
     if (!near) return;
     let cancelled = false;
-    void attachmentUrl(path).then((u) => {
+    void attachmentUrl(path).then(async (u) => {
       if (cancelled) return;
-      if (u) setUrl(u);
-      else setState("failed");
+      if (u) return setUrl(u);
+      // Refused, or just failed? Only the storage rule can say.
+      const allowed = await mayOpenAttachment(path);
+      if (!cancelled) setState(allowed === false ? "gone" : "failed");
     });
     return () => {
       cancelled = true;
@@ -69,11 +73,13 @@ export const InlineImage: React.FC<{
   const retry = async (force: boolean) => {
     setState("loading");
     const u = await attachmentUrl(path, force);
-    if (u) setUrl(u);
-    else setState("failed");
+    if (u) return setUrl(u);
+    setState((await mayOpenAttachment(path)) === false ? "gone" : "failed");
   };
 
   const { width } = boxFor(ratio);
+
+  if (state === "gone") return <AttachmentGone kind="photo" className={className} />;
 
   return (
     <button
