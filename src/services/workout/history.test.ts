@@ -69,3 +69,10 @@ test("exercise history: sessions that included it, newest first, completed sets 
   });
   assert.deepEqual(exerciseHistory(list, { catalogId: "nope", name: "Ab Wheel Rollout" }), []);
 });
+
+test("periodRange: a picked day covers exactly that day", () => {
+  const r = periodRange("day", "2026-09-30", { from: "2026-09-22", to: "2026-09-22" });
+  assert.equal(inRange("2026-09-22", r), true);
+  assert.equal(inRange("2026-09-21", r), false);
+  assert.equal(inRange("2026-09-23", r), false);
+});

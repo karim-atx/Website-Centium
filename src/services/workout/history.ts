@@ -4,13 +4,14 @@ import { isWorkingSet } from "./stats";
 // WO3.1 History: the period, the hero summary, each card's top sets, and the
 // volume comparison phrase.
 
-export type HistoryPeriod = "week" | "month" | "year" | "all" | "custom";
+export type HistoryPeriod = "week" | "month" | "year" | "all" | "day" | "custom";
 
 export const PERIOD_LABEL: Record<HistoryPeriod, string> = {
   week: "This week",
   month: "This month",
   year: "This year",
   all: "All time",
+  day: "Pick a day",
   custom: "Custom range",
 };
 
@@ -33,6 +34,8 @@ export function periodRange(
       return { from: iso(new Date(d.getFullYear(), d.getMonth(), 1)), to: today };
     case "year":
       return { from: iso(new Date(d.getFullYear(), 0, 1)), to: today };
+    // A picked day is a one-day range (from = to).
+    case "day":
     case "custom":
       return custom ? { from: custom.from, to: custom.to } : { from: null, to: null };
     default:

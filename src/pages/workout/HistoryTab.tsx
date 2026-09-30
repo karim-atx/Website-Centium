@@ -29,7 +29,7 @@ import type { WorkoutSession } from "../../types";
 // "Choose a date" picker (WO9), which is also where that single-day pick
 // lives now: the frame has no separate calendar icon.
 
-const PERIODS: HistoryPeriod[] = ["week", "month", "year", "all", "custom"];
+const PERIODS: HistoryPeriod[] = ["week", "month", "year", "all", "day", "custom"];
 const shortDate = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
@@ -41,6 +41,7 @@ export default function HistoryTab() {
   const [custom, setCustom] = useState<{ from: string; to: string } | null>(null);
   const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const [rangeStep, setRangeStep] = useState<{ step: "from" | "to"; from?: string } | null>(null);
+  const [pickingDay, setPickingDay] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [moving, setMoving] = useState<WorkoutSession | null>(null);
   const [deleting, setDeleting] = useState<WorkoutSession | null>(null);
@@ -88,7 +89,7 @@ export default function HistoryTab() {
     setError(null);
     const outside = !inRange(date, range);
     showToast({
-      message: outside ? `Moved to ${shortDate(date)} (outside ${PERIOD_LABEL[period]}).` : `Moved to ${shortDate(date)}.`,
+      message: outside ? `Moved to ${shortDate(date)} (outside ${period === "day" && custom ? shortDate(custom.from) : PERIOD_LABEL[period]}).` : `Moved to ${shortDate(date)}.`,
       undo: () => void moveWorkoutSession(s.id, from),
     });
   };
@@ -120,7 +121,7 @@ export default function HistoryTab() {
         >
           <Calendar size={13} style={{ color: "#8F68F6" }} />
           <span style={{ fontSize: 12.5, fontWeight: 500, color: "#241F1B", whiteSpace: "nowrap" }}>
-            {period === "custom" && custom
+            {(period === "custom" || period === "day") && custom
               ? custom.from === custom.to
                 ? shortDate(custom.from)
                 : `${shortDate(custom.from)} – ${shortDate(custom.to)}`
@@ -207,7 +208,24 @@ export default function HistoryTab() {
         selected={period}
         onSelect={(p) => {
           if (p === "custom") setRangeStep({ step: "from" });
+          else if (p === "day") setPickingDay(true);
           else setPeriod(p);
+        }}
+      />
+
+      {/* Decision 3: Pick a day. The shared picker titled "Choose a date"
+          (WO9), session dots on logged days; one tap shows that day. */}
+      <CalendarPickerSheet
+        open={pickingDay}
+        onClose={() => setPickingDay(false)}
+        title="Choose a date"
+        selectedDate={period === "day" && custom ? custom.from : today}
+        today={today}
+        maxDate={today}
+        markers={sessionDays}
+        onSelect={(date) => {
+          setCustom({ from: date, to: date });
+          setPeriod("day");
         }}
       />
 
