@@ -450,7 +450,8 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
         <div className="flex items-center justify-between flex-wrap" style={{ columnGap: 8, rowGap: 8 }}>
           <p style={{ ...TITLE, minWidth: 0, whiteSpace: "nowrap" }}>Daily target</p>
           <div className="flex items-center ml-auto" style={{ gap: 8 }}>
-          <span className="flex items-stretch rounded-full overflow-hidden flex-none" style={{ height: 30, background: "#F5F4FE" }}>
+          {/* No overflow clipping: it would clip the 44px hit area of the - / + buttons, and the ends are transparent anyway. A minimum height, so 130% text grows the pill rather than being cut. */}
+          <span className="flex items-stretch rounded-full flex-none" style={{ minHeight: 30, background: "#F5F4FE" }}>
             <button
               onClick={() => !locked && setCalorieDraft(String(Math.max(0, Number(calorieDraft || 0) - 50)))}
               disabled={locked}

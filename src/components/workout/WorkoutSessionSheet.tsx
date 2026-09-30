@@ -709,7 +709,10 @@ export const WorkoutSessionSheet: React.FC<{
   const exMenuBlock = blockOf(exMenuEx);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 bg-white flex flex-col animate-fade-in">
+    // GLOBAL: the on-screen keyboard covers the bottom of a fixed full-screen
+    // view, so the logger ends above it (--kb-inset, published by Layout from
+    // visualViewport) — the Finish footer and the list both stay in reach.
+    <div className="fixed inset-0 z-50 bg-white flex flex-col animate-fade-in" style={{ paddingBottom: "var(--kb-inset, 0px)" }}>
       <div className="mx-auto w-full max-w-[430px] flex flex-col flex-1 min-h-0">
         {/* Header: × and ⌄ | routine name + status | play, metronome, note. */}
         <div

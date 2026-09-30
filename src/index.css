@@ -426,6 +426,25 @@ body {
   transform: scale(0.96);
 }
 
+/* GLOBAL (01, 44x44 touch targets): every tappable control gets an invisible
+   hit box at least 44x44, centred on it, so small visuals (a 17px menu dot,
+   a 24px chevron, a 24px-tall switch) keep the size they were drawn at.
+   :where() keeps both rules at zero specificity, so a positioning utility
+   (absolute, fixed, sticky) on the same element always wins. .hit is the same
+   for a control that should not get the press animation of .tap. */
+:where(.tap, .hit) {
+  position: relative;
+}
+:where(.tap, .hit)::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(100%, 44px);
+  height: max(100%, 44px);
+  transform: translate(-50%, -50%);
+}
+
 /* Hero handoff (design_handoff_hero/source/hero.css + README §2/§3 row 10):
    real CSS hover/active states for the hero CTAs, replacing the "Request a
    Demo" button's previous JS onMouseEnter/onMouseLeave handlers. */

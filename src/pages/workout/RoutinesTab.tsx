@@ -919,7 +919,7 @@ const FolderHeader: React.FC<{
             {...gripProps}
             role="button"
             aria-label={`Drag ${folder.name}`}
-            className="flex shrink-0"
+            className="hit flex shrink-0"
             style={{ color: "#FFFFFF", ...(gripProps?.style as React.CSSProperties | undefined) }}
           >
             <GripVertical size={17} />
@@ -966,7 +966,7 @@ const RoutineCardFace: React.FC<{
       {renaming ? (
         <RenameField value={renameDraft ?? ""} onChange={(v) => onRenameDraft?.(v)} onCommit={() => onRenameCommit?.()} tone="dark" />
       ) : (
-        <button onClick={onToggle} className="flex-1 text-left min-w-0">
+        <button onClick={onToggle} className="hit flex-1 text-left min-w-0">
           <p className="text-[14.5px] font-bold text-charcoal flex items-center gap-1.5 truncate">
             {routine.name}
             {isOngoing && (
@@ -1015,7 +1015,7 @@ const RoutineCardFace: React.FC<{
         {...gripProps}
         role="button"
         aria-label={`Drag ${routine.name}`}
-        className="flex shrink-0"
+        className="hit flex shrink-0"
         style={{ color: "#8C8378", ...(gripProps?.style as React.CSSProperties | undefined) }}
       >
         <GripVertical size={17} />
