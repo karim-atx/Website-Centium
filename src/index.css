@@ -50,6 +50,15 @@
   --c-primary-pale: 240 237 249;
   --c-primary-dark: 125 107 181;
   --c-primary-deep-text: 95 80 147;
+  /* The white-text hero cards (affiliation, linked professional): the theme's
+     primary -> primary-dark, each with all three channels scaled down by one
+     factor, so the hue holds while white reaches AA. primary itself carries
+     white at 2.35:1; these hold the weakest ink on the card -- white/70
+     labels, and white on the white/15 pills -- at 4.6:1 at the start and
+     5.5:1 at the end, in every theme. Light only: dark mode draws these
+     cards with dark:from-primary/35 dark:to-primary/15 at the call site. */
+  --c-hero-from: 88 81 111;
+  --c-hero-to: 75 64 109;
 
   /* Bottom-nav brand accent (Iteration 6 "Team"). Deliberately NOT
      --c-primary: the colour-theme picker (Settings > Appearance) swaps
@@ -355,6 +364,8 @@
   --c-primary-light: 116 175 227;
   --c-primary-pale: 220 234 248;
   --c-primary-dark: 30 74 110;
+  --c-hero-from: 46 87 127;
+  --c-hero-to: 30 74 110;
 }
 .dark[data-accent="ocean"] {
   --c-primary: 116 175 227;
@@ -371,6 +382,8 @@
   --c-primary-light: 242 164 136;
   --c-primary-pale: 252 230 221;
   --c-primary-dark: 165 66 36;
+  --c-hero-from: 130 65 46;
+  --c-hero-to: 118 47 26;
 }
 .dark[data-accent="sunset"] {
   --c-primary: 240 140 108;
@@ -387,6 +400,8 @@
   --c-primary-light: 184 118 156;
   --c-primary-pale: 241 224 235;
   --c-primary-dark: 107 48 84;
+  --c-hero-from: 125 63 99;
+  --c-hero-to: 107 48 84;
 }
 .dark[data-accent="berry"] {
   --c-primary: 200 128 172;

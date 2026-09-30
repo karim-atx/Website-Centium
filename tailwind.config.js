@@ -36,6 +36,11 @@ export default {
           // Text/glyph colour when sitting on a `primary-pale` wash.
           "deep-text": "rgb(var(--c-primary-deep-text) / <alpha-value>)",
         },
+        // The white-text hero cards' light-mode gradient. See index.css.
+        hero: {
+          from: "rgb(var(--c-hero-from) / <alpha-value>)",
+          to: "rgb(var(--c-hero-to) / <alpha-value>)",
+        },
         // The sent message bubble only. Darker than `primary` because white ink
         // sits on it at 13px and below; `primary` stays the ground for every
         // button, FAB, toggle and chip, where nothing does. See index.css.
