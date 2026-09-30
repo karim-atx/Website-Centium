@@ -6,6 +6,18 @@ import type { WidgetType, WidgetConfig, WidgetSize } from "../../types";
 import { Pencil, Check, Plus, Footprints, Scale, Droplet, Moon, Utensils, Dumbbell, CheckSquare, BookOpen, Sparkles, HeartPulse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
+import { widgetColumns, widgetSpans } from "../../utils/widgetGrid";
+
+// HO1.1: 2 small widgets per row below a 400px-wide viewport, 3 from 400.
+function useWidgetColumns() {
+  const [columns, setColumns] = useState(() => widgetColumns(window.innerWidth));
+  useEffect(() => {
+    const onResize = () => setColumns(widgetColumns(window.innerWidth));
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+  return columns;
+}
 
 // V4: Body Fat removed as a Home widget option per QA (repeated from the
 // V1 pass — it stays as a Health-page metric, just not offered here).
@@ -54,6 +66,7 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
   const [editMode, setEditMode] = useState(false);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [dragRender, setDragRender] = useState<DragRenderState | null>(null);
+  const columns = useWidgetColumns();
 
   // Defensive: self-heals any old persisted board that still carries the
   // now-removed "bodyFat" widget type.
@@ -254,6 +267,16 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
         return list;
       })()
     : visibleWidgets;
+  // Spans follow the live order, placeholder included (as the dragged
+  // tile's size) and the Add tile as one more small, so edit-mode reflow
+  // obeys the same row rules.
+  const spans = widgetSpans(
+    [
+      ...renderList.map((item) => (item === "placeholder" ? dragRender!.size : item.size)),
+      ...(editMode ? (["small"] as const) : []),
+    ],
+    columns
+  );
 
   return (
     <div>
@@ -278,21 +301,18 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
         </button>
       </div>
 
-      {/* Iteration 6.2: small tiles are a fixed 114px and pack three to a
-          358px-wide row; a large tile takes the full row. flex-wrap (not a
-          2-col grid) is what lets an arbitrary user-chosen mix of
-          small/large widgets — this board is freely reorderable and
-          resizable — flow correctly instead of assuming pairs. */}
-      <div ref={boardRef} className="flex flex-wrap gap-[7px]">
-        {renderList.map((item) =>
+      {/* HO1.1 (01_GLOBAL / 03): a 6-track CSS grid with a fixed gap.
+          Small tiles span 6/columns; a large tile spans the full row; a
+          partial row of smalls shares the row equally (utils/widgetGrid). */}
+      <div ref={boardRef} className="grid grid-cols-6 gap-[7px]">
+        {renderList.map((item, i) =>
           item === "placeholder" ? (
             <div
               key="__drag-placeholder__"
               ref={placeholderRef}
               style={{
-                width: dragRender!.width,
+                gridColumn: `span ${spans[i]}`,
                 height: dragRender!.height,
-                flex: "none",
                 borderRadius: 15,
                 border: "2px dashed rgba(143,104,246,0.45)",
                 background: "rgba(143,104,246,0.06)",
@@ -304,6 +324,7 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
               key={item.id}
               ref={setTileRef(item.id)}
               size={item.size}
+              span={spans[i]}
               editMode={editMode}
               onRemove={() => removeWidget(item.id)}
               onResize={() => resizeWidget(item.id, item.size === "small" ? "large" : "small")}
@@ -322,7 +343,8 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
           <button
             onClick={() => setPickerOpen(true)}
             disabled={availableToAdd.length === 0}
-            className="tap w-[114px] h-[114px] shrink-0 rounded-[15px] border-2 border-dashed border-charcoal/15 flex flex-col items-center justify-center gap-1.5 text-charcoal-faint disabled:opacity-40"
+            style={{ gridColumn: `span ${spans[spans.length - 1]}` }}
+            className="tap h-[114px] rounded-[15px] border-2 border-dashed border-charcoal/15 flex flex-col items-center justify-center gap-1.5 text-charcoal-faint disabled:opacity-40"
           >
             <Plus size={20} />
             <span className="text-xs font-semibold">Add widget</span>

@@ -22,7 +22,7 @@ import { BookOpen, Play, Check } from "lucide-react";
 import { mondayFirstWeek, DAY_LETTERS, dayLetter } from "../../utils/week";
 
 // Iteration 6.2 "Team" canonical widget library — 11 metrics, small (fixed
-// 114×114) and large (fixed 358×150), one flat tinted ground and accent
+// 114 tall) and large (150 tall), fluid in width (HO1.1), one flat tinted ground and accent
 // colour per metric. This is the single source every widget placement
 // draws from; there is no other widget treatment left in the app. See
 // CHANGE_MANIFEST.md §4 in scratchpad/design-handoff-main-app for the
@@ -42,19 +42,22 @@ const capsLabel = "font-bold text-[9px] tracking-[.16em] uppercase";
 const numeralSmall = "text-[16px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums";
 const badge = "text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap shrink-0";
 
-// Master handover item 7: one wave layer's path, 716px wide (two periods of
-// the 358px widget). For each crest i of n across 716px, s = 716 / n and the
-// segment from x0 = i*s is `C (x0+0.28s) (y-amp) (x0+0.72s) (y+amp) (x0+s) y`,
-// starting at `M0 y`. `floor` closes the fill down past the container floor;
-// the crest line is the same path left open.
+// Master handover item 7: one wave layer's path. For each crest i of n
+// across 716px (two periods of the 358px reference widget), s = 716 / n and
+// the segment from x0 = i*s is `C (x0+0.28s) (y-amp) (x0+0.72s) (y+amp) (x0+s) y`,
+// starting at `M0 y`. HO1.1 made the widget fluid (full row, up to ~398px),
+// so the same waves repeat once more to 1432px: a layer drifts at most 358px,
+// which leaves over 1000px of strip in view at any width. `floor` closes the
+// fill down past the container floor; the crest line is the same path left open.
+const WAVE_STRIP = 1432;
 function buildWavePath(y: number, amp: number, crests: number, floor: number) {
   const s = 716 / crests;
   let edge = `M0 ${y}`;
-  for (let i = 0; i < crests; i++) {
+  for (let i = 0; i < crests * 2; i++) {
     const x0 = i * s;
     edge += ` C${(x0 + 0.28 * s).toFixed(2)} ${y - amp} ${(x0 + 0.72 * s).toFixed(2)} ${y + amp} ${(x0 + s).toFixed(2)} ${y}`;
   }
-  return { fill: `${edge} L716 ${floor} L0 ${floor} Z`, edge };
+  return { fill: `${edge} L${WAVE_STRIP} ${floor} L0 ${floor} Z`, edge };
 }
 
 // Item 7's table, in the reference markup's paint order: the front (y14)
@@ -127,7 +130,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
 
   return (
     <div
-      className="relative w-full max-w-[358px] h-[131px] rounded-[15px] overflow-hidden box-border"
+      className="relative w-full h-[131px] rounded-[15px] overflow-hidden box-border"
       style={{ background: "linear-gradient(180deg, #F4F8FE, #ECF4FE)" }}
     >
       <style>{`
@@ -174,9 +177,9 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
                 }}
               >
                 <svg
-                  width={716}
+                  width={WAVE_STRIP}
                   height={190}
-                  viewBox="0 -30 716 190"
+                  viewBox={`0 -30 ${WAVE_STRIP} 190`}
                   className="cent-water-drift"
                   style={{
                     position: "absolute",
@@ -392,14 +395,15 @@ export const HomeWidget: React.FC<{
       </>
     );
 
-  // Small: 114×114, padding 11px 12px. Large: 358×150, padding 14px 16px.
+  // Small: 114 tall, padding 11px 12px. Large: 150 tall, padding 14px 16px.
+  // HO1.1: both fill the width their grid span gives them.
   const shell = (bg: string, content: React.ReactNode) =>
     isLarge ? (
-      <div className="w-full max-w-[358px] h-[150px] box-border rounded-[15px] flex flex-col p-3.5" style={{ background: bg }}>
+      <div className="w-full h-[150px] box-border rounded-[15px] flex flex-col p-3.5" style={{ background: bg }}>
         {content}
       </div>
     ) : (
-      <div className="w-[114px] h-[114px] box-border rounded-[15px] flex flex-col px-3 py-[11px]" style={{ background: bg }}>
+      <div className="w-full h-[114px] box-border rounded-[15px] flex flex-col px-3 py-[11px]" style={{ background: bg }}>
         {content}
       </div>
     );

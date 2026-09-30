@@ -9,14 +9,16 @@ interface WidgetShellProps {
   onRemove: () => void;
   onResize: () => void;
   onGripPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
+  /** HO1.1: the tile's grid-column span on the widget board (6 tracks). */
+  span?: number;
   children: React.ReactNode;
 }
 
-// Iteration 6.2 "Team" canonical widget library: every widget tile is a
-// fixed 114×114 (small) or 358×150 (large) with its own flat tinted ground,
-// radius and padding baked into the widget's own root element (see
-// HomeWidget.tsx) — the shell no longer supplies a uniform white card
-// around it, only sizing and the edit-mode chrome.
+// Iteration 6.2 "Team" canonical widget library: every widget tile has its
+// own flat tinted ground, radius and padding baked into the widget's own
+// root element (see HomeWidget.tsx) — the shell supplies only its grid
+// placement and the edit-mode chrome. Handover 2026-09-29 HO1.1: widths are
+// fluid, set by the board's grid span (small 114 tall, large full row).
 //
 // Handoff §7a "V2 — inside the corner" (the variant chosen out of the 5
 // explored): resize/remove sit 7px INSIDE the tile's top-right corner as
@@ -32,15 +34,15 @@ interface WidgetShellProps {
 // (lift, live reflow, placeholder, auto-scroll, settle) since it needs
 // sibling tile rects and the board's own bounds.
 export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
-  ({ size, editMode, onRemove, onResize, onGripPointerDown, children }, ref) => {
+  ({ size, editMode, onRemove, onResize, onGripPointerDown, span, children }, ref) => {
     return (
       <div
         ref={ref}
         className={clsx(
-          "relative shrink-0 rounded-[15px] transition-transform",
-          size === "large" ? "w-full max-w-[358px]" : "w-[114px]",
+          "relative min-w-0 w-full rounded-[15px] transition-transform",
           editMode && "ring-2 ring-team-nav-accent/30"
         )}
+        style={span ? { gridColumn: `span ${span}` } : undefined}
       >
         {editMode && (
           <>
