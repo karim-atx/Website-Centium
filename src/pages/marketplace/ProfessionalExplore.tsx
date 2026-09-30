@@ -100,7 +100,7 @@ export default function ProfessionalExplore() {
           affiliate ID first; that ID only remains what it always was, the
           mechanism for formally joining a business's team. */}
       {affiliated && (
-        <Card className="bg-gradient-to-br from-primary to-primary-dark !text-white mb-6 animate-fade-slide-up">
+        <Card className="bg-gradient-to-br from-primary to-primary-dark dark:from-primary/35 dark:to-primary/15 !text-white mb-6 animate-fade-slide-up">
           <div className="flex items-center gap-3 mb-3">
             <span className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center shrink-0">
               <Building2 size={22} className="text-white" />

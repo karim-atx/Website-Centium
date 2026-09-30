@@ -222,7 +222,7 @@ export default function Professionals() {
         <Card
           interactive
           onClick={() => setLinkedProfileOpen(true)}
-          className="mb-6 bg-gradient-to-br from-primary to-primary-dark !text-white animate-fade-slide-up"
+          className="mb-6 bg-gradient-to-br from-primary to-primary-dark dark:from-primary/35 dark:to-primary/15 !text-white animate-fade-slide-up"
         >
           <div className="flex items-center gap-3 mb-3">
             <span className="w-12 h-12 rounded-full bg-white/15 flex items-center justify-center shrink-0">
