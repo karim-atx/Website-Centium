@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { useApp } from "../../context/AppContext";
 import { MUSCLE_GROUP_LABEL } from "../../utils/muscleGroups";
@@ -139,6 +139,19 @@ export default function ExerciseDatabaseTab() {
   const [selectedGroup, setSelectedGroup] = useState<MuscleGroup | null>(null);
   // WO2.1: one discipline at a time, from the Discipline popup (null = All).
   const [discipline, setDiscipline] = useState<ExerciseTag | null>(null);
+  // Decision 10: the filter row keeps scrolling at 360, with a fade at the
+  // right edge while more controls sit off-screen.
+  const filterRowRef = useRef<HTMLDivElement>(null);
+  const [filterMore, setFilterMore] = useState(false);
+  const measureFilterRow = () => {
+    const el = filterRowRef.current;
+    setFilterMore(!!el && el.scrollLeft + el.clientWidth < el.scrollWidth - 1);
+  };
+  useEffect(() => {
+    measureFilterRow();
+    window.addEventListener("resize", measureFilterRow);
+    return () => window.removeEventListener("resize", measureFilterRow);
+  }, [discipline]);
   const [disciplineAnchor, setDisciplineAnchor] = useState<HTMLElement | null>(null);
   const [creating, setCreating] = useState(false);
   const [bodySide, setBodySide] = useState<BodySide>("front");
@@ -341,7 +354,15 @@ export default function ExerciseDatabaseTab() {
           {/* WO2.1: sort and Discipline on one row, as smooth rounded
               rectangles. A DISCIPLINE IS NOT A MUSCLE, so it narrows
               alongside the body view's selection rather than replacing it. */}
-          <div className="flex overflow-x-auto no-scrollbar" style={{ gap: 7, marginBottom: 12 }}>
+          <div className="relative" style={{ marginBottom: 12 }}>
+          {/* 7px of padding (offset by the margin) keeps the controls' 44px
+              hit areas inside the scroller, which would otherwise clip them. */}
+          <div
+            ref={filterRowRef}
+            onScroll={measureFilterRow}
+            className="flex overflow-x-auto no-scrollbar"
+            style={{ gap: 7, padding: "7px 0", margin: "-7px 0" }}
+          >
             {(["alphabetical", "muscleGroup", "classification"] as SortMode[]).map((srt) => (
               <button key={srt} onClick={() => setSort(srt)} aria-pressed={sort === srt} className="tap flex-none" style={controlStyle(sort === srt)}>
                 {srt === "alphabetical" ? "A–Z" : srt === "muscleGroup" ? "Muscle Group" : "Classification"}
@@ -356,6 +377,14 @@ export default function ExerciseDatabaseTab() {
               {discipline ? `Discipline: ${EXERCISE_TAG_LABEL[discipline]}` : "Discipline"}
               <ChevronDown size={12} style={{ color: discipline ? "#FFFFFF" : "#ADA9A4" }} />
             </button>
+          </div>
+          {filterMore && (
+            <span
+              aria-hidden
+              className="absolute top-0 bottom-0 right-0 pointer-events-none"
+              style={{ width: 28, background: "linear-gradient(to right, rgb(var(--c-cream) / 0), rgb(var(--c-cream)))" }}
+            />
+          )}
           </div>
 
           <p style={{ margin: "0 0 8px 2px", fontSize: 11, fontWeight: 500, color: "#8C8378" }}>
@@ -375,7 +404,7 @@ export default function ExerciseDatabaseTab() {
                       key={e.id}
                       onClick={() => setEditingExercise(e)}
                       className="tap w-full flex items-center justify-between text-left"
-                      style={{ gap: 10, padding: "11px 16px" }}
+                      style={{ gap: 10, padding: "11px 16px", minHeight: 44 }}
                     >
                       <span className="min-w-0">
                         <span className="flex items-center" style={{ gap: 6 }}>

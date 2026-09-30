@@ -301,7 +301,9 @@ export default function MetricsTab() {
           </>
         }
         bottom={
-          <div className="flex overflow-x-auto no-scrollbar" style={{ gap: 18, padding: "12px 16px" }}>
+          // Decision 10: all six stats fit without scrolling, as two rows of
+          // three (one row needed 392px, more than the card at 360-430).
+          <div className="grid grid-cols-3" style={{ columnGap: 12, rowGap: 10, padding: "12px 16px" }}>
             <HeroFigure value={stats ? stats.volumeKg.toLocaleString() : null} unit="kg" label="Volume" accent />
             <HeroFigure value={stats?.oneRmKg != null ? kgWhole(stats.oneRmKg) : null} unit="kg" label="1RM" />
             <HeroFigure value={stats?.maxWeightKg ?? null} unit="kg" label="Max weight" />
@@ -625,7 +627,7 @@ const shortDay = (day: string) =>
 function HeroFigure({ value, unit, label, accent }: { value: React.ReactNode; unit?: string; label: string; accent?: boolean }) {
   const ink = accent ? "#5B3FE4" : "#2E2560";
   return (
-    <div className="flex-none">
+    <div className="min-w-0">
       <p style={{ color: ink, fontSize: 17, fontWeight: 800, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
         {value ?? "—"}
         {value != null && unit && <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2 }}>{unit}</span>}
