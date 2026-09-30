@@ -111,7 +111,13 @@ export default function Cycle() {
   // MO11: not offered the section (a male profile that has not opted in):
   // the page is not reachable from the app, and a direct link goes to Health.
   // Settings → Cycle tracking is where any profile turns it on.
-  if (!cycleOffered) return <Navigate to="/app/health" replace />;
+  // WAIT FOR THE SETTINGS FIRST: a male profile's opt-in (shownForAnySex)
+  // lives in them, so until they load "not offered" is unknown, not false —
+  // redirecting then bounced an opted-in user to Health on every refresh.
+  if (!cycleOffered) {
+    if (!cycleSettingsLoaded) return null;
+    return <Navigate to="/app/health" replace />;
+  }
 
   // --- no settings row at all ----------------------------------------------
   //
