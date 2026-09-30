@@ -906,7 +906,8 @@ export const HomeWidget: React.FC<{
                   </svg>
                   {/* Item 4: the numeric value must be charcoal, not
                       accent-colored — the unit text and glyph/icon below
-                      keep the existing #7567B7 accent. */}
+                      keep the existing #7567B7 accent. The theme token, so
+                      it reads #241F1B in light and white in dark (HO1.1). */}
                   <span
                     style={{
                       position: "absolute",
@@ -914,7 +915,7 @@ export const HomeWidget: React.FC<{
                       right: 0,
                       top: "53.1%",
                       textAlign: "center",
-                      color: "#241F1B",
+                      color: "rgb(var(--c-charcoal))",
                       fontWeight: 800,
                       lineHeight: 1,
                       fontSize: iconSize * 0.176,
