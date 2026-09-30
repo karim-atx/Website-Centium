@@ -15,9 +15,15 @@ import {
   sumNutrition,
   targetsFromGoal,
 } from "../../services/nutrition";
-import { deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
+import { copyDiaryEntry, deleteDiaryEntry, isRemoteEntryId } from "../../services/food";
+import { PopupMenu } from "../../components/ui/PopupMenu";
+import { ConfirmCard } from "../../components/ui/ConfirmCard";
+import { Toast } from "../../components/ui/Toast";
+import { CopyToSheet } from "../../components/food/CopyToSheet";
+import { COPY_MEAL_LABEL, copyToastDate } from "../../utils/copyTo";
+import { todayLocal } from "../../utils/date";
 import type { MealType, FoodLogEntry } from "../../types";
-import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronRight, Undo2, Sunrise, Clock, Sun, Sunset } from "lucide-react";
+import { Plus, Star, RefreshCw, Trash2, ChevronDown, ChevronRight, Undo2, Sunrise, Clock, Sun, Sunset, EllipsisVertical, ListChecks, SquareDashedMousePointer, Copy, Check } from "lucide-react";
 import { isFoodRestricted } from "../../utils/dietaryRestrictions";
 import GoalsPanel from "./GoalsPanel";
 import MealPrepPanel from "./MealPrepPanel";
@@ -42,7 +48,7 @@ const quickAddTiles: Record<MealType, { label: string; fill: string; Icon: typeo
 const SWIPE_THRESHOLD = 60;
 
 export default function Food() {
-  const { user, foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, diaryError } =
+  const { user, foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, diaryError, authUserId, addFoodEntryRecord } =
     useApp();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("diary");
@@ -65,6 +71,14 @@ export default function Food() {
   const rowTouchStart = useRef<{ x: number; y: number } | null>(null);
   const mealTouchStart = useRef<{ x: number; y: number } | null>(null);
   const lastTapRef = useRef<{ meal: MealType; at: number } | null>(null);
+  // FO1.1 selection: one meal of the day being viewed at a time, never kept
+  // after leaving the Diary (it is page state, and cleared on a day change).
+  const [selecting, setSelecting] = useState<{ meal: MealType; date: string; ids: Set<string> } | null>(null);
+  const [mealMenu, setMealMenu] = useState<{ meal: MealType; anchor: HTMLElement } | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const [copyOpen, setCopyOpen] = useState(false);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkToast, setBulkToast] = useState<string | null>(null);
 
   const todaysEntries = useMemo(
     () => foodLog.filter((e) => e.date === selectedDate),
@@ -127,6 +141,73 @@ export default function Food() {
       return;
     }
     removeFoodEntry(id);
+  };
+
+  // --- FO1.1 select, delete and copy ------------------------------------
+  const activeSelection = selecting && selecting.date === selectedDate && tab === "diary" ? selecting : null;
+  const selectedEntries = activeSelection ? todaysEntries.filter((e) => activeSelection.ids.has(e.id)) : [];
+  const startSelecting = (meal: MealType, all: boolean) =>
+    setSelecting({
+      meal,
+      date: selectedDate,
+      ids: new Set(all ? todaysEntries.filter((e) => e.meal === meal).map((e) => e.id) : []),
+    });
+  const toggleSelected = (id: string) =>
+    setSelecting((cur) => {
+      if (!cur) return cur;
+      const ids = new Set(cur.ids);
+      if (ids.has(id)) ids.delete(id);
+      else ids.add(id);
+      return { ...cur, ids };
+    });
+  const itemsLabel = (n: number) => `${n} item${n === 1 ? "" : "s"}`;
+
+  /** Database first, as handleDelete; what fails stays selected and says so. */
+  const deleteSelected = async () => {
+    if (!activeSelection) return;
+    setBulkBusy(true);
+    setDeleteError(null);
+    const failed = new Set<string>();
+    for (const e of selectedEntries) {
+      if (isRemoteEntryId(e.id)) {
+        const result = await deleteDiaryEntry(e.id);
+        if (!result.ok) {
+          failed.add(e.id);
+          continue;
+        }
+      }
+      removeFoodEntry(e.id);
+    }
+    setBulkBusy(false);
+    setConfirmDelete(false);
+    if (failed.size > 0) {
+      setDeleteError(`${itemsLabel(failed.size)} couldn't be deleted. Try again.`);
+      setSelecting({ ...activeSelection, ids: failed });
+      return;
+    }
+    setSelecting(null);
+  };
+
+  /** New entries, same food and quantity, in the chosen day and meal; the originals stay. */
+  const copySelected = async (day: string, meal: MealType) => {
+    if (!activeSelection || !authUserId) return;
+    setBulkBusy(true);
+    let copied = 0;
+    for (const e of selectedEntries) {
+      const result = await copyDiaryEntry(authUserId, e, day, meal);
+      if (result.ok && result.entry) {
+        addFoodEntryRecord(result.entry);
+        copied++;
+      }
+    }
+    setBulkBusy(false);
+    setCopyOpen(false);
+    if (copied < selectedEntries.length) {
+      setDeleteError(`${itemsLabel(selectedEntries.length - copied)} couldn't be copied. Try again.`);
+      return;
+    }
+    setSelecting(null);
+    setBulkToast(`Copied ${itemsLabel(copied)} to ${COPY_MEAL_LABEL[meal]}, ${copyToastDate(day)}.`);
   };
 
   const handleUndo = () => {
@@ -358,16 +439,38 @@ export default function Food() {
                   onTouchEnd={(ev) => onMealTouchEnd(ev, meal)}
                   onClick={() => onMealTap(meal)}
                 >
-                  <button
+                  <div
+                    role="button"
+                    tabIndex={0}
                     onClick={(ev) => {
                       ev.stopPropagation();
                       toggleCollapsed(meal);
                     }}
-                    className="tap w-full flex items-start gap-2.5"
+                    onKeyDown={(ev) => {
+                      if (ev.key === "Enter" || ev.key === " ") {
+                        ev.preventDefault();
+                        toggleCollapsed(meal);
+                      }
+                    }}
+                    className="tap w-full flex items-start gap-2.5 cursor-pointer"
                     style={{ background: headBg, padding: "13px 14px", transition: "background-color .18s ease" }}
                     aria-label={collapsed ? `Expand ${mealLabels[meal]}` : `Collapse ${mealLabels[meal]}`}
                   >
-                    <h3 className="flex-1 min-w-0 text-left text-[13.5px] font-bold text-charcoal">{mealLabels[meal]}</h3>
+                    <span className="flex-1 min-w-0 flex items-start" style={{ gap: 22 }}>
+                      <h3 className="min-w-0 text-left text-[13.5px] font-bold text-charcoal">{mealLabels[meal]}</h3>
+                      {/* FO1.1: the meal menu, with clear space after the title. */}
+                      <button
+                        onClick={(ev) => {
+                          ev.stopPropagation();
+                          setMealMenu({ meal, anchor: ev.currentTarget });
+                        }}
+                        aria-label={`${mealLabels[meal]} options`}
+                        className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-[10px] before:content-['']"
+                        style={{ width: 16, height: 18, color: "#8C8378" }}
+                      >
+                        <EllipsisVertical size={15} />
+                      </button>
+                    </span>
                     {!recoverySensitive && (
                       <span className="flex flex-col gap-1 w-[104px] shrink-0">
                         <span className="flex h-2 rounded-[3px] overflow-hidden bg-charcoal/[0.07]">
@@ -403,7 +506,7 @@ export default function Food() {
                         transition: "transform 0.18s ease",
                       }}
                     />
-                  </button>
+                  </div>
 
                   {showUndo && (
                     <div className="flex justify-end" style={{ background: headBg, padding: "0 14px 8px" }}>
@@ -428,13 +531,38 @@ export default function Food() {
                       {entries.length > 0 && (
                         <div className="flex flex-col gap-[3px] mb-2.5">
                           {entries.map((e) => {
-                            const revealed = revealedId === e.id;
+                            const inSelection = activeSelection?.meal === meal;
+                            const checked = inSelection && activeSelection!.ids.has(e.id);
+                            const revealed = !inSelection && revealedId === e.id;
                             // QA 11.0: "Pressing a specific restriction will
                             // highlight specific food diary items that are not
                             // compatible with the restriction."
                             const restricted = !!dietaryRestriction && isFoodRestricted(e, dietaryRestriction);
                             return (
-                              <div key={e.id} className="relative overflow-hidden rounded-[11px]">
+                              <div key={e.id} className="flex items-center" style={{ gap: inSelection ? 9 : 0 }}>
+                                {inSelection && (
+                                  <button
+                                    onClick={(ev) => {
+                                      ev.stopPropagation();
+                                      toggleSelected(e.id);
+                                    }}
+                                    role="checkbox"
+                                    aria-checked={checked}
+                                    aria-label={`Select ${e.name}`}
+                                    className="tap shrink-0 flex items-center justify-center"
+                                    style={{
+                                      width: 20,
+                                      height: 20,
+                                      borderRadius: 10,
+                                      background: checked ? "#AEA1DC" : "#FFFFFF",
+                                      border: checked ? "none" : "1.5px solid #D1CAEB",
+                                      color: "#FFFFFF",
+                                    }}
+                                  >
+                                    {checked && <Check size={12} strokeWidth={3} />}
+                                  </button>
+                                )}
+                              <div className="relative overflow-hidden rounded-[11px] flex-1 min-w-0">
                                 {revealed && (
                                   <button
                                     onClick={() => {
@@ -449,9 +577,17 @@ export default function Food() {
                                   </button>
                                 )}
                                 <button
-                                  onClick={() => (revealed ? setRevealedId(null) : setEditingEntry(e))}
-                                  onTouchStart={onRowTouchStart}
-                                  onTouchEnd={(ev) => onRowTouchEnd(ev, e.id)}
+                                  onClick={(ev) => {
+                                    if (inSelection) {
+                                      ev.stopPropagation();
+                                      toggleSelected(e.id);
+                                      return;
+                                    }
+                                    if (revealed) setRevealedId(null);
+                                    else setEditingEntry(e);
+                                  }}
+                                  onTouchStart={inSelection ? undefined : onRowTouchStart}
+                                  onTouchEnd={inSelection ? undefined : (ev) => onRowTouchEnd(ev, e.id)}
                                   className={clsx(
                                     "tap relative z-10 w-full flex items-center justify-between gap-2.5 rounded-[11px] px-[11px] py-2 text-left transition-transform duration-200",
                                     restricted ? "bg-status-high-bg" : "bg-team-lavender/10"
@@ -480,6 +616,7 @@ export default function Food() {
                                   )}
                                 </button>
                               </div>
+                              </div>
                             );
                           })}
                         </div>
@@ -491,6 +628,43 @@ export default function Food() {
                           <span className="text-[10.5px] leading-[1.45] text-team-teal-ink">
                             Swipe right or double-tap to copy yesterday's {mealLabels[meal].toLowerCase()}
                           </span>
+                        </div>
+                      )}
+
+                      {activeSelection?.meal === meal && (
+                        <div className="flex items-center mb-2" style={{ gap: 7 }}>
+                          <button
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              setConfirmDelete(true);
+                            }}
+                            disabled={activeSelection.ids.size === 0}
+                            className="tap flex-1 inline-flex items-center justify-center disabled:opacity-45"
+                            style={{ height: 36, gap: 6, borderRadius: 10, background: "#FCEDEC", border: "1px solid #F2CFCC", color: "#B4372C", fontSize: 12.5, fontWeight: 700 }}
+                          >
+                            <Trash2 size={13} /> Delete ({activeSelection.ids.size})
+                          </button>
+                          <button
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              setCopyOpen(true);
+                            }}
+                            disabled={activeSelection.ids.size === 0}
+                            className="tap flex-1 inline-flex items-center justify-center disabled:opacity-45"
+                            style={{ height: 36, gap: 6, borderRadius: 10, background: "#AEA1DC", color: "#FFFFFF", fontSize: 12.5, fontWeight: 700 }}
+                          >
+                            <Copy size={13} /> Copy ({activeSelection.ids.size})
+                          </button>
+                          <button
+                            onClick={(ev) => {
+                              ev.stopPropagation();
+                              setSelecting(null);
+                            }}
+                            className="tap shrink-0"
+                            style={{ padding: "0 8px", height: 36, color: "#8C8378", fontSize: 12.5, fontWeight: 500 }}
+                          >
+                            Cancel
+                          </button>
                         </div>
                       )}
 
@@ -532,6 +706,57 @@ export default function Food() {
 
       <AddFoodSheet open={addOpen} onClose={() => setAddOpen(false)} defaultMeal={addMeal} suggestMeal={addFor} />
       <EditFoodEntrySheet open={!!editingEntry} onClose={() => setEditingEntry(null)} entry={editingEntry} />
+
+      {mealMenu && (() => {
+        const mealEntries = todaysEntries.filter((e) => e.meal === mealMenu.meal);
+        const empty = mealEntries.length === 0;
+        const allChecked =
+          activeSelection?.meal === mealMenu.meal && !empty && mealEntries.every((e) => activeSelection.ids.has(e.id));
+        return (
+          <PopupMenu
+            open
+            anchor={mealMenu.anchor}
+            onClose={() => setMealMenu(null)}
+            align="left"
+            options={[
+              { value: "all", label: allChecked ? "Deselect all" : "Select all", icon: <ListChecks size={14} />, disabled: empty },
+              { value: "select", label: "Select", icon: <SquareDashedMousePointer size={14} />, disabled: empty },
+            ]}
+            onSelect={(v) => {
+              const meal = mealMenu.meal;
+              setMealMenu(null);
+              if (empty) return;
+              if (v === "all") {
+                if (allChecked) setSelecting({ meal, date: selectedDate, ids: new Set() });
+                else startSelecting(meal, true);
+              } else startSelecting(meal, false);
+            }}
+          />
+        );
+      })()}
+
+      <ConfirmCard
+        open={confirmDelete && !!activeSelection}
+        title={`Delete ${itemsLabel(activeSelection?.ids.size ?? 0)} from ${activeSelection ? mealLabels[activeSelection.meal] : ""}?`}
+        subtitle={selectedDate === todayLocal() ? "They'll be removed from today's diary." : "They'll be removed from this day's diary."}
+        busy={bulkBusy}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => void deleteSelected()}
+      />
+
+      {activeSelection && copyOpen && (
+        <CopyToSheet
+          open
+          onClose={() => setCopyOpen(false)}
+          count={activeSelection.ids.size}
+          today={todayLocal()}
+          meal={activeSelection.meal}
+          busy={bulkBusy}
+          onConfirm={(day, meal) => void copySelected(day, meal)}
+        />
+      )}
+
+      <Toast open={!!bulkToast} message={bulkToast ?? ""} onExpire={() => setBulkToast(null)} />
     </div>
   );
 }

@@ -845,7 +845,9 @@ export function manualFood(food: {
 export async function copyDiaryEntry(
   userId: string,
   entry: FoodLogEntry,
-  date: string
+  date: string,
+  /** FO1.1 copies into any meal; copy-yesterday keeps the entry's own. */
+  meal: FoodLogEntry["meal"] = entry.meal
 ): Promise<{ ok: boolean; message?: string; entry?: FoodLogEntry }> {
   const { data, error } = await supabase
     .from("food_log_entries")
@@ -861,7 +863,7 @@ export async function copyDiaryEntry(
       nutrients: entry.nutrients ?? null,
       quantity: entry.quantity,
       unit: entry.unit,
-      meal: entry.meal,
+      meal,
       logged_date: date,
       logged_via: "recent",
     })
@@ -873,7 +875,7 @@ export async function copyDiaryEntry(
     return { ok: false, message: error ? describe(error) : "Could not copy that entry." };
   }
 
-  return { ok: true, entry: { ...entry, id: data.id, date, loggedVia: "recent" } };
+  return { ok: true, entry: { ...entry, id: data.id, date, meal, loggedVia: "recent" } };
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
