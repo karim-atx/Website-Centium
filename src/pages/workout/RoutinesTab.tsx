@@ -14,7 +14,7 @@ import { ExerciseLibrarySheet, type ExercisePick } from "../../components/workou
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { BrowseProgramsSheet } from "../../components/workout/BrowseProgramsSheet";
 import type { Exercise, Routine, RoutineFolder, WorkoutBlock } from "../../types";
-import { folderFamily, routineFamily, type FolderFamily } from "../../data/folderColors";
+import { FOLDER_SWATCHES, folderFamily, routineFamily, type FolderFamily } from "../../data/folderColors";
 import { BlockSettingsSheet } from "../../components/workout/BlockSettingsSheet";
 import { moveId, routinesIn } from "../../services/routines/order";
 import { useRoutineDrag, type DragItem, type DropTarget } from "./useRoutineDrag";
@@ -71,7 +71,8 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
   customExerciseId: pick.customExerciseId,
 });
 
-const folderColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
+const folderColorOptions = FOLDER_SWATCHES.map((s) => s.color);
+const swatchName = (c: string) => FOLDER_SWATCHES.find((s) => s.color === c)?.name ?? c;
 
 // Folder colour families live in data/folderColors (handover 2026-09-29 02),
 // shared with the logger, History and the active-workout bar.
@@ -393,15 +394,18 @@ export default function RoutinesTab() {
                 className="absolute right-0 top-7 z-20 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] p-3 animate-fade-slide-up"
                 onClick={(ev) => ev.stopPropagation()}
               >
-                <div className="flex gap-2 mb-2">
+                <div className="flex flex-wrap gap-2 mb-2" style={{ width: 208 }}>
                   {folderColorOptions.map((c) => (
                     <button
                       key={c}
                       onClick={() => run(updateRoutineFolder(folder.id, { color: c }))}
-                      aria-label={`Color ${c}`}
+                      aria-label={swatchName(c)}
                       className="tap w-7 h-7 rounded-full"
                       style={{
                         background: c,
+                        // A faint ring in the theme's ink, so a dark swatch (Black) still
+                        // shows on a dark popover.
+                        boxShadow: "inset 0 0 0 1px rgb(var(--c-charcoal) / 0.22)",
                         outline: folder.color === c ? "2px solid rgb(var(--c-charcoal))" : "none",
                         outlineOffset: 2,
                       }}
@@ -451,15 +455,18 @@ export default function RoutinesTab() {
                     Add
                   </button>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {folderColorOptions.map((c) => (
                     <button
                       key={c}
                       onClick={() => setSubfolderColor(c)}
-                      aria-label={`Color ${c}`}
+                      aria-label={swatchName(c)}
                       className="tap w-6 h-6 rounded-full"
                       style={{
                         background: c,
+                        // A faint ring in the theme's ink, so a dark swatch (Black) still
+                        // shows on a dark popover.
+                        boxShadow: "inset 0 0 0 1px rgb(var(--c-charcoal) / 0.22)",
                         outline: subfolderColor === c ? "2px solid rgb(var(--c-charcoal))" : "none",
                         outlineOffset: 2,
                       }}
@@ -558,15 +565,18 @@ export default function RoutinesTab() {
               Add
             </button>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {folderColorOptions.map((c) => (
               <button
                 key={c}
                 onClick={() => setNewFolderColor(c)}
-                aria-label={`Color ${c}`}
+                aria-label={swatchName(c)}
                 className="tap w-6 h-6 rounded-full"
                 style={{
                   background: c,
+                  // A faint ring in the theme's ink, so a dark swatch (Black) still
+                  // shows on a dark popover.
+                  boxShadow: "inset 0 0 0 1px rgb(var(--c-charcoal) / 0.22)",
                   outline: newFolderColor === c ? "2px solid rgb(var(--c-charcoal))" : "none",
                   outlineOffset: 2,
                 }}
@@ -967,7 +977,7 @@ const RoutineCardFace: React.FC<{
         <RenameField value={renameDraft ?? ""} onChange={(v) => onRenameDraft?.(v)} onCommit={() => onRenameCommit?.()} tone="dark" />
       ) : (
         <button onClick={onToggle} className="hit flex-1 text-left min-w-0">
-          <p className="text-[14.5px] font-bold text-charcoal flex items-center gap-1.5 truncate">
+          <p className="text-[14.5px] font-bold flex items-center gap-1.5 truncate" style={{ color: "#241F1B" }}>
             {routine.name}
             {isOngoing && (
               // WO17: the same running / paused state the bar shows.

@@ -6,8 +6,9 @@ import { useApp } from "../../context/AppContext";
 import { ExerciseLibrarySheet, type ExercisePick } from "./ExerciseLibrarySheet";
 import { ExerciseSettingsSheet } from "./ExerciseSettingsSheet";
 import { GripVertical, Library, Search, Settings2, X } from "lucide-react";
+import { FOLDER_SWATCHES } from "../../data/folderColors";
 
-const colorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
+const colorOptions = FOLDER_SWATCHES.map((s) => s.color);
 
 let localId = 0;
 const blankExercise = (pick: ExercisePick): Exercise => ({
@@ -143,13 +144,20 @@ export const CreateRoutineSheet: React.FC<{
 
           <div>
             <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Color</span>
-            <div className="flex gap-2">
-              {colorOptions.map((c) => (
+            <div className="flex flex-wrap gap-2">
+              {FOLDER_SWATCHES.map(({ color: c, name }) => (
                 <button
                   key={c}
                   onClick={() => setColor(c)}
+                  aria-label={name}
                   className="tap w-8 h-8 rounded-full flex items-center justify-center"
-                  style={{ background: c, outline: color === c ? "2px solid rgb(var(--c-charcoal))" : "none", outlineOffset: 2 }}
+                  style={{
+                    background: c,
+                    // A faint ring in the theme's ink, so a dark swatch (Black) still shows.
+                    boxShadow: "inset 0 0 0 1px rgb(var(--c-charcoal) / 0.22)",
+                    outline: color === c ? "2px solid rgb(var(--c-charcoal))" : "none",
+                    outlineOffset: 2,
+                  }}
                 />
               ))}
             </div>

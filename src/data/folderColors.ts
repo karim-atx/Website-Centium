@@ -18,18 +18,47 @@ export interface FolderFamily {
 export const PURPLE: FolderFamily = { head: "#A797E3", tile: "#6E56C5", row: "#F0EEFE", bar: "#7C66CF", play: "#836BD6" };
 export const TEAL: FolderFamily = { head: "#8ABFB5", tile: "#4B786F", row: "#EBF4F3", bar: "#61958C", play: "#63968B" };
 
-// A folder can still be given any of the six picker colours. The handover
-// only has shades for lavender and teal; the other four are DERIVED, not
-// from the handover: each keeps its picker colour's hue, and takes the
-// saturation step and lightness the two specified families use for each
-// role on average (saturation capped at the handover's own ~58%).
+/**
+ * The picker, in order: twelve colours (2026-09-30). Every folder and routine
+ * colour picker reads this one list, and every entry has a family below.
+ */
+export const FOLDER_SWATCHES: readonly { color: string; name: string }[] = [
+  { color: "#7D6BB5", name: "Lavender" },
+  { color: "#6F9993", name: "Teal" },
+  { color: "#4C8FD1", name: "Blue" },
+  { color: "#5B5FC7", name: "Indigo" },
+  { color: "#7A4E9C", name: "Plum" },
+  { color: "#9C4F7C", name: "Berry" },
+  { color: "#D9695F", name: "Coral" },
+  { color: "#B8683F", name: "Terracotta" },
+  { color: "#D9A441", name: "Gold" },
+  { color: "#5E9A6B", name: "Sage" },
+  { color: "#5A6B7D", name: "Slate" },
+  { color: "#241F1B", name: "Black" },
+];
+
+// Lavender and teal are the handover's two families, literally. The other
+// ten are NOT from the handover: each keeps its swatch's hue (saturation
+// capped at the handover's ~58%) and takes the lightest shade that still
+// reads under white text, measured as WCAG contrast with white: header
+// (white name) >= 3:1, tile (white icon) >= 5:1, bar >= 3.4:1, play (white
+// icon) >= 3.6:1; the row tint is 95% light and carries dark text (>= 13:1).
+// Black is set by hand to be black, not a hue-derived brown: charcoal header
+// #45403B (10.3:1), near-black tile #1C1917. Rows stay light in dark mode
+// too, so text on a row tint is a fixed dark colour, never the theme's.
 export const FOLDER_FAMILIES: Record<string, FolderFamily> = {
   "#7D6BB5": PURPLE,
   "#6F9993": TEAL,
-  "#4C8FD1": { head: "#84B1DE", tile: "#3277BB", row: "#EBF2FA", bar: "#488BCE", play: "#4E8FD0" },
-  "#9C4F7C": { head: "#DE85B9", tile: "#AE3F80", row: "#FAEBF4", bar: "#C15594", play: "#C45998" },
-  "#D9A441": { head: "#DEBF84", tile: "#BB8B32", row: "#FAF5EB", bar: "#CE9F48", play: "#D0A24E" },
-  "#241F1B": { head: "#C4AF9E", tile: "#8E745F", row: "#F7F2ED", bar: "#A28974", play: "#A68D78" },
+  "#4C8FD1": { head: "#5E99D4", tile: "#3072B3", row: "#EBF2FA", bar: "#4E8FD0", play: "#468ACE" },
+  "#5B5FC7": { head: "#8B8ED7", tile: "#4146BE", row: "#ECECF9", bar: "#6F72CE", play: "#676BCB" },
+  "#7A4E9C": { head: "#A886C3", tile: "#8555AA", row: "#F3EEF7", bar: "#A17CBE", play: "#9D77BB" },
+  "#9C4F7C": { head: "#C082A6", tile: "#A45383", row: "#F6EEF3", bar: "#BA769D", play: "#B66F99" },
+  "#D9695F": { head: "#D97970", tile: "#C54034", row: "#FAECEB", bar: "#D56B62", play: "#D3645A" },
+  "#B8683F": { head: "#C98461", tile: "#A35C38", row: "#F8F0EC", bar: "#C37750", play: "#C1734B" },
+  "#D9A441": { head: "#BB8B32", tile: "#8D6925", row: "#FAF4EB", bar: "#AF822F", play: "#AB7F2E" },
+  "#5E9A6B": { head: "#67A274", tile: "#497854", row: "#EFF5F1", bar: "#5D986A", play: "#5A9366" },
+  "#5A6B7D": { head: "#8596A7", tile: "#5F7184", row: "#F0F2F4", bar: "#7B8DA0", play: "#75889C" },
+  "#241F1B": { head: "#45403B", tile: "#1C1917", row: "#EFEDEB", bar: "#5A544E", play: "#45403B" },
 };
 
 /**
