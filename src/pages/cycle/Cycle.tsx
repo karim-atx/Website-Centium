@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { JumpToToday } from "../../components/ui/JumpToToday";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -408,13 +409,8 @@ export default function Cycle() {
               className="w-full accent-primary"
             />
             <div className="flex items-center justify-between mt-1">
-              <button
-                onClick={() => setOffsetDays(0)}
-                disabled={offsetDays === 0}
-                className="tap text-[11px] font-semibold text-primary-dark disabled:opacity-40"
-              >
-                Back to today
-              </button>
+              {/* Only away from today (JumpToToday): the scrubber back to 0. */}
+              {offsetDays !== 0 ? <JumpToToday onClick={() => setOffsetDays(0)} /> : <span />}
               <button
                 onClick={() => {
                   setLogDate(selectedDate);

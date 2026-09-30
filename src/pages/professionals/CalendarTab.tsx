@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { JumpToToday, calendarJump } from "../../components/ui/JumpToToday";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -409,7 +410,8 @@ export default function CalendarTab() {
         }
       />
 
-      <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit mb-4">
+      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit">
         {(["year", "month", "week", "day"] as View[]).map((v) => (
           <button
             key={v}
@@ -422,6 +424,11 @@ export default function CalendarTab() {
             {v}
           </button>
         ))}
+      </div>
+        {(() => {
+          const j = calendarJump({ view, cursor, selectedDate, setCursor, setSelectedDate });
+          return j.show && <JumpToToday onClick={j.jump} />;
+        })()}
       </div>
 
       {view === "month" && (
@@ -453,7 +460,7 @@ export default function CalendarTab() {
               const isSelected = iso === selectedDate;
               const isToday = iso === toISO(today.getFullYear(), today.getMonth(), today.getDate());
               return (
-                <button
+                <button data-today={isToday || undefined}
                   key={i}
                   onClick={() => {
                     setSelectedDate(iso);
@@ -523,7 +530,7 @@ export default function CalendarTab() {
                   const isToday = iso === toISO(today.getFullYear(), today.getMonth(), today.getDate());
                   const d = new Date(`${iso}T00:00:00`);
                   return (
-                    <div key={iso} className="flex items-start gap-3">
+                    <div key={iso} data-today={isToday || undefined} className="flex items-start gap-3">
                       <button
                         onClick={() => {
                           setSelectedDate(iso);

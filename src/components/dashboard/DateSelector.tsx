@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { ChevronLeft, ChevronRight, CalendarDays } from "lucide-react";
 import { CalendarPickerSheet } from "./CalendarPickerSheet";
+import { JumpToToday } from "../ui/JumpToToday";
 
 const dayLabel = (iso: string) => {
   const d = new Date(`${iso}T00:00:00`);
@@ -24,21 +25,20 @@ export const DateSelector: React.FC = () => {
       >
         <ChevronLeft size={15} />
       </button>
-      <button onClick={() => setPickerOpen(true)} className="tap flex items-center gap-[7px] min-w-0">
-        <CalendarDays size={14} className="text-team-nav-accent shrink-0" />
-        <span className="text-[12.5px] font-bold text-charcoal whitespace-nowrap">{dayLabel(selectedDate)}</span>
+      <span className="flex items-center gap-[7px] min-w-0">
+        <button onClick={() => setPickerOpen(true)} className="tap flex items-center gap-[7px] min-w-0">
+          <CalendarDays size={14} className="text-team-nav-accent shrink-0" />
+          <span className="text-[12.5px] font-bold text-charcoal whitespace-nowrap">{dayLabel(selectedDate)}</span>
+        </button>
         {!isToday && (
-          <span
-            onClick={(e) => {
-              e.stopPropagation();
+          <JumpToToday
+            onClick={() => {
               goToToday();
+              window.scrollTo({ top: 0, behavior: "smooth" });
             }}
-            className="text-[10px] font-bold text-team-nav-accent bg-team-nav-accent/[0.14] rounded-full px-2 py-0.5 shrink-0"
-          >
-            Jump to today
-          </span>
+          />
         )}
-      </button>
+      </span>
       <button
         onClick={goToNextDate}
         className="tap w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-team-nav-idle"

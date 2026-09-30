@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { JumpToToday, calendarJump } from "../../components/ui/JumpToToday";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
@@ -200,7 +201,8 @@ export default function BusinessCalendarTab() {
       />
       <BusinessPrototypeNotice />
 
-      <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit mb-4">
+      <div className="flex items-center gap-2 mb-4">
+      <div className="flex items-center gap-2 bg-cream-soft rounded-full p-1 w-fit">
         {(["year", "month", "week", "day"] as View[]).map((v) => (
           <button
             key={v}
@@ -210,6 +212,11 @@ export default function BusinessCalendarTab() {
             {v}
           </button>
         ))}
+      </div>
+        {(() => {
+          const j = calendarJump({ view, cursor, selectedDate, setCursor, setSelectedDate });
+          return j.show && <JumpToToday onClick={j.jump} />;
+        })()}
       </div>
 
       {view === "month" && (
@@ -240,7 +247,7 @@ export default function BusinessCalendarTab() {
               const isSelected = iso === selectedDate;
               const isToday = iso === toISO(today.getFullYear(), today.getMonth(), today.getDate());
               return (
-                <button
+                <button data-today={isToday || undefined}
                   key={i}
                   onClick={() => {
                     setSelectedDate(iso);
@@ -289,7 +296,7 @@ export default function BusinessCalendarTab() {
                   const isToday = iso === toISO(today.getFullYear(), today.getMonth(), today.getDate());
                   const d = new Date(`${iso}T00:00:00`);
                   return (
-                    <div key={iso} className="flex items-start gap-3">
+                    <div key={iso} data-today={isToday || undefined} className="flex items-start gap-3">
                       <button
                         onClick={() => { setSelectedDate(iso); setView("day"); }}
                         className={clsx(

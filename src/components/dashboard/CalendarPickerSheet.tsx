@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { JumpToToday } from "../ui/JumpToToday";
 
 const WEEKDAYS = ["S", "M", "T", "W", "T", "F", "S"];
 
@@ -49,7 +50,7 @@ export const CalendarPickerSheet: React.FC<{
   confirmLabel?: string;
   /** Rendered above Done; a function receives the day currently picked (WO4.1's time wheel greys later times on today). */
   children?: React.ReactNode | ((pendingDate: string) => React.ReactNode);
-}> = ({ open, onClose, selectedDate, onSelect, title = "Choose a date", markers, maxDate, confirm, confirmLabel = "Done", children }) => {
+}> = ({ open, onClose, selectedDate, today, onSelect, title = "Choose a date", markers, maxDate, confirm, confirmLabel = "Done", children }) => {
   const [cursor, setCursor] = useState(() => new Date(`${selectedDate}T00:00:00`));
   const [pending, setPending] = useState(selectedDate);
 
@@ -79,6 +80,19 @@ export const CalendarPickerSheet: React.FC<{
   const shown = confirm ? pending : selectedDate;
   // The next month is out of reach once its first day is past maxDate.
   const nextMonthBlocked = !!maxDate && toIso(new Date(year, month + 1, 1)) > maxDate;
+  // Only when today is not both shown and picked; it picks today (as a tap on
+  // today's cell would) and turns the page to today's month.
+  const todayDate = new Date(`${today}T00:00:00`);
+  const showJump = shown !== today || year !== todayDate.getFullYear() || month !== todayDate.getMonth();
+  const jumpToToday = () => {
+    setCursor(new Date(todayDate.getFullYear(), todayDate.getMonth(), 1));
+    if (confirm) {
+      setPending(today);
+      return;
+    }
+    onSelect(today);
+    onClose();
+  };
 
   return createPortal(
     <div className="fixed inset-0 z-[70]">
@@ -107,7 +121,10 @@ export const CalendarPickerSheet: React.FC<{
               >
                 <ChevronLeft size={16} strokeWidth={2.2} />
               </button>
-              <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#241F1B" }}>{monthLabel}</p>
+              <span className="flex items-center" style={{ gap: 8 }}>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 600, color: "#241F1B" }}>{monthLabel}</p>
+                {showJump && <JumpToToday onClick={jumpToToday} />}
+              </span>
               <button
                 onClick={() => setCursor(new Date(year, month + 1, 1))}
                 disabled={nextMonthBlocked}
@@ -149,6 +166,7 @@ export const CalendarPickerSheet: React.FC<{
                       onSelect(iso);
                       onClose();
                     }}
+                    data-today={iso === today || undefined}
                     className="tap relative aspect-square flex items-center justify-center"
                     style={{
                       borderRadius: 12,
