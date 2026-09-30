@@ -61,7 +61,8 @@ export function kindFields(
 export function isWorkingSet(set: LoggedSet): boolean {
   if (!set.completed) return false;
   const kind = setKind(set);
-  return (kind === "normal" || kind === "pr" || kind === "drop") && set.weightKg > 0 && set.reps > 0;
+  // A bodyweight set (0 kg) is not a working set for load: no top set, no 1RM.
+  return (kind === "normal" || kind === "pr" || kind === "drop") && (set.weightKg ?? 0) > 0 && set.reps > 0;
 }
 
 /**
@@ -97,7 +98,8 @@ export function lastSessionPrefill(
     out.set(
       exerciseKey(ex),
       ex.sets.map((set) => ({
-        weight: set.completed && set.weightKg > 0 ? set.weightKg : null,
+        // A logged bodyweight set (0) prefills as bodyweight; only a row with no weight is blank.
+        weight: set.completed && set.weightKg !== null ? set.weightKg : null,
         reps: set.completed && set.reps > 0 ? set.reps : null,
       }))
     );

@@ -29,9 +29,10 @@ import { CoachNotePopup } from "./CoachNotePopup";
 import { Button } from "../ui/Button";
 import { BottomSheet } from "../ui/BottomSheet";
 import { PopupMenu, type PopupMenuOption } from "../ui/PopupMenu";
-import { formatDuration, estimate1RM } from "../../services/workout";
+import { formatDuration, estimate1RM, loadKg, formatSetWeight } from "../../services/workout";
+import { WeightField } from "./WeightField";
 import { localDayOf } from "../../utils/date";
-import { countsTowardVolume, finalizeExercises, initLoggedExercises, isTouched, reconcileLogged, resolveLoggedValues, setRowCount } from "../../services/workout/session";
+import { countsTowardVolume, finalizeExercises, initLoggedExercises, isTouched, reconcileLogged, resolveLoggedValues, setRowCount, upgradeLegacyBlankWeights } from "../../services/workout/session";
 import { formatClock, isRoundBased, prescriptionLine } from "../../services/workout/prescription";
 import { blockProblems, blockScore, checkBlockResult } from "../../services/workout/results";
 import { groupIntoRuns } from "../../services/workout/blocks";
@@ -81,7 +82,7 @@ function blockFrom(block: WorkoutBlock): BlockResult {
 function freshLogged(exercises: Exercise[]): LoggedExercise[] {
   return initLoggedExercises(exercises).map((ex) => ({
     ...ex,
-    sets: ex.sets.map((s) => ({ ...s, weightKg: 0, reps: 0 })),
+    sets: ex.sets.map((s) => ({ ...s, weightKg: null, reps: 0 })),
   }));
 }
 
@@ -213,7 +214,7 @@ export const WorkoutSessionSheet: React.FC<{
     if (paused) {
       // The routine may have been edited while this was paused: progress
       // follows each exercise by its id, never its position.
-      const restored = reconcileLogged(paused.logged, freshLogged(exercises));
+      const restored = reconcileLogged(upgradeLegacyBlankWeights(paused.logged), freshLogged(exercises));
       scrollToCurrent.current = restored;
       setLogged(restored);
       setBlockResults(Object.fromEntries((paused.blockResults ?? []).map((r) => [r.id, r])));
@@ -250,7 +251,7 @@ export const WorkoutSessionSheet: React.FC<{
   }, [open, routineId]);
 
   const totalVolume = useMemo(
-    () => logged.reduce((sum, ex) => sum + ex.sets.filter(countsTowardVolume).reduce((v, s) => v + s.reps * s.weightKg, 0), 0),
+    () => logged.reduce((sum, ex) => sum + ex.sets.filter(countsTowardVolume).reduce((v, s) => v + s.reps * loadKg(s), 0), 0),
     [logged]
   );
   const hasProgress = started || elapsed > 0 || logged.some((ex) => ex.sets.some((s) => s.outcome != null || s.completed));
@@ -411,7 +412,7 @@ export const WorkoutSessionSheet: React.FC<{
       const sets = next[exIdx].sets;
       // A row the athlete asked for is never optional (never dropped at the
       // end); it starts empty, with the template's values as placeholders.
-      next[exIdx] = { ...next[exIdx], sets: [...sets, { setNumber: sets.length + 1, reps: 0, weightKg: 0, completed: false }] };
+      next[exIdx] = { ...next[exIdx], sets: [...sets, { setNumber: sets.length + 1, reps: 0, weightKg: null, completed: false }] };
       return next;
     });
   };
@@ -434,8 +435,9 @@ export const WorkoutSessionSheet: React.FC<{
     // QA 12.0: a PR on a barbell, dumbbell or weighted-bodyweight movement
     // updates the one-rep max immediately.
     const libEntry = exerciseCatalog.find((l) => l.name === ex.name) ?? customExercises.find((l) => l.name === ex.name);
-    if (libEntry && ONE_RM_CLASSIFICATIONS.includes(libEntry.classification) && s.weightKg > 0) {
-      const est = estimate1RM(s.weightKg, s.reps);
+    if (libEntry && ONE_RM_CLASSIFICATIONS.includes(libEntry.classification) && loadKg(s) > 0) {
+      // No 1RM from a bodyweight set (0 kg of external load).
+      const est = estimate1RM(loadKg(s), s.reps);
       if (est > (personalRecords[ex.name] ?? 0)) {
         setPersonalRecord(ex.name, est, { catalogExerciseId: ex.catalogExerciseId, customExerciseId: ex.customExerciseId });
       }
@@ -849,7 +851,7 @@ export const WorkoutSessionSheet: React.FC<{
                 <p className="tabular-nums" style={{ margin: 0, fontSize: 12.5, color: "#5B5349" }}>
                   {ex.sets
                     .filter(isTouched)
-                    .map((s) => (s.weightKg > 0 ? `${s.weightKg} kg × ${s.reps}` : `${s.reps} reps`))
+                    .map((s) => `${formatSetWeight(s.weightKg ?? 0, true)} × ${s.reps}`)
                     .join(" · ")}
                 </p>
               </div>
@@ -1200,13 +1202,11 @@ const SetRow: React.FC<{
         <span aria-hidden className="absolute right-0" style={{ top: 7, bottom: 7, width: 1, background: "#E0DFDF" }} />
       </button>
       <div className="flex-1 flex min-w-0" style={{ gap: 8, marginLeft: 18 }}>
-        <input
-          value={s.weightKg || ""}
-          onChange={(e) => onChange({ weightKg: Number(e.target.value) || 0 })}
+        <WeightField
+          value={s.weightKg}
+          onChange={(weightKg) => onChange({ weightKg })}
           placeholder={weightPlaceholder}
-          inputMode="decimal"
-          aria-label={`Set ${label} weight`}
-          className="logger-field flex-1 focus:outline-none"
+          ariaLabel={`Set ${label} weight`}
           style={inputStyle}
         />
         <input

@@ -1,5 +1,5 @@
 import type { WorkoutSession } from "../../types";
-import { estimate1RM } from "./index";
+import { estimate1RM, loadKg } from "./index";
 import { exerciseKey, isWorkingSet, setKind } from "./stats";
 
 // Handover 2026-09-29 03 "Estimated 1RM" (WO18, WO19, WO4.1): Epley,
@@ -53,10 +53,10 @@ export function liftMaxes(sessions: WorkoutSession[], today: string): LiftMax[] 
       const key = exerciseKey(ex);
       for (const set of ex.sets) {
         if (!isWorkingSet(set)) continue;
-        const est = estimate1RM(set.weightKg, set.reps);
+        const est = estimate1RM(loadKg(set), set.reps);
         const cur = seen.get(key);
         const isPr = (cur?.isPr ?? false) || setKind(set) === "pr";
-        if (!cur || est > cur.oneRm) seen.set(key, { sessionId: s.id, date: s.date, oneRm: est, set: { weightKg: set.weightKg, reps: set.reps }, isPr });
+        if (!cur || est > cur.oneRm) seen.set(key, { sessionId: s.id, date: s.date, oneRm: est, set: { weightKg: loadKg(set), reps: set.reps }, isPr });
         else cur.isPr = isPr;
       }
       const entry = seen.get(key);

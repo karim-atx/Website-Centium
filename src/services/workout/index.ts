@@ -16,7 +16,20 @@ export function estimate1RM(weightKg: number, reps: number): number {
  * before outcomes existed, which is what those rows carry.
  */
 export function volumeForSets(sets: LoggedSet[]): number {
-  return sets.filter(countsTowardVolume).reduce((sum, s) => sum + s.reps * s.weightKg, 0);
+  return sets.filter(countsTowardVolume).reduce((sum, s) => sum + s.reps * loadKg(s), 0);
+}
+
+/** A set's external load in kg: bodyweight (0) and a not-yet-typed row (null) both carry none. */
+export const loadKg = (s: Pick<LoggedSet, "weightKg">): number => s.weightKg ?? 0;
+
+/**
+ * A set's weight as shown: "60 kg", or bodyweight as "Bodyweight" ("BW" where
+ * space is tight). null for a row with no weight typed.
+ */
+export function formatSetWeight(weightKg: number | null, short = false): string | null {
+  if (weightKg === null) return null;
+  if (weightKg === 0) return short ? "BW" : "Bodyweight";
+  return `${weightKg} kg`;
 }
 
 /**

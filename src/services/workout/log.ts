@@ -231,7 +231,8 @@ export async function saveWorkoutSession(
       // deriving it here means a caller that isn't cannot violate it.
       set_number: j + 1,
       reps: Math.max(0, Math.round(s.reps)),
-      weight_kg: round2(Math.max(0, s.weightKg)),
+      // 0 is bodyweight; null (an unlogged row nobody typed into) stays null.
+      weight_kg: s.weightKg === null ? null : round2(Math.max(0, s.weightKg)),
       // DERIVED FROM outcome by logged_sets_sync_completed() whenever one is
       // set, so this is what an older row would have carried and never
       // disagrees with the outcome beside it.

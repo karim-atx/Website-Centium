@@ -996,7 +996,13 @@ export type SetOutcome = "completed" | "skipped" | "failed";
 export interface LoggedSet {
   setNumber: number;
   reps: number;
-  weightKg: number;
+  /**
+   * External load. 0 IS BODYWEIGHT (shown "Bodyweight", or "BW" where space
+   * is tight): no weight added, so 0 kg of volume and no 1RM. null is a row
+   * nobody has typed a weight into yet (it takes its greyed hint, or 0, when
+   * logged), so only an unlogged row is ever null.
+   */
+  weightKg: number | null;
   completed: boolean;
   outcome?: SetOutcome;
   /**

@@ -1,5 +1,5 @@
 import type { WorkoutSession } from "../../types";
-import { estimate1RM } from "./index";
+import { estimate1RM, loadKg } from "./index";
 import { countsTowardVolume } from "./session";
 import { isWorkingSet } from "./stats";
 
@@ -70,8 +70,8 @@ export function pointStats(sessions: WorkoutSession[]): PointStats {
           reps += set.reps;
         }
         if (isWorkingSet(set)) {
-          oneRm = Math.max(oneRm, estimate1RM(set.weightKg, set.reps));
-          maxWeight = Math.max(maxWeight, set.weightKg);
+          oneRm = Math.max(oneRm, estimate1RM(loadKg(set), set.reps));
+          maxWeight = Math.max(maxWeight, loadKg(set));
         }
       }
     }

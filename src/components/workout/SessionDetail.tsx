@@ -1,6 +1,7 @@
 import React from "react";
 import type { LoggedSet, WorkoutSession } from "../../types";
 import { blockResultLine, enduranceResultLine } from "../../services/workout/results";
+import { formatSetWeight } from "../../services/workout";
 import clsx from "clsx";
 
 /**
@@ -99,7 +100,7 @@ const SetSummary: React.FC<{ set: LoggedSet }> = ({ set: s }) => {
         fontWeight: s.isPr ? 700 : 400,
       }}
     >
-      {s.weightKg}kg × {s.reps}
+      {formatSetWeight(s.weightKg, true) ?? "—"} × {s.reps}
       {/* Named as well as coloured, so the three read apart in greyscale and
           to a screen reader. */}
       {outcome === "failed" && " · failed"}

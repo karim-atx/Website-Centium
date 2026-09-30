@@ -1,5 +1,6 @@
 import type { LoggedExercise, WorkoutSession } from "../../types";
 import { isWorkingSet } from "./stats";
+import { loadKg } from "./index";
 
 // WO3.1 History: the period, the hero summary, each card's top sets, and the
 // volume comparison phrase.
@@ -68,8 +69,9 @@ export function topSet(ex: LoggedExercise): { weightKg: number; reps: number } |
   let best: { weightKg: number; reps: number } | null = null;
   for (const set of ex.sets) {
     if (!isWorkingSet(set)) continue;
-    if (!best || set.weightKg > best.weightKg || (set.weightKg === best.weightKg && set.reps > best.reps)) {
-      best = { weightKg: set.weightKg, reps: set.reps };
+    const kg = loadKg(set);
+    if (!best || kg > best.weightKg || (kg === best.weightKg && set.reps > best.reps)) {
+      best = { weightKg: kg, reps: set.reps };
     }
   }
   return best;
@@ -143,8 +145,8 @@ export function exerciseHistory(
       routineName: s.routineName,
       sets: done.length,
       top,
-      volumeKg: done.reduce((n, set) => n + set.weightKg * set.reps, 0),
-      line: done.map((set) => (set.weightKg > 0 ? `${set.weightKg}×${set.reps}` : `${set.reps} reps`)).join(" · "),
+      volumeKg: done.reduce((n, set) => n + loadKg(set) * set.reps, 0),
+      line: done.map((set) => (loadKg(set) > 0 ? `${set.weightKg}×${set.reps}` : `BW×${set.reps}`)).join(" · "),
     });
   }
   return out;

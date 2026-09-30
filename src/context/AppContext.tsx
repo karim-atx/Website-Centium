@@ -3914,8 +3914,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         customExercises.find((l) => l.name === ex.name);
       if (!definition || !ONE_RM_CLASSIFICATIONS.includes(definition.classification)) continue;
       const best = ex.sets
-        .filter((s) => s.completed && s.weightKg > 0)
-        .reduce((max, s) => Math.max(max, estimate1RM(s.weightKg, s.reps)), 0);
+        .filter((s) => s.completed && (s.weightKg ?? 0) > 0)
+        .reduce((max, s) => Math.max(max, estimate1RM(s.weightKg ?? 0, s.reps)), 0);
       if (best > 0 && best > (personalRecords[ex.name] ?? 0)) {
         // Through the one write path, so the queueing of an unsynced custom
         // movement happens here too rather than only on the live-set path.

@@ -198,12 +198,12 @@ test("a note or an RPE alone keeps an optional row", () => {
 });
 
 test("a blank set with an exact reps hint logs the hint", () => {
-  assert.deepEqual(resolveLoggedValues({ weightKg: 0, reps: 0 }, { weight: "60", reps: "10" }), { weightKg: 60, reps: 10 });
+  assert.deepEqual(resolveLoggedValues({ weightKg: null, reps: 0 }, { weight: "60", reps: "10" }), { weightKg: 60, reps: 10 });
 });
 
 test("a blank set with a range or AMRAP hint is not logged: reps must be entered", () => {
   for (const reps of ["8–12", "8+", "up to 12", "reps"]) {
-    assert.equal(resolveLoggedValues({ weightKg: 0, reps: 0 }, { weight: "60", reps }), null, reps);
+    assert.equal(resolveLoggedValues({ weightKg: null, reps: 0 }, { weight: "60", reps }), null, reps);
   }
 });
 
@@ -212,7 +212,11 @@ test("typed reps win over any hint, and typed weight over the weight hint", () =
 });
 
 test("a blank weight with no exact hint logs 0 (bodyweight)", () => {
-  assert.deepEqual(resolveLoggedValues({ weightKg: 0, reps: 9 }, { weight: "", reps: "8+" }), { weightKg: 0, reps: 9 });
+  assert.deepEqual(resolveLoggedValues({ weightKg: null, reps: 9 }, { weight: "", reps: "8+" }), { weightKg: 0, reps: 9 });
+});
+
+test("a TYPED 0 is bodyweight and wins over last session's weight", () => {
+  assert.deepEqual(resolveLoggedValues({ weightKg: 0, reps: 12 }, { weight: "60", reps: "10" }), { weightKg: 0, reps: 12 });
 });
 
 test("reconcileLogged keys progress by routine exercise id, not position", () => {

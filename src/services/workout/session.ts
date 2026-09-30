@@ -144,6 +144,21 @@ export function countsTowardVolume(s: LoggedSet): boolean {
   return s.completed;
 }
 
+/**
+ * A paused session saved before 0 meant bodyweight (2026-09-30) stored a row
+ * nobody typed into as weight 0. Such a session has no null weight anywhere
+ * (the new format writes blanks as null), and in it an untouched row's 0 was
+ * a blank, so it becomes null again and takes its greyed hint as before.
+ * A session that already carries a null is new-format and is left alone.
+ */
+export function upgradeLegacyBlankWeights(logged: LoggedExercise[]): LoggedExercise[] {
+  if (logged.some((ex) => ex.sets.some((s) => s.weightKg === null))) return logged;
+  return logged.map((ex) => ({
+    ...ex,
+    sets: ex.sets.map((s) => (!isTouched(s) && s.weightKg === 0 ? { ...s, weightKg: null } : s)),
+  }));
+}
+
 /** A hint that is one exact number ("10", "60", "62.5"), not a range or "8+". */
 const exactHint = (hint: string): number | null => (/^\d+(\.\d+)?$/.test(hint.trim()) ? Number(hint) : null);
 
@@ -156,7 +171,8 @@ const exactHint = (hint: string): number | null => (/^\d+(\.\d+)?$/.test(hint.tr
  * ("8+"), "up to 12" or a bare "reps" is a question, not an answer, so the
  * set is not logged at all (`null`) and the caller asks for reps rather than
  * saving 0 or guessing a number. Weight has no ranges; a blank weight with no
- * exact hint logs 0 (bodyweight).
+ * exact hint logs 0 (bodyweight). A TYPED 0 is bodyweight too, and wins over
+ * any hint: only a blank (null) weight takes one.
  */
 export function resolveLoggedValues(
   set: Pick<LoggedSet, "weightKg" | "reps">,
@@ -164,7 +180,7 @@ export function resolveLoggedValues(
 ): { weightKg: number; reps: number } | null {
   const reps = set.reps || exactHint(hints.reps);
   if (!reps) return null;
-  return { weightKg: set.weightKg || (exactHint(hints.weight) ?? 0), reps };
+  return { weightKg: set.weightKg ?? exactHint(hints.weight) ?? 0, reps };
 }
 
 /**
