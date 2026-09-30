@@ -58,6 +58,8 @@ export default function Food() {
   const [tab, setTab] = useState<Tab>("diary");
   const [addOpen, setAddOpen] = useState(false);
   const [addMeal, setAddMeal] = useState<MealType>("lunch");
+  // FO7: which meal the sheet suggests for; null from the floating +.
+  const [addFor, setAddFor] = useState<MealType | null>(null);
   const [editingEntry, setEditingEntry] = useState<FoodLogEntry | null>(null);
   const [revealedId, setRevealedId] = useState<string | null>(null);
   // QA 11.0: meal sections collapse like Routine folders on Workout >
@@ -87,8 +89,9 @@ export default function Food() {
     return map;
   }, [todaysEntries]);
 
-  const openAdd = (meal: MealType) => {
+  const openAdd = (meal: MealType, suggestFor: MealType | null = meal) => {
     setAddMeal(meal);
+    setAddFor(suggestFor);
     setAddOpen(true);
   };
 
@@ -527,7 +530,7 @@ export default function Food() {
         // above it, reading as "attached" to whatever section landed under
         // it. Same root cause already fixed for BottomSheet via portaling.
         <button
-          onClick={() => openAdd(mealForCurrentTime())}
+          onClick={() => openAdd(mealForCurrentTime(), null)}
           aria-label="Add Food"
           // 104px over the nav plus the home-indicator inset, and 20px in from
           // the right edge of the centred 430px app column (01 GLOBAL).
@@ -537,7 +540,7 @@ export default function Food() {
         </button>
       )}
 
-      <AddFoodSheet open={addOpen} onClose={() => setAddOpen(false)} defaultMeal={addMeal} />
+      <AddFoodSheet open={addOpen} onClose={() => setAddOpen(false)} defaultMeal={addMeal} suggestMeal={addFor} />
       <EditFoodEntrySheet open={!!editingEntry} onClose={() => setEditingEntry(null)} entry={editingEntry} />
     </div>
   );

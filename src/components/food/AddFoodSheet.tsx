@@ -2,7 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { sheetChipStyle, sheetGreyStyle, sheetLabelStyle } from "../ui/sheetChip";
 import { Button } from "../ui/Button";
-import { Search, Mic, ScanLine, Clock, Star, Check, UtensilsCrossed, SlidersHorizontal } from "lucide-react";
+import { Search, Mic, ScanBarcode, Camera, Plus, Carrot, Apple, Clock, Star, Check, UtensilsCrossed, SlidersHorizontal } from "lucide-react";
 import { logoTone } from "./logoTones";
 import { SheetField } from "./SheetField";
 import { CustomFoodForm } from "./CustomFoodForm";
@@ -12,7 +12,6 @@ import { servingMultiplier, targetsFromGoal } from "../../services/nutrition";
 import { NutrientDetailSections } from "./NutrientSections";
 import {
   searchFoods,
-  listFoods,
   getFoodsByIds,
   lookupByBarcode,
   createFoodByBarcode,
@@ -23,6 +22,9 @@ import { getFoodNutrientsById } from "../../services/food-nutrients";
 import { useApp } from "../../context/AppContext";
 import { AIVoiceLogger } from "./AIVoiceLogger";
 import { foodCategoryIcon } from "../../utils/icons";
+import { foodSuggestions, historyIds, type FoodSuggestion } from "../../services/food/suggestions";
+import { todayLocal } from "../../utils/date";
+import { Toast } from "../ui/Toast";
 
 // V4: preset serving units offered as tap targets — only the quantity number
 // is typed. The relevant subset differs a little by food category (a plate
@@ -71,7 +73,14 @@ export const AddFoodSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   defaultMeal?: MealType;
-}> = ({ open, onClose, defaultMeal = "lunch" }) => {
+  /**
+   * FO7: the meal the sheet was opened FOR — its suggestions are that meal's
+   * frequent foods. Null from the general entry points (the Food diary's
+   * floating + and Home's Log Food), which suggest across every meal. The
+   * food is still logged to `defaultMeal` either way.
+   */
+  suggestMeal?: MealType | null;
+}> = ({ open, onClose, defaultMeal = "lunch", suggestMeal = null }) => {
   const {
     addFoodEntryRecord,
     authUserId,
@@ -128,7 +137,8 @@ export const AddFoodSheet: React.FC<{
   // --- real catalog -------------------------------------------------------
   const [results, setResults] = useState<FoodSearchResult[]>([]);
   const [loading, setLoading] = useState(false);
-  const [recent, setRecent] = useState<FoodSearchResult[]>([]);
+  const [suggestionFoods, setSuggestionFoods] = useState<Map<string, FoodSearchResult>>(new Map());
+  const [scanNotice, setScanNotice] = useState(false);
 
   // --- barcode ------------------------------------------------------------
   const [barcode, setBarcode] = useState("");
@@ -142,51 +152,60 @@ export const AddFoodSheet: React.FC<{
   const [addError, setAddError] = useState<string | null>(null);
 
   // Search runs against Supabase, so it is debounced: a query per keystroke
-  // would be a request per keystroke. An empty box lists the whole catalog,
-  // which keeps the browse-by-category behaviour the sheet already had.
+  // would be a request per keystroke. FO7: nothing is fetched until the user
+  // types — the empty box shows their own suggestions, not the database.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     const term = query.trim();
+    if (!term) {
+      setResults([]);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
-    const timer = window.setTimeout(
-      () => {
-        void (term ? searchFoods(term) : listFoods()).then((rows) => {
-          if (cancelled) return;
-          setResults(rows);
-          setLoading(false);
-        });
-      },
-      term ? 250 : 0
-    );
+    const timer = window.setTimeout(() => {
+      void searchFoods(term).then((rows) => {
+        if (cancelled) return;
+        setResults(rows);
+        setLoading(false);
+      });
+    }, 250);
     return () => {
       cancelled = true;
       window.clearTimeout(timer);
     };
   }, [query, open]);
 
-  // Recent has to be re-read from the catalog rather than rebuilt from the
-  // diary: an entry snapshots totals, and logging the same food again needs
-  // the per-serving values only the catalog holds.
+  // FO7 suggestions: the user's frequent and recent foods for the meal the
+  // sheet was opened for (services/food/suggestions). Each is re-read from the
+  // catalog rather than rebuilt from the diary: an entry snapshots totals, and
+  // logging the same food again needs the per-serving values only the
+  // catalog holds.
+  const suggestions = useMemo(
+    () => (open ? foodSuggestions(foodLog, suggestMeal, todayLocal()) : []),
+    [foodLog, suggestMeal, open]
+  );
+  const ownFoodIds = useMemo(() => historyIds(foodLog), [foodLog]);
   useEffect(() => {
-    if (!open) return;
-    const ids: string[] = [];
-    for (let i = foodLog.length - 1; i >= 0 && ids.length < 5; i--) {
-      const id = foodLog[i].foodId ?? foodLog[i].customFoodId;
-      if (id && !ids.includes(id)) ids.push(id);
-    }
-    if (ids.length === 0) {
-      setRecent([]);
-      return;
-    }
+    if (!open || suggestions.length === 0) return;
     let cancelled = false;
-    void getFoodsByIds(ids).then((rows) => {
-      if (!cancelled) setRecent(rows);
+    void getFoodsByIds(suggestions.map((x) => x.id)).then((rows) => {
+      if (!cancelled) setSuggestionFoods(new Map(rows.map((f) => [f.id, f])));
     });
     return () => {
       cancelled = true;
     };
-  }, [foodLog, open]);
+  }, [suggestions, open]);
+
+  /** Opens the add step for a suggestion, prefilled with its last-used quantity. */
+  const pickSuggestion = (sg: FoodSuggestion) => {
+    const food = suggestionFoods.get(sg.id);
+    if (!food) return;
+    setSelectedFood(food);
+    setQuantity(sg.quantity);
+    setUnit(sg.unit);
+  };
 
   // Fetched as soon as a food is selected (not lazily on Advanced tap) so the
   // multiplier — already recomputed every render from quantity/unit — stays
@@ -217,7 +236,7 @@ export const AddFoodSheet: React.FC<{
   const localCustom = useMemo(
     () =>
       customFoods
-        .filter((f) => f.name.toLowerCase().includes(query.trim().toLowerCase()))
+        .filter((f) => query.trim() !== "" && f.name.toLowerCase().includes(query.trim().toLowerCase()))
         .map<FoodSearchResult>((f) => ({
           id: f.id,
           source: "custom",
@@ -252,10 +271,12 @@ export const AddFoodSheet: React.FC<{
 
   // Category filtering stays client-side: the catalog is small, the rows are
   // already loaded, and doing it here keeps the chips instant.
+  // FO7: foods from the user's own history rank above other matches.
   const filtered = useMemo(() => {
     const all = [...localCustom, ...results];
-    return category ? all.filter((f) => f.category === category) : all;
-  }, [localCustom, results, category]);
+    const shown = category ? all.filter((f) => f.category === category) : all;
+    return [...shown.filter((f) => ownFoodIds.has(f.id)), ...shown.filter((f) => !ownFoodIds.has(f.id))];
+  }, [localCustom, results, category, ownFoodIds]);
 
   // Takes the meal from the row the user actually tapped, each time the sheet
   // opens. Deliberately here rather than in resetAndClose below: that runs on
@@ -417,7 +438,16 @@ export const AddFoodSheet: React.FC<{
         open={open}
         onClose={resetAndClose}
         title={advancedOpen ? "Nutrient details" : "Add Food"}
-        onBack={advancedOpen ? () => setAdvancedOpen(false) : () => setSelectedFood(null)}
+        onBack={
+          advancedOpen
+            ? () => setAdvancedOpen(false)
+            : () => {
+                // A suggestion prefilled its last quantity; the next pick starts fresh.
+                setSelectedFood(null);
+                setQuantity(1);
+                setUnit("serving");
+              }
+        }
       >
         {advancedOpen ? (
           <div className="animate-fade-slide-up flex flex-col gap-2.5">
@@ -745,56 +775,48 @@ export const AddFoodSheet: React.FC<{
             />
           </div>
 
-          {/* THREE entry points, on Centium's two brand hues at alternating
-              depths — teal, lavender, deep purple — each a gradient with a
-              white glyph and label.
-
-              AI SCAN IS GONE, not hidden behind a flag. It opened a camera
-              that was a styled div and announced a catalog row after 1600ms,
-              which is a made-up answer to a question nobody had asked it.
-              Identifying a meal from a photo needs a vision model; there is
-              nothing to switch back on until one exists, and the tile is
-              worth less than nothing in the meantime. Its teal-deep gradient
-              goes with it — the remaining three keep their own. */}
-          <div className="grid grid-cols-3 gap-2 mb-5">
+          {/* FOUR entry points, HO2.1's row (FO7 builds it): AI Voice, AI
+              Scan, Barcode, Custom, each a gradient with a white glyph and
+              label. AI Scan has no vision model behind it: tapping it says so
+              rather than inventing a result. */}
+          <div className="grid grid-cols-4 mb-4" style={{ gap: 9 }}>
             {[
-              { label: "AI Voice", Icon: Mic, bg: "linear-gradient(150deg,#A2C8C2,#6F9993)", onClick: () => setVoiceOpen(true) },
-              { label: "Enter barcode", Icon: ScanLine, bg: "linear-gradient(150deg,#C0B4E8,#8F7FC9)", onClick: openBarcode },
-              { label: "Custom", Icon: UtensilsCrossed, bg: "linear-gradient(150deg,#9184CE,#5F5093)", onClick: () => setCustomMode(true) },
-            ].map(({ label, Icon, bg, onClick }) => (
+              { label: "AI Voice", icon: <Mic size={17} />, bg: "linear-gradient(150deg,#A2C8C2,#6F9993)", onClick: () => setVoiceOpen(true) },
+              {
+                label: "AI Scan",
+                icon: (
+                  <span className="relative inline-flex">
+                    <Camera size={17} />
+                    <Plus size={9} strokeWidth={3} className="absolute" style={{ top: -5, right: -6 }} />
+                  </span>
+                ),
+                bg: "linear-gradient(150deg,#8FB5AF,#4F7F78)",
+                onClick: () => setScanNotice(true),
+              },
+              { label: "Barcode", icon: <ScanBarcode size={17} />, bg: "linear-gradient(150deg,#C0B4E8,#8F7FC9)", onClick: openBarcode },
+              {
+                label: "Custom",
+                icon: (
+                  <span className="inline-flex" style={{ gap: 1 }}>
+                    <Carrot size={15} />
+                    <Apple size={15} />
+                  </span>
+                ),
+                bg: "linear-gradient(150deg,#9184CE,#5F5093)",
+                onClick: () => setCustomMode(true),
+              },
+            ].map(({ label, icon, bg, onClick }) => (
               <button
                 key={label}
                 onClick={onClick}
-                className="tap flex flex-col items-center gap-1.5 rounded-2xl py-3"
-                style={{ background: bg, color: "#FFFFFF" }}
+                className="tap flex flex-col items-center justify-center gap-1.5"
+                style={{ height: 64, borderRadius: 14, background: bg, color: "#FFFFFF" }}
               >
-                <Icon size={17} />
+                {icon}
                 <span className="text-[11px] font-semibold">{label}</span>
               </button>
             ))}
           </div>
-
-          {!query && recent.length > 0 && (
-            <div className="mb-5">
-              <p className="flex items-center gap-1.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-                <Clock size={12} /> Recent
-              </p>
-              <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
-                {recent.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setSelectedFood(f)}
-                    className="tap shrink-0 flex items-center gap-2 bg-cream-soft rounded-2xl pl-2 pr-3.5 py-2"
-                  >
-                    <span className="w-7 h-7 rounded-lg bg-cream-card flex items-center justify-center shrink-0">
-                      <FoodIcon category={f.category} size={13} className="text-primary-dark" />
-                    </span>
-                    <span className="text-xs font-semibold text-charcoal whitespace-nowrap">{f.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
 
           {matchingMeals.length > 0 && (
             <div className="mb-4">
@@ -822,6 +844,8 @@ export const AddFoodSheet: React.FC<{
             </div>
           )}
 
+          {/* FO7: the filter chips only while searching, as filters on the results. */}
+          {query.trim() && (
           <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
             {[{ id: null as string | null, label: "All" }, ...addFoodFilterCategories].map((c) => {
               const active = category === c.id;
@@ -850,12 +874,53 @@ export const AddFoodSheet: React.FC<{
               );
             })}
           </div>
+          )}
           </div>
 
           {/* The list's own scroll region, starting under the filter chips,
               so rows never travel up behind the pinned block or the band. */}
           <div className="flex flex-col no-scrollbar" style={{ gap: 6, maxHeight: 424, overflowY: "auto", margin: "0 -20px", padding: "12px 20px 0" }}>
-            {filtered.map((f) => {
+            {!query.trim() &&
+              (suggestions.length === 0 ? (
+                <p className="text-center text-sm text-charcoal-faint py-8">Start typing to search foods</p>
+              ) : (
+                <>
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
+                    <Clock size={12} />
+                    {suggestMeal ? `Frequent at ${detailMealLabels[suggestMeal]}` : "Frequent & recent"}
+                  </p>
+                  {suggestions.map((sg) => {
+                    const food = suggestionFoods.get(sg.id);
+                    const tone = food?.source === "custom" ? logoTone(food.logoTone) : null;
+                    return (
+                      <button
+                        key={sg.id}
+                        onClick={() => pickSuggestion(sg)}
+                        disabled={!food}
+                        className="tap w-full flex items-center justify-between text-left shrink-0"
+                        style={{ borderRadius: 16, padding: "10px 12px", gap: 10 }}
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <span
+                            className="flex items-center justify-center shrink-0"
+                            style={{ width: 36, height: 36, borderRadius: 12, background: tone ? tone.bg : "#F0EDF9", color: tone ? tone.fg : "#7D6BB5" }}
+                          >
+                            <FoodIcon category={food?.category ?? "homemade"} size={16} />
+                          </span>
+                          <div className="min-w-0">
+                            <p className="truncate" style={{ margin: 0, fontSize: 14, fontWeight: 600, color: "#241F1B" }}>
+                              {sg.name}
+                            </p>
+                            <p className="truncate" style={{ margin: 0, fontSize: 11, color: "#8C8378" }}>{sg.amount}</p>
+                          </div>
+                        </div>
+                        <span className="shrink-0" style={{ fontSize: 12, fontWeight: 600, color: "#5B5349" }}>{sg.kcal} kcal</span>
+                      </button>
+                    );
+                  })}
+                </>
+              ))}
+            {query.trim() !== "" && filtered.map((f) => {
               // A custom food keeps the logo colour it was saved with, so it
               // can be told apart in the list at a glance.
               const tone = f.source === "custom" ? logoTone(f.logoTone) : null;
@@ -885,19 +950,23 @@ export const AddFoodSheet: React.FC<{
               </button>
               );
             })}
-            {loading && filtered.length === 0 && (
+            {query.trim() !== "" && loading && filtered.length === 0 && (
               <p className="text-center text-sm text-charcoal-faint py-8">Searching…</p>
             )}
-            {!loading && filtered.length === 0 && (
+            {query.trim() !== "" && !loading && filtered.length === 0 && (
               <p className="text-center text-sm text-charcoal-faint py-8">
-                {query
-                  ? "Not in our catalog yet — try Custom or Barcode to add it."
-                  : "No foods match your search."}
+                Not in our catalog yet — try Custom or Barcode to add it.
               </p>
             )}
           </div>
         </div>
       </BottomSheet>
+      <Toast
+        open={scanNotice}
+        message="AI Scan isn't available yet."
+        icon={<Camera size={15} className="flex-none" style={{ color: "#A2C8C2" }} />}
+        onExpire={() => setScanNotice(false)}
+      />
 
       <AIVoiceLogger open={voiceOpen} onClose={() => { setVoiceOpen(false); resetAndClose(); }} />
     </>
