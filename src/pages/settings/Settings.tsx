@@ -680,7 +680,7 @@ export default function Settings() {
               navigate("/app/onboarding");
             }}
             disabled={deleting}
-            className="tap w-full rounded-2xl bg-status-high text-white text-sm font-semibold py-3.5 disabled:opacity-60"
+            className="tap w-full rounded-2xl bg-status-high text-white dark:text-[#0D0B1A] text-sm font-semibold py-3.5 disabled:opacity-60"
           >
             {deleting ? "Scheduling…" : "Schedule my account for deletion"}
           </button>

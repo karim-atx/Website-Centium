@@ -236,7 +236,7 @@ export default function ProfessionalDashboard() {
             >
               <Inbox size={16} />
               {requests.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-status-high text-white text-[9px] font-bold flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-status-high text-white dark:text-[#0D0B1A] text-[9px] font-bold flex items-center justify-center">
                   {requests.length}
                 </span>
               )}

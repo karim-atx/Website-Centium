@@ -84,7 +84,7 @@ export const PlanRow: React.FC<{
         <div className="flex items-center gap-2">
           <p className="text-sm font-bold text-charcoal">{tier.name}</p>
           {isCurrent && (
-            <span className="text-[10px] font-bold text-primary-dark bg-white rounded-full px-2 py-0.5">
+            <span className="text-[10px] font-bold text-primary-dark bg-white dark:bg-cream-card rounded-full px-2 py-0.5">
               CURRENT
             </span>
           )}

@@ -255,7 +255,19 @@
   --c-primary: 169 145 254;
   --c-primary-light: 195 179 251;
   --c-primary-pale: 52 45 84;
-  --c-primary-dark: 125 103 217;
+  /* A TEXT colour in dark mode, not a fill -- the role the three
+     .dark[data-accent] blocks below already give it (209 230 247, 250 199
+     176, 240 214 231). This lavender block was the odd one out at 125 103
+     217, which read 2.92:1 on primary-pale here and only 3.95:1 on
+     cream-card. It now takes the value primary-deep-text already holds for
+     text on a pale wash: 6.77:1 on primary-pale.
+
+     DARK ONLY, unlike the trend tokens' light-only fix above, and for the
+     same reason: this is the mode that fails. The light value is untouched,
+     and a per-className dark: override could not have reached the text that
+     sits inside a pale wash rather than on the same element -- nor stayed
+     accent-aware, since primary-deep-text has no per-accent value. */
+  --c-primary-dark: 195 179 251;
   --c-primary-deep-text: 195 179 251;
 
   /* The sent bubble keeps today's primary as its ground -- indirection rather

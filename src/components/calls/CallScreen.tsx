@@ -124,7 +124,7 @@ const CallStage: React.FC<{
             {formatDuration(elapsedSeconds)}
           </span>
           {secondsLeft !== null && secondsLeft <= WARN_AT_SECONDS && (
-            <span className="text-xs font-semibold text-white bg-status-high/90 rounded-full px-2.5 py-1 tabular-nums">
+            <span className="text-xs font-semibold text-white dark:text-[#0D0B1A] bg-status-high/90 rounded-full px-2.5 py-1 tabular-nums">
               {formatDuration(secondsLeft)} left
             </span>
           )}
@@ -147,7 +147,7 @@ const CallStage: React.FC<{
         <button
           onClick={onHangUp}
           aria-label="End call"
-          className="tap w-16 h-14 rounded-full bg-status-high text-white flex items-center justify-center"
+          className="tap w-16 h-14 rounded-full bg-status-high text-white dark:text-[#0D0B1A] flex items-center justify-center"
         >
           <PhoneOff size={22} />
         </button>

@@ -199,7 +199,7 @@ export const CallSurface: React.FC = () => {
             onClick={() => void hangUp()}
             disabled={busy}
             aria-label="Cancel call"
-            className="tap mt-6 w-16 h-14 rounded-full bg-status-high text-white flex items-center justify-center disabled:opacity-60"
+            className="tap mt-6 w-16 h-14 rounded-full bg-status-high text-white dark:text-[#0D0B1A] flex items-center justify-center disabled:opacity-60"
           >
             <PhoneOff size={22} />
           </button>

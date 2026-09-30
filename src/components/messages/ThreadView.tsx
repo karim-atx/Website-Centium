@@ -1054,7 +1054,7 @@ export const ThreadView: React.FC<{
             aria-label="Hold to record a voice note"
             className={`tap w-10 h-10 rounded-full flex items-center justify-center shrink-0 touch-none disabled:opacity-40 ${
               recorder.recording
-                ? "bg-status-high text-white scale-110"
+                ? "bg-status-high text-white dark:text-[#0D0B1A] scale-110"
                 : "text-charcoal-soft hover:bg-cream-soft"
             } transition-transform`}
           >
