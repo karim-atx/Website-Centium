@@ -20,6 +20,7 @@ import {
 } from "../../services/nutrition";
 import { BookOpen, Play, Check } from "lucide-react";
 import { mondayFirstWeek, DAY_LETTERS, dayLetter } from "../../utils/week";
+import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
 
 // Iteration 6.2 "Team" canonical widget library — 11 metrics, small (fixed
 // 114 tall) and large (150 tall), fluid in width (HO1.1), one flat tinted ground and accent
@@ -355,14 +356,7 @@ export const HomeWidget: React.FC<{
   // No dedicated "journal streak" metric exists — derived here the same way
   // the app's own auto-streaks are, by counting consecutive days with an
   // entry, walking back from today.
-  let journalStreak = 0;
-  {
-    const cursor = new Date(`${today}T00:00:00`);
-    while (journalEntries.some((e) => e.date === cursor.toISOString().slice(0, 10))) {
-      journalStreak++;
-      cursor.setDate(cursor.getDate() - 1);
-    }
-  }
+  const journalStreak = journalStreakFrom(journalEntries.map((e) => e.date), today);
   const journalWordTotal = journalEntries.reduce((s, e) => s + e.text.trim().split(/\s+/).filter(Boolean).length, 0);
   const latestEntry = journalEntries[journalEntries.length - 1];
 

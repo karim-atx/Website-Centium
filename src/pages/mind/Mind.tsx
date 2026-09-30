@@ -15,6 +15,7 @@ import type { Streak } from "../../types";
 import { flameColor } from "../../utils/flameColor";
 import { streakProgress } from "../../utils/streakProgress";
 import clsx from "clsx";
+import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
 
 type Tab = "overview" | "habits" | "journal" | "achievements";
 
@@ -41,6 +42,7 @@ export default function Mind() {
     pointsSummary,
     refreshAchievements,
     noteFeatureMilestone,
+    today,
   } = useApp();
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("overview");
@@ -96,16 +98,8 @@ export default function Mind() {
   const leadFilledSegments = leadTotalSegments ? Math.round(streakProgress(leadStreak) * leadTotalSegments) : 0;
 
   const doneHabits = habits.filter((h) => h.done).length;
-  let journalStreak = 0;
-  {
-    const cursor = new Date();
-    for (;;) {
-      const d = cursor.toISOString().slice(0, 10);
-      if (!journalEntries.some((e) => e.date === d)) break;
-      journalStreak++;
-      cursor.setDate(cursor.getDate() - 1);
-    }
-  }
+  // Local calendar days, from the app's local today (not UTC).
+  const journalDays = journalStreakFrom(journalEntries.map((e) => e.date), today);
 
   return (
     <div>
@@ -312,7 +306,7 @@ export default function Mind() {
                 <span className="flex flex-col items-center gap-[7px]">
                   <BookOpen size={30} className="text-team-gold-deep" />
                   <span className="flex flex-col items-center leading-none">
-                    <span className="text-[20px] font-extrabold tracking-[-0.04em] text-charcoal tabular-nums">{journalStreak}</span>
+                    <span className="text-[20px] font-extrabold tracking-[-0.04em] text-charcoal tabular-nums">{journalDays}</span>
                     <span className="mt-1 text-[8.5px] font-bold text-team-gold-ink/[0.82]">day streak</span>
                   </span>
                 </span>
