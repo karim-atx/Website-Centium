@@ -388,7 +388,10 @@ export default function Profile() {
       )}
 
       {!hidesClientFields && (
-        <div className="grid grid-cols-3 gap-3 mb-6 mt-4">
+        /* Decision 4: four tiles on one row at every width (360-430), so
+            "years" never wraps onto a row of its own. Compact padding and
+            16px values keep "Female" inside a tile even at 130% text. */
+        <div className="grid grid-cols-4 gap-1.5 mb-6 mt-4">
           {(
             [
               { field: "weightKg" as const, value: user.weightKg, unit: "kg" },
@@ -399,9 +402,11 @@ export default function Profile() {
               key={f.field}
               interactive
               onClick={() => openMetricEditor(f.field)}
-              className="text-center animate-fade-slide-up"
+              padded={false}
+              className="text-center animate-fade-slide-up min-w-0"
+              style={{ padding: "14px 2px" }}
             >
-              <p className="text-lg font-bold text-charcoal">{f.value}</p>
+              <p className="text-base font-bold text-charcoal tabular-nums">{f.value}</p>
               <p className="text-[11px] text-charcoal-faint">{f.unit}</p>
             </Card>
           ))}
@@ -416,9 +421,11 @@ export default function Profile() {
               setSexError(null);
               setSexOpen(true);
             }}
-            className="text-center animate-fade-slide-up"
+            padded={false}
+            className="text-center animate-fade-slide-up min-w-0"
+            style={{ padding: "14px 2px" }}
           >
-            <p className="text-lg font-bold text-charcoal capitalize">{user.sex}</p>
+            <p className="text-base font-bold text-charcoal capitalize">{user.sex}</p>
             <p className="text-[11px] text-charcoal-faint">sex</p>
           </Card>
 
@@ -429,9 +436,11 @@ export default function Profile() {
           <Card
             interactive
             onClick={openDobEditor}
-            className="text-center animate-fade-slide-up"
+            padded={false}
+            className="text-center animate-fade-slide-up min-w-0"
+            style={{ padding: "14px 2px" }}
           >
-            <p className="text-lg font-bold text-charcoal">{user.age}</p>
+            <p className="text-base font-bold text-charcoal tabular-nums">{user.age}</p>
             <p className="text-[11px] text-charcoal-faint">years</p>
           </Card>
         </div>
