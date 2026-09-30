@@ -10,6 +10,7 @@ import { getMfaStatus, verifyTotp } from "../../services/mfa";
 import {
   passwordChecks,
   meetsPasswordRule,
+  passwordStrength,
   shouldWarnPasswordMismatch,
 } from "../../utils/password";
 
@@ -111,14 +112,7 @@ export default function ResetPassword() {
   };
 
   const mismatch = shouldWarnPasswordMismatch(password, confirmPassword, confirmBlurred);
-  const passedChecks = passwordChecks.filter((c) => c.test(password)).length;
-  const strengthLabel = passedChecks <= 1 ? "Weak" : passedChecks <= 3 ? "Medium" : "Strong";
-  const strengthColor =
-    passedChecks <= 1
-      ? "rgb(var(--c-status-high))"
-      : passedChecks <= 3
-      ? "rgb(var(--c-status-caution))"
-      : "rgb(var(--c-status-good))";
+  const { passed: passedChecks, label: strengthLabel, color: strengthColor } = passwordStrength(password);
 
   const canSubmit =
     !busy && meetsPasswordRule(password) && confirmPassword === password && !!authUserId;

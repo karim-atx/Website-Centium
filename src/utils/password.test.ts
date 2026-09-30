@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { meetsPasswordRule, passwordChecks } from "./password";
+import { meetsPasswordRule, passwordChecks, passwordStrength } from "./password";
 
 test("the rule is exactly the checklist: accepted only when no item shows a cross", () => {
   const samples = ["", "abc", "abcdefgh", "abcdefg1", "Abcdefg1", "abcdefg1!", "Abcdefg!", "ABCDEFG1!", "Abc1!", "Abcdefg1!", "Correct-Horse-9"];
@@ -12,8 +12,16 @@ test("the rule is exactly the checklist: accepted only when no item shows a cros
 
 test("the old looser rule's passes that the checklist fails are now refused", () => {
   // 8+, a letter and a number, but no uppercase / no special: used to pass.
+  // Every class is required, lowercase included.
+  assert.equal(meetsPasswordRule("ABCDEFG1!"), false);
   assert.equal(meetsPasswordRule("abcdefg1"), false);
   assert.equal(meetsPasswordRule("Abcdefg1"), false);
   assert.equal(meetsPasswordRule("abcdefg1!"), false);
   assert.equal(meetsPasswordRule("Abcdefg1!"), true);
+});
+
+test("the strength bar says Strong only when the rule passes", () => {
+  assert.equal(passwordStrength("Abcdefg1!").label, "Strong");
+  assert.equal(passwordStrength("abcdefg1!").label, "Medium", "4 of 5: still not enough");
+  assert.equal(passwordStrength("abc").label, "Weak");
 });

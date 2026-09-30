@@ -5,6 +5,7 @@
 
 export const passwordChecks = [
   { label: "At least 8 characters", test: (p: string) => p.length >= 8 },
+  { label: "One lowercase letter", test: (p: string) => /[a-z]/.test(p) },
   { label: "One uppercase letter", test: (p: string) => /[A-Z]/.test(p) },
   { label: "One number", test: (p: string) => /\d/.test(p) },
   { label: "One special character", test: (p: string) => /[^A-Za-z0-9]/.test(p) },
@@ -16,13 +17,26 @@ export const passwordChecks = [
  * list the user is shown is exactly what is enforced; a password is never
  * accepted while an item still shows a cross.
  *
- * Supabase Auth checks its own configured requirements on the server as well
- * (see the report on 2026-09-30: locally 6 characters and nothing required);
- * where it is weaker this is the stricter of the two, and a server refusal
- * still reads as "That password is too weak" through describeAuthError.
+ * The same rule Supabase Auth is set to on staging (2026-09-30: minimum 8,
+ * "lower_upper_letters_digits_symbols"), so the list, the buttons and the
+ * server agree. Locally supabase/config.toml sets none (GoTrue's default of 6
+ * characters); a server refusal reads as "That password is too weak" through
+ * describeAuthError either way.
  */
 export function meetsPasswordRule(password: string): boolean {
   return passwordChecks.every((c) => c.test(password));
+}
+
+/**
+ * The strength bar's reading, from the same checklist. "Strong" means the rule
+ * passes and nothing less, so the bar never says Strong while the button is
+ * still disabled.
+ */
+export function passwordStrength(password: string): { passed: number; label: string; color: string } {
+  const passed = passwordChecks.filter((c) => c.test(password)).length;
+  if (meetsPasswordRule(password)) return { passed, label: "Strong", color: "rgb(var(--c-status-good))" };
+  if (passed <= 2) return { passed, label: "Weak", color: "rgb(var(--c-status-high))" };
+  return { passed, label: "Medium", color: "rgb(var(--c-status-caution))" };
 }
 
 /**

@@ -23,6 +23,7 @@ import { useSingleFlight } from "../../hooks/useSingleFlight";
 import {
   passwordChecks,
   meetsPasswordRule,
+  passwordStrength,
   shouldWarnPasswordMismatch,
 } from "../../utils/password";
 
@@ -156,14 +157,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   const confirmMismatch =
     mode === "signUp" && shouldWarnPasswordMismatch(password, confirmPassword, confirmBlurred);
 
-  const passedChecks = passwordChecks.filter((c) => c.test(password)).length;
-  const strengthLabel = passedChecks <= 1 ? "Weak" : passedChecks <= 3 ? "Medium" : "Strong";
-  const strengthColor =
-    passedChecks <= 1
-      ? "rgb(var(--c-status-high))"
-      : passedChecks <= 3
-      ? "rgb(var(--c-status-caution))"
-      : "rgb(var(--c-status-good))";
+  const { passed: passedChecks, label: strengthLabel, color: strengthColor } = passwordStrength(password);
   const meetsRule = meetsPasswordRule(password);
   // Sign up stays disabled until every checklist item passes (meetsPasswordRule)
   // and the confirmation matches.
