@@ -94,10 +94,11 @@ export type SettingsResult =
 
 // NO contraception COLUMN: 20260924470000 moved it to contraception_plans.
 const SETTINGS_COLUMNS =
-  "tracker_enabled, typical_cycle_length, typical_period_length, luteal_length, conditions, pill_reminder, method_reminders, notification_detail, timezone";
+  "tracker_enabled, shown_for_any_sex, typical_cycle_length, typical_period_length, luteal_length, conditions, pill_reminder, method_reminders, notification_detail, timezone";
 
 function toSettings(row: {
   tracker_enabled: boolean;
+  shown_for_any_sex: boolean;
   typical_cycle_length: number;
   typical_period_length: number;
   luteal_length: number;
@@ -109,6 +110,7 @@ function toSettings(row: {
 }): CycleSettings {
   return {
     trackerEnabled: row.tracker_enabled,
+    shownForAnySex: row.shown_for_any_sex,
     typicalCycleLength: row.typical_cycle_length,
     typicalPeriodLength: row.typical_period_length,
     lutealLength: row.luteal_length,
@@ -196,6 +198,7 @@ export async function saveCycleSettings(
   // to update in the first place.
   const patchRow: Record<string, unknown> = {};
   if (patch.trackerEnabled !== undefined) patchRow.tracker_enabled = patch.trackerEnabled;
+  if (patch.shownForAnySex !== undefined) patchRow.shown_for_any_sex = patch.shownForAnySex;
   if (patch.typicalCycleLength !== undefined) patchRow.typical_cycle_length = patch.typicalCycleLength;
   if (patch.typicalPeriodLength !== undefined) patchRow.typical_period_length = patch.typicalPeriodLength;
   if (patch.lutealLength !== undefined) patchRow.luteal_length = patch.lutealLength;

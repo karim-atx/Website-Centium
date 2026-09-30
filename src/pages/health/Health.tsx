@@ -87,8 +87,9 @@ export default function Health() {
     reloadBloodPressure,
     cycleSettings,
     cyclePrediction,
-    pregnancy,
-    lastEndedPregnancy,
+    pregnancy: recordedPregnancy,
+    lastEndedPregnancy: recordedEndedPregnancy,
+    cycleOffered,
     today,
     bloodMarkers,
     stepsGoal,
@@ -97,6 +98,10 @@ export default function Health() {
     imagingRecords,
     noteFeatureMilestone,
   } = useApp();
+  // MO11: a profile not offered the cycle section sees no cycle or
+  // pregnancy content here — filtered at render, nothing is changed.
+  const pregnancy = cycleOffered ? recordedPregnancy : null;
+  const lastEndedPregnancy = cycleOffered ? recordedEndedPregnancy : null;
   const platformLabel = detectPlatform() === "ios" ? "Apple Health" : "Android Health";
   const [waterOpen, setWaterOpen] = useState(false);
   const [scanOpen, setScanOpen] = useState(false);
@@ -599,7 +604,7 @@ export default function Health() {
           the tracker itself swaps its overview: a phase and a pregnancy are
           two answers to one question. It is shown whenever there is a
           pregnancy, even if the cycle tracker itself has been switched off. */}
-      {(cycleSettings?.trackerEnabled || pregnancy) && (
+      {cycleOffered && (cycleSettings?.trackerEnabled || pregnancy) && (
         <button
           onClick={() => navigate("/app/cycle")}
           className="tap w-full flex items-center gap-[11px] rounded-[15px] px-3.5 py-3 mb-[13px]"

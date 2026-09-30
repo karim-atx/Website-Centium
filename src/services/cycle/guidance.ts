@@ -382,25 +382,6 @@ export const TRACKER_OFF_KEEPS_DATA =
   "— use Delete all cycle data if you want them gone.";
 
 // ---------------------------------------------------------------------------
-// Changing sex in Profile
-// ---------------------------------------------------------------------------
-
-/**
- * Asked, never assumed.
- *
- * Changing this recalculates calorie targets, which is arithmetic. It must not
- * touch the tracker, because somebody's cycle data is not a consequence of a
- * profile field — and a trans or non-binary user changing this field should
- * not lose their logs to a rule nobody told them about.
- */
-export const SEX_CHANGE_TRACKER_TITLE = "Keep cycle tracking on?";
-export const SEX_CHANGE_TRACKER_BODY =
-  "You have cycle tracking switched on. Changing your sex doesn't affect it either way " +
-  "— your logs are kept whatever you choose here.";
-export const SEX_CHANGE_KEEP = "Keep it on";
-export const SEX_CHANGE_TURN_OFF = "Switch it off";
-
-// ---------------------------------------------------------------------------
 // Sharing
 // ---------------------------------------------------------------------------
 

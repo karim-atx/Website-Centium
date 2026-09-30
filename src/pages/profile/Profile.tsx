@@ -18,12 +18,6 @@ import { MembershipsCard } from "../../components/profile/MembershipsCard";
 import { fetchLinkedProfessionals, type LinkedProfessional } from "../../services/consent";
 import { updateBodyMetric, updateDateOfBirth, updateSex } from "../../services/profile";
 import type { Sex } from "../../types";
-import {
-  SEX_CHANGE_KEEP,
-  SEX_CHANGE_TRACKER_BODY,
-  SEX_CHANGE_TRACKER_TITLE,
-  SEX_CHANGE_TURN_OFF,
-} from "../../services/cycle/guidance";
 import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
 import {
   ageFromDateOfBirth,
@@ -73,8 +67,6 @@ export default function Profile() {
     setRecoverySensitiveIntroSeen,
     remindersPaused,
     setRemindersPaused,
-    cycleSettings,
-    saveCycleSettingsAndReload,
   } = useApp();
   const isAmbassador = useIsAmbassador();
   const { reviews: myReviews, loading: reviewsLoading, error: reviewsError } = useReviewsAboutMe();
@@ -98,7 +90,6 @@ export default function Profile() {
   const [sexOpen, setSexOpen] = useState(false);
   const [sexSaving, setSexSaving] = useState(false);
   const [sexError, setSexError] = useState<string | null>(null);
-  const [trackerPrompt, setTrackerPrompt] = useState(false);
   const [metricDraft, setMetricDraft] = useState("");
   const [metricError, setMetricError] = useState<string | null>(null);
   const [savingMetric, setSavingMetric] = useState(false);
@@ -201,11 +192,11 @@ export default function Profile() {
       return;
     }
     // RECALCULATES, NEVER DELETES. updateProfile feeds the new value straight
-    // back into calculateTDEE and getTestRecommendations, which is the whole
-    // of what depends on it. The tracker is asked about rather than acted on.
+    // back into calculateTDEE and getTestRecommendations. MO11: it writes no
+    // tracker data either — cycle and pregnancy visibility is derived from sex
+    // (and any opt-in) at render, so switching back restores everything.
     updateProfile({ sex });
     setSexOpen(false);
-    if (sex === "male" && cycleSettings?.trackerEnabled) setTrackerPrompt(true);
   };
 
   const openDobEditor = () => {
@@ -756,35 +747,6 @@ export default function Profile() {
               {sexError}
             </p>
           )}
-        </div>
-      </BottomSheet>
-
-      {/* ASKED, NEVER ASSUMED. Changing this field must not silently switch off
-          a tracker somebody is using, or delete anything they logged. */}
-      <BottomSheet
-        open={trackerPrompt}
-        onClose={() => setTrackerPrompt(false)}
-        title={SEX_CHANGE_TRACKER_TITLE}
-      >
-        <div className="animate-fade-slide-up">
-          <p className="text-[13px] text-charcoal-soft mb-4 leading-relaxed">
-            {SEX_CHANGE_TRACKER_BODY}
-          </p>
-          <div className="flex gap-2">
-            <Button fullWidth onClick={() => setTrackerPrompt(false)}>
-              {SEX_CHANGE_KEEP}
-            </Button>
-            <Button
-              fullWidth
-              variant="secondary"
-              onClick={() => {
-                void saveCycleSettingsAndReload({ trackerEnabled: false });
-                setTrackerPrompt(false);
-              }}
-            >
-              {SEX_CHANGE_TURN_OFF}
-            </Button>
-          </div>
         </div>
       </BottomSheet>
 

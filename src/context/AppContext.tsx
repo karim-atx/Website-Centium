@@ -501,6 +501,21 @@ interface AppState {
   // by the Library body map. Never used to add or remove persisted items.
   hasCycleFeatures: boolean;
   bodyMapVariant: "male" | "female" | "androgynous";
+  /**
+   * MO11: whether this profile is offered the cycle and pregnancy section at
+   * all — by sex (female or other), or by its own opt-in (shownForAnySex).
+   * Every cycle or pregnancy surface ANDs this with its own condition
+   * (tracker on, a pregnancy recorded) at render. Nothing is written when
+   * sex changes; hidden data stays exactly as it was.
+   */
+  cycleOffered: boolean;
+  /**
+   * Turns the cycle tracker on or off. Turning it on from a profile that is
+   * not offered the section through sex also records the opt-in, so it
+   * persists across devices. Turning it off only clears tracker_enabled: a
+   * user's own off switch always wins, whatever their sex.
+   */
+  setCycleTracking: (on: boolean) => Promise<{ ok: boolean; message?: string }>;
 
   // V4: estimated 1RM per exercise name (barbell/dumbbell/weighted-bodyweight
   // only) — auto-updated from logged sets, editable from History/Metrics.
@@ -4826,6 +4841,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return { ok: true };
   };
 
+  const hasCycleFeatures = user.sex === "female" || user.sex === "other";
+  const cycleOffered = hasCycleFeatures || !!cycleSettings?.shownForAnySex;
+  const setCycleTracking = (on: boolean) =>
+    saveCycleSettingsAndReload(
+      on ? { trackerEnabled: true, ...(hasCycleFeatures ? {} : { shownForAnySex: true }) } : { trackerEnabled: false }
+    );
+
   // --- pregnancy -----------------------------------------------------------
   //
   // THE ENDED ONE IS READ EVERY TIME, not only when there is no active
@@ -5695,7 +5717,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       clearPausedSession,
       activeSession,
       setActiveSession,
-      hasCycleFeatures: user.sex === "female" || user.sex === "other",
+      hasCycleFeatures,
+      cycleOffered,
+      setCycleTracking,
       bodyMapVariant: user.sex === "male" ? "male" : user.sex === "female" ? "female" : "androgynous",
       personalRecords,
       setPersonalRecord,

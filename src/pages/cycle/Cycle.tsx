@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Chip } from "../../components/ui/Chip";
@@ -54,7 +54,6 @@ const todayISO = () => {
 export default function Cycle() {
   const navigate = useNavigate();
   const {
-    user,
     cycleSettings,
     cycleSettingsLoaded,
     cycleLogs,
@@ -64,6 +63,8 @@ export default function Cycle() {
     pregnancy,
     lastEndedPregnancy,
     reloadPregnancy,
+    cycleOffered,
+    setCycleTracking,
   } = useApp();
 
   const [tab, setTab] = useState<Tab>("overview");
@@ -92,11 +93,25 @@ export default function Cycle() {
     setBusy(false);
     if (!result.ok) setError(result.message ?? "Couldn't save that.");
   };
+  // MO11: on/off goes through setCycleTracking, which records the opt-in
+  // for a profile that is not offered the section through sex.
+  const setTracking = async (on: boolean) => {
+    setBusy(true);
+    setError(null);
+    const result = await setCycleTracking(on);
+    setBusy(false);
+    if (!result.ok) setError(result.message ?? "Couldn't save that.");
+  };
 
   // SWITCHED OFF IS NOT THE SAME AS NOTHING LOGGED YET, and the difference
   // decides which of the three "no prediction" screens this is.
   // my_cycle_prediction() returns nothing for all of them.
   const trackerOff = settings !== null && !settings.trackerEnabled;
+
+  // MO11: not offered the section (a male profile that has not opted in):
+  // the page is not reachable from the app, and a direct link goes to Health.
+  // Settings → Cycle tracking is where any profile turns it on.
+  if (!cycleOffered) return <Navigate to="/app/health" replace />;
 
   // --- no settings row at all ----------------------------------------------
   //
@@ -120,7 +135,7 @@ export default function Cycle() {
               this a male profile had no way to turn the tracker on at all,
               which made "sex decides the default, never the availability" a
               statement about intent rather than about the app. */}
-          <Button disabled={busy} onClick={() => void saveSettings({ trackerEnabled: true })}>
+          <Button disabled={busy} onClick={() => void setTracking(true)}>
             {G.TRACKER_OFF_CTA}
           </Button>
         </Card>
@@ -300,7 +315,7 @@ export default function Cycle() {
               <Button
                 variant="secondary"
                 disabled={busy}
-                onClick={() => void saveSettings({ trackerEnabled: true })}
+                onClick={() => void setTracking(true)}
               >
                 {PG.LOSS_RESUME}
               </Button>
@@ -314,7 +329,7 @@ export default function Cycle() {
               <Button
                 variant="secondary"
                 disabled={busy}
-                onClick={() => void saveSettings({ trackerEnabled: true })}
+                onClick={() => void setTracking(true)}
               >
                 Turn it back on
               </Button>
@@ -560,7 +575,7 @@ export default function Cycle() {
               aria-checked={settings.trackerEnabled}
               aria-label="Cycle tracking"
               disabled={busy}
-              onClick={() => void saveSettings({ trackerEnabled: !settings.trackerEnabled })}
+              onClick={() => void setTracking(!settings.trackerEnabled)}
               className={`tap shrink-0 w-11 h-6 rounded-full transition-colors ${
                 settings.trackerEnabled ? "bg-primary" : "bg-charcoal/20"
               }`}
@@ -662,7 +677,7 @@ export default function Cycle() {
                   variant="secondary"
                   className="mt-2.5"
                   disabled={busy}
-                  onClick={() => void saveSettings({ trackerEnabled: true })}
+                  onClick={() => void setTracking(true)}
                 >
                   {PG.LOSS_RESUME}
                 </Button>
@@ -821,9 +836,6 @@ export default function Cycle() {
         />
       )}
 
-      {/* Kept so the page reads correctly for an account whose profile says
-          male — the tracker is available to anyone who switches it on. */}
-      {user.sex === "male" && settings.trackerEnabled && <span className="sr-only">Cycle tracking is on.</span>}
     </div>
   );
 }

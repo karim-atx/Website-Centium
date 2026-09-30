@@ -3446,6 +3446,7 @@ export type Database = {
           method_reminders: boolean
           notification_detail: Database["public"]["Enums"]["notification_detail_level"]
           pill_reminder: boolean
+          shown_for_any_sex: boolean
           timezone: string
           tracker_enabled: boolean
           typical_cycle_length: number
@@ -3459,6 +3460,7 @@ export type Database = {
           method_reminders?: boolean
           notification_detail?: Database["public"]["Enums"]["notification_detail_level"]
           pill_reminder?: boolean
+          shown_for_any_sex?: boolean
           timezone?: string
           tracker_enabled?: boolean
           typical_cycle_length?: number
@@ -3472,6 +3474,7 @@ export type Database = {
           method_reminders?: boolean
           notification_detail?: Database["public"]["Enums"]["notification_detail_level"]
           pill_reminder?: boolean
+          shown_for_any_sex?: boolean
           timezone?: string
           tracker_enabled?: boolean
           typical_cycle_length?: number

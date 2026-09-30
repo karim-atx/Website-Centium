@@ -55,7 +55,7 @@ interface GoalsPanelProps {
 }
 
 export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
-  const { user, healthSeries, metricValues, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, dietaryRestriction, setDietaryRestriction, today, pregnancy } =
+  const { user, healthSeries, metricValues, nutritionGoal, setWeightGoal, setMacroSplit, setNutritionGoal, dietaryRestriction, setDietaryRestriction, today, pregnancy, cycleOffered } =
     useApp();
   // What the stepper shows: the user's edit, or (null) the saved target, so it
   // never shows a figure from before the goal loaded — with "Use custom"
@@ -220,7 +220,7 @@ export default function GoalsPanel({ onTabChange }: GoalsPanelProps) {
           to my targets" writes into the calorie goal two cards below, so it
           belongs on the same screen as that number rather than somewhere the
           user has to remember what it did. */}
-      {pregnancy && <PregnancyNutritionCard pregnancy={pregnancy} />}
+      {cycleOffered && pregnancy && <PregnancyNutritionCard pregnancy={pregnancy} />}
 
       <section style={CARD}>
         <p style={{ ...TITLE, marginBottom: 12 }}>Weight goal</p>

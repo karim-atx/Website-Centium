@@ -14,6 +14,7 @@ import { StorageUsageCard } from "../../components/profile/StorageUsageCard";
 import { TermsOfServiceSheet } from "../../components/profile/TermsOfServiceSheet";
 import { TwoFactorSheet } from "../../components/profile/TwoFactorSheet";
 import { useApp } from "../../context/AppContext";
+import { TRACKER_OFF_KEEPS_DATA } from "../../services/cycle/guidance";
 import { enablePush, permissionTriState, pushSupported } from "../../services/push";
 import { getMfaStatus } from "../../services/mfa";
 import { useNavigate } from "react-router-dom";
@@ -36,6 +37,7 @@ import {
   Star,
   FileText,
   ShieldCheck,
+  Droplet,
 } from "lucide-react";
 
 /**
@@ -81,7 +83,23 @@ export default function Settings() {
     authUserId,
     twoFactorNudgeDismissed,
     setTwoFactorNudgeDismissed,
+    cycleSettings,
+    cycleSettingsLoaded,
+    cycleOffered,
+    setCycleTracking,
   } = useApp();
+  // MO11: the one switch every profile can reach for the cycle and pregnancy
+  // section. On means shown here: offered (by sex or opt-in) and tracking.
+  const cycleOn = cycleOffered && !!cycleSettings?.trackerEnabled;
+  const [cycleBusy, setCycleBusy] = useState(false);
+  const [cycleError, setCycleError] = useState<string | null>(null);
+  const toggleCycle = async (on: boolean) => {
+    setCycleBusy(true);
+    setCycleError(null);
+    const r = await setCycleTracking(on);
+    setCycleBusy(false);
+    if (!r.ok) setCycleError(r.message ?? "Couldn't save that. Try again.");
+  };
   const navigate = useNavigate();
   // QA 12.0: "For all UIs put the ability to delete account which when
   // pressed will prompt you to make sure... Make it not that obvious or
@@ -230,6 +248,38 @@ export default function Settings() {
           {t("Color theme")}
         </p>
         <ColorThemePicker />
+      </Card>
+
+      {/* Handover 2026-09-29 MO11: cycle tracking for every profile. Shown by
+          default to a female or other profile; any profile can switch it on
+          here, and that opt-in is saved to the account. Off is the user's own
+          choice and always wins. Nothing is deleted either way. */}
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+        {t("Health tracking")}
+      </p>
+      <Card className="mb-6">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0">
+              <Droplet size={16} />
+            </div>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-charcoal">{t("Cycle tracking")}</p>
+              <p className="text-[11px] text-charcoal-faint leading-snug">
+                {cycleOn ? TRACKER_OFF_KEEPS_DATA : "Switch it on to start tracking."}
+              </p>
+            </div>
+          </div>
+          <Toggle
+            checked={cycleOn}
+            onChange={(on) => void toggleCycle(on)}
+            label="Cycle tracking"
+            disabled={cycleBusy || !cycleSettingsLoaded}
+          />
+        </div>
+        {cycleError && (
+          <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{cycleError}</p>
+        )}
       </Card>
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">

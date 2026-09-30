@@ -144,6 +144,12 @@ export const LOG_LIMITS = {
 
 export interface CycleSettings {
   trackerEnabled: boolean;
+  /**
+   * MO11: this profile turned the tracker on while its sex is male, so the
+   * cycle section is offered to it whatever its sex says. Female and other
+   * profiles are offered it through sex and never need this set.
+   */
+  shownForAnySex: boolean;
   typicalCycleLength: number;
   typicalPeriodLength: number;
   lutealLength: number;

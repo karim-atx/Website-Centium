@@ -259,8 +259,8 @@ export async function updateDateOfBirth(
  * which is a consequence rather than the reason.
  *
  * NOTHING ELSE HAPPENS HERE. It does not touch cycle_settings, does not delete
- * a log and does not switch a tracker off -- see SEX_CHANGE_TRACKER_BODY for
- * why that is asked rather than assumed.
+ * a log and does not switch a tracker off. MO11: cycle and pregnancy
+ * visibility is derived from sex (or the profile's own opt-in) at render.
  */
 export async function updateSex(
   userId: string,

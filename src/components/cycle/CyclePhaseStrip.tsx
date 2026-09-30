@@ -26,8 +26,8 @@ import { PregnancyWorkoutCard } from "../pregnancy/PregnancyGuidance";
 // 'pregnant'), so the two can never both be on screen.
 
 function useCycleStrip() {
-  const { cycleSettings, cyclePrediction } = useApp();
-  if (!cycleSettings?.trackerEnabled) return null;
+  const { cycleSettings, cyclePrediction, cycleOffered } = useApp();
+  if (!cycleOffered || !cycleSettings?.trackerEnabled) return null;
   if (!cyclePrediction) return null;
   const note = PHASE_TRAINING_NOTE[cyclePrediction.phase];
   if (note === null) return null;
@@ -40,8 +40,8 @@ function useCycleStrip() {
 
 /** Where the pregnancy is, for the two workout surfaces. Null when there isn't one. */
 function usePregnancyStrip() {
-  const { pregnancy, today } = useApp();
-  if (!pregnancy) return null;
+  const { pregnancy, today, cycleOffered } = useApp();
+  if (!cycleOffered || !pregnancy) return null;
   const g = gestationOn(today, pregnancy);
   if (!g) return null;
   return { pregnancy, week: g.week };
