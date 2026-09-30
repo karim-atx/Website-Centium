@@ -48,6 +48,7 @@ import { TRIMESTER_ORDINAL } from "../../services/pregnancy/guidance";
 import type { CyclePhase } from "../../services/cycle/types";
 import { ACCESS_CATEGORIES, accessKeyFor } from "../../services/consent";
 import { MEASUREMENT_SITES } from "../../services/measurements/sites";
+import { GOAL_LABEL } from "../../services/measurements/trend";
 import { PERSON_ICON } from "../../utils/icons";
 import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "./HealthDataPending";
@@ -472,6 +473,7 @@ export const ClientDetailSheet: React.FC<{
             with nothing yet recorded in it, would have had the whole section
             hidden and no way to tell it existed. Each grant stands alone. */}
         {(client.access.healthMetrics ||
+          client.access.bodyMeasurements ||
           client.access.medicalHistory ||
           client.access.labResults ||
           client.access.bloodPressure ||
@@ -544,6 +546,12 @@ export const ClientDetailSheet: React.FC<{
                           </span>
                         </p>
                         <p className="text-[10px] text-charcoal-faint">{site.label}</p>
+                        {/* WO16: the client's goal for this measurement, when set. */}
+                        {reading.goal && (
+                          <p className="text-[10px] text-charcoal-faint">
+                            Goal: <span className="font-semibold text-charcoal">{GOAL_LABEL[reading.goal]}</span>
+                          </p>
+                        )}
                         {/* Null on a first reading: there is nothing to have
                             changed from, and +0.0 would claim a stability
                             nobody measured. */}

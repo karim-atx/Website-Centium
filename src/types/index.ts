@@ -357,7 +357,7 @@ export interface ProfessionalClient {
    * grant — its own category, never the vitals one. Undefined means not yet
    * fetched; an empty object means the grant is held and nothing is logged.
    */
-  measurements?: Partial<Record<string, { value: number; change: number | null }>>;
+  measurements?: Partial<Record<string, { value: number; change: number | null; goal: "decrease" | "increase" | "maintain" | null }>>;
   // QA 12.0: "When the client toggles the recovery sensitive experience,
   // it should show a small status badge in the professional dashboard for
   // that specific client." This prototype has no live bridge from a

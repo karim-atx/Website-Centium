@@ -21,15 +21,21 @@ const OPEN_EVENT = "swipe-actions:open";
  * lavender tint + lavender icon. The row slides as one rounded unit clipped
  * inside its own radius, with a small gap before the tiles. Swiping back,
  * tapping elsewhere or scrolling closes it; one open item at a time; a swipe
- * short of halfway snaps back. Used by WO3.1 and WO16.
+ * short of halfway snaps back. Used by WO3.1 and WO16 (`shrink`).
  */
 export const SwipeActions: React.FC<{
   actions: SwipeAction[];
   /** The row's corner radius, so it slides as one rounded unit. */
   radius?: number;
   disabled?: boolean;
+  /**
+   * WO16: instead of sliding left, the row keeps its left edge and narrows to
+   * make room for the tiles, lifted by a soft shadow, so none of its text
+   * leaves the sheet (the frame's swiped row ends at the tile gap).
+   */
+  shrink?: boolean;
   children: React.ReactNode;
-}> = ({ actions, radius = 16, disabled, children }) => {
+}> = ({ actions, radius = 16, disabled, shrink, children }) => {
   const id = useRef(Math.random().toString(36).slice(2));
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [rowH, setRowH] = useState(TILE_MAX);
@@ -142,9 +148,17 @@ export const SwipeActions: React.FC<{
         className="relative overflow-hidden"
         style={{
           borderRadius: radius,
-          transform: `translateX(${offset}px)`,
-          transition: dragging ? "none" : "transform .22s cubic-bezier(.22,1,.36,1)",
           touchAction: "pan-y",
+          ...(shrink
+            ? {
+                width: `calc(100% - ${-offset}px)`,
+                boxShadow: offset < 0 ? "0 2px 8px rgba(36,31,27,0.08)" : "none",
+                transition: dragging ? "none" : "width .22s cubic-bezier(.22,1,.36,1), box-shadow .22s",
+              }
+            : {
+                transform: `translateX(${offset}px)`,
+                transition: dragging ? "none" : "transform .22s cubic-bezier(.22,1,.36,1)",
+              }),
         }}
       >
         {children}

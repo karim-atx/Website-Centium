@@ -1,158 +1,259 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { ChevronDown, Trash2 } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { Button } from "../ui/Button";
-import { Sparkline } from "../health/Sparkline";
-import { Trash2, Check, X } from "lucide-react";
+import { PopupMenu } from "../ui/PopupMenu";
+import { SwipeActions } from "../ui/SwipeActions";
+import { ConfirmCard } from "../ui/ConfirmCard";
+import { TrendChart } from "../charts/TrendChart";
 import { formatDisplayDate } from "../../utils/date";
 import { checkValue, siteFor, type MeasurementType } from "../../services/measurements/sites";
 import type { MeasurementReading } from "../../services/measurements";
+import {
+  GOAL_COLOR,
+  GOAL_LABEL,
+  changeSummary,
+  goalTone,
+  type MeasurementGoal,
+} from "../../services/measurements/trend";
 
-// One site's history: the chart, then every reading behind it.
-//
-// THE LIST IS THE POINT, not the chart. A tape measurement is a number
-// somebody wrote down and can have written down wrong, so each row is
-// editable and deletable in place — which is the whole reason this sheet
-// exists rather than a read-only chart on the card.
+// Handover 2026-09-29 WO16: one site's history. The value and reading count,
+// the goal selector, the change summary and the chart in the goal's colour,
+// then every reading: swipe one left for the delete tile, or tap its value to
+// edit it in place (Enter or tapping away saves; an empty field reverts).
 //
 // OLDEST-TO-NEWEST FOR THE CHART, NEWEST-FIRST FOR THE LIST, deliberately.
 // A trend line reads left to right in time; a list of things you might want
 // to correct puts the most recent one where your thumb is.
 
+const GOAL_OPTIONS = (["decrease", "increase", "maintain", "none"] as const).map((value) => ({
+  value,
+  label: GOAL_LABEL[value],
+}));
+
+const shortDate = (t: number) => new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
+const dayOf = (r: MeasurementReading) => r.recordedAt.slice(0, 10);
+const timeOf = (r: MeasurementReading) => Date.parse(`${dayOf(r)}T00:00:00Z`);
+
 export const MeasurementHistorySheet: React.FC<{
   open: boolean;
   onClose: () => void;
   type: MeasurementType | null;
+  /** Newest first. */
   readings: MeasurementReading[];
+  goal: MeasurementGoal | null;
+  onGoalChange: (goal: MeasurementGoal | null) => void;
   onEdit: (id: string, type: MeasurementType, value: number) => Promise<string | null>;
-  onDelete: (id: string) => Promise<string | null>;
-}> = ({ open, onClose, type, readings, onEdit, onDelete }) => {
+  /** Confirmed: the caller hides it and owns the Undo toast. */
+  onDelete: (reading: MeasurementReading) => void;
+}> = ({ open, onClose, type, readings, goal, onGoalChange, onEdit, onDelete }) => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // Seeded once and remounted per site, for the reason AddMeasurementsSheet gives.
+  const [goalAnchor, setGoalAnchor] = useState<HTMLElement | null>(null);
+  const [deleting, setDeleting] = useState<MeasurementReading | null>(null);
+  // Enter blurs the field, and the blur is what saves: this stops a second save.
+  const committing = useRef(false);
 
   if (!type) return null;
   const site = siteFor(type);
   if (!site) return null;
-  const unit = site.unit === "%" ? "%" : " cm";
-  const chart = [...readings].reverse().map((r) => r.value);
+  const unit = site.unit;
+
+  const oldestFirst = [...readings].reverse();
+  const points = oldestFirst.map((r) => ({ t: timeOf(r), value: r.value, label: shortDate(timeOf(r)) }));
+  const color = GOAL_COLOR[goalTone(points.map((p) => p.value), goal)];
+  const summary = changeSummary(points, unit);
+  const latest = readings[0];
 
   const commit = async (reading: MeasurementReading) => {
-    const value = Number(draft.trim());
-    const problem = checkValue(type, value);
+    if (committing.current) return;
+    committing.current = true;
+    const text = draft.trim();
+    setEditingId(null);
+    // An empty field, or the same number, restores what was there.
+    if (text === "" || Number(text) === reading.value) {
+      committing.current = false;
+      return;
+    }
+    const value = Number(text);
+    const problem = Number.isFinite(value) ? checkValue(type, value) : "Enter a number.";
     if (problem) {
       setError(problem);
+      committing.current = false;
       return;
     }
-    setBusy(true);
     setError(null);
     const message = await onEdit(reading.id, type, value);
-    setBusy(false);
-    if (message) {
-      setError(message);
-      return;
-    }
-    setEditingId(null);
-  };
-
-  const remove = async (reading: MeasurementReading) => {
-    setBusy(true);
-    setError(null);
-    const message = await onDelete(reading.id);
-    setBusy(false);
     if (message) setError(message);
+    committing.current = false;
   };
 
   return (
     <BottomSheet open={open} onClose={onClose} title={site.label}>
-      <div className="space-y-4 animate-fade-slide-up">
-        {chart.length >= 2 ? (
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-2xl font-bold text-charcoal">
-                {readings[0].value}
-                <span className="text-sm font-medium text-charcoal-faint">{unit}</span>
-              </p>
-              <p className="text-xs text-charcoal-faint">
-                {readings.length} reading{readings.length === 1 ? "" : "s"}
-              </p>
-            </div>
-            <Sparkline values={chart} color="#6F9993" width={150} height={46} />
+      <div className="animate-fade-slide-up">
+        {latest && (
+          <div className="flex items-start justify-between" style={{ gap: 12 }}>
+            <p style={{ color: "#241F1B", fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>
+              {latest.value}
+              <span style={{ color: "#8C8378", fontSize: 15, fontWeight: 500, marginLeft: 4 }}>{unit}</span>
+            </p>
+            <p style={{ color: "#8C8378", fontSize: 11, marginTop: 4 }}>
+              {readings.length} reading{readings.length === 1 ? "" : "s"}
+            </p>
           </div>
-        ) : (
-          <p className="text-sm text-charcoal-faint">
-            One reading so far — add another to see how it moves.
+        )}
+
+        <button
+          onClick={(e) => setGoalAnchor(e.currentTarget)}
+          aria-haspopup="listbox"
+          className="tap inline-flex items-center"
+          style={{
+            marginTop: 10,
+            height: 26,
+            padding: "0 10px",
+            gap: 4,
+            borderRadius: 8,
+            background: "#F5F5F6",
+            border: "1px solid #E5E4E5",
+            fontSize: 11.5,
+          }}
+        >
+          <span style={{ color: "#8C8378" }}>Goal:</span>
+          <span style={{ color: "#241F1B", fontWeight: 700 }}>{GOAL_LABEL[goal ?? "none"]}</span>
+          <ChevronDown size={12} style={{ color: "#8C8378" }} />
+        </button>
+        <PopupMenu
+          open={!!goalAnchor}
+          anchor={goalAnchor}
+          onClose={() => setGoalAnchor(null)}
+          options={GOAL_OPTIONS}
+          selected={goal ?? "none"}
+          onSelect={(value) => {
+            setGoalAnchor(null);
+            onGoalChange(value === "none" ? null : value);
+          }}
+          width={152}
+          align="left"
+        />
+
+        {summary && (
+          <p style={{ marginTop: 10, color, fontSize: 11, fontWeight: 600 }}>{summary}</p>
+        )}
+
+        {points.length > 0 && (
+          <div style={{ marginTop: 14 }}>
+            <TrendChart
+              points={points}
+              color={color}
+              unit={unit}
+              formatDate={shortDate}
+              ariaLabel={`${site.label} over time`}
+            />
+          </div>
+        )}
+
+        {error && (
+          <p className="text-xs font-semibold text-status-high" style={{ marginTop: 8 }}>
+            {error}
           </p>
         )}
 
-        {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
-
-        <div className="divide-y divide-charcoal/[0.06]">
-          {readings.map((reading) => (
-            <div key={reading.id} className="flex items-center justify-between py-2.5" style={{ gap: 10 }}>
-              <span className="text-xs text-charcoal-faint">
-                {formatDisplayDate(reading.recordedAt.slice(0, 10))}
-              </span>
-              {editingId === reading.id ? (
-                <span className="flex items-center" style={{ gap: 6 }}>
-                  <input
-                    value={draft}
-                    onChange={(e) => setDraft(e.target.value)}
-                    inputMode="decimal"
-                    aria-label={`${site.label} on ${formatDisplayDate(reading.recordedAt.slice(0, 10))}`}
-                    className="rounded-lg bg-cream-soft border border-charcoal/[0.07] text-sm text-charcoal focus:outline-none focus:ring-2 focus:ring-primary/20"
-                    style={{ width: 74, padding: "6px 9px", textAlign: "right" }}
-                  />
-                  <button
-                    onClick={() => void commit(reading)}
-                    disabled={busy}
-                    aria-label="Save this reading"
-                    className="tap w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center disabled:opacity-50"
-                  >
-                    <Check size={13} strokeWidth={3} />
-                  </button>
-                  <button
-                    onClick={() => setEditingId(null)}
-                    aria-label="Cancel"
-                    className="tap w-7 h-7 rounded-full bg-cream-soft text-charcoal-soft flex items-center justify-center"
-                  >
-                    <X size={13} />
-                  </button>
-                </span>
-              ) : (
-                <span className="flex items-center" style={{ gap: 8 }}>
-                  <button
-                    onClick={() => {
-                      setEditingId(reading.id);
-                      setDraft(String(reading.value));
-                      setError(null);
-                    }}
-                    aria-label={`Edit ${site.label} from ${formatDisplayDate(reading.recordedAt.slice(0, 10))}`}
-                    className="tap text-sm font-semibold text-charcoal"
-                  >
-                    {reading.value}
-                    <span className="text-[11px] font-medium text-charcoal-faint">{unit}</span>
-                  </button>
-                  <button
-                    onClick={() => void remove(reading)}
-                    disabled={busy}
-                    aria-label={`Delete ${site.label} from ${formatDisplayDate(reading.recordedAt.slice(0, 10))}`}
-                    className="tap w-7 h-7 rounded-full bg-cream-soft text-charcoal-faint flex items-center justify-center disabled:opacity-50"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </span>
-              )}
-            </div>
-          ))}
+        <div className="flex flex-col" style={{ marginTop: 16, gap: 6 }}>
+          {readings.map((reading) => {
+            const date = formatDisplayDate(dayOf(reading));
+            return (
+              <SwipeActions
+                key={reading.id}
+                radius={12}
+                shrink
+                disabled={editingId === reading.id}
+                actions={[
+                  {
+                    key: "delete",
+                    label: `Delete ${site.label} from ${date}`,
+                    icon: <Trash2 size={17} />,
+                    destructive: true,
+                    onClick: () => setDeleting(reading),
+                  },
+                ]}
+              >
+                <div
+                  className="flex items-center justify-between"
+                  style={{ height: 44, padding: "0 12px", gap: 10, borderRadius: 12, background: "#F7F6FB" }}
+                >
+                  <span className="truncate" style={{ color: "#8C8378", fontSize: 12.5 }}>
+                    {date}
+                  </span>
+                  {editingId === reading.id ? (
+                    <input
+                      autoFocus
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      onFocus={(e) => e.currentTarget.select()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                        if (e.key === "Escape") {
+                          setDraft("");
+                          e.currentTarget.blur();
+                        }
+                      }}
+                      onBlur={() => void commit(reading)}
+                      inputMode="decimal"
+                      enterKeyHint="done"
+                      aria-label={`${site.label} on ${date}`}
+                      className="focus:outline-none"
+                      style={{
+                        width: 76,
+                        height: 32,
+                        padding: "0 9px",
+                        textAlign: "right",
+                        borderRadius: 8,
+                        background: "#FFFFFF",
+                        border: "2px solid #AEA1DC",
+                        color: "#241F1B",
+                        fontSize: 14,
+                      }}
+                    />
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setEditingId(reading.id);
+                        setDraft(String(reading.value));
+                        setError(null);
+                      }}
+                      aria-label={`Edit ${site.label} from ${date}`}
+                      className="tap flex-none"
+                      style={{ color: "#241F1B", fontSize: 14, fontWeight: 700 }}
+                    >
+                      {reading.value}
+                      <span style={{ color: "#8C8378", fontSize: 11, fontWeight: 500, marginLeft: 3 }}>{unit}</span>
+                    </button>
+                  )}
+                </div>
+              </SwipeActions>
+            );
+          })}
         </div>
 
-        <Button fullWidth variant="outline" onClick={onClose}>
+        <button
+          onClick={onClose}
+          className="tap w-full flex items-center justify-center"
+          style={{ marginTop: 16, height: 48, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+        >
           Done
-        </Button>
+        </button>
       </div>
+
+      <ConfirmCard
+        open={!!deleting}
+        title="Delete this reading?"
+        subtitle={deleting ? `${site.label} · ${formatDisplayDate(dayOf(deleting))} · ${deleting.value} ${unit}` : undefined}
+        onCancel={() => setDeleting(null)}
+        onConfirm={() => {
+          if (deleting) onDelete(deleting);
+          setDeleting(null);
+        }}
+      />
     </BottomSheet>
   );
 };

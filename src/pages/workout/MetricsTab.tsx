@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useApp } from "../../context/AppContext";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -9,11 +9,15 @@ import { TrendingUp, Dumbbell, Scale3D, Flame, Scale, Ruler, Plus } from "lucide
 import { countsTowardVolume } from "../../services/workout/session";
 import {
   deleteMeasurement,
+  getMeasurementGoals,
   getMeasurements,
   logMeasurements,
+  setMeasurementGoal,
   updateMeasurement,
+  type MeasurementGoal,
   type MeasurementReading,
 } from "../../services/measurements";
+import { Toast } from "../../components/ui/Toast";
 import { MEASUREMENT_SITES, type MeasurementType } from "../../services/measurements/sites";
 import { AddMeasurementsSheet } from "../../components/workout/AddMeasurementsSheet";
 import { MeasurementHistorySheet } from "../../components/workout/MeasurementHistorySheet";
@@ -148,6 +152,12 @@ export default function MetricsTab() {
   const [measurementsError, setMeasurementsError] = useState<string | null>(null);
   const [addMeasurementsOpen, setAddMeasurementsOpen] = useState(false);
   const [historyType, setHistoryType] = useState<MeasurementType | null>(null);
+  const [goals, setGoals] = useState<Partial<Record<MeasurementType, MeasurementGoal>>>({});
+  // WO16 delete: the reading is hidden at once and deleted on the server when
+  // its Undo toast expires (approved decision 4), or when another toast
+  // replaces it, or when this screen goes away.
+  const [hiddenIds, setHiddenIds] = useState<ReadonlySet<string>>(new Set());
+  const [toast, setToast] = useState<{ id: string } | null>(null);
 
   /**
    * Re-read after a write, so the card reflects what the database now holds
@@ -166,6 +176,35 @@ export default function MetricsTab() {
     }
     setMeasurementsError(null);
     setBySite(result.bySite);
+  }, [authUserId]);
+  const pendingDelete = useRef<string | null>(null);
+  const flushDelete = useCallback(() => {
+    const id = pendingDelete.current;
+    pendingDelete.current = null;
+    if (!id) return;
+    void (async () => {
+      const result = await deleteMeasurement(id);
+      if (!result.ok) setMeasurementsError(result.message ?? "Couldn't delete that reading.");
+      await loadMeasurements();
+      setHiddenIds((prev) => {
+        const next = new Set(prev);
+        next.delete(id);
+        return next;
+      });
+    })();
+  }, [loadMeasurements]);
+  useEffect(() => () => flushDelete(), [flushDelete]);
+
+  useEffect(() => {
+    if (!authUserId) return;
+    let cancelled = false;
+    void (async () => {
+      const goalsResult = await getMeasurementGoals(authUserId);
+      if (!cancelled && goalsResult.ok) setGoals(goalsResult.goals);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [authUserId]);
 
   useEffect(() => {
@@ -189,13 +228,22 @@ export default function MetricsTab() {
   }, [authUserId]);
 
 
+  /** Every site's readings, less any waiting on an Undo toast. */
+  const visibleBySite = useMemo(() => {
+    if (hiddenIds.size === 0) return bySite;
+    const out: Partial<Record<MeasurementType, MeasurementReading[]>> = {};
+    for (const [type, list] of Object.entries(bySite) as [MeasurementType, MeasurementReading[]][])
+      out[type] = list.filter((r) => !hiddenIds.has(r.id));
+    return out;
+  }, [bySite, hiddenIds]);
+
   /** Sites with at least one reading, in the vocabulary's own order. */
   const measuredSites = useMemo(
     () =>
-      MEASUREMENT_SITES.map((site) => ({ site, readings: bySite[site.type] ?? [] })).filter(
+      MEASUREMENT_SITES.map((site) => ({ site, readings: visibleBySite[site.type] ?? [] })).filter(
         (s) => s.readings.length > 0
       ),
-    [bySite]
+    [visibleBySite]
   );
 
 
@@ -440,18 +488,57 @@ export default function MetricsTab() {
         open={historyType != null}
         onClose={() => setHistoryType(null)}
         type={historyType}
-        readings={historyType ? (bySite[historyType] ?? []) : []}
+        readings={historyType ? (visibleBySite[historyType] ?? []) : []}
+        goal={historyType ? (goals[historyType] ?? null) : null}
+        onGoalChange={async (goal) => {
+          if (!authUserId || !historyType) return;
+          const type = historyType;
+          const before = goals[type] ?? null;
+          const apply = (g: MeasurementGoal | null) =>
+            setGoals((prev) => {
+              const next = { ...prev };
+              if (g) next[type] = g;
+              else delete next[type];
+              return next;
+            });
+          // The colour changes at once; a refused write puts it back.
+          apply(goal);
+          const result = await setMeasurementGoal(authUserId, type, goal);
+          if (!result.ok) {
+            apply(before);
+            setMeasurementsError(result.message ?? "Couldn't save that goal.");
+          }
+        }}
         onEdit={async (id, type, value) => {
           const result = await updateMeasurement(id, type, value);
           if (!result.ok) return result.message ?? "Couldn't update that.";
           await loadMeasurements();
           return null;
         }}
-        onDelete={async (id) => {
-          const result = await deleteMeasurement(id);
-          if (!result.ok) return result.message ?? "Couldn't delete that.";
-          await loadMeasurements();
-          return null;
+        onDelete={(reading) => {
+          flushDelete();
+          pendingDelete.current = reading.id;
+          setHiddenIds((prev) => new Set(prev).add(reading.id));
+          setToast({ id: reading.id });
+        }}
+      />
+
+      <Toast
+        open={!!toast}
+        message="Reading deleted."
+        onUndo={() => {
+          if (toast && pendingDelete.current === toast.id) pendingDelete.current = null;
+          const id = toast?.id;
+          setHiddenIds((prev) => {
+            const next = new Set(prev);
+            if (id) next.delete(id);
+            return next;
+          });
+          setToast(null);
+        }}
+        onExpire={() => {
+          if (toast && pendingDelete.current === toast.id) flushDelete();
+          setToast(null);
         }}
       />
 

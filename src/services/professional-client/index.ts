@@ -5,6 +5,7 @@ import {
   isMeasurementType,
   type MeasurementType,
 } from "../measurements/sites";
+import { getClientMeasurementGoals, type MeasurementGoal } from "../measurements";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type {
   BloodMarker,
@@ -306,7 +307,9 @@ export async function fetchClientVitals(clientIds: string[]): Promise<ClientVita
 }
 
 /** The latest reading per site, and how it moved since the one before it. */
-export type ClientMeasurements = Partial<Record<MeasurementType, { value: number; change: number | null }>>;
+export type ClientMeasurements = Partial<
+  Record<MeasurementType, { value: number; change: number | null; goal: MeasurementGoal | null }>
+>;
 
 export type ClientMeasurementsResult =
   | { ok: true; byClient: Record<string, ClientMeasurements> }
@@ -354,6 +357,11 @@ export async function fetchClientMeasurements(
     if (list.length < 2) list.push(Number(row.value));
   }
 
+  // WO16: each measurement's goal beside it. measurement_goals is readable
+  // under the same body_measurements consent as the readings, so the rows
+  // above and these come and go together.
+  const goals = await getClientMeasurementGoals(clientIds);
+
   const byClient: Record<string, ClientMeasurements> = {};
   for (const id of clientIds) {
     const out: ClientMeasurements = {};
@@ -361,6 +369,7 @@ export async function fetchClientMeasurements(
       out[type] = {
         value: values[0],
         change: values.length > 1 ? Math.round((values[0] - values[1]) * 10) / 10 : null,
+        goal: goals[id]?.[type] ?? null,
       };
     }
     byClient[id] = out;

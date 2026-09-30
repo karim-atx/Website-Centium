@@ -4804,6 +4804,27 @@ export type Database = {
           },
         ]
       }
+      measurement_goals: {
+        Row: {
+          goal: Database["public"]["Enums"]["measurement_goal"]
+          metric_type: Database["public"]["Enums"]["health_metric_type"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          goal: Database["public"]["Enums"]["measurement_goal"]
+          metric_type: Database["public"]["Enums"]["health_metric_type"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          goal?: Database["public"]["Enums"]["measurement_goal"]
+          metric_type?: Database["public"]["Enums"]["health_metric_type"]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       medications: {
         Row: {
           created_at: string
@@ -11371,6 +11392,7 @@ export type Database = {
       health_provider: "apple_health" | "android_health"
       lh_test_result: "negative" | "positive" | "peak"
       meal_slot: "breakfast" | "lunch" | "snack" | "dinner"
+      measurement_goal: "decrease" | "increase" | "maintain"
       medication_route: "oral" | "injectable" | "topical" | "inhaled" | "other"
       message_flag: "starred" | "hidden"
       mind_content_type: "breathing" | "stretch" | "yoga"
@@ -11767,6 +11789,7 @@ export const Constants = {
       health_provider: ["apple_health", "android_health"],
       lh_test_result: ["negative", "positive", "peak"],
       meal_slot: ["breakfast", "lunch", "snack", "dinner"],
+      measurement_goal: ["decrease", "increase", "maintain"],
       medication_route: ["oral", "injectable", "topical", "inhaled", "other"],
       message_flag: ["starred", "hidden"],
       mind_content_type: ["breathing", "stretch", "yoga"],

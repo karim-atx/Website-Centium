@@ -33,6 +33,8 @@ import {
   isMeasurementType,
   type MeasurementType,
 } from "./sites";
+import type { MeasurementGoal } from "./trend";
+export type { MeasurementGoal } from "./trend";
 export {
   GROUP_LABEL,
   MEASUREMENT_SITES,
@@ -229,5 +231,102 @@ export async function deleteMeasurement(id: string): Promise<MeasurementWriteRes
     return { ok: false, message: describe(error) };
   }
   if (!data || data.length === 0) return { ok: false, message: "That reading couldn't be deleted." };
+  return { ok: true };
+}
+
+// --- Goals (WO16) -------------------------------------------------------------
+//
+// public.measurement_goals: one row per (user, measurement), primary key on
+// that pair. NO ROW MEANS NO GOAL, so "No goal" is a DELETE.
+//
+// NEVER .upsert(). The UPDATE grant is (goal) only; a PostgREST upsert's
+// `on conflict do update` names every column it sent, user_id included, and
+// is refused with 42501. Setting a goal is an UPDATE by (user_id,
+// metric_type) and, only when that touched nothing, an INSERT.
+
+
+export type MeasurementGoalsResult =
+  | { ok: true; goals: Partial<Record<MeasurementType, MeasurementGoal>> }
+  | { ok: false; message: string };
+
+async function readGoals(userIds: string[]) {
+  return supabase.from("measurement_goals").select("user_id, metric_type, goal").in("user_id", userIds);
+}
+
+export async function getMeasurementGoals(userId: string): Promise<MeasurementGoalsResult> {
+  const { data, error } = await readGoals([userId]);
+  if (error) {
+    console.error("[measurements] Could not load goals:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  const goals: Partial<Record<MeasurementType, MeasurementGoal>> = {};
+  for (const row of data ?? []) if (isMeasurementType(row.metric_type)) goals[row.metric_type] = row.goal;
+  return { ok: true, goals };
+}
+
+/**
+ * Goals for several clients at once, for the professional's view. The
+ * database returns a client's goals only while they share body_measurements
+ * (the same consent that gates the measurements), so a client who doesn't
+ * simply has none here.
+ */
+export async function getClientMeasurementGoals(
+  clientIds: string[]
+): Promise<Record<string, Partial<Record<MeasurementType, MeasurementGoal>>>> {
+  if (clientIds.length === 0) return {};
+  const { data, error } = await readGoals(clientIds);
+  if (error) {
+    console.error("[measurements] Could not load client goals:", error.message);
+    return {};
+  }
+  const out: Record<string, Partial<Record<MeasurementType, MeasurementGoal>>> = {};
+  for (const row of data ?? []) {
+    if (!isMeasurementType(row.metric_type)) continue;
+    (out[row.user_id] ??= {})[row.metric_type] = row.goal;
+  }
+  return out;
+}
+
+/** Sets (or, with null, clears) one measurement's goal. */
+export async function setMeasurementGoal(
+  userId: string,
+  type: MeasurementType,
+  goal: MeasurementGoal | null
+): Promise<MeasurementWriteResult> {
+  if (goal === null) {
+    // Zero rows is fine here: there was no goal to clear.
+    const { error } = await supabase
+      .from("measurement_goals")
+      .delete()
+      .eq("user_id", userId)
+      .eq("metric_type", type);
+    if (error) {
+      console.error("[measurements] Could not clear a goal:", error.message);
+      return { ok: false, message: describe(error) };
+    }
+    return { ok: true };
+  }
+
+  const updated = await supabase
+    .from("measurement_goals")
+    .update({ goal })
+    .eq("user_id", userId)
+    .eq("metric_type", type)
+    .select("metric_type");
+  if (updated.error) {
+    console.error("[measurements] Could not update a goal:", updated.error.message);
+    return { ok: false, message: describe(updated.error) };
+  }
+  if (updated.data && updated.data.length > 0) return { ok: true };
+
+  const inserted = await supabase
+    .from("measurement_goals")
+    .insert({ user_id: userId, metric_type: type, goal })
+    .select("metric_type");
+  if (inserted.error) {
+    console.error("[measurements] Could not set a goal:", inserted.error.message);
+    return { ok: false, message: describe(inserted.error) };
+  }
+  if (!inserted.data || inserted.data.length === 0) return { ok: false, message: "That goal couldn't be saved." };
   return { ok: true };
 }
