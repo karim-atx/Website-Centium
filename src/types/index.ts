@@ -1095,6 +1095,12 @@ export interface LoggedExercise {
   blockResultId?: string;
   /** What the endurance effort produced, against the plan that asked for it. */
   enduranceResult?: EnduranceResult;
+  /**
+   * Logged while paused, then removed from the routine before the session was
+   * resumed. The sets are kept (and saved) under the original name; the
+   * logger shows them read-only after the routine's own exercises.
+   */
+  removedFromRoutine?: boolean;
 }
 
 /**
@@ -1122,6 +1128,23 @@ export interface PausedWorkoutSession {
   elapsedSec: number;
   startedAt: string;
   started: boolean;
+  /** Block, endurance and rest timers, as timestamps (see SessionTimers). */
+  timers?: SessionTimers;
+}
+
+/**
+ * The logger's secondary timers, held with the session so minimising to the
+ * WO17 bar (which unmounts the logger) or quitting and resuming never restarts
+ * them. Like the main clock, each is a start timestamp plus banked time, so
+ * the value on reopening is computed from the wall clock, not counted.
+ */
+export interface SessionTimers {
+  /** The rest countdown under the last checked set. */
+  rest?: { exIdx: number; setIdx: number; endsAt: number } | null;
+  /** AMRAP / EMOM / For Time stopwatches, by block id. */
+  blocks?: Record<string, { runningSince: number | null; pausedMs: number }>;
+  /** Endurance stopwatches and the current step, by routine exercise id. */
+  endurance?: Record<string, { watch: { runningSince: number | null; pausedMs: number }; current: number }>;
 }
 
 export interface WorkoutSession {

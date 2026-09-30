@@ -154,6 +154,9 @@ export interface PausedState {
   elapsedSec: number;
   startedAt: string;
   started: boolean;
+  /** BlockResult[] and SessionTimers, stored verbatim alongside the sets. */
+  blockResults?: unknown[];
+  timers?: unknown;
 }
 
 export interface PausedSessionsResult {
@@ -180,13 +183,17 @@ function toState(row: {
 }): PausedState {
   const state = row.logged_state;
   const isWrapped = !!state && typeof state === "object" && !Array.isArray(state);
-  const wrapped = isWrapped ? (state as { started?: unknown; logged?: unknown }) : null;
+  const wrapped = isWrapped
+    ? (state as { started?: unknown; logged?: unknown; blockResults?: unknown; timers?: unknown })
+    : null;
 
   return {
     logged: Array.isArray(state) ? state : Array.isArray(wrapped?.logged) ? wrapped.logged : [],
     elapsedSec: row.elapsed_sec,
     startedAt: row.started_at,
     started: wrapped?.started === true,
+    ...(Array.isArray(wrapped?.blockResults) ? { blockResults: wrapped.blockResults } : {}),
+    ...(wrapped?.timers && typeof wrapped.timers === "object" ? { timers: wrapped.timers } : {}),
   };
 }
 
@@ -237,7 +244,12 @@ export async function savePausedSession(
     started_at: state.startedAt,
     // Cast at the boundary: LoggedExercise is a plain JSON-safe shape, but
     // the generated Json type cannot know that about `unknown[]`.
-    logged_state: { started: state.started, logged: state.logged } as unknown as Json,
+    logged_state: {
+      started: state.started,
+      logged: state.logged,
+      ...(state.blockResults ? { blockResults: state.blockResults } : {}),
+      ...(state.timers ? { timers: state.timers } : {}),
+    } as unknown as Json,
   };
 
   const { data: updated, error: updateError } = await supabase

@@ -16,7 +16,7 @@ import {
   Link2,
   Unlink,
 } from "lucide-react";
-import type { BlockResult, BlockKind, Exercise, LoggedExercise, LoggedSet, WorkoutBlock } from "../../types";
+import type { BlockResult, BlockKind, Exercise, LoggedExercise, LoggedSet, SessionTimers, WorkoutBlock } from "../../types";
 import { ONE_RM_CLASSIFICATIONS } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { CyclePhaseChip } from "../cycle/CyclePhaseStrip";
@@ -31,7 +31,7 @@ import { BottomSheet } from "../ui/BottomSheet";
 import { PopupMenu, type PopupMenuOption } from "../ui/PopupMenu";
 import { formatDuration, estimate1RM } from "../../services/workout";
 import { localDayOf } from "../../utils/date";
-import { countsTowardVolume, finalizeExercises, initLoggedExercises, resolveLoggedValues, setRowCount } from "../../services/workout/session";
+import { countsTowardVolume, finalizeExercises, initLoggedExercises, isTouched, reconcileLogged, resolveLoggedValues, setRowCount } from "../../services/workout/session";
 import { formatClock, isRoundBased, prescriptionLine } from "../../services/workout/prescription";
 import { blockProblems, blockScore, checkBlockResult } from "../../services/workout/results";
 import { groupIntoRuns } from "../../services/workout/blocks";
@@ -173,8 +173,14 @@ export const WorkoutSessionSheet: React.FC<{
   // then onClose, so onClose reads this to switch views instead of closing.
   const exMenuNext = useRef<"rest" | "superset" | null>(null);
   const [pinEditor, setPinEditor] = useState<{ exIdx: number; text: string } | null>(null);
+  // Block, endurance and rest timers, held here (not in the runners) and saved
+  // with the session, so minimising or quitting never restarts them.
+  const [timers, setTimers] = useState<SessionTimers>({});
   // The rest divider under the last checked set counts down.
-  const [rest, setRest] = useState<{ exIdx: number; setIdx: number; endsAt: number } | null>(null);
+  const rest = timers.rest ?? null;
+  type Rest = NonNullable<SessionTimers["rest"]>;
+  const setRest = (next: Rest | null | ((r: Rest | null) => Rest | null)) =>
+    setTimers((t) => ({ ...t, rest: typeof next === "function" ? next(t.rest ?? null) : next }));
   const [needReps, setNeedReps] = useState<string | null>(null);
   const rowRefs = useRef(new Map<string, HTMLDivElement>());
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -205,9 +211,19 @@ export const WorkoutSessionSheet: React.FC<{
     const paused = routineId ? pausedSessions[routineId] : undefined;
     setTemplate({ exercises, blocks });
     if (paused) {
-      scrollToCurrent.current = paused.logged;
-      setLogged(paused.logged);
+      // The routine may have been edited while this was paused: progress
+      // follows each exercise by its id, never its position.
+      const restored = reconcileLogged(paused.logged, freshLogged(exercises));
+      scrollToCurrent.current = restored;
+      setLogged(restored);
       setBlockResults(Object.fromEntries((paused.blockResults ?? []).map((r) => [r.id, r])));
+      // A rest that ran out while the logger was closed is simply over.
+      const held = paused.timers ?? {};
+      const r = held.rest;
+      // The rest divider points at a position; keep it only if the same
+      // exercise is still there.
+      const sameSpot = r && paused.logged[r.exIdx]?.exerciseId === restored[r.exIdx]?.exerciseId;
+      setTimers({ ...held, rest: r && sameSpot && r.endsAt > now ? r : null });
       const start = new Date(paused.startedAt);
       setStartedAt(start);
       if (act && act.status === "running") {
@@ -223,13 +239,13 @@ export const WorkoutSessionSheet: React.FC<{
     } else {
       setLogged(freshLogged(exercises));
       setBlockResults({});
+      setTimers({});
       setBaseElapsed(0);
       setRunSince(null);
       setStartedAt(new Date());
     }
     setFinished(false);
     setQuitConfirmOpen(false);
-    setRest(null);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, routineId]);
 
@@ -300,6 +316,7 @@ export const WorkoutSessionSheet: React.FC<{
       elapsedSec: elapsed,
       startedAt: startedAt.toISOString(),
       started,
+      timers,
     });
   };
 
@@ -565,6 +582,8 @@ export const WorkoutSessionSheet: React.FC<{
               result={ex.enduranceResult}
               onResult={(enduranceResult) => setLogged((prev) => prev.map((l, n) => (n === exIdx ? { ...l, enduranceResult } : l)))}
               onStarted={startClock}
+              timer={timers.endurance?.[ex.exerciseId]}
+              onTimer={(t) => setTimers((prev) => ({ ...prev, endurance: { ...prev.endurance, [ex.exerciseId]: t } }))}
             />
           </div>
         ) : (
@@ -801,6 +820,8 @@ export const WorkoutSessionSheet: React.FC<{
                       }))
                     }
                     onStarted={startClock}
+                    watch={timers.blocks?.[run.block.id]}
+                    onWatch={(w) => setTimers((prev) => ({ ...prev, blocks: { ...prev.blocks, [run.block!.id]: w } }))}
                   >
                     <div className="flex flex-col" style={{ gap: 12, padding: "0 8px 8px" }}>
                       {indices.map((i) => renderExercise(i, true, false))}
@@ -810,6 +831,26 @@ export const WorkoutSessionSheet: React.FC<{
               }
               return indices.map((i) => renderExercise(i, false, false));
             })}
+            {/* Logged while paused, then removed from the routine: kept and
+                saved under their own name, shown read-only. */}
+            {logged.slice(template.exercises.length).map((ex) => (
+              <div
+                key={`removed-${ex.exerciseId}`}
+                className="bg-white"
+                style={{ border: "1px dashed rgba(36,31,27,0.18)", borderRadius: 16, padding: "12px 14px" }}
+              >
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#241F1B" }}>{ex.name}</p>
+                <p style={{ margin: "2px 0 8px", fontSize: 11, color: "#8C8378" }}>
+                  Removed from this routine · logged sets are kept
+                </p>
+                <p className="tabular-nums" style={{ margin: 0, fontSize: 12.5, color: "#5B5349" }}>
+                  {ex.sets
+                    .filter(isTouched)
+                    .map((s) => (s.weightKg > 0 ? `${s.weightKg} kg × ${s.reps}` : `${s.reps} reps`))
+                    .join(" · ")}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
 

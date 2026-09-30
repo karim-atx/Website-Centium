@@ -4,6 +4,7 @@ import {
   countsTowardVolume,
   finalizeSets,
   isTouched,
+  reconcileLogged,
   resolveLoggedValues,
   seedReps,
   seedSets,
@@ -212,4 +213,28 @@ test("typed reps win over any hint, and typed weight over the weight hint", () =
 
 test("a blank weight with no exact hint logs 0 (bodyweight)", () => {
   assert.deepEqual(resolveLoggedValues({ weightKg: 0, reps: 9 }, { weight: "", reps: "8+" }), { weightKg: 0, reps: 9 });
+});
+
+test("reconcileLogged keys progress by routine exercise id, not position", () => {
+  const set = (done: boolean, w = 60) => ({ setNumber: 1, reps: 8, weightKg: w, completed: done });
+  const saved = [
+    { exerciseId: "a", name: "Squat", sets: [set(true, 100)] },
+    { exerciseId: "b", name: "Bench", sets: [set(true, 70)] },
+    { exerciseId: "c", name: "Row", sets: [set(false)] },
+    { exerciseId: "d", name: "Curl", sets: [set(true, 15)] },
+  ];
+  // Edited routine: reordered (b before a), c and d removed, e added.
+  const fresh = [
+    { exerciseId: "b", name: "Bench", sets: [set(false, 0)] },
+    { exerciseId: "e", name: "Dips", sets: [set(false, 0)] },
+    { exerciseId: "a", name: "Squat", sets: [set(false, 0)] },
+  ];
+  const out = reconcileLogged(saved, fresh);
+  assert.deepEqual(out.map((e) => e.exerciseId), ["b", "e", "a", "d"]);
+  assert.equal(out[0].sets[0].weightKg, 70); // bench keeps its own sets after moving
+  assert.equal(out[1].sets[0].completed, false); // new exercise starts empty
+  assert.equal(out[2].sets[0].weightKg, 100); // squat keeps its own sets after moving
+  assert.equal(out[3].name, "Curl"); // removed but logged: kept under its name
+  assert.equal(out[3].removedFromRoutine, true);
+  assert.equal(out.some((e) => e.exerciseId === "c"), false); // removed and untouched: dropped
 });

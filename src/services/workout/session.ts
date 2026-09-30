@@ -166,3 +166,37 @@ export function resolveLoggedValues(
   if (!reps) return null;
   return { weightKg: set.weightKg || (exactHint(hints.weight) ?? 0), reps };
 }
+
+/**
+ * Resuming a paused session against a routine that may have been edited since.
+ *
+ * KEYED BY THE ROUTINE EXERCISE'S STABLE ID, never by position: `exerciseId`
+ * is the routine_exercises row the progress was logged against. The result
+ * follows the routine's CURRENT order, so every positional lookup in the
+ * logger (template.exercises[i] beside logged[i]) stays aligned:
+ * - still in the routine: keeps its logged sets, wherever it moved to;
+ * - new to the routine: starts empty (the fresh entry);
+ * - removed from the routine: kept, with its original name and sets, after
+ *   the routine's exercises — but only if something was actually logged on it,
+ *   since an untouched removed exercise has nothing to keep.
+ */
+export function reconcileLogged(saved: LoggedExercise[], fresh: LoggedExercise[]): LoggedExercise[] {
+  const byId = new Map(saved.map((e) => [e.exerciseId, e]));
+  const current = fresh.map((f) => {
+    const kept = byId.get(f.exerciseId);
+    if (!kept) return f;
+    // The block grouping follows the routine as it is now.
+    const { removedFromRoutine: _drop, ...rest } = kept;
+    void _drop;
+    return { ...rest, blockResultId: f.blockResultId };
+  });
+  const present = new Set(fresh.map((f) => f.exerciseId));
+  const removed = saved
+    .filter((e) => !present.has(e.exerciseId) && e.sets.some(isTouched))
+    .map((e) => {
+      const { blockResultId: _block, ...rest } = e;
+      void _block;
+      return { ...rest, removedFromRoutine: true };
+    });
+  return [...current, ...removed];
+}

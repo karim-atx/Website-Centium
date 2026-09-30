@@ -103,8 +103,11 @@ export const BlockRunner: React.FC<{
   onResult: (patch: Partial<BlockResult>) => void;
   /** Starts the session's own clock the first time anything here is used. */
   onStarted: () => void;
+  /** The block's stopwatch, held with the session (SessionTimers) so it survives the logger unmounting. */
+  watch: Stopwatch | undefined;
+  onWatch: (watch: Stopwatch) => void;
   children: React.ReactNode;
-}> = ({ block, ordinal, result, onResult, onStarted, children }) => {
+}> = ({ block, ordinal, result, onResult, onStarted, watch, onWatch, children }) => {
   const colors = RAIL[block.kind];
   const heading = blockHeading(block, ordinal);
 
@@ -130,6 +133,8 @@ export const BlockRunner: React.FC<{
             result={result}
             onResult={onResult}
             onStarted={onStarted}
+            watch={watch}
+            onWatch={onWatch}
             ink={colors.ink}
           />
         </div>
@@ -148,9 +153,14 @@ const ScoreBoard: React.FC<{
   result: BlockResult | undefined;
   onResult: (patch: Partial<BlockResult>) => void;
   onStarted: () => void;
+  watch: Stopwatch | undefined;
+  onWatch: (watch: Stopwatch) => void;
   ink: string;
-}> = ({ block, result, onResult, onStarted, ink }) => {
-  const [watch, setWatch] = useState<Stopwatch>(stoppedStopwatch);
+}> = ({ block, result, onResult, onStarted, watch: held, onWatch, ink }) => {
+  // Timestamps, not a count: the value after the logger was minimised and
+  // reopened is read off the wall clock, like the session's main clock.
+  const watch = held ?? stoppedStopwatch();
+  const setWatch = (next: Stopwatch | ((w: Stopwatch) => Stopwatch)) => onWatch(typeof next === "function" ? next(watch) : next);
   const [sound, setSound] = useState(true);
   const now = useTick(isRunning(watch));
   const beep = useBeeper(sound);

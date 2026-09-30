@@ -499,31 +499,41 @@ async function writeExercises(
   exercises: Exercise[],
   lookup: ExerciseLookup,
   blockIdByLocalId: Map<string, string>
-): Promise<string | null> {
+): Promise<{ error: string | null; ids: string[] }> {
   const rows = [];
+  // STABLE ROW IDS. Every save deletes and re-inserts the prescriptions, so
+  // an id the database generated would change on every edit — and a paused
+  // session keys its logged sets by this id (reconcileLogged). An exercise
+  // that already has a row keeps its id; a new one gets a real uuid here,
+  // once, and keeps it from then on. INSERT is granted on the id column.
+  const ids = exercises.map((ex) => (UUID_RE.test(ex.id) ? ex.id : crypto.randomUUID()));
   for (const [index, ex] of exercises.entries()) {
     const ref = resolveExerciseRef(ex, lookup);
     // REFUSED, NOT DROPPED. A routine that silently comes back with four of
     // its five movements is worse than one that did not save, because nothing
     // tells the user which one is missing.
     if (!ref) {
-      return `"${ex.name}" isn't in the exercise library, so this routine can't be saved.`;
+      return { error: `"${ex.name}" isn't in the exercise library, so this routine can't be saved.`, ids };
     }
     // An unknown local id means a member whose block was dropped between the
     // editor and here. Ungrouped is the safe reading — the alternative is an
     // insert that fails the foreign key and loses the whole routine.
     const blockId = ex.blockId ? blockIdByLocalId.get(ex.blockId) ?? null : null;
-    rows.push(prescriptionOf(ex, ref, routineId, index, blockId));
+    rows.push({ id: ids[index], ...prescriptionOf(ex, ref, routineId, index, blockId) });
   }
 
-  if (rows.length === 0) return null;
+  if (rows.length === 0) return { error: null, ids };
   const { error } = await supabase.from("routine_exercises").insert(rows);
   if (error) {
     console.error("[routines] Could not write exercises:", error.message);
-    return describe(error);
+    return { error: describe(error), ids };
   }
-  return null;
+  return { error: null, ids };
 }
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+/** The saved exercises, carrying the row ids they were written with. */
+const withIds = (exercises: Exercise[], ids: string[]) => exercises.map((ex, i) => ({ ...ex, id: ids[i] ?? ex.id }));
 
 export async function createRoutine(
   userId: string,
@@ -564,7 +574,7 @@ export async function createRoutine(
     return { ok: false, message: blockWrite.message };
   }
 
-  const exerciseError = await writeExercises(
+  const { error: exerciseError, ids: exerciseIds } = await writeExercises(
     data.id,
     routine.exercises,
     lookup,
@@ -586,7 +596,7 @@ export async function createRoutine(
       position: routine.position ?? 0,
       createdAt: data.created_at,
       blocks: blockWrite.saved,
-      exercises: remapBlockIds(routine.exercises, blockWrite.idByLocalId),
+      exercises: withIds(remapBlockIds(routine.exercises, blockWrite.idByLocalId), exerciseIds),
     },
   };
 }
@@ -658,13 +668,13 @@ export async function updateRoutine(
   const blockWrite = await writeBlocks(id, patch.blocks ?? []);
   if ("message" in blockWrite) return { ok: false, message: blockWrite.message };
 
-  const exerciseError = await writeExercises(id, exercises, lookup, blockWrite.idByLocalId);
+  const { error: exerciseError, ids: exerciseIds } = await writeExercises(id, exercises, lookup, blockWrite.idByLocalId);
   if (exerciseError) return { ok: false, message: exerciseError };
   return {
     ok: true,
     saved: {
       blocks: blockWrite.saved,
-      exercises: remapBlockIds(exercises, blockWrite.idByLocalId),
+      exercises: withIds(remapBlockIds(exercises, blockWrite.idByLocalId), exerciseIds),
     },
   };
 }

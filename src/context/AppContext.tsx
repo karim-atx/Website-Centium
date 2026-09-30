@@ -2018,6 +2018,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       elapsedSec: session.elapsedSec,
       startedAt: session.startedAt,
       started: session.started,
+      blockResults: session.blockResults,
+      timers: session.timers,
     });
   };
 
@@ -2914,6 +2916,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
               elapsedSec: state.elapsedSec,
               startedAt: state.startedAt,
               started: state.started,
+              ...(state.blockResults ? { blockResults: state.blockResults as PausedWorkoutSession["blockResults"] } : {}),
+              ...(state.timers ? { timers: state.timers as PausedWorkoutSession["timers"] } : {}),
             };
           }
           setPausedSessions(next);

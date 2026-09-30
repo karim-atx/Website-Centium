@@ -37,10 +37,17 @@ export const EnduranceRunner: React.FC<{
   result: EnduranceResult | undefined;
   onResult: (result: EnduranceResult) => void;
   onStarted: () => void;
-}> = ({ plan, result, onResult, onStarted }) => {
+  /** The stopwatch and current step, held with the session (SessionTimers). */
+  timer: { watch: Stopwatch; current: number } | undefined;
+  onTimer: (timer: { watch: Stopwatch; current: number }) => void;
+}> = ({ plan, result, onResult, onStarted, timer, onTimer }) => {
   const rows = planRows(plan);
-  const [current, setCurrent] = useState(0);
-  const [watch, setWatch] = useState<Stopwatch>(stoppedStopwatch);
+  const current = timer?.current ?? 0;
+  const watch = timer?.watch ?? stoppedStopwatch();
+  const setCurrent = (next: number | ((i: number) => number)) =>
+    onTimer({ watch, current: typeof next === "function" ? next(current) : next });
+  const setWatch = (next: Stopwatch | ((w: Stopwatch) => Stopwatch)) =>
+    onTimer({ current, watch: typeof next === "function" ? next(watch) : next });
   const [now, setNow] = useState(() => Date.now());
   const planned = plannedIntervals(plan);
 
