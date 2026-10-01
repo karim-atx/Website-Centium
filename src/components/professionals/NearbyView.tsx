@@ -9,7 +9,7 @@ import { DirectoryCard } from "./DirectoryCard";
 import { SUBTYPE_SINGULAR } from "./subtypeLabels";
 import type { MapPin as Pin } from "./NearbyMap";
 import type { DirectoryListing } from "../../services/directory";
-import { fetchNearby, type NearbyProfessional } from "../../services/nearby";
+import { fetchNearby, type NearbyCursor, type NearbyProfessional } from "../../services/nearby";
 import {
   coarsePoint,
   describeDistance,
@@ -32,6 +32,13 @@ type Origin = { coords: Coords; label: string; source: "device" | "area"; areaId
 const RADII = [5, 10, 25, 50, 100];
 const radiusBucket = (km: number) => RADII.find((r) => r >= km) ?? 100;
 const SEARCH_DEBOUNCE_MS = 900;
+/**
+ * Pages fetched per search, at most. The server orders by distance BAND and
+ * then by id, so within a band a later page can hold someone nearer than this
+ * one; nearest-first is only right once the whole result is in. Each page is
+ * one of the 60 searches an hour, so a busy area stops here and says so.
+ */
+const MAX_PAGES = 4;
 
 /**
  * Professionals → Map (Task F).
@@ -67,6 +74,8 @@ export const NearbyView: React.FC<{
   const [found, setFound] = useState<Map<string, NearbyProfessional>>(new Map());
   const [searchError, setSearchError] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
+  /** A search stopped at MAX_PAGES: the order past what loaded may be off. */
+  const [truncated, setTruncated] = useState(false);
   const [selected, setSelected] = useState<string | null>(null);
   /** The largest radius already searched around each coarse point. */
   const searched = useRef<Map<string, number>>(new Map());
@@ -130,20 +139,37 @@ export const NearbyView: React.FC<{
     if (before !== undefined && before >= radius) return;
     searched.current.set(key, radius);
     setSearching(true);
-    const r = await fetchNearby(point, radius);
+    // EVERY PAGE BEFORE ANY OF IT IS SHOWN, so the local nearest-first sort
+    // is over a complete result rather than a partial one.
+    const all: NearbyProfessional[] = [];
+    let cursor: NearbyCursor | undefined;
+    let pages = 0;
+    let failure: { message: string; rateLimited?: boolean } | null = null;
+    do {
+      const r = await fetchNearby(point, radius, cursor);
+      pages += 1;
+      if (!r.ok) {
+        failure = r;
+        break;
+      }
+      all.push(...r.professionals);
+      cursor = r.next ?? undefined;
+    } while (cursor && pages < MAX_PAGES);
     setSearching(false);
-    if (!r.ok) {
-      setSearchError(r.message);
-      if (!r.rateLimited) {
+    if (failure && all.length === 0) {
+      setSearchError(failure.message);
+      if (!failure.rateLimited) {
         if (before === undefined) searched.current.delete(key);
         else searched.current.set(key, before);
       }
       return;
     }
-    setSearchError(null);
+    setSearchError(failure ? failure.message : null);
+    // Stopped early (page cap, or a later page failed): the tail is incomplete.
+    if (cursor || failure) setTruncated(true);
     setFound((prev) => {
       const next = new Map(prev);
-      for (const p of r.professionals) next.set(p.profileId, p);
+      for (const p of all) next.set(p.profileId, p);
       return next;
     });
   };
@@ -264,6 +290,11 @@ export const NearbyView: React.FC<{
           </Suspense>
           {searchError && <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2">{searchError}</p>}
           {searching && <p className="text-xs text-charcoal-faint" role="status">Searching this area…</p>}
+          {truncated && (
+            <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3 py-2">
+              There are a lot of professionals around here, so not all are shown. Zoom in for the nearest.
+            </p>
+          )}
 
           <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft mt-1">
             Nearest first{nearby.length > 0 ? ` · ${nearby.length}` : ""}
