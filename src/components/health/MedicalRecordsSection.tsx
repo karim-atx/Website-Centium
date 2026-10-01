@@ -1,3 +1,5 @@
+import { useCheckFlags } from "../health-checks/useCheckFlags";
+import { CheckFlagChip } from "../health-checks/CheckFlag";
 import { useState } from "react";
 import { Card } from "../ui/Card";
 import { Chip } from "../ui/Chip";
@@ -96,6 +98,7 @@ export const MedicalRecordsSection: React.FC<{
   hideLabel,
   initialTab = "biomarkers",
 }) => {
+  const checkFlags = useCheckFlags();
   const {
     imagingRecords,
     addImagingRecord,
@@ -308,6 +311,10 @@ export const MedicalRecordsSection: React.FC<{
                       {m.status}
                     </span>
                   )}
+                  {(() => {
+                    const flag = checkFlags.lab(m);
+                    return flag ? <span className="block mt-1"><CheckFlagChip flag={flag} /></span> : null;
+                  })()}
                 </div>
                 <button
                   onClick={(e) => {

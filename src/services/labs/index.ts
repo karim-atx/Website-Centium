@@ -399,12 +399,22 @@ export function groupPanelsByMarkerName(panels: PanelRow[], catalogue?: Catalogu
       const high = m.range_high === null ? null : Number(m.range_high);
       const existing = byName.get(key);
       if (existing) {
+        existing.previous = {
+          date: existing.history[existing.history.length - 1].date,
+          value: existing.value,
+          unit: existing.unit,
+          low: existing.rangeLow ?? null,
+          high: existing.rangeHigh ?? null,
+        };
         existing.history.push({ date: panel.panel_date, value });
         existing.value = value;
         existing.unit = m.unit;
         existing.range = formatRange(low, high);
         existing.status = m.status;
         existing.id = m.id;
+        existing.markerKey = m.marker_key ?? null;
+        existing.rangeLow = low;
+        existing.rangeHigh = high;
       } else {
         byName.set(key, {
           id: m.id,
@@ -414,6 +424,10 @@ export function groupPanelsByMarkerName(panels: PanelRow[], catalogue?: Catalogu
           range: formatRange(low, high),
           status: m.status,
           history: [{ date: panel.panel_date, value }],
+          markerKey: m.marker_key ?? null,
+          rangeLow: low,
+          rangeHigh: high,
+          previous: null,
         });
       }
     }

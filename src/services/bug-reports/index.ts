@@ -74,10 +74,14 @@ export async function submitBugReport(params: {
     return { ok: false, message: "That report is too long — please shorten it." };
   }
 
+  // The advanced-monitoring plan's route is never reported, wherever the
+  // sheet was opened from: a bug report is read by staff, and the route alone
+  // would tell them the setting is on.
+  const route = params.route && /^\/app\/health\/checks(?=$|[/?#])/.test(params.route) ? null : params.route;
   const { error } = await supabase.from("bug_reports").insert({
     user_id: params.userId,
     description,
-    route: clamp(params.route),
+    route: clamp(route),
     user_agent: clamp(params.userAgent),
   });
 

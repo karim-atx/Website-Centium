@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { ShieldCheck } from "lucide-react";
 import { AppProvider, useApp } from "./context/AppContext";
+import { HealthChecksProvider } from "./context/HealthChecksContext";
 import { Button } from "./components/ui/Button";
 import { MfaChallenge } from "./components/auth/MfaChallenge";
 import { TabIdentityNotice } from "./components/auth/TabIdentityNotice";
@@ -21,6 +22,7 @@ import Food from "./pages/food/Food";
 import NutrientSummaryPage from "./pages/food/NutrientSummaryPage";
 import Workout from "./pages/workout/Workout";
 import Health from "./pages/health/Health";
+import HealthChecks from "./pages/health/HealthChecks";
 import Cycle from "./pages/cycle/Cycle";
 import Contraception from "./pages/contraception/Contraception";
 import Mind from "./pages/mind/Mind";
@@ -375,6 +377,7 @@ function AppRoutes() {
         <Route path="/app/food/nutrient-summary" element={<NutrientSummaryPage />} />
         <Route path="/app/workout" element={<Workout />} />
         <Route path="/app/health" element={<Health />} />
+        <Route path="/app/health/checks" element={<HealthChecks />} />
         <Route path="/app/cycle" element={<Cycle />} />
         <Route path="/app/contraception" element={<Contraception />} />
         <Route path="/app/mind" element={<Mind />} />
@@ -427,9 +430,11 @@ export default function App() {
           /Website-Centium/centium/. With that tag gone baseURI is just the
           current page URL, so the same expression would read a deep link like
           /pricing back as basename="/pricing" and strip the route away. */}
-      <BrowserRouter>
-        <AppRoutes />
-      </BrowserRouter>
+      <HealthChecksProvider>
+        <BrowserRouter>
+          <AppRoutes />
+        </BrowserRouter>
+      </HealthChecksProvider>
       {/* Above everything: another tab changed the account (tabIdentity.ts). */}
       <TabIdentityNotice />
     </AppProvider>

@@ -49,6 +49,7 @@ import {
 import { Toggle } from "../../components/ui/Toggle";
 import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
+import { HealthChecksSetting } from "../../components/health-checks/HealthChecksSetting";
 
 const accountTypeLabel: Record<string, string> = {
   customer: "Customer",
@@ -607,6 +608,7 @@ export default function Profile() {
             .
           </p>
           </Card>
+          <HealthChecksSetting />
         </>
       )}
 

@@ -110,6 +110,61 @@ export type Database = {
         }
         Relationships: []
       }
+      advanced_monitoring: {
+        Row: {
+          user_id: string
+        }
+        Insert: {
+          user_id: string
+        }
+        Update: {
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "advanced_monitoring_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advanced_monitoring_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advanced_monitoring_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advanced_monitoring_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "advanced_monitoring_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "advanced_monitoring_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       admin_actions: {
         Row: {
           action: string
@@ -6366,6 +6421,76 @@ export type Database = {
             foreignKeyName: "pending_client_requests_professional_id_fkey"
             columns: ["professional_id"]
             isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      personal_reminders: {
+        Row: {
+          cadence_days: number
+          created_at: string
+          enabled: boolean
+          next_due_on: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          cadence_days: number
+          created_at?: string
+          enabled?: boolean
+          next_due_on: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          cadence_days?: number
+          created_at?: string
+          enabled?: boolean
+          next_due_on?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "personal_reminders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_reminders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_reminders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_reminders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "personal_reminders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "personal_reminders_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
           },

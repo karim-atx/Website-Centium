@@ -1,3 +1,5 @@
+import { useCheckFlags } from "../health-checks/useCheckFlags";
+import { CheckFlagChip } from "../health-checks/CheckFlag";
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
@@ -92,6 +94,7 @@ export const BloodPressureDetailSheet: React.FC<{
   onEdit: (reading: BloodPressureReading) => void;
 }> = ({ open, onClose, onAdd, onEdit }) => {
   const { bloodPressure } = useApp();
+  const checkFlags = useCheckFlags();
   const [period, setPeriod] = useState<Period>("weekly");
 
   const [wasOpen, setWasOpen] = useState(false);
@@ -266,6 +269,7 @@ export const BloodPressureDetailSheet: React.FC<{
             <div className="space-y-1.5 mb-4">
               {inPeriod.map((r) => {
                 const category = classifyBloodPressure(r.systolic, r.diastolic);
+                const flag = checkFlags.bp(r);
                 return (
                   <div key={r.id} className="flex items-start gap-2.5 rounded-xl bg-cream-soft px-3.5 py-2.5">
                     <div className="flex-1 min-w-0">
@@ -282,6 +286,7 @@ export const BloodPressureDetailSheet: React.FC<{
                         {r.pulse != null && (
                           <span className="text-[11px] text-charcoal-faint">{r.pulse} bpm</span>
                         )}
+                        {flag && <CheckFlagChip flag={flag} />}
                       </p>
                       <p className="text-[10.5px] text-charcoal-faint mt-0.5">
                         {formatWhen(r.recordedAt)}

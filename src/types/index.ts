@@ -1179,6 +1179,13 @@ export interface BloodMarker {
    */
   status: "low" | "normal" | "high" | null;
   history: HealthMetricPoint[];
+  /** The standard list's key, when the result was linked to it; null for "Other". */
+  markerKey?: string | null;
+  /** The latest reading's range as printed on the user's own report, in its unit. */
+  rangeLow?: number | null;
+  rangeHigh?: number | null;
+  /** The reading before the latest, with its own range and unit, for repeat-test checks. */
+  previous?: { date: string; value: number; unit: string; low: number | null; high: number | null } | null;
 }
 
 export interface BloodPanel {

@@ -1,3 +1,5 @@
+import { useCheckFlags } from "../health-checks/useCheckFlags";
+import { CheckFlagNote } from "../health-checks/CheckFlag";
 import React from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { BiomarkerLineChart } from "./BiomarkerLineChart";
@@ -21,8 +23,10 @@ export const BiomarkerDetailSheet: React.FC<{ open: boolean; onClose: () => void
   onClose,
   marker,
 }) => {
+  const checkFlags = useCheckFlags();
   if (!marker) return null;
   const trend = trendColor(marker.history);
+  const flag = checkFlags.lab(marker);
 
   return (
     <BottomSheet open={open} onClose={onClose} title={marker.name}>
@@ -38,6 +42,7 @@ export const BiomarkerDetailSheet: React.FC<{ open: boolean; onClose: () => void
             {trend.label}
           </span>
         </div>
+        {flag && <CheckFlagNote flag={flag} className="mb-4" />}
 
         <div className="flex justify-center mb-2">
           <BiomarkerLineChart history={marker.history} unit={marker.unit} color={trend.color} width={280} height={140} />

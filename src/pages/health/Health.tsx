@@ -48,6 +48,9 @@ import { ChevronRight, Flame, Stethoscope, FileText, Moon } from "lucide-react";
 import clsx from "clsx";
 import type { BloodMarker, ImagingRecord } from "../../types";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
+import { useCheckFlags } from "../../components/health-checks/useCheckFlags";
+import { CheckFlagNote } from "../../components/health-checks/CheckFlag";
+import { COPY as CHECKS_COPY } from "../../services/health-checks/guidance";
 
 // THE PULL-TO-SYNC GESTURE IS GONE, with the device toggle behind it.
 // "Swiping down on this page should prompt syncing data with selected
@@ -236,6 +239,7 @@ export default function Health() {
   // target metric in nav state so it opens straight into that sheet.
   const location = useLocation();
   const navigate = useNavigate();
+  const checkFlags = useCheckFlags();
   useEffect(() => {
     const navState = location.state as { openMetric?: string; openRecords?: boolean } | null;
     // Add Metric's "Add Records" button lands here with the Records sheet open.
@@ -535,6 +539,7 @@ export default function Health() {
         );
         const weekAvg = averageReading(week);
         const severe = isSevere(latest.systolic, latest.diastolic);
+        const flag = checkFlags.bp(latest);
 
         return (
           <button
@@ -575,6 +580,7 @@ export default function Health() {
                 {SEVERE_READING_MESSAGE}
               </p>
             )}
+            {flag && <CheckFlagNote flag={flag} className="mt-2.5" />}
           </button>
         );
       })()}
@@ -678,6 +684,19 @@ export default function Health() {
 
       {/* The pregnancy guidance for this tab. */}
       {pregnancy && <PregnancyHealthCard pregnancy={pregnancy} />}
+
+      {/* Advanced health monitoring: the way into the plan, while the mode
+          is on. Its wording names nothing but the plan. */}
+      {checkFlags.active && (
+        <button
+          onClick={() => navigate("/app/health/checks")}
+          className="tap w-full box-border rounded-[15px] px-4 py-3.5 flex items-center justify-between gap-3 text-left mb-[13px]"
+          style={{ background: "rgba(74,61,160,.08)" }}
+        >
+          <span className="text-[13px] font-bold text-charcoal">{CHECKS_COPY.planTitle}</span>
+          <ChevronRight size={14} className="text-primary-deep-text/60 shrink-0" />
+        </button>
+      )}
 
       <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Records</p>
       <div className="flex flex-col gap-[7px] mb-3">
