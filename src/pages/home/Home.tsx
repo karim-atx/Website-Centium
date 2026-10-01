@@ -14,6 +14,10 @@ import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X } f
 import { useNavigate } from "react-router-dom";
 import ProfessionalDashboard from "../professionals/ProfessionalDashboard";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
+import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
+
+// The streaks card's height, so its placeholder does not shift the page.
+const STREAKS_PLACEHOLDER_HEIGHT = 176;
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -28,6 +32,7 @@ export default function Home() {
     t,
     premiumPlan,
     recoverySensitive,
+    recoveryModePending,
     recoverySensitiveIntroSeen,
     setRecoverySensitiveIntroSeen,
   } = useApp();
@@ -115,7 +120,13 @@ export default function Home() {
 
       {/* QA 12.0 recovery-sensitive experience: "Disable fasting, streaks,
           badges, and weight-loss prompts." */}
-      {!recoverySensitive && <StreaksBar />}
+      {/* Task X follow-up: streaks wait for the account's recovery setting
+          on a browser with no local copy of it. */}
+      {recoveryModePending ? (
+        <NumberPlaceholder height={STREAKS_PLACEHOLDER_HEIGHT} label="Streaks" className="mb-[13px]" />
+      ) : (
+        !recoverySensitive && <StreaksBar />
+      )}
 
       {isBusiness && (
         <Card

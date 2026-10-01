@@ -306,7 +306,7 @@ export const HomeWidget: React.FC<{
   editMode?: boolean;
 }> = ({ widget, onWaterClick, editMode = false }) => {
   const navigate = useNavigate();
-  const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, workoutSessions, routines, habits, journalEntries, today, selectedDate, meditationSummary } =
+  const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, workoutSessions, routines, habits, journalEntries, today, selectedDate, meditationSummary, recoverySensitive, recoveryModePending } =
     useApp();
   const isLarge = widget.size === "large";
   // Per-instance clip id for the small water bottle, so two water tiles on
@@ -401,6 +401,26 @@ export const HomeWidget: React.FC<{
       <div className="w-full h-[114px] box-border rounded-[15px] flex flex-col px-3 py-[11px]" style={{ background: bg }}>
         {content}
       </div>
+    );
+
+  /**
+   * Task X follow-up: a tile whose figure must not show until the account's
+   * recovery setting is known on this browser. Same frame, two soft bars,
+   * no number; nothing to open yet.
+   */
+  const pendingCard = (bg: string, label: string) =>
+    wrap(
+      () => undefined,
+      shell(
+        bg,
+        <>
+          <p className={`${capsLabel} text-charcoal/[0.42]`}>{label}</p>
+          <div className="flex-1 flex flex-col justify-center gap-2" aria-busy="true">
+            <span className="h-4 w-16 rounded-full bg-charcoal/[0.07] animate-pulse" />
+            <span className="h-3 w-24 max-w-full rounded-full bg-charcoal/[0.05] animate-pulse" />
+          </div>
+        </>
+      )
     );
 
   switch (widget.type) {
@@ -748,6 +768,31 @@ export const HomeWidget: React.FC<{
     // ----------------------------------------------------------- Nutrition
     case "nutrition": {
       const onClick = () => navigate("/app/food");
+      if (recoveryModePending) return pendingCard("rgba(174,161,220,.16)", "Food");
+      if (recoverySensitive) {
+        // Recovery-sensitive mode: the same neutral summary the Food tab
+        // shows — what was logged, never calories or macros.
+        const logged = foodLog.filter((e) => e.date === selectedDate).length;
+        return wrap(
+          onClick,
+          shell(
+            "rgba(174,161,220,.16)",
+            <>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Food</p>
+              <div className="flex-1 flex flex-col justify-center min-h-0">
+                <p className="text-[12px] font-semibold text-charcoal leading-snug">
+                  {logged === 0 ? "Nothing logged yet" : `${logged} item${logged === 1 ? "" : "s"} logged`}
+                </p>
+                {isLarge && (
+                  <p className="mt-1 text-[10.5px] text-charcoal-faint leading-snug">
+                    Meals, notes, and how you're feeling — no calorie counting required.
+                  </p>
+                )}
+              </div>
+            </>
+          )
+        );
+      }
       const totalGoal = targets.protein + targets.carbs + targets.fat || 1;
       const circumference = 2 * Math.PI * 34;
       const macros = [
@@ -851,6 +896,9 @@ export const HomeWidget: React.FC<{
 
     // --------------------------------------------------------------- Weight
     case "weight": {
+      // Task X follow-up: no weight until the account's recovery setting is
+      // known on this browser; a neutral tile in its place, never the number.
+      if (recoveryModePending) return pendingCard("rgba(174,161,220,.11)", "Weight");
       if (metricValues.weight === null) {
         return wrap(
           () => navigate("/app/health", { state: { openMetric: "weight" } }),

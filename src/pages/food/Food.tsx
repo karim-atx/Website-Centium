@@ -28,6 +28,7 @@ import { isFoodRestricted } from "../../utils/dietaryRestrictions";
 import GoalsPanel from "./GoalsPanel";
 import MealPrepPanel from "./MealPrepPanel";
 import { foodTabs, type Tab } from "./foodTabs";
+import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
 
 // Item 7: the Diary's own display order (Breakfast, Snack, Lunch, Dinner) —
 // deliberately separate from the shared `mealOrder` export (services/
@@ -47,9 +48,15 @@ const quickAddTiles: Record<MealType, { label: string; fill: string; Icon: typeo
 
 const SWIPE_THRESHOLD = 60;
 
+// The calorie hero's height, so its placeholder does not shift the page.
+const HERO_PLACEHOLDER_HEIGHT = 116;
+
 export default function Food() {
-  const { user, foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, diaryError, authUserId, addFoodEntryRecord } =
+  const { user, foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, recoveryModePending, diaryError, authUserId, addFoodEntryRecord } =
     useApp();
+  // Task X follow-up: every per-meal and per-entry number waits for the
+  // account's recovery setting too, not only the totals card.
+  const hideNumbers = recoverySensitive || recoveryModePending;
   const navigate = useNavigate();
   const [tab, setTab] = useState<Tab>("diary");
   const [addOpen, setAddOpen] = useState(false);
@@ -316,7 +323,11 @@ export default function Food() {
               totals... Disable deficit/remaining-calorie language... Use
               neutral food language." Same diary, same entries below — just
               no numbers-first summary card above them. */}
-          {recoverySensitive ? (
+          {recoveryModePending ? (
+            // Task X follow-up: the account's recovery setting is still
+            // loading on this browser, so no totals yet, in either form.
+            <NumberPlaceholder height={HERO_PLACEHOLDER_HEIGHT} label="Today" className="mb-[13px]" />
+          ) : recoverySensitive ? (
             <Card className="mb-6">
               <p className="text-sm font-bold text-charcoal mb-1">
                 {todaysEntries.length === 0 ? "Nothing logged yet today" : `${todaysEntries.length} item${todaysEntries.length === 1 ? "" : "s"} logged today`}
@@ -387,7 +398,7 @@ export default function Food() {
               regardless of what's already logged (unlike the "+" inside each
               card, which only opens that one meal). Master handover: four
               solid lavender steps with time-of-day glyphs. */}
-          {!recoverySensitive && (
+          {!hideNumbers && (
             <div className="flex gap-[6px] mb-[11px]">
               {diaryMealOrder.map((meal) => {
                 const { label, fill, Icon } = quickAddTiles[meal];
@@ -480,7 +491,7 @@ export default function Food() {
                         <EllipsisVertical size={15} />
                       </button>
                     </span>
-                    {!recoverySensitive && (
+                    {!hideNumbers && (
                       <span className="flex flex-col gap-1 w-[104px] shrink-0">
                         <span className="flex h-2 rounded-[3px] overflow-hidden bg-charcoal/[0.07]">
                           {mealCal > 0 && (
@@ -500,7 +511,7 @@ export default function Food() {
                         </span>
                       </span>
                     )}
-                    {!recoverySensitive && (
+                    {!hideNumbers && (
                       <span className="w-[52px] shrink-0 text-right text-[11px] font-bold text-charcoal-soft tabular-nums">
                         {Math.round(mealCal)}
                       </span>
@@ -618,7 +629,7 @@ export default function Food() {
                                       {e.unit && e.unit !== "serving" ? e.unit : e.display.serving}
                                     </span>
                                   </span>
-                                  {!recoverySensitive && (
+                                  {!hideNumbers && (
                                     <span className="shrink-0 text-[10.5px] font-bold text-charcoal-soft tabular-nums">
                                       {Math.round(e.calories)}
                                     </span>

@@ -47,6 +47,7 @@ import { getTestRecommendations } from "../../utils/biomarkerRecommendations";
 import { ChevronRight, Flame, Stethoscope, FileText, Moon } from "lucide-react";
 import clsx from "clsx";
 import type { BloodMarker, ImagingRecord } from "../../types";
+import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
 
 // THE PULL-TO-SYNC GESTURE IS GONE, with the device toggle behind it.
 // "Swiping down on this page should prompt syncing data with selected
@@ -97,6 +98,7 @@ export default function Health() {
     stepsGoal,
     setStepsGoal,
     recoverySensitive,
+    recoveryModePending,
     imagingRecords,
     noteFeatureMilestone,
   } = useApp();
@@ -205,9 +207,15 @@ export default function Health() {
   // names the number and the words "in the obese range", which on a pregnancy
   // weight is both wrong and the last thing worth saying to somebody at 30
   // weeks.
+  //
+  // Task X: in recovery-sensitive mode, and while that setting is still
+  // loading on this browser, the reasons may not quote a weight or a BMI —
+  // the weight-based reason falls back to its general wording and the BMI
+  // one is left out, the same as when there is no weigh-in.
+  const hideBodyNumbers = recoverySensitive || recoveryModePending;
   const testRecommendations = useMemo(
-    () => getTestRecommendations(user, showBmi),
-    [user, showBmi]
+    () => getTestRecommendations(hideBodyNumbers ? { ...user, weightKg: null } : user, showBmi && !hideBodyNumbers),
+    [user, showBmi, hideBodyNumbers]
   );
 
   // Iteration 6 "Team" §5 Health: the weight-trend hero's sparkline, real
@@ -266,14 +274,17 @@ export default function Health() {
           106.4 kg, "↓ 0.6 kg this week" and a seven-point line, none of which
           had ever been measured. An account that has never weighed in gets an
           invitation instead. */}
-      {!recoverySensitive && metricValues.weight === null && (
+      {/* Task X follow-up: weight and BMI wait for the account's recovery
+          setting on a browser with no local copy of it. */}
+      {recoveryModePending && <NumberPlaceholder height={127} label="Weight trend" className="mb-[13px]" />}
+      {!recoverySensitive && !recoveryModePending && metricValues.weight === null && (
         <div className="rounded-[22px] px-[17px] py-4 mb-[13px] bg-cream-card border border-charcoal/[0.06]">
           <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Weight trend</p>
           <p className="mt-[9px] text-[15px] font-bold text-charcoal">{NO_READINGS}</p>
           <p className="mt-[5px] text-[11px] text-charcoal-tertiary">{emptyHint("weight")}</p>
         </div>
       )}
-      {!recoverySensitive && metricValues.weight !== null && (
+      {!recoverySensitive && !recoveryModePending && metricValues.weight !== null && (
         <button
           onClick={() => openDetail(weightMeta, metricValues.weight as number)}
           className="tap w-full text-left relative overflow-hidden rounded-[22px] px-[17px] py-4 mb-[13px]"

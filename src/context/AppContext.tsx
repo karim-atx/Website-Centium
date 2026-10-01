@@ -799,6 +799,14 @@ interface AppState {
   /** Null until the first streak read finishes or fails. */
   streaksError: string | null;
   recoverySensitiveIntroSeen: boolean;
+  /**
+   * Task X follow-up: the account's recovery setting is not known yet on this
+   * browser (no local copy, and the account's row not read). Every number the
+   * mode hides (calories, macros, weight, BMI, streaks) is shown as a neutral
+   * placeholder until this is false, so it never flashes for someone with the
+   * mode on.
+   */
+  recoveryModePending: boolean;
   setRecoverySensitiveIntroSeen: (seen: boolean) => void;
   /**
    * The professional has dismissed the "turn on two-factor" nudge.
@@ -1358,6 +1366,18 @@ let signingOutHere = false;
 // (README → Interactions). Purely cosmetic; see plantStage below for the
 // actual growth mechanic.
 export type PlantSpecies = "tulip" | "rose" | "sunflower" | "daisy" | "lily";
+
+/** Whether a persisted key exists for this tab's account (any value). */
+/** Waits between failed reads of the recovery setting; the last repeats. */
+const RECOVERY_READ_RETRY_MS = [1000, 3000, 8000, 15000];
+
+function hasPersisted(key: string): boolean {
+  try {
+    return localStorage.getItem(persistKey(key)) !== null;
+  } catch {
+    return false;
+  }
+}
 
 function loadPersisted<T>(key: string, fallback: T): T {
   try {
@@ -2304,7 +2324,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     let cancelled = false;
     const userId = authUserId;
     void (async () => {
-      const read = await fetchRecoveryMode(userId);
+      // A FAILED READ IS RETRIED UNTIL IT SUCCEEDS, because until then a
+      // browser with no local copy shows placeholders instead of numbers.
+      // It never gives up into "off": on a fresh browser that would show
+      // calories and weight to somebody whose account has the mode on.
+      let read = await fetchRecoveryMode(userId);
+      for (let attempt = 0; !cancelled && !read.ok; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, RECOVERY_READ_RETRY_MS[Math.min(attempt, RECOVERY_READ_RETRY_MS.length - 1)]));
+        if (!cancelled) read = await fetchRecoveryMode(userId);
+      }
       if (cancelled || !read.ok) return;
       const { mode, upload } = syncRecoveryMode(read.mode, deviceRecoveryRef.current);
       if (upload) await saveRecoveryMode(userId, upload);
@@ -2318,6 +2346,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     };
   }, [authUserId, setDeviceRecovery, setDeviceRecoveryIntro]);
   const accountRecovery = recoveryRead && recoveryRead.userId === authUserId ? recoveryRead.mode : null;
+  // Whether THIS browser already held a copy when the page loaded: checked
+  // once, before the persisted default is written, so a fresh browser is
+  // told apart from one that has simply stored "off". (A different account
+  // signing in reloads the tab, so one check per load is per account.)
+  const [hadDeviceRecoveryCopy] = useState(() => hasPersisted("recoverySensitive"));
+  const recoveryModePending = !!authUserId && !accountRecovery && !hadDeviceRecoveryCopy;
   const recoverySensitive = accountRecovery ? accountRecovery.enabled : deviceRecovery;
   const recoverySensitiveIntroSeen = accountRecovery ? accountRecovery.introSeen : deviceRecoveryIntro;
 
@@ -6244,6 +6278,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setRecoverySensitive,
       streaksError,
       recoverySensitiveIntroSeen,
+      recoveryModePending,
       twoFactorNudgeDismissed,
       setTwoFactorNudgeDismissed,
       setRecoverySensitiveIntroSeen,
@@ -6465,6 +6500,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recoverySensitive,
       streaksError,
       recoverySensitiveIntroSeen,
+      recoveryModePending,
       twoFactorNudgeDismissed,
       setTwoFactorNudgeDismissed,
       referralRedeemed,
