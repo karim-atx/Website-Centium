@@ -7520,6 +7520,9 @@ export type Database = {
       professional_profiles: {
         Row: {
           affiliated_business_id: string | null
+          approx_lat: number | null
+          approx_lng: number | null
+          area_label: string | null
           bio: string | null
           certification_url: string | null
           certification_verified: boolean
@@ -7544,6 +7547,9 @@ export type Database = {
         }
         Insert: {
           affiliated_business_id?: string | null
+          approx_lat?: number | null
+          approx_lng?: number | null
+          area_label?: string | null
           bio?: string | null
           certification_url?: string | null
           certification_verified?: boolean
@@ -7568,6 +7574,9 @@ export type Database = {
         }
         Update: {
           affiliated_business_id?: string | null
+          approx_lat?: number | null
+          approx_lng?: number | null
+          area_label?: string | null
           bio?: string | null
           certification_url?: string | null
           certification_verified?: boolean
@@ -12995,6 +13004,42 @@ export type Database = {
         Returns: undefined
       }
       class_booked_count: { Args: { p_class_id: string }; Returns: number }
+      clear_approximate_location: {
+        Args: never
+        Returns: {
+          affiliated_business_id: string | null
+          approx_lat: number | null
+          approx_lng: number | null
+          area_label: string | null
+          bio: string | null
+          certification_url: string | null
+          certification_verified: boolean
+          consultation_rate: number | null
+          created_at: string
+          facebook: string | null
+          headline: string | null
+          id: string
+          instagram: string | null
+          listed_publicly: boolean
+          location: string | null
+          monthly_rate: number | null
+          payment_modalities: Database["public"]["Enums"]["payment_modality"][]
+          phone: string | null
+          profile_id: string
+          show_volunteering: boolean
+          skills: string[]
+          specialty: string | null
+          updated_at: string
+          website: string | null
+          x: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "professional_profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       client_cycle_phase: {
         Args: { p_client: string }
         Returns: Database["public"]["Enums"]["cycle_phase_kind"]
@@ -13640,6 +13685,43 @@ export type Database = {
         Args: { p_professional_id: string }
         Returns: boolean
       }
+      professionals_in_area: {
+        Args: {
+          p_before_band?: number
+          p_before_id?: string
+          p_lat: number
+          p_limit?: number
+          p_lng: number
+          p_radius_km?: number
+          p_subtype?: Database["public"]["Enums"]["professional_subtype"]
+        }
+        Returns: {
+          approx_lat: number
+          approx_lng: number
+          area_label: string
+          avatar_url: string
+          average_rating: number
+          band_rank: number
+          bio: string
+          consultation_rate: number
+          distance_band: string
+          facebook: string
+          first_name: string
+          has_verified_licence: boolean
+          headline: string
+          instagram: string
+          location: string
+          monthly_rate: number
+          payment_modalities: Database["public"]["Enums"]["payment_modality"][]
+          professional_id: string
+          professional_subtype: Database["public"]["Enums"]["professional_subtype"]
+          review_count: number
+          skills: string[]
+          specialty: string
+          website: string
+          x: string
+        }[]
+      }
       purge_contact_submissions: { Args: never; Returns: Json }
       queue_account_email: { Args: { p_id: string }; Returns: boolean }
       queue_contraception_reminders: { Args: never; Returns: number }
@@ -13859,6 +13941,42 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "broadcasts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      set_approximate_location: {
+        Args: { p_label?: string; p_lat: number; p_lng: number }
+        Returns: {
+          affiliated_business_id: string | null
+          approx_lat: number | null
+          approx_lng: number | null
+          area_label: string | null
+          bio: string | null
+          certification_url: string | null
+          certification_verified: boolean
+          consultation_rate: number | null
+          created_at: string
+          facebook: string | null
+          headline: string | null
+          id: string
+          instagram: string | null
+          listed_publicly: boolean
+          location: string | null
+          monthly_rate: number | null
+          payment_modalities: Database["public"]["Enums"]["payment_modality"][]
+          phone: string | null
+          profile_id: string
+          show_volunteering: boolean
+          skills: string[]
+          specialty: string | null
+          updated_at: string
+          website: string | null
+          x: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "professional_profiles"
           isOneToOne: true
           isSetofReturn: false
         }

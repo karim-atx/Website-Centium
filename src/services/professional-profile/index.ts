@@ -27,11 +27,18 @@ export interface ProfessionalProfile {
   listedPublicly: boolean;
   /** Read-only mirror of business_employees, maintained by a trigger. */
   affiliatedBusinessId: string | null;
+  /**
+   * The area shown on the clients' map, or null when it is off (Database
+   * dd274ee). Read-only here: written only by set_approximate_location() and
+   * cleared by clear_approximate_location(). Stored to two decimal places by
+   * the column type, about 1 km, so a precise point is never kept.
+   */
+  mapArea: { lat: number; lng: number; label: string | null } | null;
 }
 
 /** The subset a client may write. Deliberately excludes the two above. */
 export type ProfessionalProfilePatch = Partial<
-  Omit<ProfessionalProfile, "listedPublicly" | "affiliatedBusinessId">
+  Omit<ProfessionalProfile, "listedPublicly" | "affiliatedBusinessId" | "mapArea">
 >;
 
 function describe(error: PostgrestError): string {
@@ -58,13 +65,16 @@ type Row = {
   payment_modalities: PaymentModality[] | null;
   listed_publicly: boolean;
   affiliated_business_id: string | null;
+  approx_lat: number | null;
+  approx_lng: number | null;
+  area_label: string | null;
 };
 
 // One unbroken literal on purpose: supabase-js infers the row type from this
 // string, and splitting it across a concatenation collapses that inference to
 // GenericStringError and forces a cast at every call site.
 const COLUMNS =
-  "bio, website, instagram, facebook, x, specialty, location, monthly_rate, consultation_rate, payment_modalities, listed_publicly, affiliated_business_id";
+  "bio, website, instagram, facebook, x, specialty, location, monthly_rate, consultation_rate, payment_modalities, listed_publicly, affiliated_business_id, approx_lat, approx_lng, area_label";
 
 const toProfile = (r: Row): ProfessionalProfile => ({
   bio: r.bio,
@@ -79,6 +89,10 @@ const toProfile = (r: Row): ProfessionalProfile => ({
   paymentModalities: r.payment_modalities ?? [],
   listedPublicly: r.listed_publicly,
   affiliatedBusinessId: r.affiliated_business_id,
+  mapArea:
+    r.approx_lat !== null && r.approx_lng !== null
+      ? { lat: Number(r.approx_lat), lng: Number(r.approx_lng), label: r.area_label }
+      : null,
 });
 
 export type ProfileResult =
@@ -254,6 +268,9 @@ export async function leaveAffiliation(): Promise<LeaveAffiliationResult> {
   }
 }
 
+/** The one sentence for both public surfaces: the directory listing and the map area. */
+export const UNDER_18_LISTING = "Accounts under 18 can't be listed publicly.";
+
 export type SetListingResult =
   | { status: "ok"; listed: boolean }
   | { status: "affiliated" }
@@ -283,10 +300,55 @@ export async function setPublicListing(listed: boolean): Promise<SetListingResul
     // gone rather than kept beside it, because that migration changed no wording
     // — so a fallback would only ever match what the code already matches.
     if (error.code === "ATX08") return { status: "no_profile" };
+    // ATX47 (Database dd274ee): an account under 18 cannot be publicly
+    // discoverable. Turning a listing OFF is never refused.
+    if (error.code === "ATX47") return { status: "error", message: UNDER_18_LISTING };
     console.error("[professional-profile] Could not set listing:", error.code, error.message);
     return { status: "error", message: "Could not update your listing. Try again." };
   }
 
   const row = data as unknown as { listed_publicly: boolean } | null;
   return { status: "ok", listed: row?.listed_publicly ?? listed };
+}
+
+export type MapAreaResult =
+  | { ok: true; mapArea: ProfessionalProfile["mapArea"] }
+  | { ok: false; message: string };
+
+function mapAreaFrom(data: unknown): ProfessionalProfile["mapArea"] {
+  const row = data as { approx_lat: number | null; approx_lng: number | null; area_label: string | null } | null;
+  return row && row.approx_lat !== null && row.approx_lng !== null
+    ? { lat: Number(row.approx_lat), lng: Number(row.approx_lng), label: row.area_label }
+    : null;
+}
+
+/**
+ * Shows the professional on the clients' map at an approximate area. The
+ * point is rounded here to two decimals as well, though the column type would
+ * round it anyway; the label is the professional's own words for the area.
+ */
+export async function setMapArea(lat: number, lng: number, label: string | null): Promise<MapAreaResult> {
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const { data, error } = await supabase.rpc("set_approximate_location", {
+    p_lat: round2(lat),
+    p_lng: round2(lng),
+    p_label: label?.trim() ? label.trim().slice(0, 80) : undefined,
+  });
+  if (error) {
+    console.error("[professional-profile] Could not set the map area:", error.code, error.message);
+    if (error.code === "ATX47") return { ok: false, message: UNDER_18_LISTING };
+    if (error.code === "ATX08") return { ok: false, message: "Save your details first — there's nothing to list yet." };
+    return { ok: false, message: describe(error) === "Your session expired. Sign in again." ? describe(error) : "Couldn't save your area. Try again." };
+  }
+  return { ok: true, mapArea: mapAreaFrom(data) };
+}
+
+/** Takes the professional off the map. They stay in the directory. Never refused. */
+export async function clearMapArea(): Promise<MapAreaResult> {
+  const { error } = await supabase.rpc("clear_approximate_location");
+  if (error) {
+    console.error("[professional-profile] Could not clear the map area:", error.code, error.message);
+    return { ok: false, message: "Couldn't turn that off. Try again." };
+  }
+  return { ok: true, mapArea: null };
 }
