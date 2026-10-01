@@ -19,6 +19,7 @@ import { AuthStep } from "./AuthStep";
 import { AccountTypeStep } from "./AccountTypeStep";
 import { SubtypeStep } from "./SubtypeStep";
 import { dateOfBirthComplete, dateOfBirthStep, resumeIndex, stepsFor } from "./onboardingSteps";
+import { legacyStoredDraft, parseStoredDraft, resolveDraft, type StoredDraft, type Viewer } from "./draftOwner";
 import { DobStep } from "./DobStep";
 import { AboutYouStep } from "./AboutYouStep";
 import { BackgroundStep } from "./BackgroundStep";
@@ -88,48 +89,97 @@ const initialDraft: OnboardingDraft = {
 // plain component state — would be gone, dropping them back at Welcome with
 // nothing filled in. Persisting it means they return to exactly the step
 // they left.
-const DRAFT_KEY = "centium-onboarding:draft";
-const STEP_KEY = "centium-onboarding:step";
+//
+// THE DRAFT HAS AN OWNER. It used to be one ownerless key, so a second
+// sign-up in this browser resumed the first person's answers, including a
+// date of birth that locks once saved. Now one record holds the answers, the
+// step and the user id they belong to (null = started before any account
+// existed), and draftOwner.resolveDraft decides who may resume it.
+// The two old ownerless keys are read once (as a legacy draft) and removed.
+const STORE_KEY = "centium-onboarding:state";
+const LEGACY_DRAFT_KEY = "centium-onboarding:draft";
+const LEGACY_STEP_KEY = "centium-onboarding:step";
 
-function loadDraft(): OnboardingDraft {
+function readStoredDraft(): StoredDraft<OnboardingDraft> | null {
   try {
-    const raw = localStorage.getItem(DRAFT_KEY);
-    // Merged over the current defaults so a draft saved before a new field
-    // existed doesn't come back with it undefined.
-    return raw ? { ...initialDraft, ...(JSON.parse(raw) as Partial<OnboardingDraft>) } : initialDraft;
+    return parseStoredDraft<OnboardingDraft>(localStorage.getItem(STORE_KEY));
   } catch {
-    return initialDraft;
+    return null;
   }
 }
 
-/**
- * The saved step, BY NAME. Older drafts saved a position instead; resumeIndex
- * reads those against the step list they were saved with, so adding the
- * subtype step does not resume anybody one step off.
- */
-function loadStep(draft: OnboardingDraft): number {
+/** A draft saved by the old ownerless keys, if one is still here. */
+function readLegacyDraft(): StoredDraft<OnboardingDraft> | null {
   try {
-    return resumeIndex(localStorage.getItem(STEP_KEY), draft, false);
+    return legacyStoredDraft<OnboardingDraft>(localStorage.getItem(LEGACY_DRAFT_KEY), localStorage.getItem(LEGACY_STEP_KEY));
   } catch {
-    return 0;
+    return null;
   }
 }
 
 function clearPersistedDraft() {
   try {
-    localStorage.removeItem(DRAFT_KEY);
-    localStorage.removeItem(STEP_KEY);
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith("centium-onboarding:"))
+      .forEach((k) => localStorage.removeItem(k));
   } catch {
     /* nothing to clean up */
   }
 }
 
+/**
+ * The draft this viewer starts with: their own saved one if resolveDraft
+ * allows it, otherwise an empty one owned by them. Read-only (no storage
+ * writes), because React may call a state initializer twice.
+ */
+function initialStateFor(viewer: Viewer): { draft: OnboardingDraft; step: number; owner: string | null } {
+  const authStep = stepsFor(null, false).indexOf("auth");
+  // An old ownerless draft is only ever offered to a signed-in account, and
+  // first: resolveDraft adopts it only if it carries that account's email.
+  // Signed out, it is left where it is for its owner to sign back in to.
+  const legacy = viewer.userId ? resolveDraft(readLegacyDraft(), viewer) : ({ use: false } as const);
+  const resolved = legacy.use ? legacy : resolveDraft(readStoredDraft(), viewer);
+  if (!resolved.use) {
+    // A sign-in that came back refused opens on the auth step, where it is explained.
+    return { draft: initialDraft, step: hasReturnedAuthError() ? authStep : 0, owner: viewer.userId };
+  }
+  // Merged over the current defaults so a draft saved before a new field
+  // existed doesn't come back with it undefined. Signed in, the email is the
+  // account's own, as the auth step has always set it.
+  const draft: OnboardingDraft = {
+    ...initialDraft,
+    ...resolved.draft,
+    ...(viewer.userId && viewer.email ? { email: viewer.email } : {}),
+  };
+  if (hasReturnedAuthError()) return { draft, step: authStep, owner: resolved.owner };
+  let step = resumeIndex(resolved.step, draft, false);
+  // Signed in on the auth step: that step is done. It used to advance itself
+  // when the session arrived; this flow remounts for the new account instead,
+  // so the remount carries on from where the sign-up was.
+  const steps = stepsFor(draft.accountType, false);
+  if (viewer.userId && steps[step] === "auth") step = steps.indexOf("accountType");
+  return { draft, step, owner: resolved.owner };
+}
+
+/**
+ * ONE MOUNT PER ACCOUNT. The flow is keyed by the signed-in user id, so a
+ * different account (signing in here, or after a sign-out) gets a fresh
+ * mount that reads only its own draft. Nothing from another account's draft
+ * is ever in memory to be shown or submitted. Rendered once auth has
+ * settled, so a reload is not mistaken for a signed-out visitor.
+ */
 export default function Onboarding() {
-  // A sign-in that came back refused opens on the auth step, where it is explained.
-  const [draft, setDraft] = useState<OnboardingDraft>(loadDraft);
-  const [step, setStep] = useState(() =>
-    hasReturnedAuthError() ? stepsFor(null, false).indexOf("auth") : loadStep(loadDraft())
-  );
+  const { authReady, authUserId, session } = useApp();
+  if (!authReady) return <div className="min-h-[100dvh] bg-cream" />;
+  const viewer: Viewer = { userId: authUserId, email: session?.user?.email ?? null };
+  return <OnboardingFlow key={authUserId ?? "signed-out"} viewer={viewer} />;
+}
+
+function OnboardingFlow({ viewer }: { viewer: Viewer }) {
+  const [initial] = useState(() => initialStateFor(viewer));
+  const [draft, setDraft] = useState<OnboardingDraft>(initial.draft);
+  const [step, setStep] = useState(initial.step);
+  const owner = initial.owner;
   const {
     completeOnboarding,
     updateProfile,
@@ -148,13 +198,22 @@ export default function Onboarding() {
 
   useEffect(() => {
     try {
-      localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-      localStorage.setItem(STEP_KEY, stepsFor(draft.accountType, false)[step] ?? "welcome");
+      localStorage.setItem(
+        STORE_KEY,
+        JSON.stringify({ v: 2, owner, draft, step: stepsFor(draft.accountType, false)[step] ?? "welcome" })
+      );
+      // The old ownerless keys were judged at this signed-in mount (adopted
+      // or not this account's), so they go now. A signed-out mount leaves
+      // them for their owner.
+      if (owner !== null) {
+        localStorage.removeItem(LEGACY_DRAFT_KEY);
+        localStorage.removeItem(LEGACY_STEP_KEY);
+      }
     } catch {
       // A full or disabled localStorage only costs the resume-after-email
       // convenience — onboarding itself still works in-session.
     }
-  }, [draft, step]);
+  }, [draft, step, owner]);
 
   // See the note on stepsFor: a real client code carries no client profile
   // data, so there is nothing to prefill and nothing to skip.

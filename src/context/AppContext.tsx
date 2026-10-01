@@ -5951,6 +5951,11 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     Object.keys(localStorage)
       .filter((k) => k.startsWith(STORAGE_KEY))
       .forEach((k) => localStorage.removeItem(k));
+    // The onboarding draft too: it belongs to this account (pages/onboarding/
+    // draftOwner), and the next person on this device must not resume it.
+    Object.keys(localStorage)
+      .filter((k) => k.startsWith("centium-onboarding:"))
+      .forEach((k) => localStorage.removeItem(k));
 
     // The administrator escape hatch goes with it, and the boundary is the
     // sign-out rather than the tab. Keyed by account id, it was never
