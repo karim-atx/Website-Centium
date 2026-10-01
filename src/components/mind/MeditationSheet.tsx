@@ -5,6 +5,9 @@ import { Button } from "../ui/Button";
 import { breathingPatterns, stretchList, yogaPoses, type BreathingPattern } from "../../data/mockMindContent";
 import { Play, Square, ChevronDown, ChevronUp, RotateCcw } from "lucide-react";
 import clsx from "clsx";
+import { useApp } from "../../context/AppContext";
+import { logMeditationSession } from "../../services/meditation";
+import { formatMeditationTime, meditationKind, sessionSeconds } from "../../services/meditation/logic";
 
 type SubTab = "breathing" | "stretching" | "yoga";
 
@@ -29,7 +32,60 @@ const ORB_R = 64;
 const ORB_CIRC = 402.1;
 
 const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ pattern }) => {
+  const { authUserId, refreshMeditationSummary, refreshAchievements } = useApp();
   const [running, setRunning] = useState(false);
+  /** What happened to the last session, shown under the buttons. */
+  const [note, setNote] = useState<string | null>(null);
+
+  // --- the session log -------------------------------------------------------
+  //
+  // ONE SESSION IS ONE START-TO-STOP RUN, timed by the wall clock rather than
+  // by counting ticks (a backgrounded tab throttles the interval, and the
+  // person is still breathing). It is written ONCE, when the run ends (the
+  // table has no UPDATE), with the time actually spent.
+  //
+  // HOW IT ENDS DECIDES `completed`. The runner has no set length, so Stop is
+  // the only way to finish one: Stop is completed. Anything else that ends a
+  // run part-way (Reset, switching pattern or tab, closing the sheet) is an
+  // interruption: saved, because the minutes were real, but not completed,
+  // so it earns no badge credit. Under 10 seconds nothing is saved.
+  const sessionRef = useRef<{ startedAtMs: number; kind: string } | null>(null);
+  const live = useRef({ authUserId, refreshMeditationSummary, refreshAchievements });
+
+  const endSession = (completed: boolean, report: boolean) => {
+    const session = sessionRef.current;
+    sessionRef.current = null;
+    if (!session) return;
+    const seconds = sessionSeconds(session.startedAtMs, Date.now());
+    if (seconds === null) {
+      if (report) setNote("Under 10 seconds, so this one wasn't saved.");
+      return;
+    }
+    const { authUserId: userId } = live.current;
+    if (!userId) return;
+    void logMeditationSession({
+      userId,
+      startedAt: new Date(session.startedAtMs),
+      durationSeconds: seconds,
+      kind: session.kind,
+      completed,
+    }).then((r) => {
+      if (report) setNote(r.ok ? `Saved · ${formatMeditationTime(seconds)}` : r.message);
+      if (!r.ok) return;
+      void live.current.refreshMeditationSummary();
+      // A completed session can earn a meditation badge.
+      if (completed) live.current.refreshAchievements();
+    });
+  };
+  const endRef = useRef(endSession);
+  // Kept current after every render, for the unmount and pattern-change
+  // effects, which must call the latest one rather than the first.
+  useEffect(() => {
+    live.current = { authUserId, refreshMeditationSummary, refreshAchievements };
+    endRef.current = endSession;
+  });
+  // Closing the sheet (or switching its tab) unmounts the runner mid-run.
+  useEffect(() => () => endRef.current(false, false), []);
   const [phaseIdx, setPhaseIdx] = useState(0);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [cycles, setCycles] = useState(0);
@@ -44,6 +100,8 @@ const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ pattern }) =
   const elapsedRef = useRef(0);
 
   useEffect(() => {
+    // Switching pattern mid-run ends that run, interrupted.
+    endRef.current(false, true);
     setRunning(false);
     setPhaseIdx(0);
     setElapsedMs(0);
@@ -81,6 +139,7 @@ const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ pattern }) =
   }, [running, pattern]);
 
   const reset = () => {
+    endSession(false, true);
     setRunning(false);
     setPhaseIdx(0);
     setElapsedMs(0);
@@ -176,7 +235,19 @@ const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ pattern }) =
         >
           <RotateCcw size={15} />
         </button>
-        <Button onClick={() => setRunning((r) => !r)} variant={running ? "outline" : "primary"}>
+        <Button
+          onClick={() => {
+            if (running) {
+              setRunning(false);
+              endSession(true, true);
+            } else {
+              sessionRef.current = { startedAtMs: Date.now(), kind: meditationKind(pattern.id) };
+              setNote(null);
+              setRunning(true);
+            }
+          }}
+          variant={running ? "outline" : "primary"}
+        >
           {running ? (
             <>
               <Square size={14} /> Stop
@@ -188,6 +259,11 @@ const BreathingRunner: React.FC<{ pattern: BreathingPattern }> = ({ pattern }) =
           )}
         </Button>
       </div>
+      {note && (
+        <p className="mt-3 text-[11px] font-semibold text-charcoal-soft text-center" role="status">
+          {note}
+        </p>
+      )}
     </div>
   );
 };

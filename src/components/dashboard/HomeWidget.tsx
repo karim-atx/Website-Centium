@@ -2,7 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import type { WidgetConfig } from "../../types";
 import { useApp } from "../../context/AppContext";
-import { LotusGlyph } from "./LotusGlyph";
+import { MeditationLarge, MeditationSmall } from "../mind/MeditationFigures";
 import { HeartRateEKG } from "../health/HeartRateEKG";
 import {
   averageOf,
@@ -306,7 +306,7 @@ export const HomeWidget: React.FC<{
   editMode?: boolean;
 }> = ({ widget, onWaterClick, editMode = false }) => {
   const navigate = useNavigate();
-  const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, workoutSessions, routines, habits, journalEntries, today, selectedDate } =
+  const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, workoutSessions, routines, habits, journalEntries, today, selectedDate, meditationSummary } =
     useApp();
   const isLarge = widget.size === "large";
   // Per-instance clip id for the small water bottle, so two water tiles on
@@ -1208,17 +1208,9 @@ export const HomeWidget: React.FC<{
 
     // ---------------------------------------------------------- Meditation
     //
-    // EVERY NUMBER THIS WIDGET SHOWED WAS INVENTED, and there were four:
-    // "12 min" today (a literal, beside a comment admitting no duration is
-    // tracked), "3 sessions this week", a percentage of a 20-minute weekly
-    // goal nobody set, and "Box breathing · 4-4-4-4" as though it were the
-    // pattern they had just finished.
-    //
-    // Nothing records a meditation session anywhere. MeditationSheet runs its
-    // breathing timer in component state and persists nothing;
-    // public.mind_content is a catalogue of patterns, stretches and poses, not
-    // a log. There is no table and no local array to read — so this is a way
-    // in rather than a report, and the lotus is decoration rather than a gauge.
+    // Real figures from meditation_sessions (my_meditation_summary), saved by
+    // MeditationSheet when a breathing session ends. Still no goal and no
+    // percentage: nobody has set a meditation target. See MeditationFigures.
     case "meditation": {
       const onClick = () => navigate("/app/mind");
       if (!isLarge) {
@@ -1229,10 +1221,7 @@ export const HomeWidget: React.FC<{
             <>
               <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Meditation</p>
               <div className="flex-1 flex items-center justify-center min-h-0">
-                <span className="flex flex-col items-center gap-2">
-                  <LotusGlyph size={40} stroke="rgb(var(--c-teal-dark))" />
-                  <span className="text-[9px] font-bold text-team-teal-ink/[0.72]">Start a session</span>
-                </span>
+                <MeditationSmall summary={meditationSummary} />
               </div>
             </>
           )
@@ -1244,17 +1233,7 @@ export const HomeWidget: React.FC<{
           "rgba(162,200,194,.18)",
           <>
             <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Meditation</p>
-            <div className="flex-1 flex items-center gap-4 min-h-0 mt-[9px]">
-              <LotusGlyph size={66} stroke="rgb(var(--c-teal-dark))" />
-              <div className="flex-1 min-w-0">
-                <p className="text-[15px] font-extrabold leading-tight tracking-[-0.02em] text-charcoal">
-                  Breathing, stretching &amp; yoga
-                </p>
-                <p className="mt-[7px] text-[10px] leading-snug text-team-teal-ink/[0.72]">
-                  Sessions aren't recorded yet, so there's nothing to total up.
-                </p>
-              </div>
-            </div>
+            <MeditationLarge summary={meditationSummary} />
           </>
         )
       );

@@ -4983,6 +4983,44 @@ export type Database = {
           },
         ]
       }
+      meditation_sessions: {
+        Row: {
+          completed: boolean
+          created_at: string
+          duration_seconds: number
+          id: string
+          kind: string
+          started_at: string
+          user_id: string
+        }
+        Insert: {
+          completed: boolean
+          created_at?: string
+          duration_seconds: number
+          id?: string
+          kind: string
+          started_at: string
+          user_id: string
+        }
+        Update: {
+          completed?: boolean
+          created_at?: string
+          duration_seconds?: number
+          id?: string
+          kind?: string
+          started_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "meditation_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       membership_plans: {
         Row: {
           billing: Database["public"]["Enums"]["billing_period"]
@@ -13629,6 +13667,18 @@ export type Database = {
           invited_by_id: string
           member_count: number
           thread_id: string
+        }[]
+      }
+      my_meditation_summary: {
+        Args: never
+        Returns: {
+          current_streak_days: number
+          local_today: string
+          minutes_this_week: number
+          minutes_today: number
+          seconds_this_week: number
+          seconds_today: number
+          sessions_this_week: number
         }[]
       }
       my_professional_plan: {

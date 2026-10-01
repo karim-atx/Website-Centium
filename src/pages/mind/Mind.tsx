@@ -5,7 +5,7 @@ import { useApp } from "../../context/AppContext";
 import { StreakEditSheet } from "../../components/mind/StreakEditSheet";
 import { AddStreakSheet } from "../../components/mind/AddStreakSheet";
 import { MeditationSheet } from "../../components/mind/MeditationSheet";
-import { LotusGlyph } from "../../components/dashboard/LotusGlyph";
+import { MeditationSmall } from "../../components/mind/MeditationFigures";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
 import AchievementsTab from "./AchievementsTab";
@@ -41,6 +41,7 @@ export default function Mind() {
     journalEntries,
     achievements,
     pointsSummary,
+    meditationSummary,
     refreshAchievements,
     noteFeatureMilestone,
     today,
@@ -291,18 +292,10 @@ export default function Mind() {
               style={{ background: "rgba(162,200,194,.18)" }}
             >
               <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-teal-ink/[0.72]">Meditation</p>
+              {/* Real minutes from meditation_sessions (my_meditation_summary),
+                  saved by MeditationSheet when a session ends. */}
               <div className="flex-1 flex items-center justify-center min-h-0">
-                <span className="flex flex-col items-center gap-2">
-                  <LotusGlyph size={40} stroke="rgb(var(--c-teal-dark))" />
-                  {/* NO NUMBER, BECAUSE NOTHING COUNTS ONE. This read a
-                      hardcoded 12 min for every account on every day. Nothing
-                      records a meditation session anywhere — not in app state,
-                      not in the database: MeditationSheet runs a breathing
-                      timer and persists nothing, and public.mind_content is a
-                      catalogue of patterns and stretches, not a log. So the
-                      tile is a way in rather than a total, and says so. */}
-                  <span className="text-[9px] font-bold text-team-teal-ink/[0.72]">Start a session</span>
-                </span>
+                <MeditationSmall summary={meditationSummary} />
               </div>
             </button>
 

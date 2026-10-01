@@ -157,6 +157,8 @@ import {
   type PointTier,
   type FeatureMilestone,
 } from "../services/achievements";
+import { fetchMeditationSummary } from "../services/meditation";
+import type { MeditationSummary } from "../services/meditation/logic";
 import {
   IMPORT_MARKER,
   importHabits,
@@ -1046,6 +1048,14 @@ interface AppState {
   achievements: Achievement[] | null;
   /** Balance, tier and the split by source, or null before the first read. */
   pointsSummary: PointsSummary | null;
+  /**
+   * my_meditation_summary() for this account: today, this calendar week and
+   * the meditation streak. Null before the first read or if it failed; the
+   * server always answers zeros, never "nothing", when there is no session.
+   */
+  meditationSummary: MeditationSummary | null;
+  /** Re-reads it, after MeditationSheet saves a session. */
+  refreshMeditationSummary: () => Promise<void>;
   /** The tier ladder behind the pips, read from point_tiers rather than hardcoded. */
   pointTiers: PointTier[];
   achievementsLoading: boolean;
@@ -3263,6 +3273,29 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       cancelled = true;
     };
   }, [authUserId]);
+
+  // --- meditation ----------------------------------------------------------
+  //
+  // KEYED TO THE ACCOUNT IT WAS READ FOR, so a late answer, or the previous
+  // account's numbers after switching, is never shown as this account's.
+  const [meditationRead, setMeditationRead] = useState<{ userId: string; summary: MeditationSummary | null } | null>(null);
+  const refreshMeditationSummary = useCallback(async () => {
+    if (!authUserId) return;
+    const userId = authUserId;
+    const summary = await fetchMeditationSummary();
+    setMeditationRead({ userId, summary });
+  }, [authUserId]);
+  useEffect(() => {
+    if (!authUserId) return;
+    let cancelled = false;
+    void fetchMeditationSummary().then((summary) => {
+      if (!cancelled) setMeditationRead({ userId: authUserId, summary });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId]);
+  const meditationSummary = meditationRead && meditationRead.userId === authUserId ? meditationRead.summary : null;
 
   // Signing out clears everything, including what has been celebrated: a
   // different account on the same device has its own unlocks to see.
@@ -6174,6 +6207,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateMyBusinessTier,
       achievements,
       pointsSummary,
+      meditationSummary,
+      refreshMeditationSummary,
       pointTiers,
       achievementsLoading,
       achievementsError,
@@ -6345,6 +6380,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       businessDirectory,
       achievements,
       pointsSummary,
+      meditationSummary,
+      refreshMeditationSummary,
       pointTiers,
       achievementsLoading,
       achievementsError,
