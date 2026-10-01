@@ -951,9 +951,9 @@ export const ThreadView: React.FC<{
         close();
       } },
     ];
-    // Text only for now: forwarding a photo or file needs the server to copy
-    // it into the other chat, which the database does not do yet.
-    if (m.text?.trim()) list.push({ label: "Forward", onSelect: () => {
+    // Anything with content: the server copies a photo, file or voice note
+    // into the destination chat (forward-message).
+    if (m.text?.trim() || (m.attachmentPath && !m.attachmentPurgedAt)) list.push({ label: "Forward", onSelect: () => {
       setForwarding(m);
       close();
     } });

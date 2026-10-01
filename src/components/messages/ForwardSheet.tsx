@@ -100,7 +100,7 @@ export const ForwardSheet: React.FC<{
     const targets = (threads ?? []).filter((t) => chosen.has(t.id));
     const done: MessageThread[] = [];
     for (const t of targets) {
-      const result = await forwardMessage(t.id, senderId, message);
+      const result = await forwardMessage(t.id, message);
       if (!result.ok) {
         setBusy(false);
         setChosen(new Set(targets.filter((x) => !done.includes(x)).map((x) => x.id)));

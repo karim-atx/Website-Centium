@@ -1076,21 +1076,64 @@ export async function deleteForEveryone(messageId: string): Promise<{ ok: true }
   return { ok: true };
 }
 
-export async function forwardMessage(
-  destinationThreadId: string,
-  senderId: string,
-  source: Message
-): Promise<SendResult> {
-  const body = source.text?.trim();
-  if (!body) {
-    return { ok: false, message: "Only text messages can be forwarded for now." };
+/** A forward refusal, by the database's code, in words. */
+function describeForwardRefusal(code: string): string {
+  switch (code) {
+    case "ATX35":
+      return "You can't message this person.";
+    case "ATX05":
+      return "Photos and files can only be sent to someone you're working with. You can still forward text.";
+    case "ATX41":
+      return "That message can't be forwarded any more.";
+    case "ATX08":
+      return "That message or chat isn't available any more.";
+    case "ATX02":
+      return "You've forwarded a lot of messages recently. Try again in a little while.";
+    case "copy_failed":
+      return "Couldn't copy the attachment. Try again.";
+    case "unauthenticated":
+      return "Your session expired. Sign in again to forward this.";
+    default:
+      return "Couldn't forward that. Try again.";
   }
-  return insertMessage({
-    thread_id: destinationThreadId,
-    sender_id: senderId,
-    text: body,
-    forwarded: true,
-  });
+}
+
+/**
+ * Forwards one message into another chat, photos, files and voice notes
+ * included (Database 5353e32).
+ *
+ * THROUGH THE forward-message FUNCTION, for text too, so there is one path.
+ * The server decides everything from the two ids: whether the caller may see
+ * the message and send to that chat, and where the attachment's copy goes.
+ * The copy belongs to the destination chat, so its participants can open it
+ * and it does not depend on the original surviving.
+ */
+export async function forwardMessage(destinationThreadId: string, source: Message): Promise<{ ok: true } | { ok: false; message: string }> {
+  try {
+    const { error } = await supabase.functions.invoke("forward-message", {
+      body: { message_id: source.id, thread_id: destinationThreadId },
+    });
+    if (!error) return { ok: true };
+    let code = "";
+    const context = (error as { context?: unknown }).context;
+    if (context instanceof Response) {
+      try {
+        const parsed = (await context.clone().json()) as { code?: unknown };
+        code = typeof parsed.code === "string" ? parsed.code : "";
+      } catch {
+        /* not JSON */
+      }
+    }
+    console.error("[messaging] Could not forward:", code || error.message);
+    return { ok: false, message: code ? describeForwardRefusal(code) : isOfflineNow() ? OFFLINE_MESSAGE : describeForwardRefusal("") };
+  } catch (e) {
+    console.error("[messaging] Could not forward:", e);
+    return { ok: false, message: isOfflineNow() ? OFFLINE_MESSAGE : describeForwardRefusal("") };
+  }
+}
+
+function isOfflineNow(): boolean {
+  return typeof navigator !== "undefined" && navigator.onLine === false;
 }
 
 /**
