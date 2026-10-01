@@ -17,6 +17,8 @@ import type {
 import { WelcomeStep } from "./WelcomeStep";
 import { AuthStep } from "./AuthStep";
 import { AccountTypeStep } from "./AccountTypeStep";
+import { SubtypeStep } from "./SubtypeStep";
+import { resumeIndex, stepsFor } from "./onboardingSteps";
 import { AboutYouStep } from "./AboutYouStep";
 import { BackgroundStep } from "./BackgroundStep";
 import { GoalStep } from "./GoalStep";
@@ -80,57 +82,6 @@ const initialDraft: OnboardingDraft = {
   certificationFile: null,
 };
 
-type StepKey =
-  | "welcome"
-  | "auth"
-  | "accountType"
-  | "aboutYou"
-  | "background"
-  | "goal"
-  | "activity"
-  | "recovery"
-  | "tracking"
-  | "ready";
-
-// V4 (QA 4.0): professionals are onboarding to add clients, not to be
-// tracked themselves — the goal/activity-level/tracking-preference steps
-// are customer-only questions, so professionals skip straight from About
-// You to the finish screen (coaching-app style onboarding, not a client
-// health-tracking wizard).
-//
-// V7's "a client with a valid code skips About You entirely" is GONE, and
-// deliberately so: it depended on the professional having pre-entered the
-// client's name/age/height/sex/weight onto the code. The real `client_codes`
-// table has no such columns and `preview_client_code` returns none — only
-// the professional's own name, avatar, subtype and expiry. With no data to
-// prefill from, skipping the step would have left the client defaulted to
-// "Friend", 28 years, 170cm, 70kg. Every client now fills in About You.
-// Restoring the shortcut needs those columns added on the database side
-// first. `skipAboutYou` is kept as a parameter so the shape of this
-// function doesn't change if that happens.
-function stepsFor(accountType: OnboardingDraft["accountType"], skipAboutYou: boolean): StepKey[] {
-  const isProfessional = accountType === "professional";
-  // V7 (QA 7.0): a business isn't a person to profile/track either — same
-  // "land straight past the personal-tracking questions" treatment as a
-  // professional, since business-type selection (on AccountTypeStep) is
-  // its own equivalent of the professional's specialty picker.
-  const isBusiness = accountType === "business";
-  return [
-    "welcome",
-    "auth",
-    "accountType",
-    ...(skipAboutYou || isBusiness ? [] : (["aboutYou"] as StepKey[])),
-    // The optional CV step, straight after the name + certificate step.
-    ...(isProfessional ? (["background"] as StepKey[]) : []),
-    // QA 13.0: "It would make sense to have the recovery sensitive
-    // experience before the 'How active are you?' and 'what are you working
-    // towards' page" — recovery-sensitive is now asked first so those two
-    // steps can already read `draft.recoverySensitive` when they render.
-    ...(isProfessional || isBusiness ? [] : (["recovery", "goal", "activity", "tracking"] as StepKey[])),
-    "ready",
-  ];
-}
-
 // Sign-up sends the user out to their email client to click a confirmation
 // link, and they come back on a fresh page load. Without this the draft —
 // plain component state — would be gone, dropping them back at Welcome with
@@ -150,9 +101,17 @@ function loadDraft(): OnboardingDraft {
   }
 }
 
-function loadStep(): number {
-  const parsed = Number(localStorage.getItem(STEP_KEY));
-  return Number.isInteger(parsed) && parsed >= 0 ? parsed : 0;
+/**
+ * The saved step, BY NAME. Older drafts saved a position instead; resumeIndex
+ * reads those against the step list they were saved with, so adding the
+ * subtype step does not resume anybody one step off.
+ */
+function loadStep(draft: OnboardingDraft): number {
+  try {
+    return resumeIndex(localStorage.getItem(STEP_KEY), draft, false);
+  } catch {
+    return 0;
+  }
 }
 
 function clearPersistedDraft() {
@@ -166,10 +125,10 @@ function clearPersistedDraft() {
 
 export default function Onboarding() {
   // A sign-in that came back refused opens on the auth step, where it is explained.
-  const [step, setStep] = useState(() =>
-    hasReturnedAuthError() ? stepsFor(null, false).indexOf("auth") : loadStep()
-  );
   const [draft, setDraft] = useState<OnboardingDraft>(loadDraft);
+  const [step, setStep] = useState(() =>
+    hasReturnedAuthError() ? stepsFor(null, false).indexOf("auth") : loadStep(loadDraft())
+  );
   const {
     completeOnboarding,
     updateProfile,
@@ -187,7 +146,7 @@ export default function Onboarding() {
   useEffect(() => {
     try {
       localStorage.setItem(DRAFT_KEY, JSON.stringify(draft));
-      localStorage.setItem(STEP_KEY, String(step));
+      localStorage.setItem(STEP_KEY, stepsFor(draft.accountType, false)[step] ?? "welcome");
     } catch {
       // A full or disabled localStorage only costs the resume-after-email
       // convenience — onboarding itself still works in-session.
@@ -334,6 +293,9 @@ export default function Onboarding() {
         {stepKey === "auth" && <AuthStep draft={draft} setDraft={setDraft} onNext={next} />}
         {stepKey === "accountType" && (
           <AccountTypeStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
+        )}
+        {stepKey === "subtype" && (
+          <SubtypeStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
         )}
         {stepKey === "aboutYou" && (
           <AboutYouStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />

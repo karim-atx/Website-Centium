@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { OnboardingShell } from "./OnboardingShell";
 import { Button } from "../../components/ui/Button";
 import type { OnboardingDraft } from "./Onboarding";
-import type { AccountType, BusinessType, CustomerSubtype, ProfessionalSubtype } from "../../types";
+import type { AccountType, CustomerSubtype, ProfessionalSubtype } from "../../types";
 import clsx from "clsx";
 import { User, Dumbbell, Building2, AlertCircle, Check, Loader2 } from "lucide-react";
 import { previewClientCode, type ClientCodePreview } from "../../services/redemption";
@@ -24,24 +24,6 @@ const accountTypes: { value: AccountType; label: string; desc: string; icon: typ
 const customerSubtypes: { value: CustomerSubtype; label: string }[] = [
   { value: "general", label: "General User" },
   { value: "client", label: "Client of Professional" },
-];
-
-// Physiotherapist listed directly under Personal Trainer per QA.
-const professionalSubtypes: { value: ProfessionalSubtype; label: string }[] = [
-  { value: "trainer", label: "Personal Trainer" },
-  { value: "physiotherapist", label: "Physiotherapist" },
-  { value: "dietitian", label: "Dietitian" },
-  { value: "other", label: "Other health/fitness professional" },
-];
-
-const businessTypes: { value: BusinessType; label: string }[] = [
-  { value: "gym", label: "Gym" },
-  { value: "store", label: "Store" },
-  { value: "supplement_store", label: "Supplement Store" },
-  { value: "equipment_seller", label: "Equipment Seller" },
-  { value: "wellness_service", label: "Wellness Service" },
-  { value: "clothing_store", label: "Clothing Store" },
-  { value: "meal_prep_service", label: "Meal-Prepping Service" },
 ];
 
 type CodeCheck =
@@ -121,14 +103,35 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
 
   const codeIsValid = check.status === "found";
 
+  // A professional's specialty and a business's name and kind are asked on
+  // the next step (SubtypeStep), so here they only need to have picked one.
+  // A customer still answers General / Client of a professional here.
   const canContinue =
     draft.accountType === "customer"
       ? !!draft.customerSubtype && (!needsCode || codeIsValid)
-      : draft.accountType === "professional"
-      ? !!draft.professionalSubtype
-      : draft.accountType === "business"
-      ? draft.businessName.trim().length > 0 && !!draft.businessType
-      : false;
+      : draft.accountType === "professional" || draft.accountType === "business";
+
+  /**
+   * CHANGING THE ACCOUNT TYPE CLEARS THE OLD ONE'S ANSWERS, so a specialty
+   * picked as a professional cannot ride along into a business, or a client
+   * code into a professional account. Picking the same type again keeps them,
+   * which is what coming Back from the next step relies on. The business name
+   * is kept: it is typed rather than picked, and only saved for a business.
+   */
+  const chooseType = (value: AccountType) =>
+    setDraft((d) =>
+      d.accountType === value
+        ? d
+        : {
+            ...d,
+            accountType: value,
+            professionalSubtype: null,
+            businessType: null,
+            customerSubtype: null,
+            professionalUserIdCode: "",
+            clientCodeProfessional: null,
+          }
+    );
 
   return (
     <OnboardingShell
@@ -141,13 +144,15 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
         </Button>
       }
     >
-      <div className="space-y-2.5 mb-6">
+      <div className="space-y-2.5 mb-6" role="group" aria-label="Account type">
         {accountTypes.map((t) => {
           const active = draft.accountType === t.value;
           return (
             <button
               key={t.value}
-              onClick={() => setDraft((d) => ({ ...d, accountType: t.value }))}
+              type="button"
+              aria-pressed={active}
+              onClick={() => chooseType(t.value)}
               className={clsx(
                 "tap w-full flex items-center gap-3.5 text-left rounded-2xl p-4 border transition-colors",
                 active ? "bg-primary-pale border-primary" : "bg-cream-card border-charcoal/10"
@@ -156,7 +161,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
               <div
                 className={clsx(
                   "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0",
-                  active ? "bg-primary text-white" : "bg-cream-soft text-charcoal-soft"
+                  active ? "bg-primary text-white dark:text-[#0D0B1A]" : "bg-cream-soft text-charcoal-soft"
                 )}
               >
                 <t.icon size={18} />
@@ -179,11 +184,13 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
             {customerSubtypes.map((s) => (
               <button
                 key={s.value}
+                type="button"
+                aria-pressed={draft.customerSubtype === s.value}
                 onClick={() => setDraft((d) => ({ ...d, customerSubtype: s.value }))}
                 className={clsx(
                   "tap rounded-xl py-2.5 px-3 text-xs font-semibold border transition-colors text-left",
                   draft.customerSubtype === s.value
-                    ? "bg-primary text-white border-primary"
+                    ? "bg-primary text-white dark:text-[#0D0B1A] border-primary"
                     : "bg-cream-card border-charcoal/10 text-charcoal-soft"
                 )}
               >
@@ -269,67 +276,6 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
         </div>
       )}
 
-      {draft.accountType === "professional" && (
-        <div className="animate-fade-slide-up">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-            My specialty
-          </p>
-          <div className="space-y-2">
-            {professionalSubtypes.map((s) => (
-              <button
-                key={s.value}
-                onClick={() => setDraft((d) => ({ ...d, professionalSubtype: s.value }))}
-                className={clsx(
-                  "tap w-full rounded-xl py-2.5 px-3 text-sm font-semibold border transition-colors text-left",
-                  draft.professionalSubtype === s.value
-                    ? "bg-primary text-white border-primary"
-                    : "bg-cream-card border-charcoal/10 text-charcoal-soft"
-                )}
-              >
-                {s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {draft.accountType === "business" && (
-        <div className="animate-fade-slide-up">
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-              Business name
-            </span>
-            <input
-              value={draft.businessName}
-              onChange={(e) => setDraft((d) => ({ ...d, businessName: e.target.value }))}
-              placeholder="Iron Peak Gym"
-              className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
-            />
-          </label>
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mt-4 mb-2">
-            Business type
-          </p>
-          <div className="grid grid-cols-2 gap-2">
-            {businessTypes.map((b) => (
-              <button
-                key={b.value}
-                onClick={() => setDraft((d) => ({ ...d, businessType: b.value }))}
-                className={clsx(
-                  "tap rounded-xl py-2.5 px-3 text-xs font-semibold border transition-colors text-left",
-                  draft.businessType === b.value
-                    ? "bg-primary text-white border-primary"
-                    : "bg-cream-card border-charcoal/10 text-charcoal-soft"
-                )}
-              >
-                {b.label}
-              </button>
-            ))}
-          </div>
-          <p className="text-xs text-charcoal-faint mt-3">
-            Business/marketplace tools are an early preview in this prototype.
-          </p>
-        </div>
-      )}
     </OnboardingShell>
   );
 };
