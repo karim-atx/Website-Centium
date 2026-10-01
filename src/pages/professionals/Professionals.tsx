@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { DataSharingSummary } from "../../components/professionals/DataSharingSummary";
@@ -15,6 +14,10 @@ import { BottomSheet } from "../../components/ui/BottomSheet";
 import { Star, ShieldCheck, UserCheck, Pencil } from "lucide-react";
 import ProfessionalDashboard from "./ProfessionalDashboard";
 import { VerifiedCheck, VerifiedExplainer } from "../../components/cv/CvBadges";
+import { DirectoryCard } from "../../components/professionals/DirectoryCard";
+import { SUBTYPE_LABELS } from "../../components/professionals/subtypeLabels";
+import { NearbyView } from "../../components/professionals/NearbyView";
+import { List, Map as MapIcon } from "lucide-react";
 import { CvView } from "../../components/cv/CvView";
 import { cvIsEmpty, fetchPublicCv, type PublicCv } from "../../services/professional-cv";
 import {
@@ -41,22 +44,17 @@ const linkedIcon = (subtype?: string) =>
 // those professionals from every filter.
 type Subtype = Enums<"professional_subtype">;
 
-const subtypeLabels: Record<Subtype, string> = {
-  trainer: "Personal Trainers",
-  dietitian: "Dietitians",
-  physiotherapist: "Physiotherapists",
-  doctor: "Doctors / GPs",
-  other: "Other",
-};
-
-const subtypeLabel = (s: Subtype | null): string => (s ? subtypeLabels[s] : "Professional");
-
-const listingIcon = (s: Subtype | null) =>
-  s && s in professionalTypeIcon ? professionalTypeIcon[s as ProfessionalType] : UserCheck;
+// The chip labels, shared with the card (SUBTYPE_LABELS).
+const subtypeLabels: Record<Subtype, string> = SUBTYPE_LABELS;
 
 export default function Professionals() {
-  const navigate = useNavigate();
-  const { user } = useApp();
+  const { user, authUserId, theme } = useApp();
+  /**
+   * LIST OR MAP. The list is the directory, unchanged and open to everyone;
+   * the map needs an account (the database's search is signed-in only) and
+   * asks for a location only once it is chosen. The category chips filter both.
+   */
+  const [view, setView] = useState<"list" | "map">("list");
   const [type, setType] = useState<Subtype | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [linkedProfileOpen, setLinkedProfileOpen] = useState(false);
@@ -203,7 +201,33 @@ export default function Professionals() {
 
   return (
     <div>
-      <PageHeader title="Professionals" subtitle="Trainers, dietitians, physiotherapists & doctors" showBack />
+      <PageHeader
+        title="Professionals"
+        subtitle="Trainers, dietitians, physiotherapists & doctors"
+        showBack
+        right={
+          <div role="group" aria-label="Show as" className="flex rounded-full border border-charcoal/10 bg-cream-card p-0.5 shrink-0">
+            {(
+              [
+                { v: "list", label: "List", Icon: List },
+                { v: "map", label: "Map", Icon: MapIcon },
+              ] as const
+            ).map(({ v, label, Icon }) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={view === v}
+                onClick={() => setView(v)}
+                className={`tap flex items-center gap-1 h-9 px-3 rounded-full text-[13px] font-bold ${
+                  view === v ? "bg-primary text-white dark:text-[#0D0B1A]" : "text-charcoal-soft"
+                }`}
+              >
+                <Icon size={14} aria-hidden /> {label}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
       {/* Real data-sharing controls. These hang off the client's actual
           relationships, not the browse directory below — appearing in the
@@ -288,50 +312,13 @@ export default function Professionals() {
         ))}
       </div>
 
-      <div className="space-y-3">
-        {/* No rating or review count: no such schema exists, and inventing one
-            from nothing is the same class of error as a measured-looking
-            zero. Rates are shown instead, which are real. */}
+      {view === "map" && (
+        <NearbyView authUserId={authUserId} dark={theme === "dark"} subtype={type} directory={listings ?? []} />
+      )}
+
+      <div className={`space-y-3 ${view === "map" ? "hidden" : ""}`}>
         {filtered.map((p) => (
-          <Card key={p.profileId} className="animate-fade-slide-up">
-            <div className="flex items-start gap-3.5 mb-3">
-              <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
-                {p.avatarUrl ? (
-                  <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  (() => {
-                    const Icon = listingIcon(p.subtype);
-                    return <Icon size={19} className="text-primary-dark" />;
-                  })()
-                )}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="flex items-center gap-[5px] min-w-0">
-                  <span className="font-semibold text-charcoal text-sm truncate">{p.name}</span>
-                  {p.hasVerifiedLicence && <VerifiedCheck size={16} />}
-                </p>
-                {p.headline && (
-                  <p className="text-[12.5px] font-semibold text-primary-deep-text line-clamp-2 break-words">{p.headline}</p>
-                )}
-                {(p.specialty || p.subtype) && (
-                  <p className="text-xs text-primary-dark font-medium truncate">
-                    {p.specialty ?? subtypeLabel(p.subtype)}
-                  </p>
-                )}
-                {(p.location || p.monthlyRate != null) && (
-                  <p className="text-xs text-charcoal-faint truncate">
-                    {[p.location, p.monthlyRate != null ? `$${p.monthlyRate}/mo` : null]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                )}
-              </div>
-            </div>
-            {p.bio && <p className="text-xs text-charcoal-soft mb-3.5 leading-relaxed">{p.bio}</p>}
-            <Button size="sm" fullWidth onClick={() => navigate(`/app/professionals/${p.profileId}`)}>
-              View Profile
-            </Button>
-          </Card>
+          <DirectoryCard key={p.profileId} listing={p} />
         ))}
 
         {/* The check's meaning, said once under the list rather than on

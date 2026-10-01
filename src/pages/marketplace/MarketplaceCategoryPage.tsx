@@ -9,7 +9,6 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { marketplaceCategories } from "../../data/mockProfessionals";
-import { getCurrentPosition, type Coords } from "../../services/geo";
 import { MapPin, Building2, SlidersHorizontal, Check } from "lucide-react";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import type { MarketplaceCategoryId } from "../../types";
@@ -29,10 +28,9 @@ export default function MarketplaceCategoryPage() {
   const id = (category ?? "gyms") as MarketplaceCategoryId;
   const meta = marketplaceCategories.find((c) => c.id === id);
   const Icon = marketplaceCategoryIcon[id] ?? marketplaceCategoryIcon.gyms;
-  // Location is still read — the geo permission prompt and the Coords type
-  // stay in use for the proximity filter — but nothing on this page ranks by
-  // distance any more now that the fabricated venues are gone.
-  const [, setPosition] = useState<Coords | null>(null);
+  // NO LOCATION IS ASKED FOR HERE. This page used to prompt for location as
+  // soon as it opened and then throw the answer away (nothing on it ranks by
+  // distance). A location prompt belongs to a user action that uses it.
   const [filter, setFilter] = useState<FilterMode>("rating");
   const [filterOpen, setFilterOpen] = useState(false);
   // THREE DEAD CONTROLS LIVED HERE. `activeGym` and `activeStore` had setters
@@ -43,10 +41,6 @@ export default function MarketplaceCategoryPage() {
   // in it. All three are gone rather than wired to real data, because the two
   // categories they served (gyms, classes) are answered by Explore, which reads
   // marketplace_venues and marketplace_classes.
-
-  useEffect(() => {
-    getCurrentPosition().then(setPosition);
-  }, []);
 
   // V7 (QA 7.0): "adopts a marketplace like approach based on what they
   // provide in their Business UI" — offerings a business account created

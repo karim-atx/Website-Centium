@@ -13495,6 +13495,7 @@ export type Database = {
           user_id: string
         }[]
       }
+      listing_needs_date_of_birth: { Args: never; Returns: boolean }
       mark_thread_read: { Args: { p_thread_id: string }; Returns: string }
       may_open_message_attachment: {
         Args: { p_name: string }

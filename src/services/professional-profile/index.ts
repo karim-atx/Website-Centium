@@ -270,11 +270,15 @@ export async function leaveAffiliation(): Promise<LeaveAffiliationResult> {
 
 /** The one sentence for both public surfaces: the directory listing and the map area. */
 export const UNDER_18_LISTING = "Accounts under 18 can't be listed publicly.";
+/** ATX48: fixed by adding a date of birth. */
+export const NEEDS_DOB = "Add your date of birth to appear in the directory.";
 
 export type SetListingResult =
   | { status: "ok"; listed: boolean }
   | { status: "affiliated" }
   | { status: "no_profile" }
+  /** ATX48: no date of birth on file. One field, then it works. */
+  | { status: "needs_dob" }
   | { status: "error"; message: string };
 
 /**
@@ -303,6 +307,9 @@ export async function setPublicListing(listed: boolean): Promise<SetListingResul
     // ATX47 (Database dd274ee): an account under 18 cannot be publicly
     // discoverable. Turning a listing OFF is never refused.
     if (error.code === "ATX47") return { status: "error", message: UNDER_18_LISTING };
+    // ATX48 (Database 16f2f43): no date of birth on file. Different from ATX47
+    // on purpose: this one is fixed by filling in one field.
+    if (error.code === "ATX48") return { status: "needs_dob" };
     console.error("[professional-profile] Could not set listing:", error.code, error.message);
     return { status: "error", message: "Could not update your listing. Try again." };
   }
@@ -313,7 +320,7 @@ export async function setPublicListing(listed: boolean): Promise<SetListingResul
 
 export type MapAreaResult =
   | { ok: true; mapArea: ProfessionalProfile["mapArea"] }
-  | { ok: false; message: string };
+  | { ok: false; message: string; needsDob?: boolean };
 
 function mapAreaFrom(data: unknown): ProfessionalProfile["mapArea"] {
   const row = data as { approx_lat: number | null; approx_lng: number | null; area_label: string | null } | null;
@@ -337,6 +344,7 @@ export async function setMapArea(lat: number, lng: number, label: string | null)
   if (error) {
     console.error("[professional-profile] Could not set the map area:", error.code, error.message);
     if (error.code === "ATX47") return { ok: false, message: UNDER_18_LISTING };
+    if (error.code === "ATX48") return { ok: false, needsDob: true, message: NEEDS_DOB };
     if (error.code === "ATX08") return { ok: false, message: "Save your details first — there's nothing to list yet." };
     return { ok: false, message: describe(error) === "Your session expired. Sign in again." ? describe(error) : "Couldn't save your area. Try again." };
   }
@@ -351,4 +359,18 @@ export async function clearMapArea(): Promise<MapAreaResult> {
     return { ok: false, message: "Couldn't turn that off. Try again." };
   }
   return { ok: true, mapArea: null };
+}
+
+/**
+ * True when the caller is ALREADY published (listed, or sharing a map area)
+ * without a date of birth on file (Database 16f2f43). They keep their listing;
+ * this drives a non-blocking prompt, not an error.
+ */
+export async function listingNeedsDateOfBirth(): Promise<boolean> {
+  const { data, error } = await supabase.rpc("listing_needs_date_of_birth");
+  if (error) {
+    console.error("[professional-profile] Could not check the date of birth:", error.message);
+    return false;
+  }
+  return data === true;
 }

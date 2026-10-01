@@ -4,9 +4,13 @@ import { Button } from "../ui/Button";
 import { Toggle } from "../ui/Toggle";
 import { useApp } from "../../context/AppContext";
 import { Building2, Globe2 } from "lucide-react";
+import { DobInline } from "./DobInline";
+import { MapAreaSection } from "./MapAreaSection";
 import {
   fetchMyAffiliation,
   fetchMyProfile,
+  listingNeedsDateOfBirth,
+  NEEDS_DOB,
   saveMyProfile,
   setPublicListing,
   type Affiliation,
@@ -82,7 +86,15 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
   open,
   onClose,
 }) => {
-  const { authUserId } = useApp();
+  const { authUserId, theme } = useApp();
+  /**
+   * DATE OF BIRTH (Database 16f2f43). `needsDob` is true when this
+   * professional is already published without one: they keep their listing,
+   * and a non-blocking prompt asks for it. `dobAsk` is set when an action was
+   * refused for want of one (ATX48), with the action to retry once it is saved.
+   */
+  const [needsDob, setNeedsDob] = useState(false);
+  const [dobAsk, setDobAsk] = useState<null | { retry: () => void }>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<ProfessionalProfile | null>(null);
   const [affiliation, setAffiliation] = useState<Affiliation | null>(null);
@@ -112,6 +124,10 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
       }
       setProfile(result.profile);
       setDraft(draftFrom(result.profile));
+      setDobAsk(null);
+      void listingNeedsDateOfBirth().then((v) => {
+        if (!cancelled) setNeedsDob(v);
+      });
       const aff = await fetchMyAffiliation(result.profile?.affiliatedBusinessId ?? null);
       if (cancelled) return;
       setAffiliation(aff);
@@ -168,6 +184,11 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
     }
     if (result.status === "no_profile") {
       setError("Save your details first — there's nothing to list yet.");
+      return;
+    }
+    if (result.status === "needs_dob") {
+      // Not an age refusal: one field, then turning the listing on works.
+      setDobAsk({ retry: () => void toggleListing(true) });
       return;
     }
     setError(result.message);
@@ -268,6 +289,37 @@ export const PublicListingSheet: React.FC<{ open: boolean; onClose: () => void }
             </div>
           )}
         </div>
+
+        {dobAsk ? (
+          <DobInline
+            title="Add your date of birth"
+            body={`${NEEDS_DOB} It's kept private: clients never see it.`}
+            onSaved={() => {
+              const retry = dobAsk.retry;
+              setDobAsk(null);
+              setNeedsDob(false);
+              retry();
+            }}
+          />
+        ) : (
+          needsDob && (
+            <DobInline
+              title="Add your date of birth to stay fully listed"
+              body="You're listed and you stay listed. Until you add your date of birth you can't add a map area, and if you turn your listing off you won't be able to turn it back on. It's kept private: clients never see it."
+              onSaved={() => setNeedsDob(false)}
+            />
+          )
+        )}
+
+        {!loading && profile && !affiliation && (
+          <MapAreaSection
+            mapArea={profile.mapArea}
+            disabled={false}
+            dark={theme === "dark"}
+            onChanged={(next) => setProfile((p) => (p ? { ...p, mapArea: next } : p))}
+            onNeedsDob={(retry) => setDobAsk({ retry })}
+          />
+        )}
       </div>
     </BottomSheet>
   );
