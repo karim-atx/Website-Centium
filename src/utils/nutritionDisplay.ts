@@ -59,32 +59,3 @@ export function nutritionLine(
   }
 }
 
-/**
- * The recovery-sensitive wording, for clients whose card is subject to the
- * QA 12.0 constraints: no large calorie totals, and no punitive missed-log
- * indicators, on the professional's routine surfaces.
- *
- * Two consequences worth stating rather than leaving implicit:
- *
- *   * No number is ever returned here. The figure still exists and is still
- *     reachable, but only inside the clinical panel, which is collapsed by
- *     default and takes a deliberate tap to open.
- *   * The empty and loading states deliberately say the SAME thing. "No meals
- *     logged yet" is exactly the missed-log indicator the constraint rules
- *     out, so absence is not reported at all here; both fall back to stating
- *     the sharing relationship. That makes the two indistinguishable on this
- *     surface, which is the intended trade.
- */
-export function nutritionLineRecoverySensitive(
-  access: FoodDiaryAccess,
-  nutrition: ClientNutrition | null | undefined
-): string {
-  switch (nutritionState(access, nutrition)) {
-    case "not_shared":
-      return "Not sharing food diary";
-    case "figures":
-      return `Meals logged · ${formatDisplayDate(nutrition!.lastLoggedDate)}`;
-    default:
-      return "Sharing food diary";
-  }
-}

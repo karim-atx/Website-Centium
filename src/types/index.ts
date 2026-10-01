@@ -347,13 +347,10 @@ export interface ProfessionalClient {
    * fetched; an empty object means the grant is held and nothing is logged.
    */
   measurements?: Partial<Record<string, { value: number; change: number | null; goal: "decrease" | "increase" | "maintain" | null }>>;
-  // QA 12.0: "When the client toggles the recovery sensitive experience,
-  // it should show a small status badge in the professional dashboard for
-  // that specific client." This prototype has no live bridge from a
-  // client's own account to a specific ProfessionalClient row (same
-  // limitation as the hire-request inbox), so it's toggled here directly
-  // as a stand-in for what would otherwise sync automatically.
-  recoverySensitive?: boolean;
+  // NO recoverySensitive HERE (task X). A client's recovery-sensitive mode is
+  // their private setting (recovery_mode_settings, owner-only); a
+  // professional's view of a client never carries it, by the database's
+  // standing rule.
   // "The dashboard should also show the client's preferred contact style,
   // pronouns if provided, reminder preferences, and communication
   // boundaries."
@@ -363,8 +360,7 @@ export interface ProfessionalClient {
   communicationBoundaries?: string;
   // QA 13.0: "Anything added by the client in the health tab from past
   // comorbidities, previous surgeries, medications in the Client UI health
-  // tab should also appear here [Professional Health Metrics]." Same
-  // no-live-bridge limitation as `recoverySensitive` above — mocked
+  // tab should also appear here [Professional Health Metrics]." Mocked
   // directly on the client row as a stand-in for a real sync of the
   // client's own `comorbidities`/`surgeries`/`medications` state.
   medicalHistory?: { comorbidities: string[]; surgeries: Surgery[]; medications: Medication[] };

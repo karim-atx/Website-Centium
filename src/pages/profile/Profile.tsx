@@ -45,7 +45,6 @@ import {
   AtSign,
   XIcon,
   HeartHandshake,
-  BellOff,
 } from "lucide-react";
 import { Toggle } from "../../components/ui/Toggle";
 import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
@@ -67,8 +66,6 @@ export default function Profile() {
     recoverySensitive,
     setRecoverySensitive,
     setRecoverySensitiveIntroSeen,
-    remindersPaused,
-    setRemindersPaused,
   } = useApp();
   const isAmbassador = useIsAmbassador();
   const { reviews: myReviews, loading: reviewsLoading, error: reviewsError } = useReviewsAboutMe();
@@ -594,21 +591,14 @@ export default function Profile() {
               instead.
             </p>
           )}
-          {recoverySensitive && (
-            <>
-              <button
-                onClick={() => setRemindersPaused(!remindersPaused)}
-                className="tap flex items-center gap-1.5 text-xs font-semibold text-primary-dark mt-3"
-              >
-                <BellOff size={13} /> {remindersPaused ? "Resume reminders" : "Pause reminders"}
-              </button>
-              {remindersPaused && (
-                <p className="text-[11px] text-charcoal-faint mt-1.5 leading-relaxed">
-                  Taking a break is okay. You can pause meal reminders and return whenever you're ready.
-                </p>
-              )}
-            </>
-          )}
+          {/* Task X: "Pause reminders" is gone. It paused nothing: no meal
+              or tracking reminder is ever sent, so the button promised a
+              break from something that was not happening. What is true now
+              is said instead: where the setting lives, and who sees it. */}
+          <p className="text-[11px] text-charcoal-faint mt-2 leading-relaxed">
+            Saved to your account, so it's the same on every device you sign in on. Professionals you
+            work with are never told whether it's on.
+          </p>
           <p className="text-[11px] text-charcoal-faint leading-relaxed mt-3 pt-3 border-t border-charcoal/[0.06]">
             This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a{" "}
             <button onClick={() => navigate("/app/professionals")} className="tap text-primary-dark font-semibold underline">

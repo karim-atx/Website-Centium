@@ -158,6 +158,8 @@ import {
   type FeatureMilestone,
 } from "../services/achievements";
 import { fetchMeditationSummary } from "../services/meditation";
+import { fetchRecoveryMode, saveRecoveryMode } from "../services/recovery-mode";
+import { RECOVERY_MODE_OFF, syncRecoveryMode, type RecoveryMode } from "../services/recovery-mode/logic";
 import {
   browserTimezone,
   chooseTimezone,
@@ -818,11 +820,6 @@ interface AppState {
    */
   twoFactorNudgeDismissed: boolean;
   setTwoFactorNudgeDismissed: (dismissed: boolean) => void;
-  // "Let users pause reminders, summaries, and notifications with one
-  // tap." No real notification engine exists in this prototype to hook
-  // into, so this is the user-facing flag that would gate it.
-  remindersPaused: boolean;
-  setRemindersPaused: (paused: boolean) => void;
 
   // V4: Meal Prep reworked into "Create Meal" — group existing foods under
   // one title; logging the meal logs every item individually.
@@ -2280,16 +2277,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     null
   );
 
-  const [recoverySensitive, setRecoverySensitive] = usePersistentState<boolean>("recoverySensitive", false);
-  const [recoverySensitiveIntroSeen, setRecoverySensitiveIntroSeen] = usePersistentState<boolean>(
+  // --- recovery-sensitive mode (task X) ---------------------------------------
+  //
+  // ON THE ACCOUNT NOW: recovery_mode_settings (enabled, intro_seen), owner-
+  // only by the database's rules and invisible to professionals and admins.
+  // It follows the account to every device and survives signing out.
+  //
+  // THE OLD BROWSER-ONLY KEYS STAY, demoted to a per-account device copy:
+  // the first-paint hint before the account's row has been read (so somebody
+  // with the mode on does not see calorie totals flash on load), and the
+  // source of the one-time upload (services/recovery-mode/logic): no server
+  // row + this device "on" = the device's value is written to the account.
+  // Once a row exists the server always wins and the copy only follows it.
+  const [deviceRecovery, setDeviceRecovery] = usePersistentState<boolean>("recoverySensitive", false);
+  const [deviceRecoveryIntro, setDeviceRecoveryIntro] = usePersistentState<boolean>(
     "recoverySensitiveIntroSeen",
     false
   );
+  const [recoveryRead, setRecoveryRead] = useState<{ userId: string; mode: RecoveryMode } | null>(null);
+  const deviceRecoveryRef = useRef<RecoveryMode>({ enabled: deviceRecovery, introSeen: deviceRecoveryIntro });
+  useEffect(() => {
+    deviceRecoveryRef.current = { enabled: deviceRecovery, introSeen: deviceRecoveryIntro };
+  });
+  useEffect(() => {
+    if (!authUserId) return;
+    let cancelled = false;
+    const userId = authUserId;
+    void (async () => {
+      const read = await fetchRecoveryMode(userId);
+      if (cancelled || !read.ok) return;
+      const { mode, upload } = syncRecoveryMode(read.mode, deviceRecoveryRef.current);
+      if (upload) await saveRecoveryMode(userId, upload);
+      if (cancelled) return;
+      setRecoveryRead({ userId, mode });
+      setDeviceRecovery(mode.enabled);
+      setDeviceRecoveryIntro(mode.introSeen);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [authUserId, setDeviceRecovery, setDeviceRecoveryIntro]);
+  const accountRecovery = recoveryRead && recoveryRead.userId === authUserId ? recoveryRead.mode : null;
+  const recoverySensitive = accountRecovery ? accountRecovery.enabled : deviceRecovery;
+  const recoverySensitiveIntroSeen = accountRecovery ? accountRecovery.introSeen : deviceRecoveryIntro;
+
+  // WRITES MERGE ONTO THE LATEST VALUE AND SAVE IN ORDER. Turning the mode on
+  // is two calls (on, then intro not seen); merged against a ref and chained,
+  // the account ends on what the last call asked for, not on a race.
+  const recoveryLatest = useRef<RecoveryMode | null>(null);
+  const recoverySaves = useRef<Promise<unknown>>(Promise.resolve());
+  const writeRecoveryMode = (patch: Partial<RecoveryMode>) => {
+    const base = recoveryLatest.current ?? { enabled: recoverySensitive, introSeen: recoverySensitiveIntroSeen };
+    const next = { ...base, ...patch };
+    recoveryLatest.current = next;
+    setDeviceRecovery(next.enabled);
+    setDeviceRecoveryIntro(next.introSeen);
+    if (!authUserId) return;
+    const userId = authUserId;
+    setRecoveryRead({ userId, mode: next });
+    recoverySaves.current = recoverySaves.current.then(async () => {
+      const ok = await saveRecoveryMode(userId, next);
+      if (recoveryLatest.current === next) recoveryLatest.current = null;
+      if (ok) return;
+      // Not saved: show what the account actually holds rather than a
+      // setting that would quietly revert on the next device.
+      const read = await fetchRecoveryMode(userId);
+      if (read.ok) setRecoveryRead({ userId, mode: read.mode ?? RECOVERY_MODE_OFF });
+    });
+  };
+  const setRecoverySensitive = (on: boolean) => writeRecoveryMode({ enabled: on });
+  const setRecoverySensitiveIntroSeen = (seen: boolean) => writeRecoveryMode({ introSeen: seen });
   const [twoFactorNudgeDismissed, setTwoFactorNudgeDismissed] = usePersistentState<boolean>(
     "twoFactorNudgeDismissed",
     false
   );
-  const [remindersPaused, setRemindersPaused] = usePersistentState<boolean>("remindersPaused", false);
 
   const [customMeals, setCustomMeals] = usePersistentState<CustomMeal[]>("customMeals", []);
   const [recipes, setRecipes] = usePersistentState<Recipe[]>("recipes", []);
@@ -6179,8 +6240,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       twoFactorNudgeDismissed,
       setTwoFactorNudgeDismissed,
       setRecoverySensitiveIntroSeen,
-      remindersPaused,
-      setRemindersPaused,
       customMeals,
       customMealsError,
       addCustomMeal,
@@ -6401,7 +6460,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recoverySensitiveIntroSeen,
       twoFactorNudgeDismissed,
       setTwoFactorNudgeDismissed,
-      remindersPaused,
       referralRedeemed,
       referralDiscountPct,
       referralNextMonthDiscountPct,

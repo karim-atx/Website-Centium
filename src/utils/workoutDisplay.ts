@@ -43,43 +43,34 @@ export function workoutState(
  */
 export function workoutBadge(
   access: WorkoutAccess,
-  workout: ClientWorkoutActivity | null | undefined,
-  recoverySensitive = false
+  workout: ClientWorkoutActivity | null | undefined
 ): { label: string; trained: boolean } | null {
   switch (workoutState(access, workout)) {
     case "not_shared":
     case "loading":
       return null;
     case "empty":
-      // QA 12.0 forbids punitive missed-log indicators for recovery-sensitive
-      // clients, and "no sessions yet" on a permanent badge is exactly that.
-      // They get nothing; everyone else gets a plain statement of fact.
-      return recoverySensitive ? null : { label: "No sessions yet", trained: false };
+      return { label: "No sessions yet", trained: false };
     case "trained":
       if (workout!.trainedToday) return { label: "Trained", trained: true };
-      return recoverySensitive
-        ? { label: "Training logged", trained: true }
-        : { label: `Last trained ${formatDisplayDate(workout!.lastSessionDate)}`, trained: false };
+      return { label: `Last trained ${formatDisplayDate(workout!.lastSessionDate)}`, trained: false };
   }
 }
 
 /**
  * Whether this client may be counted in the hero's "N of M trained".
  *
- * Two exclusions, both deliberate:
+ * Clients who have not shared workout activity are excluded: counting them
+ * in the denominator states that they did not train, about someone who simply
+ * withheld the data — the same error as a measured-looking zero.
  *
- *   * Clients who have not shared workout activity. Counting them in the
- *     denominator states that they did not train, about someone who simply
- *     withheld the data — the same error as a measured-looking zero.
- *   * Recovery-sensitive clients, per QA 12.0. A roster-wide adherence tally
- *     is a compliance score, which is precisely what that constraint keeps off
- *     the professional's routine surfaces.
+ * Task X: recovery-sensitive clients are no longer excluded. The mode is the
+ * client's private setting and a professional never learns of it, so no
+ * client is treated differently because of it.
  */
 export function countsTowardTrainedTally(
   access: WorkoutAccess,
-  workout: ClientWorkoutActivity | null | undefined,
-  recoverySensitive = false
+  workout: ClientWorkoutActivity | null | undefined
 ): boolean {
-  if (recoverySensitive) return false;
   return workoutState(access, workout) === "empty" || workoutState(access, workout) === "trained";
 }

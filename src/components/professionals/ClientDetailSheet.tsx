@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Toggle } from "../ui/Toggle";
 import { useApp } from "../../context/AppContext";
 import type { ProfessionalClient, ProfessionalSubtype } from "../../types";
 import {
@@ -15,10 +14,6 @@ import {
   Check,
   X as XIcon,
   UserMinus,
-  HeartHandshake,
-  Lock,
-  ChevronDown,
-  ChevronUp,
   MessageCircle,
   Droplet,
   Stethoscope,
@@ -54,7 +49,7 @@ import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "./HealthDataPending";
 import { ClientClinicalRecords, type ClinicalFileRequest } from "./ClientClinicalRecords";
 import { FileViewerSheet } from "../health/FileViewerSheet";
-import { nutritionLine, nutritionLineRecoverySensitive } from "../../utils/nutritionDisplay";
+import { nutritionLine } from "../../utils/nutritionDisplay";
 
 const activityTypeLabel: Record<string, string> = {
   cardio: "Cardio",
@@ -96,7 +91,6 @@ export const ClientDetailSheet: React.FC<{
   const [assigningTemplate, setAssigningTemplate] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
-  const [clinicalOpen, setClinicalOpen] = useState(false);
   const [viewing, setViewing] = useState<ClinicalFileRequest | null>(null);
   const [editingPrefs, setEditingPrefs] = useState(false);
 
@@ -165,29 +159,17 @@ export const ClientDetailSheet: React.FC<{
                 {client.prefix ? `${client.prefix} ` : ""}
                 {client.name}
               </p>
-              {client.recoverySensitive && (
-                <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide text-primary-dark bg-primary-pale rounded-full px-1.5 py-0.5">
-                  <HeartHandshake size={9} /> Recovery-sensitive
-                </span>
-              )}
             </div>
             <p className="text-xs text-charcoal-faint">Client since {formatDisplayDate(client.joinedAt)}</p>
           </div>
         </div>
 
-        {/* No real bridge from a client's own account to this specific
-            record (same limitation as elsewhere) — toggled here as a
-            stand-in for what would otherwise sync from the client side. */}
-        <div className="flex items-center justify-between bg-cream-soft rounded-2xl px-4 py-3">
-          <span className="flex items-center gap-2 text-xs font-semibold text-charcoal-soft">
-            <HeartHandshake size={14} /> Recovery-sensitive mode (demo toggle)
-          </span>
-          <Toggle
-            checked={!!client.recoverySensitive}
-            onChange={(v) => updateProfessionalClient(client.id, { recoverySensitive: v })}
-            label="Recovery-sensitive mode"
-          />
-        </div>
+        {/* Task X: NOTHING HERE SAYS WHETHER A CLIENT HAS RECOVERY-SENSITIVE
+            MODE ON, and nothing changes because of it. It is the client's
+            private setting (recovery_mode_settings, owner-only); the demo
+            switch, badge, "Meal rhythm" view and "Clinical data" panel that
+            used to stand in for it are gone. Every client is shown the same
+            way, governed only by what they chose to share. */}
 
         {/* V7 (QA 7.0): performance summary — metrics important to the
             professional at a glance, before the per-section detail below.
@@ -206,8 +188,8 @@ export const ClientDetailSheet: React.FC<{
             <HealthDataPending label="Client activity & nutrition" />
           )}
 
-        <div className={client.recoverySensitive ? "grid grid-cols-1 gap-2.5" : "grid grid-cols-2 gap-2.5"}>
-          {!client.recoverySensitive && client.access.foodDiary && (
+        <div className="grid grid-cols-2 gap-2.5">
+          {client.access.foodDiary && (
             <div className="bg-cream-soft rounded-2xl p-3.5">
               {/* Kept as "Calories consumed", not renamed to "Food diary":
                   the standalone Food Diary card below already owns that
@@ -254,16 +236,12 @@ export const ClientDetailSheet: React.FC<{
                 </p>
               ) : (
                 <p className="text-sm font-semibold text-charcoal-soft">
-                  {client.workout === null
-                    ? client.recoverySensitive
-                      ? "Sharing workouts"
-                      : "No sessions yet"
-                    : "Loading workouts…"}
+                  {client.workout === null ? "No sessions yet" : "Loading workouts…"}
                 </p>
               )}
             </div>
           )}
-          {!client.recoverySensitive && client.lastWeightKg !== undefined && (
+          {client.lastWeightKg !== undefined && (
             <div className="bg-cream-soft rounded-2xl p-3.5">
               <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
                 Current weight
@@ -275,7 +253,7 @@ export const ClientDetailSheet: React.FC<{
           )}
         </div>
 
-        {client.access.foodDiary && !client.recoverySensitive && (
+        {client.access.foodDiary && (
           <div className="bg-cream-soft rounded-2xl p-4">
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
               Food Diary
@@ -304,23 +282,6 @@ export const ClientDetailSheet: React.FC<{
             )}
           </div>
         )}
-        {client.access.foodDiary && client.recoverySensitive && (
-          <div className="bg-cream-soft rounded-2xl p-4">
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-              Meal rhythm
-            </p>
-            {/* Was the hardcoded sentence "Meals logged on schedule", which
-                asserted adherence for every recovery-sensitive client
-                regardless of what they had logged — a clinical claim with no
-                data behind it, on exactly the client group where QA 12.0 is
-                most careful about inference. */}
-            <p className="text-sm font-semibold text-charcoal">
-              {nutritionLineRecoverySensitive(client.access, client.nutrition)}
-            </p>
-            <p className="text-xs text-charcoal-faint">Neutral view — no calorie totals shown</p>
-          </div>
-        )}
-
         {isDietitian ? (
           // Activity level comes from the client's own profile and is not
           // read here yet — hidden rather than rendered blank.
@@ -432,10 +393,7 @@ export const ClientDetailSheet: React.FC<{
           )}
         </div>
 
-        {/* QA 12.0: "Weight-loss progress, BMI-centric dashboards,
-            body-composition charts... remove from the nutritionist's
-            primary dashboard" for a recovery-sensitive client. */}
-        {client.access.weight && !client.recoverySensitive && (
+        {client.access.weight && (
           <div className="bg-cream-soft rounded-2xl p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1">Weight</p>
@@ -712,72 +670,6 @@ export const ClientDetailSheet: React.FC<{
                     <p className="text-sm font-medium">{note[f.key]}</p>
                   </div>
                 ))}
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* QA 12.0: "If calories, weight, biometrics, or intake estimates
-            are genuinely clinically required, move them to a restricted
-            Clinical data panel... ideally a client-visible explanation
-            such as: 'Your nutritionist can view clinician-only plan
-            targets to support your agreed care plan. These are not
-            displayed in your app.'" Collapsed by default — an explicit
-            tap is required to reveal the actual numbers. */}
-        {client.recoverySensitive && (client.access.foodDiary || client.access.weight) && (
-          <div className="bg-status-caution-bg rounded-2xl p-4">
-            <button
-              onClick={() => setClinicalOpen((v) => !v)}
-              className="tap w-full flex items-center justify-between"
-            >
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-charcoal uppercase tracking-wide">
-                <Lock size={12} /> Clinical data
-              </span>
-              {clinicalOpen ? <ChevronUp size={14} className="text-charcoal-faint" /> : <ChevronDown size={14} className="text-charcoal-faint" />}
-            </button>
-            {!clinicalOpen ? (
-              <p className="text-[11px] text-charcoal-faint mt-1.5 leading-relaxed">
-                Calorie and weight figures are hidden by default for this client. Expand only if genuinely
-                required to support their care plan.
-              </p>
-            ) : (
-              <div className="mt-3 pt-3 border-t border-charcoal/10 grid grid-cols-2 gap-2.5">
-                {client.access.foodDiary && (
-                  <div>
-                    <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
-                      Calories consumed
-                    </p>
-                    {/* The one surface where a recovery-sensitive client's
-                        actual figure is allowed, per QA 12.0's "if genuinely
-                        clinically required, move them to a restricted
-                        Clinical data panel" — and it is behind a deliberate
-                        tap. Stating a plain absence is acceptable here for
-                        the same reason: this panel is opened on purpose, not
-                        encountered in passing. */}
-                    {client.nutrition ? (
-                      <>
-                        <p className="text-sm font-bold text-charcoal">
-                          {client.nutrition.calories.toLocaleString()} kcal
-                        </p>
-                        <p className="text-[10px] text-charcoal-faint">
-                          {formatDisplayDate(client.nutrition.lastLoggedDate)}
-                        </p>
-                      </>
-                    ) : (
-                      <p className="text-sm font-semibold text-charcoal-soft">
-                        {nutritionLine(client.access, client.nutrition)}
-                      </p>
-                    )}
-                  </div>
-                )}
-                {client.access.weight && (
-                  <div>
-                    <p className="text-[10px] font-semibold text-charcoal-faint uppercase tracking-wide mb-1">
-                      Current weight
-                    </p>
-                    <p className="text-sm font-bold text-charcoal">{client.lastWeightKg} kg</p>
-                  </div>
-                )}
               </div>
             )}
           </div>

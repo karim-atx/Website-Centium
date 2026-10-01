@@ -17,11 +17,11 @@ import { ClientDetailSheet } from "../../components/professionals/ClientDetailSh
 import { FreePeriodEnded, FreePeriodNotice } from "../../components/professionals/FreePeriodNotice";
 import { useMyProfessionalPlan } from "../../hooks/useMyProfessionalPlan";
 import { BottomSheet } from "../../components/ui/BottomSheet";
-import { ChevronRight, Plus, Search, HeartPulse, TrendingDown, TrendingUp, Inbox, Check, X, HeartHandshake } from "lucide-react";
+import { ChevronRight, Plus, Search, HeartPulse, TrendingDown, TrendingUp, Inbox, Check, X } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
 import { formatDisplayDate } from "../../utils/date";
 import { HealthDataPending } from "../../components/professionals/HealthDataPending";
-import { nutritionLine, nutritionLineRecoverySensitive } from "../../utils/nutritionDisplay";
+import { nutritionLine } from "../../utils/nutritionDisplay";
 import { countsTowardTrainedTally, workoutBadge } from "../../utils/workoutDisplay";
 import clsx from "clsx";
 
@@ -213,14 +213,10 @@ export default function ProfessionalDashboard() {
   // measurement, about exactly the people who withheld consent — the same
   // error as the "0 kcal" card, and worse for being about a withholding.
   //
-  // Recovery-sensitive clients are excluded too, per QA 12.0: a roster-wide
-  // adherence tally is a compliance score, which is what that constraint keeps
-  // off routine surfaces. Both groups still occupy the grey segment of the
-  // track below, so the roster size is not misrepresented — they are just
-  // never counted as having failed to do something.
-  const tracked = professionalClients.filter((c) =>
-    countsTowardTrainedTally(c.access, c.workout, c.recoverySensitive)
-  );
+  // Task X: no client is singled out for recovery-sensitive mode. It is the
+  // client's private setting, so the tally treats every client alike. Those
+  // not sharing workouts still occupy the grey segment of the track below.
+  const tracked = professionalClients.filter((c) => countsTowardTrainedTally(c.access, c.workout));
   const trained = tracked.filter((c) => c.workout?.trainedToday === true).length;
   const notTrained = tracked.length - trained;
   const noData = total - tracked.length;
@@ -347,16 +343,6 @@ export default function ProfessionalDashboard() {
                       {c.name}
                     </p>
                     {shared && <HeartPulse size={12} className="text-primary-dark shrink-0" />}
-                    {/* QA 12.0: "it should show a small status badge in the
-                        professional dashboard for that specific client.
-                        The badge should be informative, not diagnostic.
-                        Avoid labels such as 'ED patient,' 'high-risk,' or
-                        'non-compliant.'" */}
-                    {c.recoverySensitive && (
-                      <span className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide text-primary-dark bg-primary-pale rounded-full px-1.5 py-0.5 shrink-0">
-                        <HeartHandshake size={9} /> Recovery-sensitive
-                      </span>
-                    )}
                   </div>
                   <p className="text-xs text-charcoal-faint truncate">
                     Client since {formatDisplayDate(c.joinedAt)}
@@ -376,17 +362,11 @@ export default function ProfessionalDashboard() {
                   held. Forcing the other branch was not an option either —
                   it renders weight, calories and training together, so two
                   absent figures would have been printed beside the one real
-                  one. Each datum now appears only when it exists.
-
-                  QA 12.0: "remove from the nutritionist's primary dashboard:
-                  Large calorie totals... Weight-loss progress... Red/green
-                  compliance colors, punitive missed-log indicators" for a
-                  recovery-sensitive client — hence the wordier, numberless
-                  line for them, and no weight at all. */}
+                  one. Each datum now appears only when it exists. */}
               {(() => {
                 const sharesNothing = !Object.values(c.access).some(Boolean);
-                const showWeight = !c.recoverySensitive && c.lastWeightKg !== undefined;
-                const badge = workoutBadge(c.access, c.workout, c.recoverySensitive);
+                const showWeight = c.lastWeightKg !== undefined;
+                const badge = workoutBadge(c.access, c.workout);
 
                 if (sharesNothing) {
                   return (
@@ -400,9 +380,7 @@ export default function ProfessionalDashboard() {
                   <div className="flex items-center justify-between gap-3 pt-2.5 border-t border-charcoal/[0.06]">
                     <div className="flex items-center gap-3.5 text-[11px] text-charcoal-faint min-w-0">
                       <span className="truncate">
-                        {c.recoverySensitive
-                          ? nutritionLineRecoverySensitive(c.access, c.nutrition)
-                          : nutritionLine(c.access, c.nutrition)}
+                        {nutritionLine(c.access, c.nutrition)}
                       </span>
                       {showWeight && (
                         <span className="flex items-center gap-1 shrink-0">
