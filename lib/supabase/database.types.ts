@@ -2287,9 +2287,11 @@ export type Database = {
         Row: {
           citation: string | null
           created_at: string
+          feature: string
           informs: string
           key: string
           organisation: string
+          published_year: number | null
           sort_order: number
           title: string
           url: string
@@ -2298,9 +2300,11 @@ export type Database = {
         Insert: {
           citation?: string | null
           created_at?: string
+          feature: string
           informs: string
           key: string
           organisation: string
+          published_year?: number | null
           sort_order: number
           title: string
           url: string
@@ -2309,9 +2313,11 @@ export type Database = {
         Update: {
           citation?: string | null
           created_at?: string
+          feature?: string
           informs?: string
           key?: string
           organisation?: string
+          published_year?: number | null
           sort_order?: number
           title?: string
           url?: string
