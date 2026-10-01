@@ -13,6 +13,7 @@ import { RateAppSheet } from "../../components/profile/RateAppSheet";
 import { StorageUsageCard } from "../../components/profile/StorageUsageCard";
 import { TermsOfServiceSheet } from "../../components/profile/TermsOfServiceSheet";
 import { TwoFactorSheet } from "../../components/profile/TwoFactorSheet";
+import { ChangePasswordSheet } from "../../components/profile/ChangePasswordSheet";
 import { useApp } from "../../context/AppContext";
 import { TRACKER_OFF_KEEPS_DATA } from "../../services/cycle/guidance";
 import { enablePush, permissionTriState, pushSupported } from "../../services/push";
@@ -37,6 +38,7 @@ import {
   Star,
   FileText,
   ShieldCheck,
+  KeyRound,
   Droplet,
 } from "lucide-react";
 
@@ -136,6 +138,7 @@ export default function Settings() {
   const [reportBugOpen, setReportBugOpen] = useState(false);
   const [rateAppOpen, setRateAppOpen] = useState(false);
   const [twoFactorOpen, setTwoFactorOpen] = useState(false);
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
 
   // Whether a factor is enrolled, so the row can say which state it is in
   // rather than making someone open the sheet to find out. Null while unknown
@@ -433,6 +436,17 @@ export default function Settings() {
         Security
       </p>
       <Card padded={false} className="mb-6">
+        {/* Task J. First, because a password is the thing two-factor adds to. */}
+        <button
+          onClick={() => setChangePasswordOpen(true)}
+          className="tap w-full flex items-center justify-between px-4 py-3.5 border-b border-charcoal/[0.06]"
+        >
+          <div className="flex items-center gap-3">
+            <KeyRound size={16} className="text-charcoal-soft" />
+            <span className="text-sm font-medium text-charcoal">Change password</span>
+          </div>
+          <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
+        </button>
         <button
           onClick={() => setTwoFactorOpen(true)}
           className="tap w-full flex items-center justify-between px-4 py-3.5"
@@ -603,6 +617,13 @@ export default function Settings() {
         key={rateAppOpen ? "review-open" : "review-closed"}
         open={rateAppOpen}
         onClose={() => setRateAppOpen(false)}
+      />
+      {/* Keyed like TwoFactorSheet, so every open starts empty: nothing typed
+          into a password field outlives the sheet being closed. */}
+      <ChangePasswordSheet
+        key={changePasswordOpen ? "pw-open" : "pw-closed"}
+        open={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
       />
       <TwoFactorSheet
         key={twoFactorOpen ? "2fa-open" : "2fa-closed"}
