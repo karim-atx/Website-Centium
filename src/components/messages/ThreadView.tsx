@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowLeft, Check, CheckCheck, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Phone, Pin, Send, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, Ban, Check, CheckCheck, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Send, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useCall } from "../../context/CallContext";
 import { threadAllowsCalls, type CallKind } from "../../services/calling";
@@ -49,6 +49,9 @@ import {
   sendFileAttachment,
   sendImageAttachment,
   sendMessage,
+  editMessage,
+  deleteForEveryone,
+  editTimeLeft,
   sendVoiceNote,
   setPin,
   setStarred,
@@ -257,6 +260,11 @@ export const ThreadView: React.FC<{
    * asked about first.
    */
   const [hiding, setHiding] = useState<Message | null>(null);
+  /** Your own message whose text the composer is editing. */
+  const [editing, setEditing] = useState<Message | null>(null);
+  /** Your own message awaiting "Delete for everyone" confirmation. */
+  const [unsending, setUnsending] = useState<Message | null>(null);
+  const [unsendBusy, setUnsendBusy] = useState(false);
   /** Message info (sent, delivered, read) for one of your own messages. */
   const [infoFor, setInfoFor] = useState<Message | null>(null);
   /** Photo or document, chosen from the paperclip. */
@@ -547,6 +555,22 @@ export const ThreadView: React.FC<{
   const send = async () => {
     const body = draft.trim();
     if (!body || !authUserId || sending) return;
+    if (editing) {
+      // EDIT, NOT SEND. The database checks the fifteen minutes and that it is
+      // yours; the composer keeps the text if it refuses.
+      setSending(true);
+      setError(null);
+      const result = await editMessage(editing.id, body);
+      setSending(false);
+      if (!result.ok) {
+        setError(result.message);
+        return;
+      }
+      setEditing(null);
+      setDraft("");
+      await load();
+      return;
+    }
     setSending(true);
     setError(null);
     // Optimistic, and deliberately NOT a message. `pending` is a rendering
@@ -806,6 +830,13 @@ export const ThreadView: React.FC<{
   const actionsForMessage = (m: Message): MessageAction[] => {
     const mine = m.senderId === authUserId;
     const close = () => setActionsFor(null);
+    // An unsent message has nothing left to reply to, copy, star or react to.
+    if (m.deletedAt) {
+      return [{ label: "Delete for me", danger: true, onSelect: () => {
+        setHiding(m);
+        close();
+      } }];
+    }
     const list: MessageAction[] = [
       { label: "Reply", onSelect: () => {
         setReplyTo(m);
@@ -834,6 +865,21 @@ export const ThreadView: React.FC<{
         close();
       },
     });
+    // EDIT, with the time left, only while the window is open and only for
+    // text. The note is the client's estimate; the server decides (ATX40).
+    const left = mine ? editTimeLeft(m) : 0;
+    if (left > 0 && m.text?.trim()) {
+      list.push({
+        label: "Edit",
+        note: `${Math.max(1, Math.ceil(left / 60_000))} min left`,
+        onSelect: () => {
+          setReplyTo(null);
+          setEditing(m);
+          setDraft(m.text ?? "");
+          close();
+        },
+      });
+    }
     if (mine) list.push({ label: "Info", onSelect: () => {
       setInfoFor(m);
       close();
@@ -841,6 +887,12 @@ export const ThreadView: React.FC<{
     if (safetyApplies && !mine) {
       list.push({ label: "Report", danger: true, onSelect: () => {
         setReportFor(m);
+        close();
+      } });
+    }
+    if (left > 0) {
+      list.push({ label: "Delete for everyone", danger: true, onSelect: () => {
+        setUnsending(m);
         close();
       } });
     }
@@ -1097,10 +1149,18 @@ export const ThreadView: React.FC<{
                 {m.text && <span>{m.text}</span>}
                 {/* What was taken off this message, derived from what is
                     actually absent; shared with the list via describeRemoval. */}
-                {removal && (
-                  <span className="flex items-center gap-1.5 opacity-85 italic">
-                    <Trash2 size={13} className="shrink-0" /> {removal}
+                {m.deletedAt ? (
+                  // UNSENT: the same words for both people, and nothing else
+                  // from the message survives on the row to show.
+                  <span className="flex items-center gap-1.5 italic text-[13.5px] opacity-85">
+                    <Ban size={14} className="shrink-0" /> This message was deleted
                   </span>
+                ) : (
+                  removal && (
+                    <span className="flex items-center gap-1.5 opacity-85 italic">
+                      <Trash2 size={13} className="shrink-0" /> {removal}
+                    </span>
+                  )
                 )}
                 {/* Suppressed only when the FILE is gone: a redacted text with a
                     surviving attachment still shows the attachment. */}
@@ -1148,7 +1208,8 @@ export const ThreadView: React.FC<{
                 >
                   {starred.has(m.id) && <Star size={11} aria-label="Starred" className="fill-current opacity-80" />}
                   {clockTime(m.createdAt)}
-                  {mine &&
+                  {m.editedAt && !m.deletedAt ? " · edited" : ""}
+                  {mine && !m.deletedAt &&
                     (tick === "read" ? (
                       <CheckCheck size={15} aria-label="Read" className="text-tick-read-sent" />
                     ) : tick === "delivered" ? (
@@ -1158,7 +1219,7 @@ export const ThreadView: React.FC<{
                     ))}
                 </span>
               </div>
-              {grouped.length > 0 && (
+              {grouped.length > 0 && !m.deletedAt && (
                 <div className={`flex gap-1 flex-wrap ${mine ? "self-end mr-2" : "self-start ml-2"}`}>
                   {grouped.map(([emoji, g]) => (
                     <button
@@ -1185,7 +1246,7 @@ export const ThreadView: React.FC<{
                   mine={mine}
                   preview={describeMessage(m)}
                   myReaction={myReaction}
-                  onReact={block.blocked || departed ? null : (emoji) => void react(m, emoji)}
+                  onReact={block.blocked || departed || m.deletedAt ? null : (emoji) => void react(m, emoji)}
                   actions={actionsForMessage(m)}
                 />
               )}
@@ -1263,6 +1324,26 @@ export const ThreadView: React.FC<{
         </div>
       ) : (
       <div className={`sticky ${footerBottom} bg-cream pt-2`}>
+      {editing && (
+        <div className="flex items-center gap-2 rounded-[10px] bg-cream-soft px-2.5 py-1.5 mb-2">
+          <Pencil size={14} className="text-primary-deep-text shrink-0" aria-hidden />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-extrabold text-primary-deep-text">Editing message</p>
+            <p className="text-[12.5px] text-charcoal-soft truncate">{editing.text}</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              setEditing(null);
+              setDraft("");
+            }}
+            aria-label="Cancel editing"
+            className="tap w-11 h-11 flex items-center justify-center text-charcoal-soft shrink-0"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
       {replyTo && (
         <QuotedMessage
           message={replyTo}
@@ -1478,6 +1559,49 @@ export const ThreadView: React.FC<{
 
       {/* A SEPARATE SHEET, opened after the actions close — two overlays alive
           at once would fight over the same dismiss. */}
+      <BottomSheet open={!!unsending} onClose={() => setUnsending(null)} title="Delete for everyone">
+        <div className="animate-fade-slide-up">
+          {unsending && (
+            <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3 py-2 mb-3 truncate">
+              {describeMessage(unsending)}
+            </p>
+          )}
+          <p className="text-sm text-charcoal-soft mb-4">
+            {departed
+              ? "This removes the message from the conversation. You'll see \"This message was deleted\" in its place."
+              : `This removes the message for you and ${thread.participantName}. You'll both see "This message was deleted" in its place.`}
+          </p>
+          <button
+            onClick={async () => {
+              if (!unsending) return;
+              setUnsendBusy(true);
+              const result = await deleteForEveryone(unsending.id);
+              setUnsendBusy(false);
+              setUnsending(null);
+              if (!result.ok) {
+                setError(result.message);
+                return;
+              }
+              if (editing?.id === unsending.id) {
+                setEditing(null);
+                setDraft("");
+              }
+              await load();
+            }}
+            disabled={unsendBusy}
+            className="tap w-full rounded-xl bg-status-high text-white dark:text-[#0D0B1A] font-semibold text-sm py-3 disabled:opacity-50"
+          >
+            {unsendBusy ? "Deleting…" : "Delete for everyone"}
+          </button>
+          <button
+            onClick={() => setUnsending(null)}
+            className="tap w-full text-sm font-medium text-charcoal-soft py-3"
+          >
+            Cancel
+          </button>
+        </div>
+      </BottomSheet>
+
       <BottomSheet open={!!hiding} onClose={() => setHiding(null)} title="Delete for me">
         <div className="animate-fade-slide-up">
           {hiding && (

@@ -199,6 +199,23 @@ export interface Message {
   imageWidth: number | null;
   imageHeight: number | null;
   voiceWaveform: number[] | null;
+  /**
+   * EDIT AND UNSEND (Database 20261002060000). The sender may change the text
+   * or unsend within fifteen minutes of sending; the database owns the window
+   * (ATX40) and keeps the original for moderators only. An unsent message has
+   * no content left on the row, and both people see "This message was deleted".
+   */
+  editedAt: string | null;
+  deletedAt: string | null;
+}
+
+/** How long after sending a message can be edited or unsent. Enforced server-side. */
+export const EDIT_WINDOW_MS = 15 * 60_000;
+
+/** Milliseconds left to edit or unsend, or 0. The server's check is the rule. */
+export function editTimeLeft(m: Pick<Message, "createdAt" | "deletedAt">, now = Date.now()): number {
+  if (m.deletedAt) return 0;
+  return Math.max(0, new Date(m.createdAt).getTime() + EDIT_WINDOW_MS - now);
 }
 
 /**
@@ -220,6 +237,7 @@ export function describeMessage(m: {
   /** When known, a document reads as its name rather than as a photo. */
   attachmentKind?: "image" | "voice" | "file" | null;
   attachmentName?: string | null;
+  deletedAt?: string | null;
 }): string {
   return (
     m.text?.trim() ||
@@ -254,7 +272,10 @@ export function describeRemoval(m: {
   text: string | null;
   attachmentPurgedAt: string | null;
   redactedAt: string | null;
+  /** Unsent by its sender: nothing else about it matters any more. */
+  deletedAt?: string | null;
 }): string | null {
+  if (m.deletedAt) return "This message was deleted";
   const textRemoved = m.redactedAt !== null && !m.text?.trim();
   const attachmentRemoved = m.attachmentPurgedAt !== null;
 
@@ -414,7 +435,7 @@ export async function fetchThreads(): Promise<ThreadsResult> {
 }
 
 const MESSAGE_COLUMNS =
-  "id, thread_id, sender_id, text, created_at, read_at, delivered_at, attachment_url, attachment_purged_at, redacted_at, voice_note_seconds, reply_to_id, forwarded, attachment_kind, attachment_name, attachment_bytes, attachment_mime, image_width, image_height, voice_waveform";
+  "id, thread_id, sender_id, text, created_at, read_at, delivered_at, attachment_url, attachment_purged_at, redacted_at, voice_note_seconds, reply_to_id, forwarded, attachment_kind, attachment_name, attachment_bytes, attachment_mime, image_width, image_height, voice_waveform, edited_at, deleted_at";
 
 type MessageRow = {
   id: string | null;
@@ -437,6 +458,8 @@ type MessageRow = {
   image_width?: number | null;
   image_height?: number | null;
   voice_waveform?: number[] | null;
+  edited_at?: string | null;
+  deleted_at?: string | null;
 };
 
 // READ THROUGH messages_visible, so a message this viewer hid is simply
@@ -486,6 +509,8 @@ const toMessage = (m: MessageRow): Message => ({
   imageWidth: m.image_width ?? null,
   imageHeight: m.image_height ?? null,
   voiceWaveform: m.voice_waveform ?? null,
+  editedAt: m.edited_at ?? null,
+  deletedAt: m.deleted_at ?? null,
 });
 
 /** Messages per page. A thread opens on its newest page; scrolling up loads the next. */
@@ -1012,6 +1037,45 @@ export async function threadForPush(pushId: string): Promise<string | null> {
  * destination thread, which is exactly what an inherited pointer would be — so
  * dropping it is not politeness, it is the only shape that inserts at all.
  */
+/** The refusals edit and unsend can meet, in words. */
+function describeEditRefusal(error: PostgrestError, verb: "edit" | "unsend"): string {
+  if (isOffline(error)) return OFFLINE_MESSAGE;
+  if (error.code === "ATX40") {
+    return verb === "edit"
+      ? "You can only edit a message within 15 minutes of sending it."
+      : "You can only delete a message for everyone within 15 minutes of sending it.";
+  }
+  if (error.code === "22023") return "A message can't be empty. To remove it, delete it for everyone.";
+  if (error.code === "ATX08") return "That message isn't available any more.";
+  return describeRefusal(error) ?? "Couldn't save that. Try again.";
+}
+
+/**
+ * Changes the text of your own message, within fifteen minutes of sending it.
+ * The database keeps the previous version for moderators and stamps edited_at.
+ */
+export async function editMessage(messageId: string, text: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { error } = await supabase.rpc("edit_message", { p_message_id: messageId, p_text: text });
+  if (error) {
+    console.error("[messaging] Could not edit:", error.message);
+    return { ok: false, message: describeEditRefusal(error, "edit") };
+  }
+  return { ok: true };
+}
+
+/**
+ * Unsends your own message for both people, within fifteen minutes of sending
+ * it. Its content is cleared from the row; both see "This message was deleted".
+ */
+export async function deleteForEveryone(messageId: string): Promise<{ ok: true } | { ok: false; message: string }> {
+  const { error } = await supabase.rpc("delete_message_for_everyone", { p_message_id: messageId });
+  if (error) {
+    console.error("[messaging] Could not unsend:", error.message);
+    return { ok: false, message: describeEditRefusal(error, "unsend") };
+  }
+  return { ok: true };
+}
+
 export async function forwardMessage(
   destinationThreadId: string,
   senderId: string,

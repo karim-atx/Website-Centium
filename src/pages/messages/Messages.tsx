@@ -9,7 +9,7 @@ import { StarredMessages } from "../../components/messages/StarredMessages";
 import { useApp } from "../../context/AppContext";
 import { fetchThreads, migrateLegacyStars, threadForPush, type MessageThread } from "../../services/messaging";
 import {
-  fetchReadState,
+  fetchLastMessageState,
   fetchThreadSettings,
   type ThreadSettings,
 } from "../../services/messaging/chatFeatures";
@@ -61,10 +61,18 @@ export default function Messages() {
     if (result.ok) {
       setThreads(result.threads);
       setError(null);
-      const mineLast = result.threads
-        .filter((t) => t.lastMessageId && t.lastMessageSenderId === authUserId)
-        .map((t) => t.lastMessageId!);
-      void fetchReadState(mineLast).then(setReadState);
+      const lastIds = result.threads.filter((t) => t.lastMessageId).map((t) => t.lastMessageId!);
+      void fetchLastMessageState(lastIds).then(({ readAt, deleted }) => {
+        setReadState(readAt);
+        if (deleted.size === 0) return;
+        setThreads((prev) =>
+          prev.map((t) =>
+            t.lastMessageId && deleted.has(t.lastMessageId)
+              ? { ...t, lastMessagePreview: "This message was deleted" }
+              : t
+          )
+        );
+      });
       if (pushId && !deepLinkConsumed.current) {
         deepLinkConsumed.current = true;
         navigate("/app/messages", { replace: true });

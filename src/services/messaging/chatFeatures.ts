@@ -167,13 +167,23 @@ export async function setReaction(
 // Reads for the list, the starred screen and the gallery
 // ---------------------------------------------------------------------------
 
-/** Read state of the latest messages in the list, so "You: …" can carry its tick. */
-export async function fetchReadState(messageIds: string[]): Promise<Record<string, string | null>> {
-  if (messageIds.length === 0) return {};
-  const { data, error } = await supabase.from("messages_visible").select("id, read_at").in("id", messageIds);
-  if (error) return {};
-  const out: Record<string, string | null> = {};
-  for (const r of data ?? []) if (r.id) out[r.id] = r.read_at;
+/**
+ * What the list needs about each chat's latest message beyond my_conversations:
+ * its read time (for the tick on "You: …") and whether it was unsent, so the
+ * preview says "This message was deleted" rather than an empty "Message".
+ */
+export async function fetchLastMessageState(
+  messageIds: string[]
+): Promise<{ readAt: Record<string, string | null>; deleted: Set<string> }> {
+  const out = { readAt: {} as Record<string, string | null>, deleted: new Set<string>() };
+  if (messageIds.length === 0) return out;
+  const { data, error } = await supabase.from("messages_visible").select("id, read_at, deleted_at").in("id", messageIds);
+  if (error) return out;
+  for (const r of data ?? []) {
+    if (!r.id) continue;
+    out.readAt[r.id] = r.read_at;
+    if (r.deleted_at) out.deleted.add(r.id);
+  }
   return out;
 }
 

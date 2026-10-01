@@ -5657,7 +5657,10 @@ export type Database = {
           attachment_url: string | null
           authored_by: string | null
           created_at: string
+          deleted_at: string | null
           delivered_at: string | null
+          edit_count: number
+          edited_at: string | null
           forwarded: boolean
           id: string
           image_height: number | null
@@ -5682,7 +5685,10 @@ export type Database = {
           attachment_url?: string | null
           authored_by?: string | null
           created_at?: string
+          deleted_at?: string | null
           delivered_at?: string | null
+          edit_count?: number
+          edited_at?: string | null
           forwarded?: boolean
           id?: string
           image_height?: number | null
@@ -5707,7 +5713,10 @@ export type Database = {
           attachment_url?: string | null
           authored_by?: string | null
           created_at?: string
+          deleted_at?: string | null
           delivered_at?: string | null
+          edit_count?: number
+          edited_at?: string | null
           forwarded?: boolean
           id?: string
           image_height?: number | null
@@ -11166,7 +11175,10 @@ export type Database = {
           attachment_purged_at: string | null
           attachment_url: string | null
           created_at: string | null
+          deleted_at: string | null
           delivered_at: string | null
+          edit_count: number | null
+          edited_at: string | null
           forwarded: boolean | null
           id: string | null
           image_height: number | null
@@ -11190,7 +11202,10 @@ export type Database = {
           attachment_purged_at?: string | null
           attachment_url?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           delivered_at?: never
+          edit_count?: number | null
+          edited_at?: string | null
           forwarded?: boolean | null
           id?: string | null
           image_height?: number | null
@@ -11214,7 +11229,10 @@ export type Database = {
           attachment_purged_at?: string | null
           attachment_url?: string | null
           created_at?: string | null
+          deleted_at?: string | null
           delivered_at?: never
+          edit_count?: number | null
+          edited_at?: string | null
           forwarded?: boolean | null
           id?: string | null
           image_height?: number | null
@@ -12953,6 +12971,41 @@ export type Database = {
         }[]
       }
       cycle_today: { Args: { p_user: string }; Returns: string }
+      delete_message_for_everyone: {
+        Args: { p_message_id: string }
+        Returns: {
+          attachment_bytes: number | null
+          attachment_kind: Database["public"]["Enums"]["attachment_kind"] | null
+          attachment_mime: string | null
+          attachment_name: string | null
+          attachment_purged_at: string | null
+          attachment_url: string | null
+          authored_by: string | null
+          created_at: string
+          deleted_at: string | null
+          delivered_at: string | null
+          edit_count: number
+          edited_at: string | null
+          forwarded: boolean
+          id: string
+          image_height: number | null
+          image_width: number | null
+          read_at: string | null
+          redacted_at: string | null
+          reply_to_id: string | null
+          sender_id: string | null
+          text: string | null
+          thread_id: string
+          voice_note_seconds: number | null
+          voice_waveform: number[] | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       delete_my_cycle_data: { Args: never; Returns: undefined }
       disconnect_client_relationship: {
         Args: { p_relationship_id: string }
@@ -12979,6 +13032,41 @@ export type Database = {
         }
       }
       display_name_is_reserved: { Args: { p_name: string }; Returns: boolean }
+      edit_message: {
+        Args: { p_message_id: string; p_text: string }
+        Returns: {
+          attachment_bytes: number | null
+          attachment_kind: Database["public"]["Enums"]["attachment_kind"] | null
+          attachment_mime: string | null
+          attachment_name: string | null
+          attachment_purged_at: string | null
+          attachment_url: string | null
+          authored_by: string | null
+          created_at: string
+          deleted_at: string | null
+          delivered_at: string | null
+          edit_count: number
+          edited_at: string | null
+          forwarded: boolean
+          id: string
+          image_height: number | null
+          image_width: number | null
+          read_at: string | null
+          redacted_at: string | null
+          reply_to_id: string | null
+          sender_id: string | null
+          text: string | null
+          thread_id: string
+          voice_note_seconds: number | null
+          voice_waveform: number[] | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "messages"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       effective_professional_tier: {
         Args: { p_professional_id: string }
         Returns: {
@@ -13131,6 +13219,10 @@ export type Database = {
       mark_thread_read: { Args: { p_thread_id: string }; Returns: string }
       may_open_message_attachment: {
         Args: { p_name: string }
+        Returns: boolean
+      }
+      message_is_editable: {
+        Args: { p_message_id: string; p_user: string }
         Returns: boolean
       }
       my_achievements: {
