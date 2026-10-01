@@ -225,7 +225,12 @@ export const ShareBiomarkerSheet: React.FC<{
     }
   }, [open, marker, markers]);
 
-  const fileBase = marker ? marker.name.toLowerCase().replace(/\s+/g, "-") : "biomarker-summary";
+  // NEUTRAL NAMES. The file name and the share sheet's title are seen before
+  // the image is opened (a downloads list, a chat's attachment preview, the
+  // system share sheet), so they never name the marker. The card itself is
+  // what the person chose to share.
+  const fileBase = marker ? "lab-result" : "lab-results";
+  const shareTitle = marker ? "Lab result — Centium" : "Lab results — Centium";
 
   const download = () => {
     if (!canvasRef.current || !ready) return;
@@ -242,7 +247,7 @@ export const ShareBiomarkerSheet: React.FC<{
       const file = new File([blob], `centium-${fileBase}.png`, { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], title: `${marker ? marker.name : "Biomarker summary"} — Centium` });
+          await navigator.share({ files: [file], title: shareTitle });
           return;
         } catch {
           // fall through to download

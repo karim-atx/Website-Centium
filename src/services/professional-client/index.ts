@@ -16,6 +16,7 @@ import type {
   LabReport,
 } from "../../types";
 import { groupPanelsByMarkerName, type PanelRow } from "../labs";
+import { fetchLabCatalogue } from "../labs/catalogue";
 import { localDayOf, todayLocal } from "../../utils/date";
 
 // A professional's read of their clients' own data.
@@ -606,7 +607,7 @@ export async function fetchClientLabs(clientIds: string[]): Promise<ClientLabsRe
 
   const { data, error } = await supabase
     .from("blood_panels")
-    .select("id, user_id, panel_date, source_image_url, blood_markers(id, name, value, unit, range_low, range_high, status)")
+    .select("id, user_id, panel_date, source_image_url, blood_markers(id, name, marker_key, value, unit, range_low, range_high, status)")
     .in("user_id", clientIds)
     .order("panel_date", { ascending: true });
 
@@ -617,6 +618,7 @@ export async function fetchClientLabs(clientIds: string[]): Promise<ClientLabsRe
 
   const byClient: Record<string, ClientLabs | null> = {};
   for (const id of clientIds) byClient[id] = null;
+  const catalogue = await fetchLabCatalogue();
 
   // Panels arrive oldest-first across every client at once, so bucket them per
   // client BEFORE grouping — the helper's chronological contract is per person.
@@ -640,7 +642,7 @@ export async function fetchClientLabs(clientIds: string[]): Promise<ClientLabsRe
   for (const [id, panels] of Object.entries(panelsFor)) {
     if (panels.length === 0) continue;
     byClient[id] = {
-      markers: groupPanelsByMarkerName(panels),
+      markers: groupPanelsByMarkerName(panels, catalogue),
       latestPanelDate: panels[panels.length - 1].panel_date,
       panelCount: panels.length,
       // Panels arrive oldest-first for the grouping's sake; reports read

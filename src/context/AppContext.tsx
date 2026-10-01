@@ -5689,7 +5689,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (!authUserId) return { ok: false, message: "You need to be signed in to save results." };
 
     const result = await recordPanel(authUserId, {
-      markers: entries.map((e) => ({ name: e.name, value: e.value, unit: e.unit })),
+      markers: entries.map((e) => ({
+        name: e.name,
+        value: e.value,
+        unit: e.unit,
+        markerKey: e.markerKey ?? null,
+        rangeLow: e.rangeLow ?? null,
+        rangeHigh: e.rangeHigh ?? null,
+      })),
       file,
     });
     if (!result.ok) return { ok: false, message: result.message };

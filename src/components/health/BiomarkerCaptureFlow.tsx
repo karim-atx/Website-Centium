@@ -1,10 +1,14 @@
-import React, { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
-import { Camera, Check, FileText, Plus, X } from "lucide-react";
+import { Camera, Check, FileText, Plus } from "lucide-react";
 import { acceptFor, validateFileFor } from "../../services/storage";
 import type { ExtractedBiomarker } from "../../types";
 import { useApp } from "../../context/AppContext";
+import { fetchLabCatalogue } from "../../services/labs/catalogue";
+import type { CatalogueMarker } from "../../services/labs/catalogueLogic";
+import { MarkerEntryRow } from "./MarkerEntryRow";
+import { draftRange, draftUsable, emptyMarker, type MarkerDraft } from "./markerDraft";
 
 // Photograph a lab report, then TYPE THE VALUES OFF IT.
 //
@@ -31,32 +35,24 @@ import { useApp } from "../../context/AppContext";
 type Stage = "capture" | "entry" | "done";
 type Source = "camera" | "pdf" | null;
 
-/**
- * One row being typed.
- *
- * Strings, not numbers, because a half-typed "1." is a legitimate state of
- * this field and Number("1.") would commit 1 behind the user's back. The
- * conversion happens once, at save.
- */
-interface MarkerDraft {
-  name: string;
-  value: string;
-  unit: string;
-}
-
-const emptyMarker = (): MarkerDraft => ({ name: "", value: "", unit: "" });
-
-/** Digits and at most one decimal point. Lab values are never negative. */
-const numeric = (raw: string) => raw.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, "");
-
-const fieldClass =
-  "w-full rounded-xl bg-cream-soft border border-charcoal/10 px-3 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20";
-
 export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void }> = ({
   open,
   onClose,
 }) => {
-  const { recordBiomarkers } = useApp();
+  const { recordBiomarkers, user } = useApp();
+  // The standard lab marker list (Database 20261011000000). Null until read,
+  // or if it could not be: rows then fall back to free text ("Other").
+  const [catalogue, setCatalogue] = useState<CatalogueMarker[] | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    void fetchLabCatalogue().then((c) => {
+      if (!cancelled) setCatalogue(c);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [open]);
   const [stage, setStage] = useState<Stage>("capture");
   const [source, setSource] = useState<Source>(null);
   const [photo, setPhoto] = useState<string | null>(null);
@@ -125,15 +121,12 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
     setMarkers((prev) => (prev.length === 1 ? [emptyMarker()] : prev.filter((_, i) => i !== index)));
 
   /**
-   * The rows that are actually a measurement.
-   *
-   * A name and a number. The unit is optional on purpose — most markers have
-   * one and the field asks for it, but a ratio genuinely has none, and
-   * demanding one would make somebody invent it. Blank rows are simply
-   * ignored rather than flagged, since the spare row at the bottom is how you
-   * add the next marker.
+   * The rows that are actually a measurement: a name, a number, and a range
+   * whose low end is not above its high end. The unit is optional for
+   * "Other" (a ratio genuinely has none). Blank rows are ignored, since the
+   * spare row at the bottom is how you add the next marker.
    */
-  const usable = markers.filter((m) => m.name.trim() !== "" && Number.isFinite(Number(m.value)) && m.value.trim() !== "");
+  const usable = markers.filter(draftUsable);
 
   /**
    * Saves the typed markers as ONE panel, with the report attached.
@@ -147,15 +140,19 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
     if (usable.length === 0) return;
     setSaving(true);
     setSaveError(null);
-    const entries: ExtractedBiomarker[] = usable.map((m) => ({
-      name: m.name.trim(),
-      value: Number(m.value),
-      unit: m.unit.trim(),
-      // Every row the user typed is a row they want. The flag is vestigial
-      // here — recordBiomarkers reads name/value/unit and nothing else — but
-      // the shared type still carries it.
-      selected: true,
-    }));
+    const entries: ExtractedBiomarker[] = usable.map((m) => {
+      const range = draftRange(m);
+      return {
+        name: m.name.trim(),
+        value: Number(m.value),
+        unit: m.unit.trim(),
+        markerKey: m.markerKey,
+        rangeLow: range.low,
+        rangeHigh: range.high,
+        // Vestigial on this path; the shared type still carries it.
+        selected: true,
+      };
+    });
     const result = await recordBiomarkers(entries, file ?? undefined);
     setSaving(false);
     if (!result.ok) {
@@ -256,41 +253,15 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
 
             <div className="space-y-2.5 mb-3">
               {markers.map((m, i) => (
-                <div key={i} className="rounded-2xl bg-cream-card border border-charcoal/10 p-3">
-                  <div className="flex items-center gap-2 mb-2">
-                    <input
-                      value={m.name}
-                      onChange={(e) => setMarker(i, { name: e.target.value })}
-                      placeholder="Marker, e.g. HbA1c"
-                      aria-label={`Marker ${i + 1} name`}
-                      className={fieldClass}
-                    />
-                    <button
-                      onClick={() => removeMarker(i)}
-                      aria-label={`Remove marker ${i + 1}`}
-                      className="tap w-8 h-8 rounded-full flex items-center justify-center text-charcoal-faint shrink-0"
-                    >
-                      <X size={15} />
-                    </button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <input
-                      value={m.value}
-                      onChange={(e) => setMarker(i, { value: numeric(e.target.value) })}
-                      placeholder="Value"
-                      inputMode="decimal"
-                      aria-label={`Marker ${i + 1} value`}
-                      className={fieldClass}
-                    />
-                    <input
-                      value={m.unit}
-                      onChange={(e) => setMarker(i, { unit: e.target.value })}
-                      placeholder="Unit (optional)"
-                      aria-label={`Marker ${i + 1} unit`}
-                      className={fieldClass}
-                    />
-                  </div>
-                </div>
+                <MarkerEntryRow
+                  key={i}
+                  index={i}
+                  draft={m}
+                  catalogue={catalogue}
+                  sex={user.sex}
+                  onChange={(patch) => setMarker(i, patch)}
+                  onRemove={() => removeMarker(i)}
+                />
               ))}
             </div>
 

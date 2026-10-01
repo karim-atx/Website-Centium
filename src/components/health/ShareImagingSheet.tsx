@@ -122,7 +122,10 @@ export const ShareImagingSheet: React.FC<{
     }
   }, [open, record, records]);
 
-  const fileBase = record ? record.type.toLowerCase().replace(/\s+/g, "-") : "imaging-summary";
+  // NEUTRAL NAMES, as on the lab share: the file name and share title are
+  // seen before the image is opened, so they never name the scan or test.
+  const fileBase = record ? "health-record" : "health-records";
+  const shareTitle = record ? "Health record — Centium" : "Health records — Centium";
 
   const download = () => {
     if (!canvasRef.current || !ready) return;
@@ -139,7 +142,7 @@ export const ShareImagingSheet: React.FC<{
       const file = new File([blob], `centium-${fileBase}.png`, { type: "image/png" });
       if (navigator.share && navigator.canShare?.({ files: [file] })) {
         try {
-          await navigator.share({ files: [file], title: `${record ? record.type : "Imaging & tests"} — Centium` });
+          await navigator.share({ files: [file], title: shareTitle });
           return;
         } catch {
           // fall through to download

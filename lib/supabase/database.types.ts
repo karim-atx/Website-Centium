@@ -527,6 +527,7 @@ export type Database = {
           blood_panel_id: string
           created_at: string
           id: string
+          marker_key: string | null
           name: string
           range_high: number | null
           range_low: number | null
@@ -539,6 +540,7 @@ export type Database = {
           blood_panel_id: string
           created_at?: string
           id?: string
+          marker_key?: string | null
           name: string
           range_high?: number | null
           range_low?: number | null
@@ -551,6 +553,7 @@ export type Database = {
           blood_panel_id?: string
           created_at?: string
           id?: string
+          marker_key?: string | null
           name?: string
           range_high?: number | null
           range_low?: number | null
@@ -4691,6 +4694,120 @@ export type Database = {
             referencedColumns: ["participant_id"]
           },
         ]
+      }
+      lab_marker_aliases: {
+        Row: {
+          alias: string
+          marker_key: string
+        }
+        Insert: {
+          alias: string
+          marker_key: string
+        }
+        Update: {
+          alias?: string
+          marker_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_marker_aliases_marker_key_fkey"
+            columns: ["marker_key"]
+            isOneToOne: false
+            referencedRelation: "lab_markers"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      lab_marker_ranges: {
+        Row: {
+          applies_to_sex: Database["public"]["Enums"]["sex"] | null
+          marker_key: string
+          ref_high: number | null
+          ref_low: number | null
+        }
+        Insert: {
+          applies_to_sex?: Database["public"]["Enums"]["sex"] | null
+          marker_key: string
+          ref_high?: number | null
+          ref_low?: number | null
+        }
+        Update: {
+          applies_to_sex?: Database["public"]["Enums"]["sex"] | null
+          marker_key?: string
+          ref_high?: number | null
+          ref_low?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_marker_ranges_marker_key_fkey"
+            columns: ["marker_key"]
+            isOneToOne: false
+            referencedRelation: "lab_markers"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      lab_marker_units: {
+        Row: {
+          marker_key: string
+          to_canonical_factor: number
+          to_canonical_offset: number
+          unit: string
+        }
+        Insert: {
+          marker_key: string
+          to_canonical_factor: number
+          to_canonical_offset?: number
+          unit: string
+        }
+        Update: {
+          marker_key?: string
+          to_canonical_factor?: number
+          to_canonical_offset?: number
+          unit?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lab_marker_units_marker_key_fkey"
+            columns: ["marker_key"]
+            isOneToOne: false
+            referencedRelation: "lab_markers"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
+      lab_markers: {
+        Row: {
+          canonical_unit: string
+          category: Database["public"]["Enums"]["lab_marker_category"]
+          created_at: string
+          display_name: string
+          key: string
+          notes: string | null
+          reviewed: boolean
+          sort_order: number
+        }
+        Insert: {
+          canonical_unit: string
+          category: Database["public"]["Enums"]["lab_marker_category"]
+          created_at?: string
+          display_name: string
+          key: string
+          notes?: string | null
+          reviewed?: boolean
+          sort_order: number
+        }
+        Update: {
+          canonical_unit?: string
+          category?: Database["public"]["Enums"]["lab_marker_category"]
+          created_at?: string
+          display_name?: string
+          key?: string
+          notes?: string | null
+          reviewed?: boolean
+          sort_order?: number
+        }
+        Relationships: []
       }
       legacy_certificate_quarantine: {
         Row: {
@@ -14355,6 +14472,14 @@ export type Database = {
         | "calf_right"
         | "body_fat_pct"
       health_provider: "apple_health" | "android_health"
+      lab_marker_category:
+        | "blood_count"
+        | "lipids"
+        | "liver"
+        | "kidney"
+        | "hormones"
+        | "metabolic"
+        | "other"
       language_proficiency:
         | "native"
         | "fluent"
@@ -14781,6 +14906,15 @@ export const Constants = {
         "body_fat_pct",
       ],
       health_provider: ["apple_health", "android_health"],
+      lab_marker_category: [
+        "blood_count",
+        "lipids",
+        "liver",
+        "kidney",
+        "hormones",
+        "metabolic",
+        "other",
+      ],
       language_proficiency: [
         "native",
         "fluent",

@@ -1256,6 +1256,11 @@ export interface ExtractedBiomarker {
   value: number;
   unit: string;
   selected: boolean;
+  /** The standard list's marker (lab_markers.key); null/absent for "Other". */
+  markerKey?: string | null;
+  /** The reference range in this result's unit, as the user confirmed it. */
+  rangeLow?: number | null;
+  rangeHigh?: number | null;
 }
 
 export type ProfessionalType =

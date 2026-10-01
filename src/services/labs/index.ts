@@ -3,6 +3,8 @@ import type { PostgrestError } from "@supabase/supabase-js";
 import type { BloodMarker, ExtractedBiomarker, LabReport } from "../../types";
 import { deletePrivateFile, uploadPrivateFile } from "../storage";
 import { todayLocal } from "../../utils/date";
+import { fetchLabCatalogue } from "./catalogue";
+import { convertUnit, tidy, type CatalogueMarker } from "./catalogueLogic";
 
 // Blood work: public.blood_panels and the blood_markers hanging off them,
 // plus the lab report itself in the private `lab-reports` bucket.
@@ -153,8 +155,19 @@ function describe(error: PostgrestError): string {
 const round4 = (n: number) => Math.round(n * 10000) / 10000;
 
 export interface RecordPanelInput {
-  /** Confirmed markers. Range is optional and absent in every current path. */
-  markers: (Pick<ExtractedBiomarker, "name" | "value" | "unit"> & { range?: string })[];
+  /**
+   * Confirmed markers. markerKey links a result to the standard list
+   * (blood_markers.marker_key, null for "Other"); rangeLow/rangeHigh are the
+   * reference range in the result's own unit, as the user confirmed it (from
+   * their report, or pre-filled from the list). `range` is the older
+   * printed-string form, still parsed if given.
+   */
+  markers: (Pick<ExtractedBiomarker, "name" | "value" | "unit"> & {
+    markerKey?: string | null;
+    rangeLow?: number | null;
+    rangeHigh?: number | null;
+    range?: string;
+  })[];
   /** The lab report this came from, if it came from one. */
   file?: File;
 }
@@ -225,16 +238,21 @@ export async function recordPanel(
   }
 
   const rows = input.markers.map((m) => {
-    const { low, high } = parseRange(m.range);
+    const parsed = parseRange(m.range);
+    const low = m.rangeLow ?? parsed.low;
+    const high = m.rangeHigh ?? parsed.high;
     return {
       blood_panel_id: panel.id,
       // The SAME id the panel was written with. Not re-read, not re-derived.
       user_id: userId,
       name: m.name,
+      marker_key: m.markerKey ?? null,
       value: round4(m.value),
       unit: m.unit,
       range_low: low,
       range_high: high,
+      // Worked out here, on the device, from the range the user confirmed.
+      // The database never judges a value (Database 20261011000000).
       status: statusFor(m.value, low, high),
     };
   });
@@ -339,6 +357,7 @@ export interface PanelRow {
   blood_markers: {
     id: string;
     name: string;
+    marker_key?: string | null;
     value: number;
     unit: string;
     range_low: number | null;
@@ -362,11 +381,19 @@ export interface PanelRow {
  * recent panel that measured it, per marker, and a marker absent from the
  * latest panel keeps the last value that did measure it rather than vanishing.
  */
-export function groupPanelsByMarkerName(panels: PanelRow[]): BloodMarker[] {
+export function groupPanelsByMarkerName(panels: PanelRow[], catalogue?: CatalogueMarker[] | null): BloodMarker[] {
   const byName = new Map<string, BloodMarker>();
+  // Each history point's unit, so readings taken in another unit can be
+  // converted into the current one (below). Same order as history.
+  const units = new Map<string, string[]>();
+  const keyOf = new Map<string, string | null>();
   for (const panel of panels) {
     for (const m of panel.blood_markers ?? []) {
-      const key = m.name.toLowerCase();
+      // A result linked to the standard list groups by that marker, so
+      // "HbA1c" and "Glycated haemoglobin" are one history; "Other" by name.
+      const key = m.marker_key ? `key:${m.marker_key}` : m.name.toLowerCase();
+      keyOf.set(key, m.marker_key ?? null);
+      units.set(key, [...(units.get(key) ?? []), m.unit]);
       const value = Number(m.value);
       const low = m.range_low === null ? null : Number(m.range_low);
       const high = m.range_high === null ? null : Number(m.range_high);
@@ -389,6 +416,24 @@ export function groupPanelsByMarkerName(panels: PanelRow[]): BloodMarker[] {
           history: [{ date: panel.panel_date, value }],
         });
       }
+    }
+  }
+  // UNIT CONVERSION BY THE LIST'S FACTORS. A marker measured in mmol/L one
+  // year and mg/dL the next would chart two different scales as one line.
+  // Earlier readings are converted into the current unit when both units are
+  // ones the list accepts; anything unknown is left exactly as entered.
+  if (catalogue) {
+    for (const [key, marker] of byName) {
+      const markerKey = keyOf.get(key);
+      const entry = markerKey ? catalogue.find((c) => c.key === markerKey) : undefined;
+      const seen = units.get(key) ?? [];
+      if (!entry) continue;
+      marker.history = marker.history.map((h, i) => {
+        const from = seen[i];
+        if (!from || from === marker.unit) return h;
+        const converted = convertUnit(entry, h.value, from, marker.unit);
+        return converted === null ? h : { ...h, value: tidy(converted) };
+      });
     }
   }
   return [...byName.values()];
@@ -436,7 +481,7 @@ export async function getLabReports(userId: string): Promise<LabReportResult> {
 export async function getBloodMarkers(userId: string): Promise<BloodMarkerResult> {
   const { data, error } = await supabase
     .from("blood_panels")
-    .select("id, panel_date, blood_markers(id, name, value, unit, range_low, range_high, status)")
+    .select("id, panel_date, blood_markers(id, name, marker_key, value, unit, range_low, range_high, status)")
     .eq("user_id", userId)
     .order("panel_date", { ascending: true });
 
@@ -445,5 +490,5 @@ export async function getBloodMarkers(userId: string): Promise<BloodMarkerResult
     return { ok: false, message: "Could not load your lab results." };
   }
 
-  return { ok: true, markers: groupPanelsByMarkerName(data ?? []) };
+  return { ok: true, markers: groupPanelsByMarkerName(data ?? [], await fetchLabCatalogue()) };
 }
