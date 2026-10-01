@@ -176,9 +176,9 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan }> = ({ plan }
 
       {/* The zone is set in general Settings (task T) and governs every
           reminder, so this only says which one is in force: the profile's,
-          then the cycle tracker's, the order the server resolves them in. */}
+          or UTC when there is none, exactly as the server resolves it. */}
       <p className="mt-2 text-[10px] leading-[1.45] text-charcoal-faint">
-        {G.TIMEZONE_HELP} ({zoneLabel(myTimezone?.timezone ?? cycleSettings.timezone)})
+        {G.TIMEZONE_HELP} ({zoneLabel(myTimezone?.timezone ?? "UTC")})
       </p>
 
       {error && <p className="mt-2 text-[11px] font-semibold text-status-high">{error}</p>}

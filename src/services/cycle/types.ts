@@ -152,8 +152,8 @@ export interface CycleSettings {
    * anybody. Neutral says there is a reminder; detailed says what for.
    */
   notificationDetail: NotificationDetail;
-  /** The IANA zone reminders are scheduled in. */
-  timezone: string;
+  // No zone here: cycle_settings.timezone was dropped (20261008000000). The
+  // one zone is profiles.timezone (AppContext's myTimezone).
 }
 
 export interface CycleDayLog {

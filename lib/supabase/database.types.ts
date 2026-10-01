@@ -3447,7 +3447,6 @@ export type Database = {
           notification_detail: Database["public"]["Enums"]["notification_detail_level"]
           pill_reminder: boolean
           shown_for_any_sex: boolean
-          timezone: string
           tracker_chosen_at: string | null
           tracker_enabled: boolean
           typical_cycle_length: number
@@ -3462,7 +3461,6 @@ export type Database = {
           notification_detail?: Database["public"]["Enums"]["notification_detail_level"]
           pill_reminder?: boolean
           shown_for_any_sex?: boolean
-          timezone?: string
           tracker_chosen_at?: string | null
           tracker_enabled?: boolean
           typical_cycle_length?: number
@@ -3477,7 +3475,6 @@ export type Database = {
           notification_detail?: Database["public"]["Enums"]["notification_detail_level"]
           pill_reminder?: boolean
           shown_for_any_sex?: boolean
-          timezone?: string
           tracker_chosen_at?: string | null
           tracker_enabled?: boolean
           typical_cycle_length?: number
@@ -13238,7 +13235,6 @@ export type Database = {
           trimester: number
         }[]
       }
-      cycle_today: { Args: { p_user: string }; Returns: string }
       decline_group_invitation: {
         Args: { p_thread_id: string }
         Returns: undefined

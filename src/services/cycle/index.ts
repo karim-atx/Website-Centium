@@ -63,8 +63,9 @@ export type SettingsResult =
   | { ok: false; message: string };
 
 // NO contraception COLUMN: 20260924470000 moved it to contraception_plans.
+// NO timezone COLUMN: 20261008000000 dropped it; the zone is profiles.timezone.
 const SETTINGS_COLUMNS =
-  "tracker_enabled, tracker_chosen_at, shown_for_any_sex, typical_cycle_length, typical_period_length, luteal_length, conditions, pill_reminder, method_reminders, notification_detail, timezone";
+  "tracker_enabled, tracker_chosen_at, shown_for_any_sex, typical_cycle_length, typical_period_length, luteal_length, conditions, pill_reminder, method_reminders, notification_detail";
 
 function toSettings(row: {
   tracker_enabled: boolean;
@@ -77,7 +78,6 @@ function toSettings(row: {
   pill_reminder: boolean;
   method_reminders: boolean;
   notification_detail: NotificationDetail;
-  timezone: string;
 }): CycleSettings {
   return {
     trackerEnabled: row.tracker_enabled,
@@ -90,7 +90,6 @@ function toSettings(row: {
     pillReminder: row.pill_reminder,
     methodReminders: row.method_reminders,
     notificationDetail: row.notification_detail,
-    timezone: row.timezone,
   };
 }
 
@@ -178,9 +177,7 @@ export async function saveCycleSettings(
   if (patch.conditions !== undefined) patchRow.conditions = patch.conditions;
   if (patch.pillReminder !== undefined) patchRow.pill_reminder = patch.pillReminder;
   if (patch.methodReminders !== undefined) patchRow.method_reminders = patch.methodReminders;
-  if (patch.notificationDetail !== undefined) patchRow.notification_detail = patch.notificationDetail;
-  if (patch.timezone !== undefined) patchRow.timezone = patch.timezone;
-  if (Object.keys(patchRow).length === 0) return { ok: true };
+  if (patch.notificationDetail !== undefined) patchRow.notification_detail = patch.notificationDetail;  if (Object.keys(patchRow).length === 0) return { ok: true };
 
   const { data: updated, error: updateError } = await supabase
     .from("cycle_settings")
