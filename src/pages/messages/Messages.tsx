@@ -8,6 +8,7 @@ import { ThreadView } from "../../components/messages/ThreadView";
 import { StarredMessages } from "../../components/messages/StarredMessages";
 import { SearchResults } from "../../components/messages/SearchResults";
 import { useApp } from "../../context/AppContext";
+import { ThreadLiveProvider } from "../../context/ThreadLiveContext";
 import { fetchThreads, migrateLegacyStars, threadForPush, type MessageThread } from "../../services/messaging";
 import {
   fetchLastMessageState,
@@ -45,6 +46,7 @@ export default function Messages() {
   const [threads, setThreads] = useState<MessageThread[]>([]);
   const [settings, setSettings] = useState<Record<string, ThreadSettings>>({});
   const [readState, setReadState] = useState<Record<string, string | null>>({});
+  const [delivered, setDelivered] = useState<Set<string>>(new Set());
   const [open, setOpen] = useState<MessageThread | null>(null);
   /** The message to show when a chat is opened from a search result. */
   const [focusId, setFocusId] = useState<string | null>(null);
@@ -73,8 +75,9 @@ export default function Messages() {
       setThreads(result.threads);
       setError(null);
       const lastIds = result.threads.filter((t) => t.lastMessageId).map((t) => t.lastMessageId!);
-      void fetchLastMessageState(lastIds).then(({ readAt, deleted }) => {
+      void fetchLastMessageState(lastIds).then(({ readAt, deleted, delivered: reached }) => {
         setReadState(readAt);
+        setDelivered(reached);
         if (deleted.size === 0) return;
         setThreads((prev) =>
           prev.map((t) =>
@@ -174,8 +177,18 @@ export default function Messages() {
 
   // The conversation and Chat info carry their own headers (screens 2 and 6),
   // so the page title is not repeated above them.
+  // Typing and online status for the chats in the list and the open one; the
+  // database decides who may see what (ThreadLiveContext). Person-to-person
+  // chats only, and at most 30 channels.
+  const liveIds = threads.filter((t) => t.kind === "peer" && t.participantId).slice(0, 30).map((t) => t.id);
+  const live = (node: React.ReactNode) => (
+    <ThreadLiveProvider userId={authUserId} threadIds={liveIds}>
+      {node}
+    </ThreadLiveProvider>
+  );
+
   if (open) {
-    return (
+    return live(
       <div>
         <ThreadView
           key={open.id}
@@ -196,7 +209,7 @@ export default function Messages() {
   }
 
   if (view === "starred") {
-    return (
+    return live(
       <div>
         <SubHeader title="Starred messages" onBack={() => setView("list")} />
         <StarredMessages
@@ -221,7 +234,7 @@ export default function Messages() {
         : "bg-cream-card border border-charcoal/10 text-charcoal font-semibold"
     }`;
 
-  return (
+  return live(
     <div>
       {view === "archived" ? (
         <SubHeader title="Archived" onBack={() => setView("list")} />
@@ -298,6 +311,7 @@ export default function Messages() {
         threads={view === "list" ? active : archived}
         settings={settings}
         readState={readState}
+        delivered={delivered}
         authUserId={authUserId}
         onOpen={setOpen}
       />

@@ -19,6 +19,7 @@ import { MessageActions, type MessageAction } from "./MessageActions";
 import { SearchResults } from "./SearchResults";
 import { clockTime } from "./chatTime";
 import { useReactionsRealtime } from "../../hooks/useReactionsRealtime";
+import { useThreadLive } from "../../context/threadLive";
 import { computeWaveform } from "../../services/messaging/waveformDecode";
 import {
   fetchReactions,
@@ -153,6 +154,10 @@ export const ThreadView: React.FC<{
 }> = ({ thread, settings, onSettingsChanged, onBack, focusMessageId }) => {
   const { authUserId, user } = useApp();
   const unread = useUnread();
+  // Typing and online for this chat; the database decides who sees them.
+  const live = useThreadLive();
+  const theyAreTyping = live.typing.has(thread.id);
+  const theyAreOnline = live.online.has(thread.id);
   /**
    * WHERE THE COMPOSER STICKS: just above the bottom bar, not behind it. The
    * client bar floats 18px up and is 58px tall; the professional and business
@@ -1124,7 +1129,14 @@ export const ThreadView: React.FC<{
               thread.participantName.trim().charAt(0).toUpperCase()
             )}
           </span>
-          <span className="text-[15px] font-bold text-charcoal truncate">{thread.participantName}</span>
+          <span className="flex flex-col min-w-0">
+            <span className="text-[15px] font-bold text-charcoal truncate">{thread.participantName}</span>
+            {(theyAreTyping || theyAreOnline) && (
+              <span className="text-xs font-semibold" style={{ color: "#2E7D57" }}>
+                {theyAreTyping ? "typing…" : "Online"}
+              </span>
+            )}
+          </span>
         </button>
 
         {/* CALL CONTROLS, gated on canCall — asked once on open, failing
@@ -1434,6 +1446,22 @@ export const ThreadView: React.FC<{
             </span>
           </div>
         )}
+        {/* THEY ARE TYPING: three dots where their next message will land. */}
+        {theyAreTyping && (
+          <div
+            role="status"
+            aria-label={`${thread.participantName} is typing`}
+            className="self-start rounded-2xl bg-cream-soft px-3.5 py-2.5 flex gap-1"
+          >
+            {[0, 1, 2].map((i) => (
+              <span
+                key={i}
+                className="w-[7px] h-[7px] rounded-full bg-primary/60 animate-pulse"
+                style={{ animationDelay: `${i * 180}ms` }}
+              />
+            ))}
+          </div>
+        )}
         <div ref={endRef} />
       </div>
 
@@ -1566,7 +1594,11 @@ export const ThreadView: React.FC<{
         ) : (
           <input
             value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              // Not while editing: an edit is not a new message on its way.
+              if (e.target.value && !editing) live.sendTyping(thread.id);
+            }}
             onKeyDown={(e) => {
               if (e.key === "Enter") void send();
             }}

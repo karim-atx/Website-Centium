@@ -174,15 +174,19 @@ export async function setReaction(
  */
 export async function fetchLastMessageState(
   messageIds: string[]
-): Promise<{ readAt: Record<string, string | null>; deleted: Set<string> }> {
-  const out = { readAt: {} as Record<string, string | null>, deleted: new Set<string>() };
+): Promise<{ readAt: Record<string, string | null>; deleted: Set<string>; delivered: Set<string> }> {
+  const out = { readAt: {} as Record<string, string | null>, deleted: new Set<string>(), delivered: new Set<string>() };
   if (messageIds.length === 0) return out;
-  const { data, error } = await supabase.from("messages_visible").select("id, read_at, deleted_at").in("id", messageIds);
+  const { data, error } = await supabase
+    .from("messages_visible")
+    .select("id, read_at, deleted_at, delivered_at")
+    .in("id", messageIds);
   if (error) return out;
   for (const r of data ?? []) {
     if (!r.id) continue;
     out.readAt[r.id] = r.read_at;
     if (r.deleted_at) out.deleted.add(r.id);
+    if (r.delivered_at) out.delivered.add(r.id);
   }
   return out;
 }
@@ -243,41 +247,52 @@ export interface GalleryItem {
   voiceNoteSeconds: number | null;
   name: string | null;
   bytes: number | null;
+  mime: string | null;
   width: number | null;
   height: number | null;
+  waveform: number[] | null;
 }
 
 const KIND: Record<GalleryKind, "image" | "file" | "voice"> = { media: "image", files: "file", voice: "voice" };
 
+const GALLERY_PAGE = 30;
+
 /**
- * One chat's photos, files or voice notes, newest first.
- *
- * Read through messages_visible, so what this person hid is absent, and
- * filtered on attachment_kind, which the database derives from the file type
- * and owns — so the gallery cannot disagree with what a file actually is.
+ * One chat's photos, files or voice notes, newest first, a page at a time
+ * (Database 20261002100000, gallery_attachments). The database leaves out what
+ * the reader hid, unsent and redacted messages, and files already purged from
+ * storage, so every tile can actually be opened. Pass the last item back as
+ * `after` for the next page.
  */
-export async function fetchGallery(threadId: string, kind: GalleryKind): Promise<GalleryItem[] | null> {
-  const { data, error } = await supabase
-    .from("messages_visible")
-    .select("id, attachment_url, created_at, voice_note_seconds, attachment_name, attachment_bytes, image_width, image_height")
-    .eq("thread_id", threadId)
-    .eq("attachment_kind", KIND[kind])
-    .not("attachment_url", "is", null)
-    .order("created_at", { ascending: false })
-    .limit(300);
-  if (error) return null;
-  return (data ?? [])
-    .filter((r) => r.id && r.attachment_url && r.created_at)
-    .map((r) => ({
-      id: r.id!,
-      path: r.attachment_url!,
-      createdAt: r.created_at!,
-      voiceNoteSeconds: r.voice_note_seconds,
-      name: r.attachment_name,
-      bytes: r.attachment_bytes,
-      width: r.image_width,
-      height: r.image_height,
-    }));
+export async function fetchGallery(
+  threadId: string,
+  kind: GalleryKind,
+  after?: GalleryItem
+): Promise<{ items: GalleryItem[]; hasMore: boolean } | null> {
+  const { data, error } = await supabase.rpc("gallery_attachments", {
+    p_thread_id: threadId,
+    p_kind: KIND[kind],
+    p_before: after?.createdAt,
+    p_before_id: after?.id,
+    p_limit: GALLERY_PAGE,
+  });
+  if (error) {
+    console.error("[chat] Could not load the gallery:", error.message);
+    return null;
+  }
+  const items = (data ?? []).map((r) => ({
+    id: r.message_id,
+    path: r.attachment_url,
+    createdAt: r.created_at,
+    voiceNoteSeconds: r.voice_note_seconds,
+    name: r.attachment_name,
+    bytes: r.attachment_bytes,
+    mime: r.attachment_mime,
+    width: r.image_width,
+    height: r.image_height,
+    waveform: r.voice_waveform,
+  }));
+  return { items, hasMore: items.length === GALLERY_PAGE };
 }
 
 /**
@@ -378,4 +393,31 @@ export async function searchMessages(
     matchedIn: r.matched_in === "attachment_name" ? ("attachment_name" as const) : ("text" as const),
   }));
   return { ok: true, hits, hasMore: hits.length === PAGE };
+}
+
+// ---------------------------------------------------------------------------
+// "Show when I'm online" (Database 20261002110000, profiles.shares_presence)
+// ---------------------------------------------------------------------------
+
+/** Whether the caller shares their online status. Off by default; null if unreadable. */
+export async function fetchSharesPresence(userId: string): Promise<boolean | null> {
+  const { data, error } = await supabase.from("profiles").select("shares_presence").eq("id", userId).maybeSingle();
+  if (error) {
+    console.error("[chat] Could not read the online setting:", error.message);
+    return null;
+  }
+  return data?.shares_presence ?? false;
+}
+
+/**
+ * Turns sharing your online status on or off, for every chat at once. Mutual:
+ * it only shows anything where the other person has it on too.
+ */
+export async function setSharesPresence(userId: string, on: boolean): Promise<{ ok: true } | Fail> {
+  const { error } = await supabase.from("profiles").update({ shares_presence: on }).eq("id", userId);
+  if (error) {
+    console.error("[chat] Could not save the online setting:", error.message);
+    return { ok: false, message: isOffline(error) ? OFFLINE_MESSAGE : "Couldn't save that. Try again." };
+  }
+  return { ok: true };
 }

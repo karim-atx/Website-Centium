@@ -23,6 +23,8 @@ import {
   type ThreadSettings,
 } from "../../services/messaging/chatFeatures";
 import { fetchHideReadReceipts, setHideReadReceipts } from "../../services/preferences";
+import { fetchSharesPresence, setSharesPresence } from "../../services/messaging/chatFeatures";
+import { useThreadLive } from "../../context/threadLive";
 
 type Tab = GalleryKind | "starred";
 
@@ -40,8 +42,8 @@ const TABS: { value: Tab; label: string }[] = [
  * changes for the other person. The gallery reads through messages_visible, so
  * what the reader hid is not in it.
  *
- * NOT YET HERE, because the database does not offer it yet: "Show when I'm
- * online" (presence). The read receipts switch is the
+ * "Show when I'm online" and read receipts are account-wide: neither is a
+ * per-chat setting in the database. The read receipts switch is the
  * account-wide one that Profile → Privacy already has, since receipts are not
  * set per chat.
  */
@@ -67,6 +69,8 @@ export const ChatInfo: React.FC<{
   const s = settings ?? NO_SETTINGS;
   const [tab, setTab] = useState<Tab>("media");
   const [items, setItems] = useState<GalleryItem[] | null>(null);
+  const [galleryMore, setGalleryMore] = useState(false);
+  const [galleryBusy, setGalleryBusy] = useState(false);
   const [starred, setStarred] = useState<StarredMessage[] | null>(null);
   const [muteOpen, setMuteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -82,7 +86,9 @@ export const ChatInfo: React.FC<{
       });
     } else {
       void fetchGallery(thread.id, tab).then((r) => {
-        if (!cancelled) setItems(r ?? []);
+        if (cancelled) return;
+        setItems(r?.items ?? []);
+        setGalleryMore(r?.hasMore ?? false);
       });
     }
     return () => {
@@ -96,6 +102,40 @@ export const ChatInfo: React.FC<{
       else setReceiptsError(r.message);
     });
   }, []);
+
+  // "SHOW WHEN I'M ONLINE": one setting for every chat, off by default, and
+  // mutual -- the database shows nothing unless both people have it on. The
+  // live channels are rejoined after a change, because the server decides at
+  // join time.
+  const live = useThreadLive();
+  const [presence, setPresence] = useState<boolean | null>(null);
+  const [presenceError, setPresenceError] = useState<string | null>(null);
+  useEffect(() => {
+    void fetchSharesPresence(authUserId).then(setPresence);
+  }, [authUserId]);
+  const togglePresence = async (on: boolean) => {
+    const previous = presence;
+    setPresence(on);
+    setPresenceError(null);
+    const r = await setSharesPresence(authUserId, on);
+    if (!r.ok) {
+      setPresence(previous);
+      setPresenceError(r.message);
+      return;
+    }
+    live.reconnect();
+  };
+
+  const moreGallery = async () => {
+    const last = items?.[items.length - 1];
+    if (!last || tab === "starred") return;
+    setGalleryBusy(true);
+    const r = await fetchGallery(thread.id, tab, last);
+    setGalleryBusy(false);
+    if (!r) return;
+    setItems((prev) => [...(prev ?? []), ...r.items]);
+    setGalleryMore(r.hasMore);
+  };
 
   const save = async (patch: Parameters<typeof saveThreadSettings>[2]) => {
     setBusy(true);
@@ -224,7 +264,7 @@ export const ChatInfo: React.FC<{
                 key={it.id}
                 name={it.name}
                 bytes={it.bytes}
-                mime={null}
+                mime={it.mime}
                 time={listTime(it.createdAt)}
                 onOpen={() => onOpenFile(it.path)}
               />
@@ -236,7 +276,7 @@ export const ChatInfo: React.FC<{
             {items.map((it) => (
               <div key={it.id} className="flex flex-col gap-1">
                 <span className="text-[11px] text-charcoal-soft">{listTime(it.createdAt)}</span>
-                <VoiceNoteBubble path={it.path} seconds={it.voiceNoteSeconds} mine={false} />
+                <VoiceNoteBubble path={it.path} seconds={it.voiceNoteSeconds} mine={false} waveform={it.waveform} />
               </div>
             ))}
           </div>
@@ -279,12 +319,37 @@ export const ChatInfo: React.FC<{
                   : "No starred messages in this chat."}
           </p>
         )}
+        {tab !== "starred" && galleryMore && (
+          <button
+            type="button"
+            onClick={() => void moreGallery()}
+            disabled={galleryBusy}
+            className="tap min-h-[44px] text-[13px] font-semibold text-primary-deep-text disabled:opacity-50"
+          >
+            {galleryBusy ? "Loading…" : "Show more"}
+          </button>
+        )}
         <p className="text-xs text-charcoal-soft">
           {tab === "media" ? "Photos are private to this chat." : tab === "starred" ? "Only you can see your stars." : "Files are private to this chat."}
         </p>
       </section>
 
       <section className="rounded-2xl bg-cream-card border border-charcoal/[0.08] px-3.5 py-1 flex flex-col">
+        <div className="flex items-center justify-between gap-3 min-h-[56px] border-b border-charcoal/[0.06]">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-sm font-semibold text-charcoal">Show when I'm online</span>
+            <span className="text-xs text-charcoal-soft">
+              Off by default. If off, you won't see theirs either. Applies to all your chats.
+            </span>
+            {presenceError && <span className="text-[11.5px] text-status-high">{presenceError}</span>}
+          </div>
+          <Toggle
+            checked={presence ?? false}
+            disabled={presence === null}
+            onChange={(v) => void togglePresence(v)}
+            label="Show when I'm online"
+          />
+        </div>
         <div className="flex items-center justify-between gap-3 min-h-[56px] border-b border-charcoal/[0.06]">
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-charcoal">Read receipts</span>

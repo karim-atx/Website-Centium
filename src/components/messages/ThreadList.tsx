@@ -1,6 +1,7 @@
 import { PERSON_ICON } from "../../utils/icons";
 import { BellOff, Check, CheckCheck, Pin, ShieldCheck } from "lucide-react";
 import { useUnread } from "../../context/UnreadContext";
+import { useThreadLive } from "../../context/threadLive";
 import type { MessageThread } from "../../services/messaging";
 import { isMuted, type ThreadSettings } from "../../services/messaging/chatFeatures";
 import { listTime } from "./chatTime";
@@ -15,17 +16,20 @@ import { listTime } from "./chatTime";
  * my_conversations(); unread from the reader's own read mark; the tick on
  * "You: …" from that message's read_at, which the database only stores when
  * both people allow read receipts; mute and pin from the reader's own chat
- * settings. There is no delivered tick and no online dot yet — the database
- * does not expose either to the app.
+ * settings. The online dot and "typing…" come from each chat's live channel,
+ * where the database decides who may see them (see ThreadLiveContext).
  */
 export const ThreadList: React.FC<{
   threads: MessageThread[];
   settings: Record<string, ThreadSettings>;
   readState: Record<string, string | null>;
+  /** Latest messages that have reached the other person's device. */
+  delivered: Set<string>;
   authUserId: string | null;
   onOpen: (thread: MessageThread) => void;
-}> = ({ threads, settings, readState, authUserId, onOpen }) => {
+}> = ({ threads, settings, readState, delivered, authUserId, onOpen }) => {
   const unread = useUnread();
+  const live = useThreadLive();
   return (
     <ul className="flex flex-col">
       {threads.map((t) => {
@@ -35,6 +39,9 @@ export const ThreadList: React.FC<{
         const muted = isMuted(s);
         const mine = !!t.lastMessageId && t.lastMessageSenderId === authUserId;
         const read = mine && t.lastMessageId ? !!readState[t.lastMessageId] : false;
+        const reached = mine && !!t.lastMessageId && delivered.has(t.lastMessageId);
+        const typing = live.typing.has(t.id);
+        const online = live.online.has(t.id);
         return (
           <li key={t.id} className="border-b border-charcoal/[0.07]">
             <button
@@ -42,17 +49,27 @@ export const ThreadList: React.FC<{
               onClick={() => onOpen(t)}
               className="tap w-full flex items-center gap-3 px-2 py-3 min-h-[72px] text-left"
             >
-              <span
-                className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${
-                  official ? "bg-teal-pale" : "bg-primary-pale"
-                }`}
-              >
-                {t.participantAvatarUrl ? (
-                  <img src={t.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
-                ) : official ? (
-                  <ShieldCheck size={19} className="text-teal-deep-text" />
-                ) : (
-                  <PERSON_ICON size={19} className="text-primary-dark" />
+              <span className="relative shrink-0">
+                <span
+                  className={`w-12 h-12 rounded-full flex items-center justify-center overflow-hidden ${
+                    official ? "bg-teal-pale" : "bg-primary-pale"
+                  }`}
+                >
+                  {t.participantAvatarUrl ? (
+                    <img src={t.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : official ? (
+                    <ShieldCheck size={19} className="text-teal-deep-text" />
+                  ) : (
+                    <PERSON_ICON size={19} className="text-primary-dark" />
+                  )}
+                </span>
+                {/* ONLINE, only when both people share it (server-gated). */}
+                {online && (
+                  <span
+                    aria-label="Online"
+                    className="absolute right-px bottom-px w-[11px] h-[11px] rounded-full border-2 border-cream"
+                    style={{ background: "#2E9E6B" }}
+                  />
                 )}
               </span>
               <span className="min-w-0 flex-1 flex flex-col gap-[3px]">
@@ -80,16 +97,26 @@ export const ThreadList: React.FC<{
                       count > 0 ? "text-charcoal font-semibold" : "text-charcoal-soft"
                     }`}
                   >
+                    {typing ? (
+                      <span className="truncate italic text-primary-deep-text font-normal">typing…</span>
+                    ) : (
+                    <>
                     {mine &&
                       (read ? (
                         <CheckCheck size={15} aria-label="Read" className="shrink-0 text-[#3A7BD5] dark:text-[#7FB0F0]" />
                       ) : (
-                        <Check size={15} aria-label="Sent" className="shrink-0 opacity-70" />
+                        reached ? (
+                          <CheckCheck size={15} aria-label="Delivered" className="shrink-0 opacity-70" />
+                        ) : (
+                          <Check size={15} aria-label="Sent" className="shrink-0 opacity-70" />
+                        )
                       ))}
                     <span className="truncate">
                       {mine ? "You: " : ""}
                       {t.lastMessagePreview ?? "No messages yet"}
                     </span>
+                    </>
+                    )}
                   </span>
                   <span className="flex items-center gap-1.5 shrink-0">
                     {s?.pinnedAt && <Pin size={13} aria-label="Pinned" className="text-charcoal-soft" />}

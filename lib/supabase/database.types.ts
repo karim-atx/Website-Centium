@@ -7934,6 +7934,7 @@ export type Database = {
             | Database["public"]["Enums"]["professional_subtype"]
             | null
           sex: Database["public"]["Enums"]["sex"] | null
+          shares_presence: boolean
           storage_bytes_used: number
           storage_purged_at: string | null
           tracking_preferences: string[]
@@ -7963,6 +7964,7 @@ export type Database = {
             | Database["public"]["Enums"]["professional_subtype"]
             | null
           sex?: Database["public"]["Enums"]["sex"] | null
+          shares_presence?: boolean
           storage_bytes_used?: number
           storage_purged_at?: string | null
           tracking_preferences?: string[]
@@ -7992,6 +7994,7 @@ export type Database = {
             | Database["public"]["Enums"]["professional_subtype"]
             | null
           sex?: Database["public"]["Enums"]["sex"] | null
+          shares_presence?: boolean
           storage_bytes_used?: number
           storage_purged_at?: string | null
           tracking_preferences?: string[]
@@ -13151,6 +13154,30 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      gallery_attachments: {
+        Args: {
+          p_before?: string
+          p_before_id?: string
+          p_kind?: Database["public"]["Enums"]["attachment_kind"]
+          p_limit?: number
+          p_thread_id: string
+        }
+        Returns: {
+          attachment_bytes: number
+          attachment_kind: Database["public"]["Enums"]["attachment_kind"]
+          attachment_mime: string
+          attachment_name: string
+          attachment_url: string
+          created_at: string
+          forwarded: boolean
+          image_height: number
+          image_width: number
+          message_id: string
+          sender_id: string
+          voice_note_seconds: number
+          voice_waveform: number[]
+        }[]
+      }
       generate_business_member_code: {
         Args: { p_prefix: string }
         Returns: string
@@ -13221,6 +13248,7 @@ export type Database = {
         Args: { p_name: string }
         Returns: boolean
       }
+      may_use_thread_channel: { Args: { p_topic: string }; Returns: boolean }
       message_is_editable: {
         Args: { p_message_id: string; p_user: string }
         Returns: boolean
@@ -13639,6 +13667,7 @@ export type Database = {
         Args: { p_caller_id: string; p_thread_id: string }
         Returns: boolean
       }
+      thread_channel_topic: { Args: { p_thread_id: string }; Returns: string }
       thread_is_muted: {
         Args: { p_thread_id: string; p_user: string }
         Returns: boolean
