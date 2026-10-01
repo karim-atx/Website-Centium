@@ -46,7 +46,7 @@ function describe(error: PostgrestError): string {
   // 23514 is a CHECK the client should already have caught. Naming the likely
   // one is more use than "constraint violated" — every other CHECK on this
   // table is a range the validator below mirrors exactly.
-  if (code === "23514") return "Check those numbers — systolic should be higher than diastolic.";
+  if (code === "23514") return "Systolic should be higher than diastolic.";
   if (code === "42501") {
     return "You don't have permission to save blood-pressure readings. Sign in again and try once more.";
   }
@@ -84,7 +84,7 @@ export function validateBloodPressure(input: BloodPressureInput): string | null 
     }
   }
   if (arm != null && !BP_ARMS.includes(arm)) return "Choose which arm you measured.";
-  if (position != null && !BP_POSITIONS.includes(position)) return "Choose how you were sitting.";
+  if (position != null && !BP_POSITIONS.includes(position)) return "Choose your position.";
   if (notes != null && notes.length > BP_LIMITS.notesMaxLength) {
     return `Keep the note under ${BP_LIMITS.notesMaxLength} characters.`;
   }

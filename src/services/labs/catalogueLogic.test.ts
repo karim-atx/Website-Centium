@@ -18,6 +18,7 @@ const hba1c: CatalogueMarker = {
   canonicalUnit: "%",
   reviewed: false,
   notes: null,
+  remark: null,
   aliases: ["hba1c", "a1c", "glycated haemoglobin"],
   units: [
     { unit: "%", factor: 1, offset: 0 },
@@ -32,6 +33,7 @@ const creatinine: CatalogueMarker = {
   canonicalUnit: "mg/dL",
   reviewed: false,
   notes: null,
+  remark: null,
   aliases: ["creatinine", "serum creatinine"],
   units: [
     { unit: "mg/dL", factor: 1, offset: 0 },

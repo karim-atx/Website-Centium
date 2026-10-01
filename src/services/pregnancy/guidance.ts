@@ -68,9 +68,9 @@ export const NUTRIENTS: readonly Nutrient[] = [
 
 /** Things to limit or avoid. Each is a fact, not an instruction to worry. */
 export const NUTRITION_LIMITS: readonly string[] = [
-  "Caffeine: under 200 mg a day — roughly one 12 oz cup of coffee.",
+  "Caffeine: under 200 mg a day — about one 350 ml cup of coffee.",
   "Alcohol: none. No amount is known to be safe in pregnancy.",
-  "Seafood: 8–12 oz a week, from low-mercury choices.",
+  "Seafood: about 225–340 g a week, from low-mercury choices.",
   "Avoid unpasteurised dairy.",
   "Avoid raw or undercooked meat, eggs and fish.",
 ];
@@ -284,13 +284,11 @@ export const URGENT_ACTION =
  * is withheld: both tools are simply not put on screen before they could be
  * used.
  *
- * 16 is early of the usual range for first feeling movement (roughly 18–25
- * weeks, earlier in a later pregnancy), chosen so the counter is already there
- * when somebody starts feeling something. 28 is the start of the third
- * trimester. Neither figure is in the brief; they are the app's own, and are
- * here rather than in a component so a reviewer sees them.
+ * 24 for the kick counter is the clinical review's decision (2026-10-02,
+ * after RCOG's reduced fetal movements guidance, GTG 57). 28 for the
+ * contraction timer is the start of the third trimester, kept as reviewed.
  */
-export const KICKS_FROM_WEEK = 16;
+export const KICKS_FROM_WEEK = 24;
 export const CONTRACTIONS_FROM_WEEK = 28;
 
 export const KICKS_TITLE = "Movements";

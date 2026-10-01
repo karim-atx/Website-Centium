@@ -23,6 +23,7 @@ import NutrientSummaryPage from "./pages/food/NutrientSummaryPage";
 import Workout from "./pages/workout/Workout";
 import Health from "./pages/health/Health";
 import HealthChecks from "./pages/health/HealthChecks";
+import HealthSources from "./pages/health/HealthSources";
 import Cycle from "./pages/cycle/Cycle";
 import Contraception from "./pages/contraception/Contraception";
 import Mind from "./pages/mind/Mind";
@@ -378,6 +379,7 @@ function AppRoutes() {
         <Route path="/app/workout" element={<Workout />} />
         <Route path="/app/health" element={<Health />} />
         <Route path="/app/health/checks" element={<HealthChecks />} />
+        <Route path="/app/health/sources" element={<HealthSources />} />
         <Route path="/app/cycle" element={<Cycle />} />
         <Route path="/app/contraception" element={<Contraception />} />
         <Route path="/app/mind" element={<Mind />} />

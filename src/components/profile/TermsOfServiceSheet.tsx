@@ -1,3 +1,4 @@
+import { HEALTH_DISCLAIMER } from "../../services/legal/disclaimer";
 import React from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 
@@ -18,7 +19,9 @@ const sections: { heading: string; body: string }[] = [
     // does not act like a replacement for a doctor rather just provides
     // advice" + "Another legal line should state that Centium does not
     // condone the use or purchase of steroids/drugs."
+    // Task Y2: the app-wide disclaimer opens this section.
     body:
+      `${HEALTH_DISCLAIMER} ` +
       "Centium provides health, fitness and nutrition tracking tools for informational purposes only. Centium does not diagnose, prognose, or treat any condition, and is not a replacement for a doctor — the app and any professional advice given through it are guidance only. Always consult a qualified healthcare professional before making changes to your diet, exercise or medication routine. Centium does not condone, endorse, or facilitate the use or purchase of steroids or other unregulated drugs, and no such content or listing is permitted on the platform.",
   },
   {

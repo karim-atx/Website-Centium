@@ -174,13 +174,22 @@ export const FLAG_TITLE: Record<CycleFlag, string> = {
   no_period_90_days: "No period logged in 90 days",
 };
 
+// The thresholds are FIGO 2018's (Database 20261013010000): under 24 days,
+// over 38 days, bleeding over 8 days. The flag KEYS keep their old numbers;
+// only the server's rule and these sentences moved.
 export const FLAG_BODY: Record<CycleFlag, string> = {
-  cycle_under_21: "Some of your cycles have been shorter than 21 days.",
-  cycle_over_35: "Some of your cycles have been longer than 35 days.",
-  period_over_7: "Some of your periods have lasted longer than 7 days.",
+  cycle_under_21: "Some of your cycles have been shorter than 24 days.",
+  cycle_over_35: "Some of your cycles have been longer than 38 days.",
+  period_over_7: "Some of your periods have lasted longer than 8 days.",
   heavy_flow: "You've logged heavy flow on several days.",
   intermenstrual_bleeding: "You've logged bleeding outside your period.",
   no_period_90_days: "You haven't logged a period in the last 90 days.",
+};
+
+/** Shown under a flag's sentence, for the flags that need more (clinical review 2026-10-02, ACOG). */
+export const FLAG_EXTRA: Partial<Record<CycleFlag, string>> = {
+  heavy_flow:
+    "If you're soaking through a pad or tampon every hour for several hours, or you might be pregnant, contact a doctor promptly.",
 };
 
 /** Appended to every flag. One sentence, the same one, every time. */

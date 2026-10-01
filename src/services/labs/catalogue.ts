@@ -10,7 +10,7 @@ async function load(): Promise<CatalogueMarker[] | null> {
   const [markers, aliases, units, ranges] = await Promise.all([
     supabase
       .from("lab_markers")
-      .select("key, display_name, category, canonical_unit, reviewed, sort_order, notes")
+      .select("key, display_name, category, canonical_unit, reviewed, sort_order, notes, remark")
       .order("sort_order"),
     supabase.from("lab_marker_aliases").select("alias, marker_key"),
     supabase.from("lab_marker_units").select("marker_key, unit, to_canonical_factor, to_canonical_offset"),
@@ -24,6 +24,7 @@ async function load(): Promise<CatalogueMarker[] | null> {
     canonicalUnit: m.canonical_unit,
     reviewed: m.reviewed,
     notes: m.notes,
+    remark: m.remark,
     aliases: (aliases.data ?? []).filter((a) => a.marker_key === m.key).map((a) => a.alias.trim().toLowerCase()),
     // The canonical unit is implied by the list (factor 1, offset 0), so it
     // leads; the table holds the alternatives.

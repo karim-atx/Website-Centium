@@ -2283,6 +2283,42 @@ export type Database = {
           },
         ]
       }
+      clinical_sources: {
+        Row: {
+          citation: string | null
+          created_at: string
+          informs: string
+          key: string
+          organisation: string
+          sort_order: number
+          title: string
+          url: string
+          url_verified_on: string
+        }
+        Insert: {
+          citation?: string | null
+          created_at?: string
+          informs: string
+          key: string
+          organisation: string
+          sort_order: number
+          title: string
+          url: string
+          url_verified_on: string
+        }
+        Update: {
+          citation?: string | null
+          created_at?: string
+          informs?: string
+          key?: string
+          organisation?: string
+          sort_order?: number
+          title?: string
+          url?: string
+          url_verified_on?: string
+        }
+        Relationships: []
+      }
       client_access_grants: {
         Row: {
           category: Database["public"]["Enums"]["access_category"]
@@ -4839,6 +4875,7 @@ export type Database = {
           display_name: string
           key: string
           notes: string | null
+          remark: string | null
           reviewed: boolean
           sort_order: number
         }
@@ -4849,6 +4886,7 @@ export type Database = {
           display_name: string
           key: string
           notes?: string | null
+          remark?: string | null
           reviewed?: boolean
           sort_order: number
         }
@@ -4859,6 +4897,7 @@ export type Database = {
           display_name?: string
           key?: string
           notes?: string | null
+          remark?: string | null
           reviewed?: boolean
           sort_order?: number
         }

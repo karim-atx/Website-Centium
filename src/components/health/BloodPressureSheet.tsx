@@ -1,3 +1,4 @@
+import { HealthDisclaimer } from "../ui/HealthDisclaimer";
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
@@ -360,6 +361,7 @@ export const BloodPressureSheet: React.FC<{
             )}
           </div>
         )}
+        <HealthDisclaimer className="mt-4" />
       </div>
     </BottomSheet>
   );

@@ -1,3 +1,4 @@
+import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
 import React from "react";
 import { Button } from "../../components/ui/Button";
 import type { OnboardingDraft } from "./Onboarding";
@@ -113,6 +114,8 @@ export const ReadyStep: React.FC<{
           <p className="text-xs text-charcoal-soft leading-relaxed">{notice}</p>
         </div>
       )}
+
+      <HealthDisclaimer className="mb-3 max-w-xs" />
 
       <Button
         size="lg"

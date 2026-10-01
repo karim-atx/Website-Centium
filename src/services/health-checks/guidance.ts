@@ -35,6 +35,10 @@ export const COPY = {
     "At your age, effects on your hormones and fertility are more likely to be lasting, even after short use. Please involve a doctor.",
   cautionWomen:
     "Some effects, like voice changes and changes to periods or fertility, can be permanent. Please involve a doctor, and take a pregnancy test before starting and if a period is missed.",
+  // Clinical review 2026-10-02: both proposed cautions approved, shown to
+  // everyone in the mode as general advice (the app never asks about either).
+  cautionHeart: "If you have a heart condition or high blood pressure, tell your doctor before making any changes.",
+  cautionMood: "If you have had low mood, anxiety or problems with other substances, please mention it to your doctor.",
   planTitle: "Your monitoring plan",
 } as const;
 
@@ -69,6 +73,8 @@ export type PlanRow = {
   timing: string;
   /** The phases whose checks include this row, read from its timing. */
   phases: Phase[];
+  /** The timing shown instead while the phase is "stopped", when it differs. */
+  stoppedTiming?: string;
   /** Shown only to this sex, when set. */
   sex?: "male" | "female";
   source: LastCheckedSource;
@@ -99,6 +105,7 @@ export const PLAN: PlanRow[] = [
     looksFor: "Dyslipidaemia (falling HDL is typical)",
     timing: "Before, every 3–6 months during, after stopping",
     phases: ALL,
+    stoppedTiming: "One repeat about 3 months after stopping",
     source: { kind: "labs", markers: ["total_cholesterol", "ldl_cholesterol", "hdl_cholesterol", "triglycerides"] },
   },
   {
@@ -106,7 +113,8 @@ export const PLAN: PlanRow[] = [
     check: "Liver tests (ALT, AST, GGT, bilirubin)",
     looksFor: "Liver injury, especially with oral use",
     timing: "Before, every 3 months during",
-    phases: ["starting", "ongoing"],
+    phases: ALL,
+    stoppedTiming: "One repeat about 3 months after stopping",
     source: { kind: "labs", markers: ["alt", "ast", "ggt", "bilirubin_total"] },
   },
   {
@@ -114,7 +122,8 @@ export const PLAN: PlanRow[] = [
     check: "Kidney tests (creatinine, eGFR, urea, electrolytes)",
     looksFor: "Kidney injury",
     timing: "Before, every 3–6 months during",
-    phases: ["starting", "ongoing"],
+    phases: ALL,
+    stoppedTiming: "One repeat about 3 months after stopping",
     source: { kind: "labs", markers: ["creatinine", "egfr", "urea", "bun"] },
   },
   {
@@ -131,6 +140,7 @@ export const PLAN: PlanRow[] = [
     looksFor: "Prostate change",
     timing: "Before; then as the doctor advises by age",
     phases: ALL,
+    stoppedTiming: "As your doctor advises",
     sex: "male",
     source: { kind: "labs", markers: ["psa"] },
   },
@@ -163,6 +173,9 @@ export const FLAG_LABEL: Record<FlagLevel, string> = {
   urgent: "Urgent",
 };
 
+/** The "discuss" sentence for a blood-pressure reading (clinical review 2026-10-02). */
+export const BP_DISCUSS_TEXT = "This reading is above the normal range. Mention it to your doctor at your next check.";
+
 export const FLAG_TEXT: Record<FlagLevel, string> = {
   discuss: "This result is outside the range on your report. Mention it to your doctor at your next check.",
   soon: "This result needs a doctor's look soon. Please book an appointment this week.",
@@ -185,12 +198,27 @@ export const BP_URGENT = { systolicAbove: 180, diastolicAbove: 120 } as const;
 /** ALT / AST: above the report's range is "discuss"; this many times its upper limit or more is "soon". */
 export const LIVER_SOON_MULTIPLE = 3;
 
-/** Markers flagged against the range on the user's own report. */
+/** ALT and AST also get the "soon" level at a multiple of the report's upper limit. */
 export const LIVER_MARKERS = ["alt", "ast"];
-export const KIDNEY_MARKERS = ["creatinine", "egfr"];
-/** Flagged only while the phase is "stopped". */
+/** "Still low on a repeat test" is "soon" for these, while the phase is "stopped". */
 export const HORMONE_MARKERS = ["lh", "fsh", "testosterone_total", "estradiol", "shbg"];
-// Lipids, PSA and HbA1c: no automatic flag (no thresholds set).
+/**
+ * Every other result, linked to the marker list or not, is "discuss" when it
+ * is outside the range printed on the user's report (clinical review
+ * 2026-10-02) -- EXCEPT the nine threshold markers, which the same review
+ * gave no range and no flag (only their remark).
+ */
+export const THRESHOLD_MARKERS = [
+  "total_cholesterol",
+  "ldl_cholesterol",
+  "hdl_cholesterol",
+  "triglycerides",
+  "egfr",
+  "glucose",
+  "hba1c",
+  "vitamin_d",
+  "psa",
+];
 
 // --------------------------------------------------------- Warning signs
 

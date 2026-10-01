@@ -1,3 +1,5 @@
+import { HealthDisclaimer } from "../ui/HealthDisclaimer";
+import { useLabCatalogue } from "./useLabCatalogue";
 import { useCheckFlags } from "../health-checks/useCheckFlags";
 import { CheckFlagNote } from "../health-checks/CheckFlag";
 import React from "react";
@@ -24,7 +26,10 @@ export const BiomarkerDetailSheet: React.FC<{ open: boolean; onClose: () => void
   marker,
 }) => {
   const checkFlags = useCheckFlags();
+  const labCatalogue = useLabCatalogue();
   if (!marker) return null;
+  const threshold = labCatalogue.isThreshold(marker);
+  const remark = labCatalogue.remarkFor(marker);
   const trend = trendColor(marker.history);
   const flag = checkFlags.lab(marker);
 
@@ -36,12 +41,13 @@ export const BiomarkerDetailSheet: React.FC<{ open: boolean; onClose: () => void
             <p className="text-2xl font-bold text-charcoal leading-none">
               {marker.value} <span className="text-sm font-normal text-charcoal-faint">{marker.unit}</span>
             </p>
-            <p className="text-xs text-charcoal-faint mt-1">Range: {marker.range} {marker.unit}</p>
+            {!threshold && <p className="text-xs text-charcoal-faint mt-1">Range: {marker.range} {marker.unit}</p>}
           </div>
           <span className="text-xs font-bold" style={{ color: trend.color }}>
             {trend.label}
           </span>
         </div>
+        {remark && <p className="-mt-2 mb-4 text-[11.5px] leading-[1.5] text-charcoal-soft">{remark}</p>}
         {flag && <CheckFlagNote flag={flag} className="mb-4" />}
 
         <div className="flex justify-center mb-2">
@@ -51,6 +57,7 @@ export const BiomarkerDetailSheet: React.FC<{ open: boolean; onClose: () => void
         <p className="text-[11px] text-charcoal-faint text-center mt-3">
           Blue = stable, red = decreasing, green = increasing since the previous reading.
         </p>
+        <HealthDisclaimer className="mt-3" />
       </div>
     </BottomSheet>
   );

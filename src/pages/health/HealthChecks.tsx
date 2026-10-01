@@ -1,3 +1,4 @@
+import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
 import { useEffect, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { Bell, ChevronRight } from "lucide-react";
@@ -64,14 +65,14 @@ export default function HealthChecks() {
     <div className="pb-8">
       <PageHeader title={COPY.planTitle} showBack onBack={() => navigate("/app/health")} />
 
-      {(young || user.sex === "female") && (
-        <div className="space-y-2 mb-4">
-          {young && <p className="rounded-xl bg-primary-pale px-3.5 py-3 text-[12px] leading-[1.5] text-charcoal">{COPY.cautionYoung}</p>}
-          {user.sex === "female" && (
-            <p className="rounded-xl bg-primary-pale px-3.5 py-3 text-[12px] leading-[1.5] text-charcoal">{COPY.cautionWomen}</p>
-          )}
-        </div>
-      )}
+      <div className="space-y-2 mb-4">
+        {young && <p className="rounded-xl bg-primary-pale px-3.5 py-3 text-[12px] leading-[1.5] text-charcoal">{COPY.cautionYoung}</p>}
+        {user.sex === "female" && (
+          <p className="rounded-xl bg-primary-pale px-3.5 py-3 text-[12px] leading-[1.5] text-charcoal">{COPY.cautionWomen}</p>
+        )}
+        <p className="rounded-xl bg-primary-pale px-3.5 py-3 text-[12px] leading-[1.5] text-charcoal">{COPY.cautionHeart}</p>
+        <p className="rounded-xl bg-primary-pale px-3.5 py-3 text-[12px] leading-[1.5] text-charcoal">{COPY.cautionMood}</p>
+      </div>
 
       <SegmentedTabs
         className="mb-2"
@@ -103,7 +104,9 @@ export default function HealthChecks() {
               </p>
             </div>
             <p className="mt-0.5 text-[11.5px] text-charcoal-soft leading-[1.4]">{r.looksFor}</p>
-            <p className="mt-1 text-[11.5px] text-charcoal-soft leading-[1.4]">{r.timing}</p>
+            <p className="mt-1 text-[11.5px] text-charcoal-soft leading-[1.4]">
+              {checks.phase === "stopped" && r.stoppedTiming ? r.stoppedTiming : r.timing}
+            </p>
           </div>
         ))}
         <p className="px-4 py-2.5 border-t border-charcoal/[0.06] text-[10.5px] text-charcoal-faint">
@@ -140,6 +143,7 @@ export default function HealthChecks() {
         onSave={(answers) => checks.addCheckIn({ date: todayLocal(), answers })}
         onShowWarningSigns={() => window.setTimeout(showWarningSigns, 250)}
       />
+      <HealthDisclaimer className="mt-4" />
       <PersonalReminderSheet open={reminderOpen} onClose={() => setReminderOpen(false)} />
     </div>
   );

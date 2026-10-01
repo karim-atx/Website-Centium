@@ -1,3 +1,4 @@
+import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
@@ -44,7 +45,7 @@ import { dayLetter } from "../../utils/week";
 import { useApp } from "../../context/AppContext";
 import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
 import { getTestRecommendations } from "../../utils/biomarkerRecommendations";
-import { ChevronRight, Flame, Stethoscope, FileText, Moon } from "lucide-react";
+import { ChevronRight, Stethoscope, FileText, Moon } from "lucide-react";
 import clsx from "clsx";
 import type { BloodMarker, ImagingRecord } from "../../types";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
@@ -730,9 +731,15 @@ export default function Health() {
         </button>
       </div>
 
-      <p className="text-[9.5px] leading-[1.5] text-charcoal-tertiary text-center mb-4 flex items-center justify-center gap-1">
-        <Flame size={11} /> Health-data tracking, not a diagnosis. Always consult a professional.
-      </p>
+      {/* Task Y2: the app-wide disclaimer replaces the old one-line notice
+          here, and the sources behind the health content sit under it. */}
+      <HealthDisclaimer className="mb-1.5" />
+      <button
+        onClick={() => navigate("/app/health/sources")}
+        className="tap mx-auto mb-3 flex items-center min-h-[44px] px-3 text-[11px] text-charcoal-soft underline underline-offset-2"
+      >
+        Sources and guidelines
+      </button>
 
       <BottomSheet open={recordsOpen} onClose={() => setRecordsTab(null)} title="Records">
         {/* KEYED ON THE TAB, so the sheet remounts when it is opened from the

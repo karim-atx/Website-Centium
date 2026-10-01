@@ -1,3 +1,4 @@
+import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
 import { useState } from "react";
 import { JumpToToday } from "../../components/ui/JumpToToday";
 import { Navigate, useNavigate } from "react-router-dom";
@@ -155,6 +156,7 @@ export default function Cycle() {
           {PG.START_TITLE}
         </button>
         <p className="mt-2 text-[10.5px] text-charcoal-faint text-center">{G.DISCLAIMER}</p>
+        <HealthDisclaimer className="mt-2" />
         <LogDaySheet
           open={logOpen}
           onClose={() => setLogOpen(false)}
@@ -507,6 +509,9 @@ export default function Cycle() {
                         <p className="text-[11px] text-charcoal-soft leading-snug">
                           {G.FLAG_BODY[f]} {G.FLAG_ADVICE}
                         </p>
+                        {G.FLAG_EXTRA[f] && (
+                          <p className="mt-1 text-[11px] text-charcoal-soft leading-snug">{G.FLAG_EXTRA[f]}</p>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -767,6 +772,8 @@ export default function Cycle() {
           </button>
         </div>
       )}
+
+      <HealthDisclaimer className="mt-4 mb-2" />
 
       <BottomSheet
         open={confirmDelete}

@@ -32,11 +32,27 @@ export interface CatalogueMarker {
   canonicalUnit: string;
   reviewed: boolean;
   notes: string | null;
+  /**
+   * The plain-language remark shown under a result (Database 20261013000000),
+   * e.g. that ALT can rise after hard training. For the nine threshold
+   * markers it carries the thresholds themselves, as information.
+   */
+  remark: string | null;
   /** Lower-cased, trimmed names that mean this marker. */
   aliases: string[];
   /** Every accepted unit, the canonical one first (factor 1, offset 0). */
   units: CatalogueUnit[];
   ranges: CatalogueRange[];
+}
+
+/**
+ * The nine threshold markers (cholesterol, LDL, HDL, triglycerides, eGFR,
+ * glucose, HbA1c, vitamin D, PSA): the list holds no range rows for them,
+ * because their familiar numbers are risk thresholds rather than ranges. The
+ * approved review: no range and no flag for these, only the remark.
+ */
+export function isThresholdMarker(marker: CatalogueMarker): boolean {
+  return marker.ranges.length === 0;
 }
 
 /** How names are compared: lower(btrim(name)), as the alias table stores them. */

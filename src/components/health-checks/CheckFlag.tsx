@@ -1,5 +1,5 @@
 import React from "react";
-import { FLAG_LABEL, FLAG_TEXT, HAEMATOCRIT_SOON_EXTRA, type FlagLevel } from "../../services/health-checks/guidance";
+import { BP_DISCUSS_TEXT, FLAG_LABEL, FLAG_TEXT, HAEMATOCRIT_SOON_EXTRA, type FlagLevel } from "../../services/health-checks/guidance";
 import type { Flag } from "../../services/health-checks/flags";
 
 /**
@@ -8,7 +8,7 @@ import type { Flag } from "../../services/health-checks/flags";
  * tint behind them is the same hue, faint.
  */
 const INK: Record<FlagLevel, string> = {
-  discuss: "text-[#8F5C12] dark:text-[#E3A851]",
+  discuss: "text-[#7A4E0E] dark:text-[#E3A851]",
   soon: "text-[#A9481B] dark:text-[#F29466]",
   urgent: "text-[#B3261E] dark:text-[#F28B82]",
 };
@@ -32,7 +32,9 @@ export const CheckFlagNote: React.FC<{ flag: Flag; className?: string }> = ({ fl
     className={`rounded-xl px-3 py-2.5 border-l-[3px] ${TINT[flag.level]} ${className ?? ""}`}
   >
     <p className={`text-[11px] font-bold ${INK[flag.level]}`}>{FLAG_LABEL[flag.level]}</p>
-    <p className="mt-0.5 text-[11.5px] leading-[1.45] text-charcoal-soft">{FLAG_TEXT[flag.level]}</p>
+    <p className="mt-0.5 text-[11.5px] leading-[1.45] text-charcoal-soft">
+      {flag.bloodPressure && flag.level === "discuss" ? BP_DISCUSS_TEXT : FLAG_TEXT[flag.level]}
+    </p>
     {flag.haematocrit && flag.level === "soon" && (
       <p className="mt-1 text-[11.5px] leading-[1.45] text-charcoal-soft">{HAEMATOCRIT_SOON_EXTRA}</p>
     )}

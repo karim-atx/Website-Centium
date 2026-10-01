@@ -1,3 +1,5 @@
+import { HealthDisclaimer } from "../ui/HealthDisclaimer";
+import { useLabCatalogue } from "./useLabCatalogue";
 import { useCheckFlags } from "../health-checks/useCheckFlags";
 import { CheckFlagChip } from "../health-checks/CheckFlag";
 import { useState } from "react";
@@ -99,6 +101,7 @@ export const MedicalRecordsSection: React.FC<{
   initialTab = "biomarkers",
 }) => {
   const checkFlags = useCheckFlags();
+  const labCatalogue = useLabCatalogue();
   const {
     imagingRecords,
     addImagingRecord,
@@ -288,13 +291,25 @@ export const MedicalRecordsSection: React.FC<{
                   onOpenMarker(m);
                 }
               }}
-              className="tap w-full flex items-center justify-between px-4 py-3.5 text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset"
+              className="tap w-full block px-4 py-3.5 text-left cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-inset"
             >
-              <div>
+              {/* Clinical review 2026-10-02: the nine threshold markers show
+                  no range and no flag, only their remark, which carries the
+                  thresholds as information. Every linked marker's remark sits
+                  under the result in small text. */}
+              {(() => {
+                const threshold = labCatalogue.isThreshold(m);
+                const remark = labCatalogue.remarkFor(m);
+                return (
+              <>
+              <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
                 <p className="text-[13.5px] font-bold text-charcoal">{m.name}</p>
-                <p className="text-[11px] font-medium text-charcoal-faint">
-                  Range: {m.range} {m.unit}
-                </p>
+                {!threshold && (
+                  <p className="text-[11px] font-medium text-charcoal-faint">
+                    Range: {m.range} {m.unit}
+                  </p>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <div className="text-right">
@@ -306,7 +321,7 @@ export const MedicalRecordsSection: React.FC<{
                       grey capsule that looked like a control, and a status
                       chip is a claim -- absent is the honest form of "we have
                       no reference range for this". */}
-                  {m.status && (
+                  {m.status && !threshold && (
                     <span className={clsx("text-[10px] font-bold uppercase rounded-full px-2 py-0.5", statusColor[m.status])}>
                       {m.status}
                     </span>
@@ -327,6 +342,11 @@ export const MedicalRecordsSection: React.FC<{
                   <Share2 size={12} />
                 </button>
               </div>
+              </div>
+              {remark && <p className="mt-1.5 text-[10.5px] leading-[1.45] text-charcoal-soft">{remark}</p>}
+              </>
+                );
+              })()}
             </div>
           ))}
         </Card>
@@ -520,7 +540,10 @@ export const MedicalRecordsSection: React.FC<{
         </div>
       )}
 
+      <HealthDisclaimer className="mb-4" />
+
       {/* Add imaging/test */}
+
       <BottomSheet open={addImagingOpen} onClose={() => setAddImagingOpen(false)} title="Add imaging or test">
         <div className="space-y-4 animate-fade-slide-up">
           <div>

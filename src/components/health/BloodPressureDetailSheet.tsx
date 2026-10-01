@@ -1,3 +1,4 @@
+import { HealthDisclaimer } from "../ui/HealthDisclaimer";
 import { useCheckFlags } from "../health-checks/useCheckFlags";
 import { CheckFlagChip } from "../health-checks/CheckFlag";
 import React, { useState } from "react";
@@ -318,6 +319,7 @@ export const BloodPressureDetailSheet: React.FC<{
         <p className="text-[11px] leading-[1.5] text-charcoal-faint text-center mt-4">
           {BP_DETAIL_FOOTER}
         </p>
+        <HealthDisclaimer className="mt-2" />
       </div>
     </BottomSheet>
   );
