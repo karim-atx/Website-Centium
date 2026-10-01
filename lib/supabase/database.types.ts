@@ -13512,6 +13512,26 @@ export type Database = {
       }
       review_reviewer_id: { Args: { p_review_id: string }; Returns: string }
       scrub_account_email_personal_data: { Args: never; Returns: number }
+      search_messages: {
+        Args: {
+          p_before?: string
+          p_before_id?: string
+          p_limit?: number
+          p_query: string
+          p_thread_id?: string
+        }
+        Returns: {
+          attachment_kind: Database["public"]["Enums"]["attachment_kind"]
+          attachment_name: string
+          created_at: string
+          edited_at: string
+          matched_in: string
+          message_id: string
+          sender_id: string
+          text: string
+          thread_id: string
+        }[]
+      }
       set_business_member_plan: {
         Args: { p_membership_id: string; p_plan_id: string }
         Returns: {

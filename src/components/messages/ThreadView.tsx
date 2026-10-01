@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowLeft, Ban, Check, CheckCheck, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Send, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, Ban, Check, CheckCheck, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useCall } from "../../context/CallContext";
 import { threadAllowsCalls, type CallKind } from "../../services/calling";
@@ -16,12 +16,15 @@ import { BlockSheet, ReportSheet } from "./ConversationSafety";
 import { ChatInfo } from "./ChatInfo";
 import { FileCard } from "./FileCard";
 import { MessageActions, type MessageAction } from "./MessageActions";
+import { SearchResults } from "./SearchResults";
 import { clockTime } from "./chatTime";
 import { useReactionsRealtime } from "../../hooks/useReactionsRealtime";
 import { computeWaveform } from "../../services/messaging/waveformDecode";
 import {
   fetchReactions,
+  searchMessages,
   setReaction,
+  type SearchHit,
   type Reaction,
   type ThreadSettings,
 } from "../../services/messaging/chatFeatures";
@@ -145,7 +148,9 @@ export const ThreadView: React.FC<{
   settings?: ThreadSettings;
   onSettingsChanged: () => void;
   onBack: () => void;
-}> = ({ thread, settings, onSettingsChanged, onBack }) => {
+  /** A message to show on opening, e.g. a search result; older pages load until it is there. */
+  focusMessageId?: string | null;
+}> = ({ thread, settings, onSettingsChanged, onBack, focusMessageId }) => {
   const { authUserId, user } = useApp();
   const unread = useUnread();
   /**
@@ -664,9 +669,112 @@ export const ThreadView: React.FC<{
   const jumpTo = (id: string) => {
     const el = bubbleRefs.current[id];
     if (!el) return;
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
+    // Smooth only when it is close: a smooth scroll across hundreds of
+    // messages is slow and any re-render on the way can cut it short.
+    const far = Math.abs(el.getBoundingClientRect().top) > window.innerHeight * 2;
+    el.scrollIntoView({ behavior: far ? "auto" : "smooth", block: "center" });
     setHighlighted(id);
     window.setTimeout(() => setHighlighted((cur) => (cur === id ? null : cur)), 1600);
+  };
+
+  /**
+   * Shows a message that may not be loaded yet: pages back through older
+   * history until it is (up to 40 pages), then scrolls to it and marks it.
+   * Used by search results and the Starred tab in Chat info.
+   */
+  const messagesRef = useRef<Message[]>([]);
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+  const [pendingFocus, setPendingFocus] = useState<string | null>(null);
+  const focusMessage = async (id: string) => {
+    if (bubbleRefs.current[id]) return jumpTo(id);
+    let list = messagesRef.current;
+    let older: Message[] = [];
+    let more = true;
+    for (let i = 0; i < 40 && more && !list.some((m) => m.id === id); i++) {
+      const oldest = list[0];
+      if (!oldest) break;
+      const result = await fetchMessagePage(thread.id, { createdAt: oldest.createdAt, id: oldest.id });
+      if (!result.ok) break;
+      older = [...result.messages, ...older];
+      list = [...result.messages, ...list];
+      more = result.hasOlder;
+    }
+    if (older.length > 0) {
+      setMessages((prev) => [...older.filter((m) => !prev.some((p) => p.id === m.id)), ...prev]);
+      setHasOlder(more);
+    }
+    if (list.some((m) => m.id === id)) setPendingFocus(id);
+    else setError("That message isn't in this conversation any more.");
+  };
+  useEffect(() => {
+    if (pendingFocus && bubbleRefs.current[pendingFocus]) {
+      jumpTo(pendingFocus);
+      setPendingFocus(null);
+    }
+    // jumpTo reads refs only.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, pendingFocus]);
+  // Opened from a search result: once the first page is in, go to it.
+  const focusDone = useRef(false);
+  useEffect(() => {
+    if (!focusMessageId || !loaded || focusDone.current) return;
+    focusDone.current = true;
+    window.setTimeout(() => void focusMessage(focusMessageId), 50);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focusMessageId, loaded]);
+
+  // SEARCH IN THIS CHAT (Database 20261002070000), opened from Chat info.
+  // The same database search as the chat list, scoped to this thread, so one
+  // character is enough here.
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchHits, setSearchHits] = useState<SearchHit[]>([]);
+  const [searchMore, setSearchMore] = useState(false);
+  const [searchBusy, setSearchBusy] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const searchTerm = searchQuery.trim();
+  useEffect(() => {
+    if (!searchOpen || !searchTerm) return;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setSearchBusy(true);
+      const result = await searchMessages(searchTerm, { threadId: thread.id });
+      if (cancelled) return;
+      setSearchBusy(false);
+      if (!result.ok) {
+        setSearchError(result.message);
+        setSearchHits([]);
+        setSearchMore(false);
+        return;
+      }
+      setSearchError(null);
+      setSearchHits(result.hits);
+      setSearchMore(result.hasMore);
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [searchOpen, searchTerm, thread.id]);
+  const moreSearch = async () => {
+    const last = searchHits[searchHits.length - 1];
+    if (!last) return;
+    setSearchBusy(true);
+    const result = await searchMessages(searchTerm, { threadId: thread.id, after: last });
+    setSearchBusy(false);
+    if (result.ok) {
+      setSearchHits((prev) => [...prev, ...result.hits]);
+      setSearchMore(result.hasMore);
+    }
+  };
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearchQuery("");
+    setSearchHits([]);
+    setSearchMore(false);
+    setSearchError(null);
   };
 
   const toggleStar = async (m: Message) => {
@@ -937,12 +1045,62 @@ export const ThreadView: React.FC<{
           onOpenFile={(path) => void openFile(path)}
           onJumpTo={(id) => {
             setInfoOpen(false);
-            window.setTimeout(() => jumpTo(id), 50);
+            window.setTimeout(() => void focusMessage(id), 50);
+          }}
+          onSearch={() => {
+            setInfoOpen(false);
+            setSearchOpen(true);
           }}
         />
       ) : (
       <>
-      <div className="flex items-center gap-2.5 mb-4">
+      {searchOpen && (
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            <label className="flex-1 flex items-center gap-2 h-11 rounded-[14px] bg-cream-card border border-charcoal/10 px-3">
+              <Search size={16} className="text-charcoal-soft shrink-0" aria-hidden />
+              <span className="sr-only">Search in this chat</span>
+              <input
+                autoFocus
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={`Search in chat with ${thread.participantName}`}
+                className="flex-1 min-w-0 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
+              />
+            </label>
+            <button
+              type="button"
+              onClick={closeSearch}
+              className="tap min-h-[44px] px-2 text-sm font-semibold text-primary-deep-text shrink-0"
+            >
+              Cancel
+            </button>
+          </div>
+          {searchError && <p className="text-xs text-status-high mt-2">{searchError}</p>}
+          {searchTerm && !searchBusy && !searchError && searchHits.length === 0 && (
+            <p className="text-sm text-charcoal-faint text-center py-8">No messages match "{searchTerm}".</p>
+          )}
+          {searchTerm && searchHits.length > 0 && (
+            <div className="mt-2">
+              <SearchResults
+                hits={searchHits}
+                query={searchTerm}
+                titleFor={(h) => (h.senderId === authUserId ? "You" : thread.participantName)}
+                onOpen={(h) => {
+                  closeSearch();
+                  window.setTimeout(() => void focusMessage(h.messageId), 50);
+                }}
+                hasMore={searchMore}
+                loadingMore={searchBusy}
+                onMore={() => void moreSearch()}
+              />
+            </div>
+          )}
+        </div>
+      )}
+      {!(searchOpen && searchTerm) && (
+      <>
+      <div className={`flex items-center gap-2.5 mb-4 ${searchOpen ? "hidden" : ""}`}>
         <button
           onClick={onBack}
           aria-label="Back to conversations"
@@ -1446,6 +1604,8 @@ export const ThreadView: React.FC<{
         </button>
       </div>
       </div>
+      )}
+      </>
       )}
       </>
       )}

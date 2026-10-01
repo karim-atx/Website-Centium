@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BellOff, ChevronLeft, Pin, PinOff } from "lucide-react";
+import { BellOff, ChevronLeft, Pin, PinOff, Search } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Toggle } from "../ui/Toggle";
 import { PERSON_ICON } from "../../utils/icons";
@@ -40,8 +40,8 @@ const TABS: { value: Tab; label: string }[] = [
  * changes for the other person. The gallery reads through messages_visible, so
  * what the reader hid is not in it.
  *
- * NOT YET HERE, because the database does not offer them yet: search in this
- * chat, and "Show when I'm online" (presence). The read receipts switch is the
+ * NOT YET HERE, because the database does not offer it yet: "Show when I'm
+ * online" (presence). The read receipts switch is the
  * account-wide one that Profile → Privacy already has, since receipts are not
  * set per chat.
  */
@@ -61,7 +61,9 @@ export const ChatInfo: React.FC<{
   onOpenPhoto: (path: string, url: string) => void;
   onOpenFile: (path: string) => void;
   onJumpTo: (messageId: string) => void;
-}> = ({ thread, authUserId, settings, onSettingsChanged, onBack, safety, onOpenPhoto, onOpenFile, onJumpTo }) => {
+  /** Opens search inside this chat. */
+  onSearch: () => void;
+}> = ({ thread, authUserId, settings, onSettingsChanged, onBack, safety, onOpenPhoto, onOpenFile, onJumpTo, onSearch }) => {
   const s = settings ?? NO_SETTINGS;
   const [tab, setTab] = useState<Tab>("media");
   const [items, setItems] = useState<GalleryItem[] | null>(null);
@@ -162,7 +164,11 @@ export const ChatInfo: React.FC<{
         <p className="text-lg font-extrabold text-charcoal text-center">{thread.participantName}</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-3 gap-2">
+        <button type="button" onClick={onSearch} className={tile}>
+          <Search size={16} aria-hidden />
+          Search chat
+        </button>
         <button type="button" disabled={busy} onClick={() => setMuteOpen(true)} className={tile}>
           <BellOff size={16} aria-hidden />
           {muteLabel}

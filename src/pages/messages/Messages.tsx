@@ -6,11 +6,15 @@ import { Card } from "../../components/ui/Card";
 import { ThreadList } from "../../components/messages/ThreadList";
 import { ThreadView } from "../../components/messages/ThreadView";
 import { StarredMessages } from "../../components/messages/StarredMessages";
+import { SearchResults } from "../../components/messages/SearchResults";
 import { useApp } from "../../context/AppContext";
 import { fetchThreads, migrateLegacyStars, threadForPush, type MessageThread } from "../../services/messaging";
 import {
   fetchLastMessageState,
   fetchThreadSettings,
+  MIN_GLOBAL_QUERY,
+  searchMessages,
+  type SearchHit,
   type ThreadSettings,
 } from "../../services/messaging/chatFeatures";
 
@@ -26,9 +30,10 @@ import {
  * person. Groups and Broadcasts arrive in phase 2B, so their filters are not
  * shown yet.
  *
- * SEARCH COVERS CHATS, NOT MESSAGE TEXT. Searching every message needs the
- * database's search function, which is not available yet; this filters the
- * list by name and latest message.
+ * SEARCH COVERS CHATS AND MESSAGES. Chats are matched here by name and latest
+ * message; messages through the database's search (Database 20261002070000),
+ * which applies the conversation's own visibility and includes archived chats.
+ * Outside one chat it needs two characters.
  *
  * THE LIST DOES NOT POLL. Only an open conversation does; the list re-reads on
  * returning from a thread, which is the moment it is actually stale.
@@ -41,6 +46,12 @@ export default function Messages() {
   const [settings, setSettings] = useState<Record<string, ThreadSettings>>({});
   const [readState, setReadState] = useState<Record<string, string | null>>({});
   const [open, setOpen] = useState<MessageThread | null>(null);
+  /** The message to show when a chat is opened from a search result. */
+  const [focusId, setFocusId] = useState<string | null>(null);
+  const [hits, setHits] = useState<SearchHit[]>([]);
+  const [hitsMore, setHitsMore] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "archived" | "starred">("list");
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<"all" | "unread">("all");
@@ -102,6 +113,50 @@ export default function Messages() {
   }, [authUserId]);
 
   const q = query.trim().toLowerCase();
+  const term = query.trim();
+  const searchingMessages = term.length >= MIN_GLOBAL_QUERY && view !== "starred";
+
+  useEffect(() => {
+    if (!searchingMessages) return;
+    let cancelled = false;
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      const result = await searchMessages(term);
+      if (cancelled) return;
+      setSearching(false);
+      if (!result.ok) {
+        setSearchError(result.message);
+        setHits([]);
+        setHitsMore(false);
+        return;
+      }
+      setSearchError(null);
+      setHits(result.hits);
+      setHitsMore(result.hasMore);
+    }, 300);
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [term, searchingMessages]);
+
+  const moreHits = async () => {
+    const last = hits[hits.length - 1];
+    if (!last) return;
+    setSearching(true);
+    const result = await searchMessages(term, { after: last });
+    setSearching(false);
+    if (result.ok) {
+      setHits((prev) => [...prev, ...result.hits]);
+      setHitsMore(result.hasMore);
+    }
+  };
+  const openHit = (h: SearchHit) => {
+    const t = threads.find((x) => x.id === h.threadId);
+    if (!t) return;
+    setFocusId(h.messageId);
+    setOpen(t);
+  };
   const { active, archived, unreadTotal } = useMemo(() => {
     const matches = (t: MessageThread) =>
       !q || t.participantName.toLowerCase().includes(q) || (t.lastMessagePreview ?? "").toLowerCase().includes(q);
@@ -123,11 +178,14 @@ export default function Messages() {
     return (
       <div>
         <ThreadView
+          key={open.id}
           thread={open}
+          focusMessageId={focusId}
           settings={settings[open.id]}
           onSettingsChanged={async () => setSettings(await fetchThreadSettings())}
           onBack={() => {
             setOpen(null);
+            setFocusId(null);
             // Re-read on the way back, so a thread just replied to moves up with
             // its new preview.
             void load();
@@ -183,11 +241,11 @@ export default function Messages() {
 
       <label className="flex items-center gap-2 h-11 rounded-[14px] bg-cream-card border border-charcoal/10 px-3 mb-3">
         <Search size={16} className="text-charcoal-soft shrink-0" aria-hidden />
-        <span className="sr-only">Search chats</span>
+        <span className="sr-only">Search messages and chats</span>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search chats"
+          placeholder="Search messages and chats"
           className="flex-1 min-w-0 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
         />
       </label>
@@ -220,7 +278,11 @@ export default function Messages() {
         </Card>
       )}
 
-      {!loading && threads.length > 0 && (view === "list" ? active : archived).length === 0 && (
+      {searchingMessages && (view === "list" ? active : archived).length > 0 && (
+        <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft mt-1 mb-1">Chats</h2>
+      )}
+
+      {!loading && threads.length > 0 && (view === "list" ? active : archived).length === 0 && !searchingMessages && (
         <p className="text-sm text-charcoal-faint text-center py-8">
           {q
             ? "No chats match your search."
@@ -239,6 +301,28 @@ export default function Messages() {
         authUserId={authUserId}
         onOpen={setOpen}
       />
+
+      {searchingMessages && (
+        <section className="mt-3" aria-label="Messages">
+          <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft mb-1">Messages</h2>
+          {searchError && <p className="text-xs text-status-high py-2">{searchError}</p>}
+          {!searching && !searchError && hits.length === 0 && (
+            <p className="text-sm text-charcoal-faint text-center py-6">No messages match "{term}".</p>
+          )}
+          <SearchResults
+            hits={hits}
+            query={term}
+            titleFor={(h) => {
+              const name = threads.find((t) => t.id === h.threadId)?.participantName ?? "Conversation";
+              return h.senderId === authUserId ? `You → ${name}` : name;
+            }}
+            onOpen={openHit}
+            hasMore={hitsMore}
+            loadingMore={searching}
+            onMore={() => void moreHits()}
+          />
+        </section>
+      )}
 
       {view === "list" && archived.length > 0 && (
         <button

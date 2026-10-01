@@ -318,3 +318,64 @@ export async function markDelivered(userId: string): Promise<void> {
     /* next pass re-asks the last week, which is harmless */
   }
 }
+
+// ---------------------------------------------------------------------------
+// Search (Database 20261002070000)
+// ---------------------------------------------------------------------------
+
+export interface SearchHit {
+  messageId: string;
+  threadId: string;
+  senderId: string | null;
+  text: string | null;
+  createdAt: string;
+  attachmentName: string | null;
+  /** Which field matched: the message text, or a document's file name. */
+  matchedIn: "text" | "attachment_name";
+}
+
+export type SearchResult = { ok: true; hits: SearchHit[]; hasMore: boolean } | Fail;
+
+/** A search outside one chat needs at least this many characters. */
+export const MIN_GLOBAL_QUERY = 2;
+const PAGE = 30;
+
+/**
+ * Searches the caller's own messages, newest first: every chat, or one chat
+ * when threadId is given. The database applies the same visibility as the
+ * conversation itself (hidden, unsent and redacted messages never match), so
+ * nothing is filtered again here. Pass the last hit back as `after` for more.
+ */
+export async function searchMessages(
+  query: string,
+  opts: { threadId?: string; after?: SearchHit } = {}
+): Promise<SearchResult> {
+  const { data, error } = await supabase.rpc("search_messages", {
+    p_query: query,
+    p_thread_id: opts.threadId,
+    p_before: opts.after?.createdAt,
+    p_before_id: opts.after?.messageId,
+    p_limit: PAGE,
+  });
+  if (error) {
+    console.error("[chat] Search failed:", error.message);
+    return {
+      ok: false,
+      message: isOffline(error)
+        ? OFFLINE_MESSAGE
+        : error.code === "22023"
+          ? `Type at least ${MIN_GLOBAL_QUERY} characters to search all chats.`
+          : "Couldn't search right now. Try again.",
+    };
+  }
+  const hits = (data ?? []).map((r) => ({
+    messageId: r.message_id,
+    threadId: r.thread_id,
+    senderId: r.sender_id,
+    text: r.text,
+    createdAt: r.created_at,
+    attachmentName: r.attachment_name,
+    matchedIn: r.matched_in === "attachment_name" ? ("attachment_name" as const) : ("text" as const),
+  }));
+  return { ok: true, hits, hasMore: hits.length === PAGE };
+}
