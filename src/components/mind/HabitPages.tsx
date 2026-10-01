@@ -28,7 +28,7 @@ export const HabitPages: React.FC<{ habits: HabitItem[] }> = ({ habits }) => {
           const el = e.currentTarget;
           setPage(Math.round(el.scrollLeft / Math.max(1, el.clientWidth)));
         }}
-        className="relative z-[1] flex overflow-x-auto no-scrollbar"
+        className="relative z-[1] flex scroll-row no-scrollbar"
         style={{ scrollSnapType: "x mandatory" }}
       >
         {pages.map((items, i) => (

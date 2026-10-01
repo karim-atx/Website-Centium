@@ -103,7 +103,7 @@ export const ExerciseLibrarySheet: React.FC<{
             </div>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-4">
+          <div className="flex gap-2 scroll-row no-scrollbar pb-1 mb-4">
             <Chip active={category === null} onClick={() => setCategory(null)}>
               All
             </Chip>

@@ -144,7 +144,7 @@ export default function JournalTab() {
       )}
 
       <div className="flex items-center justify-between mb-3">
-        <div className="flex gap-2 overflow-x-auto no-scrollbar">
+        <div className="flex gap-2 scroll-row no-scrollbar">
           {journalFolders.map((f) => (
             <Chip key={f.id} active={selected === f.id} onClick={() => setActiveFolder(f.id)}>
               {f.name}

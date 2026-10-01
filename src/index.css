@@ -484,6 +484,24 @@ body {
   scrollbar-width: none;
 }
 
+/* A ROW THAT SCROLLS SIDEWAYS ONLY (task S). Every horizontal chip, tab,
+   date or card rail uses this instead of `overflow-x-auto`.
+   `overflow-x: auto` alone makes the other axis scrollable too, and these
+   rows always overflow vertically by a few pixels: chip borders, focus rings
+   and the 44x44 `.tap` hit area are taller than the row. So the row could
+   be dragged up and down, and rubber-banded on iOS. Here the vertical axis
+   does not scroll at all, so a vertical swipe that starts on the row has
+   nothing to move inside it and scrolls the page; sideways overscroll stays
+   in the row instead of turning into the browser's back gesture. Tap,
+   long-press, pinch-zoom and drag are untouched: there is no touch-action
+   here. */
+.scroll-row {
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 .tap {
   transition: transform 0.15s cubic-bezier(0.22, 1, 0.36, 1);
 }

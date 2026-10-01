@@ -407,7 +407,7 @@ export default function Messages() {
       </label>
 
       {view === "list" && (
-        <div className="flex gap-1.5 mb-2 overflow-x-auto -mx-4 px-4 [scrollbar-width:none]" role="group" aria-label="Filter chats">
+        <div className="flex gap-1.5 mb-2 scroll-row -mx-4 px-4 [scrollbar-width:none]" role="group" aria-label="Filter chats">
           <button type="button" aria-pressed={filter === "all"} onClick={() => setFilter("all")} className={chip(filter === "all")}>
             All
           </button>

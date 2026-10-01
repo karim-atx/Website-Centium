@@ -149,7 +149,7 @@ export default function MealPlanBuilderTab() {
         </Card>
       ) : (
         <>
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-5">
+          <div className="flex gap-2 scroll-row no-scrollbar pb-1 mb-5">
             {professionalClients.map((c) => (
               <Chip key={c.id} active={clientId === c.id} onClick={() => setClientId(c.id)}>
                 {c.name}

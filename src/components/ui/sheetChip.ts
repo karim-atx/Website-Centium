@@ -2,7 +2,7 @@ import type React from "react";
 
 // Mobile handoff item 1: the option chip used inside every bottom sheet —
 // an 8px-radius rectangle, never a pill. Rows of these stay on one line and
-// scroll horizontally (`flex overflow-x-auto no-scrollbar`), never wrap.
+// scroll horizontally (`flex scroll-row no-scrollbar`), never wrap.
 export const sheetChipStyle = (selected: boolean): React.CSSProperties => ({
   borderRadius: 8,
   padding: "8px 14px",

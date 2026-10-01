@@ -251,7 +251,7 @@ export default function ForumTab() {
         </div>
       ) : (
       <>
-      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-5">
+      <div className="flex gap-2 scroll-row no-scrollbar pb-1 mb-5">
         <Chip active={filter === null} onClick={() => setFilter(null)}>
           All
         </Chip>

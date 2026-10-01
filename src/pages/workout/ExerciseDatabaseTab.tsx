@@ -355,7 +355,7 @@ export default function ExerciseDatabaseTab() {
           <div
             ref={filterRowRef}
             onScroll={measureFilterRow}
-            className="flex overflow-x-auto no-scrollbar"
+            className="flex scroll-row no-scrollbar"
             style={{ gap: 7, padding: "7px 0", margin: "-7px 0" }}
           >
             {(["alphabetical", "muscleGroup", "classification"] as SortMode[]).map((srt) => (

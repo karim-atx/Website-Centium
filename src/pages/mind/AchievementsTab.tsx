@@ -217,10 +217,10 @@ export default function AchievementsTab() {
       )}
 
       {/* ---- category chips ----------------------------------------------- */}
-      {/* `overflow-x-auto no-scrollbar`, never `overflow: hidden` — the latter
+      {/* `scroll-row no-scrollbar`, never `overflow: hidden` — the latter
           strands the trailing chips. See the note in Chip.tsx. */}
       {categories.length > 0 && (
-        <div className="flex gap-2 overflow-x-auto no-scrollbar -mx-4 px-4 mb-[11px]">
+        <div className="flex gap-2 scroll-row no-scrollbar -mx-4 px-4 mb-[11px]">
           <Chip active={category === "all"} onClick={() => setCategory("all")}>
             All
           </Chip>

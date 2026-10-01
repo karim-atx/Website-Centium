@@ -480,7 +480,7 @@ export default function Profile() {
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
             Connected professionals
           </p>
-          <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
+          <div className="flex gap-2.5 scroll-row no-scrollbar pb-1">
             {connectedProfessionals.map((p) => (
               // Opens that professional's own data-sharing controls. Used to
               // navigate to the mock directory's detail page, which no longer

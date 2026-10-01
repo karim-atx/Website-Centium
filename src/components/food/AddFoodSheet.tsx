@@ -646,7 +646,7 @@ export const AddFoodSheet: React.FC<{
             <div style={{ ...sheetGreyStyle, marginBottom: 10 }}>
               <p style={sheetLabelStyle}>Unit</p>
               <div
-                className="flex overflow-x-auto no-scrollbar"
+                className="flex scroll-row no-scrollbar"
                 style={{ gap: 7, margin: "9px -14px 0", padding: "0 14px" }}
               >
                 {servingUnitOptions.map((u) => (
@@ -1117,7 +1117,7 @@ export const AddFoodSheet: React.FC<{
 
           {/* FO7: the filter chips only while searching, as filters on the results. */}
           {query.trim() && (
-          <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1">
+          <div className="flex gap-2 scroll-row no-scrollbar pb-1">
             {[{ id: null as string | null, label: "All" }, ...addFoodFilterCategories].map((c) => {
               const active = category === c.id;
               return (

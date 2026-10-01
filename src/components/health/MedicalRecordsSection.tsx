@@ -192,7 +192,7 @@ export const MedicalRecordsSection: React.FC<{
         )}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4 -mx-1 px-1">
+      <div className="flex gap-2 scroll-row no-scrollbar mb-4 -mx-1 px-1">
         <Chip active={tab === "biomarkers"} onClick={() => setTab("biomarkers")}>
           Biomarkers
         </Chip>

@@ -86,7 +86,7 @@ const Segmented = <T extends string>({
   onChange: (value: T) => void;
   ariaLabel: string;
 }) => (
-  <div className="flex no-scrollbar" role="group" aria-label={ariaLabel} style={{ gap: 6, overflowX: "auto" }}>
+  <div className="flex no-scrollbar scroll-row" role="group" aria-label={ariaLabel} style={{ gap: 6 }}>
     {options.map((o) => (
       <button
         key={o.value}

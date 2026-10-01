@@ -150,7 +150,7 @@ export default function BusinessAnalyticsTab() {
           functional — the rest would need real multi-location/staff data
           to mean anything. */}
       {section === "insights" && (
-        <div className="flex gap-2 overflow-x-auto no-scrollbar mb-4 -mx-1 px-1">
+        <div className="flex gap-2 scroll-row no-scrollbar mb-4 -mx-1 px-1">
           {periods.map((p) => (
             <Chip key={p} active={period === p} onClick={() => setPeriod(p)}>
               {p}

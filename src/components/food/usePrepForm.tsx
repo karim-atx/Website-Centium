@@ -448,7 +448,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
                         className="w-14 shrink-0 text-center focus:outline-none"
                         style={{ background: "#F4F4F6", border: "none", borderRadius: 8, padding: "6px 8px", fontSize: 13.5, fontWeight: 700, color: PREP_CHARCOAL }}
                       />
-                      <div className="flex gap-1.5 overflow-x-auto no-scrollbar min-w-0">
+                      <div className="flex gap-1.5 scroll-row no-scrollbar min-w-0">
                         {servingUnitOptions.map((u) => (
                           <button
                             key={u}

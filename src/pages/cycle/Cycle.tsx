@@ -518,7 +518,7 @@ export default function Cycle() {
                     {G.SYMPTOM_GRID_TOO_LITTLE}
                   </p>
                 ) : (
-                  <div className="overflow-x-auto">
+                  <div className="scroll-row">
                     <table className="w-full text-[10.5px]" style={{ minWidth: 300 }}>
                       <thead>
                         <tr>

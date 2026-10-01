@@ -157,7 +157,7 @@ export const SetOptionsSheet: React.FC<{
 
         <div>
           <p style={sectionLabel}>RPE</p>
-          <div className="flex overflow-x-auto no-scrollbar" style={{ gap: 6 }}>
+          <div className="flex scroll-row no-scrollbar" style={{ gap: 6 }}>
             {RPE_ASCENDING.map((r) => (
               <button
                 key={r}

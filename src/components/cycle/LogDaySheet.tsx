@@ -49,7 +49,7 @@ import { Info, Lock } from "lucide-react";
 
 /** A horizontally scrollable row of chips, the preview's pattern. */
 const ChipRow: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <div className="-mx-1 px-1 overflow-x-auto" style={{ WebkitOverflowScrolling: "touch" }}>
+  <div className="-mx-1 px-1 scroll-row">
     <div className="flex gap-2 w-max pb-1">{children}</div>
   </div>
 );

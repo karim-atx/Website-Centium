@@ -301,7 +301,7 @@ export default function Professionals() {
           above — two cards that looked alike where one was true. The real one
           covers this case. */}
 
-      <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-5">
+      <div className="flex gap-2 scroll-row no-scrollbar pb-1 mb-5">
         <Chip active={type === null} onClick={() => setType(null)}>
           All
         </Chip>

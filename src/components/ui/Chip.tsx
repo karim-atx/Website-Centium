@@ -7,7 +7,7 @@ interface ChipProps extends React.HTMLAttributes<HTMLButtonElement> {
 }
 
 // Design refinement §5.3: idle/active/hover states, tighter padding+size.
-// Chip rails must keep `overflow-x-auto no-scrollbar` (never `overflow:
+// Chip rails must keep `scroll-row no-scrollbar` (never `overflow:
 // hidden`, which strands trailing chips) — unchanged at call sites.
 export const Chip: React.FC<ChipProps> = ({ active, icon, className, children, ...rest }) => {
   return (

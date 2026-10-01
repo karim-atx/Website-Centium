@@ -217,7 +217,7 @@ export const MeditationSheet: React.FC<{ open: boolean; onClose: () => void }> =
 
         {subTab === "breathing" && (
           <div>
-            <div className="flex gap-2 overflow-x-auto no-scrollbar pb-1 mb-2">
+            <div className="flex gap-2 scroll-row no-scrollbar pb-1 mb-2">
               {breathingPatterns.map((p) => (
                 <Chip key={p.id} active={patternId === p.id} onClick={() => setPatternId(p.id)}>
                   {p.name}

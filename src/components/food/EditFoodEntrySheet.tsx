@@ -257,7 +257,7 @@ export const EditFoodEntrySheet: React.FC<{
           <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}>
             <p style={sheetCapsLabelStyle}>UNIT</p>
             <div
-              className="flex overflow-x-auto no-scrollbar"
+              className="flex scroll-row no-scrollbar"
               style={{ gap: 7, margin: "9px -14px 0", padding: "0 14px" }}
             >
               {servingUnitOptions.map((u) => (

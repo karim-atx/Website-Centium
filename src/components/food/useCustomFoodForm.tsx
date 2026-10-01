@@ -372,7 +372,7 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
           <span className="block" style={{ fontSize: 12, fontWeight: 600, color: "#5B5349", marginBottom: 6 }}>
             Logo
           </span>
-          <div className="flex no-scrollbar" style={{ flexWrap: "nowrap", gap: 8, overflowX: "auto", margin: "0 -20px", padding: "0 20px" }}>
+          <div className="flex no-scrollbar scroll-row" style={{ flexWrap: "nowrap", gap: 8, margin: "0 -20px", padding: "0 20px" }}>
             {foodCategories.map((c) => {
               const Icon = foodCategoryIcon[c.id] ?? UtensilsCrossed;
               const active = draft.category === c.id;
