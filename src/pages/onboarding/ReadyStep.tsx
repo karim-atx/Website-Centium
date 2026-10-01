@@ -11,8 +11,13 @@ export const ReadyStep: React.FC<{
   // rest of onboarding is already saved, so this explains what happened and
   // the button becomes a plain "continue anyway" rather than a dead end.
   notice?: string | null;
+  /**
+   * Task T: the account could not be saved, so it is NOT set up yet. Unlike
+   * `notice`, the button retries rather than continuing.
+   */
+  error?: string | null;
   busy?: boolean;
-}> = ({ draft, onFinish, isProfessional, notice, busy }) => {
+}> = ({ draft, onFinish, isProfessional, notice, error, busy }) => {
   // V10 (QA 10.0): "The picture attached is the last page for the
   // onboarding for the professionals/business UI that resembles more
   // Client UI features... adjust accordingly" — the professional/business
@@ -94,6 +99,15 @@ export const ReadyStep: React.FC<{
         </div>
       )}
 
+      {error && (
+        <div
+          className="w-full rounded-2xl bg-status-high-bg px-4 py-3 mb-4 text-left"
+          role="alert"
+        >
+          <p className="text-xs font-semibold text-status-high leading-relaxed">{error}</p>
+        </div>
+      )}
+
       {notice && (
         <div className="w-full rounded-2xl bg-cream-card border border-status-high/30 px-4 py-3 mb-4 text-left">
           <p className="text-xs text-charcoal-soft leading-relaxed">{notice}</p>
@@ -105,10 +119,12 @@ export const ReadyStep: React.FC<{
         fullWidth
         onClick={onFinish}
         disabled={busy}
-        className={!isCustomer && !notice ? "mt-10" : undefined}
+        className={!isCustomer && !notice && !error ? "mt-10" : undefined}
       >
         {busy
           ? "Setting up…"
+          : error
+          ? "Try again"
           : notice
           ? "Continue anyway"
           : isProfessional || isBusiness

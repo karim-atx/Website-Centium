@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -21,6 +21,7 @@ import type { Sex } from "../../types";
 import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
 import {
   ageFromDateOfBirth,
+  formatDisplayDate,
   isoDateYearsAgo,
   validateDateOfBirth,
   MIN_AGE,
@@ -48,6 +49,7 @@ import {
 } from "lucide-react";
 import { Toggle } from "../../components/ui/Toggle";
 import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
+import { DobPromptCard } from "../../components/profile/DobPromptCard";
 
 const accountTypeLabel: Record<string, string> = {
   customer: "Customer",
@@ -445,7 +447,9 @@ export default function Profile() {
             className="text-center animate-fade-slide-up min-w-0"
             style={{ padding: "14px 2px" }}
           >
-            <p className="text-base font-bold text-charcoal tabular-nums">{user.age}</p>
+            {/* No date of birth on file (an older account): a dash, not the
+                default age the local profile falls back to. */}
+            <p className="text-base font-bold text-charcoal tabular-nums">{user.dateOfBirth ? user.age : "—"}</p>
             <p className="text-[11px] text-charcoal-faint">years</p>
           </Card>
         </div>
@@ -455,6 +459,9 @@ export default function Profile() {
           other is when a tracker somebody never chose to switch off is found
           off. Also on Health, where the Cycle card would be. */}
       <TrackerQuestion className="mb-6" />
+
+      {/* Task T: only for an older account with no date of birth. */}
+      <DobPromptCard className="mb-6" />
 
       {/* Business memberships: invitations to answer, memberships to leave,
           and the box for redeeming a code handed over at a desk. Sits with
@@ -772,6 +779,33 @@ export default function Profile() {
 
       {/* Date of birth, not age. Writes straight to profiles.date_of_birth. */}
       <BottomSheet open={dobOpen} onClose={() => setDobOpen(false)} title="Date of birth">
+        {user.dateOfBirth ? (
+          // Task T: LOCKED ONCE SET. The database refuses a change or a clear
+          // (ATX51), so a saved date is shown, not offered as an input that
+          // could never save. Only support can correct it.
+          <div className="space-y-4 animate-fade-slide-up">
+            <div className="rounded-2xl bg-cream-soft px-4 py-3.5">
+              <p className="text-base font-semibold text-charcoal tabular-nums">
+                {formatDisplayDate(user.dateOfBirth)}
+              </p>
+              {ageFromDateOfBirth(user.dateOfBirth) !== undefined && (
+                <p className="text-xs text-charcoal-faint mt-0.5">
+                  {ageFromDateOfBirth(user.dateOfBirth)} years old
+                </p>
+              )}
+            </div>
+            <p className="text-[11px] text-charcoal-faint">
+              Your age is calculated from this, and is used for calorie targets and health
+              recommendations. A date of birth can't be changed once it's saved.
+            </p>
+            <p className="text-sm text-charcoal-soft">
+              Need to correct it?{" "}
+              <Link to="/contact" className="font-semibold text-primary-deep-text underline">
+                Contact support
+              </Link>
+            </p>
+          </div>
+        ) : (
         <div className="space-y-4 animate-fade-slide-up">
           <input
             type="date"
@@ -793,7 +827,7 @@ export default function Profile() {
 
           <p className="text-[11px] text-charcoal-faint">
             Your age is calculated from this, and is used for calorie targets and health
-            recommendations.
+            recommendations. Check it before saving: it can't be changed afterwards.
           </p>
 
           {dobError && <p className="text-xs font-semibold text-status-high">{dobError}</p>}
@@ -802,6 +836,7 @@ export default function Profile() {
             {savingDob ? "Saving…" : "Save"}
           </Button>
         </div>
+        )}
       </BottomSheet>
 
       {/* Second entry point to the same controls the Professionals tab shows.

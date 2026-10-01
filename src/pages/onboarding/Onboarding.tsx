@@ -18,7 +18,8 @@ import { WelcomeStep } from "./WelcomeStep";
 import { AuthStep } from "./AuthStep";
 import { AccountTypeStep } from "./AccountTypeStep";
 import { SubtypeStep } from "./SubtypeStep";
-import { resumeIndex, stepsFor } from "./onboardingSteps";
+import { dateOfBirthComplete, dateOfBirthStep, resumeIndex, stepsFor } from "./onboardingSteps";
+import { DobStep } from "./DobStep";
 import { AboutYouStep } from "./AboutYouStep";
 import { BackgroundStep } from "./BackgroundStep";
 import { GoalStep } from "./GoalStep";
@@ -142,6 +143,8 @@ export default function Onboarding() {
   // continues into the app on a second tap.
   const [finishNotice, setFinishNotice] = useState<string | null>(null);
   const [finishing, setFinishing] = useState(false);
+  /** Task T: the server refused or missed the final save; nothing is onboarded yet. */
+  const [finishError, setFinishError] = useState<string | null>(null);
 
   useEffect(() => {
     try {
@@ -174,7 +177,21 @@ export default function Onboarding() {
       return;
     }
     if (finishing) return;
+
+    // Task T: no account is finished without a date of birth (16+). The
+    // steps already require it; this catches a draft that got here without
+    // one, and sends it back to the step that asks.
+    if (!dateOfBirthComplete(draft)) {
+      const at = steps.indexOf(dateOfBirthStep(draft.accountType));
+      if (at >= 0) setStep(at);
+      return;
+    }
+    if (!authUserId) {
+      setFinishError("You're signed out. Go back and sign in again to finish.");
+      return;
+    }
     setFinishing(true);
+    setFinishError(null);
 
     // Resolved once so the local state and the remote profiles row are
     // written from exactly the same values.
@@ -189,7 +206,7 @@ export default function Onboarding() {
           ? draft.professionalSubtype || ("other" as ProfessionalSubtype)
           : undefined,
       firstName: draft.firstName || "Friend",
-      dateOfBirth: draft.dateOfBirth || undefined,
+      dateOfBirth: draft.dateOfBirth,
       // Derived, not entered. Kept on the local profile because TDEE and the
       // biomarker screening recommendations take a number — but the date is
       // what's stored, so this recomputes correctly on every hydration
@@ -203,23 +220,26 @@ export default function Onboarding() {
       tracking: draft.tracking.length ? draft.tracking : (["nutrition", "workouts"] as TrackPreference[]),
     };
 
+    // THE SERVER FIRST, then the device (task T). The profiles row was
+    // created when the session appeared (ensureProfileRow in AppContext);
+    // this fills it in and sets onboarded. It used to be best-effort and run
+    // after the device was already marked onboarded, so a refused save left
+    // the server saying "not onboarded" and every later load sent the user
+    // back here with no explanation. Now a failure is shown and retried, and
+    // nothing local changes until the server has said yes.
+    const saved = await updateProfileFromOnboarding(authUserId, resolved);
+    if (!saved.ok) {
+      setFinishing(false);
+      setFinishError(saved.message ?? "Couldn't finish setting up your account. Try again.");
+      return;
+    }
+
     completeOnboarding({
       ...resolved,
       businessName: accountType === "business" ? draft.businessName : undefined,
       businessType: accountType === "business" ? draft.businessType || "gym" : undefined,
       certificationUrl: draft.certificationFile ?? undefined,
     });
-
-    // Phase 2 of the profiles write: the row itself was created the moment
-    // the session appeared (see ensureProfileRow in AppContext); this fills
-    // in everything that only exists now that onboarding has run.
-    //
-    // Best-effort and deliberately not blocking navigation on failure — the
-    // UI reads local state today, so a network blip here must not strand the
-    // user on the final step with no way forward.
-    if (authUserId) {
-      await updateProfileFromOnboarding(authUserId, resolved);
-    }
 
     // Redeem the client code for real. Everything the RPC can do is handled:
     // a thrown/transport failure, a raised error (not authenticated, or the
@@ -300,6 +320,9 @@ export default function Onboarding() {
         {stepKey === "aboutYou" && (
           <AboutYouStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
         )}
+        {stepKey === "dateOfBirth" && (
+          <DobStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />
+        )}
         {stepKey === "background" && <BackgroundStep onNext={next} onBack={back} />}
         {stepKey === "goal" && <GoalStep draft={draft} setDraft={setDraft} onNext={next} onBack={back} />}
         {stepKey === "activity" && (
@@ -317,6 +340,7 @@ export default function Onboarding() {
             onFinish={finish}
             isProfessional={isProfessional}
             notice={finishNotice}
+            error={finishError}
             busy={finishing}
           />
         )}

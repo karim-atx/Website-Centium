@@ -5,13 +5,9 @@ import type { OnboardingDraft } from "./Onboarding";
 import type { Sex } from "../../types";
 import clsx from "clsx";
 import { Check, Venus, Mars, VenusAndMars } from "lucide-react";
-import {
-  ageFromDateOfBirth,
-  isoDateYearsAgo,
-  validateDateOfBirth,
-  MIN_AGE,
-  MAX_AGE,
-} from "../../utils/date";
+import { validateDateOfBirth } from "../../utils/date";
+import { DobField } from "./DobField";
+import { dateOfBirthComplete } from "./onboardingSteps";
 import { validateHeightCm, validateWeightKg } from "../../utils/bodyMetrics";
 import { useApp } from "../../context/AppContext";
 import { fetchCertificationPath, uploadCertification } from "../../services/certification";
@@ -41,7 +37,8 @@ const sexOptions: { value: Sex; label: string; icon: typeof Venus }[] = [
 
 export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }) => {
   const isProfessional = draft.accountType === "professional";
-  const canContinue = draft.firstName.trim().length > 0;
+  // Task T: no Continue without a valid date of birth (16+), for everyone.
+  const canContinue = draft.firstName.trim().length > 0 && dateOfBirthComplete(draft);
   const [error, setError] = useState<string | null>(null);
 
   const { authUserId } = useApp();
@@ -107,17 +104,17 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
       setError("That name is reserved. Choose a different name.");
       return;
     }
+    // Required now (task T), for every account type, and checked again here
+    // because the button can be reached before a re-render settles.
+    const dobError = validateDateOfBirth(draft.dateOfBirth);
+    if (dobError) {
+      setError(dobError);
+      return;
+    }
     if (!isProfessional) {
       const height = Number(draft.heightCm);
       const weight = Number(draft.weightKg);
 
-      if (draft.dateOfBirth) {
-        const dobError = validateDateOfBirth(draft.dateOfBirth);
-        if (dobError) {
-          setError(dobError);
-          return;
-        }
-      }
       if (draft.heightCm) {
         const heightError = validateHeightCm(height);
         if (heightError) {
@@ -166,6 +163,11 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
           />
         </label>
 
+        {/* Task T: required for clients and professionals alike (a business
+            gives it on its own step). Above the professional/client split so
+            both see the same field. */}
+        <DobField value={draft.dateOfBirth} onChange={(v) => setDraft((d) => ({ ...d, dateOfBirth: v }))} />
+
         {isProfessional ? (
           // V5 (QA 5.0): age/height/sex don't apply to a professional's own
           // profile — replaced with a certification upload instead.
@@ -189,30 +191,6 @@ export const AboutYouStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack 
           </div>
         ) : (
           <>
-            {/* A real date, not an age. The native date input is the pattern
-                already used across this app (medical records, calendars,
-                metric detail), so no new dependency. min/max stop the picker
-                offering out-of-range years at all; handleContinue still
-                validates, since the field can also be typed into. */}
-            <label className="block">
-              <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-                Date of birth
-              </span>
-              <input
-                type="date"
-                value={draft.dateOfBirth}
-                min={isoDateYearsAgo(MAX_AGE)}
-                max={isoDateYearsAgo(MIN_AGE)}
-                onChange={(e) => setDraft((d) => ({ ...d, dateOfBirth: e.target.value }))}
-                className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
-              />
-              {draft.dateOfBirth && ageFromDateOfBirth(draft.dateOfBirth) !== undefined && (
-                <p className="text-[11px] text-charcoal-faint mt-1.5">
-                  {ageFromDateOfBirth(draft.dateOfBirth)} years old
-                </p>
-              )}
-            </label>
-
             <div className="grid grid-cols-2 gap-4">
               <label className="block">
                 <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Height (cm)</span>

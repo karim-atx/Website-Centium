@@ -13710,6 +13710,7 @@ export type Database = {
           tier_name: string
         }[]
       }
+      needs_date_of_birth: { Args: never; Returns: boolean }
       normalise_display_name: { Args: { p_name: string }; Returns: string }
       preview_client_code: {
         Args: { p_code: string }

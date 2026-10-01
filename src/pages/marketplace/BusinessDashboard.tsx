@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { PageHeader } from "../../components/ui/PageHeader";
+import { DobPromptCard } from "../../components/profile/DobPromptCard";
 import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPrototypeNotice";
 import { Card } from "../../components/ui/Card";
 import { Toggle } from "../../components/ui/Toggle";
@@ -30,6 +31,8 @@ export default function BusinessDashboard() {
   return (
     <div>
       <PageHeader title="Business Dashboard" subtitle="Manage your Centium marketplace listing" />
+      {/* Task T: a business's Home. Only for an older account with no date of birth. */}
+      <DobPromptCard className="mb-5" />
       <BusinessPrototypeNotice />
 
       {/* Design refinement §6.11: gradient hero flattens to one solid fill,

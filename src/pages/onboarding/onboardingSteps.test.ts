@@ -1,16 +1,33 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { resumeIndex, stepsFor } from "./onboardingSteps";
+import { dateOfBirthComplete, resumeIndex, stepsFor } from "./onboardingSteps";
 
-const pro = { accountType: "professional" as const, professionalSubtype: "trainer", businessType: null, businessName: "" };
-const biz = { accountType: "business" as const, professionalSubtype: null, businessType: "gym", businessName: "Iron Peak" };
-const customer = { accountType: "customer" as const, professionalSubtype: null, businessType: null, businessName: "" };
+const dob = "1990-05-01";
+const pro = { accountType: "professional" as const, professionalSubtype: "trainer", businessType: null, businessName: "", dateOfBirth: dob };
+const biz = { accountType: "business" as const, professionalSubtype: null, businessType: "gym", businessName: "Iron Peak", dateOfBirth: dob };
+const customer = { accountType: "customer" as const, professionalSubtype: null, businessType: null, businessName: "", dateOfBirth: dob };
 const at = (d: Parameters<typeof resumeIndex>[1], stored: string | null) => stepsFor(d.accountType, false)[resumeIndex(stored, d, false)];
 
 test("the subtype step follows the account type for professionals and businesses, not customers", () => {
   assert.deepEqual(stepsFor("professional", false).slice(2, 5), ["accountType", "subtype", "aboutYou"]);
-  assert.deepEqual(stepsFor("business", false).slice(2, 5), ["accountType", "subtype", "ready"]);
+  assert.deepEqual(stepsFor("business", false).slice(2, 6), ["accountType", "subtype", "dateOfBirth", "ready"]);
   assert.ok(!stepsFor("customer", false).includes("subtype"));
+});
+
+test("every account type is asked for a date of birth exactly once", () => {
+  for (const t of ["customer", "professional", "business"] as const) {
+    const steps = stepsFor(t, false);
+    assert.equal(steps.filter((k) => k === "aboutYou" || k === "dateOfBirth").length, 1, t);
+  }
+});
+
+test("never resumes past a missing or under-16 date of birth", () => {
+  assert.equal(at({ ...customer, dateOfBirth: "" }, "goal"), "aboutYou");
+  assert.equal(at({ ...pro, dateOfBirth: "" }, "ready"), "aboutYou");
+  assert.equal(at({ ...biz, dateOfBirth: "" }, "ready"), "dateOfBirth");
+  const tooYoung = new Date(Date.now() - 10 * 365 * 86400000).toISOString().slice(0, 10);
+  assert.equal(dateOfBirthComplete({ dateOfBirth: tooYoung }), false);
+  assert.equal(dateOfBirthComplete({ dateOfBirth: dob }), true);
 });
 
 test("a draft saved by name resumes on that step", () => {

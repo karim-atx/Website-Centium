@@ -2,6 +2,8 @@ import { supabase } from "../../../lib/supabase/client";
 import type { TablesInsert, TablesUpdate } from "../../../lib/supabase/database.types";
 import { isAdminAccount } from "../admin";
 import { ageFromDateOfBirth } from "../../utils/date";
+import { isOffline, OFFLINE_MESSAGE } from "../network-error";
+import { describeDobError } from "./dobErrors";
 import type {
   AccountType,
   ActivityLevel,
@@ -168,9 +170,10 @@ export async function fetchProfile(userId: string): Promise<FetchedProfile | nul
 export interface OnboardingProfileData {
   email: string;
   firstName: string;
-  // A real collected date now, not derived from an age. Written straight to
-  // profiles.date_of_birth. Optional because a user can skip the field.
-  dateOfBirth?: string;
+  // A real collected date, not derived from an age. Written straight to
+  // profiles.date_of_birth. Required for every account type (task T), and
+  // locked once set: re-sending the same value on a retry is allowed.
+  dateOfBirth: string;
   sex: Sex;
   heightCm: number;
   weightKg: number;
@@ -228,14 +231,16 @@ export async function updateDateOfBirth(
   userId: string,
   dateOfBirth: string
 ): Promise<{ ok: boolean; message?: string }> {
-  const { error } = await supabase
-    .from("profiles")
-    .update({ date_of_birth: dateOfBirth || null })
-    .eq("id", userId);
+  // Task T: once set, the date is locked (ATX51), so this is only ever the
+  // first save; callers show a saved date read-only. An empty string is
+  // never sent: it would be an explicit null, which clearing also refuses.
+  if (!dateOfBirth) return { ok: false, message: "Enter your date of birth." };
+  const { error } = await supabase.from("profiles").update({ date_of_birth: dateOfBirth }).eq("id", userId);
 
   if (error) {
-    console.error("[profile] Could not save date of birth:", error.message);
-    return { ok: false, message: error.message };
+    console.error("[profile] Could not save date of birth:", error.code);
+    if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+    return { ok: false, message: describeDobError(error.code) ?? "Couldn't save that. Try again." };
   }
   return { ok: true };
 }
@@ -320,9 +325,26 @@ export async function updateBodyMetric(
 }
 
 /**
- * Fills in the profiles row at the end of onboarding. Best-effort: a failure
- * here must not strand the user on the last step, since the local app state
- * has already been written and is what the UI reads today.
+ * Task T: needs_date_of_birth() (Database 20261009000000) — true for an
+ * account that finished onboarding without a date of birth (before it was
+ * required). A prompt, not a gate. Null when the read failed: no prompt then.
+ */
+export async function fetchNeedsDateOfBirth(): Promise<boolean | null> {
+  const { data, error } = await supabase.rpc("needs_date_of_birth");
+  if (error) return null;
+  return data === true;
+}
+
+/**
+ * Fills in the profiles row at the end of onboarding, including
+ * `onboarded: true`.
+ *
+ * NOT BEST-EFFORT ANY MORE (task T). It used to log a failure and let the
+ * user carry on, which left the device thinking they were onboarded while
+ * the server said they were not, so every later load sent them back to
+ * onboarding with no explanation. The caller now waits for this, shows the
+ * message on failure, and lets them retry; nothing is marked onboarded on
+ * the device until the server has said yes.
  */
 export async function updateProfileFromOnboarding(
   userId: string,
@@ -347,8 +369,12 @@ export async function updateProfileFromOnboarding(
   const { error } = await supabase.from("profiles").update(patch).eq("id", userId);
 
   if (error) {
-    console.error("[profile] Could not save onboarding profile:", error.message);
-    return { ok: false, message: error.message };
+    console.error("[profile] Could not save onboarding profile:", error.code, error.message);
+    if (isOffline(error)) return { ok: false, message: OFFLINE_MESSAGE };
+    return {
+      ok: false,
+      message: describeDobError(error.code) ?? "Couldn't finish setting up your account. Try again.",
+    };
   }
   return { ok: true };
 }

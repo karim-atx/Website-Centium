@@ -2,6 +2,7 @@
 // resumes. Pure (no React, no storage), so it is tested in node.
 
 import type { AccountType } from "../../types";
+import { validateDateOfBirth } from "../../utils/date";
 
 export type StepKey =
   | "welcome"
@@ -9,6 +10,7 @@ export type StepKey =
   | "accountType"
   | "subtype"
   | "aboutYou"
+  | "dateOfBirth"
   | "background"
   | "goal"
   | "activity"
@@ -22,6 +24,7 @@ const STEP_KEYS: readonly StepKey[] = [
   "accountType",
   "subtype",
   "aboutYou",
+  "dateOfBirth",
   "background",
   "goal",
   "activity",
@@ -62,6 +65,10 @@ export function stepsFor(accountType: AccountType | null, skipAboutYou: boolean)
     "accountType",
     ...(isProfessional || isBusiness ? (["subtype"] as StepKey[]) : []),
     ...(skipAboutYou || isBusiness ? [] : (["aboutYou"] as StepKey[])),
+    // Task T: a date of birth is required for every account type. Clients and
+    // professionals give it on About You; a business has no About You, so it
+    // gets this one-field step for the person who runs the account.
+    ...(isBusiness ? (["dateOfBirth"] as StepKey[]) : []),
     // The optional CV step, straight after the name + certificate step.
     ...(isProfessional ? (["background"] as StepKey[]) : []),
     // QA 13.0: recovery-sensitive is asked before goal and activity so those
@@ -76,7 +83,7 @@ export function stepsFor(accountType: AccountType | null, skipAboutYou: boolean)
  * position in this list, so it is read through it to find the step by name.
  */
 function legacyStepsFor(accountType: AccountType | null): StepKey[] {
-  return stepsFor(accountType, false).filter((k) => k !== "subtype");
+  return stepsFor(accountType, false).filter((k) => k !== "subtype" && k !== "dateOfBirth");
 }
 
 export interface ResumeDraft {
@@ -84,6 +91,7 @@ export interface ResumeDraft {
   professionalSubtype: string | null;
   businessType: string | null;
   businessName: string;
+  dateOfBirth: string;
 }
 
 /** Whether the step after the account type has what it needs. */
@@ -91,6 +99,16 @@ export function subtypeComplete(d: ResumeDraft): boolean {
   if (d.accountType === "professional") return !!d.professionalSubtype;
   if (d.accountType === "business") return !!d.businessType && d.businessName.trim().length > 0;
   return true;
+}
+
+/** Whether the draft has a date of birth the server will accept (16+). */
+export function dateOfBirthComplete(d: Pick<ResumeDraft, "dateOfBirth">): boolean {
+  return !!d.dateOfBirth && validateDateOfBirth(d.dateOfBirth) === null;
+}
+
+/** The step that asks for the date of birth for this account type. */
+export function dateOfBirthStep(accountType: AccountType | null): StepKey {
+  return accountType === "business" ? "dateOfBirth" : "aboutYou";
 }
 
 /**
@@ -102,7 +120,8 @@ export function subtypeComplete(d: ResumeDraft): boolean {
  * found in today's list, so nobody resumes one step off.
  *
  * Never past an unanswered subtype: someone saved beyond it without a
- * specialty or business type lands on the subtype step first.
+ * specialty or business type lands on the subtype step first. And never past
+ * a missing date of birth (task T): it lands on the step that asks for it.
  */
 export function resumeIndex(stored: string | null, draft: ResumeDraft, skipAboutYou: boolean): number {
   const steps = stepsFor(draft.accountType, skipAboutYou);
@@ -123,5 +142,7 @@ export function resumeIndex(stored: string | null, draft: ResumeDraft, skipAbout
   if (at < 0) at = steps.indexOf("accountType");
   const sub = steps.indexOf("subtype");
   if (sub >= 0 && at > sub && !subtypeComplete(draft)) at = sub;
+  const dob = steps.indexOf(dateOfBirthStep(draft.accountType));
+  if (dob >= 0 && at > dob && !dateOfBirthComplete(draft)) at = dob;
   return at;
 }

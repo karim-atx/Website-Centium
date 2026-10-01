@@ -9,6 +9,7 @@ import { AddFoodSheet } from "../../components/food/AddFoodSheet";
 import { AIVoiceLogger } from "../../components/food/AIVoiceLogger";
 import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
 import { AddMetricSheet } from "../../components/health/AddMetricSheet";
+import { DobPromptCard } from "../../components/profile/DobPromptCard";
 import { ChevronRight, ArrowRight, Sparkles, Store, Crown, HeartHandshake, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import ProfessionalDashboard from "../professionals/ProfessionalDashboard";
@@ -105,6 +106,9 @@ export default function Home() {
           </button>
         </div>
       )}
+
+      {/* Task T: only for an older account with no date of birth. */}
+      <DobPromptCard className="mb-5 animate-fade-slide-up" />
 
       {/* Widget order per QA: Calendar (fixed, non-adjustable) > Streaks > Quick Actions > Your Health Today */}
       <DateSelector />
