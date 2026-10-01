@@ -96,6 +96,34 @@ export function convertUnit(marker: CatalogueMarker, value: number, from: string
 export const tidy = (n: number) => Number(n.toPrecision(4));
 
 /**
+ * The range to PRE-FILL in the entry form, or null.
+ *
+ * ONLY FROM A REVIEWED ROW. Until a clinician has reviewed the list
+ * (lab_markers.reviewed), nothing is pre-filled: the user enters the range
+ * printed on their report, and low/normal/high is computed only from that.
+ * When the flag flips to true in the database, pre-filling switches on with
+ * no code change.
+ */
+export function prefillRange(
+  marker: CatalogueMarker,
+  sex: string | null | undefined,
+  unit: string
+): { low: number | null; high: number | null } | null {
+  return marker.reviewed ? catalogueRange(marker, sex, unit) : null;
+}
+
+/**
+ * Whether to say "the standard list has no range for this marker". Always
+ * for the threshold markers (no range rows at all: their familiar numbers are
+ * risk thresholds, not ranges); for others only once reviewed, when there is
+ * no row for this person (e.g. LH, FSH, estradiol for women).
+ */
+export function noStandardRange(marker: CatalogueMarker, sex: string | null | undefined, unit: string): boolean {
+  if (marker.ranges.length === 0) return true;
+  return marker.reviewed && catalogueRange(marker, sex, unit) === null;
+}
+
+/**
  * The list's reference range for this person, in `unit`, or null.
  *
  * Their own sex's row first, then a row that applies to everyone. NO ROW

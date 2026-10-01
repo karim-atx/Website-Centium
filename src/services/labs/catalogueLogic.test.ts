@@ -4,6 +4,8 @@ import {
   catalogueRange,
   convertUnit,
   matchMarker,
+  noStandardRange,
+  prefillRange,
   searchMarkers,
   toCanonical,
   type CatalogueMarker,
@@ -81,6 +83,19 @@ test("ranges by sex, converted into the chosen unit", () => {
   assert.equal(catalogueRange(creatinine, "other", "mg/dL"), null);
   // An everyone-row applies to everybody.
   assert.deepEqual(catalogueRange(alt, "other", "IU/L"), { low: 7, high: 45 });
+});
+
+test("nothing is pre-filled until the row is reviewed; then it is, with no code change", () => {
+  assert.equal(prefillRange(creatinine, "female", "mg/dL"), null);
+  assert.deepEqual(prefillRange({ ...creatinine, reviewed: true }, "female", "mg/dL"), { low: 0.59, high: 1.04 });
+});
+
+test("'no standard range' for threshold markers always; for others once reviewed", () => {
+  assert.equal(noStandardRange(hba1c, "female", "%"), true);
+  assert.equal(noStandardRange(creatinine, "female", "mg/dL"), false);
+  // Per-sex rows only and no sex on file: only said once the list is reviewed.
+  assert.equal(noStandardRange(creatinine, null, "mg/dL"), false);
+  assert.equal(noStandardRange({ ...creatinine, reviewed: true }, null, "mg/dL"), true);
 });
 
 test("a marker with no range row gets none (the threshold markers)", () => {

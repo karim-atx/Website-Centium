@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { Search, X } from "lucide-react";
 import {
-  catalogueRange,
+  noStandardRange,
+  prefillRange,
   convertUnit,
   searchMarkers,
   tidy,
@@ -36,7 +37,7 @@ export const MarkerEntryRow: React.FC<{
 
   const choose = (m: CatalogueMarker) => {
     const unit = m.canonicalUnit;
-    const range = catalogueRange(m, sex, unit);
+    const range = prefillRange(m, sex, unit);
     onChange({
       markerKey: m.key,
       other: false,
@@ -60,7 +61,7 @@ export const MarkerEntryRow: React.FC<{
   const setUnit = (unit: string) => {
     if (!marker) return onChange({ unit });
     if (draft.rangeFrom === "list") {
-      const range = catalogueRange(marker, sex, unit);
+      const range = prefillRange(marker, sex, unit);
       return onChange({ unit, low: fmt(range?.low ?? null), high: fmt(range?.high ?? null), rangeFrom: range ? "list" : null });
     }
     const conv = (s: string) => {
@@ -79,7 +80,7 @@ export const MarkerEntryRow: React.FC<{
       ? searchMarkers(query, catalogue).slice(0, 6)
       : [...catalogue].sort((a, b) => a.displayName.localeCompare(b.displayName)).slice(0, 8)
     : [];
-  const listHasRange = marker ? catalogueRange(marker, sex, draft.unit) !== null : false;
+  const noRange = marker ? noStandardRange(marker, sex, draft.unit) : false;
 
   return (
     <div className="rounded-2xl bg-cream-card border border-charcoal/10 p-3">
@@ -209,10 +210,13 @@ export const MarkerEntryRow: React.FC<{
             />
           </div>
           <p className="mt-1.5 text-[11px] text-charcoal-faint leading-relaxed">
-            Use the range printed on your report.
-            {draft.rangeFrom === "list" &&
-              " Pre-filled from Centium's standard list, which is still awaiting clinical review."}
-            {marker && !listHasRange && draft.rangeFrom !== "you" && " The standard list has no range for this marker."}
+            {/* Until the list is clinically reviewed nothing is pre-filled
+                (prefillRange), so the range is always the user's own, from
+                their report, and so is the low/normal/high worked from it. */}
+            {draft.rangeFrom === "list"
+              ? "Use the range printed on your report. Pre-filled from Centium's standard list."
+              : "Enter the range printed on your report."}
+            {noRange && " The standard list has no range for this marker."}
           </p>
           {draft.low && draft.high && Number(draft.low) > Number(draft.high) && (
             <p className="mt-1 text-[11px] font-semibold text-status-high" role="alert">

@@ -32,7 +32,10 @@ import { draftRange, draftUsable, emptyMarker, type MarkerDraft } from "./marker
 // than switched off — there is no flag to turn back on, because what would
 // replace it is a vision model that does not exist yet.
 
-type Stage = "capture" | "entry" | "done";
+// THE REPORT IS OPTIONAL NOW. Results can be typed straight in; attaching a
+// photo or PDF of the report stays available on the same screen, and is still
+// saved with the panel when given. There is no separate capture step.
+type Stage = "entry" | "done";
 type Source = "camera" | "pdf" | null;
 
 export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void }> = ({
@@ -53,7 +56,7 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
       cancelled = true;
     };
   }, [open]);
-  const [stage, setStage] = useState<Stage>("capture");
+  const [stage, setStage] = useState<Stage>("entry");
   const [source, setSource] = useState<Source>(null);
   const [photo, setPhoto] = useState<string | null>(null);
   const [markers, setMarkers] = useState<MarkerDraft[]>([emptyMarker()]);
@@ -68,7 +71,7 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
   const pdfInputRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
-    setStage("capture");
+    setStage("entry");
     setSource(null);
     setPhoto(null);
     setMarkers([emptyMarker()]);
@@ -87,8 +90,7 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
     // inside uploadPrivateFile, but running it only there meant a file with an
     // unusable type was read and reviewed before anyone mentioned it — the
     // rejection arrived after all the work rather than instead of it. Nothing
-    // here advances the stage, so the sheet stays on capture and the message
-    // appears beside the buttons.
+    // here changes the file, so the message appears beside the attach buttons.
     const check = validateFileFor("lab-reports", picked);
     if (!check.ok) {
       setSaveError(check.message ?? "That file can't be used.");
@@ -96,11 +98,8 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
     }
     setSource(via);
     setFile(picked);
+    setPhoto(null);
     setSaveError(null);
-
-    // STRAIGHT TO THE FORM. There is nothing to wait for — the only reason
-    // this step ever took 1600ms was a setTimeout pretending to think.
-    setStage("entry");
 
     // The thumbnail, and only the thumbnail. A PDF gets a file chip instead,
     // so it is not read at all.
@@ -108,6 +107,12 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
     const reader = new FileReader();
     reader.onload = () => setPhoto(reader.result as string);
     reader.readAsDataURL(picked);
+  };
+
+  const removeFile = () => {
+    setSource(null);
+    setFile(null);
+    setPhoto(null);
   };
 
   const setMarker = (index: number, patch: Partial<MarkerDraft>) =>
@@ -129,7 +134,7 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
   const usable = markers.filter(draftUsable);
 
   /**
-   * Saves the typed markers as ONE panel, with the report attached.
+   * Saves the typed markers as ONE panel, with the report attached if one was.
    *
    * A panel is one lab report, so every marker belongs to a single panel and
    * a single upload — not one panel per marker, which would scatter one
@@ -168,88 +173,86 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
       open={open}
       onClose={handleClose}
       title="Add blood work"
-      // Back to the picker, so a wrong file is one tap to replace rather than
-      // a reason to close the sheet and start again.
-      onBack={stage === "entry" ? reset : undefined}
     >
       <div className="min-h-[280px] flex flex-col animate-fade-slide-up">
-        {stage === "capture" && (
-          <div className="flex-1 flex flex-col items-center justify-center text-center py-6">
-            <input
-              ref={cameraInputRef}
-              type="file"
-              accept={acceptFor("lab-reports", true)}
-              capture="environment"
-              className="hidden"
-              // Cleared after every pick so choosing the SAME file again still
-              // fires onChange — otherwise a rejected file cannot be retried
-              // without picking something else first.
-              onChange={(e) => {
-                const picked = e.target.files?.[0];
-                e.target.value = "";
-                if (picked) handleFile(picked, "camera");
-              }}
-            />
-            <input
-              ref={pdfInputRef}
-              type="file"
-              accept="application/pdf,.pdf"
-              className="hidden"
-              onChange={(e) => {
-                const picked = e.target.files?.[0];
-                e.target.value = "";
-                if (picked) handleFile(picked, "pdf");
-              }}
-            />
-            <div className="flex items-center gap-4 mb-6">
-              <button
-                onClick={() => cameraInputRef.current?.click()}
-                className="tap w-24 h-24 rounded-full bg-charcoal flex items-center justify-center shadow-lift"
-                aria-label="Take a photo"
-              >
-                <Camera size={30} className="text-cream" />
-              </button>
-              <button
-                onClick={() => pdfInputRef.current?.click()}
-                className="tap w-24 h-24 rounded-full bg-primary-pale flex items-center justify-center shadow-soft"
-                aria-label="Attach a PDF"
-              >
-                <FileText size={26} className="text-primary-dark" />
-              </button>
-            </div>
-            <p className="font-display text-xl font-semibold text-charcoal mb-2">
-              Take a picture, or attach a PDF, of your results
-            </p>
-            <p className="text-sm text-charcoal-soft max-w-xs">
-              Then add the values from your report. Your photo is saved with them for reference.
-            </p>
-            {saveError && (
-              <p className="text-[11px] text-status-high mt-3 text-center max-w-xs">{saveError}</p>
-            )}
-          </div>
-        )}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept={acceptFor("lab-reports", true)}
+          capture="environment"
+          className="hidden"
+          // Cleared after every pick so choosing the SAME file again still
+          // fires onChange — otherwise a rejected file cannot be retried
+          // without picking something else first.
+          onChange={(e) => {
+            const picked = e.target.files?.[0];
+            e.target.value = "";
+            if (picked) handleFile(picked, "camera");
+          }}
+        />
+        <input
+          ref={pdfInputRef}
+          type="file"
+          accept="application/pdf,.pdf"
+          className="hidden"
+          onChange={(e) => {
+            const picked = e.target.files?.[0];
+            e.target.value = "";
+            if (picked) handleFile(picked, "pdf");
+          }}
+        />
 
         {stage === "entry" && (
           <div>
-            {/* The document, kept in view while its values are typed — which
-                is the whole reason it is attached rather than decorative. */}
-            <div className="flex items-center gap-3 bg-cream-soft rounded-2xl px-3.5 py-3 mb-4">
-              {photo ? (
-                <img src={photo} alt="Your lab report" className="w-12 h-12 object-cover rounded-xl shrink-0" />
-              ) : (
-                <div className="w-12 h-12 rounded-xl bg-cream-card flex items-center justify-center shrink-0">
-                  <FileText size={20} className="text-charcoal-faint" />
+            {/* The report, optional. Attached, it stays in view while its
+                values are typed and is saved with them for reference. */}
+            {file ? (
+              <div className="flex items-center gap-3 bg-cream-soft rounded-2xl px-3.5 py-3 mb-4">
+                {photo ? (
+                  <img src={photo} alt="Your lab report" className="w-12 h-12 object-cover rounded-xl shrink-0" />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-cream-card flex items-center justify-center shrink-0">
+                    <FileText size={20} className="text-charcoal-faint" />
+                  </div>
+                )}
+                <div className="flex-1 min-w-0 text-left">
+                  <p className="text-sm font-semibold text-charcoal">Report attached</p>
+                  <p className="text-[11px] text-charcoal-faint">
+                    Your {source === "pdf" ? "file" : "photo"} is saved with these results for reference.
+                  </p>
                 </div>
-              )}
-              <div className="min-w-0 text-left">
-                <p className="text-sm font-semibold text-charcoal">
-                  Add the values from your report
-                </p>
-                <p className="text-[11px] text-charcoal-faint">
-                  Your {source === "pdf" ? "file" : "photo"} is saved with them for reference.
-                </p>
+                <button
+                  type="button"
+                  onClick={removeFile}
+                  className="tap text-xs font-semibold text-charcoal-soft shrink-0"
+                >
+                  Remove
+                </button>
               </div>
-            </div>
+            ) : (
+              <div className="bg-cream-soft rounded-2xl px-3.5 py-3 mb-4">
+                <p className="text-sm font-semibold text-charcoal">Type in your results</p>
+                <p className="text-[11px] text-charcoal-faint mb-2.5">
+                  You can also attach your report (optional), to keep it with these results.
+                </p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => cameraInputRef.current?.click()}
+                    className="tap flex items-center gap-1.5 rounded-full bg-cream-card px-3 py-2 text-xs font-semibold text-charcoal"
+                  >
+                    <Camera size={14} /> Take a photo
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => pdfInputRef.current?.click()}
+                    className="tap flex items-center gap-1.5 rounded-full bg-cream-card px-3 py-2 text-xs font-semibold text-charcoal"
+                  >
+                    <FileText size={14} /> Attach a PDF
+                  </button>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-2.5 mb-3">
               {markers.map((m, i) => (
