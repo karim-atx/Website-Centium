@@ -8,6 +8,8 @@ export interface ThreadLive {
   online: Set<string>;
   /** Chats where somebody else is typing right now. */
   typing: Set<string>;
+  /** Who is typing, by chat (the latest), so a group can say "Lina is typing". */
+  typingBy: Record<string, string>;
   /** Call on each keystroke in a chat's composer; throttled here. */
   sendTyping: (threadId: string) => void;
   /** Rejoin every channel, e.g. after "Show when I'm online" changes. */
@@ -15,6 +17,6 @@ export interface ThreadLive {
 }
 
 export const empty = new Set<string>();
-export const ThreadLiveCtx = createContext<ThreadLive>({ online: empty, typing: empty, sendTyping: () => {}, reconnect: () => {} });
+export const ThreadLiveCtx = createContext<ThreadLive>({ online: empty, typing: empty, typingBy: {}, sendTyping: () => {}, reconnect: () => {} });
 
 export const useThreadLive = () => useContext(ThreadLiveCtx);

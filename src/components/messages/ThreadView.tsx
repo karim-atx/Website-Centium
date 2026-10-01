@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowDown, ArrowLeft, Ban, Check, CheckCheck, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, Ban, Check, CheckCheck, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Pencil, Phone, Pin, Search, Send, ShieldCheck, Star, Trash2, Users, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useCall } from "../../context/CallContext";
 import { threadAllowsCalls, type CallKind } from "../../services/calling";
@@ -17,6 +17,15 @@ import { ChatInfo } from "./ChatInfo";
 import { FileCard } from "./FileCard";
 import { MessageActions, type MessageAction } from "./MessageActions";
 import { SearchResults } from "./SearchResults";
+import {
+  fetchGroupMembers,
+  fetchGroupReadCounts,
+  fetchGroupReaders,
+  fetchGroupState,
+  type GroupMember,
+  type GroupReader,
+  type GroupState,
+} from "../../services/messaging/groups";
 import { clockTime } from "./chatTime";
 import { useReactionsRealtime } from "../../hooks/useReactionsRealtime";
 import { useThreadLive } from "../../context/threadLive";
@@ -157,7 +166,49 @@ export const ThreadView: React.FC<{
   // Typing and online for this chat; the database decides who sees them.
   const live = useThreadLive();
   const theyAreTyping = live.typing.has(thread.id);
-  const theyAreOnline = live.online.has(thread.id);
+  const isGroup = thread.kind === "group";
+  // Presence is never shown in a group; the database refuses it there anyway.
+  const theyAreOnline = !isGroup && live.online.has(thread.id);
+
+  /**
+   * A GROUP (phase 2B, screen 4): its members by first name, its host, and
+   * whether it is closed. Members come from group_members(), which gives a
+   * first name and an avatar and nothing else; a former member still sees who
+   * was there while they were, so their own row says "left" or "removed".
+   */
+  const [members, setMembers] = useState<GroupMember[]>([]);
+  const [groupState, setGroupState] = useState<GroupState | null>(null);
+  const refreshGroup = async () => {
+    if (!isGroup) return;
+    const [m, g] = await Promise.all([fetchGroupMembers(thread.id), fetchGroupState(thread.id)]);
+    setMembers(m);
+    setGroupState(g);
+  };
+  useEffect(() => {
+    void refreshGroup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [thread.id]);
+  const myMembership = members.find((m) => m.userId === authUserId);
+  const groupHost = members.find((m) => m.role === "owner");
+  const isHost = isGroup && !!authUserId && groupState?.ownerId === authUserId;
+  const joinedCount = members.filter((m) => m.status === "joined").length;
+  /** Read-only: the group is closed, or you left or were removed. Nobody can post then. */
+  const groupEnded: null | "closed" | "left" | "removed" = !isGroup
+    ? null
+    : groupState?.closedAt
+      ? "closed"
+      : myMembership?.status === "left"
+        ? "left"
+        : myMembership?.status === "removed"
+          ? "removed"
+          : null;
+  const groupName = isGroup ? groupState?.name ?? thread.participantName : thread.participantName;
+  const nameOf = (userId: string | null) =>
+    (userId && members.find((m) => m.userId === userId)?.firstName) || "Someone";
+  /** Who wrote a message, as a quote or a label says it. */
+  const authorOf = (senderId: string | null) =>
+    senderId === authUserId ? "You" : isGroup ? nameOf(senderId) : thread.participantName;
+  const typingName = isGroup && theyAreTyping ? nameOf(live.typingBy[thread.id] ?? null) : null;
   /**
    * WHERE THE COMPOSER STICKS: just above the bottom bar, not behind it. The
    * client bar floats 18px up and is 58px tall; the professional and business
@@ -180,12 +231,14 @@ export const ThreadView: React.FC<{
    * because a thread object only exists after fetchThreads has fully resolved.
    * See the note in fetchThreads.
    */
-  const departed = thread.participantId === null;
+  const departed = !isGroup && thread.participantId === null;
 
   // BLOCKING (Database 20261001020000). A block stops messages and calls both
   // ways; the composer and call buttons give way to a plain statement of it.
   // Official support threads cannot be blocked or reported from here.
   const safetyApplies = !departed && thread.kind === "peer";
+  // Reporting a message works in a direct chat and in a group alike.
+  const canReport = !departed && thread.kind !== "official_support";
   const [block, setBlock] = useState<BlockState>({ iBlocked: false, blocked: false });
   const [blockOpen, setBlockOpen] = useState(false);
   /** Chat info (screen 6) replaces the conversation while open. */
@@ -505,6 +558,32 @@ export const ThreadView: React.FC<{
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idsKey]);
   useReactionsRealtime(thread.id, () => void refreshReactions());
+
+  // "READ BY N" on your own recent messages in a group. Asked per message, so
+  // only the newest 15 of yours, and re-asked every 30 seconds while open.
+  const [readCounts, setReadCounts] = useState<Record<string, number>>({});
+  const refreshReadCounts = async () => {
+    if (!isGroup || !authUserId) return;
+    const mineRecent = messagesRef.current
+      .filter((m) => m.senderId === authUserId && !m.deletedAt)
+      .slice(-15)
+      .map((m) => m.id);
+    if (mineRecent.length === 0) return;
+    const counts = await fetchGroupReadCounts(mineRecent);
+    setReadCounts((prev) => ({ ...prev, ...counts }));
+  };
+  useEffect(() => {
+    void refreshReadCounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idsKey]);
+  usePoll(() => void refreshReadCounts(), 30000, isGroup);
+  // Membership changes elsewhere (someone joins, leaves, is removed, the host
+  // closes the group): re-read on opening Chat info and once a minute.
+  useEffect(() => {
+    if (infoOpen) void refreshGroup();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [infoOpen]);
+  usePoll(() => void refreshGroup(), 60000, isGroup);
 
   const react = async (m: Message, emoji: string | null) => {
     if (!authUserId) return;
@@ -997,7 +1076,7 @@ export const ThreadView: React.FC<{
       setInfoFor(m);
       close();
     } });
-    if (safetyApplies && !mine) {
+    if (canReport && !mine) {
       list.push({ label: "Report", danger: true, onSelect: () => {
         setReportFor(m);
         close();
@@ -1017,8 +1096,30 @@ export const ThreadView: React.FC<{
   };
 
   const reportLatest = (() => {
-    const theirs = [...messages].reverse().find((m) => m.senderId === thread.participantId);
+    const theirs = [...messages]
+      .reverse()
+      .find((m) => (isGroup ? m.senderId !== authUserId && !m.deletedAt : m.senderId === thread.participantId));
     return theirs ? () => setReportFor(theirs) : null;
+  })();
+
+  // "MAYA JOINED THE GROUP": from each member's joined_at, placed before the
+  // first loaded message after it. Only inside the loaded range, so a join
+  // from before the oldest loaded page is not shown out of place. The host
+  // made the group and is not announced.
+  const joinEvents = (() => {
+    const at: Record<string, string[]> = {};
+    const after: string[] = [];
+    if (!isGroup || messages.length === 0) return { at, after };
+    const oldest = messages[0].createdAt;
+    for (const m of members) {
+      if (m.role === "owner" || !m.joinedAt) continue;
+      if (hasOlder && m.joinedAt < oldest) continue;
+      const before = messages.find((x) => x.createdAt >= m.joinedAt!);
+      const label = `${m.userId === authUserId ? "You" : m.firstName} joined the group`;
+      if (before) (at[before.id] ??= []).push(label);
+      else after.push(label);
+    }
+    return { at, after };
   })();
 
   return (
@@ -1056,6 +1157,18 @@ export const ThreadView: React.FC<{
             setInfoOpen(false);
             setSearchOpen(true);
           }}
+          group={
+            isGroup
+              ? {
+                  name: groupName,
+                  members,
+                  isHost,
+                  ended: groupEnded,
+                  onChanged: () => void refreshGroup(),
+                  onReport: reportLatest,
+                }
+              : null
+          }
         />
       ) : (
       <>
@@ -1122,6 +1235,11 @@ export const ThreadView: React.FC<{
           aria-label={`Chat info for ${thread.participantName}`}
           className="tap flex items-center gap-2.5 flex-1 min-w-0 text-left"
         >
+          {isGroup ? (
+            <span className="w-10 h-10 rounded-full bg-[#E4F0EE] dark:bg-teal-pale flex items-center justify-center shrink-0">
+              <Users size={19} className="text-[#2F5F58] dark:text-teal-deep-text" aria-hidden />
+            </span>
+          ) : (
           <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center overflow-hidden shrink-0 font-extrabold text-primary-deep-text">
             {thread.participantAvatarUrl ? (
               <img src={thread.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
@@ -1129,12 +1247,28 @@ export const ThreadView: React.FC<{
               thread.participantName.trim().charAt(0).toUpperCase()
             )}
           </span>
+          )}
           <span className="flex flex-col min-w-0">
-            <span className="text-[15px] font-bold text-charcoal truncate">{thread.participantName}</span>
-            {(theyAreTyping || theyAreOnline) && (
-              <span className="text-xs font-semibold" style={{ color: "#2E7D57" }}>
-                {theyAreTyping ? "typing…" : "Online"}
-              </span>
+            <span className="text-[15px] font-bold text-charcoal truncate">{groupName}</span>
+            {isGroup ? (
+              typingName ? (
+                <span className="text-xs font-semibold truncate" style={{ color: "#2E7D57" }}>
+                  {typingName} is typing…
+                </span>
+              ) : (
+                members.length > 0 && (
+                  <span className="text-xs text-charcoal-soft truncate">
+                    {groupHost ? `${groupHost.firstName} (host) · ` : ""}
+                    {joinedCount} {joinedCount === 1 ? "member" : "members"}
+                  </span>
+                )
+              )
+            ) : (
+              (theyAreTyping || theyAreOnline) && (
+                <span className="text-xs font-semibold" style={{ color: "#2E7D57" }}>
+                  {theyAreTyping ? "typing…" : "Online"}
+                </span>
+              )
             )}
           </span>
         </button>
@@ -1142,7 +1276,7 @@ export const ThreadView: React.FC<{
         {/* CALL CONTROLS, gated on canCall — asked once on open, failing
             closed, and not the enforcement: mint-call-token re-checks
             thread_allows_calls server-side. */}
-        {canCall && thread.participantId && !block.blocked && (
+        {canCall && !isGroup && thread.participantId && !block.blocked && (
           <>
             <button
               onClick={() => void placeCall("voice")}
@@ -1259,6 +1393,11 @@ export const ThreadView: React.FC<{
           const tick = m.readAt ? "read" : m.deliveredAt ? "delivered" : "sent";
           return (
             <div key={m.id} className="flex flex-col gap-1">
+              {joinEvents.at[m.id]?.map((label, i) => (
+                <p key={i} className="self-center text-xs text-charcoal-soft bg-cream-card rounded-full px-3 py-[5px] my-0.5">
+                  {label}
+                </p>
+              ))}
               {index === dividerAt && (
                 <div ref={dividerRef} className="flex items-center gap-2 my-1" role="separator">
                   <span className="flex-1 h-px bg-primary/40" />
@@ -1296,15 +1435,17 @@ export const ThreadView: React.FC<{
                 {/* What is being answered, then the answer. The parent is looked
                     up among the loaded messages, so a reply to something not
                     loaded renders as unavailable rather than a stale copy. */}
+                {isGroup && !mine && (
+                  <span className={`text-xs font-extrabold ${senderTone(m.senderId, groupState?.ownerId ?? null, members)}`}>
+                    {nameOf(m.senderId)}
+                    {m.senderId === groupState?.ownerId ? " · Host" : ""}
+                  </span>
+                )}
                 {m.replyToId && (
                   <QuotedMessage
                     inBubble
                     message={messages.find((x) => x.id === m.replyToId) ?? null}
-                    authorLabel={
-                      messages.find((x) => x.id === m.replyToId)?.senderId === authUserId
-                        ? "You"
-                        : thread.participantName
-                    }
+                    authorLabel={authorOf(messages.find((x) => x.id === m.replyToId)?.senderId ?? null)}
                     onJump={() => m.replyToId && jumpTo(m.replyToId)}
                   />
                 )}
@@ -1379,7 +1520,10 @@ export const ThreadView: React.FC<{
                   {starred.has(m.id) && <Star size={11} aria-label="Starred" className="fill-current opacity-80" />}
                   {clockTime(m.createdAt)}
                   {m.editedAt && !m.deletedAt ? " · edited" : ""}
-                  {mine && !m.deletedAt &&
+                  {/* A GROUP HAS NO TICKS: one timestamp cannot say who read
+                      it, so your own messages say how many have. */}
+                  {isGroup && mine && !m.deletedAt && (readCounts[m.id] ?? 0) > 0 ? ` · read by ${readCounts[m.id]}` : ""}
+                  {mine && !isGroup && !m.deletedAt &&
                     (tick === "read" ? (
                       <CheckCheck size={15} aria-label="Read" className="text-tick-read-sent" />
                     ) : tick === "delivered" ? (
@@ -1446,11 +1590,16 @@ export const ThreadView: React.FC<{
             </span>
           </div>
         )}
+        {joinEvents.after.map((label, i) => (
+          <p key={`after-${i}`} className="self-center text-xs text-charcoal-soft bg-cream-card rounded-full px-3 py-[5px] my-0.5">
+            {label}
+          </p>
+        ))}
         {/* THEY ARE TYPING: three dots where their next message will land. */}
         {theyAreTyping && (
           <div
             role="status"
-            aria-label={`${thread.participantName} is typing`}
+            aria-label={`${typingName ?? thread.participantName} is typing`}
             className="self-start rounded-2xl bg-cream-soft px-3.5 py-2.5 flex gap-1"
           >
             {[0, 1, 2].map((i) => (
@@ -1485,7 +1634,24 @@ export const ThreadView: React.FC<{
 
       {/* BLOCKED: the conversation stays readable, and nothing can be sent. The
           other side's block is stated without saying who did it. */}
-      {block.blocked ? (
+      {groupEnded ? (
+        <div className={`sticky ${footerBottom} bg-cream pt-2`}>
+          <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-center" role="status">
+            <p className="text-sm font-semibold text-charcoal">
+              {groupEnded === "closed"
+                ? "This group was closed"
+                : groupEnded === "left"
+                  ? "You left this group"
+                  : "You were removed from this group"}
+            </p>
+            <p className="text-xs text-charcoal-soft mt-1 leading-relaxed">
+              {groupEnded === "closed"
+                ? "You can still read it, but nobody can send messages here."
+                : "You can still read what was sent while you were in it. Nothing new will arrive."}
+            </p>
+          </div>
+        </div>
+      ) : block.blocked ? (
         <div className={`sticky ${footerBottom} bg-cream pt-2`}>
           <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-center">
             <p className="text-sm font-semibold text-charcoal">
@@ -1533,7 +1699,7 @@ export const ThreadView: React.FC<{
       {replyTo && (
         <QuotedMessage
           message={replyTo}
-          authorLabel={replyTo.senderId === authUserId ? "You" : thread.participantName}
+          authorLabel={authorOf(replyTo.senderId)}
           onCancel={() => setReplyTo(null)}
         />
       )}
@@ -1602,7 +1768,7 @@ export const ThreadView: React.FC<{
             onKeyDown={(e) => {
               if (e.key === "Enter") void send();
             }}
-            placeholder="Message…"
+            placeholder={isGroup ? "Message the group" : "Message…"}
             className="flex-1 rounded-full bg-cream-soft border border-charcoal/10 px-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
           />
         )}
@@ -1724,6 +1890,10 @@ export const ThreadView: React.FC<{
             <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3 py-2 mb-2 truncate">
               {describeMessage(infoFor)}
             </p>
+            {isGroup ? (
+              <GroupMessageInfo messageId={infoFor.id} sentAt={infoFor.createdAt} count={readCounts[infoFor.id] ?? null} />
+            ) : (
+            <>
             {(
               [
                 ["Sent", infoFor.createdAt],
@@ -1744,6 +1914,8 @@ export const ThreadView: React.FC<{
               <p className="text-xs text-charcoal-soft mt-2 leading-relaxed">
                 Delivered and read times aren't shown when either of you has read receipts off.
               </p>
+            )}
+            </>
             )}
           </div>
         )}
@@ -1836,5 +2008,72 @@ export const ThreadView: React.FC<{
         senderId={authUserId}
       />
     </div>
+  );
+};
+
+/**
+ * A sender's name colour in a group: the host in the app's primary ink, the
+ * others from a small set IN THE ORDER THEY JOINED, so the first four members
+ * always differ and each person keeps their colour as others join.
+ */
+const SENDER_TONES = [
+  "text-[#2F5F58] dark:text-teal-deep-text",
+  "text-[#9B2C22] dark:text-[#F0A39A]",
+  "text-[#7A5212] dark:text-gold",
+  "text-[#2B5C8A] dark:text-[#8FB8E8]",
+];
+function senderTone(senderId: string | null, hostId: string | null, members: GroupMember[]): string {
+  if (!senderId || senderId === hostId) return "text-primary-deep-text";
+  const order = members
+    .filter((m) => m.role !== "owner")
+    .sort((a, b) => (a.joinedAt ?? "").localeCompare(b.joinedAt ?? "") || a.userId.localeCompare(b.userId));
+  const at = order.findIndex((m) => m.userId === senderId);
+  return SENDER_TONES[(at < 0 ? 0 : at) % SENDER_TONES.length];
+}
+
+/**
+ * Message info in a group: when it was sent, how many have read it, and who by
+ * name. Only members with read receipts on are named; the rest are counted.
+ */
+const GroupMessageInfo: React.FC<{ messageId: string; sentAt: string; count: number | null }> = ({
+  messageId,
+  sentAt,
+  count,
+}) => {
+  const [readers, setReaders] = useState<GroupReader[] | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void fetchGroupReaders(messageId).then((r) => {
+      if (!cancelled) setReaders(r);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [messageId]);
+  const when = (at: string) =>
+    new Date(at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const unnamed = count !== null && readers ? Math.max(0, count - readers.length) : 0;
+  return (
+    <>
+      <div className="flex items-center justify-between min-h-[48px] border-b border-charcoal/[0.06]">
+        <span className="text-sm font-semibold text-charcoal">Sent</span>
+        <span className="text-sm text-charcoal-soft tabular-nums">{when(sentAt)}</span>
+      </div>
+      <div className="flex items-center justify-between min-h-[48px] border-b border-charcoal/[0.06]">
+        <span className="text-sm font-semibold text-charcoal">Read by</span>
+        <span className="text-sm text-charcoal-soft tabular-nums">{count ?? "—"}</span>
+      </div>
+      {(readers ?? []).map((r) => (
+        <div key={r.userId} className="flex items-center justify-between min-h-[44px] border-b border-charcoal/[0.06] last:border-b-0 pl-3">
+          <span className="text-sm text-charcoal">{r.firstName}</span>
+          <span className="text-xs text-charcoal-soft tabular-nums">{when(r.readAt)}</span>
+        </div>
+      ))}
+      <p className="text-xs text-charcoal-soft mt-2 leading-relaxed">
+        {unnamed > 0
+          ? `${unnamed} more read it with read receipts off, so they aren't named.`
+          : "People with read receipts off are counted but not named."}
+      </p>
+    </>
   );
 };

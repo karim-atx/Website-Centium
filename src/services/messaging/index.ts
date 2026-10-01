@@ -38,7 +38,12 @@ import type { PostgrestError } from "@supabase/supabase-js";
  * genuinely opened itself. The view projects the column for this reason; see
  * its comment in Database 20260915210000.
  */
-export type ThreadKind = "peer" | "official_support";
+/**
+ * "peer" is a direct chat between two people; "group" a professional's group
+ * (Database 20261003000000, phase 2B). The database kept the name "peer" for
+ * direct chats rather than renaming it.
+ */
+export type ThreadKind = "peer" | "official_support" | "group";
 
 export interface MessageThread {
   id: string;
@@ -57,6 +62,7 @@ export interface MessageThread {
    * into a `string` by an assertion; that is all.
    */
   participantId: string | null;
+  /** For a group, the group's name; for a direct chat, the other person's first name. */
   participantName: string;
   participantAvatarUrl: string | null;
   /**
@@ -407,12 +413,20 @@ export async function fetchThreads(): Promise<ThreadsResult> {
     // A null id means no profiles row exists, which is a deleted account (the
     // function LEFT JOINs profiles). A present id with no first name is a real
     // person who has not named themselves yet.
-    participantId: r.other_participant_id,
+    //
+    // A GROUP HAS NO "OTHER PARTICIPANT": its three participant columns are
+    // null and thread_name carries its name. Switched on kind first, so a
+    // group is never mistaken for a chat with a deleted account.
+    participantId: r.kind === "group" ? null : r.other_participant_id,
     participantName:
-      r.other_participant_id === null ? "Deleted account" : r.other_first_name?.trim() || "Someone",
-    participantAvatarUrl: r.other_avatar_url,
+      r.kind === "group"
+        ? r.thread_name?.trim() || "Group"
+        : r.other_participant_id === null
+          ? "Deleted account"
+          : r.other_first_name?.trim() || "Someone",
+    participantAvatarUrl: r.kind === "group" ? null : r.other_avatar_url,
     // Compared, not cast: only the exact string earns the official treatment.
-    kind: r.kind === "official_support" ? "official_support" : "peer",
+    kind: r.kind === "official_support" ? "official_support" : r.kind === "group" ? "group" : "peer",
     // Through the shared describer, so the list and a quoted preview always
     // say the same thing about the same message. The function returns no text
     // for a redacted message, and only whether there was an attachment.

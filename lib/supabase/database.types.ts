@@ -5567,27 +5567,78 @@ export type Database = {
       }
       message_threads: {
         Row: {
+          closed_at: string | null
           created_at: string
+          created_by: string | null
           id: string
           kind: Database["public"]["Enums"]["thread_kind"]
+          name: string | null
           participant_one_id: string | null
           participant_two_id: string | null
         }
         Insert: {
+          closed_at?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           kind?: Database["public"]["Enums"]["thread_kind"]
+          name?: string | null
           participant_one_id?: string | null
           participant_two_id?: string | null
         }
         Update: {
+          closed_at?: string | null
           created_at?: string
+          created_by?: string | null
           id?: string
           kind?: Database["public"]["Enums"]["thread_kind"]
+          name?: string | null
           participant_one_id?: string | null
           participant_two_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "message_threads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_threads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "message_threads_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
           {
             foreignKeyName: "message_threads_participant_one_id_fkey"
             columns: ["participant_one_id"]
@@ -12459,6 +12510,25 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      accept_group_invitation: {
+        Args: { p_thread_id: string }
+        Returns: {
+          closed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["thread_kind"]
+          name: string | null
+          participant_one_id: string | null
+          participant_two_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "message_threads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       account_erasure_date: {
         Args: { p_requested_at: string }
         Returns: string
@@ -12469,6 +12539,10 @@ export type Database = {
           achievement_key: string
           current_value: number
         }[]
+      }
+      add_to_broadcast_list: {
+        Args: { p_list_id: string; p_user_ids: string[] }
+        Returns: number
       }
       admin_approve_certification: {
         Args: { p_note?: string; p_professional_id: string }
@@ -12810,6 +12884,24 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      broadcast_attachment_paths: {
+        Args: { p_list_id: string; p_object_leaf: string }
+        Returns: {
+          destination_path: string
+          is_source: boolean
+          recipient_id: string
+          thread_id: string
+        }[]
+      }
+      broadcast_list_people: {
+        Args: { p_list_id: string }
+        Returns: {
+          added_at: string
+          avatar_url: string
+          first_name: string
+          user_id: string
+        }[]
+      }
       business_invite_member: {
         Args: {
           p_business_id: string
@@ -12914,7 +13006,42 @@ export type Database = {
           trimester: number
         }[]
       }
+      close_group: {
+        Args: { p_thread_id: string }
+        Returns: {
+          closed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["thread_kind"]
+          name: string | null
+          participant_one_id: string | null
+          participant_two_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "message_threads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       contraception_is_hormonal: { Args: { p_user: string }; Returns: boolean }
+      create_broadcast_list: {
+        Args: { p_name: string }
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "broadcast_lists"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       create_business_member_code: {
         Args: {
           p_business_id: string
@@ -12955,6 +13082,25 @@ export type Database = {
         SetofOptions: {
           from: "*"
           to: "client_codes"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_group: {
+        Args: { p_name: string }
+        Returns: {
+          closed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["thread_kind"]
+          name: string | null
+          participant_one_id: string | null
+          participant_two_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "message_threads"
           isOneToOne: true
           isSetofReturn: false
         }
@@ -13001,6 +13147,11 @@ export type Database = {
         }[]
       }
       cycle_today: { Args: { p_user: string }; Returns: string }
+      decline_group_invitation: {
+        Args: { p_thread_id: string }
+        Returns: undefined
+      }
+      delete_broadcast_list: { Args: { p_list_id: string }; Returns: undefined }
       delete_message_for_everyone: {
         Args: { p_message_id: string }
         Returns: {
@@ -13211,6 +13362,30 @@ export type Database = {
       }
       generate_client_code: { Args: { p_prefix: string }; Returns: string }
       generate_referral_code: { Args: { p_prefix: string }; Returns: string }
+      group_members: {
+        Args: { p_thread_id: string }
+        Returns: {
+          avatar_url: string
+          first_name: string
+          joined_at: string
+          role: Database["public"]["Enums"]["thread_member_role"]
+          status: Database["public"]["Enums"]["thread_member_status"]
+          user_id: string
+        }[]
+      }
+      group_message_read_count: {
+        Args: { p_message_id: string }
+        Returns: number
+      }
+      group_message_readers: {
+        Args: { p_message_id: string }
+        Returns: {
+          avatar_url: string
+          first_name: string
+          read_at: string
+          user_id: string
+        }[]
+      }
       has_class_booking: { Args: { p_class_id: string }; Returns: boolean }
       has_client_access: {
         Args: {
@@ -13235,6 +13410,10 @@ export type Database = {
           table_name: string
         }[]
       }
+      invite_to_group: {
+        Args: { p_thread_id: string; p_user_ids: string[] }
+        Returns: number
+      }
       is_admin: { Args: never; Returns: boolean }
       is_ambassador: { Args: { p_profile_id: string }; Returns: boolean }
       is_business_insider: { Args: { p_business_id: string }; Returns: boolean }
@@ -13244,6 +13423,7 @@ export type Database = {
         Args: { p_thread_id: string; p_user: string }
         Returns: boolean
       }
+      leave_group: { Args: { p_thread_id: string }; Returns: undefined }
       licence_is_verified: { Args: { p_licence_id: string }; Returns: boolean }
       list_pending_health_data_storage_purges: {
         Args: never
@@ -13298,6 +13478,27 @@ export type Database = {
           title: string
         }[]
       }
+      my_broadcast_lists: {
+        Args: never
+        Returns: {
+          created_at: string
+          id: string
+          last_sent_at: string
+          member_count: number
+          name: string
+        }[]
+      }
+      my_broadcasts: {
+        Args: { p_limit?: number }
+        Returns: {
+          id: string
+          list_id: string
+          list_name: string
+          sent_at: string
+          sent_count: number
+          skipped_count: number
+        }[]
+      }
       my_business_seat_capacity: {
         Args: never
         Returns: {
@@ -13337,6 +13538,7 @@ export type Database = {
           other_first_name: string
           other_participant_id: string
           thread_id: string
+          thread_name: string
           unread_count: number
         }[]
       }
@@ -13366,6 +13568,18 @@ export type Database = {
           source: Database["public"]["Enums"]["professional_plan_source"]
           tier_id: string
           tier_name: string
+        }[]
+      }
+      my_group_invitations: {
+        Args: never
+        Returns: {
+          group_name: string
+          invited_at: string
+          invited_by_avatar_url: string
+          invited_by_first_name: string
+          invited_by_id: string
+          member_count: number
+          thread_id: string
         }[]
       }
       my_points_summary: {
@@ -13497,6 +13711,49 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      remove_from_broadcast_list: {
+        Args: { p_list_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      remove_group_member: {
+        Args: { p_thread_id: string; p_user_id: string }
+        Returns: undefined
+      }
+      rename_broadcast_list: {
+        Args: { p_list_id: string; p_name: string }
+        Returns: {
+          created_at: string
+          id: string
+          name: string
+          owner_id: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "broadcast_lists"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      rename_group: {
+        Args: { p_name: string; p_thread_id: string }
+        Returns: {
+          closed_at: string | null
+          created_at: string
+          created_by: string | null
+          id: string
+          kind: Database["public"]["Enums"]["thread_kind"]
+          name: string | null
+          participant_one_id: string | null
+          participant_two_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "message_threads"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       request_account_deletion: {
         Args: never
         Returns: {
@@ -13587,6 +13844,24 @@ export type Database = {
           text: string
           thread_id: string
         }[]
+      }
+      send_broadcast: {
+        Args: { p_list_id: string; p_text: string }
+        Returns: {
+          id: string
+          list_id: string | null
+          list_name: string
+          owner_id: string
+          sent_at: string
+          sent_count: number
+          skipped_count: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "broadcasts"
+          isOneToOne: true
+          isSetofReturn: false
+        }
       }
       set_business_member_plan: {
         Args: { p_membership_id: string; p_plan_id: string }
@@ -13705,6 +13980,10 @@ export type Database = {
         Returns: {
           user_id: string
         }[]
+      }
+      thread_read_through: {
+        Args: { p_thread_id: string; p_user: string }
+        Returns: string
       }
       thread_shows_read_receipts: {
         Args: { p_thread_id: string }
@@ -13961,6 +14240,10 @@ export type Database = {
         | "check_disposable_email"
         | "start_conversation"
         | "send_message"
+        | "forward_message"
+        | "create_group"
+        | "invite_to_group"
+        | "send_broadcast"
       rep_max_update_mode: "no_update" | "prompt" | "prompt_with_estimate"
       report_reason:
         | "harassment"
@@ -13979,7 +14262,14 @@ export type Database = {
       subscription_tier_type: "professional" | "business" | "client"
       template_level: "beginner" | "intermediate" | "advanced"
       theme_mode: "light" | "dark" | "auto"
-      thread_kind: "peer" | "official_support"
+      thread_kind: "peer" | "official_support" | "group"
+      thread_member_role: "owner" | "member"
+      thread_member_status:
+        | "invited"
+        | "joined"
+        | "declined"
+        | "left"
+        | "removed"
       weight_goal: "lose" | "gain" | "maintain"
       widget_size: "small" | "large"
       widget_type:
@@ -14385,6 +14675,10 @@ export const Constants = {
         "check_disposable_email",
         "start_conversation",
         "send_message",
+        "forward_message",
+        "create_group",
+        "invite_to_group",
+        "send_broadcast",
       ],
       rep_max_update_mode: ["no_update", "prompt", "prompt_with_estimate"],
       report_reason: [
@@ -14405,7 +14699,15 @@ export const Constants = {
       subscription_tier_type: ["professional", "business", "client"],
       template_level: ["beginner", "intermediate", "advanced"],
       theme_mode: ["light", "dark", "auto"],
-      thread_kind: ["peer", "official_support"],
+      thread_kind: ["peer", "official_support", "group"],
+      thread_member_role: ["owner", "member"],
+      thread_member_status: [
+        "invited",
+        "joined",
+        "declined",
+        "left",
+        "removed",
+      ],
       weight_goal: ["lose", "gain", "maintain"],
       widget_size: ["small", "large"],
       widget_type: [

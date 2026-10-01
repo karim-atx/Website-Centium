@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BellOff, ChevronLeft, Pin, PinOff, Search } from "lucide-react";
+import { BellOff, ChevronLeft, Pin, PinOff, Search, Users } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Toggle } from "../ui/Toggle";
 import { PERSON_ICON } from "../../utils/icons";
@@ -25,6 +25,9 @@ import {
 import { fetchHideReadReceipts, setHideReadReceipts } from "../../services/preferences";
 import { fetchSharesPresence, setSharesPresence } from "../../services/messaging/chatFeatures";
 import { useThreadLive } from "../../context/threadLive";
+import { useApp } from "../../context/AppContext";
+import { GroupInfoSection } from "./GroupInfoSection";
+import type { GroupMember } from "../../services/messaging/groups";
 
 type Tab = GalleryKind | "starred";
 
@@ -65,8 +68,25 @@ export const ChatInfo: React.FC<{
   onJumpTo: (messageId: string) => void;
   /** Opens search inside this chat. */
   onSearch: () => void;
-}> = ({ thread, authUserId, settings, onSettingsChanged, onBack, safety, onOpenPhoto, onOpenFile, onJumpTo, onSearch }) => {
+  /** A group's members and controls (phase 2B); null for a direct chat. */
+  group?: null | {
+    name: string;
+    members: GroupMember[];
+    isHost: boolean;
+    ended: null | "closed" | "left" | "removed";
+    onChanged: () => void;
+    onReport: (() => void) | null;
+  };
+}> = ({ thread, authUserId, settings, onSettingsChanged, onBack, safety, onOpenPhoto, onOpenFile, onJumpTo, onSearch, group }) => {
   const s = settings ?? NO_SETTINGS;
+  const { professionalClients } = useApp();
+  const displayName = group ? group.name : thread.participantName;
+  const nameFor = (senderId: string | null) =>
+    senderId === authUserId
+      ? "You"
+      : group
+        ? group.members.find((m) => m.userId === senderId)?.firstName ?? "Someone"
+        : thread.participantName;
   const [tab, setTab] = useState<Tab>("media");
   const [items, setItems] = useState<GalleryItem[] | null>(null);
   const [galleryMore, setGalleryMore] = useState(false);
@@ -192,6 +212,11 @@ export const ChatInfo: React.FC<{
       </div>
 
       <div className="flex flex-col items-center gap-1.5">
+        {group ? (
+          <span className="w-[72px] h-[72px] rounded-full bg-[#E4F0EE] dark:bg-teal-pale flex items-center justify-center">
+            <Users size={30} className="text-[#2F5F58] dark:text-teal-deep-text" aria-hidden />
+          </span>
+        ) : (
         <span className="w-[72px] h-[72px] rounded-full bg-primary-pale flex items-center justify-center overflow-hidden text-[26px] font-extrabold text-primary-deep-text">
           {thread.participantAvatarUrl ? (
             <img src={thread.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
@@ -201,7 +226,8 @@ export const ChatInfo: React.FC<{
             <PERSON_ICON size={26} />
           )}
         </span>
-        <p className="text-lg font-extrabold text-charcoal text-center">{thread.participantName}</p>
+        )}
+        <p className="text-lg font-extrabold text-charcoal text-center">{displayName}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-2">
@@ -291,7 +317,7 @@ export const ChatInfo: React.FC<{
                 className="tap text-left py-2.5 border-b border-charcoal/[0.06] last:border-b-0"
               >
                 <span className="block text-xs font-bold text-primary-deep-text">
-                  {m.senderId === authUserId ? "You" : thread.participantName} · {listTime(m.createdAt)}
+                  {nameFor(m.senderId)} · {listTime(m.createdAt)}
                 </span>
                 <span className="block text-[13px] text-charcoal line-clamp-2">
                   {describeMessage({
@@ -334,7 +360,24 @@ export const ChatInfo: React.FC<{
         </p>
       </section>
 
+      {group && (
+        <GroupInfoSection
+          threadId={thread.id}
+          authUserId={authUserId}
+          name={group.name}
+          members={group.members}
+          isHost={group.isHost}
+          ended={group.ended}
+          clients={professionalClients
+            .filter((c) => c.clientId)
+            .map((c) => ({ userId: c.clientId!, name: c.name, avatarUrl: c.avatarUrl ?? null }))}
+          onChanged={group.onChanged}
+        />
+      )}
+
       <section className="rounded-2xl bg-cream-card border border-charcoal/[0.08] px-3.5 py-1 flex flex-col">
+        {/* Never in a group: the database does not share presence there. */}
+        {!group && (
         <div className="flex items-center justify-between gap-3 min-h-[56px] border-b border-charcoal/[0.06]">
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-charcoal">Show when I'm online</span>
@@ -350,6 +393,7 @@ export const ChatInfo: React.FC<{
             label="Show when I'm online"
           />
         </div>
+        )}
         <div className="flex items-center justify-between gap-3 min-h-[56px] border-b border-charcoal/[0.06]">
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-charcoal">Read receipts</span>
@@ -385,12 +429,17 @@ export const ChatInfo: React.FC<{
             Report
           </button>
         )}
+        {group?.onReport && (
+          <button type="button" onClick={group.onReport} className={`${row} text-status-high`}>
+            Report
+          </button>
+        )}
       </section>
 
       <BottomSheet open={muteOpen} onClose={() => setMuteOpen(false)} title="Mute notifications">
         <div className="flex flex-col animate-fade-slide-up">
           <p className="text-xs text-charcoal-soft mb-2">
-            You won't be notified of new messages. {thread.participantName} isn't told.
+            You won't be notified of new messages. {group ? "Nobody in the group is told." : `${thread.participantName} isn't told.`}
           </p>
           {MUTE_CHOICES.map((c) => (
             <button

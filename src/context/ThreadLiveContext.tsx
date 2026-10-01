@@ -39,6 +39,7 @@ export const ThreadLiveProvider: React.FC<{
 }> = ({ userId, threadIds, children }) => {
   const [online, setOnline] = useState<Set<string>>(empty);
   const [typingUntil, setTypingUntil] = useState<Record<string, number>>({});
+  const [typingBy, setTypingBy] = useState<Record<string, string>>({});
   const [now, setNow] = useState(() => Date.now());
   const [epoch, setEpoch] = useState(0);
   const channels = useRef<Map<string, RealtimeChannel>>(new Map());
@@ -70,8 +71,10 @@ export const ThreadLiveProvider: React.FC<{
           config: { private: true, broadcast: { self: false }, presence: { key: userId } },
         });
         ch.on("broadcast", { event: "typing" }, ({ payload }) => {
-          if ((payload as { userId?: string } | undefined)?.userId === userId) return;
+          const who = (payload as { userId?: string } | undefined)?.userId;
+          if (who === userId) return;
           setTypingUntil((prev) => ({ ...prev, [id]: Date.now() + TYPING_SHOW_MS }));
+          if (who) setTypingBy((prev) => ({ ...prev, [id]: who }));
         });
         ch.on("presence", { event: "sync" }, () => {
           const others = Object.keys(ch.presenceState()).filter((k) => k !== userId);
@@ -148,5 +151,5 @@ export const ThreadLiveProvider: React.FC<{
 
   const typing = new Set(Object.entries(typingUntil).filter(([, until]) => until > now).map(([id]) => id));
 
-  return <ThreadLiveCtx.Provider value={{ online, typing, sendTyping, reconnect }}>{children}</ThreadLiveCtx.Provider>;
+  return <ThreadLiveCtx.Provider value={{ online, typing, typingBy, sendTyping, reconnect }}>{children}</ThreadLiveCtx.Provider>;
 };

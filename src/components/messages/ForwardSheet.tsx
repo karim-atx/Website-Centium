@@ -71,7 +71,7 @@ export const ForwardSheet: React.FC<{
       if (cancelled) return;
       setThreads(
         result.ok
-          ? result.threads.filter((t) => t.id !== currentThreadId && t.participantId !== null)
+          ? result.threads.filter((t) => t.id !== currentThreadId && (t.participantId !== null || t.kind === "group"))
           : []
       );
       if (!result.ok) setError(result.message);
