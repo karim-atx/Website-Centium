@@ -12,7 +12,7 @@
  * account that already has the setting on sees nothing until it is true.
  */
 
-export const REVIEWED = false;
+export const REVIEWED = true;
 
 export const APPROVAL = {
   reviewer: "Dr. El Khaldi",
