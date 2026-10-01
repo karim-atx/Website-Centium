@@ -138,8 +138,11 @@ const BUCKETS: Record<
   // 10 MB, matching the migration. Audio is here because a recorded voice
   // note arrives through this same function as an audio/* blob; it is NOT
   // offered by acceptFor, which see.
+  // 25 MB and documents since Database 20261002030000. HEIC and GIF, which
+  // the bucket also takes, are left out here: nothing in the app renders HEIC,
+  // and a picker should not offer what the thread cannot show.
   "message-attachments": {
-    maxBytes: 10 * 1024 * 1024,
+    maxBytes: 25 * 1024 * 1024,
     mimeTypes: [
       "image/jpeg",
       "image/png",
@@ -149,9 +152,18 @@ const BUCKETS: Record<
       "audio/aac",
       "audio/ogg",
       "audio/webm",
+      "application/pdf",
+      "application/msword",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "application/vnd.ms-powerpoint",
+      "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+      "text/plain",
+      "text/csv",
     ],
     label: "attachment",
-    accepts: "an image or a voice note",
+    accepts: "a photo, a PDF, a Word, Excel or PowerPoint file, or a text file",
     refused: "That file couldn't be attached to this conversation.",
   },
 };
@@ -180,6 +192,12 @@ const EXTENSIONS: Record<string, string> = {
   "application/pdf": "pdf",
   "application/msword": "doc",
   "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+  "application/vnd.ms-excel": "xls",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+  "application/vnd.ms-powerpoint": "ppt",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+  "text/plain": "txt",
+  "text/csv": "csv",
   "audio/mpeg": "mp3",
   "audio/mp4": "m4a",
   "audio/aac": "aac",
@@ -409,6 +427,12 @@ export function acceptFor(bucket: PrivateBucket, imagesOnly = false): string {
   );
   // Extension hints alongside the MIME types: some pickers match one and not
   // the other. Derived from the same map that names the uploaded file.
+  return [...types, ...types.map((t) => `.${EXTENSIONS[t]}`)].join(",");
+}
+
+/** The bucket's document types only (no images, no audio), for a "Document" picker. */
+export function acceptDocumentsFor(bucket: PrivateBucket): string {
+  const types = BUCKETS[bucket].mimeTypes.filter((t) => !t.startsWith("image/") && !t.startsWith("audio/"));
   return [...types, ...types.map((t) => `.${EXTENSIONS[t]}`)].join(",");
 }
 

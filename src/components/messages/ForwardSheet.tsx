@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Check, ChevronRight } from "lucide-react";
+import { Check } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { PERSON_ICON } from "../../utils/icons";
 import {
@@ -58,7 +58,9 @@ export const ForwardSheet: React.FC<{
   senderId: string | null;
 }> = ({ open, onClose, message, currentThreadId, senderId }) => {
   const [threads, setThreads] = useState<MessageThread[] | null>(null);
-  const [busyFor, setBusyFor] = useState<string | null>(null);
+  // SEVERAL AT ONCE (phase 2A): chats are ticked, then sent together.
+  const [chosen, setChosen] = useState<Set<string>>(new Set());
+  const [busy, setBusy] = useState(false);
   const [sentTo, setSentTo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -79,17 +81,40 @@ export const ForwardSheet: React.FC<{
     };
   }, [open, currentThreadId]);
 
-  const send = async (thread: MessageThread) => {
-    if (!message || !senderId || busyFor) return;
-    setBusyFor(thread.id);
+  const toggle = (id: string) =>
+    setChosen((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+
+  /**
+   * One after another rather than in parallel, so a refusal (a block, the rate
+   * limit) stops the rest instead of racing them, and what did go is named.
+   */
+  const send = async () => {
+    if (!message || !senderId || busy || chosen.size === 0) return;
+    setBusy(true);
     setError(null);
-    const result = await forwardMessage(thread.id, senderId, message);
-    setBusyFor(null);
-    if (!result.ok) {
-      setError(result.message);
-      return;
+    const targets = (threads ?? []).filter((t) => chosen.has(t.id));
+    const done: MessageThread[] = [];
+    for (const t of targets) {
+      const result = await forwardMessage(t.id, senderId, message);
+      if (!result.ok) {
+        setBusy(false);
+        setChosen(new Set(targets.filter((x) => !done.includes(x)).map((x) => x.id)));
+        setError(
+          done.length > 0
+            ? `Sent to ${done.map((d) => d.participantName).join(", ")}. Not sent to ${t.participantName}: ${result.message}`
+            : `Not sent to ${t.participantName}: ${result.message}`
+        );
+        return;
+      }
+      done.push(t);
     }
-    setSentTo(thread.participantName);
+    setBusy(false);
+    setSentTo(done.map((d) => d.participantName).join(", "));
     setTimeout(onClose, 1200);
   };
 
@@ -128,8 +153,9 @@ export const ForwardSheet: React.FC<{
           {(threads ?? []).map((t) => (
             <button
               key={t.id}
-              onClick={() => void send(t)}
-              disabled={!!busyFor}
+              onClick={() => toggle(t.id)}
+              disabled={busy}
+              aria-pressed={chosen.has(t.id)}
               className="tap w-full flex items-center gap-3 px-1 py-3 text-left disabled:opacity-50"
             >
               <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
@@ -142,13 +168,27 @@ export const ForwardSheet: React.FC<{
               <span className="flex-1 min-w-0 text-sm font-medium text-charcoal truncate">
                 {t.participantName}
               </span>
-              {busyFor === t.id ? (
-                <span className="text-[11px] text-charcoal-faint shrink-0">Sending…</span>
-              ) : (
-                <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
-              )}
+              <span
+                aria-hidden
+                className={`w-[22px] h-[22px] rounded-full flex items-center justify-center shrink-0 ${
+                  chosen.has(t.id) ? "bg-primary text-white dark:text-[#0D0B1A]" : "border-2 border-charcoal/20"
+                }`}
+              >
+                {chosen.has(t.id) && <Check size={13} strokeWidth={3} />}
+              </span>
             </button>
           ))}
+
+          {(threads?.length ?? 0) > 0 && (
+            <button
+              type="button"
+              onClick={() => void send()}
+              disabled={busy || chosen.size === 0}
+              className="tap w-full mt-3 rounded-xl bg-primary text-white dark:text-[#0D0B1A] font-semibold text-sm py-3 disabled:opacity-40"
+            >
+              {busy ? "Sending…" : chosen.size > 1 ? `Send to ${chosen.size} chats` : "Send"}
+            </button>
+          )}
         </div>
       )}
     </BottomSheet>

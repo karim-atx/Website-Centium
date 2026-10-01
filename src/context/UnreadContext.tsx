@@ -3,6 +3,7 @@ import { useApp } from "./AppContext";
 import { usePoll } from "../hooks/usePoll";
 import { useUnreadRealtime } from "../hooks/useUnreadRealtime";
 import { fetchUnreadCounts, type UnreadCounts } from "../services/messaging";
+import { markDelivered } from "../services/messaging/chatFeatures";
 
 /**
  * How often the badge re-counts WHEN REALTIME IS NOT DELIVERING.
@@ -72,6 +73,10 @@ export const UnreadProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setCounts({ byThread: {}, total: 0 });
       return;
     }
+    // Whatever this count saw has reached this device: the sender's single
+    // tick becomes two. Rides the same cadence as the badge (realtime, with the
+    // slow poll as insurance) rather than running a second timer.
+    void markDelivered(authUserId);
     setCounts(await fetchUnreadCounts());
   }, [authUserId]);
 

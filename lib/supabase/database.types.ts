@@ -5241,6 +5241,87 @@ export type Database = {
           },
         ]
       }
+      message_reactions: {
+        Row: {
+          created_at: string
+          emoji: string
+          message_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          emoji: string
+          message_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          emoji?: string
+          message_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages_visible"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "message_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       message_reports: {
         Row: {
           admin_notes: string | null
@@ -5382,6 +5463,81 @@ export type Database = {
           },
         ]
       }
+      message_stars: {
+        Row: {
+          created_at: string
+          message_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          message_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          message_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "message_stars_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_stars_message_id_fkey"
+            columns: ["message_id"]
+            isOneToOne: false
+            referencedRelation: "messages_visible"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_stars_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_stars_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_stars_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_stars_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_stars_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "message_stars_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       message_threads: {
         Row: {
           created_at: string
@@ -5493,12 +5649,19 @@ export type Database = {
       }
       messages: {
         Row: {
+          attachment_bytes: number | null
+          attachment_kind: Database["public"]["Enums"]["attachment_kind"] | null
+          attachment_mime: string | null
+          attachment_name: string | null
           attachment_purged_at: string | null
           attachment_url: string | null
           authored_by: string | null
           created_at: string
+          delivered_at: string | null
           forwarded: boolean
           id: string
+          image_height: number | null
+          image_width: number | null
           read_at: string | null
           redacted_at: string | null
           reply_to_id: string | null
@@ -5506,14 +5669,24 @@ export type Database = {
           text: string | null
           thread_id: string
           voice_note_seconds: number | null
+          voice_waveform: number[] | null
         }
         Insert: {
+          attachment_bytes?: number | null
+          attachment_kind?:
+            | Database["public"]["Enums"]["attachment_kind"]
+            | null
+          attachment_mime?: string | null
+          attachment_name?: string | null
           attachment_purged_at?: string | null
           attachment_url?: string | null
           authored_by?: string | null
           created_at?: string
+          delivered_at?: string | null
           forwarded?: boolean
           id?: string
+          image_height?: number | null
+          image_width?: number | null
           read_at?: string | null
           redacted_at?: string | null
           reply_to_id?: string | null
@@ -5521,14 +5694,24 @@ export type Database = {
           text?: string | null
           thread_id: string
           voice_note_seconds?: number | null
+          voice_waveform?: number[] | null
         }
         Update: {
+          attachment_bytes?: number | null
+          attachment_kind?:
+            | Database["public"]["Enums"]["attachment_kind"]
+            | null
+          attachment_mime?: string | null
+          attachment_name?: string | null
           attachment_purged_at?: string | null
           attachment_url?: string | null
           authored_by?: string | null
           created_at?: string
+          delivered_at?: string | null
           forwarded?: boolean
           id?: string
+          image_height?: number | null
+          image_width?: number | null
           read_at?: string | null
           redacted_at?: string | null
           reply_to_id?: string | null
@@ -5536,6 +5719,7 @@ export type Database = {
           text?: string | null
           thread_id?: string
           voice_note_seconds?: number | null
+          voice_waveform?: number[] | null
         }
         Relationships: [
           {
@@ -9517,6 +9701,106 @@ export type Database = {
           },
         ]
       }
+      thread_user_settings: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          left_at: string | null
+          muted_always: boolean
+          muted_until: string | null
+          pinned_at: string | null
+          thread_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          left_at?: string | null
+          muted_always?: boolean
+          muted_until?: string | null
+          pinned_at?: string | null
+          thread_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          left_at?: string | null
+          muted_always?: boolean
+          muted_until?: string | null
+          pinned_at?: string | null
+          thread_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "thread_user_settings_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "admin_account_threads"
+            referencedColumns: ["thread_id"]
+          },
+          {
+            foreignKeyName: "thread_user_settings_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_user_settings_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["thread_id"]
+          },
+          {
+            foreignKeyName: "thread_user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "thread_user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "thread_user_settings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
       user_achievements: {
         Row: {
           achievement_key: string
@@ -10875,11 +11159,18 @@ export type Database = {
       }
       messages_visible: {
         Row: {
+          attachment_bytes: number | null
+          attachment_kind: Database["public"]["Enums"]["attachment_kind"] | null
+          attachment_mime: string | null
+          attachment_name: string | null
           attachment_purged_at: string | null
           attachment_url: string | null
           created_at: string | null
+          delivered_at: string | null
           forwarded: boolean | null
           id: string | null
+          image_height: number | null
+          image_width: number | null
           read_at: string | null
           redacted_at: string | null
           reply_to_id: string | null
@@ -10887,13 +11178,23 @@ export type Database = {
           text: string | null
           thread_id: string | null
           voice_note_seconds: number | null
+          voice_waveform: number[] | null
         }
         Insert: {
+          attachment_bytes?: number | null
+          attachment_kind?:
+            | Database["public"]["Enums"]["attachment_kind"]
+            | null
+          attachment_mime?: string | null
+          attachment_name?: string | null
           attachment_purged_at?: string | null
           attachment_url?: string | null
           created_at?: string | null
+          delivered_at?: never
           forwarded?: boolean | null
           id?: string | null
+          image_height?: number | null
+          image_width?: number | null
           read_at?: never
           redacted_at?: string | null
           reply_to_id?: string | null
@@ -10901,13 +11202,23 @@ export type Database = {
           text?: string | null
           thread_id?: string | null
           voice_note_seconds?: number | null
+          voice_waveform?: number[] | null
         }
         Update: {
+          attachment_bytes?: number | null
+          attachment_kind?:
+            | Database["public"]["Enums"]["attachment_kind"]
+            | null
+          attachment_mime?: string | null
+          attachment_name?: string | null
           attachment_purged_at?: string | null
           attachment_url?: string | null
           created_at?: string | null
+          delivered_at?: never
           forwarded?: boolean | null
           id?: string | null
+          image_height?: number | null
+          image_width?: number | null
           read_at?: never
           redacted_at?: string | null
           reply_to_id?: string | null
@@ -10915,6 +11226,7 @@ export type Database = {
           text?: string | null
           thread_id?: string | null
           voice_note_seconds?: number | null
+          voice_waveform?: number[] | null
         }
         Relationships: [
           {
@@ -12786,6 +13098,10 @@ export type Database = {
       is_business_insider: { Args: { p_business_id: string }; Returns: boolean }
       is_calendar_invitee: { Args: { p_event_id: string }; Returns: boolean }
       is_disposable_email: { Args: { email: string }; Returns: boolean }
+      is_thread_participant: {
+        Args: { p_thread_id: string; p_user: string }
+        Returns: boolean
+      }
       licence_is_verified: { Args: { p_licence_id: string }; Returns: boolean }
       list_pending_health_data_storage_purges: {
         Args: never
@@ -13156,6 +13472,7 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      star_messages: { Args: { p_message_ids: string[] }; Returns: number }
       start_message_thread: {
         Args: { p_other_user_id: string }
         Returns: {
@@ -13213,6 +13530,12 @@ export type Database = {
       thread_is_muted: {
         Args: { p_thread_id: string; p_user: string }
         Returns: boolean
+      }
+      thread_participants: {
+        Args: { p_thread_id: string }
+        Returns: {
+          user_id: string
+        }[]
       }
       thread_shows_read_receipts: {
         Args: { p_thread_id: string }
@@ -13275,6 +13598,7 @@ export type Database = {
         | "athlete"
       app_language: "en" | "ar"
       app_platform: "web" | "mobile"
+      attachment_kind: "image" | "voice" | "file"
       billing_period: "daily" | "monthly" | "annually"
       block_kind: "superset" | "amrap" | "emom" | "for_time"
       blood_marker_status: "low" | "normal" | "high"
@@ -13681,6 +14005,7 @@ export const Constants = {
       ],
       app_language: ["en", "ar"],
       app_platform: ["web", "mobile"],
+      attachment_kind: ["image", "voice", "file"],
       billing_period: ["daily", "monthly", "annually"],
       block_kind: ["superset", "amrap", "emom", "for_time"],
       blood_marker_status: ["low", "normal", "high"],

@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
 import { notificationTarget } from "./services/push/messagePushUrl";
+import { collapsedText, collapseTag } from "./services/push/collapse";
 
 /**
  * Centium's service worker. Two handlers, and deliberately nothing else.
@@ -55,6 +56,8 @@ interface PushPayload {
   url: string;
   /** Collapses repeat notifications about the same thing. */
   tag?: string;
+  /** Set when this is a chat message that collapses with others from its chat. */
+  chatTag?: string;
 }
 
 /**
@@ -98,6 +101,7 @@ function readPayload(data: PushMessageData | null): PushPayload {
     // same-origin path or the fallback. See notificationTarget.
     url: notificationTarget(raw, fallback.url),
     tag: str(raw.tag),
+    chatTag: collapseTag(raw),
   };
 }
 
@@ -107,13 +111,37 @@ self.addEventListener("push", (event) => {
   // notification gets the browser's own "updated in the background" notice
   // instead, and repeated offences can cost the origin its push permission.
   event.waitUntil(
-    self.registration.showNotification(payload.title, {
-      body: payload.body,
-      icon: "/pwa-192x192.png",
-      badge: "/pwa-192x192.png",
-      tag: payload.tag,
-      data: { url: payload.url },
-    })
+    (async () => {
+      // ONE NOTIFICATION PER CHAT: a new message from a chat already on screen
+      // replaces it and counts ("3 new messages from Sarah"), and still
+      // alerts. The count lives on the notification itself, so it resets
+      // once that notification is dismissed or opened.
+      let title = payload.title;
+      let body = payload.body;
+      let count = 1;
+      if (payload.chatTag) {
+        let previous = 0;
+        try {
+          const shown = await self.registration.getNotifications({ tag: payload.chatTag });
+          for (const n of shown) {
+            const c = (n.data as { count?: unknown } | undefined)?.count;
+            previous = Math.max(previous, typeof c === "number" ? c : 1);
+          }
+        } catch {
+          /* Can't read what is shown: show this one on its own terms. */
+        }
+        ({ title, body, count } = collapsedText(payload.title, payload.body, previous));
+      }
+      await self.registration.showNotification(title, {
+        body,
+        icon: "/pwa-192x192.png",
+        badge: "/pwa-192x192.png",
+        tag: payload.chatTag ?? payload.tag,
+        // Without this a replaced notification updates silently.
+        renotify: !!payload.chatTag,
+        data: { url: payload.url, count },
+      } as NotificationOptions);
+    })()
   );
 });
 

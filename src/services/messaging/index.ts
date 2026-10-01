@@ -83,6 +83,9 @@ export interface MessageThread {
    */
   lastMessagePreview: string | null;
   lastMessageAt: string | null;
+  /** The latest message's id and sender, for the list's "You:" and its tick. */
+  lastMessageId: string | null;
+  lastMessageSenderId: string | null;
   /** Received and not yet read, from the caller's private read mark. */
   unreadCount: number;
   /** When the caller last read this thread, or null if never. */
@@ -174,6 +177,28 @@ export interface Message {
    * should not learn the existence of.
    */
   forwarded: boolean;
+  /**
+   * When the recipient's device received it (Database 20261002020000). Stored
+   * only when both people allow read receipts, exactly like readAt; the
+   * recipient always sees their own.
+   */
+  deliveredAt: string | null;
+  /**
+   * Everything a client needs about an attachment before it has the bytes
+   * (Database 20261002030000-040000). The kind is derived by the database from
+   * the file type, so it cannot disagree with the file. Name, size and type
+   * are what the sender's device reported; pixel size lets a photo be laid out
+   * before it loads; the waveform was measured when the note was recorded. All
+   * null on a message without an attachment, and on older attachments whose
+   * details were never recorded.
+   */
+  attachmentKind: "image" | "voice" | "file" | null;
+  attachmentName: string | null;
+  attachmentBytes: number | null;
+  attachmentMime: string | null;
+  imageWidth: number | null;
+  imageHeight: number | null;
+  voiceWaveform: number[] | null;
 }
 
 /**
@@ -192,10 +217,14 @@ export function describeMessage(m: {
   attachmentPurgedAt: string | null;
   redactedAt: string | null;
   voiceNoteSeconds: number | null;
+  /** When known, a document reads as its name rather than as a photo. */
+  attachmentKind?: "image" | "voice" | "file" | null;
+  attachmentName?: string | null;
 }): string {
   return (
     m.text?.trim() ||
     (m.attachmentPath && m.voiceNoteSeconds ? "Voice note" : "") ||
+    (m.attachmentPath && m.attachmentKind === "file" ? m.attachmentName || "File" : "") ||
     (m.attachmentPath ? "Photo" : "") ||
     describeRemoval(m) ||
     "Message"
@@ -376,6 +405,8 @@ export async function fetchThreads(): Promise<ThreadsResult> {
         })
       : null,
     lastMessageAt: r.last_message_at,
+    lastMessageId: r.last_message_id,
+    lastMessageSenderId: r.last_message_sender_id,
     unreadCount: Number(r.unread_count ?? 0),
     lastReadAt: r.last_read_at,
   }));
@@ -383,7 +414,7 @@ export async function fetchThreads(): Promise<ThreadsResult> {
 }
 
 const MESSAGE_COLUMNS =
-  "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, redacted_at, voice_note_seconds, reply_to_id, forwarded";
+  "id, thread_id, sender_id, text, created_at, read_at, delivered_at, attachment_url, attachment_purged_at, redacted_at, voice_note_seconds, reply_to_id, forwarded, attachment_kind, attachment_name, attachment_bytes, attachment_mime, image_width, image_height, voice_waveform";
 
 type MessageRow = {
   id: string | null;
@@ -398,6 +429,14 @@ type MessageRow = {
   voice_note_seconds: number | null;
   reply_to_id: string | null;
   forwarded: boolean | null;
+  delivered_at?: string | null;
+  attachment_kind?: "image" | "voice" | "file" | null;
+  attachment_name?: string | null;
+  attachment_bytes?: number | null;
+  attachment_mime?: string | null;
+  image_width?: number | null;
+  image_height?: number | null;
+  voice_waveform?: number[] | null;
 };
 
 // READ THROUGH messages_visible, so a message this viewer hid is simply
@@ -439,6 +478,14 @@ const toMessage = (m: MessageRow): Message => ({
   voiceNoteSeconds: m.voice_note_seconds,
   replyToId: m.reply_to_id,
   forwarded: m.forwarded ?? false,
+  deliveredAt: m.delivered_at ?? null,
+  attachmentKind: m.attachment_kind ?? null,
+  attachmentName: m.attachment_name ?? null,
+  attachmentBytes: m.attachment_bytes ?? null,
+  attachmentMime: m.attachment_mime ?? null,
+  imageWidth: m.image_width ?? null,
+  imageHeight: m.image_height ?? null,
+  voiceWaveform: m.voice_waveform ?? null,
 });
 
 /** Messages per page. A thread opens on its newest page; scrolling up loads the next. */
@@ -565,40 +612,58 @@ async function insertMessage(row: {
   voice_note_seconds?: number | null;
   reply_to_id?: string | null;
   forwarded?: boolean;
-}): Promise<SendResult> {
+} & AttachmentMeta): Promise<SendResult> {
   const { data, error } = await supabase
     .from("messages")
     .insert(row)
-    .select(
-      "id, thread_id, sender_id, text, created_at, read_at, attachment_url, attachment_purged_at, voice_note_seconds, reply_to_id, forwarded"
-    )
+    .select(MESSAGE_COLUMNS)
     .single();
 
   if (error) {
     console.error("[messaging] Could not send:", error.message);
     return { ok: false, message: describe(error) };
   }
-  return {
-    ok: true,
-    message: {
-      id: data.id,
-      threadId: data.thread_id,
-      // As above: NOT NULL in the schema, widened by the generated types. This
-      // row was just inserted with sender_id set, so it cannot be null here.
-      senderId: data.sender_id,
-      text: data.text,
-      createdAt: data.created_at,
-      readAt: data.read_at,
-      attachmentPath: data.attachment_url,
-      attachmentPurgedAt: data.attachment_purged_at,
-      // The row this returns is the one just inserted, so it cannot have been
-      // redacted; not selected rather than read back as a certain null.
-      redactedAt: null,
-      voiceNoteSeconds: data.voice_note_seconds,
-      replyToId: data.reply_to_id,
-      forwarded: data.forwarded,
-    },
+  return { ok: true, message: toMessage(data as MessageRow) };
+}
+
+/**
+ * What the sender can tell the database about an attachment before anyone
+ * loads it (Database 20261002030000): its name, size and type, and for a photo
+ * its pixel size, so it can be laid out before the bytes arrive. The kind is
+ * derived server-side from the type and is never sent.
+ */
+type AttachmentMeta = {
+  attachment_name?: string | null;
+  attachment_bytes?: number | null;
+  attachment_mime?: string | null;
+  image_width?: number | null;
+  image_height?: number | null;
+  voice_waveform?: number[] | null;
+};
+
+async function attachmentMeta(file: File): Promise<AttachmentMeta> {
+  const name = file.name?.trim().slice(0, 300) || null;
+  const meta: AttachmentMeta = {
+    attachment_name: name,
+    attachment_bytes: file.size > 0 ? file.size : null,
+    attachment_mime: file.type || null,
   };
+  if (file.type.startsWith("image/") && typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(file);
+      meta.image_width = bitmap.width;
+      meta.image_height = bitmap.height;
+      bitmap.close();
+    } catch {
+      /* no dimensions: the photo is laid out once it loads, as before */
+    }
+  }
+  return meta;
+}
+
+/** A photo or a document (PDF, Office, text): the same upload, the same row. */
+export async function sendFileAttachment(threadId: string, senderId: string, file: File): Promise<SendResult> {
+  return sendImageAttachment(threadId, senderId, file);
 }
 
 /**
@@ -632,6 +697,8 @@ export async function sendImageAttachment(
 ): Promise<SendResult> {
   const check = validateFileFor("message-attachments", file);
   if (!check.ok) return { ok: false, message: check.message ?? "That file can't be sent." };
+  // Read before the upload strips metadata, from the file the person chose.
+  const meta = await attachmentMeta(file);
 
   // EXIF stripping happens inside this call, not here — see 6a. An image sent
   // to someone carries the same GPS coordinates as one filed as a medical
@@ -657,6 +724,7 @@ export async function sendImageAttachment(
     thread_id: threadId,
     sender_id: senderId,
     attachment_url: upload.path,
+    ...meta,
   });
   if (!sent.ok) {
     // Named plainly so it is greppable if these ever need sweeping. See the
@@ -701,7 +769,9 @@ export async function sendVoiceNote(
   threadId: string,
   senderId: string,
   file: File,
-  seconds: number
+  seconds: number,
+  /** 0..100 levels drawn as the waveform; computed at record time, never by the server. */
+  waveform?: number[] | null
 ): Promise<SendResult> {
   const check = validateFileFor("message-attachments", file);
   if (!check.ok) return { ok: false, message: check.message ?? "That recording can't be sent." };
@@ -727,6 +797,9 @@ export async function sendVoiceNote(
     sender_id: senderId,
     attachment_url: upload.path,
     voice_note_seconds: Math.max(1, Math.round(seconds)),
+    attachment_bytes: file.size > 0 ? file.size : null,
+    attachment_mime: file.type || null,
+    voice_waveform: waveform && waveform.length > 0 ? waveform.slice(0, 100) : null,
   });
   if (!sent.ok) {
     // Same undercount as the image path — see the note there. This line is not
@@ -959,27 +1032,16 @@ export async function forwardMessage(
 /**
  * The ids this viewer has starred, as a set for O(1) lookup at render.
  *
- * ONLY STARRED IS FETCHED, AND THAT IS THE POINT OF messages_visible. Hidden
- * flags are enforced in the database, so the client never needs to know which
- * messages it is not being shown — asking for them would mean holding a list of
- * things to filter out, which is the duplicate-enforcement shape the view was
- * introduced to remove.
+ * FROM message_stars (Database 20261002010000): stars follow the account and
+ * are private — own-row policies only, and not in the realtime publication, so
+ * nobody learns which of their messages you keep. The old message_flags
+ * 'starred' value is no longer read or written; see migrateLegacyStars.
  *
- * NOT SCOPED TO A THREAD. The flags table has no thread column, and joining
- * through messages to add one would cost a round trip to narrow a set that is
- * already small — a person's stars across every conversation is a handful of
- * rows, and RLS has already limited it to their own.
- *
- * FAILS TO EMPTY. A star that cannot be read renders as un-starred, which
- * understates rather than invents: the alternative is claiming a mark the
- * database did not confirm.
+ * FAILS TO EMPTY: a star that cannot be read renders as un-starred rather than
+ * claiming a mark the database did not confirm.
  */
 export async function fetchStarred(): Promise<Set<string>> {
-  const { data, error } = await supabase
-    .from("message_flags")
-    .select("message_id")
-    .eq("flag", "starred");
-
+  const { data, error } = await supabase.from("message_stars").select("message_id");
   if (error) {
     console.error("[messaging] Could not load stars:", error.message);
     return new Set();
@@ -990,41 +1052,55 @@ export async function fetchStarred(): Promise<Set<string>> {
 /**
  * Adds or removes this viewer's star on one message.
  *
- * ON CONFLICT DO NOTHING ON THE WAY IN, because (user_id, message_id, flag) is
- * the primary key and a double tap would otherwise raise 23505 for doing
- * nothing wrong. Tested directly: the plain insert errors, the ignoring one
- * returns zero rows and no error.
- *
- * NO RPC, AND NOTHING TO MAKE ATOMIC. One row appears or one row goes; nothing
- * else in the schema reads this table, so there is no second write to keep in
- * step.
+ * ON CONFLICT DO NOTHING on the way in: (message_id, user_id) is the primary
+ * key, and a double tap must not raise for doing nothing wrong.
  */
-export async function setStarred(
-  messageId: string,
-  userId: string,
-  starred: boolean
-): Promise<boolean> {
-  if (starred) {
-    const { error } = await supabase
-      .from("message_flags")
-      .upsert({ user_id: userId, message_id: messageId, flag: "starred" }, { ignoreDuplicates: true });
-    if (error) {
-      console.error("[messaging] Could not star:", error.message);
-      return false;
-    }
-    return true;
-  }
-  const { error } = await supabase
-    .from("message_flags")
-    .delete()
-    .eq("user_id", userId)
-    .eq("message_id", messageId)
-    .eq("flag", "starred");
+export async function setStarred(messageId: string, userId: string, starred: boolean): Promise<boolean> {
+  const { error } = starred
+    ? await supabase
+        .from("message_stars")
+        .upsert({ user_id: userId, message_id: messageId }, { onConflict: "message_id,user_id", ignoreDuplicates: true })
+    : await supabase.from("message_stars").delete().eq("user_id", userId).eq("message_id", messageId);
   if (error) {
-    console.error("[messaging] Could not unstar:", error.message);
+    console.error(`[messaging] Could not ${starred ? "star" : "unstar"}:`, error.message);
     return false;
   }
   return true;
+}
+
+/**
+ * A ONE-TIME UPLOAD of stars this account made the old way.
+ *
+ * Until this build, starring wrote message_flags 'starred'. The database copied
+ * those rows into message_stars when the migration ran, but anything starred
+ * between that migration and this deploy was written the old way afterwards
+ * and the copy never saw it. So, once per account on this device, the old rows
+ * are sent to star_messages(), which is idempotent and silently skips any id
+ * the caller may no longer star — a retry is free and one stale id cannot fail
+ * the rest.
+ */
+export async function migrateLegacyStars(userId: string): Promise<void> {
+  const key = `centium-state:u:${userId}:starsMigrated`;
+  try {
+    if (localStorage.getItem(key)) return;
+  } catch {
+    /* no storage: the upload is idempotent, so running again costs nothing */
+  }
+  const { data, error } = await supabase.from("message_flags").select("message_id").eq("flag", "starred");
+  if (error) return;
+  const ids = (data ?? []).map((r) => r.message_id);
+  if (ids.length > 0) {
+    const up = await supabase.rpc("star_messages", { p_message_ids: ids });
+    if (up.error) {
+      console.error("[messaging] Could not upload old stars:", up.error.message);
+      return;
+    }
+  }
+  try {
+    localStorage.setItem(key, new Date().toISOString());
+  } catch {
+    /* see above */
+  }
 }
 
 /**

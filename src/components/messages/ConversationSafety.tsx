@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Ban, Flag, ShieldCheck } from "lucide-react";
+import { Ban, ShieldCheck } from "lucide-react";
 import clsx from "clsx";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
@@ -8,9 +8,8 @@ import { REPORT_REASONS, reportMessage, type Message, type ReportReason } from "
 // Report and block, for a conversation (Database 20261001020000).
 //
 // A REPORT IS ABOUT A MESSAGE. The schema files every report against one
-// message, which is what an admin opens first. "Report user" from the header
-// reports the most recent message that person sent in this conversation, and
-// says so — there is no such thing as a report with nothing attached.
+// message, which is what an admin opens first. "Report" in Chat info reports
+// the most recent message that person sent in this conversation, and says so — there is no such thing as a report with nothing attached.
 //
 // A BLOCK WORKS BOTH WAYS and says nothing to the other person. While it
 // stands neither of them can message or call the other.
@@ -114,8 +113,11 @@ export const ReportSheet: React.FC<{
   );
 };
 
-/** The conversation menu in the thread header: block or unblock, and report. */
-export const ConversationMenu: React.FC<{
+/**
+ * Block or unblock, confirmed first. Opened from Chat info; report has its own
+ * row there, so this sheet is only the decision.
+ */
+export const BlockSheet: React.FC<{
   open: boolean;
   onClose: () => void;
   personName: string;
@@ -124,66 +126,23 @@ export const ConversationMenu: React.FC<{
   error: string | null;
   onBlock: () => void;
   onUnblock: () => void;
-  /** Null when they haven't sent anything here yet, so there is nothing to report. */
-  onReport: (() => void) | null;
-}> = ({ open, onClose, personName, iBlocked, busy, error, onBlock, onUnblock, onReport }) => {
-  const [confirmBlock, setConfirmBlock] = useState(false);
-  const row = "tap w-full flex items-start gap-3 px-1 py-3 min-h-[44px] text-left disabled:opacity-50";
-
-  return (
-    <BottomSheet
-      open={open}
-      onClose={() => {
-        setConfirmBlock(false);
-        onClose();
-      }}
-      title={personName}
-    >
-      <div className="space-y-1">
-        {iBlocked ? (
-          <button type="button" onClick={onUnblock} disabled={busy} className={row}>
-            <Ban size={17} className="text-charcoal-soft shrink-0 mt-0.5" />
-            <span>
-              <span className="block text-sm font-medium text-charcoal">Unblock {personName}</span>
-              <span className="block text-xs text-charcoal-soft">You'll be able to message and call each other again.</span>
-            </span>
-          </button>
-        ) : confirmBlock ? (
-          <div className="rounded-xl bg-cream-soft px-3.5 py-3 space-y-3">
-            <p className="text-sm text-charcoal">
-              Block {personName}? Neither of you will be able to message or call the other. They won't be told.
-            </p>
-            <div className="flex gap-2">
-              <Button variant="outline" className="flex-1" onClick={() => setConfirmBlock(false)}>
-                Cancel
-              </Button>
-              <Button className="flex-1" disabled={busy} onClick={onBlock}>
-                {busy ? "Blocking…" : "Block"}
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <button type="button" onClick={() => setConfirmBlock(true)} disabled={busy} className={row}>
-            <Ban size={17} className="text-status-high shrink-0 mt-0.5" />
-            <span>
-              <span className="block text-sm font-medium text-status-high">Block {personName}</span>
-              <span className="block text-xs text-charcoal-soft">Stops messages and calls both ways.</span>
-            </span>
-          </button>
-        )}
-        <button type="button" onClick={onReport ?? undefined} disabled={!onReport} className={row}>
-          <Flag size={17} className="text-charcoal-soft shrink-0 mt-0.5" />
-          <span>
-            <span className="block text-sm font-medium text-charcoal">Report {personName}</span>
-            <span className="block text-xs text-charcoal-soft">
-              {onReport
-                ? "Reports their most recent message here to our team."
-                : "There's nothing from them here to report yet."}
-            </span>
-          </span>
-        </button>
-        {error && <p className="text-xs font-semibold text-status-high px-1">{error}</p>}
+}> = ({ open, onClose, personName, iBlocked, busy, error, onBlock, onUnblock }) => (
+  <BottomSheet open={open} onClose={onClose} title={iBlocked ? `Unblock ${personName}?` : `Block ${personName}?`}>
+    <div className="space-y-3 animate-fade-slide-up">
+      <p className="text-sm text-charcoal">
+        {iBlocked
+          ? "You'll be able to message and call each other again."
+          : "Neither of you will be able to message or call the other. They won't be told."}
+      </p>
+      <div className="flex gap-2">
+        <Button variant="outline" className="flex-1" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button className="flex-1" disabled={busy} onClick={iBlocked ? onUnblock : onBlock}>
+          {iBlocked ? (busy ? "Unblocking…" : "Unblock") : busy ? "Blocking…" : "Block"}
+        </Button>
       </div>
-    </BottomSheet>
-  );
-};
+      {error && <p className="text-xs font-semibold text-status-high">{error}</p>}
+    </div>
+  </BottomSheet>
+);

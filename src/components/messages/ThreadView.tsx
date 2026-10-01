@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { ArrowLeft, Check, CheckCheck, Clock, Copy, CornerUpLeft, EyeOff, FileText, Flag, Forward, ImageIcon, Mic, MoreVertical, Paperclip, Phone, Pin, PinOff, Send, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
+import { ArrowDown, ArrowLeft, Check, CheckCheck, Clock, FileText, Forward, ImageIcon, Mic, Paperclip, Phone, Pin, Send, ShieldCheck, Star, Trash2, Video, X } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { useCall } from "../../context/CallContext";
 import { threadAllowsCalls, type CallKind } from "../../services/calling";
@@ -12,14 +12,26 @@ import { useVoiceRecorder, MAX_SECONDS } from "../../hooks/useVoiceRecorder";
 import { BottomSheet } from "../ui/BottomSheet";
 import { FileViewerSheet } from "../health/FileViewerSheet";
 import { InlineImage } from "./InlineImage";
-import { ConversationMenu, ReportSheet } from "./ConversationSafety";
+import { BlockSheet, ReportSheet } from "./ConversationSafety";
+import { ChatInfo } from "./ChatInfo";
+import { FileCard } from "./FileCard";
+import { MessageActions, type MessageAction } from "./MessageActions";
+import { clockTime } from "./chatTime";
+import { useReactionsRealtime } from "../../hooks/useReactionsRealtime";
+import { computeWaveform } from "../../services/messaging/waveformDecode";
+import {
+  fetchReactions,
+  setReaction,
+  type Reaction,
+  type ThreadSettings,
+} from "../../services/messaging/chatFeatures";
 import { AttachmentGone } from "./AttachmentGone";
 import { ImageLightbox } from "./ImageLightbox";
 import { attachmentUrl, isImagePath } from "../../services/messaging/attachmentUrls";
 import { ForwardSheet } from "./ForwardSheet";
 import { QuotedMessage } from "./QuotedMessage";
 import { VoiceNoteBubble } from "./VoiceNoteBubble";
-import { acceptFor } from "../../services/storage";
+import { acceptDocumentsFor, acceptFor } from "../../services/storage";
 import {
   clearPin,
   describeMessage,
@@ -34,6 +46,7 @@ import {
   fetchStarred,
   hideMessage,
   markThreadRead,
+  sendFileAttachment,
   sendImageAttachment,
   sendMessage,
   sendVoiceNote,
@@ -125,10 +138,22 @@ const SAFETY_POLL_MS = 60000;
  */
 export const ThreadView: React.FC<{
   thread: MessageThread;
+  /** The reader's own mute/pin/archive for this chat; see Chat info. */
+  settings?: ThreadSettings;
+  onSettingsChanged: () => void;
   onBack: () => void;
-}> = ({ thread, onBack }) => {
-  const { authUserId } = useApp();
+}> = ({ thread, settings, onSettingsChanged, onBack }) => {
+  const { authUserId, user } = useApp();
   const unread = useUnread();
+  /**
+   * WHERE THE COMPOSER STICKS: just above the bottom bar, not behind it. The
+   * client bar floats 18px up and is 58px tall; the professional and business
+   * bar is flush and goes away at lg, where the sidebar takes over.
+   */
+  const footerBottom =
+    user.accountType === "professional" || user.accountType === "business"
+      ? "bottom-[calc(env(safe-area-inset-bottom)+64px)] lg:bottom-0"
+      : "bottom-[calc(env(safe-area-inset-bottom)+84px)]";
   /**
    * The other participant has deleted their account.
    *
@@ -149,7 +174,9 @@ export const ThreadView: React.FC<{
   // Official support threads cannot be blocked or reported from here.
   const safetyApplies = !departed && thread.kind === "peer";
   const [block, setBlock] = useState<BlockState>({ iBlocked: false, blocked: false });
-  const [menuOpen, setMenuOpen] = useState(false);
+  const [blockOpen, setBlockOpen] = useState(false);
+  /** Chat info (screen 6) replaces the conversation while open. */
+  const [infoOpen, setInfoOpen] = useState(false);
   const [reportFor, setReportFor] = useState<Message | null>(null);
   const [safetyBusy, setSafetyBusy] = useState(false);
   const [safetyError, setSafetyError] = useState<string | null>(null);
@@ -168,7 +195,7 @@ export const ThreadView: React.FC<{
     const r = await blockUser(authUserId, thread.participantId);
     setSafetyBusy(false);
     if (!r.ok) return setSafetyError(r.message);
-    setMenuOpen(false);
+    setBlockOpen(false);
     setReportFor(null);
     await refreshBlock();
   };
@@ -179,7 +206,7 @@ export const ThreadView: React.FC<{
     const r = await unblockUser(authUserId, thread.participantId);
     setSafetyBusy(false);
     if (!r.ok) return setSafetyError(r.message);
-    setMenuOpen(false);
+    setBlockOpen(false);
     await refreshBlock();
   };
   const [messages, setMessages] = useState<Message[]>([]);
@@ -210,7 +237,7 @@ export const ThreadView: React.FC<{
    * It matters most for attachments and voice notes, where an upload can take
    * seconds and the composer would otherwise sit silent.
    */
-  const [pending, setPending] = useState<{ kind: "text" | "photo" | "voice"; text?: string } | null>(
+  const [pending, setPending] = useState<{ kind: "text" | "photo" | "file" | "voice"; text?: string } | null>(
     null
   );
 
@@ -230,6 +257,25 @@ export const ThreadView: React.FC<{
    * asked about first.
    */
   const [hiding, setHiding] = useState<Message | null>(null);
+  /** Message info (sent, delivered, read) for one of your own messages. */
+  const [infoFor, setInfoFor] = useState<Message | null>(null);
+  /** Photo or document, chosen from the paperclip. */
+  const [attachMenu, setAttachMenu] = useState(false);
+  const docInputRef = useRef<HTMLInputElement>(null);
+  /**
+   * Reactions on the loaded messages, keyed by message id. Re-read whenever the
+   * loaded set changes and whenever message_reactions changes (realtime).
+   */
+  const [reactions, setReactions] = useState<Record<string, Reaction[]>>({});
+  /**
+   * WHERE "N NEW MESSAGES" GOES, fixed when the chat opens: the reader's last
+   * read time as the list reported it. Marking the chat read on load moves the
+   * server's value, so it is captured once rather than read back. Null when
+   * nothing was unread; "" when they had never read this chat.
+   */
+  const [readBefore] = useState<string | null>(() => (thread.unreadCount > 0 ? thread.lastReadAt ?? "" : null));
+  const dividerRef = useRef<HTMLDivElement>(null);
+  const [dividerAbove, setDividerAbove] = useState(false);
   /**
    * Ids this viewer has starred. A set rather than a field on Message, because
    * stars live in their own table and are fetched separately — folding them
@@ -431,6 +477,25 @@ export const ThreadView: React.FC<{
   // made here take the identical path.
   usePinRealtime(thread.id, () => void refreshPin());
 
+  const idsKey = messages.map((m) => m.id).join(",");
+  const refreshReactions = async () => {
+    const ids = idsKey ? idsKey.split(",") : [];
+    setReactions(await fetchReactions(ids));
+  };
+  useEffect(() => {
+    void refreshReactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idsKey]);
+  useReactionsRealtime(thread.id, () => void refreshReactions());
+
+  const react = async (m: Message, emoji: string | null) => {
+    if (!authUserId) return;
+    const had = (reactions[m.id] ?? []).some((x) => x.userId === authUserId);
+    const result = await setReaction(m.id, authUserId, emoji, had);
+    if (!result.ok) setError(result.message);
+    await refreshReactions();
+  };
+
   // Only when the NEWEST message changes, so a poll returning the same history
   // does not yank the view down while someone is reading back through it, and
   // loading an older page (which adds messages at the top) does not either.
@@ -439,10 +504,29 @@ export const ThreadView: React.FC<{
   const isSending = !!pending;
   const newestId = messages[messages.length - 1]?.id;
   const [atBottomOnce, setAtBottomOnce] = useState(false);
+  const firstScrollDone = useRef(false);
   useEffect(() => {
-    endRef.current?.scrollIntoView({ block: "end" });
-    if (newestId) setAtBottomOnce(true);
+    // JUMP TO UNREAD on opening: the first new message sits near the top of
+    // the screen instead of the reader landing past everything they missed.
+    if (!firstScrollDone.current && newestId && dividerRef.current) {
+      dividerRef.current.scrollIntoView({ block: "center" });
+    } else {
+      endRef.current?.scrollIntoView({ block: "end" });
+    }
+    if (newestId) {
+      firstScrollDone.current = true;
+      setAtBottomOnce(true);
+    }
   }, [newestId, isSending]);
+
+  // The pill that jumps back to the divider, shown while it is above the screen.
+  useEffect(() => {
+    const el = dividerRef.current;
+    if (!el || !("IntersectionObserver" in window)) return;
+    const io = new IntersectionObserver(([e]) => setDividerAbove(!e.isIntersecting && e.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [newestId, infoOpen]);
 
   // OLDER MESSAGES LOAD AS THE TOP COMES INTO VIEW, and only once the thread
   // has first been shown at its end — otherwise the top is on screen for the
@@ -626,8 +710,11 @@ export const ThreadView: React.FC<{
     if (!authUserId || sending) return;
     setSending(true);
     setError(null);
-    setPending({ kind: "photo" });
-    const result = await sendImageAttachment(thread.id, authUserId, file);
+    const isImage = file.type.startsWith("image/");
+    setPending({ kind: isImage ? "photo" : "file" });
+    const result = isImage
+      ? await sendImageAttachment(thread.id, authUserId, file)
+      : await sendFileAttachment(thread.id, authUserId, file);
     setSending(false);
     setPending(null);
     if (!result.ok) {
@@ -693,7 +780,10 @@ export const ThreadView: React.FC<{
     setSending(true);
     setError(null);
     setPending({ kind: "voice" });
-    const result = await sendVoiceNote(thread.id, authUserId, capture.file, capture.seconds);
+    // Measured here, from the recording itself; null if this browser cannot
+    // decode its own recording, and the note sends without one.
+    const waveform = await computeWaveform(capture.file, 48);
+    const result = await sendVoiceNote(thread.id, authUserId, capture.file, capture.seconds, waveform);
     setSending(false);
     setPending(null);
     if (!result.ok) {
@@ -705,8 +795,101 @@ export const ThreadView: React.FC<{
     setMessages((prev) => (prev.some((m) => m.id === result.message.id) ? prev : [...prev, result.message]));
   };
 
+  // "N NEW MESSAGES": before the first message from them newer than the
+  // reader's last read when the chat opened.
+  const dividerAt =
+    readBefore === null
+      ? -1
+      : messages.findIndex((m) => m.senderId !== authUserId && (readBefore === "" || m.createdAt > readBefore));
+  const newCount = dividerAt < 0 ? 0 : messages.slice(dividerAt).filter((m) => m.senderId !== authUserId).length;
+
+  const actionsForMessage = (m: Message): MessageAction[] => {
+    const mine = m.senderId === authUserId;
+    const close = () => setActionsFor(null);
+    const list: MessageAction[] = [
+      { label: "Reply", onSelect: () => {
+        setReplyTo(m);
+        close();
+      } },
+    ];
+    // Text only for now: forwarding a photo or file needs the server to copy
+    // it into the other chat, which the database does not do yet.
+    if (m.text?.trim()) list.push({ label: "Forward", onSelect: () => {
+      setForwarding(m);
+      close();
+    } });
+    list.push({
+      label: starred.has(m.id) ? "Unstar" : "Star",
+      onSelect: () => {
+        void toggleStar(m);
+        close();
+      },
+    });
+    if (m.text?.trim()) list.push({ label: "Copy", onSelect: () => void copyMessage(m) });
+    list.push({
+      label: pin?.messageId === m.id ? "Unpin" : "Pin",
+      onSelect: () => {
+        if (pin?.messageId === m.id) void unpinMessage();
+        else void pinMessage(m);
+        close();
+      },
+    });
+    if (mine) list.push({ label: "Info", onSelect: () => {
+      setInfoFor(m);
+      close();
+    } });
+    if (safetyApplies && !mine) {
+      list.push({ label: "Report", danger: true, onSelect: () => {
+        setReportFor(m);
+        close();
+      } });
+    }
+    list.push({ label: "Delete for me", danger: true, onSelect: () => {
+    setHiding(m);
+    close();
+  } });
+    return list;
+  };
+
+  const reportLatest = (() => {
+    const theirs = [...messages].reverse().find((m) => m.senderId === thread.participantId);
+    return theirs ? () => setReportFor(theirs) : null;
+  })();
+
   return (
     <div className="flex flex-col min-h-[60dvh]">
+      {infoOpen && authUserId ? (
+        <ChatInfo
+          thread={thread}
+          authUserId={authUserId}
+          settings={settings}
+          onSettingsChanged={onSettingsChanged}
+          onBack={() => setInfoOpen(false)}
+          safety={
+            safetyApplies
+              ? {
+                  iBlocked: block.iBlocked,
+                  onBlock: () => {
+                    setSafetyError(null);
+                    setBlockOpen(true);
+                  },
+                  onUnblock: () => {
+                    setSafetyError(null);
+                    setBlockOpen(true);
+                  },
+                  onReport: reportLatest,
+                }
+              : null
+          }
+          onOpenPhoto={(path, url) => setPhoto({ path, url })}
+          onOpenFile={(path) => void openFile(path)}
+          onJumpTo={(id) => {
+            setInfoOpen(false);
+            window.setTimeout(() => jumpTo(id), 50);
+          }}
+        />
+      ) : (
+      <>
       <div className="flex items-center gap-2.5 mb-4">
         <button
           onClick={onBack}
@@ -715,27 +898,35 @@ export const ThreadView: React.FC<{
         >
           <ArrowLeft size={16} />
         </button>
-        {/* flex-1 min-w-0 so `truncate` has a width to truncate against once a
-            trailing control shares the row — without it a long name pushes the
-            call buttons off the edge instead of ellipsing. */}
-        <p className="font-semibold text-charcoal truncate flex-1 min-w-0">
-          {thread.participantName}
-        </p>
+        {/* THE NAME OPENS CHAT INFO (screen 6): mute, pin, archive, what was
+            shared, privacy, block and report. flex-1 min-w-0 so a long name
+            ellipses instead of pushing the call buttons off the edge. */}
+        <button
+          type="button"
+          onClick={() => setInfoOpen(true)}
+          aria-label={`Chat info for ${thread.participantName}`}
+          className="tap flex items-center gap-2.5 flex-1 min-w-0 text-left"
+        >
+          <span className="w-10 h-10 rounded-full bg-primary-pale flex items-center justify-center overflow-hidden shrink-0 font-extrabold text-primary-deep-text">
+            {thread.participantAvatarUrl ? (
+              <img src={thread.participantAvatarUrl} alt="" className="w-full h-full object-cover" />
+            ) : (
+              thread.participantName.trim().charAt(0).toUpperCase()
+            )}
+          </span>
+          <span className="text-[15px] font-bold text-charcoal truncate">{thread.participantName}</span>
+        </button>
 
-        {/* CALL CONTROLS. Two buttons rather than one with a menu: voice and
-            video are different decisions, not a setting on one action, and a
-            menu would put an extra tap in front of the commoner of the two.
-            Gated on canCall, which mirrors canAttach exactly — asked once on
-            open, failing closed, and NOT the enforcement. mint-call-token
-            re-checks thread_allows_calls server-side, so a stale true costs a
-            refused call rather than an unauthorised one. */}
+        {/* CALL CONTROLS, gated on canCall — asked once on open, failing
+            closed, and not the enforcement: mint-call-token re-checks
+            thread_allows_calls server-side. */}
         {canCall && thread.participantId && !block.blocked && (
           <>
             <button
               onClick={() => void placeCall("voice")}
               disabled={callBusy}
               aria-label={`Voice call ${thread.participantName}`}
-              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0 ml-auto disabled:opacity-50"
+              className="tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0 disabled:opacity-50"
             >
               <Phone size={15} />
             </button>
@@ -749,37 +940,13 @@ export const ThreadView: React.FC<{
             </button>
           </>
         )}
-        {safetyApplies && (
-          <button
-            onClick={() => {
-              setSafetyError(null);
-              setMenuOpen(true);
-            }}
-            aria-label={`More options for ${thread.participantName}`}
-            className={`tap w-8 h-8 rounded-full bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0 ${
-              canCall && !block.blocked ? "" : "ml-auto"
-            }`}
-          >
-            <MoreVertical size={15} />
-          </button>
-        )}
       </div>
 
       {/* WHO THIS IS, stated rather than implied by a name in the header.
-          Centium opened this conversation; the user did not choose to talk
-          to whoever is on the other side, and a stranger calling themselves
+          Centium opened this conversation, and a stranger calling themselves
           "Centium Support" is exactly the shape of a phishing message. The
-          app is the only party that can tell the difference, so it says so.
-
-          Above the messages and outside the scroll, because it qualifies the
-          whole conversation rather than any one message in it.
-
-          THE SECOND SENTENCE IS THE USEFUL HALF. Saying "this really is us"
-          helps only against an impostor the app can already see; it does
-          nothing about a message somewhere else that claims to be support.
-          Naming what support will never ask for travels with the reader --
-          it is the sentence that is still true in an email, a DM or a phone
-          call, none of which this app can vouch for. */}
+          second sentence is the useful half: it stays true in an email, a DM
+          or a phone call, none of which this app can vouch for. */}
       {thread.kind === "official_support" && (
         <div className="flex items-start gap-2 rounded-xl bg-teal-pale text-charcoal-soft dark:text-teal-deep-text px-3 py-2.5 mb-2">
           <ShieldCheck size={15} className="shrink-0 mt-px" />
@@ -792,24 +959,14 @@ export const ThreadView: React.FC<{
         </div>
       )}
 
-      {/* A permission refusal that stopped the call, or a camera refusal that
-          turned a video call into a voice one. Shown here rather than as a
-          toast because it explains a button the user just pressed. */}
       {mediaNotice && (
         <p className="text-[11px] text-charcoal-faint bg-cream-soft rounded-xl px-3 py-2 mb-2">
           {mediaNotice}
         </p>
       )}
 
-      {/* THE PINNED BANNER, and it renders only when the pinned message is one
-          this viewer can actually see. A pin is shared, but hiding is not: if
-          they hid the message someone pinned, the banner would otherwise be a
-          reference to something absent from their conversation — so it is
-          suppressed rather than shown as unavailable, which would state that a
-          message is gone when it is merely hidden by choice.
-
-          Tapping reuses jumpTo, the same scroll-and-highlight the reply quote
-          uses, so the two behave identically rather than similarly. */}
+      {/* THE PINNED BANNER, only when the pinned message is one this viewer
+          can see: a pin is shared, hiding is not. */}
       {pin &&
         (() => {
           const target = messages.find((m) => m.id === pin.messageId);
@@ -835,10 +992,9 @@ export const ThreadView: React.FC<{
           );
         })()}
 
-      <div className="flex-1 space-y-2 mb-3">
+      <div className="flex-1 flex flex-col gap-2.5 mb-3">
         {/* The top of the loaded history. Scrolling up to it loads the next
-            older page; the button is the same action for anyone not scrolling
-            (a keyboard, a screen reader, a browser without the observer). */}
+            older page; the button is the same action for anyone not scrolling. */}
         <div ref={topRef}>
           {hasOlder && (
             <button
@@ -853,26 +1009,43 @@ export const ThreadView: React.FC<{
         </div>
         {loaded && messages.length === 0 && (
           <p className="text-sm text-charcoal-faint text-center py-8">
-            {/* "Say hello to Deleted account" invites something impossible.
-                An empty thread whose other side has gone is simply empty. */}
             {departed
               ? "This conversation is empty."
               : `No messages yet — say hello to ${thread.participantName}.`}
           </p>
         )}
-        {messages.map((m) => {
+        {messages.map((m, index) => {
           const mine = m.senderId === authUserId;
-          // NO LOOKUP NEEDED, AND NONE IS POSSIBLE. system_support_identity() is
-          // revoked from authenticated, so a client cannot ask which profile id
-          // support posts as. It does not have to: an official thread has exactly
-          // two sides, so anything that is not the viewer's own is support.
+          // An official thread has exactly two sides, so anything that is not
+          // the viewer's own is support.
           const fromSupport = !mine && thread.kind === "official_support";
-          // GLOBAL, NOT PER-VIEWER. Both columns are on the row itself, so
-          // both participants see the same notice — unlike message_flags,
-          // which is the viewer's own and is why hiding is not rendered here.
+          // GLOBAL, NOT PER-VIEWER: both participants see the same notice.
           const removal = describeRemoval(m);
+          const kind =
+            m.attachmentKind ??
+            (m.voiceNoteSeconds ? "voice" : m.attachmentPath && isImagePath(m.attachmentPath) ? "image" : "file");
+          const mineReactions = reactions[m.id] ?? [];
+          const grouped = Object.entries(
+            mineReactions.reduce<Record<string, { n: number; me: boolean }>>((acc, x) => {
+              const g = (acc[x.emoji] ??= { n: 0, me: false });
+              g.n += 1;
+              if (x.userId === authUserId) g.me = true;
+              return acc;
+            }, {})
+          );
+          const myReaction = mineReactions.find((x) => x.userId === authUserId)?.emoji ?? null;
+          const tick = m.readAt ? "read" : m.deliveredAt ? "delivered" : "sent";
           return (
-            <div key={m.id} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
+            <div key={m.id} className="flex flex-col gap-1">
+              {index === dividerAt && (
+                <div ref={dividerRef} className="flex items-center gap-2 my-1" role="separator">
+                  <span className="flex-1 h-px bg-primary/40" />
+                  <span className="text-xs font-bold text-primary-deep-text">
+                    {newCount === 1 ? "1 new message" : `${newCount} new messages`}
+                  </span>
+                  <span className="flex-1 h-px bg-primary/40" />
+                </div>
+              )}
               <div
                 ref={(el) => {
                   bubbleRefs.current[m.id] = el;
@@ -885,31 +1058,22 @@ export const ThreadView: React.FC<{
                   e.preventDefault();
                   setActionsFor(m);
                 }}
-                className={`max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words select-none transition-shadow ${
+                className={`max-w-[78%] px-3 py-[9px] text-sm leading-[1.4] whitespace-pre-wrap break-words select-none transition-shadow flex flex-col gap-1 ${
                   mine
-                    ? "bg-bubble-sent text-white dark:text-[#0D0B1A]"
-                    : // Matching the teal the Admin console already gives support
-                      // messages, so one conversation reads the same way to the
-                      // person answering it and the person receiving it.
-                      //
-                      // THE GROUND IS THEMED, THE TEXT IS NOT, and the asymmetry
-                      // is the point. teal-pale carries its own dark value, so
-                      // the bubble follows the mode on its own. teal-deep-text
-                      // does too, but its LIGHT value only reaches 3.90:1 on that
-                      // ground -- under AA for text this size -- while its dark
-                      // value is a comfortable 7.34:1. So light is corrected and
-                      // dark is left exactly as it was, rather than one token
-                      // being retuned for a problem it only has in half the cases.
-                      fromSupport
-                      ? "bg-teal-pale text-charcoal-soft dark:text-teal-deep-text"
-                      : "bg-cream-soft text-charcoal"
+                    ? "self-end rounded-[16px_16px_4px_16px] bg-bubble-sent text-white dark:text-[#0D0B1A]"
+                    : // Support messages keep the teal the Admin console gives
+                      // them. The light text colour is corrected to clear AA on
+                      // teal-pale; the dark one already does.
+                      `self-start rounded-[16px_16px_16px_4px] ${
+                        fromSupport
+                          ? "bg-teal-pale text-charcoal-soft dark:text-teal-deep-text"
+                          : "bg-cream-soft text-charcoal"
+                      }`
                 } ${highlighted === m.id ? "ring-2 ring-primary-dark" : ""}`}
               >
-                {/* The quote sits above the message body, as it reads: what
-                    is being answered, then the answer. The parent is looked up
-                    among the loaded messages rather than stored, so a reply to
-                    something scrolled out of the window renders as unavailable
-                    instead of a stale copy. */}
+                {/* What is being answered, then the answer. The parent is looked
+                    up among the loaded messages, so a reply to something not
+                    loaded renders as unavailable rather than a stale copy. */}
                 {m.replyToId && (
                   <QuotedMessage
                     inBubble
@@ -922,217 +1086,150 @@ export const ThreadView: React.FC<{
                     onJump={() => m.replyToId && jumpTo(m.replyToId)}
                   />
                 )}
-                {/* A star is the viewer's own mark, so it sits with the tick
-                    rather than above the text: it says something about their
-                    relationship to the message, not about the message. Filled
-                    rather than outlined, because an outline at this size reads
-                    as a tappable affordance and this is a state. */}
-                {/* 80% stays: on the darkened sent ground it now measures
-                    4.32-4.40:1 across the four themes, well past the 3:1 a
-                    non-text indicator needs, while still reading as quieter
-                    than the message itself. */}
-                {starred.has(m.id) && (
-                  <Star
-                    size={11}
-                    aria-label="Starred"
-                    className="float-right ml-1.5 mt-1 shrink-0 fill-current opacity-80"
-                  />
-                )}
-                {/* Above the text, because it qualifies everything below it.
-                    A reader who sees the words first and the provenance second
-                    has already taken them as the sender's own. */}
-                {/* 85%, not 70%. At 11px this is NORMAL text by WCAG's
-                    measure — "large" starts at 18.66px bold or 24px — so it
-                    needs 4.5:1, not 3:1. 85% is the most de-emphasis the
-                    darkened ground affords while clearing it: 4.65-4.72:1
-                    across the four themes, against 1.87:1 before. */}
+                {/* Above the text: a reader who sees the words first has
+                    already taken them as the sender's own. 85% clears 4.5:1 on
+                    the sent ground at 11px. */}
                 {m.forwarded && (
-                  <span className="flex items-center gap-1 text-[11px] italic opacity-85 mb-0.5">
+                  <span className="flex items-center gap-1 text-[11px] italic opacity-85">
                     <Forward size={11} className="shrink-0" /> Forwarded
                   </span>
                 )}
-                {m.text}
-                {/* WHAT WAS TAKEN OFF THIS MESSAGE, as one line.
-                    Without it a message whose content is gone renders as an
-                    empty bubble rather than one that was deliberately emptied.
-                    describeRemoval is shared with the thread list so the
-                    preview and the bubble cannot disagree about whether a
-                    message still exists, and it collapses the both-removed
-                    case into a single sentence instead of stacking two.
-
-                    It is NOT keyed on redactedAt alone: an attachment-only
-                    redaction stamps that flag and leaves the text readable, so
-                    the notice is derived from what is actually absent. */}
+                {m.text && <span>{m.text}</span>}
+                {/* What was taken off this message, derived from what is
+                    actually absent; shared with the list via describeRemoval. */}
                 {removal && (
                   <span className="flex items-center gap-1.5 opacity-85 italic">
                     <Trash2 size={13} className="shrink-0" /> {removal}
                   </span>
                 )}
-                {/* Suppressed only when the FILE is gone. A message whose text
-                    was redacted but whose attachment survives still renders the
-                    attachment below the notice — the photo is still there and
-                    hiding it would be its own small lie. */}
-                {m.attachmentPurgedAt ? null : m.attachmentPath && m.voiceNoteSeconds ? (
-                  // Voice note before photo: both are attachment_url, and the
-                  // duration column is the only thing distinguishing them.
+                {/* Suppressed only when the FILE is gone: a redacted text with a
+                    surviving attachment still shows the attachment. */}
+                {m.attachmentPurgedAt || !m.attachmentPath ? null : kind === "voice" ? (
                   <VoiceNoteBubble
                     path={m.attachmentPath}
                     seconds={m.voiceNoteSeconds}
                     mine={mine}
+                    waveform={m.voiceWaveform}
                   />
+                ) : kind === "image" ? (
+                  // Signed as it nears the screen and re-signed before expiry
+                  // (attachmentUrls); sized from the stored pixels so the box
+                  // is right before it loads.
+                  <InlineImage
+                    path={m.attachmentPath}
+                    width={m.imageWidth}
+                    height={m.imageHeight}
+                    onOpen={(url) => setPhoto({ path: m.attachmentPath!, url })}
+                  />
+                ) : goneFiles.has(m.attachmentPath) ? (
+                  <AttachmentGone kind="file" />
                 ) : (
-                  m.attachmentPath &&
-                  (isImagePath(m.attachmentPath) ? (
-                    // THE PHOTO ITSELF, INLINE. Signed when it nears the
-                    // screen and re-signed before expiry by a cache
-                    // (services/messaging/attachmentUrls), so the 8s poll does
-                    // not mint a URL per image per tick — the reason this used
-                    // to be a "Photo" tile that had to be tapped to be seen.
-                    <InlineImage
-                      path={m.attachmentPath}
-                      onOpen={(url) => setPhoto({ path: m.attachmentPath!, url })}
-                      className={m.text ? "mt-1.5" : ""}
-                    />
-                  ) : goneFiles.has(m.attachmentPath) ? (
-                    <AttachmentGone kind="file" className={m.text ? "mt-1.5" : ""} />
-                  ) : (
-                    // Anything else stays a file card, opened in the viewer.
-                    <button
-                      onClick={() => void openFile(m.attachmentPath!)}
-                      className={`tap flex items-center gap-2 rounded-xl bg-black/10 px-3 py-2 text-left ${
-                        m.text ? "mt-1.5" : ""
-                      }`}
-                    >
-                      <FileText size={15} className="shrink-0" />
-                      <span className="text-[12.5px] font-semibold">File</span>
-                    </button>
-                  ))
+                  <FileCard
+                    name={m.attachmentName}
+                    bytes={m.attachmentBytes}
+                    mime={m.attachmentMime}
+                    onOpen={() => void openFile(m.attachmentPath!)}
+                  />
                 )}
-                {/* ON EVERY BUBBLE, NOT ONLY YOUR OWN — a deliberate departure
-                    from the usual convention, which puts ticks sender-side
-                    because "did it reach them" is the sender's question. Here
-                    each message reports its OWN state to whoever is looking, so
-                    one you received shows as read the moment opening the thread
-                    marks it. That is the honest reading of the data rather than
-                    a glitch: mark-as-read runs on load, so by the time the tick
-                    is on screen it is telling the truth.
+                {/* TIME, THEN — ON YOUR OWN MESSAGES — THE TICK: one for sent,
+                    two for delivered, two in the read colour for read. Delivered
+                    and read are only stored where both people allow receipts, so
+                    with receipts off your messages stay at one tick.
 
-                    THE UNSENT TICK SETS NO COLOUR OF ITS OWN, which is what
-                    lets one element serve both bubbles. It inherits
-                    currentColor — white inside your own bubble, charcoal
-                    inside a received `cream-soft` one. Hard-coding it white to
-                    "match the design" would drop the received side to 1.05:1
-                    and make it disappear. At 75% it now measures 4.02-4.09:1
-                    sent and 6.80:1 received; it was 60%, and 1.72:1 sent.
-
-                    THE READ TICK HAS TO BRANCH, THOUGH. No single colour can
-                    serve both grounds, and that is provable rather than a
-                    matter of taste: clearing 3:1 on the darker of the two
-                    bubbles requires one luminance bound and clearing it on the
-                    lighter requires the opposite one, and the window between
-                    them is empty. So there are two tokens, named for the
-                    bubble each belongs to.
-
-                    AND THE ASSIGNMENT FLIPS WITH THE MODE, because both
-                    grounds flip. In light mode the sent bubble is the dark
-                    surface and the received one is pale; in dark mode it is
-                    exactly reversed. `tick-read-sent` is therefore the light
-                    green in light mode and the dark one in dark mode, and
-                    `tick-read-received` is the other way round — which is why
-                    neither can be named for its shade.
-
-                    Every combination, four themes x two sides x two modes:
-                    sent 3.69-3.74:1 light and 3.21-4.04:1 dark, received
-                    8.67:1 light and 9.02:1 dark. An earlier version of this
-                    comment claimed one green covered both sides at 4.02:1 and
-                    8.67:1 and needed no per-theme variant. That was measured
-                    on the default accent in light mode alone — on a sent
-                    bubble it was already 2.77:1 on ocean and 1.72:1 on berry,
-                    and on a received bubble in dark mode 1.90:1.
-
-                    SENT AND READ, WITH NO "DELIVERED" BETWEEN THEM. A delivered
-                    state was scoped and deliberately dropped: the only place a
-                    recipient's client reliably touches the server on every page
-                    is the 30s unread poll, so "delivered" would mean "their
-                    client fetched this row within the last half minute" — not
-                    that their device received it, and not that anyone was
-                    there. RLS would at least keep the sender from stamping
-                    their own message, so it would not be a lie about WHO, but
-                    it would be a weak claim wearing a confident icon. It is
-                    worth building on real Realtime events and not before.
-
-                    NOT BLUE, AND THE COLOUR WAS MEASURED RATHER THAN CHOSEN. A
-                    blue read-tick belongs to apps whose sent bubble is white or
-                    pale green; this one is `primary`, a mid-toned lavender, and
-                    every accent in this palette was designed for light grounds
-                    and therefore vanishes on it — sky 1.45:1, teal 1.30, gold
-                    1.05, and status-good, the app's OWN confirmation colour,
-                    only 1.64. None clear the 3:1 WCAG asks of a graphical
-                    object, and most are fainter than the body text beside them.
-
-                    So the tick tokens exist: the same hue as status-good, moved
-                    away from it in whichever direction the ground demands. They
-                    keep the confirmation meaning the palette already assigns to
-                    that green instead of inventing a signal — and on a
-                    near-black bubble, where nothing is swallowed, the received
-                    tick is literally var(--c-status-good) rather than a value
-                    of its own.
-
-                    SHAPE CARRIES IT ANYWAY — one tick against two — so the
-                    state survives greyscale, colour blindness, and a 13px
-                    icon where hue is barely perceptible. The colour is
-                    reinforcement, not the message. */}
+                    The read colour branches by bubble because no single colour
+                    clears 3:1 on both grounds in both modes (tick-read-sent /
+                    tick-read-received). Shape carries the state anyway, so it
+                    survives greyscale and colour blindness. The star is the
+                    reader's own mark, so it sits here too. */}
                 <span
-                  className={`flex items-center justify-end gap-1 mt-1 ${
-                    m.readAt
-                      ? mine
-                        ? "text-tick-read-sent"
-                        : "text-tick-read-received"
-                      : "opacity-75"
+                  className={`self-end flex items-center gap-1 text-[11px] ${
+                    mine ? "opacity-90" : "text-charcoal-soft"
                   }`}
-                  title={m.readAt ? "Read" : "Sent"}
                 >
-                  {m.readAt ? <CheckCheck size={13} /> : <Check size={13} />}
+                  {starred.has(m.id) && <Star size={11} aria-label="Starred" className="fill-current opacity-80" />}
+                  {clockTime(m.createdAt)}
+                  {mine &&
+                    (tick === "read" ? (
+                      <CheckCheck size={15} aria-label="Read" className="text-tick-read-sent" />
+                    ) : tick === "delivered" ? (
+                      <CheckCheck size={15} aria-label="Delivered" />
+                    ) : (
+                      <Check size={15} aria-label="Sent" />
+                    ))}
                 </span>
               </div>
+              {grouped.length > 0 && (
+                <div className={`flex gap-1 flex-wrap ${mine ? "self-end mr-2" : "self-start ml-2"}`}>
+                  {grouped.map(([emoji, g]) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      disabled={block.blocked}
+                      onClick={() => void react(m, g.me ? null : emoji)}
+                      aria-label={`${emoji} ${g.n}${g.me ? ", including you. Tap to remove yours" : ""}`}
+                      aria-pressed={g.me}
+                      className={`tap text-xs rounded-full px-2 py-0.5 border ${
+                        g.me ? "bg-primary-pale border-primary/40" : "bg-cream-card border-charcoal/10"
+                      } text-charcoal`}
+                    >
+                      {emoji} {g.n}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {actionsFor?.id === m.id && (
+                <MessageActions
+                  key={m.id}
+                  open
+                  onClose={() => setActionsFor(null)}
+                  mine={mine}
+                  preview={describeMessage(m)}
+                  myReaction={myReaction}
+                  onReact={block.blocked || departed ? null : (emoji) => void react(m, emoji)}
+                  actions={actionsForMessage(m)}
+                />
+              )}
             </div>
           );
         })}
         {/* The in-flight message, rendered after the real ones and outside the
-            list. Dimmed and clock-ticked so it reads as not-yet-landed rather
-            than as a message that arrived looking odd. */}
+            list. 90%, not lower: a parent opacity fades text toward the page. */}
         {pending && (
-          <div className="flex justify-end">
-            {/* 90%, NOT 60%. A parent opacity fades the whole subtree toward
-                the page behind it, so the ink and the ground converge: at 60%
-                over a white page this bubble's own text measured 1.62:1, worse
-                than the un-faded bubble it imitates. 90% keeps it at 4.62:1
-                and still reads as tentative, and the clock below — which this
-                bubble has always carried — is what actually says "not yet". */}
-            <div className="max-w-[78%] rounded-2xl px-3.5 py-2.5 text-[13px] leading-relaxed whitespace-pre-wrap break-words bg-bubble-sent text-white dark:text-[#0D0B1A] opacity-90">
-              {pending.kind === "text" ? (
-                pending.text
-              ) : (
-                <span className="flex items-center gap-2">
-                  {pending.kind === "photo" ? <ImageIcon size={15} /> : <Mic size={15} />}
-                  {pending.kind === "photo" ? "Photo" : "Voice note"}
-                </span>
-              )}
-              {/* Compounds with the 90% above, so this is 0.8 x 0.9 in
-                  practice: 3.59-3.66:1, past the 3:1 an icon needs. */}
-              <span className="flex items-center justify-end gap-1 mt-1 opacity-80" title="Sending">
-                <Clock size={13} />
+          <div className="self-end max-w-[78%] rounded-[16px_16px_4px_16px] px-3 py-[9px] text-sm leading-[1.4] whitespace-pre-wrap break-words bg-bubble-sent text-white dark:text-[#0D0B1A] opacity-90">
+            {pending.kind === "text" ? (
+              pending.text
+            ) : (
+              <span className="flex items-center gap-2">
+                {pending.kind === "photo" ? (
+                  <ImageIcon size={15} />
+                ) : pending.kind === "file" ? (
+                  <FileText size={15} />
+                ) : (
+                  <Mic size={15} />
+                )}
+                {pending.kind === "photo" ? "Photo" : pending.kind === "file" ? "Document" : "Voice note"}
               </span>
-            </div>
+            )}
+            <span className="flex items-center justify-end gap-1 mt-1 opacity-80" title="Sending">
+              <Clock size={13} />
+            </span>
           </div>
         )}
         <div ref={endRef} />
       </div>
 
-      {/* A recorder failure gets the same treatment as a send failure, because
-          from the user's side they are the same event: the voice note they
-          tried to make did not happen. A denied microphone in particular must
-          say so — a hold that silently does nothing reads as a broken app. */}
+      {/* JUMP TO UNREAD, while the divider is above the screen. */}
+      {dividerAbove && newCount > 0 && (
+        <button
+          type="button"
+          onClick={() => dividerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
+          className="tap fixed left-1/2 -translate-x-1/2 top-20 z-30 rounded-full bg-primary text-white dark:text-[#0D0B1A] text-xs font-bold px-3.5 h-9 flex items-center gap-1.5 shadow-lg"
+        >
+          <ArrowDown size={14} className="rotate-180" />
+          {newCount === 1 ? "1 new message" : `${newCount} new messages`}
+        </button>
+      )}
+
       {(error || recorder.error) && (
         <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5 mb-2">
           {error ?? recorder.error?.message}
@@ -1142,7 +1239,7 @@ export const ThreadView: React.FC<{
       {/* BLOCKED: the conversation stays readable, and nothing can be sent. The
           other side's block is stated without saying who did it. */}
       {block.blocked ? (
-        <div className="sticky bottom-0 bg-cream pt-2">
+        <div className={`sticky ${footerBottom} bg-cream pt-2`}>
           <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-center">
             <p className="text-sm font-semibold text-charcoal">
               {block.iBlocked ? `You blocked ${thread.participantName}` : "You can't message this person"}
@@ -1165,47 +1262,48 @@ export const ThreadView: React.FC<{
           </div>
         </div>
       ) : (
-      <>
-      {/* Above the composer, inside the sticky footer, so it travels with the
-          input rather than scrolling away from what it belongs to. */}
+      <div className={`sticky ${footerBottom} bg-cream pt-2`}>
       {replyTo && (
-        <div className="sticky bottom-0 bg-cream">
-          <QuotedMessage
-            message={replyTo}
-            authorLabel={replyTo.senderId === authUserId ? "You" : thread.participantName}
-            onCancel={() => setReplyTo(null)}
-          />
-        </div>
+        <QuotedMessage
+          message={replyTo}
+          authorLabel={replyTo.senderId === authUserId ? "You" : thread.participantName}
+          onCancel={() => setReplyTo(null)}
+        />
       )}
 
-      <div className="flex items-center gap-2 sticky bottom-0 bg-cream pt-2">
-        {/* Shown only for a live relationship. This is convenience, not
-            security — the server refuses independently at both doors, so
-            hiding the button spares someone an upload that was always going to
-            be rejected rather than being the thing that stops them. */}
+      <div className="flex items-center gap-2">
+        {/* Shown only for a live relationship. Convenience, not security: the
+            server refuses independently at both doors. */}
         {canAttach && (
           <>
             <input
               ref={fileInputRef}
               type="file"
-              // Images only. The bucket also accepts audio so a recorded voice
-              // note can go up (6c), but nothing picks audio off disk and
-              // acceptFor excludes it on every bucket.
               accept={acceptFor("message-attachments", true)}
               className="hidden"
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                // Reset first: picking the same file twice in a row fires no
-                // change event otherwise, so a failed send could not be retried
-                // with the same image.
+                // Reset first, so picking the same file again after a failure
+                // still fires a change.
+                e.target.value = "";
+                if (file) void attach(file);
+              }}
+            />
+            <input
+              ref={docInputRef}
+              type="file"
+              accept={acceptDocumentsFor("message-attachments")}
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
                 e.target.value = "";
                 if (file) void attach(file);
               }}
             />
             <button
-              onClick={() => fileInputRef.current?.click()}
+              onClick={() => setAttachMenu(true)}
               disabled={sending}
-              aria-label="Attach a photo"
+              aria-label="Attach a photo or document"
               className="tap w-9 h-9 rounded-full flex items-center justify-center text-charcoal-soft shrink-0 hover:bg-cream-soft disabled:opacity-40"
             >
               <Paperclip size={16} />
@@ -1213,8 +1311,6 @@ export const ThreadView: React.FC<{
           </>
         )}
         {recorder.recording ? (
-          // Replaces the text field while recording, so the elapsed count and
-          // the cancel hint occupy the space the user is already looking at.
           <div
             className={`flex-1 flex items-center gap-2 rounded-full px-4 py-2.5 ${
               willCancel ? "bg-status-high-bg" : "bg-cream-soft"
@@ -1240,10 +1336,8 @@ export const ThreadView: React.FC<{
           />
         )}
 
-        {/* Same gate as the paperclip: thread_allows_attachments covers
-            voice_note_seconds at both server doors, so one check governs both.
-            Shown only when the draft is empty — a typed message wants Send,
-            and putting the two side by side makes the primary action ambiguous. */}
+        {/* Same gate as the paperclip. Shown only when the draft is empty, so
+            Send stays the one primary action while typing. */}
         {canAttach && recorder.supported && !draft.trim() && (
           <button
             onPointerDown={(e) => void onRecordDown(e)}
@@ -1270,29 +1364,22 @@ export const ThreadView: React.FC<{
           <Send size={16} />
         </button>
       </div>
+      </div>
+      )}
       </>
       )}
 
       {safetyApplies && authUserId && (
         <>
-          <ConversationMenu
-            open={menuOpen}
-            onClose={() => setMenuOpen(false)}
+          <BlockSheet
+            open={blockOpen}
+            onClose={() => setBlockOpen(false)}
             personName={thread.participantName}
             iBlocked={block.iBlocked}
             busy={safetyBusy}
             error={safetyError}
             onBlock={() => void doBlock()}
             onUnblock={() => void doUnblock()}
-            onReport={(() => {
-              const theirs = [...messages].reverse().find((m) => m.senderId === thread.participantId);
-              return theirs
-                ? () => {
-                    setMenuOpen(false);
-                    setReportFor(theirs);
-                  }
-                : null;
-            })()}
           />
           <ReportSheet
             key={reportFor?.id ?? "none"}
@@ -1325,127 +1412,72 @@ export const ThreadView: React.FC<{
         />
       )}
 
-      {/* A sheet rather than a floating menu, matching every other choice in
-          this app. Only the actions that exist are listed: forward, star, pin
-          and delete are separate tasks, and stubbing them here as disabled
-          rows would advertise features that do nothing. */}
-      <BottomSheet open={!!actionsFor} onClose={() => setActionsFor(null)} title="Message">
-        <div className="space-y-1 animate-fade-slide-up">
+      <BottomSheet open={attachMenu} onClose={() => setAttachMenu(false)} title="Send">
+        <div className="flex flex-col animate-fade-slide-up">
           <button
+            type="button"
             onClick={() => {
-              if (actionsFor) setReplyTo(actionsFor);
-              setActionsFor(null);
+              setAttachMenu(false);
+              fileInputRef.current?.click();
             }}
-            className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
+            className="tap w-full flex items-center gap-3 px-1 min-h-[52px] text-left"
           >
-            <CornerUpLeft size={17} className="text-charcoal-soft shrink-0" />
-            <span className="text-sm font-medium text-charcoal">Reply</span>
+            <ImageIcon size={18} className="text-charcoal-soft shrink-0" />
+            <span className="text-sm font-semibold text-charcoal">Photo</span>
           </button>
-          {/* Only for a message with words. Copying an image or a voice note
-              would put an empty string on the clipboard and look like it
-              worked. */}
-          {actionsFor?.text?.trim() && (
-            <button
-              onClick={() => void copyMessage(actionsFor)}
-              className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
-            >
-              <Copy size={17} className="text-charcoal-soft shrink-0" />
-              <span className="text-sm font-medium text-charcoal">Copy</span>
-            </button>
-          )}
-          {/* Same text-present condition as Copy. Attachments and voice notes
-              are not forwardable yet: the copy would point at the original
-              object path, which the destination thread's participants have no
-              Storage grant to read. */}
-          {actionsFor?.text?.trim() && (
-            <button
-              onClick={() => {
-                // The action sheet closes first — two BottomSheets open at
-                // once would stack overlays and fight over the backdrop.
-                setForwarding(actionsFor);
-                setActionsFor(null);
-              }}
-              className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
-            >
-              <Forward size={17} className="text-charcoal-soft shrink-0" />
-              <span className="text-sm font-medium text-charcoal">Forward</span>
-            </button>
-          )}
-          {/* Star works on any message, unlike Copy and Forward — there is
-              nothing text-specific about keeping a voice note for later. */}
           <button
+            type="button"
             onClick={() => {
-              if (actionsFor) void toggleStar(actionsFor);
-              setActionsFor(null);
+              setAttachMenu(false);
+              docInputRef.current?.click();
             }}
-            className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
+            className="tap w-full flex items-start gap-3 px-1 py-3 min-h-[52px] text-left"
           >
-            <Star
-              size={17}
-              className={`shrink-0 ${
-                actionsFor && starred.has(actionsFor.id)
-                  ? "text-primary-dark fill-current"
-                  : "text-charcoal-soft"
-              }`}
-            />
-            <span className="text-sm font-medium text-charcoal">
-              {actionsFor && starred.has(actionsFor.id) ? "Unstar" : "Star"}
+            <FileText size={18} className="text-charcoal-soft shrink-0 mt-0.5" />
+            <span>
+              <span className="block text-sm font-semibold text-charcoal">Document</span>
+              <span className="block text-xs text-charcoal-soft">PDF, Word, Excel, PowerPoint, text or CSV, up to 25 MB</span>
             </span>
-          </button>
-          {/* One entry that reads the current state rather than two that both
-              always show: pinning the already-pinned message is a no-op worth
-              not offering. */}
-          <button
-            onClick={() => {
-              if (!actionsFor) return;
-              if (pin?.messageId === actionsFor.id) void unpinMessage();
-              else void pinMessage(actionsFor);
-              setActionsFor(null);
-            }}
-            className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
-          >
-            {pin && actionsFor && pin.messageId === actionsFor.id ? (
-              <PinOff size={17} className="text-charcoal-soft shrink-0" />
-            ) : (
-              <Pin size={17} className="text-charcoal-soft shrink-0" />
-            )}
-            <span className="text-sm font-medium text-charcoal">
-              {pin && actionsFor && pin.messageId === actionsFor.id ? "Unpin" : "Pin"}
-            </span>
-          </button>
-          {/* Report: only someone else's message, and not in an official
-              thread — there is nobody to report Centium to but Centium. */}
-          {safetyApplies && actionsFor && actionsFor.senderId !== authUserId && (
-            <button
-              onClick={() => {
-                setReportFor(actionsFor);
-                setActionsFor(null);
-              }}
-              className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
-            >
-              <Flag size={17} className="text-charcoal-soft shrink-0" />
-              <span className="text-sm font-medium text-charcoal">Report</span>
-            </button>
-          )}
-          {/* Last, and the only one that leads to a confirmation. It is styled
-              as a caution rather than a destruction: nothing is destroyed, and
-              colouring it like a delete would claim otherwise. */}
-          <button
-            onClick={() => {
-              setHiding(actionsFor);
-              setActionsFor(null);
-            }}
-            className="tap w-full flex items-center gap-3 px-1 py-3 text-left"
-          >
-            <EyeOff size={17} className="text-charcoal-soft shrink-0" />
-            <span className="text-sm font-medium text-charcoal">Delete for me</span>
           </button>
         </div>
       </BottomSheet>
 
-      {/* A SEPARATE SHEET, opened after the action sheet closes, matching how
-          Forward already works — two BottomSheets alive at once would stack
-          overlays and fight over the same dismiss. */}
+      {/* MESSAGE INFO, for your own messages. Delivered and read are stored
+          only where both people allow read receipts, so a dash can mean
+          "not yet" or "not shared" — the note says which is possible. */}
+      <BottomSheet open={!!infoFor} onClose={() => setInfoFor(null)} title="Message info">
+        {infoFor && (
+          <div className="flex flex-col animate-fade-slide-up">
+            <p className="text-xs text-charcoal-soft bg-cream-soft rounded-xl px-3 py-2 mb-2 truncate">
+              {describeMessage(infoFor)}
+            </p>
+            {(
+              [
+                ["Sent", infoFor.createdAt],
+                ["Delivered", infoFor.deliveredAt],
+                ["Read", infoFor.readAt],
+              ] as const
+            ).map(([label, at]) => (
+              <div key={label} className="flex items-center justify-between min-h-[48px] border-b border-charcoal/[0.06] last:border-b-0">
+                <span className="text-sm font-semibold text-charcoal">{label}</span>
+                <span className="text-sm text-charcoal-soft tabular-nums">
+                  {at
+                    ? new Date(at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
+                    : "—"}
+                </span>
+              </div>
+            ))}
+            {(!infoFor.deliveredAt || !infoFor.readAt) && (
+              <p className="text-xs text-charcoal-soft mt-2 leading-relaxed">
+                Delivered and read times aren't shown when either of you has read receipts off.
+              </p>
+            )}
+          </div>
+        )}
+      </BottomSheet>
+
+      {/* A SEPARATE SHEET, opened after the actions close — two overlays alive
+          at once would fight over the same dismiss. */}
       <BottomSheet open={!!hiding} onClose={() => setHiding(null)} title="Delete for me">
         <div className="animate-fade-slide-up">
           {hiding && (
@@ -1453,18 +1485,12 @@ export const ThreadView: React.FC<{
               {describeMessage(hiding)}
             </p>
           )}
-          {/* SAYS WHAT IT ACTUALLY DOES. "Delete" is the word people look for,
-              so it is the label — but the message is not deleted, and the one
-              sentence that matters is that the other person still has it. */}
+          {/* SAYS WHAT IT ACTUALLY DOES: the message is not deleted, and the
+              other person still has it. With nobody left to name, it says only
+              that hiding is not deleting. */}
           <p className="text-sm text-charcoal-soft mb-1">
             This removes the message from your view of the conversation.
           </p>
-          {/* THE FALSE VERSION OF THIS WAS A REAL BUG, not just clumsy copy.
-              "Deleted account will still see it" asserts that a person who no
-              longer exists retains a view of the conversation — reassurance
-              about someone who cannot be reassured. What stays true either way
-              is that hiding is not deleting, so that is what is said when
-              there is nobody left to name. */}
           <p className="text-xs text-charcoal-faint mb-4">
             {departed
               ? "The message isn't deleted — it stays part of the conversation. You won't be able to undo this here."
@@ -1486,6 +1512,7 @@ export const ThreadView: React.FC<{
       </BottomSheet>
 
       <ForwardSheet
+        key={forwarding?.id ?? "none"}
         open={!!forwarding}
         onClose={() => setForwarding(null)}
         message={forwarding}

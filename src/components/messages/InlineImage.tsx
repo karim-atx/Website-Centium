@@ -29,13 +29,22 @@ export const InlineImage: React.FC<{
   path: string;
   onOpen: (url: string) => void;
   className?: string;
-}> = ({ path, onOpen, className }) => {
+  /**
+   * The photo's pixel size as the sender's device measured it (Database
+   * 20261002030000), so the box is the right shape before a byte arrives.
+   * Absent on photos sent before it was recorded.
+   */
+  width?: number | null;
+  height?: number | null;
+}> = ({ path, onOpen, className, width: pxW, height: pxH }) => {
   const holder = useRef<HTMLButtonElement>(null);
   // Without IntersectionObserver there is nothing to wait for: sign at once.
   const [near, setNear] = useState(() => !("IntersectionObserver" in window));
   const [url, setUrl] = useState<string | null>(null);
   const [state, setState] = useState<"loading" | "loaded" | "failed" | "gone">("loading");
-  const [ratio, setRatio] = useState<number>(() => knownRatio(path) ?? 4 / 3);
+  const [ratio, setRatio] = useState<number>(
+    () => knownRatio(path) ?? (pxW && pxH ? pxW / pxH : 4 / 3)
+  );
   const retried = useRef(false);
 
   // Sign only once the photo is within a screen of the viewport.
