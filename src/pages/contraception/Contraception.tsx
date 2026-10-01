@@ -29,8 +29,9 @@ import { ChevronLeft, Info, Plus } from "lucide-react";
 // it could be answering about a different day: measured at 00:42 in UTC+3, the
 // pack grid put the "today" ring on day 10 with the pill just logged on day
 // 11, and a ring inserted that afternoon came back as "Put a new ring in — in
-// 1 day". It now asks `cycle_today(user)`, which resolves
-// cycle_settings.timezone — the zone this app writes on every load.
+// 1 day". It now asks `cycle_today(user)`, which resolves the user's zone
+// through user_timezone: profiles.timezone (the one zone this app writes,
+// task T), then cycle_settings.timezone, then UTC.
 //
 // So the reconciliation this screen used to do is GONE, along with the
 // nextEvent() that stood in for the function. Two places computing one

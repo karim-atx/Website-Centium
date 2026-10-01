@@ -53,40 +53,10 @@ function describe(error: PostgrestError): string {
 // Settings
 // ---------------------------------------------------------------------------
 
-/**
- * The IANA zone this browser thinks it is in, or null.
- *
- * NULL RATHER THAN A FALLBACK, because the column already has one. Defaulting
- * to 'UTC' here would overwrite a zone the user had deliberately set with a
- * guess, on any engine that does not answer — the column's own default covers
- * the never-answered case, and a write that cannot improve on it should not
- * happen.
- */
-export function browserTimezone(): string | null {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Every zone this engine knows, for the picker. Empty when it cannot say.
- *
- * Intl.supportedValuesOf is recent enough to be worth guarding; without it the
- * Settings row falls back to offering the device's own zone and nothing else,
- * which is still the answer almost everybody wants.
- */
-export function knownTimezones(): string[] {
-  try {
-    const supported = (
-      Intl as typeof Intl & { supportedValuesOf?: (k: string) => string[] }
-    ).supportedValuesOf;
-    return supported ? supported("timeZone") : [];
-  } catch {
-    return [];
-  }
-}
+// The time zone is no longer the cycle tracker's to write: see
+// services/timezone (profiles.timezone). cycle_settings.timezone is still
+// read here, and still honoured by the server after the profile's, until the
+// Database session retires it.
 
 export type SettingsResult =
   | { ok: true; settings: CycleSettings | null }

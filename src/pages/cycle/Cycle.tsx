@@ -11,7 +11,8 @@ import { CycleRing, PhaseBar } from "../../components/cycle/CycleRing";
 import { PHASE_COLOR } from "../../services/cycle/guidance";
 import { HormoneGraph } from "../../components/cycle/HormoneGraph";
 import { LogDaySheet } from "../../components/cycle/LogDaySheet";
-import { browserTimezone, deleteAllCycleData, knownTimezones } from "../../services/cycle";
+import { deleteAllCycleData } from "../../services/cycle";
+import { zoneLabel } from "../../services/timezone/logic";
 import {
   CONDITIONS,
   SETTINGS_LIMITS,
@@ -66,6 +67,7 @@ export default function Cycle() {
     reloadPregnancy,
     cycleOffered,
     setCycleTracking,
+    myTimezone,
   } = useApp();
 
   const [tab, setTab] = useState<Tab>("overview");
@@ -700,18 +702,20 @@ export default function Cycle() {
               </Card>
             )}
 
-          {/* --- time zone --- */}
-          <Card className="mb-3">
-            <p className="text-[13px] font-bold text-charcoal">{G.TIMEZONE_TITLE}</p>
-            <p className="mt-1 text-[11px] leading-relaxed text-charcoal-faint">
-              {G.TIMEZONE_BODY}
-            </p>
-            <TimezoneRow
-              value={settings.timezone}
-              disabled={busy}
-              onChange={(tz) => void saveSettings({ timezone: tz })}
-            />
-          </Card>
+          {/* --- time zone ---
+              Task T: the zone lives on the profile now and is set in general
+              Settings, for every account; this is the way there. */}
+          <button onClick={() => navigate("/app/settings#timezone")} className="tap w-full mb-3 text-left">
+            <Card className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-[13px] font-bold text-charcoal">{G.TIMEZONE_TITLE}</p>
+                <p className="mt-1 text-[11px] leading-relaxed text-charcoal-faint">
+                  {myTimezone?.timezone ? zoneLabel(myTimezone.timezone) : "Not set"} · Change it in Settings
+                </p>
+              </div>
+              <ChevronRight size={15} className="shrink-0 text-charcoal-faint" />
+            </Card>
+          </button>
 
           {/* --- contraception --- */}
           <button
@@ -849,60 +853,6 @@ function BackRow({ onBack }: { onBack: () => void }) {
     <button onClick={onBack} className="tap flex items-center gap-1 mb-2 text-[12px] font-semibold text-charcoal-soft">
       <ChevronLeft size={15} /> Back
     </button>
-  );
-}
-
-/**
- * The zone picker.
- *
- * A <select> OF THE ENGINE'S OWN LIST, not a hand-kept one, because the
- * database validates against pg_timezone_names and a stale hard-coded list
- * would offer names the write then refuses. Where the engine cannot enumerate
- * them, the only options are whatever is stored and the device's own — which
- * is what almost everybody wants anyway, and is reachable in one tap either
- * way.
- */
-function TimezoneRow({
-  value,
-  disabled,
-  onChange,
-}: {
-  value: string;
-  disabled?: boolean;
-  onChange: (tz: string) => void;
-}) {
-  const device = browserTimezone();
-  const all = knownTimezones();
-  const options = all.length > 0 ? all : [...new Set([value, device].filter(Boolean) as string[])];
-
-  return (
-    <>
-      <select
-        value={value}
-        disabled={disabled}
-        aria-label={G.TIMEZONE_TITLE}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full mt-2.5 rounded-xl bg-cream-soft px-3.5 py-2.5 text-[13px] text-charcoal disabled:opacity-50"
-      >
-        {/* A zone the engine does not list — set on another device, or since
-            renamed — would otherwise vanish from its own picker. */}
-        {!options.includes(value) && <option value={value}>{value}</option>}
-        {options.map((tz) => (
-          <option key={tz} value={tz}>
-            {tz.replace(/_/g, " ")}
-          </option>
-        ))}
-      </select>
-      {device && device !== value && (
-        <button
-          onClick={() => onChange(device)}
-          disabled={disabled}
-          className="tap mt-1.5 text-[11.5px] font-semibold text-primary-dark disabled:opacity-40"
-        >
-          {G.TIMEZONE_USE_DEVICE} ({device.replace(/_/g, " ")})
-        </button>
-      )}
-    </>
   );
 }
 

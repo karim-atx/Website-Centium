@@ -14,11 +14,12 @@ import { StorageUsageCard } from "../../components/profile/StorageUsageCard";
 import { TermsOfServiceSheet } from "../../components/profile/TermsOfServiceSheet";
 import { TwoFactorSheet } from "../../components/profile/TwoFactorSheet";
 import { ChangePasswordSheet } from "../../components/profile/ChangePasswordSheet";
+import { TimezoneSetting } from "../../components/settings/TimezoneSetting";
 import { useApp } from "../../context/AppContext";
 import { TRACKER_OFF_KEEPS_DATA } from "../../services/cycle/guidance";
 import { enablePush, permissionTriState, pushSupported } from "../../services/push";
 import { getMfaStatus } from "../../services/mfa";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
   Moon,
@@ -103,6 +104,31 @@ export default function Settings() {
     if (!r.ok) setCycleError(r.message ?? "Couldn't save that. Try again.");
   };
   const navigate = useNavigate();
+  // The cycle tracker's Settings tab links to /app/settings#timezone.
+  //
+  // TRIED A FEW TIMES, because two things move the page after this mounts:
+  // Layout scrolls to the top on every route change, and the cards above
+  // the time zone grow as their reads come back. So it scrolls instantly,
+  // then again until the card is actually in view, for up to a second.
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash !== "#timezone") return;
+    let tries = 0;
+    const id = window.setInterval(() => {
+      const el = document.getElementById("timezone");
+      tries += 1;
+      if (el) {
+        const r = el.getBoundingClientRect();
+        if (r.top >= 0 && r.bottom <= window.innerHeight) {
+          window.clearInterval(id);
+          return;
+        }
+        el.scrollIntoView({ block: "center" });
+      }
+      if (tries >= 10) window.clearInterval(id);
+    }, 100);
+    return () => window.clearInterval(id);
+  }, [hash]);
   // QA 12.0: "For all UIs put the ability to delete account which when
   // pressed will prompt you to make sure... Make it not that obvious or
   // big." Settings.tsx is already the one shared page for every account
@@ -492,6 +518,10 @@ export default function Settings() {
           </div>
         )}
       </Card>
+
+      {/* Task T: the profile's time zone, for every account. Moved here from
+          the cycle tracker's Settings tab, which links to #timezone. */}
+      <TimezoneSetting />
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         {t("General")}

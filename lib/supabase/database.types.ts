@@ -8065,6 +8065,8 @@ export type Database = {
           shares_presence: boolean
           storage_bytes_used: number
           storage_purged_at: string | null
+          timezone: string | null
+          timezone_chosen_at: string | null
           tracking_preferences: string[]
           updated_at: string
           weight_kg: number | null
@@ -8095,6 +8097,8 @@ export type Database = {
           shares_presence?: boolean
           storage_bytes_used?: number
           storage_purged_at?: string | null
+          timezone?: string | null
+          timezone_chosen_at?: string | null
           tracking_preferences?: string[]
           updated_at?: string
           weight_kg?: number | null
@@ -8125,6 +8129,8 @@ export type Database = {
           shares_presence?: boolean
           storage_bytes_used?: number
           storage_purged_at?: string | null
+          timezone?: string | null
+          timezone_chosen_at?: string | null
           tracking_preferences?: string[]
           updated_at?: string
           weight_kg?: number | null

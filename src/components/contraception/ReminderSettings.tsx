@@ -5,6 +5,7 @@ import { isPill, updatePlan, type ContraceptionPlan } from "../../services/contr
 import type { NotificationDetail } from "../../services/cycle/types";
 import { enablePush, permissionTriState, pushSupported } from "../../services/push";
 import * as G from "../../services/contraception/guidance";
+import { zoneLabel } from "../../services/timezone/logic";
 import { BellOff } from "lucide-react";
 
 // Reminders: what is sent, when, and how much it says.
@@ -36,7 +37,7 @@ import { BellOff } from "lucide-react";
 const DETAILS: readonly NotificationDetail[] = ["neutral", "detailed"];
 
 export const ReminderSettings: React.FC<{ plan: ContraceptionPlan }> = ({ plan }) => {
-  const { authUserId, cycleSettings, saveCycleSettingsAndReload, reloadContraception } = useApp();
+  const { authUserId, cycleSettings, saveCycleSettingsAndReload, reloadContraception, myTimezone } = useApp();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -173,11 +174,11 @@ export const ReminderSettings: React.FC<{ plan: ContraceptionPlan }> = ({ plan }
         {G.DETAIL_HELP[cycleSettings.notificationDetail]}
       </p>
 
-      {/* The zone is set and changed in the tracker's own Settings tab, which
-          is where it belongs — it governs every reminder, not just this plan's
-          — so this only says which one is in force. */}
+      {/* The zone is set in general Settings (task T) and governs every
+          reminder, so this only says which one is in force: the profile's,
+          then the cycle tracker's, the order the server resolves them in. */}
       <p className="mt-2 text-[10px] leading-[1.45] text-charcoal-faint">
-        {G.TIMEZONE_HELP} ({cycleSettings.timezone})
+        {G.TIMEZONE_HELP} ({zoneLabel(myTimezone?.timezone ?? cycleSettings.timezone)})
       </p>
 
       {error && <p className="mt-2 text-[11px] font-semibold text-status-high">{error}</p>}

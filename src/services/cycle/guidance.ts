@@ -337,10 +337,6 @@ export const TRACKER_OFF_BODY =
 export const TRACKER_OFF_CTA = "Turn on cycle tracking";
 
 export const TIMEZONE_TITLE = "Time zone";
-export const TIMEZONE_BODY =
-  "Reminders are sent at your local time in this zone. It follows this device unless " +
-  "you pick one yourself.";
-export const TIMEZONE_USE_DEVICE = "Use this device's zone";
 
 export const CONDITION_LABEL: Record<string, string> = {
   pcos: "PCOS",

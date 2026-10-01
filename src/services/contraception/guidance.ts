@@ -163,8 +163,7 @@ export const DETAIL_HELP: Record<"neutral" | "detailed", string> = {
   detailed: "Says what the reminder is for, so it's readable to anyone who sees your screen.",
 };
 
-export const TIMEZONE_HELP =
-  "Reminders use this time zone, so they don't shift while you're travelling.";
+export const TIMEZONE_HELP = "Reminders are sent at your local time in your time zone, set in Settings";
 
 // ---------------------------------------------------------------------------
 // Changing or stopping

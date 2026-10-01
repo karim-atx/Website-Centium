@@ -158,6 +158,14 @@ import {
   type FeatureMilestone,
 } from "../services/achievements";
 import { fetchMeditationSummary } from "../services/meditation";
+import {
+  browserTimezone,
+  chooseTimezone,
+  fetchProfileTimezone,
+  followDeviceTimezone,
+  writeDeviceTimezone,
+} from "../services/timezone";
+import { deviceZoneUpdate, type ProfileTimezone } from "../services/timezone/logic";
 import type { MeditationSummary } from "../services/meditation/logic";
 import {
   IMPORT_MARKER,
@@ -246,7 +254,6 @@ import {
   fetchClientPregnancy,
   getCycleLogs,
   getCyclePrediction,
-  browserTimezone,
   getCycleSettings,
   saveCycleSettings,
   type CycleDayLog,
@@ -1056,6 +1063,15 @@ interface AppState {
   meditationSummary: MeditationSummary | null;
   /** Re-reads it, after MeditationSheet saves a session. */
   refreshMeditationSummary: () => Promise<void>;
+  /**
+   * Task T: profiles.timezone and whether it was picked by hand, or null
+   * before the first read. The one zone the app writes.
+   */
+  myTimezone: ProfileTimezone | null;
+  /** A zone picked in Settings: stops the device overwriting it. */
+  pickTimezone: (zone: string) => Promise<{ ok: boolean; message?: string }>;
+  /** "Use this device's time zone": the device's zone, following it again. */
+  followDeviceZone: () => Promise<{ ok: boolean; message?: string }>;
   /** The tier ladder behind the pips, read from point_tiers rather than hardcoded. */
   pointTiers: PointTier[];
   achievementsLoading: boolean;
@@ -5068,8 +5084,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // tracker on from Settings — sex decides the DEFAULT, never the
   // availability.
   //
-  // The browser's zone goes in with the first write rather than being left at
-  // the column's 'UTC' default, so the reminder queue is right from the start.
+  // NO ZONE IS WRITTEN HERE ANY MORE (task T): the profile holds it, below.
   const seededCycleFor = useRef<string | null>(null);
   useEffect(() => {
     if (!profileReady || !authUserId || !cycleSettingsLoaded) return;
@@ -5077,42 +5092,72 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (user.sex !== "female" && user.sex !== "other") return;
     if (seededCycleFor.current === authUserId) return;
     seededCycleFor.current = authUserId;
-    const zone = browserTimezone();
-    void saveCycleSettings(authUserId, {
-      trackerEnabled: true,
-      ...(zone ? { timezone: zone } : {}),
-    }).then((r) => {
+    void saveCycleSettings(authUserId, { trackerEnabled: true }).then((r) => {
       if (r.ok) readCycle();
       // A failed write leaves the guard set, so this does not retry in a loop
       // against a database that is refusing it; the next session tries again.
     });
   }, [authUserId, profileReady, cycleSettingsLoaded, cycleSettings, user.sex, readCycle]);
 
-  // THE ZONE IS CORRECTED ONCE PER LOAD, QUIETLY, because it is not a
-  // preference — it is where the phone is, and the reminder queue schedules
-  // from it (queue_contraception_reminders computes timezone(tz, now())).
-  // Somebody who set the tracker up in Amsterdam and opens the app in Beirut
-  // should not get their pill reminder at the wrong hour, and should not have
-  // to be told about it either.
+  // --- the time zone (task T) ------------------------------------------------
   //
-  // THE GUARD IS SET ON THE FIRST LOOK, NOT ON THE FIRST WRITE, and that
-  // distinction is the whole correctness of this effect. Setting it only when
-  // the zones differed left the effect armed for the rest of the session, so
-  // the next mismatch it saw was the user's OWN choice in Settings — picking
-  // Tokyo in Beirut saved Tokyo, reloaded, and was overwritten back within the
-  // second. Looking once means a deliberate pick survives, which is the
-  // difference between a setting and a display.
+  // profiles.timezone is the ONE zone the app writes, for every signed-in
+  // account, cycle tracker or not. The server reads it first for every
+  // "today" it computes (meditation, the four auto streaks, cycle and pack
+  // days), then cycle_settings.timezone, then UTC.
+  //
+  // FOLLOWS THE DEVICE UNTIL SOMEBODY PICKS ONE. While
+  // profiles.timezone_chosen_at is null the device's zone is written when it
+  // is missing or has changed, quietly, once per load and account. Once the
+  // user picks a zone in Settings, chosen_at is set and the device never
+  // overwrites it (checked again inside the write itself, so a pick made on
+  // another device meanwhile still wins). "Use this device's time zone"
+  // clears chosen_at and resumes following.
+  //
+  // The cycle tracker's own per-load sync of cycle_settings.timezone is gone:
+  // the profile wins whenever both are set, and the column is being retired.
+  const [profileTimezone, setProfileTimezone] = useState<{ userId: string; value: ProfileTimezone } | null>(null);
   const syncedZoneFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!authUserId || !cycleSettings) return;
+    if (!profileReady || !authUserId) return;
     if (syncedZoneFor.current === authUserId) return;
     syncedZoneFor.current = authUserId;
-    const zone = browserTimezone();
-    if (!zone || cycleSettings.timezone === zone) return;
-    void saveCycleSettings(authUserId, { timezone: zone }).then((r) => {
-      if (r.ok) readCycle();
-    });
-  }, [authUserId, cycleSettings, readCycle]);
+    const userId = authUserId;
+    void (async () => {
+      const stored = await fetchProfileTimezone(userId);
+      if (!stored) return;
+      const update = deviceZoneUpdate(stored, browserTimezone());
+      if (update && (await writeDeviceTimezone(userId, update)).ok) {
+        const fresh = await fetchProfileTimezone(userId);
+        setProfileTimezone({ userId, value: fresh ?? stored });
+        // Everything already read was counted in the OLD zone (or UTC): the
+        // meditation summary's "today" and streak move with it, so re-read.
+        void refreshMeditationSummary();
+        return;
+      }
+      setProfileTimezone({ userId, value: stored });
+    })();
+  }, [authUserId, profileReady, refreshMeditationSummary]);
+  const myTimezone = profileTimezone && profileTimezone.userId === authUserId ? profileTimezone.value : null;
+
+  const reloadProfileTimezone = async (userId: string) => {
+    const fresh = await fetchProfileTimezone(userId);
+    if (fresh) setProfileTimezone({ userId, value: fresh });
+  };
+  const pickTimezone = async (zone: string) => {
+    if (!authUserId) return { ok: false, message: "You need to be signed in." };
+    const r = await chooseTimezone(authUserId, zone);
+    if (r.ok) await reloadProfileTimezone(authUserId);
+    void refreshMeditationSummary();
+    return r;
+  };
+  const followDeviceZone = async () => {
+    if (!authUserId) return { ok: false, message: "You need to be signed in." };
+    const r = await followDeviceTimezone(authUserId, browserTimezone());
+    if (r.ok) await reloadProfileTimezone(authUserId);
+    void refreshMeditationSummary();
+    return r;
+  };
 
   const saveCycleSettingsAndReload = async (patch: Partial<CycleSettings>) => {
     if (!authUserId) return { ok: false, message: "You need to be signed in." };
@@ -6209,6 +6254,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       pointsSummary,
       meditationSummary,
       refreshMeditationSummary,
+      myTimezone,
+      pickTimezone,
+      followDeviceZone,
       pointTiers,
       achievementsLoading,
       achievementsError,
@@ -6382,6 +6430,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       pointsSummary,
       meditationSummary,
       refreshMeditationSummary,
+      myTimezone,
       pointTiers,
       achievementsLoading,
       achievementsError,

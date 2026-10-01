@@ -44,8 +44,8 @@ export async function logMeditationSession(input: MeditationSessionInput): Promi
  * null here only ever means the read failed.
  *
  * "This week" is the CALENDAR week (Monday to today) in the user's zone and
- * resets on Monday. The zone is cycle_settings.timezone; an account with no
- * cycle settings is counted in UTC (a known schema limitation).
+ * resets on Monday. The zone is the profile's (profiles.timezone, written by
+ * the app for every account, task T), then the cycle tracker's, then UTC.
  */
 export async function fetchMeditationSummary(): Promise<MeditationSummary | null> {
   try {
