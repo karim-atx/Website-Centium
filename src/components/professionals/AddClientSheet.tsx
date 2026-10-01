@@ -8,6 +8,9 @@ import { capLabel, effectiveTierLabel } from "../../services/subscription-tiers"
 import { planLabel } from "../../services/subscription-tiers/pricing";
 import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { Check, Copy, UserPlus } from "lucide-react";
+import { useMyProfessionalPlan } from "../../hooks/useMyProfessionalPlan";
+import { freePeriodBlocksConnecting } from "../../services/subscription-tiers/freePeriodCopy";
+import { FreePeriodEnded, FreePeriodNotice } from "./FreePeriodNotice";
 
 // Invite-a-client. This used to collect the client's name, prefix, age, sex,
 // height and weight, and stash them on a locally-generated code.
@@ -35,6 +38,8 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
   // have refused a client the database was ready to accept.
   const { effective } = useEffectiveProfessionalTier();
   const tier = effective?.tier;
+  // Task G: the Free plan's month for connecting new clients.
+  const { plan } = useMyProfessionalPlan();
   /**
    * The tier whose cap has been reached, or null — one value rather than a
    * boolean plus a separately-nullable tier, so the panel below cannot render
@@ -94,7 +99,20 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
       }}
       title="Add Client"
     >
-      {capReached ? (
+      {/* Task G: once the free month is over a code could not be redeemed
+          (ATX49), so the sheet stops here instead of issuing one. Before the
+          cap panel: an upgrade solves the cap too, and "disconnect a client to
+          free a place" would not help after the month. */}
+      {freePeriodBlocksConnecting(plan) ? (
+        <div className="animate-fade-slide-up py-2">
+          <FreePeriodEnded
+            onContact={() => {
+              reset();
+              onClose();
+            }}
+          />
+        </div>
+      ) : capReached ? (
         <div className="text-center animate-fade-slide-up py-4">
           <p className="text-sm font-bold text-charcoal mb-1.5">
             You've reached the client limit on your{" "}
@@ -133,6 +151,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
             Generate a code and share it with your client. They enter it when signing up as a Client
             of Professional, and their own profile details come across with them.
           </p>
+          <FreePeriodNotice plan={plan} className="justify-center mb-4" />
           {error && (
             <p className="text-xs font-semibold text-status-high text-center mb-3">{error}</p>
           )}

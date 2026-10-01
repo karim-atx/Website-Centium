@@ -13631,6 +13631,18 @@ export type Database = {
           thread_id: string
         }[]
       }
+      my_professional_plan: {
+        Args: never
+        Returns: {
+          free_period_ended: boolean
+          free_period_ends_at: string
+          max_clients: number
+          may_connect_clients: boolean
+          source: Database["public"]["Enums"]["professional_plan_source"]
+          tier_id: string
+          tier_name: string
+        }[]
+      }
       my_points_summary: {
         Args: never
         Returns: {

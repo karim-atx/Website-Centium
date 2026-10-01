@@ -1,6 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import type { PostgrestError } from "@supabase/supabase-js";
 import type { Enums, Tables } from "../../../lib/supabase/database.types";
+import { NOT_ACCEPTING_CLIENTS } from "../subscription-tiers/freePeriodCopy";
 
 // Client-code and referral-code redemption, against the real RPCs.
 //
@@ -137,6 +138,12 @@ export async function previewClientCode(code: string): Promise<PreviewResult<Cli
 export async function redeemClientCode(code: string): Promise<RedeemResult> {
   try {
     const { data, error } = await supabase.rpc("redeem_client_code", { p_code: code.trim() });
+    // Task G: ATX49 is the professional's free month being over. The client
+    // is told only that they are not taking new clients, never why: their
+    // plan is their own business. A "failed" outcome rather than an "error",
+    // like the full-roster refusal, because the code is valid and stays
+    // unredeemed for when the professional's plan changes.
+    if (error?.code === "ATX49") return { status: "failed", message: NOT_ACCEPTING_CLIENTS };
     if (error) return { status: "error", message: describeRedemptionError(error) };
     const result = data as unknown as {
       success: boolean | null;

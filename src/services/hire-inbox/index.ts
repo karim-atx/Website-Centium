@@ -51,6 +51,9 @@ export type HireInboxResult =
 export type AcceptResult =
   | { status: "ok" }
   | { status: "tier_limit_reached" }
+  /** Task G: the Free plan's month for connecting is over. The request is
+   *  left pending by the server, so it can be accepted after an upgrade. */
+  | { status: "free_period_ended" }
   | { status: "already_resolved" }
   | { status: "not_found" }
   | { status: "permission_denied" }
@@ -87,6 +90,9 @@ const CODE = {
   /** Tier cap. Raised by professional_clients_enforce_tier_cap, caught by
    *  accept_client_request and re-raised without the raw usage counts. */
   TIER_LIMIT: "ATX01",
+  /** The Free plan's month for connecting new clients is over
+   *  (20261005000000). Not the cap: ATX01 is "too many at once". */
+  FREE_PERIOD_ENDED: "ATX49",
   /** No row with that id. */
   NOT_FOUND: "ATX08",
   /** The caller is not the professional named on the request. */
@@ -193,6 +199,7 @@ export async function acceptHireRequest(requestId: string): Promise<AcceptResult
     });
     if (!error) return { status: "ok" };
     if (error.code === CODE.TIER_LIMIT) return { status: "tier_limit_reached" };
+    if (error.code === CODE.FREE_PERIOD_ENDED) return { status: "free_period_ended" };
     if (error.code === CODE.ALREADY_RESOLVED) return { status: "already_resolved" };
     if (error.code === CODE.NOT_FOUND) return { status: "not_found" };
     if (error.code === CODE.NOT_ENTITLED) return { status: "permission_denied" };

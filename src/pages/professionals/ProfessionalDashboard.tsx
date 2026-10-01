@@ -14,6 +14,8 @@ import { useEffectiveProfessionalTier } from "../../hooks/useEffectiveProfession
 import { effectiveTierLabel } from "../../services/subscription-tiers";
 import { UPGRADE_ACTION_LABEL, upgradeMailto } from "../../services/subscription-tiers/upgrade";
 import { ClientDetailSheet } from "../../components/professionals/ClientDetailSheet";
+import { FreePeriodEnded, FreePeriodNotice } from "../../components/professionals/FreePeriodNotice";
+import { useMyProfessionalPlan } from "../../hooks/useMyProfessionalPlan";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { ChevronRight, Plus, Search, HeartPulse, TrendingDown, TrendingUp, Inbox, Check, X, HeartHandshake } from "lucide-react";
 import { PERSON_ICON } from "../../utils/icons";
@@ -75,6 +77,14 @@ export default function ProfessionalDashboard() {
   // The effective plan, for the reason AddClientSheet gives: a seated
   // professional's cap comes from their business, not from a row they own.
   const { effective: myTier } = useEffectiveProfessionalTier();
+  // Task G: the Free plan's month. Shared with AddClientSheet through the
+  // same hook, and re-read when an accept is refused with ATX49.
+  const { plan, refresh: refreshPlan } = useMyProfessionalPlan();
+  /**
+   * An accept was refused because the free month is over (ATX49). Its own
+   * flag, like atCap, because it renders its own prompt rather than a line.
+   */
+  const [freeEnded, setFreeEnded] = useState(false);
 
   const loadInbox = useCallback(async () => {
     // Returns rather than clearing, so there is no synchronous setState on the
@@ -114,6 +124,7 @@ export default function ProfessionalDashboard() {
     if (answering) return;
     setAnswering(id);
     setInboxError(null);
+    setFreeEnded(false);
     const res = action === "accept" ? await acceptHireRequest(id) : await rejectHireRequest(id);
     setAnswering(null);
 
@@ -140,6 +151,15 @@ export default function ProfessionalDashboard() {
       // plainly rather than swallowed, because reaching it means the list is
       // showing something it should not.
       setInboxError("You don't have permission to answer that request.");
+      return;
+    }
+    if (res.status === "free_period_ended") {
+      // Task G (ATX49). The request stays PENDING on the server, so the row
+      // stays here too: it can be accepted later without the client asking
+      // again. The plan is re-read so the dashboard notice agrees.
+      setFreeEnded(true);
+      setAtCap(false);
+      refreshPlan();
       return;
     }
     if (res.status === "tier_limit_reached") {
@@ -252,6 +272,11 @@ export default function ProfessionalDashboard() {
       />
 
       <TwoFactorNudge />
+
+      {/* Task G: the Free plan's month for connecting new clients, counted
+          down, or the friendly stop once it is over. Existing clients below
+          are untouched either way. */}
+      <FreePeriodNotice plan={plan} className="mb-4" />
 
       {searchOpen && (
         <input
@@ -410,7 +435,13 @@ export default function ProfessionalDashboard() {
         {visibleClients.length === 0 && (
           <Card className="text-center py-8">
             <p className="text-sm text-charcoal-faint">
-              {professionalClients.length === 0 ? "No clients yet — add your first one." : "No clients match your search."}
+              {/* Task G: no "add your first one" once the free month is over,
+                  when adding is exactly what the notice above says they can't. */}
+              {professionalClients.length > 0
+                ? "No clients match your search."
+                : plan && !plan.mayConnectClients
+                  ? "No clients yet."
+                  : "No clients yet — add your first one."}
             </p>
           </Card>
         )}
@@ -426,6 +457,11 @@ export default function ProfessionalDashboard() {
 
       <BottomSheet open={inboxOpen} onClose={() => setInboxOpen(false)} title="New client requests">
         <div className="space-y-3 animate-fade-slide-up">
+          {/* Task G: accepting is connecting, so the month is counted down
+              here too; once it is over the stop is shown before an accept is
+              even tried, and if one is refused anyway (ATX49). The requests
+              stay, still pending. */}
+          {freeEnded ? <FreePeriodEnded /> : <FreePeriodNotice plan={plan} />}
           {requests.length === 0 && !inboxError && (
             <p className="text-sm text-charcoal-faint text-center py-6">
               {/* "after paying" is gone: nothing here involves a payment. A
