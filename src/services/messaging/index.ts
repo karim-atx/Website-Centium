@@ -423,6 +423,9 @@ export async function fetchThreads(): Promise<ThreadsResult> {
           attachmentPurgedAt: null,
           redactedAt: r.last_message_redacted ? "redacted" : null,
           voiceNoteSeconds: r.last_message_is_voice_note ? 1 : null,
+          // Unsent for everyone (Database 20261002140000): said, not inferred
+          // from everything else being empty.
+          deletedAt: r.last_message_deleted ? "deleted" : null,
         })
       : null,
     lastMessageAt: r.last_message_at,

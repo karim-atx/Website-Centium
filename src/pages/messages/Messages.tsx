@@ -74,18 +74,13 @@ export default function Messages() {
     if (result.ok) {
       setThreads(result.threads);
       setError(null);
-      const lastIds = result.threads.filter((t) => t.lastMessageId).map((t) => t.lastMessageId!);
-      void fetchLastMessageState(lastIds).then(({ readAt, deleted, delivered: reached }) => {
+      // Only your own latest messages carry a tick.
+      const mineLast = result.threads
+        .filter((t) => t.lastMessageId && t.lastMessageSenderId === authUserId)
+        .map((t) => t.lastMessageId!);
+      void fetchLastMessageState(mineLast).then(({ readAt, delivered: reached }) => {
         setReadState(readAt);
         setDelivered(reached);
-        if (deleted.size === 0) return;
-        setThreads((prev) =>
-          prev.map((t) =>
-            t.lastMessageId && deleted.has(t.lastMessageId)
-              ? { ...t, lastMessagePreview: "This message was deleted" }
-              : t
-          )
-        );
       });
       if (pushId && !deepLinkConsumed.current) {
         deepLinkConsumed.current = true;

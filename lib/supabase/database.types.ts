@@ -5149,6 +5149,7 @@ export type Database = {
         Row: {
           attempts: number
           body: string
+          chat_group: string | null
           delivered_at: string | null
           id: string
           last_attempt_at: string | null
@@ -5156,11 +5157,13 @@ export type Database = {
           message_id: string
           queued_at: string
           recipient_id: string
+          thread_id: string
           title: string
         }
         Insert: {
           attempts?: number
           body: string
+          chat_group?: string | null
           delivered_at?: string | null
           id?: string
           last_attempt_at?: string | null
@@ -5168,11 +5171,13 @@ export type Database = {
           message_id: string
           queued_at?: string
           recipient_id: string
+          thread_id: string
           title: string
         }
         Update: {
           attempts?: number
           body?: string
+          chat_group?: string | null
           delivered_at?: string | null
           id?: string
           last_attempt_at?: string | null
@@ -5180,6 +5185,7 @@ export type Database = {
           message_id?: string
           queued_at?: string
           recipient_id?: string
+          thread_id?: string
           title?: string
         }
         Relationships: [
@@ -5238,6 +5244,27 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "thread_participant_summary"
             referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "message_push_sends_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "admin_account_threads"
+            referencedColumns: ["thread_id"]
+          },
+          {
+            foreignKeyName: "message_push_sends_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "message_threads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "message_push_sends_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["thread_id"]
           },
         ]
       }
@@ -13298,6 +13325,7 @@ export type Database = {
         Returns: {
           kind: Database["public"]["Enums"]["thread_kind"]
           last_message_at: string
+          last_message_deleted: boolean
           last_message_has_attachment: boolean
           last_message_id: string
           last_message_is_voice_note: boolean
