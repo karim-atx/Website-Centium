@@ -3448,6 +3448,7 @@ export type Database = {
           pill_reminder: boolean
           shown_for_any_sex: boolean
           timezone: string
+          tracker_chosen_at: string | null
           tracker_enabled: boolean
           typical_cycle_length: number
           typical_period_length: number
@@ -3462,6 +3463,7 @@ export type Database = {
           pill_reminder?: boolean
           shown_for_any_sex?: boolean
           timezone?: string
+          tracker_chosen_at?: string | null
           tracker_enabled?: boolean
           typical_cycle_length?: number
           typical_period_length?: number
@@ -3476,6 +3478,7 @@ export type Database = {
           pill_reminder?: boolean
           shown_for_any_sex?: boolean
           timezone?: string
+          tracker_chosen_at?: string | null
           tracker_enabled?: boolean
           typical_cycle_length?: number
           typical_period_length?: number

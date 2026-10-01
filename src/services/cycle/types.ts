@@ -121,6 +121,15 @@ export const LOG_LIMITS = {
 export interface CycleSettings {
   trackerEnabled: boolean;
   /**
+   * Task R: when the owner last set the tracker switch themselves (Settings,
+   * the Cycle page, the "Turn period tracking back on?" question, or pausing
+   * it after a loss). Null means nobody chose trackerEnabled: it is the
+   * column default or the app's own seed, so for a female or other profile an
+   * off here is not a decision yet and the question is asked. Only whether it
+   * is null matters, never the value.
+   */
+  trackerChosenAt: string | null;
+  /**
    * MO11: this profile turned the tracker on while its sex is male, so the
    * cycle section is offered to it whatever its sex says. Female and other
    * profiles are offered it through sex and never need this set.

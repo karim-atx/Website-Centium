@@ -522,6 +522,14 @@ interface AppState {
    * user's own off switch always wins, whatever their sex.
    */
   setCycleTracking: (on: boolean) => Promise<{ ok: boolean; message?: string }>;
+  /**
+   * Task R: a female or other profile whose tracker is off without anybody
+   * having chosen that (tracker_chosen_at null). Shows the one-time
+   * "Turn period tracking back on?" question.
+   */
+  trackerQuestionDue: boolean;
+  /** Answers it: either way records the choice; true also turns tracking on. */
+  answerTrackerQuestion: (turnOn: boolean) => Promise<{ ok: boolean; message?: string }>;
 
   // V4: estimated 1RM per exercise name (barbell/dumbbell/weighted-bodyweight
   // only) — auto-updated from logged sets, editable from History/Metrics.
@@ -5092,10 +5100,34 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     () => (cycleOffered || !nutritionGoal.pregnancyKcal ? nutritionGoal : { ...nutritionGoal, pregnancyKcal: 0 }),
     [nutritionGoal, cycleOffered]
   );
+  // Task R: every switch the owner sets is recorded as their choice
+  // (tracker_chosen_at), so it is never asked about again.
   const setCycleTracking = (on: boolean) =>
     saveCycleSettingsAndReload(
-      on ? { trackerEnabled: true, ...(hasCycleFeatures ? {} : { shownForAnySex: true }) } : { trackerEnabled: false }
+      on
+        ? {
+            trackerEnabled: true,
+            trackerChosenAt: new Date().toISOString(),
+            ...(hasCycleFeatures ? {} : { shownForAnySex: true }),
+          }
+        : { trackerEnabled: false, trackerChosenAt: new Date().toISOString() }
     );
+  // TASK R: AN OFF NOBODY CHOSE IS ASKED ABOUT, NOT OBEYED AND NOT OVERRIDDEN.
+  // A row can hold tracker_enabled false without its owner ever setting the
+  // switch: the column defaults to false, and before MO11 the sex-change
+  // prompt wrote it. tracker_chosen_at is null for exactly those rows, so a
+  // female or other profile with one is asked once, without blocking
+  // anything, whether to turn it back on. Either answer is a choice and sets
+  // tracker_chosen_at; any set value (including the loss pause) means the
+  // question never shows. A male profile is never asked: his section stays
+  // opt-in only.
+  const trackerQuestionDue =
+    hasCycleFeatures && cycleSettings !== null && !cycleSettings.trackerEnabled && cycleSettings.trackerChosenAt === null;
+  const answerTrackerQuestion = (turnOn: boolean) =>
+    saveCycleSettingsAndReload({
+      trackerChosenAt: new Date().toISOString(),
+      ...(turnOn ? { trackerEnabled: true } : {}),
+    });
 
   // --- pregnancy -----------------------------------------------------------
   //
@@ -5972,6 +6004,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setActiveSession,
       cycleOffered,
       setCycleTracking,
+      trackerQuestionDue,
+      answerTrackerQuestion,
       bodyMapVariant: user.sex === "male" ? "male" : user.sex === "female" ? "female" : "androgynous",
       personalRecords,
       setPersonalRecord,

@@ -63,7 +63,12 @@ export const EndPregnancySheet: React.FC<{
       return;
     }
     if (outcome === "loss") {
-      const paused = await saveCycleSettingsAndReload({ trackerEnabled: false });
+      // Recorded as the owner's own choice (Task R), so the app never asks
+      // "Turn period tracking back on?" about this pause.
+      const paused = await saveCycleSettingsAndReload({
+        trackerEnabled: false,
+        trackerChosenAt: new Date().toISOString(),
+      });
       if (!paused.ok) {
         // The pregnancy HAS ended at this point, so this is not a failure to
         // report as one — it is one half of the change not landing. Say what

@@ -42,6 +42,7 @@ import {
 } from "../../services/health-metrics/series";
 import { dayLetter } from "../../utils/week";
 import { useApp } from "../../context/AppContext";
+import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
 import { getTestRecommendations } from "../../utils/biomarkerRecommendations";
 import { ChevronRight, Flame, Stethoscope, FileText, Moon } from "lucide-react";
 import clsx from "clsx";
@@ -605,6 +606,9 @@ export default function Health() {
           the tracker itself swaps its overview: a phase and a pregnancy are
           two answers to one question. It is shown whenever there is a
           pregnancy, even if the cycle tracker itself has been switched off. */}
+      {/* Task R: in the Cycle card's place while the one-time question is
+          due; once answered Yes, the card itself shows here. */}
+      <TrackerQuestion className="mb-[13px]" />
       {cycleOffered && (cycleSettings?.trackerEnabled || pregnancy) && (
         <button
           onClick={() => navigate("/app/cycle")}

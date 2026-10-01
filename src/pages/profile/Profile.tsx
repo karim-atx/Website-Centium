@@ -47,6 +47,7 @@ import {
   BellOff,
 } from "lucide-react";
 import { Toggle } from "../../components/ui/Toggle";
+import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
 
 const accountTypeLabel: Record<string, string> = {
   customer: "Customer",
@@ -449,6 +450,11 @@ export default function Profile() {
           </Card>
         </div>
       )}
+
+      {/* Task R: right under the sex card, because switching to female or
+          other is when a tracker somebody never chose to switch off is found
+          off. Also on Health, where the Cycle card would be. */}
+      <TrackerQuestion className="mb-6" />
 
       {/* Business memberships: invitations to answer, memberships to leave,
           and the box for redeeming a code handed over at a desk. Sits with
