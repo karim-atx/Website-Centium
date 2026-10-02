@@ -4819,20 +4819,29 @@ export type Database = {
         Row: {
           applies_to_sex: Database["public"]["Enums"]["sex"] | null
           marker_key: string
+          phase: string | null
           ref_high: number | null
           ref_low: number | null
+          source_key: string
+          source_note: string | null
         }
         Insert: {
           applies_to_sex?: Database["public"]["Enums"]["sex"] | null
           marker_key: string
+          phase?: string | null
           ref_high?: number | null
           ref_low?: number | null
+          source_key: string
+          source_note?: string | null
         }
         Update: {
           applies_to_sex?: Database["public"]["Enums"]["sex"] | null
           marker_key?: string
+          phase?: string | null
           ref_high?: number | null
           ref_low?: number | null
+          source_key?: string
+          source_note?: string | null
         }
         Relationships: [
           {

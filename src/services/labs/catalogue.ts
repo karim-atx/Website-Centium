@@ -1,5 +1,5 @@
 import { supabase } from "../../../lib/supabase/client";
-import type { CatalogueMarker, MarkerSex } from "./catalogueLogic";
+import { LAB_PHASES, type CatalogueMarker, type LabPhase, type MarkerSex } from "./catalogueLogic";
 
 // The standard lab marker list (Database 20261011000000): four publicly
 // readable tables, read once per page load and cached. No client writes.
@@ -14,7 +14,7 @@ async function load(): Promise<CatalogueMarker[] | null> {
       .order("sort_order"),
     supabase.from("lab_marker_aliases").select("alias, marker_key"),
     supabase.from("lab_marker_units").select("marker_key, unit, to_canonical_factor, to_canonical_offset"),
-    supabase.from("lab_marker_ranges").select("marker_key, applies_to_sex, ref_low, ref_high"),
+    supabase.from("lab_marker_ranges").select("marker_key, applies_to_sex, phase, ref_low, ref_high"),
   ]);
   if (markers.error || aliases.error || units.error || ranges.error || !markers.data) return null;
   return markers.data.map((m) => ({
@@ -38,6 +38,7 @@ async function load(): Promise<CatalogueMarker[] | null> {
       .filter((r) => r.marker_key === m.key)
       .map((r) => ({
         sex: (r.applies_to_sex === "male" || r.applies_to_sex === "female" ? r.applies_to_sex : null) as MarkerSex | null,
+        phase: (LAB_PHASES.some((p) => p.value === r.phase) ? r.phase : null) as LabPhase | null,
         low: r.ref_low === null ? null : Number(r.ref_low),
         high: r.ref_high === null ? null : Number(r.ref_high),
       })),

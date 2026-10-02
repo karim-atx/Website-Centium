@@ -104,12 +104,13 @@ export function parseRange(range: string | null | undefined): {
  * dash the seeded data used, so nothing about the rendering changes.
  *
  * Both bounds absent gives "—", which is exactly what recordBiomarkers has
- * always written for a marker with no known range.
+ * always written for a marker with no known range. A one-sided range reads
+ * "under 20" or "above 30", and a result is judged against that one bound.
  */
 export function formatRange(low: number | null, high: number | null): string {
   if (low !== null && high !== null) return `${low} – ${high}`;
-  if (high !== null) return `< ${high}`;
-  if (low !== null) return `> ${low}`;
+  if (high !== null) return `under ${high}`;
+  if (low !== null) return `above ${low}`;
   return "—";
 }
 

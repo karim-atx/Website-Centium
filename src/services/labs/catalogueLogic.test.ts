@@ -3,6 +3,7 @@ import { test } from "node:test";
 import {
   catalogueRange,
   convertUnit,
+  needsPhase,
   matchMarker,
   noStandardRange,
   prefillRange,
@@ -40,8 +41,8 @@ const creatinine: CatalogueMarker = {
     { unit: "umol/L", factor: 0.0113122, offset: 0 },
   ],
   ranges: [
-    { sex: "male", low: 0.74, high: 1.35 },
-    { sex: "female", low: 0.59, high: 1.04 },
+    { sex: "male", phase: null, low: 0.74, high: 1.35 },
+    { sex: "female", phase: null, low: 0.59, high: 1.04 },
   ],
 };
 const alt: CatalogueMarker = {
@@ -54,7 +55,7 @@ const alt: CatalogueMarker = {
     { unit: "U/L", factor: 1, offset: 0 },
     { unit: "IU/L", factor: 1, offset: 0 },
   ],
-  ranges: [{ sex: null, low: 7, high: 45 }],
+  ranges: [{ sex: null, phase: null, low: 7, high: 45 }],
 };
 const list = [hba1c, creatinine, alt];
 
@@ -102,4 +103,38 @@ test("'no standard range' for threshold markers always; for others once reviewed
 
 test("a marker with no range row gets none (the threshold markers)", () => {
   assert.equal(catalogueRange(hba1c, "female", "%"), null);
+});
+
+const fsh: CatalogueMarker = {
+  ...creatinine,
+  key: "fsh",
+  displayName: "FSH",
+  reviewed: true,
+  aliases: ["fsh"],
+  canonicalUnit: "IU/L",
+  units: [{ unit: "IU/L", factor: 1, offset: 0 }],
+  ranges: [
+    { sex: "female", phase: "follicular", low: 2, high: 9 },
+    { sex: "female", phase: "mid_cycle", low: 4, high: 22 },
+    { sex: "female", phase: "luteal", low: 2, high: 9 },
+    { sex: "female", phase: "postmenopausal", low: 30, high: null },
+    { sex: "male", phase: null, low: 1, high: 7 },
+  ],
+};
+const prolactin: CatalogueMarker = { ...alt, key: "prolactin", reviewed: true, ranges: [{ sex: null, phase: null, low: null, high: 20 }] };
+
+test("a woman's FSH needs the phase: nothing until it is chosen, then that phase's range", () => {
+  assert.equal(needsPhase(fsh, "female"), true);
+  assert.equal(needsPhase(fsh, "male"), false);
+  assert.equal(prefillRange(fsh, "female", "IU/L"), null);
+  assert.equal(noStandardRange(fsh, "female", "IU/L"), false);
+  assert.deepEqual(prefillRange(fsh, "female", "IU/L", "mid_cycle"), { low: 4, high: 22 });
+  assert.deepEqual(prefillRange(fsh, "female", "IU/L", "postmenopausal"), { low: 30, high: null });
+  assert.deepEqual(prefillRange(fsh, "male", "IU/L"), { low: 1, high: 7 });
+  // no sex on file: no phase rows and no everyone-row, so no range
+  assert.equal(prefillRange(fsh, null, "IU/L"), null);
+});
+
+test("one-sided ranges pre-fill with the one bound", () => {
+  assert.deepEqual(prefillRange(prolactin, "female", "U/L"), { low: null, high: 20 });
 });

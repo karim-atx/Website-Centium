@@ -18,9 +18,22 @@ export interface CatalogueUnit {
   offset: number;
 }
 
+/** The cycle phases a woman's LH, FSH and estradiol ranges are given for. */
+export type LabPhase = "follicular" | "mid_cycle" | "luteal" | "postmenopausal";
+
+export const LAB_PHASES: readonly { value: LabPhase; label: string }[] = [
+  { value: "follicular", label: "Follicular" },
+  { value: "mid_cycle", label: "Mid-cycle" },
+  { value: "luteal", label: "Luteal" },
+  { value: "postmenopausal", label: "Postmenopausal" },
+];
+
 export interface CatalogueRange {
   /** null = the same for everyone. */
   sex: MarkerSex | null;
+  /** Women's LH, FSH and estradiol only: the phase this range is for. */
+  phase: LabPhase | null;
+  /** Either bound may be absent: a range can be one-sided ("under 20"). */
   low: number | null;
   high: number | null;
 }
@@ -112,20 +125,29 @@ export function convertUnit(marker: CatalogueMarker, value: number, from: string
 export const tidy = (n: number) => Number(n.toPrecision(4));
 
 /**
+ * Whether this person's range for the marker depends on the cycle phase: a
+ * woman's LH, FSH or estradiol, whose ranges are given per phase
+ * (Database 20261013050000). The entry form asks for the phase first.
+ */
+export function needsPhase(marker: CatalogueMarker, sex: string | null | undefined): boolean {
+  return sex === "female" && marker.ranges.some((r) => r.sex === "female" && r.phase !== null);
+}
+
+/**
  * The range to PRE-FILL in the entry form, or null.
  *
- * ONLY FROM A REVIEWED ROW. Until a clinician has reviewed the list
- * (lab_markers.reviewed), nothing is pre-filled: the user enters the range
- * printed on their report, and low/normal/high is computed only from that.
- * When the flag flips to true in the database, pre-filling switches on with
- * no code change.
+ * ONLY FROM A REVIEWED ROW (lab_markers.reviewed, signed off in Database
+ * 20261013060000). An unreviewed marker pre-fills nothing: the user enters
+ * the range printed on their report. For a phase-dependent marker nothing is
+ * pre-filled until a phase is chosen.
  */
 export function prefillRange(
   marker: CatalogueMarker,
   sex: string | null | undefined,
-  unit: string
+  unit: string,
+  phase: LabPhase | null = null
 ): { low: number | null; high: number | null } | null {
-  return marker.reviewed ? catalogueRange(marker, sex, unit) : null;
+  return marker.reviewed ? catalogueRange(marker, sex, unit, phase) : null;
 }
 
 /**
@@ -134,9 +156,16 @@ export function prefillRange(
  * risk thresholds, not ranges); for others only once reviewed, when there is
  * no row for this person (e.g. LH, FSH, estradiol for women).
  */
-export function noStandardRange(marker: CatalogueMarker, sex: string | null | undefined, unit: string): boolean {
+export function noStandardRange(
+  marker: CatalogueMarker,
+  sex: string | null | undefined,
+  unit: string,
+  phase: LabPhase | null = null
+): boolean {
   if (marker.ranges.length === 0) return true;
-  return marker.reviewed && catalogueRange(marker, sex, unit) === null;
+  // Waiting for the phase is not "no range": the form asks for it instead.
+  if (needsPhase(marker, sex) && phase === null) return false;
+  return marker.reviewed && catalogueRange(marker, sex, unit, phase) === null;
 }
 
 /**
@@ -144,17 +173,26 @@ export function noStandardRange(marker: CatalogueMarker, sex: string | null | un
  *
  * Their own sex's row first, then a row that applies to everyone. NO ROW
  * MEANS NO INTERVAL, deliberately: the nine threshold markers (cholesterol,
- * LDL, HDL, triglycerides, eGFR, glucose, HbA1c, vitamin D, PSA) have none,
- * and neither have LH, FSH and estradiol for women (cycle-phase dependent).
- * A person with no sex on file, or "other", only gets an everyone-row.
+ * LDL, HDL, triglycerides, eGFR, glucose, HbA1c, vitamin D, PSA) have none.
+ * A woman's LH, FSH and estradiol are given per cycle phase: that phase's row,
+ * or nothing until the phase is known. A person with no sex on file, or
+ * "other", only gets an everyone-row. Either bound may be absent.
  */
 export function catalogueRange(
   marker: CatalogueMarker,
   sex: string | null | undefined,
-  unit: string
+  unit: string,
+  phase: LabPhase | null = null
 ): { low: number | null; high: number | null } | null {
-  const own = sex === "male" || sex === "female" ? marker.ranges.find((r) => r.sex === sex) : undefined;
-  const row = own ?? marker.ranges.find((r) => r.sex === null);
+  const own = needsPhase(marker, sex)
+    ? phase === null
+      ? undefined
+      : marker.ranges.find((r) => r.sex === "female" && r.phase === phase)
+    : sex === "male" || sex === "female"
+      ? marker.ranges.find((r) => r.sex === sex && r.phase === null)
+      : undefined;
+  if (needsPhase(marker, sex) && !own) return null;
+  const row = own ?? marker.ranges.find((r) => r.sex === null && r.phase === null);
   if (!row || (row.low === null && row.high === null)) return null;
   const conv = (v: number | null) => {
     if (v === null) return null;

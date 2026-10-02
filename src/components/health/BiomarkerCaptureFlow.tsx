@@ -1,3 +1,4 @@
+import type { LabPhase } from "../../services/labs/catalogueLogic";
 import React, { useEffect, useRef, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
@@ -42,7 +43,21 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
   open,
   onClose,
 }) => {
-  const { recordBiomarkers, user } = useApp();
+  const { recordBiomarkers, user, cycleSettings, cyclePrediction } = useApp();
+  // The cycle tracker's phase today, offered for a woman's LH, FSH or
+  // estradiol when the tracker is on. The panel is dated today, so today's
+  // phase is the one the sample was taken in. Hormonal contraception,
+  // pregnancy or too little data suggest nothing.
+  const suggestedPhase: LabPhase | null =
+    cycleSettings?.trackerEnabled && cyclePrediction
+      ? cyclePrediction.phase === "menstrual" || cyclePrediction.phase === "follicular"
+        ? "follicular"
+        : cyclePrediction.phase === "ovulatory"
+          ? "mid_cycle"
+          : cyclePrediction.phase === "luteal"
+            ? "luteal"
+            : null
+      : null;
   // The standard lab marker list (Database 20261011000000). Null until read,
   // or if it could not be: rows then fall back to free text ("Other").
   const [catalogue, setCatalogue] = useState<CatalogueMarker[] | null>(null);
@@ -262,6 +277,7 @@ export const BiomarkerCaptureFlow: React.FC<{ open: boolean; onClose: () => void
                   draft={m}
                   catalogue={catalogue}
                   sex={user.sex}
+                  suggestedPhase={suggestedPhase}
                   onChange={(patch) => setMarker(i, patch)}
                   onRemove={() => removeMarker(i)}
                 />

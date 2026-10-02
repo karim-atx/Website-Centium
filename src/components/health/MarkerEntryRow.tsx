@@ -1,12 +1,15 @@
 import React, { useState } from "react";
 import { Search, X } from "lucide-react";
 import {
+  LAB_PHASES,
+  needsPhase,
   noStandardRange,
   prefillRange,
   convertUnit,
   searchMarkers,
   tidy,
   type CatalogueMarker,
+  type LabPhase,
 } from "../../services/labs/catalogueLogic";
 
 import { asNumber, emptyMarker, numeric, type MarkerDraft } from "./markerDraft";
@@ -27,9 +30,11 @@ export const MarkerEntryRow: React.FC<{
   draft: MarkerDraft;
   catalogue: CatalogueMarker[] | null;
   sex: string | null | undefined;
+  /** The cycle tracker's phase today, when it is on: offered for a phase-dependent marker. */
+  suggestedPhase: LabPhase | null;
   onChange: (patch: Partial<MarkerDraft>) => void;
   onRemove: () => void;
-}> = ({ index, draft, catalogue, sex, onChange, onRemove }) => {
+}> = ({ index, draft, catalogue, sex, suggestedPhase, onChange, onRemove }) => {
   const [query, setQuery] = useState("");
   const marker = draft.markerKey ? (catalogue?.find((c) => c.key === draft.markerKey) ?? null) : null;
   const choosing = !draft.markerKey && !draft.other && !!catalogue;
@@ -37,7 +42,9 @@ export const MarkerEntryRow: React.FC<{
 
   const choose = (m: CatalogueMarker) => {
     const unit = m.canonicalUnit;
-    const range = prefillRange(m, sex, unit);
+    // A woman's LH, FSH or estradiol: start from the tracker's phase, if any.
+    const phase = needsPhase(m, sex) ? suggestedPhase : null;
+    const range = prefillRange(m, sex, unit, phase);
     onChange({
       markerKey: m.key,
       other: false,
@@ -46,12 +53,14 @@ export const MarkerEntryRow: React.FC<{
       low: fmt(range?.low ?? null),
       high: fmt(range?.high ?? null),
       rangeFrom: range ? "list" : null,
+      phase,
+      phaseSuggested: phase !== null,
     });
     setQuery("");
   };
 
   const chooseOther = () => {
-    onChange({ markerKey: null, other: true, name: query.trim(), unit: "", low: "", high: "", rangeFrom: null });
+    onChange({ markerKey: null, other: true, name: query.trim(), unit: "", low: "", high: "", rangeFrom: null, phase: null, phaseSuggested: false });
     setQuery("");
   };
 
@@ -61,7 +70,7 @@ export const MarkerEntryRow: React.FC<{
   const setUnit = (unit: string) => {
     if (!marker) return onChange({ unit });
     if (draft.rangeFrom === "list") {
-      const range = prefillRange(marker, sex, unit);
+      const range = prefillRange(marker, sex, unit, draft.phase);
       return onChange({ unit, low: fmt(range?.low ?? null), high: fmt(range?.high ?? null), rangeFrom: range ? "list" : null });
     }
     const conv = (s: string) => {
@@ -80,7 +89,21 @@ export const MarkerEntryRow: React.FC<{
       ? searchMarkers(query, catalogue).slice(0, 6)
       : [...catalogue].sort((a, b) => a.displayName.localeCompare(b.displayName)).slice(0, 8)
     : [];
-  const noRange = marker ? noStandardRange(marker, sex, draft.unit) : false;
+  const noRange = marker ? noStandardRange(marker, sex, draft.unit, draft.phase) : false;
+  const askPhase = marker ? needsPhase(marker, sex) : false;
+
+  /** A new phase re-reads the list's range, unless the user has typed their own. */
+  const setPhase = (phase: LabPhase) => {
+    if (!marker || draft.rangeFrom === "you") return onChange({ phase, phaseSuggested: false });
+    const range = prefillRange(marker, sex, draft.unit, phase);
+    onChange({
+      phase,
+      phaseSuggested: false,
+      low: fmt(range?.low ?? null),
+      high: fmt(range?.high ?? null),
+      rangeFrom: range ? "list" : null,
+    });
+  };
 
   return (
     <div className="rounded-2xl bg-cream-card border border-charcoal/10 p-3">
@@ -189,6 +212,33 @@ export const MarkerEntryRow: React.FC<{
             )}
           </div>
 
+          {/* --- cycle phase (a woman's LH, FSH, estradiol) --- */}
+          {askPhase && (
+            <>
+              <p className="mt-2.5 mb-1 text-[11px] font-semibold text-charcoal-soft">Cycle phase when the sample was taken</p>
+              <select
+                value={draft.phase ?? ""}
+                onChange={(e) => e.target.value && setPhase(e.target.value as LabPhase)}
+                aria-label={`Marker ${n} cycle phase`}
+                className={fieldClass}
+              >
+                <option value="" disabled>
+                  Choose a phase
+                </option>
+                {LAB_PHASES.map((p) => (
+                  <option key={p.value} value={p.value}>
+                    {p.label}
+                  </option>
+                ))}
+              </select>
+              <p className="mt-1 text-[11px] text-charcoal-soft leading-relaxed">
+                {draft.phaseSuggested
+                  ? "Suggested from your cycle tracker. The normal range depends on the phase."
+                  : "The normal range depends on the phase."}
+              </p>
+            </>
+          )}
+
           {/* --- reference range --- */}
           <p className="mt-2.5 mb-1 text-[11px] font-semibold text-charcoal-soft">Reference range</p>
           <div className="grid grid-cols-2 gap-2">
@@ -209,13 +259,14 @@ export const MarkerEntryRow: React.FC<{
               className={fieldClass}
             />
           </div>
-          <p className="mt-1.5 text-[11px] text-charcoal-faint leading-relaxed">
-            {/* Until the list is clinically reviewed nothing is pre-filled
-                (prefillRange), so the range is always the user's own, from
-                their report, and so is the low/normal/high worked from it. */}
+          <p className="mt-1.5 text-[11px] text-charcoal-soft leading-relaxed">
+            {/* Pre-filled only from a reviewed marker (prefillRange), and
+                always editable: the range printed on the report wins. A
+                one-sided range leaves Low or High empty. */}
             {draft.rangeFrom === "list"
               ? "Use the range printed on your report. Pre-filled from Centium's standard list."
               : "Enter the range printed on your report."}
+            {" If it gives only one limit, leave the other empty."}
             {noRange && " The standard list has no range for this marker."}
           </p>
           {draft.low && draft.high && Number(draft.low) > Number(draft.high) && (

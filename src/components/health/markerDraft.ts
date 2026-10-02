@@ -1,6 +1,8 @@
 // The draft behind one row of "Add blood work", and the rules for it. Kept
 // out of MarkerEntryRow.tsx so that file only exports a component.
 
+import type { LabPhase } from "../../services/labs/catalogueLogic";
+
 /**
  * One result being typed. Strings, not numbers, because a half-typed "1." is a
  * legitimate state of a field; conversion happens once, at save.
@@ -17,6 +19,13 @@ export interface MarkerDraft {
   high: string;
   /** Where the range came from: the list's pre-fill, or the user. */
   rangeFrom: "list" | "you" | null;
+  /**
+   * A woman's LH, FSH or estradiol: the cycle phase the test was taken in,
+   * which picks the list's range. Only used to pre-fill; not saved.
+   */
+  phase: LabPhase | null;
+  /** Whether `phase` is the cycle tracker's suggestion, not yet changed. */
+  phaseSuggested: boolean;
 }
 
 export const emptyMarker = (): MarkerDraft => ({
@@ -28,6 +37,8 @@ export const emptyMarker = (): MarkerDraft => ({
   low: "",
   high: "",
   rangeFrom: null,
+  phase: null,
+  phaseSuggested: false,
 });
 
 /** Digits and at most one decimal point. Lab values are never negative. */
