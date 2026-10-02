@@ -70,7 +70,7 @@ export interface UserProfile {
    * 106.4 kg, from AppContext's defaultUser — which every account carried
    * until its own profile overwrote them, and which an account that never
    * recorded either kept for good. That default reached further than it
-   * looks: getTestRecommendations divided the two into a BMI of 33.6 and told
+   * looks: the old test recommendations divided the two into a BMI of 33.6 and told
    * such accounts they were "in the obese range".
    */
   heightCm: number | null;

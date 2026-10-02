@@ -38,6 +38,8 @@ export function GeneralPlan() {
   const [reminderOpen, setReminderOpen] = useState(false);
   const latestBpDay = bloodPressure[0] ? localDayOf(bloodPressure[0].recordedAt) : null;
   const gestation = pregnancy ? gestationOn(todayLocal(), pregnancy) : null;
+  // Not known yet counts as on: nothing body-size related may show by mistake.
+  const recovery = recoverySensitive || recoveryModePending;
 
   const reminderLink = (
     <button
@@ -86,7 +88,9 @@ export function GeneralPlan() {
                   </span>
                 )}
               </div>
-              <p className="mt-0.5 text-[11.5px] leading-[1.45] text-charcoal-soft">{c.what}</p>
+              <p className="mt-0.5 text-[11.5px] leading-[1.45] text-charcoal-soft">
+                {recovery && c.whatRecoverySensitive ? c.whatRecoverySensitive : c.what}
+              </p>
             </div>
           ))}
         </section>
@@ -118,8 +122,7 @@ export function GeneralPlan() {
     age: user.age,
     sex: user.sex,
     bmi: bmiOf(user.heightCm, user.weightKg),
-    // Not known yet counts as on: the reason must never mention BMI by mistake.
-    recoverySensitive: recoverySensitive || recoveryModePending,
+    recoverySensitive: recovery,
   });
 
   return (

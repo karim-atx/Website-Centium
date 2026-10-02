@@ -2,6 +2,7 @@ import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import { bmiOf, screeningLastChecked, screeningRows, type ScreeningProfile } from "./screening.ts";
 import {
+  PREGNANCY_SCHEDULE,
   haemoglobinGdl,
   pregnancyBloodPressureFlag,
   pregnancyChecksDone,
@@ -74,6 +75,14 @@ test("pregnancy schedule: done from matching results, and what is coming up", ()
   assert.equal(pregnancyComingUp(26, new Set(["first"]))?.id, "glucose");
   assert.equal(pregnancyComingUp(26, new Set(["first", "glucose"]))?.id, "week28");
   assert.equal(pregnancyComingUp(30, new Set()), null);
+});
+
+test("recovery-sensitive mode: the glucose test's risk factors leave out BMI and point to the clinic", () => {
+  const g = PREGNANCY_SCHEDULE.find((c) => c.id === "glucose")!;
+  assert.ok(g.what.includes("a BMI above 30"));
+  assert.ok(!/bmi/i.test(g.whatRecoverySensitive!));
+  assert.ok(g.whatRecoverySensitive!.endsWith("Your clinic will check your risk factors with you."));
+  assert.ok(PREGNANCY_SCHEDULE.filter((c) => c.id !== "glucose").every((c) => !c.whatRecoverySensitive && !/bmi/i.test(c.what)));
 });
 
 test("pregnancy blood pressure: 140/90 same day, 160/110 urgent, below that nothing", () => {

@@ -2,7 +2,7 @@ import { SCREENING_COPY, bmiOf, screeningRows } from "../../services/health-chec
 import { usePregnancyFlags } from "../../components/pregnancy/usePregnancyFlags";
 import { FlagChip, FlagNote } from "../../components/ui/FlagNote";
 import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { BiomarkerCaptureFlow } from "../../components/health/BiomarkerCaptureFlow";
@@ -47,7 +47,6 @@ import {
 import { dayLetter } from "../../utils/week";
 import { useApp } from "../../context/AppContext";
 import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
-import { getTestRecommendations } from "../../utils/biomarkerRecommendations";
 import { ChevronRight, Stethoscope, FileText, Moon } from "lucide-react";
 import clsx from "clsx";
 import type { BloodMarker, ImagingRecord } from "../../types";
@@ -209,21 +208,6 @@ export default function Health() {
   // 1.85/0.65/0.5/1 = under/normal/over/obese, a linear 0–40 scale) with a
   // downward triangle marker pinned at the reading's position."
   const bmiBandPct = bmiValue === null ? 0 : Math.max(0, Math.min(100, (bmiValue / 40) * 100));
-
-  // AFTER showBmi, because it takes it: the one BMI-derived recommendation
-  // names the number and the words "in the obese range", which on a pregnancy
-  // weight is both wrong and the last thing worth saying to somebody at 30
-  // weeks.
-  //
-  // Task X: in recovery-sensitive mode, and while that setting is still
-  // loading on this browser, the reasons may not quote a weight or a BMI —
-  // the weight-based reason falls back to its general wording and the BMI
-  // one is left out, the same as when there is no weigh-in.
-  const hideBodyNumbers = recoverySensitive || recoveryModePending;
-  const testRecommendations = useMemo(
-    () => getTestRecommendations(hideBodyNumbers ? { ...user, weightKg: null } : user, showBmi && !hideBodyNumbers),
-    [user, showBmi, hideBodyNumbers]
-  );
 
   // Iteration 6 "Team" §5 Health: the weight-trend hero's sparkline, real
   // 7-day history scaled into the dc.html's own 130×44 viewBox.
@@ -602,30 +586,6 @@ export default function Health() {
           </button>
         );
       })()}
-
-      {/* QA 11.0: "Based on the information provided by the client...
-          provide recommendations on what tests might be important...
-          Make sure to state that this is not for diagnosis or prognosis
-          only recommendation." */}
-      {testRecommendations.length > 0 && (
-        <Card className="mb-4 !bg-primary-pale">
-          <div className="flex items-center gap-2 mb-2">
-            <Stethoscope size={15} className="text-primary-dark" />
-            <p className="text-sm font-bold text-primary-deep-text">Recommended tests</p>
-          </div>
-          <div className="space-y-2 mb-2">
-            {testRecommendations.map((r) => (
-              <div key={r.test}>
-                <p className="text-[13px] font-bold text-charcoal">{r.test}</p>
-                <p className="text-[11.5px] text-charcoal-soft">{r.reason}</p>
-              </div>
-            ))}
-          </div>
-          <p className="text-[10.5px] font-medium text-charcoal-faint border-t border-primary/[0.15] pt-2">
-            Based on your profile only — not a diagnosis or prognosis. Discuss with a doctor before acting on it.
-          </p>
-        </Card>
-      )}
 
       {/* QA 13.0: "Have records be a button you can press that leads to the
           following tabs" — still one entry point (both rows open the same

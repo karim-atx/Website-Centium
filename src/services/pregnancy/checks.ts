@@ -38,6 +38,12 @@ export type PregnancyCheck = {
   when: string;
   /** What is usually offered. */
   what: string;
+  /**
+   * The same in recovery-sensitive mode, when it must differ: the glucose
+   * test's risk factors leave out "a BMI above 30" and say the clinic will
+   * go through them instead (Task Y follow-up).
+   */
+  whatRecoverySensitive?: string;
   /** The test, as "Coming up" names it. */
   short: string;
   /** The "Coming up" week label, and the last week it can be coming up. */
@@ -61,6 +67,8 @@ export const PREGNANCY_SCHEDULE: PregnancyCheck[] = [
     when: "24–28 weeks",
     what:
       "Glucose tolerance test for gestational diabetes, if you have a risk factor (including a family background from the Middle East, South Asia or the Caribbean, a BMI above 30, a previous large baby or gestational diabetes, or a close relative with diabetes)",
+    whatRecoverySensitive:
+      "Glucose tolerance test for gestational diabetes, if you have a risk factor (including a family background from the Middle East, South Asia or the Caribbean, a previous large baby or gestational diabetes, or a close relative with diabetes). Your clinic will check your risk factors with you.",
     short: "a glucose test, if you have a risk factor",
     weekLabel: "24–28",
     upToWeek: 28,

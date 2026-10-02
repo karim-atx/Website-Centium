@@ -312,7 +312,7 @@ const defaultUser: UserProfile = {
   // NO BODY BY DEFAULT. These were 178 cm and 106.4 kg — the same figures
   // mockHealthData used — and they were not merely cosmetic: profile loading
   // only overwrites a field the row actually carries, so an account with no
-  // height on record kept 178 permanently, and getTestRecommendations divided
+  // height on record kept 178 permanently, and the old test recommendations divided
   // the pair into a BMI of 33.6 and told the user they were in the obese
   // range. Null is what "we have not been told" looks like.
   heightCm: null,

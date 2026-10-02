@@ -192,7 +192,7 @@ export default function Profile() {
       return;
     }
     // RECALCULATES, NEVER DELETES. updateProfile feeds the new value straight
-    // back into calculateTDEE and getTestRecommendations. MO11: it writes no
+    // back into calculateTDEE and the health checks. MO11: it writes no
     // tracker data either — cycle and pregnancy visibility is derived from sex
     // (and any opt-in) at render, so switching back restores everything.
     updateProfile({ sex });
