@@ -1,3 +1,6 @@
+import { SCREENING_COPY, bmiOf, screeningRows } from "../../services/health-checks/screening";
+import { usePregnancyFlags } from "../../components/pregnancy/usePregnancyFlags";
+import { FlagChip, FlagNote } from "../../components/ui/FlagNote";
 import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
 import { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -241,6 +244,7 @@ export default function Health() {
   const location = useLocation();
   const navigate = useNavigate();
   const checkFlags = useCheckFlags();
+  const pregnancyFlags = usePregnancyFlags();
   useEffect(() => {
     const navState = location.state as { openMetric?: string; openRecords?: boolean } | null;
     // Add Metric's "Add Records" button lands here with the Records sheet open.
@@ -539,8 +543,12 @@ export default function Health() {
           (r) => new Date(r.recordedAt).getTime() >= Date.now() - 7 * 86400000
         );
         const weekAvg = averageReading(week);
-        const severe = isSevere(latest.systolic, latest.diastolic);
-        const flag = checkFlags.bp(latest);
+        // Task Y: during a pregnancy its own levels replace the general bands
+        // (category chip, severe alert, the monitoring flag).
+        const inPregnancy = pregnancyFlags.replacesBpBands;
+        const pFlag = pregnancyFlags.bp(latest);
+        const severe = !inPregnancy && isSevere(latest.systolic, latest.diastolic);
+        const flag = inPregnancy ? null : checkFlags.bp(latest);
 
         return (
           <button
@@ -554,12 +562,16 @@ export default function Health() {
               </p>
               {/* THE CATEGORY IN WORDS, not as a colour. The chip is tinted
                   too, but the label is what carries the meaning. */}
-              <span
-                className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap"
-                style={{ color: BP_CATEGORY_COLOR[category], background: `${BP_CATEGORY_COLOR[category]}1F` }}
-              >
-                {BP_CATEGORY_LABEL[category]}
-              </span>
+              {inPregnancy ? (
+                pFlag && <FlagChip tone={pFlag.level} label={pFlag.label} />
+              ) : (
+                <span
+                  className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap"
+                  style={{ color: BP_CATEGORY_COLOR[category], background: `${BP_CATEGORY_COLOR[category]}1F` }}
+                >
+                  {BP_CATEGORY_LABEL[category]}
+                </span>
+              )}
             </div>
             <div className="flex items-baseline gap-2 mt-[9px]">
               <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-charcoal tabular-nums">
@@ -582,6 +594,11 @@ export default function Health() {
               </p>
             )}
             {flag && <CheckFlagNote flag={flag} className="mt-2.5" />}
+            {pFlag && (
+              <FlagNote tone={pFlag.level} label={pFlag.label} className="mt-2.5">
+                <p className="mt-0.5 text-[11.5px] leading-[1.45] text-charcoal-soft">{pFlag.text}</p>
+              </FlagNote>
+            )}
           </button>
         );
       })()}
@@ -685,6 +702,28 @@ export default function Health() {
 
       {/* The pregnancy guidance for this tab. */}
       {pregnancy && <PregnancyHealthCard pregnancy={pregnancy} />}
+
+      {/* Task Y: health checks for everyone (or, in a pregnancy, the blood
+          tests usually offered). Shown whenever there is something in it. */}
+      {(pregnancy ||
+        screeningRows({
+          age: user.age,
+          sex: user.sex,
+          bmi: bmiOf(user.heightCm, user.weightKg),
+          recoverySensitive: recoverySensitive || recoveryModePending,
+        }).length > 0) && (
+        <button
+          onClick={() => navigate("/app/health/checks", { state: { plan: "general" } })}
+          className="tap w-full box-border rounded-[15px] px-4 py-3.5 flex items-center justify-between gap-3 text-left mb-[13px]"
+          style={{ background: "rgba(74,61,160,.08)" }}
+        >
+          <span className="min-w-0">
+            <span className="block text-[13px] font-bold text-charcoal">{SCREENING_COPY.cardTitle}</span>
+            <span className="block mt-0.5 text-[11px] text-charcoal-soft">{SCREENING_COPY.cardSubtitle}</span>
+          </span>
+          <ChevronRight size={14} className="text-primary-deep-text/60 shrink-0" />
+        </button>
+      )}
 
       {/* Advanced health monitoring: the way into the plan, while the mode
           is on. Its wording names nothing but the plan. */}

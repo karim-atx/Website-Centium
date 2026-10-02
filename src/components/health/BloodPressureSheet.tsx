@@ -1,3 +1,5 @@
+import { usePregnancyFlags } from "../pregnancy/usePregnancyFlags";
+import { FlagNote } from "../ui/FlagNote";
 import { HealthDisclaimer } from "../ui/HealthDisclaimer";
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
@@ -108,7 +110,13 @@ export const BloodPressureSheet: React.FC<{
     systolic !== null && diastolic !== null && systolic > diastolic
       ? classifyBloodPressure(systolic, diastolic)
       : null;
-  const severe = systolic !== null && diastolic !== null && isSevere(systolic, diastolic);
+  // Task Y: during a pregnancy its own levels replace the general category
+  // and the severe-reading alert.
+  const pregnancyFlags = usePregnancyFlags();
+  const inPregnancy = pregnancyFlags.replacesBpBands;
+  const severe = !inPregnancy && systolic !== null && diastolic !== null && isSevere(systolic, diastolic);
+  const pFlag =
+    systolic !== null && diastolic !== null && systolic > diastolic ? pregnancyFlags.bp({ systolic, diastolic }) : null;
 
   const save = async () => {
     if (systolic === null || diastolic === null) {
@@ -227,7 +235,12 @@ export const BloodPressureSheet: React.FC<{
         <p className="text-[10.5px] text-charcoal-faint mb-3">mmHg · mmHg · bpm</p>
 
         {/* The live category. Text, never colour alone. */}
-        {category && (
+        {pFlag && (
+          <FlagNote tone={pFlag.level} label={pFlag.label} className="mb-3">
+            <p className="mt-0.5 text-[11.5px] leading-[1.45] text-charcoal-soft">{pFlag.text}</p>
+          </FlagNote>
+        )}
+        {category && !inPregnancy && (
           <div className="flex items-center justify-between gap-2 rounded-xl bg-cream-soft px-3.5 py-2.5 mb-3">
             <span className="text-[12.5px] font-bold text-charcoal">{BP_CATEGORY_LABEL[category]}</span>
             <span className="text-[11px] text-charcoal-faint">{BP_CATEGORY_RANGE[category]}</span>

@@ -1,3 +1,5 @@
+import { usePregnancyFlags } from "../pregnancy/usePregnancyFlags";
+import { FlagNote } from "../ui/FlagNote";
 import { HealthDisclaimer } from "../ui/HealthDisclaimer";
 import { useLabCatalogue } from "./useLabCatalogue";
 import { useCheckFlags } from "../health-checks/useCheckFlags";
@@ -26,12 +28,15 @@ export const BiomarkerDetailSheet: React.FC<{ open: boolean; onClose: () => void
   marker,
 }) => {
   const checkFlags = useCheckFlags();
+  const pregnancyFlags = usePregnancyFlags();
   const labCatalogue = useLabCatalogue();
   if (!marker) return null;
   const threshold = labCatalogue.isThreshold(marker);
   const remark = labCatalogue.remarkFor(marker);
   const trend = trendColor(marker.history);
-  const flag = checkFlags.lab(marker);
+  // A pregnancy flag (Task Y) is the one shown when both apply.
+  const pFlag = pregnancyFlags.lab(marker);
+  const flag = pFlag ? null : checkFlags.lab(marker);
 
   return (
     <BottomSheet open={open} onClose={onClose} title={marker.name}>
@@ -49,6 +54,11 @@ export const BiomarkerDetailSheet: React.FC<{ open: boolean; onClose: () => void
         </div>
         {remark && <p className="-mt-2 mb-4 text-[11.5px] leading-[1.5] text-charcoal-soft">{remark}</p>}
         {flag && <CheckFlagNote flag={flag} className="mb-4" />}
+        {pFlag && (
+          <FlagNote tone={pFlag.level} label={pFlag.label} className="mb-4">
+            <p className="mt-0.5 text-[11.5px] leading-[1.45] text-charcoal-soft">{pFlag.text}</p>
+          </FlagNote>
+        )}
 
         <div className="flex justify-center mb-2">
           <BiomarkerLineChart history={marker.history} unit={marker.unit} color={trend.color} width={280} height={140} />

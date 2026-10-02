@@ -167,9 +167,6 @@ export const EXERCISE_STOP_TITLE = "Stop exercising and contact your provider if
 // Health — ACOG, CDC
 // ---------------------------------------------------------------------------
 
-export const GLUCOSE_SCREENING =
-  "Screening for gestational diabetes usually happens around weeks 24–28.";
-
 export const VACCINES = "Ask your provider about recommended vaccines.";
 
 /**

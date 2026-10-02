@@ -1,6 +1,7 @@
 import { HealthDisclaimer } from "../../components/ui/HealthDisclaimer";
 import { useEffect, useState } from "react";
-import { Navigate, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
+import { GeneralPlan } from "../../components/health-checks/GeneralPlan";
 import { Bell, ChevronRight } from "lucide-react";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
@@ -23,33 +24,46 @@ function showDay(day: string | null): string {
 }
 
 /**
- * The monitoring plan. A NEUTRAL ROUTE (/app/health/checks) with a neutral
- * title: nothing in the URL, the tab or the page heading says what the mode
- * is for. Shown only while the mode is available and on; otherwise it sends
- * the user back to Health without saying why.
+ * One NEUTRAL ROUTE (/app/health/checks), three plans (Task Y): the
+ * Advanced health monitoring plan for a user who turned that on (unchanged,
+ * and still the default here for them), otherwise the health checks for
+ * everyone, or the pregnancy schedule while a pregnancy is tracked. The
+ * "Your health checks" card asks for that plan explicitly, so a user with the
+ * monitoring plan can still reach it. Nothing in the URL, the tab or the
+ * other plans says what the monitoring mode is for.
  */
 export default function HealthChecks() {
-  const navigate = useNavigate();
-  const { user, bloodMarkers, bloodPressure, myTimezone } = useApp();
+  const location = useLocation();
   const checks = useHealthChecks();
-  const [checkInOpen, setCheckInOpen] = useState(false);
-  const [reminderOpen, setReminderOpen] = useState(false);
   const { refresh } = checks;
+  const wantsGeneral = (location.state as { plan?: string } | null)?.plan === "general";
 
   // Read the setting fresh on every visit.
   useEffect(() => {
     refresh();
   }, [refresh]);
 
-  if (!checks.available || checks.on === false) return <Navigate to="/app/health" replace />;
-  if (checks.on === null) {
-    return (
-      <div className="pb-8">
-        <PageHeader title={COPY.planTitle} showBack onBack={() => navigate("/app/health")} />
-        <p className="text-[13px] text-charcoal-faint">Loading…</p>
-      </div>
-    );
+  if (!wantsGeneral && checks.available) {
+    if (checks.on === true) return <MonitoringPlan />;
+    if (checks.on === null) {
+      // Neutral while the setting is read: no heading that could name either plan.
+      return (
+        <div className="pb-8 pt-6">
+          <p className="text-[13px] text-charcoal-faint">Loading…</p>
+        </div>
+      );
+    }
   }
+  return <GeneralPlan />;
+}
+
+/** The Advanced health monitoring plan, as built (only reached when the mode is on). */
+function MonitoringPlan() {
+  const navigate = useNavigate();
+  const { user, bloodMarkers, bloodPressure, myTimezone } = useApp();
+  const checks = useHealthChecks();
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [reminderOpen, setReminderOpen] = useState(false);
 
   const today = todayLocal();
   const lastCheckIn = checks.checkIns[checks.checkIns.length - 1]?.date ?? null;

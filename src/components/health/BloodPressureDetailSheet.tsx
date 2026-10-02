@@ -1,3 +1,5 @@
+import { usePregnancyFlags } from "../pregnancy/usePregnancyFlags";
+import { FlagChip, FlagNote } from "../ui/FlagNote";
 import { HealthDisclaimer } from "../ui/HealthDisclaimer";
 import { useCheckFlags } from "../health-checks/useCheckFlags";
 import { CheckFlagChip } from "../health-checks/CheckFlag";
@@ -96,6 +98,9 @@ export const BloodPressureDetailSheet: React.FC<{
 }> = ({ open, onClose, onAdd, onEdit }) => {
   const { bloodPressure } = useApp();
   const checkFlags = useCheckFlags();
+  // Task Y: during a pregnancy its own levels replace the general bands here.
+  const pregnancyFlags = usePregnancyFlags();
+  const inPregnancy = pregnancyFlags.replacesBpBands;
   const [period, setPeriod] = useState<Period>("weekly");
 
   const [wasOpen, setWasOpen] = useState(false);
@@ -113,7 +118,8 @@ export const BloodPressureDetailSheet: React.FC<{
   const morningAvg = averageReading(morning);
   const eveningAvg = averageReading(evening);
   const latest = bloodPressure[0] ?? null;
-  const latestSevere = latest ? isSevere(latest.systolic, latest.diastolic) : false;
+  const latestSevere = latest && !inPregnancy ? isSevere(latest.systolic, latest.diastolic) : false;
+  const latestPregnancyFlag = latest ? pregnancyFlags.bp(latest) : null;
 
   // Oldest first for the chart, so time runs left to right.
   const points = [...inPeriod].reverse();
@@ -135,6 +141,12 @@ export const BloodPressureDetailSheet: React.FC<{
               {SEVERE_READING_MESSAGE}
             </p>
           </div>
+        )}
+
+        {latestPregnancyFlag && (
+          <FlagNote tone={latestPregnancyFlag.level} label={latestPregnancyFlag.label} className="mb-4">
+            <p className="mt-0.5 text-[11.5px] leading-[1.45] text-charcoal-soft">{latestPregnancyFlag.text}</p>
+          </FlagNote>
         )}
 
         {/* --- the period selector ---------------------------------------- */}
@@ -161,7 +173,7 @@ export const BloodPressureDetailSheet: React.FC<{
             {/* --- the chart ---------------------------------------------- */}
             <div className="mb-1.5">
               <svg viewBox="0 0 100 100" preserveAspectRatio="none" width="100%" height={150} style={{ display: "block" }}>
-                {SYSTOLIC_BANDS.map((b) => (
+                {!inPregnancy && SYSTOLIC_BANDS.map((b) => (
                   <rect
                     key={b.category}
                     x={0}
@@ -207,7 +219,7 @@ export const BloodPressureDetailSheet: React.FC<{
               <span className="flex items-center gap-1.5 text-[10.5px] text-charcoal-soft">
                 <span className="w-2.5 h-[2px] rounded-full" style={{ background: "#4A3DA0" }} /> Diastolic
               </span>
-              <span className="text-[10px] text-charcoal-faint">Bands follow the systolic thresholds</span>
+              {!inPregnancy && <span className="text-[10px] text-charcoal-faint">Bands follow the systolic thresholds</span>}
             </div>
 
             {/* --- averages ----------------------------------------------- */}
@@ -237,6 +249,8 @@ export const BloodPressureDetailSheet: React.FC<{
             </p>
 
             {/* --- how many in each category ------------------------------ */}
+            {!inPregnancy && (
+            <>
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
               Readings by category
             </p>
@@ -262,6 +276,8 @@ export const BloodPressureDetailSheet: React.FC<{
                 );
               })}
             </div>
+            </>
+            )}
 
             {/* --- the readings themselves -------------------------------- */}
             <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
@@ -270,7 +286,8 @@ export const BloodPressureDetailSheet: React.FC<{
             <div className="space-y-1.5 mb-4">
               {inPeriod.map((r) => {
                 const category = classifyBloodPressure(r.systolic, r.diastolic);
-                const flag = checkFlags.bp(r);
+                const flag = inPregnancy ? null : checkFlags.bp(r);
+                const pFlag = pregnancyFlags.bp(r);
                 return (
                   <div key={r.id} className="flex items-start gap-2.5 rounded-xl bg-cream-soft px-3.5 py-2.5">
                     <div className="flex-1 min-w-0">
@@ -278,12 +295,15 @@ export const BloodPressureDetailSheet: React.FC<{
                         <span className="text-[15px] font-extrabold text-charcoal tabular-nums">
                           {r.systolic}/{r.diastolic}
                         </span>
-                        <span
-                          className="text-[10px] font-bold uppercase tracking-wide"
-                          style={{ color: BP_CATEGORY_COLOR[category] }}
-                        >
-                          {BP_CATEGORY_LABEL[category]}
-                        </span>
+                        {!inPregnancy && (
+                          <span
+                            className="text-[10px] font-bold uppercase tracking-wide"
+                            style={{ color: BP_CATEGORY_COLOR[category] }}
+                          >
+                            {BP_CATEGORY_LABEL[category]}
+                          </span>
+                        )}
+                        {pFlag && <FlagChip tone={pFlag.level} label={pFlag.label} />}
                         {r.pulse != null && (
                           <span className="text-[11px] text-charcoal-faint">{r.pulse} bpm</span>
                         )}

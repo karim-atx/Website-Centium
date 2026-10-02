@@ -1,3 +1,5 @@
+import { usePregnancyFlags } from "../pregnancy/usePregnancyFlags";
+import { FlagChip } from "../ui/FlagNote";
 import { HealthDisclaimer } from "../ui/HealthDisclaimer";
 import { useLabCatalogue } from "./useLabCatalogue";
 import { useCheckFlags } from "../health-checks/useCheckFlags";
@@ -101,6 +103,7 @@ export const MedicalRecordsSection: React.FC<{
   initialTab = "biomarkers",
 }) => {
   const checkFlags = useCheckFlags();
+  const pregnancyFlags = usePregnancyFlags();
   const labCatalogue = useLabCatalogue();
   const {
     imagingRecords,
@@ -327,6 +330,9 @@ export const MedicalRecordsSection: React.FC<{
                     </span>
                   )}
                   {(() => {
+                    // A pregnancy flag (Task Y) is the one shown when both apply.
+                    const pFlag = pregnancyFlags.lab(m);
+                    if (pFlag) return <span className="block mt-1"><FlagChip tone={pFlag.level} label={pFlag.label} /></span>;
                     const flag = checkFlags.lab(m);
                     return flag ? <span className="block mt-1"><CheckFlagChip flag={flag} /></span> : null;
                   })()}

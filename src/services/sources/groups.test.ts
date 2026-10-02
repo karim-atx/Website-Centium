@@ -15,6 +15,7 @@ const s = (key: string, feature: string, sortOrder: number, year: number | null 
 test("groups in the page's order, each by sort_order, with neutral headings", () => {
   const groups = groupSources([
     s("figo", "cycle", 10),
+    s("uspstf_hcv", "screening", 200),
     s("ada", "labs", 20),
     s("kdigo", "labs", 30, 2024),
     s("bjgp", "monitoring", 130, 2024),
@@ -26,10 +27,10 @@ test("groups in the page's order, each by sort_order, with neutral headings", ()
   ]);
   assert.deepEqual(
     groups.map((g) => g.heading),
-    ["Blood pressure", "Lab results", "Health checks", "Cycle", "Contraception", "Pregnancy", "Exercise"]
+    ["Blood pressure", "Health screening", "Lab results", "Health checks", "Cycle", "Contraception", "Pregnancy", "Exercise"]
   );
   assert.deepEqual(groups[0].sources.map((x) => x.key), ["aha", "aha_home"]);
-  assert.deepEqual(groups[1].sources.map((x) => x.key), ["ada", "kdigo"]);
+  assert.deepEqual(groups[2].sources.map((x) => x.key), ["ada", "kdigo"]);
 });
 
 test("no heading names the mode; an unknown feature is shown last, never dropped", () => {

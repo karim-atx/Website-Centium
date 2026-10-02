@@ -11,7 +11,9 @@ import {
 } from "../../services/pregnancy/weight";
 import * as G from "../../services/pregnancy/guidance";
 import { PREGNANCY_COLOR } from "./PregnancyRing";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronRight } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { PREGNANCY_CHECKS_COPY, pregnancyChecksDone, pregnancyComingUp } from "../../services/pregnancy/checks";
 
 // The week-by-week guidance, one card per tab.
 //
@@ -30,7 +32,7 @@ const todayISO = () => {
 };
 
 const ProviderLine: React.FC = () => (
-  <p className="mt-3 text-[10px] leading-[1.45] font-semibold text-charcoal-faint">
+  <p className="mt-3 text-[10px] leading-[1.45] font-semibold text-charcoal-soft">
     {G.PROVIDER_FIRST}
   </p>
 );
@@ -203,10 +205,14 @@ export const PregnancyWorkoutCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregn
  * default body and drawing somebody else's range.
  */
 export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregnancy }) => {
-  const { user, weightByDate } = useApp();
+  const { user, weightByDate, bloodMarkers } = useApp();
+  const navigate = useNavigate();
   const [signsOpen, setSignsOpen] = useState(false);
   const g = gestationOn(todayISO(), pregnancy);
   if (!g) return null;
+  // Task Y: the next blood test usually offered, from the pregnancy schedule
+  // (which replaced the single gestational-diabetes line).
+  const next = pregnancyComingUp(g.week, pregnancyChecksDone(bloodMarkers, pregnancy));
 
   // THE WEIGHT BEFORE THE PREGNANCY, which is the last one logged on or before
   // the LMP — not the earliest on record and not today's. A weigh-in from
@@ -276,7 +282,16 @@ export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregna
 
       {/* --- appointments --- */}
       <p className="mt-3.5 text-[11px] font-bold text-charcoal mb-1.5">Coming up</p>
-      <Bullets items={[G.GLUCOSE_SCREENING, G.VACCINES]} />
+      <Bullets
+        items={[...(next ? [PREGNANCY_CHECKS_COPY.comingUp(next.weekLabel, next.short)] : []), G.VACCINES]}
+      />
+      <button
+        onClick={() => navigate("/app/health/checks", { state: { plan: "general" } })}
+        className="tap mt-1.5 flex items-center gap-1 min-h-[44px] text-[11.5px] font-semibold text-primary-dark"
+      >
+        {PREGNANCY_CHECKS_COPY.heading}
+        <ChevronRight size={13} aria-hidden />
+      </button>
 
       {/* --- the urgent signs --- */}
       <div className="mt-3.5 rounded-xl bg-status-high-bg px-3.5 py-3">

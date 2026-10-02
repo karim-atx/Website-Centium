@@ -23,6 +23,7 @@ export type SourceGroup = { feature: string; heading: string; sources: ClinicalS
  */
 export const SOURCE_GROUPS: readonly { feature: string; heading: string }[] = [
   { feature: "blood_pressure", heading: "Blood pressure" },
+  { feature: "screening", heading: "Health screening" },
   { feature: "labs", heading: "Lab results" },
   { feature: "monitoring", heading: "Health checks" },
   { feature: "cycle", heading: "Cycle" },
