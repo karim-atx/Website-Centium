@@ -19,15 +19,12 @@ import { jpegCarriesMetadata } from "./photoBytes";
 // bucket's 5 MB limit without a visible loss on a phone screen.
 
 /**
- * OFF UNTIL THE DATABASE FIXES THE BUCKET'S POLICIES. The forum-photos insert,
- * update and delete policies (Database 20261014040000) check ownership by
- * reading public.forum_photos, which the authenticated role cannot read, so
- * every upload is refused with "permission denied for table forum_photos".
- * The preparation below is built and tested on the device; turn this on, and
- * verify an upload end to end, once the policies ask through a
- * security-definer function instead.
+ * On since Database f3df07e, which moved the forum-photos write policies'
+ * ownership check into security-definer functions (the first version read
+ * forum_photos directly, which the authenticated role cannot, and refused
+ * every upload). Kept as a switch so photos can be turned off in one place.
  */
-export const FORUM_PHOTOS_ENABLED = false;
+export const FORUM_PHOTOS_ENABLED = true;
 
 export const FORUM_PHOTO_MAX_EDGE = 2048;
 export const FORUM_PHOTO_MAX_BYTES = 5 * 1024 * 1024;

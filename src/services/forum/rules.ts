@@ -104,7 +104,17 @@ export const NICKNAME_PROBLEM_TEXT: Record<Exclude<NicknameProblem, null>, strin
 // Refusals
 // ---------------------------------------------------------------------------
 
-export type ForumAction = "post" | "reply" | "report" | "photo" | "nickname" | "block" | "like" | "read";
+export type ForumAction =
+  | "post"
+  | "reply"
+  | "report"
+  | "photo"
+  | "nickname"
+  | "block"
+  | "like"
+  | "read"
+  | "edit"
+  | "withdraw";
 
 /**
  * The words for a database refusal. Null when the code is not one of the
@@ -136,6 +146,13 @@ export function describeForumError(
       return "Professionals post under their own name.";
     case "ATX60":
       return "That contains a word this community doesn't allow. Edit it and try again.";
+    // One refusal for every reason, on purpose (it does not say whether the
+    // post exists or whose it is). From the author's own menu, the only
+    // ordinary cause is the 30-minute edit window.
+    case "ATX62":
+      return action === "edit"
+        ? "This can no longer be edited. Posts can be edited for 30 minutes after posting."
+        : "This couldn't be withdrawn. It may already have been removed.";
     case "ATX63":
       return "That nickname is taken. Choose a different one.";
     case "ATX64":

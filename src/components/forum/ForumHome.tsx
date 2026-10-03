@@ -12,6 +12,7 @@ import {
 } from "../../services/forum";
 import { filterChips, forumAge, hiddenInRecovery, type ForumCategory } from "../../services/forum/rules";
 import { fv } from "./forumColor";
+import { WarningNotice } from "./WarningNotice";
 import {
   AuthorInitial,
   AuthorName,
@@ -127,6 +128,7 @@ export function ForumHome({
 
   return (
     <div className="flex flex-col gap-3 pb-28" style={{ color: fv("text") }}>
+      <WarningNotice />
       {recoveryPending ? (
         <div className="flex gap-1.5" aria-hidden="true">
           {[44, 92, 92, 100].map((w, i) => (

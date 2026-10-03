@@ -191,6 +191,7 @@ export async function setNickname(nickname: string): Promise<Result<null>> {
 // ---------------------------------------------------------------------------
 
 export const THREAD_PAGE = 30;
+const PHOTO_URL_SECONDS = 10 * 60;
 
 /**
  * A page of threads, newest first with pinned ones leading. Withdrawn posts
@@ -266,12 +267,17 @@ export async function fetchMyLikes(threadIds: string[]): Promise<Set<string>> {
   return new Set(((data ?? []) as { post_id: string; post_kind: string }[]).filter((r) => r.post_kind === "thread").map((r) => r.post_id));
 }
 
-/** Short-lived signed URLs for the photos on these posts. */
+/**
+ * Short-lived signed URLs for the photos on these posts. TEN MINUTES, not an
+ * hour: a signed URL keeps working until it expires even after its post is
+ * withdrawn or removed, so the lifetime is how long a link someone already
+ * loaded can outlive the post. Every screen signs afresh when it loads.
+ */
 export async function signPhotos(paths: string[]): Promise<Map<string, string>> {
   const out = new Map<string, string>();
   const unique = [...new Set(paths)];
   if (unique.length === 0) return out;
-  const { data } = await supabase.storage.from("forum-photos").createSignedUrls(unique, 60 * 60);
+  const { data } = await supabase.storage.from("forum-photos").createSignedUrls(unique, PHOTO_URL_SECONDS);
   for (const r of data ?? []) if (r.path && r.signedUrl) out.set(r.path, r.signedUrl);
   return out;
 }
@@ -390,5 +396,62 @@ export async function unblockForumBlock(ref: string): Promise<Result<null>> {
   const { error } = await supabase.rpc("unblock_forum_block", { p_block_ref: ref });
   // ATX65 here means it is already lifted, which is what the person wanted.
   if (error && error.code !== "ATX65") return fail(error, "block");
+  return { ok: true, value: null };
+}
+
+// ---------------------------------------------------------------------------
+// Editing and withdrawing your own posts
+// ---------------------------------------------------------------------------
+
+/** How long after posting the author may still edit (edit_forum_post's own window). */
+export const EDIT_WINDOW_MS = 30 * 60_000;
+
+export function editTimeLeft(createdAt: string, now = Date.now()): number {
+  return Math.max(0, new Date(createdAt).getTime() + EDIT_WINDOW_MS - now);
+}
+
+/**
+ * Edits a post or reply. The title is for a post only. An edit that adds a
+ * link puts the post back in the moderator's queue, so callers re-read the
+ * post afterwards rather than assuming it is still published.
+ */
+export async function editPost(ref: PostRef, body: string, title?: string): Promise<Result<null>> {
+  const { error } = await supabase.rpc("edit_forum_post", {
+    ...refArgs(ref),
+    p_body: body.trim(),
+    ...(title !== undefined ? { p_title: title.trim() } : {}),
+  });
+  if (error) return fail(error, "edit");
+  return { ok: true, value: null };
+}
+
+/** Withdraws a post or reply, at any time. */
+export async function withdrawPost(ref: PostRef): Promise<Result<null>> {
+  const { error } = await supabase.rpc("delete_forum_post", refArgs(ref));
+  if (error) return fail(error, "withdraw");
+  return { ok: true, value: null };
+}
+
+// ---------------------------------------------------------------------------
+// Moderator warnings
+// ---------------------------------------------------------------------------
+
+export interface ForumWarning {
+  id: string;
+  body: string;
+  createdAt: string;
+}
+
+/** The caller's warnings not yet acknowledged, newest first. */
+export async function fetchUnseenWarnings(): Promise<ForumWarning[]> {
+  const { data } = await supabase.rpc("my_forum_warnings");
+  return ((data ?? []) as { id: string; body: string; created_at: string; seen_at: string | null }[])
+    .filter((w) => !w.seen_at)
+    .map((w) => ({ id: w.id, body: w.body, createdAt: w.created_at }));
+}
+
+export async function acknowledgeWarning(id: string): Promise<Result<null>> {
+  const { error } = await supabase.rpc("acknowledge_forum_warning", { p_warning_id: id });
+  if (error) return fail(error, "read");
   return { ok: true, value: null };
 }
