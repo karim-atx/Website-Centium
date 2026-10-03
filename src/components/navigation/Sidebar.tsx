@@ -8,6 +8,7 @@ import { useUnread } from "../../context/UnreadContext";
 import { UnreadBadge } from "../messages/UnreadBadge";
 import { PlanLine } from "./PlanLine";
 import { currentDayStreak, dayStreakLabel } from "../../services/streaks/dayStreak";
+import { forumAccess } from "../../services/forum/rules";
 
 export const Sidebar: React.FC = () => {
   const { user, t, today, foodLog, waterByDate, workoutLog, journalEntries } = useApp();
@@ -20,7 +21,10 @@ export const Sidebar: React.FC = () => {
     today
   );
   // V7 (QA 7.0): Employees/Classes only apply to gym-type businesses.
-  const items =
+  // The forum is for adults (Database ATX55): no entry for anyone the app
+  // cannot confirm is 18 or over.
+  const forumAllowed = forumAccess(user.dateOfBirth) === "adult";
+  const items = (
     user.accountType === "professional"
       ? professionalSidebarNavItems
       : isBusiness
@@ -28,7 +32,8 @@ export const Sidebar: React.FC = () => {
           (item) =>
             user.businessType === "gym" || (item.to !== "/app/business/employees" && item.to !== "/app/business/classes")
         )
-      : sidebarNavItems;
+      : sidebarNavItems
+  ).filter((item) => forumAllowed || item.to !== "/app/forum");
 
   return (
     <aside className="hidden lg:flex flex-col w-64 shrink-0 h-[100dvh] sticky top-0 border-r border-charcoal/[0.06] bg-cream-card/60 px-4 py-6">

@@ -50,7 +50,7 @@ import MyCv from "./pages/profile/MyCv";
 import Subscription from "./pages/subscription/Subscription";
 import More from "./pages/profile/More";
 import ClientCalendarTab from "./pages/profile/ClientCalendarTab";
-import ForumTab from "./pages/profile/ForumTab";
+import Community, { ForumNewPage, ForumNicknamePage, ForumPostPage } from "./pages/community/Community";
 import Settings from "./pages/settings/Settings";
 import ResetPassword from "./pages/auth/ResetPassword";
 
@@ -410,7 +410,10 @@ function AppRoutes() {
         <Route path="/app/subscription" element={<Subscription />} />
         <Route path="/app/more" element={<More />} />
         <Route path="/app/calendar" element={<ClientCalendarTab />} />
-        <Route path="/app/forum" element={<ForumTab />} />
+        <Route path="/app/forum" element={<Community />} />
+        <Route path="/app/forum/new" element={<ForumNewPage />} />
+        <Route path="/app/forum/nickname" element={<ForumNicknamePage />} />
+        <Route path="/app/forum/post/:id" element={<ForumPostPage />} />
         <Route path="/app/settings" element={<Settings />} />
       </Route>
       {/* More specific than the marketing group's own path="*" (an extra

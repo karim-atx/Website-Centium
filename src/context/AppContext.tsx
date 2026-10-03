@@ -40,8 +40,6 @@ import type {
   WorkoutTemplate,
   WorkoutTemplateAssignment,
   ClientHealthNote,
-  ForumPost,
-  ForumCategory,
   HealthMetric,
 } from "../types";
 import {
@@ -104,7 +102,6 @@ import {
 import { cleanRoutineCopy } from "../services/routines/duplicate";
 import { displayedFolderColor, needsSavedColor } from "../data/folderColors";
 import { MAX_DEPTH_NOTE, canAddSubfolder, canMoveFolder } from "../services/routines/folderDepth";
-import { mockForumPosts } from "../data/mockForum";
 import { estimate1RM } from "../services/workout";
 import {
   clearPausedSession as clearPausedSessionRemote,
@@ -1028,12 +1025,6 @@ interface AppState {
   // the professional read that same key back on their own device, where no
   // client had ever written it. They are professional_reviews rows now, read
   // and written through hooks/useProfessionalReviews.
-
-  // V9 (QA 9.0): "a hub for all clients to share information publicly."
-  forumPosts: ForumPost[];
-  addForumPost: (category: ForumCategory, title: string, body: string) => void;
-  toggleForumLike: (postId: string) => void;
-  addForumComment: (postId: string, text: string) => void;
 
   // V7 (QA 7.0): Professional UI — Explore reframes categories as job
   // postings for hiring the professional, gated by a unique-ID affiliation
@@ -2270,10 +2261,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   });
 
   // HO5.1 removed the voice notice card; drop its old dismissal flag from
-  // storage once (nothing reads it).
+  // storage once (nothing reads it). The device-only forum went the same way
+  // when the shared forum replaced it: its posts were mock data saved per
+  // account, under "forumPosts".
   useEffect(() => {
     try {
       localStorage.removeItem("centium-state:voiceDisclosureSeen");
+      for (const key of Object.keys(localStorage)) {
+        if (key.startsWith("centium-state:") && key.endsWith(":forumPosts")) localStorage.removeItem(key);
+      }
     } catch {
       /* storage unavailable: nothing to clean */
     }
@@ -5921,37 +5917,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     setCustomExercises((prev) => prev.filter((e) => e.id !== id));
   };
 
-  const [forumPosts, setForumPosts] = usePersistentState<ForumPost[]>("forumPosts", mockForumPosts);
-  const addForumPost: AppState["addForumPost"] = (category, title, body) =>
-    setForumPosts((prev) => [
-      {
-        id: `fp-${Date.now()}`,
-        authorName: user.firstName,
-        category,
-        title,
-        body,
-        likes: 0,
-        likedByMe: false,
-        comments: [],
-        at: new Date().toISOString(),
-        mine: true,
-      },
-      ...prev,
-    ]);
-  const toggleForumLike: AppState["toggleForumLike"] = (postId) =>
-    setForumPosts((prev) =>
-      prev.map((p) => (p.id === postId ? { ...p, likedByMe: !p.likedByMe, likes: p.likes + (p.likedByMe ? -1 : 1) } : p))
-    );
-  const addForumComment: AppState["addForumComment"] = (postId, text) =>
-    setForumPosts((prev) =>
-      prev.map((p) =>
-        p.id === postId
-          ? { ...p, comments: [...p.comments, { id: `fc-${Date.now()}`, authorName: user.firstName, text, at: new Date().toISOString() }] }
-          : p
-      )
-    );
-
-
   const generateClientCode: AppState["generateClientCode"] = async () => {
     const result = await createClientCode();
     if (result.status === "error") return { ok: false, message: result.message };
@@ -6345,10 +6310,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateCustomExercise,
       removeCustomExercise,
       customExercisesError,
-      forumPosts,
-      addForumPost,
-      toggleForumLike,
-      addForumComment,
       businessDirectory,
       updateMyBusinessTier,
       achievements,
@@ -6525,7 +6486,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       exerciseCatalogError,
       customExercises,
       customExercisesError,
-      forumPosts,
       businessDirectory,
       achievements,
       pointsSummary,

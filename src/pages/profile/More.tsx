@@ -5,6 +5,7 @@ import { ReferralSheet } from "../../components/profile/ReferralSheet";
 import { PaymentsSheet } from "../../components/profile/PaymentsSheet";
 import { PublicListingSheet } from "../../components/profile/PublicListingSheet";
 import { useUnread } from "../../context/UnreadContext";
+import { forumAccess } from "../../services/forum/rules";
 import { UnreadBadge } from "../../components/messages/UnreadBadge";
 import { CommunityLeafIcon, ExploreLeafIcon, ReferralLeafIcon, PremiumLeafIcon } from "../../components/icons/MoreLeafIcons";
 import {
@@ -55,6 +56,7 @@ export default function More() {
   const isProfessional = user.accountType === "professional";
   const isBusiness = user.accountType === "business";
   const isClient = !isProfessional && !isBusiness;
+  const forumAllowed = forumAccess(user.dateOfBirth) === "adult";
   const [referralOpen, setReferralOpen] = useState(false);
   const [paymentsOpen, setPaymentsOpen] = useState(false);
   const [listingOpen, setListingOpen] = useState(false);
@@ -64,11 +66,14 @@ export default function More() {
   // The three tiles under the Mind hero (clients: the directory, Community and
   // Explore). Professionals and businesses have no Mind, directory or
   // Community (V6 / V9), so their page is the grouped list alone.
-  const tiles: Entry[] = [
+  //
+  // Community is for adults (Database ATX55): an under-18 gets the other two
+  // tiles, two to the row.
+  const tiles = [
     { icon: Users, label: "Professionals", desc: "Trainers, dietitians & doctors", to: "/app/professionals" },
-    { icon: CommunityLeafIcon, label: "Community", desc: "Forum discussions & fitness courses", to: "/app/forum" },
+    forumAllowed && { icon: CommunityLeafIcon, label: "Community", desc: "Forum discussions & fitness courses", to: "/app/forum" },
     { icon: ExploreLeafIcon, label: "Explore", desc: "Gyms, classes & the marketplace", to: "/app/marketplace" },
-  ];
+  ].filter(Boolean) as Entry[];
 
   // The grouped list. The client rows are the frame's five, in its order;
   // the professional and business rows are the ones those accounts had
@@ -88,6 +93,7 @@ export default function More() {
           isBusiness && { icon: Building2, label: "Business Profile", desc: "Name, bio, location & reviews", to: "/app/business/profile" },
           isProfessional && { icon: MessageCircle, label: "Messages", desc: "Chat with your clients", to: "/app/messages" },
           isProfessional && { icon: HeartPulse, label: "Health Metrics", desc: "Client health data & clinical notes", to: "/app/professionals/health-metrics" },
+          isProfessional && forumAllowed && { icon: CommunityLeafIcon, label: "Community", desc: "Forum discussions & fitness courses", to: "/app/forum" },
           isProfessional && { icon: Banknote, label: "Payments", desc: "Your rates & accepted payment methods", onClick: () => setPaymentsOpen(true) },
           isProfessional && { icon: Globe2, label: "Your public listing", desc: "Specialty, bio & whether clients can find you", onClick: () => setListingOpen(true) },
           isBusiness && { icon: MessageCircle, label: "Messages", desc: "Your conversations", to: "/app/messages" },
@@ -143,7 +149,7 @@ export default function More() {
             </span>
           </button>
 
-          <div className="grid grid-cols-3" style={{ gap: 9, marginBottom: 7 }}>
+          <div className={tiles.length === 3 ? "grid grid-cols-3" : "grid grid-cols-2"} style={{ gap: 9, marginBottom: 7 }}>
             {tiles.map((t) => (
               <button
                 key={t.label}

@@ -229,10 +229,63 @@
   --wheel-text: #241f1b;
   --wheel-disabled: #cfcbd6;
 
+  /* The shared forum (design PgYuBboDr8DEL2bk7EJKtU, screens 1-5). Light
+     values are the design's own hexes. The design has no dark frames, so the
+     dark values in .dark are this app's, keeping the same roles and AA
+     contrast on the dark card. */
+  --forum-accent: #7d6bb5;
+  --forum-on-accent: #ffffff;
+  --forum-track: #ece9f4;
+  --forum-track-active: #ffffff;
+  --forum-border: #e4e0f0;
+  --forum-card: #ffffff;
+  --forum-text: #241f1b;
+  --forum-muted: #5e5750;
+  --forum-body: #3a3430;
+  --forum-rules-bg: #eeeaf9;
+  --forum-rules-ink: #3f3272;
+  --forum-link: #5b4a99;
+  --forum-amber-bg: #fbf1dc;
+  --forum-amber-ink: #7a5212;
+  --forum-held-ink: #6b4710;
+  --forum-teal-bg: #e4f0ee;
+  --forum-teal-ink: #2f5f58;
+  --forum-removed-bg: #f1eef7;
+  --forum-photo-bg: #ece9f4;
+  --forum-rule: #ece9f4;
+  --forum-dashed: #8e80c2;
+  --forum-dashed-bg: #f7f6fb;
+  --forum-danger: #a33a2f;
+  --forum-handle: #dcd7e8;
+
   color-scheme: light;
 }
 
 .dark {
+  --forum-accent: #6e5bb8;
+  --forum-on-accent: #ffffff;
+  --forum-track: #24203d;
+  --forum-track-active: #3a3360;
+  --forum-border: #3a3456;
+  --forum-card: #1b1830;
+  --forum-text: #f2effa;
+  --forum-muted: #bdb6cf;
+  --forum-body: #dad5e6;
+  --forum-rules-bg: #2e2850;
+  --forum-rules-ink: #d7cef7;
+  --forum-link: #c3b6f5;
+  --forum-amber-bg: #3b2e14;
+  --forum-amber-ink: #f0cf8e;
+  --forum-held-ink: #f0cf8e;
+  --forum-teal-bg: #193a35;
+  --forum-teal-ink: #9fd6cb;
+  --forum-removed-bg: #262140;
+  --forum-photo-bg: #2a2546;
+  --forum-rule: #2e2946;
+  --forum-dashed: #8e80c2;
+  --forum-dashed-bg: #1b1830;
+  --forum-danger: #b04236;
+  --forum-handle: #4a4366;
   --c-cream: 13 11 26;
   --c-cream-soft: 23 20 42;
   --c-cream-card: 27 24 48;

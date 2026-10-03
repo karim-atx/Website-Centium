@@ -50,6 +50,7 @@ import { Toggle } from "../../components/ui/Toggle";
 import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
 import { HealthChecksSetting } from "../../components/health-checks/HealthChecksSetting";
+import { ForumNicknameCard } from "../../components/forum/ForumNicknameCard";
 
 const accountTypeLabel: Record<string, string> = {
   customer: "Customer",
@@ -466,6 +467,10 @@ export default function Profile() {
           the other relationship surfaces on this page rather than inventing a
           notification centre for one kind of invitation. */}
       {user.accountType === "customer" && <MembershipsCard />}
+
+      {/* The forum nickname: "You can change it later in Profile" (forum
+          design, screen 4). Adult members only. */}
+      <ForumNicknameCard className="mb-6 animate-fade-slide-up" />
 
       {/* QA 12.0: "Reorder the widgets under the profile picture and name
           to have the weight, height and age first then credentials which

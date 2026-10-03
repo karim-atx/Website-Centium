@@ -82,6 +82,9 @@ export const professionalSidebarNavItems: NavItem[] = [
   // real conversations, including any with an affiliated business, are here.
   { to: "/app/messages", label: "Messages", icon: MessageCircle },
   { to: "/app/professionals/health-metrics", label: "Health Metrics", icon: HeartPulse },
+  // The shared forum, where a verified professional posts under their name
+  // with the Professional badge. Removed for an under-18 in Sidebar.
+  { to: "/app/forum", label: "Forum", icon: MessageSquare },
   { to: "/app/marketplace", label: "Explore", icon: Store },
   { to: "/app/profile", label: "Profile", icon: UserIcon },
 ];

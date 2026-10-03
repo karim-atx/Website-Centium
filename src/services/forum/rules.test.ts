@@ -1,0 +1,83 @@
+import { strict as assert } from "node:assert";
+import { test } from "node:test";
+import {
+  composeChips,
+  describeForumError,
+  filterChips,
+  forumAccess,
+  initialOf,
+  nicknameProblem,
+  type ForumCategory,
+} from "./rules.ts";
+import { jpegCarriesMetadata } from "./photoBytes.ts";
+
+const cats: ForumCategory[] = [
+  { key: "general", name: "General", sensitivity: "general", sortOrder: 50 },
+  { key: "progress", name: "Progress", sensitivity: "weight", sortOrder: 40 },
+  { key: "workouts", name: "Workouts", sensitivity: "general", sortOrder: 10 },
+  { key: "nutrition", name: "Nutrition", sensitivity: "diet", sortOrder: 20 },
+  { key: "motivation", name: "Motivation", sensitivity: "general", sortOrder: 30 },
+];
+
+test("main chips: no General, sort order; recovery hides diet and weight", () => {
+  assert.deepEqual(filterChips(cats, false).map((c) => c.key), ["workouts", "nutrition", "motivation", "progress"]);
+  assert.deepEqual(filterChips(cats, true).map((c) => c.key), ["workouts", "motivation"]);
+});
+
+test("composer chips keep General", () => {
+  assert.deepEqual(composeChips(cats, false).map((c) => c.key), ["workouts", "nutrition", "motivation", "progress", "general"]);
+  assert.deepEqual(composeChips(cats, true).map((c) => c.key), ["workouts", "motivation", "general"]);
+});
+
+test("age gate", () => {
+  assert.equal(forumAccess("1990-01-01"), "adult");
+  const y = new Date().getUTCFullYear() - 10;
+  assert.equal(forumAccess(`${y}-01-01`), "minor");
+  assert.equal(forumAccess(undefined), "unknown-age");
+});
+
+test("nickname checks", () => {
+  const reserved = new Set(["doctor", "support"]);
+  assert.equal(nicknameProblem("ab", reserved, []), "format");
+  assert.equal(nicknameProblem("has space", reserved, []), "format");
+  assert.equal(nicknameProblem("a".repeat(21), reserved, []), "format");
+  assert.equal(nicknameProblem("Doctor", reserved, []), "reserved");
+  // Exact match only, like the server: containing a reserved word is fine.
+  assert.equal(nicknameProblem("DoctorWho", reserved, []), null);
+  assert.equal(nicknameProblem("Lina_Runs", reserved, ["Lina"]), "real-name");
+  assert.equal(nicknameProblem("RunnerMaya", reserved, ["Lina"]), null);
+  assert.equal(nicknameProblem("MaryRuns", reserved, ["Mary Ann"]), "real-name");
+  // A two-letter name is not a basis for refusing.
+  assert.equal(nicknameProblem("Alpha", reserved, ["Al"]), null);
+});
+
+test("refusal wording", () => {
+  assert.equal(
+    describeForumError({ code: "ATX57", message: "your access to the community forum is paused until Friday 09 Oct" }, "post"),
+    "Your access to the community forum is paused until Friday 09 Oct."
+  );
+  assert.match(describeForumError({ code: "ATX02" }, "post")!, /5 posts an hour/);
+  assert.match(describeForumError({ code: "ATX02" }, "reply")!, /20 replies an hour/);
+  assert.equal(describeForumError({ code: "XX000" }, "post"), null);
+});
+
+test("initials", () => {
+  assert.equal(initialOf("runnerMaya"), "R");
+  assert.equal(initialOf(""), "?");
+});
+
+test("photo bytes: a re-drawn JPEG passes, Exif or a comment is refused", () => {
+  const sos = [0xff, 0xda, 0x00, 0x02];
+  const jfif = [0xff, 0xe0, 0x00, 0x04, 0x00, 0x00];
+  assert.equal(jpegCarriesMetadata(new Uint8Array([0xff, 0xd8, ...jfif, ...sos])), false);
+  const exif = [0xff, 0xe1, 0x00, 0x04, 0x45, 0x78];
+  assert.equal(jpegCarriesMetadata(new Uint8Array([0xff, 0xd8, ...jfif, ...exif, ...sos])), true);
+  const comment = [0xff, 0xfe, 0x00, 0x03, 0x41];
+  assert.equal(jpegCarriesMetadata(new Uint8Array([0xff, 0xd8, ...comment, ...sos])), true);
+  assert.equal(jpegCarriesMetadata(new Uint8Array([0x89, 0x50, 0x4e, 0x47])), true);
+  // Chrome's encoder adds an ICC colour profile (APP2): allowed. Any other APP2 is not.
+  const icc = [0xff, 0xe2, 0x00, 0x10, ...Array.from("ICC_PROFILE\0", (ch) => ch.charCodeAt(0)), 0x01, 0x01];
+  assert.equal(jpegCarriesMetadata(new Uint8Array([0xff, 0xd8, ...jfif, ...icc, ...sos])), false);
+  const otherApp2 = [0xff, 0xe2, 0x00, 0x06, 0x46, 0x50, 0x58, 0x52];
+  assert.equal(jpegCarriesMetadata(new Uint8Array([0xff, 0xd8, ...otherApp2, ...sos])), true);
+});

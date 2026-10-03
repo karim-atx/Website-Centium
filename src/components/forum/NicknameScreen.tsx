@@ -1,0 +1,128 @@
+import { useEffect, useState } from "react";
+import { fetchReservedNicknames, setNickname } from "../../services/forum";
+import { nicknameProblem, NICKNAME_PROBLEM_TEXT } from "../../services/forum/rules";
+import { fv } from "./forumColor";
+import { rememberNickname } from "./useForumMe";
+
+// Design screen 4: "Choose a forum nickname". Shown on a member's first visit
+// to the forum, and again from Profile or the forum's Edit link to change it.
+//
+// NO "AVAILABLE" LINE BEFORE SAVING. The design shows one, but the nickname
+// table is readable only row by row by its owner, so the device cannot know a
+// name is free until set_forum_nickname accepts it (ATX63 when it is taken).
+// Showing "Available" for a name that then turns out taken would be wrong, so
+// the screen checks what it can (format, reserved words, your own name) and
+// lets the save answer the rest.
+
+export function NicknameScreen({
+  firstName,
+  initial,
+  editing,
+  onDone,
+}: {
+  firstName: string;
+  initial: string | null;
+  editing: boolean;
+  onDone: (nickname: string) => void;
+}) {
+  const [value, setValue] = useState(initial ?? "");
+  const [reserved, setReserved] = useState<Set<string>>(new Set());
+  const [touched, setTouched] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let live = true;
+    void fetchReservedNicknames().then((r) => live && setReserved(r));
+    return () => {
+      live = false;
+    };
+  }, []);
+
+  const problem = nicknameProblem(value, reserved, [firstName]);
+  const unchanged = editing && initial !== null && value.trim() === initial;
+  const shownError = serverError ?? (touched && problem ? NICKNAME_PROBLEM_TEXT[problem] : null);
+
+  const submit = async () => {
+    setTouched(true);
+    if (problem || busy) return;
+    if (unchanged) {
+      onDone(initial!);
+      return;
+    }
+    setBusy(true);
+    setServerError(null);
+    const r = await setNickname(value);
+    setBusy(false);
+    if (!r.ok) {
+      setServerError(r.message);
+      return;
+    }
+    rememberNickname(value.trim());
+    onDone(value.trim());
+  };
+
+  return (
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        void submit();
+      }}
+      className="flex flex-col min-h-[calc(100dvh-180px)]"
+      style={{ color: fv("text") }}
+    >
+      <div className="flex flex-col gap-[18px] pt-10 pb-6 grow">
+        <div className="w-16 h-16 rounded-[20px] flex items-center justify-center" style={{ background: fv("rules-bg") }}>
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke={fv("rules-ink")} strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 21c1-4 4-6 8-6s7 2 8 6" />
+          </svg>
+        </div>
+        <h1 className="m-0 text-[26px] font-extrabold leading-[1.2] [text-wrap:balance]">Choose a forum nickname</h1>
+        <p className="m-0 text-[15px] leading-[1.6]" style={{ color: fv("body") }}>
+          Each time you post, you choose whether to use this nickname or your first name. Nobody in the community can
+          see who is behind your nickname.
+        </p>
+        <label className="flex flex-col gap-1.5 text-[13px] font-extrabold">
+          Nickname
+          <input
+            value={value}
+            onChange={(e) => {
+              setValue(e.target.value);
+              setServerError(null);
+            }}
+            onBlur={() => setTouched(true)}
+            autoCapitalize="none"
+            autoCorrect="off"
+            spellCheck={false}
+            maxLength={20}
+            aria-invalid={!!shownError}
+            aria-describedby="nickname-rules"
+            className="h-[50px] rounded-[14px] px-[14px] text-base font-bold outline-none"
+            style={{ border: `2px solid ${fv("accent")}`, background: fv("card"), color: fv("text") }}
+          />
+        </label>
+        {shownError && (
+          <span role="alert" className="text-[13px] font-bold text-status-high">
+            {shownError}
+          </span>
+        )}
+        <ul id="nickname-rules" className="m-0 pl-[18px] text-[13px] leading-[1.7] list-disc" style={{ color: fv("muted") }}>
+          <li>3 to 20 letters, numbers or underscores</li>
+          <li>Not your real name, and not a name that sounds official, like "Doctor" or "Support"</li>
+          <li>You can change it later in Profile</li>
+        </ul>
+      </div>
+      <div className="pb-8">
+        <button
+          type="submit"
+          disabled={busy}
+          className="tap w-full h-[54px] rounded-2xl text-base font-extrabold disabled:opacity-60"
+          style={{ background: fv("accent"), color: fv("on-accent") }}
+        >
+          {busy ? "Saving…" : editing ? "Save" : "Continue"}
+        </button>
+      </div>
+    </form>
+  );
+}

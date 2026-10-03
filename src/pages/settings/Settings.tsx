@@ -42,6 +42,7 @@ import {
   KeyRound,
   Droplet,
 } from "lucide-react";
+import { ForumBlocksSetting } from "../../components/forum/ForumBlocksSetting";
 
 /**
  * Whether the app is running installed rather than in a browser tab.
@@ -522,6 +523,9 @@ export default function Settings() {
       {/* Task T: the profile's time zone, for every account. Moved here from
           the cycle tracker's Settings tab, which links to #timezone. */}
       <TimezoneSetting />
+
+      {/* "Blocked in the forum": label only, with Unblock. */}
+      <ForumBlocksSetting />
 
       <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         {t("General")}

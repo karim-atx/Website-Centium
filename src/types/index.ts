@@ -1564,28 +1564,3 @@ export interface BusinessClass {
   paymentType?: string;
 }
 
-// V9 (QA 9.0): "a hub for all clients to share information publicly" — a
-// lightweight community forum, one flat list of posts each with its own
-// comment thread (no nested categories/subforums, to match the rest of this
-// prototype's "keep it simple" feature depth).
-export interface ForumComment {
-  id: string;
-  authorName: string;
-  text: string;
-  at: string;
-}
-
-export interface ForumPost {
-  id: string;
-  authorName: string;
-  category: ForumCategory;
-  title: string;
-  body: string;
-  likes: number;
-  likedByMe: boolean;
-  comments: ForumComment[];
-  at: string;
-  mine?: boolean;
-}
-
-export type ForumCategory = "Nutrition" | "Workouts" | "Progress" | "Motivation" | "General";
