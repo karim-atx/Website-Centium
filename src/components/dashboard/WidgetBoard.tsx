@@ -6,7 +6,7 @@ import type { WidgetType, WidgetConfig, WidgetSize } from "../../types";
 import { Pencil, Check, Plus, Footprints, Scale, Droplet, Moon, Utensils, Dumbbell, CheckSquare, BookOpen, Sparkles, HeartPulse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { ALWAYS_LARGE, widgetColumns, widgetSpans } from "../../utils/widgetGrid";
+import { createEditTapGuard, widgetColumns, widgetSpans } from "../../utils/widgetGrid";
 
 // HO1.1: 2 small widgets per row below a 400px-wide viewport, 3 from 400.
 function useWidgetColumns() {
@@ -206,9 +206,23 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
     [handlePointerMove, reorderWidgets]
   );
 
+  // A resize reflows the grid, so a quick second tap lands on whatever moved
+  // under the finger: a tile body, a neighbour's control, or its REMOVE.
+  // Every edit action waits until the board has settled (createEditTapGuard).
+  const [tapGuard] = useState(createEditTapGuard);
+  const resizeTile = (widget: WidgetConfig) => {
+    if (!tapGuard.allowed(Date.now())) return;
+    tapGuard.resized(Date.now());
+    resizeWidget(widget.id, widget.size === "small" ? "large" : "small");
+  };
+  const removeTile = (id: string) => {
+    if (tapGuard.allowed(Date.now())) removeWidget(id);
+  };
+
   const handleGripPointerDown = useCallback(
     (e: React.PointerEvent, widget: WidgetConfig) => {
       e.preventDefault();
+      if (!tapGuard.allowed(Date.now())) return;
       const tile = tileRefs.current.get(widget.id);
       if (!tile) return;
       const fromIndex = visibleWidgetsRef.current.findIndex((w) => w.id === widget.id);
@@ -229,7 +243,7 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
       window.addEventListener("pointercancel", handlePointerUp, { once: true });
       startAutoScroll();
     },
-    [handlePointerMove, handlePointerUp]
+    [handlePointerMove, handlePointerUp, tapGuard]
   );
 
   // Ghost's initial position + "lifted" treatment, set imperatively once
@@ -325,10 +339,9 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
               ref={setTileRef(item.id)}
               size={item.size}
               span={spans[i]}
-              resizable={!ALWAYS_LARGE.has(item.type)}
               editMode={editMode}
-              onRemove={() => removeWidget(item.id)}
-              onResize={() => resizeWidget(item.id, item.size === "small" ? "large" : "small")}
+              onRemove={() => removeTile(item.id)}
+              onResize={() => resizeTile(item)}
               onGripPointerDown={(e) => handleGripPointerDown(e, item)}
             >
               <HomeWidget
@@ -342,7 +355,9 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
 
         {editMode && (
           <button
-            onClick={() => setPickerOpen(true)}
+            onClick={() => {
+              if (tapGuard.allowed(Date.now())) setPickerOpen(true);
+            }}
             disabled={availableToAdd.length === 0}
             style={{ gridColumn: `span ${spans[spans.length - 1]}` }}
             className="tap h-[114px] rounded-[15px] border-2 border-dashed border-charcoal/15 flex flex-col items-center justify-center gap-1.5 text-charcoal-faint disabled:opacity-40"

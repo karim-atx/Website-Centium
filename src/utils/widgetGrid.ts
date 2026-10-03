@@ -1,4 +1,4 @@
-import type { WidgetConfig, WidgetSize, WidgetType } from "../types";
+import type { WidgetSize } from "../types";
 
 // Handover 2026-09-29 HO1.1 (01_GLOBAL / 03): the Home widget board is a
 // CSS grid of 6 tracks. Small widgets sit `columns` to a row (2 below a
@@ -20,10 +20,24 @@ export function widgetSpans(sizes: WidgetSize[], columns: 2 | 3): number[] {
   return sizes.map((size) => (size === "large" ? WIDGET_GRID_TRACKS : WIDGET_GRID_TRACKS / columns));
 }
 
-// Approved decision 7: Water and Food are always large, with no size toggle.
-export const ALWAYS_LARGE: ReadonlySet<WidgetType> = new Set<WidgetType>(["water", "nutrition"]);
+/**
+ * HOW LONG THE EDIT CONTROLS IGNORE TAPS AFTER A RESIZE. A resize reflows the
+ * grid, so the control moves out from under the finger and the next tap of a
+ * quick double or repeated tap lands on whatever moved there: the tile's own
+ * body, a neighbour's resize, or a neighbour's REMOVE. Half a second covers
+ * a fast repeat tap without making a deliberate second tap feel ignored.
+ */
+export const EDIT_TAP_LOCK_MS = 500;
 
-/** A widget with its size forced where decision 7 fixes it (also migrates saved boards). */
-export function withFixedSize<T extends Pick<WidgetConfig, "type" | "size">>(w: T): T {
-  return ALWAYS_LARGE.has(w.type) && w.size !== "large" ? { ...w, size: "large" } : w;
+/** The board's tap guard: `resized(now)` after a resize, `allowed(now)` before any edit action. */
+export function createEditTapGuard() {
+  let lockedUntil = 0;
+  return {
+    resized(now: number) {
+      lockedUntil = now + EDIT_TAP_LOCK_MS;
+    },
+    allowed(now: number) {
+      return now >= lockedUntil;
+    },
+  };
 }

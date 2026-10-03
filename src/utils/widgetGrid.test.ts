@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { widgetColumns, widgetSpans, withFixedSize } from "./widgetGrid.ts";
+import { EDIT_TAP_LOCK_MS, createEditTapGuard, widgetColumns, widgetSpans } from "./widgetGrid.ts";
 
 test("widgetColumns is 2 below 400 and 3 from 400", () => {
   assert.equal(widgetColumns(360), 2);
@@ -24,9 +24,11 @@ test("a large widget takes the full row; the small next to it does not stretch",
   assert.deepEqual(widgetSpans([], 3), []);
 });
 
-test("withFixedSize keeps Water and Food large and leaves the rest alone (decision 7)", () => {
-  assert.equal(withFixedSize({ type: "water", size: "small" }).size, "large");
-  assert.equal(withFixedSize({ type: "nutrition", size: "small" }).size, "large");
-  assert.equal(withFixedSize({ type: "steps", size: "small" }).size, "small");
-  assert.equal(withFixedSize({ type: "sleep", size: "large" }).size, "large");
+test("after a resize, every edit control ignores taps until the board has settled", () => {
+  const guard = createEditTapGuard();
+  assert.equal(guard.allowed(1000), true);
+  guard.resized(1000);
+  // rapid repeat taps land wherever the reflow put something: all ignored
+  for (const t of [1050, 1200, 1499]) assert.equal(guard.allowed(t), false);
+  assert.equal(guard.allowed(1000 + EDIT_TAP_LOCK_MS), true);
 });

@@ -11,8 +11,6 @@ interface WidgetShellProps {
   onGripPointerDown?: (e: React.PointerEvent<HTMLDivElement>) => void;
   /** HO1.1: the tile's grid-column span on the widget board (6 tracks). */
   span?: number;
-  /** Decision 7: Water and Food are always large, so they get no size toggle. */
-  resizable?: boolean;
   children: React.ReactNode;
 }
 
@@ -36,7 +34,20 @@ interface WidgetShellProps {
 // (lift, live reflow, placeholder, auto-scroll, settle) since it needs
 // sibling tile rects and the board's own bounds.
 export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
-  ({ size, editMode, onRemove, onResize, onGripPointerDown, span, resizable = true, children }, ref) => {
+  ({ size, editMode, onRemove, onResize, onGripPointerDown, span, children }, ref) => {
+    // EDIT CONTROLS ONLY EVER DO THEIR OWN THING. The tap stops here (it
+    // never reaches the tile or the board), a pointerdown on a control can
+    // never start a drag, and touch-action: manipulation stops a quick double
+    // tap being read as a zoom. WidgetBoard also ignores edit taps for a
+    // moment after each resize, while the grid reflows.
+    const control = (action: () => void) => ({
+      type: "button" as const,
+      onClick: (e: React.MouseEvent) => {
+        e.stopPropagation();
+        action();
+      },
+      onPointerDown: (e: React.PointerEvent) => e.stopPropagation(),
+    });
     return (
       <div
         ref={ref}
@@ -49,9 +60,8 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
         {editMode && (
           <>
             <div style={{ position: "absolute", top: 7, right: 7, display: "flex", gap: 4, zIndex: 10 }}>
-              {resizable && (
               <button
-                onClick={onResize}
+                {...control(onResize)}
                 className="tap"
                 style={{
                   width: 22,
@@ -64,14 +74,14 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
                   background: "rgba(255,255,255,0.92)",
                   color: "#241F1B",
                   boxShadow: "0 2px 8px rgba(36,31,27,0.18)",
+                  touchAction: "manipulation",
                 }}
                 aria-label="Resize widget"
               >
                 {size === "small" ? <Maximize2 size={11} /> : <Minimize2 size={11} />}
               </button>
-              )}
               <button
-                onClick={onRemove}
+                {...control(onRemove)}
                 className="tap"
                 style={{
                   width: 22,
@@ -84,6 +94,7 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
                   background: "rgba(255,255,255,0.92)",
                   color: "#4F7F78",
                   boxShadow: "0 2px 8px rgba(36,31,27,0.18)",
+                  touchAction: "manipulation",
                 }}
                 aria-label="Remove widget"
               >
@@ -126,7 +137,11 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
             </div>
           </>
         )}
-        {children}
+        {/* THE TILE ITSELF IS INERT WHILE EDITING: a tap on it (including one
+            meant for a control that a resize has just moved) never opens the
+            widget's screen or sheet. pointer-events is inherited, and
+            display: contents keeps the tile's own layout untouched. */}
+        <div style={editMode ? { display: "contents", pointerEvents: "none" } : { display: "contents" }}>{children}</div>
       </div>
     );
   }

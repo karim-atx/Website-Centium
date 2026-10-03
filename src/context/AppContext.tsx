@@ -1,5 +1,4 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
-import { withFixedSize } from "../utils/widgetGrid";
 import type {
   UserProfile,
   FoodLogEntry,
@@ -2280,12 +2279,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   }, []);
   const [widgets, setWidgets] = usePersistentState<WidgetConfig[]>("widgets", defaultWidgets);
-  // Decision 7: a board saved before Water and Food were fixed large is
-  // migrated once, in place.
-  useEffect(() => {
-    if (widgets.some((w) => withFixedSize(w) !== w)) setWidgets((prev) => prev.map(withFixedSize));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   const [nutritionGoal, setNutritionGoalState] = usePersistentState<NutritionGoal>(
     "nutritionGoal",
@@ -3924,7 +3917,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
     setUser((prev) => {
       const next = { ...prev, ...profile, businessId, onboarded: true };
-      setWidgets(widgetsForGoals(next.goals, next.tracking).map(withFixedSize));
+      setWidgets(widgetsForGoals(next.goals, next.tracking));
       return next;
     });
     // Health's Weight card reads metricValues.weight, not user.weightKg
@@ -5406,7 +5399,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const addWidget: AppState["addWidget"] = (type, size = "small") => {
     setWidgets((prev) => [
       ...prev,
-      withFixedSize({ id: `widget${Date.now()}${Math.random().toString(16).slice(2)}`, type, size, visible: true }),
+      { id: `widget${Date.now()}${Math.random().toString(16).slice(2)}`, type, size, visible: true },
     ]);
     // Explorer milestone: "Make it yours". Here rather than in WidgetBoard,
     // because this is the one function every way of adding a widget goes
@@ -5422,8 +5415,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       next.splice(toIndex, 0, moved);
       return next;
     });
+  // Any widget may be small or large (2026-10-02: Water and Food too, which
+  // decision 7 had fixed large). A resize only ever changes the size.
   const resizeWidget = (id: string, size: WidgetSize) =>
-    setWidgets((prev) => prev.map((w) => (w.id === id ? withFixedSize({ ...w, size }) : w)));
+    setWidgets((prev) => prev.map((w) => (w.id === id ? { ...w, size } : w)));
 
   // MO11: while the cycle section is hidden, the pregnancy addition is hidden
   // too, so a write from this profile never changes the stored value.

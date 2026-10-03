@@ -41,6 +41,8 @@ import { HabitPages } from "../mind/HabitPages";
 // step-down branch.
 
 const capsLabel = "font-bold text-[9px] tracking-[.16em] uppercase";
+/** The small water tile's one-tap amount: the middle of Add Metric's quick amounts. */
+const WATER_QUICK_ADD_ML = 250;
 const numeralSmall = "text-[16px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums";
 const badge = "text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap shrink-0";
 
@@ -306,13 +308,12 @@ export const HomeWidget: React.FC<{
   editMode?: boolean;
 }> = ({ widget, onWaterClick, editMode = false }) => {
   const navigate = useNavigate();
-  const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, workoutSessions, routines, habits, journalEntries, today, selectedDate, meditationSummary, recoverySensitive, recoveryModePending } =
+  const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, workoutSessions, routines, habits, journalEntries, today, selectedDate, meditationSummary, recoverySensitive, recoveryModePending, addWater } =
     useApp();
   const isLarge = widget.size === "large";
-  // Per-instance clip id for the small water bottle, so two water tiles on
-  // one board never resolve url(#…) to the other tile's clip path. useId's
-  // colons are stripped: they are not safe inside a url() fragment.
-  const bottleClipId = `w-bottle-clip-${React.useId().replace(/:/g, "")}`;
+  // Water quick-add on the small tile: one tap adds a glass, and a tap in
+  // flight cannot add a second one.
+  const [addingWater, setAddingWater] = React.useState(false);
 
   // A WEEK OF REAL READINGS. These three used to come from mockHealthData's
   // seven-value literals, so every widget on every Home screen drew the same
@@ -361,11 +362,16 @@ export const HomeWidget: React.FC<{
   const journalWordTotal = journalEntries.reduce((s, e) => s + e.text.trim().split(/\s+/).filter(Boolean).length, 0);
   const latestEntry = journalEntries[journalEntries.length - 1];
 
-  const wrap = (onClick: () => void, content: React.ReactNode) => (
-    <div onClick={onClick} role="button" tabIndex={0} className="tap cursor-pointer h-full">
-      {content}
-    </div>
-  );
+  // While the board is being edited the tile does nothing of its own (a tap,
+  // a click or Enter): only the edit controls act. See WidgetShell.
+  const wrap = (onClick: () => void, content: React.ReactNode) =>
+    editMode ? (
+      <div className="h-full">{content}</div>
+    ) : (
+      <div onClick={onClick} role="button" tabIndex={0} className="tap cursor-pointer h-full">
+        {content}
+      </div>
+    );
 
   /**
    * A widget with nothing behind it yet.
@@ -516,47 +522,48 @@ export const HomeWidget: React.FC<{
       const pct = water / waterGoalMl;
       const onClick = onWaterClick ?? (() => navigate("/app/health"));
       if (!isLarge) {
-        // CentiumWaterWidget.dc.html, variant "bottle": the fill is clipped
-        // to the body path, so it never enters the collar or cap. Its top
-        // edge runs from the body floor (y96) at 0% to the body top (y34) at
-        // the goal, and rises no further above it. Static, as in the markup.
-        const BOTTLE_BODY = "M14 34 h36 a3 3 0 0 1 3 3 v54 a5 5 0 0 1 -5 5 h-32 a5 5 0 0 1 -5 -5 v-54 a3 3 0 0 1 3 -3 z";
-        const bottleFillTop = 96 - Math.max(0, Math.min(1, pct)) * (96 - 34);
+        // SMALL WATER (2026-10-02, replacing decision 7's "always large"):
+        // today's amount against the goal, a slim progress bar, and one
+        // quick-add tap (+250 ml, the middle of the Add Metric sheet's quick
+        // amounts). The button's tap never reaches the tile's own (which
+        // opens the water sheet). Inert in edit mode with the rest of the tile.
+        const quickAdd = async (e: React.MouseEvent) => {
+          e.stopPropagation();
+          if (addingWater) return;
+          setAddingWater(true);
+          await addWater(WATER_QUICK_ADD_ML);
+          setAddingWater(false);
+        };
         return wrap(
           onClick,
           shell(
             "rgba(143,192,232,.17)",
             <>
-              <p className={capsLabel} style={{ color: "#5B86AD" }}>Water</p>
-              <div className="flex-1 flex items-center justify-between gap-1 min-h-0">
-                <span className="flex flex-col min-w-0">
-                  <span className="text-[17px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums whitespace-nowrap">
-                    {(water / 1000).toFixed(1)} L
-                  </span>
-                  <span className="text-[9px] font-semibold mt-[5px] whitespace-nowrap" style={{ color: "#5B86AD" }}>
-                    of {(waterGoalMl / 1000).toFixed(1)} L
-                  </span>
+              <p className={`${capsLabel} text-[#3F6F98] dark:text-[#9CC8EE]`}>Water</p>
+              <div className="flex-1 flex flex-col justify-center min-h-0">
+                <span className="text-[17px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums whitespace-nowrap">
+                  {(water / 1000).toFixed(1)} L
                 </span>
-                <svg width={41} height={64} viewBox="0 0 64 100" style={{ display: "block", flex: "none", overflow: "visible" }}>
-                  <defs>
-                    <clipPath id={bottleClipId}>
-                      <path d={BOTTLE_BODY} />
-                    </clipPath>
-                  </defs>
-                  <g clipPath={`url(#${bottleClipId})`}>
-                    <rect x={10} y={bottleFillTop.toFixed(2)} width={44} height={100} fill="#A8D5F2" />
-                  </g>
-                  <path d={BOTTLE_BODY} fill="none" stroke="#4A85C4" strokeWidth={3.4} strokeLinejoin="round" />
-                  <path d="M21 26 h22 v8 h-22 z" fill="#A8D5F2" stroke="#4A85C4" strokeWidth={3.4} strokeLinejoin="round" />
-                  <rect x={19} y={13} width={26} height={13} rx={3.5} fill="#A8D5F2" stroke="#4A85C4" strokeWidth={3.4} strokeLinejoin="round" />
-                  <circle cx={53} cy={15} r={7.5} fill="none" stroke="#4A85C4" strokeWidth={3.4} />
-                  <g stroke="#4A85C4" strokeWidth={3} strokeLinecap="round">
-                    <path d="M46 46 h4" />
-                    <path d="M46 58 h4" />
-                    <path d="M46 70 h4" />
-                    <path d="M46 82 h4" />
-                  </g>
-                </svg>
+                <span className="text-[9.5px] font-semibold mt-[4px] whitespace-nowrap text-[#3F6F98] dark:text-[#9CC8EE]">
+                  of {(waterGoalMl / 1000).toFixed(1)} L
+                </span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="flex-1 min-w-0 h-[5px] rounded-full bg-charcoal/[0.08] overflow-hidden">
+                  <span className="block h-full rounded-full" style={{ width: `${Math.min(100, pct * 100)}%`, background: "#4A85C4" }} />
+                </span>
+                <button
+                  type="button"
+                  onClick={quickAdd}
+                  disabled={addingWater}
+                  aria-label={`Add ${WATER_QUICK_ADD_ML} ml of water`}
+                  className="relative shrink-0 h-[26px] px-2 rounded-full text-[10px] font-bold text-white whitespace-nowrap disabled:opacity-60"
+                  style={{ background: "#3F6F98", touchAction: "manipulation" }}
+                >
+                  {/* a 44px hit area around the visible pill */}
+                  <span aria-hidden className="absolute -inset-[9px]" />
+                  +{WATER_QUICK_ADD_ML} ml
+                </button>
               </div>
             </>
           )
@@ -781,7 +788,7 @@ export const HomeWidget: React.FC<{
               <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Food</p>
               <div className="flex-1 flex flex-col justify-center min-h-0">
                 <p className="text-[12px] font-semibold text-charcoal leading-snug">
-                  {logged === 0 ? "Nothing logged yet" : `${logged} item${logged === 1 ? "" : "s"} logged`}
+                  {logged === 0 ? "Nothing logged yet today" : `${logged} item${logged === 1 ? "" : "s"} logged today`}
                 </p>
                 {isLarge && (
                   <p className="mt-1 text-[10.5px] text-charcoal-faint leading-snug">
@@ -793,54 +800,34 @@ export const HomeWidget: React.FC<{
           )
         );
       }
-      const totalGoal = targets.protein + targets.carbs + targets.fat || 1;
-      const circumference = 2 * Math.PI * 34;
       const macros = [
         { label: "Protein", color: "rgb(var(--c-team-lavender-deep))", consumed: totals.protein, target: targets.protein },
         { label: "Carbs", color: "rgb(var(--c-team-lavender))", consumed: totals.carbs, target: targets.carbs },
         { label: "Fat", color: "rgb(var(--c-teal))", consumed: totals.fat, target: targets.fat },
       ];
-      let rotAcc = -90;
-      const arcs = macros.map((m) => {
-        const arc = (m.consumed / totalGoal) * circumference;
-        const rotate = rotAcc;
-        rotAcc += (arc / circumference) * 360;
-        return { ...m, arc, rotate };
-      });
       const kcalLeft = Math.max(0, Math.round(targets.calories - totals.calories));
       if (!isLarge) {
+        // SMALL FOOD (2026-10-02, replacing decision 7's "always large"):
+        // today's calories against the target, with a slim progress bar,
+        // matching the small water tile.
+        const kcalPct = targets.calories > 0 ? Math.min(100, (totals.calories / targets.calories) * 100) : 0;
         return wrap(
           onClick,
           shell(
             "rgba(174,161,220,.16)",
             <>
               <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Food</p>
-              <div className="flex-1 flex items-center justify-center min-h-0">
-                <span className="relative w-[76px] h-[76px] block shrink-0">
-                  <svg width={76} height={76}>
-                    <circle cx="38" cy="38" r="34" fill="none" stroke="rgba(36,31,27,.07)" strokeWidth={8} />
-                    {arcs.map((a) => (
-                      <circle
-                        key={a.label}
-                        cx="38"
-                        cy="38"
-                        r="34"
-                        fill="none"
-                        stroke={a.color}
-                        strokeWidth={8}
-                        strokeDasharray={`${a.arc} ${circumference - a.arc}`}
-                        transform={`rotate(${a.rotate} 38 38)`}
-                      />
-                    ))}
-                  </svg>
-                  <span className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-                    <span className="text-[15px] font-extrabold tracking-[-0.03em] text-charcoal tabular-nums">
-                      {Math.round(totals.calories)}
-                    </span>
-                    <span className="mt-[2px] text-[8px] font-semibold text-charcoal-tertiary">kcal</span>
-                  </span>
+              <div className="flex-1 flex flex-col justify-center min-h-0">
+                <span className="text-[17px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums whitespace-nowrap">
+                  {Math.round(totals.calories)}
+                </span>
+                <span className="text-[9.5px] font-semibold mt-[4px] whitespace-nowrap text-primary-deep-text/[0.78]">
+                  of {targets.calories} kcal
                 </span>
               </div>
+              <span className="block h-[5px] rounded-full bg-charcoal/[0.08] overflow-hidden">
+                <span className="block h-full rounded-full" style={{ width: `${kcalPct}%`, background: "rgb(var(--c-team-lavender-deep))" }} />
+              </span>
             </>
           )
         );
