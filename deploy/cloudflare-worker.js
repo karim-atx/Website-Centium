@@ -11,6 +11,11 @@
 //      are gone — folded into legal.html's tabs — and deliberately not
 //      redirected: neither URL was ever linked externally or indexed, so
 //      they now 404 like any other removed path.
+//      The Explorations blog rides on the same proxy: /blog serves
+//      blog.html, and /blog/<slug> serves blog-post.html with that post's
+//      title/description/image written into its <head> (see
+//      renderBlogPost below), so search engines and link-preview bots that
+//      never run the page's script still see the right post.
 //   2. atraxia.org/centium/* (and www.atraxia.org/centium/*) -> a 301
 //      redirect to centium.atraxia.org,
 //      preserving the rest of the path and the query string. Centium used
@@ -67,6 +72,12 @@ const HUB_ASSET_PATHS = new Set([
   "/sitemap.xml",
   "/legal.html",
   "/404.html",
+  // The Explorations blog. index.html is listed explicitly because the blog
+  // pages link back to the hub's sections as "index.html#about" etc. (the
+  // hub's own nav uses bare "#about", so nothing needed it before).
+  "/index.html",
+  "/blog.html",
+  "/blog-post.html",
 ]);
 // "/icons/" added for the favicon/manifest set the hub has referenced by
 // root-relative path since the "landing page enhancements" v7 handoff — this
@@ -76,6 +87,8 @@ const HUB_ASSET_PATHS = new Set([
 // handoff's inline data-URI primary favicon (see the hub's first rel="icon")
 // is what will actually render meanwhile, since it needs no fetch at all —
 // but the rest stay broken without this until this file is redeployed.
+// The blog's featured images live under /atraxia/blog/, which "/atraxia/"
+// already covers — no separate entry, so there's one rule per folder.
 const HUB_ASSET_PREFIXES = ["/atraxia/", "/icons/"];
 
 function isHubAsset(pathname) {
@@ -101,6 +114,113 @@ function isLegacyCentiumPath(pathname) {
 function redirectToCentium(url) {
   const rest = url.pathname.slice(CENTIUM_LEGACY_PREFIX.length) || "/";
   return Response.redirect(`${CENTIUM_ORIGIN}${rest}${url.search}`, 301);
+}
+
+// The blog's pretty routes. "/blog" is the listing; "/blog/<slug>" is one
+// post. A slug is lowercase words joined by single hyphens and nothing else,
+// so it can never contain a "/" or "." and can't collide with a hub asset.
+const BLOG_INDEX_PATH = "/blog";
+const BLOG_PREFIX = "/blog/";
+const BLOG_SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+
+function isBlogPath(pathname) {
+  return pathname === BLOG_INDEX_PATH || pathname.startsWith(BLOG_PREFIX);
+}
+
+// blog-post.html renders a post client-side, so its static <head> carries
+// only neutral blog-level tags. Bots don't run that script; this writes the
+// requested post's own tags into the HTML before it leaves the Worker. The
+// post data is read from the page's own inline POSTS array rather than kept
+// in a second copy here, so adding a post to blog-post.html is all it takes.
+function findBlogPost(html, slug) {
+  const match = html.match(/var POSTS = (\[[\s\S]*?\]);/);
+  if (!match) return null;
+  try {
+    return JSON.parse(match[1]).find((post) => post.slug === slug) || null;
+  } catch {
+    return null;
+  }
+}
+
+function escapeAttr(value) {
+  return String(value).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function injectBlogPostMeta(html, post) {
+  const title = escapeAttr(`${post.title} | Atraxia`);
+  const description = escapeAttr(post.excerpt);
+  const pageUrl = escapeAttr(`https://${HUB_HOST}${BLOG_PREFIX}${post.slug}`);
+  const imageUrl = escapeAttr(`https://${HUB_HOST}/${post.img.replace(/^\/+/, "")}`);
+  const tags = [
+    [/<title>[\s\S]*?<\/title>/, `<title>${title}</title>`],
+    [/<meta\s+name="description"[^>]*>/, `<meta name="description" content="${description}" />`],
+    [/<link\s+rel="canonical"[^>]*>/, `<link rel="canonical" href="${pageUrl}" />`],
+    [/<meta\s+property="og:type"[^>]*>/, `<meta property="og:type" content="article" />`],
+    [/<meta\s+property="og:title"[^>]*>/, `<meta property="og:title" content="${title}" />`],
+    [/<meta\s+property="og:description"[^>]*>/, `<meta property="og:description" content="${description}" />`],
+    [/<meta\s+property="og:url"[^>]*>/, `<meta property="og:url" content="${pageUrl}" />`],
+    [/<meta\s+property="og:image"[^>]*>/, `<meta property="og:image" content="${imageUrl}" />`],
+    [/<meta\s+name="twitter:card"[^>]*>/, `<meta name="twitter:card" content="summary_large_image" />`],
+    [/<meta\s+name="twitter:title"[^>]*>/, `<meta name="twitter:title" content="${title}" />`],
+    [/<meta\s+name="twitter:description"[^>]*>/, `<meta name="twitter:description" content="${description}" />`],
+    [/<meta\s+name="twitter:image"[^>]*>/, `<meta name="twitter:image" content="${imageUrl}" />`],
+  ];
+  // Replace each tag where the page already has it; add it before </head>
+  // where it doesn't, so a template edit can't silently drop a tag.
+  return tags.reduce(
+    (out, [pattern, tag]) => (pattern.test(out) ? out.replace(pattern, () => tag) : out.replace("</head>", () => `    ${tag}\n  </head>`)),
+    html,
+  );
+}
+
+// Fetched without forwarding the visitor's request (unlike proxy()), so a
+// conditional request can't come back as a bodiless 304 — the whole page is
+// needed to read POSTS and rewrite the <head>. An unknown slug on the pretty
+// route gets the branded 404 with a real 404 status; on the legacy
+// blog-post.html?slug= URL the page is passed through untouched and shows its
+// own "Post not found" state, exactly as before.
+async function renderBlogPost(slug, { notFoundIfUnknown }) {
+  const originUrl = `https://${GH_PAGES_HOST}${GH_PAGES_PATH}/blog-post.html`;
+  const response = await fetch(originUrl);
+  if (!response.ok) return new Response(response.body, response);
+  const html = await response.text();
+  const post = findBlogPost(html, slug);
+  if (!post) {
+    return notFoundIfUnknown ? proxyHub404() : new Response(html, { status: response.status, headers: response.headers });
+  }
+  const headers = new Headers(response.headers);
+  headers.delete("content-length");
+  headers.set("content-type", "text/html; charset=utf-8");
+  return new Response(injectBlogPostMeta(html, post), { status: 200, headers });
+}
+
+// Everything under /blog. The hub's pages use relative URLs (they're also
+// served from the github.io subpath, where root-relative ones would break),
+// so on /blog/<slug> the browser resolves "atraxia/…", "favicon.svg",
+// "blog.html" etc. one level down, as /blog/atraxia/… and so on. Those are
+// mapped back onto the hub asset they name: pages by redirect, so the URL bar
+// and every further relative link stay correct; everything else (images,
+// icons) by proxy, to save a round trip per asset.
+async function routeBlog(url, request) {
+  const { pathname, search } = url;
+  if (pathname === BLOG_INDEX_PATH) {
+    return proxy(`${GH_PAGES_PATH}/blog.html`, search, request);
+  }
+  // One canonical form per page: no trailing slashes.
+  if (pathname === BLOG_PREFIX || (pathname.endsWith("/") && BLOG_SLUG.test(pathname.slice(BLOG_PREFIX.length, -1)))) {
+    return Response.redirect(`https://${url.host}${pathname.slice(0, -1)}${search}`, 301);
+  }
+  const rest = pathname.slice(BLOG_PREFIX.length);
+  if (BLOG_SLUG.test(rest)) {
+    return renderBlogPost(rest, { notFoundIfUnknown: true });
+  }
+  const assetPath = `/${rest}`;
+  if (isHubAsset(assetPath) && !assertNeverProxied(assetPath)) {
+    return assetPath.endsWith(".html")
+      ? Response.redirect(`https://${url.host}${assetPath}${search}`, 301)
+      : proxy(GH_PAGES_PATH + assetPath, search, request);
+  }
+  return proxyHub404();
 }
 
 async function proxy(originPath, search, request) {
@@ -159,6 +279,16 @@ export default {
     // falling through to any asset branch.
     if (assertNeverProxied(url.pathname)) {
       return proxyHub404();
+    }
+
+    if (isBlogPath(url.pathname)) {
+      return routeBlog(url, request);
+    }
+
+    // The pre-pretty-route post URL. Still linked from the listing's cards, so
+    // it gets the same per-post <head> as /blog/<slug> when it names a post.
+    if (url.pathname === "/blog-post.html" && url.searchParams.has("slug")) {
+      return renderBlogPost(url.searchParams.get("slug"), { notFoundIfUnknown: false });
     }
 
     if (isHubAsset(url.pathname)) {

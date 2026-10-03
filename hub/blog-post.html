@@ -1,499 +1,4 @@
 <!doctype html>
-<!--
-  atraxia.org's root "hub of apps" page. Fully self-contained (no external
-  JS/CSS frameworks or CDNs, save for Google Fonts), so it ships as a plain
-  static file. It lives in the repo's hub/ directory, which GitHub Actions
-  publishes to GitHub Pages verbatim — no build step (see
-  .github/workflows/deploy.yml). The Cloudflare Worker
-  (deploy/cloudflare-worker.js) proxies atraxia.org's root request to this
-  file. Centium is no longer part of this deployment at all: it builds and
-  deploys separately at centium.atraxia.org, and the Worker 301-redirects
-  the old atraxia.org/centium/* URLs there.
-
-  Design pass v1 (Claude Design handoff, "Atraxia Landing Page" — see
-  scratchpad/design-handoff-atraxia-landing/design_handoff_atraxia_landing/
-  README.md): full replacement of the previous hero, background, navigation
-  and founders treatment with a "concept sphere" design — animated planet,
-  data-mesh overlay, ring system, orbiting satellites, parallax starfield.
-  Light-mode only by design (the handoff's own open item).
-
-  Design pass v2 (Claude Design handoff, "Atraxia Landing Page — cosmic
-  hero, transparent nav, intro loader" — see
-  scratchpad/design-handoff-atraxia-landing-v2/design_handoff_atraxia_landing/
-  README.md): a scoped revision on top of v1, covering exactly three areas
-  per that handoff's own stated scope — everything else (mission, portfolio,
-  founders, trust, resources, contact, footer) is unmodified:
-    1. A new "cosmic hero" scene replacing v1's light hero band: dark ringed
-       planet with three orbiting moons (occlusion-masked so they pass
-       behind the body), parallax starfield, three nebulas, three meteors.
-    2. A fully transparent, theme-flipping nav pulled over the page content
-       (`--navh`-driven overlay, `.nav.is-dark` palette swap while a
-       `[data-nav-dark]` section spans the bar's mid-line, an animated
-       sliding pill tracking hover/focus/active-section) — ported from this
-       same repo's own src/marketing/components/Nav.tsx + useNavTheme.ts,
-       per the handoff's own note that it was ported *from* them.
-    3. A new intro loader: the mark draws itself via a star flying the
-       swoosh's path (SVG animateMotion) with a synced clip-path reveal
-       trailing behind it — both generated from the swoosh's actual pixel
-       geometry per the handoff, copied here as literal computed output
-       rather than re-run through the generator.
-  All CSS/markup/script here is lifted near-verbatim per the handoff's own
-  instructions (its `.dc.html` wrapper aside, the markup/CSS/JS is already
-  meant to transfer directly into a static file like this one).
-
-  (Historical note: this file used to deviate from the handoff by keeping a
-  script that rewrote the Centium tile's href to a raw-GitHub-Pages subpath,
-  since the handoff's unconditional absolute URL would have resolved wrong
-  when this page was viewed at the github.io URL. That script is gone —
-  Centium no longer exists at any subpath of this deployment, so there is no
-  variant left to rewrite to, and the tile now carries the handoff's
-  absolute URL after all.)
-
-  Design pass v3 (Claude Design handoff, "Atraxia landing page — v3 (nav
-  row, loader fixes, founder cards)" — see
-  scratchpad/design-handoff-atraxia-landing-v3/design_handoff_atraxia_landing_v3/
-  README.md): a scoped revision on top of v2, covering exactly five areas
-  per that handoff's own stated scope — everything else is unmodified:
-    1. Nav collapsed from two rows to one (logo · tabs · EST. 2026 on one
-       grid row); bar height ~99px (was 159px), --navh still measured at
-       runtime so hero padding/scroll-margin follow automatically.
-    2. Nav crossfade bugfix: the 70px crossfade band could exceed the
-       shorter bar's own half-height and clamp --navsolid to a permanent
-       grey wash over the hero instead of full transparency — band is now
-       capped at the bar's half-height.
-    3. Intro loader: explicit z-index paint order (circle always topmost),
-       the swoosh-reveal clip-path keyframes rebuilt as true half-planes
-       behind the same unchanged leading edge (the old trailing edge swung
-       back and sliced a wedge out of the artwork mid-sweep), and the
-       swoosh's reveal delay nudged from 0.9s to 0.85s so it trails the
-       circle by 0.15s.
-    4. Swoosh artwork swapped to a repaired copy (atraxia-swish-solid.png)
-       with ~470 enclosed transparent/near-white pixels along the inner
-       edge and tip filled in — present in the source PNG itself, not
-       introduced by the animation.
-    5. Founder cards: click-to-flip (front face → placeholder back-face
-       copy), updated titles, placeholder bio copy, and cards now hug their
-       own content height instead of stretching to match each other.
-  All CSS/markup/script here is lifted near-verbatim from the handoff's
-  `.dc.html`, including the swoosh keyframes' literal computed polygon
-  values (algorithmically derived per the handoff, not hand-rederived
-  here). Per the handoff's own note, its `public/atraxia/...` asset paths
-  and the `.dc.html` editor-shell-only `overflow-x`/`height:auto` rules are
-  prototype-only artifacts and were not carried over.
-
-  Design pass v4 (Claude Design handoff, "Atraxia landing page — mobile
-  header/nav + founder card crop" — see
-  scratchpad/design-handoff-atraxia-landing-v4/design_handoff_mobile_header_and_founder_card/
-  README.md): two scoped mobile-only (max-width: 760px) fixes; desktop is
-  untouched in both.
-    1. Mobile nav: "EST. 2026" moved under the lockup, and the five-tab
-       pill — which the handoff measured as needing ~487px of row width,
-       still cramped even with that row freed up — collapses to a 46px
-       glass menu button + dropdown panel, duplicating the desktop tabs'
-       hrefs. Toggle/outside-click/link-click behavior via a delegated,
-       once-bound click listener.
-    2. Founder card (mobile): Abdallah's photo used the same 15% focal
-       point as Karim's despite being framed ~7% higher in its source
-       file, clipping his hair. An `img[src*="abdallah"]` override switches
-       just his mobile focal point to `center top` — same frame and zoom
-       as Karim's, only the crop point changed.
-
-  Design pass v5 (Claude Design handoff, "Atraxia landing page — v5 (mobile
-  founder crop + mobile nav dropdown)" — see
-  scratchpad/design-handoff-atraxia-landing-v5/design_handoff_atraxia_landing_v5/
-  README.md): three targeted mobile-only (max-width: 760px) changes;
-  desktop/tablet and the dark (top-of-page) header state are untouched.
-    1. Founder photo crop replaced with a device-independent one: the v4
-       fix pinned a fixed 220px height against a fluid width, so the crop
-       window's aspect ratio (and effective zoom) changed with viewport
-       width — that's why a per-photo override was needed and still didn't
-       hold across devices. A fixed 4/3 container + object-fit: cover + one
-       shared 22% focal point gives both 720x828 photos pixel-identical
-       chest-up framing at every mobile width; the abdallah-specific
-       override from v4 is removed as no longer needed.
-    2. Mobile dropdown seam fix: the scrolled/light header's own
-       translucent surface and the dropdown's separate translucent
-       background resolved to slightly different values, showing a
-       horizontal seam where the bar ended and the panel began. Background
-       made fully opaque cream with a transparent top border; size, radius,
-       padding and shadow unchanged. The dark-state override stays after
-       this rule so it keeps winning at the top of the page.
-    3. Tap-outside-to-close: a single bubbling document click listener
-       doesn't reliably fire from a tap on non-interactive area on touch
-       devices, so the v4 __atxNavMenu IIFE is replaced by a v5 one bound
-       in the capture phase plus a pointerdown listener that closes the
-       panel on any press outside it and outside the toggle button. Same
-       toggle/link-click/aria-expanded behavior otherwise.
-
-  QA pass (2026-09-03, "Atraxia | Web QA 2.0" — a copy/content QA doc, not
-  a design handoff; applied directly to every section against this file's
-  own current content since the doc itself was extracted from the live
-  site). Full copy pivot from "health & wellness parent company" framing
-  to a broader "curiosity-led exploration company" framing:
-    - Nav renamed: Trust & Security -> Values (#trust -> #values),
-      Resources -> Blog (#resources -> #blog). About/Portfolio/Contact
-      unchanged.
-    - Hero: new eyebrow/headline/body/CTAs (arrows added to match the doc).
-    - About/mission: new eyebrow, headline, both body paragraphs, and the
-      first stat relabeled LIVE PRODUCT -> CORE MISSION.
-    - Portfolio: new headline/body; the two tiles themselves (Centium,
-      Coming soon) are unchanged per the doc.
-    - Founders: front-face bio and back-face text rewritten for both. The
-      doc struck through Abdallah's original Arabic proverb front quote
-      with no replacement given; initially omitted and flagged, then
-      restored per explicit follow-up instruction — kept verbatim
-      («الحاجة أم الاختراع» — أفلاطون), marked dir="rtl" lang="ar" so it
-      renders correctly inside the page's LTR layout.
-    - Values (was Trust & Security): fully reframed from data/privacy
-      specifics (cookies, per-product privacy policy, a security contact
-      email) to brand values (Principled / Client-Centric / Simplicity);
-      the "plain-language summary, see Privacy Policy" disclaimer is
-      removed. This section no longer says anything about data handling —
-      that now lives solely in legal.html's Group Privacy Policy tab.
-    - Blog (was Resources): new eyebrow/headline/body/teaser copy.
-    - Contact: new eyebrow/body; email changed hello@ -> support@atraxia.org
-      (both the section's own two links and the icon SVGs were left as-is —
-      the doc didn't ask for new ones). The old privacy.html and
-      accessibility.html pages, which still referenced hello@atraxia.org,
-      are gone as of the legal-centre content pass below — folded into
-      legal.html, which uses support@atraxia.org throughout.
-
-  Bugfix (2026-09-03): nav-bar click caused a visible jitter/back-and-forth
-  in the active-tab pill. The scroll-driven active-section function ran
-  synchronously on every raw 'scroll' event — dozens per second during a
-  nav link's smooth-scroll — each one forcing a layout read and rewriting
-  the pill's transform mid-transition, restarting its CSS transition
-  repeatedly. navTheme() (the nav dark/light crossfade) was already
-  coalesced to one call per animation frame via requestAnimationFrame;
-  active() now gets the same treatment.
-
-  Bugfix (2026-09-04): clicking one nav item then a different one made the
-  active-tab pill flash back to the just-left tab before landing on the new
-  one. First pass: deferred the blur-driven repaint (blur(A) firing before
-  focus(B) on a link-to-link click was falling through to the stale
-  `current` index) by one animation frame, cancelled once a
-  pointerenter/focus for the new tab arrived. That covers Chrome's
-  focus-on-click order but not every browser/input path — Safari in
-  particular doesn't focus a link on click at all, so nothing was there to
-  cancel the fallback. Replaced with a click-time pin: clicking a tab pins
-  the pill to it for a short window, during which any hover-loss reset
-  (blur, pointerleave) is ignored outright, regardless of what triggers it
-  or whether a prior hover/focus ever ran. Genuine focus/hover loss still
-  resolves to `current` exactly as before, just outside that window.
-
-  Design pass v6 (Claude Design handoff, "Atraxia landing page enhancements"
-  — see
-  scratchpad/design-handoff-atraxia-landing-v6/design_handoff_atraxia_landing_enhancements/
-  README.md): six scoped enhancements on top of v1-v5; the page itself was
-  not redesigned.
-    1. Mission stats: the three plain stat boxes became one unified panel
-       (dividers, brand swish/star motifs, a per-cell scramble count-up on
-       scroll-into-view, and a hover comet — an SVG meteor riding an orbital
-       ring between cells, eased so a direction change decelerates/arcs/
-       re-accelerates rather than flipping).
-    2. Portfolio: the two static tiles became a centre-snapping horizontal
-       selector (native scroll-snap drives selection) with a per-app
-       gradient glow sampled from each logo; #centium-tile's id moved from
-       the old tile onto the new CTA link, unchanged otherwise.
-    3. Values: new currentColor icons (balance scales / concentric circles /
-       tapering lines, replacing the old shield/lock/checkmark set), centred
-       content, hover lift + navy icon-tile inversion, staggered scroll-in,
-       icon stroke draw-in.
-    4. Founders: "Dr. Karim Khaldi" -> "Dr. Karim El Khaldi" (intro
-       paragraph, card heading, photo alt); mobile photo crop tightened from
-       a 4/3 window to 1/1 at a higher focal point so Abdallah's hairline
-       stays fully in frame.
-    5. Mobile nav: the scrolled/open dropdown's bar surface now goes fully
-       opaque (via :has()) instead of painting at 0.86 alpha over the
-       opaque panel, removing a visible seam between the two.
-    6. Document head: title -> "Atraxia — Led by Curiosity"; favicon
-       switched from favicon.svg to the atraxia-mark.png brand mark (og:
-       and twitter: meta still read the old title — out of this handoff's
-       stated scope, flagged rather than changed silently).
-  All CSS/markup/script lifted near-verbatim from the handoff's .dc.html/.js
-  pair; unused prototype-only particle-trail markup (dead .haze/.burn SVG
-  groups the shipped JS never queries) was not carried over.
-
-  Design pass v7 (Claude Design handoff, "Atraxia landing page (atraxia.org
-  root) — imported changes" — see
-  scratchpad/design-handoff-atraxia-landing-v7/design_handoff_atraxia_landing/
-  README.md): eleven targeted changes on top of v1-v6; everything else on
-  the page is unchanged.
-    1. Stats scramble now flashes one/two-digit numbers (was single random
-       glyphs) before resolving to the same final values.
-    2. Portfolio: the app logo is now also a link to that app's site,
-       gated to the already-selected item so it doesn't fight the rail's
-       own click-to-select behaviour (mirrors the "Visit …" CTA).
-    3. Abdallah Diab's front-quote reverted to the Plato quote's English
-       translation ("Necessity is the mother of invention"), dropping the
-       Arabic/RTL markup — this explicitly re-reverses the Arabic-quote
-       restoration from the 2026-09-03 QA-follow-up commit; confirmed with
-       the user given the direct conflict before applying.
-    4. Mobile stats: cells centre as one block, the desktop's circular
-       orbit/comet are hidden, and a new scroll-driven straight vertical
-       comet track (same nucleus/ribbon construction as the desktop ring,
-       linearised) takes its place — desktop untouched.
-    5. Mobile nav dropdown: the bar/panel seam corners now go square where
-       they meet (bar bottom, panel top), keeping their radius everywhere
-       else, so the two read as one connected shape.
-    6. Mobile hero parallax is now scroll-driven (swept through the hero's
-       scroll progress) instead of cursor-driven, since touch has no
-       cursor; fine-pointer desktop is unaffected.
-    7. Stats grid columns equalized (was a wider first column) so the
-       dividers land evenly regardless of content length.
-    8. Six generated bookmark/home-screen icons (derived from the existing
-       atraxia-mark-hi.png, opaque background) replace the single PNG
-       favicon; new public/icons/ directory.
-    9. Portfolio glow's purple-to-green transition point is now measured
-       to the active logo's own centreline (was the glow's fixed geometric
-       centre), realigned on select/resize/rail-scroll.
-    10. Portfolio glow enlarged to cover the whole selected-app block (logo
-        + name + description + CTA), not just the logo.
-    11. Added top margin above the portfolio selector, separate from the
-        section header's own bottom margin.
-  Two edits present in the handoff's extracted script were environment
-  shims for the design host's scrolling container (a document-capture
-  scroll listener plus poll in both the parallax and nav IIFEs, and a
-  zero-height guard in each) and were not ported — this static page's
-  script already runs after the DOM is parsed, so window's own scroll
-  event and the existing measurement calls are sufficient, as before.
-  One bug caught while porting item 4: the handoff's own stylesheet
-  declared the base `.mission-stats .stat-vtrack { display: none }` rule
-  AFTER the ≤760px block's `display: block` override, so at equal
-  specificity the base rule always won and the mobile track would never
-  actually show — reordered so the override wins as intended.
-
-  Design pass v8 (Claude Design handoff, "Atraxia landing page (atraxia.org
-  root) — imported changes", round 5 — see
-  scratchpad/design-handoff-atraxia-landing-v8/design_handoff_atraxia_landing/
-  README.md): items 12-18 on top of v7's items 1-11, several superseding an
-  earlier v7 item as noted.
-    12. Favicon set made explicit (supersedes v7 item 8/#12's own head
-        markup): a size-less rel="icon" + rel="shortcut icon" pair added
-        ahead of the sized set so every browser has an unambiguous default
-        (the previous sized-only set let some fall back to a missing
-        /favicon.ico and show nothing); added rel="manifest" pointing at a
-        new public/icons/site.webmanifest (name "Atraxia", theme #023b4a,
-        background white, the 192/512 icons, display "browser").
-    13. Portfolio logo->site redirect (supersedes v7 item 2): moved to the
-        capture phase with stopPropagation. The rail's own click handler
-        centres (and thus activates) the clicked item in the target phase,
-        so a bubble-phase listener here saw is-active already true even for
-        a logo that had just been off-centre, making every click both
-        select AND navigate. Capture-phase reads is-active before the rail
-        acts on the same click, which is the only point the guard means
-        anything.
-    14. Comet core detail + trailing embers, added to both comets: a
-        layered core (haze shell, nucleus, a slowly rotating faceted
-        hexagon, a specular highlight) replaces the flat disc, and a fixed
-        pool of SVG circles (16 desktop / 20 mobile, re-attributed per
-        frame rather than created/destroyed) spawns as embers opposite the
-        direction of travel while speed > 0.12, each fading independently
-        on its own decay.
-    15. Mobile comet path (supersedes v7 item 4c's straight vertical
-        track): now a sine weave (3.2 lobes) descending alongside the
-        stats instead of a straight line down a dead-space column. The
-        SVG's viewBox is rewritten to the wrapper's actual pixel size each
-        frame (was a fixed non-uniform 64x600 with preserveAspectRatio:
-        none, which would have stretched the new round core/embers), and
-        the ribbon is offset along each point's local normal instead of in
-        x alone, so the taper follows the curve.
-    16. Mobile stat-cell padding made symmetric (supersedes v7 item 4a,
-        which reserved a 4.6rem left column for the old straight track and
-        so centred content in the space to its right, not the cell itself)
-        — 1.6rem on both sides, since the winding path now passes behind
-        the content instead of beside it.
-    17. Mobile nav dropdown seam fully closed (supersedes v7 item 5, which
-        only squared the corners): the residual hairline was the open
-        panel's own top/side border plus the top bleed of its drop shadow.
-        Border-top dropped, shadow pushed fully below the panel, and a
-        clip-path masks anything that could still paint above the panel's
-        top edge.
-    18. Equal-width stats columns (v7 item 7) reconfirmed unchanged.
-  Same two environment shims as v7 (the design host's document-capture
-  scroll listeners/polls and zero-height guards) were present in this
-  handoff's extracted script and were not ported, for the same reason.
-  Re-fixed the same `.stat-vtrack` display:none-after-display:block
-  ordering bug noted above — the handoff's stylesheet still had the pair
-  in the losing order, so the reorder from v7 carries forward here too,
-  now with the new 44% width.
-
-  Design pass v9 (Claude Design handoff, "Atraxia landing page (atraxia.org
-  root) — imported changes", rounds 6-14 — items 12-34): see commit bbcb69d
-  for the full item-by-item summary. Headlines: primary favicon inlined as
-  a data URI (can't 404 or serve stale); mobile dropdown open/closed states
-  rebuilt as one interpolated state via three registered custom properties
-  (--dd-gap/--dd-radius/--dd-sep); several stacked stats-comet defects
-  fixed (lost IntersectionObserver across re-renders, a viewport-gate that
-  starved both loops below the fold, an over-broad `.core`-hiding
-  selector); new public/legal.html (seven-section legal centre, unreviewed
-  draft). Also fixed a live production bug found while wiring the above:
-  deploy/cloudflare-worker.js's asset allowlist never gained "/icons/" or
-  "/legal.html", so those had been 404ing on atraxia.org since the v7
-  favicon-set rollout — fixed here, but needs manual redeploy to the
-  Cloudflare dashboard to take effect (this file isn't auto-deployed).
-
-  Design pass v10 (Claude Design handoff, "Atraxia landing page (atraxia.org
-  root) — imported changes", rounds 15-22 — see
-  scratchpad/design-handoff-atraxia-landing-v10/design_handoff_atraxia_landing/
-  README.md): items 35-51 on top of v9's items 1-34.
-    35. Intro loader: the travelling dot's SMIL `<animateMotion>` removed in
-        favour of a CSS motion path (`offset-path`/`offset-distance`), since
-        SMIL runs on the document timeline — late-parsed markup could seek
-        past its own duration and freeze at the path's end, where a CSS
-        motion path is element-relative and always starts at 0%. `.atx-swish`
-        retimed to match the dot's new easing.
-    37. New on-brand 404 page (public/atraxia-404.html, replacing the old
-        plain placeholder): cream/teal gradient, teal-pale glow, a seeded
-        46-star field (deterministic PRNG, not Math.random(), so the layout
-        never reshuffles on reload), two drifting streaks, mark + wordmark
-        linking home, a large ghosted "404", and buttons to home and the
-        legal centre. Respects prefers-reduced-motion. Kept light-mode only,
-        matching hub.html itself — the old file's separate dark-mode
-        palette wasn't part of this page's actual design and was dropped.
-    38. Portfolio glow purple/green rebalance (three attempts upstream, only
-        the final one applied): the flanking gradient stops were
-        proportional to --pf-mid-pos (mid*0.32 / 0.68*(100-mid)), symmetric
-        only when the midpoint happened to sit at 50% — fixed ±30/+14
-        offsets instead, and the radial mask's centre now tracks
-        --pf-mid-pos too instead of a fixed 50%. --pf-from/--pf-mid/--pf-to/
-        --pf-mid-pos registered as typed custom properties (colour/
-        percentage) and transitioned on .pf-carousel, so the gradient
-        re-resolves and cross-fades every frame instead of the colour swap
-        snapping instantly.
-    39/42/44/48. Hero primary CTA redesigned: light gradient-bordered pill
-        (`.btn--hero-cta`) replacing the plain link, purple->teal->green
-        ramp drifting slowly at rest (hover-only, since animating
-        background-position at rest repaints for the life of the page),
-        hover adds a teal glow, a one-pass sheen and a lift. Final markup
-        dropped the arrow (`<span class="cta-label">See the portfolio</span>`
-        only) — the handoff's own `.cta-arrow` CSS rules were left dead
-        after that change upstream and were dropped here rather than
-        ported inert.
-    40/47. Hero cursor jitter + parallax performance: `.star-layer,
-        .orbit-wrap` no longer carry `transition: transform` — a transition
-        on a property a rAF loop writes every frame fights the loop's own
-        easing and was the actual jitter source, not the loop itself;
-        `will-change: transform` instead. The parallax IIFE also rewritten
-        to cache its layer list (rebuilt on resize), read scroll position
-        once per frame instead of per listener, and skip DOM writes whose
-        value hasn't changed (WeakMap of last-written transforms) — this is
-        what made fast scrolling feel laggy.
-    46. Portfolio switch flicker, root cause: the passive nearest-item
-        watcher and a click's own `center()` call could disagree mid-scroll
-        and both write selection state. Fixed with a selection lock —
-        `center(i)` sets a `lockTarget` the passive watcher defers to until
-        the rail actually arrives (or a 900ms fallback releases it) — in
-        `bindRail()`'s `center()`/`nearest()`/`select()`. (Items 41/45 were
-        superseded first attempts at this same bug, not applied.)
-    49. Legal Centre tab clicks now reset scroll to top: a `toTop(el)`
-        helper smooth-scrolls the document scroller and walks up from the
-        clicked link resetting any scrollable ancestor too, since the page
-        could in principle be embedded in a constrained scroll container.
-    50. Shared-script null guard: the centium-tile href IIFE's element
-        lookup was unguarded, so it threw at the script's top level on any
-        page without that element (Legal, the new 404 page) — aborting
-        every IIFE registered after it in the same script, including the
-        mobile nav dropdown and founder-card flip. Guarded with `if (tile)`.
-    51. Legal Centre background watermark: the same `.hero-backdrop`
-        element/class/rule the landing page's hero uses (so scale, opacity,
-        desaturation and sizing come from one shared definition), as the
-        first child of the page, plus the same cursor parallax (ported
-        standalone in legal.html's own script, since that page has no star
-        layers/orbit to share a loop with). Two supporting rules were
-        needed since this page doesn't share hub.html's `.page`/`.nav`/main
-        layering: `position: relative; z-index: 1` added directly to its
-        existing `.header`/`main`/`footer` rules (a position:fixed z-index:0
-        watermark would otherwise paint over static in-flow content per the
-        CSS stacking order), and no `--navh` neutralising was needed since
-        this page never had that hub.html-specific negative margin to begin
-        with. A full nav/dark-header treatment was tried upstream and
-        reverted per the handoff's own note — only the watermark and
-        parallax were ported, not the nav.
-  Two environment shims flagged in the handoff (a document-capture scroll
-  listener/poll and an `atxScrollY()` helper, present only because the
-  design host scrolls an internal container rather than window) were not
-  ported, same as every prior round. v10's icon PNGs differ in byte size
-  from what's deployed but are pixel-identical on inspection — re-export
-  noise, not a real change, so public/icons/* was left as-is.
-
-  Favicon consistency fix: the item 12 (v8) primary `rel="icon"` was a
-  base64 PNG data URI carrying embedded C2PA content-credentials metadata
-  and no background — it rendered as a bare "A" mark with no backdrop,
-  inconsistent with Centium's own favicon (a white rounded-square badge
-  behind the mark, added when Centium's favicon was brought up to date).
-  Replaced with a plain `favicon.svg` (same rx=22 rounded-square-on-white
-  convention, atraxia/atraxia-mark.png embedded inside it) so both
-  products' tab icons match. The sized PNG set (16/32/48/192,
-  apple-touch-icon, manifest) is unchanged — those still show the mark
-  with no backdrop, since regenerating that set would need real image
-  tooling this environment doesn't have; flagging as a follow-up rather
-  than leaving it silently inconsistent.
-
-  Design pass v11 (Claude Design handoff, "Atraxia landing page — icons,
-  interactions, mobile fixes" — see
-  scratchpad/design-handoff-atraxia-landing-v12/design_handoff_atraxia_landing/
-  README.md): items 1-8 of that handoff (items 9/10, the Legal Centre
-  content pass and accessibility.html/privacy.html retirement, were out of
-  this pass's scope and left for a parallel change).
-    1. Values section: all three `.trust-card .icon` SVGs replaced —
-       compass (Principled, was a scales glyph), two figures over an
-       infinity loop (Client-Centric, was concentric circles), pill switch
-       (Simplicity, was three stacked lines). Tile 44px -> 56px, glyph
-       24px -> 34px.
-    2. The three new icons opt out of the shared `atxDrawIn` scroll-reveal
-       dash animation: it hardcodes `stroke-dasharray: 96`, sized for the
-       old icons' path lengths, which left the new (much shorter) marks
-       permanently part-drawn at rest.
-    3. Hover animations ported into a new fourth end-of-body IIFE
-       (bindIconDraw/bindCompass/bindToggle): Client-Centric self-draws via
-       measured per-element dash lengths (no `pathLength` attribute —
-       reintroducing one silently renormalises every dasharray/dashoffset
-       to a 100-unit space); Principled's needle does one settling spin
-       (rotate(-360deg) snapped, then transitions to rotate(0deg) over
-       900ms); Simplicity's knob is a pure CSS transition on :hover/
-       :focus-within. Each hover binder guards on a versioned dataset flag
-       (ccBound/prBound) and tears down its previous listeners via
-       AbortController before rebinding, rather than a boolean flag, since
-       the SVG nodes persist across any future re-render.
-    4. Touch tap-to-select model (bindTouchTriggers): coarse/touch pointers
-       get a selection model instead of hover — tap an unselected card to
-       select and play its animation, tap again to deselect (no replay);
-       one card selected at a time; a tap outside the grid clears it.
-       `.is-selected` carries the same visual treatment as hover MINUS the
-       lift transform, so a deselecting card never appears to drop. Hover
-       binders are gated to `pointerType === 'mouse'` throughout, since a
-       touch tap also fires `pointerenter`.
-    5. Two mobile-only (max-width: 760px) seam fixes: the mission section's
-       border-bottom replaced with a wash that ramps to zero opacity at
-       both edges instead of stepping; the hero's opaque backdrop dropped
-       and `.hs-stage` mask-image'd to transparent over its last 140px so
-       the shared `.page` gradient shows through the seam uninterrupted
-       (deliberately not colour-matched — the composited colour there
-       depends on document height, so no literal stop is correct).
-    6. Footer social icons: hover now fills pale teal within the existing
-       32px circular border (was a plain navy text/border colour change).
-    7. Hero galaxy v17 module: `coreNear()`'s `return 0` stub (with its
-       anti-reintroduction warning comment) replaced with real cursor-
-       coupling — smoothstep falloff eased 0.07/frame, snapping to 0 below
-       0.0005 — plus a live "lighter"-composite core bloom in `drawGalaxy`
-       and `pointerleave`/`blur` teardown in `bindDrive()`. The handler
-       still only stores raw coordinates; the one layout read
-       (`getBoundingClientRect`) stays inside `coreNear`, once per frame,
-       preserving the module's no-layout-read-in-the-listener rule.
-    8. Portfolio selector: `.pf-item .pf-name` (the Centium title) widened
-       into the same navigation target as `.pf-logo`, same capture-phase
-       listener and is-active gating (unchanged, still required so a
-       bubble-phase listener can't double-fire select-and-navigate against
-       the rail's own target-phase activation). Centium panel copy updated
-       to a two-part title + description (`.desc-title` / `.desc`).
-  All CSS/markup/JS lifted near-verbatim from the handoff's
-  `Atraxia Landing.dc.html` (CSS/markup, items 1/2/5/6/8b) and
-  `atraxia-boot.js` (items 7/8a); items 3/4's logic class was ported from a
-  React-host component method set into a plain end-of-body IIFE, matching
-  this page's own module convention, rather than carried over as a class.
--->
-
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -547,8 +52,8 @@
       content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' data:; manifest-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'none'; object-src 'none'"
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Atraxia — Led by Curiosity</title>
-    <meta name="description" content="Atraxia is the parent company behind a growing portfolio of health and wellness apps and businesses, starting with Centium." />
+    <title>Explorations | Atraxia</title>
+    <meta name="description" content="Thoughts on what’s next: the thinking behind Atraxia’s work." />
     <meta name="theme-color" content="#023b4a" />
     <link rel="icon" type="image/svg+xml" href="favicon.svg" />
     <link rel="shortcut icon" type="image/png" href="icons/favicon-32.png" />
@@ -558,16 +63,16 @@
     <link rel="icon" type="image/png" sizes="192x192" href="icons/favicon-192.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png" />
     <link rel="manifest" href="icons/site.webmanifest" />
-    <link rel="canonical" href="https://atraxia.org/" />
+    <link rel="canonical" href="https://atraxia.org/blog" />
     <meta property="og:type" content="website" />
     <meta property="og:site_name" content="Atraxia" />
-    <meta property="og:title" content="Atraxia — Health & wellness ventures" />
-    <meta property="og:description" content="Atraxia is the parent company behind a growing portfolio of health and wellness apps and businesses, starting with Centium." />
-    <meta property="og:url" content="https://atraxia.org/" />
+    <meta property="og:title" content="Explorations | Atraxia" />
+    <meta property="og:description" content="Thoughts on what’s next: the thinking behind Atraxia’s work." />
+    <meta property="og:url" content="https://atraxia.org/blog" />
     <meta property="og:image" content="https://atraxia.org/atraxia/atraxia-logo.png" />
     <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content="Atraxia — Health & wellness ventures" />
-    <meta name="twitter:description" content="Atraxia is the parent company behind a growing portfolio of health and wellness apps and businesses, starting with Centium." />
+    <meta name="twitter:title" content="Explorations | Atraxia" />
+    <meta name="twitter:description" content="Thoughts on what’s next: the thinking behind Atraxia’s work." />
     <meta name="twitter:image" content="https://atraxia.org/atraxia/atraxia-logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -2178,53 +1683,82 @@
         }
       })();
     </script>
+
+    <style>
+      /* ---------- blog (listing + post) — page-scoped, built only from the
+         landing page's existing tokens (--navy/--teal/--charcoal, card radius
+         1.75rem, 1px border/0.07, card shadow, a.tile hover lift) */
+      .hero--compact + section { padding-top: 1.5rem; }
+      .hero.hero--compact { min-height: min(70vh, 720px); padding-bottom: 7.5rem; }
+      .hero--compact .hero-h1 { max-width: 17ch; }
+      .hero--post .hero-h1 { font-size: clamp(2.2rem, 4.4vw, 3.5rem); line-height: 1.08; max-width: 20ch; margin-bottom: 2rem; }
+      .hero--post .hero-back { margin-bottom: 2.4rem; display: inline-flex; }
+      @media (max-width: 760px) { .hero.hero--compact { min-height: 74vh; padding-bottom: 6rem; } }
+
+      .post-meta { display: flex; align-items: center; flex-wrap: wrap; gap: 0.7rem 0.85rem; font-size: 0.92rem; color: #A5C0CA; }
+      .post-meta .avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; object-position: center 22%; border: 1px solid rgb(191 219 227 / 0.3); }
+      .post-meta .author { color: #F4FAFC; font-weight: 700; }
+      .post-meta .sep { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: 0.6; }
+
+      .post-thumb { position: relative; aspect-ratio: 16 / 10; border-radius: 1.25rem; overflow: hidden; background: #02060C; }
+      .post-thumb img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.6s cubic-bezier(.22,1,.36,1); }
+      a.post-card:hover .post-thumb img, a.post-feature:hover .post-thumb img { transform: scale(1.03); }
+
+      .post-byline { display: flex; align-items: center; flex-wrap: wrap; gap: 0.35rem 0.6rem; font-size: 0.8rem; color: rgb(var(--charcoal-faint)); }
+      .post-byline .author { color: rgb(var(--charcoal-soft)); font-weight: 700; }
+      .post-byline .sep { width: 3px; height: 3px; border-radius: 50%; background: currentColor; opacity: 0.7; }
+
+      a.post-card, a.post-feature {
+        display: flex; text-decoration: none; color: inherit;
+        background: rgb(var(--cream-card));
+        border: 1px solid rgb(var(--border) / 0.07);
+        box-shadow: 0 2px 10px rgb(0 0 0 / 0.05), 0 1px 2px rgb(0 0 0 / 0.03);
+        transition: transform 0.18s ease, box-shadow 0.18s ease;
+      }
+      a.post-card:hover, a.post-card:focus-visible, a.post-feature:hover, a.post-feature:focus-visible { transform: translateY(-4px); box-shadow: 0 14px 34px rgb(0 0 0 / 0.10); }
+      a.post-card:focus-visible, a.post-feature:focus-visible { outline: 2px solid rgb(var(--teal)); outline-offset: 2px; }
+
+      a.post-feature { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 2rem; align-items: center; padding: 0.7rem; border-radius: 1.75rem; }
+      .post-feature .post-thumb { aspect-ratio: 16 / 11; }
+      .post-feature .body { padding: 1.5rem 1.5rem 1.5rem 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.9rem; }
+      .post-feature h3 { margin: 0; font-size: clamp(1.6rem, 2.8vw, 2.15rem); line-height: 1.15; font-weight: 800; letter-spacing: -0.015em; text-wrap: pretty; }
+      .post-feature p { margin: 0; color: rgb(var(--charcoal-soft)); line-height: 1.6; max-width: 46ch; }
+      .post-feature .read { margin-top: 0.4rem; font-size: 0.85rem; font-weight: 800; color: rgb(var(--navy)); }
+      a.post-feature:hover .read { text-decoration: underline; }
+      @media (max-width: 860px) {
+        a.post-feature { grid-template-columns: 1fr; gap: 0; }
+        .post-feature .body { padding: 1.3rem 0.9rem 1rem; }
+      }
+
+      .post-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 1.25rem; }
+      .post-grid--two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      @media (max-width: 640px) { .post-grid, .post-grid--two { grid-template-columns: 1fr; } }
+      a.post-card { flex-direction: column; padding: 0.6rem; border-radius: 1.75rem; }
+      .post-card .body { padding: 1.1rem 0.9rem 0.95rem; display: flex; flex-direction: column; align-items: flex-start; gap: 0.6rem; flex: 1; }
+      .post-card h3 { margin: 0; font-size: 1.15rem; line-height: 1.3; font-weight: 800; letter-spacing: -0.005em; text-wrap: pretty; }
+      .post-card p { margin: 0; font-size: 0.9rem; line-height: 1.55; color: rgb(var(--charcoal-soft)); }
+      .post-card .post-byline { margin-top: auto; padding-top: 0.5rem; }
+
+      .blog-bar { margin: 3.5rem 0 1.5rem; }
+      .blog-bar h2 { margin: 0; font-size: 1.15rem; font-weight: 800; }
+
+      /* ---------- post body ---------- */
+      .post-body { max-width: 690px; margin: 0 auto; }
+      .post-body p { font-size: 1.08rem; line-height: 1.8; color: rgb(var(--charcoal-soft)); margin: 0 0 1.4rem; }
+      .post-body p.lead { font-size: 1.22rem; line-height: 1.7; color: rgb(var(--charcoal)); }
+      .post-body h2 { font-size: clamp(1.35rem, 2.4vw, 1.6rem); font-weight: 800; letter-spacing: -0.01em; line-height: 1.25; margin: 3rem 0 0.9rem; color: rgb(var(--charcoal)); }
+      .post-body h3 { font-size: 1.12rem; font-weight: 800; margin: 2.2rem 0 0.6rem; }
+      .post-body a { color: rgb(var(--navy)); font-weight: 700; }
+      .post-body figure { margin: 0 0 2.6rem; }
+      .post-body figure .post-thumb { aspect-ratio: 16 / 9; border-radius: 1.5rem; box-shadow: 0 2px 10px rgb(0 0 0 / 0.05); }
+      .post-end { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-top: 3rem; padding-top: 1.75rem; border-top: 1px solid rgb(var(--border) / 0.08); }
+      .post-end .who { display: flex; align-items: center; gap: 0.85rem; }
+      .post-end .who img { width: 52px; height: 52px; border-radius: 50%; object-fit: cover; object-position: center 22%; }
+      .post-end .who strong { display: block; font-size: 0.95rem; }
+      .post-end .who span { font-size: 0.82rem; color: rgb(var(--charcoal-faint)); }
+    </style>
   </head>
   <body>
-    <div class="loader" aria-hidden="true">
-      <div class="loader-lockup">
-        <div class="atx-stage">
-          <img class="atx-mark logo-img" src="atraxia/atraxia-a-only.png" alt="" />
-          <img class="atx-swish logo-img" src="atraxia/atraxia-swish-solid.png" alt="" />
-          <svg class="atx-trail" viewBox="0 0 1200 863" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="atxTrailGrad" x1="0" y1="1" x2="1" y2="0">
-                <stop offset="0%" stop-color="#7FBECC" stop-opacity="0" />
-                <stop offset="55%" stop-color="#5AA4B8" stop-opacity=".42" />
-                <stop offset="100%" stop-color="#2E7386" stop-opacity=".8" />
-              </linearGradient>
-              <linearGradient id="atxCometGrad" x1="0" y1="1" x2="1" y2="0">
-                <stop offset="0%" stop-color="#9FD2DE" stop-opacity="0" />
-                <stop offset="70%" stop-color="#4FA3B0" stop-opacity=".8" />
-                <stop offset="100%" stop-color="#23697C" stop-opacity="1" />
-              </linearGradient>
-              <radialGradient id="atxDotGrad" cx="42%" cy="38%" r="62%">
-                <stop offset="0%" stop-color="#EAF6F8" />
-                <stop offset="38%" stop-color="#7BC0D0" />
-                <stop offset="100%" stop-color="#3A7E93" />
-              </radialGradient>
-              <radialGradient id="atxGlintGrad" cx="50%" cy="50%" r="50%">
-                <stop offset="0%" stop-color="#E0B87A" stop-opacity=".7" />
-                <stop offset="100%" stop-color="#D9A860" stop-opacity="0" />
-              </radialGradient>
-              <filter id="atxBloom" x="-60%" y="-60%" width="220%" height="220%">
-                <feGaussianBlur stdDeviation="13" result="b" />
-                <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-              </filter>
-              <path id="atxSwish" d="M6,754 Q213,769 233.5,773.5 Q254,778 275.0,770.5 Q296,763 316.5,754.5 Q337,746 357.5,737.0 Q378,728 399.0,718.0 Q420,708 440.5,697.5 Q461,687 481.5,676.5 Q502,666 523.0,654.5 Q544,643 564.5,631.5 Q585,620 605.5,607.5 Q626,595 647.0,582.0 Q668,569 688.5,556.0 Q709,543 729.5,529.5 Q750,516 771.0,501.5 Q792,487 812.5,472.5 Q833,458 854.0,442.5 Q875,427 895.5,411.5 Q916,396 936.5,379.0 Q957,362 978.0,344.5 Q999,327 1019.5,316.5 Q1040,306 1057.5,278.0 Q1075,250 1102.5,218.5 L1130,187" pathLength="1000" fill="none" />
-            </defs>
-            <use class="atx-comet" href="#atxSwish" stroke="url(#atxCometGrad)" stroke-width="17" stroke-linecap="round" filter="url(#atxBloom)" />
-            <use class="atx-shimmer" href="#atxSwish" stroke="#FFFFFF" stroke-opacity=".7" stroke-width="9" stroke-linecap="round" />
-
-            <g class="atx-dot" filter="url(#atxBloom)">
-              <circle r="88" fill="url(#atxGlintGrad)" class="atx-glint" />
-              <circle r="55" fill="url(#atxDotGrad)" />
-            </g>
-          </svg>
-        </div>
-        <img class="atx-wordmark logo-img" src="atraxia/atraxia-wordmark.png" alt="" />
-      </div>
-    </div>
-
     <div class="page">
       <img class="hero-backdrop logo-img" src="atraxia/atraxia-mark-hi.png" alt="" aria-hidden="true" />
 
@@ -2427,17 +1961,17 @@
 
       <nav class="nav">
         <div class="wrap nav-top">
-          <div class="lockup">
+          <a class="lockup" href="index.html" aria-label="Atraxia home" style="text-decoration:none">
             <img class="mark logo-img" src="atraxia/atraxia-mark-hi.png" alt="Atraxia" />
             <img class="wordmark logo-img" src="atraxia/atraxia-wordmark.png" alt="ATRAXIA" />
-          </div>
+          </a>
           <div class="tabs" role="tablist" aria-label="Primary">
             <span class="tab-pill" aria-hidden="true"></span>
-            <a href="#about">About</a>
-            <a href="#portfolio">Portfolio</a>
-            <a href="#values">Values</a>
-            <a href="#blog">Blog</a>
-            <a href="#contact">Contact</a>
+            <a href="index.html#about">About</a>
+            <a href="index.html#portfolio">Portfolio</a>
+            <a href="index.html#values">Values</a>
+            <a href="blog.html" aria-current="page">Blog</a>
+            <a href="index.html#contact">Contact</a>
           </div>
           <button class="nav-toggle" type="button" aria-label="Menu" aria-expanded="false" aria-controls="nav-menu">
             <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden="true">
@@ -2447,18 +1981,18 @@
             </svg>
           </button>
           <div class="nav-menu" id="nav-menu">
-            <a href="#about">About</a>
-            <a href="#portfolio">Portfolio</a>
-            <a href="#values">Values</a>
-            <a href="#blog">Blog</a>
-            <a href="#contact">Contact</a>
+            <a href="index.html#about">About</a>
+            <a href="index.html#portfolio">Portfolio</a>
+            <a href="index.html#values">Values</a>
+            <a href="blog.html" aria-current="page">Blog</a>
+            <a href="index.html#contact">Contact</a>
           </div>
           <span class="meta">EST. 2026</span>
         </div>
       </nav>
 
       <main>
-        <header class="hero" data-nav-dark>
+        <header class="hero hero--compact hero--post" data-nav-dark>
           <div class="hs-stage" aria-hidden="true">
             <div class="hs-void"></div>
             <div class="hs-bleed hs-bleed--violet"><div class="hs-bloom-drift"></div></div>
@@ -2477,349 +2011,156 @@
           </div>
           <div class="wrap">
             <div class="hs-copy">
+              <a class="btn btn--ghost hero-back" href="blog.html">← All posts</a>
               <div class="eyebrow-rule">
                 <span class="rule"></span>
-                <span class="label">LED BY CURIOSITY</span>
+                <span class="label">EXPLORATIONS</span>
               </div>
-              <h1 class="hero-h1">Beyond the obvious.<br />Toward what&rsquo;s next.</h1>
-              <p class="hero-lede">
-                We explore ideas worth pursuing, rethink complex problems, and turn
-                possibilities into solutions designed to move things forward.
-              </p>
-              <div class="hero-actions">
-                <a class="btn btn--primary btn--hero-cta" href="#portfolio"><span class="cta-label">See the portfolio</span></a>
-                <a class="btn btn--ghost" href="#founders">Meet the founders →</a>
+              <h1 class="hero-h1" data-p="title"></h1>
+              <div class="post-meta" style="visibility:hidden">
+                <img class="avatar" data-p="authorImg" alt="" />
+                <span class="author" data-p="authorName"></span>
+                <span class="sep"></span>
+                <time data-p="dateLabel"></time>
+                <span class="sep"></span>
+                <span><span data-p="read"></span> min read</span>
               </div>
             </div>
           </div>
         </header>
 
-        <section class="mission" id="about">
+        <section data-wash-end>
           <div class="wrap">
-            <span class="eyebrow">OUR PHILOSOPHY</span>
-            <h2 class="mission-statement">Understand first.<br />Build better.</h2>
-            <div class="mission-prose">
-              <p>
-                We don't create solutions for problems that don't exist. We
-                study real needs, understand the complexity behind them, and
-                build thoughtful products that make the answer feel obvious.
-              </p>
-              <p>
-                From functionality to experience, every detail is designed
-                with the user in mind.
-              </p>
-            </div>
-            <div class="mission-stats">
-              <img class="stat-swish" src="atraxia/atraxia-swish-only.png" alt="" aria-hidden="true" />
-              <span class="stat-comet" aria-hidden="true">
-                <span class="trail"></span>
-                <span class="halo"></span>
-                <span class="arc"></span>
-                <span class="arc2"></span>
-                <span class="stat-orbit">
-                  <svg class="stat-trail" viewBox="0 0 300 300" aria-hidden="true">
-                    <defs>
-                      <filter id="atxTrailBurn" x="-60%" y="-60%" width="220%" height="220%">
-                        <feGaussianBlur stdDeviation="1.6" result="b" />
-                        <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-                      </filter>
-                      <filter id="atxTrailHaze" x="-80%" y="-80%" width="260%" height="260%">
-                        <feGaussianBlur stdDeviation="6" />
-                      </filter>
-                    </defs>
-                    <radialGradient id="atxTrailGrad" gradientUnits="userSpaceOnUse" cx="282" cy="150" r="200">
-                      <stop offset="0" stop-color="#ffffff" stop-opacity="1"></stop>
-                      <stop offset="0.08" stop-color="#eafcff" stop-opacity="0.98"></stop>
-                      <stop offset="0.26" stop-color="rgb(94 186 205)" stop-opacity="0.82"></stop>
-                      <stop offset="0.58" stop-color="rgb(54 130 148)" stop-opacity="0.5"></stop>
-                      <stop offset="1" stop-color="rgb(54 130 148)" stop-opacity="0"></stop>
-                    </radialGradient>
-                    <path class="flameHaze" d="" fill="url(#atxTrailGrad)" opacity="0.5" filter="url(#atxTrailHaze)"></path>
-                    <path class="flame" d="" fill="url(#atxTrailGrad)" filter="url(#atxTrailBurn)"></path>
-                    <radialGradient id="atxNucleus">
-                      <stop offset="0" stop-color="#ffffff"></stop>
-                      <stop offset="0.35" stop-color="#eafcff"></stop>
-                      <stop offset="0.7" stop-color="rgb(94 186 205)"></stop>
-                      <stop offset="1" stop-color="rgb(54 130 148)"></stop>
-                    </radialGradient>
-                    <radialGradient id="atxCoreHaze">
-                      <stop offset="0" stop-color="#eafcff" stop-opacity="0.5"></stop>
-                      <stop offset="0.45" stop-color="rgb(94 186 205)" stop-opacity="0.3"></stop>
-                      <stop offset="1" stop-color="rgb(54 130 148)" stop-opacity="0"></stop>
-                    </radialGradient>
-                    <radialGradient id="atxEmber">
-                      <stop offset="0" stop-color="#ffffff"></stop>
-                      <stop offset="0.45" stop-color="#eafcff"></stop>
-                      <stop offset="1" stop-color="rgb(94 186 205)" stop-opacity="0"></stop>
-                    </radialGradient>
-                    <g class="embers"></g>
-                    <circle class="nucleus" cx="282" cy="150" r="6.5" fill="url(#atxNucleus)"></circle>
-                    <g class="core">
-                      <circle class="core-haze" r="14" fill="url(#atxCoreHaze)"></circle>
-                      <g class="facet">
-                        <path d="M0,-5.6 L4.85,-2.8 L4.85,2.8 L0,5.6 L-4.85,2.8 L-4.85,-2.8 Z" fill="#ffffff" opacity="0.4"></path>
-                      </g>
-                      <circle class="spec" cx="-1.4" cy="-1.4" r="2.1" fill="#ffffff"></circle>
-                    </g>
-                  </svg>
-                  <span class="rider">
-                    <span class="tangent">
-                      <span class="glow"></span>
-                      <span class="head"></span>
-                    </span>
-                  </span>
-                </span>
-                <span class="core"></span>
-              </span>
-              <span class="stat-vtrack" aria-hidden="true">
-                <svg class="stat-vtrail" viewBox="0 0 170 600" preserveAspectRatio="none">
-                  <defs>
-                    <filter id="atxVBurn" x="-60%" y="-60%" width="220%" height="220%">
-                      <feGaussianBlur stdDeviation="1.6" result="b"></feGaussianBlur>
-                      <feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
-                    </filter>
-                    <filter id="atxVHaze" x="-80%" y="-80%" width="260%" height="260%">
-                      <feGaussianBlur stdDeviation="6"></feGaussianBlur>
-                    </filter>
-                    <linearGradient id="atxVTrack" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0" stop-color="rgb(79 163 176)" stop-opacity="0"></stop>
-                      <stop offset="0.16" stop-color="rgb(79 163 176)" stop-opacity="0.22"></stop>
-                      <stop offset="0.84" stop-color="rgb(79 163 176)" stop-opacity="0.22"></stop>
-                      <stop offset="1" stop-color="rgb(79 163 176)" stop-opacity="0"></stop>
-                    </linearGradient>
-                    <radialGradient id="atxVNucleus">
-                      <stop offset="0" stop-color="#ffffff"></stop>
-                      <stop offset="0.35" stop-color="#eafcff"></stop>
-                      <stop offset="0.7" stop-color="rgb(94 186 205)"></stop>
-                      <stop offset="1" stop-color="rgb(54 130 148)"></stop>
-                    </radialGradient>
-                    <radialGradient id="atxVCoreHaze">
-                      <stop offset="0" stop-color="#eafcff" stop-opacity="0.5"></stop>
-                      <stop offset="0.45" stop-color="rgb(94 186 205)" stop-opacity="0.3"></stop>
-                      <stop offset="1" stop-color="rgb(54 130 148)" stop-opacity="0"></stop>
-                    </radialGradient>
-                    <radialGradient id="atxVEmber">
-                      <stop offset="0" stop-color="#ffffff"></stop>
-                      <stop offset="0.45" stop-color="#eafcff"></stop>
-                      <stop offset="1" stop-color="rgb(94 186 205)" stop-opacity="0"></stop>
-                    </radialGradient>
-                  </defs>
-                  <radialGradient id="atxVTrailGrad" gradientUnits="userSpaceOnUse" cx="85" cy="150" r="200">
-                    <stop offset="0" stop-color="#ffffff" stop-opacity="1"></stop>
-                    <stop offset="0.08" stop-color="#eafcff" stop-opacity="0.98"></stop>
-                    <stop offset="0.26" stop-color="rgb(94 186 205)" stop-opacity="0.82"></stop>
-                    <stop offset="0.58" stop-color="rgb(54 130 148)" stop-opacity="0.5"></stop>
-                    <stop offset="1" stop-color="rgb(54 130 148)" stop-opacity="0"></stop>
-                  </radialGradient>
-                  <path class="vtrack-line" d="" fill="none" stroke="url(#atxVTrack)" stroke-width="1"></path>
-                  <path class="flameHaze" d="" fill="url(#atxVTrailGrad)" opacity="0.5" filter="url(#atxVHaze)"></path>
-                  <path class="flame" d="" fill="url(#atxVTrailGrad)" filter="url(#atxVBurn)"></path>
-                  <g class="embers"></g>
-                  <g class="core">
-                    <circle class="core-haze" r="15" fill="url(#atxVCoreHaze)"></circle>
-                    <circle class="nucleus" r="7.4" fill="url(#atxVNucleus)"></circle>
-                    <g class="facet">
-                      <path d="M0,-6.2 L5.4,-3.1 L5.4,3.1 L0,6.2 L-5.4,3.1 L-5.4,-3.1 Z" fill="#ffffff" opacity="0.42"></path>
-                    </g>
-                    <circle class="spec" cx="-1.6" cy="-1.6" r="2.4" fill="#ffffff"></circle>
-                  </g>
-                </svg>
-              </span>
-              <span class="stat-stars" aria-hidden="true">
-                <svg viewBox="0 0 40 40" style="left:13%;top:22%;width:11px;height:11px;opacity:.3"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
-                <svg viewBox="0 0 40 40" style="left:47%;top:70%;width:8px;height:8px;opacity:.22"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
-                <svg viewBox="0 0 40 40" style="left:73%;top:22%;width:14px;height:14px;opacity:.26"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
-                <svg viewBox="0 0 40 40" style="left:83%;top:58%;width:9px;height:9px;opacity:.2"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
-                <svg viewBox="0 0 40 40" style="left:31%;top:34%;width:7px;height:7px;opacity:.18"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
-              </span>
-              <div class="stat-grid">
-                <div class="stat-cell">
-                  <svg class="stat-spark" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
-                  <strong data-stat-final="1" data-stat-kind="number">1</strong><span>CORE MISSION</span>
+            <article class="post-body">
+              <figure style="visibility:hidden"><div class="post-thumb"><img data-p="img" alt="" /></div></figure>
+              <div data-body></div>
+              <div class="post-end" style="visibility:hidden">
+                <div class="who">
+                  <img data-p="authorImg" alt="" />
+                  <div><strong data-p="authorName"></strong><span data-p="authorRole"></span></div>
                 </div>
-                <div class="stat-cell">
-                  <svg class="stat-spark" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
-                  <strong data-stat-final="2" data-stat-kind="number">2</strong><span>FOUNDERS</span>
-                </div>
-                <div class="stat-cell">
-                  <svg class="stat-spark" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 0 C21.4 15.6 24.4 18.6 40 20 C24.4 21.4 21.4 24.4 20 40 C18.6 24.4 15.6 21.4 0 20 C15.6 18.6 18.6 15.6 20 0 Z" fill="currentColor" /></svg>
-                  <strong data-stat-final="∞" data-stat-kind="symbol">∞</strong><span>VENTURES AHEAD</span>
-                </div>
+                <a class="btn btn--ghost" href="blog.html">← All posts</a>
               </div>
-            </div>
+            </article>
           </div>
         </section>
 
-        <section id="portfolio">
+        <section>
           <div class="wrap">
             <div class="section-head">
-              <span class="eyebrow">OUR PORTFOLIO</span>
-              <h2>Discover what&rsquo;s taking shape.</h2>
-              <p>Our portfolio is only the beginning, a growing collection of ideas, each explored, refined, and built around a real opportunity to make a difference.</p>
+              <span class="eyebrow">KEEP EXPLORING</span>
+              <h2>Related posts</h2>
             </div>
-            <div class="pf-carousel is-glowing">
-              <span class="pf-glow" aria-hidden="true"></span>
-              <div class="pf-rail" role="tablist" aria-label="Portfolio">
-                <button class="pf-item is-active" type="button" role="tab" aria-selected="true" data-pf="centium" data-pf-url="https://centium.atraxia.org" data-pf-from="#8E6DE0" data-pf-mid="#6EA6A6" data-pf-to="#35B37D">
-                  <span class="pf-logo">
-                    <img src="atraxia/centium-mark.png" alt="" />
-                  </span>
-                  <span class="pf-name">Centium</span>
-                </button>
-                <button class="pf-item pf-item--soon" type="button" role="tab" aria-selected="false" data-pf="soon">
-                  <span class="pf-logo">
-                    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <circle cx="12" cy="12" r="9" stroke="rgb(var(--charcoal-faint))" stroke-width="1.6"/>
-                      <path d="M12 8v4l2.5 2.5" stroke="rgb(var(--charcoal-faint))" stroke-width="1.6" stroke-linecap="round"/>
-                    </svg>
-                  </span>
-                  <span class="pf-name">Coming soon</span>
-                </button>
-              </div>
-              <div class="pf-panels">
-                <div class="pf-panel is-active" data-pf-panel="centium">
-                  <p class="desc"><strong class="desc-title">Health, accompanied</strong>Your nutrition, training, and health; never managed alone.</p>
-                  <a class="cta" href="https://centium.atraxia.org" id="centium-tile">Visit Centium →</a>
-                </div>
-                <div class="pf-panel" data-pf-panel="soon">
-                  <p class="desc">The next venture in the Atraxia portfolio is already in the works.</p>
-                </div>
-              </div>
-            </div>
+            <div class="post-grid post-grid--two" data-related></div>
           </div>
         </section>
 
-        <section id="founders">
+        <section>
           <div class="wrap">
-            <div class="section-head">
-              <span class="eyebrow">LEADERSHIP</span>
-              <h2>Founders</h2>
-              <p>
-                Abdallah Diab and Dr. Karim El Khaldi are both passionate about
-                healthcare and fitness, as well as building companies and
-                solutions that matter.
-              </p>
-            </div>
-            <div class="founders-grid">
-              <div class="founder-flip">
-                <div class="founder-inner">
-                  <div class="founder-card founder-face founder-face--front">
-                    <img src="atraxia/founder-abdallah-v8.jpg" alt="Abdallah Diab, Co-founder of Atraxia" width="720" height="828" loading="lazy" />
-                    <div class="body">
-                      <h3>Abdallah Diab</h3>
-                      <div class="role">Co-founder | Operations Manager</div>
-                      <p class="bio">&ldquo;Necessity is the mother of invention&rdquo; &mdash;Plato</p>
-                    </div>
-                  </div>
-                  <div class="founder-card founder-face founder-face--back">
-                    <p>A firm believer in simplifying complexity, removing obstacles, and bringing clarity to chaos. I strive to create organized, intuitive solutions that feel effortless to understand from the very first interaction.</p>
-                  </div>
-                </div>
-              </div>
-              <div class="founder-flip">
-                <div class="founder-inner">
-                  <div class="founder-card founder-face founder-face--front">
-                    <img src="atraxia/founder-karim-v6.jpg" alt="Dr. Karim El Khaldi, Co-founder of Atraxia" width="720" height="828" loading="lazy" />
-                    <div class="body">
-                      <h3>Dr. Karim El Khaldi</h3>
-                      <div class="role">Co-founder | MD | MPH</div>
-                      <p class="bio">&ldquo;The mind is that which is roused and directed by itself.&rdquo; &mdash;Marcus Aurelius</p>
-                    </div>
-                  </div>
-                  <div class="founder-card founder-face founder-face--back">
-                    <p>I believe the lessons of medicine are simple: be rigorous, stay passionate, and create solutions where none yet exist.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="values">
-          <div class="wrap">
-            <div class="section-head">
-              <span class="eyebrow">WHAT GUIDES US</span>
-              <h2>Three principles, one way of thinking.</h2>
-              <p>Curiosity may drive us forward, but these values keep us grounded in how we think, build, and serve.</p>
-            </div>
-            <div class="trust-grid">
-              <div class="trust-card">
-                <span class="icon" aria-hidden="true">
-                  <svg class="icon-pr" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle cx="12" cy="12.6" r="8.3" stroke="currentColor" stroke-width="1.6"/>
-                    <path d="M12 4.3v1.9M12 19v1.9M3.7 12.6h1.9M18.4 12.6h1.9" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-                    <circle cx="12" cy="1.8" r="1.5" fill="currentColor"/>
-                    <g class="pr-needle">
-                      <path d="M15.5 9.1 L13.2 13.8 L8.5 16.1 L10.8 11.4 Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
-                      <circle cx="12" cy="12.6" r="1.5" stroke="currentColor" stroke-width="1.6"/>
-                    </g>
-                  </svg>
-                </span>
-                <h3>Principled</h3>
-                <p>We only put our name behind what we genuinely believe in. Commercial opportunity will never outweigh our principles or the value we aim to create.</p>
-              </div>
-              <div class="trust-card">
-                <span class="icon" aria-hidden="true">
-                  <svg class="icon-cc" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <circle class="cc-head" cx="8.2" cy="6.4" r="1.9" stroke="currentColor" stroke-width="1.6"/>
-                    <circle class="cc-head" cx="15.8" cy="6.4" r="1.9" stroke="currentColor" stroke-width="1.6"/>
-                    <path class="cc-loop" d="M12 15.1 C7.7 9.9 2.4 11.3 2.4 15.1 C2.4 18.9 7.7 20.3 12 15.1 C16.3 9.9 21.6 11.3 21.6 15.1 C21.6 18.9 16.3 20.3 12 15.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
-                  </svg>
-                </span>
-                <h3>Client-Centric</h3>
-                <p>Our clients sit at the heart of every decision. We listen, understand, and build around their needs, creating value without compromising what we stand for.</p>
-              </div>
-              <div class="trust-card">
-                <span class="icon" aria-hidden="true">
-                  <svg class="icon-sp" width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <rect x="2.4" y="6.9" width="19.2" height="10.2" rx="5.1" stroke="currentColor" stroke-width="1.6"/>
-                    <circle class="sp-knob" cx="7.5" cy="12" r="3.1" fill="currentColor"/>
-                  </svg>
-                </span>
-                <h3>Simplicity</h3>
-                <p>Our job is to make things easier. We absorb the complexity, remove the unnecessary, and turn difficult problems into experiences that feel simple.</p>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        <section id="blog">
-          <div class="wrap">
-            <div class="section-head">
-              <span class="eyebrow">EXPLORATIONS</span>
-              <h2>Thoughts on what's next</h2>
-              <p>A space for the thinking behind our work, what we're learning, what we're questioning, and what we're discovering along the way.</p>
-            </div>
-            <a class="btn btn--ghost" href="blog.html">Read our thinking →</a>
-          </div>
-        </section>
-
-        <section id="contact">
-          <div class="wrap">
-            <div class="section-head">
-              <span class="eyebrow">REACH OUT</span>
-              <h2>Contact Atraxia</h2>
-              <p>Questions about the company, partnerships, press, or our ventures and what's on the horizon.</p>
-            </div>
             <div class="contact-card">
               <div>
-                <div class="label">GENERAL INQUIRIES</div>
+                <div class="label">CURIOUS WHERE THIS LEADS?</div>
                 <a class="email" href="mailto:support@atraxia.org">support@atraxia.org</a>
               </div>
-              <a class="btn btn--primary" href="mailto:support@atraxia.org">Email us</a>
+              <div class="hero-actions">
+                <a class="btn btn--ghost" href="https://centium.atraxia.org">Visit Centium →</a>
+                <a class="btn btn--primary" href="index.html#contact">Get in touch</a>
+              </div>
             </div>
           </div>
         </section>
       </main>
 
+      <template data-post-body="the-plan-comes-second">
+              <p class="lead">Most companies begin with a plan: a product, a market, a timeline. We have plans too, but they come second. First comes a question we can&rsquo;t stop asking.</p>
+              <p>It usually starts somewhere unglamorous: a workflow that takes four extra steps for no good reason, a tool that almost works, a problem everyone&rsquo;s quietly adapted to instead of solving. We notice it, and then we can&rsquo;t stop noticing it. That&rsquo;s the part that doesn&rsquo;t show up in a pitch deck, the itch that comes before the business case.</p>
+              <p>Centium started this way. Not from a market-sizing spreadsheet, but from watching how disconnected the pieces of someone&rsquo;s health actually are. The data lives in one app. The professional guidance lives somewhere else entirely. There&rsquo;s no real link between the two. The plan came after we understood that gap, not before.</p>
+              <p>We think that order matters. A plan built on a real question tends to survive contact with reality better than one built to justify an opportunity. It&rsquo;s slower at the start. It&rsquo;s usually worth it by the end.</p>
+              <p>This is the thinking we&rsquo;ll keep sharing here. Not polished conclusions, but the questions behind what we&rsquo;re building, as we&rsquo;re still working through them.</p>
+      </template>
+      <template data-post-body="what-client-centric-actually-costs">
+              <p class="lead">It&rsquo;s easy to say the client comes first. Almost every company says it. It&rsquo;s harder to say no to a feature a client is actively asking for, paying for, maybe even frustrated about not having, because it doesn&rsquo;t actually serve what they need.</p>
+              <p>That&rsquo;s the distinction we try to hold onto: what a client wants in the moment and what actually moves them forward aren&rsquo;t always the same thing. Giving someone exactly what they ask for feels responsive. It isn&rsquo;t always right.</p>
+              <p>This shows up constantly in healthcare-adjacent products. Someone wants a feature that makes a number look better on a dashboard. What they need is to understand why the number is what it is, and what to do about it. The first is easier to build and easier to sell. The second is the harder, slower work of actually being useful.</p>
+              <p>Being client-centric, to us, doesn&rsquo;t mean saying yes to every request. It means taking the request seriously enough to ask what&rsquo;s underneath it. Sometimes that means building something different from what was asked for, because it&rsquo;s what the person actually needs.</p>
+              <p>That costs trust in the short term. A client who doesn&rsquo;t get the feature they asked for can feel unheard. But we&rsquo;d rather earn that trust back by being right than keep it by being agreeable.</p>
+      </template>
+      <template data-post-body="why-we-dont-ship-the-obvious-answer">
+              <p class="lead">The first solution to a problem is rarely the right one. It&rsquo;s just the first one you thought of. There&rsquo;s a real difference between those two things, and it&rsquo;s easy to lose sight of it when a deadline is close and the obvious answer is sitting right there.</p>
+              <p>The obvious answer usually looks like whatever the last product you used did. It&rsquo;s familiar, it&rsquo;s defensible in a meeting, and it ships fast. None of that makes it correct for the problem in front of you.</p>
+              <p>We&rsquo;ve learned to treat the first idea as a starting point, not a destination. The real question isn&rsquo;t &ldquo;does this work?&rdquo; Almost anything works well enough to demo. The question is whether it&rsquo;s actually the right shape for the problem, or just the shape we reached for because it was closest.</p>
+              <p>That usually means sitting with a problem longer than feels comfortable, sketching out two or three alternatives even when the first one seems fine, and being willing to throw away work that technically functions but doesn&rsquo;t actually solve the thing.</p>
+              <p>It&rsquo;s slower. It also means what we ship tends to still make sense six months later, instead of becoming the thing we quietly patch around.</p>
+      </template>
+      <template data-post-body="the-weight-of-yes-we-could">
+              <p class="lead">Working in health and wellness means running into a particular kind of temptation often. Not the temptation to cut corners, but the opposite: the temptation to add. A feature that would work. A data point that&rsquo;s technically available. A capability that&rsquo;s genuinely possible to build.</p>
+              <p>&ldquo;Yes, we could&rdquo; is a dangerous sentence in this industry. Just because something is technically possible doesn&rsquo;t mean it belongs in a product that handles someone&rsquo;s health information. Every additional piece of data collected is something that has to be protected, explained, and justified. Every added capability is something a user now has to understand, even if they never asked for it.</p>
+              <p>We&rsquo;ve turned down features that would have been easy to build and easy to market, because the honest answer to &ldquo;should we build this&rdquo; was no, even when the answer to &ldquo;can we build this&rdquo; was yes. That&rsquo;s not a popular stance in a culture that rewards shipping fast and shipping often.</p>
+              <p>But health products carry a different weight than most. Someone trusts us with information about their body, sometimes their most sensitive information. That trust doesn&rsquo;t get earned by how much we build. It gets earned by how carefully we decide what not to.</p>
+              <p>So we keep asking the harder question first. Not &ldquo;can we,&rdquo; but &ldquo;should we,&rdquo; and we&rsquo;re comfortable with the answer sometimes being no.</p>
+      </template>
+      <template data-post-body="what-we-mean-by-simple">
+              <p class="lead">&ldquo;Simple&rdquo; gets used as a compliment so often that it&rsquo;s started to mean almost nothing. Everyone says their product is simple. Most of them aren&rsquo;t. What they usually mean is that it looks clean, which is a different thing entirely.</p>
+              <p>Real simplicity isn&rsquo;t about how something looks. It&rsquo;s about how much a person has to think to use it correctly. A screen can look minimal and still be confusing, if the thing it&rsquo;s asking you to do doesn&rsquo;t match how you actually think about the problem. A screen can look busy and still be simple, if every piece of information on it is exactly where you&rsquo;d expect to find it.</p>
+              <p>We&rsquo;ve rebuilt the same screen more times than we&rsquo;d like to admit, not because it looked wrong, but because using it required remembering something, or guessing at something, or backtracking to fix something. Those are the real signs that a design has failed at simplicity, even if it passed every visual review.</p>
+              <p>The harder version of our job isn&rsquo;t adding capability. It&rsquo;s absorbing complexity somewhere the user never has to see it, so the interaction in front of them stays obvious. That usually means more work on our end, not less. Simple, done properly, is rarely the easy option for the people building it.</p>
+              <p>That&rsquo;s the standard we hold ourselves to: not whether something looks clean, but whether someone can use it correctly without having to think about it. If it fails that test, it isn&rsquo;t simple yet, no matter how it looks.</p>
+      </template>
+    <script>
+      // Blog post template: one page, resolved by ?slug=. Runs inline right after
+      // the templates (before the footer and the shared scripts) and the static
+      // markup carries no post content, so nothing but the requested post can paint.
+      // Original note: resolved by ?slug= (production route
+      // /blog/<slug> maps here). Fills hero, meta, image and body from POSTS,
+      // then renders the other posts as related cards, most recent first.
+      (function () {
+        var POSTS = [{"slug":"the-plan-comes-second","title":"The Plan Comes Second","excerpt":"We start from a question we can’t stop asking, and only then work out the plan.","img":"atraxia/blog/plan-comes-second.jpg?v=3","alt":"A star-forming nebula with a bright young star cluster at its core, teal and violet gas clouds and dark dust lanes threading through, against a dense star field","date":"2026-09-29","read":1,"authorName":"Dr. Karim El Khaldi","authorImg":"atraxia/founder-karim-v6.jpg","authorRole":"Co-founder | MD | MPH","dateLabel":"29 September 2026"},{"slug":"what-client-centric-actually-costs","title":"What “Client-Centric” Actually Costs","excerpt":"Putting the client first sometimes means building what they need instead of what they asked for.","img":"atraxia/blog/client-centric.jpg?v=4","alt":"A banded teal gas giant lit from the upper right, its multi-banded ring passing in front of and behind it, with a small cratered moon","date":"2026-09-15","read":2,"authorName":"Abdallah Diab","authorImg":"atraxia/founder-abdallah-v8.jpg","authorRole":"Co-founder | Operations Manager","dateLabel":"15 September 2026"},{"slug":"why-we-dont-ship-the-obvious-answer","title":"Why We Don’t Ship the Obvious Answer","excerpt":"The first idea is only the one that came to mind first, so we treat it as a starting point.","img":"atraxia/blog/obvious-answer.jpg?v=3","alt":"Four comets on different paths across a dense star field, one tail crossing a faint teal and violet nebula, with two meteor streaks","date":"2026-09-01","read":2,"authorName":"Dr. Karim El Khaldi","authorImg":"atraxia/founder-karim-v6.jpg","authorRole":"Co-founder | MD | MPH","dateLabel":"1 September 2026"},{"slug":"the-weight-of-yes-we-could","title":"The Weight of “Yes, We Could”","excerpt":"Being able to build something isn’t a reason to build it, especially when someone trusts us with their health.","img":"atraxia/blog/yes-we-could.jpg?v=1","alt":"A black hole off-centre in a deep star field, its glowing accretion disk bent around the dark core by gravitational lensing, warm at the inner edge and teal further out","date":"2026-08-18","read":2,"authorName":"Abdallah Diab","authorImg":"atraxia/founder-abdallah-v8.jpg","authorRole":"Co-founder | Operations Manager","dateLabel":"18 August 2026"},{"slug":"what-we-mean-by-simple","title":"What We Mean by Simple","excerpt":"Simple is about how little a person has to think to use something correctly, not how clean it looks.","img":"atraxia/blog/what-we-mean-by-simple.jpg?v=2","alt":"Tall columns of dark gas and dust rising from a cloud bank against a glowing teal nebula and dense star field, their ragged edges lit from the upper right and young stars glinting inside them","date":"2026-08-04","read":2,"authorName":"Dr. Karim El Khaldi","authorImg":"atraxia/founder-karim-v6.jpg","authorRole":"Co-founder | MD | MPH","dateLabel":"4 August 2026"}];
+        var pretty = location.pathname.match(/\/blog\/([a-z0-9]+(?:-[a-z0-9]+)*)\/?$/);  // /blog/<slug> (served by the Worker)
+        var slug = pretty ? pretty[1] : new URLSearchParams(location.search).get('slug');
+        if (!slug) { location.replace('blog.html'); return; }  // no slug: go to the listing, never guess a post
+        var post = POSTS.filter(function (p) { return p.slug === slug; })[0];
+        var body = document.querySelector('[data-body]');
+        if (!post) {
+          document.querySelector('.hero-h1').textContent = 'Post not found';
+          document.querySelector('.post-meta').style.display = 'none';
+          document.querySelector('.post-body figure').style.display = 'none';
+          body.innerHTML = '<p class="lead">That post doesn\u2019t exist, or has moved. <a href="blog.html">Browse all posts</a>.</p>';
+          document.querySelector('.post-end').style.display = 'none';
+          post = { slug: '' };
+        } else {
+          [].slice.call(document.querySelectorAll('[data-p]')).forEach(function (el) {
+            var k = el.getAttribute('data-p'), v = post[k];
+            if (k === 'authorImg') el.src = v;
+            else if (k === 'img') { el.src = v; el.alt = post.alt; }
+            else el.textContent = v;
+          });
+          var t = document.querySelector('time[data-p]'); if (t) t.setAttribute('datetime', post.date);
+          document.title = post.title + ' | Atraxia';
+          body.appendChild(document.querySelector('template[data-post-body="' + post.slug + '"]').content.cloneNode(true));
+          ['.post-meta', '.post-body figure', '.post-end'].forEach(function (s) { document.querySelector(s).style.visibility = ''; });
+        }
+        function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); }
+        var others = POSTS.filter(function (p) { return p.slug !== post.slug; }).slice(0, 3);
+        var rel = document.querySelector('[data-related]');
+        if (others.length > 2) rel.classList.remove('post-grid--two');
+        rel.innerHTML = others.map(function (p) {
+          return '<a class="post-card" href="blog-post.html?slug=' + p.slug + '">' +
+            '<div class="post-thumb"><img src="' + p.img + '" alt="' + esc(p.alt) + '" loading="lazy" /></div><div class="body">' +
+            '<h3>' + esc(p.title) + '</h3><p>' + esc(p.excerpt) + '</p>' +
+            '<div class="post-byline"><span class="author">' + esc(p.authorName) + '</span><span class="sep"></span><time datetime="' + p.date + '">' + p.dateLabel + '</time><span class="sep"></span><span>' + p.read + ' min read</span></div>' +
+            '</div></a>';
+        }).join('');
+      })();
+    </script>
+
       <footer>
         <div class="wrap footer-tabs-row">
           <div class="tabs" role="navigation" aria-label="Footer">
-            <a href="#about">About</a>
-            <a href="#portfolio">Portfolio</a>
-            <a href="#values">Values</a>
-            <a href="#blog">Blog</a>
-            <a href="#contact">Contact</a>
+            <a href="index.html#about">About</a>
+            <a href="index.html#portfolio">Portfolio</a>
+            <a href="index.html#values">Values</a>
+            <a href="blog.html" aria-current="page">Blog</a>
+            <a href="index.html#contact">Contact</a>
           </div>
         </div>
         <div class="wrap footer-meta-row">
@@ -4370,6 +3711,7 @@
           var links = [].slice.call(tabs.querySelectorAll('a'));
           var ids = links.map(function (a) { return a.getAttribute('href').slice(1); });
           var current = -1, hovered = -1;
+          var fixedIdx = links.map(function (a) { return a.hasAttribute('aria-current'); }).indexOf(true);
 
           function place(i) {
             if (i < 0) { pill.style.opacity = '0'; return; }
@@ -4404,6 +3746,7 @@
               var el = document.getElementById(ids[i]);
               if (el && el.getBoundingClientRect().top + window.scrollY <= mark) found = i;
             }
+            if (fixedIdx > -1) found = fixedIdx;
             if (found !== current) {
               current = found;
               links.forEach(function (a, i) { a.classList.toggle('is-active', i === current); });
@@ -5464,7 +4807,7 @@
     <script>
       (function () {
         var page = document.querySelector('.page');
-        var mission = document.querySelector('.mission');
+        var mission = document.querySelector('.mission') || document.querySelector('[data-wash-end]');
         if (!page || !mission) return;
         var set = function () {
           var p = page.getBoundingClientRect(), m = mission.getBoundingClientRect();
@@ -5483,5 +4826,6 @@
         if (document.fonts && document.fonts.ready) document.fonts.ready.then(set);
       })();
     </script>
+
   </body>
 </html>
