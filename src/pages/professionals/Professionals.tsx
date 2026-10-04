@@ -3,20 +3,20 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { DataSharingSummary } from "../../components/professionals/DataSharingSummary";
 import { Chip } from "../../components/ui/Chip";
-import { Button } from "../../components/ui/Button";
 import { fetchPublicDirectory, type DirectoryListing } from "../../services/directory";
 import { useApp } from "../../context/AppContext";
-import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
 import { fetchLinkedProfessionals } from "../../services/consent";
 import type { ProfessionalType } from "../../types";
 import type { Enums } from "../../../lib/supabase/database.types";
 import { BottomSheet } from "../../components/ui/BottomSheet";
-import { Star, ShieldCheck, UserCheck, Pencil } from "lucide-react";
+import { ShieldCheck, UserCheck } from "lucide-react";
 import ProfessionalDashboard from "./ProfessionalDashboard";
 import { VerifiedCheck, VerifiedExplainer } from "../../components/cv/CvBadges";
 import { DirectoryCard } from "../../components/professionals/DirectoryCard";
 import { SUBTYPE_LABELS } from "../../components/professionals/subtypeLabels";
 import { NearbyView } from "../../components/professionals/NearbyView";
+import { YourReviewsSection } from "../../components/professionals/YourReviewsSection";
+import { sortByRating } from "../../services/professional-reviews/rules";
 import { List, Map as MapIcon } from "lucide-react";
 import { CvView } from "../../components/cv/CvView";
 import { cvIsEmpty, fetchPublicCv, type PublicCv } from "../../services/professional-cv";
@@ -56,15 +56,14 @@ export default function Professionals() {
    */
   const [view, setView] = useState<"list" | "map">("list");
   const [type, setType] = useState<Subtype | null>(null);
-  const [reviewOpen, setReviewOpen] = useState(false);
   const [linkedProfileOpen, setLinkedProfileOpen] = useState(false);
-  const [savingReview, setSavingReview] = useState(false);
+  /** The list's order: as the directory returns it (by name), or top rated first. */
+  const [sort, setSort] = useState<"name" | "rating">("name");
 
-  // THE REVIEW NEEDS AN ACCOUNT, NOT A CODE. This card is rendered from
+  // THE CARD NEEDS AN ACCOUNT, NOT A CODE. It is rendered from
   // `user.linkedProfessionalCode`, local onboarding state — fine for showing a
-  // name, useless for writing a row, because professional_reviews.professional_id
-  // is a uuid. The real relationship comes from professional_clients via
-  // fetchLinkedProfessionals, which is what the review is attached to.
+  // name, but the profile and CV hang off the real relationship from
+  // professional_clients via fetchLinkedProfessionals.
   const [linkedProfessionalId, setLinkedProfessionalId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -125,47 +124,6 @@ export default function Professionals() {
   const linkedName = linkedDetail?.firstName ?? user.linkedProfessionalName ?? "Your professional";
   const linkedSubtype = linkedDetail?.subtype ?? user.linkedProfessionalSubtype;
 
-  const {
-    mine: myLinkedReview,
-    error: reviewError,
-    save: saveLinkedReview,
-    remove: removeLinkedReview,
-  } = useProfessionalReviews(linkedProfessionalId);
-
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewText, setReviewText] = useState("");
-  // Opt-in, defaulting off — the same shape as the column.
-  const [showMyName, setShowMyName] = useState(false);
-  const [confirmDeleteReview, setConfirmDeleteReview] = useState(false);
-
-  const openReviewSheet = () => {
-    setReviewRating(myLinkedReview?.rating ?? 5);
-    setReviewText(myLinkedReview?.body ?? "");
-    setShowMyName(myLinkedReview?.reviewerNameVisible ?? false);
-    setConfirmDeleteReview(false);
-    setReviewOpen(true);
-  };
-
-  const submitLinkedReview = async () => {
-    if (savingReview) return;
-    setSavingReview(true);
-    const ok = await saveLinkedReview(reviewRating, reviewText, showMyName);
-    setSavingReview(false);
-    if (ok) setReviewOpen(false);
-  };
-
-  const deleteLinkedReview = async () => {
-    if (!confirmDeleteReview) {
-      setConfirmDeleteReview(true);
-      setTimeout(() => setConfirmDeleteReview(false), 3000);
-      return;
-    }
-    setSavingReview(true);
-    const ok = await removeLinkedReview();
-    setSavingReview(false);
-    if (ok) setReviewOpen(false);
-  };
-
   // The real directory, replacing the static mockProfessionals array this
   // page browsed until now. Those entries were not accounts — their ids
   // ("pr1") could never hold a relationship — so every listing was a
@@ -191,7 +149,8 @@ export default function Professionals() {
     };
   }, []);
 
-  const filtered = (listings ?? []).filter((l) => (type ? l.subtype === type : true));
+  const byType = (listings ?? []).filter((l) => (type ? l.subtype === type : true));
+  const filtered = sort === "rating" ? sortByRating(byType) : byType;
 
   // Professionals get an entirely different dashboard here (client roster,
   // not a directory to browse) — separate UI per QA, not just a banner.
@@ -260,40 +219,16 @@ export default function Professionals() {
               <p className="font-display font-semibold text-lg">{linkedName}</p>
             </div>
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-xs text-white/80">
-              <ShieldCheck size={13} /> Linked to your account
-            </div>
-            {/* Disabled until the real relationship resolves. The card is
-                rendered from local state, so it can be on screen a moment
-                before professional_clients has answered — and a review sheet
-                with nothing to attach the review to is worse than a button
-                that waits. */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                openReviewSheet();
-              }}
-              disabled={!linkedProfessionalId}
-              className="tap flex items-center gap-1 text-xs font-semibold text-white bg-white/15 rounded-full px-2.5 py-1 disabled:opacity-50"
-            >
-              <Pencil size={11} /> {myLinkedReview ? "Edit review" : "Rate & Review"}
-            </button>
+          <div className="flex items-center gap-1.5 text-xs text-white/80">
+            <ShieldCheck size={13} /> Linked to your account
           </div>
-          {myLinkedReview && (
-            <div className="flex items-center gap-1 mt-2.5">
-              {Array.from({ length: 5 }, (_, i) => (
-                <Star key={i} size={13} className={i < myLinkedReview.rating ? "fill-white text-white" : "text-white/25"} />
-              ))}
-              {myLinkedReview.editedAt && (
-                <span className="ml-1 text-[10px] font-semibold text-white/70 uppercase tracking-wide">
-                  Edited
-                </span>
-              )}
-            </div>
-          )}
         </Card>
       )}
+
+      {/* Reviews for every professional this client has worked with —
+          current and past, listed or not. The linked card above used to
+          carry a review button for the first relationship only. */}
+      <YourReviewsSection authUserId={authUserId} />
 
       {/* The mock "My Dietitian" card that used to sit here is gone with
           mockProfessionals. It rendered a hired relationship with a person who
@@ -317,6 +252,17 @@ export default function Professionals() {
       )}
 
       <div className={`space-y-3 ${view === "map" ? "hidden" : ""}`}>
+        {(listings?.length ?? 0) > 1 && (
+          <div role="group" aria-label="Sort" className="flex items-center gap-2">
+            <span className="text-xs font-semibold text-charcoal-soft">Sort</span>
+            <Chip active={sort === "name"} aria-pressed={sort === "name"} onClick={() => setSort("name")}>
+              Name
+            </Chip>
+            <Chip active={sort === "rating"} aria-pressed={sort === "rating"} onClick={() => setSort("rating")}>
+              Top rated
+            </Chip>
+          </div>
+        )}
         {filtered.map((p) => (
           <DirectoryCard key={p.profileId} listing={p} />
         ))}
@@ -352,70 +298,6 @@ export default function Professionals() {
           </Card>
         )}
       </div>
-
-      <BottomSheet
-        open={reviewOpen}
-        onClose={() => setReviewOpen(false)}
-        title={`Rate ${linkedName.split(" ")[0]}`}
-      >
-        <div className="space-y-5 animate-fade-slide-up">
-          <div className="flex items-center justify-center gap-2">
-            {Array.from({ length: 5 }, (_, i) => {
-              const filled = i < reviewRating;
-              return (
-                <button
-                  key={i}
-                  onClick={() => setReviewRating(i + 1)}
-                  aria-label={`${i + 1} star${i === 0 ? "" : "s"}`}
-                  className="tap"
-                >
-                  <Star size={30} className={filled ? "fill-gold text-gold" : "text-charcoal/15"} />
-                </button>
-              );
-            })}
-          </div>
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Your review</span>
-            <textarea
-              value={reviewText}
-              onChange={(e) => setReviewText(e.target.value)}
-              placeholder="How has your experience been?"
-              rows={4}
-              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-            />
-          </label>
-          {/* Same wording as the listing sheet, and same reason: the toggle
-              controls who ELSE sees the name, not whether the professional can
-              work out who wrote it. */}
-          <label className="flex items-start gap-2.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showMyName}
-              onChange={(e) => setShowMyName(e.target.checked)}
-              className="mt-0.5 w-4 h-4 shrink-0 accent-primary"
-            />
-            <span className="text-xs text-charcoal-soft leading-relaxed">
-              Show my first name on this review —{" "}
-              <span className="text-charcoal-faint">
-                your professional can see who left it either way.
-              </span>
-            </span>
-          </label>
-          {reviewError && <p className="text-xs font-semibold text-status-high">{reviewError}</p>}
-          <Button fullWidth size="lg" onClick={() => void submitLinkedReview()} disabled={savingReview}>
-            {savingReview ? "Saving…" : myLinkedReview ? "Save changes" : "Submit review"}
-          </Button>
-          {myLinkedReview && (
-            <button
-              onClick={() => void deleteLinkedReview()}
-              disabled={savingReview}
-              className="tap w-full text-center text-xs font-semibold text-status-high py-2"
-            >
-              {confirmDeleteReview ? "Tap again to delete your review" : "Delete review"}
-            </button>
-          )}
-        </div>
-      </BottomSheet>
 
       {/* THE CONNECTED PROFESSIONAL'S REAL PROFILE AND CV. This sheet used to
           read a certification, bio, phone, website and socials from fields on

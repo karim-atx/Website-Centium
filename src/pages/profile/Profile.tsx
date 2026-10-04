@@ -10,8 +10,7 @@ import { CertificationSheet } from "../../components/profile/CertificationSheet"
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
 import { useIsAmbassador } from "../../hooks/useIsAmbassador";
-import { useReviewsAboutMe } from "../../hooks/useProfessionalReviews";
-import { ReviewItem } from "../../components/professionals/ReviewItem";
+import { ReviewsAboutMeCard } from "../../components/professionals/ReviewsAboutMeCard";
 import { AVATAR_ACCEPT, removeAvatar, uploadAvatar } from "../../services/avatar";
 import { DataSharingSection } from "../../components/professionals/DataSharingSection";
 import { MembershipsCard } from "../../components/profile/MembershipsCard";
@@ -70,7 +69,6 @@ export default function Profile() {
     setRecoverySensitiveIntroSeen,
   } = useApp();
   const isAmbassador = useIsAmbassador();
-  const { reviews: myReviews, loading: reviewsLoading, error: reviewsError } = useReviewsAboutMe();
   const navigate = useNavigate();
   const [justToggledRecovery, setJustToggledRecovery] = useState(false);
   const [goalsOpen, setGoalsOpen] = useState(false);
@@ -323,34 +321,9 @@ export default function Profile() {
           followed by rating/reviews then certification. then credentials." */}
       {user.accountType === "professional" && <ProfessionalBioCard />}
 
-      {/* V7 (QA 7.0): surfaces ratings/reviews clients have left for this
-          professional — the same review a client submits from the "Your
-          professional" card on their own Professionals tab. */}
-      {user.accountType === "professional" && (
-        <Card className="mb-6 animate-fade-slide-up">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-            Ratings & Reviews
-          </p>
-          {/* REAL ROWS, READ AS THE PROFESSIONAL. This used to look up the
-              string "me" in localStorage — the key a client wrote on THEIR
-              device — so it could only ever show something when the client and
-              the professional were the same browser profile. The SELECT policy
-              admits these through `auth.uid() = professional_id`, a branch that
-              carries no redaction filter: a professional sees that one of their
-              reviews was redacted even though its body is gone. */}
-          {myReviews.length === 0 ? (
-            <p className="text-sm text-charcoal-faint">
-              {reviewsError ?? (reviewsLoading ? "Loading reviews…" : "No reviews from clients yet.")}
-            </p>
-          ) : (
-            <div className="space-y-3">
-              {myReviews.map((r) => (
-                <ReviewItem key={r.id} review={r} starSize={15} />
-              ))}
-            </div>
-          )}
-        </Card>
-      )}
+      {/* V7 (QA 7.0): the ratings and reviews clients left, with the average
+          and the professional's public reply under each. */}
+      {user.accountType === "professional" && <ReviewsAboutMeCard className="mb-6 animate-fade-slide-up" />}
 
       {/* My CV: licences, experience, education and the rest, shown on the
           public profile. */}

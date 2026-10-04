@@ -8,6 +8,7 @@ import type { ProfessionalType } from "../../types";
 import { professionalTypeIcon } from "../../utils/icons";
 
 import { SUBTYPE_LABELS } from "./subtypeLabels";
+import { RatingBadge } from "./RatingBadge";
 
 const subtypeLabel = (s: DirectoryListing["subtype"]): string => (s ? SUBTYPE_LABELS[s] : "Professional");
 
@@ -20,9 +21,8 @@ const listingIcon = (s: DirectoryListing["subtype"]) =>
  * Hamra"), computed on the device; the list view passes nothing, and null
  * means not on the map near here (no area shared, or outside what was searched).
  *
- * No rating or review count: no such schema exists, and inventing one from
- * nothing is the same class of error as a measured-looking zero. Rates are
- * shown instead, which are real.
+ * The rating is professional_rating_summary's, through the directory view:
+ * an average once three reviews count towards it, "New" before that.
  */
 export const DirectoryCard: React.FC<{ listing: DirectoryListing; distance?: string | null }> = ({ listing: p, distance }) => {
   const navigate = useNavigate();
@@ -50,6 +50,7 @@ export const DirectoryCard: React.FC<{ listing: DirectoryListing; distance?: str
           {(p.specialty || p.subtype) && (
             <p className="text-xs text-primary-dark font-medium truncate">{p.specialty ?? subtypeLabel(p.subtype)}</p>
           )}
+          <RatingBadge average={p.averageRating} count={p.reviewCount} className="mt-0.5 mb-0.5" />
           {(p.location || p.monthlyRate != null) && (
             <p className="text-xs text-charcoal-faint truncate">
               {[p.location, p.monthlyRate != null ? `$${p.monthlyRate}/mo` : null].filter(Boolean).join(" · ")}

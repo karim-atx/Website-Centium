@@ -18,7 +18,11 @@ import type { ProfessionalType } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
 import { ReviewItem } from "../../components/professionals/ReviewItem";
-import { ChevronLeft, Star, Lock, Pencil } from "lucide-react";
+import { RatingBadge } from "../../components/professionals/RatingBadge";
+import { MyReviewCard, ReviewFormSheet, ReviewReportForm } from "../../components/professionals/ReviewForms";
+import { reportReview } from "../../services/professional-reviews";
+import { reviewCountLabel } from "../../services/professional-reviews/rules";
+import { ChevronLeft, Lock } from "lucide-react";
 import { professionalTypeIcon } from "../../utils/icons";
 import { UserCheck } from "lucide-react";
 
@@ -241,44 +245,26 @@ export default function ProfessionalDetail() {
   const isConnected: boolean = activeClient === true;
   const [reviewOpen, setReviewOpen] = useState(false);
   const [allReviewsOpen, setAllReviewsOpen] = useState(false);
-  const [savingReview, setSavingReview] = useState(false);
-  const [confirmDeleteReview, setConfirmDeleteReview] = useState(false);
+  /** The review being reported; the reviews sheet shows the form in its place. */
+  const [reportingId, setReportingId] = useState<string | null>(null);
 
-  // REAL ROWS. This was a localStorage array keyed on the directory id, so a
-  // client's review lived on their own device and the professional it was
-  // about never saw it.
+  // REAL ROWS, read as this caller. Signed out nothing is read — review text
+  // has no anon grant — and the sheet asks them to sign in instead.
   const {
     mine: myReview,
+    myStatus,
     others: otherReviews,
     error: reviewError,
     canReview,
+    signedOut,
     save: saveReview,
-    remove: removeReview,
+    withdraw: withdrawReview,
   } = useProfessionalReviews(realProfessionalId);
-
-  const [reviewRating, setReviewRating] = useState(5);
-  const [reviewText, setReviewText] = useState("");
-  // OPT-IN, DEFAULTING OFF, matching the column: reviewer_name_visible is NOT
-  // NULL DEFAULT false, so a review left without touching this is unnamed to
-  // everyone the relationship does not already identify you to.
-  const [showMyName, setShowMyName] = useState(false);
-
-  // The sheet opens on what is stored, not on whatever was typed last time.
-  const openReviewSheet = () => {
-    setReviewRating(myReview?.rating ?? 5);
-    setReviewText(myReview?.body ?? "");
-    setShowMyName(myReview?.reviewerNameVisible ?? false);
-    setConfirmDeleteReview(false);
-    setReviewOpen(true);
-  };
 
   /**
    * Re-reads the listing so the headline average moves with the write.
-   *
-   * THE AGGREGATE IS NOT THIS SCREEN'S TO COMPUTE. average_rating comes from a
-   * view over every unredacted row, so the only honest way to show the new
-   * number is to ask for it again — adding the new rating into the old average
-   * locally would be a guess that drifts the moment anyone else reviews.
+   * average_rating comes from a view over every counted row, so the honest
+   * way to show the new number is to ask for it again.
    */
   const refreshAggregate = async () => {
     if (!realProfessionalId) return;
@@ -286,28 +272,21 @@ export default function ProfessionalDetail() {
     if (found) setListing(found);
   };
 
-  const submitReview = async () => {
-    if (savingReview) return;
-    setSavingReview(true);
-    const ok = await saveReview(reviewRating, reviewText, showMyName);
-    setSavingReview(false);
-    if (!ok) return;
-    await refreshAggregate();
-    setReviewOpen(false);
+  const submitReview = async (rating: number, body: string, nameVisible: boolean) => {
+    const message = await saveReview(rating, body, nameVisible);
+    if (!message) await refreshAggregate();
+    return message;
   };
 
-  const deleteMyReview = async () => {
-    if (!confirmDeleteReview) {
-      setConfirmDeleteReview(true);
-      setTimeout(() => setConfirmDeleteReview(false), 3000);
-      return;
-    }
-    setSavingReview(true);
-    const ok = await removeReview();
-    setSavingReview(false);
-    if (!ok) return;
-    await refreshAggregate();
-    setReviewOpen(false);
+  const withdrawMyReview = async () => {
+    const message = await withdrawReview();
+    if (!message) await refreshAggregate();
+    return message;
+  };
+
+  const closeAllReviews = () => {
+    setAllReviewsOpen(false);
+    setReportingId(null);
   };
 
   // V7 (QA 7.0): "Your rating should influence the professional's overall
@@ -318,7 +297,6 @@ export default function ProfessionalDetail() {
   // row including this user's, so the number below IS the blend — and
   // re-adding the own review on top would double-count it.
   const aggregateCount = professional?.reviews ?? 0;
-  const displayRating = professional && aggregateCount > 0 ? professional.rating.toFixed(1) : null;
 
   if (!professional) {
     return (
@@ -369,15 +347,12 @@ export default function ProfessionalDetail() {
             account and a 0.0 would have looked like a verdict. There is one
             now — so the number shows when somebody has actually left one, and
             stays hidden when nobody has, which is still not a verdict. */}
-        {displayRating !== null && (
-          <>
-            <span className="flex items-center gap-1 text-sm font-bold text-gold">
-              <Star size={14} className="fill-gold" /> {displayRating}
-            </span>
-            <button onClick={() => setAllReviewsOpen(true)} className="tap text-xs text-charcoal-faint underline">
-              {aggregateCount} {aggregateCount === 1 ? "review" : "reviews"}
-            </button>
-          </>
+        {/* The average only from three reviews; "New" below that. */}
+        <RatingBadge average={listing?.averageRating ?? null} count={aggregateCount} withCount={false} />
+        {aggregateCount > 0 && (
+          <button onClick={() => setAllReviewsOpen(true)} className="tap min-h-[44px] text-xs text-charcoal-faint underline">
+            {reviewCountLabel(aggregateCount)}
+          </button>
         )}
         {isConnected && clientSince && (
           <span className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1">
@@ -413,26 +388,21 @@ export default function ProfessionalDetail() {
           for an existing review regardless, so a past client can still edit or
           remove what they wrote. */}
       {(canReview === true || myReview) && (
-        <Card className="mb-6 animate-fade-slide-up">
-          <div className="flex items-center justify-between mb-1.5">
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">My Review</p>
-            <Button size="sm" variant="outline" onClick={openReviewSheet}>
-              <Pencil size={13} /> {myReview ? "Edit" : "Rate & Review"}
-            </Button>
-          </div>
-          {myReview ? (
-            <ReviewItem review={myReview} showName={false} starSize={14} />
-          ) : (
-            <p className="text-sm text-charcoal-faint">You haven't reviewed {professional.name.split(" ")[0]} yet</p>
-          )}
-        </Card>
+        <MyReviewCard
+          className="mb-6 animate-fade-slide-up"
+          firstName={professional.name.split(" ")[0]}
+          review={myReview}
+          status={myStatus}
+          onOpen={() => setReviewOpen(true)}
+          onWithdraw={withdrawMyReview}
+        />
       )}
 
       {/* Why the review card is absent, said once rather than left as silence.
           Shown only once the gate has actually answered — `canReview` is null
           while the check is in flight, and telling somebody they can't review
           before asking would be a guess. */}
-      {isReal && canReview === false && !myReview && (
+      {isReal && !signedOut && canReview === false && !myReview && (
         <Card className="mb-6 animate-fade-slide-up">
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">Reviews</p>
           <p className="text-sm text-charcoal-faint">
@@ -578,112 +548,79 @@ export default function ProfessionalDetail() {
         )
       )}
 
-      <BottomSheet open={reviewOpen} onClose={() => setReviewOpen(false)} title={`Rate ${professional.name.split(" ")[0]}`}>
-        <div className="space-y-5 animate-fade-slide-up">
-          <div className="flex items-center justify-center gap-2">
-            {Array.from({ length: 5 }, (_, i) => {
-              const filled = i < reviewRating;
-              return (
-                <button
-                  key={i}
-                  onClick={() => setReviewRating(i + 1)}
-                  aria-label={`${i + 1} star${i === 0 ? "" : "s"}`}
-                  className="tap"
-                >
-                  <Star size={30} className={filled ? "fill-gold text-gold" : "text-charcoal/15"} />
-                </button>
-              );
-            })}
-          </div>
-          <label className="block">
-            <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Your review</span>
-            <textarea
-              value={reviewText}
-              onChange={(e) => setReviewText(e.target.value)}
-              placeholder={`How has your experience with ${professional.name.split(" ")[0]} been?`}
-              rows={4}
-              className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20 resize-none"
-            />
-          </label>
-          {/* LABELLED FOR WHAT IT ACTUALLY DOES. It is not "post anonymously":
-              the professional being reviewed can resolve an active client's
-              name from the relationship whatever this says, so the only thing
-              the toggle controls is whether everyone ELSE reading the listing
-              sees it. Saying otherwise would be promising a privacy the schema
-              does not provide. */}
-          <label className="flex items-start gap-2.5 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={showMyName}
-              onChange={(e) => setShowMyName(e.target.checked)}
-              className="mt-0.5 w-4 h-4 shrink-0 accent-primary"
-            />
-            <span className="text-xs text-charcoal-soft leading-relaxed">
-              Show my first name on this review —{" "}
-              <span className="text-charcoal-faint">
-                your professional can see who left it either way.
-              </span>
-            </span>
-          </label>
-          {reviewError && <p className="text-xs font-semibold text-status-high">{reviewError}</p>}
-          <Button fullWidth size="lg" onClick={() => void submitReview()} disabled={savingReview}>
-            {savingReview ? "Saving…" : myReview ? "Save changes" : "Submit review"}
-          </Button>
-          {/* Delete is only offered once there is something to delete, and
-              asks twice — the same two-tap confirm the rest of the app uses
-              for destructive actions. */}
-          {myReview && (
-            <button
-              onClick={() => void deleteMyReview()}
-              disabled={savingReview}
-              className="tap w-full text-center text-xs font-semibold text-status-high py-2"
-            >
-              {confirmDeleteReview ? "Tap again to delete your review" : "Delete review"}
-            </button>
-          )}
-        </div>
-      </BottomSheet>
+      <ReviewFormSheet
+        open={reviewOpen}
+        onClose={() => setReviewOpen(false)}
+        firstName={professional.name.split(" ")[0]}
+        existing={myReview}
+        onSave={submitReview}
+        onWithdraw={withdrawMyReview}
+      />
 
       <BottomSheet
         open={allReviewsOpen}
-        onClose={() => setAllReviewsOpen(false)}
-        title={`${aggregateCount} ${aggregateCount === 1 ? "Review" : "Reviews"}`}
+        onClose={closeAllReviews}
+        onBack={reportingId ? () => setReportingId(null) : undefined}
+        title={reportingId ? "Report this review" : `${aggregateCount} ${aggregateCount === 1 ? "Review" : "Reviews"}`}
       >
-        <div className="space-y-3 animate-fade-slide-up">
-          {myReview && (
-            <Card className="!bg-primary-pale">
-              <p className="text-sm font-semibold text-charcoal mb-1.5">You</p>
-              <ReviewItem review={myReview} showName={false} starSize={12} />
-            </Card>
-          )}
-          {/* REAL ROWS, NOT mockReviewsFor(). That helper generated plausible
-              names and sentences from a hash of the professional's id — fine
-              as scaffolding for seeded entries, indistinguishable from real
-              testimony once a real account had a listing. It is gone. */}
-          {otherReviews.map((r) => (
-            <Card key={r.id}>
-              <ReviewItem review={r} starSize={12} />
-            </Card>
-          ))}
-          {aggregateCount === 0 && (
-            <Card className="text-center py-8">
-              <p className="text-sm text-charcoal-faint">No reviews yet.</p>
-            </Card>
-          )}
-          {/* The count comes from the aggregate, which anon can read; the
-              bodies come from a table anon holds no grant on. Signed out,
-              those two disagree — and saying so beats an empty list under a
-              headline promising several. */}
-          {aggregateCount > 0 && otherReviews.length === 0 && !myReview && (
-            <Card className="text-center py-6">
-              <p className="text-sm text-charcoal-faint">
-                {authUserId
-                  ? "No review text to show yet."
-                  : "Sign in to read what clients wrote."}
-              </p>
-            </Card>
-          )}
-        </div>
+        {reportingId ? (
+          <ReviewReportForm
+            onSend={async (reason, detail) => {
+              const r = await reportReview(reportingId, reason, detail);
+              return r.ok ? null : r.message;
+            }}
+          />
+        ) : signedOut ? (
+          // The count is public; the words are for members. A prompt, not
+          // the read's refusal dressed up as "Couldn't load reviews".
+          <Card className="text-center py-8 animate-fade-slide-up">
+            <p className="text-sm font-semibold text-charcoal">Sign in to read reviews</p>
+            <p className="text-xs text-charcoal-faint mt-1 leading-relaxed">
+              Reviews are from {professional.name.split(" ")[0]}'s clients, and members can read them.
+            </p>
+            <Button size="sm" className="mt-3" onClick={() => navigate("/app/onboarding")}>
+              Sign in
+            </Button>
+          </Card>
+        ) : (
+          <div className="space-y-3 animate-fade-slide-up">
+            {myReview && myStatus !== "withdrawn" && (
+              <Card className="!bg-primary-pale">
+                <p className="text-sm font-semibold text-charcoal mb-1.5">You</p>
+                <ReviewItem
+                  review={myReview}
+                  showName={false}
+                  starSize={12}
+                  replyLabel={`Reply from ${professional.name.split(" ")[0]}`}
+                />
+              </Card>
+            )}
+            {otherReviews.map((r) => (
+              <Card key={r.id}>
+                <ReviewItem
+                  review={r}
+                  starSize={12}
+                  replyLabel={`Reply from ${professional.name.split(" ")[0]}`}
+                  actions={
+                    <button
+                      type="button"
+                      onClick={() => setReportingId(r.id)}
+                      className="tap min-h-[44px] text-xs font-semibold text-charcoal-faint"
+                    >
+                      Report
+                    </button>
+                  }
+                />
+              </Card>
+            ))}
+            {reviewError && <p className="text-xs font-semibold text-status-high text-center">{reviewError}</p>}
+            {!reviewError && aggregateCount === 0 && otherReviews.length === 0 && (
+              <Card className="text-center py-8">
+                <p className="text-sm text-charcoal-faint">No reviews yet.</p>
+              </Card>
+            )}
+          </div>
+        )}
       </BottomSheet>
     </div>
   );

@@ -49,15 +49,11 @@ const LISTING_COLUMNS =
   "profile_id, first_name, avatar_url, professional_subtype, specialty, location, bio, monthly_rate, consultation_rate, payment_modalities, average_rating, review_count, headline, skills, has_verified_licence";
 
 /**
- * The view's row as it actually is.
- *
- * average_rating and review_count ARE NOT IN database.types.ts: the view
- * gained them when professional_rating_summary was added, and the generated
- * file predates that. The columns are real — the view is security_invoker
- * =false and owned by postgres, which is how `anon` reads an aggregate over a
- * table it holds no grant on — so the response is cast here rather than the
- * generated file being hand-edited, which the next regeneration would undo.
- * Same treatment calendar_events.attachment_path already gets.
+ * The columns LISTING_COLUMNS selects, as the view returns them. The string
+ * select is not inferred by the client, so the response is cast to this.
+ * average_rating and review_count come from professional_rating_summary,
+ * which the view reads as its owner so that anon sees the aggregate without
+ * any grant on the reviews themselves.
  */
 type DirectoryRow = {
   profile_id: string | null;

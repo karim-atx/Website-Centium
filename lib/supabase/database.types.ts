@@ -424,6 +424,7 @@ export type Database = {
           language: Database["public"]["Enums"]["app_language"]
           notification_meal_reminders: boolean
           notification_professional_messages: boolean
+          notification_reviews: boolean
           notification_streak_alerts: boolean
           notification_weekly_summary: boolean
           notification_workout_reminders: boolean
@@ -438,6 +439,7 @@ export type Database = {
           language?: Database["public"]["Enums"]["app_language"]
           notification_meal_reminders?: boolean
           notification_professional_messages?: boolean
+          notification_reviews?: boolean
           notification_streak_alerts?: boolean
           notification_weekly_summary?: boolean
           notification_workout_reminders?: boolean
@@ -452,6 +454,7 @@ export type Database = {
           language?: Database["public"]["Enums"]["app_language"]
           notification_meal_reminders?: boolean
           notification_professional_messages?: boolean
+          notification_reviews?: boolean
           notification_streak_alerts?: boolean
           notification_weekly_summary?: boolean
           notification_workout_reminders?: boolean
@@ -1142,26 +1145,38 @@ export type Database = {
       }
       bug_reports: {
         Row: {
+          admin_notes: string | null
           created_at: string
           description: string
           id: string
           route: string | null
+          status: string
+          status_changed_at: string | null
+          status_changed_by: string | null
           user_agent: string | null
           user_id: string | null
         }
         Insert: {
+          admin_notes?: string | null
           created_at?: string
           description: string
           id?: string
           route?: string | null
+          status?: string
+          status_changed_at?: string | null
+          status_changed_by?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
         Update: {
+          admin_notes?: string | null
           created_at?: string
           description?: string
           id?: string
           route?: string | null
+          status?: string
+          status_changed_at?: string | null
+          status_changed_by?: string | null
           user_agent?: string | null
           user_id?: string | null
         }
@@ -10400,10 +10415,251 @@ export type Database = {
           },
         ]
       }
+      professional_review_replies: {
+        Row: {
+          body: string
+          created_at: string
+          deleted_at: string | null
+          edited_at: string | null
+          professional_id: string
+          redacted_at: string | null
+          redacted_body: string | null
+          redacted_by: string | null
+          redaction_reason: string | null
+          review_id: string
+          updated_at: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          professional_id: string
+          redacted_at?: string | null
+          redacted_body?: string | null
+          redacted_by?: string | null
+          redaction_reason?: string | null
+          review_id: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          deleted_at?: string | null
+          edited_at?: string | null
+          professional_id?: string
+          redacted_at?: string | null
+          redacted_body?: string | null
+          redacted_by?: string | null
+          redaction_reason?: string | null
+          review_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_review_replies_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_replies_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_replies_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_replies_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_replies_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_review_replies_professional_id_fkey"
+            columns: ["professional_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "professional_review_replies_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: true
+            referencedRelation: "professional_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_replies_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: true
+            referencedRelation: "professional_reviews_readable"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      professional_review_reports: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          detail: string | null
+          id: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          reported_id: string | null
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          review_id: string
+          status: Database["public"]["Enums"]["report_status"]
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          reported_id?: string | null
+          reporter_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id: string
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          detail?: string | null
+          id?: string
+          reason?: Database["public"]["Enums"]["report_reason"]
+          reported_id?: string | null
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          review_id?: string
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "professional_review_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "professional_reviews"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "professional_review_reports_review_id_fkey"
+            columns: ["review_id"]
+            isOneToOne: false
+            referencedRelation: "professional_reviews_readable"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       professional_reviews: {
         Row: {
           body: string | null
           created_at: string
+          deleted_at: string | null
           edited_at: string | null
           id: string
           professional_id: string
@@ -10419,6 +10675,7 @@ export type Database = {
         Insert: {
           body?: string | null
           created_at?: string
+          deleted_at?: string | null
           edited_at?: string | null
           id?: string
           professional_id: string
@@ -10434,6 +10691,7 @@ export type Database = {
         Update: {
           body?: string | null
           created_at?: string
+          deleted_at?: string | null
           edited_at?: string | null
           id?: string
           professional_id?: string
@@ -15485,6 +15743,21 @@ export type Database = {
         Args: { p_licence_id: string; p_note?: string }
         Returns: Json
       }
+      admin_bug_reports: {
+        Args: { p_status?: string }
+        Returns: {
+          admin_notes: string
+          created_at: string
+          description: string
+          report_id: string
+          reporter_account_id: string
+          route: string
+          status: string
+          status_changed_at: string
+          status_changed_by: string
+          user_agent: string
+        }[]
+      }
       admin_cancel_deletion: {
         Args: { reason?: string; target_user_id: string }
         Returns: string
@@ -15688,7 +15961,9 @@ export type Database = {
           author_identity: string
           author_label: string
           body: string
+          category_name: string
           created_at: string
+          has_photo: boolean
           post_id: string
           post_kind: string
           thread_id: string
@@ -15706,13 +15981,15 @@ export type Database = {
         }[]
       }
       admin_forum_reports: {
-        Args: { p_status?: Database["public"]["Enums"]["report_status"] }
+        Args: { p_status: Database["public"]["Enums"]["report_status"] }
         Returns: {
           admin_notes: string
           author_identity: string
           author_label: string
+          category_name: string
           created_at: string
           detail: string
+          has_photo: boolean
           post_body: string
           post_created_at: string
           post_id: string
@@ -15729,6 +16006,8 @@ export type Database = {
           resolved_by: string
           status: Database["public"]["Enums"]["report_status"]
           thread_id: string
+          thread_locked: boolean
+          thread_pinned: boolean
         }[]
       }
       admin_grant_ambassador_status: {
@@ -15879,6 +16158,25 @@ export type Database = {
           verified: boolean
         }[]
       }
+      admin_professional_review_queue: {
+        Args: { p_filter?: string }
+        Returns: {
+          body: string
+          created_at: string
+          deleted_at: string
+          edited_at: string
+          open_reports: number
+          professional_id: string
+          rating: number
+          redacted_at: string
+          redaction_reason: string
+          reply_exists: boolean
+          reply_redacted: boolean
+          review_id: string
+          reviewer_id: string
+          total_reports: number
+        }[]
+      }
       admin_publish_course: {
         Args: { p_course_id: string; p_reason: string }
         Returns: undefined
@@ -15947,6 +16245,10 @@ export type Database = {
       admin_redact_professional_review: {
         Args: { p_reason: string; p_review_id: string }
         Returns: Json
+      }
+      admin_redact_review_reply: {
+        Args: { p_reason: string; p_review_id: string }
+        Returns: undefined
       }
       admin_reject_certification: {
         Args: { p_professional_id: string; p_reason: string }
@@ -16030,6 +16332,22 @@ export type Database = {
         }
         Returns: Json
       }
+      admin_resolve_professional_review_report: {
+        Args: {
+          p_notes?: string
+          p_report_id: string
+          p_status: Database["public"]["Enums"]["report_status"]
+        }
+        Returns: undefined
+      }
+      admin_restore_professional_review: {
+        Args: { p_reason: string; p_review_id: string }
+        Returns: Json
+      }
+      admin_restore_review_reply: {
+        Args: { p_reason: string; p_review_id: string }
+        Returns: undefined
+      }
       admin_revoke_ambassador_status: {
         Args: { p_profile_id: string; p_reason: string }
         Returns: Json
@@ -16041,6 +16359,10 @@ export type Database = {
       admin_send_support_message: {
         Args: { body: string; reason?: string; thread_id: string }
         Returns: string
+      }
+      admin_set_bug_report_status: {
+        Args: { p_note?: string; p_report_id: string; p_status: string }
+        Returns: undefined
       }
       admin_set_contact_status: {
         Args: { new_status: string; reason?: string; submission_id: string }
@@ -16749,6 +17071,19 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      edit_my_professional_review: {
+        Args: {
+          p_body?: string
+          p_name_visible?: boolean
+          p_rating?: number
+          p_review_id: string
+        }
+        Returns: undefined
+      }
+      edit_my_review_reply: {
+        Args: { p_body: string; p_review_id: string }
+        Returns: undefined
+      }
       effective_professional_tier: {
         Args: { p_professional_id: string }
         Returns: {
@@ -17270,6 +17605,18 @@ export type Database = {
           tier_name: string
         }[]
       }
+      my_reviewable_professionals: {
+        Args: never
+        Returns: {
+          connected_now: boolean
+          first_name: string
+          listed_publicly: boolean
+          my_rating: number
+          my_review_id: string
+          my_review_status: string
+          professional_id: string
+        }[]
+      }
       needs_date_of_birth: { Args: never; Returns: boolean }
       new_course_pdf_path: { Args: { p_course_id: string }; Returns: string }
       new_forum_photo_path: { Args: { p_extension?: string }; Returns: string }
@@ -17509,6 +17856,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      reply_to_professional_review: {
+        Args: { p_body: string; p_review_id: string }
+        Returns: undefined
+      }
       report_course: {
         Args: {
           p_course_id: string
@@ -17523,6 +17874,14 @@ export type Database = {
           p_reason?: Database["public"]["Enums"]["report_reason"]
           p_reply_id?: string
           p_thread_id?: string
+        }
+        Returns: undefined
+      }
+      report_professional_review: {
+        Args: {
+          p_detail?: string
+          p_reason: Database["public"]["Enums"]["report_reason"]
+          p_review_id: string
         }
         Returns: undefined
       }
@@ -17934,6 +18293,14 @@ export type Database = {
         Args: { p_revision_id: string }
         Returns: undefined
       }
+      withdraw_my_professional_review: {
+        Args: { p_review_id: string }
+        Returns: undefined
+      }
+      withdraw_my_review_reply: {
+        Args: { p_review_id: string }
+        Returns: undefined
+      }
       youtube_video_id: { Args: { p_url: string }; Returns: string }
     }
     Enums: {
@@ -18185,6 +18552,10 @@ export type Database = {
         | "submit_course_for_review"
         | "ask_course_question"
         | "rate_course"
+        | "review_professional"
+        | "edit_professional_review"
+        | "report_professional_review"
+        | "reply_to_professional_review"
       rep_max_update_mode: "no_update" | "prompt" | "prompt_with_estimate"
       report_reason:
         | "harassment"
@@ -18643,6 +19014,10 @@ export const Constants = {
         "submit_course_for_review",
         "ask_course_question",
         "rate_course",
+        "review_professional",
+        "edit_professional_review",
+        "report_professional_review",
+        "reply_to_professional_review",
       ],
       rep_max_update_mode: ["no_update", "prompt", "prompt_with_estimate"],
       report_reason: [
