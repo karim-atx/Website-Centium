@@ -80,6 +80,19 @@ export function minutesLabel(minutes: number): string | null {
   return m ? `${h} hr ${m} min` : `${h} hr`;
 }
 
+/**
+ * "1,204 learners", or null below the threshold.
+ *
+ * NOTHING AT ZERO, and nothing at one or two either. "0 learners" reads as a
+ * verdict on a course nobody has found yet, and "1 learner" tells that learner
+ * they are the only one — neither is information the card is trying to give.
+ * The number itself is the server's; this only decides when it is worth saying.
+ */
+export function enrolledLabel(enrolled: number): string | null {
+  if (enrolled < 3) return null;
+  return `${enrolled.toLocaleString()} ${enrolled === 1 ? "learner" : "learners"}`;
+}
+
 export function ratingSummary(stars: number[]): { average: number | null; count: number } {
   if (stars.length === 0) return { average: null, count: 0 };
   const avg = stars.reduce((s, x) => s + x, 0) / stars.length;

@@ -5,17 +5,18 @@ import {
   fetchCatalogue,
   fetchCompleted,
   fetchCourseCategories,
+  fetchCourseStats,
   fetchMyEnrolments,
-  fetchStars,
   fetchTrees,
   orderedLessons,
   type Course,
   type CourseCategory,
   type CourseModule,
+  type CourseStats,
   type Enrolment,
   type Lesson,
 } from "../../services/courses";
-import { coursePill, formatPrice, nextLesson, progressPercent, ratingSummary } from "../../services/courses/rules";
+import { coursePill, enrolledLabel, formatPrice, nextLesson, progressPercent } from "../../services/courses/rules";
 import { ForumChip, ForumPlaceholder } from "../forum/parts";
 import { fv } from "../forum/forumColor";
 import { CoverPill, Instructor, RatingShort } from "./courseParts";
@@ -27,7 +28,7 @@ type Data = {
   categories: CourseCategory[];
   courses: Course[];
   names: Map<string, string>;
-  stars: Map<string, number[]>;
+  stats: Map<string, CourseStats>;
   modules: CourseModule[];
   lessons: Lesson[];
   enrolments: Enrolment[];
@@ -39,9 +40,9 @@ async function load(userId: string): Promise<{ data: Data } | { error: string }>
   if (!cats.ok) return { error: cats.message };
   if (!cat.ok) return { error: cat.message };
   const ids = cat.value.map((c) => c.id);
-  const [names, stars, tree, completed] = await Promise.all([
+  const [names, stats, tree, completed] = await Promise.all([
     fetchAuthorNames(cat.value.map((c) => c.authorId).filter((x): x is string => !!x)),
-    fetchStars(ids),
+    fetchCourseStats(ids),
     fetchTrees(ids),
     fetchCompleted(enrolments.map((e) => e.id)),
   ]);
@@ -50,7 +51,7 @@ async function load(userId: string): Promise<{ data: Data } | { error: string }>
       categories: cats.value,
       courses: cat.value,
       names,
-      stars,
+      stats,
       modules: tree.modules,
       lessons: tree.lessons,
       enrolments,
@@ -86,8 +87,16 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
           (c.subtitle ?? "").toLowerCase().includes(q) ||
           (data.names.get(c.authorId ?? "") ?? "").toLowerCase().includes(q)
       )
-      // Most rated first, then newest: "popular" until course_stats can say more.
-      .sort((a, b) => (data.stars.get(b.id)?.length ?? 0) - (data.stars.get(a.id)?.length ?? 0));
+      // POPULAR MEANS ENROLMENTS NOW, which is what the word means and what the
+      // client could not see before course_stats: course_enrolments is readable
+      // only for your own rows, so the old sort used the rating COUNT as a
+      // stand-in. Ratings break the tie, because a course everybody finished and
+      // rated is ahead of one nobody came back to.
+      .sort((a, b) => {
+        const x = data.stats.get(a.id);
+        const y = data.stats.get(b.id);
+        return (y?.enrolled ?? 0) - (x?.enrolled ?? 0) || (y?.ratings ?? 0) - (x?.ratings ?? 0);
+      });
   }, [data, query, filter]);
 
   if (result && "error" in result) {
@@ -199,7 +208,7 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
           <div className="flex flex-col gap-2.5">
             {shown.map((c) => {
               const weeks = data.modules.filter((m) => m.courseId === c.id).length;
-              const r = ratingSummary(data.stars.get(c.id) ?? []);
+              const s = data.stats.get(c.id);
               return (
                 <Link
                   key={c.id}
@@ -215,9 +224,21 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
                     <span className="text-xs" style={{ color: fv("muted") }}>
                       <Instructor authorId={c.authorId} name={data.names.get(c.authorId ?? "") ?? "Professional"} link={false} />
                     </span>
-                    <span className="flex justify-between items-center text-xs" style={{ color: fv("muted") }}>
-                      <RatingShort average={r.average} count={r.count} />
-                      <strong className="text-[13px]" style={{ color: fv("text") }}>
+                    <span className="flex justify-between items-center gap-2 text-xs" style={{ color: fv("muted") }}>
+                      <span className="flex items-center gap-1.5 min-w-0">
+                        <RatingShort average={s?.averageRating ?? null} count={s?.ratings ?? 0} />
+                        {/* THE ENROLLED COUNT, which no client could compute
+                            before course_stats. Hidden entirely at zero rather
+                            than shown as "0 learners", which reads as a verdict
+                            on a course nobody has found yet. */}
+                        {enrolledLabel(s?.enrolled ?? 0) && (
+                          <>
+                            <span aria-hidden="true">·</span>
+                            <span className="truncate">{enrolledLabel(s?.enrolled ?? 0)}</span>
+                          </>
+                        )}
+                      </span>
+                      <strong className="text-[13px] shrink-0" style={{ color: fv("text") }}>
                         {formatPrice(c.priceCents)}
                       </strong>
                     </span>
