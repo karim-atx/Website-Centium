@@ -5,3 +5,10 @@
 # Windows sets core.autocrlf=true by default -- this makes it the repo's rule
 # rather than one machine's setting.
 * text=auto
+
+# Images are never text. `* text=auto` above only keeps PNGs safe because git
+# happens to sniff a NUL byte in the header; two committed icons were found
+# corrupt (invalid image data), so say so explicitly instead of relying on a
+# heuristic -- no end-of-line conversion or diff/merge treatment, ever.
+*.png binary
+*.ico binary
