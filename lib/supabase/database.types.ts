@@ -3298,6 +3298,7 @@ export type Database = {
           issued_at: string
           learner_id: string
           serial: string
+          shared: boolean
         }
         Insert: {
           course_id: string
@@ -3306,6 +3307,7 @@ export type Database = {
           issued_at?: string
           learner_id: string
           serial: string
+          shared?: boolean
         }
         Update: {
           course_id?: string
@@ -3314,6 +3316,7 @@ export type Database = {
           issued_at?: string
           learner_id?: string
           serial?: string
+          shared?: boolean
         }
         Relationships: [
           {
@@ -15432,13 +15435,20 @@ export type Database = {
         Args: { p_warning_id: string }
         Returns: undefined
       }
+      add_course_module: {
+        Args: { p_course_id: string; p_revision_id?: string; p_title: string }
+        Returns: string
+      }
       add_course_pdf_lesson: {
-        Args: {
-          p_module_id: string
-          p_path: string
-          p_position: number
-          p_title: string
-        }
+        Args: { p_module_id: string; p_path: string; p_title: string }
+        Returns: string
+      }
+      add_course_quiz_lesson: {
+        Args: { p_module_id: string; p_pass_mark?: number; p_title: string }
+        Returns: string
+      }
+      add_course_quiz_question: {
+        Args: { p_lesson_id: string; p_prompt: string }
         Returns: string
       }
       add_course_reading_lesson: {
@@ -15446,16 +15456,14 @@ export type Database = {
           p_body: string
           p_minutes?: number
           p_module_id: string
-          p_position: number
           p_title: string
         }
         Returns: string
       }
       add_course_video_lesson: {
         Args: {
-          p_minutes: number
+          p_minutes?: number
           p_module_id: string
-          p_position: number
           p_title: string
           p_url: string
         }
@@ -15464,6 +15472,10 @@ export type Database = {
       add_to_broadcast_list: {
         Args: { p_list_id: string; p_user_ids: string[] }
         Returns: number
+      }
+      admin_apply_course_revision: {
+        Args: { p_reason: string; p_revision_id: string }
+        Returns: undefined
       }
       admin_approve_certification: {
         Args: { p_note?: string; p_professional_id: string }
@@ -15538,6 +15550,38 @@ export type Database = {
           video_id: string
         }[]
       }
+      admin_course_header: {
+        Args: { p_course_id: string }
+        Returns: {
+          author_email: string
+          author_id: string
+          author_name: string
+          author_verified: boolean
+          average_rating: number
+          category_key: string
+          course_id: string
+          cover_colour: string
+          created_at: string
+          currency: string
+          enrolled: number
+          learn_points: string[]
+          level: string
+          open_revision_id: string
+          price_cents: number
+          published_at: string
+          ratings: number
+          reports_open: number
+          review_reason: string
+          reviewed_by: string
+          status: string
+          submitted_at: string
+          subtitle: string
+          title: string
+          unpublished_at: string
+          updated_at: string
+          weekly_hours: number
+        }[]
+      }
       admin_course_reports: {
         Args: { p_status?: Database["public"]["Enums"]["report_status"] }
         Returns: {
@@ -15563,6 +15607,7 @@ export type Database = {
           author_name: string
           author_verified: boolean
           category_key: string
+          content_changed: boolean
           course_id: string
           lessons: number
           level: string
@@ -15571,11 +15616,29 @@ export type Database = {
           price_cents: number
           quizzes: number
           reports_open: number
+          revision_id: string
           status: string
           submitted_at: string
           subtitle: string
           title: string
           videos: number
+        }[]
+      }
+      admin_course_revision_curriculum: {
+        Args: { p_revision_id: string }
+        Returns: {
+          body: string
+          has_pdf: boolean
+          kind: string
+          lesson_id: string
+          lesson_position: number
+          lesson_title: string
+          minutes: number
+          module_id: string
+          module_position: number
+          module_title: string
+          pass_mark: number
+          video_id: string
         }[]
       }
       admin_delete_contact_submission: {
@@ -15930,6 +15993,10 @@ export type Database = {
           target_user_id: string
         }
         Returns: string
+      }
+      admin_request_revision_changes: {
+        Args: { p_reason: string; p_revision_id: string }
+        Returns: undefined
       }
       admin_reset_mfa: {
         Args: { p_factor_ids?: string[]; p_reason: string; p_user_id: string }
@@ -16348,9 +16415,31 @@ export type Database = {
       }
       course_access_level: { Args: { p_course_id: string }; Returns: string }
       course_author_may_publish: { Args: { p_user: string }; Returns: boolean }
+      course_certificate: {
+        Args: { p_serial: string }
+        Returns: {
+          completed_on: string
+          course_title: string
+          learner_first_name: string
+          professional_name: string
+          serial: string
+        }[]
+      }
       course_commission_percent: { Args: never; Returns: number }
+      course_content_is_editable: {
+        Args: { p_course_id: string; p_revision_id?: string }
+        Returns: boolean
+      }
       course_is_mine: { Args: { p_course_id: string }; Returns: boolean }
       course_is_readable: { Args: { p_course_id: string }; Returns: boolean }
+      course_lesson_is_editable: {
+        Args: { p_lesson_id: string }
+        Returns: boolean
+      }
+      course_module_is_editable: {
+        Args: { p_module_id: string }
+        Returns: boolean
+      }
       course_net_earnings: {
         Args: { p_course_id: string }
         Returns: {
@@ -16359,6 +16448,10 @@ export type Database = {
           net_cents: number
           sales: number
         }[]
+      }
+      course_next_lesson_position: {
+        Args: { p_module_id: string }
+        Returns: number
       }
       course_pdf_is_claimed_by_caller: {
         Args: { p_path: string }
@@ -16370,6 +16463,10 @@ export type Database = {
         Returns: boolean
       }
       course_pdf_path: { Args: { p_lesson_id: string }; Returns: string }
+      course_question_is_editable: {
+        Args: { p_question_id: string }
+        Returns: boolean
+      }
       course_quiz: {
         Args: { p_lesson_id: string }
         Returns: {
@@ -16380,6 +16477,38 @@ export type Database = {
           question_id: string
           question_position: number
         }[]
+      }
+      course_quiz_for_author: {
+        Args: { p_lesson_id: string }
+        Returns: {
+          is_correct: boolean
+          option_body: string
+          option_id: string
+          option_position: number
+          prompt: string
+          question_id: string
+          question_position: number
+        }[]
+      }
+      course_revision_lesson_map: {
+        Args: { p_revision_id: string }
+        Returns: {
+          new_lesson_id: string
+          old_lesson_id: string
+        }[]
+      }
+      course_stats: {
+        Args: { p_course_ids: string[] }
+        Returns: {
+          average_rating: number
+          course_id: string
+          enrolled: number
+          ratings: number
+        }[]
+      }
+      course_tree_digest: {
+        Args: { p_course_id: string; p_revision_id?: string }
+        Returns: string
       }
       create_broadcast_list: {
         Args: { p_name: string }
@@ -17025,6 +17154,26 @@ export type Database = {
           unread_count: number
         }[]
       }
+      my_course_revision: {
+        Args: { p_course_id: string }
+        Returns: {
+          category_key: string
+          content_changed: boolean
+          cover_colour: string
+          created_at: string
+          learn_points: string[]
+          level: string
+          price_cents: number
+          review_reason: string
+          reviewed_at: string
+          revision_id: string
+          status: string
+          submitted_at: string
+          subtitle: string
+          title: string
+          weekly_hours: number
+        }[]
+      }
       my_cycle_prediction: {
         Args: { p_on?: string }
         Returns: {
@@ -17126,6 +17275,7 @@ export type Database = {
       new_forum_photo_path: { Args: { p_extension?: string }; Returns: string }
       normalise_display_name: { Args: { p_name: string }; Returns: string }
       normalize_gtin: { Args: { p_input: string }; Returns: string }
+      open_course_revision: { Args: { p_course_id: string }; Returns: string }
       paid_enrolment_is_open: { Args: never; Returns: boolean }
       preview_client_code: {
         Args: { p_code: string }
@@ -17288,6 +17438,18 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      remove_course_lesson: {
+        Args: { p_lesson_id: string }
+        Returns: undefined
+      }
+      remove_course_module: {
+        Args: { p_module_id: string }
+        Returns: undefined
+      }
+      remove_course_quiz_question: {
+        Args: { p_question_id: string }
+        Returns: undefined
+      }
       remove_from_broadcast_list: {
         Args: { p_list_id: string; p_user_id: string }
         Returns: undefined
@@ -17312,6 +17474,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      rename_course_module: {
+        Args: { p_module_id: string; p_title: string }
+        Returns: undefined
+      }
       rename_group: {
         Args: { p_name: string; p_thread_id: string }
         Returns: {
@@ -17330,6 +17496,18 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      reorder_course_lessons: {
+        Args: { p_lesson_ids: string[]; p_module_id: string }
+        Returns: undefined
+      }
+      reorder_course_modules: {
+        Args: {
+          p_course_id: string
+          p_module_ids: string[]
+          p_revision_id?: string
+        }
+        Returns: undefined
       }
       report_course: {
         Args: {
@@ -17547,6 +17725,14 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      set_certificate_sharing: {
+        Args: { p_certificate_id: string; p_shared: boolean }
+        Returns: undefined
+      }
+      set_course_quiz_options: {
+        Args: { p_options: Json; p_question_id: string }
+        Returns: undefined
+      }
       set_forum_nickname: { Args: { p_nickname: string }; Returns: undefined }
       set_public_listing: {
         Args: { p_listed: boolean }
@@ -17644,6 +17830,10 @@ export type Database = {
           score_percent: number
         }[]
       }
+      submit_course_revision: {
+        Args: { p_revision_id: string }
+        Returns: undefined
+      }
       sweep_achievements: { Args: never; Returns: number }
       system_support_identity: { Args: never; Returns: string }
       thread_allows_attachments: {
@@ -17688,6 +17878,37 @@ export type Database = {
       trigger_message_attachment_purge: { Args: never; Returns: number }
       trigger_storage_purge: { Args: never; Returns: number }
       unblock_forum_block: { Args: { p_block_ref: string }; Returns: undefined }
+      update_course_details: {
+        Args: {
+          p_category_key?: string
+          p_course_id: string
+          p_cover_colour?: string
+          p_learn_points?: string[]
+          p_level?: string
+          p_price_cents?: number
+          p_revision_id?: string
+          p_subtitle?: string
+          p_title?: string
+          p_weekly_hours?: number
+        }
+        Returns: undefined
+      }
+      update_course_lesson: {
+        Args: {
+          p_body?: string
+          p_lesson_id: string
+          p_minutes?: number
+          p_pass_mark?: number
+          p_pdf_path?: string
+          p_title?: string
+          p_url?: string
+        }
+        Returns: undefined
+      }
+      update_course_quiz_question: {
+        Args: { p_prompt: string; p_question_id: string }
+        Returns: undefined
+      }
       user_is_confirmed_adult: { Args: { p_user: string }; Returns: boolean }
       user_is_minor: { Args: { p_user: string }; Returns: boolean }
       user_timezone: { Args: { p_user: string }; Returns: string }
@@ -17708,6 +17929,10 @@ export type Database = {
       valid_string_set: {
         Args: { allowed: string[]; v: string[] }
         Returns: boolean
+      }
+      withdraw_course_revision: {
+        Args: { p_revision_id: string }
+        Returns: undefined
       }
       youtube_video_id: { Args: { p_url: string }; Returns: string }
     }
