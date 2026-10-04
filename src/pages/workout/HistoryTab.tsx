@@ -7,7 +7,7 @@ import { PopupMenu } from "../../components/ui/PopupMenu";
 import { SwipeActions } from "../../components/ui/SwipeActions";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { Toast } from "../../components/ui/Toast";
-import { routineFamily, PURPLE, type FolderFamily } from "../../data/folderColors";
+import { headInk, headInkSoft, routineFamily, PURPLE, type FolderFamily } from "../../data/folderColors";
 import {
   byNewest,
   comparisonPhrase,
@@ -328,14 +328,16 @@ const SessionCard: React.FC<{
           <button
             onClick={onChangeDate}
             aria-label={`Change date of ${session.routineName}`}
-            className="tap flex-none flex flex-col items-center justify-center text-white"
-            style={{ width: 56, background: family.head }}
+            className="tap flex-none flex flex-col items-center justify-center"
+            // The folder header's ink (headInk): near-black on the light
+            // folder colours, white on Black, so the date reads at 4.5:1.
+            style={{ width: 56, background: family.head, color: headInk(family) }}
           >
             <span style={{ fontSize: 19, lineHeight: "20px", fontWeight: 800 }}>{d.getDate()}</span>
             <span style={{ fontSize: 11, lineHeight: "13px", fontWeight: 700, marginTop: 2 }}>
               {d.toLocaleDateString("en-US", { month: "short" })}
             </span>
-            <span style={{ fontSize: 8.5, lineHeight: "10px", fontWeight: 600, color: "rgba(255,255,255,0.72)" }}>{d.getFullYear()}</span>
+            <span style={{ fontSize: 8.5, lineHeight: "10px", fontWeight: 600, color: headInkSoft(family) }}>{d.getFullYear()}</span>
           </button>
           <button onClick={onToggle} aria-expanded={expanded} className="tap flex-1 min-w-0 flex items-center text-left" style={{ padding: "0 14px 0 15px", gap: 10 }}>
             <span className="flex-1 min-w-0">
