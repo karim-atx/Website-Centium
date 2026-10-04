@@ -1,4 +1,4 @@
-import { Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { useApp } from "../../context/AppContext";
 import { forumAccess, ADULTS_ONLY_TEXT, NEEDS_DOB_TEXT, type ForumCategory } from "../../services/forum/rules";
 import { useForumMe } from "../../components/forum/useForumMe";
@@ -7,6 +7,8 @@ import { ForumPostView } from "../../components/forum/ForumPostView";
 import { ForumCompose } from "../../components/forum/ForumCompose";
 import { NicknameScreen } from "../../components/forum/NicknameScreen";
 import { CoursesCatalogue } from "../../components/courses/CoursesCatalogue";
+import { MyCourses } from "../../components/courses/author/MyCourses";
+import { CourseBuilder } from "../../components/courses/author/CourseBuilder";
 import { CourseDetailView } from "../../components/courses/CourseDetailView";
 import { LessonView } from "../../components/courses/LessonView";
 import { ADULTS_ONLY_COURSES_TEXT, NEEDS_DOB_COURSES_TEXT } from "../../services/courses/rules";
@@ -166,7 +168,23 @@ export default function Community() {
               ))}
             </div>
             {tab === "courses" ? (
-              <CoursesCatalogue userId={ctx.userId} />
+              <>
+                {/* THE WAY INTO THE BUILDER, for the people who can use it.
+                    Only a professional sees it, because create_course refuses
+                    everybody else and a link to a screen that would only
+                    explain why is not worth a learner reading past. */}
+                {ctx.isProfessional && (
+                  <Link
+                    to="/app/forum/courses/mine"
+                    className="rounded-[14px] h-11 px-3.5 flex items-center justify-between gap-2 no-underline"
+                    style={{ background: fv("rules-bg"), color: fv("rules-ink") }}
+                  >
+                    <span className="text-[13px] font-extrabold">My courses</span>
+                    <span className="text-[13px] font-bold">Write a course →</span>
+                  </Link>
+                )}
+                <CoursesCatalogue userId={ctx.userId} />
+              </>
             ) : (
               <ForumHome
                 categories={ctx.categories}
@@ -259,6 +277,32 @@ export function ForumNicknamePage() {
 export function CoursePage() {
   const { courseId } = useParams();
   return <Gated section="courses" render={(ctx) => <CourseDetailView key={courseId} courseId={courseId ?? ""} userId={ctx.userId} />} />;
+}
+
+/**
+ * /app/forum/courses/mine: a professional's own courses (design screen 9).
+ *
+ * BEHIND THE SAME GATE AS EVERY OTHER COURSE SCREEN. Courses are adults-only
+ * and businesses have no Community, so the author side inherits both rather
+ * than restating them. The licence check is separate and is the screen's own:
+ * create_course refuses anyone unverified, so MyCourses says what is missing
+ * instead of offering a button that cannot work.
+ */
+export function MyCoursesPage() {
+  return <Gated section="courses" render={(ctx) => <MyCourses userId={ctx.userId} canAuthor={ctx.isProfessional} />} />;
+}
+
+/** /app/forum/courses/mine/:courseId: the builder (design screen 9). */
+export function CourseBuilderPage() {
+  const { courseId } = useParams();
+  return (
+    <Gated
+      section="courses"
+      render={(ctx) =>
+        ctx.isProfessional ? <CourseBuilder key={courseId} courseId={courseId ?? ""} /> : <Navigate to="/app/forum?tab=courses" replace />
+      }
+    />
+  );
 }
 
 /** /app/forum/courses/:courseId/lessons/:lessonId: a lesson (design screen 8). */

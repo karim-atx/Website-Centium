@@ -50,9 +50,10 @@ import MyCv from "./pages/profile/MyCv";
 import Subscription from "./pages/subscription/Subscription";
 import More from "./pages/profile/More";
 import ClientCalendarTab from "./pages/profile/ClientCalendarTab";
-import Community, { CoursePage, ForumNewPage, ForumNicknamePage, ForumPostPage, LessonPage } from "./pages/community/Community";
+import Community, { CourseBuilderPage, CoursePage, ForumNewPage, ForumNicknamePage, ForumPostPage, LessonPage, MyCoursesPage } from "./pages/community/Community";
 import Settings from "./pages/settings/Settings";
 import ResetPassword from "./pages/auth/ResetPassword";
+import PublicCertificate from "./pages/courses/PublicCertificate";
 
 const RouteLoading: React.FC = () => (
   <div className="min-h-[100dvh] flex items-center justify-center bg-cream">
@@ -352,6 +353,16 @@ function AppRoutes() {
         <Route path="*" element={<MarketingNotFound />} />
       </Route>
 
+      {/* A SHARED CERTIFICATE, FOR SOMEBODY WHO HAS NEVER SIGNED IN.
+          Outside every guard and outside /app on purpose: it is a document a
+          learner sends to an employer, and it has to open for a stranger with
+          no session. course_certificate() is the only function in Courses
+          granted to anon, and it answers with nothing unless its owner has
+          turned sharing on — so this route being public reveals nothing that
+          the learner has not chosen to publish. Not inside MarketingLayout
+          either: it should carry no nav, no footer and nothing to sell. */}
+      <Route path="/certificate/:serial" element={<PublicCertificate />} />
+
       {/* The one route a recovery session may reach. Deliberately outside
           RequireOnboarded: those guards redirect INTO here, so putting it
           behind them would loop. It does its own auth check instead. */}
@@ -414,6 +425,13 @@ function AppRoutes() {
         <Route path="/app/forum/new" element={<ForumNewPage />} />
         <Route path="/app/forum/nickname" element={<ForumNicknamePage />} />
         <Route path="/app/forum/post/:id" element={<ForumPostPage />} />
+        {/* BEFORE the :courseId route in the file, though React Router ranks
+            by specificity rather than order: a static segment beats a dynamic
+            one, so /courses/mine could never be read as a course id named
+            "mine". Written first anyway, so the next person reading this list
+            does not have to know that. */}
+        <Route path="/app/forum/courses/mine" element={<MyCoursesPage />} />
+        <Route path="/app/forum/courses/mine/:courseId" element={<CourseBuilderPage />} />
         <Route path="/app/forum/courses/:courseId" element={<CoursePage />} />
         <Route path="/app/forum/courses/:courseId/lessons/:lessonId" element={<LessonPage />} />
         <Route path="/app/settings" element={<Settings />} />
