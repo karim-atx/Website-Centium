@@ -93,12 +93,6 @@ export function enrolledLabel(enrolled: number): string | null {
   return `${enrolled.toLocaleString()} ${enrolled === 1 ? "learner" : "learners"}`;
 }
 
-export function ratingSummary(stars: number[]): { average: number | null; count: number } {
-  if (stars.length === 0) return { average: null, count: 0 };
-  const avg = stars.reduce((s, x) => s + x, 0) / stars.length;
-  return { average: Math.round(avg * 10) / 10, count: stars.length };
-}
-
 export interface OrderedLesson {
   id: string;
   kind: LessonKind;

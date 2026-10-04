@@ -8,7 +8,6 @@ import {
   minutesLabel,
   nextLesson,
   progressPercent,
-  ratingSummary,
   weekContents,
   youtubeEmbedUrl,
   type OrderedLesson,
@@ -60,11 +59,6 @@ test("continue goes to the next open lesson not done", () => {
   assert.equal(nextLesson(L, new Set(["a", "b"]), "b", "paid")?.id, "q");
   assert.equal(nextLesson(L, new Set(), null, "free")?.id, "a");
   assert.equal(nextLesson(L, new Set(["a", "b", "r"]), "r", "free")?.id, "r");
-});
-
-test("ratings", () => {
-  assert.deepEqual(ratingSummary([]), { average: null, count: 0 });
-  assert.deepEqual(ratingSummary([5, 4, 5]), { average: 4.7, count: 3 });
 });
 
 test("embed url: privacy-enhanced, no autoplay, ids only", () => {
