@@ -1,16 +1,7 @@
 import React from "react";
 import { Reveal } from "./Reveal";
 import { useEcoSlider } from "../hooks/useEcoSlider";
-
-// Same leaf-mark outline PillarRail's bullet badge uses (`LEAF_PATH` there),
-// duplicated locally rather than imported since PillarRail.tsx isn't owned by
-// this change. Masked by its own local `#eco-leaf-slit` (not the literal
-// handoff's shared `#cent-leaf-slit`), so this component stays fully
-// self-contained and doesn't depend on PillarRail having rendered first.
-const LEAF_PATH =
-  "M 924.1 543.4 L 915.6 549.5 L 905.6 555.7 L 894 561.9 L 878.6 568.1 L 859.3 574.2 L 830 580.4 L 796.8 586.6 L 768.2 592.8 L 748.1 598.9 L 731.9 605.1 L 718.8 611.3 L 708 617.5 L 698.7 623.6 L 690.2 629.8 L 682.5 636 L 675.5 642.2 L 669.4 648.3 L 664 654.5 L 658.6 660.7 L 653.9 666.9 L 650.1 673.1 L 645.4 679.2 L 641.6 685.4 L 637.7 691.6 L 634.6 697.8 L 631.5 703.9 L 628.5 710.1 L 626.1 716.3 L 623.8 722.5 L 621.5 728.6 L 619.2 734.8 L 617.6 741 L 615.3 747.2 L 613.8 753.3 L 612.2 759.5 L 611.5 765.7 L 609.9 771.9 L 609.2 778 L 608.4 784.2 L 607.6 790.4 L 681.7 796.6 L 671.7 802.8 L 661.7 808.9 L 651.6 815.1 L 643.1 821.3 L 634.6 827.5 L 626.1 833.6 L 618.4 839.8 L 611.5 846 L 603.8 852.2 L 596.8 858.3 L 589.9 864.5 L 582.9 870.7 L 576.7 876.9 L 569.8 883 L 607.6 887.7 L 637.7 887.7 L 684.8 883 L 713.4 876.9 L 734.2 870.7 L 751.2 864.5 L 765.1 858.3 L 778.2 852.2 L 789 846 L 799.1 839.8 L 808.3 833.6 L 816.8 827.5 L 824.5 821.3 L 832.3 815.1 L 839.2 808.9 L 845.4 802.8 L 851.6 796.6 L 857.7 790.4 L 863.2 784.2 L 867.8 778 L 872.4 771.9 L 877 765.7 L 881.7 759.5 L 885.5 753.3 L 889.4 747.2 L 893.3 741 L 896.3 734.8 L 899.4 728.6 L 902.5 722.5 L 905.6 716.3 L 907.9 710.1 L 911 703.9 L 913.3 697.8 L 915.6 691.6 L 917.2 685.4 L 919.5 679.2 L 921.1 673.1 L 922.6 666.9 L 924.1 660.7 L 925.7 654.5 L 927.2 648.3 L 928 642.2 L 929.5 636 L 930.3 629.8 L 931.1 623.6 L 931.9 617.5 L 931.9 611.3 L 932.6 605.1 L 932.6 598.9 L 932.6 592.8 L 931.9 586.6 L 931.9 580.4 L 931.1 574.2 L 930.3 568.1 L 930.3 561.9 L 928.8 555.7 L 928 549.5 L 926.5 543.4 Z";
-const LEAF_SLIT_PATH =
-  "M 829.2 668.4 L 826.1 674.6 L 822.2 680.8 L 817.6 686.9 L 813.7 693.1 L 809.1 699.3 L 804.5 705.5 L 799.8 711.7 L 794.4 717.8 L 789 724 L 782.9 730.2 L 776.7 736.4 L 769.7 742.5 L 762.8 748.7 L 755.1 754.9 L 746.6 761.1 L 737.3 767.2 L 727.3 773.4 L 715.7 779.6 L 703.3 785.8 L 691 791.9 L 683.3 795.8 L 656.2 809.3 L 589.5 809.3 L 608.4 795.8 L 613.8 791.9 L 622.3 785.8 L 632.3 779.6 L 643.1 773.4 L 655.5 767.2 L 668.6 761.1 L 684 754.9 L 699.5 748.7 L 714.2 742.5 L 727.3 736.4 L 739.6 730.2 L 751.2 724 L 761.2 717.8 L 771.3 711.7 L 779.8 705.5 L 789 699.3 L 797.5 693.1 L 805.2 686.9 L 813 680.8 L 819.9 674.6 L 826.9 668.4 Z";
+import { CENTIUM_MARK_C_PATH, CENTIUM_MARK_LEAF_PATH } from "./CentiumLogo";
 
 type ChipTone = "normal" | "warn";
 interface RowChip {
@@ -179,12 +170,6 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
 #eco-stage [data-eco-split]{grid-template-columns:minmax(0,1fr) !important;gap:10px !important;}
 }
       `}</style>
-      <svg width="0" height="0" aria-hidden="true" style={{ position: "absolute" }}>
-        <mask id="eco-leaf-slit" maskUnits="userSpaceOnUse" x={270} y={180} width={690} height={730}>
-          <rect x={270} y={180} width={690} height={730} fill="#FFFFFF" />
-          <path d={LEAF_SLIT_PATH} fill="#000000" />
-        </mask>
-      </svg>
       <div style={{ position: "relative", maxWidth: 1180, margin: "0 auto" }}>
         {heading}
 
@@ -319,8 +304,8 @@ export const Ecosystem: React.FC<{ heading: React.ReactNode }> = ({ heading }) =
                 }}
               >
                 <svg aria-hidden="true" viewBox="270 180 690 730" fill="none" style={{ display: "block", width: 38, height: 40, overflow: "visible", color: coreInk, transition: "color .45s" }}>
-                  <path d="M 843 339 A 287 287 0 1 0 561 809" stroke="currentColor" strokeWidth={113} strokeLinecap="butt" fill="none" />
-                  <path fillRule="nonzero" mask="url(#eco-leaf-slit)" fill="currentColor" d={LEAF_PATH} />
+                  <path fill="currentColor" d={CENTIUM_MARK_C_PATH} />
+                  <path fill="currentColor" d={CENTIUM_MARK_LEAF_PATH} />
                 </svg>
               </div>
             </div>
