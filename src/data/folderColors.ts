@@ -155,3 +155,37 @@ export function activeBarShades(
   if (family === PURPLE) return { bg: PURPLE.tile, line: "#C2B3FA" };
   return { bg: family.tile, line: mixHex(family.tile, "#FFFFFF", 0.55) };
 }
+
+/**
+ * THE INK ON A FOLDER HEADER: near-black on the light colours, white on the
+ * dark one (2026-10-05). The headers are light enough that white text sat as
+ * low as 2.06:1 (teal) and 2.57:1 (lavender); near-black reaches 5.7:1 or
+ * more on all eleven of those, and only Black's charcoal header needs white
+ * (10.3:1). Chosen by measured contrast rather than listed by hand, so a new
+ * family is covered too. Headers are the same in light and dark mode, so
+ * this does not depend on the theme. The tile inside the header keeps its
+ * white icon: that sits on the dark `tile` shade, not on the header.
+ */
+export const HEAD_INK_DARK = "#1C1917";
+
+function luminance(hex: string): number {
+  return [1, 3, 5]
+    .map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
+    .map((v) => (v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
+    .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
+}
+
+export function contrastRatio(a: string, b: string): number {
+  const x = luminance(a);
+  const y = luminance(b);
+  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+export function headInk(family: Pick<FolderFamily, "head">): string {
+  return contrastRatio("#FFFFFF", family.head) >= contrastRatio(HEAD_INK_DARK, family.head) ? "#FFFFFF" : HEAD_INK_DARK;
+}
+
+/** The header's secondary line (the item count): the same ink at 86%, as the design's white was. */
+export function headInkSoft(family: Pick<FolderFamily, "head">): string {
+  return headInk(family) === "#FFFFFF" ? "rgba(255,255,255,0.86)" : "rgba(28,25,23,0.86)";
+}

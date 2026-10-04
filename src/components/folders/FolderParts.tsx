@@ -2,7 +2,7 @@ import React, { useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { ChevronDown, ChevronRight, Folder, GripVertical, MoreVertical } from "lucide-react";
-import type { FolderFamily } from "../../data/folderColors";
+import { headInk, headInkSoft, type FolderFamily } from "../../data/folderColors";
 import { folderColorOptions, swatchName } from "./folderList";
 
 // The folder pieces the Routines tab built (WO1.1), shared so the coach's
@@ -120,12 +120,14 @@ type PressProps = Record<string, unknown>;
 type GripProps = Record<string, unknown>;
 
 /** The inline rename field (folders and their items rename the same way). */
-export const RenameField: React.FC<{ value: string; onChange: (v: string) => void; onCommit: () => void; tone: "light" | "dark" }> = ({
-  value,
-  onChange,
-  onCommit,
-  tone,
-}) => (
+export const RenameField: React.FC<{
+  value: string;
+  onChange: (v: string) => void;
+  onCommit: () => void;
+  tone: "light" | "dark";
+  /** The Save label's colour where the background decides it (a folder header). */
+  ink?: string;
+}> = ({ value, onChange, onCommit, tone, ink }) => (
   <div className="flex items-center gap-2 flex-1 min-w-0" data-no-drag>
     <input
       autoFocus
@@ -136,7 +138,11 @@ export const RenameField: React.FC<{ value: string; onChange: (v: string) => voi
       }}
       className="flex-1 min-w-0 rounded-lg bg-cream-card border border-charcoal/10 px-2 py-1 text-sm"
     />
-    <button onClick={onCommit} className={clsx("text-xs font-semibold", tone === "light" ? "text-white" : "text-primary")}>
+    <button
+      onClick={onCommit}
+      className={clsx("text-xs font-semibold", !ink && (tone === "light" ? "text-white" : "text-primary"))}
+      style={ink ? { color: ink } : undefined}
+    >
       Save
     </button>
   </div>
@@ -183,6 +189,10 @@ export const FolderHeader: React.FC<{
   colorEditor,
 }) => {
   const gripProps = grip;
+  // Near-black on the light headers, white on the dark one (headInk), so
+  // the name, count, chevron, ⋮ and grip all reach 4.5:1 on every colour.
+  const ink = headInk(family);
+  const inkSoft = headInkSoft(family);
   return (
     <div
       data-drag-card
@@ -199,7 +209,7 @@ export const FolderHeader: React.FC<{
       }}
     >
       {renaming ? (
-        <RenameField value={renameDraft ?? ""} onChange={(v) => onRenameDraft?.(v)} onCommit={() => onRenameCommit?.()} tone="light" />
+        <RenameField value={renameDraft ?? ""} onChange={(v) => onRenameDraft?.(v)} onCommit={() => onRenameCommit?.()} tone="light" ink={ink} />
       ) : (
         <>
           <button onClick={onToggle} className="tap flex items-center gap-[13px] flex-1 text-left min-w-0 self-stretch">
@@ -211,14 +221,14 @@ export const FolderHeader: React.FC<{
             </span>
             <span className="flex-1 min-w-0">
               <span className="flex items-center gap-[7px]">
-                <span className="text-[15px] font-extrabold text-white truncate">{folder.name}</span>
+                <span className="text-[15px] font-extrabold truncate" style={{ color: ink }}>{folder.name}</span>
                 {collapsed ? (
-                  <ChevronRight size={15} strokeWidth={2.4} className="shrink-0" style={{ color: "#FFFFFF" }} />
+                  <ChevronRight size={15} strokeWidth={2.4} className="shrink-0" style={{ color: ink }} />
                 ) : (
-                  <ChevronDown size={15} strokeWidth={2.4} className="shrink-0" style={{ color: "#FFFFFF" }} />
+                  <ChevronDown size={15} strokeWidth={2.4} className="shrink-0" style={{ color: ink }} />
                 )}
               </span>
-              <span className="block text-[11.5px] mt-px" style={{ color: "rgba(255,255,255,0.86)" }}>
+              <span className="block text-[11.5px] mt-px" style={{ color: inkSoft }}>
                 {count} {count === 1 ? noun[0] : noun[1]}
               </span>
             </span>
@@ -227,7 +237,7 @@ export const FolderHeader: React.FC<{
             <button
               onClick={(e) => onMenu?.(e.currentTarget)}
               className="tap flex shrink-0"
-              style={{ color: "#FFFFFF" }}
+              style={{ color: ink }}
               aria-label={`Options for ${folder.name}`}
             >
               <MoreVertical size={17} />
@@ -239,7 +249,7 @@ export const FolderHeader: React.FC<{
             role="button"
             aria-label={`Drag ${folder.name}`}
             className="hit flex shrink-0"
-            style={{ color: "#FFFFFF", ...(gripProps?.style as React.CSSProperties | undefined) }}
+            style={{ color: ink, ...(gripProps?.style as React.CSSProperties | undefined) }}
           >
             <GripVertical size={17} />
           </span>
