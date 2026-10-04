@@ -9,7 +9,7 @@ import {
   nicknameProblem,
   type ForumCategory,
 } from "./rules.ts";
-import { jpegCarriesMetadata } from "./photoBytes.ts";
+import { jpegCarriesMetadata, stripEncoderSegments } from "./photoBytes.ts";
 
 const cats: ForumCategory[] = [
   { key: "general", name: "General", sensitivity: "general", sortOrder: 50 },
@@ -80,4 +80,19 @@ test("photo bytes: a re-drawn JPEG passes, Exif or a comment is refused", () => 
   assert.equal(jpegCarriesMetadata(new Uint8Array([0xff, 0xd8, ...jfif, ...icc, ...sos])), false);
   const otherApp2 = [0xff, 0xe2, 0x00, 0x06, 0x46, 0x50, 0x58, 0x52];
   assert.equal(jpegCarriesMetadata(new Uint8Array([0xff, 0xd8, ...otherApp2, ...sos])), true);
+});
+
+test("an encoder's own Exif and comments are stripped from a canvas JPEG; the colour profile and pixels stay", () => {
+  const sos = [0xff, 0xda, 0x00, 0x02, 0x11, 0x22, 0xff, 0xd9];
+  const jfif = [0xff, 0xe0, 0x00, 0x04, 0x00, 0x00];
+  const exif = [0xff, 0xe1, 0x00, 0x06, 0x45, 0x78, 0x69, 0x66];
+  const icc = [0xff, 0xe2, 0x00, 0x10, ...Array.from("ICC_PROFILE\0", (ch) => ch.charCodeAt(0)), 0x01, 0x01];
+  const com = [0xff, 0xfe, 0x00, 0x03, 0x41];
+  const dqt = [0xff, 0xdb, 0x00, 0x03, 0x07];
+  const input = new Uint8Array([0xff, 0xd8, ...jfif, ...exif, ...icc, ...com, ...dqt, ...sos]);
+  assert.equal(jpegCarriesMetadata(input), true);
+  const out = stripEncoderSegments(input)!;
+  assert.deepEqual([...out], [0xff, 0xd8, ...jfif, ...icc, ...dqt, ...sos]);
+  assert.equal(jpegCarriesMetadata(out), false);
+  assert.equal(stripEncoderSegments(new Uint8Array([0x89, 0x50, 0x4e, 0x47])), null);
 });

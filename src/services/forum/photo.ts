@@ -1,4 +1,4 @@
-import { jpegCarriesMetadata } from "./photoBytes";
+import { jpegCarriesMetadata, stripEncoderSegments } from "./photoBytes";
 
 // Preparing a forum photo: every byte of metadata removed, or no photo at all.
 //
@@ -36,20 +36,68 @@ export type PreparedPhoto = { ok: true; file: File } | { ok: false; message: str
 export const PHOTO_NOT_PREPARED =
   "This photo couldn't be prepared safely, so it wasn't added. Try a different photo.";
 
-async function decode(file: File): Promise<ImageBitmap> {
-  return createImageBitmap(file, { imageOrientation: "from-image" });
+/** Formats a phone may hand over that the browser itself may still be able to decode. */
+const MAYBE_DECODABLE = ["image/heic", "image/heif", ""];
+
+export const PHOTO_FORMAT_UNSUPPORTED =
+  "This photo's format isn't supported here. Choose a JPEG, PNG or WebP photo.";
+
+type Drawable = { source: CanvasImageSource; width: number; height: number; done: () => void };
+
+/**
+ * Decodes the photo with its orientation applied. createImageBitmap with the
+ * orientation option first; where that is missing or refuses (older Safari,
+ * some Android browsers), an <img>, which applies EXIF orientation by default
+ * (image-orientation: from-image) in every current browser.
+ */
+async function decode(file: File): Promise<Drawable> {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const b = await createImageBitmap(file, { imageOrientation: "from-image" });
+      return { source: b, width: b.width, height: b.height, done: () => b.close() };
+    } catch {
+      /* fall through to the image element */
+    }
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.decoding = "async";
+    img.src = url;
+    await img.decode();
+    return { source: img, width: img.naturalWidth, height: img.naturalHeight, done: () => URL.revokeObjectURL(url) };
+  } catch (e) {
+    URL.revokeObjectURL(url);
+    throw e;
+  }
 }
 
 function toJpeg(canvas: HTMLCanvasElement): Promise<Blob | null> {
   return new Promise((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.88));
 }
 
+/** Which step a refusal came from, for the console only: never the file or its name. */
+function refuse(stage: string, message = PHOTO_NOT_PREPARED): PreparedPhoto {
+  console.warn(`[forum photo] not added at: ${stage}`);
+  return { ok: false, message };
+}
+
 export async function prepareForumPhoto(file: File): Promise<PreparedPhoto> {
-  if (!ACCEPTED.includes(file.type)) {
-    return { ok: false, message: "Choose a JPEG, PNG or WebP photo." };
+  // A phone can hand over a HEIC photo, or one with no type at all (some
+  // Android browsers do for camera shots). Those are tried, not refused:
+  // whether this browser can decode them is the real question.
+  if (!ACCEPTED.includes(file.type) && !MAYBE_DECODABLE.includes(file.type)) {
+    return refuse("type", "Choose a JPEG, PNG or WebP photo.");
+  }
+  let picture: Drawable;
+  try {
+    picture = await decode(file);
+  } catch {
+    return refuse("decode", ACCEPTED.includes(file.type) ? PHOTO_NOT_PREPARED : PHOTO_FORMAT_UNSUPPORTED);
   }
   try {
-    const bitmap = await decode(file);
+    const bitmap = picture;
+    if (!(bitmap.width > 0 && bitmap.height > 0)) return refuse("size");
     const scale = Math.min(1, FORUM_PHOTO_MAX_EDGE / Math.max(bitmap.width, bitmap.height));
     const width = Math.max(1, Math.round(bitmap.width * scale));
     const height = Math.max(1, Math.round(bitmap.height * scale));
@@ -57,22 +105,25 @@ export async function prepareForumPhoto(file: File): Promise<PreparedPhoto> {
     canvas.width = width;
     canvas.height = height;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return { ok: false, message: PHOTO_NOT_PREPARED };
+    if (!ctx) return refuse("canvas");
     // JPEG has no transparency: a PNG's clear areas would otherwise turn black.
     ctx.fillStyle = "#FFFFFF";
     ctx.fillRect(0, 0, width, height);
-    ctx.drawImage(bitmap, 0, 0, width, height);
-    bitmap.close();
+    ctx.drawImage(bitmap.source, 0, 0, width, height);
+    bitmap.done();
 
     const blob = await toJpeg(canvas);
-    if (!blob) return { ok: false, message: PHOTO_NOT_PREPARED };
-    const bytes = new Uint8Array(await blob.arrayBuffer());
-    if (jpegCarriesMetadata(bytes)) return { ok: false, message: PHOTO_NOT_PREPARED };
+    if (!blob) return refuse("encode");
+    // The encoder's own segments go (see stripEncoderSegments), then the
+    // strict check runs on what is left, exactly as before.
+    const bytes = stripEncoderSegments(new Uint8Array(await blob.arrayBuffer()));
+    if (!bytes) return refuse("encode-shape");
+    if (jpegCarriesMetadata(bytes)) return refuse("metadata");
     if (bytes.length > FORUM_PHOTO_MAX_BYTES) {
       return { ok: false, message: "This photo is too large. Choose one under 5 MB." };
     }
     return { ok: true, file: new File([bytes as BlobPart], "photo.jpg", { type: "image/jpeg" }) };
   } catch {
-    return { ok: false, message: PHOTO_NOT_PREPARED };
+    return refuse("draw");
   }
 }

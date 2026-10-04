@@ -300,11 +300,17 @@ export async function likeThread(threadId: string, userId: string, liked: boolea
 /** Claims a path, uploads the prepared photo to it, and returns the path for the post. */
 export async function uploadForumPhoto(file: File): Promise<Result<string>> {
   const { data: path, error } = await supabase.rpc("new_forum_photo_path", { p_extension: "jpg" });
-  if (error || typeof path !== "string") return fail(error ?? {}, "photo");
+  if (error || typeof path !== "string") {
+    console.warn("[forum photo] claim refused:", error?.code ?? "no path");
+    return fail(error ?? {}, "photo");
+  }
   const { error: upErr } = await supabase.storage
     .from("forum-photos")
     .upload(path, file, { contentType: "image/jpeg", upsert: false });
   if (upErr) {
+    // The status and code only: never the path, which is the photo's address.
+    const e = upErr as { statusCode?: string; status?: number; error?: string };
+    console.warn("[forum photo] upload refused:", e.statusCode ?? e.status ?? "", e.error ?? upErr.name);
     return { ok: false, message: isOffline(upErr) ? OFFLINE_MESSAGE : "The photo couldn't be uploaded. Try again." };
   }
   return { ok: true, value: path };

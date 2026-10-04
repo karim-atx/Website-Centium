@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
@@ -11,15 +12,33 @@ import { UnverifiedProgramNotice } from "../../components/workout/UnverifiedProg
 import { BlockCard } from "../../components/workout/BlockCard";
 import { groupIntoRuns } from "../../services/workout/blocks";
 import { prescriptionLine } from "../../services/workout/prescription";
-import { Plus, Trash2, ChevronDown, ChevronUp, Folder, FolderPlus, MoreVertical, Copy, Pencil, Settings2, Send } from "lucide-react";
+import { Plus, Trash2, ChevronDown, ChevronUp, FolderPlus, FolderTree, MoreVertical, Copy, Pencil, Palette, Settings2, Send } from "lucide-react";
+import { PopupMenu } from "../../components/ui/PopupMenu";
+import { ColorPopover, ColorSwatches, FolderHeader, InsertionLine, Placeholder } from "../../components/folders/FolderParts";
+import { folderColorOptions, withPlaceholder } from "../../components/folders/folderList";
+import { folderFamily } from "../../data/folderColors";
+import { moveId } from "../../services/routines/order";
+import { MAX_DEPTH_NOTE, canAddSubfolder, canMoveFolder } from "../../services/routines/folderDepth";
+import { useRoutineDrag, type DragItem, type DropTarget } from "../workout/useRoutineDrag";
+import type { WorkoutTemplateFolder } from "../../types";
 import { SessionDetail } from "../../components/workout/SessionDetail";
 import { fetchClientSessionsForRoutines } from "../../services/professional-client";
 import { formatDuration } from "../../services/workout";
 import { formatDisplayDate } from "../../utils/date";
 import type { WorkoutSession } from "../../types";
-import clsx from "clsx";
 
-const folderColorOptions = ["#7D6BB5", "#6F9993", "#4C8FD1", "#9C4F7C", "#D9A441", "#241F1B"];
+// The folder ⋮ menu: the Routines tab's, on the same shared popup, for the
+// same folders (the two tables share one schema and one trigger). Moving a
+// folder is by drag, as there.
+type FolderAction = "rename" | "color" | "subfolder" | "template" | "delete";
+const MENU_ICON = 15;
+const FOLDER_MENU: { value: FolderAction; label: string; icon: React.ReactNode; destructive?: boolean }[] = [
+  { value: "rename", label: "Rename", icon: <Pencil size={MENU_ICON} /> },
+  { value: "color", label: "Edit color", icon: <Palette size={MENU_ICON} /> },
+  { value: "subfolder", label: "Add subfolder", icon: <FolderTree size={MENU_ICON} /> },
+  { value: "template", label: "Add template", icon: <Plus size={MENU_ICON} /> },
+  { value: "delete", label: "Delete", icon: <Trash2 size={MENU_ICON} />, destructive: true },
+];
 
 export default function WorkoutTemplateBuilderTab() {
   const {
@@ -33,6 +52,10 @@ export default function WorkoutTemplateBuilderTab() {
     workoutTemplateFolders,
     addWorkoutTemplateFolder,
     deleteWorkoutTemplateFolder,
+    renameWorkoutTemplateFolder,
+    updateWorkoutTemplateFolder,
+    reorderWorkoutTemplateFolders,
+    moveWorkoutTemplateFolder,
   } = useApp();
   const [createOpen, setCreateOpen] = useState(false);
   const [createFolderId, setCreateFolderId] = useState<string | null>(null);
@@ -43,11 +66,22 @@ export default function WorkoutTemplateBuilderTab() {
   const [renamingTemplate, setRenamingTemplate] = useState<WorkoutTemplate | null>(null);
   const [renameDraft, setRenameDraft] = useState("");
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [expandedFolders, setExpandedFolders] = useState<Set<string>>(new Set());
+  // Folders start open, as routine folders do.
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set());
   const [newFolderOpen, setNewFolderOpen] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
-  const [newFolderParentId, setNewFolderParentId] = useState<string | null>(null);
   const [newFolderColor, setNewFolderColor] = useState(folderColorOptions[0]);
+  const [folderMenu, setFolderMenu] = useState<{ id: string; anchor: HTMLElement } | null>(null);
+  const [renamingFolderId, setRenamingFolderId] = useState<string | null>(null);
+  const [folderRenameDraft, setFolderRenameDraft] = useState("");
+  const [editingColorId, setEditingColorId] = useState<string | null>(null);
+  const [addingSubfolderTo, setAddingSubfolderTo] = useState<string | null>(null);
+  const [subfolderName, setSubfolderName] = useState("");
+  const [subfolderColor, setSubfolderColor] = useState(folderColorOptions[0]);
+  // Every folder write reports here, as on the Routines tab (run there).
+  const run = (action: Promise<string | undefined>) => {
+    void action.then((message) => setActionError(message ?? null));
+  };
 
   const openCreateIn = (folderId: string | null) => {
     setCreateFolderId(folderId);
@@ -55,7 +89,7 @@ export default function WorkoutTemplateBuilderTab() {
   };
 
   const toggleFolder = (id: string) =>
-    setExpandedFolders((prev) => {
+    setCollapsedFolders((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
@@ -63,12 +97,57 @@ export default function WorkoutTemplateBuilderTab() {
 
   const saveFolder = () => {
     if (!newFolderName.trim()) return;
-    addWorkoutTemplateFolder(newFolderName.trim(), newFolderParentId, newFolderColor);
+    run(addWorkoutTemplateFolder(newFolderName.trim(), null, newFolderColor));
     setNewFolderName("");
-    setNewFolderParentId(null);
     setNewFolderColor(folderColorOptions[0]);
     setNewFolderOpen(false);
   };
+
+  const onFolderAction = (folder: WorkoutTemplateFolder, action: FolderAction) => {
+    if (action === "rename") {
+      setRenamingFolderId(folder.id);
+      setFolderRenameDraft(folder.name);
+    } else if (action === "color") setEditingColorId(folder.id);
+    else if (action === "subfolder") {
+      setAddingSubfolderTo(folder.id);
+      setSubfolderName("");
+    } else if (action === "template") openCreateIn(folder.id);
+    else run(deleteWorkoutTemplateFolder(folder.id));
+  };
+
+  const commitFolderRename = (id: string) => {
+    const name = folderRenameDraft.trim();
+    if (name) run(renameWorkoutTemplateFolder(id, name));
+    setRenamingFolderId(null);
+  };
+
+  const addSubfolder = (parentId: string) => {
+    if (subfolderName.trim()) run(addWorkoutTemplateFolder(subfolderName.trim(), parentId, subfolderColor));
+    setAddingSubfolderTo(null);
+  };
+
+  // --- Folder drag and drop: the Routines tab's hook and rules ----------------
+  // Above, below or inside another folder (the middle half of its header),
+  // five levels deep at most and never into itself (folderDepth). Templates
+  // are not dragged: they have no stored order to drop them into.
+  const listRef = useRef<HTMLDivElement>(null);
+  const siblingsOf = (parentId: string | null) =>
+    workoutTemplateFolders.filter((f) => (f.parentId ?? null) === parentId);
+  const onDrop = (item: DragItem, target: DropTarget) => {
+    if (item.kind !== "folder") return;
+    if (target.kind === "into") run(moveWorkoutTemplateFolder(item.id, target.folderId, Number.MAX_SAFE_INTEGER));
+    else if (target.kind === "folders") {
+      if (target.parentId === item.parentId) {
+        const ids = siblingsOf(item.parentId).map((f) => f.id);
+        const next = moveId(ids, item.id, target.index);
+        if (next.some((id, i) => id !== ids[i])) run(reorderWorkoutTemplateFolders(item.parentId, next));
+      } else run(moveWorkoutTemplateFolder(item.id, target.parentId, target.index));
+    }
+  };
+  const canNest = (folderId: string, parentId: string | null) => canMoveFolder(folderId, parentId, workoutTemplateFolders);
+  const { drag, pressProps, gripProps, onClickCapture } = useRoutineDrag(listRef, onDrop, canNest);
+  const draggingFolder = drag?.item.kind === "folder" ? drag.item.id : null;
+  const dragFolder = draggingFolder ? workoutTemplateFolders.find((f) => f.id === draggingFolder) : undefined;
 
 
   // The expanded template's clients' real sessions.
@@ -118,8 +197,6 @@ export default function WorkoutTemplateBuilderTab() {
     loaded?.templateId === templateId ? loaded.byClient[clientId] ?? [] : undefined;
 
 
-  const topFolders = workoutTemplateFolders.filter((f) => !f.parentId);
-  const subfoldersOf = (id: string) => workoutTemplateFolders.filter((f) => f.parentId === id);
   const templatesIn = (folderId: string | null) => workoutTemplates.filter((t) => (t.folderId ?? null) === folderId);
 
   const templateCard = (t: (typeof workoutTemplates)[number]) => {
@@ -382,60 +459,112 @@ export default function WorkoutTemplateBuilderTab() {
     );
   };
 
-  const folderCard = (folderId: string, indent = false) => {
-    const folder = workoutTemplateFolders.find((f) => f.id === folderId);
-    if (!folder) return null;
-    const expanded = expandedFolders.has(folder.id);
-    const templates = templatesIn(folder.id);
-    const subfolders = subfoldersOf(folder.id);
-    return (
-      <Card key={folder.id} padded={false} className={clsx("overflow-hidden", indent && "ml-4")}>
-        <button
-          onClick={() => toggleFolder(folder.id)}
-          className="tap w-full flex items-center justify-between p-4 text-left"
-        >
-          <div className="flex items-center gap-2.5 min-w-0">
-            <Folder size={16} style={{ color: folder.color ?? "#7D6BB5" }} className="shrink-0" />
-            <p className="text-sm font-semibold text-charcoal truncate">{folder.name}</p>
-            <span className="text-xs text-charcoal-faint shrink-0">({templates.length})</span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                deleteWorkoutTemplateFolder(folder.id);
-              }}
-              aria-label={`Delete folder ${folder.name}`}
-              className="tap text-charcoal-faint"
-            >
-              <Trash2 size={14} />
-            </button>
-            {expanded ? <ChevronUp size={16} className="text-charcoal-faint" /> : <ChevronDown size={16} className="text-charcoal-faint" />}
-          </div>
-        </button>
-        {expanded && (
-          <div className="border-t border-charcoal/[0.06] px-4 py-3.5 space-y-2.5">
-            {subfolders.map((sf) => folderCard(sf.id, true))}
-            {templates.map(templateCard)}
-            {templates.length === 0 && subfolders.length === 0 && (
-              <p className="text-xs text-charcoal-faint">No templates in this folder yet.</p>
-            )}
-            <button
-              onClick={() => openCreateIn(folder.id)}
-              className="tap w-full flex items-center justify-center gap-1.5 rounded-xl border-2 border-dashed border-charcoal/15 py-2 text-xs font-semibold text-charcoal-soft"
-            >
-              <Plus size={13} /> New template in this folder
-            </button>
-          </div>
-        )}
-      </Card>
+  /** A sibling group of folders, with the drop placeholder while a folder is dragged. */
+  const renderFolders = (parentId: string | null, depth: number): React.ReactNode => {
+    const siblings = siblingsOf(parentId);
+    const at =
+      drag?.item.kind === "folder" && drag.target.kind === "folders" && drag.target.parentId === parentId
+        ? drag.target.index
+        : null;
+    const rest = siblings.filter((f) => f.id !== draggingFolder);
+    return withPlaceholder(siblings, draggingFolder, at).map((entry) =>
+      entry.kind === "placeholder" ? (
+        <Placeholder key="placeholder" gap={parentId === null ? 14 : 6} />
+      ) : (
+        renderFolder(entry.item, depth, entry.hidden ? siblings.indexOf(entry.item) : rest.indexOf(entry.item), entry.hidden)
+      )
     );
   };
+
+  // A render function, not a component (see RoutinesTab): a component made
+  // during render would remount on every pointer move and drop the drag.
+  const renderFolder = (folder: WorkoutTemplateFolder, depth: number, index: number, hidden: boolean): React.ReactNode => {
+    const templates = templatesIn(folder.id);
+    const collapsed = collapsedFolders.has(folder.id);
+    const family = folderFamily(folder, workoutTemplateFolders.indexOf(folder));
+    const item: DragItem = { kind: "folder", id: folder.id, parentId: folder.parentId ?? null, index };
+    return (
+      <div
+        key={folder.id}
+        data-dnd-folder-block
+        data-flip={`f:${folder.id}`}
+        className="flex flex-col gap-1.5"
+        style={{ marginLeft: depth * 16, display: hidden ? "none" : undefined }}
+      >
+        <FolderHeader
+          folder={folder}
+          family={family}
+          count={templates.length}
+          noun={["template", "templates"]}
+          collapsed={collapsed}
+          highlighted={drag?.target.kind === "into" && drag.target.folderId === folder.id}
+          onToggle={() => toggleFolder(folder.id)}
+          onMenu={(anchor) => setFolderMenu({ id: folder.id, anchor })}
+          renaming={renamingFolderId === folder.id}
+          renameDraft={folderRenameDraft}
+          onRenameDraft={setFolderRenameDraft}
+          onRenameCommit={() => commitFolderRename(folder.id)}
+          press={pressProps(item, renamingFolderId !== folder.id)}
+          grip={gripProps(item)}
+          colorEditor={
+            editingColorId === folder.id && (
+              <ColorPopover
+                value={folder.color}
+                onPick={(c) => run(updateWorkoutTemplateFolder(folder.id, { color: c }))}
+                onDone={() => setEditingColorId(null)}
+              />
+            )
+          }
+        />
+
+        {!collapsed && (
+          <div className="flex flex-col gap-1.5">
+            {templates.length > 0 && <div className="space-y-2.5">{templates.map(templateCard)}</div>}
+
+            {addingSubfolderTo === folder.id && (
+              <div className="mb-2" style={{ marginLeft: 16 }}>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    autoFocus
+                    value={subfolderName}
+                    onChange={(e) => setSubfolderName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && subfolderName.trim()) addSubfolder(folder.id);
+                    }}
+                    placeholder="Subfolder name…"
+                    aria-label="Subfolder name"
+                    className="flex-1 rounded-xl bg-cream-card border border-charcoal/10 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/20"
+                  />
+                  <button
+                    onClick={() => addSubfolder(folder.id)}
+                    className="tap px-3 rounded-xl bg-primary text-white text-sm font-semibold"
+                  >
+                    Add
+                  </button>
+                </div>
+                <ColorSwatches value={subfolderColor} onPick={setSubfolderColor} size={24} />
+              </div>
+            )}
+
+            <div data-dnd-folders={folder.id} className="flex flex-col gap-1.5 empty:hidden">
+              {renderFolders(folder.id, depth + 1)}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const menuFolder = folderMenu ? workoutTemplateFolders.find((f) => f.id === folderMenu.id) : undefined;
 
   const unfiledTemplates = templatesIn(null);
 
   return (
-    <div>
+    <div
+      onClick={() => {
+        if (editingColorId) setEditingColorId(null);
+      }}
+    >
       {/* V10 (QA 10.0): "Rename the tab templates into something that
           pertains to workout templates and being able to track what the
           client logged when it came to working out." */}
@@ -474,10 +603,14 @@ export default function WorkoutTemplateBuilderTab() {
         </p>
       )}
 
+      <div ref={listRef} onClickCapture={onClickCapture} className="flex flex-col gap-3.5 mb-3.5">
+        <div data-dnd-folders="" className="flex flex-col gap-3.5 empty:hidden">
+          {renderFolders(null, 0)}
+        </div>
+      </div>
       <div className="space-y-2.5">
-        {topFolders.map((f) => folderCard(f.id))}
         {unfiledTemplates.map(templateCard)}
-        {workoutTemplates.length === 0 && topFolders.length === 0 && (
+        {workoutTemplates.length === 0 && workoutTemplateFolders.length === 0 && (
           <Card className="text-center py-8">
             <p className="text-sm text-charcoal-faint">No templates yet — build your first one.</p>
           </Card>
@@ -528,6 +661,47 @@ export default function WorkoutTemplateBuilderTab() {
         </div>
       </BottomSheet>
 
+      <PopupMenu<FolderAction>
+        open={!!menuFolder}
+        anchor={folderMenu?.anchor ?? null}
+        onClose={() => setFolderMenu(null)}
+        options={
+          menuFolder && !canAddSubfolder(menuFolder.id, workoutTemplateFolders)
+            ? FOLDER_MENU.map((o) => (o.value === "subfolder" ? { ...o, disabled: true, note: MAX_DEPTH_NOTE } : o))
+            : FOLDER_MENU
+        }
+        onSelect={(action) => menuFolder && onFolderAction(menuFolder, action)}
+      />
+
+      {drag && <InsertionLine listRef={listRef} />}
+      {/* The lifted folder follows the pointer, as on the Routines tab. */}
+      {drag &&
+        dragFolder &&
+        createPortal(
+          <div
+            aria-hidden
+            className="fixed pointer-events-none"
+            style={{
+              zIndex: 55,
+              left: drag.left,
+              width: drag.width,
+              top: drag.y - drag.offsetY,
+              transform: "scale(1.03)",
+              borderRadius: 14,
+              boxShadow: "0 14px 30px rgba(36,31,27,0.18)",
+            }}
+          >
+            <FolderHeader
+              folder={dragFolder}
+              family={folderFamily(dragFolder, workoutTemplateFolders.indexOf(dragFolder))}
+              count={templatesIn(dragFolder.id).length}
+              noun={["template", "templates"]}
+              collapsed={collapsedFolders.has(dragFolder.id)}
+            />
+          </div>,
+          document.body
+        )}
+
       <BottomSheet open={newFolderOpen} onClose={() => setNewFolderOpen(false)} title="New Folder">
         <div className="space-y-4 animate-fade-slide-up">
           <label className="block">
@@ -540,55 +714,9 @@ export default function WorkoutTemplateBuilderTab() {
             />
           </label>
 
-          {topFolders.length > 0 && (
-            <div>
-              <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Parent folder (optional)</span>
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => setNewFolderParentId(null)}
-                  className={clsx(
-                    "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
-                    newFolderParentId === null
-                      ? "bg-primary text-white border-primary"
-                      : "bg-cream-soft border-transparent text-charcoal-soft"
-                  )}
-                >
-                  None (top-level)
-                </button>
-                {topFolders.map((f) => (
-                  <button
-                    key={f.id}
-                    onClick={() => setNewFolderParentId(f.id)}
-                    className={clsx(
-                      "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
-                      newFolderParentId === f.id
-                        ? "bg-primary text-white border-primary"
-                        : "bg-cream-soft border-transparent text-charcoal-soft"
-                    )}
-                  >
-                    {f.name}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div>
             <span className="text-xs font-semibold text-charcoal-soft mb-2 block">Color</span>
-            <div className="flex gap-2">
-              {folderColorOptions.map((c) => (
-                <button
-                  key={c}
-                  onClick={() => setNewFolderColor(c)}
-                  aria-label={`Color ${c}`}
-                  className="tap w-7 h-7 rounded-full"
-                  style={{
-                    background: c,
-                    boxShadow: newFolderColor === c ? "0 0 0 2px rgb(var(--c-cream)), 0 0 0 4px " + c : undefined,
-                  }}
-                />
-              ))}
-            </div>
+            <ColorSwatches value={newFolderColor} onPick={setNewFolderColor} size={28} />
           </div>
 
           <Button fullWidth size="lg" onClick={saveFolder} disabled={!newFolderName.trim()}>

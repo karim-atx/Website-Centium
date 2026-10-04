@@ -1,4 +1,4 @@
-import React, { useLayoutEffect, useRef, useState } from "react";
+import React, { useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { useApp } from "../../context/AppContext";
@@ -14,7 +14,9 @@ import { ExerciseLibrarySheet, type ExercisePick } from "../../components/workou
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { BrowseProgramsSheet } from "../../components/workout/BrowseProgramsSheet";
 import type { Exercise, Routine, RoutineFolder, WorkoutBlock } from "../../types";
-import { FOLDER_SWATCHES, folderFamily, routineFamily, type FolderFamily } from "../../data/folderColors";
+import { folderFamily, routineFamily, type FolderFamily } from "../../data/folderColors";
+import { ColorPopover, ColorSwatches, FolderHeader, InsertionLine, Placeholder, RenameField } from "../../components/folders/FolderParts";
+import { folderColorOptions, withPlaceholder } from "../../components/folders/folderList";
 import { BlockSettingsSheet } from "../../components/workout/BlockSettingsSheet";
 import { moveId, routinesIn } from "../../services/routines/order";
 import { useRoutineDrag, type DragItem, type DropTarget } from "./useRoutineDrag";
@@ -30,10 +32,7 @@ import {
   ungroupBlock,
 } from "../../services/workout/blocks";
 import {
-  ChevronDown,
-  ChevronRight,
   Copy,
-  Folder,
   FolderPlus,
   GripVertical,
   MoreVertical,
@@ -73,8 +72,6 @@ const blankExerciseFromPick = (pick: ExercisePick): Exercise => ({
   customExerciseId: pick.customExerciseId,
 });
 
-const folderColorOptions = FOLDER_SWATCHES.map((s) => s.color);
-const swatchName = (c: string) => FOLDER_SWATCHES.find((s) => s.color === c)?.name ?? c;
 
 // Folder colour families live in data/folderColors (handover 2026-09-29 02),
 // shared with the logger, History and the active-workout bar.
@@ -96,61 +93,6 @@ const ROUTINE_MENU: { value: RoutineAction; label: string; icon: React.ReactNode
   { value: "duplicate", label: "Duplicate", icon: <Copy size={MENU_ICON} /> },
   { value: "delete", label: "Delete", icon: <Trash2 size={MENU_ICON} />, destructive: true },
 ];
-
-/**
- * Where a dragged item will land (2026-09-30, replacing WO1.1's "placeholder
- * gap"): an invisible marker centred in the gap between two rows. Its negative
- * margins cancel its own height and the list's flex gap, so nothing shifts
- * while it moves. The line itself is drawn by InsertionLine, above the lifted
- * card, which would otherwise cover it.
- */
-const Placeholder: React.FC<{ gap: number }> = ({ gap }) => (
-  <div data-dnd-placeholder aria-hidden style={{ height: 2, margin: `${-(gap + 2) / 2}px 0` }} />
-);
-
-/**
- * The visible insertion line, in the same layer as the lifted card and just
- * above it, placed on the list's [data-dnd-placeholder] marker after every
- * render of a drag. Positioned by writing its own style (it has no state).
- */
-const InsertionLine: React.FC<{ listRef: React.RefObject<HTMLDivElement | null> }> = ({ listRef }) => {
-  const ref = useRef<HTMLDivElement>(null);
-  useLayoutEffect(() => {
-    const el = ref.current;
-    const marker = listRef.current?.querySelector<HTMLElement>("[data-dnd-placeholder]");
-    if (!el) return;
-    if (!marker) {
-      el.style.display = "none";
-      return;
-    }
-    // Layout position, ignoring transforms, as useRoutineDrag measures drop
-    // targets: the line never jumps while rows slide.
-    let top = 0;
-    let left = 0;
-    for (let n: HTMLElement | null = marker; n; n = n.offsetParent as HTMLElement | null) {
-      top += n.offsetTop;
-      left += n.offsetLeft;
-    }
-    el.style.display = "block";
-    el.style.top = `${top - window.scrollY + marker.offsetHeight / 2 - 1.5}px`;
-    el.style.left = `${left - window.scrollX}px`;
-    el.style.width = `${marker.offsetWidth}px`;
-  });
-  return createPortal(
-    <div
-      ref={ref}
-      aria-hidden
-      className="fixed pointer-events-none"
-      style={{ display: "none", zIndex: 56, height: 3, borderRadius: 2, background: "#7D6BB5", boxShadow: "0 0 0 1.5px #FFFFFF" }}
-    >
-      <span
-        className="absolute rounded-full"
-        style={{ left: -5, top: -3.5, width: 10, height: 10, border: "2.5px solid #7D6BB5", background: "#FFFFFF" }}
-      />
-    </div>,
-    document.body
-  );
-};
 
 export default function RoutinesTab() {
   const {
@@ -261,24 +203,6 @@ export default function RoutinesTab() {
   const { drag, pressProps, gripProps, onClickCapture } = useRoutineDrag(listRef, onDrop, canNest);
   const draggingRoutine = drag?.item.kind === "routine" ? drag.item.id : null;
   const draggingFolder = drag?.item.kind === "folder" ? drag.item.id : null;
-
-  /**
-   * A group's rows as rendered while dragging: the placeholder at the drop
-   * index (counted without the dragged item), and the dragged item kept in
-   * its original place, hidden (see useRoutineDrag).
-   */
-  function withPlaceholder<T extends { id: string }>(items: T[], draggedId: string | null, at: number | null) {
-    const rest = items.filter((x) => x.id !== draggedId);
-    const out: ({ kind: "item"; item: T; hidden: boolean } | { kind: "placeholder" })[] = rest.map((item) => ({
-      kind: "item" as const,
-      item,
-      hidden: false,
-    }));
-    if (at !== null) out.splice(Math.min(at, out.length), 0, { kind: "placeholder" });
-    const dragged = items.findIndex((x) => x.id === draggedId);
-    if (dragged !== -1) out.splice(Math.min(dragged, out.length), 0, { kind: "item", item: items[dragged], hidden: true });
-    return out;
-  }
 
   // V7 (QA 7.0): "No two routines can be played simultaneously" — starting
   // a routine while a different one has an ongoing (paused) session warns
@@ -439,35 +363,11 @@ export default function RoutinesTab() {
           grip={gripProps(item)}
           colorEditor={
             editingColorId === folder.id && (
-              <div
-                className="absolute right-0 top-7 z-20 bg-cream-card rounded-2xl shadow-lift border border-charcoal/[0.06] p-3 animate-fade-slide-up"
-                onClick={(ev) => ev.stopPropagation()}
-              >
-                <div className="flex flex-wrap gap-2 mb-2" style={{ width: 208 }}>
-                  {folderColorOptions.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => run(updateRoutineFolder(folder.id, { color: c }))}
-                      aria-label={swatchName(c)}
-                      className="tap w-7 h-7 rounded-full"
-                      style={{
-                        background: c,
-                        // A faint ring in the theme's ink, so a dark swatch (Black) still
-                        // shows on a dark popover.
-                        boxShadow: "inset 0 0 0 1px rgb(var(--c-charcoal) / 0.22)",
-                        outline: folder.color === c ? "2px solid rgb(var(--c-charcoal))" : "none",
-                        outlineOffset: 2,
-                      }}
-                    />
-                  ))}
-                </div>
-                <button
-                  onClick={() => setEditingColorId(null)}
-                  className="tap w-full text-center text-xs font-semibold text-charcoal-soft"
-                >
-                  Done
-                </button>
-              </div>
+              <ColorPopover
+                value={folder.color}
+                onPick={(c) => run(updateRoutineFolder(folder.id, { color: c }))}
+                onDone={() => setEditingColorId(null)}
+              />
             )
           }
         />
@@ -504,24 +404,7 @@ export default function RoutinesTab() {
                     Add
                   </button>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {folderColorOptions.map((c) => (
-                    <button
-                      key={c}
-                      onClick={() => setSubfolderColor(c)}
-                      aria-label={swatchName(c)}
-                      className="tap w-6 h-6 rounded-full"
-                      style={{
-                        background: c,
-                        // A faint ring in the theme's ink, so a dark swatch (Black) still
-                        // shows on a dark popover.
-                        boxShadow: "inset 0 0 0 1px rgb(var(--c-charcoal) / 0.22)",
-                        outline: subfolderColor === c ? "2px solid rgb(var(--c-charcoal))" : "none",
-                        outlineOffset: 2,
-                      }}
-                    />
-                  ))}
-                </div>
+                <ColorSwatches value={subfolderColor} onPick={setSubfolderColor} size={24} />
               </div>
             )}
 
@@ -614,24 +497,7 @@ export default function RoutinesTab() {
               Add
             </button>
           </div>
-          <div className="flex flex-wrap gap-2">
-            {folderColorOptions.map((c) => (
-              <button
-                key={c}
-                onClick={() => setNewFolderColor(c)}
-                aria-label={swatchName(c)}
-                className="tap w-6 h-6 rounded-full"
-                style={{
-                  background: c,
-                  // A faint ring in the theme's ink, so a dark swatch (Black) still
-                  // shows on a dark popover.
-                  boxShadow: "inset 0 0 0 1px rgb(var(--c-charcoal) / 0.22)",
-                  outline: newFolderColor === c ? "2px solid rgb(var(--c-charcoal))" : "none",
-                  outlineOffset: 2,
-                }}
-              />
-            ))}
-          </div>
+          <ColorSwatches value={newFolderColor} onPick={setNewFolderColor} size={24} />
         </div>
       )}
 
@@ -881,118 +747,6 @@ export default function RoutinesTab() {
 
 type PressProps = Record<string, unknown>;
 type GripProps = Record<string, unknown>;
-
-/** The inline rename field (folders and routines rename the same way). */
-const RenameField: React.FC<{ value: string; onChange: (v: string) => void; onCommit: () => void; tone: "light" | "dark" }> = ({
-  value,
-  onChange,
-  onCommit,
-  tone,
-}) => (
-  <div className="flex items-center gap-2 flex-1 min-w-0" data-no-drag>
-    <input
-      autoFocus
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" && value.trim()) onCommit();
-      }}
-      className="flex-1 min-w-0 rounded-lg bg-cream-card border border-charcoal/10 px-2 py-1 text-sm"
-    />
-    <button onClick={onCommit} className={clsx("text-xs font-semibold", tone === "light" ? "text-white" : "text-primary")}>
-      Save
-    </button>
-  </div>
-);
-
-/**
- * A folder header (WO1.1 frame): folder tile, name + chevron, routine count,
- * then ⋮ and the six-dot grip 13px apart, 14px from the right edge. Tapping
- * the name toggles the folder; a long-press or the grip drags it. Rendered
- * bare (no handlers) as the lifted card while dragging.
- */
-const FolderHeader: React.FC<{
-  folder: RoutineFolder;
-  family: FolderFamily;
-  count: number;
-  collapsed: boolean;
-  highlighted?: boolean;
-  onToggle?: () => void;
-  onMenu?: (anchor: HTMLElement) => void;
-  renaming?: boolean;
-  renameDraft?: string;
-  onRenameDraft?: (v: string) => void;
-  onRenameCommit?: () => void;
-  press?: PressProps;
-  grip?: GripProps;
-  colorEditor?: React.ReactNode;
-}> = ({ folder, family, count, collapsed, highlighted, onToggle, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip, colorEditor }) => {
-  const gripProps = grip;
-  return (
-    <div
-      data-drag-card
-      data-dnd-header={onToggle ? folder.id : undefined}
-      {...press}
-      className="flex items-center gap-[13px] justify-between rounded-[14px] select-none transition-shadow"
-      style={{
-        background: family.head,
-        minHeight: 54,
-        padding: "0 14px",
-        WebkitTouchCallout: "none",
-        // A routine dragged over this folder: dropping adds it to the end.
-        boxShadow: highlighted ? `0 0 0 2px #FFFFFF inset, 0 0 0 2px ${family.tile}` : undefined,
-      }}
-    >
-      {renaming ? (
-        <RenameField value={renameDraft ?? ""} onChange={(v) => onRenameDraft?.(v)} onCommit={() => onRenameCommit?.()} tone="light" />
-      ) : (
-        <>
-          <button onClick={onToggle} className="tap flex items-center gap-[13px] flex-1 text-left min-w-0 self-stretch">
-            <span
-              className="w-[33px] h-[33px] rounded-[10px] flex items-center justify-center shrink-0"
-              style={{ background: family.tile }}
-            >
-              <Folder size={16} style={{ color: "#FFFFFF" }} />
-            </span>
-            <span className="flex-1 min-w-0">
-              <span className="flex items-center gap-[7px]">
-                <span className="text-[15px] font-extrabold text-white truncate">{folder.name}</span>
-                {collapsed ? (
-                  <ChevronRight size={15} strokeWidth={2.4} className="shrink-0" style={{ color: "#FFFFFF" }} />
-                ) : (
-                  <ChevronDown size={15} strokeWidth={2.4} className="shrink-0" style={{ color: "#FFFFFF" }} />
-                )}
-              </span>
-              <span className="block text-[11.5px] mt-px" style={{ color: "rgba(255,255,255,0.86)" }}>
-                {count} {count === 1 ? "routine" : "routines"}
-              </span>
-            </span>
-          </button>
-          <div className="relative flex shrink-0" data-no-drag>
-            <button
-              onClick={(e) => onMenu?.(e.currentTarget)}
-              className="tap flex shrink-0"
-              style={{ color: "#FFFFFF" }}
-              aria-label={`Options for ${folder.name}`}
-            >
-              <MoreVertical size={17} />
-            </button>
-            {colorEditor}
-          </div>
-          <span
-            {...gripProps}
-            role="button"
-            aria-label={`Drag ${folder.name}`}
-            className="hit flex shrink-0"
-            style={{ color: "#FFFFFF", ...(gripProps?.style as React.CSSProperties | undefined) }}
-          >
-            <GripVertical size={17} />
-          </span>
-        </>
-      )}
-    </div>
-  );
-};
 
 /**
  * The routine card's top row (WO1.1 frame): accent bar, name and meta, play,

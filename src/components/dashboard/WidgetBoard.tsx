@@ -6,7 +6,7 @@ import type { WidgetType, WidgetConfig, WidgetSize } from "../../types";
 import { Pencil, Check, Plus, Footprints, Scale, Droplet, Moon, Utensils, Dumbbell, CheckSquare, BookOpen, Sparkles, HeartPulse } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { createEditTapGuard, widgetColumns, widgetSpans } from "../../utils/widgetGrid";
+import { createEditTapGuard, dropSlot, storedMove, widgetColumns, widgetSpans } from "../../utils/widgetGrid";
 
 // HO1.1: 2 small widgets per row below a 400px-wide viewport, 3 from 400.
 function useWidgetColumns() {
@@ -95,11 +95,15 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
   const dragInfoRef = useRef<DragInfo | null>(null);
   const ghostInitialRef = useRef<{ left: number; top: number } | null>(null);
   const visibleWidgetsRef = useRef(visibleWidgets);
-  const pointerYRef = useRef(0);
+  const widgetsRef = useRef(widgets);
+  // The last pointer position, so the drop slot can be recomputed while the
+  // page scrolls under a still finger (no pointermove fires then).
+  const pointerRef = useRef({ x: 0, y: 0 });
   const autoScrollRafRef = useRef<number | null>(null);
 
   useEffect(() => {
     visibleWidgetsRef.current = visibleWidgets;
+    widgetsRef.current = widgets;
   });
 
   const setTileRef = (id: string) => (el: HTMLDivElement | null) => {
@@ -114,50 +118,75 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
     }
   };
 
+  // Live reflow: the placeholder moves to where the tile would land if
+  // released here (utils/widgetGrid dropSlot, against the other tiles' live
+  // rects). Called on every pointer move AND whenever the page scrolls under
+  // a still pointer -- the auto-scroll at the edges or a wheel -- since no
+  // pointermove fires then and the slot would otherwise scroll away with the
+  // page, a screen or more from the finger. Only over the board (with the
+  // same 40px allowance a release uses): over the nav or the header above,
+  // the slot stays where it is.
+  const updateDrop = useCallback(() => {
+    const info = dragInfoRef.current;
+    const boardEl = boardRef.current;
+    if (!info || !boardEl) return;
+    const { x, y } = pointerRef.current;
+    const bb = boardEl.getBoundingClientRect();
+    if (x < bb.left - 40 || x > bb.right + 40 || y < bb.top - 40 || y > bb.bottom + 40) return;
+    const others = visibleWidgetsRef.current.filter((w) => w.id !== info.id);
+    const rects = others.map((w) => {
+      const el = tileRefs.current.get(w.id);
+      return el ? el.getBoundingClientRect() : { left: -1e6, top: -1e6, right: -1e6, bottom: -1e6 };
+    });
+    const ph = placeholderRef.current?.getBoundingClientRect() ?? null;
+    const newDrop = dropSlot(x, y, rects, ph);
+    if (newDrop !== null && newDrop !== info.dropIndex) {
+      info.dropIndex = newDrop;
+      setDragRender((prev) => (prev ? { ...prev, dropIndex: newDrop } : prev));
+    }
+  }, []);
+
+  // The bottom edge that starts an auto-scroll sits above the floating nav,
+  // not under it: the nav covers the last ~90px of the screen, and a finger
+  // can't reach "60px from the bottom" without being over the nav.
+  const bottomEdge = () => {
+    const nav = document.querySelector("[data-bottom-nav]");
+    const top = nav ? nav.getBoundingClientRect().top : window.innerHeight;
+    return Math.min(window.innerHeight, top) - 60;
+  };
+
   const startAutoScroll = () => {
     const step = () => {
       if (!dragInfoRef.current) return;
-      const y = pointerYRef.current;
-      const edge = 60;
-      if (y < edge) window.scrollBy(0, -12);
-      else if (y > window.innerHeight - edge) window.scrollBy(0, 12);
+      const y = pointerRef.current.y;
+      const before = window.scrollY;
+      if (y < 60) window.scrollBy(0, -12);
+      else if (y > bottomEdge()) window.scrollBy(0, 12);
+      if (window.scrollY !== before) updateDrop();
       autoScrollRafRef.current = requestAnimationFrame(step);
     };
     autoScrollRafRef.current = requestAnimationFrame(step);
   };
 
-  const handlePointerMove = useCallback((e: PointerEvent) => {
-    const info = dragInfoRef.current;
-    if (!info) return;
-    pointerYRef.current = e.clientY;
-    const g = ghostRef.current;
-    if (g) {
-      g.style.left = `${e.clientX - info.offsetX}px`;
-      g.style.top = `${e.clientY - info.offsetY}px`;
-    }
-    // Live reflow: the placeholder jumps beside whichever tile the pointer
-    // is currently over, on the side it's over (mirrors the handoff script
-    // exactly — hit-test against the *other* tiles' live rects).
-    const others = visibleWidgetsRef.current.filter((w) => w.id !== info.id);
-    for (let idx = 0; idx < others.length; idx++) {
-      const el = tileRefs.current.get(others[idx].id);
-      if (!el) continue;
-      const b = el.getBoundingClientRect();
-      if (e.clientX >= b.left && e.clientX <= b.right && e.clientY >= b.top && e.clientY <= b.bottom) {
-        const after = e.clientX > b.left + b.width / 2;
-        const newDrop = after ? idx + 1 : idx;
-        if (newDrop !== info.dropIndex) {
-          info.dropIndex = newDrop;
-          setDragRender((prev) => (prev ? { ...prev, dropIndex: newDrop } : prev));
-        }
-        break;
+  const handlePointerMove = useCallback(
+    (e: PointerEvent) => {
+      const info = dragInfoRef.current;
+      if (!info) return;
+      pointerRef.current = { x: e.clientX, y: e.clientY };
+      const g = ghostRef.current;
+      if (g) {
+        g.style.left = `${e.clientX - info.offsetX}px`;
+        g.style.top = `${e.clientY - info.offsetY}px`;
       }
-    }
-  }, []);
+      updateDrop();
+    },
+    [updateDrop]
+  );
 
   const handlePointerUp = useCallback(
     (e: PointerEvent) => {
       window.removeEventListener("pointermove", handlePointerMove);
+      window.removeEventListener("scroll", updateDrop);
       stopAutoScroll();
       const info = dragInfoRef.current;
       if (!info) {
@@ -176,10 +205,18 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
 
       const finalDropIndex = inBoard ? info.dropIndex : info.fromIndex;
       if (inBoard && finalDropIndex !== info.fromIndex) {
-        // Reuses the same ordering mechanism the board already had
-        // (AppContext's reorderWidgets, backing the persisted widget list)
-        // rather than a parallel one.
-        reorderWidgets(info.fromIndex, finalDropIndex);
+        // The SAME ordering mechanism the board already had (AppContext's
+        // reorderWidgets on the persisted list), but given positions in that
+        // stored list: the board's indices count only the visible widgets,
+        // and a hidden one before the drop used to land the tile one slot
+        // away from where the placeholder showed it.
+        const move = storedMove(
+          widgetsRef.current.map((w) => w.id),
+          visibleWidgetsRef.current.map((w) => w.id),
+          info.id,
+          finalDropIndex
+        );
+        if (move) reorderWidgets(move.from, move.to);
       }
       info.dropIndex = finalDropIndex;
       setDragRender((prev) => (prev ? { ...prev, dropIndex: finalDropIndex } : prev));
@@ -197,13 +234,17 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
           g.style.top = `${r.top}px`;
           g.style.transform = "scale(1)";
         }
-        window.setTimeout(() => {
-          dragInfoRef.current = null;
-          setDragRender(null);
-        }, 170);
       });
+      // The hand-back does NOT wait on the frame above: a page that goes to
+      // the background mid-drag (switching apps) gets no animation frames,
+      // and the lifted copy used to stay stuck over the board until it came
+      // back. A timer still runs, so the drag always ends.
+      window.setTimeout(() => {
+        dragInfoRef.current = null;
+        setDragRender(null);
+      }, 190);
     },
-    [handlePointerMove, reorderWidgets]
+    [handlePointerMove, reorderWidgets, updateDrop]
   );
 
   // A resize reflows the grid, so a quick second tap lands on whatever moved
@@ -236,14 +277,16 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
         dropIndex: fromIndex,
       };
       ghostInitialRef.current = { left: r.left, top: r.top };
-      pointerYRef.current = e.clientY;
+      pointerRef.current = { x: e.clientX, y: e.clientY };
       setDragRender({ id: widget.id, size: widget.size, width: r.width, height: r.height, dropIndex: fromIndex });
       window.addEventListener("pointermove", handlePointerMove);
       window.addEventListener("pointerup", handlePointerUp, { once: true });
       window.addEventListener("pointercancel", handlePointerUp, { once: true });
+      window.addEventListener("scroll", updateDrop, { passive: true });
       startAutoScroll();
     },
-    [handlePointerMove, handlePointerUp, tapGuard]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [handlePointerMove, handlePointerUp, tapGuard, updateDrop]
   );
 
   // Ghost's initial position + "lifted" treatment, set imperatively once
@@ -255,6 +298,11 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
     g.style.transition = "none";
     g.style.left = `${ghostInitialRef.current.left}px`;
     g.style.top = `${ghostInitialRef.current.top}px`;
+    // The lift scales AROUND THE GRAB POINT. Scaled around its centre (the
+    // default), a 3% lift moved the point under the finger by up to ~6px on
+    // a large tile, so the tile looked skewed off the finger.
+    const info = dragInfoRef.current;
+    g.style.transformOrigin = info ? `${info.offsetX}px ${info.offsetY}px` : "50% 50%";
     g.style.transform = "scale(1.03)";
     // Reuses the shell's existing lift shadow (Tailwind `shadow-lift`)
     // rather than inventing a new one.
@@ -267,9 +315,10 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
       window.removeEventListener("pointermove", handlePointerMove);
       window.removeEventListener("pointerup", handlePointerUp);
       window.removeEventListener("pointercancel", handlePointerUp);
+      window.removeEventListener("scroll", updateDrop);
       stopAutoScroll();
     },
-    [handlePointerMove, handlePointerUp]
+    [handlePointerMove, handlePointerUp, updateDrop]
   );
 
   const draggedWidget = dragRender ? visibleWidgets.find((w) => w.id === dragRender.id) ?? null : null;

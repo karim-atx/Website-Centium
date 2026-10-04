@@ -69,6 +69,7 @@ import {
   createTemplateFolder,
   deleteTemplate as deleteTemplateRemote,
   deleteTemplateFolder,
+  setTemplateFolderPositions,
   getTemplateAssignments,
   getTemplateFolders,
   getTemplates,
@@ -1211,6 +1212,10 @@ interface AppState {
   ) => Promise<string | undefined>;
   renameWorkoutTemplateFolder: (id: string, name: string) => Promise<string | undefined>;
   deleteWorkoutTemplateFolder: (id: string) => Promise<string | undefined>;
+  /** Colour or name; the same contract as updateRoutineFolder. */
+  updateWorkoutTemplateFolder: (id: string, patch: Partial<WorkoutTemplateFolder>) => Promise<string | undefined>;
+  reorderWorkoutTemplateFolders: (parentId: string | null, orderedIds: string[]) => Promise<string | undefined>;
+  moveWorkoutTemplateFolder: (id: string, parentId: string | null, index: number) => Promise<string | undefined>;
 
   clientHealthNotes: Record<string, ClientHealthNote>;
   updateClientHealthNote: (clientId: string, patch: Partial<ClientHealthNote>) => void;
@@ -3891,6 +3896,80 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return undefined;
   };
 
+  // Colour, rename, reorder and move: the routine folders' four, the same
+  // logic against the template table (see updateRoutineFolder and the two
+  // below it, which these mirror line for line). Template folders exist only
+  // signed in (addWorkoutTemplateFolder refuses otherwise), so every id here
+  // is a database row.
+  const updateWorkoutTemplateFolder: AppState["updateWorkoutTemplateFolder"] = async (id, patch) => {
+    const applyLocal = () =>
+      setWorkoutTemplateFolders((prev) => prev.map((f) => (f.id === id ? { ...f, ...patch } : f)));
+    if (!authUserId || !isUuid(id)) {
+      applyLocal();
+      return undefined;
+    }
+    const result = await updateTemplateFolder(id, { name: patch.name, color: patch.color, parentId: patch.parentId });
+    if (!result.ok) return result.message ?? "Could not update that folder.";
+    applyLocal();
+    return undefined;
+  };
+
+  const reorderWorkoutTemplateFolders: AppState["reorderWorkoutTemplateFolders"] = async (parentId, orderedIds) => {
+    const parent = parentId ?? null;
+    const isSibling = (f: WorkoutTemplateFolder) => (f.parentId ?? null) === parent;
+    const before = workoutTemplateFolders;
+    setWorkoutTemplateFolders((prev) => {
+      const byId = new Map(prev.map((f) => [f.id, f]));
+      const queue = orderedIds.filter((id) => byId.has(id));
+      let cursor = 0;
+      return prev.map((f) => (isSibling(f) ? byId.get(queue[cursor++]) ?? f : f));
+    });
+    const renumbered = orderedIds.map((id, position) => ({ id, position })).filter((x) => isUuid(x.id));
+    if (!authUserId || renumbered.length === 0) return undefined;
+    const result = await setTemplateFolderPositions(renumbered);
+    if (!result.ok) {
+      setWorkoutTemplateFolders(before);
+      return result.message ?? "Could not reorder those folders.";
+    }
+    return undefined;
+  };
+
+  const moveWorkoutTemplateFolder: AppState["moveWorkoutTemplateFolder"] = async (id, parentId, index) => {
+    const parent = parentId ?? null;
+    const moving = workoutTemplateFolders.find((f) => f.id === id);
+    if (!moving) return undefined;
+    const siblingIds = (of: string | null) =>
+      workoutTemplateFolders.filter((f) => (f.parentId ?? null) === of && f.id !== id).map((f) => f.id);
+    const dest = siblingIds(parent);
+    dest.splice(Math.max(0, Math.min(index, dest.length)), 0, id);
+    if ((moving.parentId ?? null) === parent) return reorderWorkoutTemplateFolders(parent, dest);
+    if (!canMoveFolder(id, parent, workoutTemplateFolders)) return `${MAX_DEPTH_NOTE}.`;
+
+    const before = workoutTemplateFolders;
+    setWorkoutTemplateFolders((prev) => {
+      const rest = prev.filter((f) => f.id !== id);
+      const moved = { ...moving, parentId: parent };
+      const next = dest[dest.indexOf(id) + 1];
+      const at = next
+        ? rest.findIndex((f) => f.id === next)
+        : (() => {
+            const lastSibling = [...rest].reverse().find((f) => (f.parentId ?? null) === parent);
+            return lastSibling ? rest.indexOf(lastSibling) + 1 : rest.length;
+          })();
+      return [...rest.slice(0, at), moved, ...rest.slice(at)];
+    });
+    if (!authUserId || !isUuid(id)) return undefined;
+    const moved = await updateTemplateFolder(id, { parentId: parent });
+    if (!moved.ok) {
+      setWorkoutTemplateFolders(before);
+      return moved.message ?? "Could not move that folder.";
+    }
+    const renumbered = dest.map((fid, position) => ({ id: fid, position })).filter((x) => isUuid(x.id));
+    const placed = await setTemplateFolderPositions(renumbered);
+    if (!placed.ok) return placed.message ?? "Could not place that folder.";
+    return undefined;
+  };
+
   const [clientHealthNotes, setClientHealthNotes] = usePersistentState<Record<string, ClientHealthNote>>(
     "clientHealthNotes",
     {}
@@ -6359,6 +6438,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       addWorkoutTemplateFolder,
       renameWorkoutTemplateFolder,
       deleteWorkoutTemplateFolder,
+      updateWorkoutTemplateFolder,
+      reorderWorkoutTemplateFolders,
+      moveWorkoutTemplateFolder,
       clientHealthNotes,
       updateClientHealthNote,
       signOut,

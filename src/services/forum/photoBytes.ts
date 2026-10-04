@@ -41,3 +41,47 @@ export function jpegCarriesMetadata(bytes: Uint8Array): boolean {
   }
   return true;
 }
+
+/**
+ * Removes the segments a BROWSER'S ENCODER adds to a canvas JPEG: APP1-APP15
+ * (except an ICC colour profile) and COM. Safe only on a canvas's own output:
+ * the image has been redrawn, so nothing from the original photo's metadata
+ * can be in it, and what an encoder writes here (WebKit's ImageIO, used by
+ * every browser on an iPhone, can add a small Exif block with the pixel size
+ * and colour space) is not the person's data. Stripping it, rather than
+ * refusing the photo, is what lets those browsers share photos at all; the
+ * strict check above still runs on the result.
+ *
+ * Returns null for anything that is not a well-formed JPEG up to its scan.
+ */
+export function stripEncoderSegments(bytes: Uint8Array): Uint8Array | null {
+  if (bytes.length < 4 || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+  const keep: Uint8Array[] = [bytes.subarray(0, 2)];
+  let i = 2;
+  while (i + 4 <= bytes.length) {
+    if (bytes[i] !== 0xff) return null;
+    const marker = bytes[i + 1];
+    if (marker === 0xda) {
+      keep.push(bytes.subarray(i));
+      const total = keep.reduce((n, p) => n + p.length, 0);
+      const out = new Uint8Array(total);
+      let o = 0;
+      for (const p of keep) {
+        out.set(p, o);
+        o += p.length;
+      }
+      return out;
+    }
+    if (marker === 0x01 || (marker >= 0xd0 && marker <= 0xd7)) {
+      keep.push(bytes.subarray(i, i + 2));
+      i += 2;
+      continue;
+    }
+    const length = (bytes[i + 2] << 8) | bytes[i + 3];
+    if (length < 2 || i + 2 + length > bytes.length) return null;
+    const drop = ((marker >= 0xe1 && marker <= 0xef) && !(marker === 0xe2 && isIccSegment(bytes, i))) || marker === 0xfe;
+    if (!drop) keep.push(bytes.subarray(i, i + 2 + length));
+    i += 2 + length;
+  }
+  return null;
+}

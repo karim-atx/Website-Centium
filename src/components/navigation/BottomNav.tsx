@@ -94,7 +94,7 @@ export const BottomNav: React.FC = () => {
   // sets, not part of this pass).
   if (isProfessional || isBusiness) {
     return (
-      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-cream-card/95 backdrop-blur-md border-t border-charcoal/[0.06] pb-[env(safe-area-inset-bottom)]">
+      <nav data-bottom-nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 bg-cream-card/95 backdrop-blur-md border-t border-charcoal/[0.06] pb-[env(safe-area-inset-bottom)]">
         <div className={clsx("grid max-w-xl mx-auto", gridColsForCount[items.length] ?? "grid-cols-5")}>
           {items.map((item) => {
             const Icon = item.icon;
@@ -135,6 +135,7 @@ export const BottomNav: React.FC = () => {
   // black one so the pill reads as raised rather than emitting light.
   return (
     <nav
+      data-bottom-nav
       className={clsx(
         // Handover 2026-09-29, 01 GLOBAL: the client app keeps this nav at
         // every width (there is no client sidebar any more), inside the
