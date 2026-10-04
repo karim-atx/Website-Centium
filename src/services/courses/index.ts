@@ -138,12 +138,44 @@ export async function fetchAuthorNames(ids: string[]): Promise<Map<string, strin
   return out;
 }
 
-/** Stars per course. Read whole until course_stats lands, which will do this on the server. */
-export async function fetchStars(courseIds: string[]): Promise<Map<string, number[]>> {
-  const out = new Map<string, number[]>();
+export interface CourseStats {
+  /** Rounded to one place by the server, so every client shows the same 4.8. */
+  averageRating: number | null;
+  ratings: number;
+  enrolled: number;
+}
+
+/**
+ * Ratings and enrolment counts for many courses at once.
+ *
+ * THIS REPLACES READING course_ratings WHOLE AND COUNTING IN THE BROWSER, which
+ * is what was here while course_stats did not exist. The server-side version is
+ * better on three counts, and only one of them is speed: it averages and rounds
+ * in one place so no two screens can disagree about 4.8; it returns an enrolled
+ * count that the client could not compute at all, because course_enrolments is
+ * readable only for your own rows; and it is scoped by course_is_readable, so
+ * it cannot be used to confirm that a draft course id exists or to watch a
+ * competitor's sales.
+ *
+ * A course with no ratings comes back with averageRating null and 0 — not
+ * absent — so a card can say "New" rather than nothing.
+ */
+export async function fetchCourseStats(courseIds: string[]): Promise<Map<string, CourseStats>> {
+  const out = new Map<string, CourseStats>();
   if (courseIds.length === 0) return out;
-  const { data } = await supabase.from("course_ratings").select("course_id, stars").in("course_id", courseIds);
-  for (const r of data ?? []) out.set(r.course_id, [...(out.get(r.course_id) ?? []), r.stars]);
+  const { data } = await supabase.rpc("course_stats", { p_course_ids: courseIds });
+  for (const r of data ?? []) {
+    out.set(r.course_id, {
+      averageRating: r.average_rating === null ? null : Number(r.average_rating),
+      ratings: Number(r.ratings ?? 0),
+      enrolled: Number(r.enrolled ?? 0),
+    });
+  }
+  // A course the server said nothing about has nothing yet, which is a real
+  // answer and not a missing one.
+  for (const id of courseIds) {
+    if (!out.has(id)) out.set(id, { averageRating: null, ratings: 0, enrolled: 0 });
+  }
   return out;
 }
 
@@ -330,11 +362,70 @@ export async function rateCourse(courseId: string, stars: number, body: string):
 }
 
 export interface Certificate {
+  id: string;
   serial: string;
   issuedAt: string;
+  /** The learner's own "Share certificate" switch. OFF until they turn it on. */
+  shared: boolean;
 }
 
 export async function fetchMyCertificate(enrolmentId: string): Promise<Certificate | null> {
-  const { data } = await supabase.from("course_certificates").select("serial, issued_at").eq("enrolment_id", enrolmentId).maybeSingle();
-  return data ? { serial: data.serial, issuedAt: data.issued_at } : null;
+  const { data } = await supabase
+    .from("course_certificates")
+    .select("id, serial, issued_at, shared")
+    .eq("enrolment_id", enrolmentId)
+    .maybeSingle();
+  return data ? { id: data.id, serial: data.serial, issuedAt: data.issued_at, shared: data.shared } : null;
+}
+
+/**
+ * The switch, per certificate rather than per account, so publishing one course
+ * does not volunteer the rest.
+ */
+export async function setCertificateSharing(certificateId: string, shared: boolean): Promise<Result<null>> {
+  const { error } = await supabase.rpc("set_certificate_sharing", {
+    p_certificate_id: certificateId,
+    p_shared: shared,
+  });
+  if (error) return fail(error, "read");
+  return { ok: true, value: null };
+}
+
+export interface PublicCertificate {
+  serial: string;
+  learnerFirstName: string;
+  courseTitle: string;
+  /** Null when the professional has since deleted their account. */
+  professionalName: string | null;
+  /** A DATE, not a timestamp: the day is on the certificate, the minute is not. */
+  completedOn: string;
+}
+
+/**
+ * One shared certificate, by serial, for the public page.
+ *
+ * SIGNED OUT ON PURPOSE — course_certificate() is the only function in Courses
+ * granted to anon, and it returns five fields and no sixth.
+ *
+ * NULL MEANS "WE COULD NOT FIND IT", AND MEANS NOTHING MORE. An unshared
+ * certificate and a serial that never existed both answer with zero rows and no
+ * error, deliberately: distinguishing them would tell a stranger that a given
+ * certificate exists, which is the one thing the switch is there to prevent. So
+ * this returns the same null for both, and the page must word it the same way.
+ */
+export async function fetchPublicCertificate(serial: string): Promise<Result<PublicCertificate | null>> {
+  const { data, error } = await supabase.rpc("course_certificate", { p_serial: serial });
+  if (error) return fail(error, "read");
+  const r = (data ?? [])[0];
+  if (!r) return { ok: true, value: null };
+  return {
+    ok: true,
+    value: {
+      serial: r.serial,
+      learnerFirstName: r.learner_first_name,
+      courseTitle: r.course_title,
+      professionalName: r.professional_name,
+      completedOn: r.completed_on,
+    },
+  };
 }

@@ -8,16 +8,18 @@ import {
   fetchCompleted,
   fetchCourse,
   fetchMyCertificate,
+  setCertificateSharing,
   fetchMyEnrolments,
   fetchMyRating,
   fetchPaidOpen,
   fetchQuestions,
-  fetchStars,
+  fetchCourseStats,
   fetchTrees,
   orderedLessons,
   rateCourse,
   type Certificate,
   type Course,
+  type CourseStats,
   type CourseModule,
   type CourseQuestion,
   type Enrolment,
@@ -25,11 +27,11 @@ import {
 } from "../../services/courses";
 import {
   coursePill,
+  enrolledLabel,
   formatPrice,
   minutesLabel,
   nextLesson,
   PAID_OPEN_SOON,
-  ratingSummary,
   weekContents,
   type AccessLevel,
 } from "../../services/courses/rules";
@@ -40,8 +42,10 @@ import { CheckIcon, CoverPill, Instructor, StarIcon } from "./courseParts";
 // Design screen 7: the course page. What you'll learn, the syllabus by week,
 // ratings, and the choice between watching free and the full course.
 //
-// THE ENROLLED COUNT IS NOT SHOWN YET. Learners can read only their own
-// enrolment, so nothing can count everyone's until course_stats lands.
+// THE ENROLLED COUNT COMES FROM course_stats. It could not be shown before:
+// course_enrolments is readable only for your own rows, so no client could
+// count everyone's. The function counts server-side and is scoped by
+// course_is_readable, so it cannot be used to watch a course you cannot see.
 //
 // BUYING IS BEHIND THE PAYMENTS SWITCH. While paid_enrolment_is_open() is
 // false, "Get the full course" says "Paid courses open soon." and calls
@@ -50,7 +54,7 @@ import { CheckIcon, CoverPill, Instructor, StarIcon } from "./courseParts";
 type Loaded = {
   course: Course;
   authorName: string;
-  stars: number[];
+  stats: CourseStats;
   modules: CourseModule[];
   lessons: Lesson[];
   access: AccessLevel;
@@ -67,9 +71,9 @@ async function loadCourse(courseId: string, userId: string): Promise<Loaded | nu
   if (!c.ok) return { error: c.message };
   if (!c.value) return null;
   const course = c.value;
-  const [names, starMap, tree, access, paidOpen, enrolments] = await Promise.all([
+  const [names, statMap, tree, access, paidOpen, enrolments] = await Promise.all([
     fetchAuthorNames(course.authorId ? [course.authorId] : []),
-    fetchStars([course.id]),
+    fetchCourseStats([course.id]),
     fetchTrees([course.id]),
     fetchAccessLevel(course.id),
     fetchPaidOpen(),
@@ -85,7 +89,7 @@ async function loadCourse(courseId: string, userId: string): Promise<Loaded | nu
   return {
     course,
     authorName: names.get(course.authorId ?? "") ?? "Professional",
-    stars: starMap.get(course.id) ?? [],
+    stats: statMap.get(course.id) ?? { averageRating: null, ratings: 0, enrolled: 0 },
     modules: tree.modules.sort((a, b) => a.position - b.position),
     lessons: tree.lessons,
     access,
@@ -151,7 +155,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
 
   const { course, authorName, modules, access, enrolment } = state;
   const lessons = orderedLessons(modules, state.lessons, course.id);
-  const rating = ratingSummary(state.stars);
+  const stats = state.stats;
   const isAuthor = course.authorId === userId;
   const paidCourse = course.priceCents > 0;
   const hasPaid = access === "paid";
@@ -209,12 +213,20 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
           </span>
           <Instructor authorId={course.authorId} name={authorName} link />
         </span>
-        <span className="flex gap-1 items-center text-[13px]" style={{ color: fv("muted") }}>
-          {rating.average === null ? (
+        <span className="flex gap-1.5 items-center flex-wrap text-[13px]" style={{ color: fv("muted") }}>
+          {stats.averageRating === null ? (
             "No ratings yet"
           ) : (
             <>
-              <StarIcon /> {rating.average.toFixed(1)} · {rating.count} {rating.count === 1 ? "rating" : "ratings"}
+              <StarIcon /> {stats.averageRating.toFixed(1)} · {stats.ratings} {stats.ratings === 1 ? "rating" : "ratings"}
+            </>
+          )}
+          {/* Hidden below three, like the card's: "1 learner" tells that one
+              learner they are the only one, which is not what a count is for. */}
+          {enrolledLabel(stats.enrolled) && (
+            <>
+              <span aria-hidden="true">·</span>
+              <span>{enrolledLabel(stats.enrolled)}</span>
             </>
           )}
         </span>
@@ -359,14 +371,114 @@ function PrimaryButton({ onClick, busy, children }: { onClick: () => void; busy?
   );
 }
 
+/**
+ * The certificate, and the switch that makes it public.
+ *
+ * OFF BY DEFAULT, AND PER CERTIFICATE. The default is the database's
+ * (course_certificates.shared is `not null default false`), and the switch is
+ * per certificate rather than per account so that publishing one course does
+ * not volunteer the rest.
+ *
+ * THE LINK ONLY EXISTS WHILE IT IS ON. While the switch is off,
+ * course_certificate(serial) answers a stranger with nothing — so showing the
+ * URL would be showing a link that leads nowhere, and the page it leads to is
+ * deliberately unable to say why.
+ */
 function CertificateCard({ certificate }: { certificate: Certificate | null }) {
+  const [shared, setShared] = useState(certificate?.shared ?? false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const url = certificate ? `${window.location.origin}/certificate/${certificate.serial}` : "";
+
+  const toggle = async (next: boolean) => {
+    if (!certificate || busy) return;
+    setBusy(true);
+    setError(null);
+    // Optimistic, then corrected by the write: a switch should move under the
+    // finger, and a failed write puts it back and says so.
+    setShared(next);
+    const r = await setCertificateSharing(certificate.id, next);
+    if (!r.ok) {
+      setShared(!next);
+      setError(r.message);
+    }
+    setBusy(false);
+  };
+
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      setError("Couldn't copy the link. Select it and copy it by hand.");
+    }
+  };
+
   return (
-    <div className="rounded-2xl p-[14px] flex flex-col gap-1" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
+    <div className="rounded-2xl p-[14px] flex flex-col gap-2" style={{ background: fv("card"), border: `1px solid ${fv("border")}` }}>
       <span className="text-sm font-extrabold">Certificate of completion</span>
       {certificate ? (
-        <span className="text-[13px] leading-[1.5]" style={{ color: fv("muted") }}>
-          Earned {new Date(certificate.issuedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })} · {certificate.serial}
-        </span>
+        <>
+          <span className="text-[13px] leading-[1.5]" style={{ color: fv("muted") }}>
+            Earned {new Date(certificate.issuedAt).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" })} ·{" "}
+            {certificate.serial}
+          </span>
+
+          <label className="flex items-center justify-between gap-3 mt-1 cursor-pointer">
+            <span className="flex flex-col min-w-0">
+              <span className="text-[13px] font-bold">Share certificate</span>
+              <span className="text-xs leading-[1.45]" style={{ color: fv("muted") }}>
+                {shared
+                  ? "Anyone with the link can see your first name, this course, the professional and the date."
+                  : "Off. Only you can see it."}
+              </span>
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              checked={shared}
+              disabled={busy}
+              onChange={(e) => void toggle(e.target.checked)}
+              className="sr-only peer"
+              aria-label="Share certificate"
+            />
+            <span
+              aria-hidden="true"
+              className="w-[42px] h-[25px] rounded-full shrink-0 relative transition-colors"
+              style={{ background: shared ? fv("accent") : fv("track"), opacity: busy ? 0.6 : 1 }}
+            >
+              <span
+                className="absolute top-[3px] w-[19px] h-[19px] rounded-full bg-white transition-all"
+                style={{ left: shared ? 20 : 3 }}
+              />
+            </span>
+          </label>
+
+          {shared && (
+            <div className="flex items-center gap-2 rounded-xl px-2.5 py-2" style={{ background: fv("track") }}>
+              <span className="text-[11px] grow min-w-0 truncate" style={{ color: fv("muted") }}>
+                {url}
+              </span>
+              <button
+                type="button"
+                onClick={() => void copy()}
+                className="tap text-[11px] font-extrabold rounded-full px-2.5 py-1 shrink-0"
+                style={{ background: fv("card"), color: fv("link"), border: `1px solid ${fv("border")}` }}
+              >
+                {copied ? "Copied" : "Copy link"}
+              </button>
+            </div>
+          )}
+
+          {error && (
+            <span role="alert" className="text-xs font-semibold" style={{ color: fv("danger") }}>
+              {error}
+            </span>
+          )}
+        </>
       ) : (
         <span className="text-[13px] leading-[1.5]" style={{ color: fv("muted") }}>
           Finish every lesson and pass every quiz to earn it.
