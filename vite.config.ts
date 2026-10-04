@@ -10,6 +10,13 @@ import { VitePWA } from 'vite-plugin-pwa'
 // atraxia.org — with index.html choosing between them at runtime via an
 // injected <base> tag. The hub deploys on its own now (see hub/), so there's
 // exactly one possible base path and both halves of that mechanism are gone.
+// Cache-buster for the app icons. The icon files kept their names when the logo
+// was redrawn, so a browser or CDN that already holds the old (broken) files
+// would keep serving them; a new query string is a new URL to every cache
+// layer, so nothing stale can match it. index.html carries the same `?v=` on
+// every icon <link> -- bump both together whenever the icon artwork changes.
+const ICON_VERSION = '?v=2'
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -75,13 +82,13 @@ export default defineConfig({
         theme_color: '#AEA1DC',
         background_color: '#FFFFFF',
         icons: [
-          { src: '/pwa-192x192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
-          { src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: `/pwa-192x192.png${ICON_VERSION}`, sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: `/pwa-512x512.png${ICON_VERSION}`, sizes: '512x512', type: 'image/png', purpose: 'any' },
           // Full-bleed and more generously inset, because a maskable icon is
           // cropped to whatever shape the platform wants. The 'any' pair keeps
           // its transparent rounded corners, which a mask would cut through.
           {
-            src: '/pwa-maskable-512x512.png',
+            src: `/pwa-maskable-512x512.png${ICON_VERSION}`,
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',
@@ -98,4 +105,9 @@ export default defineConfig({
   // bundle, so only publishable/anon keys belong here — never a service-role
   // key. See SECURITY.md.
   envPrefix: ['VITE_', 'NEXT_PUBLIC_'],
+  // src/sw.ts is bundled separately by vite-plugin-pwa and cannot import from
+  // this file, but it also names an icon (the notification icon and badge).
+  // Handing it ICON_VERSION as a compile-time constant keeps every icon
+  // reference on the one version number above.
+  define: { __ICON_VERSION__: JSON.stringify(ICON_VERSION) },
 })

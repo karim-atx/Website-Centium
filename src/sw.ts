@@ -2,6 +2,9 @@
 import { notificationTarget } from "./services/push/messagePushUrl";
 import { collapsedText, collapseTag } from "./services/push/collapse";
 
+/** The `?v=` cache-buster for the app icons, injected at build time from ICON_VERSION in vite.config.ts. */
+declare const __ICON_VERSION__: string;
+
 /**
  * Centium's service worker. Two handlers, and deliberately nothing else.
  *
@@ -134,8 +137,8 @@ self.addEventListener("push", (event) => {
       }
       await self.registration.showNotification(title, {
         body,
-        icon: "/pwa-192x192.png",
-        badge: "/pwa-192x192.png",
+        icon: `/pwa-192x192.png${__ICON_VERSION__}`,
+        badge: `/pwa-192x192.png${__ICON_VERSION__}`,
         tag: payload.chatTag ?? payload.tag,
         // Without this a replaced notification updates silently.
         renotify: !!payload.chatTag,
