@@ -3269,6 +3269,976 @@ export type Database = {
           },
         ]
       }
+      course_categories: {
+        Row: {
+          created_at: string
+          key: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          key: string
+          name: string
+          sort_order: number
+        }
+        Update: {
+          created_at?: string
+          key?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: []
+      }
+      course_certificates: {
+        Row: {
+          course_id: string
+          enrolment_id: string
+          id: string
+          issued_at: string
+          learner_id: string
+          serial: string
+        }
+        Insert: {
+          course_id: string
+          enrolment_id: string
+          id?: string
+          issued_at?: string
+          learner_id: string
+          serial: string
+        }
+        Update: {
+          course_id?: string
+          enrolment_id?: string
+          id?: string
+          issued_at?: string
+          learner_id?: string
+          serial?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_certificates_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_certificates_enrolment_id_fkey"
+            columns: ["enrolment_id"]
+            isOneToOne: true
+            referencedRelation: "course_enrolments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_certificates_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_certificates_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_certificates_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_certificates_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_certificates_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "course_certificates_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      course_enrolments: {
+        Row: {
+          commission_percent: number | null
+          course_id: string
+          enrolled_at: string
+          id: string
+          last_lesson_id: string | null
+          last_seen_at: string | null
+          learner_id: string
+          price_cents_paid: number
+          tier: string
+        }
+        Insert: {
+          commission_percent?: number | null
+          course_id: string
+          enrolled_at?: string
+          id?: string
+          last_lesson_id?: string | null
+          last_seen_at?: string | null
+          learner_id: string
+          price_cents_paid?: number
+          tier?: string
+        }
+        Update: {
+          commission_percent?: number | null
+          course_id?: string
+          enrolled_at?: string
+          id?: string
+          last_lesson_id?: string | null
+          last_seen_at?: string | null
+          learner_id?: string
+          price_cents_paid?: number
+          tier?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_enrolments_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_enrolments_last_lesson_id_fkey"
+            columns: ["last_lesson_id"]
+            isOneToOne: false
+            referencedRelation: "course_lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_enrolments_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_enrolments_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_enrolments_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_enrolments_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_enrolments_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "course_enrolments_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      course_lesson_progress: {
+        Row: {
+          completed_at: string
+          enrolment_id: string
+          lesson_id: string
+        }
+        Insert: {
+          completed_at?: string
+          enrolment_id: string
+          lesson_id: string
+        }
+        Update: {
+          completed_at?: string
+          enrolment_id?: string
+          lesson_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_lesson_progress_enrolment_id_fkey"
+            columns: ["enrolment_id"]
+            isOneToOne: false
+            referencedRelation: "course_enrolments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_lesson_progress_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "course_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_lessons: {
+        Row: {
+          body: string | null
+          created_at: string
+          id: string
+          kind: string
+          minutes: number | null
+          module_id: string
+          pass_mark: number | null
+          pdf_path: string | null
+          position: number
+          revision_id: string | null
+          title: string
+          video_id: string | null
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind: string
+          minutes?: number | null
+          module_id: string
+          pass_mark?: number | null
+          pdf_path?: string | null
+          position: number
+          revision_id?: string | null
+          title: string
+          video_id?: string | null
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          id?: string
+          kind?: string
+          minutes?: number | null
+          module_id?: string
+          pass_mark?: number | null
+          pdf_path?: string | null
+          position?: number
+          revision_id?: string | null
+          title?: string
+          video_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_lessons_module_id_fkey"
+            columns: ["module_id"]
+            isOneToOne: false
+            referencedRelation: "course_modules"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_lessons_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "course_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_modules: {
+        Row: {
+          course_id: string
+          created_at: string
+          id: string
+          position: number
+          revision_id: string | null
+          title: string
+        }
+        Insert: {
+          course_id: string
+          created_at?: string
+          id?: string
+          position: number
+          revision_id?: string | null
+          title: string
+        }
+        Update: {
+          course_id?: string
+          created_at?: string
+          id?: string
+          position?: number
+          revision_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_modules_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_modules_revision_id_fkey"
+            columns: ["revision_id"]
+            isOneToOne: false
+            referencedRelation: "course_revisions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_pdfs: {
+        Row: {
+          attached_at: string | null
+          course_id: string
+          created_at: string
+          path: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          attached_at?: string | null
+          course_id: string
+          created_at?: string
+          path: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          attached_at?: string | null
+          course_id?: string
+          created_at?: string
+          path?: string
+          uploaded_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_pdfs_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_pdfs_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_pdfs_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_pdfs_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_pdfs_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_pdfs_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "course_pdfs_uploaded_by_fkey"
+            columns: ["uploaded_by"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      course_questions: {
+        Row: {
+          answer: string | null
+          answered_at: string | null
+          body: string
+          course_id: string
+          created_at: string
+          enrolment_id: string
+          id: string
+          lesson_id: string | null
+        }
+        Insert: {
+          answer?: string | null
+          answered_at?: string | null
+          body: string
+          course_id: string
+          created_at?: string
+          enrolment_id: string
+          id?: string
+          lesson_id?: string | null
+        }
+        Update: {
+          answer?: string | null
+          answered_at?: string | null
+          body?: string
+          course_id?: string
+          created_at?: string
+          enrolment_id?: string
+          id?: string
+          lesson_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_questions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_questions_enrolment_id_fkey"
+            columns: ["enrolment_id"]
+            isOneToOne: false
+            referencedRelation: "course_enrolments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_questions_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "course_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_quiz_attempts: {
+        Row: {
+          attempted_at: string
+          enrolment_id: string
+          id: string
+          lesson_id: string
+          passed: boolean
+          score_percent: number
+        }
+        Insert: {
+          attempted_at?: string
+          enrolment_id: string
+          id?: string
+          lesson_id: string
+          passed: boolean
+          score_percent: number
+        }
+        Update: {
+          attempted_at?: string
+          enrolment_id?: string
+          id?: string
+          lesson_id?: string
+          passed?: boolean
+          score_percent?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_quiz_attempts_enrolment_id_fkey"
+            columns: ["enrolment_id"]
+            isOneToOne: false
+            referencedRelation: "course_enrolments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_quiz_attempts_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "course_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_quiz_options: {
+        Row: {
+          body: string
+          id: string
+          is_correct: boolean
+          position: number
+          question_id: string
+        }
+        Insert: {
+          body: string
+          id?: string
+          is_correct?: boolean
+          position: number
+          question_id: string
+        }
+        Update: {
+          body?: string
+          id?: string
+          is_correct?: boolean
+          position?: number
+          question_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_quiz_options_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "course_quiz_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_quiz_questions: {
+        Row: {
+          created_at: string
+          id: string
+          lesson_id: string
+          position: number
+          prompt: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lesson_id: string
+          position: number
+          prompt: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lesson_id?: string
+          position?: number
+          prompt?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_quiz_questions_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "course_lessons"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      course_ratings: {
+        Row: {
+          body: string | null
+          course_id: string
+          created_at: string
+          learner_id: string
+          stars: number
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          course_id: string
+          created_at?: string
+          learner_id: string
+          stars: number
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          course_id?: string
+          created_at?: string
+          learner_id?: string
+          stars?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_ratings_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_ratings_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_ratings_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_ratings_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_ratings_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_ratings_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "course_ratings_learner_id_fkey"
+            columns: ["learner_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      course_reports: {
+        Row: {
+          admin_notes: string | null
+          course_id: string
+          created_at: string
+          detail: string | null
+          id: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          reported_id: string | null
+          reporter_id: string
+          resolved_at: string | null
+          resolved_by: string | null
+          status: Database["public"]["Enums"]["report_status"]
+        }
+        Insert: {
+          admin_notes?: string | null
+          course_id: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          reported_id?: string | null
+          reporter_id: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Update: {
+          admin_notes?: string | null
+          course_id?: string
+          created_at?: string
+          detail?: string | null
+          id?: string
+          reason?: Database["public"]["Enums"]["report_reason"]
+          reported_id?: string | null
+          reporter_id?: string
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: Database["public"]["Enums"]["report_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_reports_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "course_reports_reported_id_fkey"
+            columns: ["reported_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "course_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "course_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "course_reports_reporter_id_fkey"
+            columns: ["reporter_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+        ]
+      }
+      course_revisions: {
+        Row: {
+          category_key: string | null
+          content_changed: boolean
+          course_id: string
+          cover_colour: string | null
+          created_at: string
+          id: string
+          learn_points: string[] | null
+          level: string | null
+          price_cents: number | null
+          review_reason: string | null
+          reviewed_at: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+          subtitle: string | null
+          title: string | null
+          weekly_hours: number | null
+        }
+        Insert: {
+          category_key?: string | null
+          content_changed?: boolean
+          course_id: string
+          cover_colour?: string | null
+          created_at?: string
+          id?: string
+          learn_points?: string[] | null
+          level?: string | null
+          price_cents?: number | null
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          subtitle?: string | null
+          title?: string | null
+          weekly_hours?: number | null
+        }
+        Update: {
+          category_key?: string | null
+          content_changed?: boolean
+          course_id?: string
+          cover_colour?: string | null
+          created_at?: string
+          id?: string
+          learn_points?: string[] | null
+          level?: string | null
+          price_cents?: number | null
+          review_reason?: string | null
+          reviewed_at?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          subtitle?: string | null
+          title?: string | null
+          weekly_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "course_revisions_category_key_fkey"
+            columns: ["category_key"]
+            isOneToOne: false
+            referencedRelation: "course_categories"
+            referencedColumns: ["key"]
+          },
+          {
+            foreignKeyName: "course_revisions_course_id_fkey"
+            columns: ["course_id"]
+            isOneToOne: false
+            referencedRelation: "courses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      courses: {
+        Row: {
+          author_id: string | null
+          category_key: string
+          cover_colour: string
+          created_at: string
+          currency: string
+          id: string
+          learn_points: string[]
+          level: string
+          price_cents: number
+          published_at: string | null
+          review_reason: string | null
+          reviewed_by: string | null
+          status: string
+          submitted_at: string | null
+          subtitle: string | null
+          title: string
+          unpublished_at: string | null
+          updated_at: string
+          weekly_hours: number | null
+        }
+        Insert: {
+          author_id?: string | null
+          category_key: string
+          cover_colour?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          learn_points?: string[]
+          level?: string
+          price_cents?: number
+          published_at?: string | null
+          review_reason?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          subtitle?: string | null
+          title: string
+          unpublished_at?: string | null
+          updated_at?: string
+          weekly_hours?: number | null
+        }
+        Update: {
+          author_id?: string | null
+          category_key?: string
+          cover_colour?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          learn_points?: string[]
+          level?: string
+          price_cents?: number
+          published_at?: string | null
+          review_reason?: string | null
+          reviewed_by?: string | null
+          status?: string
+          submitted_at?: string | null
+          subtitle?: string | null
+          title?: string
+          unpublished_at?: string | null
+          updated_at?: string
+          weekly_hours?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "courses_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "connected_professional_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "public_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "related_profile_summary"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "courses_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "storage_purge_stalls"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "courses_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "thread_participant_summary"
+            referencedColumns: ["participant_id"]
+          },
+          {
+            foreignKeyName: "courses_category_key_fkey"
+            columns: ["category_key"]
+            isOneToOne: false
+            referencedRelation: "course_categories"
+            referencedColumns: ["key"]
+          },
+        ]
+      }
       custom_exercise_library_items: {
         Row: {
           breathing: string | null
@@ -4591,23 +5561,32 @@ export type Database = {
         Row: {
           attached_at: string | null
           created_at: string
+          last_attempt_at: string | null
           path: string
           purge_after: string | null
-          uploaded_by: string
+          purge_attempts: number
+          purged_at: string | null
+          uploaded_by: string | null
         }
         Insert: {
           attached_at?: string | null
           created_at?: string
+          last_attempt_at?: string | null
           path: string
           purge_after?: string | null
-          uploaded_by: string
+          purge_attempts?: number
+          purged_at?: string | null
+          uploaded_by?: string | null
         }
         Update: {
           attached_at?: string | null
           created_at?: string
+          last_attempt_at?: string | null
           path?: string
           purge_after?: string | null
-          uploaded_by?: string
+          purge_attempts?: number
+          purged_at?: string | null
+          uploaded_by?: string | null
         }
         Relationships: [
           {
@@ -8125,18 +9104,24 @@ export type Database = {
       }
       platform_settings: {
         Row: {
+          course_commission_percent: number
           id: boolean
           marketplace_revenue_share_pct: number
+          paid_enrolment_enabled: boolean
           updated_at: string
         }
         Insert: {
+          course_commission_percent?: number
           id?: boolean
           marketplace_revenue_share_pct: number
+          paid_enrolment_enabled?: boolean
           updated_at?: string
         }
         Update: {
+          course_commission_percent?: number
           id?: boolean
           marketplace_revenue_share_pct?: number
+          paid_enrolment_enabled?: boolean
           updated_at?: string
         }
         Relationships: []
@@ -14447,6 +15432,35 @@ export type Database = {
         Args: { p_warning_id: string }
         Returns: undefined
       }
+      add_course_pdf_lesson: {
+        Args: {
+          p_module_id: string
+          p_path: string
+          p_position: number
+          p_title: string
+        }
+        Returns: string
+      }
+      add_course_reading_lesson: {
+        Args: {
+          p_body: string
+          p_minutes?: number
+          p_module_id: string
+          p_position: number
+          p_title: string
+        }
+        Returns: string
+      }
+      add_course_video_lesson: {
+        Args: {
+          p_minutes: number
+          p_module_id: string
+          p_position: number
+          p_title: string
+          p_url: string
+        }
+        Returns: string
+      }
       add_to_broadcast_list: {
         Args: { p_list_id: string; p_user_ids: string[] }
         Returns: number
@@ -14505,6 +15519,63 @@ export type Database = {
           status: string
           status_changed_at: string
           topic: string
+        }[]
+      }
+      admin_course_curriculum: {
+        Args: { p_course_id: string }
+        Returns: {
+          body: string
+          has_pdf: boolean
+          kind: string
+          lesson_id: string
+          lesson_position: number
+          lesson_title: string
+          minutes: number
+          module_id: string
+          module_position: number
+          module_title: string
+          pass_mark: number
+          video_id: string
+        }[]
+      }
+      admin_course_reports: {
+        Args: { p_status?: Database["public"]["Enums"]["report_status"] }
+        Returns: {
+          admin_notes: string
+          course_id: string
+          course_title: string
+          created_at: string
+          detail: string
+          reason: Database["public"]["Enums"]["report_reason"]
+          report_id: string
+          reported_id: string
+          reporter_id: string
+          reports_against_this_course: number
+          resolved_at: string
+          resolved_by: string
+          status: Database["public"]["Enums"]["report_status"]
+        }[]
+      }
+      admin_course_review_queue: {
+        Args: never
+        Returns: {
+          author_id: string
+          author_name: string
+          author_verified: boolean
+          category_key: string
+          course_id: string
+          lessons: number
+          level: string
+          modules: number
+          pdfs: number
+          price_cents: number
+          quizzes: number
+          reports_open: number
+          status: string
+          submitted_at: string
+          subtitle: string
+          title: string
+          videos: number
         }[]
       }
       admin_delete_contact_submission: {
@@ -14745,6 +15816,10 @@ export type Database = {
           verified: boolean
         }[]
       }
+      admin_publish_course: {
+        Args: { p_course_id: string; p_reason: string }
+        Returns: undefined
+      }
       admin_read_professional_reviews: {
         Args: { p_professional_id: string; p_reason: string }
         Returns: {
@@ -14843,6 +15918,10 @@ export type Database = {
           was_edited: boolean
         }[]
       }
+      admin_request_course_changes: {
+        Args: { p_course_id: string; p_reason: string }
+        Returns: undefined
+      }
       admin_request_health_data_reset: {
         Args: {
           purge_storage?: boolean
@@ -14859,6 +15938,14 @@ export type Database = {
       admin_reset_onboarding: {
         Args: { reason?: string; target_user_id: string }
         Returns: string
+      }
+      admin_resolve_course_report: {
+        Args: {
+          p_notes?: string
+          p_report_id: string
+          p_status: Database["public"]["Enums"]["report_status"]
+        }
+        Returns: undefined
       }
       admin_resolve_forum_report: {
         Args: {
@@ -14892,6 +15979,10 @@ export type Database = {
         Args: { new_status: string; reason?: string; submission_id: string }
         Returns: string
       }
+      admin_set_course_commission: {
+        Args: { p_percent: number; p_reason: string }
+        Returns: undefined
+      }
       admin_set_date_of_birth: {
         Args: { p_dob: string; p_reason: string; p_user: string }
         Returns: {
@@ -14901,6 +15992,10 @@ export type Database = {
           new_date_of_birth: string
           old_date_of_birth: string
         }[]
+      }
+      admin_set_paid_enrolment: {
+        Args: { p_open: boolean; p_reason: string }
+        Returns: undefined
       }
       admin_set_subscription_tier: {
         Args: {
@@ -14923,6 +16018,10 @@ export type Database = {
       admin_suspend_from_forum: {
         Args: { p_days: number; p_reason: string; p_user_id: string }
         Returns: string
+      }
+      admin_unpublish_course: {
+        Args: { p_course_id: string; p_reason: string }
+        Returns: undefined
       }
       admin_unsuspend_account: {
         Args: { reason?: string; target_user_id: string }
@@ -14992,6 +16091,14 @@ export type Database = {
       }
       advance_auto_streaks: { Args: never; Returns: number }
       am_i_blocked_with: { Args: { p_other: string }; Returns: boolean }
+      answer_course_question: {
+        Args: { p_answer: string; p_question_id: string }
+        Returns: undefined
+      }
+      ask_course_question: {
+        Args: { p_body: string; p_course_id: string; p_lesson_id?: string }
+        Returns: string
+      }
       assert_barcode_lookup_allowed: { Args: never; Returns: undefined }
       assert_broadcast_list_owner: {
         Args: { p_list_id: string; p_user: string }
@@ -15007,6 +16114,7 @@ export type Database = {
         Returns: undefined
       }
       assert_message_columns_readable: { Args: never; Returns: undefined }
+      assert_no_unqualified_updates: { Args: never; Returns: undefined }
       assert_subscription_price_list: { Args: never; Returns: undefined }
       assert_workout_copy_complete: { Args: never; Returns: undefined }
       assign_template_to_client: {
@@ -15229,10 +16337,49 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      complete_course_lesson: {
+        Args: { p_lesson_id: string }
+        Returns: undefined
+      }
       contraception_is_hormonal: { Args: { p_user: string }; Returns: boolean }
       contraception_reminder_block_reason: {
         Args: { p_kind: string; p_user: string }
         Returns: string
+      }
+      course_access_level: { Args: { p_course_id: string }; Returns: string }
+      course_author_may_publish: { Args: { p_user: string }; Returns: boolean }
+      course_commission_percent: { Args: never; Returns: number }
+      course_is_mine: { Args: { p_course_id: string }; Returns: boolean }
+      course_is_readable: { Args: { p_course_id: string }; Returns: boolean }
+      course_net_earnings: {
+        Args: { p_course_id: string }
+        Returns: {
+          commission_cents: number
+          gross_cents: number
+          net_cents: number
+          sales: number
+        }[]
+      }
+      course_pdf_is_claimed_by_caller: {
+        Args: { p_path: string }
+        Returns: boolean
+      }
+      course_pdf_is_readable: { Args: { p_path: string }; Returns: boolean }
+      course_pdf_is_unattached_claim: {
+        Args: { p_path: string }
+        Returns: boolean
+      }
+      course_pdf_path: { Args: { p_lesson_id: string }; Returns: string }
+      course_quiz: {
+        Args: { p_lesson_id: string }
+        Returns: {
+          option_body: string
+          option_id: string
+          option_position: number
+          prompt: string
+          question_id: string
+          question_position: number
+        }[]
       }
       create_broadcast_list: {
         Args: { p_name: string }
@@ -15293,6 +16440,10 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      create_course: {
+        Args: { p_category_key: string; p_level?: string; p_title: string }
+        Returns: string
       }
       create_group: {
         Args: { p_name: string }
@@ -15500,6 +16651,10 @@ export type Database = {
           isSetofReturn: false
         }
       }
+      enrol_in_course: {
+        Args: { p_course_id: string; p_tier?: string }
+        Returns: string
+      }
       evaluate_achievements: {
         Args: { p_user: string }
         Returns: {
@@ -15508,10 +16663,7 @@ export type Database = {
         }[]
       }
       expire_stale_ringing_calls: { Args: never; Returns: number }
-      finalize_forum_photo_purge: {
-        Args: { p_path: string }
-        Returns: undefined
-      }
+      finalize_forum_photo_purge: { Args: { p_path: string }; Returns: boolean }
       finalize_health_data_storage_purge: {
         Args: { p_request_id: string }
         Returns: boolean
@@ -15586,6 +16738,14 @@ export type Database = {
           post_id: string
           post_kind: string
         }[]
+      }
+      forum_photo_is_claimed_by_caller: {
+        Args: { p_path: string }
+        Returns: boolean
+      }
+      forum_photo_is_unattached_claim: {
+        Args: { p_path: string }
+        Returns: boolean
       }
       forum_photo_is_visible: { Args: { p_path: string }; Returns: boolean }
       forum_post_has_link: { Args: { p_text: string }; Returns: boolean }
@@ -15728,6 +16888,7 @@ export type Database = {
         Args: never
         Returns: {
           path: string
+          purge_attempts: number
         }[]
       }
       list_pending_health_data_storage_purges: {
@@ -15763,6 +16924,10 @@ export type Database = {
       }
       may_share_presence_on: { Args: { p_topic: string }; Returns: boolean }
       may_use_thread_channel: { Args: { p_topic: string }; Returns: boolean }
+      maybe_issue_course_certificate: {
+        Args: { p_enrolment_id: string }
+        Returns: boolean
+      }
       message_forward_paths: {
         Args: { p_message_id: string; p_thread_id: string }
         Returns: {
@@ -15957,9 +17122,11 @@ export type Database = {
         }[]
       }
       needs_date_of_birth: { Args: never; Returns: boolean }
+      new_course_pdf_path: { Args: { p_course_id: string }; Returns: string }
       new_forum_photo_path: { Args: { p_extension?: string }; Returns: string }
       normalise_display_name: { Args: { p_name: string }; Returns: string }
       normalize_gtin: { Args: { p_input: string }; Returns: string }
+      paid_enrolment_is_open: { Args: never; Returns: boolean }
       preview_client_code: {
         Args: { p_code: string }
         Returns: {
@@ -16049,6 +17216,10 @@ export type Database = {
       queue_account_email: { Args: { p_id: string }; Returns: boolean }
       queue_contraception_reminders: { Args: never; Returns: number }
       queue_personal_reminders: { Args: never; Returns: number }
+      rate_course: {
+        Args: { p_body?: string; p_course_id: string; p_stars: number }
+        Returns: undefined
+      }
       reconcile_storage_usage: {
         Args: { p_user_id?: string }
         Returns: {
@@ -16159,6 +17330,14 @@ export type Database = {
           isOneToOne: true
           isSetofReturn: false
         }
+      }
+      report_course: {
+        Args: {
+          p_course_id: string
+          p_detail?: string
+          p_reason: Database["public"]["Enums"]["report_reason"]
+        }
+        Returns: undefined
       }
       report_forum_post: {
         Args: {
@@ -16454,6 +17633,17 @@ export type Database = {
           used_bytes: number
         }[]
       }
+      submit_course_for_review: {
+        Args: { p_course_id: string }
+        Returns: undefined
+      }
+      submit_course_quiz: {
+        Args: { p_answers: Json; p_lesson_id: string }
+        Returns: {
+          passed: boolean
+          score_percent: number
+        }[]
+      }
       sweep_achievements: { Args: never; Returns: number }
       system_support_identity: { Args: never; Returns: string }
       thread_allows_attachments: {
@@ -16493,6 +17683,7 @@ export type Database = {
       }
       touch_last_active: { Args: never; Returns: string }
       trigger_call_cap_sweep: { Args: never; Returns: number }
+      trigger_forum_photo_purge: { Args: never; Returns: number }
       trigger_health_data_storage_purge: { Args: never; Returns: number }
       trigger_message_attachment_purge: { Args: never; Returns: number }
       trigger_storage_purge: { Args: never; Returns: number }
@@ -16518,6 +17709,7 @@ export type Database = {
         Args: { allowed: string[]; v: string[] }
         Returns: boolean
       }
+      youtube_video_id: { Args: { p_url: string }; Returns: string }
     }
     Enums: {
       access_category:
@@ -16764,6 +17956,10 @@ export type Database = {
         | "create_forum_post"
         | "create_forum_reply"
         | "report_forum_post"
+        | "create_course"
+        | "submit_course_for_review"
+        | "ask_course_question"
+        | "rate_course"
       rep_max_update_mode: "no_update" | "prompt" | "prompt_with_estimate"
       report_reason:
         | "harassment"
@@ -17218,6 +18414,10 @@ export const Constants = {
         "create_forum_post",
         "create_forum_reply",
         "report_forum_post",
+        "create_course",
+        "submit_course_for_review",
+        "ask_course_question",
+        "rate_course",
       ],
       rep_max_update_mode: ["no_update", "prompt", "prompt_with_estimate"],
       report_reason: [

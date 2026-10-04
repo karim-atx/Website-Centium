@@ -257,6 +257,11 @@
   --forum-dashed-bg: #f7f6fb;
   --forum-danger: #a33a2f;
   --forum-handle: #dcd7e8;
+  /* Courses (design screens 6-9). */
+  --forum-star: #c98a1b;
+  --forum-good: #1f6b47;
+  --forum-done-ink: #1f4a44;
+  --forum-video-bg: #241f1b;
 
   color-scheme: light;
 }
@@ -286,6 +291,10 @@
   --forum-dashed-bg: #1b1830;
   --forum-danger: #b04236;
   --forum-handle: #4a4366;
+  --forum-star: #e3b04b;
+  --forum-good: #7fd1a8;
+  --forum-done-ink: #9fd6cb;
+  --forum-video-bg: #0d0b1a;
   --c-cream: 13 11 26;
   --c-cream-soft: 23 20 42;
   --c-cream-card: 27 24 48;

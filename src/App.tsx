@@ -50,7 +50,7 @@ import MyCv from "./pages/profile/MyCv";
 import Subscription from "./pages/subscription/Subscription";
 import More from "./pages/profile/More";
 import ClientCalendarTab from "./pages/profile/ClientCalendarTab";
-import Community, { ForumNewPage, ForumNicknamePage, ForumPostPage } from "./pages/community/Community";
+import Community, { CoursePage, ForumNewPage, ForumNicknamePage, ForumPostPage, LessonPage } from "./pages/community/Community";
 import Settings from "./pages/settings/Settings";
 import ResetPassword from "./pages/auth/ResetPassword";
 
@@ -414,6 +414,8 @@ function AppRoutes() {
         <Route path="/app/forum/new" element={<ForumNewPage />} />
         <Route path="/app/forum/nickname" element={<ForumNicknamePage />} />
         <Route path="/app/forum/post/:id" element={<ForumPostPage />} />
+        <Route path="/app/forum/courses/:courseId" element={<CoursePage />} />
+        <Route path="/app/forum/courses/:courseId/lessons/:lessonId" element={<LessonPage />} />
         <Route path="/app/settings" element={<Settings />} />
       </Route>
       {/* More specific than the marketing group's own path="*" (an extra

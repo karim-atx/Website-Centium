@@ -6,7 +6,10 @@ import { ForumHome } from "../../components/forum/ForumHome";
 import { ForumPostView } from "../../components/forum/ForumPostView";
 import { ForumCompose } from "../../components/forum/ForumCompose";
 import { NicknameScreen } from "../../components/forum/NicknameScreen";
-import { CoursesTab } from "../../components/forum/CoursesTab";
+import { CoursesCatalogue } from "../../components/courses/CoursesCatalogue";
+import { CourseDetailView } from "../../components/courses/CourseDetailView";
+import { LessonView } from "../../components/courses/LessonView";
+import { ADULTS_ONLY_COURSES_TEXT, NEEDS_DOB_COURSES_TEXT } from "../../services/courses/rules";
 import { ForumPlaceholder } from "../../components/forum/parts";
 import { fv } from "../../components/forum/forumColor";
 
@@ -28,7 +31,9 @@ type Ctx = {
   recoveryPending: boolean;
 };
 
-function useForumGate():
+type Section = "forum" | "courses";
+
+function useForumGate(section: Section):
   | { state: "redirect" }
   | { state: "refused"; text: string }
   | { state: "loading" }
@@ -39,12 +44,26 @@ function useForumGate():
   const allowed = user.accountType !== "business" && access === "adult" && !!authUserId;
   const me = useForumMe(allowed ? authUserId : null);
   if (user.accountType === "business" || !authUserId) return { state: "redirect" };
-  if (access === "minor") return { state: "refused", text: ADULTS_ONLY_TEXT };
-  if (access === "unknown-age") return { state: "refused", text: NEEDS_DOB_TEXT };
+  if (access === "minor") {
+    return { state: "refused", text: section === "courses" ? ADULTS_ONLY_COURSES_TEXT : ADULTS_ONLY_TEXT };
+  }
+  // Never an empty page: an older account with no date of birth is told what
+  // would let them in, in the words of the part they opened.
+  if (access === "unknown-age") {
+    return { state: "refused", text: section === "courses" ? NEEDS_DOB_COURSES_TEXT : NEEDS_DOB_TEXT };
+  }
   if (me.error && (!me.categories || me.nickname === undefined)) {
     return { state: "error", message: me.error, retry: me.retry };
   }
   if (!me.categories || me.nickname === undefined) return { state: "loading" };
+  // THE SERVER'S ANSWER WINS. The forum's categories are always seeded and
+  // are readable only by someone the server confirms is 18 or over, so none
+  // coming back means it does not (a date of birth removed or changed since
+  // this device last saw the profile). Say what would let them in rather than
+  // show an empty forum or catalogue.
+  if (me.categories.length === 0) {
+    return { state: "refused", text: section === "courses" ? NEEDS_DOB_COURSES_TEXT : NEEDS_DOB_TEXT };
+  }
   return {
     state: "ready",
     ctx: {
@@ -74,8 +93,8 @@ function Refused({ text }: { text: string }) {
   );
 }
 
-function Gated({ render }: { render: (ctx: Ctx) => React.ReactNode }) {
-  const gate = useForumGate();
+function Gated({ render, section = "forum" }: { render: (ctx: Ctx) => React.ReactNode; section?: Section }) {
+  const gate = useForumGate(section);
   if (gate.state === "redirect") return <Navigate to="/app" replace />;
   if (gate.state === "refused") return <Refused text={gate.text} />;
   if (gate.state === "error") {
@@ -117,6 +136,7 @@ export default function Community() {
 
   return (
     <Gated
+      section={tab}
       render={(ctx) => {
         // First visit: a member chooses a nickname before seeing the forum.
         // Professionals post under their name only, so they have none to choose.
@@ -146,7 +166,7 @@ export default function Community() {
               ))}
             </div>
             {tab === "courses" ? (
-              <CoursesTab />
+              <CoursesCatalogue userId={ctx.userId} />
             ) : (
               <ForumHome
                 categories={ctx.categories}
@@ -231,6 +251,23 @@ export function ForumNicknamePage() {
           />
         )
       }
+    />
+  );
+}
+
+/** /app/forum/courses/:courseId: a course page (design screen 7). */
+export function CoursePage() {
+  const { courseId } = useParams();
+  return <Gated section="courses" render={(ctx) => <CourseDetailView key={courseId} courseId={courseId ?? ""} userId={ctx.userId} />} />;
+}
+
+/** /app/forum/courses/:courseId/lessons/:lessonId: a lesson (design screen 8). */
+export function LessonPage() {
+  const { courseId, lessonId } = useParams();
+  return (
+    <Gated
+      section="courses"
+      render={(ctx) => <LessonView key={lessonId} courseId={courseId ?? ""} lessonId={lessonId ?? ""} userId={ctx.userId} />}
     />
   );
 }
