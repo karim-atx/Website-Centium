@@ -1,7 +1,7 @@
 import { supabase } from "../../../lib/supabase/client";
 import { getSupabaseConfig } from "../../../lib/supabase/config";
 import { AuthError } from "@supabase/supabase-js";
-import { describeAuthError } from "./index";
+import { describeAuthError, isAuthRateLimited } from "./index";
 import { passwordChangeOutcome, type ChangeOutcome } from "./passwordChangeLogic";
 
 // Task J: Change password, from Settings → Security.
@@ -10,7 +10,10 @@ import { passwordChangeOutcome, type ChangeOutcome } from "./passwordChangeLogic
 // GoTrue's codes, never by echoing a request, and nothing here calls
 // console.* with an argument that came from a field.
 
-export type VerifyResult = { status: "ok" } | { status: "wrong" } | { status: "error"; message: string };
+export type VerifyResult =
+  | { status: "ok" }
+  | { status: "wrong" }
+  | { status: "error"; message: string; rateLimited?: boolean };
 
 /**
  * CHECKS THE CURRENT PASSWORD WITHOUT TOUCHING THIS SESSION.
@@ -26,13 +29,18 @@ export type VerifyResult = { status: "ok" } | { status: "wrong" } | { status: "e
  * updateUser directly; what actually stops a stolen, older session is
  * Supabase's "Secure password change" (the emailed code below).
  */
-export async function verifyCurrentPassword(email: string, password: string): Promise<VerifyResult> {
+export async function verifyCurrentPassword(email: string, password: string, captchaToken?: string): Promise<VerifyResult> {
   const { url, anonKey } = getSupabaseConfig();
   try {
     const res = await fetch(`${url}/auth/v1/token?grant_type=password`, {
       method: "POST",
       headers: { apikey: anonKey, "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
+      // gotrue_meta_security is where supabase-js puts a captcha token; this
+      // is a plain REST call, so it is added by hand. Required once the
+      // project's auth captcha is on, ignored while it is off.
+      body: JSON.stringify(
+        captchaToken ? { email, password, gotrue_meta_security: { captcha_token: captchaToken } } : { email, password }
+      ),
     });
     const body = (await res.json().catch(() => null)) as
       | { access_token?: string; error_code?: string; code?: string | number; msg?: string; error_description?: string }
@@ -48,7 +56,7 @@ export async function verifyCurrentPassword(email: string, password: string): Pr
     const code = body?.error_code ?? (typeof body?.code === "string" ? body.code : undefined);
     if (code === "invalid_credentials") return { status: "wrong" };
     const error = new AuthError(body?.msg ?? body?.error_description ?? "", res.status, code);
-    return { status: "error", message: describeAuthError(error) };
+    return { status: "error", message: describeAuthError(error), rateLimited: isAuthRateLimited(error) };
   } catch {
     return { status: "error", message: "Couldn't reach Centium. Check your connection and try again." };
   }

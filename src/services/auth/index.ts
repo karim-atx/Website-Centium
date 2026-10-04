@@ -103,8 +103,13 @@ export function describeAuthError(error: AuthError): string {
   if (code === "over_email_send_rate_limit") {
     return "We can't send confirmation emails right now — the email limit for this project has been reached. Try again later, or contact support if this persists.";
   }
-  if (error.status === 429 || code.startsWith("over_")) {
+  if (isAuthRateLimited(error)) {
     return "Too many attempts. Wait a minute and try again.";
+  }
+  // The project's auth captcha refused the Turnstile token: missing, expired
+  // or already spent. Said as something to do, not a failure of theirs.
+  if (code === "captcha_failed" || /captcha/i.test(message)) {
+    return CAPTCHA_FAILED_MESSAGE;
   }
   // BEFORE invalid_credentials, and the order is the point. A suspended user
   // supplying the right password gets `user_banned`, not a credentials error —
@@ -128,6 +133,25 @@ export function describeAuthError(error: AuthError): string {
     return "Check the email and password and try again.";
   }
   return message || "Something went wrong. Try again.";
+}
+
+export const CAPTCHA_FAILED_MESSAGE = "The security check didn't go through. Complete it again, then try once more.";
+
+/**
+ * A refusal from Supabase's own per-IP limit (HTTP 429, over_request_rate_limit
+ * and friends). The screens start a 60-second countdown on it. NOT the
+ * project's outbound email quota (over_email_send_rate_limit), which is an
+ * hour or more, project-wide, and has its own message above.
+ */
+export function isAuthRateLimited(error: Pick<AuthError, "status" | "code">): boolean {
+  const code = error.code ?? "";
+  if (code === "over_email_send_rate_limit") return false;
+  return error.status === 429 || code.startsWith("over_");
+}
+
+/** What an auth screen needs back from a refusal: the words, and whether to count down. */
+function refusal(error: AuthError): { status: "error"; message: string; rateLimited: boolean } {
+  return { status: "error", message: describeAuthError(error), rateLimited: isAuthRateLimited(error) };
 }
 
 /** The one error the UI must distinguish from a wrong password. */
@@ -157,7 +181,7 @@ export type SignUpResult =
   | { status: "confirmation_required"; email: string }
   | { status: "signed_in" }
   | { status: "disposable_email" }
-  | { status: "error"; message: string };
+  | { status: "error"; message: string; rateLimited: boolean };
 
 /**
  * Email confirmation is REQUIRED on this project, so a successful signUp
@@ -165,16 +189,18 @@ export type SignUpResult =
  * until they click the emailed link. The caller must show a "check your
  * email" state rather than advancing as though sign-up logged them in.
  */
-export async function signUpWithEmail(email: string, password: string): Promise<SignUpResult> {
+export async function signUpWithEmail(email: string, password: string, captchaToken?: string): Promise<SignUpResult> {
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: { emailRedirectTo: authRedirectUrl() },
+    // The Turnstile token, when the screen has one: required by GoTrue once
+    // the project's auth captcha is on, ignored while it is off.
+    options: { emailRedirectTo: authRedirectUrl(), ...(captchaToken ? { captchaToken } : {}) },
   });
 
   if (error) {
     if (isDisposableEmailRefusal(error)) return { status: "disposable_email" };
-    return { status: "error", message: describeAuthError(error) };
+    return refusal(error);
   }
   // Belt and braces: if confirmations are ever turned off on the project,
   // signUp returns a live session and we should just proceed.
@@ -190,14 +216,18 @@ export async function signUpWithEmail(email: string, password: string): Promise<
 export type SignInResult =
   | { status: "signed_in" }
   | { status: "email_not_confirmed" }
-  | { status: "error"; message: string };
+  | { status: "error"; message: string; rateLimited: boolean };
 
-export async function signInWithEmail(email: string, password: string): Promise<SignInResult> {
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+export async function signInWithEmail(email: string, password: string, captchaToken?: string): Promise<SignInResult> {
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+    ...(captchaToken ? { options: { captchaToken } } : {}),
+  });
 
   if (error) {
     if (isEmailNotConfirmed(error)) return { status: "email_not_confirmed" };
-    return { status: "error", message: describeAuthError(error) };
+    return refusal(error);
   }
   return { status: "signed_in" };
 }
@@ -249,11 +279,15 @@ export async function signInWithGoogle(): Promise<OAuthResult> {
  * The existing UI already words its confirmation enumeration-safely ("if an
  * account exists..."), which is exactly what resetPasswordForEmail needs.
  */
-export async function sendPasswordReset(email: string): Promise<{ ok: boolean; message?: string }> {
+export async function sendPasswordReset(
+  email: string,
+  captchaToken?: string
+): Promise<{ ok: boolean; message?: string; rateLimited?: boolean }> {
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
     redirectTo: passwordResetRedirectUrl(),
+    ...(captchaToken ? { captchaToken } : {}),
   });
-  if (error) return { ok: false, message: describeAuthError(error) };
+  if (error) return { ok: false, message: describeAuthError(error), rateLimited: isAuthRateLimited(error) };
   return { ok: true };
 }
 

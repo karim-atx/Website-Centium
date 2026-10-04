@@ -5,6 +5,11 @@ import { Button } from "../ui/Button";
 import { supabase } from "../../../lib/supabase/client";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
+import { useApp } from "../../context/AppContext";
+import { useTurnstile } from "../security/useTurnstile";
+import { useCooldown } from "../security/useCooldown";
+import { SecurityCheck } from "../security/SecurityCheck";
+import { cooldownMessage } from "../../services/auth/cooldown";
 import {
   changePassword,
   sendReauthenticationCode,
@@ -58,6 +63,12 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
   const singleFlight = useSingleFlight();
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // AG phase 1: checking the current password is a password sign-in to
+  // GoTrue, so it carries a Turnstile token like the sign-in screen does.
+  const { theme } = useApp();
+  const { token: captchaToken, status: captchaStatus, container: captchaContainer, reset: resetCaptcha, required: captchaRequired } =
+    useTurnstile(theme);
+  const cooldown = useCooldown();
 
   useEffect(() => {
     if (!open) return;
@@ -76,7 +87,14 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
   const mismatch = shouldWarnPasswordMismatch(password, confirm, confirmBlurred);
   const { passed, label: strengthLabel, color: strengthColor } = passwordStrength(password);
   const canSubmit =
-    !busy && (settingFirst || current.length > 0) && meetsPasswordRule(password) && confirm === password;
+    !busy &&
+    (settingFirst || current.length > 0) &&
+    meetsPasswordRule(password) &&
+    confirm === password &&
+    // The check of the current password waits for the security check, and
+    // for a rate-limit wait to run out. A first password involves no check.
+    (settingFirst || !(captchaRequired && !captchaToken)) &&
+    !cooldown.active;
 
   /** After the server accepted the new password. */
   const finish = async () => {
@@ -95,7 +113,10 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
     setBusy(true);
     setError(null);
     if (!settingFirst) {
-      const verified = await verifyCurrentPassword(email, current);
+      const verified = await verifyCurrentPassword(email, current, captchaToken ?? undefined);
+      // Single-use: spent whatever the answer was.
+      resetCaptcha();
+      if (verified.status === "error" && verified.rateLimited) cooldown.start();
       if (verified.status !== "ok") {
         setBusy(false);
         setError(verified.status === "wrong" ? "Your current password isn't right." : verified.message);
@@ -282,9 +303,11 @@ export const ChangePasswordSheet: React.FC<{ open: boolean; onClose: () => void 
               </div>
             )}
 
-            {error && (
+            {!settingFirst && <SecurityCheck status={captchaStatus} container={captchaContainer} />}
+
+            {(cooldown.active || error) && (
               <p className="text-xs font-semibold text-status-high text-center" role="alert">
-                {error}
+                {cooldown.active ? cooldownMessage(cooldown.left) : error}
               </p>
             )}
 

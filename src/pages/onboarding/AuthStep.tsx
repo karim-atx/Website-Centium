@@ -20,6 +20,10 @@ import { setRememberMe as setRememberMePreference } from "../../../lib/supabase/
 import { clearSessionArrived, sessionArrivedPending } from "../../../lib/supabase/tabIdentity";
 import { usePasswordVisibility } from "../../hooks/usePasswordVisibility";
 import { useSingleFlight } from "../../hooks/useSingleFlight";
+import { useTurnstile } from "../../components/security/useTurnstile";
+import { useCooldown } from "../../components/security/useCooldown";
+import { SecurityCheck } from "../../components/security/SecurityCheck";
+import { cooldownMessage } from "../../services/auth/cooldown";
 import {
   passwordChecks,
   meetsPasswordRule,
@@ -58,7 +62,22 @@ const inputClass =
   "w-full rounded-2xl bg-cream-card border border-charcoal/10 pl-10 pr-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10";
 
 export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
-  const { session, authReady, signOut } = useApp();
+  const { session, authReady, signOut, theme } = useApp();
+  // AG phase 1: a Turnstile challenge on every password call this screen
+  // makes (sign-in, sign-up, reset, resend), so the project's auth captcha
+  // can be switched on. One widget, rendered into whichever form is showing.
+  // Without a site key there is no widget and no token, and nothing waits.
+  const { token: captchaToken, status: captchaStatus, container: captchaContainer, reset: resetCaptcha, required: captchaRequired } =
+    useTurnstile(theme);
+  const captchaPending = captchaRequired && !captchaToken;
+  // After a rate-limit refusal: "Try again in 0:45", and the button waits.
+  const cooldown = useCooldown();
+  /** After any attempt: the token is spent, and a rate limit starts the wait. */
+  const afterAttempt = (rateLimited?: boolean) => {
+    resetCaptcha();
+    if (rateLimited) cooldown.start();
+  };
+  const shownError = (message: string | null) => (cooldown.active ? cooldownMessage(cooldown.left) : message);
   const [mode, setModeState] = useState<Mode>("signIn");
   // Every screen switch inside this step (sign in / sign up / forgot / check
   // email, and back) starts with the password hidden again.
@@ -209,8 +228,9 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
     // at that point — setting it afterwards would be one write too late.
     setRememberMePreference(rememberMe);
     setBusy(true);
-    const result = await signInWithEmail(email, password);
+    const result = await signInWithEmail(email, password, captchaToken ?? undefined);
     setBusy(false);
+    afterAttempt(result.status === "error" && result.rateLimited);
 
     if (result.status === "email_not_confirmed") {
       // Deliberately distinct from a wrong password: the credentials were
@@ -239,8 +259,9 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
       setBurnerEmail(normalizedEmail);
       return;
     }
-    const result = await signUpWithEmail(email, password);
+    const result = await signUpWithEmail(email, password, captchaToken ?? undefined);
     setBusy(false);
+    afterAttempt(result.status === "error" && result.rateLimited);
 
     if (result.status === "disposable_email") {
       setBurnerEmail(normalizedEmail);
@@ -263,8 +284,9 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   const handleResend = async () => {
     setError(null);
     setBusy(true);
-    const result = await signUpWithEmail(email, password);
+    const result = await signUpWithEmail(email, password, captchaToken ?? undefined);
     setBusy(false);
+    afterAttempt(result.status === "error" && result.rateLimited);
     if (result.status === "disposable_email") setError(DISPOSABLE_EMAIL_MESSAGE);
     else if (result.status === "error") setError(result.message);
   };
@@ -272,8 +294,13 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   const handleSendReset = async () => {
     setError(null);
     setBusy(true);
-    const result = await sendPasswordReset(forgotEmail);
+    const result = await sendPasswordReset(forgotEmail, captchaToken ?? undefined);
     setBusy(false);
+    afterAttempt(result.rateLimited);
+    if (result.rateLimited) {
+      setError(result.message ?? null);
+      return;
+    }
     // Shown regardless of outcome — the copy is deliberately worded so it
     // reveals nothing about whether the address has an account.
     if (!result.ok && result.message) setError(result.message);
@@ -360,7 +387,8 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
           </p>
         </div>
         <div className="mt-8">
-          {error && <p className="text-xs font-semibold text-status-high mb-3 text-center">{error}</p>}
+          <SecurityCheck status={captchaStatus} container={captchaContainer} />
+          {shownError(error) && <p className="text-xs font-semibold text-status-high mb-3 text-center">{shownError(error)}</p>}
           {fromSignUp && (
             <Button
               fullWidth
@@ -374,7 +402,13 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
               Sign in instead
             </Button>
           )}
-          <Button fullWidth size="lg" variant="outline" disabled={busy || !password} onClick={handleResend}>
+          <Button
+            fullWidth
+            size="lg"
+            variant="outline"
+            disabled={busy || !password || captchaPending || cooldown.active}
+            onClick={handleResend}
+          >
             {busy ? "Sending…" : "Resend confirmation email"}
           </Button>
           <button
@@ -392,7 +426,7 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
   }
 
   if (mode === "forgot") {
-    const canSendReset = !resetSent && isValidEmail(forgotEmail) && !busy;
+    const canSendReset = !resetSent && isValidEmail(forgotEmail) && !busy && !captchaPending && !cooldown.active;
     return (
       <form
         noValidate
@@ -425,7 +459,8 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
           )}
         </div>
         <div className="mt-8">
-          {error && <p className="text-xs font-semibold text-status-high mb-3 text-center">{error}</p>}
+          {!resetSent && <SecurityCheck status={captchaStatus} container={captchaContainer} />}
+          {shownError(error) && <p className="text-xs font-semibold text-status-high mb-3 text-center">{shownError(error)}</p>}
           {!resetSent ? (
             <Button type="submit" fullWidth size="lg" disabled={!canSendReset}>
               {busy ? "Sending…" : "Send reset link"}
@@ -451,7 +486,8 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
 
   // One rule for the button and for Enter / the keyboard's Go key: a real
   // form submit, refused while the button is disabled or a request is out.
-  const submitDisabled = busy || (mode === "signUp" && (isBurner || !signUpReady));
+  // ...and while the security check has no token, or a rate-limit wait runs.
+  const submitDisabled = busy || captchaPending || cooldown.active || (mode === "signUp" && (isBurner || !signUpReady));
   return (
     <form
       noValidate
@@ -583,7 +619,8 @@ export const AuthStep: React.FC<Props> = ({ draft, setDraft, onNext }) => {
       </div>
 
       <div className="mt-8">
-        {error && <p className="text-xs font-semibold text-status-high mb-3 text-center">{error}</p>}
+        <SecurityCheck status={captchaStatus} container={captchaContainer} />
+        {shownError(error) && <p className="text-xs font-semibold text-status-high mb-3 text-center">{shownError(error)}</p>}
         <Button type="submit" fullWidth size="lg" disabled={submitDisabled}>
           {busy ? "Please wait…" : mode === "signIn" ? "Sign in" : "Sign up"}
         </Button>

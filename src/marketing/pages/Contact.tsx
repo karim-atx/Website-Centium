@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Mail, Clock } from "lucide-react";
 import { Section } from "../components/Section";
@@ -6,6 +6,8 @@ import { Reveal } from "../components/Reveal";
 import { Eyebrow } from "../components/Eyebrow";
 import { useSEO } from "../useSEO";
 import { submitContact, type ContactTopic } from "../../services/contact";
+import { TURNSTILE_SITEKEY } from "../../components/security/turnstile";
+import { useTurnstile } from "../../components/security/useTurnstile";
 
 /** The pill labels, and the enum the Edge Function validates against. */
 const topics: { label: string; value: ContactTopic }[] = [
@@ -39,86 +41,6 @@ const SUPPORT_EMAIL = "support@atraxia.org";
  */
 const ERROR_RED = "#C0392B";
 
-/**
- * The site key is baked in at build time, and its absence is a real state
- * rather than a crash: see the `unavailable` branch below.
- */
-const TURNSTILE_SITEKEY = import.meta.env.NEXT_PUBLIC_TURNSTILE_SITEKEY;
-
-const TURNSTILE_SRC = "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
-
-interface TurnstileApi {
-  render: (
-    container: HTMLElement,
-    options: {
-      sitekey: string;
-      theme?: "auto" | "light" | "dark";
-      callback?: (token: string) => void;
-      "expired-callback"?: () => void;
-      "error-callback"?: () => void;
-    }
-  ) => string;
-  reset: (widgetId?: string) => void;
-  remove: (widgetId?: string) => void;
-}
-
-declare global {
-  interface Window {
-    turnstile?: TurnstileApi;
-  }
-}
-
-/**
- * Loads Cloudflare's script once per page, however many times this component
- * mounts.
- *
- * MODULE SCOPE ON PURPOSE. React remounts this page on every navigation back
- * to /contact, and appending a second <script> would re-run Turnstile's
- * bootstrap against widgets the first copy already owns. The promise is the
- * lock, so the second mount waits on the first mount's load instead of
- * starting its own.
- *
- * NOT LOADED GLOBALLY EITHER. It is requested from the effect below, so every
- * other page in the app — the whole signed-in product included — never talks
- * to challenges.cloudflare.com at all.
- *
- * A FAILED LOAD IS NOT CACHED. Caching the promise is what makes the sharing
- * work, but a rejected one would answer for the rest of the session, so a
- * blocked request or a dropped connection would leave the form permanently
- * without a widget even after the network came back.
- */
-let turnstileScript: Promise<void> | null = null;
-
-function loadTurnstile(): Promise<void> {
-  if (turnstileScript) return turnstileScript;
-
-  const pending = new Promise<void>((resolve, reject) => {
-    if (window.turnstile) {
-      resolve();
-      return;
-    }
-    const existing = document.querySelector<HTMLScriptElement>(`script[src="${TURNSTILE_SRC}"]`);
-    if (existing) {
-      existing.addEventListener("load", () => resolve());
-      existing.addEventListener("error", () => reject(new Error("turnstile script failed")));
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = TURNSTILE_SRC;
-    script.async = true;
-    script.defer = true;
-    script.addEventListener("load", () => resolve());
-    script.addEventListener("error", () => reject(new Error("turnstile script failed")));
-    document.head.appendChild(script);
-  });
-
-  turnstileScript = pending.catch((e) => {
-    turnstileScript = null;
-    throw e;
-  });
-  return turnstileScript;
-}
-
 type Status = "idle" | "sending" | "sent";
 
 export const Contact: React.FC = () => {
@@ -129,13 +51,12 @@ export const Contact: React.FC = () => {
   const [message, setMessage] = useState("");
   /** Honeypot. A real visitor never types here; see the input's own note. */
   const [website, setWebsite] = useState("");
-  const [token, setToken] = useState<string | null>(null);
   const [status, setStatus] = useState<Status>("idle");
   /** The function's code, "" for a failure with no response, null for none. */
   const [errorCode, setErrorCode] = useState<string | null>(null);
 
-  const widgetRef = useRef<HTMLDivElement | null>(null);
-  const widgetIdRef = useRef<string | null>(null);
+  // The shared widget (components/security): dark, at its fixed size, as before.
+  const { token, container: turnstileContainer, reset: resetTurnstile } = useTurnstile("dark", "normal");
 
   const unavailable = !TURNSTILE_SITEKEY;
 
@@ -146,60 +67,8 @@ export const Contact: React.FC = () => {
       console.warn(
         "[contact] NEXT_PUBLIC_TURNSTILE_SITEKEY is not set — the contact form is showing its unavailable state."
       );
-      return;
     }
-
-    let cancelled = false;
-    void loadTurnstile()
-      .then(() => {
-        if (cancelled || !widgetRef.current || !window.turnstile) return;
-        widgetIdRef.current = window.turnstile.render(widgetRef.current, {
-          sitekey: TURNSTILE_SITEKEY,
-          theme: "dark",
-          callback: (t) => setToken(t),
-          // A token is good for a few minutes. Clearing it on expiry is what
-          // stops the button offering to send something the function would
-          // then reject.
-          "expired-callback": () => setToken(null),
-          "error-callback": () => setToken(null),
-        });
-      })
-      .catch(() => {
-        /* No widget, so no token, so the button stays disabled. Nothing to
-           say here that the disabled button does not already say. */
-      });
-
-    return () => {
-      cancelled = true;
-      const id = widgetIdRef.current;
-      if (id && window.turnstile) {
-        try {
-          window.turnstile.remove(id);
-        } catch {
-          /* Already gone with the container. */
-        }
-      }
-      widgetIdRef.current = null;
-    };
   }, []);
-
-  /**
-   * Turnstile tokens are single-use — the function redeems one per submission
-   * and Cloudflare refuses the same token twice. Resetting after EVERY attempt,
-   * not just failures, is what keeps a second send from failing verification
-   * on a token the first one already spent.
-   */
-  const resetTurnstile = () => {
-    setToken(null);
-    const id = widgetIdRef.current;
-    if (id && window.turnstile) {
-      try {
-        window.turnstile.reset(id);
-      } catch {
-        /* Widget went away; the missing token already disables the button. */
-      }
-    }
-  };
 
   /** Any edit retires the error: it described the previous attempt. */
   const edited = () => {
@@ -388,7 +257,7 @@ export const Contact: React.FC = () => {
                 reading it. */}
             {!unavailable && (
               <div
-                ref={widgetRef}
+                ref={turnstileContainer}
                 className={status === "sent" ? "hidden" : "flex justify-center min-h-[65px]"}
               />
             )}
