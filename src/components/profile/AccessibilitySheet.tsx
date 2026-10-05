@@ -37,7 +37,7 @@ export const AccessibilitySheet: React.FC<{ open: boolean; onClose: () => void }
         </div>
 
         <div className="border-t border-charcoal/[0.06] pt-4">
-          <p className="section-label mb-2">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
             Planned for a future update
           </p>
           <ul className="space-y-1.5 text-xs text-charcoal-soft list-disc pl-4">

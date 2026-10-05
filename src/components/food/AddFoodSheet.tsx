@@ -719,7 +719,7 @@ export const AddFoodSheet: React.FC<{
                 type="button"
                 onClick={confirmAdjust}
                 className="tap w-full inline-flex items-center justify-center gap-2"
-                style={{ height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15.5, fontWeight: 700 }}
+                style={{ height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-fill-cta))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15.5, fontWeight: 700 }}
               >
                 <Check size={16} /> Confirm
               </button>
@@ -730,7 +730,7 @@ export const AddFoodSheet: React.FC<{
                 onClick={handleAdd}
                 disabled={justAdded || saving}
                 className="tap inline-flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
-                style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15.5, fontWeight: 700 }}
+                style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-fill-cta))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15.5, fontWeight: 700 }}
               >
                 {justAdded ? <><Check size={16} /> Added</> : saving ? "Saving…" : "Add to Diary"}
               </button>
@@ -1058,14 +1058,13 @@ export const AddFoodSheet: React.FC<{
               Scan, Barcode, Custom, each a gradient with a white glyph and
               label. AI Scan has no vision model behind it: tapping it says so
               rather than inventing a result. */}
-          {/* Decision 7: white labels on these four gradients reached only
-              1.8-3.3:1. Each gradient keeps its two stops and their relation,
-              with both channels scaled down by one factor until white reads at
-              4.5:1 at the lighter stop (AI Voice x0.615, AI Scan x0.68, Barcode
-              x0.635, Custom x0.835). Used in light and dark alike. */}
+          {/* Light mode draws the board's four gradients (decision 14). Dark
+              mode keeps each one scaled down by one factor until white reads
+              at 4.5:1 at the lighter stop (AI Voice x0.615, AI Scan x0.68,
+              Barcode x0.635, Custom x0.835). */}
           <div className="grid grid-cols-4 mb-4" style={{ gap: 9 }}>
             {[
-              { label: "AI Voice", icon: <Mic size={17} />, bg: "linear-gradient(150deg,#647B77,#445E5A)", onClick: () => setVoiceOpen(true) },
+              { label: "AI Voice", icon: <Mic size={17} />, bg: dark ? "linear-gradient(150deg,#647B77,#445E5A)" : "linear-gradient(150deg,#A2C8C2,#6F9993)", onClick: () => setVoiceOpen(true) },
               {
                 label: "AI Scan",
                 icon: (
@@ -1074,10 +1073,10 @@ export const AddFoodSheet: React.FC<{
                     <Plus size={9} strokeWidth={3} className="absolute" style={{ top: -5, right: -6 }} />
                   </span>
                 ),
-                bg: "linear-gradient(150deg,#617B77,#365652)",
+                bg: dark ? "linear-gradient(150deg,#617B77,#365652)" : "linear-gradient(150deg,#8FB5AF,#4F7F78)",
                 onClick: () => setScanNotice(true),
               },
-              { label: "Barcode", icon: <ScanBarcode size={17} />, bg: "linear-gradient(150deg,#7A7293,#5B5180)", onClick: openBarcode },
+              { label: "Barcode", icon: <ScanBarcode size={17} />, bg: dark ? "linear-gradient(150deg,#7A7293,#5B5180)" : "linear-gradient(150deg,#C0B4E8,#8F7FC9)", onClick: openBarcode },
               {
                 label: "Custom",
                 icon: (
@@ -1086,7 +1085,7 @@ export const AddFoodSheet: React.FC<{
                     <Apple size={15} />
                   </span>
                 ),
-                bg: "linear-gradient(150deg,#796EAC,#4F437B)",
+                bg: dark ? "linear-gradient(150deg,#796EAC,#4F437B)" : "linear-gradient(150deg,#9184CE,#5F5093)",
                 onClick: () => setCustomMode(true),
               },
             ].map(({ label, icon, bg, onClick }) => (
@@ -1104,7 +1103,7 @@ export const AddFoodSheet: React.FC<{
 
           {matchingMeals.length > 0 && (
             <div className="mb-4">
-              <p className="section-label mb-2">
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
                 Custom meals
               </p>
               <div className="space-y-1.5">
@@ -1145,9 +1144,9 @@ export const AddFoodSheet: React.FC<{
                     borderRadius: 8,
                     padding: "7px 13px",
                     fontSize: 12,
-                    // Decision 7: the active chip is primary-fill and its ink (#A299DE: 2.58:1 with white).
-                    border: `1px solid ${active ? "rgb(var(--c-primary-fill))" : dark ? FOOD_DARK.outline : "#E7E7EC"}`,
-                    background: active ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-card))",
+                    // The active chip: the board's #A299DE in light, primary-fill in dark.
+                    border: `1px solid ${active ? "rgb(var(--c-fill-sheet))" : dark ? FOOD_DARK.outline : "#E7E7EC"}`,
+                    background: active ? "rgb(var(--c-fill-sheet))" : "rgb(var(--c-cream-card))",
                     color: active ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal))",
                     fontWeight: active ? 700 : 600,
                     flex: "none",
@@ -1170,7 +1169,7 @@ export const AddFoodSheet: React.FC<{
                 <p className="text-center text-sm text-charcoal-faint py-8">Start typing to search foods</p>
               ) : (
                 <>
-                  <p className="section-label flex items-center gap-1.5">
+                  <p className="flex items-center gap-1.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
                     <Clock size={12} />
                     {suggestMeal ? `Frequent at ${detailMealLabels[suggestMeal]}` : "Frequent & recent"}
                   </p>

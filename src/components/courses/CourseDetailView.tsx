@@ -447,12 +447,12 @@ function CertificateCard({ certificate }: { certificate: Certificate | null }) {
             />
             <span
               aria-hidden="true"
-              className="w-11 h-[26px] rounded-full shrink-0 relative transition-colors"
+              className="w-[42px] h-[25px] rounded-full shrink-0 relative transition-colors"
               style={{ background: shared ? fv("accent") : fv("track"), opacity: busy ? 0.6 : 1 }}
             >
               <span
-                className="absolute top-[3px] w-5 h-5 rounded-full bg-white shadow-[0_1px_2px_rgba(0,0,0,0.08)] transition-all"
-                style={{ left: shared ? 21 : 3 }}
+                className="absolute top-[3px] w-[19px] h-[19px] rounded-full bg-white transition-all"
+                style={{ left: shared ? 20 : 3 }}
               />
             </span>
           </label>

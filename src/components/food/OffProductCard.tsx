@@ -62,7 +62,7 @@ export const OffProductCard: React.FC<{
         <button
           onClick={onConfirm}
           className="tap flex-1"
-          style={{ height: 48, borderRadius: 14, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 14, fontWeight: 700 }}
+          style={{ height: 48, borderRadius: 14, background: "rgb(var(--c-fill-cta))", color: "rgb(var(--c-on-primary-fill))", fontSize: 14, fontWeight: 700 }}
         >
           Use this product
         </button>

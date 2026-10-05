@@ -35,7 +35,7 @@ export const AreaPicker: React.FC<{
         if (inRegion.length === 0) return null;
         return (
           <section key={region} aria-label={region} className="mb-1">
-            <h3 className="section-label mt-2 mb-1">{region}</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft mt-2 mb-1">{region}</h3>
             {inRegion.map((a) => (
               <button
                 key={a.id}

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { ChevronUp } from "lucide-react";
 import { useApp } from "../../context/AppContext";
 import { activeBarShades } from "../../data/folderColors";
+import { useIsDark } from "../../hooks/useIsDark";
 import { activeBarLine, loggedFraction } from "../../services/workout/activeBar";
 import { WorkoutSessionSheet } from "./WorkoutSessionSheet";
 
@@ -65,6 +66,7 @@ const BAR_LIFT = 60;
  */
 export const ActiveWorkoutBar: React.FC = () => {
   const { activeSession, routines, routineFolders, pausedSessions } = useApp();
+  const dark = useIsDark();
   const overlayOpen = useOverlayOpen();
   const keyboardOpen = useKeyboardOpen();
   // The logger this bar opened. Held separately from the session so the
@@ -100,7 +102,7 @@ export const ActiveWorkoutBar: React.FC = () => {
 
   const bar = visible && activeSession && routine
     ? {
-        ...activeBarShades(routine, routineFolders),
+        ...activeBarShades(routine, routineFolders, dark),
         progress: loggedFraction(pausedSessions[routine.id]?.logged),
         subline: activeBarLine(activeSession, routine.exercises.length, routine.estimatedDurationMin ?? 0, now),
       }

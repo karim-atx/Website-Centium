@@ -9,10 +9,9 @@ import { Loader2 } from "lucide-react";
 // a page CTA pinned above the navbar, 52 / radius 16 for a CTA inside a sheet.
 // The handover's third size (44 / 12) is not offered.
 //
-// THE FILL IS primary-fill, NOT THE HANDOVER'S #9A8CD6. That shade carries
-// white at 2.96:1; primary-fill is the closest brand shade that clears 4.5:1
-// in every theme (see index.css). Dark mode keeps the lighter primary with
-// near-black ink, the convention the app's Button already follows.
+// THE FILL IS primary-fill: the handover's #9A8CD6 in light mode (decision
+// 14; see index.css). Dark mode keeps the lighter primary with near-black
+// ink, the convention the app's Button already follows.
 
 type CtaSize = "page" | "sheet";
 type CtaVariant = "primary" | "secondary" | "outline";

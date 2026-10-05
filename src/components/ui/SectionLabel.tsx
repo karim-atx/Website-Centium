@@ -7,11 +7,9 @@ import clsx from "clsx";
 // `primary` line underneath (Foundations 2.3, hairlines). The board's label
 // block is 23 tall: a 14 px line, then 7.5 px, then the rule.
 //
-// THE INK IS primary-dark (#7D6BB5), NOT THE BOARD'S primary.accent (#7D67D9).
-// At 11 px this is body-size text, and #7D67D9 measures 4.36:1 on white;
-// #7D6BB5 is the nearest brand shade that clears 4.5:1 (4.52:1), the same
-// shade the filled buttons use. It follows the colour theme like every
-// primary-* token.
+// THE INK IS THE BOARD'S primary.accent (#7D67D9) in light mode (decision 14)
+// and primary-dark in dark mode; both follow the colour theme like every
+// primary-* token. See .section-label in index.css.
 export const SectionLabel: React.FC<{
   children: React.ReactNode;
   /** Pass to point a region's aria-labelledby at the label. */

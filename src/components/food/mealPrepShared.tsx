@@ -99,10 +99,10 @@ export const prepMealLabel = (m: MealType) => mealLabels[m];
 // Create "Save", Detail "Add to Diary") and the selected meal pill — teal for
 // meals, lavender for recipes.
 //
-// Mobile v5.1 R2: white sits on these, so each is the closest brand shade
-// that clears 4.5:1. The board's #79A8A1 and #A198DF carry white at about
-// 2.6:1; secondary.deep #4F7F78 is 4.53:1 and primary-fill is 4.52:1 or more.
-export const PREP_PRIMARY = { meals: "#4F7F78", recipes: "rgb(var(--c-primary-fill))" } as const;
+// The board's #79A8A1 and #A198DF in light mode (decision 14); dark mode
+// uses secondary.deep #4F7F78 and primary-fill (see --c-fill-prep and
+// --c-fill-cta in index.css).
+export const PREP_PRIMARY = { meals: "rgb(var(--c-fill-prep))", recipes: "rgb(var(--c-fill-cta))" } as const;
 
 export function capsLabelStyle(color: string): React.CSSProperties {
   return { margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color };

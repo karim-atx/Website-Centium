@@ -225,7 +225,7 @@ export const BroadcastEditor: React.FC<{
 
       {history.length > 0 && (
         <section className="flex flex-col gap-1 mt-2" aria-label="Sent before">
-          <h2 className="section-label">Sent before</h2>
+          <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft">Sent before</h2>
           {history.map((b) => (
             <div key={b.id} className="flex items-center justify-between min-h-[44px] border-b border-charcoal/[0.06] text-sm">
               <span className="text-charcoal">

@@ -30,7 +30,7 @@ type SubTab = "meals" | "recipes" | "foods";
 const SUB: Record<SubTab, { label: string; color: string; ink: string; row: string; icon: string; create: string; empty: string; emptyText: string }> = {
   meals: { label: "Meal Prep", color: PREP_PRIMARY.meals, ink: PREP_ON_PRIMARY.meals, row: "#ECF4F3", icon: "#4F7F78", create: "Create Meal", empty: "No meal prep yet", emptyText: "#5F8681" },
   recipes: { label: "Recipes", color: PREP_PRIMARY.recipes, ink: PREP_ON_PRIMARY.recipes, row: "#F0EEF9", icon: "#816FB7", create: "Create Recipe", empty: "No recipes yet", emptyText: "#7A6DB0" },
-  foods: { label: "Custom Foods", color: "rgb(var(--c-primary-fill))", ink: "rgb(var(--c-on-primary-fill))", row: "#F1EEFB", icon: "#7D67D9", create: "Create Custom Food", empty: "No custom foods yet", emptyText: "#7D67D9" },
+  foods: { label: "Custom Foods", color: "rgb(var(--c-fill-foods))", ink: "rgb(var(--c-on-primary-fill))", row: "#F1EEFB", icon: "#7D67D9", create: "Create Custom Food", empty: "No custom foods yet", emptyText: "#7D67D9" },
 };
 // Mobile v5.1 R3, dark mode (no light islands): the rows' tints are
 // secondary.tint (meals) and primary.tint (recipes, foods) dark; the icons and

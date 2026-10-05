@@ -83,7 +83,7 @@ export default function HealthMetricsTab() {
                       readings shows a dash, never a zero. */}
                   {c.access.healthMetrics || c.access.weight || c.access.bodyMeasurements ? (
                     <div>
-                      <p className="section-label mb-2">
+                      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
                         Logged
                       </p>
                       <div className="grid grid-cols-4 gap-2 text-center">
@@ -139,7 +139,7 @@ export default function HealthMetricsTab() {
                   <ClientClinicalRecords client={c} onOpenFile={setViewing} />
 
                   <div>
-                    <p className="section-label mb-2">
+                    <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
                       Clinical notes
                     </p>
                     <div className="space-y-3">

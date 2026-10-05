@@ -81,7 +81,7 @@ function useForumGate(section: Section):
 }
 
 function Heading() {
-  return <h1 className="m-0 text-[27px] font-bold leading-[1.5] tracking-[-0.022em]" style={{ color: fv("text") }}>Community</h1>;
+  return <h1 className="m-0 text-[26px] font-extrabold" style={{ color: fv("text") }}>Community</h1>;
 }
 
 function Refused({ text }: { text: string }) {

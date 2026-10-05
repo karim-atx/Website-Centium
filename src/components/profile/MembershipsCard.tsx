@@ -114,7 +114,7 @@ export const MembershipsCard: React.FC = () => {
   // redeem box is how somebody with a code in their hand gets anywhere.
   return (
     <Card className="mb-6 animate-fade-slide-up">
-      <p className="section-label mb-2.5">
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         Memberships
       </p>
 

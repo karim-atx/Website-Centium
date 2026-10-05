@@ -82,8 +82,8 @@ export const MyReviewCard: React.FC<{
 
   return (
     <Card className={className}>
-      <div className="flex items-center justify-between gap-2 mb-1.5 pb-[7.5px] border-b-[1.5px] border-primary">
-        <p className="section-label !border-b-0 !pb-0">My Review</p>
+      <div className="flex items-center justify-between gap-2 mb-1.5">
+        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">My Review</p>
         {(!review || editable) && (
           <Button size="sm" variant="outline" onClick={onOpen}>
             <Pencil size={13} /> {review ? "Edit" : "Rate & Review"}
@@ -295,7 +295,7 @@ export const ReviewReportForm: React.FC<{
         A moderator will review it. Nobody is told who reported it.
       </p>
       <fieldset className="border-none m-0 p-0">
-        <legend className="section-label w-full mb-1">Reason</legend>
+        <legend className="text-xs font-bold text-charcoal-soft uppercase tracking-[0.06em] mb-1">Reason</legend>
         {REVIEW_REPORT_REASONS.map((r, i) => (
           <label
             key={r.value}

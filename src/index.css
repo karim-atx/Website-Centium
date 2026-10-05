@@ -33,11 +33,9 @@
   --c-cream-card: 255 255 255;
   --c-charcoal: 36 31 27;
   --c-charcoal-soft: 91 83 73;
-  /* Mobile v5.1 R3: text.muted. The board's #8C8378 is 3.73:1 on white,
-     under AA for the 11-12 px meta lines that use it everywhere; this is the
-     same hue scaled to the nearest shade that clears 4.5:1 on white and on
-     cream-soft: #776F66 (4.94:1 and 4.54:1). Light mode only. */
-  --c-charcoal-faint: 119 111 102;
+  /* text.muted #8C8378 (the board's value; light mode follows the board,
+     decision 14). */
+  --c-charcoal-faint: 140 131 120;
   /* Design refinement (App-Centium, Aug 2026): weakest metadata ("of
      10,000 · 84%") and disabled glyphs (inactive chevrons/arrows) each get
      their own step instead of reusing `faint` for both. */
@@ -62,14 +60,25 @@
   /* MOBILE v5.1 HANDOVER (R1). Added alongside the tokens above; nothing
      existing reads them yet.
 
-     --c-primary-fill IS THE GROUND OF A FILLED BUTTON WITH WHITE INK. The
-     handover's primary.fill #9A8CD6 carries white at 2.96:1, so this is the
-     closest brand shade that clears 4.5:1: #7D6BB5 (primary.deep), 4.52:1.
-     #7D67D9 (primary.accent) is closer in hue but measures 4.36:1. Each
-     accent theme below gets its own passing shade, and dark mode keeps
-     today's convention: the lighter primary with near-black ink (6.6-8.3:1). */
-  --c-primary-fill: 125 107 181;
+     --c-primary-fill IS THE GROUND OF A FILLED BUTTON WITH WHITE INK. In
+     light mode it is each theme's primary, exactly as filled controls were
+     before v5.1 (decision 15). Dark mode keeps the lighter primary with
+     near-black ink (6.6-8.3:1). */
+  --c-primary-fill: 174 161 220;
   --c-on-primary-fill: 255 255 255;
+  /* Filled controls the board draws in their own lavender rather than
+     primary.fill, kept as drawn in light mode (decision 14); dark mode uses
+     primary-fill for all four. Selected sheet chips and menu rows #A092E0,
+     the Food sheets' buttons primary.cta.alt #A198DF, the Add Food and
+     workout sheet buttons #A299DE, and the calendar picker's day #AB9ED7.
+     Meal Prep's teal #79A8A1 and Custom Foods' #7D67D9 likewise (dark: the
+     teal #4F7F78, and primary-fill). */
+  --c-fill-chip: 160 146 224;
+  --c-fill-cta: 161 152 223;
+  --c-fill-sheet: 162 153 222;
+  --c-fill-day: 171 158 215;
+  --c-fill-prep: 121 168 161;
+  --c-fill-foods: 125 103 217;
   /* primary.accent #7D67D9: row and tile glyphs (Settings rows, popup icon). */
   --c-primary-accent: 125 103 217;
   /* border.row: the inset divider between Settings rows. */
@@ -95,14 +104,10 @@
      tab colour are brand chrome, not theme-reactive content, so they stay
      this lavender under every accent theme. */
   --c-team-nav-accent: 143 104 246;
-  /* Mobile v5.1, R2 (D4): the board's nav.idle #9A94B3 measures 2.89:1 on
-     the white bar, under both 3:1 (icons) and 4.5:1 (10.5 px labels). This
-     is the same hue scaled down until it clears 4.5:1: #78738C, 4.54:1. */
-  --c-team-nav-idle: 120 115 140;
-  /* The ACTIVE label is 10.5 px text too, and nav.accent #8F68F6 carries it
-     at 3.83:1. The icon and ring keep #8F68F6 (a shape needs 3:1); only the
-     label takes this scaled shade, #825FE0, 4.50:1. */
-  --c-team-nav-accent-text: 130 95 224;
+  /* The board's nav.idle #9A94B3, and nav.accent #8F68F6 for the active
+     label (decision 14). Dark mode has its own values below. */
+  --c-team-nav-idle: 154 148 179;
+  --c-team-nav-accent-text: 143 104 246;
 
   /* Iteration 6.2 canonical widget library — same reasoning as the nav
      accent above: these are the design's fixed lavender/teal/blue/rose/gold
@@ -132,16 +137,10 @@
      below because they don't change. */
   --gradient-board: linear-gradient(122deg, #aea1dc 0%, #8e93c8 46%, #7fb3af 78%, #a2c8c2 100%);
   --gradient-teal-hero: linear-gradient(150deg, #a2c8c2, #4f7f78);
-  /* Mobile v5.1 R3 (FO1): the hero is a button with white text, and the
-     board's #aea1dc start carries it at 2.35:1. The closest compliant pair is
-     the board's own darker shades: #6f5fa6 (its end, 5.44:1) to primary.deeper
-     #5f5093 (6.87:1); its secondary text is 90% white (4.77:1 or more). */
-  --gradient-food-hero: linear-gradient(150deg, #6f5fa6, #5f5093);
-  /* Decision 7: white sits on this (the calendar's selected day and + button,
-     the consent banner) and the board's #aea1dc start carried it at 2.35:1.
-     Both stops scaled by one factor (x0.70) until white reads 4.5:1 at the
-     lighter one. */
-  --gradient-lavender-accent: linear-gradient(150deg, #7a719a, #4e4274);
+  /* The board's values (decision 14). Food's hero has a .dark entry of its
+     own since v5.1 R3. */
+  --gradient-food-hero: linear-gradient(150deg, #aea1dc, #6f5fa6);
+  --gradient-lavender-accent: linear-gradient(150deg, #aea1dc, #6f5fa6);
   --gradient-quick-action: linear-gradient(150deg, #c3b7e6, #a192d6);
 
   /* THE SENT MESSAGE BUBBLE'S GROUND, AND THE READ TICK THAT SITS ON IT.
@@ -195,36 +194,32 @@
 
   --c-teal: 162 200 194;
   --c-teal-light: 193 219 214;
-  --c-teal-pale: 231 242 240;
+  --c-teal-pale: 234 244 242;
   --c-teal-dark: 111 153 147;
-  /* Mobile v5.1, R2: the board's secondary.deep #4F7F78 clears white (4.53:1)
-     but not teal-pale (3.96:1), where CvEditor's skill chips use it; this is
-     that hue scaled until both pass: #49756F, 5.40:1 and 4.52:1. */
-  --c-teal-deep-text: 73 117 111;
-  /* Mobile v5.1 R2: the ground of a filled teal control with white ink.
-     --c-teal (#A2C8C2) carries white at 1.8:1; secondary.deep #4F7F78 is the
-     closest brand teal that clears 4.5:1 (4.53:1). Dark mode uses the light
-     teal with on-primary-fill's near-black ink (10.7:1). */
-  --c-teal-fill: 79 127 120;
+  --c-teal-deep-text: 95 127 122;
+  /* The ground of a filled teal control: the board's secondary #A2C8C2 in
+     light mode (decision 14), with white ink. Dark mode uses the same teal
+     with on-primary-fill's near-black ink. */
+  --c-teal-fill: 162 200 194;
 
   /* NEITHER OF THE TWO ABOVE IS THE TEXT COLOUR FOR A teal-pale SURFACE,
      which is worth stating here because both names suggest otherwise and
      both have been used that way and failed:
 
        teal-dark       2.81:1 light, 3.13:1 dark  -- fails in BOTH modes
-       teal-deep-text  4.52:1 light, 7.34:1 dark  -- passes since v5.1 R2
+       teal-deep-text  3.90:1 light, 7.34:1 dark  -- fails light only
 
      What text on teal-pale actually uses is
      "text-charcoal-soft dark:text-teal-deep-text": 6.6:1 and 7.34:1, the
-     pairing every such site in the app now shares. teal-deep-text was
-     darkened in v5.1 R2 and now clears AA on teal-pale in light as well.
+     pairing every such site in the app now shares. teal-deep-text earns its
+     name in dark and only there; in light the ground is too close to it.
 
      These two stay as they are because they are correct on the grounds they
      were tuned for -- teal-dark on cream, teal-deep-text in dark mode -- and
      a dozen places outside this problem depend on exactly those values. */
 
   --c-gold: 217 164 65;
-  --c-gold-pale: 251 243 226;
+  --c-gold-pale: 246 233 201;
 
   --c-sky: 76 143 209;
   --c-sky-pale: 220 234 248;
@@ -261,8 +256,7 @@
      the received tick is var(--c-status-good). A near-black bubble needs no
      deepening; that was only ever a light-mode problem. */
   --c-status-high: 192 57 43;
-  /* danger.tint (v5.1): status-high on it measures 4.78:1. */
-  --c-status-high-bg: 252 237 236;
+  --c-status-high-bg: 251 231 228;
   --c-status-low: 58 118 176;
   --c-status-low-bg: 220 234 248;
   --c-status-caution: 217 164 65;
@@ -393,6 +387,8 @@
   --gradient-board: linear-gradient(122deg, #584a8c 0%, #4b5183 46%, #2f6660 78%, #3b7f76 100%);
   --gradient-teal-hero: linear-gradient(150deg, #2f6660, #24504b);
   --gradient-lavender-accent: linear-gradient(150deg, #54468a, #3b3168);
+  /* Food's hero in dark (unchanged since v5.1 R3). */
+  --gradient-food-hero: linear-gradient(150deg, #6f5fa6, #5f5093);
   --gradient-quick-action: linear-gradient(150deg, #6e5fa8, #53478a);
 
   --c-primary: 169 145 254;
@@ -416,6 +412,12 @@
   /* Mobile v5.1 (R1): see :root. Dark fills keep near-black ink. */
   --c-primary-fill: var(--c-primary);
   --c-on-primary-fill: 13 11 26;
+  --c-fill-chip: var(--c-primary-fill);
+  --c-fill-cta: var(--c-primary-fill);
+  --c-fill-sheet: var(--c-primary-fill);
+  --c-fill-day: var(--c-primary-fill);
+  --c-fill-prep: 79 127 120;
+  --c-fill-foods: var(--c-primary-fill);
   --c-primary-accent: 154 140 214;
   --border-row: rgba(238, 239, 242, 0.08);
 
@@ -506,7 +508,7 @@
 [data-accent="ocean"] {
   --c-primary: 76 143 209;
   --c-bubble-sent: 55 104 153;
-  --c-primary-fill: 55 104 153;
+  --c-primary-fill: 76 143 209;
   --c-primary-accent: 30 74 110;
   --c-primary-light: 116 175 227;
   --c-primary-pale: 220 234 248;
@@ -529,7 +531,7 @@
 [data-accent="sunset"] {
   --c-primary: 233 116 82;
   --c-bubble-sent: 158 79 56;
-  --c-primary-fill: 158 79 56;
+  --c-primary-fill: 233 116 82;
   --c-primary-accent: 165 66 36;
   --c-primary-light: 242 164 136;
   --c-primary-pale: 252 230 221;
@@ -721,31 +723,19 @@ body {
 /* Design refinement: the one text role repeated on nearly every screen —
    section labels ("WEIGHT GOAL", "TODAY", "BIOMARKERS"...). Quieter than
    the old 12px/600/wide-tracking convention. */
-/* Mobile v5.1, R2: the one section-label style (C-05, decided "lavender with
-   the line"). Foundations label.section.settings: 11 / 600 uppercase, 0.14em,
-   a 14 px line, 7.5 px, then a 1.5 px primary rule. The ink is primary-dark
-   (#7D6BB5, 4.52:1 at 11 px) rather than the board's #7D67D9 (4.36:1), per D1.
-   The SectionLabel component renders this same class. */
 .section-label {
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 600;
-  line-height: 14px;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
-  color: rgb(var(--c-primary-dark));
-  padding-bottom: 7.5px;
-  border-bottom: 1.5px solid rgb(var(--c-primary));
+  letter-spacing: 0.1em;
 }
 
 /* WO8 logger fields: placeholders (last session's or the template's values)
-   are the field's ink. Mobile v5.1 R3: the board's 46% reads at about 2:1, so
-   the opacity is the lowest that clears 4.5:1 for that folder's colours
-   (--ph-opacity, from placeholderOpacity()), and the weight drops to 400 so a
-   suggested value still looks different from a typed one (600). */
+   are the field's ink at 46% in light mode. Dark mode sets --ph-opacity (from
+   placeholderOpacity()) to the lowest opacity that clears 4.5:1. */
 .logger-field::placeholder {
   color: var(--ph);
   opacity: var(--ph-opacity, 0.46);
-  font-weight: 400;
 }
 
 /* WO10 Set options sliders (Pain level, Mood): a light #E5E5EA track with the

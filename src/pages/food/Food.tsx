@@ -40,7 +40,7 @@ import { useIsDark } from "../../hooks/useIsDark";
  */
 const DIARY_COLORS = {
   protein: ["#7D6BB5", "#B7ABDE"],
-  carbs: ["#7B6DAD", "#AEA1DC"],
+  carbs: ["#8C7CC4", "#AEA1DC"],
   fat: ["#4F7F78", "#7FB3A9"],
   selectRing: ["#D1CAEB", "#8A8698"],
   deleteBg: ["#FCEDEC", "#3C2A30"],
@@ -58,14 +58,15 @@ const diaryMealOrder: MealType[] = ["breakfast", "snack", "lunch", "dinner"];
 // Master handover, CentiumTabFrame `food.diary` with quick-add "timeOfDay":
 // the quick-add tiles, like the meal cards, read "Snacks" (approved
 // decision 7). Each tile carries its own sampled fill and time-of-day glyph.
-// Mobile v5.1 R2: white 10 px labels sit on these, and the board's fills
-// (#BEB4E6 #B1A5DF #B1A5E0 #9284C4) carry it at 1.9 to 3.3:1. Each is its
-// own hue scaled down, keeping the dawn-to-dusk steps: 4.5, 5.0, 5.0, 5.6:1.
-const quickAddTiles: Record<MealType, { label: string; fill: string; Icon: typeof Sunrise }> = {
-  breakfast: { label: "Breakfast", fill: "#797292", Icon: Sunrise },
-  snack: { label: "Snacks", fill: "#726A90", Icon: Clock },
-  lunch: { label: "Lunch", fill: "#726A90", Icon: Sun },
-  dinner: { label: "Dinner", fill: "#6B6190", Icon: Sunset },
+// Light mode uses the board's fills (decision 14). In dark mode the white
+// 10 px labels need 4.5:1, which the board's fills (1.9 to 3.3:1) miss, so
+// each is its own hue scaled down, keeping the dawn-to-dusk steps: 4.5, 5.0,
+// 5.0, 5.6:1.
+const quickAddTiles: Record<MealType, { label: string; fill: string; fillDark: string; Icon: typeof Sunrise }> = {
+  breakfast: { label: "Breakfast", fill: "#BEB4E6", fillDark: "#797292", Icon: Sunrise },
+  snack: { label: "Snacks", fill: "#B1A5DF", fillDark: "#726A90", Icon: Clock },
+  lunch: { label: "Lunch", fill: "#B1A5E0", fillDark: "#726A90", Icon: Sun },
+  dinner: { label: "Dinner", fill: "#9284C4", fillDark: "#6B6190", Icon: Sunset },
 };
 
 const SWIPE_THRESHOLD = 60;
@@ -313,7 +314,7 @@ export default function Food() {
       <span className="flex-1 min-w-0 h-1 rounded-full bg-white/[0.28] overflow-hidden">
         <span className="block h-full rounded-full bg-white" style={{ width: `${Math.min(100, (value / (target || 1)) * 100)}%` }} />
       </span>
-      <span className="shrink-0 text-[9px] text-white/90 tabular-nums">
+      <span className="shrink-0 text-[9px] text-white/[0.66] dark:text-white/90 tabular-nums">
         {Math.round(value)} / {target}g
       </span>
     </div>
@@ -382,16 +383,16 @@ export default function Food() {
                   <p className="text-[26px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
                     {Math.round(totals.calories).toLocaleString()}
                   </p>
-                  <p className="mt-1 text-[9.5px] text-white/90">of {targets.calories.toLocaleString()} kcal</p>
+                  <p className="mt-1 text-[9.5px] text-white/70 dark:text-white/90">of {targets.calories.toLocaleString()} kcal</p>
                   {/* SAYS WHOSE NUMBER IT IS. With no height or weight on
                       record the target is a published reference intake rather
                       than anything computed from this person. */}
                   {isReferenceOnlyTarget(user) && (
-                    <p className="mt-[3px] text-[8.5px] leading-[1.3] text-white/90">
+                    <p className="mt-[3px] text-[8.5px] leading-[1.3] text-white/60 dark:text-white/90">
                       {REFERENCE_INTAKE_NOTE}
                     </p>
                   )}
-                  <p className="mt-[7px] inline-block text-[9.5px] font-bold text-white bg-white/[0.08] rounded-full px-2 py-[3px]">
+                  <p className="mt-[7px] inline-block text-[9.5px] font-bold text-white bg-white/20 dark:bg-white/[0.08] rounded-full px-2 py-[3px]">
                     {targets.calories - Math.round(totals.calories)} left
                   </p>
                 </div>
@@ -424,13 +425,13 @@ export default function Food() {
           {!hideNumbers && (
             <div className="flex gap-[6px] mb-[11px]">
               {diaryMealOrder.map((meal) => {
-                const { label, fill, Icon } = quickAddTiles[meal];
+                const { label, fill, fillDark, Icon } = quickAddTiles[meal];
                 return (
                   <button
                     key={meal}
                     onClick={() => openAdd(meal)}
                     className="tap flex-1 h-[38px] flex items-center justify-center gap-1.5 rounded-[11px] text-[10px] font-bold text-white whitespace-nowrap"
-                    style={{ background: fill }}
+                    style={{ background: dark ? fillDark : fill }}
                   >
                     <Icon size={19} className="shrink-0" style={{ color: "#FFFFFF" }} />
                     {label}
@@ -527,11 +528,11 @@ export default function Food() {
                           )}
                         </span>
                         <span className="flex items-center gap-1 text-[8.5px] font-bold tabular-nums whitespace-nowrap">
-                          <span style={{ color: mealCal > 0 ? dc("protein", dark) : "rgb(var(--c-charcoal-faint))" }}>P {Math.round(mealProtein)}g</span>
+                          <span style={{ color: mealCal > 0 ? dc("protein", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>P {Math.round(mealProtein)}g</span>
                           <span aria-hidden className="text-charcoal/20">|</span>
-                          <span style={{ color: mealCal > 0 ? dc("carbs", dark) : "rgb(var(--c-charcoal-faint))" }}>C {Math.round(mealCarbs)}g</span>
+                          <span style={{ color: mealCal > 0 ? dc("carbs", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>C {Math.round(mealCarbs)}g</span>
                           <span aria-hidden className="text-charcoal/20">|</span>
-                          <span style={{ color: mealCal > 0 ? dc("fat", dark) : "rgb(var(--c-charcoal-faint))" }}>F {Math.round(mealFat)}g</span>
+                          <span style={{ color: mealCal > 0 ? dc("fat", dark) : (dark ? "rgb(var(--c-charcoal-faint))" : "#A79E93") }}>F {Math.round(mealFat)}g</span>
                         </span>
                       </span>
                     )}

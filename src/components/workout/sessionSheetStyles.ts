@@ -7,7 +7,7 @@ import type React from "react";
 // Mobile v5.1 R3 (no light islands): idle white and #241F1B are the card and
 // charcoal tokens; the #E7E7EC border has no token, so its dark value
 // (option border rgba(238,239,242,0.10)) comes from `dark`. The selected
-// fill carries white ink and is the same in both modes.
+// fill is the board's #A299DE in light and primary-fill in dark.
 const sessionOptionStyle = (
   selected: boolean,
   shape: { borderRadius: number; padding: string },
@@ -16,9 +16,8 @@ const sessionOptionStyle = (
   ...shape,
   fontSize: 12,
   fontWeight: 600,
-  // Decision 7: selected is primary-fill and its ink (#A299DE carried white at 2.58:1).
-  border: `1px solid ${selected ? "rgb(var(--c-primary-fill))" : dark ? "rgba(238,239,242,0.10)" : "#E7E7EC"}`,
-  background: selected ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-card))",
+  border: `1px solid ${selected ? "rgb(var(--c-fill-sheet))" : dark ? "rgba(238,239,242,0.10)" : "#E7E7EC"}`,
+  background: selected ? "rgb(var(--c-fill-sheet))" : "rgb(var(--c-cream-card))",
   color: selected ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal))",
 });
 

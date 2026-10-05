@@ -255,7 +255,7 @@ export const ClientDetailSheet: React.FC<{
 
         {client.access.foodDiary && (
           <div className="bg-cream-soft rounded-2xl p-4">
-            <p className="section-label mb-2">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
               Food Diary
             </p>
             {client.nutrition ? (
@@ -287,7 +287,7 @@ export const ClientDetailSheet: React.FC<{
           // read here yet — hidden rather than rendered blank.
           client.activityLevel && (
             <div className="bg-cream-soft rounded-2xl p-4">
-              <p className="section-label mb-2">
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
                 Activity Level
               </p>
               <div className="flex items-center gap-2">
@@ -306,8 +306,8 @@ export const ClientDetailSheet: React.FC<{
         ) : (
           client.access.workoutActivity && (
             <div className="bg-cream-soft rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-2 pb-[7.5px] border-b-[1.5px] border-primary">
-                <p className="section-label !border-b-0 !pb-0">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
                   Workout Activity
                 </p>
                 <button
@@ -351,8 +351,8 @@ export const ClientDetailSheet: React.FC<{
         )}
 
         <div className="bg-cream-soft rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2 pb-[7.5px] border-b-[1.5px] border-primary">
-            <p className="section-label !border-b-0 !pb-0">
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
               Food Template
             </p>
             <button
@@ -396,7 +396,7 @@ export const ClientDetailSheet: React.FC<{
         {client.access.weight && (
           <div className="bg-cream-soft rounded-2xl p-4 flex items-center justify-between">
             <div>
-              <p className="section-label mb-1">Weight</p>
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1">Weight</p>
               {/* NO READING, NO NUMBER. `{client.lastWeightKg} kg` rendered a
                   bare "kg" for a client who has logged none, and the trend
                   beside it read `?? 0` — so a client with no weight history at
@@ -439,7 +439,7 @@ export const ClientDetailSheet: React.FC<{
           client.access.pregnancy ||
           activeNotes.length > 0) && (
           <div className="bg-cream-soft rounded-2xl p-4">
-            <p className="section-label mb-2.5 flex items-center gap-1.5">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
               <HeartPulse size={13} /> Health Metrics
             </p>
             {/* SLEEP AND STEPS, AVERAGED FROM REAL ROWS. What stood here was
@@ -478,7 +478,7 @@ export const ClientDetailSheet: React.FC<{
                 "steps, water, sleep" would have started sharing their waist
                 without touching anything. Sharing vitals shows nothing here. */}
             <div className="mt-3 pt-3 border-t border-charcoal/[0.06]">
-              <p className="section-label mb-2.5 flex items-center gap-1.5">
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
                 <Ruler size={13} /> Body measurements
               </p>
               {!client.access.bodyMeasurements ? (
@@ -535,7 +535,7 @@ export const ClientDetailSheet: React.FC<{
                 client already sharing vitals did not begin sharing this the
                 moment the column existed. Sharing vitals shows nothing here. */}
             <div className="mt-3 pt-3 border-t border-charcoal/[0.06]">
-              <p className="section-label mb-2.5 flex items-center gap-1.5">
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
                 <Activity size={13} /> Blood pressure
               </p>
               {/* FOUR STATES, FOUR SENTENCES — not sharing, not fetched,
@@ -600,7 +600,7 @@ export const ClientDetailSheet: React.FC<{
                 they were. */}
             {(client.access.cyclePhase || client.access.pregnancy) && (
               <div className="mt-3 pt-3 border-t border-charcoal/[0.06]">
-                <p className="section-label mb-2.5 flex items-center gap-1.5">
+                <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5 flex items-center gap-1.5">
                   <Moon size={13} /> Cycle
                 </p>
                 {!client.access.cyclePhase ? (
@@ -680,8 +680,8 @@ export const ClientDetailSheet: React.FC<{
             communication boundaries." Editable here since this prototype
             has no client-side form feeding these fields in yet. */}
         <div className="bg-cream-soft rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2.5 pb-[7.5px] border-b-[1.5px] border-primary">
-            <p className="section-label !border-b-0 !pb-0 flex items-center gap-1.5">
+          <div className="flex items-center justify-between mb-2.5">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide flex items-center gap-1.5">
               <MessageCircle size={13} /> Communication preferences
             </p>
             <button onClick={() => setEditingPrefs((v) => !v)} className="text-xs font-semibold text-primary">
@@ -722,7 +722,7 @@ export const ClientDetailSheet: React.FC<{
         </div>
 
         <div>
-          <p className="section-label mb-2">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
             What you can see
           </p>
           <p className="text-[11px] text-charcoal-faint mb-3">

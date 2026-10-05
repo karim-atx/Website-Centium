@@ -384,8 +384,8 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
                 onClick={() => void saveFood()}
                 disabled={!foodDraft.name.trim() || !foodDraft.calories}
                 className="tap h-10 rounded-[12px] text-[13px] font-bold text-on-primary-fill disabled:opacity-40"
-                // Decision 7: primary-fill (#A198DF carried white at 2.60:1).
-                style={{ background: "rgb(var(--c-primary-fill))" }}
+                // The board's #A198DF in light, primary-fill in dark.
+                style={{ background: "rgb(var(--c-fill-cta))" }}
               >
                 Add to {isR ? "recipe" : "meal"}
               </button>

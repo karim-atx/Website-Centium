@@ -482,7 +482,7 @@ export default function MetricsTab() {
             <button
               onClick={() => setAddMeasurementsOpen(true)}
               className="tap flex items-center"
-              style={{ height: 26, padding: "0 10px", gap: 4, borderRadius: 8, background: "rgb(var(--c-teal-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 12, fontWeight: 700 }}
+              style={{ height: 26, padding: "0 10px", gap: 4, borderRadius: 8, background: dark ? "rgb(var(--c-teal-fill))" : "#6F9993", color: "rgb(var(--c-on-primary-fill))", fontSize: 12, fontWeight: 700 }}
             >
               <Plus size={12} /> Add
             </button>

@@ -372,7 +372,7 @@ export const ExerciseSettingsSheet: React.FC<{
               </label>
 
               <div>
-                <p className="section-label mb-2">
+                <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
                   Rep Max update mode
                 </p>
                 <div className="space-y-2">

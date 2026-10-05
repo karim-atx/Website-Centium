@@ -466,7 +466,7 @@ export default function Profile() {
 
       {connectedProfessionals.length > 0 && (
         <div className="mb-6 animate-fade-slide-up">
-          <p className="section-label mb-2.5">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
             Connected professionals
           </p>
           <div className="flex gap-2.5 scroll-row no-scrollbar pb-1">
@@ -499,7 +499,7 @@ export default function Profile() {
       {sections.length > 0 && (
       <>
       {/* V8 (QA 8.0): "Have a common title fir Goals and Activity level" */}
-      <p className="section-label mb-2.5">
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
         Goals & Activity
       </p>
       <Card padded={false} className="divide-y divide-charcoal/[0.04] animate-fade-slide-up">
@@ -533,7 +533,7 @@ export default function Profile() {
           first line. */}
       {user.accountType === "customer" && (
         <>
-          <p className="section-label mb-2.5">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
             Safety & content
           </p>
           <Card className="mb-6 animate-fade-slide-up">
@@ -627,7 +627,7 @@ export default function Profile() {
               className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
             />
           </div>
-          <p className="section-label pt-2">Social</p>
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide pt-2">Social</p>
           <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
             <AtSign size={15} className="text-charcoal-faint shrink-0" />
             <input

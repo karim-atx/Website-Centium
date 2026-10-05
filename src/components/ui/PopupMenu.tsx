@@ -174,9 +174,9 @@ export function PopupMenu<V extends string>({
                 borderRadius: 8,
                 padding: "9px 10px",
                 marginTop: i > 0 ? 6 : 0,
-                // Decision 7: the filled selection is primary-fill (#A092E0 carried white at 2.73:1).
-                border: `1px solid ${filled ? "rgb(var(--c-primary-fill))" : on ? c("onBorder") : "rgb(var(--c-border-option))"}`,
-                background: filled ? "rgb(var(--c-primary-fill))" : on ? c("onFill") : "rgb(var(--c-surface-raised))",
+                // The filled selection: the board's #A092E0 in light, primary-fill in dark.
+                border: `1px solid ${filled ? "rgb(var(--c-fill-chip))" : on ? c("onBorder") : "rgb(var(--c-border-option))"}`,
+                background: filled ? "rgb(var(--c-fill-chip))" : on ? c("onFill") : "rgb(var(--c-surface-raised))",
                 color: filled ? "rgb(var(--c-on-primary-fill))" : opt.destructive ? c("destructive") : "rgb(var(--c-charcoal))",
                 fontSize: 12.5,
                 fontWeight: on ? 700 : 500,

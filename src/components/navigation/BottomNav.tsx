@@ -109,12 +109,12 @@ export const BottomNav: React.FC = () => {
                 <Icon
                   size={22}
                   strokeWidth={active ? 2.4 : 2}
-                  className={clsx(active ? "text-primary-dark" : "text-team-nav-idle")}
+                  className={clsx(active ? "text-primary dark:text-primary-dark" : "text-charcoal-faint dark:text-team-nav-idle")}
                 />
                 <span
                   className={clsx(
                     "text-[11px] font-semibold",
-                    active ? "text-primary-dark" : "text-team-nav-idle"
+                    active ? "text-primary dark:text-primary-dark" : "text-charcoal-faint dark:text-team-nav-idle"
                   )}
                 >
                   {t(item.label)}

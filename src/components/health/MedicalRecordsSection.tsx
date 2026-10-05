@@ -178,7 +178,7 @@ export const MedicalRecordsSection: React.FC<{
   return (
     <>
       <div className="flex items-center justify-between mb-2.5">
-        {hideLabel ? <span /> : <p className="section-label flex-1 min-w-0 me-3">Records</p>}
+        {hideLabel ? <span /> : <p className="section-label text-charcoal-faint">Records</p>}
         {tab === "biomarkers" && (
           <div className="flex items-center gap-3">
             <button onClick={onShareAll} className="tap flex items-center gap-1.5 text-[11.5px] font-semibold text-primary-dark">
@@ -223,7 +223,7 @@ export const MedicalRecordsSection: React.FC<{
           a lab report and never see it again. */}
       {tab === "biomarkers" && labReports.length > 0 && (
         <Card className="mb-3">
-          <p className="section-label mb-2">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
             Lab reports
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -438,7 +438,7 @@ export const MedicalRecordsSection: React.FC<{
             <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{recordError}</p>
           )}
           <Card>
-            <p className="section-label mb-3">Comorbidities</p>
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">Comorbidities</p>
             <div className="flex flex-wrap gap-2">
               {commonComorbidities.map((c) => (
                 <Chip key={c} active={comorbidities.includes(c)} onClick={() => toggleComorbidity(c)}>
@@ -474,7 +474,7 @@ export const MedicalRecordsSection: React.FC<{
           </Card>
 
           <Card>
-            <p className="section-label mb-3">Past surgeries</p>
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">Past surgeries</p>
             {surgeries.length === 0 && <p className="text-sm text-charcoal-faint mb-2">None added.</p>}
             <div className="space-y-2 mb-3">
               {surgeries.map((s) => (

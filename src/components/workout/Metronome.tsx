@@ -178,9 +178,9 @@ export const Metronome: React.FC = () => {
             style={{
               height: 44,
               borderRadius: 12,
-              // White ink needs 4.5:1: idle is primary-fill, and running is
-              // the deeper brand shade so the two states stay distinct.
-              background: running ? "rgb(var(--c-primary-deep-text))" : "rgb(var(--c-primary-fill))",
+              // Idle is primary-fill. Running is the board's #7D67D9 in light
+              // mode; dark mode uses the deeper brand shade.
+              background: running ? (dark ? "rgb(var(--c-primary-deep-text))" : "#7D67D9") : "rgb(var(--c-primary-fill))",
               color: "rgb(var(--c-on-primary-fill))",
               fontSize: 14,
               fontWeight: 700,

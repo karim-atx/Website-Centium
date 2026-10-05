@@ -193,7 +193,7 @@ export const CalendarPickerSheet: React.FC<{
                       borderRadius: 12,
                       fontSize: 15,
                       fontWeight: isSelected ? 600 : 500,
-                      background: isSelected ? "rgb(var(--c-primary-fill))" : "transparent",
+                      background: isSelected ? "rgb(var(--c-fill-day))" : "transparent",
                       color: isSelected ? "rgb(var(--c-on-primary-fill))" : isFuture ? cal("future") : cal("day"),
                     }}
                   >

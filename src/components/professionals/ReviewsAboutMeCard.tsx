@@ -36,8 +36,8 @@ export const ReviewsAboutMeCard: React.FC<{ className?: string }> = ({ className
 
   return (
     <Card className={className}>
-      <div className="flex items-center justify-between gap-2 mb-2.5 pb-[7.5px] border-b-[1.5px] border-primary">
-        <p className="section-label !border-b-0 !pb-0">Ratings & Reviews</p>
+      <div className="flex items-center justify-between gap-2 mb-2.5">
+        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Ratings & Reviews</p>
         {!loading && !error && <RatingBadge average={average} count={counted.length} />}
       </div>
       {reviews.length === 0 ? (
