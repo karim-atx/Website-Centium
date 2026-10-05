@@ -104,6 +104,12 @@ export const stretchList: StretchItem[] = [
 export interface YogaPose {
   id: string;
   name: string;
+  /** MO1.1.4.2's line under the name. "Rest & reset" is the board's; the
+   *  other five are drafts for review (A16). */
+  subtitle: string;
+  /** The first-pass animation under public/meditation/yoga/ (<image>.gif)
+   *  and its static thumbnail (<image>.png), A14. */
+  image: string;
   difficulty: "beginner" | "intermediate" | "advanced";
   instructions: string;
 }
@@ -112,36 +118,48 @@ export const yogaPoses: YogaPose[] = [
   {
     id: "y1",
     name: "Child's Pose",
+    subtitle: "Rest & reset",
+    image: "yoga-childs-pose",
     difficulty: "beginner",
     instructions: "Kneel and sit back on your heels, then fold forward with arms extended, resting your forehead down.",
   },
   {
     id: "y2",
     name: "Cat-Cow",
+    subtitle: "Warm up the spine",
+    image: "yoga-cat-cow",
     difficulty: "beginner",
     instructions: "On hands and knees, alternate arching your spine up (cat) and dipping it down (cow).",
   },
   {
     id: "y3",
     name: "Downward Dog",
+    subtitle: "Lengthen & energise",
+    image: "yoga-downward-dog",
     difficulty: "intermediate",
     instructions: "From hands and knees, lift your hips up and back, forming an inverted V with your body.",
   },
   {
     id: "y4",
     name: "Warrior II",
+    subtitle: "Strength & focus",
+    image: "yoga-warrior-ii",
     difficulty: "intermediate",
     instructions: "Step into a wide stance, bend the front knee, and extend your arms parallel to the floor.",
   },
   {
     id: "y5",
     name: "Crow Pose",
+    subtitle: "Balance & core",
+    image: "yoga-crow-pose",
     difficulty: "advanced",
     instructions: "Balance your knees on your upper arms, lean forward, and lift your feet off the ground.",
   },
   {
     id: "y6",
     name: "Wheel Pose",
+    subtitle: "Open the chest",
+    image: "yoga-wheel-pose",
     difficulty: "advanced",
     instructions: "Lying down, place hands by your ears and feet near your hips, then press up into a full backbend.",
   },

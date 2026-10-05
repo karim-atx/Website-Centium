@@ -54,3 +54,25 @@ export function habitStreak(completedDates: readonly string[], today: string): n
 export function isDoneOn(completedDates: readonly string[], today: string): boolean {
   return completedDates.includes(today);
 }
+
+/**
+ * The longest run of consecutive completed days in `completedDates`, which is
+ * whatever window was loaded (365 days today): MO1.1's "Personal best". It is
+ * the best inside that window, not all-time, which would need its own read.
+ */
+export function habitBestStreak(completedDates: readonly string[]): number {
+  const days = new Set(completedDates);
+  let best = 0;
+  for (const day of days) {
+    // Only count from the first day of each run.
+    if (days.has(shiftDay(day, -1))) continue;
+    let run = 0;
+    let cursor = day;
+    while (days.has(cursor)) {
+      run++;
+      cursor = shiftDay(cursor, 1);
+    }
+    if (run > best) best = run;
+  }
+  return best;
+}

@@ -68,6 +68,8 @@ export interface ForumReply {
   editedAt: string | null;
   createdAt: string;
   withdrawn: boolean;
+  /** Likes on the reply (MO1.3.3, A21). */
+  reactionCount: number;
 }
 
 /** The label a post shows when the resolver gave no row (a deleted or unknown author). */
@@ -81,7 +83,7 @@ export const UNKNOWN_AUTHOR: Author = {
 
 const THREAD_COLUMNS =
   "id, category_key, identity, title, body, photo_path, status, pinned, locked, edited_at, created_at, withdrawn, reaction_count, reply_count";
-const REPLY_COLUMNS = "id, thread_id, identity, body, status, edited_at, created_at, withdrawn";
+const REPLY_COLUMNS = "id, thread_id, identity, body, status, edited_at, created_at, withdrawn, reaction_count";
 
 type ThreadRow = {
   id: string;
@@ -128,6 +130,7 @@ type ReplyRow = {
   edited_at: string | null;
   created_at: string;
   withdrawn: boolean;
+  reaction_count: number | null;
 };
 
 function toReply(r: ReplyRow): ForumReply {
@@ -140,6 +143,7 @@ function toReply(r: ReplyRow): ForumReply {
     editedAt: r.edited_at,
     createdAt: r.created_at,
     withdrawn: r.withdrawn,
+    reactionCount: Number(r.reaction_count) || 0,
   };
 }
 
@@ -267,6 +271,13 @@ export async function fetchMyLikes(threadIds: string[]): Promise<Set<string>> {
   return new Set(((data ?? []) as { post_id: string; post_kind: string }[]).filter((r) => r.post_kind === "thread").map((r) => r.post_id));
 }
 
+/** Which of these replies the caller has liked (MO1.3.3, A21). */
+export async function fetchMyReplyLikes(replyIds: string[]): Promise<Set<string>> {
+  if (replyIds.length === 0) return new Set();
+  const { data } = await supabase.rpc("forum_my_reactions", { p_thread_ids: [], p_reply_ids: replyIds });
+  return new Set(((data ?? []) as { post_id: string; post_kind: string }[]).filter((r) => r.post_kind === "reply").map((r) => r.post_id));
+}
+
 /**
  * Short-lived signed URLs for the photos on these posts. TEN MINUTES, not an
  * hour: a signed URL keeps working until it expires even after its post is
@@ -293,6 +304,15 @@ export async function likeThread(threadId: string, userId: string, liked: boolea
     ? await supabase.from("forum_reactions").insert({ thread_id: threadId, user_id: userId })
     : await supabase.from("forum_reactions").delete().eq("thread_id", threadId);
   // Liking twice is the same like (a double tap on a slow connection).
+  if (error && error.code !== "23505") return fail(error, "like");
+  return { ok: true, value: null };
+}
+
+/** Likes or unlikes a reply; the same rules as a thread like (one per person, delete limited to your own). */
+export async function likeReply(replyId: string, userId: string, liked: boolean): Promise<Result<null>> {
+  const { error } = liked
+    ? await supabase.from("forum_reactions").insert({ reply_id: replyId, user_id: userId })
+    : await supabase.from("forum_reactions").delete().eq("reply_id", replyId);
   if (error && error.code !== "23505") return fail(error, "like");
   return { ok: true, value: null };
 }

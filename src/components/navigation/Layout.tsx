@@ -8,7 +8,7 @@ import { BottomNav } from "./BottomNav";
 import { UnreadProvider } from "../../context/UnreadContext";
 import { CallProvider } from "../../context/CallContext";
 import { CallSurface } from "../calls/CallSurface";
-import { AchievementUnlockSheet } from "../mind/AchievementUnlockSheet";
+import { AchievementUnlockToast } from "../mind/AchievementUnlockToast";
 import { ActiveWorkoutBar } from "../workout/ActiveWorkoutBar";
 import { useApp } from "../../context/AppContext";
 
@@ -139,7 +139,7 @@ export const Layout: React.FC = () => {
           or writing a journal entry can all unlock one, and the celebration
           belongs on that screen rather than waiting for somebody to next open
           the Mind tab. Renders nothing while the queue is empty. */}
-      <AchievementUnlockSheet />
+      <AchievementUnlockToast />
       </CallProvider>
     </UnreadProvider>
   );

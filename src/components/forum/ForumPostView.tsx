@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, ChevronDown, EllipsisVertical, MessageCircle, Send } from "lucide-react";
 import {
   createReply,
   editPost,
   fetchAuthors,
   fetchMyLikes,
+  fetchMyReplyLikes,
   fetchReplies,
   fetchThread,
+  likeReply,
   likeThread,
   signPhotos,
   UNKNOWN_AUTHOR,
@@ -19,10 +22,19 @@ import {
 import { forumAge, hiddenInRecovery, type ForumCategory } from "../../services/forum/rules";
 import { ForumSafetySheet } from "./ForumSafetySheet";
 import { OwnPostSheet } from "./OwnPostSheet";
-import { AuthorInitial, AuthorName, ForumPlaceholder, HeartIcon, HeldNote, RemovedNote } from "./parts";
+import { AuthorInitial, AuthorName, ForumPlaceholder, HeartIcon, HeldNote, ProfessionalBadge, RemovedNote } from "./parts";
 import { fv } from "./forumColor";
+import { PopupMenu } from "../ui/PopupMenu";
+import { useIsDark } from "../../hooks/useIsDark";
+import { categoryColours } from "./categoryColour";
 
-// Design screen 2: one post, its replies, and the reply bar.
+// Design screen 2: one post, its replies, and the reply bar, restyled to
+// mobile v5.1 MO1.3.3: a "Post" top bar, the post's header card in its
+// category colour (A20), an absolute time, a likes and replies row, icon
+// actions, likes on replies (A21) and a "Reply as" chip. Not shown: "Member
+// since" (A19) and "Replying to", which waits for threaded replies (A21).
+// Every moderation and safety piece stays (A25): own-post edit and withdraw,
+// report and block, held, removed and locked notes, "edited", photos.
 //
 // "Reply as" is the member's choice per reply, nickname or first name, like
 // "Post as" in the composer. A professional has no choice to make: they always
@@ -55,6 +67,11 @@ export function ForumPostView({
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [liked, setLiked] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
+  const [likedReplies, setLikedReplies] = useState<Set<string>>(new Set());
+  const [replyMenu, setReplyMenu] = useState(false);
+  const [replyAnchor, setReplyAnchor] = useState<HTMLButtonElement | null>(null);
+  const replyInput = useRef<HTMLInputElement>(null);
+  const dark = useIsDark();
   const [error, setError] = useState<string | null>(null);
   const [replyAs, setReplyAs] = useState<Identity>(!isProfessional && nickname ? "nickname" : "real_name");
   const [draft, setDraft] = useState("");
@@ -71,6 +88,7 @@ export function ForumPostView({
     setError(d.error);
     setAuthors(d.authors);
     setLiked(d.liked);
+    setLikedReplies(d.likedReplies);
     setPhotoUrl(d.photoUrl);
     setReplies(d.replies);
     setThread(d.thread);
@@ -101,6 +119,26 @@ export function ForumPostView({
       setLiked(!next);
       setThread(thread);
       setError(r.message);
+    }
+  };
+
+  // A like on a reply (A21), optimistic like the post's.
+  const toggleReplyLike = async (reply: ForumReply) => {
+    const next = !likedReplies.has(reply.id);
+    const flip = (on: boolean, d: number) => {
+      setLikedReplies((prev) => {
+        const s2 = new Set(prev);
+        if (on) s2.add(reply.id);
+        else s2.delete(reply.id);
+        return s2;
+      });
+      setReplies((prev) => prev.map((x) => (x.id === reply.id ? { ...x, reactionCount: Math.max(0, x.reactionCount + d) } : x)));
+    };
+    flip(next, next ? 1 : -1);
+    const res = await likeReply(reply.id, userId, next);
+    if (!res.ok) {
+      flip(!next, next ? -1 : 1);
+      setError(res.message);
     }
   };
 
@@ -211,12 +249,12 @@ export function ForumPostView({
 
   const topBar = (
     <div className="flex items-center justify-between -mx-1 pb-2">
-      <button type="button" onClick={back} aria-label="Back" className="tap w-11 h-11 flex items-center justify-center">
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={fv("text")} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-          <path d="M15 5l-7 7 7 7" />
-        </svg>
-      </button>
-      <span className="text-[15px] font-extrabold">{recoveryPending || hiddenByMode ? "" : category?.name ?? ""}</span>
+      <span className="flex items-center gap-1.5">
+        <button type="button" onClick={back} aria-label="Back" className="tap w-11 h-11 flex items-center justify-center">
+          <ArrowLeft size={22} strokeWidth={2} style={{ color: fv("text") }} />
+        </button>
+        <span className="text-[18px] font-extrabold">Post</span>
+      </span>
       {thread && !hiddenByMode && !recoveryPending && thread.status !== "removed" && (authors.get(thread.id)?.isMine ?? false) ? (
         <button
           type="button"
@@ -224,11 +262,7 @@ export function ForumPostView({
           onClick={() => setOwn({ ref: { threadId: thread.id }, kind: "post", createdAt: thread.createdAt })}
           className="tap w-11 h-11 flex items-center justify-center"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill={fv("muted")} aria-hidden="true">
-            <circle cx="5" cy="12" r="1.8" />
-            <circle cx="12" cy="12" r="1.8" />
-            <circle cx="19" cy="12" r="1.8" />
-          </svg>
+          <EllipsisVertical size={18} style={{ color: fv("muted") }} aria-hidden />
         </button>
       ) : thread && !hiddenByMode && !recoveryPending && thread.status === "published" && !(authors.get(thread.id)?.isMine ?? false) ? (
         <button
@@ -239,11 +273,7 @@ export function ForumPostView({
           }
           className="tap w-11 h-11 flex items-center justify-center"
         >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill={fv("muted")} aria-hidden="true">
-            <circle cx="5" cy="12" r="1.8" />
-            <circle cx="12" cy="12" r="1.8" />
-            <circle cx="19" cy="12" r="1.8" />
-          </svg>
+          <EllipsisVertical size={18} style={{ color: fv("muted") }} aria-hidden />
         </button>
       ) : (
         <span className="w-11 h-11" aria-hidden="true" />
@@ -277,6 +307,7 @@ export function ForumPostView({
   const author = authors.get(thread.id) ?? UNKNOWN_AUTHOR;
   const visibleReplies = replies;
   const canReply = thread.status === "published" && !thread.locked;
+  const postColours = categoryColours(thread.categoryKey, dark);
 
   return (
     <div className="flex flex-col" style={{ color: fv("text") }}>
@@ -285,47 +316,100 @@ export function ForumPostView({
       {thread.status === "removed" ? (
         <RemovedNote kind="post" />
       ) : (
-        <div className="flex flex-col gap-2.5">
-          <div className="flex items-center gap-2.5">
-            <AuthorInitial author={author} identity={thread.identity} size={40} />
-            <div className="flex flex-col min-w-0">
-              <AuthorName author={author} size={15} />
-              <span className="text-xs" style={{ color: fv("muted") }}>
-                {forumAge(thread.createdAt)}
-                {thread.editedAt ? " · edited" : ""}
-                {thread.pinned ? " · pinned" : ""}
+        <div className="flex flex-col gap-3">
+          {/* MO1.3.3: the header card in the category's colour. */}
+          <div
+            className="relative overflow-hidden rounded-[22px] px-4 py-4 flex flex-col gap-3"
+            style={{ background: postColours.strong, color: postColours.onStrong }}
+          >
+            <span aria-hidden className="absolute -right-10 -top-8 w-40 h-40 rounded-full" style={{ background: "rgba(255,255,255,0.10)" }} />
+            <div className="relative flex items-center gap-3">
+              <span className="rounded-full p-[3px] shrink-0" style={{ background: "#FFFFFF" }}>
+                <AuthorInitial author={author} identity={thread.identity} size={40} />
               </span>
+              <div className="min-w-0 flex flex-col gap-1">
+                <span className="flex items-center gap-1.5 flex-wrap min-w-0">
+                  {author.professionalId ? (
+                    <Link to={`/app/professionals/${author.professionalId}`} className="text-[16px] font-bold no-underline [overflow-wrap:anywhere]" style={{ color: postColours.onStrong }}>
+                      {author.label}
+                    </Link>
+                  ) : (
+                    <span className="text-[16px] font-bold [overflow-wrap:anywhere]">{author.label}</span>
+                  )}
+                  {author.professionalId && <ProfessionalBadge />}
+                </span>
+                <span className="flex items-center gap-2 flex-wrap">
+                  {category && (
+                    <span
+                      className="inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[12px] font-bold"
+                      style={{ background: "#FFFFFF", color: categoryColours(thread.categoryKey, false).strong }}
+                    >
+                      <span aria-hidden className="w-1.5 h-1.5 rounded-full" style={{ background: categoryColours(thread.categoryKey, false).strong }} />
+                      {category.name}
+                    </span>
+                  )}
+                  {(thread.pinned || thread.editedAt) && (
+                    <span className="text-[12px] font-semibold opacity-90">
+                      {[thread.pinned ? "Pinned" : null, thread.editedAt ? "Edited" : null].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
+                </span>
+              </div>
             </div>
+            {!(editing && "threadId" in editing.ref) && (
+              <h2 className="relative m-0 text-[21px] font-extrabold leading-tight [overflow-wrap:anywhere] [text-wrap:balance]">{thread.title}</h2>
+            )}
           </div>
           {thread.status === "held" && <HeldNote />}
           {editing && "threadId" in editing.ref ? (
             editFields("post")
           ) : (
-            <>
-              <h2 className="m-0 text-xl font-extrabold [overflow-wrap:anywhere] [text-wrap:balance]">{thread.title}</h2>
-              <p className="m-0 text-sm leading-[1.6] whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ color: fv("body") }}>
-                {thread.body}
-              </p>
-            </>
+            <p className="m-0 text-base leading-[1.6] whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ color: fv("body") }}>
+              {thread.body}
+            </p>
           )}
           {thread.photoPath && (
             <div className="rounded-[14px] overflow-hidden" style={{ background: fv("photo-bg"), minHeight: photoUrl ? undefined : 180 }}>
               {photoUrl && <img src={photoUrl} alt="Photo attached to the post" className="w-full max-h-[420px] object-cover" />}
             </div>
           )}
+          <p className="m-0 text-[12px]" style={{ color: fv("muted") }}>
+            {postTime(thread.createdAt)}
+          </p>
           {thread.status === "published" && (
-            <div className="flex gap-2.5">
-              <button
-                type="button"
-                onClick={() => void toggleLike()}
-                aria-pressed={liked}
-                aria-label={`${liked ? "Unlike" : "Like"}, ${thread.reactionCount} ${thread.reactionCount === 1 ? "like" : "likes"}`}
-                className="tap h-11 rounded-full px-[14px] flex gap-1.5 items-center text-[13px] font-bold"
-                style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
-              >
-                <HeartIcon filled={liked} color={liked ? fv("accent") : fv("muted")} /> {thread.reactionCount}
-              </button>
-            </div>
+            <>
+              <div className="flex gap-5 py-3 text-[14px]" style={{ borderTop: `1px solid ${fv("rule")}`, borderBottom: `1px solid ${fv("rule")}`, color: fv("muted") }}>
+                <span>
+                  <strong className="font-extrabold" style={{ color: fv("text") }}>{thread.reactionCount}</strong>{" "}
+                  {thread.reactionCount === 1 ? "Like" : "Likes"}
+                </span>
+                <span>
+                  <strong className="font-extrabold" style={{ color: fv("text") }}>{thread.replyCount}</strong>{" "}
+                  {thread.replyCount === 1 ? "Reply" : "Replies"}
+                </span>
+              </div>
+              <div className="flex -mt-3 pb-1" style={{ borderBottom: `1px solid ${fv("rule")}` }}>
+                <button
+                  type="button"
+                  onClick={() => replyInput.current?.focus()}
+                  disabled={!canReply}
+                  aria-label="Reply"
+                  className="tap flex-1 h-11 flex items-center justify-center disabled:opacity-40"
+                  style={{ color: fv("accent") }}
+                >
+                  <MessageCircle size={20} strokeWidth={1.75} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void toggleLike()}
+                  aria-pressed={liked}
+                  aria-label={`${liked ? "Unlike" : "Like"}, ${thread.reactionCount} ${thread.reactionCount === 1 ? "like" : "likes"}`}
+                  className="tap flex-1 h-11 flex items-center justify-center"
+                >
+                  <HeartIcon filled={liked} color={fv("accent")} />
+                </button>
+              </div>
+            </>
           )}
         </div>
       )}
@@ -336,10 +420,7 @@ export function ForumPostView({
         </p>
       )}
 
-      <div className="mt-[14px] pt-3 flex flex-col gap-[14px] grow" style={{ borderTop: `1px solid ${fv("rule")}` }}>
-        <span className="text-[13px] font-extrabold" style={{ color: fv("muted") }}>
-          {thread.replyCount} {thread.replyCount === 1 ? "reply" : "replies"}
-        </span>
+      <div className="pt-4 flex flex-col gap-[18px] grow">
         {visibleReplies.map((r) =>
           r.status === "removed" ? (
             <RemovedNote key={r.id} kind="reply" radius={12} />
@@ -350,6 +431,9 @@ export function ForumPostView({
               author={authors.get(r.id) ?? UNKNOWN_AUTHOR}
               onSafety={(label) => setSheet({ ref: { replyId: r.id }, kind: "reply", label })}
               onOwn={() => setOwn({ ref: { replyId: r.id }, kind: "reply", createdAt: r.createdAt })}
+              liked={likedReplies.has(r.id)}
+              onLike={() => void toggleReplyLike(r)}
+              onReply={canReply ? () => replyInput.current?.focus() : undefined}
               editor={editing && "replyId" in editing.ref && editing.ref.replyId === r.id ? editFields("reply") : null}
             />
           )
@@ -366,18 +450,22 @@ export function ForumPostView({
           style={{ borderTop: `1px solid ${fv("rule")}`, background: fv("card") }}
         >
           {!isProfessional && nickname && (
-            <label className="flex items-center gap-1.5 text-xs" style={{ color: fv("muted") }}>
+            <span className="flex items-center gap-2 text-xs" style={{ color: fv("muted") }}>
               Reply as
-              <select
-                value={replyAs}
-                onChange={(e) => setReplyAs(e.target.value as Identity)}
-                className="h-8 rounded-[10px] text-xs font-bold min-w-0 max-w-full px-1"
-                style={{ border: `1px solid ${fv("border")}`, color: fv("text"), background: fv("card") }}
+              {/* MO1.3.3: a chip that opens the choice (was a native select). */}
+              <button
+                ref={setReplyAnchor}
+                type="button"
+                onClick={() => setReplyMenu(true)}
+                aria-haspopup="menu"
+                aria-label={`Reply as ${replyAs === "nickname" ? nickname : firstName}`}
+                className="tap h-8 rounded-full px-3 flex items-center gap-1 text-[13px] font-bold"
+                style={{ background: fv("rules-bg"), color: fv("rules-ink") }}
               >
-                <option value="nickname">{nickname} (nickname)</option>
-                <option value="real_name">{firstName} (your name)</option>
-              </select>
-            </label>
+                {replyAs === "nickname" ? nickname : firstName}
+                <ChevronDown size={14} />
+              </button>
+            </span>
           )}
           {replyError && (
             <p role="alert" className="m-0 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3 py-2">
@@ -386,10 +474,18 @@ export function ForumPostView({
           )}
           <div className="flex gap-2 items-center">
             <label
-              className="grow min-w-0 h-11 rounded-[22px] flex items-center px-[14px]"
+              className="grow min-w-0 h-12 rounded-full flex items-center gap-2.5 pl-1.5 pr-1.5"
               style={{ border: `1px solid ${fv("border")}` }}
             >
+              <span
+                aria-hidden
+                className="w-9 h-9 rounded-full flex items-center justify-center text-[14px] font-extrabold shrink-0"
+                style={{ background: fv("teal-bg"), color: fv("teal-ink") }}
+              >
+                {((replyAs === "nickname" && nickname ? nickname : firstName) || "?").charAt(0).toUpperCase()}
+              </span>
               <input
+                ref={replyInput}
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
                 placeholder="Write a reply"
@@ -398,18 +494,16 @@ export function ForumPostView({
                 className="border-none outline-none text-sm grow min-w-0 bg-transparent"
                 style={{ color: fv("text") }}
               />
+              <button
+                type="submit"
+                aria-label="Send reply"
+                disabled={!draft.trim() || sending}
+                className="tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 disabled:opacity-50"
+                style={{ background: fv("accent"), color: fv("on-accent") }}
+              >
+                <Send size={16} />
+              </button>
             </label>
-            <button
-              type="submit"
-              aria-label="Send reply"
-              disabled={!draft.trim() || sending}
-              className="tap w-11 h-11 rounded-[22px] flex items-center justify-center shrink-0 disabled:opacity-50"
-              style={{ background: fv("accent") }}
-            >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={fv("on-accent")} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </button>
           </div>
         </form>
       ) : (
@@ -419,6 +513,21 @@ export function ForumPostView({
             This post isn't taking new replies.
           </p>
         )
+      )}
+
+      {!isProfessional && nickname && (
+        <PopupMenu<Identity>
+          open={replyMenu}
+          onClose={() => setReplyMenu(false)}
+          anchor={replyAnchor}
+          align="left"
+          options={[
+            { value: "nickname", label: nickname, note: "Your nickname" },
+            { value: "real_name", label: firstName, note: "Your first name" },
+          ]}
+          selected={replyAs}
+          onSelect={setReplyAs}
+        />
       )}
 
       <OwnPostSheet
@@ -459,18 +568,28 @@ type Loaded = {
   replies: ForumReply[];
   authors: Map<string, Author>;
   liked: boolean;
+  likedReplies: Set<string>;
   photoUrl: string | null;
   error: string | null;
 };
 
+/** MO1.3.3's absolute time: "9:14 AM · Aug 24, 2026". */
+function postTime(iso: string): string {
+  const d = new Date(iso);
+  const time = d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+  const date = d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  return `${time} · ${date}`;
+}
+
 /** Everything the post page shows, fetched the same way whatever the reader's settings. */
 async function loadPost(threadId: string): Promise<Loaded> {
   const [t, r] = await Promise.all([fetchThread(threadId), fetchReplies(threadId)]);
-  if (!t.ok) return { thread: null, replies: [], authors: new Map(), liked: false, photoUrl: null, error: t.message };
+  if (!t.ok) return { thread: null, replies: [], authors: new Map(), liked: false, likedReplies: new Set(), photoUrl: null, error: t.message };
   const rs = r.ok ? r.value : [];
-  const [a, likes, photos] = await Promise.all([
+  const [a, likes, replyLikes, photos] = await Promise.all([
     fetchAuthors(t.value ? [t.value.id] : [], rs.map((x) => x.id)),
     fetchMyLikes(t.value ? [t.value.id] : []),
+    fetchMyReplyLikes(rs.map((x) => x.id)),
     signPhotos(t.value?.photoPath ? [t.value.photoPath] : []),
   ]);
   return {
@@ -478,6 +597,7 @@ async function loadPost(threadId: string): Promise<Loaded> {
     replies: rs,
     authors: a,
     liked: !!t.value && likes.has(t.value.id),
+    likedReplies: replyLikes,
     photoUrl: t.value?.photoPath ? photos.get(t.value.photoPath) ?? null : null,
     error: r.ok ? null : r.message,
   };
@@ -489,21 +609,27 @@ function ReplyRow({
   onSafety,
   onOwn,
   editor,
+  liked,
+  onLike,
+  onReply,
 }: {
   reply: ForumReply;
   author: Author;
   onSafety: (label: string) => void;
   onOwn: () => void;
   editor: React.ReactNode;
+  liked: boolean;
+  onLike: () => void;
+  onReply?: () => void;
 }) {
   return (
-    <div className="flex gap-2.5">
-      <AuthorInitial author={author} identity={reply.identity} size={32} />
+    <div className="flex gap-3">
+      <AuthorInitial author={author} identity={reply.identity} size={40} />
       <div className="flex flex-col gap-1 min-w-0 grow">
         <span className="flex gap-1.5 items-center flex-wrap">
-          <AuthorName author={author} size={13} />
+          <AuthorName author={author} size={15} />
           <span className="text-xs" style={{ color: fv("muted") }}>
-            {forumAge(reply.createdAt)}
+            · {forumAge(reply.createdAt)}
             {reply.editedAt ? " · edited" : ""}
           </span>
           {(author.isMine ? reply.status !== "removed" : reply.status === "published") && (
@@ -523,8 +649,27 @@ function ReplyRow({
         </span>
         {reply.status === "held" && <HeldNote />}
         {editor ?? (
-          <span className="text-[13px] leading-[1.5] whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ color: fv("body") }}>
+          <span className="text-[15px] leading-[1.5] whitespace-pre-wrap [overflow-wrap:anywhere]" style={{ color: fv("body") }}>
             {reply.body}
+          </span>
+        )}
+        {reply.status === "published" && !editor && (
+          <span className="flex items-center gap-5 mt-1 text-[13px]" style={{ color: fv("muted") }}>
+            {onReply && (
+              <button type="button" onClick={onReply} aria-label="Reply" className="tap -my-2 py-2">
+                <MessageCircle size={16} strokeWidth={1.75} />
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={onLike}
+              aria-pressed={liked}
+              aria-label={`${liked ? "Unlike" : "Like"} reply, ${reply.reactionCount} ${reply.reactionCount === 1 ? "like" : "likes"}`}
+              className="tap flex items-center gap-1.5 -my-2 py-2"
+            >
+              <HeartIcon filled={liked} color={liked ? fv("accent") : fv("muted")} />
+              {reply.reactionCount > 0 && <span className="tabular-nums">{reply.reactionCount}</span>}
+            </button>
           </span>
         )}
       </div>

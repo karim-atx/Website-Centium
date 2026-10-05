@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { habitStreak, isDoneOn, shiftDay } from "./streak.ts";
+import { habitBestStreak, habitStreak, isDoneOn, shiftDay } from "./streak.ts";
 
 const TODAY = "2026-09-29";
 const back = (n: number) => shiftDay(TODAY, -n);
@@ -69,4 +69,15 @@ test("shiftDay is UTC arithmetic across a DST change", () => {
   // land on the wrong day here.
   assert.equal(shiftDay("2026-03-29", -1), "2026-03-28");
   assert.equal(shiftDay("2026-03-28", 1), "2026-03-29");
+});
+
+test("best streak is the longest run in the window", () => {
+  assert.equal(habitBestStreak([]), 0);
+  assert.equal(habitBestStreak(["2026-10-01"]), 1);
+  assert.equal(
+    habitBestStreak(["2026-09-01", "2026-09-02", "2026-09-03", "2026-09-10", "2026-09-11", "2026-10-05"]),
+    3
+  );
+  // Order and duplicates don't matter; a month boundary is still consecutive.
+  assert.equal(habitBestStreak(["2026-10-01", "2026-09-30", "2026-09-30", "2026-09-29"]), 3);
 });

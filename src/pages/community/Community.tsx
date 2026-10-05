@@ -80,8 +80,30 @@ function useForumGate(section: Section):
   };
 }
 
+// MO1.3 #1: a back chevron and the subtitle; the title keeps its 26/800 (A17).
 function Heading() {
-  return <h1 className="m-0 text-[26px] font-extrabold" style={{ color: fv("text") }}>Community</h1>;
+  const navigate = useNavigate();
+  return (
+    <div className="flex items-start gap-2.5">
+      <button
+        type="button"
+        onClick={() => navigate(-1)}
+        aria-label="Back"
+        className="tap w-9 h-9 rounded-full flex items-center justify-center shrink-0 -ml-1.5 mt-0.5"
+        style={{ color: fv("muted") }}
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M15 18l-6-6 6-6" />
+        </svg>
+      </button>
+      <div className="min-w-0">
+        <h1 className="m-0 text-[26px] font-extrabold leading-tight" style={{ color: fv("text") }}>Community</h1>
+        <p className="mt-1 text-[13px] font-medium" style={{ color: fv("muted") }}>
+          Discuss with other clients, or learn from a course
+        </p>
+      </div>
+    </div>
+  );
 }
 
 function Refused({ text }: { text: string }) {
@@ -130,8 +152,9 @@ function Gated({ render, section = "forum" }: { render: (ctx: Ctx) => React.Reac
   return <>{render(gate.ctx)}</>;
 }
 
-/** /app/forum: the Community page. */
-export default function Community() {
+/** /app/forum: the Community page. With `compose` (/app/forum/new) the New
+ *  post sheet is open over the forum (MO1.3.2, A22). */
+export default function Community({ compose = false }: { compose?: boolean }) {
   const [params, setParams] = useSearchParams();
   const tab = params.get("tab") === "courses" ? "courses" : "forum";
   const navigate = useNavigate();
@@ -148,7 +171,9 @@ export default function Community() {
         return (
           <div className="flex flex-col gap-3" style={{ color: fv("text") }}>
             <Heading />
-            <div className="flex gap-1 rounded-[14px] p-1" style={{ background: fv("track") }} role="tablist" aria-label="Community">
+            {/* MO1.3 #2: a 56 pt segmented control (44 pt tabs), in the
+                forum's own colours. */}
+            <div className="flex gap-[5px] rounded-2xl p-1.5" style={{ background: fv("track") }} role="tablist" aria-label="Community">
               {(["forum", "courses"] as const).map((t) => (
                 <button
                   key={t}
@@ -156,7 +181,7 @@ export default function Community() {
                   role="tab"
                   aria-selected={tab === t}
                   onClick={() => setParams(t === "courses" ? { tab: "courses" } : {}, { replace: true })}
-                  className="tap grow basis-0 h-10 rounded-[11px] text-sm"
+                  className="tap grow basis-0 h-11 rounded-xl text-[15px]"
                   style={
                     tab === t
                       ? { background: fv("track-active"), color: fv("text"), fontWeight: 800 }
@@ -186,13 +211,28 @@ export default function Community() {
                 <CoursesCatalogue userId={ctx.userId} />
               </>
             ) : (
+              <>
+              {compose && (
+                <ForumCompose
+                  onClose={() => navigate("/app/forum", { replace: true })}
+                  userId={ctx.userId}
+                  firstName={ctx.firstName}
+                  nickname={ctx.nickname}
+                  isProfessional={ctx.isProfessional}
+                  categories={ctx.categories}
+                  recoveryOn={ctx.recoveryOn}
+                  recoveryPending={ctx.recoveryPending}
+                />
+              )}
               <ForumHome
+                userId={ctx.userId}
                 categories={ctx.categories}
                 nickname={ctx.nickname}
                 isProfessional={ctx.isProfessional}
                 recoveryOn={ctx.recoveryOn}
                 recoveryPending={ctx.recoveryPending}
               />
+              </>
             )}
           </div>
         );
@@ -227,27 +267,9 @@ export function ForumPostPage() {
   );
 }
 
-/** /app/forum/new */
+/** /app/forum/new: the forum with the New post sheet open. */
 export function ForumNewPage() {
-  return (
-    <Gated
-      render={(ctx) =>
-        !ctx.isProfessional && ctx.nickname === null ? (
-          <Navigate to="/app/forum" replace />
-        ) : (
-          <ForumCompose
-            userId={ctx.userId}
-            firstName={ctx.firstName}
-            nickname={ctx.nickname}
-            isProfessional={ctx.isProfessional}
-            categories={ctx.categories}
-            recoveryOn={ctx.recoveryOn}
-            recoveryPending={ctx.recoveryPending}
-          />
-        )
-      }
-    />
-  );
+  return <Community compose />;
 }
 
 /** /app/forum/nickname: changing it, from the forum's Edit link or from Profile. */

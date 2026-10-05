@@ -20,6 +20,8 @@ import { coursePill, enrolledLabel, formatPrice, nextLesson, progressPercent } f
 import { ForumChip, ForumPlaceholder } from "../forum/parts";
 import { fv } from "../forum/forumColor";
 import { CoverPill, Instructor, RatingShort } from "./courseParts";
+import { coverBackground } from "./courseCover";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Design screen 6: the Courses tab. Search, category chips, "Continue
 // learning" with progress, then the course cards.
@@ -60,7 +62,11 @@ async function load(userId: string): Promise<{ data: Data } | { error: string }>
   };
 }
 
+/** MO1.3.1's filter order; anything else sorts last. */
+const COURSE_ORDER = ["workouts", "nutrition", "progress", "motivation", "general"];
+
 export function CoursesCatalogue({ userId }: { userId: string }) {
+  const dark = useIsDark();
   const [result, setResult] = useState<{ data: Data } | { error: string } | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<string | null>(null);
@@ -125,7 +131,8 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
           return { course, next: full, week, n, percent: progressPercent(lessons, done, access) };
         })
         .filter((x): x is NonNullable<typeof x> => !!x)
-        .slice(0, 3)
+        // MO1.3.1 draws one "Continue learning" course (A24).
+        .slice(0, 1)
     : [];
 
   return (
@@ -149,15 +156,24 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
       </label>
 
       {data ? (
-        <div className="flex gap-1.5 overflow-x-auto no-scrollbar -mx-1 px-1" role="group" aria-label="Course categories">
-          <ForumChip active={filter === null} onClick={() => setFilter(null)}>
+        // MO1.3.1: the filters as one strip running off the right edge, in
+        // the frame's order (All · Workouts · Nutrition · Progress · Motivation).
+        <div
+          className="flex gap-1 overflow-x-auto no-scrollbar -mr-4 p-1 pr-4"
+          style={{ background: fv("track"), borderRadius: "16px 0 0 16px" }}
+          role="group"
+          aria-label="Course categories"
+        >
+          <ForumChip inStrip active={filter === null} onClick={() => setFilter(null)}>
             All
           </ForumChip>
-          {data.categories.map((c) => (
-            <ForumChip key={c.key} active={filter === c.key} onClick={() => setFilter(c.key)}>
-              {c.name}
-            </ForumChip>
-          ))}
+          {[...data.categories]
+            .sort((a, b) => COURSE_ORDER.indexOf(a.key) - COURSE_ORDER.indexOf(b.key))
+            .map((c) => (
+              <ForumChip inStrip key={c.key} active={filter === c.key} onClick={() => setFilter(c.key)}>
+                {c.name}
+              </ForumChip>
+            ))}
         </div>
       ) : (
         <div className="flex gap-1.5" aria-hidden="true">
@@ -184,7 +200,7 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
                 <Link
                   key={course.id}
                   to={`/app/forum/courses/${course.id}/lessons/${next.id}`}
-                  className="rounded-[18px] px-[14px] py-3 flex flex-col gap-2 no-underline"
+                  className="rounded-[20px] px-4 py-3.5 flex flex-col gap-2 no-underline"
                   style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
                 >
                   <span className="text-[15px] font-extrabold [overflow-wrap:anywhere]">{course.title}</span>
@@ -213,10 +229,10 @@ export function CoursesCatalogue({ userId }: { userId: string }) {
                 <Link
                   key={c.id}
                   to={`/app/forum/courses/${c.id}`}
-                  className="rounded-[18px] overflow-hidden flex flex-col no-underline"
+                  className="rounded-[20px] overflow-hidden flex flex-col no-underline"
                   style={{ background: fv("card"), border: `1px solid ${fv("border")}`, color: fv("text") }}
                 >
-                  <div className="h-[104px] flex items-end p-2.5" style={{ background: c.coverColour }}>
+                  <div className="h-[104px] flex items-end p-2.5" style={{ background: coverBackground(c.coverColour, dark) }}>
                     <CoverPill>{coursePill(c.level, weeks)}</CoverPill>
                   </div>
                   <div className="px-[14px] py-3 flex flex-col gap-[5px]">

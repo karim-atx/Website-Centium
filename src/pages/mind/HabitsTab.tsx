@@ -37,7 +37,10 @@ function weekOf(today: string): string[] {
 // pinned Add habit is the old outline button. Edit and Delete sit behind a
 // swipe, as in Journal and Workout › History. Dark mode is the v5.1 set; a
 // tick there is the dark filled-control ink on the purple (white measured
-// about 2.6:1 on #A991FE).
+// about 2.6:1 on #A991FE). An empty ring for today or an earlier day is
+// #807C93 in dark: 4.1:1 on the card and 3.2:1 on the today column in every
+// accent (a control's outline needs 3:1). Later days stay faint: they can't
+// be ticked. Light mode is unchanged (A26).
 export default function HabitsTab() {
   const {
     today,
@@ -167,7 +170,7 @@ export default function HabitsTab() {
                       aria-pressed={ticked}
                       className={clsx(
                         "tap w-6 h-6 rounded-full flex items-center justify-center border",
-                        ticked ? "bg-primary border-primary" : "border-charcoal/15"
+                        ticked ? "bg-primary border-primary" : "border-charcoal/15 dark:border-[#807C93]"
                       )}
                     >
                       {ticked && <Check size={13} className="text-white dark:text-on-primary-fill" strokeWidth={3} />}
@@ -178,7 +181,7 @@ export default function HabitsTab() {
                       role="img"
                       className={clsx(
                         "w-6 h-6 rounded-full flex items-center justify-center border",
-                        ticked ? "bg-primary border-primary" : future ? "border-charcoal/[0.08]" : "border-charcoal/15"
+                        ticked ? "bg-primary border-primary" : future ? "border-charcoal/[0.08]" : "border-charcoal/15 dark:border-[#807C93]"
                       )}
                     >
                       {ticked && <Check size={13} className="text-white dark:text-on-primary-fill" strokeWidth={3} />}

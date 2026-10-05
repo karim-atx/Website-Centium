@@ -78,21 +78,34 @@ export const CtaButton: React.FC<CtaButtonProps> = ({
   </button>
 );
 
-type IconCtaProps = { icon: React.ReactNode; label: string; onClick: () => void; onAnchor?: (el: HTMLButtonElement | null) => void };
+type IconCtaProps = {
+  icon: React.ReactNode;
+  label: string;
+  onClick: () => void;
+  onAnchor?: (el: HTMLButtonElement | null) => void;
+  /** Width in pt (default 89, MO1.1.2's FolderCog); MO1.1.4's Reset is 44. */
+  width?: number;
+  /** Colour overrides, e.g. to keep a replaced button's light colours. */
+  className?: string;
+  disabled?: boolean;
+};
 
-/** The pinned row's icon-only secondary button, 89 wide. */
-const IconCta: React.FC<IconCtaProps> = ({ icon, label, onClick, onAnchor }) => (
+/** The pinned row's icon-only secondary button. */
+const IconCta: React.FC<IconCtaProps> = ({ icon, label, onClick, onAnchor, width = 89, className, disabled }) => (
   <button
     ref={onAnchor}
     type="button"
     aria-label={label}
     title={label}
     onClick={onClick}
+    disabled={disabled}
+    style={{ width }}
     className={clsx(
-      "tap flex-none w-[89px] inline-flex items-center justify-center",
+      "tap flex-none inline-flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none",
       "transition-[filter] duration-150 ease-out active:brightness-[0.92]",
       sizeClasses.page,
-      variantClasses.secondary
+      variantClasses.secondary,
+      className
     )}
   >
     {icon}

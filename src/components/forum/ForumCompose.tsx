@@ -1,12 +1,21 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { createThread, uploadForumPhoto, type Identity } from "../../services/forum";
 import { FORUM_PHOTO_ACCEPT, FORUM_PHOTOS_ENABLED, prepareForumPhoto } from "../../services/forum/photo";
 import { composeChips, type ForumCategory } from "../../services/forum/rules";
-import { ForumChip } from "./parts";
 import { fv } from "./forumColor";
+import { BottomSheet } from "../ui/BottomSheet";
+import { CtaButton } from "../ui/PinnedCta";
+import { PopupMenu } from "../ui/PopupMenu";
+import { useIsDark } from "../../hooks/useIsDark";
+import { categoryColours, orderCategories } from "./categoryColour";
 
-// Design screen 3: a new post.
+// Design screen 3: a new post, as mobile v5.1 MO1.3.2's lavender-header
+// sheet over the forum (also what /app/forum/new opens). The category is a
+// dropdown (MO1.3.2.1) that starts on General, and "Post to forum" stays
+// disabled until the post is filled in (A22). The photo upload and its
+// privacy line are not drawn but kept. Fields keep the forum's colours.
 //
 // "POST AS" IS FIXED ONCE POSTED. The server freezes a post's identity
 // (ATX61), and the line under the choice says so. A professional has no
@@ -25,7 +34,9 @@ export function ForumCompose({
   categories,
   recoveryOn,
   recoveryPending,
+  onClose,
 }: {
+  onClose: () => void;
   userId: string;
   firstName: string;
   nickname: string | null;
@@ -35,7 +46,14 @@ export function ForumCompose({
   recoveryPending: boolean;
 }) {
   const navigate = useNavigate();
-  const chips = useMemo(() => composeChips(categories, recoveryOn), [categories, recoveryOn]);
+  const dark = useIsDark();
+  // General first (the default), then the design's order (A20, A22).
+  const chips = useMemo(() => {
+    const all = orderCategories(composeChips(categories, recoveryOn));
+    return [...all.filter((c) => c.key === "general"), ...all.filter((c) => c.key !== "general")];
+  }, [categories, recoveryOn]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [anchor, setAnchor] = useState<HTMLButtonElement | null>(null);
   const [identity, setIdentity] = useState<Identity>(!isProfessional && nickname ? "nickname" : "real_name");
   const [category, setCategory] = useState<string | null>(null);
   const [title, setTitle] = useState("");
@@ -48,8 +66,7 @@ export function ForumCompose({
   const [error, setError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
-  // The design opens on the first category selected; a choice recovery mode
-  // hides falls back to it too.
+  // Opens on General (the first); a choice recovery mode hides falls back to it too.
   const chosen = category && chips.some((c) => c.key === category) ? category : chips[0]?.key ?? null;
 
   useEffect(() => () => {
@@ -114,54 +131,42 @@ export function ForumCompose({
     navigate(r.value.held ? "/app/forum" : `/app/forum/post/${r.value.id}`, { replace: true });
   };
 
+  // MO1.3.2: choice cards with a check circle (the radio stays, hidden, for
+  // keyboards and screen readers).
   const choice = (value: Identity, name: string, hint: string) => {
     const on = identity === value;
     return (
       <label
-        className="flex-1 min-w-0 rounded-[14px] px-3 py-2.5 flex flex-col gap-0.5 cursor-pointer"
+        className="flex-1 min-w-0 rounded-[14px] px-3 py-2.5 flex gap-2.5 items-center cursor-pointer"
         style={on ? { border: `2px solid ${fv("accent")}`, background: fv("rules-bg") } : { border: `1px solid ${fv("border")}`, margin: 1 }}
       >
-        <span className="flex gap-1.5 items-center min-w-0">
-          <input
-            type="radio"
-            name="forum-post-as"
-            checked={on}
-            onChange={() => setIdentity(value)}
-            style={{ accentColor: fv("accent") }}
-          />
-          <span className="text-sm font-extrabold truncate">{name}</span>
+        <input type="radio" name="forum-post-as" checked={on} onChange={() => setIdentity(value)} className="sr-only" />
+        <span
+          aria-hidden
+          className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+          style={on ? { background: fv("accent"), color: fv("on-accent") } : { border: `1.5px solid ${fv("border")}`, background: fv("card") }}
+        >
+          {on && <Check size={12} strokeWidth={3} />}
         </span>
-        <span className="text-xs" style={{ color: fv("muted") }}>
-          {hint}
+        <span className="min-w-0 flex flex-col gap-0.5">
+          <span className="text-sm font-extrabold truncate">{name}</span>
+          <span className="text-xs" style={{ color: fv("muted") }}>
+            {hint}
+          </span>
         </span>
       </label>
     );
   };
+  const chosenCat = chips.find((c) => c.key === chosen);
 
   return (
-    <div className="flex flex-col" style={{ color: fv("text") }}>
-      <div className="flex items-center justify-between pt-1 pb-2">
-        <button
-          type="button"
-          onClick={() => navigate("/app/forum")}
-          className="tap text-sm font-bold py-3 px-1"
-          style={{ color: fv("link") }}
-        >
-          Cancel
-        </button>
-        <span className="text-base font-extrabold">New post</span>
-        <button
-          type="button"
-          onClick={() => void post()}
-          disabled={busy || preparing}
-          className="tap h-11 rounded-full px-[18px] text-sm font-extrabold disabled:opacity-60"
-          style={{ background: fv("accent"), color: fv("on-accent") }}
-        >
-          {busy ? "Posting…" : "Post"}
-        </button>
-      </div>
-
-      <div className="py-2 flex flex-col gap-4">
+    <BottomSheet
+      open
+      onClose={onClose}
+      title="New Post"
+      footer={<CtaButton label={busy ? "Posting…" : "Post to forum"} onClick={() => void post()} disabled={!ready} loading={busy} />}
+    >
+      <div className="flex flex-col gap-4" style={{ color: fv("text") }}>
         {error && (
           <p role="alert" className="m-0 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">
             {error}
@@ -170,7 +175,9 @@ export function ForumCompose({
 
         {!isProfessional && nickname && (
           <fieldset className="border-none m-0 p-0 flex flex-col gap-2">
-            <legend className="text-[13px] font-extrabold p-0 mb-2">Post as</legend>
+            <legend className="text-[12px] font-semibold p-0 mb-2" style={{ color: fv("muted") }}>
+              Post as
+            </legend>
             <div className="flex gap-2">
               {choice("nickname", nickname, "Your nickname")}
               {choice("real_name", firstName, "Your first name")}
@@ -181,42 +188,51 @@ export function ForumCompose({
           </fieldset>
         )}
 
-        <div className="flex flex-col gap-2">
-          <span className="text-[13px] font-extrabold">Category</span>
-          {recoveryPending ? (
-            <div className="flex gap-1.5 flex-wrap" aria-hidden="true">
-              {[92, 80, 100].map((w, i) => (
-                <div key={i} className="h-[34px] rounded-full animate-pulse" style={{ width: w, background: fv("track") }} />
-              ))}
-            </div>
-          ) : (
-            <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Category">
-              {chips.map((c) => (
-                <ForumChip key={c.key} active={chosen === c.key} onClick={() => setCategory(c.key)}>
-                  {c.name}
-                </ForumChip>
-              ))}
-            </div>
-          )}
+        <div className="flex gap-2.5">
+          <div className="flex flex-col gap-1.5 w-[42%] shrink-0">
+            <span className="text-[12px] font-semibold" style={{ color: fv("muted") }}>
+              Category
+            </span>
+            {recoveryPending ? (
+              <div className="h-[46px] rounded-xl animate-pulse" aria-hidden="true" style={{ background: fv("track") }} />
+            ) : (
+              <button
+                ref={setAnchor}
+                type="button"
+                onClick={() => setMenuOpen(true)}
+                aria-haspopup="menu"
+                aria-label={`Category: ${chosenCat?.name ?? "none"}`}
+                className="tap h-[46px] rounded-xl px-3 flex items-center gap-2 text-sm font-semibold"
+                style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
+              >
+                {chosenCat && (
+                  <span aria-hidden className="w-2 h-2 rounded-full shrink-0" style={{ background: categoryColours(chosenCat.key, dark).ink }} />
+                )}
+                <span className="flex-1 min-w-0 text-left truncate">{chosenCat?.name ?? ""}</span>
+                <ChevronDown size={15} className="shrink-0" style={{ color: fv("muted") }} />
+              </button>
+            )}
+          </div>
+          <label className="flex-1 min-w-0 flex flex-col gap-1.5 text-[12px] font-semibold" style={{ color: fv("muted") }}>
+            Title
+            <input
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={140}
+              placeholder="What's on your mind?"
+              className="h-[46px] rounded-xl px-3 text-sm font-semibold outline-none"
+              style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
+            />
+          </label>
         </div>
-
-        <label className="flex flex-col gap-1.5 text-[13px] font-extrabold">
-          Title
-          <input
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            maxLength={140}
-            className="h-[46px] rounded-xl px-3 text-sm font-semibold outline-none"
-            style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
-          />
-        </label>
-        <label className="flex flex-col gap-1.5 text-[13px] font-extrabold">
+        <label className="flex flex-col gap-1.5 text-[12px] font-semibold" style={{ color: fv("muted") }}>
           Post
           <textarea
             value={body}
             onChange={(e) => setBody(e.target.value)}
             maxLength={8000}
-            className="h-[140px] rounded-xl px-3 py-2.5 text-sm font-normal resize-none outline-none"
+            placeholder="Share a win, ask a question, or pass on a tip…"
+            className="h-[160px] rounded-xl px-3 py-2.5 text-sm font-normal resize-none outline-none"
             style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
           />
         </label>
@@ -271,6 +287,21 @@ export function ForumCompose({
           <span>Posts with links are checked by a moderator before they appear.</span>
         </div>
       </div>
-    </div>
+
+      {/* MO1.3.2.1: the category dropdown. */}
+      <PopupMenu<string>
+        open={menuOpen}
+        onClose={() => setMenuOpen(false)}
+        anchor={anchor}
+        align="left"
+        options={chips.map((c) => ({
+          value: c.key,
+          label: c.name,
+          icon: <span className="block w-2 h-2 rounded-full" style={{ background: categoryColours(c.key, dark).ink }} />,
+        }))}
+        selected={chosen}
+        onSelect={(k) => setCategory(k)}
+      />
+    </BottomSheet>
   );
 }
