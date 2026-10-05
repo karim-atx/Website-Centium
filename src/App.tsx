@@ -394,6 +394,7 @@ function AppRoutes() {
         <Route path="/app/cycle" element={<Cycle />} />
         <Route path="/app/contraception" element={<Contraception />} />
         <Route path="/app/mind" element={<Mind />} />
+        <Route path="/app/mind/:section" element={<Mind />} />
         <Route path="/app/professionals" element={<Professionals />} />
         <Route path="/app/professionals/calendar" element={<CalendarTab />} />
         <Route path="/app/professionals/templates" element={<WorkoutTemplateBuilderTab />} />
