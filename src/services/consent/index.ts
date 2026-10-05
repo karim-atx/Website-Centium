@@ -152,7 +152,7 @@ function describe(error: PostgrestError): string {
   // the session for far longer than it should have. Surface the database's
   // own words instead.
   if (code === "42501" || /permission denied|row-level security/i.test(message)) {
-    return `Data sharing couldn't be saved — the database refused the change. ${message}`;
+    return `Data sharing couldn't be saved. The database refused the change. ${message}`;
   }
   // The 42501 branch above deliberately passes the database's own words
   // through; this fallback must not. A dropped connection arrives with no code

@@ -26,7 +26,7 @@ export const MeditationSmall: React.FC<{ summary: MeditationSummary | null }> = 
     return (
       <span className="flex flex-col items-center gap-2">
         <LotusGlyph size={40} stroke="rgb(var(--c-teal-dark))" />
-        <span className="text-[9px] font-bold text-team-teal-ink/[0.72]">
+        <span className="text-[9px] font-bold text-team-teal-ink/[0.72] dark:text-team-teal-ink">
           {summary ? "No sessions this week" : "Start a session"}
         </span>
       </span>
@@ -39,7 +39,7 @@ export const MeditationSmall: React.FC<{ summary: MeditationSummary | null }> = 
         <span className="text-[20px] font-extrabold tracking-[-0.04em] text-charcoal tabular-nums">
           {formatMeditationTime(summary.secondsToday)}
         </span>
-        <span className="mt-1 text-[8.5px] font-bold text-team-teal-ink/[0.82]">today</span>
+        <span className="mt-1 text-[8.5px] font-bold text-team-teal-ink/[0.82] dark:text-team-teal-ink">today</span>
       </span>
     </span>
   );
@@ -57,7 +57,7 @@ export const MeditationLarge: React.FC<{ summary: MeditationSummary | null }> = 
             <p className="text-[15px] font-extrabold leading-tight tracking-[-0.02em] text-charcoal">
               {summary ? "No sessions this week yet" : "Breathing, stretching & yoga"}
             </p>
-            <p className="mt-[7px] text-[10px] leading-snug text-team-teal-ink/[0.72]">
+            <p className="mt-[7px] text-[10px] leading-snug text-team-teal-ink/[0.72] dark:text-team-teal-ink">
               {summary
                 ? "A breathing session from Mind is saved when you stop it."
                 : "Breathing sessions you finish are saved and totalled here."}
@@ -72,7 +72,7 @@ export const MeditationLarge: React.FC<{ summary: MeditationSummary | null }> = 
               {formatMeditationTime(summary.secondsThisWeek)} this week · {summary.sessionsThisWeek}{" "}
               {summary.sessionsThisWeek === 1 ? "session" : "sessions"}
             </p>
-            <p className="mt-[3px] text-[10px] leading-snug text-team-teal-ink/[0.72] tabular-nums">
+            <p className="mt-[3px] text-[10px] leading-snug text-team-teal-ink/[0.72] dark:text-team-teal-ink tabular-nums">
               {summary.streakDays > 0
                 ? `Meditation streak: ${summary.streakDays} ${summary.streakDays === 1 ? "day" : "days"}`
                 : "No meditation streak yet"}

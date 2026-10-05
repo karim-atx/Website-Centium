@@ -4,6 +4,7 @@ import clsx from "clsx";
 import { useApp } from "../../context/AppContext";
 import { CyclePhaseStrip } from "../../components/cycle/CyclePhaseStrip";
 import { Card } from "../../components/ui/Card";
+import { PinnedCta } from "../../components/ui/PinnedCta";
 import { Button } from "../../components/ui/Button";
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { CreateRoutineSheet } from "../../components/workout/CreateRoutineSheet";
@@ -14,7 +15,25 @@ import { ExerciseLibrarySheet, type ExercisePick } from "../../components/workou
 import { WorkoutSessionSheet } from "../../components/workout/WorkoutSessionSheet";
 import { BrowseProgramsSheet } from "../../components/workout/BrowseProgramsSheet";
 import type { Exercise, Routine, RoutineFolder, WorkoutBlock } from "../../types";
-import { folderFamily, routineFamily, type FolderFamily } from "../../data/folderColors";
+import { folderFamily, routineFamily, themedFamily, type FolderFamily } from "../../data/folderColors";
+import { useIsDark } from "../../hooks/useIsDark";
+
+/**
+ * Mobile v5.1 R3, dark mode (no light islands): routine rows and folder
+ * headers take themedFamily's dark shades; the colours below are the rest, as
+ * [light, dark]. The new-folder glyph and ongoing coral are lifted to read on
+ * the dark page and rows (3:1 and 4.5:1); the select box's checked fill is the
+ * dark primary with a near-black tick, as dark filled controls are.
+ */
+const ROUTINE_COLORS = {
+  newFolder: ["#6B41EF", "#9A8CD6"],
+  ongoing: ["#E9736A", "#EE8A82"],
+  meta: ["#726A61", "#B8B3C7"],
+  checked: ["#AEA1DC", "#9A8CD6"],
+  tick: ["#FFFFFF", "#121317"],
+  off: ["#D6D2CB", "#4A4D57"],
+} as const;
+const rc = (key: keyof typeof ROUTINE_COLORS, dark: boolean): string => ROUTINE_COLORS[key][dark ? 1 : 0];
 import { ColorPopover, ColorSwatches, FolderHeader, InsertionLine, Placeholder, RenameField } from "../../components/folders/FolderParts";
 import { folderColorOptions, withPlaceholder } from "../../components/folders/folderList";
 import { BlockSettingsSheet } from "../../components/workout/BlockSettingsSheet";
@@ -115,6 +134,7 @@ export default function RoutinesTab() {
     activeSession,
     setActiveSession,
   } = useApp();
+  const dark = useIsDark();
   // WO17: the ONGOING row mirrors the bar. A minimised session can be paused
   // and resumed from here; the clock is timestamps (startedAt, pausedAt,
   // pausedMs), so the logger and the bar read the same state back.
@@ -336,7 +356,7 @@ export default function RoutinesTab() {
     const folderRoutines = routinesIn(routines, folder.id);
     const collapsed = collapsedFolders.has(folder.id);
     // Folder order: the folder's position in the account's folder list.
-    const family = folderFamily(folder, routineFolders.indexOf(folder));
+    const family = themedFamily(folderFamily(folder, routineFolders.indexOf(folder)), dark);
     const item: DragItem = { kind: "folder", id: folder.id, parentId: folder.parentId ?? null, index };
 
     return (
@@ -399,7 +419,7 @@ export default function RoutinesTab() {
                       if (subfolderName.trim()) run(addRoutineFolder(subfolderName.trim(), folder.id, subfolderColor));
                       setAddingSubfolderTo(null);
                     }}
-                    className="tap px-3 rounded-xl bg-primary text-white text-sm font-semibold"
+                    className="tap px-3 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold"
                   >
                     Add
                   </button>
@@ -435,8 +455,8 @@ export default function RoutinesTab() {
           global scope. */}
       <CyclePhaseStrip />
 
-      <div className="flex items-center justify-between mb-2.5">
-        <p className="text-[9.5px] font-bold tracking-[.2em] uppercase" style={{ color: "#9A94B3" }}>Folders</p>
+      <div className="flex items-center justify-between mb-2.5 pb-[7.5px] border-b-[1.5px] border-primary">
+        <p className="section-label !border-b-0 !pb-0">Folders</p>
         <button
           // Tapping it again closes the new-folder form, discarding the draft.
           onClick={() => {
@@ -447,7 +467,7 @@ export default function RoutinesTab() {
           aria-label="New folder"
           aria-expanded={newFolderOpen}
           className="tap w-[30px] h-[30px] rounded-[9px] flex items-center justify-center"
-          style={{ color: "#6B41EF", margin: "-4px -6px -4px 0" }}
+          style={{ color: rc("newFolder", dark), margin: "-4px -6px -4px 0" }}
         >
           <FolderPlus size={18} />
         </button>
@@ -464,7 +484,7 @@ export default function RoutinesTab() {
         )}
         {routinesError && !actionError && (
           <p className="text-[11.5px] font-semibold text-status-high mb-3">
-            Couldn't refresh your routines — showing what was saved on this device.
+            Couldn't refresh your routines. Showing what was saved on this device.
           </p>
         )}
       </div>
@@ -492,7 +512,7 @@ export default function RoutinesTab() {
                 setNewFolderName("");
                 setNewFolderOpen(false);
               }}
-              className="tap px-3 rounded-xl bg-primary text-white text-sm font-semibold"
+              className="tap px-3 rounded-xl bg-primary-fill text-on-primary-fill text-sm font-semibold"
             >
               Add
             </button>
@@ -510,7 +530,7 @@ export default function RoutinesTab() {
             can be dropped out of every folder. */}
         {(unfiled.length > 0 || draggingRoutine) && (
           <div data-flip="unfiled">
-            <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Unfiled</p>
+            <p className="section-label mb-[9px]">Unfiled</p>
             <div
               data-dnd-group=""
               className="flex flex-col gap-1.5"
@@ -518,11 +538,11 @@ export default function RoutinesTab() {
                 draggingRoutine &&
                 unfiled.every((r) => r.id === draggingRoutine) &&
                 !(drag?.target.kind === "group" && drag.target.folderId === null)
-                  ? { minHeight: 54, borderRadius: 14, border: "1.5px dashed rgba(36,31,27,0.14)" }
+                  ? { minHeight: 54, borderRadius: 14, border: "1.5px dashed rgb(var(--c-charcoal) / 0.14)" }
                   : undefined
               }
             >
-              {renderGroup(null, (r) => routineFamily(r, routineFolders))}
+              {renderGroup(null, (r) => themedFamily(routineFamily(r, routineFolders), dark))}
             </div>
           </div>
         )}
@@ -531,44 +551,43 @@ export default function RoutinesTab() {
       {/* NOTHING HERE YET, AND SOMEWHERE TO START. An empty routines list used
           to offer one door — build a routine from scratch — which is the
           harder of the two for someone who has never written a training
-          program. The nine curated programs existed but had no way in. */}
+          program. The nine curated programs existed but had no way in.
+          D9 (Mobile v5.1 R3): that way in is now the pinned "Browse starter
+          programs" below, always shown, so this card no longer repeats it. */}
       {routines.length === 0 && (
         <Card className="text-center py-7 mb-4">
           <p className="text-sm font-semibold text-charcoal mb-1">No routines yet</p>
-          <p className="text-[12.5px] text-charcoal-soft mb-4 px-4 leading-relaxed">
+          <p className="text-[12.5px] text-charcoal-soft px-4 leading-relaxed">
             Start from a ready-made program and change whatever you like, or build your own from
             scratch.
           </p>
-          <Button size="sm" onClick={() => setBrowseOpen(true)}>
-            <Library size={14} /> Browse starter programs
-          </Button>
         </Card>
       )}
 
-      {/* Master handover (CentiumTabFrame "Color-coded folders"): a 54px
-          lavender "Create routine" and a 50px outlined "Browse starter
-          programs", 9px apart. */}
-      <div className="flex flex-col gap-[9px]">
-        <button
-          onClick={() => {
+      {/* Mobile v5.1 WO1 / WO1.1: "Browse starter programs" first, then a
+          filled "Create routine" pinned above the navbar, both overlaying the
+          list. Page CTAs are 48 / r14 (decision C-01); the fill is
+          primary-fill, not the board's #A198DF (2.60:1 with white). Browse is
+          now always shown, so the empty-state card no longer has its own
+          (decision D9). The spacer lets the last
+          routine scroll clear of both buttons: 172 for one CTA + 56 for the
+          second, less the 112 the layout already pads. */}
+      <div aria-hidden style={{ height: 116 }} />
+      <PinnedCta
+        above={{
+          label: "Browse starter programs",
+          icon: <Library size={17} className="text-charcoal-soft" />,
+          onClick: () => setBrowseOpen(true),
+        }}
+        primary={{
+          label: "Create routine",
+          icon: <Plus size={15} />,
+          onClick: () => {
             setCreateFolder(null);
             setCreateOpen(true);
-          }}
-          className="tap w-full h-[54px] flex items-center justify-center gap-[9px] rounded-[14px] text-[14.5px] font-bold"
-          style={{ background: "#EFEEFD", color: "#6B41EF" }}
-        >
-          <Plus size={17} /> Create routine
-        </button>
-        {routines.length > 0 && (
-          <button
-            onClick={() => setBrowseOpen(true)}
-            className="tap w-full h-[50px] flex items-center justify-center gap-[9px] rounded-[14px] bg-white text-[14px] font-bold text-charcoal"
-            style={{ border: "1px solid rgba(143,104,246,0.28)" }}
-          >
-            <Library size={17} style={{ color: "#5B5349" }} /> Browse starter programs
-          </button>
-        )}
-      </div>
+          },
+        }}
+      />
 
       <PopupMenu<FolderAction>
         open={!!menuFolder}
@@ -604,26 +623,27 @@ export default function RoutinesTab() {
               top: drag.y - drag.offsetY,
               transform: "scale(1.03)",
               borderRadius: 14,
-              boxShadow: "0 14px 30px rgba(36,31,27,0.18)",
+              boxShadow: "0 14px 30px rgb(var(--c-charcoal) / 0.18)",
             }}
           >
             {dragRoutine ? (
               <RoutineCardFace
                 routine={dragRoutine}
-                family={
+                family={themedFamily(
                   dragRoutine.folderId
                     ? folderFamily(
                         routineFolders.find((f) => f.id === dragRoutine.folderId)!,
                         routineFolders.findIndex((f) => f.id === dragRoutine.folderId)
                       )
-                    : routineFamily(dragRoutine, routineFolders)
-                }
+                    : routineFamily(dragRoutine, routineFolders),
+                  dark
+                )}
                 isOngoing={!!pausedSessions[dragRoutine.id]}
               />
             ) : (
               <FolderHeader
                 folder={dragFolder!}
-                family={folderFamily(dragFolder!, routineFolders.indexOf(dragFolder!))}
+                family={themedFamily(folderFamily(dragFolder!, routineFolders.indexOf(dragFolder!)), dark)}
                 count={routinesIn(routines, dragFolder!.id).length}
                 collapsed={collapsedFolders.has(dragFolder!.id)}
               />
@@ -691,8 +711,7 @@ export default function RoutinesTab() {
             <div className="relative w-full max-w-xs bg-cream rounded-3xl shadow-lift p-5 animate-pop">
               <p className="font-display font-semibold text-lg text-charcoal mb-1.5">Cancel ongoing routine?</p>
               <p className="text-sm text-charcoal-soft mb-5">
-                Starting "{pendingRoutine.name}" will cancel your other ongoing routine entirely — its
-                progress won't be saved.
+                Starting "{pendingRoutine.name}" will cancel your other ongoing routine entirely. Its progress won't be saved.
               </p>
               <div className="flex gap-2.5">
                 <Button variant="outline" fullWidth onClick={() => setPendingRoutine(null)}>
@@ -769,6 +788,7 @@ const RoutineCardFace: React.FC<{
   press?: PressProps;
   grip?: GripProps;
 }> = ({ routine, family, isOngoing, running, onPause, onToggle, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip }) => {
+  const dark = useIsDark();
   const gripProps = grip;
   return (
     <div
@@ -779,17 +799,17 @@ const RoutineCardFace: React.FC<{
     >
       <span
         className={clsx("w-1 h-8 rounded-full shrink-0 block", isOngoing && running && "animate-pulse")}
-        style={{ marginLeft: 15, background: isOngoing ? "#E9736A" : family.bar }}
+        style={{ marginLeft: 15, background: isOngoing ? rc("ongoing", dark) : family.bar }}
       />
       {renaming ? (
         <RenameField value={renameDraft ?? ""} onChange={(v) => onRenameDraft?.(v)} onCommit={() => onRenameCommit?.()} tone="dark" />
       ) : (
         <button onClick={onToggle} className="hit flex-1 text-left min-w-0">
-          <p className="text-[14.5px] font-bold flex items-center gap-1.5 truncate" style={{ color: "#241F1B" }}>
+          <p className="text-[14.5px] font-bold flex items-center gap-1.5 truncate" style={{ color: "rgb(var(--c-charcoal))" }}>
             {routine.name}
             {isOngoing && (
               // WO17: the same running / paused state the bar shows.
-              <span className="text-[10px] font-bold uppercase text-[#E9736A] flex items-center gap-1 shrink-0">
+              <span className="text-[10px] font-bold uppercase text-[#E9736A] dark:text-[#EE8A82] flex items-center gap-1 shrink-0">
                 {running ? (
                   <>
                     <Play size={10} fill="currentColor" /> Ongoing
@@ -802,7 +822,7 @@ const RoutineCardFace: React.FC<{
               </span>
             )}
           </p>
-          <p className="text-[11.5px] mt-0.5" style={{ color: "#8C8378" }}>
+          <p className="text-[11.5px] mt-0.5" style={{ color: rc("meta", dark) }}>
             {routine.exercises.length} exercises • ~{routine.estimatedDurationMin} min
           </p>
         </button>
@@ -812,7 +832,7 @@ const RoutineCardFace: React.FC<{
         onClick={isOngoing && running ? onPause : onStart}
         aria-label={isOngoing ? (running ? `Pause ${routine.name}` : `Resume ${routine.name}`) : `Start ${routine.name}`}
         className={clsx("tap w-[34px] h-[34px] rounded-full flex items-center justify-center shrink-0", isOngoing && running && "animate-pulse")}
-        style={{ background: isOngoing ? "#E9736A" : family.play }}
+        style={{ background: isOngoing ? rc("ongoing", dark) : family.play }}
       >
         {isOngoing && running ? (
           <Pause size={13} fill="#FFFFFF" style={{ color: "#FFFFFF" }} />
@@ -825,7 +845,7 @@ const RoutineCardFace: React.FC<{
         onClick={(e) => onMenu?.(e.currentTarget)}
         aria-label={`Options for ${routine.name}`}
         className="tap flex shrink-0"
-        style={{ color: "#8C8378" }}
+        style={{ color: "rgb(var(--c-charcoal-faint))" }}
       >
         <MoreVertical size={17} />
       </button>
@@ -834,7 +854,7 @@ const RoutineCardFace: React.FC<{
         role="button"
         aria-label={`Drag ${routine.name}`}
         className="hit flex shrink-0"
-        style={{ color: "#8C8378", ...(gripProps?.style as React.CSSProperties | undefined) }}
+        style={{ color: "rgb(var(--c-charcoal-faint))", ...(gripProps?.style as React.CSSProperties | undefined) }}
       >
         <GripVertical size={17} />
       </span>
@@ -854,25 +874,28 @@ const SelectBox: React.FC<{
   disabled?: boolean;
   onChange: () => void;
   label: string;
-}> = ({ checked, disabled, onChange, label }) => (
-  <button
-    onClick={onChange}
-    disabled={disabled}
-    role="checkbox"
-    aria-checked={checked}
-    aria-label={`Select ${label}`}
-    className="tap flex items-center justify-center shrink-0"
-    style={{
-      width: 20,
-      height: 20,
-      borderRadius: 6,
-      border: `2px solid ${disabled ? "#D6D2CB" : checked ? "#AEA1DC" : "rgba(36,31,27,0.2)"}`,
-      background: checked ? "#AEA1DC" : "transparent",
-    }}
-  >
-    {checked && <Check size={12} strokeWidth={3} style={{ color: "#FFFFFF" }} />}
-  </button>
-);
+}> = ({ checked, disabled, onChange, label }) => {
+  const dark = useIsDark();
+  return (
+    <button
+      onClick={onChange}
+      disabled={disabled}
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={`Select ${label}`}
+      className="tap flex items-center justify-center shrink-0"
+      style={{
+        width: 20,
+        height: 20,
+        borderRadius: 6,
+        border: `2px solid ${disabled ? rc("off", dark) : checked ? rc("checked", dark) : "rgb(var(--c-charcoal) / 0.2)"}`,
+        background: checked ? rc("checked", dark) : "transparent",
+      }}
+    >
+      {checked && <Check size={12} strokeWidth={3} style={{ color: rc("tick", dark) }} />}
+    </button>
+  );
+};
 
 const RoutineRow: React.FC<{
   routine: Routine;
@@ -899,6 +922,7 @@ const RoutineRow: React.FC<{
   running?: boolean;
   onPause?: () => void;
 }> = ({ routine, hidden, onStart, onMenu, renaming, renameDraft, onRenameDraft, onRenameCommit, press, grip, onSettings, onDeleteExercise, onReplaceExercise, onAddExercise, onArrange, family, isOngoing, running, onPause }) => {
+  const dark = useIsDark();
   const [expanded, setExpanded] = useState(false);
   const [revealedId, setRevealedId] = useState<string | null>(null);
   const [replaceTarget, setReplaceTarget] = useState<string | null>(null);
@@ -1003,7 +1027,7 @@ const RoutineRow: React.FC<{
             disabled={!enabled}
             aria-label={`Move ${direction}`}
             className="tap flex items-center justify-center"
-            style={{ width: 22, height: 22, color: enabled ? "#8C8378" : "#D6D2CB" }}
+            style={{ width: 22, height: 22, color: enabled ? "rgb(var(--c-charcoal-faint))" : rc("off", dark) }}
           >
             <Icon size={13} />
           </button>
@@ -1047,9 +1071,19 @@ const RoutineRow: React.FC<{
     <div
       data-dnd-row
       data-flip={`r:${routine.id}`}
-      className="rounded-[14px] overflow-hidden"
+      className="relative rounded-[14px] overflow-hidden"
       style={{ background: family.row, display: hidden ? "none" : undefined }}
     >
+      {/* WO1.1 handover note: "The outline takes the routine's accent colour".
+          Width unspecified on the board; 1.5 px (decision D8). Drawn as an
+          overlay so the open body's own backgrounds cannot cover it. */}
+      {expanded && (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-0 z-20 rounded-[14px]"
+          style={{ border: `1.5px solid ${family.bar}` }}
+        />
+      )}
       <RoutineCardFace
         routine={routine}
         family={family}
@@ -1073,7 +1107,7 @@ const RoutineRow: React.FC<{
               row two meanings; and nobody groups a superset by accident. */}
           <div
             className="flex items-center justify-between bg-cream-card px-4 py-2"
-            style={{ borderBottom: "1px solid rgba(36,31,27,0.05)" }}
+            style={{ borderBottom: "1px solid rgb(var(--c-charcoal) / 0.05)" }}
           >
             {selecting ? (
               <>
@@ -1090,7 +1124,7 @@ const RoutineRow: React.FC<{
                     onClick={startGrouping}
                     disabled={selected.length < 2}
                     className="tap text-[11.5px] font-semibold"
-                    style={{ color: selected.length < 2 ? "#C9C2B8" : "#5F5093" }}
+                    style={{ color: selected.length < 2 ? "rgb(var(--c-charcoal-disabled))" : "rgb(var(--c-primary-deep-text))" }}
                   >
                     Group as…
                   </button>
@@ -1107,7 +1141,7 @@ const RoutineRow: React.FC<{
                   onClick={() => setSelecting(true)}
                   disabled={routine.exercises.length < 2}
                   className="tap flex items-center gap-1 text-[11.5px] font-semibold"
-                  style={{ color: routine.exercises.length < 2 ? "#C9C2B8" : "#5F5093" }}
+                  style={{ color: routine.exercises.length < 2 ? "rgb(var(--c-charcoal-disabled))" : "rgb(var(--c-primary-deep-text))" }}
                 >
                   <Group size={13} /> Group
                 </button>
@@ -1149,7 +1183,7 @@ const RoutineRow: React.FC<{
                           <button
                             onClick={() => setReplaceTarget(ex.id)}
                             aria-label={`Replace ${ex.name}`}
-                            className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-primary text-white text-[10px] font-semibold"
+                            className="tap w-16 flex flex-col items-center justify-center gap-0.5 bg-primary-fill text-on-primary-fill text-[10px] font-semibold"
                           >
                             <Repeat size={14} />
                             Replace
@@ -1192,7 +1226,7 @@ const RoutineRow: React.FC<{
           )}
           <button
             onClick={() => setAddExerciseOpen(true)}
-            className="tap w-full flex items-center justify-center gap-1.5 px-4 py-3 text-xs font-semibold text-primary bg-cream-card hover:bg-primary-pale/40"
+            className="tap w-full flex items-center justify-center gap-1.5 px-4 py-3 text-xs font-semibold text-primary-dark bg-cream-card hover:bg-primary-pale/40"
           >
             <Plus size={13} /> Add exercise
           </button>

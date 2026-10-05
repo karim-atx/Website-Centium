@@ -11,6 +11,8 @@ import { MealPrepFlowSheet, type PrepKind } from "../../components/food/MealPrep
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { sumItems, divideTotals, PREP_PRIMARY, type PrepItem } from "../../components/food/mealPrepShared";
+import { PREP_ON_PRIMARY } from "../../components/food/foodDark";
+import { useIsDark } from "../../hooks/useIsDark";
 import { logoTone } from "../../components/food/logoTones";
 import { foodCategoryIcon } from "../../utils/icons";
 import { deleteCustomFood, listCustomFoods, type FoodSearchResult } from "../../services/food";
@@ -23,11 +25,24 @@ type SubTab = "meals" | "recipes" | "foods";
 
 // Handover 2026-09-29 FO3.2: each sub-tab's colour, its rows' lighter tint
 // and its icon colour, measured from the frame. Custom Foods is Dark Lavender.
-const SUB: Record<SubTab, { label: string; color: string; row: string; icon: string; create: string; empty: string; emptyText: string }> = {
-  meals: { label: "Meal Prep", color: PREP_PRIMARY.meals, row: "#ECF4F3", icon: "#4F7F78", create: "Create Meal", empty: "No meal prep yet", emptyText: "#5F8681" },
-  recipes: { label: "Recipes", color: PREP_PRIMARY.recipes, row: "#F0EEF9", icon: "#816FB7", create: "Create Recipe", empty: "No recipes yet", emptyText: "#7A6DB0" },
-  foods: { label: "Custom Foods", color: "#7D67D9", row: "#F1EEFB", icon: "#7D67D9", create: "Create Custom Food", empty: "No custom foods yet", emptyText: "#7D67D9" },
+// `ink` is the text on `color`: white, or on-primary-fill (white in light
+// mode) on the primary fill, which dark mode makes the light lavender.
+const SUB: Record<SubTab, { label: string; color: string; ink: string; row: string; icon: string; create: string; empty: string; emptyText: string }> = {
+  meals: { label: "Meal Prep", color: PREP_PRIMARY.meals, ink: PREP_ON_PRIMARY.meals, row: "#ECF4F3", icon: "#4F7F78", create: "Create Meal", empty: "No meal prep yet", emptyText: "#5F8681" },
+  recipes: { label: "Recipes", color: PREP_PRIMARY.recipes, ink: PREP_ON_PRIMARY.recipes, row: "#F0EEF9", icon: "#816FB7", create: "Create Recipe", empty: "No recipes yet", emptyText: "#7A6DB0" },
+  foods: { label: "Custom Foods", color: "rgb(var(--c-primary-fill))", ink: "rgb(var(--c-on-primary-fill))", row: "#F1EEFB", icon: "#7D67D9", create: "Create Custom Food", empty: "No custom foods yet", emptyText: "#7D67D9" },
 };
+// Mobile v5.1 R3, dark mode (no light islands): the rows' tints are
+// secondary.tint (meals) and primary.tint (recipes, foods) dark; the icons and
+// the empty-state text are secondary.deep / secondary.deeper and primary.deep
+// dark (6.99:1 on the card tile, 7.06:1 and 6.03:1 on the tints); the tab
+// container (#F4F3F9) is tabs.container dark.
+const SUB_DARK: Record<SubTab, { row: string; icon: string; emptyText: string }> = {
+  meals: { row: "#293339", icon: "#7FB3A9", emptyText: "#A3C7C0" },
+  recipes: { row: "#303141", icon: "#B7ABDE", emptyText: "#B7ABDE" },
+  foods: { row: "#303141", icon: "#B7ABDE", emptyText: "#B7ABDE" },
+};
+const TABS_CONTAINER: [string, string] = ["#F4F3F9", "#242730"];
 const SUB_ORDER: SubTab[] = ["meals", "recipes", "foods"];
 
 type Opened =
@@ -44,6 +59,7 @@ type Opened =
 export default function MealPrepPanel() {
   const { customMeals, customMealsError, recipes, recipesError, reloadMealPrep, authUserId, removeCustomMeal, removeRecipe, forgetCustomFood } =
     useApp();
+  const dark = useIsDark();
   const [sub, setSub] = useState<SubTab>("meals");
 
   // Custom Foods reads custom_foods itself: this device's copy only holds
@@ -122,7 +138,7 @@ export default function MealPrepPanel() {
     setDeleting(null);
   };
 
-  const t = SUB[sub];
+  const t = dark ? { ...SUB[sub], ...SUB_DARK[sub] } : SUB[sub];
   // Newest first: recipes already arrive that way (getRecipes orders
   // descending); custom meals keep their ascending query and are reversed.
   const mealsNewest = customMeals.slice().reverse();
@@ -135,7 +151,7 @@ export default function MealPrepPanel() {
           // Decision 12: "N ingredients · kcal"; there is no servings column.
           detail: `${m.items.length} ingredient${m.items.length === 1 ? "" : "s"} · ${Math.round(sumItems(m.items as PrepItem[]).kcal)} kcal`,
           icon: <Package size={16} />,
-          iconBg: "#FFFFFF",
+          iconBg: "rgb(var(--c-cream-card))",
         }))
       : sub === "recipes"
         ? recipes.map((r) => ({
@@ -143,17 +159,17 @@ export default function MealPrepPanel() {
             name: r.title,
             detail: `${r.items.length} ingredient${r.items.length === 1 ? "" : "s"} · ${Math.round(divideTotals(sumItems(r.items as PrepItem[]), r.servings).kcal)} kcal / serving`,
             icon: <Soup size={16} />,
-            iconBg: "#FFFFFF",
+            iconBg: "rgb(var(--c-cream-card))",
           }))
         : foods.map((f) => {
             const Icon = foodCategoryIcon[f.category] ?? UtensilsCrossed;
-            const tone = logoTone(f.logoTone);
+            const tone = logoTone(f.logoTone, dark);
             return {
               open: { kind: "foods", food: f, edit: false },
               name: f.name,
               detail: `${f.servingLabel} · ${Math.round(f.calories)} kcal`,
               icon: <Icon size={16} style={tone ? { color: tone.fg } : undefined} />,
-              iconBg: tone ? tone.bg : "#FFFFFF",
+              iconBg: tone ? tone.bg : "rgb(var(--c-cream-card))",
             };
           });
   const error = sub === "meals" ? customMealsError : sub === "recipes" ? recipesError : foodsError;
@@ -183,7 +199,7 @@ export default function MealPrepPanel() {
         </div>
       )}
 
-      <div role="tablist" aria-label="Custom" className="flex" style={{ background: "#F4F3F9", borderRadius: 12, padding: 4, gap: 4 }}>
+      <div role="tablist" aria-label="Custom" className="flex" style={{ background: TABS_CONTAINER[dark ? 1 : 0], borderRadius: 12, padding: 4, gap: 4 }}>
         {SUB_ORDER.map((k) => (
           <button
             key={k}
@@ -195,7 +211,7 @@ export default function MealPrepPanel() {
               height: 32,
               borderRadius: 9,
               background: sub === k ? SUB[k].color : "transparent",
-              color: sub === k ? "#FFFFFF" : "#5B5349",
+              color: sub === k ? SUB[k].ink : "rgb(var(--c-charcoal-soft))",
               fontSize: 12,
               fontWeight: sub === k ? 700 : 600,
             }}
@@ -207,7 +223,7 @@ export default function MealPrepPanel() {
 
       <div className="flex flex-col" style={{ gap: 8, marginTop: 12, paddingBottom: 72 }}>
         {error ? (
-          <p style={{ margin: 0, fontSize: 13, color: "#5B5349", padding: "8px 2px" }}>{errorText}</p>
+          <p style={{ margin: 0, fontSize: 13, color: "rgb(var(--c-charcoal-soft))", padding: "8px 2px" }}>{errorText}</p>
         ) : rows.length === 0 ? (
           <div className="flex items-center justify-center" style={{ height: 76, borderRadius: 16, background: t.row }}>
             <p style={{ margin: 0, fontSize: 13, color: t.emptyText }}>{t.empty}</p>
@@ -227,10 +243,10 @@ export default function MealPrepPanel() {
                   {r.icon}
                 </span>
                 <span className="min-w-0">
-                  <span className="block truncate" style={{ fontSize: 14, fontWeight: 700, color: "#241F1B" }}>
+                  <span className="block truncate" style={{ fontSize: 14, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
                     {r.name}
                   </span>
-                  <span className="block truncate" style={{ fontSize: 11, color: "#8C8378" }}>
+                  <span className="block truncate" style={{ fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>
                     {r.detail}
                   </span>
                 </span>
@@ -239,7 +255,7 @@ export default function MealPrepPanel() {
                 onClick={(e) => setMenu({ anchor: e.currentTarget, open: r.open })}
                 aria-label={`${r.name} options`}
                 className="tap flex items-center justify-center flex-none"
-                style={{ width: 40, height: 44, color: "#8C8378" }}
+                style={{ width: 40, height: 44, color: "rgb(var(--c-charcoal-muted))" }}
               >
                 <EllipsisVertical size={16} />
               </button>
@@ -264,7 +280,7 @@ export default function MealPrepPanel() {
           gap: 7,
           borderRadius: 12,
           background: t.color,
-          color: "#FFFFFF",
+          color: t.ink,
           fontSize: 13.5,
           fontWeight: 700,
         }}

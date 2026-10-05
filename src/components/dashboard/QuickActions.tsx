@@ -85,7 +85,7 @@ export const QuickActions: React.FC<QuickActionsProps> = ({ onLogFood, onLogWork
   };
   return (
     <div className="animate-fade-slide-up">
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Quick actions</p>
+      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">Quick actions</p>
 
       <div className="relative flex" style={{ height: px(BOTTOM - TOP), marginTop: -8, marginBottom: -12 }}>
         {/* Log food: the left pill, its glyph 22.6px in from the centre. */}

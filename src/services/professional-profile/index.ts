@@ -345,7 +345,7 @@ export async function setMapArea(lat: number, lng: number, label: string | null)
     console.error("[professional-profile] Could not set the map area:", error.code, error.message);
     if (error.code === "ATX47") return { ok: false, message: UNDER_18_LISTING };
     if (error.code === "ATX48") return { ok: false, needsDob: true, message: NEEDS_DOB };
-    if (error.code === "ATX08") return { ok: false, message: "Save your details first — there's nothing to list yet." };
+    if (error.code === "ATX08") return { ok: false, message: "Save your details first. There's nothing to list yet." };
     return { ok: false, message: describe(error) === "Your session expired. Sign in again." ? describe(error) : "Couldn't save your area. Try again." };
   }
   return { ok: true, mapArea: mapAreaFrom(data) };

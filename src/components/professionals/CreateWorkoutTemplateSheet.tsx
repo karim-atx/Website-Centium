@@ -369,7 +369,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{
                   className={clsx(
                     "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
                     folderId === null
-                      ? "bg-primary text-white border-primary"
+                      ? "bg-primary-fill text-on-primary-fill border-primary-fill"
                       : "bg-cream-soft border-transparent text-charcoal-soft"
                   )}
                 >
@@ -382,7 +382,7 @@ export const CreateWorkoutTemplateSheet: React.FC<{
                     className={clsx(
                       "tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors",
                       folderId === f.id
-                        ? "bg-primary text-white border-primary"
+                        ? "bg-primary-fill text-on-primary-fill border-primary-fill"
                         : "bg-cream-soft border-transparent text-charcoal-soft"
                     )}
                   >

@@ -3,7 +3,8 @@ import { Pin } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { Button } from "../ui/Button";
 import { sessionChipStyle } from "./sessionSheetStyles";
-import { TYPE_STYLE } from "./setTypeStyle";
+import { typeStyles } from "./setTypeStyle";
+import { useIsDark } from "../../hooks/useIsDark";
 import type { LoggedSet } from "../../types";
 import { rpeOptions } from "../../services/workout";
 import { HANDOVER_SET_TYPES, setKind, type HandoverSetType } from "../../services/workout/stats";
@@ -32,11 +33,31 @@ const TYPE_BLURB: Partial<Record<HandoverSetType, string>> = {
 // RPE runs 6 → 10 in one row (WO10), scrollable if needed.
 const RPE_ASCENDING = [...rpeOptions].sort((a, b) => a - b);
 
+/**
+ * Mobile v5.1 R3 (no light islands): the colours here with no token of the
+ * same light value, as [light, dark]. The slider's empty track (the board's
+ * dark empty track), the idle Type button's border (option border), the scale
+ * captions (text.tertiary, 5.1:1 on the card), the notes box (surface.soft on
+ * the card) and its label (text.secondary, 7.3:1), the idle pin (tertiary,
+ * 4.6:1 on the box) and the pinned pin and caption (primary.deeper, 8.6:1).
+ */
+const SET_OPTIONS_COLORS = {
+  track: ["#E5E5EA", "rgba(238,239,242,0.10)"],
+  typeBorder: ["#E7E7EC", "rgba(238,239,242,0.10)"],
+  caption: ["#9A9389", "#918DA0"],
+  notesBox: ["#F2F3F5", "#242730"],
+  notesLabel: ["#575863", "#B8B3C7"],
+  pinIdle: ["#A39D95", "#918DA0"],
+  pinned: ["#5F5093", "#C8BFE9"],
+} as const;
+const optionsColor = (key: keyof typeof SET_OPTIONS_COLORS, dark: boolean): string => SET_OPTIONS_COLORS[key][dark ? 1 : 0];
+
 /** The filled part of a slider up to its value, on the frame's #E5E5EA track. */
-const sliderStyle = (value: number, min: number, max: number, fill: string, thumb: string): React.CSSProperties => {
+const sliderStyle = (value: number, min: number, max: number, fill: string, thumb: string, dark: boolean): React.CSSProperties => {
   const pct = ((value - min) / (max - min)) * 100;
+  const track = optionsColor("track", dark);
   return {
-    background: `linear-gradient(to right, ${fill} 0%, ${fill} ${pct}%, #E5E5EA ${pct}%, #E5E5EA 100%)`,
+    background: `linear-gradient(to right, ${fill} 0%, ${fill} ${pct}%, ${track} ${pct}%, ${track} 100%)`,
     ["--thumb" as string]: thumb,
   };
 };
@@ -47,7 +68,7 @@ const sectionLabel: React.CSSProperties = {
   fontWeight: 600,
   letterSpacing: "0.08em",
   textTransform: "uppercase",
-  color: "#8C8378",
+  color: "rgb(var(--c-charcoal-muted))",
 };
 
 /**
@@ -77,6 +98,7 @@ export const SetOptionsSheet: React.FC<{
   const [rpe, setRpe] = useState<number | undefined>(undefined);
   const [mood, setMood] = useState(5);
   const [pain, setPain] = useState(0);
+  const dark = useIsDark();
 
   useEffect(() => {
     if (set) {
@@ -104,7 +126,6 @@ export const SetOptionsSheet: React.FC<{
 
   return (
     <BottomSheet
-      light
       open={open}
       onClose={onClose}
       title={title}
@@ -130,7 +151,7 @@ export const SetOptionsSheet: React.FC<{
           <div className="grid grid-cols-3" style={{ gap: 6 }}>
             {HANDOVER_SET_TYPES.filter((t) => t.value !== "normal").map((t) => {
               const on = kind === t.value;
-              const color = TYPE_STYLE[t.value as Exclude<HandoverSetType, "normal">].dot;
+              const color = typeStyles(dark)[t.value as Exclude<HandoverSetType, "normal">].dot;
               return (
                 <button
                   key={t.value}
@@ -140,9 +161,9 @@ export const SetOptionsSheet: React.FC<{
                   style={{
                     height: 34,
                     borderRadius: 8,
-                    border: `1px solid ${on ? color : "#E7E7EC"}`,
-                    background: on ? color : "#FFFFFF",
-                    color: on ? "#FFFFFF" : "#241F1B",
+                    border: `1px solid ${on ? color : optionsColor("typeBorder", dark)}`,
+                    background: on ? color : "rgb(var(--c-cream-card))",
+                    color: on ? "#FFFFFF" : "rgb(var(--c-charcoal))",
                     fontSize: 12,
                     fontWeight: on ? 600 : 500,
                   }}
@@ -152,7 +173,7 @@ export const SetOptionsSheet: React.FC<{
               );
             })}
           </div>
-          {TYPE_BLURB[kind] && <p style={{ margin: "6px 0 0", fontSize: 11, color: "#8C8378" }}>{TYPE_BLURB[kind]}</p>}
+          {TYPE_BLURB[kind] && <p style={{ margin: "6px 0 0", fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{TYPE_BLURB[kind]}</p>}
         </div>
 
         <div>
@@ -164,7 +185,7 @@ export const SetOptionsSheet: React.FC<{
                 onClick={() => setRpe(rpe === r ? undefined : r)}
                 aria-pressed={rpe === r}
                 className="tap flex-none"
-                style={{ ...sessionChipStyle(rpe === r), minWidth: 30, height: 30, padding: "0 8px", borderRadius: 6 }}
+                style={{ ...sessionChipStyle(rpe === r, dark), minWidth: 30, height: 30, padding: "0 8px", borderRadius: 6 }}
               >
                 {r}
               </button>
@@ -176,7 +197,7 @@ export const SetOptionsSheet: React.FC<{
           {/* V9 (QA 9.0): Pain level above Mood, starting at zero. */}
           <div className="flex items-baseline justify-between" style={{ marginBottom: 6 }}>
             <p style={{ ...sectionLabel, margin: 0 }}>Pain level</p>
-            <span className="tabular-nums" style={{ fontSize: 11, color: "#8C8378" }}>{pain} / 10</span>
+            <span className="tabular-nums" style={{ fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{pain} / 10</span>
           </div>
           <input
             type="range"
@@ -187,9 +208,9 @@ export const SetOptionsSheet: React.FC<{
             onChange={(e) => setPain(Number(e.target.value))}
             aria-label="Pain level"
             className="set-slider w-full"
-            style={sliderStyle(pain, 0, 10, painColor, painColor)}
+            style={sliderStyle(pain, 0, 10, painColor, painColor, dark)}
           />
-          <div className="flex items-center justify-between" style={{ fontSize: 10, color: "#9A9389", marginTop: 2 }}>
+          <div className="flex items-center justify-between" style={{ fontSize: 10, color: optionsColor("caption", dark), marginTop: 2 }}>
             <span>No injury</span>
             <span>Severe pain</span>
           </div>
@@ -198,7 +219,7 @@ export const SetOptionsSheet: React.FC<{
         <div>
           <div className="flex items-baseline justify-between" style={{ marginBottom: 6 }}>
             <p style={{ ...sectionLabel, margin: 0 }}>Mood</p>
-            <span className="tabular-nums" style={{ fontSize: 11, color: "#8C8378" }}>{mood} / 10</span>
+            <span className="tabular-nums" style={{ fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{mood} / 10</span>
           </div>
           {/* WO10: matches Pain level, with a pink fill (frame #D987AC thumb). */}
           <input
@@ -210,17 +231,17 @@ export const SetOptionsSheet: React.FC<{
             onChange={(e) => setMood(Number(e.target.value))}
             aria-label="Mood"
             className="set-slider w-full"
-            style={sliderStyle(mood, 1, 10, "#E8A3C0", "#D987AC")}
+            style={sliderStyle(mood, 1, 10, "#E8A3C0", "#D987AC", dark)}
           />
-          <div className="flex items-center justify-between" style={{ fontSize: 10, color: "#9A9389", marginTop: 2 }}>
+          <div className="flex items-center justify-between" style={{ fontSize: 10, color: optionsColor("caption", dark), marginTop: 2 }}>
             <span>Bad mood</span>
             <span>Very good</span>
           </div>
         </div>
 
-        <div style={{ background: "#F2F3F5", borderRadius: 14, padding: "10px 12px" }}>
+        <div style={{ background: optionsColor("notesBox", dark), borderRadius: 14, padding: "10px 12px" }}>
           <div className="flex items-center justify-between" style={{ marginBottom: 6 }}>
-            <label htmlFor="set-notes" style={{ fontSize: 13, fontWeight: 500, color: "#575863" }}>
+            <label htmlFor="set-notes" style={{ fontSize: 13, fontWeight: 500, color: optionsColor("notesLabel", dark) }}>
               Notes
             </label>
             <button
@@ -229,7 +250,7 @@ export const SetOptionsSheet: React.FC<{
               aria-pressed={pinned && hasNote}
               aria-label={pinned && hasNote ? "Unpin this note from the exercise" : "Pin this note to the exercise"}
               className="tap relative flex items-center justify-center disabled:opacity-40 before:absolute before:-inset-[12px] before:content-['']"
-              style={{ width: 20, height: 20, color: pinned && hasNote ? "#5F5093" : "#A39D95" }}
+              style={{ width: 20, height: 20, color: pinned && hasNote ? optionsColor("pinned", dark) : optionsColor("pinIdle", dark) }}
             >
               <Pin size={15} fill={pinned && hasNote ? "currentColor" : "none"} />
             </button>
@@ -240,10 +261,10 @@ export const SetOptionsSheet: React.FC<{
             onChange={(e) => setNotes(e.target.value)}
             placeholder="e.g. felt heavy, elbow twinge…"
             className="w-full text-charcoal placeholder:text-charcoal-faint focus:outline-none"
-            style={{ borderRadius: 10, background: "#FFFFFF", border: "none", padding: "9px 12px", fontSize: 14 }}
+            style={{ borderRadius: 10, background: "rgb(var(--c-cream-card))", border: "none", padding: "9px 12px", fontSize: 14 }}
           />
           {pinned && hasNote && (
-            <p style={{ margin: "8px 0 0", fontSize: 11, fontWeight: 600, color: "#5F5093" }}>
+            <p style={{ margin: "8px 0 0", fontSize: 11, fontWeight: 600, color: optionsColor("pinned", dark) }}>
               Pinned to this exercise in {routineName}
             </p>
           )}

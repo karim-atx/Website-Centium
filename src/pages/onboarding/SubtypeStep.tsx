@@ -49,7 +49,7 @@ export const SubtypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }
   return (
     <OnboardingShell
       title={isBusiness ? "What kind of business is this?" : "What kind of professional are you?"}
-      subtitle="This shapes your experience — you can adjust it later."
+      subtitle="This shapes your experience. You can adjust it later."
       onBack={onBack}
       footer={
         <Button fullWidth size="lg" disabled={!canContinue} onClick={onNext}>
@@ -68,7 +68,7 @@ export const SubtypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }
               className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
             />
           </label>
-          <p id="business-type-label" className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mt-4 mb-2">
+          <p id="business-type-label" className="section-label mt-4 mb-2">
             Business type
           </p>
           <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="business-type-label">
@@ -81,7 +81,7 @@ export const SubtypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }
                 className={clsx(
                   "tap rounded-xl py-2.5 px-3 text-xs font-semibold border transition-colors text-left",
                   draft.businessType === b.value
-                    ? "bg-primary text-white dark:text-[#0D0B1A] border-primary"
+                    ? "bg-primary-fill text-on-primary-fill border-primary-fill"
                     : "bg-cream-card border-charcoal/10 text-charcoal-soft"
                 )}
               >
@@ -95,7 +95,7 @@ export const SubtypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }
         </div>
       ) : (
         <div>
-          <p id="specialty-label" className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+          <p id="specialty-label" className="section-label mb-2">
             My specialty
           </p>
           <div className="space-y-2" role="group" aria-labelledby="specialty-label">
@@ -108,7 +108,7 @@ export const SubtypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }
                 className={clsx(
                   "tap w-full rounded-xl py-2.5 px-3 text-sm font-semibold border transition-colors text-left",
                   draft.professionalSubtype === s.value
-                    ? "bg-primary text-white dark:text-[#0D0B1A] border-primary"
+                    ? "bg-primary-fill text-on-primary-fill border-primary-fill"
                     : "bg-cream-card border-charcoal/10 text-charcoal-soft"
                 )}
               >

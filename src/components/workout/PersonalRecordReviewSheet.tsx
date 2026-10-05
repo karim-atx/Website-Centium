@@ -94,8 +94,7 @@ export const PersonalRecordReviewSheet: React.FC = () => {
     <BottomSheet open onClose={() => void skipAll()} title="Save your personal records?">
       <div className="space-y-4 animate-fade-slide-up">
         <p className="text-[12.5px] text-charcoal-soft leading-relaxed">
-          These were tracked on this device only. Pick the ones worth keeping and they'll be saved
-          to your account — anything you leave unticked stays on this device and isn't recorded.
+          These were tracked on this device only. Pick the ones worth keeping and they'll be saved to your account. Anything you leave unticked stays on this device and isn't recorded.
         </p>
 
         <div className="space-y-2 max-h-[320px] overflow-y-auto no-scrollbar">
@@ -117,7 +116,7 @@ export const PersonalRecordReviewSheet: React.FC = () => {
                   className={clsx(
                     "tap w-5 h-5 rounded-md flex items-center justify-center shrink-0 border",
                     isChecked
-                      ? "bg-primary border-primary text-white"
+                      ? "bg-primary-fill border-primary-fill text-on-primary-fill"
                       : "bg-cream-card border-charcoal/20 text-transparent",
                     status === "missing" && "opacity-40"
                   )}
@@ -136,7 +135,7 @@ export const PersonalRecordReviewSheet: React.FC = () => {
                     )}
                     {status === "missing" && (
                       <p className="text-[10.5px] font-medium text-charcoal-faint">
-                        Not in your library — can't be saved
+                        Not in your library. Can't be saved
                       </p>
                     )}
                   </div>

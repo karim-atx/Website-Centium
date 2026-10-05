@@ -12,6 +12,7 @@ import { ExerciseInfoSheet } from "../../components/workout/ExerciseInfoSheet";
 import { ExerciseHistorySheet } from "../../components/workout/ExerciseHistorySheet";
 import type { FigureKey, ZoneKey } from "../../data/bodyZones";
 import { BodyFigure } from "../../components/workout/BodyFigure";
+import { useIsDark } from "../../hooks/useIsDark";
 
 type ViewMode = "list" | "body";
 type SortMode = "alphabetical" | "muscleGroup" | "classification";
@@ -98,6 +99,18 @@ const CB_FADE_KEYFRAMES =
 const FRONT_ZONE_KEYS: ZoneKey[] = ["shoulders", "chest", "biceps", "forearms", "core", "quads", "calves"];
 const BACK_ZONE_KEYS: ZoneKey[] = ["shoulders", "back", "triceps", "forearms", "glutes", "hamstrings", "calves"];
 
+/**
+ * Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the "Yours"
+ * badge takes gold.text / gold.tint dark, the flip chip's lavender ink
+ * primary.deeper dark, the Discipline chevron text.tertiary dark.
+ */
+const COLORS = {
+  yoursInk: ["#8A6318", "#CAB082"],
+  yoursBg: ["rgba(200,145,43,0.16)", "#3A342C"],
+  flipInk: ["#5F5093", "#C8BFE9"],
+  chevron: ["#ADA9A4", "#918DA0"],
+} as const;
+
 /** WO2.1 control: a 30px smooth rounded rectangle; selected = #AEA1DC fill, white text. */
 const controlStyle = (on: boolean): React.CSSProperties => ({
   height: 30,
@@ -106,9 +119,9 @@ const controlStyle = (on: boolean): React.CSSProperties => ({
   fontSize: 11.5,
   fontWeight: 600,
   whiteSpace: "nowrap",
-  border: `1px solid ${on ? "#AEA1DC" : "rgba(36,31,27,0.11)"}`,
-  background: on ? "#AEA1DC" : "#FFFFFF",
-  color: on ? "#FFFFFF" : "#5B5349",
+  border: `1px solid ${on ? "#AEA1DC" : "rgb(var(--c-charcoal) / 0.11)"}`,
+  background: on ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-card))",
+  color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-soft))",
 });
 
 export default function ExerciseDatabaseTab() {
@@ -134,6 +147,8 @@ export default function ExerciseDatabaseTab() {
     noteFeatureMilestone("exercise_library");
   }, [noteFeatureMilestone]);
 
+  const dark = useIsDark();
+  const tabColor = (key: keyof typeof COLORS) => COLORS[key][dark ? 1 : 0];
   const [view, setView] = useState<ViewMode>("list");
   const [sort, setSort] = useState<SortMode>("alphabetical");
   const [query, setQuery] = useState("");
@@ -299,7 +314,7 @@ export default function ExerciseDatabaseTab() {
           something you reach by opening a stock exercise and saving it under
           another name — which was the only route to it from this tab. */}
       <div className="flex items-center justify-between" style={{ gap: 10, marginBottom: 12 }}>
-        <div className="flex" style={{ height: 34, padding: 3, borderRadius: 12, background: "#F5F5F6" }}>
+        <div className="flex" style={{ height: 34, padding: 3, borderRadius: 12, background: "rgb(var(--c-cream-soft))" }}>
           {(["list", "body"] as ViewMode[]).map((v) => {
             const on = view === v;
             return (
@@ -319,8 +334,8 @@ export default function ExerciseDatabaseTab() {
                   gap: 6,
                   fontSize: 12,
                   fontWeight: 700,
-                  background: on ? "#AEA1DC" : "transparent",
-                  color: on ? "#FFFFFF" : "#8C8378",
+                  background: on ? "rgb(var(--c-primary-fill))" : "transparent",
+                  color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-muted))",
                 }}
               >
                 {v === "list" ? <List size={13} /> : <User size={13} />}
@@ -333,14 +348,14 @@ export default function ExerciseDatabaseTab() {
       </div>
 
       <div className="relative" style={{ marginBottom: 10 }}>
-        <Search size={15} className="absolute top-1/2 -translate-y-1/2" style={{ left: 14, color: "#8C8378" }} />
+        <Search size={15} className="absolute top-1/2 -translate-y-1/2" style={{ left: 14, color: "rgb(var(--c-charcoal-muted))" }} />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search exercises…"
           aria-label="Search exercises"
           className="w-full text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-          style={{ height: 40, borderRadius: 16, background: "#F5F5F6", paddingLeft: 36, paddingRight: 14, fontSize: 14 }}
+          style={{ height: 40, borderRadius: 16, background: "rgb(var(--c-cream-soft))", paddingLeft: 36, paddingRight: 14, fontSize: 14 }}
         />
       </div>
 
@@ -370,7 +385,7 @@ export default function ExerciseDatabaseTab() {
               style={{ ...controlStyle(!!discipline), gap: 5 }}
             >
               {discipline ? `Discipline: ${EXERCISE_TAG_LABEL[discipline]}` : "Discipline"}
-              <ChevronDown size={12} style={{ color: discipline ? "#FFFFFF" : "#ADA9A4" }} />
+              <ChevronDown size={12} style={{ color: discipline ? "#FFFFFF" : tabColor("chevron") }} />
             </button>
           </div>
           {filterMore && (
@@ -382,17 +397,17 @@ export default function ExerciseDatabaseTab() {
           )}
           </div>
 
-          <p style={{ margin: "0 0 8px 2px", fontSize: 11, fontWeight: 500, color: "#8C8378" }}>
+          <p style={{ margin: "0 0 8px 2px", fontSize: 11, fontWeight: 500, color: "rgb(var(--c-charcoal-muted))" }}>
             {filtered.length} {filtered.length === 1 ? "exercise" : "exercises"}
           </p>
 
           <div className="space-y-5">
             {groups.map((g, i) => (
               <div key={g.label ?? i}>
-                {g.label && <p className="section-label text-charcoal-faint mb-2">{g.label}</p>}
+                {g.label && <p className="section-label mb-2">{g.label}</p>}
                 <div
-                  className="overflow-hidden bg-white divide-y divide-[rgba(36,31,27,0.07)]"
-                  style={{ border: "1px solid rgba(36,31,27,0.11)", borderRadius: 18 }}
+                  className="overflow-hidden bg-cream-card divide-y divide-charcoal/[0.07]"
+                  style={{ border: "1px solid rgb(var(--c-charcoal) / 0.11)", borderRadius: 18 }}
                 >
                   {g.items.map((e) => (
                     <button
@@ -415,8 +430,8 @@ export default function ExerciseDatabaseTab() {
                                 fontWeight: 800,
                                 letterSpacing: "0.06em",
                                 textTransform: "uppercase",
-                                color: "#8A6318",
-                                background: "rgba(200,145,43,0.16)",
+                                color: tabColor("yoursInk"),
+                                background: tabColor("yoursBg"),
                                 borderRadius: 5,
                                 padding: "2px 5px",
                               }}
@@ -424,12 +439,12 @@ export default function ExerciseDatabaseTab() {
                               Yours
                             </span>
                           )}
-                          <span className="truncate" style={{ fontSize: 14, lineHeight: "18px", fontWeight: 500, color: "#241F1B" }}>
+                          <span className="truncate" style={{ fontSize: 14, lineHeight: "18px", fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>
                             {e.name}
                           </span>
                         </span>
                         {e.tags.length > 0 && (
-                          <span className="block truncate" style={{ fontSize: 11, lineHeight: "14px", color: "#8C8378" }}>
+                          <span className="block truncate" style={{ fontSize: 11, lineHeight: "14px", color: "rgb(var(--c-charcoal-muted))" }}>
                             {e.tags.map((t) => EXERCISE_TAG_LABEL[t]).join(" · ")}
                           </span>
                         )}
@@ -468,7 +483,7 @@ export default function ExerciseDatabaseTab() {
                 fontWeight: 700,
                 letterSpacing: "0.14em",
                 textTransform: "uppercase",
-                color: "#8C8378",
+                color: "rgb(var(--c-charcoal-muted))",
               }}
             >
               {bodySide === "front" ? "Front view" : "Back view"}
@@ -480,11 +495,11 @@ export default function ExerciseDatabaseTab() {
                 height: 32,
                 padding: "0 13px",
                 borderRadius: 9,
-                border: "1px solid #E5E6EB",
-                background: "#FAFAFB",
+                border: "1px solid rgb(var(--c-border-option))",
+                background: "rgb(var(--c-surface-raised))",
                 fontSize: 12,
                 fontWeight: 700,
-                color: "#5F5093",
+                color: tabColor("flipInk"),
               }}
             >
               <RefreshCw size={13} strokeWidth={2} />
@@ -495,7 +510,9 @@ export default function ExerciseDatabaseTab() {
           {/* WO5 / WO6 figure panel: the figure's own line art over its own
               zone masks (the highlight sits beneath the lines), in a
               376px-tall box sized to the art's proportions, and the figure's
-              name captioned bottom-left. */}
+              name captioned bottom-left. The panel stays light in dark mode
+              (Mobile v5.1 R3 exception): the art is near-black line work on
+              white fills, an illustration that would vanish on a dark panel. */}
           <div
             className="relative w-full flex items-center justify-center overflow-hidden"
             style={{
@@ -527,7 +544,7 @@ export default function ExerciseDatabaseTab() {
               fontWeight: 700,
               letterSpacing: "0.14em",
               textTransform: "uppercase",
-              color: "#8C8378",
+              color: "rgb(var(--c-charcoal-muted))",
             }}
           >
             Muscle groups
@@ -547,8 +564,9 @@ export default function ExerciseDatabaseTab() {
                     fontSize: 13,
                     whiteSpace: "nowrap",
                     ...(selected
-                      ? { background: "#A092E0", border: "1px solid #A092E0", color: "#FFFFFF", fontWeight: 700 }
-                      : { background: "#FAFAFB", border: "1px solid #E5E6EB", color: "#241F1B", fontWeight: 500 }),
+                      ? // Decision 7: primary-fill and its ink (#A092E0 carried white at 2.73:1).
+                        { background: "rgb(var(--c-primary-fill))", border: "1px solid rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontWeight: 700 }
+                      : { background: "rgb(var(--c-surface-raised))", border: "1px solid rgb(var(--c-border-option))", color: "rgb(var(--c-charcoal))", fontWeight: 500 }),
                   }}
                 >
                   {ZONE_LABEL[zoneKey]}
@@ -562,7 +580,7 @@ export default function ExerciseDatabaseTab() {
               classification on the right. */}
           {selectedGroup && (
             <div style={{ marginTop: 16, animation: "cb-fade .3s ease both" }}>
-              <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: "#241F1B" }}>
+              <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
                 {`${selectedMuscleLabel} · ${filtered.length} ${filtered.length === 1 ? "exercise" : "exercises"}`}
               </p>
               {filtered.length === 0 ? (
@@ -576,13 +594,13 @@ export default function ExerciseDatabaseTab() {
                       className="tap w-full flex items-center justify-between text-left"
                       style={{
                         gap: 10,
-                        border: "1px solid rgba(36,31,27,0.1)",
+                        border: "1px solid rgb(var(--c-charcoal) / 0.1)",
                         borderRadius: 12,
                         padding: "11px 13px",
                       }}
                     >
-                      <span style={{ fontSize: 13.5, fontWeight: 600, color: "#241F1B" }}>{e.name}</span>
-                      <span style={{ fontSize: 11, color: "#8C8378" }}>{classificationLabel[e.classification]}</span>
+                      <span style={{ fontSize: 13.5, fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>{e.name}</span>
+                      <span style={{ fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{classificationLabel[e.classification]}</span>
                     </button>
                   ))}
                 </div>

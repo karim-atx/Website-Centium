@@ -256,7 +256,7 @@ export default function Settings() {
     <div>
       <PageHeader title={t("Settings")} showBack />
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+      <p className="section-label mb-2.5">
         {t("Appearance")}
       </p>
       <Card className="mb-6">
@@ -268,13 +268,13 @@ export default function Settings() {
             <div>
               <p className="text-sm font-semibold text-charcoal">{t("Dark Mode")}</p>
               <p className="text-[11px] text-charcoal-faint">
-                {theme === "dark" ? t("Currently on") : t("Currently off")} — {t("applies throughout Centium")}
+                {theme === "dark" ? t("Currently on") : t("Currently off")}. {t("Applies throughout Centium")}
               </p>
             </div>
           </div>
           <Toggle checked={theme === "dark"} onChange={toggleTheme} label="Dark mode" />
         </div>
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+        <p className="section-label mb-2.5">
           {t("Color theme")}
         </p>
         <ColorThemePicker />
@@ -284,7 +284,7 @@ export default function Settings() {
           default to a female or other profile; any profile can switch it on
           here, and that opt-in is saved to the account. Off is the user's own
           choice and always wins. Nothing is deleted either way. */}
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+      <p className="section-label mb-2.5">
         {t("Health tracking")}
       </p>
       <Card className="mb-6">
@@ -312,7 +312,7 @@ export default function Settings() {
         )}
       </Card>
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+      <p className="section-label mb-2.5">
         {t("Permissions")}
       </p>
       <Card className="mb-6 space-y-4">
@@ -441,7 +441,7 @@ export default function Settings() {
           a professional or business account has any use for. */}
       {user.accountType === "customer" && (
         <>
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+          <p className="section-label mb-2.5">
             {t("Connected devices")}
           </p>
           <div className="mb-6">
@@ -459,7 +459,7 @@ export default function Settings() {
           app had was the password-reset page, reachable only from an email.
           Placed above General because "who can get into my account" outranks
           "which language is the interface in". */}
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+      <p className="section-label mb-2.5">
         Security
       </p>
       <Card padded={false} className="mb-6">
@@ -488,8 +488,8 @@ export default function Settings() {
                 {mfaEnrolled === null
                   ? "A code from your phone, as well as your password"
                   : mfaEnrolled
-                  ? "On — a code is required when you sign in"
-                  : "Off — your password alone signs you in"}
+                  ? "On: a code is required when you sign in"
+                  : "Off: your password alone signs you in"}
               </p>
             </div>
           </div>
@@ -527,7 +527,7 @@ export default function Settings() {
       {/* "Blocked in the forum": label only, with Unblock. */}
       <ForumBlocksSetting />
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+      <p className="section-label mb-2.5">
         {t("General")}
       </p>
       <Card padded={false} className="divide-y divide-charcoal/[0.04]">
@@ -711,7 +711,7 @@ export default function Settings() {
             logs, workouts, health metrics and connections are permanently removed.
           </p>
           <p className="text-sm text-charcoal-soft leading-relaxed">
-            You can change your mind at any point in those 30 days — sign back in and choose
+            You can change your mind at any point in those 30 days. Sign back in and choose
             “Cancel deletion”.
           </p>
           {deleteError && (

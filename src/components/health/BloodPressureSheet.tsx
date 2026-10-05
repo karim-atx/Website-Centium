@@ -201,7 +201,7 @@ export const BloodPressureSheet: React.FC<{
               value={sys}
               onChange={(e) => setSys(digitsOnly(e.target.value, 3))}
               inputMode="numeric"
-              placeholder="—"
+              placeholder="–"
               aria-label="Systolic, in mmHg"
               className={`${fieldStyle} text-center text-xl font-bold tabular-nums`}
             />
@@ -213,7 +213,7 @@ export const BloodPressureSheet: React.FC<{
               value={dia}
               onChange={(e) => setDia(digitsOnly(e.target.value, 3))}
               inputMode="numeric"
-              placeholder="—"
+              placeholder="–"
               aria-label="Diastolic, in mmHg"
               className={`${fieldStyle} text-center text-xl font-bold tabular-nums`}
             />
@@ -226,7 +226,7 @@ export const BloodPressureSheet: React.FC<{
               value={pulse}
               onChange={(e) => setPulse(digitsOnly(e.target.value, 3))}
               inputMode="numeric"
-              placeholder="—"
+              placeholder="–"
               aria-label="Pulse, in beats per minute"
               className={`${fieldStyle} text-center text-base font-bold tabular-nums`}
             />
@@ -253,8 +253,9 @@ export const BloodPressureSheet: React.FC<{
             className="flex gap-2.5 rounded-2xl px-3.5 py-3 mb-3"
             style={{ background: "rgba(164,35,28,0.08)" }}
           >
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "#A4231C" }} />
-            <p className="text-[12px] leading-[1.5] font-semibold" style={{ color: "#7E1B15" }}>
+            {/* Mobile v5.1 R3, dark mode: danger #FF6B5E for ink and icon (5.7:1 on the 8% red tint over the dark sheet). */}
+            <AlertTriangle size={16} className="shrink-0 mt-0.5 text-[#A4231C] dark:text-[#FF6B5E]" />
+            <p className="text-[12px] leading-[1.5] font-semibold text-[#7E1B15] dark:text-[#FF6B5E]">
               {SEVERE_READING_MESSAGE}
             </p>
           </div>

@@ -66,7 +66,7 @@ export const ReferralSheet: React.FC<{ open: boolean; onClose: () => void }> = (
     }
     setResult({
       success: false,
-      message: found.status === "not_found" ? "Code not found — check it and try again." : found.message,
+      message: found.status === "not_found" ? "Code not found. Check it and try again." : found.message,
     });
   };
 
@@ -85,7 +85,7 @@ export const ReferralSheet: React.FC<{ open: boolean; onClose: () => void }> = (
       applyReferralReward(outcome.discountPct ?? preview.refereeDiscountPct);
       setResult({
         success: true,
-        message: outcome.message ?? `Code applied — ${outcome.discountPct ?? preview.refereeDiscountPct}% off your subscription.`,
+        message: outcome.message ?? `Code applied: ${outcome.discountPct ?? preview.refereeDiscountPct}% off your subscription.`,
       });
       return;
     }
@@ -107,7 +107,7 @@ export const ReferralSheet: React.FC<{ open: boolean; onClose: () => void }> = (
               already true. What it never said is what points are for, which is
               a tier and, so far, nothing else. */}
           <p className="text-xs text-charcoal-soft mb-3">
-            Share this code — when someone subscribes to Centium using it, they get 10% off their
+            Share this code. When someone subscribes to Centium using it, they get 10% off their
             subscription, and you get 1,500 points plus 15% off your next month. Points count toward
             your tier; rewards for them are coming soon.
           </p>
@@ -119,7 +119,7 @@ export const ReferralSheet: React.FC<{ open: boolean; onClose: () => void }> = (
               onClick={copyCode}
               disabled={!myCode}
               aria-label="Copy referral code"
-              className="tap w-10 h-10 rounded-xl bg-primary text-white flex items-center justify-center shrink-0 disabled:opacity-40"
+              className="tap w-10 h-10 rounded-xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
             >
               {copied ? <Check size={16} /> : <Copy size={16} />}
             </button>
@@ -129,7 +129,7 @@ export const ReferralSheet: React.FC<{ open: boolean; onClose: () => void }> = (
 
         {referralNextMonthDiscountPct > 0 && (
           <p className="text-xs font-semibold text-primary-dark bg-primary-pale/60 rounded-xl px-3.5 py-2.5">
-            A referral succeeded — you have {referralNextMonthDiscountPct}% off your next month's subscription.
+            A referral succeeded: you have {referralNextMonthDiscountPct}% off your next month's subscription.
           </p>
         )}
 
@@ -138,7 +138,7 @@ export const ReferralSheet: React.FC<{ open: boolean; onClose: () => void }> = (
           {referralRedeemed ? (
             <p className="text-xs text-charcoal-faint bg-cream-soft rounded-xl px-3.5 py-2.5">
               You've already redeemed a referral code
-              {referralDiscountPct > 0 ? ` — ${referralDiscountPct}% off is applied to your subscription.` : "."}
+              {referralDiscountPct > 0 ? `. ${referralDiscountPct}% off is applied to your subscription.` : "."}
             </p>
           ) : preview ? (
             // Confirmation card — shown before anything is redeemed.

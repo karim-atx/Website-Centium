@@ -68,7 +68,7 @@ export const CheckInSheet: React.FC<{
                       onClick={() => setAnswers((prev) => prev.map((a, i) => (i === qi ? ai : a)))}
                       className={`tap min-h-[44px] rounded-xl px-3 py-2.5 text-[12px] font-semibold text-left border ${
                         selected
-                          ? "bg-primary text-white dark:text-[#0D0B1A] border-primary"
+                          ? "bg-primary-fill text-on-primary-fill border-primary-fill"
                           : "bg-cream-card text-charcoal border-charcoal/[0.1]"
                       }`}
                     >

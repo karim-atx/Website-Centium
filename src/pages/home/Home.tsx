@@ -15,6 +15,7 @@ import { useNavigate } from "react-router-dom";
 import ProfessionalDashboard from "../professionals/ProfessionalDashboard";
 import BusinessDashboard from "../marketplace/BusinessDashboard";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // The streaks card's height, so its placeholder does not shift the page.
 const STREAKS_PLACEHOLDER_HEIGHT = 176;
@@ -37,6 +38,7 @@ export default function Home() {
     setRecoverySensitiveIntroSeen,
   } = useApp();
   const navigate = useNavigate();
+  const dark = useIsDark();
   const [addFoodOpen, setAddFoodOpen] = useState(false);
   const [voiceOpen, setVoiceOpen] = useState(false);
   // Quick Actions' Workout starts a NEW routine: the create-routine flow.
@@ -76,7 +78,10 @@ export default function Home() {
         <button
           onClick={() => navigate("/app/profile")}
           className="tap w-9 h-9 rounded-full flex items-center justify-center text-team-teal-ink font-extrabold text-[13px] shrink-0 overflow-hidden"
-          style={{ background: "linear-gradient(150deg,#C8E0DC,#A2C8C2)" }}
+          // Mobile v5.1 R3, dark mode: team-teal-ink turns light teal (#93C1B9), so
+          // the avatar takes the teal #6F9993 as a 30% to 16% tint on the dark
+          // surfaces (secondary.tint #293339), 5.9:1 to 6.5:1 under the initial.
+          style={{ background: dark ? "linear-gradient(150deg,#2E3B3C,#293339)" : "linear-gradient(150deg,#C8E0DC,#A2C8C2)" }}
         >
           {user.avatarUrl ? (
             <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -98,8 +103,7 @@ export default function Home() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-bold text-primary-deep-text mb-0.5">You're in a recovery-sensitive experience</p>
             <p className="text-xs text-charcoal-soft leading-relaxed">
-              Calorie totals, weight, and streaks are hidden. You can turn this off anytime in your Profile
-              — nothing you've logged is ever lost.
+              Calorie totals, weight, and streaks are hidden. You can turn this off anytime in your Profile. Nothing you've logged is ever lost.
             </p>
           </div>
           <button

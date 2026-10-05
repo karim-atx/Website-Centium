@@ -17,7 +17,7 @@ export const DateSelector: React.FC = () => {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   return (
-    <div className="flex items-center justify-between gap-2.5 rounded-full bg-white dark:bg-[#221C2E] border border-team-nav-accent/[0.28] dark:border-team-nav-accent/[0.34] px-3 py-2 mb-[13px] animate-fade-slide-up">
+    <div className="flex items-center justify-between gap-2.5 rounded-full bg-white dark:bg-[#1C1F28] border border-team-nav-accent/[0.28] dark:border-team-nav-accent/[0.34] px-3 py-2 mb-[13px] animate-fade-slide-up">
       <button
         onClick={goToPrevDate}
         className="tap w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-team-nav-idle"

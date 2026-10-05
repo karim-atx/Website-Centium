@@ -92,7 +92,7 @@ export const EndPregnancySheet: React.FC<{
               key={o}
               onClick={() => setOutcome(o)}
               className={`tap w-full text-left rounded-xl px-3.5 py-3 text-[12.5px] font-semibold ${
-                outcome === o ? "bg-primary text-white" : "bg-cream-soft text-charcoal"
+                outcome === o ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal"
               }`}
             >
               {G.END_OUTCOME_LABEL[o]}

@@ -8,7 +8,8 @@ import { BlockCard } from "./BlockCard";
 import { groupIntoRuns } from "../../services/workout/blocks";
 import { formatCompactDuration } from "../../services/workout";
 import { programRow } from "../../services/workout/programRow";
-import { LEVEL_COLORS, LEVEL_ORDER, levelColors, levelName } from "../../data/levelColors";
+import { LEVEL_ORDER, levelColors, levelColorsMap, levelName } from "../../data/levelColors";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Browsing the curated starter programs, and taking one for yourself.
 //
@@ -42,6 +43,7 @@ export const BrowseProgramsSheet: React.FC<{
   onClose: () => void;
 }> = ({ open, onClose }) => {
   const { authUserId, adoptTemplate } = useApp();
+  const dark = useIsDark();
 
   const [programs, setPrograms] = useState<WorkoutTemplate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -97,11 +99,10 @@ export const BrowseProgramsSheet: React.FC<{
     setSelected(null);
   };
 
-  const tone = selected ? levelColors(selected.level) : null;
+  const tone = selected ? levelColors(selected.level, dark) : null;
 
   return (
     <BottomSheet
-      light
       open={open}
       onClose={close}
       title={selected ? selected.name : "Starter programs"}
@@ -113,7 +114,7 @@ export const BrowseProgramsSheet: React.FC<{
               onClick={() => void adopt(selected)}
               disabled={adopting}
               className="tap w-full flex items-center justify-center disabled:opacity-60"
-              style={{ height: 52, borderRadius: 16, background: tone.deep, color: "#FFFFFF", fontSize: 14, fontWeight: 700 }}
+              style={{ height: 52, borderRadius: 16, background: tone.fill, color: "#FFFFFF", fontSize: 14, fontWeight: 700 }}
             >
               {adopting ? "Adding…" : "Add to my routines"}
             </button>
@@ -137,12 +138,12 @@ export const BrowseProgramsSheet: React.FC<{
             <ChevronLeft size={14} /> All programs
           </button>
 
-          {/* WO21: description and meta on a white card (exercise-row width and radius). */}
-          <div style={{ background: "#FFFFFF", borderRadius: 12, padding: "12px 14px 14px" }}>
+          {/* WO21: description and meta on a white card (exercise-row width and radius); the dark card in dark mode. */}
+          <div style={{ background: "rgb(var(--c-cream-card))", borderRadius: 12, padding: "12px 14px 14px" }}>
             {selected.description && (
-              <p style={{ margin: 0, fontSize: 12.5, lineHeight: "20px", color: "#5B5349" }}>{selected.description}</p>
+              <p style={{ margin: 0, fontSize: 12.5, lineHeight: "20px", color: "rgb(var(--c-charcoal-soft))" }}>{selected.description}</p>
             )}
-            <p style={{ margin: selected.description ? "8px 0 0" : 0, fontSize: 11, fontWeight: 500, color: "#8C8378" }}>
+            <p style={{ margin: selected.description ? "8px 0 0" : 0, fontSize: 11, fontWeight: 500, color: "rgb(var(--c-charcoal-muted))" }}>
               {[selected.level ? levelName(selected.level) : null, aboutDuration(selected), exerciseCount(selected)]
                 .filter(Boolean)
                 .join(" · ")}
@@ -172,9 +173,9 @@ export const BrowseProgramsSheet: React.FC<{
                     return (
                       <div key={ex.id} className="flex overflow-hidden" style={{ borderRadius: 12, minHeight: 48 }}>
                         <div className="flex-1 min-w-0 flex flex-col justify-center" style={{ background: tone.row, padding: "8px 14px" }}>
-                          <p style={{ margin: 0, fontSize: 14, lineHeight: "19px", fontWeight: 500, color: "#241F1B" }}>{ex.name}</p>
+                          <p style={{ margin: 0, fontSize: 14, lineHeight: "19px", fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>{ex.name}</p>
                           {row.detail && (
-                            <p style={{ margin: "1px 0 0", fontSize: 11, lineHeight: "16px", color: "#8C8378" }}>{row.detail}</p>
+                            <p style={{ margin: "1px 0 0", fontSize: 11, lineHeight: "16px", color: "rgb(var(--c-charcoal-muted))" }}>{row.detail}</p>
                           )}
                         </div>
                         {row.value && (
@@ -185,7 +186,7 @@ export const BrowseProgramsSheet: React.FC<{
                             <span style={{ fontSize: 14, lineHeight: "17px", fontWeight: 800, color: tone.deep, whiteSpace: "nowrap" }}>
                               {row.value}
                             </span>
-                            <span style={{ fontSize: 9, lineHeight: "12px", fontWeight: 600, color: tone.deep, opacity: 0.8, whiteSpace: "nowrap" }}>
+                            <span style={{ fontSize: 9, lineHeight: "12px", fontWeight: 600, color: tone.deep, opacity: dark ? 1 : 0.8, whiteSpace: "nowrap" }}>
                               {row.label}
                             </span>
                           </div>
@@ -202,7 +203,7 @@ export const BrowseProgramsSheet: React.FC<{
         </div>
       ) : (
         <div className="space-y-4 animate-fade-slide-up">
-          <p className="text-[12.5px] leading-[20px]" style={{ margin: 0, color: "#5B5349" }}>
+          <p className="text-[12.5px] leading-[20px]" style={{ margin: 0, color: "rgb(var(--c-charcoal-soft))" }}>
             Ready-made programs to start from. Adding one copies it into your routines, where you can change anything. The
             original stays as it is.
           </p>
@@ -210,8 +211,8 @@ export const BrowseProgramsSheet: React.FC<{
           {/* WO20: what the tile colours mean. */}
           <div className="flex items-center flex-wrap" style={{ columnGap: 14, rowGap: 4 }}>
             {LEVEL_ORDER.map((level) => (
-              <span key={level} className="flex items-center" style={{ gap: 6, fontSize: 10, lineHeight: "14px", color: "#5B5349" }}>
-                <span aria-hidden className="rounded-full flex-none" style={{ width: 8, height: 8, background: LEVEL_COLORS[level].dot }} />
+              <span key={level} className="flex items-center" style={{ gap: 6, fontSize: 10, lineHeight: "14px", color: "rgb(var(--c-charcoal-soft))" }}>
+                <span aria-hidden className="rounded-full flex-none" style={{ width: 8, height: 8, background: levelColorsMap(dark)[level].dot }} />
                 {levelName(level)}
               </span>
             ))}
@@ -227,7 +228,7 @@ export const BrowseProgramsSheet: React.FC<{
               taller tile's height (grid stretch). The whole tile is the button. */}
           <div className="grid grid-cols-2" style={{ gap: 10 }}>
             {programs.map((p) => {
-              const c = levelColors(p.level);
+              const c = levelColors(p.level, dark);
               const duration = aboutDuration(p);
               return (
                 <button
@@ -241,7 +242,7 @@ export const BrowseProgramsSheet: React.FC<{
                 >
                   <span
                     className="line-clamp-2"
-                    style={{ fontSize: 14.5, lineHeight: "19px", fontWeight: 600, color: "#241F1B" }}
+                    style={{ fontSize: 14.5, lineHeight: "19px", fontWeight: 600, color: "rgb(var(--c-charcoal))" }}
                   >
                     {p.name}
                   </span>
@@ -255,7 +256,7 @@ export const BrowseProgramsSheet: React.FC<{
                       )}
                     </span>
                   )}
-                  <span style={{ marginTop: 2, fontSize: 11, lineHeight: "14px", color: "#5B5349" }}>
+                  <span style={{ marginTop: 2, fontSize: 11, lineHeight: "14px", color: "rgb(var(--c-charcoal-soft))" }}>
                     {duration && (
                       <>
                         <span className="whitespace-nowrap">{duration}</span> ·{" "}

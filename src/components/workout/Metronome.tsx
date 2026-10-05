@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import clsx from "clsx";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Design refinement §6.6: a real metronome mark, drawn at lucide's stroke
 // weight so it sits with the rest of the set — replaces the generic timer
@@ -72,6 +73,10 @@ export const Metronome: React.FC = () => {
   const [bpm, setBpm] = useState(60);
   const [running, setRunning] = useState(false);
   const [beat, setBeat] = useState(0);
+  const dark = useIsDark();
+  // Mobile v5.1 R3 (no light islands): the − / + glyphs have no token at
+  // #8A8594; dark lifts them to text.secondary (7.3:1 on surface.soft).
+  const stepInk = dark ? "#B8B3C7" : "#8A8594";
   const ctxRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<number | null>(null);
   const reducedMotion =
@@ -125,7 +130,7 @@ export const Metronome: React.FC = () => {
         onClick={() => setOpen((v) => !v)}
         className={clsx(
           "tap w-[34px] h-[34px] rounded-full flex items-center justify-center shadow-soft",
-          running ? "bg-teal text-white" : "bg-white text-charcoal-soft"
+          running ? "bg-teal-fill text-on-primary-fill" : "bg-cream-card text-charcoal-soft"
         )}
         aria-label="Metronome"
         aria-expanded={open}
@@ -135,12 +140,12 @@ export const Metronome: React.FC = () => {
       {open && (
         <div
           className="absolute right-0 top-11 z-20 w-48 animate-fade-slide-up"
-          style={{ background: "#FFFFFF", borderRadius: 20, padding: 16, boxShadow: "0 12px 32px rgba(0,0,0,0.18)" }}
+          style={{ background: "rgb(var(--c-cream-card))", borderRadius: 20, padding: 16, boxShadow: "0 12px 32px rgba(0,0,0,0.18)" }}
         >
           <style>{`@keyframes metro-beat { 0% { transform: scale(1.7); opacity: 1; } 100% { transform: scale(1); opacity: 0.85; } } @keyframes metro-beat-soft { 0% { opacity: 0.25; } 100% { opacity: 1; } }`}</style>
           <p
             className="uppercase"
-            style={{ margin: "0 0 8px", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em", color: "#8C8378" }}
+            style={{ margin: "0 0 8px", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em", color: "rgb(var(--c-charcoal-muted))" }}
           >
             Metronome
           </p>
@@ -150,18 +155,18 @@ export const Metronome: React.FC = () => {
               onClick={() => setBpm((b) => Math.max(30, b - 5))}
               aria-label="Slower"
               className={stepButton}
-              style={{ width: 28, height: 28, background: "#F5F5F6", color: "#8A8594" }}
+              style={{ width: 28, height: 28, background: "rgb(var(--c-cream-soft))", color: stepInk }}
             >
               <Minus size={13} />
             </button>
-            <span className="tabular-nums" style={{ fontSize: 20, fontWeight: 800, color: "#241F1B" }}>
+            <span className="tabular-nums" style={{ fontSize: 20, fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
               {bpm} BPM
             </span>
             <button
               onClick={() => setBpm((b) => Math.min(200, b + 5))}
               aria-label="Faster"
               className={stepButton}
-              style={{ width: 28, height: 28, background: "#F5F5F6", color: "#8A8594" }}
+              style={{ width: 28, height: 28, background: "rgb(var(--c-cream-soft))", color: stepInk }}
             >
               <Plus size={13} />
             </button>
@@ -173,8 +178,10 @@ export const Metronome: React.FC = () => {
             style={{
               height: 44,
               borderRadius: 12,
-              background: running ? "#7D67D9" : "#AEA1DC",
-              color: "#FFFFFF",
+              // White ink needs 4.5:1: idle is primary-fill, and running is
+              // the deeper brand shade so the two states stay distinct.
+              background: running ? "rgb(var(--c-primary-deep-text))" : "rgb(var(--c-primary-fill))",
+              color: "rgb(var(--c-on-primary-fill))",
               fontSize: 14,
               fontWeight: 700,
             }}

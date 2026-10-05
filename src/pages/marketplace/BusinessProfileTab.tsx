@@ -190,7 +190,7 @@ export default function BusinessProfileTab() {
         </div>
       </div>
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Profile</p>
+      <p className="section-label mb-2.5">Profile</p>
       <Card className="mb-6">
         <label className="block mb-3">
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">Business name</span>
@@ -202,7 +202,7 @@ export default function BusinessProfileTab() {
         </label>
         <label className="block mb-3">
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-            Branch type — if this business has multiple branches
+            Branch type (if this business has multiple branches)
           </span>
           <input
             value={field("branchType")}
@@ -213,7 +213,7 @@ export default function BusinessProfileTab() {
         </label>
         <label className="block mb-3">
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-            Bio — shown to clients on Explore
+            Bio (shown to clients on Explore)
           </span>
           <textarea
             value={field("bio")}
@@ -225,7 +225,7 @@ export default function BusinessProfileTab() {
         </label>
         <label className="block">
           <span className="text-xs font-semibold text-charcoal-soft mb-1.5 block">
-            Location — shown to clients on Explore
+            Location (shown to clients on Explore)
           </span>
           <input
             value={field("location")}
@@ -239,7 +239,7 @@ export default function BusinessProfileTab() {
       {/* V10 (QA 10.0): "a credentials tab should include the email, phone
           number, website. If either one is filled, it should reflect in
           the client UI as well as part of the explore tab." */}
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Credentials</p>
+      <p className="section-label mb-2.5">Credentials</p>
       <Card className="mb-6">
         <div className="space-y-2.5">
           <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
@@ -282,7 +282,7 @@ export default function BusinessProfileTab() {
           <button
             onClick={() => void saveListing()}
             disabled={savingListing}
-            className="tap rounded-full bg-primary text-white text-xs font-bold px-5 py-2.5 disabled:opacity-50"
+            className="tap rounded-full bg-primary-fill text-on-primary-fill text-xs font-bold px-5 py-2.5 disabled:opacity-50"
           >
             {savingListing ? "Saving…" : "Save changes"}
           </button>
@@ -292,7 +292,7 @@ export default function BusinessProfileTab() {
         {listingError && <p className="text-xs font-semibold text-status-high">{listingError}</p>}
       </div>
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+      <p className="section-label mb-2.5">
         Ratings & Reviews
       </p>
       {/* BUSINESSES HAVE NO REVIEWS, and this card has never shown one. It
@@ -312,8 +312,8 @@ export default function BusinessProfileTab() {
           The Save button above is what says whether any of it has landed. */}
       {(field("bio") || field("location")) && (
         <Card className="mb-6 bg-cream-soft">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-            Preview — what clients see on Explore
+          <p className="section-label mb-2">
+            Preview: what clients see on Explore
           </p>
           {field("branchType") && (
             <p className="text-xs font-semibold text-primary-dark mb-1">{field("branchType")}</p>

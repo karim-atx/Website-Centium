@@ -771,7 +771,7 @@ function describeAdoption(error: PostgrestError): string {
   if (code === "ATX08") return "That program is no longer available.";
   if (code === "ATX09") return "That program can't be added this way.";
   if (code === "ATX10") {
-    return "This program can't be copied — one of its exercises isn't available.";
+    return "This program can't be copied. One of its exercises isn't available.";
   }
   return describe(error);
 }

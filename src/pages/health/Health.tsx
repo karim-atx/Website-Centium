@@ -272,7 +272,7 @@ export default function Health() {
       {recoveryModePending && <NumberPlaceholder height={127} label="Weight trend" className="mb-[13px]" />}
       {!recoverySensitive && !recoveryModePending && metricValues.weight === null && (
         <div className="rounded-[22px] px-[17px] py-4 mb-[13px] bg-cream-card border border-charcoal/[0.06]">
-          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Weight trend</p>
+          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">Weight trend</p>
           <p className="mt-[9px] text-[15px] font-bold text-charcoal">{NO_READINGS}</p>
           <p className="mt-[5px] text-[11px] text-charcoal-tertiary">{emptyHint("weight")}</p>
         </div>
@@ -337,7 +337,7 @@ export default function Health() {
           calls this set canonical and says every future placement should
           draw from it. Wired to this page's own detail sheets rather than
           Home's navigate-to-Health, since we're already here. */}
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Today</p>
+      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">Today</p>
       <div className="flex gap-[7px] mb-[9px]">
         <button
           onClick={() => metricValues.steps !== null && openDetail(stepsMeta, metricValues.steps)}
@@ -345,7 +345,7 @@ export default function Health() {
           className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left disabled:cursor-default"
           style={{ background: "rgba(162,200,194,.2)" }}
         >
-          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-teal-ink/[0.72]">Steps</p>
+          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-teal-ink/[0.72] dark:text-team-teal-ink">Steps</p>
           <p className="mt-[5px] text-[16px] font-extrabold tracking-[-0.03em] text-charcoal tabular-nums">
             {metricValues.steps === null ? (
               <span className="text-[11px] font-semibold text-charcoal-tertiary">{NO_READINGS}</span>
@@ -384,7 +384,7 @@ export default function Health() {
           className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left"
           style={{ background: "rgba(143,192,232,.17)" }}
         >
-          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-blue-ink/[0.72]">Water</p>
+          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-blue-ink/[0.72] dark:text-team-blue-ink">Water</p>
           <div className="flex-1 flex items-center justify-center gap-2.5 min-h-0">
             <div className="min-w-0 text-right">
               <p className="text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">{(water / 1000).toFixed(1)} L</p>
@@ -411,7 +411,7 @@ export default function Health() {
           className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left disabled:cursor-default"
           style={{ background: "rgba(174,161,220,.13)" }}
         >
-          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-primary-deep-text/[0.65]">Sleep</p>
+          <p className="text-[9px] font-bold tracking-[.16em] uppercase text-primary-deep-text/[0.65] dark:text-primary-deep-text">Sleep</p>
           <p className="mt-[5px] text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">
             {metricValues.sleepHours === null ? (
               <span className="text-[11px] font-semibold text-charcoal-tertiary">{NO_READINGS}</span>
@@ -571,8 +571,9 @@ export default function Health() {
             {severe && (
               <p
                 role="alert"
-                className="mt-2.5 text-[11px] leading-[1.45] font-semibold rounded-xl px-2.5 py-2"
-                style={{ background: "rgba(164,35,28,0.08)", color: "#7E1B15" }}
+                // Mobile v5.1 R3, dark mode: danger #FF6B5E (5.7:1 on the 8% red tint over the dark card).
+                className="mt-2.5 text-[11px] leading-[1.45] font-semibold rounded-xl px-2.5 py-2 text-[#7E1B15] dark:text-[#FF6B5E]"
+                style={{ background: "rgba(164,35,28,0.08)" }}
               >
                 {SEVERE_READING_MESSAGE}
               </p>
@@ -698,7 +699,7 @@ export default function Health() {
         </button>
       )}
 
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Records</p>
+      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">Records</p>
       <div className="flex flex-col gap-[7px] mb-3">
         <button
           onClick={() => setRecordsTab("biomarkers")}

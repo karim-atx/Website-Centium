@@ -18,6 +18,10 @@ export default {
           soft: "rgb(var(--c-cream-soft) / <alpha-value>)",
           card: "rgb(var(--c-cream-card) / <alpha-value>)",
         },
+        // Mobile v5.1 surface.raised: #FAFAFB, dark #262932. See index.css.
+        surface: {
+          raised: "rgb(var(--c-surface-raised) / <alpha-value>)",
+        },
         charcoal: {
           DEFAULT: "rgb(var(--c-charcoal) / <alpha-value>)",
           soft: "rgb(var(--c-charcoal-soft) / <alpha-value>)",
@@ -27,7 +31,11 @@ export default {
           // step instead of reusing `faint` for both.
           tertiary: "rgb(var(--c-charcoal-tertiary) / <alpha-value>)",
           disabled: "rgb(var(--c-charcoal-disabled) / <alpha-value>)",
+          // Mobile v5.1 R3: the board's text.muted #8C8378, dark #B8B3C7.
+          muted: "rgb(var(--c-charcoal-muted) / <alpha-value>)",
         },
+        // Mobile v5.1 R3: border.option #E5E6EB, dark rgba(238,239,242,0.10).
+        "border-option": "rgb(var(--c-border-option) / <alpha-value>)",
         primary: {
           DEFAULT: "rgb(var(--c-primary) / <alpha-value>)",
           light: "rgb(var(--c-primary-light) / <alpha-value>)",
@@ -35,7 +43,14 @@ export default {
           dark: "rgb(var(--c-primary-dark) / <alpha-value>)",
           // Text/glyph colour when sitting on a `primary-pale` wash.
           "deep-text": "rgb(var(--c-primary-deep-text) / <alpha-value>)",
+          // Mobile v5.1 (R1): the ground of a filled button with white ink,
+          // 4.5:1 or better in every theme; and the row/tile glyph colour.
+          fill: "rgb(var(--c-primary-fill) / <alpha-value>)",
+          accent: "rgb(var(--c-primary-accent) / <alpha-value>)",
         },
+        // The ink on a primary-fill button: white in light mode, near-black in
+        // dark mode, where the fill is the lighter primary. See index.css.
+        "on-primary-fill": "rgb(var(--c-on-primary-fill) / <alpha-value>)",
         // The white-text hero cards' light-mode gradient. See index.css.
         hero: {
           from: "rgb(var(--c-hero-from) / <alpha-value>)",
@@ -62,6 +77,8 @@ export default {
           dark: "rgb(var(--c-teal-dark) / <alpha-value>)",
           // Positive-trend text colour on a `teal-pale` (sage) wash.
           "deep-text": "rgb(var(--c-teal-deep-text) / <alpha-value>)",
+          // Mobile v5.1 R2: a filled teal control's ground; ink is on-primary-fill.
+          fill: "rgb(var(--c-teal-fill) / <alpha-value>)",
         },
         gold: {
           DEFAULT: "rgb(var(--c-gold) / <alpha-value>)",
@@ -88,6 +105,8 @@ export default {
         team: {
           "nav-accent": "rgb(var(--c-team-nav-accent) / <alpha-value>)",
           "nav-idle": "rgb(var(--c-team-nav-idle) / <alpha-value>)",
+          // The active label's ink: nav-accent itself is under 4.5:1 as text.
+          "nav-accent-text": "rgb(var(--c-team-nav-accent-text) / <alpha-value>)",
           lavender: "rgb(var(--c-team-lavender) / <alpha-value>)",
           "lavender-deep": "rgb(var(--c-team-lavender-deep) / <alpha-value>)",
           "teal-ink": "rgb(var(--c-team-teal-ink) / <alpha-value>)",
@@ -171,6 +190,11 @@ export default {
         "fade-in": {
           "0%": { opacity: 0 },
           "100%": { opacity: 1 },
+        },
+        // motion.base for centred popups (Foundations 2.6): scale 0.96 to 1 + fade.
+        "popup-in": {
+          "0%": { opacity: 0, transform: "scale(0.96)" },
+          "100%": { opacity: 1, transform: "scale(1)" },
         },
         "pop": {
           "0%": { transform: "scale(0.9)", opacity: 0 },
@@ -407,6 +431,7 @@ export default {
       animation: {
         "fade-slide-up": "fade-slide-up 0.45s cubic-bezier(0.22,1,0.36,1) both",
         "fade-in": "fade-in 0.3s ease both",
+        "popup-in": "popup-in 0.25s cubic-bezier(0.22,1,0.36,1) both",
         "pop": "pop 0.4s cubic-bezier(0.22,1,0.36,1) both",
         "sheet-up": "sheet-up 0.35s cubic-bezier(0.22,1,0.36,1) both",
         "drop-down": "drop-down 0.28s cubic-bezier(0.22,1,0.36,1) both",

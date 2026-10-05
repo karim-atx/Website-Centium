@@ -181,7 +181,7 @@ export const MetricDetailSheet: React.FC<{
                   if (n > 0) onEditStepsGoal?.(n);
                   setEditingStepsGoal(false);
                 }}
-                className="tap w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shrink-0"
+                className="tap w-9 h-9 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0"
                 aria-label="Save step goal"
               >
                 <Check size={16} strokeWidth={3} />
@@ -202,7 +202,7 @@ export const MetricDetailSheet: React.FC<{
                     setSelectedSleepIdx(null);
                   }}
                   className={`tap w-8 h-7 text-[11px] font-bold rounded-full leading-none ${
-                    period === p.value ? "bg-primary text-white" : "text-charcoal-faint"
+                    period === p.value ? "bg-primary-fill text-on-primary-fill" : "text-charcoal-faint"
                   }`}
                 >
                   {p.label}
@@ -287,7 +287,7 @@ export const MetricDetailSheet: React.FC<{
 
         {isWeight && period === "daily" && current !== null && (
           <div className="mb-4 text-center">
-            <p className="text-xs text-charcoal-faint">Latest reading — see the number above.</p>
+            <p className="text-xs text-charcoal-faint">Latest reading: see the number above.</p>
           </div>
         )}
 
@@ -316,12 +316,12 @@ export const MetricDetailSheet: React.FC<{
                     <p className="text-sm font-bold text-charcoal">
                       {values.length > 1
                         ? `${Math.round(Math.min(...values))}–${Math.round(Math.max(...values))}`
-                        : "—"}
+                        : "–"}
                     </p>
                     <p className="text-[10px] text-charcoal-faint">Range (bpm)</p>
                   </div>
                   <div className="text-center bg-cream-soft rounded-xl py-2.5">
-                    <p className="text-sm font-bold text-charcoal">{average === null ? "—" : Math.round(average)}</p>
+                    <p className="text-sm font-bold text-charcoal">{average === null ? "–" : Math.round(average)}</p>
                     <p className="text-[10px] text-charcoal-faint">Average</p>
                   </div>
                 </div>
@@ -372,7 +372,7 @@ export const MetricDetailSheet: React.FC<{
 
                   {night?.stages && (
                     <>
-                      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+                      <p className="section-label mb-2">
                         Total time asleep by stage
                       </p>
                       <div className="grid grid-cols-4 gap-2 mb-4">
@@ -392,7 +392,7 @@ export const MetricDetailSheet: React.FC<{
                         })}
                       </div>
 
-                      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+                      <p className="section-label mb-2">
                         Sleep stages
                       </p>
                     </>
@@ -473,7 +473,7 @@ export const MetricDetailSheet: React.FC<{
         )}
         {isSteps && (
           <p className="text-[11px] text-charcoal-faint mt-2">
-            Recorded by a connected device — tap the pencil to set your daily goal. Device sync
+            Recorded by a connected device. Tap the pencil to set your daily goal. Device sync
             isn't available yet.
           </p>
         )}

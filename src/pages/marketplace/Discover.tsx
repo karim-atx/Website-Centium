@@ -181,7 +181,7 @@ export default function Discover() {
             onClick={() => setClassType(null)}
             className={clsx(
               "tap rounded-full px-3 py-1.5 text-xs font-semibold",
-              classType === null ? "bg-primary text-white" : "bg-cream-soft text-charcoal-soft"
+              classType === null ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
             )}
           >
             All types
@@ -192,7 +192,7 @@ export default function Discover() {
               onClick={() => setClassType((c) => (c === t ? null : t))}
               className={clsx(
                 "tap rounded-full px-3 py-1.5 text-xs font-semibold",
-                classType === t ? "bg-primary text-white" : "bg-cream-soft text-charcoal-soft"
+                classType === t ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
               )}
             >
               {t}
@@ -208,7 +208,7 @@ export default function Discover() {
             onClick={() => setMaxPrice(p.value)}
             className={clsx(
               "tap rounded-full px-3 py-1.5 text-xs font-semibold",
-              maxPrice === p.value ? "bg-teal text-white" : "bg-cream-soft text-charcoal-soft"
+              maxPrice === p.value ? "bg-teal-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
             )}
           >
             {p.label}
@@ -216,7 +216,7 @@ export default function Discover() {
         ))}
       </div>
 
-      <p className="mb-2.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Classes</p>
+      <p className="section-label mb-2.5">Classes</p>
       <div className="space-y-2.5 mb-6">
         {filtered.map((c) => {
           const mine = booked.has(c.classId);
@@ -280,7 +280,7 @@ export default function Discover() {
                     "…"
                   ) : mine ? (
                     <>
-                      <Check size={13} /> Booked — tap to cancel
+                      <Check size={13} /> Booked. Tap to cancel
                     </>
                   ) : c.isFull ? (
                     "Full"
@@ -297,14 +297,14 @@ export default function Discover() {
           <Card className="text-center py-8">
             <p className="text-sm text-charcoal-faint">
               {classes.length === 0
-                ? "No classes scheduled yet — businesses add them from their own dashboard."
+                ? "No classes scheduled yet. Businesses add them from their own dashboard."
                 : "No classes match those filters."}
             </p>
           </Card>
         )}
       </div>
 
-      <p className="mb-2.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
+      <p className="section-label mb-2.5">
         Businesses
       </p>
       <div className="space-y-2.5 mb-6">
@@ -343,7 +343,7 @@ export default function Discover() {
         )}
       </div>
 
-      <p className="mb-2.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Gyms</p>
+      <p className="section-label mb-2.5">Gyms</p>
       <div className="space-y-2.5">
         {gyms.map((v) => (
           <Card key={v.venueId} className="flex items-start gap-3 animate-fade-slide-up">

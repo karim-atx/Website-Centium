@@ -1,4 +1,5 @@
 import React from "react";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // V4: small widget = vertical bar (fills bottom-up), large widget = horizontal
 // bar (fills left-to-right) — per QA.
@@ -11,6 +12,8 @@ export const WaterFillContainer: React.FC<{
   width?: number | string;
   orientation?: "vertical" | "horizontal";
 }> = ({ pct, height = 64, width = 40, orientation = "vertical" }) => {
+  // Mobile v5.1 R3, dark mode: an empty segment is surface.raised #262932.
+  const dark = useIsDark();
   const exceeded = pct > 1;
   const clamped = Math.max(0, Math.min(1, pct));
 
@@ -35,7 +38,7 @@ export const WaterFillContainer: React.FC<{
               // color of the water in the detailed widget" — the detail
               // sheet's own vertical fill is sky-blue; this segmented bar
               // used teal instead.
-              background: exceeded ? "rgb(var(--c-gold))" : i < filled ? "rgb(var(--c-sky))" : "#EDEBE8",
+              background: exceeded ? "rgb(var(--c-gold))" : i < filled ? "rgb(var(--c-sky))" : dark ? "#262932" : "#EDEBE8",
             }}
           />
         ))}

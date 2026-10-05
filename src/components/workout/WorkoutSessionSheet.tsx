@@ -37,8 +37,9 @@ import { formatClock, isRoundBased, prescriptionLine } from "../../services/work
 import { blockProblems, blockScore, checkBlockResult } from "../../services/workout/results";
 import { groupIntoRuns } from "../../services/workout/blocks";
 import { exerciseKey, kindFields, lastSessionPrefill, setKind, HANDOVER_SET_TYPES, type HandoverSetType } from "../../services/workout/stats";
-import { loggerShades, routineFamily, type FolderFamily, type LoggerShades } from "../../data/folderColors";
-import { TYPE_STYLE, PR_BAR } from "./setTypeStyle";
+import { loggerShades, placeholderOpacity, playInk, playText, routineFamily, type FolderFamily, type LoggerShades } from "../../data/folderColors";
+import { useIsDark } from "../../hooks/useIsDark";
+import { PR_BAR, typeStyles } from "./setTypeStyle";
 import { BlockRunner } from "./BlockRunner";
 import { EnduranceRunner } from "./EnduranceRunner";
 import clsx from "clsx";
@@ -47,6 +48,28 @@ import clsx from "clsx";
 // Super set (exercise level only) = soft coral: bracket #DB885D, badge
 // #FBE7DC / #B4602F, from the frame.
 const SS_BRACKET = "#DB885D";
+
+/**
+ * Mobile v5.1 R3, dark mode (no light islands). The handover draws this view
+ * in light only; dark takes the v5.1 dark tokens (Foundations 2.1). Colours
+ * whose light value is already a token are written as the token; these are
+ * the rest, as [light, dark]: danger (#FF6B5E is danger dark), the Add set
+ * link (primary.deep dark), the super-set badge (its bracket hue as a dark
+ * tint, ink lifted to 4.5:1), the set-type divider, the un-ticked check (3:1
+ * on surface.soft), the skipped strike line and the note field's border
+ * (border.option dark).
+ */
+const SESSION_COLORS = {
+  danger: ["#B4372C", "#FF6B5E"],
+  addSet: ["#7D6BB5", "#B7ABDE"],
+  ssBadgeBg: ["#FBE7DC", "#4A3A37"],
+  ssBadgeInk: ["#B4602F", "#E6A27F"],
+  divider: ["#E0DFDF", "rgba(238,239,242,0.12)"],
+  uncheck: ["#8F8981", "#8A8698"],
+  strike: ["#8A8887", "#8A8698"],
+  fieldBorder: ["#E7E7EC", "rgba(238,239,242,0.10)"],
+} as const;
+const sessionColor = (key: keyof typeof SESSION_COLORS, dark: boolean): string => SESSION_COLORS[key][dark ? 1 : 0];
 
 // Rest timer: 0:30–5:00 in 15 s steps, or Off (WO8 exercise ⋮ menu).
 const REST_OPTIONS: PopupMenuOption[] = [
@@ -129,8 +152,9 @@ export const WorkoutSessionSheet: React.FC<{
 
   const routineRow = routineId ? routines.find((r) => r.id === routineId) ?? null : null;
   // 02 Folder colour tokens: parent folder → routine's own colour → lavender.
+  const dark = useIsDark();
   const family: FolderFamily = routineFamily(routineRow, routineFolders);
-  const shades: LoggerShades = loggerShades(family);
+  const shades: LoggerShades = loggerShades(family, dark);
 
   // THE TEMPLATE THE LOGGER EDITS (pinned notes, rest timers, super sets are
   // stored per exercise in the routine template — WO8 data). A local mirror,
@@ -539,38 +563,38 @@ export const WorkoutSessionSheet: React.FC<{
       <div
         key={exIdx}
         data-ex={exIdx}
-        className="bg-white"
-        style={{ border: "1px solid rgba(36,31,27,0.08)", borderRadius: 16, overflow: "hidden", paddingBottom: 12, scrollMarginTop: 12 }}
+        className="bg-cream-card"
+        style={{ border: "1px solid rgb(var(--c-charcoal) / 0.08)", borderRadius: 16, overflow: "hidden", paddingBottom: 12, scrollMarginTop: 12 }}
       >
         <div className="flex items-center" style={{ gap: 6, padding: "13px 14px 8px" }}>
-          <p className="whitespace-nowrap" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#241F1B", letterSpacing: "-0.01em" }}>
+          <p className="whitespace-nowrap" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))", letterSpacing: "-0.01em" }}>
             {ex.name}
           </p>
           {superset && (
             <span
               className="flex-none"
-              style={{ fontSize: 9, fontWeight: 800, color: "#B4602F", background: "#FBE7DC", borderRadius: 4, padding: "1px 5px", lineHeight: "13px" }}
+              style={{ fontSize: 9, fontWeight: 800, color: sessionColor("ssBadgeInk", dark), background: sessionColor("ssBadgeBg", dark), borderRadius: 4, padding: "1px 5px", lineHeight: "13px" }}
             >
               SS
             </span>
           )}
-          <span className="flex-1 min-w-0 truncate" style={{ fontSize: 11, fontWeight: 500, color: "#8C8378" }}>
+          <span className="flex-1 min-w-0 truncate" style={{ fontSize: 11, fontWeight: 500, color: "rgb(var(--c-charcoal-faint))" }}>
             {line}
           </span>
           <button
             onClick={(e) => setExMenu({ exIdx, anchor: e.currentTarget, view: "main" })}
             aria-label={`${ex.name} options`}
             className="tap relative flex-none flex items-center justify-center before:absolute before:-inset-[9px] before:content-['']"
-            style={{ width: 26, height: 26, color: "#8C8378" }}
+            style={{ width: 26, height: 26, color: "rgb(var(--c-charcoal-faint))" }}
           >
             <EllipsisVertical size={16} />
           </button>
-          <span className="flex-none tabular-nums" style={{ fontSize: 10.5, fontWeight: 500, color: "#A79E93" }}>
+          <span className="flex-none tabular-nums" style={{ fontSize: 10.5, fontWeight: 500, color: "rgb(var(--c-charcoal-faint))" }}>
             {exIdx + 1} of {logged.length}
           </span>
         </div>
         {/* The divider in the folder's dark shade (WO8). */}
-        <div style={{ height: 2, margin: "0 14px", background: family.play, borderRadius: 1 }} />
+        <div style={{ height: 2, margin: "0 14px", background: playInk(family, dark), borderRadius: 1 }} />
         {meta.pinnedNote && (
           <div className="flex items-start" style={{ gap: 8, padding: "8px 14px", background: shades.banner, color: shades.ink }}>
             <Pin size={13} className="flex-none" style={{ marginTop: 2 }} />
@@ -592,7 +616,7 @@ export const WorkoutSessionSheet: React.FC<{
           <>
             <div
               className="flex items-center uppercase"
-              style={{ padding: "9px 15px 1px", fontSize: 9.5, fontWeight: 600, letterSpacing: "0.08em", color: "#A79E93" }}
+              style={{ padding: "9px 15px 1px", fontSize: 9.5, fontWeight: 600, letterSpacing: "0.08em", color: "rgb(var(--c-charcoal-faint))" }}
             >
               <span style={{ width: 58 }}>Set</span>
               <span className="flex-1">Weight (kg)</span>
@@ -631,7 +655,7 @@ export const WorkoutSessionSheet: React.FC<{
                   {showRest && (
                     <div className="flex items-center" style={{ gap: 10, padding: "0 15px", height: 19 }}>
                       <span className="flex-1" style={{ height: 1, background: shades.restLine }} />
-                      <span className="tabular-nums" style={{ fontSize: 10.5, fontWeight: 600, color: family.play }}>
+                      <span className="tabular-nums" style={{ fontSize: 10.5, fontWeight: 600, color: playInk(family, dark) }}>
                         {formatClock(counting !== null && counting > 0 ? counting : restSec)}
                       </span>
                       <span className="flex-1" style={{ height: 1, background: shades.restLine }} />
@@ -641,12 +665,12 @@ export const WorkoutSessionSheet: React.FC<{
               );
             })}
             {asked > 0 && ex.sets.some((s) => s.optional) && (
-              <p style={{ margin: "6px 15px 0", fontSize: 10.5, color: "#A79E93" }}>{asked} asked for · the rest are yours if you want them.</p>
+              <p style={{ margin: "6px 15px 0", fontSize: 10.5, color: "rgb(var(--c-charcoal-faint))" }}>{asked} asked for · the rest are yours if you want them.</p>
             )}
             <button
               onClick={() => addSet(exIdx)}
               className="tap flex items-center"
-              style={{ gap: 6, margin: "8px 15px 0", fontSize: 12, fontWeight: 600, color: "#AEA1DC" }}
+              style={{ gap: 6, margin: "8px 15px 0", fontSize: 12, fontWeight: 600, color: sessionColor("addSet", dark) }}
             >
               <Plus size={12} /> Add set
             </button>
@@ -714,7 +738,7 @@ export const WorkoutSessionSheet: React.FC<{
     // GLOBAL: the on-screen keyboard covers the bottom of a fixed full-screen
     // view, so the logger ends above it (--kb-inset, published by Layout from
     // visualViewport) — the Finish footer and the list both stay in reach.
-    <div className="fixed inset-0 z-50 bg-white flex flex-col animate-fade-in" style={{ paddingBottom: "var(--kb-inset, 0px)" }}>
+    <div className="fixed inset-0 z-50 bg-cream flex flex-col animate-fade-in" style={{ paddingBottom: "var(--kb-inset, 0px)" }}>
       <div className="mx-auto w-full max-w-[430px] flex flex-col flex-1 min-h-0">
         {/* Header: × and ⌄ | routine name + status | play, metronome, note. */}
         <div
@@ -723,24 +747,24 @@ export const WorkoutSessionSheet: React.FC<{
             gridTemplateColumns: "auto 1fr auto",
             gap: 8,
             padding: "max(21px, calc(env(safe-area-inset-top) + 8px)) 20px 14px",
-            borderBottom: "1px solid rgba(36,31,27,0.05)",
+            borderBottom: "1px solid rgb(var(--c-charcoal) / 0.05)",
           }}
         >
           <div className="flex items-center" style={{ gap: 8 }}>
-            <button onClick={requestClose} aria-label="Close workout" className={circle} style={{ width: 34, height: 34, background: "#F5F5F6", color: "#5B5349" }}>
+            <button onClick={requestClose} aria-label="Close workout" className={circle} style={{ width: 34, height: 34, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))" }}>
               <X size={16} />
             </button>
-            <button onClick={minimise} aria-label="Minimise workout" className={circle} style={{ width: 34, height: 34, background: "#F5F5F6", color: "#5B5349" }}>
+            <button onClick={minimise} aria-label="Minimise workout" className={circle} style={{ width: 34, height: 34, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))" }}>
               <ChevronDown size={17} />
             </button>
           </div>
           <div className="text-center min-w-0">
             {/* Wraps to two lines rather than cutting the name to "Regres…" when the
                 cycle chip takes room (as the WO8 frame wraps "Push Pull / Legs"). */}
-            <p className="line-clamp-2 break-words" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#241F1B", lineHeight: "19px" }}>
+            <p className="line-clamp-2 break-words" style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))", lineHeight: "19px" }}>
               {routineName}
             </p>
-            <p className="tabular-nums" style={{ margin: 0, fontSize: 10.5, fontWeight: 500, color: "#A79E93", lineHeight: "14px" }}>
+            <p className="tabular-nums" style={{ margin: 0, fontSize: 10.5, fontWeight: 500, color: "rgb(var(--c-charcoal-faint))", lineHeight: "14px" }}>
               {started
                 ? `Started ${startedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} · ${formatDuration(elapsed)} elapsed`
                 : elapsed > 0
@@ -771,14 +795,14 @@ export const WorkoutSessionSheet: React.FC<{
               }}
               aria-label={noteUnread ? "Coach's note, unread" : "Coach's note"}
               className={circle}
-              style={{ width: 34, height: 34, background: "#F5F5F6", color: "#8C8378" }}
+              style={{ width: 34, height: 34, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-faint))" }}
             >
               <MessageSquareText size={15} />
               {noteUnread && (
                 <span
                   aria-hidden
                   className="absolute rounded-full"
-                  style={{ top: 3, right: 3, width: 8, height: 8, background: "#8F68F6", boxShadow: "0 0 0 1.5px #FFFFFF" }}
+                  style={{ top: 3, right: 3, width: 8, height: 8, background: "#8F68F6", boxShadow: "0 0 0 1.5px rgb(var(--c-cream-card))" }}
                 />
               )}
             </button>
@@ -841,14 +865,14 @@ export const WorkoutSessionSheet: React.FC<{
             {logged.slice(template.exercises.length).map((ex) => (
               <div
                 key={`removed-${ex.exerciseId}`}
-                className="bg-white"
-                style={{ border: "1px dashed rgba(36,31,27,0.18)", borderRadius: 16, padding: "12px 14px" }}
+                className="bg-cream-card"
+                style={{ border: "1px dashed rgb(var(--c-charcoal) / 0.18)", borderRadius: 16, padding: "12px 14px" }}
               >
-                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "#241F1B" }}>{ex.name}</p>
-                <p style={{ margin: "2px 0 8px", fontSize: 11, color: "#8C8378" }}>
+                <p style={{ margin: 0, fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>{ex.name}</p>
+                <p style={{ margin: "2px 0 8px", fontSize: 11, color: "rgb(var(--c-charcoal-faint))" }}>
                   Removed from this routine · logged sets are kept
                 </p>
-                <p className="tabular-nums" style={{ margin: 0, fontSize: 12.5, color: "#5B5349" }}>
+                <p className="tabular-nums" style={{ margin: 0, fontSize: 12.5, color: "rgb(var(--c-charcoal-soft))" }}>
                   {ex.sets
                     .filter(isTouched)
                     .map((s) => `${formatSetWeight(s.weightKg ?? 0, true)} × ${s.reps}`)
@@ -860,15 +884,15 @@ export const WorkoutSessionSheet: React.FC<{
         </div>
 
         <div
-          className="flex-none bg-white"
-          style={{ borderTop: "1px solid rgba(36,31,27,0.05)", padding: "14px 20px max(28px, calc(env(safe-area-inset-bottom) + 12px))" }}
+          className="flex-none bg-cream"
+          style={{ borderTop: "1px solid rgb(var(--c-charcoal) / 0.05)", padding: "14px 20px max(28px, calc(env(safe-area-inset-bottom) + 12px))" }}
         >
           <div className="flex items-center justify-between" style={{ marginBottom: 14 }}>
             <div>
-              <p className="uppercase" style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "#8C8378" }}>
+              <p className="uppercase" style={{ margin: 0, fontSize: 10, fontWeight: 700, letterSpacing: "0.1em", color: "rgb(var(--c-charcoal-faint))" }}>
                 Total volume
               </p>
-              <p className="tabular-nums" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "#241F1B", letterSpacing: "-0.03em", lineHeight: "30px" }}>
+              <p className="tabular-nums" style={{ margin: 0, fontSize: 24, fontWeight: 800, color: "rgb(var(--c-charcoal))", letterSpacing: "-0.03em", lineHeight: "30px" }}>
                 {totalVolume.toLocaleString()} kg
               </p>
             </div>
@@ -876,7 +900,7 @@ export const WorkoutSessionSheet: React.FC<{
               <button
                 onClick={() => setRpeOpen(true)}
                 className="tap flex items-center justify-center"
-                style={{ gap: 6, height: 32, padding: "0 12px", borderRadius: 16, background: "#F5F5F6", color: "#5B5349", fontSize: 12, fontWeight: 600 }}
+                style={{ gap: 6, height: 32, padding: "0 12px", borderRadius: 16, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))", fontSize: 12, fontWeight: 600 }}
               >
                 <Calculator size={13} /> RPE
               </button>
@@ -884,14 +908,14 @@ export const WorkoutSessionSheet: React.FC<{
                 onClick={() => setPlateCalcOpen(true)}
                 aria-label="Plate calculator"
                 className="tap flex items-center justify-center rounded-full"
-                style={{ width: 32, height: 32, background: "#F5F5F6", color: "#5B5349" }}
+                style={{ width: 32, height: 32, background: "rgb(var(--c-cream-soft))", color: "rgb(var(--c-charcoal-soft))" }}
               >
                 <PlateIcon size={15} />
               </button>
             </div>
           </div>
           {saveError && (
-            <p className="text-center" style={{ margin: "0 0 8px", fontSize: 11.5, fontWeight: 600, color: "#B4372C" }}>
+            <p className="text-center" style={{ margin: "0 0 8px", fontSize: 11.5, fontWeight: 600, color: sessionColor("danger", dark) }}>
               {saveError}
             </p>
           )}
@@ -899,7 +923,7 @@ export const WorkoutSessionSheet: React.FC<{
             onClick={() => void finishWorkout()}
             disabled={finished || saving}
             className="tap w-full flex items-center justify-center disabled:opacity-70"
-            style={{ gap: 8, height: 52, borderRadius: 14, background: family.play, color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+            style={{ gap: 8, height: 52, borderRadius: 14, background: playText(family), color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
           >
             {finished ? (
               "Workout Saved ✓"
@@ -938,8 +962,8 @@ export const WorkoutSessionSheet: React.FC<{
                 width: 8,
                 height: 8,
                 borderRadius: 4,
-                background: t.value === "normal" ? family.play : TYPE_STYLE[t.value].dot,
-                boxShadow: "0 0 0 1.5px #FFFFFF",
+                background: t.value === "normal" ? family.play : typeStyles(dark)[t.value].dot,
+                boxShadow: "0 0 0 1.5px rgb(var(--c-cream-card))",
               }}
             />
           ),
@@ -963,23 +987,23 @@ export const WorkoutSessionSheet: React.FC<{
           if (v === "unpair") removeSuperset(exMenu.exIdx);
         }}
         options={[
-          { value: "note", label: "Pinned note", icon: <Pin size={15} style={{ color: "#5B5349" }} /> },
+          { value: "note", label: "Pinned note", icon: <Pin size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> },
           {
             value: "rest",
             label: "Rest timer",
-            icon: <Timer size={15} style={{ color: "#5B5349" }} />,
+            icon: <Timer size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} />,
             trailing: (
-              <span className="tabular-nums" style={{ fontSize: 12, fontWeight: 600, color: family.play }}>
+              <span className="tabular-nums" style={{ fontSize: 12, fontWeight: 600, color: playInk(family, dark) }}>
                 {exMenuEx?.restSeconds ? formatClock(exMenuEx.restSeconds) : "Off"}
               </span>
             ),
           },
           exMenuBlock?.kind === "superset"
-            ? { value: "unpair", label: "Remove super set", icon: <Unlink size={15} style={{ color: "#5B5349" }} /> }
+            ? { value: "unpair", label: "Remove super set", icon: <Unlink size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} /> }
             : {
                 value: "superset",
                 label: "Super set",
-                icon: <Link2 size={15} style={{ color: "#5B5349" }} />,
+                icon: <Link2 size={15} style={{ color: "rgb(var(--c-charcoal-soft))" }} />,
                 disabled: !exMenu || !!exMenuBlock || partnersFor(exMenu.exIdx).length === 0,
               },
         ]}
@@ -1005,7 +1029,6 @@ export const WorkoutSessionSheet: React.FC<{
       />
 
       <BottomSheet
-        light
         open={!!pinEditor}
         onClose={() => setPinEditor(null)}
         title="Pinned note"
@@ -1028,8 +1051,8 @@ export const WorkoutSessionSheet: React.FC<{
           onChange={(e) => setPinEditor((p) => (p ? { ...p, text: e.target.value.slice(0, 500) } : p))}
           placeholder="e.g. Pin safety rack at level 3"
           rows={3}
-          className="w-full focus:outline-none"
-          style={{ border: "1px solid #E7E7EC", borderRadius: 12, padding: "10px 12px", fontSize: 14, color: "#241F1B", resize: "none" }}
+          className="w-full bg-transparent focus:outline-none"
+          style={{ border: `1px solid ${sessionColor("fieldBorder", dark)}`, borderRadius: 12, padding: "10px 12px", fontSize: 14, color: "rgb(var(--c-charcoal))", resize: "none" }}
         />
       </BottomSheet>
 
@@ -1110,11 +1133,17 @@ export const WorkoutSessionSheet: React.FC<{
 };
 
 /** WO8: the plate calculator icon is a weight plate (assets/icons/plate-calculator.svg). */
+// WO1.2 handover note: "a gym plate with a bold rim, a thin inner ring, a
+// centre hole and two curved grip slots (no lines through the centre)". The
+// slots sit between rim and ring, above and below the hole, each an arc of
+// the plate drawn with round ends. No asset was supplied; drawn to the note.
 const PlateIcon: React.FC<{ size?: number }> = ({ size = 15 }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="12" cy="12" r="9" />
-    <circle cx="12" cy="12" r="5.2" style={{ strokeWidth: 1.4, opacity: 0.55 }} />
-    <circle cx="12" cy="12" r="1.8" />
+  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeLinecap="round" aria-hidden>
+    <circle cx="12" cy="12" r="9.6" strokeWidth={2.2} />
+    <circle cx="12" cy="12" r="4.4" strokeWidth={1.2} />
+    <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    <path d="M8.6 5.6 A7 7 0 0 1 15.4 5.6" strokeWidth={1.9} />
+    <path d="M8.6 18.4 A7 7 0 0 0 15.4 18.4" strokeWidth={1.9} />
   </svg>
 );
 
@@ -1144,8 +1173,9 @@ const SetRow: React.FC<{
   onCheck: () => void;
   onOptions: () => void;
 }> = ({ rowRef, set: s, number, separator, family, shades, weightPlaceholder, repsPlaceholder, justTicked, tickKey, needsReps, onChange, onType, onCheck, onOptions }) => {
+  const dark = useIsDark();
   const kind = setKind(s);
-  const t = kind === "normal" ? null : TYPE_STYLE[kind];
+  const t = kind === "normal" ? null : typeStyles(dark)[kind];
   const field = t?.field ?? shades.field;
   const border = t?.border ?? shades.fieldBorder;
   const ink = t?.ink ?? shades.ink;
@@ -1162,6 +1192,7 @@ const SetRow: React.FC<{
     fontSize: 14,
     fontWeight: 600,
     ["--ph" as string]: ink,
+    ["--ph-opacity" as string]: placeholderOpacity(ink, field),
   };
   const label = s.setNumber;
 
@@ -1172,7 +1203,7 @@ const SetRow: React.FC<{
       style={{
         padding: "5px 15px",
         background: t?.row ?? "transparent",
-        borderTop: separator ? "1px solid rgba(36,31,27,0.05)" : undefined,
+        borderTop: separator ? "1px solid rgb(var(--c-charcoal) / 0.05)" : undefined,
         opacity: muted ? 0.62 : 1,
         ["--settle-from" as string]: t?.row && t.row !== "transparent" ? t.row : shades.banner,
         ["--settle-to" as string]: t?.row ?? "transparent",
@@ -1188,7 +1219,7 @@ const SetRow: React.FC<{
         <span className="flex items-center" style={{ gap: 2 }}>
           {number !== null ? (
             <span className="flex flex-col items-center" style={{ lineHeight: 1 }}>
-              <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 700, color: t?.label ?? "#8C8378" }}>
+              <span className="tabular-nums" style={{ fontSize: 14, fontWeight: 700, color: t?.label ?? "rgb(var(--c-charcoal-faint))" }}>
                 {number}
               </span>
               {t && (
@@ -1198,9 +1229,9 @@ const SetRow: React.FC<{
           ) : (
             <span style={{ fontSize: 10.5, fontWeight: 600, color: t?.label }}>{t?.short}</span>
           )}
-          <ChevronDown size={10} style={{ color: t?.label ?? "#A79E93" }} />
+          <ChevronDown size={10} style={{ color: t?.label ?? "rgb(var(--c-charcoal-faint))" }} />
         </span>
-        <span aria-hidden className="absolute right-0" style={{ top: 7, bottom: 7, width: 1, background: "#E0DFDF" }} />
+        <span aria-hidden className="absolute right-0" style={{ top: 7, bottom: 7, width: 1, background: sessionColor("divider", dark) }} />
       </button>
       <div className="flex-1 flex min-w-0" style={{ gap: 8, marginLeft: 18 }}>
         <WeightField
@@ -1220,14 +1251,14 @@ const SetRow: React.FC<{
           aria-describedby={needsReps ? `need-reps-${label}` : undefined}
           data-field="reps"
           className="logger-field flex-1 focus:outline-none"
-          style={needsReps ? { ...inputStyle, borderColor: "#B4372C" } : inputStyle}
+          style={needsReps ? { ...inputStyle, borderColor: sessionColor("danger", dark) } : inputStyle}
         />
       </div>
       <button
         onClick={onOptions}
         aria-label={`Set ${label} options`}
         className="tap relative flex-none flex items-center justify-center before:absolute before:-inset-[8px] before:content-['']"
-        style={{ width: 28, height: 28, marginLeft: 8, color: s.notes || s.rpe ? family.play : "#8C8378" }}
+        style={{ width: 28, height: 28, marginLeft: 8, color: s.notes || s.rpe ? playInk(family, dark) : "rgb(var(--c-charcoal-faint))" }}
       >
         <EllipsisVertical size={15} />
       </button>
@@ -1249,16 +1280,16 @@ const SetRow: React.FC<{
             "tap relative w-7 h-7 rounded-full flex items-center justify-center before:absolute before:-inset-[8px] before:content-['']",
             justTicked && "animate-set-tick"
           )}
-          style={{ background: done ? family.play : "#F5F5F6", color: done ? "#FFFFFF" : "#C9C2B8" }}
+          style={{ background: done ? family.play : "rgb(var(--c-cream-soft))", color: done ? "#FFFFFF" : sessionColor("uncheck", dark) }}
         >
           <Check key={justTicked ? tickKey : "check"} size={13} strokeWidth={3} className={justTicked ? "animate-set-tick-check" : undefined} />
         </button>
       </div>
       {kind === "skipped" && (
-        <span aria-hidden className="absolute pointer-events-none" style={{ left: 15, right: 15, top: "50%", height: 1, background: "#8A8887" }} />
+        <span aria-hidden className="absolute pointer-events-none" style={{ left: 15, right: 15, top: "50%", height: 1, background: sessionColor("strike", dark) }} />
       )}
       {needsReps && (
-        <p id={`need-reps-${label}`} role="alert" className="basis-full" style={{ margin: "4px 0 0 58px", fontSize: 10.5, fontWeight: 600, color: "#B4372C" }}>
+        <p id={`need-reps-${label}`} role="alert" className="basis-full" style={{ margin: "4px 0 0 58px", fontSize: 10.5, fontWeight: 600, color: sessionColor("danger", dark) }}>
           Enter the reps you did to log this set.
         </p>
       )}

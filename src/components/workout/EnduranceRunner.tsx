@@ -14,6 +14,12 @@ import {
   type Stopwatch,
 } from "../../services/workout/clock";
 import clsx from "clsx";
+import { useIsDark } from "../../hooks/useIsDark";
+
+// Mobile v5.1 R3 (no light islands): the plan box's pale lavender has no
+// token of the same light value; dark is primary.tint.2 on the card
+// (#2B2C3A). Everything else here is written as the tokens.
+const PLAN_BOX = ["#F6F4FB", "#2B2C3A"] as const;
 
 // Running an endurance effort, and recording what it produced.
 //
@@ -50,6 +56,7 @@ export const EnduranceRunner: React.FC<{
     onTimer({ current, watch: typeof next === "function" ? next(watch) : next });
   const [now, setNow] = useState(() => Date.now());
   const planned = plannedIntervals(plan);
+  const dark = useIsDark();
 
   React.useEffect(() => {
     if (!isRunning(watch)) return;
@@ -76,7 +83,7 @@ export const EnduranceRunner: React.FC<{
     <div style={{ marginBottom: 10 }}>
       <div
         style={{
-          background: "#F6F4FB",
+          background: PLAN_BOX[dark ? 1 : 0],
           borderRadius: 12,
           padding: "8px 10px",
           marginBottom: 10,
@@ -97,7 +104,7 @@ export const EnduranceRunner: React.FC<{
                 onStarted();
               }}
               aria-label={isRunning(watch) ? "Pause the stopwatch" : "Start the stopwatch"}
-              className="tap w-7 h-7 rounded-full bg-primary text-white flex items-center justify-center"
+              className="tap w-7 h-7 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center"
             >
               {isRunning(watch) ? <Pause size={12} fill="white" /> : <Play size={12} fill="white" />}
             </button>
@@ -124,7 +131,7 @@ export const EnduranceRunner: React.FC<{
                   gap: 8,
                   padding: "5px 8px",
                   borderRadius: 8,
-                  background: i === current ? "#FFFFFF" : "transparent",
+                  background: i === current ? "rgb(var(--c-cream-card))" : "transparent",
                   // The current step is named as well as highlighted, so the
                   // position survives greyscale and a screen reader — which
                   // reads aria-current and never the background.
@@ -212,7 +219,7 @@ const Field: React.FC<{
 }> = ({ label, placeholder, value, onChange, hint, onHint }) => (
   <label className="block" style={{ width: 104 }}>
     <span className="flex items-baseline justify-between" style={{ marginBottom: 3 }}>
-      <span style={{ fontSize: 9.5, color: "#8C8378" }}>{label}</span>
+      <span style={{ fontSize: 9.5, color: "rgb(var(--c-charcoal-muted))" }}>{label}</span>
       {hint && (
         <button onClick={onHint} className="tap text-[9.5px] font-bold text-primary">
           {hint}
@@ -228,12 +235,12 @@ const Field: React.FC<{
       className="w-full placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
       style={{
         borderRadius: 9,
-        background: "#FFFFFF",
-        border: "1px solid rgba(36,31,27,0.1)",
+        background: "rgb(var(--c-cream-card))",
+        border: "1px solid rgb(var(--c-charcoal) / 0.1)",
         padding: "7px 9px",
         fontSize: 14,
         textAlign: "center",
-        color: "#241F1B",
+        color: "rgb(var(--c-charcoal))",
       }}
     />
   </label>

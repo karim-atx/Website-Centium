@@ -115,7 +115,7 @@ export default function BusinessGymTab() {
                 aria-label={`Delete ${p.name}`}
                 className={clsx(
                   "tap w-8 h-8 rounded-full flex items-center justify-center",
-                  confirmDeleteId === p.id ? "bg-teal text-white" : "bg-cream-soft text-charcoal-soft"
+                  confirmDeleteId === p.id ? "bg-teal-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
                 )}
               >
                 <Trash2 size={13} />
@@ -170,7 +170,7 @@ export default function BusinessGymTab() {
                   onClick={() => setBilling(b.value)}
                   className={clsx(
                     "tap flex-1 rounded-xl py-2 text-xs font-semibold border transition-colors",
-                    billing === b.value ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
+                    billing === b.value ? "bg-primary-fill text-on-primary-fill border-primary-fill" : "bg-cream-soft border-transparent text-charcoal-soft"
                   )}
                 >
                   {b.label}
@@ -187,7 +187,7 @@ export default function BusinessGymTab() {
                   onClick={() => setPaymentType(p)}
                   className={clsx(
                     "tap flex-1 rounded-xl py-2 text-xs font-semibold border transition-colors",
-                    paymentType === p ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
+                    paymentType === p ? "bg-primary-fill text-on-primary-fill border-primary-fill" : "bg-cream-soft border-transparent text-charcoal-soft"
                   )}
                 >
                   {p}

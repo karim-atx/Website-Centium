@@ -9,6 +9,8 @@ import { updateDiaryEntry, deleteDiaryEntry, isRemoteEntryId } from "../../servi
 import { rescaleEntry, servingMultiplier, targetsFromGoal } from "../../services/nutrition";
 import { getFoodNutrientsById } from "../../services/food-nutrients";
 import { NutrientDetailSections } from "./NutrientSections";
+import { useIsDark } from "../../hooks/useIsDark";
+import { FOOD_DARK } from "./foodDark";
 
 const servingUnitOptions: { value: ServingUnit; label: string }[] = [
   { value: "serving", label: "serving" },
@@ -26,7 +28,7 @@ const sheetCapsLabelStyle: React.CSSProperties = {
   fontWeight: 700,
   letterSpacing: "0.12em",
   textTransform: "uppercase",
-  color: "#8C8378",
+  color: "rgb(var(--c-charcoal-muted))",
 };
 
 // V4: "Logged foods should be editable, to be able to change quantities or
@@ -38,6 +40,7 @@ export const EditFoodEntrySheet: React.FC<{
   entry: FoodLogEntry | null;
 }> = ({ open, onClose, entry }) => {
   const { updateFoodEntry, removeFoodEntry, nutritionGoal } = useApp();
+  const dark = useIsDark();
   const [quantity, setQuantityRaw] = useState(1);
   const [quantityDraft, setQuantityDraft] = useState("1");
   const setQuantity = (updater: number | ((q: number) => number)) => {
@@ -184,7 +187,6 @@ export const EditFoodEntrySheet: React.FC<{
 
   return (
     <BottomSheet
-      light
       open={open}
       onClose={onClose}
       title={advancedOpen ? "Nutrient details" : "Edit Logged Food"}
@@ -192,7 +194,7 @@ export const EditFoodEntrySheet: React.FC<{
     >
       {advancedOpen ? (
         <div className="animate-fade-slide-up flex flex-col gap-2.5">
-          <p style={{ fontSize: 13, color: "#5B5349", margin: "0 2px 2px" }}>
+          <p style={{ fontSize: 13, color: "rgb(var(--c-charcoal-soft))", margin: "0 2px 2px" }}>
             {entry.name} ·{" "}
             {editMultiplierDisplay === 1 ? entry.display.serving : `${editMultiplierDisplay} × ${entry.display.serving}`}
           </p>
@@ -209,7 +211,7 @@ export const EditFoodEntrySheet: React.FC<{
             />
           )}
 
-          <p style={{ fontSize: 10.5, lineHeight: 1.5, color: "#8C8378", margin: "6px 2px 0" }}>
+          <p style={{ fontSize: 10.5, lineHeight: 1.5, color: "rgb(var(--c-charcoal-muted))", margin: "6px 2px 0" }}>
             % of the FDA Daily Value for adults, from this food alone. Calorie and macro percentages use your
             Goals.
           </p>
@@ -222,23 +224,23 @@ export const EditFoodEntrySheet: React.FC<{
           <div className="flex items-center" style={{ gap: 13, marginBottom: 14 }}>
             <span
               className="flex items-center justify-center shrink-0"
-              style={{ width: 48, height: 48, borderRadius: 15, background: "#EFECFB", color: "#6B4BE0" }}
+              style={{ width: 48, height: 48, borderRadius: 15, background: dark ? FOOD_DARK.iconTile : "#EFECFB", color: dark ? FOOD_DARK.lavInk : "#6B4BE0" }}
             >
               <Icon size={20} />
             </span>
             <div className="min-w-0">
-              <p style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em", color: "#241F1B" }}>
+              <p style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em", color: "rgb(var(--c-charcoal))" }}>
                 {entry.name}
               </p>
-              <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "#8C8378" }}>{entry.display.serving}</p>
+              <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "rgb(var(--c-charcoal-muted))" }}>{entry.display.serving}</p>
             </div>
           </div>
 
           <div
             className="flex items-center"
-            style={{ gap: 12, background: "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}
+            style={{ gap: 12, background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}
           >
-            <span style={{ flex: "none", fontSize: 14.5, fontWeight: 500, color: "#575863" }}>Quantity</span>
+            <span style={{ flex: "none", fontSize: 14.5, fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>Quantity</span>
             <input
               value={quantityDraft}
               onChange={(e) => {
@@ -250,11 +252,11 @@ export const EditFoodEntrySheet: React.FC<{
               onBlur={() => setQuantityDraft(String(quantity))}
               inputMode="decimal"
               className="min-w-0 text-center focus:outline-none"
-              style={{ flex: 1, background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
+              style={{ flex: 1, background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}
             />
           </div>
 
-          <div style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}>
+          <div style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 16, padding: "13px 14px", marginBottom: 10 }}>
             <p style={sheetCapsLabelStyle}>UNIT</p>
             <div
               className="flex scroll-row no-scrollbar"
@@ -275,20 +277,20 @@ export const EditFoodEntrySheet: React.FC<{
 
           {/* Same rescaleEntry() the save uses, so the preview can't disagree
               with what gets written. */}
-          <div className="grid grid-cols-4" style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 0", marginBottom: 16 }}>
+          <div className="grid grid-cols-4" style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 16, padding: "13px 0", marginBottom: 16 }}>
             {[
-              { value: `${Math.round(preview.calories)}`, color: "#241F1B", caption: "kcal" },
-              { value: `${Math.round(preview.protein * 10) / 10}g`, color: "#7D6BB5", caption: "protein" },
-              { value: `${Math.round(preview.carbs)}g`, color: "#8175C2", caption: "carbs" },
-              { value: `${Math.round(preview.fat * 10) / 10}g`, color: "#4274D7", caption: "fat" },
+              { value: `${Math.round(preview.calories)}`, color: "rgb(var(--c-charcoal))", caption: "kcal" },
+              { value: `${Math.round(preview.protein * 10) / 10}g`, color: dark ? FOOD_DARK.protein : "#7D6BB5", caption: "protein" },
+              { value: `${Math.round(preview.carbs)}g`, color: dark ? FOOD_DARK.carbs : "#8175C2", caption: "carbs" },
+              { value: `${Math.round(preview.fat * 10) / 10}g`, color: dark ? FOOD_DARK.fat : "#4274D7", caption: "fat" },
             ].map((cell, i) => (
               <div
                 key={cell.caption}
                 className="text-center"
-                style={i > 0 ? { borderLeft: "1px solid #E2E3E7" } : undefined}
+                style={i > 0 ? { borderLeft: `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` } : undefined}
               >
                 <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: cell.color }}>{cell.value}</p>
-                <p style={{ margin: "2px 0 0", fontSize: 11, color: "#8C8378" }}>{cell.caption}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{cell.caption}</p>
               </div>
             ))}
           </div>
@@ -307,7 +309,7 @@ export const EditFoodEntrySheet: React.FC<{
               aria-label="Delete entry"
               title="Delete entry"
               className="tap shrink-0 flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
-              style={{ width: 60, height: 52, borderRadius: 14, background: "#FCEDEC", border: "1px solid #F2CFCC", color: "#B4372C" }}
+              style={{ width: 60, height: 52, borderRadius: 14, background: dark ? FOOD_DARK.dangerBg : "#FCEDEC", border: `1px solid ${dark ? FOOD_DARK.dangerBorder : "#F2CFCC"}`, color: dark ? FOOD_DARK.danger : "#B4372C" }}
             >
               <Trash2 size={19} />
             </button>
@@ -316,7 +318,7 @@ export const EditFoodEntrySheet: React.FC<{
               onClick={handleSave}
               disabled={busy}
               className="tap inline-flex items-center justify-center disabled:opacity-40 disabled:pointer-events-none"
-              style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "#A198DF", color: "#FFFFFF", fontSize: 15.5, fontWeight: 700 }}
+              style={{ flex: 1, height: 52, borderRadius: 14, border: "none", background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15.5, fontWeight: 700 }}
             >
               {busy && !deleting ? "Saving…" : "Save changes"}
             </button>
@@ -326,7 +328,7 @@ export const EditFoodEntrySheet: React.FC<{
               aria-label="Nutrient details"
               title="Nutrient details"
               className="tap shrink-0 flex items-center justify-center"
-              style={{ width: 60, height: 52, borderRadius: 14, background: "#FFFFFF", border: "1px solid #E4E4E9", color: "#241F1B" }}
+              style={{ width: 60, height: 52, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))" }}
             >
               <SlidersHorizontal size={20} strokeWidth={1.9} />
             </button>

@@ -82,7 +82,7 @@ export default function BusinessClassesTab() {
           <button
             onClick={() => setComposeOpen(true)}
             disabled={!businessId}
-            className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft disabled:opacity-40"
+            className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-soft disabled:opacity-40"
             aria-label="New class"
           >
             <Plus size={18} />
@@ -133,7 +133,7 @@ export default function BusinessClassesTab() {
             <p className="text-sm text-charcoal-faint">
               {businessId
                 ? "No classes scheduled yet."
-                : "Save your business profile first — classes are scheduled under it."}
+                : "Save your business profile first. Classes are scheduled under it."}
             </p>
           </Card>
         )}
@@ -229,7 +229,7 @@ export default function BusinessClassesTab() {
                     key={p}
                     onClick={() => setDraft((d) => ({ ...d, paymentType: p }))}
                     className={`tap flex-1 rounded-xl py-2 text-xs font-semibold border transition-colors ${
-                      draft.paymentType === p ? "bg-primary text-white border-primary" : "bg-cream-soft border-transparent text-charcoal-soft"
+                      draft.paymentType === p ? "bg-primary-fill text-on-primary-fill border-primary-fill" : "bg-cream-soft border-transparent text-charcoal-soft"
                     }`}
                   >
                     {p}
@@ -249,7 +249,7 @@ export default function BusinessClassesTab() {
                     onClick={() => setDraft((d) => ({ ...d, professionalId: d.professionalId === e.professionalId ? "" : e.professionalId }))}
                     className={`tap rounded-xl px-3 py-1.5 text-xs font-semibold border transition-colors ${
                       draft.professionalId === e.professionalId
-                        ? "bg-primary text-white border-primary"
+                        ? "bg-primary-fill text-on-primary-fill border-primary-fill"
                         : "bg-cream-soft border-transparent text-charcoal-soft"
                     }`}
                   >

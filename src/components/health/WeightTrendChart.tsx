@@ -1,4 +1,12 @@
 import React, { useId } from "react";
+import { useIsDark } from "../../hooks/useIsDark";
+
+// Mobile v5.1 R3, dark mode (no light islands): the chart grid and axis text
+// as [light, dark], the dark values the v5.1 chart rules (grid
+// rgba(238,239,242,0.08), axis text #B8B3C7). The hollow goal marker is
+// filled with the surface (cream-card, #FFFFFF in light).
+const GRID = ["#EDEDEF", "rgba(238,239,242,0.08)"] as const;
+const AXIS = ["#9C9284", "#B8B3C7"] as const;
 
 // V4 (QA 4.0): a labeled line graph — y-axis in kg, x-axis by date — that
 // plots the actual recent weight history (solid) continuing as a projected
@@ -28,6 +36,9 @@ export const WeightTrendChart: React.FC<{
   fill?: boolean;
 }> = ({ history, desiredWeightKg, reachDate, width = 280, height = 120, displayWidth, displayHeight, fill }) => {
   const gradientId = useId();
+  const dark = useIsDark();
+  const grid = GRID[dark ? 1 : 0];
+  const axis = AXIS[dark ? 1 : 0];
   const points: Point[] = history.map((h) => ({ ...h, projected: false }));
   if (desiredWeightKg !== undefined && reachDate) {
     points.push({ date: reachDate, value: desiredWeightKg, projected: true });
@@ -67,7 +78,7 @@ export const WeightTrendChart: React.FC<{
       {/* y-axis ticks */}
       {[min, (min + max) / 2, max].map((v, i) => (
         <g key={i}>
-          <text x={0} y={y(v) + 3} fontSize={9} fill="#9C9284">
+          <text x={0} y={y(v) + 3} fontSize={9} fill={axis}>
             {v.toFixed(0)}kg
           </text>
           <line
@@ -75,7 +86,7 @@ export const WeightTrendChart: React.FC<{
             x2={width - padding.right}
             y1={y(v)}
             y2={y(v)}
-            stroke="#EDEDEF"
+            stroke={grid}
             strokeWidth={1}
           />
         </g>
@@ -115,17 +126,17 @@ export const WeightTrendChart: React.FC<{
           cx={x(i)}
           cy={y(p.value)}
           r={i === 0 || i === points.length - 1 ? 3.5 : 0}
-          fill={p.projected ? "#fff" : "#7D6BB5"}
+          fill={p.projected ? "rgb(var(--c-cream-card))" : "#7D6BB5"}
           stroke="#7D6BB5"
           strokeWidth={p.projected ? 2 : 0}
         />
       ))}
 
       {/* x-axis: first, today/last-actual, and goal date */}
-      <text x={x(0)} y={height - 4} fontSize={9} fill="#9C9284" textAnchor="start">
+      <text x={x(0)} y={height - 4} fontSize={9} fill={axis} textAnchor="start">
         {shortDate(points[0].date)}
       </text>
-      <text x={x(points.length - 1)} y={height - 4} fontSize={9} fill="#9C9284" textAnchor="end">
+      <text x={x(points.length - 1)} y={height - 4} fontSize={9} fill={axis} textAnchor="end">
         {shortDate(points[points.length - 1].date)}
       </text>
     </svg>

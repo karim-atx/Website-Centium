@@ -41,7 +41,7 @@ export const BillingToggle: React.FC<{
         aria-pressed={period === p}
         className={clsx(
           "tap flex-1 rounded-xl py-2.5 text-xs font-bold transition-colors flex items-center justify-center gap-1.5",
-          period === p ? "bg-primary text-white" : "bg-cream-soft text-charcoal-faint"
+          period === p ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-faint"
         )}
       >
         {p === "monthly" ? "Monthly" : "Yearly"}
@@ -52,7 +52,9 @@ export const BillingToggle: React.FC<{
           <span
             className={clsx(
               "text-[10px] font-bold rounded-full px-1.5 py-0.5",
-              period === "yearly" ? "bg-white/20 text-white" : "bg-teal text-white"
+              // Decision 7: on the selected pill the badge inverts (white on primary-fill
+              // read 3.15:1 through white/20).
+              period === "yearly" ? "bg-on-primary-fill text-primary-fill" : "bg-teal-fill text-on-primary-fill"
             )}
           >
             −{bestSaving}%
@@ -89,7 +91,7 @@ export const PlanRow: React.FC<{
             </span>
           )}
           {period === "yearly" && saving && (
-            <span className="text-[10px] font-bold text-white bg-teal rounded-full px-2 py-0.5">
+            <span className="text-[10px] font-bold text-on-primary-fill bg-teal-fill rounded-full px-2 py-0.5">
               {savingLabel(saving)}
             </span>
           )}

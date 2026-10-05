@@ -261,7 +261,7 @@ export const PregnancyHealthCard: React.FC<{ pregnancy: Pregnancy }> = ({ pregna
               {/* A DASH, NOT A ZERO, when there is no current weight — an
                   unlogged weight is not a gain of nothing. */}
               <span className="text-[11.5px] font-bold text-charcoal tabular-nums">
-                {actual !== null ? `${actual > 0 ? "+" : ""}${actual} kg` : "—"}
+                {actual !== null ? `${actual > 0 ? "+" : ""}${actual} kg` : "–"}
               </span>
             </div>
             {verdict && (

@@ -2,6 +2,7 @@ import React, { forwardRef } from "react";
 import clsx from "clsx";
 import { X, Maximize2, Minimize2, GripVertical } from "lucide-react";
 import type { WidgetSize } from "../../types";
+import { useIsDark } from "../../hooks/useIsDark";
 
 interface WidgetShellProps {
   size: WidgetSize;
@@ -35,6 +36,10 @@ interface WidgetShellProps {
 // sibling tile rects and the board's own bounds.
 export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
   ({ size, editMode, onRemove, onResize, onGripPointerDown, span, children }, ref) => {
+    // Mobile v5.1 R3, dark mode (no light islands): the edit controls are
+    // surface.raised #262932 at the same 92% (charcoal ink 13:1; the remove
+    // glyph secondary.deep #7FB3A9, 6.2:1); the grip is the charcoal token.
+    const dark = useIsDark();
     // EDIT CONTROLS ONLY EVER DO THEIR OWN THING. The tap stops here (it
     // never reaches the tile or the board), a pointerdown on a control can
     // never start a drag, and touch-action: manipulation stops a quick double
@@ -71,8 +76,8 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
                   alignItems: "center",
                   justifyContent: "center",
                   flex: "none",
-                  background: "rgba(255,255,255,0.92)",
-                  color: "#241F1B",
+                  background: dark ? "rgba(38,41,50,0.92)" : "rgba(255,255,255,0.92)",
+                  color: "rgb(var(--c-charcoal))",
                   boxShadow: "0 2px 8px rgba(36,31,27,0.18)",
                   touchAction: "manipulation",
                 }}
@@ -91,8 +96,8 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
                   alignItems: "center",
                   justifyContent: "center",
                   flex: "none",
-                  background: "rgba(255,255,255,0.92)",
-                  color: "#4F7F78",
+                  background: dark ? "rgba(38,41,50,0.92)" : "rgba(255,255,255,0.92)",
+                  color: dark ? "#7FB3A9" : "#4F7F78",
                   boxShadow: "0 2px 8px rgba(36,31,27,0.18)",
                   touchAction: "manipulation",
                 }}
@@ -115,7 +120,7 @@ export const WidgetShell = forwardRef<HTMLDivElement, WidgetShellProps>(
                 position: "absolute",
                 bottom: 7,
                 left: 8,
-                color: "rgba(36,31,27,0.35)",
+                color: "rgb(var(--c-charcoal) / 0.35)",
                 zIndex: 10,
                 display: "inline-flex",
                 touchAction: "none",

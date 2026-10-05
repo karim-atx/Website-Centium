@@ -178,7 +178,7 @@ export const MedicalRecordsSection: React.FC<{
   return (
     <>
       <div className="flex items-center justify-between mb-2.5">
-        {hideLabel ? <span /> : <p className="section-label text-charcoal-faint">Records</p>}
+        {hideLabel ? <span /> : <p className="section-label flex-1 min-w-0 me-3">Records</p>}
         {tab === "biomarkers" && (
           <div className="flex items-center gap-3">
             <button onClick={onShareAll} className="tap flex items-center gap-1.5 text-[11.5px] font-semibold text-primary-dark">
@@ -223,7 +223,7 @@ export const MedicalRecordsSection: React.FC<{
           a lab report and never see it again. */}
       {tab === "biomarkers" && labReports.length > 0 && (
         <Card className="mb-3">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+          <p className="section-label mb-2">
             Lab reports
           </p>
           <div className="flex flex-wrap gap-1.5">
@@ -438,7 +438,7 @@ export const MedicalRecordsSection: React.FC<{
             <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{recordError}</p>
           )}
           <Card>
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">Comorbidities</p>
+            <p className="section-label mb-3">Comorbidities</p>
             <div className="flex flex-wrap gap-2">
               {commonComorbidities.map((c) => (
                 <Chip key={c} active={comorbidities.includes(c)} onClick={() => toggleComorbidity(c)}>
@@ -465,7 +465,7 @@ export const MedicalRecordsSection: React.FC<{
                     setCustomComorbidity("");
                   }
                 }}
-                className="tap w-9 h-9 rounded-full bg-primary text-white flex items-center justify-center shrink-0"
+                className="tap w-9 h-9 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0"
                 aria-label="Add comorbidity"
               >
                 <Plus size={16} />
@@ -474,7 +474,7 @@ export const MedicalRecordsSection: React.FC<{
           </Card>
 
           <Card>
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">Past surgeries</p>
+            <p className="section-label mb-3">Past surgeries</p>
             {surgeries.length === 0 && <p className="text-sm text-charcoal-faint mb-2">None added.</p>}
             <div className="space-y-2 mb-3">
               {surgeries.map((s) => (
@@ -604,7 +604,7 @@ export const MedicalRecordsSection: React.FC<{
               setAddImagingOpen(false);
             }}
             disabled={!imagingDate || busy}
-            className="tap w-full rounded-2xl bg-primary text-white text-sm font-semibold py-3.5 disabled:opacity-50"
+            className="tap w-full rounded-2xl bg-primary-fill text-on-primary-fill text-sm font-semibold py-3.5 disabled:opacity-50"
           >
             {busy ? "Saving…" : "Save"}
           </button>
@@ -651,7 +651,7 @@ export const MedicalRecordsSection: React.FC<{
               setAddSurgeryOpen(false);
             }}
             disabled={!surgeryName.trim() || !surgeryDate || busy}
-            className="tap w-full rounded-2xl bg-primary text-white text-sm font-semibold py-3.5 disabled:opacity-50"
+            className="tap w-full rounded-2xl bg-primary-fill text-on-primary-fill text-sm font-semibold py-3.5 disabled:opacity-50"
           >
             {busy ? "Saving…" : "Save"}
           </button>
@@ -752,7 +752,7 @@ export const MedicalRecordsSection: React.FC<{
               setAddMedOpen(false);
             }}
             disabled={!medName.trim() || !medDose.trim() || busy}
-            className="tap w-full rounded-2xl bg-primary text-white text-sm font-semibold py-3.5 disabled:opacity-50"
+            className="tap w-full rounded-2xl bg-primary-fill text-on-primary-fill text-sm font-semibold py-3.5 disabled:opacity-50"
           >
             {busy ? "Saving…" : "Save"}
           </button>
@@ -791,7 +791,7 @@ export const MedicalRecordsSection: React.FC<{
         <div className="space-y-4 animate-fade-slide-up">
           <p className="text-sm text-charcoal-soft">
             The report from {confirmRemoveReport?.date} will be deleted, along with the
-            results it recorded — those readings will no longer appear in your biomarker
+            results it recorded. Those readings will no longer appear in your biomarker
             history. This can&rsquo;t be undone.
           </p>
           {recordError && (

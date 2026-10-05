@@ -14,7 +14,9 @@ import {
 } from "../../services/nutrition";
 import { NutrientDetailSections } from "./NutrientSections";
 import { CustomFoodForm } from "./CustomFoodForm";
-import { sheetChipStyle, sheetGreyStyle, sheetLabelStyle } from "../ui/sheetChip";
+import { sheetChipStyle, sheetGreyStyleFor, sheetLabelStyleFor } from "../ui/sheetChip";
+import { useIsDark } from "../../hooks/useIsDark";
+import { FOOD_DARK } from "./foodDark";
 import {
   AUDIO_BITS_PER_SECOND,
   MAX_RECORDING_SECONDS,
@@ -155,6 +157,9 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     nutritionGoal,
     noteFeatureMilestone,
   } = useApp();
+  const dark = useIsDark();
+  const sheetGreyStyle = sheetGreyStyleFor(dark);
+  const sheetLabelStyle = sheetLabelStyleFor(dark);
 
   // Explorer milestone: "Say it out loud". One row per account for ever — the repeat is
   // a primary-key conflict the service treats as the success it is. Recorded on opening, not on a
@@ -491,7 +496,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
         setNotice({
           tone: "info",
           text: outcome.transcript
-            ? `Heard "${outcome.transcript}" — but no food in it. Try again, or add it manually.`
+            ? `Heard "${outcome.transcript}", but no food in it. Try again, or add it manually.`
             : "No food in that one. Try again, or add it manually.",
         });
         break;
@@ -754,7 +759,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
       // Shown beside the serving label only when the spoken word was dropped.
       unitNote:
         item.spokenUnit && !item.unit
-          ? `Logged as ${item.quantity} serving${plural} — “${item.spokenUnit}” is not a unit this can convert`
+          ? `Logged as ${item.quantity} serving${plural}. “${item.spokenUnit}” is not a unit this can convert`
           : null,
       quantityLabel: item.unit && item.unit !== "serving" ? item.unit : `serving${plural}`,
     };
@@ -786,7 +791,6 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
   return (
     <BottomSheet
-      light
       open={open}
       onClose={handleClose}
       title="Tell Centium what you ate"
@@ -813,13 +817,14 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
             <button
               onClick={() => void requestMicAndStart()}
-              className="tap relative w-24 h-24 rounded-full bg-teal flex items-center justify-center shadow-lift mb-6"
+              // Decision 7: teal-fill and its ink (white on #A2C8C2 was 1.81:1).
+              className="tap relative w-24 h-24 rounded-full bg-teal-fill flex items-center justify-center shadow-lift mb-6"
             >
-              <Mic size={32} className="text-white" />
+              <Mic size={32} className="text-on-primary-fill" />
             </button>
             <p className="font-display text-xl font-semibold text-charcoal mb-2">What did you eat?</p>
             <p className="text-sm text-charcoal-soft max-w-xs">
-              Tap the mic and describe your meal naturally — Centium will find the foods for you to
+              Tap the mic and describe your meal naturally. Centium will find the foods for you to
               confirm.
             </p>
           </>
@@ -939,8 +944,8 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               </div>
             </div>
 
-            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
-              We found — select what to add
+            <p className="section-label mb-2">
+              We found: select what to add
             </p>
             <div className="space-y-2 mb-4">
               {items.map((item, i) => {
@@ -994,10 +999,10 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
                       <div
                         className={`w-5 h-5 rounded-full flex items-center justify-center border-2 shrink-0 ${
-                          item.selected ? "bg-primary border-primary" : "border-charcoal/20"
+                          item.selected ? "bg-primary-fill border-primary-fill" : "border-charcoal/20"
                         }`}
                       >
-                        {item.selected && <Check size={11} className="text-white" strokeWidth={3} />}
+                        {item.selected && <Check size={11} className="text-on-primary-fill" strokeWidth={3} />}
                       </div>
                     </div>
 
@@ -1016,20 +1021,20 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                           style={{ ...sheetGreyStyle, padding: "9px 0", borderRadius: 12 }}
                         >
                           {[
-                            { value: `${preview.calories}`, color: "#241F1B", caption: "kcal" },
-                            { value: `${preview.protein}g`, color: "#7D6BB5", caption: "protein" },
-                            { value: `${preview.carbs}g`, color: "#8175C2", caption: "carbs" },
-                            { value: `${preview.fat}g`, color: "#4274D7", caption: "fat" },
+                            { value: `${preview.calories}`, color: "rgb(var(--c-charcoal))", caption: "kcal" },
+                            { value: `${preview.protein}g`, color: dark ? FOOD_DARK.protein : "#7D6BB5", caption: "protein" },
+                            { value: `${preview.carbs}g`, color: dark ? FOOD_DARK.carbs : "#8175C2", caption: "carbs" },
+                            { value: `${preview.fat}g`, color: dark ? FOOD_DARK.fat : "#4274D7", caption: "fat" },
                           ].map((cell, ci) => (
                             <div
                               key={cell.caption}
                               className="text-center"
-                              style={ci > 0 ? { borderLeft: "1px solid #E2E3E7" } : undefined}
+                              style={ci > 0 ? { borderLeft: `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` } : undefined}
                             >
                               <p style={{ margin: 0, fontSize: 14, fontWeight: 800, color: cell.color }}>
                                 {cell.value}
                               </p>
-                              <p style={{ margin: "1px 0 0", fontSize: 10, color: "#8C8378" }}>{cell.caption}</p>
+                              <p style={{ margin: "1px 0 0", fontSize: 10, color: "rgb(var(--c-charcoal-muted))" }}>{cell.caption}</p>
                             </div>
                           ))}
                         </div>
@@ -1070,7 +1075,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                       </span>
                       <div
                         className="shrink-0"
-                        style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
+                        style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 16, padding: "13px 14px" }}
                       >
                         <input
                           value={quantityDrafts[i] ?? String(item.quantity)}
@@ -1080,7 +1085,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                           inputMode="decimal"
                           aria-label={`${item.food?.name ?? item.spokenName} quantity`}
                           className="w-14 text-center tabular-nums focus:outline-none"
-                          style={{ background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
+                          style={{ background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}
                         />
                       </div>
                     </div>
@@ -1133,7 +1138,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
                               />
                             ) : (
                               <p className="text-[11px] text-charcoal-faint">
-                                No per-nutrient data for this food yet — the calories and macros
+                                No per-nutrient data for this food yet. The calories and macros
                                 above are all there is.
                               </p>
                             )}
@@ -1174,7 +1179,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               </Button>
             </div>
             <p className="text-[11px] text-charcoal-faint mt-4 text-center">
-              AI-identified from your description — review before adding. Estimates, not
+              AI-identified from your description. Review before adding. Estimates, not
               medical-grade data.
             </p>
           </div>

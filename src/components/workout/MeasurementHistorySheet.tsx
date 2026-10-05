@@ -16,6 +16,17 @@ import {
   goalTone,
   type MeasurementGoal,
 } from "../../services/measurements/trend";
+import { useIsDark } from "../../hooks/useIsDark";
+import { DARK_SURFACE, liftTo } from "../../data/folderColors";
+
+// Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the goal
+// button's border takes option-border dark and the reading rows surface.raised
+// dark. The change summary is lifted to 4.5:1 on the dark card, as the chart's
+// own colour is (TrendChart).
+const COLORS = {
+  goalBorder: ["#E5E4E5", "rgba(238,239,242,0.10)"],
+  row: ["#F7F6FB", "#262932"],
+} as const;
 
 // Handover 2026-09-29 WO16: one site's history. The value and reading count,
 // the goal selector, the change summary and the chart in the goal's colour,
@@ -54,6 +65,7 @@ export const MeasurementHistorySheet: React.FC<{
   const [error, setError] = useState<string | null>(null);
   const [goalAnchor, setGoalAnchor] = useState<HTMLElement | null>(null);
   const [deleting, setDeleting] = useState<MeasurementReading | null>(null);
+  const dark = useIsDark();
   // Enter blurs the field, and the blur is what saves: this stops a second save.
   const committing = useRef(false);
 
@@ -92,15 +104,15 @@ export const MeasurementHistorySheet: React.FC<{
   };
 
   return (
-    <BottomSheet light open={open} onClose={onClose} title={site.label}>
+    <BottomSheet open={open} onClose={onClose} title={site.label}>
       <div className="animate-fade-slide-up">
         {latest && (
           <div className="flex items-start justify-between" style={{ gap: 12 }}>
-            <p style={{ color: "#241F1B", fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>
+            <p style={{ color: "rgb(var(--c-charcoal))", fontSize: 24, fontWeight: 800, lineHeight: 1.1 }}>
               {latest.value}
-              <span style={{ color: "#8C8378", fontSize: 15, fontWeight: 500, marginLeft: 4 }}>{unit}</span>
+              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 15, fontWeight: 500, marginLeft: 4 }}>{unit}</span>
             </p>
-            <p style={{ color: "#8C8378", fontSize: 11, marginTop: 4 }}>
+            <p style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11, marginTop: 4 }}>
               {readings.length} reading{readings.length === 1 ? "" : "s"}
             </p>
           </div>
@@ -116,14 +128,14 @@ export const MeasurementHistorySheet: React.FC<{
             padding: "0 10px",
             gap: 4,
             borderRadius: 8,
-            background: "#F5F5F6",
-            border: "1px solid #E5E4E5",
+            background: "rgb(var(--c-cream-soft))",
+            border: `1px solid ${COLORS.goalBorder[dark ? 1 : 0]}`,
             fontSize: 11.5,
           }}
         >
-          <span style={{ color: "#8C8378" }}>Goal:</span>
-          <span style={{ color: "#241F1B", fontWeight: 700 }}>{GOAL_LABEL[goal ?? "none"]}</span>
-          <ChevronDown size={12} style={{ color: "#8C8378" }} />
+          <span style={{ color: "rgb(var(--c-charcoal-muted))" }}>Goal:</span>
+          <span style={{ color: "rgb(var(--c-charcoal))", fontWeight: 700 }}>{GOAL_LABEL[goal ?? "none"]}</span>
+          <ChevronDown size={12} style={{ color: "rgb(var(--c-charcoal-muted))" }} />
         </button>
         <PopupMenu
           open={!!goalAnchor}
@@ -140,7 +152,7 @@ export const MeasurementHistorySheet: React.FC<{
         />
 
         {summary && (
-          <p style={{ marginTop: 10, color, fontSize: 11, fontWeight: 600 }}>{summary}</p>
+          <p style={{ marginTop: 10, color: dark ? liftTo(color, DARK_SURFACE.card) : color, fontSize: 11, fontWeight: 600 }}>{summary}</p>
         )}
 
         {points.length > 0 && (
@@ -182,9 +194,9 @@ export const MeasurementHistorySheet: React.FC<{
               >
                 <div
                   className="flex items-center justify-between"
-                  style={{ height: 44, padding: "0 12px", gap: 10, borderRadius: 12, background: "#F7F6FB" }}
+                  style={{ height: 44, padding: "0 12px", gap: 10, borderRadius: 12, background: COLORS.row[dark ? 1 : 0] }}
                 >
-                  <span className="truncate" style={{ color: "#8C8378", fontSize: 12.5 }}>
+                  <span className="truncate" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 12.5 }}>
                     {date}
                   </span>
                   {editingId === reading.id ? (
@@ -211,9 +223,9 @@ export const MeasurementHistorySheet: React.FC<{
                         padding: "0 9px",
                         textAlign: "right",
                         borderRadius: 8,
-                        background: "#FFFFFF",
+                        background: "rgb(var(--c-cream-card))",
                         border: "2px solid #AEA1DC",
-                        color: "#241F1B",
+                        color: "rgb(var(--c-charcoal))",
                         fontSize: 14,
                       }}
                     />
@@ -226,10 +238,10 @@ export const MeasurementHistorySheet: React.FC<{
                       }}
                       aria-label={`Edit ${site.label} from ${date}`}
                       className="tap flex-none"
-                      style={{ color: "#241F1B", fontSize: 14, fontWeight: 700 }}
+                      style={{ color: "rgb(var(--c-charcoal))", fontSize: 14, fontWeight: 700 }}
                     >
                       {reading.value}
-                      <span style={{ color: "#8C8378", fontSize: 11, fontWeight: 500, marginLeft: 3 }}>{unit}</span>
+                      <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11, fontWeight: 500, marginLeft: 3 }}>{unit}</span>
                     </button>
                   )}
                 </div>
@@ -241,7 +253,7 @@ export const MeasurementHistorySheet: React.FC<{
         <button
           onClick={onClose}
           className="tap w-full flex items-center justify-center"
-          style={{ marginTop: 16, height: 48, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+          style={{ marginTop: 16, height: 48, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15, fontWeight: 700 }}
         >
           Done
         </button>

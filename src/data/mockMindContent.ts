@@ -12,7 +12,7 @@ export const breathingPatterns: BreathingPattern[] = [
   {
     id: "box",
     name: "Box Breathing",
-    desc: "Equal counts in, hold, out, hold — used by Navy SEALs to stay calm under pressure.",
+    desc: "Equal counts in, hold, out, hold: used by Navy SEALs to stay calm under pressure.",
     phases: [
       { label: "Breathe in", seconds: 4 },
       { label: "Hold", seconds: 4 },
@@ -57,7 +57,7 @@ export const stretchList: StretchItem[] = [
     type: "static",
     target: "Hamstrings",
     seconds: 30,
-    instructions: "Hinge at the hips with a soft knee bend, reach toward your toes, and hold — don't bounce.",
+    instructions: "Hinge at the hips with a soft knee bend, reach toward your toes, and hold. Don't bounce.",
   },
   {
     id: "st2",

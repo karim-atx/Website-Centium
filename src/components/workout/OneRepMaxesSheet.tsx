@@ -3,6 +3,7 @@ import { ArrowDownWideNarrow, ChevronDown, ChevronRight, TrendingDown, TrendingU
 import { BottomSheet } from "../ui/BottomSheet";
 import { PopupMenu } from "../ui/PopupMenu";
 import { useApp } from "../../context/AppContext";
+import { useIsDark } from "../../hooks/useIsDark";
 import { todayLocal } from "../../utils/date";
 import {
   LIFT_SORT_LABEL,
@@ -12,6 +13,23 @@ import {
   type LiftMax,
   type LiftSort,
 } from "../../services/workout/oneRepMax";
+
+/**
+ * Mobile v5.1 R3 (no light islands): the colours here with no token of the
+ * same light value, as [light, dark]. The sort button's border (option
+ * border), the teal 1RM and its up-change (secondary.deeper, 9:1 on the
+ * card) and its kg unit (secondary.deep, 7:1), and the chevron and the "no
+ * change" dash: #C9C2B8 is the disabled-glyph shade, but these are live, so
+ * dark lifts them to text.tertiary (5.1:1) rather than charcoal-disabled
+ * (2.2:1).
+ */
+const ORM_COLORS = {
+  sortBorder: ["#E5E4E5", "rgba(238,239,242,0.10)"],
+  teal: ["#3B7570", "#A3C7C0"],
+  tealUnit: ["#86B3AD", "#7FB3A9"],
+  faint: ["#C9C2B8", "#918DA0"],
+} as const;
+const ormColor = (key: keyof typeof ORM_COLORS, dark: boolean): string => ORM_COLORS[key][dark ? 1 : 0];
 
 const SORTS = (Object.keys(LIFT_SORT_LABEL) as LiftSort[]).map((value) => ({ value, label: LIFT_SORT_LABEL[value] }));
 
@@ -36,22 +54,23 @@ export const OneRepMaxesSheet: React.FC<{
   const { workoutSessions } = useApp();
   const [sort, setSort] = useState<LiftSort>("highest");
   const [anchor, setAnchor] = useState<HTMLElement | null>(null);
+  const dark = useIsDark();
   const lifts = useMemo(() => sortLifts(liftMaxes(workoutSessions, todayLocal()), sort), [workoutSessions, sort]);
 
   return (
-    <BottomSheet light open={open} onClose={onClose} title="One-rep maxes" titleIcon={<OrmIcon size={26} />} handle>
+    <BottomSheet open={open} onClose={onClose} title="One-rep maxes" titleIcon={<OrmIcon size={26} />} handle>
       <div className="animate-fade-slide-up">
         {lifts.length === 0 ? (
           <div className="flex flex-col items-center text-center" style={{ padding: "28px 12px", gap: 14 }}>
             <OrmIcon size={36} />
-            <p style={{ color: "#8C8378", fontSize: 12.5, lineHeight: 1.5 }}>
+            <p style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 12.5, lineHeight: 1.5 }}>
               No lifts yet. Log a set to see your one-rep maxes here.
             </p>
           </div>
         ) : (
           <>
             <div className="flex items-center justify-between" style={{ marginBottom: 9 }}>
-              <span style={{ color: "#8C8378", fontSize: 11 }}>
+              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11 }}>
                 {lifts.length} lift{lifts.length === 1 ? "" : "s"}
               </span>
               <button
@@ -63,16 +82,16 @@ export const OneRepMaxesSheet: React.FC<{
                   padding: "0 10px",
                   gap: 5,
                   borderRadius: 8,
-                  background: "#F5F5F6",
-                  border: "1px solid #E5E4E5",
-                  color: "#241F1B",
+                  background: "rgb(var(--c-cream-soft))",
+                  border: `1px solid ${ormColor("sortBorder", dark)}`,
+                  color: "rgb(var(--c-charcoal))",
                   fontSize: 12,
                   fontWeight: 600,
                 }}
               >
-                <ArrowDownWideNarrow size={13} style={{ color: "#5B5349" }} />
+                <ArrowDownWideNarrow size={13} style={{ color: "rgb(var(--c-charcoal-soft))" }} />
                 {LIFT_SORT_LABEL[sort]}
-                <ChevronDown size={12} style={{ color: "#8C8378" }} />
+                <ChevronDown size={12} style={{ color: "rgb(var(--c-charcoal-muted))" }} />
               </button>
               <PopupMenu
                 open={!!anchor}
@@ -89,28 +108,28 @@ export const OneRepMaxesSheet: React.FC<{
 
             <ul>
               {lifts.map((lift, i) => (
-                <li key={lift.key} style={{ borderTop: i ? "1px solid rgba(36,31,27,0.06)" : undefined }}>
+                <li key={lift.key} style={{ borderTop: i ? "1px solid rgb(var(--c-charcoal) / 0.06)" : undefined }}>
                   <button
                     onClick={() => onSelect?.(lift)}
                     className="tap w-full flex items-center text-left"
                     style={{ height: 62, gap: 10 }}
                   >
                     <span className="flex-1 min-w-0">
-                      <span className="block truncate" style={{ color: "#241F1B", fontSize: 13.5, fontWeight: 700 }}>
+                      <span className="block truncate" style={{ color: "rgb(var(--c-charcoal))", fontSize: 13.5, fontWeight: 700 }}>
                         {lift.name}
                       </span>
-                      <span className="block" style={{ color: "#8C8378", fontSize: 10.5, marginTop: 2 }}>
+                      <span className="block" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 10.5, marginTop: 2 }}>
                         Last trained {shortDate(lift.lastTrained)}
                       </span>
                     </span>
                     <span className="flex flex-col items-end flex-none">
-                      <span style={{ color: "#3B7570", fontSize: 15, fontWeight: 800 }}>
+                      <span style={{ color: ormColor("teal", dark), fontSize: 15, fontWeight: 800 }}>
                         {kgWhole(lift.oneRm)}
-                        <span style={{ color: "#86B3AD", fontSize: 10, fontWeight: 600, marginLeft: 2 }}>kg</span>
+                        <span style={{ color: ormColor("tealUnit", dark), fontSize: 10, fontWeight: 600, marginLeft: 2 }}>kg</span>
                       </span>
-                      <Change value={lift.change30} />
+                      <Change value={lift.change30} dark={dark} />
                     </span>
-                    <ChevronRight size={14} className="flex-none" style={{ color: "#C9C2B8" }} />
+                    <ChevronRight size={14} className="flex-none" style={{ color: ormColor("faint", dark) }} />
                   </button>
                 </li>
               ))}
@@ -123,16 +142,16 @@ export const OneRepMaxesSheet: React.FC<{
 };
 
 /** 30-day change: teal up, muted down, "–" when there is none. */
-const Change: React.FC<{ value: number | null }> = ({ value }) => {
+const Change: React.FC<{ value: number | null; dark: boolean }> = ({ value, dark }) => {
   const kg = value == null ? 0 : kgWhole(value);
   if (kg === 0)
-    return <span style={{ color: "#C9C2B8", fontSize: 10, marginTop: 2 }}>–</span>;
+    return <span style={{ color: ormColor("faint", dark), fontSize: 10, marginTop: 2 }}>–</span>;
   const up = kg > 0;
   const Icon = up ? TrendingUp : TrendingDown;
   return (
     <span
       className="inline-flex items-center"
-      style={{ color: up ? "#3B7570" : "#A79E93", fontSize: 10, fontWeight: 600, marginTop: 2, gap: 3 }}
+      style={{ color: up ? ormColor("teal", dark) : "rgb(var(--c-charcoal-tertiary))", fontSize: 10, fontWeight: 600, marginTop: 2, gap: 3 }}
     >
       <Icon size={11} />
       {up ? `+${kg}` : Math.abs(kg)} kg

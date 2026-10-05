@@ -136,12 +136,12 @@ export default function ProfessionalExplore() {
           which is why it appeared to work. */}
       {!affiliated && (
         <Card className="mb-6 animate-fade-slide-up">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+          <p className="section-label mb-2">
             Not affiliated with a business
           </p>
           <p className="text-[11px] text-charcoal-faint">
             A business adds you to their team from their own account. Reach out to one directly and
-            they can add you — there is nothing to enter here.
+            they can add you. There is nothing to enter here.
           </p>
         </Card>
       )}

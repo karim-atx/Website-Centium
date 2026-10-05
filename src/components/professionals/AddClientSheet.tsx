@@ -128,7 +128,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
               a change nothing can apply. */}
           <a
             href={upgradeMailto()}
-            className="tap w-full flex items-center justify-center rounded-2xl bg-primary text-white text-sm font-semibold h-12 mb-2.5"
+            className="tap w-full flex items-center justify-center rounded-2xl bg-primary-fill text-on-primary-fill text-sm font-semibold h-12 mb-2.5"
           >
             {UPGRADE_ACTION_LABEL}
           </a>
@@ -162,7 +162,7 @@ export const AddClientSheet: React.FC<{ open: boolean; onClose: () => void }> = 
       ) : (
         <div className="text-center animate-fade-slide-up">
           <p className="text-sm text-charcoal-soft mb-4">
-            Code generated. Share it with your client — they'll appear on your roster once they join.
+            Code generated. Share it with your client. They'll appear on your roster once they join.
           </p>
           <div className="bg-primary-pale rounded-2xl py-5 mb-4">
             <p className="text-2xl font-bold tracking-widest text-primary-dark">{generatedCode}</p>

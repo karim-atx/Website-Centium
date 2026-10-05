@@ -109,12 +109,12 @@ export const BottomNav: React.FC = () => {
                 <Icon
                   size={22}
                   strokeWidth={active ? 2.4 : 2}
-                  className={clsx(active ? "text-primary" : "text-charcoal-faint")}
+                  className={clsx(active ? "text-primary-dark" : "text-team-nav-idle")}
                 />
                 <span
                   className={clsx(
                     "text-[11px] font-semibold",
-                    active ? "text-primary" : "text-charcoal-faint"
+                    active ? "text-primary-dark" : "text-team-nav-idle"
                   )}
                 >
                   {t(item.label)}
@@ -146,8 +146,8 @@ export const BottomNav: React.FC = () => {
         // to account for this, but the bar this replaces did.
         "bottom-[calc(env(safe-area-inset-bottom)+18px)]",
         "backdrop-blur-[16px]",
-        "bg-white/[0.72] dark:bg-[#2A2338]/[0.72]",
-        "border border-team-nav-accent/[0.28] dark:border-team-nav-accent/[0.42]",
+        "bg-white/[0.72] dark:bg-[#1C1F28]/[0.94]",
+        "border border-team-nav-accent/[0.28] dark:border-[rgba(238,239,242,0.08)]",
         "shadow-[0_10px_28px_rgb(var(--c-primary-deep-text)/0.16)] dark:shadow-[0_12px_30px_rgba(0,0,0,0.55)]"
       )}
     >
@@ -169,7 +169,7 @@ export const BottomNav: React.FC = () => {
                 <span
                   className={clsx(
                     "absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2",
-                    "w-[66px] h-[66px] rounded-full bg-white dark:bg-[#2A2338] flex items-center justify-center",
+                    "w-[66px] h-[66px] rounded-full bg-white dark:bg-[#1C1F28] flex items-center justify-center",
                     active
                       ? "shadow-[0_0_0_2px_rgb(var(--c-team-nav-accent))]"
                       : "shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.28)] dark:shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.42)]"
@@ -202,7 +202,7 @@ export const BottomNav: React.FC = () => {
                   <span
                     className={clsx(
                       "text-[10.5px] leading-none",
-                      active ? "font-extrabold text-team-nav-accent" : "font-semibold text-team-nav-idle"
+                      active ? "font-extrabold text-team-nav-accent-text" : "font-semibold text-team-nav-idle"
                     )}
                   >
                     {t(item.label)}

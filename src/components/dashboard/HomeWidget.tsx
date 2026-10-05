@@ -22,6 +22,7 @@ import { BookOpen, Play, Check } from "lucide-react";
 import { mondayFirstWeek, DAY_LETTERS, dayLetter } from "../../utils/week";
 import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
 import { HabitPages } from "../mind/HabitPages";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Iteration 6.2 "Team" canonical widget library — 11 metrics, small (fixed
 // 114 tall) and large (150 tall), fluid in width (HO1.1), one flat tinted ground and accent
@@ -80,13 +81,52 @@ const WATER_WAVE_LAYERS: Array<{
   swell: "A" | "B" | "C";
   delay: string;
   front?: boolean;
+  /** Dark mode below the goal: the white layers at half strength. */
+  fillDark?: string;
 }> = [
   { y: 30, amp: 9, crests: 2, fill: "rgba(23,69,127,0.17)", swellCycle: "8.5s", driftCycle: "9s", rightward: false, swell: "A", delay: "-1.2s" },
   { y: 22, amp: 6, crests: 3, fill: "rgba(23,69,127,0.11)", swellCycle: "6.5s", driftCycle: "7s", rightward: true, swell: "C", delay: "-3.4s" },
-  { y: 46, amp: 7, crests: 5, fill: "rgba(255,255,255,0.13)", swellCycle: "7.5s", driftCycle: "11s", rightward: false, swell: "B", delay: "-0.6s" },
-  { y: 14, amp: 8, crests: 2, fill: "rgba(255,255,255,0.30)", swellCycle: "5.5s", driftCycle: "5s", rightward: true, swell: "B", delay: "-2.1s", front: true },
-  { y: 74, amp: 6, crests: 4, fill: "rgba(255,255,255,0.10)", swellCycle: "9s", driftCycle: "13s", rightward: false, swell: "A", delay: "-4.7s" },
+  { y: 46, amp: 7, crests: 5, fill: "rgba(255,255,255,0.13)", swellCycle: "7.5s", driftCycle: "11s", rightward: false, swell: "B", delay: "-0.6s", fillDark: "rgba(255,255,255,0.065)" },
+  { y: 14, amp: 8, crests: 2, fill: "rgba(255,255,255,0.30)", swellCycle: "5.5s", driftCycle: "5s", rightward: true, swell: "B", delay: "-2.1s", front: true, fillDark: "rgba(255,255,255,0.15)" },
+  { y: 74, amp: 6, crests: 4, fill: "rgba(255,255,255,0.10)", swellCycle: "9s", driftCycle: "13s", rightward: false, swell: "A", delay: "-4.7s", fillDark: "rgba(255,255,255,0.05)" },
 ];
+
+/**
+ * Mobile v5.1 R3, dark mode (no light islands): the large Water widget below
+ * its goal. The handover draws it light only; these are DERIVED: the ground
+ * is the water blue #4A85DC at 10% to 16% on the dark card (the light ground
+ * runs lighter to bluer the same way), the body a deep version of the light
+ * body's three blues, the type the dark text ramp (value #F5F3FA, label
+ * #C3CCDB 9:1, sub-line and goal #D5DCE8 7.5:1 on the mid body). The pill is
+ * #4A85C4 at 30% on the card with its ink lifted to 6:1 (#A8C4E3); above the
+ * goal it is gold.tint #3A342C with gold.text #CAB082 (5.9:1).
+ */
+const WATER_DARK = {
+  ground: "linear-gradient(180deg, #21293A, #232F45)",
+  body: "linear-gradient(180deg, #1E2E47 0%, #23416B 42%, #2A5088 100%)",
+  label: "#C3CCDB",
+  value: "#F5F3FA",
+  sub: "#D5DCE8",
+  pillBg: "#2A3E57",
+  pillFg: "#A8C4E3",
+  goldPillBg: "#3A342C",
+  goldPillFg: "#CAB082",
+} as const;
+
+/**
+ * Mobile v5.1 R3, dark mode: the sleep-stage chip labels where the stage's
+ * own colour is under 4.5:1 on the dark chip (cream-card at 55% over the
+ * sleep tile, #23242F): teal-dark #4F8F8A (4.1:1) and lavender-deep #7D6BB5
+ * (3.4:1), each lifted toward white until it reads. REM (berry) and Light
+ * (sky) already pass and keep their token.
+ */
+const SLEEP_STAGE_INK_DARK: Record<string, string> = { Awake: "#5A9691", Deep: "#9283C1" };
+
+/**
+ * Mobile v5.1 R3, dark mode: the small Weight tile's #7567B7 glyph and "kg"
+ * (3.25:1 on the tile over the dark page), lifted to 4.5:1 for the text.
+ */
+const WEIGHT_ACCENT_DARK = "#8E82C4";
 
 // Seamless drift. A layer's loop only closes if its travel is a whole number
 // of its own wave periods (716 / crests). 358px is that for 2 and 4 crests;
@@ -117,25 +157,38 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
   const fillHeightPx = (Math.min(100, pctPercent) / 100) * 126;
   const atOrAboveGoal = pctPercent >= 100;
   const overGoal = pctPercent > 100;
+  const dark = useIsDark();
+  // In dark mode, below the goal: the light waves' white layers at half
+  // strength, so the light type above them keeps its contrast.
+  const dimWaves = dark && !atOrAboveGoal;
 
+  // Mobile v5.1 R3, dark mode (no light islands): below the goal the card is
+  // dark (WATER_DARK); at and above it the bright blue body with white type is
+  // a coloured fill and stays as it is. The pill is dark in every state.
   const bodyGradient = atOrAboveGoal
     ? "linear-gradient(180deg, #6FA6EC 0%, #4A85DC 46%, #2C5FAF 100%)"
+    : dark
+    ? WATER_DARK.body
     : "linear-gradient(180deg, #E4F0FE 0%, #B9D7F8 42%, #7FB0EE 100%)";
-  const labelColor = atOrAboveGoal ? "rgba(255,255,255,0.92)" : "#3A4351";
-  const valueColor = atOrAboveGoal ? "#FFFFFF" : "#000000";
-  const subColor = atOrAboveGoal ? "rgba(255,255,255,0.95)" : "#46505F";
-  const goalColor = atOrAboveGoal ? "rgba(255,255,255,0.92)" : "#26303D";
+  const labelColor = atOrAboveGoal ? "rgba(255,255,255,0.92)" : dark ? WATER_DARK.label : "#3A4351";
+  const valueColor = atOrAboveGoal ? "#FFFFFF" : dark ? WATER_DARK.value : "#000000";
+  const subColor = atOrAboveGoal ? "rgba(255,255,255,0.95)" : dark ? WATER_DARK.sub : "#46505F";
+  const goalColor = atOrAboveGoal ? "rgba(255,255,255,0.92)" : dark ? WATER_DARK.sub : "#26303D";
   const textShadow = atOrAboveGoal ? "0 1px 3px rgba(12,40,82,0.45)" : "none";
   // Pill: solid blue below the goal (#D7E8FA, #004376 type), a deeper blue
   // at it (#D1E5FD, #003874), gold above it.
-  const pillBg = overGoal ? "#F4D789" : atOrAboveGoal ? "#D1E5FD" : "#D7E8FA";
-  const pillFg = overGoal ? "#8B5900" : atOrAboveGoal ? "#003874" : "#004376";
+  const pillBg = dark
+    ? overGoal ? WATER_DARK.goldPillBg : WATER_DARK.pillBg
+    : overGoal ? "#F4D789" : atOrAboveGoal ? "#D1E5FD" : "#D7E8FA";
+  const pillFg = dark
+    ? overGoal ? WATER_DARK.goldPillFg : WATER_DARK.pillFg
+    : overGoal ? "#8B5900" : atOrAboveGoal ? "#003874" : "#004376";
   const subLabel = atOrAboveGoal ? "Goal reached!" : `${((waterGoalMl - water) / 1000).toFixed(1)} L to go`;
 
   return (
     <div
       className="relative w-full h-[131px] rounded-[15px] overflow-hidden box-border"
-      style={{ background: "linear-gradient(180deg, #F4F8FE, #ECF4FE)" }}
+      style={{ background: dark ? WATER_DARK.ground : "linear-gradient(180deg, #F4F8FE, #ECF4FE)" }}
     >
       <style>{`
         @keyframes cent-water-drift { from { transform: translateX(0); } to { transform: translateX(calc(-1 * var(--cent-drift, 358px))); } }
@@ -196,9 +249,9 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
                     ["--cent-drift" as string]: drift.distance,
                   } as React.CSSProperties}
                 >
-                  <path d={fill} fill={w.fill} />
+                  <path d={fill} fill={dimWaves ? w.fillDark ?? w.fill : w.fill} />
                   {w.front && (
-                    <path d={edge} fill="none" stroke="rgba(255,255,255,0.95)" strokeWidth={1.7} strokeLinecap="round" />
+                    <path d={edge} fill="none" stroke={dimWaves ? "rgba(255,255,255,0.48)" : "rgba(255,255,255,0.95)"} strokeWidth={1.7} strokeLinecap="round" />
                   )}
                 </svg>
               </span>
@@ -207,7 +260,7 @@ const LargeWaterWidget: React.FC<{ water: number; waterGoalMl: number; pct: numb
           <span
             aria-hidden="true"
             className="absolute left-0 right-0 top-0 pointer-events-none"
-            style={{ height: 22, background: "linear-gradient(180deg, rgba(255,255,255,0.42), rgba(255,255,255,0))" }}
+            style={{ height: 22, background: `linear-gradient(180deg, rgba(255,255,255,${dimWaves ? 0.21 : 0.42}), rgba(255,255,255,0))` }}
           />
           <span
             aria-hidden="true"
@@ -311,6 +364,7 @@ export const HomeWidget: React.FC<{
   const { user, metricValues, healthSeries, sleepDetail, water, waterGoalMl, stepsGoal, foodLog, nutritionGoal, workoutLog, workoutSessions, routines, habits, journalEntries, today, selectedDate, meditationSummary, recoverySensitive, recoveryModePending, addWater } =
     useApp();
   const isLarge = widget.size === "large";
+  const dark = useIsDark();
   // Water quick-add on the small tile: one tap adds a glass, and a tap in
   // flight cannot add a second one.
   const [addingWater, setAddingWater] = React.useState(false);
@@ -386,7 +440,7 @@ export const HomeWidget: React.FC<{
     shell(
       bg,
       <>
-        <p className={`${capsLabel} text-charcoal/[0.42]`}>{label}</p>
+        <p className={`${capsLabel} text-charcoal/[0.42] dark:text-charcoal/[0.55]`}>{label}</p>
         <div className="flex-1 flex flex-col justify-center min-h-0">
           <p className="text-[12px] font-semibold text-charcoal-tertiary leading-snug">{NO_READINGS}</p>
           {hint && isLarge && (
@@ -420,7 +474,7 @@ export const HomeWidget: React.FC<{
       shell(
         bg,
         <>
-          <p className={`${capsLabel} text-charcoal/[0.42]`}>{label}</p>
+          <p className={`${capsLabel} text-charcoal/[0.42] dark:text-charcoal/[0.55]`}>{label}</p>
           <div className="flex-1 flex flex-col justify-center gap-2" aria-busy="true">
             <span className="h-4 w-16 rounded-full bg-charcoal/[0.07] animate-pulse" />
             <span className="h-3 w-24 max-w-full rounded-full bg-charcoal/[0.05] animate-pulse" />
@@ -444,7 +498,7 @@ export const HomeWidget: React.FC<{
           shell(
             "rgba(162,200,194,.2)",
             <>
-              <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Steps</p>
+              <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Steps</p>
               <p className={`${numeralSmall} mt-[5px]`}>{metricValues.steps.toLocaleString()}</p>
               <div className="flex items-end gap-[2px] h-[26px] mt-[9px]">
                 {stepsMeta.history.map((h, i) => {
@@ -484,15 +538,15 @@ export const HomeWidget: React.FC<{
           "rgba(162,200,194,.2)",
           <>
             <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Steps</p>
-              <span className={`${badge} text-team-teal-ink bg-teal/[0.42]`}>{Math.min(999, pct)}% of goal</span>
+              <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Steps</p>
+              <span className={`${badge} text-team-teal-ink bg-teal/[0.42] dark:text-charcoal`}>{Math.min(999, pct)}% of goal</span>
             </div>
             <div className="flex-1 flex flex-col justify-between min-h-0 mt-[9px]">
               <div className="flex items-baseline gap-2.5">
                 <span className="text-[26px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
                   {metricValues.steps.toLocaleString()}
                 </span>
-                <span className="text-[10px] text-team-teal-ink/[0.72]">
+                <span className="text-[10px] text-team-teal-ink/[0.72] dark:text-team-teal-ink">
                   of {stepsGoal.toLocaleString()} · {stepsKm} km
                 </span>
               </div>
@@ -503,7 +557,7 @@ export const HomeWidget: React.FC<{
                     style={{ width: `${Math.min(100, pct)}%`, background: "linear-gradient(90deg,#A9CFC9,#6F9993)" }}
                   />
                 </div>
-                <div className="flex justify-between mt-[5px] text-[8px] font-semibold text-team-teal-ink/[0.72]">
+                <div className="flex justify-between mt-[5px] text-[8px] font-semibold text-team-teal-ink/[0.72] dark:text-team-teal-ink">
                   <span>0</span>
                   <span>
                     {weeklyStepsAvg === null ? "No weekly average yet" : `Weekly avg ${weeklyStepsAvg.toLocaleString()}`}
@@ -592,7 +646,7 @@ export const HomeWidget: React.FC<{
           shell(
             "rgba(174,161,220,.13)",
             <>
-              <p className={`${capsLabel} text-primary-deep-text/[0.65]`}>Sleep</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.65] dark:text-primary-deep-text`}>Sleep</p>
               <p className="mt-[5px] text-[16px] font-extrabold tracking-[-0.03em] text-charcoal">
                 {h}h{m.toString().padStart(2, "0")}
               </p>
@@ -613,9 +667,9 @@ export const HomeWidget: React.FC<{
           "rgba(174,161,220,.16)",
           <>
             <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Sleep</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Sleep</p>
               {sleepDetail?.score != null && (
-                <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>Score {sleepDetail.score}</span>
+                <span className={`${badge} text-primary-deep-text bg-team-lavender/30 dark:text-charcoal`}>Score {sleepDetail.score}</span>
               )}
             </div>
             <div className="flex-1 flex flex-col justify-between min-h-0 mt-1">
@@ -624,7 +678,7 @@ export const HomeWidget: React.FC<{
                   {h}h {m.toString().padStart(2, "0")}m
                 </span>
                 {sleepTrend && (
-                  <span className="text-[10px] whitespace-nowrap text-primary-deep-text/[0.68]">{sleepTrend}</span>
+                  <span className="text-[10px] whitespace-nowrap text-primary-deep-text/[0.68] dark:text-primary-deep-text">{sleepTrend}</span>
                 )}
               </div>
               {/* A NIGHT'S LENGTH AND A NIGHT'S STAGES ARE DIFFERENT
@@ -634,9 +688,9 @@ export const HomeWidget: React.FC<{
               {sleepStages && (
               <div className="flex gap-[7px] mt-0.5">
                 {sleepStages.map((s) => (
-                  <span key={s.label} className="flex-1 rounded-[9px] bg-white/55 py-[5px] text-center">
+                  <span key={s.label} className="flex-1 rounded-[9px] bg-cream-card/55 py-[5px] text-center">
                     <span className="block text-[11px] font-extrabold text-charcoal tabular-nums">{fmtMin(s.min)}</span>
-                    <span className="block mt-[2px] text-[7.5px] font-semibold" style={{ color: s.color }}>
+                    <span className="block mt-[2px] text-[7.5px] font-semibold" style={{ color: dark ? SLEEP_STAGE_INK_DARK[s.label] ?? s.color : s.color }}>
                       {s.label}
                     </span>
                   </span>
@@ -654,7 +708,7 @@ export const HomeWidget: React.FC<{
                   {sleepStages.map((s) => (
                     <span key={s.label} className="flex items-center gap-1">
                       <span className="w-[6px] h-[6px] rounded-full shrink-0" style={{ background: s.color }} />
-                      <span className="text-[7.5px] font-semibold text-primary-deep-text/[0.68]">{s.label}</span>
+                      <span className="text-[7.5px] font-semibold text-primary-deep-text/[0.68] dark:text-primary-deep-text">{s.label}</span>
                     </span>
                   ))}
                 </div>
@@ -687,23 +741,23 @@ export const HomeWidget: React.FC<{
           shell(
             "rgba(162,200,194,.16)",
             <>
-              <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Workout</p>
+              <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Workout</p>
               <div className="flex-1 flex items-center justify-center min-h-0">
                 {suggested ? (
                   <span className="flex flex-col items-center text-center leading-[1.25]">
-                    <span className={`${badge} text-team-teal-ink bg-teal/[0.42]`}>
+                    <span className={`${badge} text-team-teal-ink bg-teal/[0.42] dark:text-charcoal`}>
                       {done ? "Completed" : "Up next"}
                     </span>
                     <span className="mt-1.5 text-[15px] font-extrabold tracking-[-0.02em] text-charcoal line-clamp-2">
                       {suggested.name}
                     </span>
-                    <span className="mt-[5px] text-[8.5px] font-semibold text-team-teal-ink/[0.72]">
+                    <span className="mt-[5px] text-[8.5px] font-semibold text-team-teal-ink/[0.72] dark:text-team-teal-ink">
                       {suggested.exercises.length} exercises
                     </span>
                   </span>
                 ) : (
-                  <span className="text-[10px] font-semibold text-center leading-snug text-team-teal-ink/[0.72] px-1">
-                    No workout planned — pick a routine
+                  <span className="text-[10px] font-semibold text-center leading-snug text-team-teal-ink/[0.72] dark:text-team-teal-ink px-1">
+                    No workout planned. Pick a routine
                   </span>
                 )}
               </div>
@@ -717,9 +771,9 @@ export const HomeWidget: React.FC<{
           "rgba(162,200,194,.16)",
           <>
             <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Workout</p>
+              <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Workout</p>
               {suggested && (
-                <span className={`${badge} text-team-teal-ink bg-teal/[0.42]`}>
+                <span className={`${badge} text-team-teal-ink bg-teal/[0.42] dark:text-charcoal`}>
                   {done ? "Completed" : "Up next"}
                 </span>
               )}
@@ -732,7 +786,7 @@ export const HomeWidget: React.FC<{
                       <p className="text-[20px] font-extrabold tracking-[-0.03em] text-charcoal truncate">
                         {suggested.name}
                       </p>
-                      <p className="mt-1 text-[10px] text-team-teal-ink/[0.72]">
+                      <p className="mt-1 text-[10px] text-team-teal-ink/[0.72] dark:text-team-teal-ink">
                         {suggested.exercises.length} exercises
                         {suggested.estimatedDurationMin
                           ? ` · ~${suggested.estimatedDurationMin} min`
@@ -741,7 +795,7 @@ export const HomeWidget: React.FC<{
                     </>
                   ) : (
                     <p className="text-[13px] font-bold leading-snug text-charcoal">
-                      No workout planned — pick a routine
+                      No workout planned. Pick a routine
                     </p>
                   )}
                 </div>
@@ -753,7 +807,7 @@ export const HomeWidget: React.FC<{
                   which are real, rather than a plan. */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
-                  <span className="text-[9px] font-bold tracking-[.12em] uppercase text-team-teal-ink/[0.72]">This week</span>
+                  <span className="text-[9px] font-bold tracking-[.12em] uppercase text-team-teal-ink/[0.72] dark:text-team-teal-ink">This week</span>
                   <span className="text-[9.5px] font-extrabold text-team-teal-ink">{workoutDaysThisWeek.length} of 7</span>
                 </div>
                 <span className="flex gap-1 w-full">
@@ -785,14 +839,14 @@ export const HomeWidget: React.FC<{
           shell(
             "rgba(174,161,220,.16)",
             <>
-              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Food</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Food</p>
               <div className="flex-1 flex flex-col justify-center min-h-0">
                 <p className="text-[12px] font-semibold text-charcoal leading-snug">
                   {logged === 0 ? "Nothing logged yet today" : `${logged} item${logged === 1 ? "" : "s"} logged today`}
                 </p>
                 {isLarge && (
                   <p className="mt-1 text-[10.5px] text-charcoal-faint leading-snug">
-                    Meals, notes, and how you're feeling — no calorie counting required.
+                    Meals, notes, and how you're feeling, no calorie counting required.
                   </p>
                 )}
               </div>
@@ -816,12 +870,12 @@ export const HomeWidget: React.FC<{
           shell(
             "rgba(174,161,220,.16)",
             <>
-              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Food</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Food</p>
               <div className="flex-1 flex flex-col justify-center min-h-0">
                 <span className="text-[17px] font-extrabold leading-none tracking-[-0.03em] text-charcoal tabular-nums whitespace-nowrap">
                   {Math.round(totals.calories)}
                 </span>
-                <span className="text-[9.5px] font-semibold mt-[4px] whitespace-nowrap text-primary-deep-text/[0.78]">
+                <span className="text-[9.5px] font-semibold mt-[4px] whitespace-nowrap text-primary-deep-text/[0.78] dark:text-primary-deep-text">
                   of {targets.calories} kcal
                 </span>
               </div>
@@ -838,24 +892,24 @@ export const HomeWidget: React.FC<{
           "rgba(174,161,220,.16)",
           <>
             <div className="flex items-center justify-between gap-2.5">
-              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Food</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Food</p>
               <span className="flex-1 flex items-baseline justify-end gap-1.5 min-w-0">
                 <span className="text-[22px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
                   {Math.round(totals.calories)}
                 </span>
-                <span className="text-[9.5px] whitespace-nowrap text-primary-deep-text/[0.68]">
+                <span className="text-[9.5px] whitespace-nowrap text-primary-deep-text/[0.68] dark:text-primary-deep-text">
                   of {targets.calories} kcal
                   {/* The large widget has the room to say whose number this
                       is; the small one shows the figure alone, and the Food
                       tab it opens onto carries the same note. */}
                   {isReferenceOnlyTarget(user) && (
-                    <span className="block text-[8.5px] leading-[1.3] text-primary-deep-text/[0.55]">
+                    <span className="block text-[8.5px] leading-[1.3] text-primary-deep-text/[0.55] dark:text-primary-deep-text">
                       {REFERENCE_INTAKE_NOTE}
                     </span>
                   )}
                 </span>
               </span>
-              <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>{kcalLeft} kcal left</span>
+              <span className={`${badge} text-primary-deep-text bg-team-lavender/30 dark:text-charcoal`}>{kcalLeft} kcal left</span>
             </div>
             <div className="flex-1 flex flex-col justify-evenly min-h-0 mt-2">
               {macros.map((m) => (
@@ -870,7 +924,7 @@ export const HomeWidget: React.FC<{
                       style={{ width: `${Math.min(100, (m.consumed / (m.target || 1)) * 100)}%`, background: m.color }}
                     />
                   </span>
-                  <span className="w-14 shrink-0 text-right text-[9px] text-primary-deep-text/[0.68] tabular-nums">
+                  <span className="w-14 shrink-0 text-right text-[9px] text-primary-deep-text/[0.68] dark:text-primary-deep-text tabular-nums">
                     {Math.round(m.consumed)} / {Math.round(m.target)}g
                   </span>
                 </div>
@@ -907,7 +961,7 @@ export const HomeWidget: React.FC<{
           shell(
             "rgba(174,161,220,.11)",
             <>
-              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Weight</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Weight</p>
               <div className="flex-1 flex items-end justify-center min-h-0">
                 <div style={{ position: "relative", width: iconSize, height: iconSize, flex: "none" }}>
                   <svg
@@ -915,7 +969,7 @@ export const HomeWidget: React.FC<{
                     width={iconSize}
                     height={iconSize}
                     fill="none"
-                    stroke="#7567B7"
+                    stroke={dark ? WEIGHT_ACCENT_DARK : "#7567B7"}
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     style={{ display: "block" }}
@@ -959,7 +1013,7 @@ export const HomeWidget: React.FC<{
                       right: 0,
                       top: "73%",
                       textAlign: "center",
-                      color: "#7567B7",
+                      color: dark ? WEIGHT_ACCENT_DARK : "#7567B7",
                       fontWeight: 800,
                       lineHeight: 1,
                       fontSize: iconSize * 0.119,
@@ -989,9 +1043,9 @@ export const HomeWidget: React.FC<{
           "rgba(174,161,220,.11)",
           <>
             <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Weight</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Weight</p>
               {trendLabel(weightMeta) && (
-                <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>
+                <span className={`${badge} text-primary-deep-text bg-team-lavender/30 dark:text-charcoal`}>
                   {trendLabel(weightMeta)}
                 </span>
               )}
@@ -1003,10 +1057,10 @@ export const HomeWidget: React.FC<{
                     <span className="text-[26px] font-extrabold leading-none tracking-[-0.035em] text-charcoal tabular-nums">
                       {metricValues.weight}
                     </span>
-                    <span className="text-[11px] font-bold text-primary-deep-text/[0.68]">kg</span>
+                    <span className="text-[11px] font-bold text-primary-deep-text/[0.68] dark:text-primary-deep-text">kg</span>
                   </p>
                   {nutritionGoal.weightGoal !== "maintain" && nutritionGoal.desiredWeightConfirmed && nutritionGoal.desiredWeightKg && (
-                    <p className="mt-[5px] text-[9.5px] text-primary-deep-text/[0.68]">Goal {nutritionGoal.desiredWeightKg} kg</p>
+                    <p className="mt-[5px] text-[9.5px] text-primary-deep-text/[0.68] dark:text-primary-deep-text">Goal {nutritionGoal.desiredWeightKg} kg</p>
                   )}
                 </div>
                 <svg viewBox={`0 0 ${vbW} ${vbH}`} width={vbW} height={vbH} style={{ display: "block", flex: "none" }}>
@@ -1028,11 +1082,11 @@ export const HomeWidget: React.FC<{
                         fontFamily="Manrope"
                         fontSize={8}
                         fontWeight={700}
-                        fill={i === pts.length - 1 ? "rgb(var(--c-primary-deep-text))" : "rgba(95,80,147,.6)"}
+                        fill={i === pts.length - 1 ? "rgb(var(--c-primary-deep-text))" : dark ? "rgb(var(--c-charcoal-muted))" : "rgba(95,80,147,.6)"}
                       >
                         {p.v.toFixed(1)}
                       </text>
-                      <text x={p.x} y={76} textAnchor="middle" fontFamily="Manrope" fontSize={7.5} fontWeight={600} fill="rgba(95,80,147,.5)">
+                      <text x={p.x} y={76} textAnchor="middle" fontFamily="Manrope" fontSize={7.5} fontWeight={600} fill={dark ? "rgb(var(--c-charcoal-muted))" : "rgba(95,80,147,.5)"}>
                         {dayLetter(p.date)}
                       </text>
                     </React.Fragment>
@@ -1055,7 +1109,7 @@ export const HomeWidget: React.FC<{
           shell(
             "rgba(174,161,220,.16)",
             <>
-              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Habits</p>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Habits</p>
               <div className="flex-1 flex items-center justify-center min-h-0">
                 <span className="flex flex-col items-center gap-2">
                   <svg viewBox="0 0 24 24" width={40} height={40} style={{ display: "block", flex: "none" }}>
@@ -1082,8 +1136,8 @@ export const HomeWidget: React.FC<{
           "rgba(174,161,220,.16)",
           <>
             <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-primary-deep-text/[0.68]`}>Habits</p>
-              <span className={`${badge} text-primary-deep-text bg-team-lavender/30`}>
+              <p className={`${capsLabel} text-primary-deep-text/[0.68] dark:text-primary-deep-text`}>Habits</p>
+              <span className={`${badge} text-primary-deep-text bg-team-lavender/30 dark:text-charcoal`}>
                 {done} of {habits.length} today
               </span>
             </div>
@@ -1177,13 +1231,13 @@ export const HomeWidget: React.FC<{
           shell(
             "rgba(217,164,65,.14)",
             <>
-              <p className={`${capsLabel} text-team-gold-ink/[0.82]`}>Journal</p>
+              <p className={`${capsLabel} text-team-gold-ink/[0.82] dark:text-team-gold-ink`}>Journal</p>
               <div className="flex-1 flex items-center justify-center min-h-0">
                 <span className="flex flex-col items-center gap-[7px]">
                   <BookOpen size={30} className="text-team-gold-deep" />
                   <span className="flex flex-col items-center leading-none">
                     <span className="text-[20px] font-extrabold tracking-[-0.04em] text-charcoal tabular-nums">{journalStreak}</span>
-                    <span className="mt-1 text-[8.5px] font-bold text-team-gold-ink/[0.82]">day streak</span>
+                    <span className="mt-1 text-[8.5px] font-bold text-team-gold-ink/[0.82] dark:text-team-gold-ink">day streak</span>
                   </span>
                 </span>
               </div>
@@ -1197,7 +1251,7 @@ export const HomeWidget: React.FC<{
           "rgba(217,164,65,.14)",
           <>
             <div className="flex items-center justify-between gap-3">
-              <p className={`${capsLabel} text-team-gold-ink/[0.82]`}>Journal</p>
+              <p className={`${capsLabel} text-team-gold-ink/[0.82] dark:text-team-gold-ink`}>Journal</p>
               <span className={`${badge} text-team-gold-ink bg-gold/[0.22]`}>{journalDoneToday ? "Written today" : "Not written today"}</span>
             </div>
             <div className="flex-1 flex flex-col justify-between min-h-0 mt-2.5">
@@ -1206,17 +1260,17 @@ export const HomeWidget: React.FC<{
                 <div className="flex-1 min-w-0">
                   <p className="flex items-baseline gap-1.5">
                     <span className="text-[22px] font-extrabold leading-none tracking-[-0.035em] text-charcoal">{journalStreak}</span>
-                    <span className="text-[10px] font-bold text-team-gold-ink/[0.82]">day streak</span>
+                    <span className="text-[10px] font-bold text-team-gold-ink/[0.82] dark:text-team-gold-ink">day streak</span>
                   </p>
                   {latestEntry && (
-                    <p className="mt-[5px] text-[10px] leading-[1.45] text-team-gold-ink/[0.82] overflow-hidden text-ellipsis whitespace-nowrap">
+                    <p className="mt-[5px] text-[10px] leading-[1.45] text-team-gold-ink/[0.82] dark:text-team-gold-ink overflow-hidden text-ellipsis whitespace-nowrap">
                       &ldquo;{latestEntry.text}&rdquo;
                     </p>
                   )}
                 </div>
                 <span className="shrink-0 text-right">
                   <span className="block text-[14px] font-extrabold text-charcoal tabular-nums">{journalWordTotal}</span>
-                  <span className="block mt-[2px] text-[7.5px] font-semibold text-team-gold-ink/[0.82]">words</span>
+                  <span className="block mt-[2px] text-[7.5px] font-semibold text-team-gold-ink/[0.82] dark:text-team-gold-ink">words</span>
                 </span>
               </div>
               <div className="flex gap-[5px]">
@@ -1224,7 +1278,7 @@ export const HomeWidget: React.FC<{
                   <span
                     key={i}
                     className="flex-1 flex flex-col items-center gap-1 rounded-lg py-[5px]"
-                    style={{ background: has ? "rgba(217,164,65,.22)" : "rgba(255,255,255,.45)" }}
+                    style={{ background: has ? "rgba(217,164,65,.22)" : "rgb(var(--c-cream-card) / .45)" }}
                   >
                     <span className={`text-[7.5px] font-extrabold ${has ? "text-team-gold-ink" : "text-team-gold-ink/50"}`}>{DAY_LETTERS[i]}</span>
                     {has ? (
@@ -1254,7 +1308,7 @@ export const HomeWidget: React.FC<{
           shell(
             "rgba(162,200,194,.18)",
             <>
-              <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Meditation</p>
+              <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Meditation</p>
               <div className="flex-1 flex items-center justify-center min-h-0">
                 <MeditationSmall summary={meditationSummary} />
               </div>
@@ -1267,7 +1321,7 @@ export const HomeWidget: React.FC<{
         shell(
           "rgba(162,200,194,.18)",
           <>
-            <p className={`${capsLabel} text-team-teal-ink/[0.72]`}>Meditation</p>
+            <p className={`${capsLabel} text-team-teal-ink/[0.72] dark:text-team-teal-ink`}>Meditation</p>
             <MeditationLarge summary={meditationSummary} />
           </>
         )

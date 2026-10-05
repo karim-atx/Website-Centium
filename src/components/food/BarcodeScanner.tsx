@@ -3,6 +3,8 @@ import { ScanLine } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { canUseBarcodeScanner, createFrameReader } from "../../services/barcode/scanner";
 import { normalizeGtin } from "../../utils/gtin";
+import { useIsDark } from "../../hooks/useIsDark";
+import { FOOD_DARK } from "./foodDark";
 
 type CameraState = "starting" | "scanning" | "denied" | "unavailable";
 
@@ -22,6 +24,7 @@ export const BarcodeScanner: React.FC<{
   onCode: (gtin: string) => void;
   title?: string;
 }> = ({ open, onClose, onCode, title = "Scan barcode" }) => {
+  const dark = useIsDark();
   const video = useRef<HTMLVideoElement | null>(null);
   const [camera, setCamera] = useState<CameraState>(() => (canUseBarcodeScanner() ? "starting" : "unavailable"));
   const [typed, setTyped] = useState("");
@@ -97,7 +100,7 @@ export const BarcodeScanner: React.FC<{
   const showCamera = camera === "starting" || camera === "scanning";
 
   return (
-    <BottomSheet light open={open} onClose={onClose} title={title}>
+    <BottomSheet open={open} onClose={onClose} title={title}>
       <div className="animate-fade-slide-up">
         {showCamera ? (
           <div className="relative overflow-hidden" style={{ borderRadius: 18, background: "#1E1834", aspectRatio: "4 / 3" }}>
@@ -116,9 +119,9 @@ export const BarcodeScanner: React.FC<{
             </p>
           </div>
         ) : (
-          <div className="flex items-start" style={{ gap: 10, padding: "12px 14px", borderRadius: 14, background: "#F4F4F6" }}>
-            <ScanLine size={18} className="flex-none" style={{ color: "#7D67D9", marginTop: 1 }} />
-            <p style={{ margin: 0, fontSize: 12.5, color: "#5B5349", lineHeight: 1.45 }}>
+          <div className="flex items-start" style={{ gap: 10, padding: "12px 14px", borderRadius: 14, background: dark ? FOOD_DARK.box : "#F4F4F6" }}>
+            <ScanLine size={18} className="flex-none" style={{ color: dark ? FOOD_DARK.lavInk : "#7D67D9", marginTop: 1 }} />
+            <p style={{ margin: 0, fontSize: 12.5, color: "rgb(var(--c-charcoal-soft))", lineHeight: 1.45 }}>
               {camera === "denied"
                 ? "Camera access is off for this site. Allow it in your browser settings, or type the number below."
                 : "This browser can't use the camera for scanning. Type the number under the barcode instead."}
@@ -126,7 +129,7 @@ export const BarcodeScanner: React.FC<{
           </div>
         )}
 
-        <p style={{ margin: "16px 0 6px", fontSize: 12, fontWeight: 600, color: "#5B5349" }}>Or type the number</p>
+        <p style={{ margin: "16px 0 6px", fontSize: 12, fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>Or type the number</p>
         <div className="flex" style={{ gap: 8 }}>
           <input
             value={typed}
@@ -139,13 +142,13 @@ export const BarcodeScanner: React.FC<{
             placeholder="Enter number manually"
             aria-label="Barcode number"
             className="flex-1 min-w-0 focus:outline-none"
-            style={{ height: 46, padding: "0 14px", borderRadius: 12, border: "1px solid #E7E7EC", background: "#FFFFFF", fontSize: 14, color: "#241F1B" }}
+            style={{ height: 46, padding: "0 14px", borderRadius: 12, border: `1px solid ${dark ? FOOD_DARK.outline : "#E7E7EC"}`, background: "rgb(var(--c-cream-card))", fontSize: 14, color: "rgb(var(--c-charcoal))" }}
           />
           <button
             onClick={submitTyped}
             disabled={!typed.trim()}
             className="tap flex-none disabled:opacity-50"
-            style={{ height: 46, padding: "0 16px", borderRadius: 12, background: "#AEA1DC", color: "#FFFFFF", fontSize: 14, fontWeight: 700 }}
+            style={{ height: 46, padding: "0 16px", borderRadius: 12, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 14, fontWeight: 700 }}
           >
             Use
           </button>

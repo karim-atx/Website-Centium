@@ -79,7 +79,7 @@ export const ConsentReviewBanner: React.FC = () => {
           <p className="mt-[5px] text-[11px] leading-[1.6] text-white/[0.82]">
             Your health sharing settings used to bundle several different things into one
             switch. We've separated them so you can decide each one. Nothing you already chose
-            has changed — there are just two new questions waiting for you.
+            has changed. There are just two new questions waiting for you.
           </p>
           <button
             onClick={() => navigate(SHARING_ROUTE)}

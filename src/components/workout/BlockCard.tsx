@@ -1,6 +1,8 @@
 import React from "react";
 import type { BlockKind, Exercise, WorkoutBlock } from "../../types";
 import { blockHeading, isRoundBased, prescriptionLine } from "../../services/workout/prescription";
+import { liftTo, tintOn, DARK_SURFACE } from "../../data/folderColors";
+import { useIsDark } from "../../hooks/useIsDark";
 export type { RenderRun } from "../../services/workout/blocks";
 
 // A block, as it reads in a routine, a template or a curated program.
@@ -23,12 +25,31 @@ export type { RenderRun } from "../../services/workout/blocks";
  * palette where one of them moves cannot promise that. Same reasoning as the
  * nav's brand accent and the widget library's fixed hues.
  */
-const RAIL: Record<BlockKind, { rail: string; tint: string; ink: string }> = {
+type BlockRail = { rail: string; tint: string; ink: string };
+const RAIL: Record<BlockKind, BlockRail> = {
   superset: { rail: "#7D6BB5", tint: "rgba(125,107,181,0.08)", ink: "#5F5093" },
   amrap: { rail: "#4F8F8A", tint: "rgba(79,143,138,0.09)", ink: "#3C6B65" },
   emom: { rail: "#3F6E93", tint: "rgba(63,110,147,0.08)", ink: "#3F6E93" },
   for_time: { rail: "#8A5878", tint: "rgba(138,88,120,0.08)", ink: "#8A5878" },
 };
+
+/**
+ * Mobile v5.1 R3, dark mode (no light islands): the handover has no dark
+ * value for these, so each is derived from its rail hue the way the other
+ * hued pastels are: the card tint is the hue at 16% on the dark card, the
+ * rail itself is lifted until it holds 3:1 on the card (only For Time moves,
+ * #8A5878 -> #8B5A79), and the ink is lifted until it reads at 4.5:1 on the
+ * tint (5.2:1 or more on the plain card too).
+ */
+const DARK_RAIL = Object.fromEntries(
+  (Object.entries(RAIL) as [BlockKind, BlockRail][]).map(([k, r]) => {
+    const tint = tintOn(r.rail, 0.16);
+    return [k, { rail: liftTo(r.rail, DARK_SURFACE.card, 3), tint, ink: liftTo(r.rail, tint) }];
+  })
+) as Record<BlockKind, BlockRail>;
+
+/** The rails for the current mode. BlockRunner keeps a copy of both maps. */
+const blockRails = (dark: boolean): Record<BlockKind, BlockRail> => (dark ? DARK_RAIL : RAIL);
 
 /** What each kind is, in one clause, for the people who have not met EMOM. */
 const EXPLANATION: Record<BlockKind, string> = {
@@ -48,7 +69,8 @@ export const BlockCard: React.FC<{
   /** The whole header, tapped — used by the editors to open block settings. */
   onHeaderClick?: () => void;
 }> = ({ block, ordinal, members, renderMemberAction, onHeaderClick }) => {
-  const colors = RAIL[block.kind];
+  const dark = useIsDark();
+  const colors = blockRails(dark)[block.kind];
   const perRound = isRoundBased(block.kind);
   const heading = blockHeading(block, ordinal);
 
@@ -73,16 +95,16 @@ export const BlockCard: React.FC<{
         },
         <>
           <p style={{ margin: 0, fontSize: 12.5, fontWeight: 800, color: colors.ink }}>{heading}</p>
-          <p style={{ margin: "1px 0 0", fontSize: 10.5, color: "#8C8378" }}>
+          <p style={{ margin: "1px 0 0", fontSize: 10.5, color: "rgb(var(--c-charcoal-muted))" }}>
             {EXPLANATION[block.kind]}
             {block.label?.trim() ? "" : ""}
           </p>
         </>
       )}
 
-      <div style={{ background: "#FFFFFF", margin: "0 6px 6px", borderRadius: 10 }}>
+      <div style={{ background: "rgb(var(--c-cream-card))", margin: "0 6px 6px", borderRadius: 10 }}>
         {members.length === 0 ? (
-          <p style={{ margin: 0, padding: "10px 12px", fontSize: 11.5, color: "#8C8378" }}>
+          <p style={{ margin: 0, padding: "10px 12px", fontSize: 11.5, color: "rgb(var(--c-charcoal-muted))" }}>
             Nothing in this block yet.
           </p>
         ) : (
@@ -95,13 +117,13 @@ export const BlockCard: React.FC<{
                 style={{
                   gap: 8,
                   padding: "8px 12px",
-                  borderTop: i === 0 ? "none" : "1px solid rgba(36,31,27,0.05)",
+                  borderTop: i === 0 ? "none" : "1px solid rgb(var(--c-charcoal) / 0.05)",
                 }}
               >
                 <div style={{ minWidth: 0 }}>
-                  <p style={{ margin: 0, fontSize: 13, color: "#241F1B" }}>{ex.name}</p>
+                  <p style={{ margin: 0, fontSize: 13, color: "rgb(var(--c-charcoal))" }}>{ex.name}</p>
                   {line && (
-                    <p style={{ margin: "1px 0 0", fontSize: 11, color: "#8C8378" }}>{line}</p>
+                    <p style={{ margin: "1px 0 0", fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{line}</p>
                   )}
                 </div>
                 {renderMemberAction?.(ex)}

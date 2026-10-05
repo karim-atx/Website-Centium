@@ -326,7 +326,7 @@ export default function ProfessionalDetail() {
           })()}
         </span>
         <div className="min-w-0">
-          <h1 className="flex items-center gap-1.5 font-display text-2xl font-semibold text-charcoal">
+          <h1 className="flex items-center gap-1.5 font-display text-[22px] leading-tight font-bold text-charcoal">
             <span className="min-w-0 break-words">{professional.name}</span>
             {professional.verified && <VerifiedCheck size={18} />}
           </h1>
@@ -364,7 +364,7 @@ export default function ProfessionalDetail() {
       {/* About IS the existing bio; the CV follows it. */}
       {professional.bio && (
         <Card className="mb-3.5 animate-fade-slide-up">
-          <p className="text-xs font-bold text-charcoal-soft uppercase tracking-[0.06em] mb-2">About</p>
+          <p className="section-label mb-2">About</p>
           <p className="text-sm text-charcoal-soft leading-relaxed whitespace-pre-line">{professional.bio}</p>
         </Card>
       )}
@@ -404,7 +404,7 @@ export default function ProfessionalDetail() {
           before asking would be a guess. */}
       {isReal && !signedOut && canReview === false && !myReview && (
         <Card className="mb-6 animate-fade-slide-up">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">Reviews</p>
+          <p className="section-label mb-1.5">Reviews</p>
           <p className="text-sm text-charcoal-faint">
             You can only review a professional you've worked with.
           </p>

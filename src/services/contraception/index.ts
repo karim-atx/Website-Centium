@@ -53,7 +53,7 @@ function describe(error: PostgrestError): string {
   // contraception_events_one_pill_per_day_idx: one pill outcome per day, so a
   // second tap is an edit rather than a second row.
   if (code === "23505") return "Today is already logged. Change it instead of adding another.";
-  if (code === "23514") return "That schedule doesn't fit this method — check the dates and numbers.";
+  if (code === "23514") return "That schedule doesn't fit this method. Check the dates and numbers.";
   if (code === "42501") {
     return "You don't have permission to save this. Sign in again and try once more.";
   }

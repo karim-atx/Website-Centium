@@ -72,7 +72,7 @@ function BadgeTile({ badge, onOpen }: { badge: Badge; onOpen: () => void }) {
           </span>
         </span>
       ) : (
-        <span className="text-[8.5px] font-bold text-team-gold-ink/[0.82]">
+        <span className="text-[8.5px] font-bold text-team-gold-ink/[0.82] dark:text-team-gold-ink">
           {badge.pointsEarned > 0 ? `+${badge.pointsEarned.toLocaleString()} pts` : "Earned"}
         </span>
       )}
@@ -194,7 +194,7 @@ export default function AchievementsTab() {
       {/* ---- recently unlocked -------------------------------------------- */}
       {recent.length > 0 && (
         <div className="mb-[13px]">
-          <p className="mb-[7px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">
+          <p className="mb-[7px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">
             Recently unlocked
           </p>
           <Card padded={false} className="divide-y divide-charcoal/[0.04]">

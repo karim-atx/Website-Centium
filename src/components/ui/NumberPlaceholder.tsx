@@ -20,7 +20,7 @@ export const NumberPlaceholder: React.FC<{ height: number; className?: string; l
     aria-busy="true"
     aria-label={label ? `${label}, loading` : "Loading"}
   >
-    {label && <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">{label}</p>}
+    {label && <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">{label}</p>}
     <div className="mt-3 h-4 w-24 rounded-full bg-charcoal/[0.07] animate-pulse" />
     <div className="mt-2.5 h-3 w-40 max-w-full rounded-full bg-charcoal/[0.05] animate-pulse" />
   </div>

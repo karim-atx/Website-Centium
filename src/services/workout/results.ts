@@ -185,7 +185,7 @@ export function blockRunHint(block: WorkoutBlock): string {
       return `One round at the top of every ${block.intervalSeconds ? formatClock(block.intervalSeconds) : "interval"}.`;
     case "for_time":
       return block.timeCapSeconds
-        ? `Finish as fast as you can — cap ${formatSeconds(block.timeCapSeconds)}.`
+        ? `Finish as fast as you can (cap ${formatSeconds(block.timeCapSeconds)}).`
         : "Finish as fast as you can.";
   }
 }

@@ -29,7 +29,7 @@ export const translations: Record<Language, Record<string, string>> = {
     "Dark Mode": "الوضع الداكن",
     "Currently on": "مفعّل حالياً",
     "Currently off": "غير مفعّل حالياً",
-    "applies throughout Centium": "يُطبَّق في جميع أنحاء التطبيق",
+    "Applies throughout Centium": "يُطبَّق في جميع أنحاء التطبيق",
     "Color theme": "لون السمة",
     Permissions: "الأذونات",
     Microphone: "الميكروفون",

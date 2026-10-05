@@ -76,15 +76,14 @@ export const RateAppSheet: React.FC<{ open: boolean; onClose: () => void }> = ({
           </div>
           <p className="text-sm font-semibold text-charcoal">Review sent</p>
           <p className="text-xs text-charcoal-faint mt-1 max-w-xs">
-            Thank you — the team reads these when reviewing feedback. You won&rsquo;t get a
+            Thank you. The team reads these when reviewing feedback. You won&rsquo;t get a
             reply here.
           </p>
         </div>
       ) : (
         <div className="space-y-4 animate-fade-slide-up">
           <p className="text-xs text-charcoal-soft">
-            How has Centium been for you? A rating on its own is enough — the words are
-            optional.
+            How has Centium been for you? A rating on its own is enough. The words are optional.
           </p>
 
           <div className="py-1">

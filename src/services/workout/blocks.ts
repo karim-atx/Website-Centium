@@ -109,10 +109,10 @@ export function canGroup(
     // Deliberately not the toolbar’s idle hint, which says the same thing in
     // the same words: a refusal that reads identically to the standing
     // instruction looks like the tap did nothing at all.
-    return { ok: false, message: "There is a gap in that selection — a block has to be one unbroken run." };
+    return { ok: false, message: "There is a gap in that selection. A block has to be one unbroken run." };
   }
   if (indices.some((i) => exercises[i].blockId)) {
-    return { ok: false, message: "Ungroup those first — they're already in a block." };
+    return { ok: false, message: "Ungroup those first. They're already in a block." };
   }
   return { ok: true };
 }

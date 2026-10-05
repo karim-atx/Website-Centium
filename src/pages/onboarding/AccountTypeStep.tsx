@@ -79,7 +79,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
         return;
       }
       if (result.data.expiresAt && new Date(result.data.expiresAt).getTime() < Date.now()) {
-        setCheck({ status: "unusable", message: "That code has expired — ask for a new one." });
+        setCheck({ status: "unusable", message: "That code has expired. Ask for a new one." });
         setDraft((d) => ({ ...d, clientCodeProfessional: null }));
         return;
       }
@@ -136,7 +136,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
   return (
     <OnboardingShell
       title="What brings you to Centium?"
-      subtitle="This shapes your experience — you can adjust it later."
+      subtitle="This shapes your experience. You can adjust it later."
       onBack={onBack}
       footer={
         <Button fullWidth size="lg" disabled={!canContinue} onClick={onNext}>
@@ -161,7 +161,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
               <div
                 className={clsx(
                   "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0",
-                  active ? "bg-primary text-white dark:text-[#0D0B1A]" : "bg-cream-soft text-charcoal-soft"
+                  active ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
                 )}
               >
                 <t.icon size={18} />
@@ -177,7 +177,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
 
       {draft.accountType === "customer" && (
         <div className="animate-fade-slide-up">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+          <p className="section-label mb-2">
             I am a…
           </p>
           <div className="grid grid-cols-2 gap-2 mb-3">
@@ -190,7 +190,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                 className={clsx(
                   "tap rounded-xl py-2.5 px-3 text-xs font-semibold border transition-colors text-left",
                   draft.customerSubtype === s.value
-                    ? "bg-primary text-white dark:text-[#0D0B1A] border-primary"
+                    ? "bg-primary-fill text-on-primary-fill border-primary-fill"
                     : "bg-cream-card border-charcoal/10 text-charcoal-soft"
                 )}
               >
@@ -235,7 +235,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                       className="w-10 h-10 rounded-2xl object-cover shrink-0"
                     />
                   ) : (
-                    <div className="w-10 h-10 rounded-2xl bg-primary text-white flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-2xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0">
                       <Dumbbell size={18} />
                     </div>
                   )}
@@ -257,7 +257,7 @@ export const AccountTypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBa
                 <p className="flex items-center gap-1.5 text-[11px] text-status-high mt-1.5">
                   <AlertCircle size={12} />{" "}
                   {check.status === "not_found"
-                    ? "Code not found — check it and try again."
+                    ? "Code not found. Check it and try again."
                     : check.message}
                 </p>
               )}

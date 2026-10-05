@@ -45,7 +45,8 @@ export const FOLDER_SWATCHES: readonly { color: string; name: string }[] = [
 // icon) >= 3.6:1; the row tint is 95% light and carries dark text (>= 13:1).
 // Black is set by hand to be black, not a hue-derived brown: charcoal header
 // #45403B (10.3:1), near-black tile #1C1917. Rows stay light in dark mode
-// too, so text on a row tint is a fixed dark colour, never the theme's.
+// The rows are light in light mode only: dark mode derives its own shades
+// from each family (themedFamily, loggerShades(family, true)).
 export const FOLDER_FAMILIES: Record<string, FolderFamily> = {
   "#7D6BB5": PURPLE,
   "#6F9993": TEAL,
@@ -117,13 +118,26 @@ export interface LoggerShades {
   restLine: string;
 }
 
-function mixHex(a: string, b: string, t: number): string {
+export function mixHex(a: string, b: string, t: number): string {
   const pa = [1, 3, 5].map((i) => parseInt(a.slice(i, i + 2), 16));
   const pb = [1, 3, 5].map((i) => parseInt(b.slice(i, i + 2), 16));
   return "#" + pa.map((v, i) => Math.round(v + (pb[i] - v) * t).toString(16).padStart(2, "0")).join("").toUpperCase();
 }
 
-export function loggerShades(family: FolderFamily): LoggerShades {
+export function loggerShades(family: FolderFamily, dark = false): LoggerShades {
+  if (dark) {
+    // Mobile v5.1 R3, dark mode (no light islands): the same hue as a tint
+    // on the dark card, at the strengths the other dark tints use, and the
+    // typed-number ink lifted toward white until it reads at 6:1 on the field.
+    const field = tintOn(family.play, 0.2);
+    return {
+      field,
+      fieldBorder: tintOn(family.play, 0.38),
+      ink: liftTo(family.play, field, 6),
+      banner: tintOn(family.play, 0.12),
+      restLine: tintOn(family.play, 0.42),
+    };
+  }
   const derived: LoggerShades = {
     field: mixHex("#FFFFFF", family.play, 0.18),
     fieldBorder: mixHex("#FFFFFF", family.play, 0.314),
@@ -144,12 +158,30 @@ export function loggerShades(family: FolderFamily): LoggerShades {
  * has none for the other folder colours or the no-folder fallback, so those
  * are DERIVED: the bar colour 55% of the way to white.
  */
+/**
+ * The lowest opacity at which a logger field's placeholder (last session's or
+ * the template's value, drawn in the field's ink) reads at 4.5:1 on the field.
+ * The board's 46% measures about 2:1. The caller pairs this with a lighter
+ * weight than typed values, so suggested and entered values stay distinct.
+ */
+export function placeholderOpacity(ink: string, field: string): number {
+  const a = [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16));
+  const b = [1, 3, 5].map((i) => parseInt(field.slice(i, i + 2), 16));
+  for (let op = 0.46; op < 1; op += 0.01) {
+    const mixed = "#" + a.map((v, i) => Math.round(v * op + b[i] * (1 - op)).toString(16).padStart(2, "0")).join("");
+    if (contrastRatio(mixed, field) >= 4.5) return Math.round(op * 100) / 100;
+  }
+  return 1;
+}
+
 export function activeBarShades(
   routine: Pick<Routine, "folderId"> | null | undefined,
   folders: RoutineFolder[]
 ): { bg: string; line: string } {
   const folder = routine?.folderId ? folders.find((f) => f.id === routine.folderId) : undefined;
-  if (!folder) return { bg: "#7D67D9", line: mixHex("#7D67D9", "#FFFFFF", 0.55) };
+  // Mobile v5.1 R3: #7D67D9 carries the bar's white text at 4.36:1;
+  // #7D6BB5 (primary.deep) is the nearest brand shade at 4.5:1 or more.
+  if (!folder) return { bg: "#7D6BB5", line: mixHex("#7D6BB5", "#FFFFFF", 0.55) };
   const family = folderFamily(folder, folders.indexOf(folder));
   if (family === TEAL) return { bg: TEAL.tile, line: "#A2C8C2" };
   if (family === PURPLE) return { bg: PURPLE.tile, line: "#C2B3FA" };
@@ -179,6 +211,77 @@ export function contrastRatio(a: string, b: string): number {
   const x = luminance(a);
   const y = luminance(b);
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+}
+
+/**
+ * The folder's play shade where it carries TEXT rather than an icon: white
+ * text on it (Finish Workout) or it as text on white (the rest timer, set
+ * values). `play` is tuned for white icons at 3.6:1, under the 4.5:1 text
+ * needs, so this is the same hue scaled down until it clears 4.5:1 both
+ * ways (white on it equals it on white). Families already there are unchanged.
+ */
+export function playText(family: Pick<FolderFamily, "play">): string {
+  if (contrastRatio("#FFFFFF", family.play) >= 4.5) return family.play;
+  const rgb = [1, 3, 5].map((i) => parseInt(family.play.slice(i, i + 2), 16));
+  for (let f = 0.995; f > 0.3; f -= 0.005) {
+    const hex = "#" + rgb.map((v) => Math.round(v * f).toString(16).padStart(2, "0")).join("").toUpperCase();
+    if (contrastRatio("#FFFFFF", hex) >= 4.5) return hex;
+  }
+  return "#1C1917";
+}
+
+/**
+ * The play shade as TEXT on the surface around it (the rest timer, the menu's
+ * rest value): playText on white in light mode; in dark mode the hue lifted
+ * toward white until it reads at 4.5:1 on the raised dark surface, the
+ * lightest one it sits on.
+ */
+export function playInk(family: Pick<FolderFamily, "play">, dark: boolean): string {
+  return dark ? liftTo(family.play, DARK_SURFACE.raised) : playText(family);
+}
+
+/**
+ * MOBILE v5.1 DARK SURFACES (Foundations 2.1 "Dark mode surfaces"), as hex for
+ * the places that compute colours in script rather than through the tokens.
+ * soft is surface.soft rgba(238,239,242,0.04) flattened onto the card.
+ */
+export const DARK_SURFACE = { page: "#121317", card: "#1C1F28", raised: "#262932", soft: "#242730" } as const;
+
+/**
+ * A hue as a tint on a dark surface: the handover's dark tints are the hue at
+ * a low opacity over the card (primary.tint 14%, secondary.tint 16%), so this
+ * is that, flattened to a hex.
+ */
+export function tintOn(hue: string, amount: number, bg: string = DARK_SURFACE.card): string {
+  return mixHex(bg, hue, amount);
+}
+
+/**
+ * A hue as text or an icon on a dark surface: unchanged if it already reaches
+ * `ratio` against `bg`, else moved toward white in 1% steps until it does.
+ */
+export function liftTo(hue: string, bg: string, ratio = 4.5): string {
+  for (let t = 0; t <= 1; t += 0.01) {
+    const c = mixHex(hue, "#FFFFFF", t);
+    if (contrastRatio(c, bg) >= ratio) return c;
+  }
+  return "#FFFFFF";
+}
+
+/**
+ * A family's shades for the current mode. Light mode is the family itself.
+ * Dark mode keeps tile and play (filled shades under white icons and text)
+ * and the bar (unless it falls under 3:1 on the dark row), and turns the
+ * light surfaces dark: the routine row is the play hue at 16% on the card
+ * (secondary.tint's strength) and the folder header at 42%, which carries
+ * white text (headInk picks it by contrast).
+ */
+export function themedFamily(family: FolderFamily, dark: boolean): FolderFamily {
+  if (!dark) return family;
+  const row = tintOn(family.play, 0.16);
+  // The accent bar is the folder colour on the row: kept at 3:1 there (only
+  // Black needs lifting, from 2.07:1).
+  return { ...family, row, head: tintOn(family.play, 0.42), bar: liftTo(family.bar, row, 3) };
 }
 
 export function headInk(family: Pick<FolderFamily, "head">): string {

@@ -1,4 +1,5 @@
 import type { HandoverSetType } from "../../services/workout/stats";
+import { liftTo, tintOn } from "../../data/folderColors";
 
 /**
  * How each set type looks, shared by the WO8 logger (rows, set-type dropdown)
@@ -26,3 +27,20 @@ export const TYPE_STYLE: Record<Exclude<HandoverSetType, "normal">, TypeStyle> =
 
 /** The PR row's gold accent bar. */
 export const PR_BAR = "#C8912B";
+
+/**
+ * Mobile v5.1 R3, dark mode (no light islands): each type's shades derived
+ * from its `dot` token the way the folder shades are, as tints on the dark
+ * card (row 12%, field 20%, border 38%) with the ink and label lifted toward
+ * white until they read at 4.5:1 on the field. Skipped keeps no row fill.
+ */
+const DARK_TYPE_STYLE = Object.fromEntries(
+  (Object.entries(TYPE_STYLE) as [keyof typeof TYPE_STYLE, TypeStyle][]).map(([k, t]) => {
+    const field = tintOn(t.dot, 0.2);
+    const ink = liftTo(t.dot, field);
+    return [k, { ...t, row: t.row === "transparent" ? t.row : tintOn(t.dot, 0.12), field, border: tintOn(t.dot, 0.38), ink, label: ink }];
+  })
+) as typeof TYPE_STYLE;
+
+/** The set-type shades for the current mode. */
+export const typeStyles = (dark: boolean): typeof TYPE_STYLE => (dark ? DARK_TYPE_STYLE : TYPE_STYLE);

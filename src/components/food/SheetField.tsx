@@ -1,5 +1,6 @@
 import React from "react";
-import { sheetGreyStyle, sheetLabelStyle } from "../ui/sheetChip";
+import { sheetGreyStyleFor, sheetLabelStyleFor } from "../ui/sheetChip";
+import { useIsDark } from "../../hooks/useIsDark";
 
 /**
  * CentiumFrame `field()`: a grey labelled container with a white borderless
@@ -16,18 +17,21 @@ export const SheetField: React.FC<{
   onChange: (value: string) => void;
   placeholder: string;
   numeric?: boolean;
-}> = ({ label, value, onChange, placeholder, numeric = false }) => (
-  <label className="block" style={{ ...sheetGreyStyle, boxSizing: "border-box" }}>
-    <span className="block" style={{ ...sheetLabelStyle, marginBottom: 8 }}>
-      {label}
-    </span>
-    <input
-      value={value}
-      onChange={(e) => onChange(numeric ? e.target.value.replace(/[^\d.]/g, "") : e.target.value)}
-      placeholder={placeholder}
-      inputMode={numeric ? "decimal" : "text"}
-      className="w-full placeholder:text-charcoal-faint focus:outline-none"
-      style={{ borderRadius: 10, background: "#FFFFFF", border: "none", padding: "11px 13px", fontSize: 14, color: "#241F1B", boxSizing: "border-box" }}
-    />
-  </label>
-);
+}> = ({ label, value, onChange, placeholder, numeric = false }) => {
+  const dark = useIsDark();
+  return (
+    <label className="block" style={{ ...sheetGreyStyleFor(dark), boxSizing: "border-box" }}>
+      <span className="block" style={{ ...sheetLabelStyleFor(dark), marginBottom: 8 }}>
+        {label}
+      </span>
+      <input
+        value={value}
+        onChange={(e) => onChange(numeric ? e.target.value.replace(/[^\d.]/g, "") : e.target.value)}
+        placeholder={placeholder}
+        inputMode={numeric ? "decimal" : "text"}
+        className="w-full placeholder:text-charcoal-faint focus:outline-none"
+        style={{ borderRadius: 10, background: "rgb(var(--c-cream-card))", border: "none", padding: "11px 13px", fontSize: 14, color: "rgb(var(--c-charcoal))", boxSizing: "border-box" }}
+      />
+    </label>
+  );
+};

@@ -8,6 +8,7 @@ import { MUSCLE_GROUP_LABEL, SELECTABLE_MUSCLE_GROUPS } from "../../utils/muscle
 import { EXERCISE_TAGS, EXERCISE_TAG_LABEL, disciplineSummary } from "../../utils/exerciseTags";
 import { classificationOptions } from "../../utils/exerciseClassification";
 import clsx from "clsx";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Derived from SELECTABLE_MUSCLE_GROUPS rather than listed again here. The
 // two copies had already drifted apart once, and this one carried `olympic`
@@ -32,21 +33,40 @@ export interface CustomExerciseData {
 const dropdownStyle: React.CSSProperties = {
   height: 40,
   borderRadius: 12,
-  border: "1px solid rgba(36,31,27,0.11)",
-  background: "#FFFFFF",
+  border: "1px solid rgb(var(--c-charcoal) / 0.11)",
+  background: "rgb(var(--c-cream-card))",
   padding: "0 14px 0 14px",
   gap: 8,
   fontSize: 14,
 };
 
+/**
+ * Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the tinted
+ * square takes primary.tint dark with the lavender #AEA1DC at 30% on the card
+ * as its border (derived), the plain one the dark card with option-border
+ * dark; their ink primary.deeper dark; the chevrons text.tertiary dark; the
+ * delete confirm danger.tint dark with the danger dark hue at 28% for its
+ * border (the light border's alpha).
+ */
+const COLORS = {
+  tintedBorder: ["#D6CFED", "#48465E"],
+  tintedBg: ["#F0EDF9", "#303141"],
+  plainBorder: ["#E4E4E9", "rgba(238,239,242,0.10)"],
+  ink: ["#5F5093", "#C8BFE9"],
+  chevron: ["#A9A29A", "#918DA0"],
+  dangerBorder: ["rgba(176,64,47,0.28)", "rgba(255,107,94,0.28)"],
+  dangerBg: ["#FBEDEB", "#3C2A30"],
+} as const;
+const color = (key: keyof typeof COLORS, dark: boolean): string => COLORS[key][dark ? 1 : 0];
+
 /** WO11 square button beside the Name field (eye) and the Save button (book). */
-const squareStyle = (size: number, tinted: boolean): React.CSSProperties => ({
+const squareStyle = (size: number, tinted: boolean, dark: boolean): React.CSSProperties => ({
   width: size,
   height: size,
   borderRadius: 14,
-  border: `1px solid ${tinted ? "#D6CFED" : "#E4E4E9"}`,
-  background: tinted ? "#F0EDF9" : "#FFFFFF",
-  color: "#5F5093",
+  border: `1px solid ${color(tinted ? "tintedBorder" : "plainBorder", dark)}`,
+  background: tinted ? color("tintedBg", dark) : "rgb(var(--c-cream-card))",
+  color: color("ink", dark),
 });
 
 /**
@@ -89,6 +109,7 @@ export const CreateCustomExerciseSheet: React.FC<{
   const [classAnchor, setClassAnchor] = useState<HTMLElement | null>(null);
   const [tagAnchor, setTagAnchor] = useState<HTMLElement | null>(null);
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const dark = useIsDark();
 
   useEffect(() => {
     if (open) {
@@ -129,7 +150,6 @@ export const CreateCustomExerciseSheet: React.FC<{
 
   return (
     <BottomSheet
-      light
       open={open}
       onClose={onClose}
       title={name.trim() || "New Custom Exercise"}
@@ -147,14 +167,14 @@ export const CreateCustomExerciseSheet: React.FC<{
               onChange={(e) => setName(e.target.value)}
               placeholder="e.g. Abdallah's Bungees"
               className="flex-1 min-w-0 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
-              style={{ height: 46, borderRadius: 16, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.1)", padding: "0 16px", fontSize: 14 }}
+              style={{ height: 46, borderRadius: 16, background: "rgb(var(--c-cream-soft))", border: "1px solid rgb(var(--c-charcoal) / 0.1)", padding: "0 16px", fontSize: 14 }}
             />
             <button
               onClick={() => onInfo?.(name.trim() || "New Custom Exercise")}
               disabled={!onInfo}
               aria-label="Exercise information"
               className="tap flex-none flex items-center justify-center disabled:opacity-40"
-              style={squareStyle(46, true)}
+              style={squareStyle(46, true, dark)}
             >
               <Eye size={18} />
             </button>
@@ -177,7 +197,7 @@ export const CreateCustomExerciseSheet: React.FC<{
                   className={clsx(
                     "tap rounded-xl px-3 py-2 text-xs font-semibold border transition-colors",
                     isPrimary
-                      ? "bg-primary text-white border-primary"
+                      ? "bg-primary-fill text-on-primary-fill border-primary-fill"
                       : isSecondary
                       ? "bg-primary-pale text-primary-dark border-primary/40"
                       : "bg-cream-card border-charcoal/10 text-charcoal-soft"
@@ -201,10 +221,10 @@ export const CreateCustomExerciseSheet: React.FC<{
               onClick={(e) => setClassAnchor(e.currentTarget)}
               aria-haspopup="menu"
               className="tap w-full flex items-center justify-between text-left"
-              style={{ ...dropdownStyle, color: "#241F1B" }}
+              style={{ ...dropdownStyle, color: "rgb(var(--c-charcoal))" }}
             >
               <span className="truncate">{classificationOptions.find((c) => c.value === classification)?.label}</span>
-              <ChevronDown size={14} className="flex-none" style={{ color: "#A9A29A" }} />
+              <ChevronDown size={14} className="flex-none" style={{ color: color("chevron", dark) }} />
             </button>
           </div>
           <div className="min-w-0">
@@ -213,12 +233,12 @@ export const CreateCustomExerciseSheet: React.FC<{
               onClick={(e) => setTagAnchor(e.currentTarget)}
               aria-haspopup="menu"
               className="tap w-full flex items-center justify-between text-left"
-              style={{ ...dropdownStyle, color: tags.length ? "#241F1B" : "#8C8378" }}
+              style={{ ...dropdownStyle, color: tags.length ? "rgb(var(--c-charcoal))" : "rgb(var(--c-charcoal-muted))" }}
             >
               <span className="truncate">
                 {disciplineSummary(tags) ?? "Select"}
               </span>
-              <ChevronDown size={14} className="flex-none" style={{ color: "#A9A29A" }} />
+              <ChevronDown size={14} className="flex-none" style={{ color: color("chevron", dark) }} />
             </button>
           </div>
         </div>
@@ -250,7 +270,7 @@ export const CreateCustomExerciseSheet: React.FC<{
             onClick={save}
             disabled={!name.trim()}
             className="tap flex-1 flex items-center justify-center disabled:opacity-60"
-            style={{ height: 52, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", fontSize: 14, fontWeight: 700 }}
+            style={{ height: 52, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 14, fontWeight: 700 }}
           >
             Save exercise
           </button>
@@ -259,7 +279,7 @@ export const CreateCustomExerciseSheet: React.FC<{
             disabled={!onHistory}
             aria-label="Exercise history"
             className="tap flex-none flex items-center justify-center disabled:opacity-40"
-            style={squareStyle(52, false)}
+            style={squareStyle(52, false, dark)}
           >
             <BookOpen size={18} />
           </button>
@@ -279,8 +299,8 @@ export const CreateCustomExerciseSheet: React.FC<{
               <div
                 style={{
                   borderRadius: 14,
-                  border: "1px solid rgba(176,64,47,0.28)",
-                  background: "#FBEDEB",
+                  border: `1px solid ${color("dangerBorder", dark)}`,
+                  background: color("dangerBg", dark),
                   padding: "12px 14px",
                 }}
               >
@@ -303,7 +323,7 @@ export const CreateCustomExerciseSheet: React.FC<{
                     <li>No routine or template uses it.</li>
                   )}
                   {impact?.hasPersonalRecord && <li>Its personal record is deleted with it.</li>}
-                  <li>Past workouts keep it — logged sets are not touched.</li>
+                  <li>Past workouts keep it. Logged sets are not touched.</li>
                 </ul>
                 <div className="flex" style={{ gap: 8, marginTop: 10 }}>
                   <Button variant="outline" fullWidth onClick={() => setConfirmDelete(false)}>

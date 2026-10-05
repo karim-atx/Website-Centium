@@ -5,8 +5,9 @@
 @tailwind utilities;
 
 /* Centium brand palette (Brand Portfolio 3.1). Light mode: white base,
-   Primary Lavender #AEA1DC, Soft Teal #A2C8C2. Dark mode: Deep Night
-   Background #0D0B1A, Dark Surface #17142A, Primary Lavender #A991FE,
+   Primary Lavender #AEA1DC, Soft Teal #A2C8C2. Dark mode (surfaces from
+   the v5.1 handover, Foundations 2.1 "Dark mode surfaces"): page #121317,
+   card #1C1F28, raised #262932; Primary Lavender #A991FE,
    Light Lavender #C3B3FB, Teal #A2C8C2 (unchanged from light), Dark
    Lavender Accent #7D67D9, Dark Teal Accent #4F8F8A, Primary Text #F5F3FA,
    Secondary Text #B8B3C7. -pale variants are derived tints for badges/pills;
@@ -26,30 +27,58 @@
   --kb-inset: 0px;
 }
 
-/* `.theme-light` re-declares the light palette on one element, so a subtree
-   drawn with literal light-mode hex (the handover-built Workout / Food sheets)
-   stays a readable light island while the rest of the app is dark: every
-   token-coloured child resolves to its light value again. See BottomSheet's
-   `light` prop. */
-:root,
-.theme-light {
+:root {
   --c-cream: 255 255 255;
   --c-cream-soft: 245 245 246;
   --c-cream-card: 255 255 255;
   --c-charcoal: 36 31 27;
   --c-charcoal-soft: 91 83 73;
-  --c-charcoal-faint: 140 131 120;
+  /* Mobile v5.1 R3: text.muted. The board's #8C8378 is 3.73:1 on white,
+     under AA for the 11-12 px meta lines that use it everywhere; this is the
+     same hue scaled to the nearest shade that clears 4.5:1 on white and on
+     cream-soft: #776F66 (4.94:1 and 4.54:1). Light mode only. */
+  --c-charcoal-faint: 119 111 102;
   /* Design refinement (App-Centium, Aug 2026): weakest metadata ("of
      10,000 · 84%") and disabled glyphs (inactive chevrons/arrows) each get
      their own step instead of reusing `faint` for both. */
   --c-charcoal-tertiary: 167 158 147;
   --c-charcoal-disabled: 201 194 184;
+  /* Mobile v5.1 surface.raised (#FAFAFB / dark #262932): dropdown option rows
+     and the raised rows inside sheets. */
+  --c-surface-raised: 250 250 251;
+  /* Mobile v5.1 R3 (dark mode, no light islands): two light literals with no
+     token yet, so their light value stays exact while dark gets the v5.1 one.
+     text.muted's board value #8C8378 (where a screen has not had its AA pass
+     yet; --c-charcoal-faint is the AA shade) and border.option #E5E6EB. */
+  --c-charcoal-muted: 140 131 120;
+  --c-border-option: 229 230 235;
 
   --c-primary: 174 161 220;
   --c-primary-light: 200 191 233;
   --c-primary-pale: 240 237 249;
   --c-primary-dark: 125 107 181;
   --c-primary-deep-text: 95 80 147;
+
+  /* MOBILE v5.1 HANDOVER (R1). Added alongside the tokens above; nothing
+     existing reads them yet.
+
+     --c-primary-fill IS THE GROUND OF A FILLED BUTTON WITH WHITE INK. The
+     handover's primary.fill #9A8CD6 carries white at 2.96:1, so this is the
+     closest brand shade that clears 4.5:1: #7D6BB5 (primary.deep), 4.52:1.
+     #7D67D9 (primary.accent) is closer in hue but measures 4.36:1. Each
+     accent theme below gets its own passing shade, and dark mode keeps
+     today's convention: the lighter primary with near-black ink (6.6-8.3:1). */
+  --c-primary-fill: 125 107 181;
+  --c-on-primary-fill: 255 255 255;
+  /* primary.accent #7D67D9: row and tile glyphs (Settings rows, popup icon). */
+  --c-primary-accent: 125 103 217;
+  /* border.row: the inset divider between Settings rows. */
+  --border-row: rgba(174, 161, 220, 0.15);
+  /* shadow.sheet and backdrop.dim (Foundations 2.3): sheets and centred popups. */
+  --shadow-sheet: 0 10px 40px rgba(36, 31, 27, 0.18);
+  --backdrop-dim: rgba(36, 31, 27, 0.4);
+  /* motion.base (Foundations 2.6). */
+  --ease-base: cubic-bezier(0.22, 1, 0.36, 1);
   /* The white-text hero cards (affiliation, linked professional): the theme's
      primary -> primary-dark, each with all three channels scaled down by one
      factor, so the hue holds while white reaches AA. primary itself carries
@@ -66,7 +95,14 @@
      tab colour are brand chrome, not theme-reactive content, so they stay
      this lavender under every accent theme. */
   --c-team-nav-accent: 143 104 246;
-  --c-team-nav-idle: 154 148 179;
+  /* Mobile v5.1, R2 (D4): the board's nav.idle #9A94B3 measures 2.89:1 on
+     the white bar, under both 3:1 (icons) and 4.5:1 (10.5 px labels). This
+     is the same hue scaled down until it clears 4.5:1: #78738C, 4.54:1. */
+  --c-team-nav-idle: 120 115 140;
+  /* The ACTIVE label is 10.5 px text too, and nav.accent #8F68F6 carries it
+     at 3.83:1. The icon and ring keep #8F68F6 (a shape needs 3:1); only the
+     label takes this scaled shade, #825FE0, 4.50:1. */
+  --c-team-nav-accent-text: 130 95 224;
 
   /* Iteration 6.2 canonical widget library — same reasoning as the nav
      accent above: these are the design's fixed lavender/teal/blue/rose/gold
@@ -96,8 +132,16 @@
      below because they don't change. */
   --gradient-board: linear-gradient(122deg, #aea1dc 0%, #8e93c8 46%, #7fb3af 78%, #a2c8c2 100%);
   --gradient-teal-hero: linear-gradient(150deg, #a2c8c2, #4f7f78);
-  --gradient-food-hero: linear-gradient(150deg, #aea1dc, #6f5fa6);
-  --gradient-lavender-accent: linear-gradient(150deg, #aea1dc, #6f5fa6);
+  /* Mobile v5.1 R3 (FO1): the hero is a button with white text, and the
+     board's #aea1dc start carries it at 2.35:1. The closest compliant pair is
+     the board's own darker shades: #6f5fa6 (its end, 5.44:1) to primary.deeper
+     #5f5093 (6.87:1); its secondary text is 90% white (4.77:1 or more). */
+  --gradient-food-hero: linear-gradient(150deg, #6f5fa6, #5f5093);
+  /* Decision 7: white sits on this (the calendar's selected day and + button,
+     the consent banner) and the board's #aea1dc start carried it at 2.35:1.
+     Both stops scaled by one factor (x0.70) until white reads 4.5:1 at the
+     lighter one. */
+  --gradient-lavender-accent: linear-gradient(150deg, #7a719a, #4e4274);
   --gradient-quick-action: linear-gradient(150deg, #c3b7e6, #a192d6);
 
   /* THE SENT MESSAGE BUBBLE'S GROUND, AND THE READ TICK THAT SITS ON IT.
@@ -151,28 +195,36 @@
 
   --c-teal: 162 200 194;
   --c-teal-light: 193 219 214;
-  --c-teal-pale: 234 244 242;
+  --c-teal-pale: 231 242 240;
   --c-teal-dark: 111 153 147;
-  --c-teal-deep-text: 95 127 122;
+  /* Mobile v5.1, R2: the board's secondary.deep #4F7F78 clears white (4.53:1)
+     but not teal-pale (3.96:1), where CvEditor's skill chips use it; this is
+     that hue scaled until both pass: #49756F, 5.40:1 and 4.52:1. */
+  --c-teal-deep-text: 73 117 111;
+  /* Mobile v5.1 R2: the ground of a filled teal control with white ink.
+     --c-teal (#A2C8C2) carries white at 1.8:1; secondary.deep #4F7F78 is the
+     closest brand teal that clears 4.5:1 (4.53:1). Dark mode uses the light
+     teal with on-primary-fill's near-black ink (10.7:1). */
+  --c-teal-fill: 79 127 120;
 
   /* NEITHER OF THE TWO ABOVE IS THE TEXT COLOUR FOR A teal-pale SURFACE,
      which is worth stating here because both names suggest otherwise and
      both have been used that way and failed:
 
        teal-dark       2.81:1 light, 3.13:1 dark  -- fails in BOTH modes
-       teal-deep-text  3.90:1 light, 7.34:1 dark  -- fails light only
+       teal-deep-text  4.52:1 light, 7.34:1 dark  -- passes since v5.1 R2
 
      What text on teal-pale actually uses is
-     "text-charcoal-soft dark:text-teal-deep-text": 6.74:1 and 7.34:1, the
-     pairing every such site in the app now shares. teal-deep-text earns its
-     name in dark and only there; in light the ground is too close to it.
+     "text-charcoal-soft dark:text-teal-deep-text": 6.6:1 and 7.34:1, the
+     pairing every such site in the app now shares. teal-deep-text was
+     darkened in v5.1 R2 and now clears AA on teal-pale in light as well.
 
      These two stay as they are because they are correct on the grounds they
      were tuned for -- teal-dark on cream, teal-deep-text in dark mode -- and
      a dozen places outside this problem depend on exactly those values. */
 
   --c-gold: 217 164 65;
-  --c-gold-pale: 246 233 201;
+  --c-gold-pale: 251 243 226;
 
   --c-sky: 76 143 209;
   --c-sky-pale: 220 234 248;
@@ -209,7 +261,8 @@
      the received tick is var(--c-status-good). A near-black bubble needs no
      deepening; that was only ever a light-mode problem. */
   --c-status-high: 192 57 43;
-  --c-status-high-bg: 251 231 228;
+  /* danger.tint (v5.1): status-high on it measures 4.78:1. */
+  --c-status-high-bg: 252 237 236;
   --c-status-low: 58 118 176;
   --c-status-low-bg: 220 234 248;
   --c-status-caution: 217 164 65;
@@ -269,14 +322,14 @@
 .dark {
   --forum-accent: #6e5bb8;
   --forum-on-accent: #ffffff;
-  --forum-track: #24203d;
+  --forum-track: #242730;
   --forum-track-active: #3a3360;
-  --forum-border: #3a3456;
-  --forum-card: #1b1830;
+  --forum-border: #383b44;
+  --forum-card: #1c1f28;
   --forum-text: #f2effa;
   --forum-muted: #bdb6cf;
   --forum-body: #dad5e6;
-  --forum-rules-bg: #2e2850;
+  --forum-rules-bg: #303141;
   --forum-rules-ink: #d7cef7;
   --forum-link: #c3b6f5;
   --forum-amber-bg: #3b2e14;
@@ -284,24 +337,38 @@
   --forum-held-ink: #f0cf8e;
   --forum-teal-bg: #193a35;
   --forum-teal-ink: #9fd6cb;
-  --forum-removed-bg: #262140;
-  --forum-photo-bg: #2a2546;
-  --forum-rule: #2e2946;
+  --forum-removed-bg: #262932;
+  --forum-photo-bg: #262932;
+  --forum-rule: #2d3038;
   --forum-dashed: #8e80c2;
-  --forum-dashed-bg: #1b1830;
+  --forum-dashed-bg: #1c1f28;
   --forum-danger: #b04236;
   --forum-handle: #4a4366;
   --forum-star: #e3b04b;
   --forum-good: #7fd1a8;
   --forum-done-ink: #9fd6cb;
-  --forum-video-bg: #0d0b1a;
-  --c-cream: 13 11 26;
-  --c-cream-soft: 23 20 42;
-  --c-cream-card: 27 24 48;
+  --forum-video-bg: #121317;
+  /* Mobile v5.1 R3 (dark mode, no light islands): the handover's dark
+     surfaces. surface #121317 (page), surface.card #1C1F28 (cards, sheets,
+     sheet header), surface.raised #262932 (raised rows), and surface.soft
+     rgba(238,239,242,0.04) flattened onto the card, #242730 (inputs, neutral
+     chips), so the token stays an rgb triplet. */
+  --c-cream: 18 19 23;
+  --c-cream-soft: 36 39 48;
+  --c-cream-card: 28 31 40;
+  --c-surface-raised: 38 41 50;
+  --c-charcoal-muted: 184 179 199;
+  /* border.option dark, rgba(238,239,242,0.10), flattened onto the card. */
+  --c-border-option: 49 52 60;
+  /* "Dark text always uses #F5F3FA / #B8B3C7" (Foundations 2.1, theme rule 3):
+     text.primary, text.secondary and text.muted. */
   --c-charcoal: 245 243 250;
   --c-charcoal-soft: 184 179 199;
-  --c-charcoal-faint: 125 119 142;
-  --c-charcoal-tertiary: 137 131 160;
+  --c-charcoal-faint: 184 179 199;
+  /* text.tertiary: the board's #8A8698 is 4.11:1 on the raised row and lower
+     on the Home and Health tile tints; the same hue lifted to the nearest shade
+     at 4.5:1 on the lightest of them (the teal tile, #2F3739): #9F9CAC. */
+  --c-charcoal-tertiary: 159 156 172;
   --c-charcoal-disabled: 87 81 112;
 
   /* Iteration 6.1 "Team Dark" — confirmed against the handoff's own IT6.1
@@ -312,7 +379,12 @@
      points at the call site rather than the token itself), so they keep
      inheriting the :root value. Only the low-opacity "ink" label colours —
      the ones dark text would vanish at — actually change. */
-  --c-team-nav-idle: 169 161 190;
+  /* nav.idle dark, the board's #8A8698: 4.66:1 on the dark.navbar surface
+     rgba(28,31,40,0.94). */
+  --c-team-nav-idle: 138 134 152;
+  /* #8F68F6 is under 4.5:1 on the dark bar; 9% toward white clears it for
+     the active label: #9976F7, 4.93:1 on #1C1F28. */
+  --c-team-nav-accent-text: 153 118 247;
   --c-team-teal-ink: 147 193 185;
   --c-team-blue-ink: 150 196 236;
   --c-team-rose-ink: 219 159 193;
@@ -325,7 +397,8 @@
 
   --c-primary: 169 145 254;
   --c-primary-light: 195 179 251;
-  --c-primary-pale: 52 45 84;
+  /* primary.tint dark, rgba(174,161,220,0.14), flattened onto the card. */
+  --c-primary-pale: 48 49 65;
   /* A TEXT colour in dark mode, not a fill -- the role the three
      .dark[data-accent] blocks below already give it (209 230 247, 250 199
      176, 240 214 231). This lavender block was the odd one out at 125 103
@@ -340,6 +413,11 @@
      accent-aware, since primary-deep-text has no per-accent value. */
   --c-primary-dark: 195 179 251;
   --c-primary-deep-text: 195 179 251;
+  /* Mobile v5.1 (R1): see :root. Dark fills keep near-black ink. */
+  --c-primary-fill: var(--c-primary);
+  --c-on-primary-fill: 13 11 26;
+  --c-primary-accent: 154 140 214;
+  --border-row: rgba(238, 239, 242, 0.08);
 
   /* The sent bubble keeps today's primary as its ground -- indirection rather
      than a repeated literal, so it cannot drift from the token it mirrors.
@@ -367,12 +445,15 @@
 
   --c-teal: 162 200 194;
   --c-teal-light: 184 216 210;
-  --c-teal-pale: 51 56 72;
+  /* secondary.tint dark, rgba(111,153,147,0.16), flattened onto the card. */
+  --c-teal-pale: 41 51 57;
   --c-teal-dark: 79 143 138;
   --c-teal-deep-text: 178 212 207;
+  --c-teal-fill: 162 200 194;
 
   --c-gold: 224 179 96;
-  --c-gold-pale: 51 43 26;
+  /* gold.tint dark, rgba(217,164,65,0.16), flattened onto the card. */
+  --c-gold-pale: 58 52 44;
 
   --c-sky: 116 175 227;
   --c-sky-pale: 26 41 57;
@@ -388,7 +469,8 @@
   --c-status-good: 127 199 156;
   --c-status-good-bg: 25 42 32;
   --c-status-high: 240 154 142;
-  --c-status-high-bg: 46 27 26;
+  /* danger.tint dark, rgba(255,107,94,0.14), flattened onto the card. */
+  --c-status-high-bg: 60 42 48;
   --c-status-low: 116 175 227;
   --c-status-low-bg: 26 41 57;
   --c-status-caution: 224 179 96;
@@ -402,14 +484,16 @@
      --c-charcoal-disabled; the outline takes the dark brand Primary Lavender
      #A991FE, the title Light Lavender #C3B3FB, and the footer rule HO1.1's
      hairline rgba(245,243,250,0.07). */
-  --sheet-band: #342d54;
+  /* v5.1: sheet.header dark is #1C1F28, the same as the sheet body (the
+     card surface); the band is set apart by the sheet's outline and rule. */
+  --sheet-band: #1c1f28;
   --sheet-border: #a991fe;
   --sheet-title: #c3b3fb;
-  --sheet-body: #1b1830;
+  --sheet-body: #1c1f28;
   --sheet-rule: rgba(245, 243, 250, 0.07);
   --sheet-handle: #575170;
   --sheet-back: #f5f3fa;
-  --wheel-band: #342d54;
+  --wheel-band: #242730;
   --wheel-text: #f5f3fa;
   --wheel-disabled: #575170;
 
@@ -419,28 +503,34 @@
 /* V3: accent color themes (Settings > Appearance). Each overrides only the
    --c-primary* "primary" tokens used throughout for buttons/active states —
    everything else in the palette stays put. */
-[data-accent="ocean"],
-[data-accent="ocean"] .theme-light {
+[data-accent="ocean"] {
   --c-primary: 76 143 209;
   --c-bubble-sent: 55 104 153;
+  --c-primary-fill: 55 104 153;
+  --c-primary-accent: 30 74 110;
   --c-primary-light: 116 175 227;
   --c-primary-pale: 220 234 248;
   --c-primary-dark: 30 74 110;
   --c-hero-from: 46 87 127;
   --c-hero-to: 30 74 110;
 }
+/* Mobile v5.1 R3: each dark theme's primary-pale is primary.tint dark, the
+   theme's dark primary at 14% flattened onto the card #1C1F28. */
 .dark[data-accent="ocean"] {
   --c-primary: 116 175 227;
   --c-bubble-sent: var(--c-primary);
+  --c-primary-fill: var(--c-primary);
+  --c-primary-accent: var(--c-primary);
   --c-primary-light: 150 197 237;
-  --c-primary-pale: 26 41 57;
+  --c-primary-pale: 40 51 66;
   --c-primary-dark: 209 230 247;
 }
 
-[data-accent="sunset"],
-[data-accent="sunset"] .theme-light {
+[data-accent="sunset"] {
   --c-primary: 233 116 82;
   --c-bubble-sent: 158 79 56;
+  --c-primary-fill: 158 79 56;
+  --c-primary-accent: 165 66 36;
   --c-primary-light: 242 164 136;
   --c-primary-pale: 252 230 221;
   --c-primary-dark: 165 66 36;
@@ -450,15 +540,18 @@
 .dark[data-accent="sunset"] {
   --c-primary: 240 140 108;
   --c-bubble-sent: var(--c-primary);
+  --c-primary-fill: var(--c-primary);
+  --c-primary-accent: var(--c-primary);
   --c-primary-light: 247 178 152;
-  --c-primary-pale: 57 37 30;
+  --c-primary-pale: 58 46 50;
   --c-primary-dark: 250 199 176;
 }
 
-[data-accent="berry"],
-[data-accent="berry"] .theme-light {
+[data-accent="berry"] {
   --c-primary: 156 79 124;
   --c-bubble-sent: 151 77 120;
+  --c-primary-fill: 156 79 124;
+  --c-primary-accent: 107 48 84;
   --c-primary-light: 184 118 156;
   --c-primary-pale: 241 224 235;
   --c-primary-dark: 107 48 84;
@@ -468,8 +561,10 @@
 .dark[data-accent="berry"] {
   --c-primary: 200 128 172;
   --c-bubble-sent: var(--c-primary);
+  --c-primary-fill: var(--c-primary);
+  --c-primary-accent: var(--c-primary);
   --c-primary-light: 216 158 194;
-  --c-primary-pale: 46 30 40;
+  --c-primary-pale: 52 45 58;
   --c-primary-dark: 240 214 231;
 }
 
@@ -626,18 +721,31 @@ body {
 /* Design refinement: the one text role repeated on nearly every screen —
    section labels ("WEIGHT GOAL", "TODAY", "BIOMARKERS"...). Quieter than
    the old 12px/600/wide-tracking convention. */
+/* Mobile v5.1, R2: the one section-label style (C-05, decided "lavender with
+   the line"). Foundations label.section.settings: 11 / 600 uppercase, 0.14em,
+   a 14 px line, 7.5 px, then a 1.5 px primary rule. The ink is primary-dark
+   (#7D6BB5, 4.52:1 at 11 px) rather than the board's #7D67D9 (4.36:1), per D1.
+   The SectionLabel component renders this same class. */
 .section-label {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 14px;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
+  color: rgb(var(--c-primary-dark));
+  padding-bottom: 7.5px;
+  border-bottom: 1.5px solid rgb(var(--c-primary));
 }
 
 /* WO8 logger fields: placeholders (last session's or the template's values)
-   are the field's ink at 46%, e.g. teal rgba(63,111,102,0.46). */
+   are the field's ink. Mobile v5.1 R3: the board's 46% reads at about 2:1, so
+   the opacity is the lowest that clears 4.5:1 for that folder's colours
+   (--ph-opacity, from placeholderOpacity()), and the weight drops to 400 so a
+   suggested value still looks different from a typed one (600). */
 .logger-field::placeholder {
   color: var(--ph);
-  opacity: 0.46;
+  opacity: var(--ph-opacity, 0.46);
+  font-weight: 400;
 }
 
 /* WO10 Set options sliders (Pain level, Mood): a light #E5E5EA track with the

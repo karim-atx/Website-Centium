@@ -226,7 +226,7 @@ export default function ResetPassword() {
             {/* The same honesty as the sign-in challenge: there are no backup
                 codes to offer, so this says what actually happens instead. */}
             <p className="text-[11px] text-charcoal-faint leading-relaxed text-center">
-              Lost access to your authenticator? Contact Centium support — resetting your password
+              Lost access to your authenticator? Contact Centium support. Resetting your password
               alone won't get you back in.
             </p>
 

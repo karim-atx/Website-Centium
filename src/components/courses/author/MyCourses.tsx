@@ -83,7 +83,7 @@ export function MyCourses({ userId, canAuthor }: { userId: string; canAuthor: bo
         <AuthorCard>
           <span className="text-sm font-extrabold">No courses yet</span>
           <p className="text-[13px] leading-[1.55]" style={{ color: fv("muted") }}>
-            A course is weeks of lessons — videos, readings, quizzes and downloadable plans. Start one and it stays a
+            A course is weeks of lessons: videos, readings, quizzes and downloadable plans. Start one and it stays a
             draft until you submit it.
           </p>
         </AuthorCard>

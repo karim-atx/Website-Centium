@@ -36,7 +36,7 @@ export const CopyToSheet: React.FC<{
           onClick={() => onConfirm(day, toMeal)}
           disabled={busy}
           className="tap w-full inline-flex items-center justify-center disabled:opacity-60"
-          style={{ height: 52, gap: 8, borderRadius: 16, background: "#AEA1DC", color: "#FFFFFF", fontSize: 15, fontWeight: 700 }}
+          style={{ height: 52, gap: 8, borderRadius: 16, background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontSize: 15, fontWeight: 700 }}
         >
           <Copy size={16} /> {busy ? "Copying…" : `Copy ${count} item${count === 1 ? "" : "s"}`}
         </button>

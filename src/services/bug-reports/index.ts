@@ -45,7 +45,7 @@ function describe(error: PostgrestError): string {
   }
   // 23514 is the description CHECK. The UI blocks empty and over-long text
   // before this point, so reaching it means the two drifted apart.
-  if (code === "23514") return "That report couldn't be sent — please shorten it and try again.";
+  if (code === "23514") return "That report couldn't be sent. Please shorten it and try again.";
   return "That report couldn't be sent. Check your connection and try again.";
 }
 
@@ -71,7 +71,7 @@ export async function submitBugReport(params: {
   const description = params.description.trim();
   if (!description) return { ok: false, message: "Add a short description first." };
   if (description.length > MAX_DESCRIPTION) {
-    return { ok: false, message: "That report is too long — please shorten it." };
+    return { ok: false, message: "That report is too long. Please shorten it." };
   }
 
   // The advanced-monitoring plan's route is never reported, wherever the

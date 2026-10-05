@@ -213,7 +213,7 @@ export default function Contraception() {
                     disabled={busy}
                     onClick={() => void log(e)}
                     className={`tap flex-1 rounded-xl py-2.5 text-[12px] font-semibold disabled:opacity-50 ${
-                      on ? "bg-primary text-white" : "bg-cream-soft text-charcoal-soft"
+                      on ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
                     }`}
                   >
                     {G.EVENT_LABEL[e]}

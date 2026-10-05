@@ -111,7 +111,7 @@ export function formatRange(low: number | null, high: number | null): string {
   if (low !== null && high !== null) return `${low} – ${high}`;
   if (high !== null) return `under ${high}`;
   if (low !== null) return `above ${low}`;
-  return "—";
+  return "–";
 }
 
 /**

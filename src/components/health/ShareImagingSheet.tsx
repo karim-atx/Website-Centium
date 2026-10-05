@@ -51,7 +51,7 @@ function drawCard(canvas: HTMLCanvasElement, record: ImagingRecord) {
 
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.font = "500 15px Manrope, sans-serif";
-  ctx.fillText("Prototype health tracking — not a diagnosis.", 48, canvas.height - 32);
+  ctx.fillText("Prototype health tracking, not a diagnosis.", 48, canvas.height - 32);
 }
 
 function drawSummaryCard(canvas: HTMLCanvasElement, records: ImagingRecord[]) {
@@ -93,7 +93,7 @@ function drawSummaryCard(canvas: HTMLCanvasElement, records: ImagingRecord[]) {
 
   ctx.fillStyle = "rgba(255,255,255,0.5)";
   ctx.font = "500 15px Manrope, sans-serif";
-  ctx.fillText("Prototype health tracking — not a diagnosis.", 48, canvas.height - 24);
+  ctx.fillText("Prototype health tracking, not a diagnosis.", 48, canvas.height - 24);
 }
 
 export const ShareImagingSheet: React.FC<{
@@ -125,7 +125,7 @@ export const ShareImagingSheet: React.FC<{
   // NEUTRAL NAMES, as on the lab share: the file name and share title are
   // seen before the image is opened, so they never name the scan or test.
   const fileBase = record ? "health-record" : "health-records";
-  const shareTitle = record ? "Health record — Centium" : "Health records — Centium";
+  const shareTitle = record ? "Health record · Centium" : "Health records · Centium";
 
   const download = () => {
     if (!canvasRef.current || !ready) return;

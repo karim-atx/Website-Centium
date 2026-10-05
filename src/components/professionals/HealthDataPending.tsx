@@ -29,7 +29,7 @@ export const HealthDataPending: React.FC<{ label?: string; className?: string }>
   <div
     className={`rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center ${className ?? ""}`}
   >
-    <p className="text-xs font-semibold text-charcoal-soft">{label} — coming soon</p>
+    <p className="text-xs font-semibold text-charcoal-soft">{label}: coming soon</p>
     <p className="text-[11px] text-charcoal-faint mt-1 leading-relaxed">
       Not yet connected to real client data.
     </p>

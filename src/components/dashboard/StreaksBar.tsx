@@ -147,17 +147,17 @@ export const StreaksBar: React.FC = () => {
             <div className="min-w-0">
               <p className="flex items-baseline gap-[5px]">
                 <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">{dayStreak}</span>
-                <span className="text-[12px] font-bold text-white/[0.86]">day streak</span>
+                <span className="text-[12px] font-bold text-white/[0.86] dark:text-white">day streak</span>
               </p>
-              <p className="mt-[5px] text-[10.5px] text-white/[0.66]">{todayState?.met ?? 0} of 4 goals done today</p>
+              <p className="mt-[5px] text-[10.5px] text-white/[0.66] dark:text-white">{todayState?.met ?? 0} of 4 goals done today</p>
             </div>
-            <span className="text-[9.5px] font-bold text-white bg-white/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">This week</span>
+            <span className="text-[9.5px] font-bold text-white bg-white/20 dark:bg-black/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">This week</span>
           </div>
 
           <div className="flex items-start gap-px mt-[11px] pt-[11px] border-t border-white/[0.24]">
             {days.map((d, i) => (
               <div key={d.date} className="flex flex-col items-center gap-1.5 flex-1">
-                <span className={`text-[8px] tracking-[.1em] ${d.isToday ? "font-extrabold text-white" : "font-bold text-white/[0.62]"}`}>
+                <span className={`text-[8px] tracking-[.1em] ${d.isToday ? "font-extrabold text-white" : "font-bold text-white/[0.62] dark:text-white"}`}>
                   {WEEKDAY_CAPS[i]}
                 </span>
                 <span className="h-[22px] flex items-center justify-center">

@@ -203,7 +203,7 @@ export const ThreadList: React.FC<{
                     {count > 0 && (
                       <span
                         aria-label={`${count} unread`}
-                        className="min-w-[20px] h-5 px-1.5 rounded-full bg-primary text-white dark:text-[#0D0B1A] text-[11px] font-extrabold flex items-center justify-center"
+                        className="min-w-[20px] h-5 px-1.5 rounded-full bg-primary-fill text-on-primary-fill text-[11px] font-extrabold flex items-center justify-center"
                       >
                         {count > 99 ? "99+" : count}
                       </span>

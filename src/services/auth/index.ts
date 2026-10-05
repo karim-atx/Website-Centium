@@ -76,7 +76,7 @@ export function describeAuthError(error: AuthError): string {
     // GoTrue gives a challenge 300 seconds. A screen left open through a
     // lock and unlock is the ordinary way to reach this, so it reads as an
     // instruction rather than a failure.
-    return "That took too long — the code request expired. Enter a fresh code to try again.";
+    return "That took too long. The code request expired. Enter a fresh code to try again.";
   }
   if (code === "insufficient_aal" || /aal2/i.test(message)) {
     return "Confirm your two-factor code first, then try this again.";
@@ -101,7 +101,7 @@ export function describeAuthError(error: AuthError): string {
   // than the "wait a minute" the generic throttle message promises.
   // The real fix is configuring custom SMTP on the project.
   if (code === "over_email_send_rate_limit") {
-    return "We can't send confirmation emails right now — the email limit for this project has been reached. Try again later, or contact support if this persists.";
+    return "We can't send confirmation emails right now. The email limit for this project has been reached. Try again later, or contact support if this persists.";
   }
   if (isAuthRateLimited(error)) {
     return "Too many attempts. Wait a minute and try again.";
@@ -124,7 +124,7 @@ export function describeAuthError(error: AuthError): string {
     return "Email or password is incorrect.";
   }
   if (code === "weak_password") {
-    return "That password is too weak — see the checklist below.";
+    return "That password is too weak. See the checklist below.";
   }
   if (code === "user_already_exists" || /already registered/i.test(message)) {
     return "An account already exists for this email. Try signing in instead.";

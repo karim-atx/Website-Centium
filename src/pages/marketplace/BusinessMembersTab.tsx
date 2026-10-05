@@ -144,7 +144,7 @@ export default function BusinessMembersTab() {
           <button
             onClick={() => setInviteOpen(true)}
             disabled={!businessId}
-            className="tap w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-soft disabled:opacity-40"
+            className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shadow-soft disabled:opacity-40"
             aria-label="Invite a member"
           >
             <Plus size={18} />
@@ -161,7 +161,7 @@ export default function BusinessMembersTab() {
 
       {liveCodes.length > 0 && (
         <>
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+          <p className="section-label mb-2.5">
             Codes waiting to be used
           </p>
           <div className="space-y-2.5 mb-6">
@@ -193,7 +193,7 @@ export default function BusinessMembersTab() {
         </>
       )}
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Members</p>
+      <p className="section-label mb-2.5">Members</p>
       <div className="space-y-2.5">
         {members.map((m) => (
           <Card key={m.id} className="flex items-center gap-3 animate-fade-slide-up">
@@ -235,8 +235,8 @@ export default function BusinessMembersTab() {
           <Card className="text-center py-8">
             <p className="text-sm text-charcoal-faint">
               {businessId
-                ? "No members yet — create a code and hand it to someone at the desk."
-                : "Save your business profile first — members belong to it."}
+                ? "No members yet. Create a code and hand it to someone at the desk."
+                : "Save your business profile first. Members belong to it."}
             </p>
           </Card>
         )}

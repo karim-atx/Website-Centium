@@ -98,7 +98,7 @@ function endedMessage(status: string, role: "caller" | "callee"): string {
     case "missed":
       return role === "caller" ? "No answer." : "Missed call.";
     case "cap_ended":
-      return "Call ended — time limit reached.";
+      return "Call ended: time limit reached.";
     case "failed":
       return "The call couldn't be set up.";
     default:

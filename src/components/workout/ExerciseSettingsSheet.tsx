@@ -213,7 +213,7 @@ export const ExerciseSettingsSheet: React.FC<{
               {exercise.muscleGroups?.map((mg) => (
                 <span
                   key={mg}
-                  className="rounded-full bg-primary text-white text-[11px] font-semibold px-2.5 py-1"
+                  className="rounded-full bg-primary-fill text-on-primary-fill text-[11px] font-semibold px-2.5 py-1"
                 >
                   {muscleGroupLabel[mg]}
                   <span className="ml-0.5 text-[9px] align-super">1°</span>
@@ -304,7 +304,7 @@ export const ExerciseSettingsSheet: React.FC<{
                     className="tap shrink-0 rounded-xl px-3 py-2.5 text-xs font-bold"
                     style={
                       draft.weightKg === 0
-                        ? { background: "#AEA1DC", color: "#FFFFFF" }
+                        ? { background: "rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))" }
                         : { background: "rgba(174,161,220,0.14)", color: "#5F5093" }
                     }
                   >
@@ -372,7 +372,7 @@ export const ExerciseSettingsSheet: React.FC<{
               </label>
 
               <div>
-                <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
+                <p className="section-label mb-2">
                   Rep Max update mode
                 </p>
                 <div className="space-y-2">

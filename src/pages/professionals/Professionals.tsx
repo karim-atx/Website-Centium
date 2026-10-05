@@ -178,7 +178,7 @@ export default function Professionals() {
                 aria-pressed={view === v}
                 onClick={() => setView(v)}
                 className={`tap flex items-center gap-1 h-9 px-3 rounded-full text-[13px] font-bold ${
-                  view === v ? "bg-primary text-white dark:text-[#0D0B1A]" : "text-charcoal-soft"
+                  view === v ? "bg-primary-fill text-on-primary-fill" : "text-charcoal-soft"
                 }`}
               >
                 <Icon size={14} aria-hidden /> {label}
@@ -340,7 +340,7 @@ export default function Professionals() {
 
           {linkedDetail?.bio && (
             <div>
-              <p className="text-xs font-bold text-charcoal-soft uppercase tracking-[0.06em] mb-1.5">About</p>
+              <p className="section-label mb-1.5">About</p>
               <p className="text-sm text-charcoal leading-relaxed whitespace-pre-line">{linkedDetail.bio}</p>
             </div>
           )}

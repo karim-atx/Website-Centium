@@ -5,9 +5,19 @@ import {
   hasNoInstructions,
   type ExerciseInstructions,
 } from "../../services/exercises";
+import { useIsDark } from "../../hooks/useIsDark";
 
-const heading: React.CSSProperties = { margin: "0 0 10px", fontSize: 14, lineHeight: "18px", fontWeight: 700, color: "#241F1B" };
-const body: React.CSSProperties = { fontSize: 13, lineHeight: "19px", color: "#5B5349" };
+const heading: React.CSSProperties = { margin: "0 0 10px", fontSize: 14, lineHeight: "18px", fontWeight: 700, color: "rgb(var(--c-charcoal))" };
+const body: React.CSSProperties = { fontSize: 13, lineHeight: "19px", color: "rgb(var(--c-charcoal-soft))" };
+
+// Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the lavender
+// ink takes primary.deeper dark, the step badge primary.tint dark and the
+// image backdrop primary.tint.2 dark.
+const COLORS = {
+  ink: ["#5F5093", "#C8BFE9"],
+  badge: ["#F0EDF9", "#303141"],
+  imageBg: ["#F4F2FA", "#2B2C3A"],
+} as const;
 
 const Bullets: React.FC<{ items: string[] }> = ({ items }) => (
   <ul style={{ margin: 0, padding: 0, listStyle: "none" }} className="flex flex-col" >
@@ -41,6 +51,8 @@ export const ExerciseInfoSheet: React.FC<{
 }> = ({ open, onClose, name, source, imageUrl }) => {
   const [state, setState] = useState<{ key: string; instructions: ExerciseInstructions | null; error?: string } | null>(null);
   const key = source ? `${source.kind}:${source.id}` : "";
+  const dark = useIsDark();
+  const c = (k: keyof typeof COLORS) => COLORS[k][dark ? 1 : 0];
 
   useEffect(() => {
     if (!open || !source) return;
@@ -57,14 +69,14 @@ export const ExerciseInfoSheet: React.FC<{
   const i = loaded?.instructions ?? null;
 
   return (
-    <BottomSheet light open={open} onClose={onClose} title={name}>
+    <BottomSheet open={open} onClose={onClose} title={name}>
       <div className="animate-fade-slide-up">
         {imageUrl && (
           <img
             src={imageUrl}
             alt={`${name} demonstration`}
             className="w-full object-cover"
-            style={{ height: 190, borderRadius: 16, background: "#F4F2FA", marginBottom: 22 }}
+            style={{ height: 190, borderRadius: 16, background: c("imageBg"), marginBottom: 22 }}
           />
         )}
 
@@ -80,7 +92,7 @@ export const ExerciseInfoSheet: React.FC<{
           i && (
             <div className="flex flex-col" style={{ gap: 22 }}>
               {i.difficulty && (
-                <p style={{ margin: "-8px 0 -8px", fontSize: 11.5, fontWeight: 700, color: "#5F5093" }}>
+                <p style={{ margin: "-8px 0 -8px", fontSize: 11.5, fontWeight: 700, color: c("ink") }}>
                   {i.difficulty[0].toUpperCase() + i.difficulty.slice(1)}
                 </p>
               )}
@@ -98,7 +110,7 @@ export const ExerciseInfoSheet: React.FC<{
                       <li key={n} className="flex items-start" style={{ gap: 10, marginTop: n ? 8 : 0 }}>
                         <span
                           className="flex-none flex items-center justify-center rounded-full"
-                          style={{ width: 20, height: 20, background: "#F0EDF9", color: "#5F5093", fontSize: 11, fontWeight: 700 }}
+                          style={{ width: 20, height: 20, background: c("badge"), color: c("ink"), fontSize: 11, fontWeight: 700 }}
                         >
                           {n + 1}
                         </span>
@@ -143,12 +155,12 @@ export const ExerciseInfoSheet: React.FC<{
                   <div className="flex flex-col" style={{ gap: 4, ...body }}>
                     {i.easierVariation && (
                       <p style={{ margin: 0 }}>
-                        <b style={{ color: "#241F1B", fontWeight: 600 }}>Easier:</b> {i.easierVariation}
+                        <b style={{ color: "rgb(var(--c-charcoal))", fontWeight: 600 }}>Easier:</b> {i.easierVariation}
                       </p>
                     )}
                     {i.harderVariation && (
                       <p style={{ margin: 0 }}>
-                        <b style={{ color: "#241F1B", fontWeight: 600 }}>Harder:</b> {i.harderVariation}
+                        <b style={{ color: "rgb(var(--c-charcoal))", fontWeight: 600 }}>Harder:</b> {i.harderVariation}
                       </p>
                     )}
                   </div>

@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
 import { TrendChart, type TrendGeometry } from "../charts/TrendChart";
-import { TYPE_STYLE } from "./setTypeStyle";
+import { typeStyles } from "./setTypeStyle";
+import { useIsDark } from "../../hooks/useIsDark";
 import { todayLocal } from "../../utils/date";
 import {
   kgWhole,
@@ -27,6 +28,10 @@ const CARD_GEOMETRY: TrendGeometry = {
   height: 135,
 };
 
+// Mobile v5.1 R3 (no light islands): the PR chip's ground, [light, dark].
+// Dark is gold.tint; its ink is the set-type PR ink for the mode (4.7:1).
+const PR_CHIP_BG = ["#F7EDD9", "#3A342C"] as const;
+
 const dayMs = (day: string) => Date.parse(`${day}T00:00:00Z`);
 const shortDate = (t: number) => new Date(t).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
@@ -39,6 +44,7 @@ const shortDate = (t: number) => new Date(t).toLocaleDateString("en-US", { month
  */
 export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => void }> = ({ lift, onClose }) => {
   const [range, setRange] = useState<LiftRange>("3M");
+  const dark = useIsDark();
   if (!lift) return null;
 
   const shown = sessionsInRange(lift, range, todayLocal());
@@ -46,16 +52,16 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
   const recent = [...lift.sessions].reverse().slice(0, RECENT);
 
   return (
-    <BottomSheet light open onClose={onClose} title={lift.name} handle>
+    <BottomSheet open onClose={onClose} title={lift.name} handle>
       <div className="animate-fade-slide-up">
         <div className="flex items-baseline" style={{ gap: 10 }}>
-          <p style={{ color: "#241F1B", fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
+          <p style={{ color: "rgb(var(--c-charcoal))", fontSize: 30, fontWeight: 800, lineHeight: 1 }}>
             {kgWhole(lift.oneRm)}
-            <span style={{ color: "#5B5349", fontSize: 15, fontWeight: 700, marginLeft: 4 }}>kg</span>
+            <span style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: 15, fontWeight: 700, marginLeft: 4 }}>kg</span>
           </p>
-          <span style={{ color: "#8C8378", fontSize: 11 }}>estimated 1RM</span>
+          <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11 }}>estimated 1RM</span>
         </div>
-        <p style={{ color: "#5B5349", fontSize: 12, marginTop: 8 }}>
+        <p style={{ color: "rgb(var(--c-charcoal-soft))", fontSize: 12, marginTop: 8 }}>
           {setLine(lift.best)} · {shortDate(dayMs(lift.best.date))}
         </p>
 
@@ -121,7 +127,7 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
           )}
         </div>
 
-        <p style={{ marginTop: 20, color: "#8C8378", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em" }}>
+        <p style={{ marginTop: 20, color: "rgb(var(--c-charcoal-muted))", fontSize: 10.5, fontWeight: 700, letterSpacing: "0.1em" }}>
           RECENT SESSIONS
         </p>
         <ul style={{ marginTop: 6 }}>
@@ -129,13 +135,13 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
             <li
               key={s.sessionId}
               className="flex items-center"
-              style={{ height: 40, gap: 10, borderTop: i ? "1px solid rgba(36,31,27,0.06)" : undefined }}
+              style={{ height: 40, gap: 10, borderTop: i ? "1px solid rgb(var(--c-charcoal) / 0.06)" : undefined }}
             >
-              <span className="flex-none" style={{ width: 48, color: "#8C8378", fontSize: 12.5 }}>
+              <span className="flex-none" style={{ width: 48, color: "rgb(var(--c-charcoal-muted))", fontSize: 12.5 }}>
                 {shortDate(dayMs(s.date))}
               </span>
               <span className="flex-1 min-w-0 flex items-center" style={{ gap: 8 }}>
-                <span className="truncate" style={{ color: "#241F1B", fontSize: 13, fontWeight: 700 }}>
+                <span className="truncate" style={{ color: "rgb(var(--c-charcoal))", fontSize: 13, fontWeight: 700 }}>
                   {setLine(s.set)}
                 </span>
                 {s.isPr && (
@@ -145,8 +151,8 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
                       height: 16,
                       padding: "0 6px",
                       borderRadius: 5,
-                      background: "#F7EDD9",
-                      color: TYPE_STYLE.pr.ink,
+                      background: PR_CHIP_BG[dark ? 1 : 0],
+                      color: typeStyles(dark).pr.ink,
                       fontSize: 9.5,
                       fontWeight: 800,
                       lineHeight: "16px",
@@ -156,9 +162,9 @@ export const LiftDetailSheet: React.FC<{ lift: LiftMax | null; onClose: () => vo
                   </span>
                 )}
               </span>
-              <span className="flex-none" style={{ color: "#241F1B", fontSize: 15, fontWeight: 800 }}>
+              <span className="flex-none" style={{ color: "rgb(var(--c-charcoal))", fontSize: 15, fontWeight: 800 }}>
                 {kgWhole(s.oneRm)}
-                <span style={{ color: "#8C8378", fontSize: 10, fontWeight: 600, marginLeft: 2 }}>kg</span>
+                <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 10, fontWeight: 600, marginLeft: 2 }}>kg</span>
               </span>
             </li>
           ))}

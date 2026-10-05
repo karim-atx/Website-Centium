@@ -7,6 +7,7 @@ import { classifyBloodPressure } from "../../services/blood-pressure/classify";
 import { BP_CATEGORY_LABEL } from "../../services/blood-pressure/guidance";
 import { BloodPressureSheet } from "./BloodPressureSheet";
 import { X, Camera, ChevronRight, AlertCircle } from "lucide-react";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Item 3 of the "Centium Mobile" handoff (design_handoff_centium_mobile,
 // frame p10b, screen="metric" metricStyle="v2"): Add Metric stops being a
@@ -16,6 +17,34 @@ import { X, Camera, ChevronRight, AlertCircle } from "lucide-react";
 // markup (CentiumFrame.dc.html) rather than its README prose table where
 // the two disagreed — see the final report for the specific conflicts.
 const quickAmounts = [100, 250, 500] as const;
+
+/**
+ * Mobile v5.1 R3, dark mode (no light islands): the card's colours that are
+ * not a token, as [light, dark]. Shell primary.tint #303141 with the
+ * #B2A9F4 hairline as a 38% tint on the card; title and close the same
+ * violet lifted to 4.5:1 on the shell; section labels text.secondary; grey
+ * captions text.tertiary (4.6:1 on the rows); the grey rows surface.soft;
+ * the weight field the card, recessed into its row; the water tiles their
+ * #0A80E8 blue at 16% on the card with the label lifted to 4.5:1; line icons
+ * primary.deep; the confirmation strip primary.tint.2 with primary.deeper
+ * text (7.9:1). The bottle glyphs are illustrations and keep their colours.
+ */
+const AM_COLORS = {
+  shell: ["#ECEBFE", "#303141"],
+  shellBorder: ["#B2A9F4", "#555376"],
+  title: ["#9C7EF8", "#A387F8"],
+  label: ["#655B69", "#B8B3C7"],
+  caption: ["#827C9C", "#918DA0"],
+  row: ["#F3F3F4", "#242730"],
+  field: ["#FBFBFD", "#1C1F28"],
+  waterTile: ["#E1F2FE", "#192F47"],
+  waterInk: ["#0A80E8", "#3B99ED"],
+  icon: ["#4A22CE", "#B7ABDE"],
+  strip: ["#F0F0FD", "#2B2C3A"],
+  stripInk: ["#1A00E0", "#C8BFE9"],
+} as const;
+type AmKey = keyof typeof AM_COLORS;
+const amColor = (key: AmKey, dark: boolean): string => AM_COLORS[key][dark ? 1 : 0];
 
 // Traced bottle glyphs, one shared scale per dose (source boxes 61x130,
 // 71x173, 123x194 -> rendered 17x56, 20x56, 35x56px). Outline and cap paths
@@ -92,33 +121,33 @@ const waterGlyphs: Record<(typeof quickAmounts)[number], React.FC> = {
 };
 
 const WeightGlyph: React.FC = () => (
-  <svg width={28} height={26} viewBox="0 0 93 85" fill="none" style={{ display: "block", flex: "none" }}>
-    <rect x={1.5} y={1.5} width={90} height={82} rx={13} fill="none" stroke="#4A22CE" strokeWidth={3} />
-    <path d="M18 24 C30 13 62 13 72 24 L63 40 C52 34 38 34 28 40 Z" fill="none" stroke="#4A22CE" strokeWidth={3} strokeLinejoin="round" />
-    <path d="M30.5 17.5 L33 24 M44 16 L44 24 M58.5 17.5 L56 24" stroke="#4A22CE" strokeWidth={3} strokeLinecap="round" />
-    <path d="M50 22 L41.5 37.5" stroke="#4A22CE" strokeWidth={3} strokeLinecap="round" />
+  <svg width={28} height={26} viewBox="0 0 93 85" fill="none" style={{ display: "block", flex: "none", color: "var(--am-icon)" }}>
+    <rect x={1.5} y={1.5} width={90} height={82} rx={13} fill="none" stroke="currentColor" strokeWidth={3} />
+    <path d="M18 24 C30 13 62 13 72 24 L63 40 C52 34 38 34 28 40 Z" fill="none" stroke="currentColor" strokeWidth={3} strokeLinejoin="round" />
+    <path d="M30.5 17.5 L33 24 M44 16 L44 24 M58.5 17.5 L56 24" stroke="currentColor" strokeWidth={3} strokeLinecap="round" />
+    <path d="M50 22 L41.5 37.5" stroke="currentColor" strokeWidth={3} strokeLinecap="round" />
   </svg>
 );
 
 const CuffGlyph: React.FC = () => (
-  <svg width={27} height={24} viewBox="-1 -1 92 83" fill="none" style={{ display: "block", flex: "none" }}>
+  <svg width={27} height={24} viewBox="-1 -1 92 83" fill="none" style={{ display: "block", flex: "none", color: "var(--am-icon)" }}>
     <path
       d="M1.5 16 L1.5 50 C1.5 55 5 58.5 9.5 58.5 L37.5 58.5 C42 58.5 45.5 55 45.5 50 L45.5 16"
       fill="none"
-      stroke="#4A22CE"
+      stroke="currentColor"
       strokeWidth={4}
       strokeLinecap="round"
     />
-    <ellipse cx={23.5} cy={16} rx={22} ry={6} fill="none" stroke="#4A22CE" strokeWidth={4} />
+    <ellipse cx={23.5} cy={16} rx={22} ry={6} fill="none" stroke="currentColor" strokeWidth={4} />
     <path
       d="M23 58.5 L23 70 C23 76 27 79.5 33 79.5 L57 79.5 C63 79.5 67.5 76 67.5 70 L67.5 44"
       fill="none"
-      stroke="#4A22CE"
+      stroke="currentColor"
       strokeWidth={4}
       strokeLinecap="round"
     />
-    <rect x={65} y={38.5} width={6} height={6} rx={1.5} fill="none" stroke="#4A22CE" strokeWidth={4} />
-    <ellipse cx={73} cy={19} rx={13} ry={16} fill="none" stroke="#4A22CE" strokeWidth={4} />
+    <rect x={65} y={38.5} width={6} height={6} rx={1.5} fill="none" stroke="currentColor" strokeWidth={4} />
+    <ellipse cx={73} cy={19} rx={13} ry={16} fill="none" stroke="currentColor" strokeWidth={4} />
   </svg>
 );
 
@@ -128,11 +157,11 @@ const CheckCircleGlyph: React.FC = () => (
     height={20}
     viewBox="0 0 24 24"
     fill="none"
-    stroke="#1A00E0"
+    stroke="currentColor"
     strokeWidth={1.8}
     strokeLinecap="round"
     strokeLinejoin="round"
-    style={{ display: "block", flex: "none" }}
+    style={{ display: "block", flex: "none", color: "var(--am-strip-ink)" }}
   >
     <circle cx={12} cy={12} r={9.2} />
     <path d="M7.8 12.3 10.6 15l5.6-5.8" />
@@ -160,6 +189,8 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
     today,
     authUserId,
   } = useApp();
+  const dark = useIsDark();
+  const am = (key: AmKey) => amColor(key, dark);
   const isToday = selectedDate === today;
   const loggedForDay = weightLoggedDate === selectedDate;
   // ?? rather than ||, and null-checked: metricValues.weight is null for an
@@ -281,27 +312,33 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
       />
       <div
         className="relative w-full sm:max-w-md rounded-[20px] shadow-lift overflow-hidden animate-pop flex flex-col max-h-[calc(100dvh-32px)]"
-        style={{ background: "#ECEBFE", border: "1px solid #B2A9F4" }}
+        style={{
+          background: am("shell"),
+          border: `1px solid ${am("shellBorder")}`,
+          // The line glyphs above (weight, cuff, check) read these.
+          ["--am-icon" as string]: am("icon"),
+          ["--am-strip-ink" as string]: am("stripInk"),
+        }}
       >
         <div className="relative shrink-0 flex items-center justify-center" style={{ height: 42 }}>
-          <p style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em", color: "#9C7EF8", whiteSpace: "nowrap" }}>
+          <p style={{ margin: 0, fontSize: 20, fontWeight: 800, letterSpacing: "-0.015em", color: am("title"), whiteSpace: "nowrap" }}>
             Add Metric
           </p>
           <button
             onClick={onClose}
             aria-label="Close"
             className="tap absolute flex items-center justify-center rounded-full"
-            style={{ right: 12, top: 8, width: 26, height: 26, border: "1.5px solid #9C7EF8", background: "none" }}
+            style={{ right: 12, top: 8, width: 26, height: 26, border: `1.5px solid ${am("title")}`, background: "none" }}
           >
-            <X size={12} strokeWidth={2.4} style={{ color: "#9C7EF8" }} />
+            <X size={12} strokeWidth={2.4} style={{ color: am("title") }} />
           </button>
         </div>
 
         {/* Scrolls only on a screen too short to fit the card; the shell itself
             stays overflow hidden per the handover. */}
-        <div className="bg-white min-h-0 overflow-y-auto" style={{ borderRadius: 18, padding: 14 }}>
+        <div className="bg-cream-card min-h-0 overflow-y-auto" style={{ borderRadius: 18, padding: 14 }}>
           <div className="flex items-start justify-between gap-3" style={{ marginBottom: 9 }}>
-            <p style={{ margin: 0, fontSize: 12, letterSpacing: "0.02em", color: "#655B69" }}>WATER</p>
+            <p style={{ margin: 0, fontSize: 12, letterSpacing: "0.02em", color: am("label") }}>WATER</p>
             <div style={{ textAlign: "right" }}>
               <p
                 style={{
@@ -310,13 +347,13 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                   fontWeight: 800,
                   lineHeight: 1,
                   letterSpacing: "-0.02em",
-                  color: "#241F1B",
+                  color: "rgb(var(--c-charcoal))",
                   fontVariantNumeric: "tabular-nums",
                 }}
               >
                 {(water / 1000).toFixed(2)}L
               </p>
-              <p style={{ margin: "3px 0 0", fontSize: 10, color: "#827C9C" }}>of {(waterGoalMl / 1000).toFixed(1)}L goal</p>
+              <p style={{ margin: "3px 0 0", fontSize: 10, color: am("caption") }}>of {(waterGoalMl / 1000).toFixed(1)}L goal</p>
             </div>
           </div>
 
@@ -330,7 +367,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                   disabled={saving}
                   className="flex flex-col items-center active:scale-[0.97] disabled:opacity-50"
                   style={{
-                    background: "#E1F2FE",
+                    background: am("waterTile"),
                     border: "none",
                     borderRadius: 12,
                     padding: "10px 0 9px",
@@ -339,7 +376,7 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                   }}
                 >
                   <Glyph />
-                  <span style={{ fontSize: 14, fontWeight: 700, color: "#0A80E8" }}>+{ml}ml</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: am("waterInk") }}>+{ml}ml</span>
                 </button>
               );
             })}
@@ -347,12 +384,12 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
 
           <div className="grid grid-cols-2 gap-[10px]" style={{ marginBottom: 13 }}>
             <div className="min-w-0">
-              <p style={{ margin: "0 0 6px", fontSize: 12, letterSpacing: "0.02em", color: "#655B69" }}>
+              <p style={{ margin: "0 0 6px", fontSize: 12, letterSpacing: "0.02em", color: am("label") }}>
                 {isToday ? "WEIGHT TODAY" : "WEIGHT FOR THIS DAY"}
               </p>
               <div
                 className="flex items-center gap-2 box-border"
-                style={{ background: "#F3F3F4", borderRadius: 12, padding: "0 10px", height: 42 }}
+                style={{ background: am("row"), borderRadius: 12, padding: "0 10px", height: 42 }}
               >
                 <WeightGlyph />
                 <input
@@ -365,42 +402,42 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
                   inputMode="decimal"
                   className="flex-1 w-full min-w-0 outline-none"
                   style={{
-                    background: "#FBFBFD",
-                    border: "1px solid rgba(36,31,27,0.06)",
+                    background: am("field"),
+                    border: "1px solid rgb(var(--c-charcoal) / 0.06)",
                     borderRadius: 8,
                     padding: "6px 8px",
                     textAlign: "center",
                     fontSize: 15,
                     fontWeight: 700,
-                    color: "#241F1B",
+                    color: "rgb(var(--c-charcoal))",
                   }}
                 />
-                <span style={{ fontSize: 11, color: "#827C9C", flex: "none" }}>kg</span>
+                <span style={{ fontSize: 11, color: am("caption"), flex: "none" }}>kg</span>
               </div>
             </div>
             <div className="min-w-0">
-              <p style={{ margin: "0 0 6px", fontSize: 12, letterSpacing: "0.02em", color: "#655B69" }}>ADD RECORDS</p>
+              <p style={{ margin: "0 0 6px", fontSize: 12, letterSpacing: "0.02em", color: am("label") }}>ADD RECORDS</p>
               <button
                 onClick={handleAddRecords}
                 aria-label="Add records"
                 className="tap flex items-center w-full text-left box-border"
-                style={{ background: "#F3F3F4", border: "none", borderRadius: 12, padding: "0 8px", height: 42, gap: 7 }}
+                style={{ background: am("row"), border: "none", borderRadius: 12, padding: "0 8px", height: 42, gap: 7 }}
               >
-                <Camera size={21} strokeWidth={1.8} style={{ color: "#4A22CE", flex: "none" }} />
+                <Camera size={21} strokeWidth={1.8} style={{ color: am("icon"), flex: "none" }} />
                 <span className="flex-1 min-w-0">
-                  <span style={{ display: "block", fontSize: 8.5, fontWeight: 600, color: "#241F1B", whiteSpace: "nowrap" }}>
+                  <span style={{ display: "block", fontSize: 8.5, fontWeight: 600, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
                     Add Photo / Upload File
                   </span>
-                  <span style={{ display: "block", fontSize: 7.5, color: "#827C9C", whiteSpace: "nowrap" }}>
+                  <span style={{ display: "block", fontSize: 7.5, color: am("caption"), whiteSpace: "nowrap" }}>
                     Lab results, reports, etc.
                   </span>
                 </span>
-                <ChevronRight size={12} strokeWidth={2.2} style={{ color: "#4A22CE", flex: "none" }} />
+                <ChevronRight size={12} strokeWidth={2.2} style={{ color: am("icon"), flex: "none" }} />
               </button>
             </div>
           </div>
 
-          <p style={{ margin: "0 0 6px", fontSize: 12, letterSpacing: "0.02em", color: "#655B69" }}>BLOOD PRESSURE</p>
+          <p style={{ margin: "0 0 6px", fontSize: 12, letterSpacing: "0.02em", color: am("label") }}>BLOOD PRESSURE</p>
           {/* THE DAY'S LATEST READING, or nothing. This was two number fields
               pre-filled with 120/80 for everybody, saving themselves on a
               debounce. A reading needs a time, an arm and a position to be
@@ -408,55 +445,55 @@ export const AddMetricSheet: React.FC<{ open: boolean; onClose: () => void }> = 
           <button
             onClick={() => setBpSheetOpen(true)}
             className="tap w-full flex items-center gap-[9px] text-left"
-            style={{ background: "#F3F3F4", borderRadius: 12, padding: "9px 11px", marginBottom: 13 }}
+            style={{ background: am("row"), borderRadius: 12, padding: "9px 11px", marginBottom: 13 }}
           >
             <CuffGlyph />
             <span className="flex-1 min-w-0">
               {bpLatest ? (
                 <>
-                  <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "#241F1B" }}>
+                  <span style={{ display: "block", fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
                     {bpLatest.systolic}/{bpLatest.diastolic}
-                    <span style={{ fontSize: 11, fontWeight: 500, color: "#827C9C" }}> mmHg</span>
+                    <span style={{ fontSize: 11, fontWeight: 500, color: am("caption") }}> mmHg</span>
                   </span>
-                  <span style={{ display: "block", fontSize: 10.5, color: "#655B69" }}>
+                  <span style={{ display: "block", fontSize: 10.5, color: am("label") }}>
                     {BP_CATEGORY_LABEL[classifyBloodPressure(bpLatest.systolic, bpLatest.diastolic)]}
                     {bpLatest.pulse != null && ` · ${bpLatest.pulse} bpm`}
                   </span>
                 </>
               ) : (
                 <>
-                  <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "#241F1B" }}>
+                  <span style={{ display: "block", fontSize: 13, fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
                     Add a reading
                   </span>
-                  <span style={{ display: "block", fontSize: 10.5, color: "#827C9C" }}>
+                  <span style={{ display: "block", fontSize: 10.5, color: am("caption") }}>
                     Nothing recorded for this day
                   </span>
                 </>
               )}
             </span>
-            <ChevronRight size={12} strokeWidth={2.2} style={{ color: "#4A22CE", flex: "none" }} />
+            <ChevronRight size={12} strokeWidth={2.2} style={{ color: am("icon"), flex: "none" }} />
           </button>
 
           <div
             className="flex items-center gap-[9px]"
-            style={{ background: "#F0F0FD", borderRadius: 12, padding: "11px 13px" }}
+            style={{ background: am("strip"), borderRadius: 12, padding: "11px 13px" }}
             role={error ? "alert" : undefined}
           >
             {/* Same strip, same colour; an error gets an alert glyph so it
                 doesn't read as a confirmation. */}
             {error ? (
-              <AlertCircle size={20} strokeWidth={1.8} style={{ color: "#1A00E0", flex: "none" }} />
+              <AlertCircle size={20} strokeWidth={1.8} style={{ color: am("stripInk"), flex: "none" }} />
             ) : (
               <CheckCircleGlyph />
             )}
-            <span style={{ fontSize: 12, fontWeight: 600, color: "#1A00E0" }}>{confirmationText}</span>
+            <span style={{ fontSize: 12, fontWeight: 600, color: am("stripInk") }}>{confirmationText}</span>
           </div>
 
           {/* Steps, sleep and calories burned are not manually loggable and
               nothing syncs them either -- device sync is not built. The old
               line said they "sync automatically from Apple/Android Health",
               which no account has ever done. */}
-          <p style={{ margin: "13px 4px 2px", fontSize: 10, lineHeight: 1.5, color: "#827C9C", textAlign: "center" }}>
+          <p style={{ margin: "13px 4px 2px", fontSize: 10, lineHeight: 1.5, color: am("caption"), textAlign: "center" }}>
             Steps, sleep and calories burned would come from a connected device. Device sync isn't
             available yet.
           </p>

@@ -1308,7 +1308,7 @@ export const ThreadView: React.FC<{
           <ShieldCheck size={15} className="shrink-0 mt-px" />
           <p className="text-[11px] leading-relaxed">
             <span className="font-semibold">You're talking with Centium Support.</span>{" "}
-            Centium started this conversation — it is not a message from
+            Centium started this conversation. It is not a message from
             another member. Centium Support will never ask for your password
             or payment details in a message.
           </p>
@@ -1367,7 +1367,7 @@ export const ThreadView: React.FC<{
           <p className="text-sm text-charcoal-faint text-center py-8">
             {departed
               ? "This conversation is empty."
-              : `No messages yet — say hello to ${thread.participantName}.`}
+              : `No messages yet. Say hello to ${thread.participantName}.`}
           </p>
         )}
         {messages.map((m, index) => {
@@ -1619,7 +1619,7 @@ export const ThreadView: React.FC<{
         <button
           type="button"
           onClick={() => dividerRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
-          className="tap fixed left-1/2 -translate-x-1/2 top-20 z-30 rounded-full bg-primary text-white dark:text-[#0D0B1A] text-xs font-bold px-3.5 h-9 flex items-center gap-1.5 shadow-lg"
+          className="tap fixed left-1/2 -translate-x-1/2 top-20 z-30 rounded-full bg-primary-fill text-on-primary-fill text-xs font-bold px-3.5 h-9 flex items-center gap-1.5 shadow-lg"
         >
           <ArrowDown size={14} className="rotate-180" />
           {newCount === 1 ? "1 new message" : `${newCount} new messages`}
@@ -1796,7 +1796,7 @@ export const ThreadView: React.FC<{
           onClick={() => void send()}
           disabled={sending || !draft.trim()}
           aria-label="Send message"
-          className="tap w-10 h-10 rounded-full bg-primary text-white dark:text-[#0D0B1A] flex items-center justify-center shrink-0 disabled:opacity-40"
+          className="tap w-10 h-10 rounded-full bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
         >
           <Send size={16} />
         </button>
@@ -1906,7 +1906,7 @@ export const ThreadView: React.FC<{
                 <span className="text-sm text-charcoal-soft tabular-nums">
                   {at
                     ? new Date(at).toLocaleString(undefined, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })
-                    : "—"}
+                    : "–"}
                 </span>
               </div>
             ))}
@@ -1981,12 +1981,12 @@ export const ThreadView: React.FC<{
           </p>
           <p className="text-xs text-charcoal-faint mb-4">
             {departed
-              ? "The message isn't deleted — it stays part of the conversation. You won't be able to undo this here."
+              ? "The message isn't deleted. It stays part of the conversation. You won't be able to undo this here."
               : `${thread.participantName} will still see it, and it stays part of the conversation for them. You won't be able to undo this here.`}
           </p>
           <button
             onClick={() => void confirmHide()}
-            className="tap w-full rounded-xl bg-primary text-white dark:text-[#0D0B1A] font-semibold text-sm py-3"
+            className="tap w-full rounded-xl bg-primary-fill text-on-primary-fill font-semibold text-sm py-3"
           >
             Delete for me
           </button>
@@ -2061,7 +2061,7 @@ const GroupMessageInfo: React.FC<{ messageId: string; sentAt: string; count: num
       </div>
       <div className="flex items-center justify-between min-h-[48px] border-b border-charcoal/[0.06]">
         <span className="text-sm font-semibold text-charcoal">Read by</span>
-        <span className="text-sm text-charcoal-soft tabular-nums">{count ?? "—"}</span>
+        <span className="text-sm text-charcoal-soft tabular-nums">{count ?? "–"}</span>
       </div>
       {(readers ?? []).map((r) => (
         <div key={r.userId} className="flex items-center justify-between min-h-[44px] border-b border-charcoal/[0.06] last:border-b-0 pl-3">

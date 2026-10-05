@@ -100,7 +100,7 @@ const SetSummary: React.FC<{ set: LoggedSet }> = ({ set: s }) => {
         fontWeight: s.isPr ? 700 : 400,
       }}
     >
-      {formatSetWeight(s.weightKg, true) ?? "—"} × {s.reps}
+      {formatSetWeight(s.weightKg, true) ?? "–"} × {s.reps}
       {/* Named as well as coloured, so the three read apart in greyscale and
           to a screen reader. */}
       {outcome === "failed" && " · failed"}

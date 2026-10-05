@@ -1,6 +1,7 @@
 import React, { useLayoutEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Check } from "lucide-react";
+import { useIsDark } from "../../hooks/useIsDark";
 
 export interface PopupMenuOption<V extends string = string> {
   value: V;
@@ -38,11 +39,25 @@ interface PopupMenuProps<V extends string> {
   heading?: string;
   /**
    * How the selected row reads. "tint" is the Nutrient Summary filter (02);
-   * "filled" is the WO8 set-type dropdown frame: #A092E0 fill, white bold
-   * text and check.
+   * "filled" is the WO8 set-type dropdown frame: a filled row with bold text
+   * and check (primary-fill and its ink; the frame's #A092E0 failed 4.5:1).
    */
   variant?: "tint" | "filled";
 }
+
+/**
+ * Mobile v5.1 R3, dark mode (no light islands): the colours that are not a
+ * token, as [light, dark]. The selected row is primary.tint (#303141 on the
+ * card) bordered in primary.accent, its check primary.deep; destructive text
+ * is danger dark. The card, rows, borders and inks use the cream / charcoal /
+ * surface-raised / border-option tokens, whose light values are the literals.
+ */
+const MENU_COLORS = {
+  onFill: ["#F0EDF9", "#303141"],
+  onBorder: ["#AEA1DC", "#9A8CD6"],
+  check: ["#7D6BB5", "#B7ABDE"],
+  destructive: ["rgb(192,57,43)", "#FF6B5E"],
+} as const;
 
 const GAP = 6; // between trigger and card
 const EDGE = 8; // min distance from the viewport edges
@@ -72,6 +87,8 @@ export function PopupMenu<V extends string>({
   heading,
   variant = "tint",
 }: PopupMenuProps<V>) {
+  const dark = useIsDark();
+  const c = (key: keyof typeof MENU_COLORS) => MENU_COLORS[key][dark ? 1 : 0];
   const [pos, setPos] = useState<{ top?: number; bottom?: number; left: number; maxHeight: number; up: boolean } | null>(null);
 
   useLayoutEffect(() => {
@@ -122,7 +139,7 @@ export function PopupMenu<V extends string>({
             width,
             maxHeight: pos.maxHeight,
             boxSizing: "content-box",
-            background: "#FFFFFF",
+            background: "rgb(var(--c-cream-card))",
             border: "1px solid rgba(174,161,220,0.5)",
             borderRadius: 14,
             boxShadow: "0 12px 32px rgba(95,80,147,0.18)",
@@ -134,7 +151,7 @@ export function PopupMenu<V extends string>({
         }
       >
         {heading && (
-          <p style={{ margin: "2px 4px 8px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "#8C8378" }}>
+          <p style={{ margin: "2px 4px 8px", fontSize: 11, fontWeight: 700, letterSpacing: "0.1em", textTransform: "uppercase", color: "rgb(var(--c-charcoal-muted))" }}>
             {heading}
           </p>
         )}
@@ -157,9 +174,10 @@ export function PopupMenu<V extends string>({
                 borderRadius: 8,
                 padding: "9px 10px",
                 marginTop: i > 0 ? 6 : 0,
-                border: `1px solid ${filled ? "#A092E0" : on ? "#AEA1DC" : "#E5E6EB"}`,
-                background: filled ? "#A092E0" : on ? "#F0EDF9" : "#FAFAFB",
-                color: filled ? "#FFFFFF" : opt.destructive ? "rgb(192,57,43)" : "#241F1B",
+                // Decision 7: the filled selection is primary-fill (#A092E0 carried white at 2.73:1).
+                border: `1px solid ${filled ? "rgb(var(--c-primary-fill))" : on ? c("onBorder") : "rgb(var(--c-border-option))"}`,
+                background: filled ? "rgb(var(--c-primary-fill))" : on ? c("onFill") : "rgb(var(--c-surface-raised))",
+                color: filled ? "rgb(var(--c-on-primary-fill))" : opt.destructive ? c("destructive") : "rgb(var(--c-charcoal))",
                 fontSize: 12.5,
                 fontWeight: on ? 700 : 500,
               }}
@@ -168,13 +186,13 @@ export function PopupMenu<V extends string>({
               <span className="flex-1 min-w-0">
                 {opt.label}
                 {opt.note && (
-                  <span className="block" style={{ fontSize: 10.5, fontWeight: 500, marginTop: 1, color: "#8C8378" }}>
+                  <span className="block" style={{ fontSize: 10.5, fontWeight: 500, marginTop: 1, color: "rgb(var(--c-charcoal-muted))" }}>
                     {opt.note}
                   </span>
                 )}
               </span>
               {opt.trailing && <span className="flex-none">{opt.trailing}</span>}
-              {on && <Check size={13} strokeWidth={3} className="flex-none" style={{ display: "block", color: filled ? "#FFFFFF" : "#7D6BB5" }} />}
+              {on && <Check size={13} strokeWidth={3} className="flex-none" style={{ display: "block", color: filled ? "rgb(var(--c-on-primary-fill))" : c("check") }} />}
             </button>
           );
         })}
