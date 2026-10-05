@@ -45,7 +45,9 @@ export const SegmentedTabs: React.FC<{
   light?: { activeFill: string; activeInk: string; idleFill: string; idleInk: string };
   /** Track overrides, e.g. MO1.1.3's strip that runs off the right edge (radius 16 0 0 16). */
   trackStyle?: React.CSSProperties;
-}> = ({ items, activeKey, onChange, className, idleInk = "#6D50D3", idleInkDark = "#B7ABDE", size = "default", scroll, light, trackStyle }) => {
+  /** Long labels wrap onto two centred lines (MO1.1.4's "Simple Deep Breathing"). */
+  wrapLabels?: boolean;
+}> = ({ items, activeKey, onChange, className, idleInk = "#6D50D3", idleInkDark = "#B7ABDE", size = "default", scroll, light, trackStyle, wrapLabels }) => {
   const dark = useIsDark();
   const lit = dark ? undefined : light;
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -76,7 +78,7 @@ export const SegmentedTabs: React.FC<{
             role="tab"
             aria-selected={active}
             onClick={() => onChange(item.key)}
-            className="tap flex items-center justify-center whitespace-nowrap"
+            className={`tap flex items-center justify-center ${wrapLabels ? "text-center leading-[1.15]" : "whitespace-nowrap"}`}
             style={{
               flex: scroll ? "none" : item.weight ?? 1,
               minWidth: scroll ? 86 : 0,
