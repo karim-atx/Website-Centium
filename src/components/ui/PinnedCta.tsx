@@ -121,7 +121,24 @@ export const PinnedCta: React.FC<{
   secondary?: Omit<CtaButtonProps, "size" | "variant">;
   above?: Omit<CtaButtonProps, "size" | "variant">;
   trailing?: IconCtaProps;
-}> = ({ primary, secondary, above, trailing }) =>
+}> = ({ primary, secondary, above, trailing }) => (
+  <PinnedSlot>
+    {above && <CtaButton {...above} size="page" variant="outline" />}
+    <div className="flex gap-2">
+      {secondary && <CtaButton {...secondary} size="page" variant="secondary" />}
+      <CtaButton {...primary} size="page" variant="primary" />
+      {trailing && <IconCta {...trailing} />}
+    </div>
+  </PinnedSlot>
+);
+
+/**
+ * The pinned CTA's position on its own, for something that takes the
+ * button's place (MO1.1.1.1: Add habit turns into the add panel). With
+ * `aboveKeyboard`, it rides 8 pt above the on-screen keyboard while one is
+ * open, since the panel holds a text field.
+ */
+export const PinnedSlot: React.FC<{ aboveKeyboard?: boolean; children: React.ReactNode }> = ({ aboveKeyboard, children }) =>
   createPortal(
     <div
       className={clsx(
@@ -129,15 +146,12 @@ export const PinnedCta: React.FC<{
         "left-[calc(var(--app-gutter)+16px)] right-[calc(var(--app-gutter)+16px)]",
         // The client navbar floats at every width, so this holds at desktop
         // sizes too.
-        "bottom-[calc(env(safe-area-inset-bottom)+96px+var(--active-bar,0px))]"
+        aboveKeyboard
+          ? "bottom-[max(calc(env(safe-area-inset-bottom)+96px+var(--active-bar,0px)),calc(var(--kb-inset,0px)+8px))]"
+          : "bottom-[calc(env(safe-area-inset-bottom)+96px+var(--active-bar,0px))]"
       )}
     >
-      {above && <CtaButton {...above} size="page" variant="outline" />}
-      <div className="flex gap-2">
-        {secondary && <CtaButton {...secondary} size="page" variant="secondary" />}
-        <CtaButton {...primary} size="page" variant="primary" />
-        {trailing && <IconCta {...trailing} />}
-      </div>
+      {children}
     </div>,
     document.body
   );

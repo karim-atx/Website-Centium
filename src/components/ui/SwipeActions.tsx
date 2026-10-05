@@ -45,8 +45,12 @@ export const SwipeActions: React.FC<{
    * leaves the sheet (the frame's swiped row ends at the tile gap).
    */
   shrink?: boolean;
+  /** Tile size cap (default 56) and the gap from the row's right edge
+   *  (default 0). MO1.1.1 Habits draws 45 pt tiles 10 pt in from the card. */
+  tileMax?: number;
+  edgeInset?: number;
   children: React.ReactNode;
-}> = ({ actions, radius = 16, disabled, shrink, children }) => {
+}> = ({ actions, radius = 16, disabled, shrink, tileMax = TILE_MAX, edgeInset = 0, children }) => {
   const dark = useIsDark();
   const id = useRef(Math.random().toString(36).slice(2));
   const rowRef = useRef<HTMLDivElement | null>(null);
@@ -57,8 +61,8 @@ export const SwipeActions: React.FC<{
 
   // Delete last, whatever order the caller passed.
   const ordered = [...actions.filter((a) => !a.destructive), ...actions.filter((a) => a.destructive)];
-  const tile = Math.min(TILE_MAX, rowH);
-  const openWidth = ordered.length * (tile + TILE_GAP);
+  const tile = Math.min(tileMax, rowH);
+  const openWidth = ordered.length * (tile + TILE_GAP) + edgeInset;
 
   useEffect(() => {
     const el = rowRef.current;
@@ -132,6 +136,7 @@ export const SwipeActions: React.FC<{
         style={{
           gap: TILE_GAP,
           width: openWidth,
+          paddingRight: edgeInset,
           visibility: offset === 0 && !dragging ? "hidden" : "visible",
           transition: offset === 0 && !dragging ? "visibility 0s linear .22s" : "none",
         }}
