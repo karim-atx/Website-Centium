@@ -1,0 +1,235 @@
+import React, { useEffect, useRef, useState } from "react";
+import { CircleAlert, CircleCheck, Copy, Check, Gift, Share, Sparkles, UserPlus } from "lucide-react";
+import { CentredPopup } from "../ui/CentredPopup";
+import { Button } from "../ui/Button";
+import { useApp } from "../../context/AppContext";
+import {
+  getOrCreateMyReferralCode,
+  previewReferral,
+  redeemReferral,
+  type ReferralPreview,
+} from "../../services/redemption";
+
+// MO1.10 Invite friends, as a centred popup (R15/popups, batch C, C30),
+// ON TODAY'S TERMS: the rewards card says what redeem_referral() actually
+// does (10% off for the friend; 1,500 points, which are real in points_ledger,
+// plus 15% off the next month for you). The board's "3 of 12 rewards this
+// year" bar and its rule lines describe the referral model in the backlog
+// (D25), so they are left out until it exists.
+//
+// KEPT FROM THE SHEET: the "{name} invited you" confirm before anything is
+// redeemed, the "a referral succeeded" banner, and the already-redeemed
+// state. MO1.10.1 and .2 use today's paths: the success row replaces the code
+// box, and a refusal is a red line with the RPC's own words (the board's
+// per-reason wording needs reason codes from the backend). MO1.10.3 (already
+// subscribed) needs store subscription data and is skipped.
+//
+// QA 11.0: shared across Client / Professional / Business More pages.
+export const ReferralPopup: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+  const { authUserId, referralRedeemed, referralDiscountPct, referralNextMonthDiscountPct, applyReferralReward } =
+    useApp();
+  const [codeDraft, setCodeDraft] = useState("");
+  const [copied, setCopied] = useState(false);
+  const [result, setResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [preview, setPreview] = useState<ReferralPreview | null>(null);
+
+  // The user's own code, fetched once per mount and remembered, so reopening
+  // never mints a second code and orphans one that may already be shared.
+  const [myCode, setMyCode] = useState<string | null>(null);
+  const [codeError, setCodeError] = useState<string | null>(null);
+  const requested = useRef(false);
+
+  useEffect(() => {
+    if (!open || !authUserId || requested.current) return;
+    requested.current = true;
+    void getOrCreateMyReferralCode(authUserId).then((r) => {
+      if (r.status === "ok") setMyCode(r.code);
+      else setCodeError(r.message);
+    });
+  }, [open, authUserId]);
+
+  const copyCode = async () => {
+    if (!myCode) return false;
+    try {
+      await navigator.clipboard.writeText(myCode);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1600);
+      return true;
+    } catch {
+      setCopied(false);
+      return false;
+    }
+  };
+
+  // The phone's share menu where there is one; elsewhere, copy.
+  const shareCode = async () => {
+    if (!myCode) return;
+    const text = `Join me on Centium with my referral code ${myCode} for 10% off your subscription.`;
+    if (typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "Centium", text });
+        return;
+      } catch {
+        // Dismissed or refused: fall through to copying.
+      }
+    }
+    await copyCode();
+  };
+
+  const lookUp = async () => {
+    setResult(null);
+    setBusy(true);
+    const found = await previewReferral(codeDraft);
+    setBusy(false);
+    if (found.status === "found") {
+      setPreview(found.data);
+      return;
+    }
+    setResult({
+      success: false,
+      message: found.status === "not_found" ? "Code not found. Check it and try again." : found.message,
+    });
+  };
+
+  const confirm = async () => {
+    if (!preview) return;
+    setBusy(true);
+    const outcome = await redeemReferral(preview.code);
+    setBusy(false);
+    setPreview(null);
+    setCodeDraft("");
+    if (outcome.status === "success") {
+      // The returned row's number, not a hardcoded 10: only the friend's
+      // discount applies to THIS account.
+      const pct = outcome.discountPct ?? preview.refereeDiscountPct;
+      applyReferralReward(pct);
+      setResult({ success: true, message: outcome.message ?? `Code applied. ${pct}% off your subscription.` });
+      return;
+    }
+    setResult({ success: false, message: outcome.message });
+  };
+
+  const label = (text: string) => (
+    <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">{text}</p>
+  );
+
+  return (
+    <CentredPopup open={open} onClose={onClose} title="Invite friends" icon={<Gift size={22} />}>
+      <div className="text-start">
+        {label("Rewards")}
+        <div className="rounded-2xl border border-charcoal/[0.08] px-3.5">
+          {[
+            { icon: UserPlus, who: "Your friend", what: "10% off their subscription" },
+            { icon: Sparkles, who: "You", what: "1,500 points plus 15% off your next month" },
+          ].map((row, i) => (
+            <div key={row.who} className={`flex items-center gap-3 py-3 ${i === 1 ? "border-t border-charcoal/[0.06]" : ""}`}>
+              <span className="w-9 h-9 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                <row.icon size={16} className="text-primary-dark" />
+              </span>
+              <span className="min-w-0">
+                <span className="block text-[12px] text-charcoal-faint">{row.who}</span>
+                <span className="block text-[14px] font-bold text-charcoal">{row.what}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+        {/* The points are real: redeem_referral() writes 1,500 to
+            points_ledger, shown under "from referrals" on both tier cards.
+            What they are for is a tier and, so far, nothing else. */}
+        <p className="mt-2 text-[12px] text-charcoal-faint">Points count toward your tier. Rewards for points are coming soon.</p>
+
+        {referralNextMonthDiscountPct > 0 && (
+          <p className="mt-3 text-xs font-semibold text-primary-dark bg-primary-pale rounded-xl px-3.5 py-2.5">
+            A referral succeeded: you have {referralNextMonthDiscountPct}% off your next month's subscription.
+          </p>
+        )}
+
+        <div className="mt-4">{label("Your code")}</div>
+        <div className="flex items-center gap-2">
+          <span className="flex-1 min-w-0 h-12 rounded-2xl bg-cream-card border border-charcoal/10 flex items-center justify-center text-[18px] font-extrabold tracking-[0.18em] text-charcoal truncate">
+            {myCode ?? (codeError ? "Unavailable" : "…")}
+          </span>
+          <button
+            type="button"
+            onClick={() => void copyCode()}
+            disabled={!myCode}
+            aria-label="Copy referral code"
+            className="tap w-12 h-12 rounded-2xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
+          >
+            {copied ? <Check size={18} /> : <Copy size={18} />}
+          </button>
+        </div>
+        {codeError && <p className="text-[11px] text-status-high mt-2">{codeError}</p>}
+        <button
+          type="button"
+          onClick={() => void shareCode()}
+          disabled={!myCode}
+          className="tap mt-2.5 w-full h-12 rounded-[14px] bg-primary-fill text-on-primary-fill text-[14px] font-bold inline-flex items-center justify-center gap-2 disabled:opacity-40"
+        >
+          <Share size={16} aria-hidden />
+          {copied ? "Code copied" : "Share code"}
+        </button>
+
+        <div className="mt-5 pt-4 border-t border-charcoal/[0.06]">
+          {label("Have a code?")}
+          {result?.success ? (
+            // MO1.10.1: the success row replaces the code box.
+            <p role="status" className="flex items-center gap-2 rounded-2xl bg-teal-pale px-3.5 py-3 text-[13px] font-semibold text-teal-dark dark:text-teal-deep-text">
+              <CircleCheck size={16} className="shrink-0" aria-hidden />
+              {result.message}
+            </p>
+          ) : referralRedeemed ? (
+            <p className="text-xs text-charcoal-faint bg-cream-soft rounded-xl px-3.5 py-2.5">
+              You've already redeemed a referral code
+              {referralDiscountPct > 0 ? `. ${referralDiscountPct}% off is applied to your subscription.` : "."}
+            </p>
+          ) : preview ? (
+            // The confirmation, before anything is redeemed.
+            <div className="rounded-2xl bg-primary-pale p-3.5 animate-fade-slide-up">
+              <p className="text-sm font-semibold text-primary-deep-text mb-1">{preview.referrerFirstName} invited you</p>
+              <p className="text-xs text-primary-dark mb-3">
+                You'll get {preview.refereeDiscountPct}% off your subscription
+                {preview.referrerDiscountPct > 0
+                  ? `, and ${preview.referrerFirstName} gets ${preview.referrerDiscountPct}% off theirs.`
+                  : "."}
+              </p>
+              <div className="flex items-center gap-2">
+                <Button size="md" onClick={confirm} disabled={busy}>
+                  {busy ? "Applying…" : "Confirm"}
+                </Button>
+                <Button size="md" variant="ghost" onClick={() => setPreview(null)} disabled={busy}>
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <input
+                value={codeDraft}
+                onChange={(e) => {
+                  setCodeDraft(e.target.value.toUpperCase());
+                  setResult(null);
+                }}
+                onKeyDown={(e) => e.key === "Enter" && codeDraft.trim() && void lookUp()}
+                placeholder="Enter a code"
+                aria-label="A friend's referral code"
+                className="flex-1 min-w-0 h-12 rounded-2xl bg-cream-soft border border-charcoal/10 px-3.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+              />
+              <Button size="md" onClick={lookUp} disabled={!codeDraft.trim() || busy}>
+                {busy ? "…" : "Apply"}
+              </Button>
+            </div>
+          )}
+          {/* MO1.10.2: a refusal, in the RPC's own words for now. */}
+          {result && !result.success && (
+            <p role="alert" className="mt-2 flex items-start gap-1.5 text-xs font-semibold text-status-high">
+              <CircleAlert size={14} className="shrink-0 mt-px" aria-hidden />
+              {result.message}
+            </p>
+          )}
+        </div>
+      </div>
+    </CentredPopup>
+  );
+};
