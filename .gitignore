@@ -27,3 +27,4 @@ scratchpad/
 # the Supabase CLI's scratch directory, created by `npm run gen:types`. It
 # holds a cached project ref and nothing worth keeping.
 supabase/.temp/
+design-handover/
