@@ -1,30 +1,27 @@
 import { PageHeader } from "../../components/ui/PageHeader";
-import { Card } from "../../components/ui/Card";
-import { Toggle } from "../../components/ui/Toggle";
-import { BottomSheet } from "../../components/ui/BottomSheet";
-import { IntegrationsCard } from "../../components/health/IntegrationsCard";
+import { SettingsRow, SettingsSection } from "../../components/ui/SettingsRows";
 import { ColorThemePicker } from "../../components/profile/ColorThemePicker";
-import { ContactUsSheet } from "../../components/profile/ContactUsSheet";
-import { NotificationsSheet } from "../../components/profile/NotificationsSheet";
-import { AccessibilitySheet } from "../../components/profile/AccessibilitySheet";
-import { PrivacySheet } from "../../components/profile/PrivacySheet";
-import { ReportBugSheet } from "../../components/profile/ReportBugSheet";
-import { RateAppSheet } from "../../components/profile/RateAppSheet";
-import { StorageUsageCard } from "../../components/profile/StorageUsageCard";
-import { TermsOfServiceSheet } from "../../components/profile/TermsOfServiceSheet";
+import { ContactUsPopup } from "../../components/profile/ContactUsPopup";
+import { ReportBugPopup } from "../../components/profile/ReportBugPopup";
+import { RateAppPopup } from "../../components/profile/RateAppPopup";
+import { StorageUsageRow } from "../../components/profile/StorageUsageRow";
 import { TwoFactorSheet } from "../../components/profile/TwoFactorSheet";
 import { ChangePasswordSheet } from "../../components/profile/ChangePasswordSheet";
+import { DeleteAccountSheet } from "../../components/profile/DeleteAccountSheet";
 import { TimezoneSetting } from "../../components/settings/TimezoneSetting";
+import { ForumBlocksSetting } from "../../components/forum/ForumBlocksSetting";
 import { useApp } from "../../context/AppContext";
 import { TRACKER_OFF_KEEPS_DATA } from "../../services/cycle/guidance";
-import { enablePush, permissionTriState, pushSupported } from "../../services/push";
+import { pushSupported } from "../../services/push";
 import { getMfaStatus } from "../../services/mfa";
+import { detectPlatform } from "../../components/health/IntegrationsCard";
+import { APP_LANGUAGES } from "../../i18n/languages";
+import { pushUnavailableReason, watchPermission, type PermissionReading } from "./platform";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import {
   Moon,
   Sun,
-  Bell,
   Globe,
   Lock,
   HelpCircle,
@@ -32,8 +29,6 @@ import {
   Camera,
   MapPin,
   BellRing,
-  ChevronRight,
-  Check,
   Accessibility,
   Bug,
   Star,
@@ -41,38 +36,27 @@ import {
   ShieldCheck,
   KeyRound,
   Droplet,
+  Apple,
+  Smartphone,
+  Watch,
 } from "lucide-react";
-import { ForumBlocksSetting } from "../../components/forum/ForumBlocksSetting";
 
-/**
- * Whether the app is running installed rather than in a browser tab.
- *
- * Two checks because they cover different engines: the display-mode media
- * query is the standard, and `navigator.standalone` is Safari's own
- * non-standard predecessor, which is still what iOS reports.
- */
-function isInstalled(): boolean {
-  if (typeof window === "undefined") return false;
-  if (window.matchMedia("(display-mode: standalone)").matches) return true;
-  return (navigator as Navigator & { standalone?: boolean }).standalone === true;
-}
+// MO1.8 Settings (R17, batch C). The board's layout: labelled sections of
+// flat icon-tile rows instead of cards, sub-screens as routed pages
+// (/app/settings/notifications, two-factor, accessibility, privacy, terms,
+// language) and centred popups (Contact us, Report a bug, Rate this app).
+// Colours are today's (decision 15) and the section labels are the pre-R1
+// ones (decision 17, C1).
+//
+// EVERY ROW THE BOARD DROPS IS KEPT (C13): Change password, Storage, Time
+// zone and Forum blocks live in a "Data & account" section above General; the
+// professionals' two-factor reminder moved to the two-factor page.
 
-/**
- * Whether this is iOS or iPadOS.
- *
- * USED ONLY TO PICK A MESSAGE, NEVER TO GATE ANYTHING. `pushSupported()`
- * decides what the row can do; this decides which sentence explains a `false`,
- * because "add it to your Home Screen" is actionable on iOS and misleading
- * everywhere else. If this function is ever wrong, the cost is showing the
- * wrong explanation, not blocking a browser that works.
- *
- * The second clause is iPadOS 13+, which reports itself as a Mac. A real Mac
- * has no touch points, so maxTouchPoints separates them.
- */
-function isIosLike(): boolean {
-  if (typeof navigator === "undefined") return false;
-  if (/iPad|iPhone|iPod/.test(navigator.userAgent)) return true;
-  return navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1;
+/** A permission's state, as the row says it. */
+function permissionLine(state: PermissionReading, purpose: string): string {
+  if (state === "granted") return "Allowed. Change this in your browser settings.";
+  if (state === "denied") return "Blocked in browser settings";
+  return purpose;
 }
 
 export default function Settings() {
@@ -80,20 +64,20 @@ export default function Settings() {
     theme,
     toggleTheme,
     language,
-    setLanguage,
     t,
     user,
-    deleteAccount,
-    authUserId,
-    twoFactorNudgeDismissed,
-    setTwoFactorNudgeDismissed,
     cycleSettings,
     cycleSettingsLoaded,
     cycleOffered,
     setCycleTracking,
+    twoFactorNudgeDismissed,
+    setTwoFactorNudgeDismissed,
   } = useApp();
+  const navigate = useNavigate();
+
   // MO11: the one switch every profile can reach for the cycle and pregnancy
   // section. On means shown here: offered (by sex or opt-in) and tracking.
+  // It moves to Profile in R15 (C6); until then it stays here, unchanged.
   const cycleOn = cycleOffered && !!cycleSettings?.trackerEnabled;
   const [cycleBusy, setCycleBusy] = useState(false);
   const [cycleError, setCycleError] = useState<string | null>(null);
@@ -104,13 +88,13 @@ export default function Settings() {
     setCycleBusy(false);
     if (!r.ok) setCycleError(r.message ?? "Couldn't save that. Try again.");
   };
-  const navigate = useNavigate();
+
   // The cycle tracker's Settings tab links to /app/settings#timezone.
   //
   // TRIED A FEW TIMES, because two things move the page after this mounts:
-  // Layout scrolls to the top on every route change, and the cards above
-  // the time zone grow as their reads come back. So it scrolls instantly,
-  // then again until the card is actually in view, for up to a second.
+  // Layout scrolls to the top on every route change, and the rows above the
+  // time zone grow as their reads come back. So it scrolls instantly, then
+  // again until the row is actually in view, for up to a second.
   const { hash } = useLocation();
   useEffect(() => {
     if (hash !== "#timezone") return;
@@ -130,52 +114,65 @@ export default function Settings() {
     }, 100);
     return () => window.clearInterval(id);
   }, [hash]);
-  // QA 12.0: "For all UIs put the ability to delete account which when
-  // pressed will prompt you to make sure... Make it not that obvious or
-  // big." Settings.tsx is already the one shared page for every account
-  // type, so this covers Client/Professional/Business at once.
-  const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleting, setDeleting] = useState(false);
-  const [deleteError, setDeleteError] = useState<string | null>(null);
-  const [micAllowed, setMicAllowed] = useState<boolean | null>(null);
-  const [cameraAllowed, setCameraAllowed] = useState<boolean | null>(null);
-  const [locationAllowed, setLocationAllowed] = useState<boolean | null>(null);
-  // Resolved once. Neither answer can change while the page is mounted —
-  // installing the app or switching browser reloads it either way.
+
+  // --- permissions (C14): the real state, read without prompting ------------
+  //
+  // A browser cannot revoke a permission, so a toggle can only ask. Off and
+  // tapped: the browser asks. On: it stays on, and the row says where to
+  // change it. Blocked: off, and the row says so. Where the browser can't say
+  // without asking (null), the row shows what the permission is for.
+  const [mic, setMic] = useState<PermissionReading>(null);
+  const [camera, setCamera] = useState<PermissionReading>(null);
+  const [location, setLocation] = useState<PermissionReading>(null);
+  useEffect(() => {
+    const stops: Promise<() => void>[] = [
+      watchPermission("microphone", setMic),
+      watchPermission("camera", setCamera),
+      watchPermission("geolocation", setLocation),
+    ];
+    return () => {
+      for (const p of stops) void p.then((stop) => stop());
+    };
+  }, []);
+
+  const requestMedia = async (kind: "audio" | "video") => {
+    const set = kind === "audio" ? setMic : setCamera;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(kind === "audio" ? { audio: true } : { video: true });
+      stream.getTracks().forEach((track) => track.stop());
+      set("granted");
+    } catch {
+      set("denied");
+    }
+  };
+  // QA 11.0: location is used for distance-to-gym/business results in Explore.
+  const requestLocation = () => {
+    navigator.geolocation.getCurrentPosition(
+      () => setLocation("granted"),
+      () => setLocation("denied")
+    );
+  };
+  // Asking only from off; on stays on (the browser owns revoking it).
+  const permissionToggle = (state: PermissionReading, ask: () => void) => ({
+    checked: state === "granted",
+    onChange: (next: boolean) => {
+      if (next) ask();
+    },
+  });
+
+  // Resolved once: installing the app or switching browser reloads the page.
   const [pushAvailable] = useState(pushSupported);
-  // THE ONLY ROW THAT CAN READ ITS TRUE STATE WITHOUT ASKING. The three above
-  // start at null because the only way to learn a camera or mic permission is
-  // to request it, which prompts. `Notification.permission` is readable
-  // synchronously and prompts nobody, so this row shows what is actually the
-  // case on arrival rather than "unknown until you press Allow".
-  const [notificationsAllowed, setNotificationsAllowed] = useState<boolean | null>(() =>
-    pushSupported() ? permissionTriState(Notification.permission) : null
-  );
-  // Kept apart from notificationsAllowed on purpose: permission granted with a
-  // failed subscription is a real state, and collapsing it into "Denied" would
-  // blame the user for something the browser or the server did.
-  const [pushError, setPushError] = useState<string | null>(null);
-  const [subscribing, setSubscribing] = useState(false);
+
   const [contactOpen, setContactOpen] = useState(false);
-  const [languageOpen, setLanguageOpen] = useState(false);
-  const [notificationsOpen, setNotificationsOpen] = useState(false);
-  const [accessibilityOpen, setAccessibilityOpen] = useState(false);
-  const [privacyOpen, setPrivacyOpen] = useState(false);
-  const [tosOpen, setTosOpen] = useState(false);
   const [reportBugOpen, setReportBugOpen] = useState(false);
   const [rateAppOpen, setRateAppOpen] = useState(false);
-  const [twoFactorOpen, setTwoFactorOpen] = useState(false);
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+  const [twoFactorOpen, setTwoFactorOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
-  // Whether a factor is enrolled, so the row can say which state it is in
-  // rather than making someone open the sheet to find out. Null while unknown
-  // — including when the read fails, where a neutral description is honest
-  // and "Off" would be a claim we cannot make.
-  //
-  // Re-read when the sheet CLOSES, which is the only thing that changes it.
-  // mfaPending from context is a different question (a challenge is
-  // outstanding) and would be false for exactly the enrolled users this row
-  // is describing.
+  // Whether a factor is enrolled, for the professionals' reminder row. Re-read
+  // when the two-factor sheet closes, the only thing on this page that
+  // changes it. Null while unknown.
   const [mfaEnrolled, setMfaEnrolled] = useState<boolean | null>(null);
   useEffect(() => {
     if (twoFactorOpen) return;
@@ -189,564 +186,163 @@ export default function Settings() {
     };
   }, [twoFactorOpen]);
 
-  const requestMic = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      stream.getTracks().forEach((t) => t.stop());
-      setMicAllowed(true);
-    } catch {
-      setMicAllowed(false);
-    }
-  };
-
-  const requestCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-      stream.getTracks().forEach((t) => t.stop());
-      setCameraAllowed(true);
-    } catch {
-      setCameraAllowed(false);
-    }
-  };
-
-  /**
-   * Asks the OS for permission, then registers this browser to receive push.
-   *
-   * TWO STEPS, AND THEY FAIL DIFFERENTLY. Permission is the browser's answer
-   * about notifications; the subscription is a record in push_subscriptions
-   * that lets the server address this specific browser. Granting the first and
-   * failing the second leaves someone who has seen "Granted" and will never be
-   * rung — so the subscribe failure gets its own message rather than being
-   * folded into the permission state, which would either lie or show "Denied"
-   * for something the user did allow.
-   *
-   * SUBSCRIBE ONLY AFTER "granted". Calling subscribe() with userVisibleOnly
-   * on an undecided permission raises the prompt itself, from a service layer,
-   * with nothing on screen explaining it.
-   */
-  const requestNotifications = async () => {
-    if (!pushAvailable) return;
-    setPushError(null);
-    setSubscribing(true);
-    const result = await enablePush(authUserId);
-    setSubscribing(false);
-
-    // The permission row reflects the OS answer; the error line reflects the
-    // subscription. "dismissed" is neither granted nor denied — the engine
-    // refused to ask — so it leaves the tri-state undecided.
-    if (result.status === "denied") setNotificationsAllowed(false);
-    else if (result.status === "ok") setNotificationsAllowed(true);
-    else setNotificationsAllowed(permissionTriState(Notification.permission));
-
-    // "ok" is the only outcome that leaves the row reading plain "Granted".
-    if (result.status !== "ok") setPushError(result.message);
-  };
-
-  // QA 11.0: "Besides microphone and camera, the app should also ask for
-  // location permission" — used for distance-to-gym/business results in
-  // Explore.
-  const requestLocation = () => {
-    navigator.geolocation.getCurrentPosition(
-      () => setLocationAllowed(true),
-      () => setLocationAllowed(false)
-    );
-  };
+  const isIos = detectPlatform() === "ios";
+  const languageName = APP_LANGUAGES.find((l) => l.code === language)?.name ?? "English";
 
   return (
     <div>
       <PageHeader title={t("Settings")} showBack />
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        {t("Appearance")}
-      </p>
-      <Card className="mb-6">
-        <div className="flex items-center justify-between mb-5">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              {theme === "dark" ? <Moon size={16} /> : <Sun size={16} />}
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-charcoal">{t("Dark Mode")}</p>
-              <p className="text-[11px] text-charcoal-faint">
-                {theme === "dark" ? t("Currently on") : t("Currently off")}. {t("Applies throughout Centium")}
-              </p>
-            </div>
-          </div>
-          <Toggle checked={theme === "dark"} onChange={toggleTheme} label="Dark mode" />
+      <SettingsSection label={t("Appearance")}>
+        <SettingsRow
+          icon={theme === "dark" ? Moon : Sun}
+          title={t("Dark Mode")}
+          subtitle={`${theme === "dark" ? t("Currently on") : t("Currently off")}. ${t("Applies throughout Centium")}`}
+          toggle={{ checked: theme === "dark", onChange: toggleTheme, label: "Dark mode" }}
+        />
+        {/* The board puts the colour theme under the Dark Mode row, in the
+            text column. Today's four themes until R20 (C17). */}
+        <div className="ps-[50px] pb-2">
+          <p className="text-[12px] font-semibold text-charcoal-soft mb-2.5">{t("Color theme")}</p>
+          <ColorThemePicker />
         </div>
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-          {t("Color theme")}
-        </p>
-        <ColorThemePicker />
-      </Card>
+      </SettingsSection>
 
       {/* Handover 2026-09-29 MO11: cycle tracking for every profile. Shown by
           default to a female or other profile; any profile can switch it on
           here, and that opt-in is saved to the account. Off is the user's own
           choice and always wins. Nothing is deleted either way. */}
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        {t("Health tracking")}
-      </p>
-      <Card className="mb-6">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft shrink-0">
-              <Droplet size={16} />
-            </div>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-charcoal">{t("Cycle tracking")}</p>
-              <p className="text-[11px] text-charcoal-faint leading-snug">
-                {cycleOn ? TRACKER_OFF_KEEPS_DATA : "Switch it on to start tracking."}
-              </p>
-            </div>
-          </div>
-          <Toggle
-            checked={cycleOn}
-            onChange={(on) => void toggleCycle(on)}
-            label="Cycle tracking"
-            disabled={cycleBusy || !cycleSettingsLoaded}
-          />
-        </div>
+      <SettingsSection label={t("Health tracking")}>
+        <SettingsRow
+          icon={Droplet}
+          title={t("Cycle tracking")}
+          subtitle={cycleOn ? TRACKER_OFF_KEEPS_DATA : "Switch it on to start tracking."}
+          toggle={{
+            checked: cycleOn,
+            onChange: (on) => void toggleCycle(on),
+            disabled: cycleBusy || !cycleSettingsLoaded,
+          }}
+        />
         {cycleError && (
-          <p className="mt-3 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{cycleError}</p>
+          <p className="mt-1 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{cycleError}</p>
         )}
-      </Card>
+      </SettingsSection>
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        {t("Permissions")}
-      </p>
-      <Card className="mb-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <Mic size={16} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-charcoal">{t("Microphone")}</p>
-              <p className="text-[11px] text-charcoal-faint">
-                {t(micAllowed === true ? "Granted" : micAllowed === false ? "Denied" : "Needed for AI voice logging")}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={requestMic}
-            className="tap text-xs font-semibold text-primary bg-primary-pale rounded-full px-3 py-1.5"
-          >
-            {t(micAllowed === true ? "Re-check" : "Allow")}
-          </button>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <Camera size={16} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-charcoal">{t("Camera")}</p>
-              <p className="text-[11px] text-charcoal-faint">
-                {t(
-                  cameraAllowed === true
-                    ? "Granted"
-                    : cameraAllowed === false
-                    ? "Denied"
-                    : "Needed for scanning biomarkers & photos"
-                )}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={requestCamera}
-            className="tap text-xs font-semibold text-primary bg-primary-pale rounded-full px-3 py-1.5"
-          >
-            {t(cameraAllowed === true ? "Re-check" : "Allow")}
-          </button>
-        </div>
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <MapPin size={16} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-charcoal">{t("Location")}</p>
-              <p className="text-[11px] text-charcoal-faint">
-                {t(
-                  locationAllowed === true
-                    ? "Granted"
-                    : locationAllowed === false
-                    ? "Denied"
-                    : "Needed to find gyms & businesses near you"
-                )}
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={requestLocation}
-            className="tap text-xs font-semibold text-primary bg-primary-pale rounded-full px-3 py-1.5"
-          >
-            {t(locationAllowed === true ? "Re-check" : "Allow")}
-          </button>
-        </div>
-        {/* "Push notifications", not "Notifications", because the General card
-            below already has a Notifications row — that one opens preference
-            toggles for which alerts you want, this one is the OS permission
-            that decides whether any of them can be delivered at all. Two rows
-            with the same name on one page would read as a duplicate. */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center text-charcoal-soft">
-              <BellRing size={16} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-charcoal">{t("Push notifications")}</p>
-              <p className="text-[11px] text-charcoal-faint">
-                {!pushAvailable
-                  ? isIosLike() && !isInstalled()
-                    ? // The honest instruction rather than a flat "unsupported":
-                      // on iOS the APIs genuinely do appear once the app is
-                      // installed to the Home Screen, so this is a step the
-                      // user can take, not a dead end.
-                      t("Add Centium to your Home Screen to receive call notifications when the app is closed")
-                    : t("Not available in this browser")
-                  : subscribing
-                  ? t("Registering this device…")
-                  : pushError
-                  ? // The permission answer is still shown by the button; this
-                    // line carries why nothing will arrive despite it.
-                    pushError
-                  : t(
-                      notificationsAllowed === true
-                        ? "Granted"
-                        : notificationsAllowed === false
-                        ? "Denied"
-                        : "Needed for calls & messages when Centium is closed"
-                    )}
-              </p>
-            </div>
-          </div>
-          {/* No button when the APIs are absent: there is nothing to request,
-              and an Allow that cannot do anything is worse than no control. */}
-          {pushAvailable && (
-            <button
-              onClick={() => void requestNotifications()}
-              disabled={subscribing}
-              className="tap text-xs font-semibold text-primary bg-primary-pale rounded-full px-3 py-1.5 disabled:opacity-60"
-            >
-              {t(notificationsAllowed === true ? "Re-check" : "Allow")}
-            </button>
-          )}
-        </div>
-      </Card>
+      <SettingsSection label={t("Permissions")}>
+        <SettingsRow
+          icon={Mic}
+          title={t("Microphone")}
+          subtitle={t(permissionLine(mic, "Needed for AI voice logging"))}
+          toggle={permissionToggle(mic, () => void requestMedia("audio"))}
+        />
+        <SettingsRow
+          icon={Camera}
+          title={t("Camera")}
+          subtitle={t(permissionLine(camera, "Needed for scanning biomarkers & photos"))}
+          toggle={permissionToggle(camera, () => void requestMedia("video"))}
+        />
+        <SettingsRow
+          icon={MapPin}
+          title={t("Location")}
+          subtitle={t(permissionLine(location, "Needed to find gyms & businesses near you"))}
+          toggle={permissionToggle(location, requestLocation)}
+        />
+        {/* Opens Notifications, where "Allow notifications" is the device's
+            permission and registration (C15). The hint stays here when push
+            can't work in this browser at all. */}
+        <SettingsRow
+          icon={BellRing}
+          title={t("Push notifications")}
+          subtitle={pushAvailable ? undefined : t(pushUnavailableReason())}
+          onClick={() => navigate("/app/settings/notifications")}
+        />
+      </SettingsSection>
 
-      {/* V8 (QA 8.0): "remove the connected device row/section" — auto-sync
-          integrations are a personal health-tracking concept, not something
-          a professional or business account has any use for. */}
+      {/* Customers only, as before (V8: device sync is a personal tracking
+          concept). Nothing syncs yet, so the rows say "Coming soon" and carry
+          no switch (C16); "Health Connect" is the Android name (C-11). */}
       {user.accountType === "customer" && (
-        <>
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-            {t("Connected devices")}
+        <SettingsSection label={t("Connected devices")}>
+          <SettingsRow
+            icon={isIos ? Apple : Smartphone}
+            title={isIos ? "Apple Health" : "Health Connect"}
+            subtitle="Would sync steps, sleep, heart rate and calories burned"
+            value="Coming soon"
+          />
+          <SettingsRow icon={Watch} title="Whoop" value="Coming soon" />
+          <p className="mt-2 text-[11px] text-charcoal-faint">
+            Device sync isn't available yet. Until it is, weight and water are the metrics you can log yourself.
           </p>
-          <div className="mb-6">
-            <IntegrationsCard />
-          </div>
-        </>
+        </SettingsSection>
       )}
 
-      {/* Above General rather than inside it: the rows below are all controls
-          that open something, and this opens nothing — it is a reading. */}
-      <StorageUsageCard />
-
-      {/* Security did not exist before two-factor, which is why it is a new
-          section rather than a row under General: the only auth screen this
-          app had was the password-reset page, reachable only from an email.
-          Placed above General because "who can get into my account" outranks
-          "which language is the interface in". */}
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        Security
-      </p>
-      <Card padded={false} className="mb-6">
-        {/* Task J. First, because a password is the thing two-factor adds to. */}
-        <button
-          onClick={() => setChangePasswordOpen(true)}
-          className="tap w-full flex items-center justify-between px-4 py-3.5 border-b border-charcoal/[0.06]"
-        >
-          <div className="flex items-center gap-3">
-            <KeyRound size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">Change password</span>
-          </div>
-          <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
-        </button>
-        <button
+      <SettingsSection label="Security">
+        <SettingsRow
+          icon={ShieldCheck}
+          title="Two-factor authentication"
           onClick={() => setTwoFactorOpen(true)}
-          className="tap w-full flex items-center justify-between px-4 py-3.5"
-        >
-          <div className="flex items-center gap-3">
-            <ShieldCheck size={16} className="text-charcoal-soft" />
-            <div className="text-left">
-              <span className="text-sm font-medium text-charcoal">
-                Two-factor authentication
-              </span>
-              <p className="text-[11px] text-charcoal-faint">
-                {mfaEnrolled === null
-                  ? "A code from your phone, as well as your password"
-                  : mfaEnrolled
-                  ? "On: a code is required when you sign in"
-                  : "Off: your password alone signs you in"}
-              </p>
-            </div>
-          </div>
-          <ChevronRight size={15} className="text-charcoal-faint shrink-0" />
-        </button>
-
-        {/* THE WAY BACK FROM A DISMISSAL. The nudge on the professional
-            dashboard hides permanently once dismissed, which is only
-            defensible if turning it back on is findable — and the row sits
-            here, next to the thing it is reminding you about, rather than in
-            a notifications screen two levels away.
-
-            Shown only to the people who can see the nudge and have actually
-            turned it off, so it is not a switch for a banner nobody has met. */}
-        {user.accountType === "professional" && twoFactorNudgeDismissed && !mfaEnrolled && (
-          <div className="flex items-center justify-between px-4 py-3.5 border-t border-charcoal/[0.06]">
-            <div className="text-left pr-3">
-              <span className="text-sm font-medium text-charcoal">Remind me about two-factor</span>
-              <p className="text-[11px] text-charcoal-faint">
-                You dismissed the reminder on your dashboard.
-              </p>
-            </div>
-            <Toggle
-              checked={!twoFactorNudgeDismissed}
-              onChange={() => setTwoFactorNudgeDismissed(false)}
-            />
-          </div>
+        />
+        {/* THE WAY BACK FROM A DISMISSAL: the professional dashboard's nudge
+            hides once dismissed, so turning it back on has to be findable.
+            Only for those who can see the nudge and turned it off. */}
+        {user.accountType === "professional" && twoFactorNudgeDismissed && mfaEnrolled === false && (
+          <SettingsRow
+            title="Remind me about two-factor"
+            subtitle="You dismissed the reminder on your dashboard."
+            toggle={{ checked: !twoFactorNudgeDismissed, onChange: () => setTwoFactorNudgeDismissed(false) }}
+          />
         )}
-      </Card>
+      </SettingsSection>
 
-      {/* Task T: the profile's time zone, for every account. Moved here from
-          the cycle tracker's Settings tab, which links to #timezone. */}
-      <TimezoneSetting />
+      <SettingsSection label="Data & account">
+        {/* Task J. */}
+        <SettingsRow icon={KeyRound} title="Change password" onClick={() => setChangePasswordOpen(true)} />
+        <StorageUsageRow />
+        {/* Task T: the profile's time zone, for every account (#timezone). */}
+        <TimezoneSetting />
+        <ForumBlocksSetting />
+      </SettingsSection>
 
-      {/* "Blocked in the forum": label only, with Unblock. */}
-      <ForumBlocksSetting />
+      <SettingsSection label={t("General")}>
+        <SettingsRow
+          icon={Globe}
+          title={t("Language")}
+          value={<span lang={language}>{languageName}</span>}
+          onClick={() => navigate("/app/settings/language")}
+        />
+        <SettingsRow icon={Accessibility} title="Accessibility" onClick={() => navigate("/app/settings/accessibility")} />
+        <SettingsRow icon={Lock} title={t("Privacy")} onClick={() => navigate("/app/settings/privacy")} />
+        {/* V9 (QA 9.0): for every account type; Settings is the one shared page. */}
+        <SettingsRow icon={FileText} title="Terms of Service" onClick={() => navigate("/app/settings/terms")} />
+        <SettingsRow icon={HelpCircle} title={t("Contact us")} onClick={() => setContactOpen(true)} />
+        <SettingsRow icon={Bug} title="Report a bug" onClick={() => setReportBugOpen(true)} />
+        <SettingsRow icon={Star} title="Rate this app" onClick={() => setRateAppOpen(true)} />
+      </SettingsSection>
 
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        {t("General")}
-      </p>
-      <Card padded={false} className="divide-y divide-charcoal/[0.04]">
-        <button
-          onClick={() => setNotificationsOpen(true)}
-          className="tap w-full flex items-center justify-between px-4 py-3.5"
-        >
-          <div className="flex items-center gap-3">
-            <Bell size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">{t("Notifications")}</span>
-          </div>
-          <ChevronRight size={15} className="text-charcoal-faint" />
-        </button>
-        <button
-          onClick={() => setLanguageOpen(true)}
-          className="tap w-full flex items-center justify-between px-4 py-3.5"
-        >
-          <div className="flex items-center gap-3">
-            <Globe size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">{t("Language")}</span>
-          </div>
-          <span className="flex items-center gap-1 text-xs text-charcoal-faint">
-            {language === "ar" ? t("Arabic") : t("English")}
-            <ChevronRight size={15} />
-          </span>
-        </button>
-        <button
-          onClick={() => setAccessibilityOpen(true)}
-          className="tap w-full flex items-center justify-between px-4 py-3.5"
-        >
-          <div className="flex items-center gap-3">
-            <Accessibility size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">Accessibility</span>
-          </div>
-          <ChevronRight size={15} className="text-charcoal-faint" />
-        </button>
-        <button
-          onClick={() => setPrivacyOpen(true)}
-          className="tap w-full flex items-center justify-between px-4 py-3.5"
-        >
-          <div className="flex items-center gap-3">
-            <Lock size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">{t("Privacy")}</span>
-          </div>
-          <ChevronRight size={15} className="text-charcoal-faint" />
-        </button>
-        {/* V9 (QA 9.0): "a button for terms and services... applicable in
-            the other professional and business UI as well" — Settings.tsx
-            is already the one shared page for every account type. */}
-        <button
-          onClick={() => setTosOpen(true)}
-          className="tap w-full flex items-center justify-between px-4 py-3.5"
-        >
-          <div className="flex items-center gap-3">
-            <FileText size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">Terms of Service</span>
-          </div>
-          <ChevronRight size={15} className="text-charcoal-faint" />
-        </button>
-        <button
-          onClick={() => setContactOpen(true)}
-          className="tap w-full flex items-center justify-between px-4 py-3.5"
-        >
-          <div className="flex items-center gap-3">
-            <HelpCircle size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">{t("Contact us")}</span>
-          </div>
-          <ChevronRight size={15} className="text-charcoal-faint" />
-        </button>
-        {/* Below Contact us, which is still the prototype mock it has always
-            been — three controls that connect to nothing. This one does write
-            somewhere, so it goes last rather than above and reads as the
-            working option. Reconciling the two is a product question, left
-            alone here and recorded as a follow-up. */}
-        <button
-          onClick={() => setReportBugOpen(true)}
-          className="tap w-full flex items-center justify-between px-4 py-3.5"
-        >
-          <div className="flex items-center gap-3">
-            <Bug size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">Report a bug</span>
-          </div>
-          <ChevronRight size={15} className="text-charcoal-faint" />
-        </button>
-        {/* Beside Report a bug because they are the same kind of thing: both
-            write to a write-only table nobody is notified about, and both say
-            so in their own copy. Kept below it so the two working options sit
-            together, under the Contact us mock. */}
-        <button
-          onClick={() => setRateAppOpen(true)}
-          className="tap w-full flex items-center justify-between px-4 py-3.5"
-        >
-          <div className="flex items-center gap-3">
-            <Star size={16} className="text-charcoal-soft" />
-            <span className="text-sm font-medium text-charcoal">Rate this app</span>
-          </div>
-          <ChevronRight size={15} className="text-charcoal-faint" />
-        </button>
-      </Card>
-
+      {/* QA 12.0 asked for this to be "not that obvious or big"; the board
+          draws it red (D21, C18): red text at the foot, still behind the same
+          30-day confirm. */}
       <button
+        type="button"
         onClick={() => setDeleteOpen(true)}
-        className="tap block mx-auto mt-6 text-[11px] font-medium text-charcoal-faint"
+        className="tap block mx-auto mt-8 text-[13px] font-semibold text-status-high"
       >
         Delete account
       </button>
 
-      <ContactUsSheet open={contactOpen} onClose={() => setContactOpen(false)} />
-      {/* Keyed on open so each opening mounts a fresh sheet: that is what
-          clears the previous report text and any stale error, without an
-          effect setting state on open. */}
-      <ReportBugSheet
-        key={reportBugOpen ? "open" : "closed"}
-        open={reportBugOpen}
-        onClose={() => setReportBugOpen(false)}
-      />
-      {/* Keyed for the same reason, and it matters more here: a rating left
-          over from a previous visit would be a number the user never chose
-          this time, sitting one tap from being submitted. */}
-      <RateAppSheet
-        key={rateAppOpen ? "review-open" : "review-closed"}
-        open={rateAppOpen}
-        onClose={() => setRateAppOpen(false)}
-      />
-      {/* Keyed like TwoFactorSheet, so every open starts empty: nothing typed
-          into a password field outlives the sheet being closed. */}
+      <ContactUsPopup open={contactOpen} onClose={() => setContactOpen(false)} />
+      {/* Keyed on open so each opening mounts fresh: no previous report text,
+          no stale error, no rating left over from a previous visit. */}
+      <ReportBugPopup key={reportBugOpen ? "bug-open" : "bug-closed"} open={reportBugOpen} onClose={() => setReportBugOpen(false)} />
+      <RateAppPopup key={rateAppOpen ? "rate-open" : "rate-closed"} open={rateAppOpen} onClose={() => setRateAppOpen(false)} />
+      {/* Keyed so nothing typed into a password field outlives the sheet. */}
       <ChangePasswordSheet
         key={changePasswordOpen ? "pw-open" : "pw-closed"}
         open={changePasswordOpen}
         onClose={() => setChangePasswordOpen(false)}
       />
-      <TwoFactorSheet
-        key={twoFactorOpen ? "2fa-open" : "2fa-closed"}
-        open={twoFactorOpen}
-        onClose={() => setTwoFactorOpen(false)}
-      />
-      <NotificationsSheet open={notificationsOpen} onClose={() => setNotificationsOpen(false)} />
-      <AccessibilitySheet open={accessibilityOpen} onClose={() => setAccessibilityOpen(false)} />
-      {/* Closing Privacy before opening Delete rather than stacking them: two
-          bottom sheets open at once would leave the user dismissing one to
-          find another underneath. Settings owns both flags, which is why the
-          handoff lives here and not inside either sheet. */}
-      <PrivacySheet
-        open={privacyOpen}
-        onClose={() => setPrivacyOpen(false)}
-        onDeleteAccount={() => {
-          setPrivacyOpen(false);
-          setDeleteOpen(true);
-        }}
-      />
-      <TermsOfServiceSheet open={tosOpen} onClose={() => setTosOpen(false)} />
-
-      <BottomSheet open={languageOpen} onClose={() => setLanguageOpen(false)} title={t("Language")}>
-        <div className="space-y-2.5 animate-fade-slide-up">
-          {(["en", "ar"] as const).map((lng) => (
-            <button
-              key={lng}
-              onClick={() => {
-                setLanguage(lng);
-                setLanguageOpen(false);
-              }}
-              className="tap w-full flex items-center justify-between rounded-2xl bg-cream-soft px-4 py-3.5 text-left"
-            >
-              <span className="text-sm font-semibold text-charcoal">
-                {lng === "ar" ? t("Arabic") : t("English")}
-              </span>
-              {language === lng && <Check size={16} className="text-primary" />}
-            </button>
-          ))}
-        </div>
-      </BottomSheet>
-
-      <BottomSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} title="Delete account">
-        <div className="space-y-4 animate-fade-slide-up">
-          {/* The old copy claimed this was permanent and could not be undone.
-              Neither was true: nothing was deleted at all, and now that
-              deletion is real it runs after a 30-day grace period during which
-              it can be cancelled. Saying so is the point. */}
-          <p className="text-sm text-charcoal-soft leading-relaxed">
-            Your account will be scheduled for deletion in 30 days. After that your food
-            logs, workouts, health metrics and connections are permanently removed.
-          </p>
-          <p className="text-sm text-charcoal-soft leading-relaxed">
-            You can change your mind at any point in those 30 days. Sign back in and choose
-            “Cancel deletion”.
-          </p>
-          {deleteError && (
-            <p className="text-xs font-semibold text-status-high text-center">{deleteError}</p>
-          )}
-          <button
-            onClick={async () => {
-              if (deleting) return;
-              setDeleteError(null);
-              setDeleting(true);
-              const result = await deleteAccount();
-              setDeleting(false);
-              // Only leave on a confirmed success. A failed request keeps the
-              // user signed in with their data intact and says what happened,
-              // rather than navigating away as though it had worked.
-              if (!result.ok) {
-                setDeleteError(result.message ?? "Could not schedule deletion.");
-                return;
-              }
-              setDeleteOpen(false);
-              navigate("/app/onboarding");
-            }}
-            disabled={deleting}
-            className="tap w-full rounded-2xl bg-status-high text-white dark:text-[#0D0B1A] text-sm font-semibold py-3.5 disabled:opacity-60"
-          >
-            {deleting ? "Scheduling…" : "Schedule my account for deletion"}
-          </button>
-          <button
-            onClick={() => setDeleteOpen(false)}
-            className="tap w-full rounded-2xl bg-cream-soft text-charcoal text-sm font-semibold py-3.5"
-          >
-            Cancel
-          </button>
-        </div>
-      </BottomSheet>
+      <TwoFactorSheet key={twoFactorOpen ? "2fa-open" : "2fa-closed"} open={twoFactorOpen} onClose={() => setTwoFactorOpen(false)} />
+      <DeleteAccountSheet open={deleteOpen} onClose={() => setDeleteOpen(false)} />
     </div>
   );
 }

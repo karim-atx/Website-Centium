@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
-import { Card } from "../ui/Card";
+import { SettingsRow } from "../ui/SettingsRows";
 import { HardDrive } from "lucide-react";
 import { getStorageUsage, type StorageUsage } from "../../services/storage";
 
 /**
- * How much Storage this account holds, against its cap.
+ * How much Storage this account holds, against its cap. A Settings row in the
+ * "Data & account" section (batch C 13); it used to be a card of its own.
  *
  * EXISTS SO THE CAP IS NOT FIRST MET AS A FAILURE. `storage_usage()` shipped
  * with the cap and had no caller, which meant the only way to discover the
@@ -31,7 +32,7 @@ function formatBytes(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`;
 }
 
-export const StorageUsageCard: React.FC = () => {
+export const StorageUsageRow: React.FC = () => {
   const [usage, setUsage] = useState<StorageUsage | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -57,40 +58,38 @@ export const StorageUsageCard: React.FC = () => {
   const pct = Math.round(usage.fraction * 100);
 
   return (
-    <Card className="mb-6">
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-3">
-          <HardDrive size={16} className="text-charcoal-soft" />
-          <span className="text-sm font-medium text-charcoal">Storage</span>
-        </div>
-        <span
-          className={`text-xs font-semibold ${warning ? "text-status-high" : "text-charcoal-faint"}`}
-        >
+    <SettingsRow
+      icon={HardDrive}
+      title="Storage"
+      value={
+        <span className={`font-semibold ${warning ? "text-status-high" : "text-charcoal-faint"}`}>
           {formatBytes(usage.usedBytes)} of {formatBytes(usage.capBytes)}
         </span>
-      </div>
-
-      <div
-        className="h-1.5 rounded-full bg-charcoal/[0.08] overflow-hidden"
-        role="progressbar"
-        aria-valuenow={pct}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label="Storage used"
-      >
-        {/* A visible sliver for any non-zero usage: a bar that renders as
-            nothing says "empty", and 4 MB of 2 GB is not empty. */}
-        <div
-          className={`h-full rounded-full ${warning ? "bg-status-high" : "bg-primary"}`}
-          style={{ width: usage.usedBytes > 0 ? `max(2px, ${usage.fraction * 100}%)` : "0%" }}
-        />
-      </div>
-
-      <p className="text-[11px] text-charcoal-faint mt-2">
-        {warning
-          ? "You're running low. Remove a lab report or scan you no longer need to free up space."
-          : "Lab reports, scans and other files you upload."}
-      </p>
-    </Card>
+      }
+      subtitle={
+        <>
+          <span
+            className="mt-1.5 block h-1.5 rounded-full bg-charcoal/[0.08] overflow-hidden"
+            role="progressbar"
+            aria-valuenow={pct}
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-label="Storage used"
+          >
+            {/* A visible sliver for any non-zero usage: a bar that renders as
+                nothing says "empty", and 4 MB of 2 GB is not empty. */}
+            <span
+              className={`block h-full rounded-full ${warning ? "bg-status-high" : "bg-primary"}`}
+              style={{ width: usage.usedBytes > 0 ? `max(2px, ${usage.fraction * 100}%)` : "0%" }}
+            />
+          </span>
+          <span className="block mt-1.5">
+            {warning
+              ? "You're running low. Remove a lab report or scan you no longer need to free up space."
+              : "Lab reports, scans and other files you upload."}
+          </span>
+        </>
+      }
+    />
   );
 };
