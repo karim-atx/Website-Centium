@@ -90,7 +90,7 @@ export default function Marketplace() {
             13/400 subtitle. */}
         <div className="mt-[3px]">
           <h1 className="text-[24px] font-bold tracking-[-0.03em] text-charcoal leading-tight">Explore</h1>
-          <p className="mt-1 text-[13px] text-charcoal-faint">Classes and places near you</p>
+          <p className="mt-1 text-[13px] text-charcoal-tertiary">Classes and places near you</p>
         </div>
       </div>
 
