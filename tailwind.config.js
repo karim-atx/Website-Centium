@@ -18,6 +18,10 @@ export default {
           soft: "rgb(var(--c-cream-soft) / <alpha-value>)",
           card: "rgb(var(--c-cream-card) / <alpha-value>)",
         },
+        // Mobile v5.1 surface.raised: #FAFAFB, dark #262932. See index.css.
+        surface: {
+          raised: "rgb(var(--c-surface-raised) / <alpha-value>)",
+        },
         charcoal: {
           DEFAULT: "rgb(var(--c-charcoal) / <alpha-value>)",
           soft: "rgb(var(--c-charcoal-soft) / <alpha-value>)",
@@ -27,7 +31,11 @@ export default {
           // step instead of reusing `faint` for both.
           tertiary: "rgb(var(--c-charcoal-tertiary) / <alpha-value>)",
           disabled: "rgb(var(--c-charcoal-disabled) / <alpha-value>)",
+          // Mobile v5.1 R3: the board's text.muted #8C8378, dark #B8B3C7.
+          muted: "rgb(var(--c-charcoal-muted) / <alpha-value>)",
         },
+        // Mobile v5.1 R3: border.option #E5E6EB, dark rgba(238,239,242,0.10).
+        "border-option": "rgb(var(--c-border-option) / <alpha-value>)",
         primary: {
           DEFAULT: "rgb(var(--c-primary) / <alpha-value>)",
           light: "rgb(var(--c-primary-light) / <alpha-value>)",
