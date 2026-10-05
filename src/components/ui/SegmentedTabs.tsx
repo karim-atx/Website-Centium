@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import { useIsDark } from "../../hooks/useIsDark";
 
 export interface SegmentedTabItem {
@@ -26,7 +26,13 @@ export interface SegmentedTabItem {
  *  (#242730 on the card), an idle tab primary.tint.2 (#2B2C3A) and its label
  *  tabs.inactive.text (#B7ABDE, 6.5:1). `idleInk` is the LIGHT label only, so
  *  a caller's light-only ink (Workout's #5B5349) never reaches dark mode;
- *  `idleInkDark` overrides the dark label if a caller ever needs to. */
+ *  `idleInkDark` overrides the dark label if a caller ever needs to.
+ *
+ *  `scroll` (MO1.1.2 Journal folders): the user's own folders, any number of
+ *  them, so tabs keep their natural width (at least 86, the frame's) and the
+ *  track scrolls sideways instead of squeezing labels. `light` overrides the
+ *  four LIGHT-mode colours, for a row that replaced an older control and
+ *  keeps its colours (decision 15); dark mode is unaffected. */
 export const SegmentedTabs: React.FC<{
   items: SegmentedTabItem[];
   activeKey: string;
@@ -35,11 +41,28 @@ export const SegmentedTabs: React.FC<{
   idleInk?: string;
   idleInkDark?: string;
   size?: "default" | "compact";
-}> = ({ items, activeKey, onChange, className, idleInk = "#6D50D3", idleInkDark = "#B7ABDE", size = "default" }) => {
+  scroll?: boolean;
+  light?: { activeFill: string; activeInk: string; idleFill: string; idleInk: string };
+}> = ({ items, activeKey, onChange, className, idleInk = "#6D50D3", idleInkDark = "#B7ABDE", size = "default", scroll, light }) => {
   const dark = useIsDark();
+  const lit = dark ? undefined : light;
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  // A scrolling track brings the active tab into view (a new folder, or one
+  // just moved, can sit past the right edge).
+  useEffect(() => {
+    if (!scroll) return;
+    const track = trackRef.current;
+    const tab = track?.querySelector<HTMLElement>('[aria-selected="true"]');
+    if (!track || !tab) return;
+    const left = tab.offsetLeft - track.offsetLeft;
+    if (left < track.scrollLeft) track.scrollTo({ left: left - 6, behavior: "smooth" });
+    else if (left + tab.offsetWidth > track.scrollLeft + track.clientWidth)
+      track.scrollTo({ left: left + tab.offsetWidth - track.clientWidth + 6, behavior: "smooth" });
+  }, [scroll, activeKey, items.length]);
   return (
     <div
-      className={`flex items-center ${className ?? ""}`}
+      ref={trackRef}
+      className={`flex items-center ${scroll ? "overflow-x-auto no-scrollbar" : ""} ${className ?? ""}`}
       style={{ background: dark ? "#242730" : "#F3F3FD", borderRadius: 16, padding: 6, gap: 5 }}
       role="tablist"
     >
@@ -53,13 +76,17 @@ export const SegmentedTabs: React.FC<{
             onClick={() => onChange(item.key)}
             className="tap flex items-center justify-center whitespace-nowrap"
             style={{
-              flex: item.weight ?? 1,
-              minWidth: 0,
+              flex: scroll ? "none" : item.weight ?? 1,
+              minWidth: scroll ? 86 : 0,
               height: size === "compact" ? 38 : 44,
-              padding: "0 6px",
+              padding: scroll ? "0 16px" : "0 6px",
               borderRadius: 12,
-              background: active ? (dark ? "rgb(var(--c-primary-fill))" : "#A79AD5") : dark ? "#2B2C3A" : "#F5F4FE",
-              color: active ? "rgb(var(--c-on-primary-fill))" : dark ? idleInkDark : idleInk,
+              background: lit
+                ? active ? lit.activeFill : lit.idleFill
+                : active ? (dark ? "rgb(var(--c-primary-fill))" : "#A79AD5") : dark ? "#2B2C3A" : "#F5F4FE",
+              color: lit
+                ? active ? lit.activeInk : lit.idleInk
+                : active ? "rgb(var(--c-on-primary-fill))" : dark ? idleInkDark : idleInk,
               fontSize: 12.5,
               fontWeight: 700,
             }}

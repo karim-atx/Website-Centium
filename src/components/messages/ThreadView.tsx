@@ -77,7 +77,7 @@ import {
 /** How far the finger must travel from the mic before a release cancels. */
 const CANCEL_DISTANCE = 60;
 
-/** Rightward travel that counts as swipe-to-reply. Matches Food and JournalTab. */
+/** Rightward travel that counts as swipe-to-reply. Matches Food's copy-yesterday swipe. */
 const SWIPE_THRESHOLD = 60;
 
 /**
@@ -743,7 +743,7 @@ export const ThreadView: React.FC<{
     if (!origin) return;
     const dx = e.clientX - origin.x;
     const dy = e.clientY - origin.y;
-    // Same shape as the swipe already used in Food and JournalTab: rightward
+    // Same shape as the swipe already used in Food: rightward
     // past the threshold, and near-horizontal so a scroll is never mistaken
     // for it.
     if (dx > SWIPE_THRESHOLD && Math.abs(dy) < 40) setReplyTo(m);

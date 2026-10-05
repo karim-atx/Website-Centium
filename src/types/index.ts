@@ -1310,6 +1310,8 @@ export interface HabitItem {
   icon: HabitIconKey;
   done: boolean;
   streakDays: number;
+  /** yyyy-mm-dd days with a completion, within the loaded window (MO1.1.1 week grid). */
+  doneDates?: string[];
 }
 
 export interface Streak {

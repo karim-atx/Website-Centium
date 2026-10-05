@@ -8,6 +8,11 @@ export interface SwipeAction {
   onClick: () => void;
   /** Delete: #FCEDEC fill + #B4372C icon, and always the far-right tile. */
   destructive?: boolean;
+  /**
+   * LIGHT-mode tile colours, for a row whose old action buttons keep their
+   * colours on the new tiles (decision 15). Dark mode is unaffected.
+   */
+  light?: { fill: string; ink: string };
 }
 
 const TILE_MAX = 56;
@@ -40,8 +45,12 @@ export const SwipeActions: React.FC<{
    * leaves the sheet (the frame's swiped row ends at the tile gap).
    */
   shrink?: boolean;
+  /** Tile size cap (default 56) and the gap from the row's right edge
+   *  (default 0). MO1.1.1 Habits draws 45 pt tiles 10 pt in from the card. */
+  tileMax?: number;
+  edgeInset?: number;
   children: React.ReactNode;
-}> = ({ actions, radius = 16, disabled, shrink, children }) => {
+}> = ({ actions, radius = 16, disabled, shrink, tileMax = TILE_MAX, edgeInset = 0, children }) => {
   const dark = useIsDark();
   const id = useRef(Math.random().toString(36).slice(2));
   const rowRef = useRef<HTMLDivElement | null>(null);
@@ -52,8 +61,8 @@ export const SwipeActions: React.FC<{
 
   // Delete last, whatever order the caller passed.
   const ordered = [...actions.filter((a) => !a.destructive), ...actions.filter((a) => a.destructive)];
-  const tile = Math.min(TILE_MAX, rowH);
-  const openWidth = ordered.length * (tile + TILE_GAP);
+  const tile = Math.min(tileMax, rowH);
+  const openWidth = ordered.length * (tile + TILE_GAP) + edgeInset;
 
   useEffect(() => {
     const el = rowRef.current;
@@ -121,7 +130,16 @@ export const SwipeActions: React.FC<{
       <div
         aria-hidden={offset === 0}
         className="absolute inset-y-0 right-0 flex items-center justify-end"
-        style={{ gap: TILE_GAP, width: openWidth }}
+        // Hidden while fully closed: a tile behind a row whose corner radius
+        // is near the tile's inset otherwise shows as a sliver at the curve.
+        // Hiding waits for the row's .22s slide back.
+        style={{
+          gap: TILE_GAP,
+          width: openWidth,
+          paddingRight: edgeInset,
+          visibility: offset === 0 && !dragging ? "hidden" : "visible",
+          transition: offset === 0 && !dragging ? "visibility 0s linear .22s" : "none",
+        }}
       >
         {ordered.map((a) => (
           <button
@@ -138,8 +156,8 @@ export const SwipeActions: React.FC<{
               width: tile,
               height: tile,
               borderRadius: 14,
-              background: a.destructive ? (dark ? "#3C2A30" : "#FCEDEC") : "rgba(174,161,220,0.18)",
-              color: a.destructive ? (dark ? "#FF6B5E" : "#B4372C") : dark ? "#B7ABDE" : "#7D67D9",
+              background: !dark && a.light ? a.light.fill : a.destructive ? (dark ? "#3C2A30" : "#FCEDEC") : "rgba(174,161,220,0.18)",
+              color: !dark && a.light ? a.light.ink : a.destructive ? (dark ? "#FF6B5E" : "#B4372C") : dark ? "#B7ABDE" : "#7D67D9",
             }}
           >
             {a.icon}
