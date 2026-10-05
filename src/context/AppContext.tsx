@@ -2231,6 +2231,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
           icon: h.icon,
           done: isDoneOn(dates, today),
           streakDays: habitStreak(dates, today),
+          doneDates: dates,
         };
       }),
     [habitSnapshot, today]
