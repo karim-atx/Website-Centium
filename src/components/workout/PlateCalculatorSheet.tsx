@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
+import { useIsDark } from "../../hooks/useIsDark";
 import { BARS, COLLARS, nearestKgPlate, plateLoad, type PlateUnit } from "../../services/workout/plates";
 
 // IPF plate colours (WO24): 25 red, 20 blue, 15 yellow, 10 green, 5 white,
@@ -11,7 +12,7 @@ const PLATE: Record<number, { fill: string; text: string; h: number; w: number }
   25: { fill: "#C8403A", text: "#FFFFFF", h: 82, w: 13 },
   20: { fill: "#2E5F8A", text: "#FFFFFF", h: 82, w: 11 },
   15: { fill: "#D9A441", text: "#3F2A08", h: 73, w: 10 },
-  10: { fill: "#3F9165", text: "#FFFFFF", h: 59, w: 9 },
+  10: { fill: "#39845C", text: "#FFFFFF", h: 59, w: 9 }, // v5.1 R3: #3F9165 carried the white label at 3.85:1
   5: { fill: "#F4F4F2", text: "#4A443A", h: 42, w: 7 },
   2.5: { fill: "#2B2735", text: "#FFFFFF", h: 35, w: 6 },
   1.25: { fill: "#C9CCD2", text: "#4A443A", h: 29, w: 5 },
@@ -22,7 +23,32 @@ const SHOULDER = "#9A96A3";
 const GRIP = "#B9B6C0";
 const KNURL = "#A7A3AF";
 
-const label: React.CSSProperties = { display: "block", fontSize: 13, fontWeight: 500, color: "#5B5349", marginBottom: 8 };
+/**
+ * Mobile v5.1 R3, dark mode (no light islands): the sheet follows the v5.1
+ * dark tokens. Light values that are already tokens are written as tokens;
+ * these are the rest, as [light, dark]. The plate colours are the IPF
+ * colours in both modes; in dark each plate (and legend swatch) gets a
+ * #808288 outline, 3.78:1 on the raised panel, because red, blue and black
+ * plates sit under 3:1 against it on their own.
+ */
+const PLATE_COLORS = {
+  plateEdge: ["rgba(36,31,27,0.18)", "#808288"],
+  swatchEdge: ["rgba(36,31,27,0.25)", "#808288"],
+  unitTrack: ["#F0EDF9", "#303141"], // primary.tint
+  unitIdle: ["#7362A7", "#B7ABDE"], // primary.deep dark, 6.03:1 on the tint
+  otherBorder: ["#AEA1DC", "#9A8CD6"], // primary dark
+  pct: ["#7B65D5", "#B7ABDE"],
+  sliderFill: ["#AEA1DC", "#9A8CD6"],
+  sliderTrack: ["#EDEDEF", "#3E4048"], // rgba(238,239,242,0.16) on the card, as the toggle's off track
+  resultBox: ["#F3F1FC", "#303141"], // primary.tint
+  resultLabel: ["#725EC7", "#B7ABDE"],
+  resultValue: ["#4A3AA0", "#C8BFE9"], // primary.deeper dark, 7.36:1
+  resultSub: ["#5F5093", "#C8BFE9"],
+  panelBorder: ["#EDEDEE", "rgba(238,239,242,0.08)"],
+} as const;
+const pc = (key: keyof typeof PLATE_COLORS, dark: boolean): string => PLATE_COLORS[key][dark ? 1 : 0];
+
+const label: React.CSSProperties = { display: "block", fontSize: 13, fontWeight: 500, color: "rgb(var(--c-charcoal-soft))", marginBottom: 8 };
 
 const fmt = (n: number) => String(+n.toFixed(2));
 
@@ -40,6 +66,7 @@ const Barbell: React.FC<{ plates: { kg: number; count: number }[]; unit: PlateUn
   light,
   barLabel,
 }) => {
+  const dark = useIsDark();
   // Per side, innermost first: each plate drawn as its kg look-alike.
   const stack = plates.flatMap((p) => Array.from({ length: p.count }, () => ({ value: p.kg, look: unit === "kg" ? p.kg : nearestKgPlate(p.kg) })));
   const stackW = stack.reduce((w, p) => w + PLATE[p.look].w + 1, 0);
@@ -62,7 +89,7 @@ const Barbell: React.FC<{ plates: { kg: number; count: number }[]; unit: PlateUn
       const px = dir === 1 ? x - s.w : x;
       out.push(
         <g key={`p${dir}${i}`}>
-          <rect x={px} y={cy - s.h / 2} width={s.w} height={s.h} rx={1.5} fill={s.fill} stroke="rgba(36,31,27,0.18)" strokeWidth={0.6} />
+          <rect x={px} y={cy - s.h / 2} width={s.w} height={s.h} rx={1.5} fill={s.fill} stroke={pc("plateEdge", dark)} strokeWidth={dark ? 0.8 : 0.6} />
           <text
             x={px + s.w / 2}
             y={cy}
@@ -102,7 +129,7 @@ const Barbell: React.FC<{ plates: { kg: number; count: number }[]; unit: PlateUn
         <line key={t} x1={t} y1={cy - shaftH / 2} x2={t + 2} y2={cy + shaftH / 2} stroke={KNURL} strokeWidth={0.8} />
       ))}
       {barLabel && (
-        <text x={W / 2} y={cy - 8} fontSize={7} fontWeight={700} fill="#5B5349" textAnchor="middle">
+        <text x={W / 2} y={cy - 8} fontSize={7} fontWeight={700} fill="rgb(var(--c-charcoal-soft))" textAnchor="middle">
           {barLabel}
         </text>
       )}
@@ -127,6 +154,7 @@ const Barbell: React.FC<{ plates: { kg: number; count: number }[]; unit: PlateUn
  * "Other" bar weight.
  */
 export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+  const dark = useIsDark();
   const [unit, setUnit] = useState<PlateUnit>("kg");
   const [targetDraft, setTargetDraft] = useState("");
   const [pct, setPct] = useState(100);
@@ -148,8 +176,8 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
     minWidth: 0,
     height: 38,
     borderRadius: 10,
-    background: on ? "rgb(var(--c-primary-fill))" : "#F5F5F6",
-    color: on ? "rgb(var(--c-on-primary-fill))" : "#5B5349",
+    background: on ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-soft))",
+    color: on ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal-soft))",
     fontSize: 12.5,
     fontWeight: on ? 700 : 600,
   });
@@ -161,7 +189,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
     : `${fmt(bar)} ${u} bar${collar > 0 ? ` · ${fmt(collar)} ${u} collars` : ""} · ${fmt(load.perSide * 2)} ${u} plates`;
 
   return (
-    <BottomSheet light open={open} onClose={onClose} title="Plate Calculator">
+    <BottomSheet open={open} onClose={onClose} title="Plate Calculator">
       <div className="flex flex-col" style={{ gap: 16 }}>
         <div>
           <span style={label}>Target weight ({u})</span>
@@ -172,14 +200,14 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
               inputMode="decimal"
               aria-label={`Target weight (${u})`}
               className="flex-1 min-w-0 text-center focus:outline-none focus:ring-2 focus:ring-primary/20"
-              style={{ height: 43, borderRadius: 12, background: "#F5F5F6", border: "1px solid rgba(36,31,27,0.11)", fontSize: 15, fontWeight: 500, color: "#241F1B" }}
+              style={{ height: 43, borderRadius: 12, background: "rgb(var(--c-cream-soft))", border: "1px solid rgb(var(--c-charcoal) / 0.11)", fontSize: 15, fontWeight: 500, color: "rgb(var(--c-charcoal))" }}
             />
             {/* 02: the one pill control, with a sliding highlight. */}
             <div
               role="radiogroup"
               aria-label="Unit"
               className="relative flex flex-none"
-              style={{ width: 93, height: 43, borderRadius: 999, background: "#F0EDF9", padding: 3 }}
+              style={{ width: 93, height: 43, borderRadius: 999, background: pc("unitTrack", dark), padding: 3 }}
             >
               <span
                 aria-hidden
@@ -190,7 +218,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
                   left: 3,
                   width: "calc(50% - 3px)",
                   borderRadius: 999,
-                  background: "#AEA1DC",
+                  background: "rgb(var(--c-primary-fill))",
                   transform: unit === "lb" ? "translateX(100%)" : "translateX(0)",
                   transition: "transform .22s cubic-bezier(.22,1,.36,1)",
                 }}
@@ -205,7 +233,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
                     if (barChoice === "other") setCustomBarDraft("");
                   }}
                   className="tap relative flex-1 uppercase"
-                  style={{ fontSize: 12, fontWeight: 700, color: unit === v ? "#FFFFFF" : "#7D6BB5" }}
+                  style={{ fontSize: 12, fontWeight: 700, color: unit === v ? "rgb(var(--c-on-primary-fill))" : pc("unitIdle", dark) }}
                 >
                   {v}
                 </button>
@@ -231,7 +259,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
                 aria-label={`Bar weight (${u})`}
                 placeholder={u}
                 className="text-center focus:outline-none"
-                style={{ ...tile(true), background: "#FFFFFF", color: "#241F1B", border: "1.5px solid #AEA1DC" }}
+                style={{ ...tile(true), background: "rgb(var(--c-cream-card))", color: "rgb(var(--c-charcoal))", border: `1.5px solid ${pc("otherBorder", dark)}` }}
               />
             ) : (
               <button onClick={() => setBarChoice("other")} aria-pressed={false} className="tap" style={tile(false)}>
@@ -255,7 +283,7 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
         <div>
           <div className="flex items-baseline justify-between" style={{ marginBottom: 8 }}>
             <span style={{ ...label, marginBottom: 0 }}>Percentage</span>
-            <span className="tabular-nums" style={{ fontSize: 12, fontWeight: 700, color: "#7D67D9" }}>
+            <span className="tabular-nums" style={{ fontSize: 12, fontWeight: 700, color: pc("pct", dark) }}>
               {pct}%
             </span>
           </div>
@@ -271,46 +299,46 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
             style={{
               height: 6,
               borderRadius: 3,
-              background: `linear-gradient(to right, #AEA1DC 0%, #AEA1DC ${((pct - 10) / 90) * 100}%, #EDEDEF ${((pct - 10) / 90) * 100}%, #EDEDEF 100%)`,
+              background: `linear-gradient(to right, ${pc("sliderFill", dark)} 0%, ${pc("sliderFill", dark)} ${((pct - 10) / 90) * 100}%, ${pc("sliderTrack", dark)} ${((pct - 10) / 90) * 100}%, ${pc("sliderTrack", dark)} 100%)`,
               ["--thumb" as string]: "#FFFFFF",
             }}
           />
         </div>
 
-        <div style={{ background: "#F3F1FC", borderRadius: 14, padding: "14px 16px" }}>
+        <div style={{ background: pc("resultBox", dark), borderRadius: 14, padding: "14px 16px" }}>
           <div className="flex items-end justify-between" style={{ gap: 12 }}>
             <div className="min-w-0">
-              <p className="uppercase" style={{ margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", color: "#7D67D9" }}>
+              <p className="uppercase" style={{ margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", color: pc("resultLabel", dark) }}>
                 Working
               </p>
               <p className="tabular-nums" style={{ margin: 0, lineHeight: "36px" }}>
-                <span style={{ fontSize: 30, fontWeight: 800, color: "#4A3AA0", letterSpacing: "-0.02em" }}>{load ? fmt(load.working) : "–"}</span>
-                {load && <span style={{ fontSize: 13, fontWeight: 600, color: "#7D67D9", marginLeft: 4 }}>{u}</span>}
+                <span style={{ fontSize: 30, fontWeight: 800, color: pc("resultValue", dark), letterSpacing: "-0.02em" }}>{load ? fmt(load.working) : "–"}</span>
+                {load && <span style={{ fontSize: 13, fontWeight: 600, color: pc("resultLabel", dark), marginLeft: 4 }}>{u}</span>}
               </p>
             </div>
             <div className="text-right flex-none">
-              <p className="uppercase" style={{ margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", color: "#7D67D9" }}>
+              <p className="uppercase" style={{ margin: 0, fontSize: 9.5, fontWeight: 700, letterSpacing: "0.1em", color: pc("resultLabel", dark) }}>
                 Per side
               </p>
-              <p className="tabular-nums" style={{ margin: "2px 0 0", fontSize: 18, fontWeight: 800, color: "#4A3AA0" }}>
+              <p className="tabular-nums" style={{ margin: "2px 0 0", fontSize: 18, fontWeight: 800, color: pc("resultValue", dark) }}>
                 {!load ? "–" : barOnly ? "Bar only" : `${fmt(load.perSide)} ${u}`}
               </p>
               {load && (
-                <p style={{ margin: "2px 0 0", fontSize: 10.5, color: "#5F5093" }}>
+                <p style={{ margin: "2px 0 0", fontSize: 10.5, color: pc("resultSub", dark) }}>
                   {pct}% of {fmt(target)} {u}
                 </p>
               )}
             </div>
           </div>
           {load?.closest != null && (
-            <p style={{ margin: "8px 0 0", fontSize: 11.5, fontWeight: 700, color: "#5F5093" }}>
+            <p style={{ margin: "8px 0 0", fontSize: 11.5, fontWeight: 700, color: pc("resultSub", dark) }}>
               Closest: {fmt(load.closest)} {u}
             </p>
           )}
         </div>
 
-        <div style={{ background: "#FAFAFB", border: "1px solid #EDEDEE", borderRadius: 14, padding: "12px 12px 14px" }}>
-          {caption && <p style={{ margin: "0 0 10px", fontSize: 11, color: "#8C8378" }}>{caption}</p>}
+        <div style={{ background: "rgb(var(--c-surface-raised))", border: `1px solid ${pc("panelBorder", dark)}`, borderRadius: 14, padding: "12px 12px 14px" }}>
+          {caption && <p style={{ margin: "0 0 10px", fontSize: 11, color: "rgb(var(--c-charcoal-faint))" }}>{caption}</p>}
           <Barbell
             plates={load?.plates ?? []}
             unit={unit}
@@ -323,18 +351,18 @@ export const PlateCalculatorSheet: React.FC<{ open: boolean; onClose: () => void
               {load.plates.map((p) => {
                 const s = PLATE[unit === "kg" ? p.kg : nearestKgPlate(p.kg)];
                 return (
-                  <span key={p.kg} className="flex items-center" style={{ gap: 6, background: "#F5F5F6", borderRadius: 8, padding: "6px 10px" }}>
-                    <span style={{ width: 8, height: 8, borderRadius: 2, background: s.fill, border: "1px solid rgba(36,31,27,0.25)" }} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: "#241F1B" }}>
+                  <span key={p.kg} className="flex items-center" style={{ gap: 6, background: "rgb(var(--c-cream-soft))", borderRadius: 8, padding: "6px 10px" }}>
+                    <span style={{ width: 8, height: 8, borderRadius: 2, background: s.fill, border: `1px solid ${pc("swatchEdge", dark)}` }} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
                       {fmt(p.kg)} {u}
                     </span>
-                    <span style={{ fontSize: 10.5, color: "#8C8378" }}>× {p.count}</span>
+                    <span style={{ fontSize: 10.5, color: "rgb(var(--c-charcoal-faint))" }}>× {p.count}</span>
                   </span>
                 );
               })}
             </div>
           ) : barOnly ? (
-            <p style={{ margin: "10px 0 0", fontSize: 11, color: "#8C8378" }}>Bar only</p>
+            <p style={{ margin: "10px 0 0", fontSize: 11, color: "rgb(var(--c-charcoal-faint))" }}>Bar only</p>
           ) : null}
         </div>
       </div>

@@ -29,6 +29,25 @@ import GoalsPanel from "./GoalsPanel";
 import MealPrepPanel from "./MealPrepPanel";
 import { foodTabs, type Tab } from "./foodTabs";
 import { NumberPlaceholder } from "../../components/ui/NumberPlaceholder";
+import { useIsDark } from "../../hooks/useIsDark";
+
+/**
+ * Mobile v5.1 R3, dark mode (no light islands): the meal cards follow the
+ * dark tokens. These are the colours with no exact token, as [light, dark]:
+ * the macro letters (primary.deep dark, the carbs lavender, secondary.deep
+ * dark), the select circle's ring (3:1 on the card), and the Delete pill
+ * (danger.tint and danger dark).
+ */
+const DIARY_COLORS = {
+  protein: ["#7D6BB5", "#B7ABDE"],
+  carbs: ["#7B6DAD", "#AEA1DC"],
+  fat: ["#4F7F78", "#7FB3A9"],
+  selectRing: ["#D1CAEB", "#8A8698"],
+  deleteBg: ["#FCEDEC", "#3C2A30"],
+  deleteBorder: ["#F2CFCC", "rgba(255,107,94,0.3)"],
+  deleteInk: ["#B4372C", "#FF6B5E"],
+} as const;
+const dc = (key: keyof typeof DIARY_COLORS, dark: boolean): string => DIARY_COLORS[key][dark ? 1 : 0];
 
 // Item 7: the Diary's own display order (Breakfast, Snack, Lunch, Dinner) —
 // deliberately separate from the shared `mealOrder` export (services/
@@ -57,6 +76,7 @@ const HERO_PLACEHOLDER_HEIGHT = 116;
 export default function Food() {
   const { user, foodLog, nutritionGoal, selectedDate, copyYesterdayMeal, removeFoodEntry, dietaryRestriction, recoverySensitive, recoveryModePending, diaryError, authUserId, addFoodEntryRecord } =
     useApp();
+  const dark = useIsDark();
   // Task X follow-up: every per-meal and per-entry number waits for the
   // account's recovery setting too, not only the totals card.
   const hideNumbers = recoverySensitive || recoveryModePending;
@@ -293,7 +313,7 @@ export default function Food() {
       <span className="flex-1 min-w-0 h-1 rounded-full bg-white/[0.28] overflow-hidden">
         <span className="block h-full rounded-full bg-white" style={{ width: `${Math.min(100, (value / (target || 1)) * 100)}%` }} />
       </span>
-      <span className="shrink-0 text-[9px] text-white/[0.66] tabular-nums">
+      <span className="shrink-0 text-[9px] text-white/90 tabular-nums">
         {Math.round(value)} / {target}g
       </span>
     </div>
@@ -362,16 +382,16 @@ export default function Food() {
                   <p className="text-[26px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
                     {Math.round(totals.calories).toLocaleString()}
                   </p>
-                  <p className="mt-1 text-[9.5px] text-white/70">of {targets.calories.toLocaleString()} kcal</p>
+                  <p className="mt-1 text-[9.5px] text-white/90">of {targets.calories.toLocaleString()} kcal</p>
                   {/* SAYS WHOSE NUMBER IT IS. With no height or weight on
                       record the target is a published reference intake rather
                       than anything computed from this person. */}
                   {isReferenceOnlyTarget(user) && (
-                    <p className="mt-[3px] text-[8.5px] leading-[1.3] text-white/60">
+                    <p className="mt-[3px] text-[8.5px] leading-[1.3] text-white/90">
                       {REFERENCE_INTAKE_NOTE}
                     </p>
                   )}
-                  <p className="mt-[7px] inline-block text-[9.5px] font-bold text-white bg-white/20 rounded-full px-2 py-[3px]">
+                  <p className="mt-[7px] inline-block text-[9.5px] font-bold text-white bg-white/[0.08] rounded-full px-2 py-[3px]">
                     {targets.calories - Math.round(totals.calories)} left
                   </p>
                 </div>
@@ -450,13 +470,14 @@ export default function Food() {
               // while this specific meal's add sheet is open for it.
               const isAddingHere = addOpen && addMeal === meal;
               // Master handover (CentiumTabFrame food.diary): the card itself
-              // is always white with the lavender hairline and shadow; only
-              // its header carries the lavender wash, and only while open.
-              const headBg = collapsed ? "#FFFFFF" : "rgba(174,161,220,0.12)";
+              // is white (the dark card in dark mode) with the lavender hairline
+              // and shadow; only its header carries the lavender wash, and only
+              // while open.
+              const headBg = collapsed ? "rgb(var(--c-cream-card))" : "rgba(174,161,220,0.12)";
               return (
                 <div
                   key={meal}
-                  className="rounded-[15px] bg-white overflow-hidden"
+                  className="rounded-[15px] bg-cream-card overflow-hidden"
                   style={{ border: "1px solid rgba(174,161,220,0.34)", boxShadow: "0 4px 14px rgba(95,80,147,0.08)" }}
                   onTouchStart={onMealTouchStart}
                   onTouchEnd={(ev) => onMealTouchEnd(ev, meal)}
@@ -489,7 +510,7 @@ export default function Food() {
                         }}
                         aria-label={`${mealLabels[meal]} options`}
                         className="tap relative flex items-center justify-center shrink-0 before:absolute before:-inset-[10px] before:content-['']"
-                        style={{ width: 16, height: 18, color: "#8C8378" }}
+                        style={{ width: 16, height: 18, color: "rgb(var(--c-charcoal-faint))" }}
                       >
                         <EllipsisVertical size={15} />
                       </button>
@@ -499,18 +520,18 @@ export default function Food() {
                         <span className="flex h-2 rounded-[3px] overflow-hidden bg-charcoal/[0.07]">
                           {mealCal > 0 && (
                             <>
-                              <span style={{ width: `${(mealProtein / macroTotal) * 100}%`, background: "#7D6BB5" }} />
+                              <span style={{ width: `${(mealProtein / macroTotal) * 100}%`, background: dc("protein", dark) }} />
                               <span style={{ width: `${(mealCarbs / macroTotal) * 100}%`, background: "#AEA1DC" }} />
                               <span style={{ width: `${(mealFat / macroTotal) * 100}%`, background: "#A2C8C2" }} />
                             </>
                           )}
                         </span>
                         <span className="flex items-center gap-1 text-[8.5px] font-bold tabular-nums whitespace-nowrap">
-                          <span style={{ color: mealCal > 0 ? "#7D6BB5" : "#A79E93" }}>P {Math.round(mealProtein)}g</span>
-                          <span className="text-charcoal/20">|</span>
-                          <span style={{ color: mealCal > 0 ? "#8C7CC4" : "#A79E93" }}>C {Math.round(mealCarbs)}g</span>
-                          <span className="text-charcoal/20">|</span>
-                          <span style={{ color: mealCal > 0 ? "#4F7F78" : "#A79E93" }}>F {Math.round(mealFat)}g</span>
+                          <span style={{ color: mealCal > 0 ? dc("protein", dark) : "rgb(var(--c-charcoal-faint))" }}>P {Math.round(mealProtein)}g</span>
+                          <span aria-hidden className="text-charcoal/20">|</span>
+                          <span style={{ color: mealCal > 0 ? dc("carbs", dark) : "rgb(var(--c-charcoal-faint))" }}>C {Math.round(mealCarbs)}g</span>
+                          <span aria-hidden className="text-charcoal/20">|</span>
+                          <span style={{ color: mealCal > 0 ? dc("fat", dark) : "rgb(var(--c-charcoal-faint))" }}>F {Math.round(mealFat)}g</span>
                         </span>
                       </span>
                     )}
@@ -577,9 +598,9 @@ export default function Food() {
                                       width: 20,
                                       height: 20,
                                       borderRadius: 10,
-                                      background: checked ? "rgb(var(--c-primary-fill))" : "#FFFFFF",
-                                      border: checked ? "none" : "1.5px solid #D1CAEB",
-                                      color: checked ? "rgb(var(--c-on-primary-fill))" : "#FFFFFF",
+                                      background: checked ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-card))",
+                                      border: checked ? "none" : `1.5px solid ${dc("selectRing", dark)}`,
+                                      color: checked ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-cream-card))",
                                     }}
                                   >
                                     {checked && <Check size={12} strokeWidth={3} />}
@@ -663,7 +684,7 @@ export default function Food() {
                             }}
                             disabled={activeSelection.ids.size === 0}
                             className="tap flex-1 inline-flex items-center justify-center disabled:opacity-45"
-                            style={{ height: 36, gap: 6, borderRadius: 10, background: "#FCEDEC", border: "1px solid #F2CFCC", color: "#B4372C", fontSize: 12.5, fontWeight: 700 }}
+                            style={{ height: 36, gap: 6, borderRadius: 10, background: dc("deleteBg", dark), border: `1px solid ${dc("deleteBorder", dark)}`, color: dc("deleteInk", dark), fontSize: 12.5, fontWeight: 700 }}
                           >
                             <Trash2 size={13} /> Delete ({activeSelection.ids.size})
                           </button>
@@ -684,7 +705,7 @@ export default function Food() {
                               setSelecting(null);
                             }}
                             className="tap shrink-0"
-                            style={{ padding: "0 8px", height: 36, color: "#8C8378", fontSize: 12.5, fontWeight: 500 }}
+                            style={{ padding: "0 8px", height: 36, color: "rgb(var(--c-charcoal-faint))", fontSize: 12.5, fontWeight: 500 }}
                           >
                             Cancel
                           </button>
