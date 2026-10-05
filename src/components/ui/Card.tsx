@@ -7,6 +7,7 @@ interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
   // Design refinement §5.1/§4.5: "elevation earns meaning" — in-page cards
   // use a hairline border, not a shadow. `elevated` keeps the old
   // shadow-soft treatment for the handful of genuinely floating cases.
+  // Mobile v5.1 R2 (D3): the hairline is border.card, 8% (was 11%).
   elevated?: boolean;
 }
 
@@ -21,7 +22,7 @@ export const Card: React.FC<CardProps> = ({
   return (
     <div
       className={clsx(
-        "bg-cream-card rounded-3xl border border-charcoal/[0.11]",
+        "bg-cream-card rounded-3xl border border-charcoal/[0.08]",
         elevated && "shadow-soft",
         padded && "p-5",
         interactive && "tap cursor-pointer hover:shadow-card transition-shadow duration-200",

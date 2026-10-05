@@ -87,7 +87,14 @@
      tab colour are brand chrome, not theme-reactive content, so they stay
      this lavender under every accent theme. */
   --c-team-nav-accent: 143 104 246;
-  --c-team-nav-idle: 154 148 179;
+  /* Mobile v5.1, R2 (D4): the board's nav.idle #9A94B3 measures 2.89:1 on
+     the white bar, under both 3:1 (icons) and 4.5:1 (10.5 px labels). This
+     is the same hue scaled down until it clears 4.5:1: #78738C, 4.54:1. */
+  --c-team-nav-idle: 120 115 140;
+  /* The ACTIVE label is 10.5 px text too, and nav.accent #8F68F6 carries it
+     at 3.83:1. The icon and ring keep #8F68F6 (a shape needs 3:1); only the
+     label takes this scaled shade, #825FE0, 4.50:1. */
+  --c-team-nav-accent-text: 130 95 224;
 
   /* Iteration 6.2 canonical widget library — same reasoning as the nav
      accent above: these are the design's fixed lavender/teal/blue/rose/gold
@@ -172,28 +179,36 @@
 
   --c-teal: 162 200 194;
   --c-teal-light: 193 219 214;
-  --c-teal-pale: 234 244 242;
+  --c-teal-pale: 231 242 240;
   --c-teal-dark: 111 153 147;
-  --c-teal-deep-text: 95 127 122;
+  /* Mobile v5.1, R2: the board's secondary.deep #4F7F78 clears white (4.53:1)
+     but not teal-pale (3.96:1), where CvEditor's skill chips use it; this is
+     that hue scaled until both pass: #49756F, 5.40:1 and 4.52:1. */
+  --c-teal-deep-text: 73 117 111;
+  /* Mobile v5.1 R2: the ground of a filled teal control with white ink.
+     --c-teal (#A2C8C2) carries white at 1.8:1; secondary.deep #4F7F78 is the
+     closest brand teal that clears 4.5:1 (4.53:1). Dark mode uses the light
+     teal with on-primary-fill's near-black ink (10.7:1). */
+  --c-teal-fill: 79 127 120;
 
   /* NEITHER OF THE TWO ABOVE IS THE TEXT COLOUR FOR A teal-pale SURFACE,
      which is worth stating here because both names suggest otherwise and
      both have been used that way and failed:
 
        teal-dark       2.81:1 light, 3.13:1 dark  -- fails in BOTH modes
-       teal-deep-text  3.90:1 light, 7.34:1 dark  -- fails light only
+       teal-deep-text  4.52:1 light, 7.34:1 dark  -- passes since v5.1 R2
 
      What text on teal-pale actually uses is
-     "text-charcoal-soft dark:text-teal-deep-text": 6.74:1 and 7.34:1, the
-     pairing every such site in the app now shares. teal-deep-text earns its
-     name in dark and only there; in light the ground is too close to it.
+     "text-charcoal-soft dark:text-teal-deep-text": 6.6:1 and 7.34:1, the
+     pairing every such site in the app now shares. teal-deep-text was
+     darkened in v5.1 R2 and now clears AA on teal-pale in light as well.
 
      These two stay as they are because they are correct on the grounds they
      were tuned for -- teal-dark on cream, teal-deep-text in dark mode -- and
      a dozen places outside this problem depend on exactly those values. */
 
   --c-gold: 217 164 65;
-  --c-gold-pale: 246 233 201;
+  --c-gold-pale: 251 243 226;
 
   --c-sky: 76 143 209;
   --c-sky-pale: 220 234 248;
@@ -230,7 +245,8 @@
      the received tick is var(--c-status-good). A near-black bubble needs no
      deepening; that was only ever a light-mode problem. */
   --c-status-high: 192 57 43;
-  --c-status-high-bg: 251 231 228;
+  /* danger.tint (v5.1): status-high on it measures 4.78:1. */
+  --c-status-high-bg: 252 237 236;
   --c-status-low: 58 118 176;
   --c-status-low-bg: 220 234 248;
   --c-status-caution: 217 164 65;
@@ -334,6 +350,9 @@
      inheriting the :root value. Only the low-opacity "ink" label colours —
      the ones dark text would vanish at — actually change. */
   --c-team-nav-idle: 169 161 190;
+  /* On the dark bar (#2A2338) #8F68F6 is 3.92:1; 9% toward white clears
+     4.5:1 for the active label: #9976F7, 4.51:1. Idle above is 6.11:1. */
+  --c-team-nav-accent-text: 153 118 247;
   --c-team-teal-ink: 147 193 185;
   --c-team-blue-ink: 150 196 236;
   --c-team-rose-ink: 219 159 193;
@@ -396,6 +415,7 @@
   --c-teal-pale: 51 56 72;
   --c-teal-dark: 79 143 138;
   --c-teal-deep-text: 178 212 207;
+  --c-teal-fill: 162 200 194;
 
   --c-gold: 224 179 96;
   --c-gold-pale: 51 43 26;
@@ -664,11 +684,20 @@ body {
 /* Design refinement: the one text role repeated on nearly every screen —
    section labels ("WEIGHT GOAL", "TODAY", "BIOMARKERS"...). Quieter than
    the old 12px/600/wide-tracking convention. */
+/* Mobile v5.1, R2: the one section-label style (C-05, decided "lavender with
+   the line"). Foundations label.section.settings: 11 / 600 uppercase, 0.14em,
+   a 14 px line, 7.5 px, then a 1.5 px primary rule. The ink is primary-dark
+   (#7D6BB5, 4.52:1 at 11 px) rather than the board's #7D67D9 (4.36:1), per D1.
+   The SectionLabel component renders this same class. */
 .section-label {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
+  line-height: 14px;
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
+  color: rgb(var(--c-primary-dark));
+  padding-bottom: 7.5px;
+  border-bottom: 1.5px solid rgb(var(--c-primary));
 }
 
 /* WO8 logger fields: placeholders (last session's or the template's values)

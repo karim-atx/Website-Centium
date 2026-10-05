@@ -107,7 +107,7 @@ export const SettingsRow: React.FC<RowProps> = ({
     return (
       <div className={clsx(rowClass, className)}>
         {body}
-        <Toggle size="md" checked={toggle.checked} onChange={toggle.onChange} disabled={toggle.disabled} label={title} />
+        <Toggle checked={toggle.checked} onChange={toggle.onChange} disabled={toggle.disabled} label={title} />
       </div>
     );
   }

@@ -98,9 +98,9 @@ export const PinnedCta: React.FC<{
       className={clsx(
         "fixed z-20 flex gap-2",
         "left-[calc(var(--app-gutter)+16px)] right-[calc(var(--app-gutter)+16px)]",
-        "bottom-[calc(env(safe-area-inset-bottom)+96px+var(--active-bar,0px))]",
-        // No navbar on wide screens, so there is nothing to clear.
-        "lg:bottom-[calc(env(safe-area-inset-bottom)+32px)]"
+        // The client navbar floats at every width, so this holds at desktop
+        // sizes too.
+        "bottom-[calc(env(safe-area-inset-bottom)+96px+var(--active-bar,0px))]"
       )}
     >
       {secondary && <CtaButton {...secondary} size="page" variant="secondary" />}

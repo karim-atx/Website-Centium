@@ -15,7 +15,7 @@ export const Chip: React.FC<ChipProps> = ({ active, icon, className, children, .
       className={clsx(
         "tap inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-[13px] py-[7px] text-xs border transition-colors duration-150",
         active
-          ? "bg-primary text-white border-primary font-bold"
+          ? "bg-primary-fill text-on-primary-fill border-primary-fill font-bold"
           : // `hover:font-bold` used to sit alongside these — going
             // semibold-to-bold on hover widens the text, which grows the
             // chip's box (it has no fixed width), which can push the

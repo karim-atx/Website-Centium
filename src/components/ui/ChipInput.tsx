@@ -94,7 +94,7 @@ export const ChipInput: React.FC<{
           onClick={add}
           disabled={disabled || !text.trim()}
           aria-label={`Add to ${label.toLowerCase()}`}
-          className="tap w-11 h-11 rounded-xl bg-primary text-white dark:text-[#0D0B1A] flex items-center justify-center shrink-0 disabled:opacity-40"
+          className="tap w-11 h-11 rounded-xl bg-primary-fill text-on-primary-fill flex items-center justify-center shrink-0 disabled:opacity-40"
         >
           <Plus size={16} />
         </button>

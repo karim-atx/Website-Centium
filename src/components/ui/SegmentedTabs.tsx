@@ -48,8 +48,8 @@ export const SegmentedTabs: React.FC<{
             height: size === "compact" ? 38 : 44,
             padding: "0 6px",
             borderRadius: 12,
-            background: active ? "#A79AD5" : "#F5F4FE",
-            color: active ? "#FFFFFF" : idleInk,
+            background: active ? "rgb(var(--c-primary-fill))" : "#F5F4FE",
+            color: active ? "rgb(var(--c-on-primary-fill))" : idleInk,
             fontSize: 12.5,
             fontWeight: 700,
           }}

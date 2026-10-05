@@ -69,6 +69,8 @@ export default {
           dark: "rgb(var(--c-teal-dark) / <alpha-value>)",
           // Positive-trend text colour on a `teal-pale` (sage) wash.
           "deep-text": "rgb(var(--c-teal-deep-text) / <alpha-value>)",
+          // Mobile v5.1 R2: a filled teal control's ground; ink is on-primary-fill.
+          fill: "rgb(var(--c-teal-fill) / <alpha-value>)",
         },
         gold: {
           DEFAULT: "rgb(var(--c-gold) / <alpha-value>)",
@@ -95,6 +97,8 @@ export default {
         team: {
           "nav-accent": "rgb(var(--c-team-nav-accent) / <alpha-value>)",
           "nav-idle": "rgb(var(--c-team-nav-idle) / <alpha-value>)",
+          // The active label's ink: nav-accent itself is under 4.5:1 as text.
+          "nav-accent-text": "rgb(var(--c-team-nav-accent-text) / <alpha-value>)",
           lavender: "rgb(var(--c-team-lavender) / <alpha-value>)",
           "lavender-deep": "rgb(var(--c-team-lavender-deep) / <alpha-value>)",
           "teal-ink": "rgb(var(--c-team-teal-ink) / <alpha-value>)",
