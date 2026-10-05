@@ -172,7 +172,7 @@ export const CallSurface: React.FC = () => {
               <button
                 onClick={() => void answer()}
                 disabled={busy}
-                className="tap flex-1 rounded-2xl bg-[#39845C] dark:bg-status-good text-white dark:text-[#0D0B1A] py-3 text-sm font-semibold disabled:opacity-60"
+                className="tap flex-1 rounded-2xl bg-status-good text-white dark:text-[#0D0B1A] py-3 text-sm font-semibold disabled:opacity-60"
               >
                 {busy ? "Answering…" : "Answer"}
               </button>

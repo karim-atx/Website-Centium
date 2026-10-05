@@ -7,8 +7,8 @@ import type React from "react";
 // whose light values are its literals (surface.raised #FAFAFB, border.option
 // #E5E6EB, charcoal #241F1B), so it follows the theme without a hook. The
 // selected fill carries white ink and stays as it is in both modes.
-// Decision 7: the selected chip is primary-fill with its ink; the board's
-// #A092E0 carried white at 2.73:1.
+// The selected chip is the board's #A092E0 with white ink in light mode
+// (decision 14) and primary-fill with its ink in dark mode (--c-fill-chip).
 export const sheetChipStyle = (selected: boolean): React.CSSProperties => ({
   borderRadius: 8,
   padding: "8px 14px",
@@ -16,7 +16,7 @@ export const sheetChipStyle = (selected: boolean): React.CSSProperties => ({
   whiteSpace: "nowrap",
   flex: "none",
   ...(selected
-    ? { background: "rgb(var(--c-primary-fill))", border: "1px solid rgb(var(--c-primary-fill))", color: "rgb(var(--c-on-primary-fill))", fontWeight: 700 }
+    ? { background: "rgb(var(--c-fill-chip))", border: "1px solid rgb(var(--c-fill-chip))", color: "rgb(var(--c-on-primary-fill))", fontWeight: 700 }
     : {
         background: "rgb(var(--c-surface-raised))",
         border: "1px solid rgb(var(--c-border-option))",

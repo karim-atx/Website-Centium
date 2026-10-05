@@ -161,8 +161,7 @@ export function loggerShades(family: FolderFamily, dark = false): LoggerShades {
 /**
  * The lowest opacity at which a logger field's placeholder (last session's or
  * the template's value, drawn in the field's ink) reads at 4.5:1 on the field.
- * The board's 46% measures about 2:1. The caller pairs this with a lighter
- * weight than typed values, so suggested and entered values stay distinct.
+ * 46% measures about 2:1. Used in dark mode only (light keeps 46%).
  */
 export function placeholderOpacity(ink: string, field: string): number {
   const a = [1, 3, 5].map((i) => parseInt(ink.slice(i, i + 2), 16));
@@ -176,12 +175,14 @@ export function placeholderOpacity(ink: string, field: string): number {
 
 export function activeBarShades(
   routine: Pick<Routine, "folderId"> | null | undefined,
-  folders: RoutineFolder[]
+  folders: RoutineFolder[],
+  dark = false
 ): { bg: string; line: string } {
   const folder = routine?.folderId ? folders.find((f) => f.id === routine.folderId) : undefined;
-  // Mobile v5.1 R3: #7D67D9 carries the bar's white text at 4.36:1;
-  // #7D6BB5 (primary.deep) is the nearest brand shade at 4.5:1 or more.
-  if (!folder) return { bg: "#7D6BB5", line: mixHex("#7D6BB5", "#FFFFFF", 0.55) };
+  // No folder: the board's #7D67D9 in light mode (decision 14); dark mode
+  // keeps #7D6BB5 (primary.deep), which carries the white text at 4.5:1.
+  const none = dark ? "#7D6BB5" : "#7D67D9";
+  if (!folder) return { bg: none, line: mixHex(none, "#FFFFFF", 0.55) };
   const family = folderFamily(folder, folders.indexOf(folder));
   if (family === TEAL) return { bg: TEAL.tile, line: "#A2C8C2" };
   if (family === PURPLE) return { bg: PURPLE.tile, line: "#C2B3FA" };
@@ -232,12 +233,12 @@ export function playText(family: Pick<FolderFamily, "play">): string {
 
 /**
  * The play shade as TEXT on the surface around it (the rest timer, the menu's
- * rest value): playText on white in light mode; in dark mode the hue lifted
- * toward white until it reads at 4.5:1 on the raised dark surface, the
- * lightest one it sits on.
+ * rest value): the board's play shade itself in light mode (decision 14); in
+ * dark mode the hue lifted toward white until it reads at 4.5:1 on the raised
+ * dark surface, the lightest one it sits on.
  */
 export function playInk(family: Pick<FolderFamily, "play">, dark: boolean): string {
-  return dark ? liftTo(family.play, DARK_SURFACE.raised) : playText(family);
+  return dark ? liftTo(family.play, DARK_SURFACE.raised) : family.play;
 }
 
 /**

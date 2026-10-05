@@ -30,8 +30,8 @@ export interface LevelColors {
   /** WO21 value block ("row-strong"). */
   value: string;
   /**
-   * WO21 "Add to my routines" fill, under white text: `deep` in light mode,
-   * and still the light deep in dark mode (see darkLevel).
+   * WO21 "Add to my routines" fill, under white text: `deep` in light mode
+   * (the board's), and a 4.5:1 shade of it in dark mode (see darkLevel).
    */
   fill: string;
 }
@@ -45,8 +45,7 @@ const BEGINNER: LevelColors = {
   body: "#EEF6F4",
   row: "#DDEDEA",
   value: "#C3DFDA",
-  // Decision 7: #4F8F8A carried white at 3.73:1; secondary.deep #4F7F78 (4.53:1).
-  fill: "#4F7F78",
+  fill: "#4F8F8A",
 };
 
 const INTERMEDIATE: LevelColors = {
@@ -58,8 +57,7 @@ const INTERMEDIATE: LevelColors = {
   body: "#F1EEFA",
   row: "#E4DEF5",
   value: "#D3CAEF",
-  // Decision 7: #7D67D9 carried white at 4.36:1; primary.deep #7D6BB5 (4.52:1).
-  fill: "#7D6BB5",
+  fill: "#7D67D9",
 };
 
 const ADVANCED: LevelColors = {
@@ -84,8 +82,8 @@ export const LEVEL_ORDER: TemplateLevel[] = ["beginner", "intermediate", "advanc
  * body 8%, exercise row and tile 16%, value block 24%, header band 26%. `deep`
  * (title, back link, section label, value text, close ring) is lifted toward
  * white until it reads at 4.5:1 on the band, the strongest tint it sits on;
- * the tile label likewise on the tile. `fill` keeps the light deep: white
- * reads only about 2:1 on the lifted deep, and the button is a coloured fill.
+ * the tile label likewise on the tile. `fill` is not lifted (white reads only
+ * about 2:1 on the lifted deep); its dark values are set below.
  */
 const darkLevel = (c: LevelColors, sheetHue: string): LevelColors => {
   const band = tintOn(sheetHue, 0.26);
@@ -102,10 +100,13 @@ const darkLevel = (c: LevelColors, sheetHue: string): LevelColors => {
   };
 };
 
+// Dark mode's button fills: white reads 3.73:1 on #4F8F8A and 4.36:1 on
+// #7D67D9, so dark mode uses secondary.deep #4F7F78 (4.53:1) and primary.deep
+// #7D6BB5 (4.52:1). Light mode keeps the board's deep.
 const DARK_LEVEL_COLORS: Record<TemplateLevel, LevelColors> = {
-  beginner: darkLevel(BEGINNER, BEGINNER.dot),
-  intermediate: darkLevel(INTERMEDIATE, INTERMEDIATE.dot),
-  advanced: darkLevel(ADVANCED, INTERMEDIATE.dot),
+  beginner: { ...darkLevel(BEGINNER, BEGINNER.dot), fill: "#4F7F78" },
+  intermediate: { ...darkLevel(INTERMEDIATE, INTERMEDIATE.dot), fill: "#7D6BB5" },
+  advanced: { ...darkLevel(ADVANCED, INTERMEDIATE.dot), fill: "#7D6BB5" },
 };
 
 /** The level colour map for the current mode. */

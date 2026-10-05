@@ -19,10 +19,9 @@ const variantClasses: Record<Variant, string> = {
   // Design refinement §8: dark mode's primary fill (#A991FE) is light
   // enough that it takes dark text, not white — `dark:text-[#0D0B1A]`
   // matches the ground colour exactly.
-  // Mobile v5.1 R2: the light fill is primary-fill, the closest brand shade
-  // that carries white at 4.5:1 (primary itself is 2.35:1); dark keeps the
-  // lighter primary with that near-black ink, via on-primary-fill. Hover
-  // darkens 8% (the board pressed state) since primary-dark is now the fill.
+  // Mobile v5.1: the fill is primary-fill, the board's primary.fill #9A8CD6
+  // in light mode; dark keeps the lighter primary with that near-black ink,
+  // via on-primary-fill. Hover darkens 8% (the board pressed state).
   primary: "bg-primary-fill text-on-primary-fill hover:brightness-[0.92]",
   secondary: "bg-cream-soft text-charcoal hover:bg-primary-pale",
   ghost: "bg-transparent text-charcoal hover:bg-cream-soft",
