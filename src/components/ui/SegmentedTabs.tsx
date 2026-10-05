@@ -43,7 +43,9 @@ export const SegmentedTabs: React.FC<{
   size?: "default" | "compact";
   scroll?: boolean;
   light?: { activeFill: string; activeInk: string; idleFill: string; idleInk: string };
-}> = ({ items, activeKey, onChange, className, idleInk = "#6D50D3", idleInkDark = "#B7ABDE", size = "default", scroll, light }) => {
+  /** Track overrides, e.g. MO1.1.3's strip that runs off the right edge (radius 16 0 0 16). */
+  trackStyle?: React.CSSProperties;
+}> = ({ items, activeKey, onChange, className, idleInk = "#6D50D3", idleInkDark = "#B7ABDE", size = "default", scroll, light, trackStyle }) => {
   const dark = useIsDark();
   const lit = dark ? undefined : light;
   const trackRef = useRef<HTMLDivElement | null>(null);
@@ -63,7 +65,7 @@ export const SegmentedTabs: React.FC<{
     <div
       ref={trackRef}
       className={`flex items-center ${scroll ? "overflow-x-auto no-scrollbar" : ""} ${className ?? ""}`}
-      style={{ background: dark ? "#242730" : "#F3F3FD", borderRadius: 16, padding: 6, gap: 5 }}
+      style={{ background: dark ? "#242730" : "#F3F3FD", borderRadius: 16, padding: 6, gap: 5, ...trackStyle }}
       role="tablist"
     >
       {items.map((item) => {
