@@ -15,7 +15,7 @@ import { Loader2 } from "lucide-react";
 // near-black ink, the convention the app's Button already follows.
 
 type CtaSize = "page" | "sheet";
-type CtaVariant = "primary" | "secondary";
+type CtaVariant = "primary" | "secondary" | "outline";
 
 const sizeClasses: Record<CtaSize, string> = {
   page: "h-12 rounded-[14px]",
@@ -23,10 +23,12 @@ const sizeClasses: Record<CtaSize, string> = {
 };
 
 // Secondary (the left button of a CTA row): primary.tint fill with
-// primary.deeper ink.
+// primary.deeper ink. Outline (WO1 "Browse starter programs"): the card
+// surface with a 1 px rgba(143,104,246,0.28) border and text.primary ink.
 const variantClasses: Record<CtaVariant, string> = {
   primary: "bg-primary-fill text-on-primary-fill",
   secondary: "bg-primary-pale text-primary-deep-text",
+  outline: "bg-cream-card text-charcoal border border-[rgba(143,104,246,0.28)]",
 };
 
 export interface CtaButtonProps extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "children"> {
@@ -80,7 +82,9 @@ export const CtaButton: React.FC<CtaButtonProps> = ({
 /**
  * A page's pinned CTA, or a pinned CTA row: fixed 16 pt in from the app
  * column's edges, 96 pt above the bottom (clear of the navbar), with the
- * secondary button first when there are two (gap 8).
+ * secondary button first when there are two (gap 8). `above` stacks one
+ * outline button 8 pt over it (WO1: "Browse starter programs" over "Create
+ * routine"); that page then needs 56 pt more bottom padding (228 in all).
  *
  * PORTALED TO <body>. A screen wrapper with `animate-fade-slide-up` has a
  * transform, which makes it the containing block for position: fixed, and
@@ -92,19 +96,23 @@ export const CtaButton: React.FC<CtaButtonProps> = ({
 export const PinnedCta: React.FC<{
   primary: Omit<CtaButtonProps, "size" | "variant">;
   secondary?: Omit<CtaButtonProps, "size" | "variant">;
-}> = ({ primary, secondary }) =>
+  above?: Omit<CtaButtonProps, "size" | "variant">;
+}> = ({ primary, secondary, above }) =>
   createPortal(
     <div
       className={clsx(
-        "fixed z-20 flex gap-2",
+        "fixed z-20 flex flex-col gap-2",
         "left-[calc(var(--app-gutter)+16px)] right-[calc(var(--app-gutter)+16px)]",
         // The client navbar floats at every width, so this holds at desktop
         // sizes too.
         "bottom-[calc(env(safe-area-inset-bottom)+96px+var(--active-bar,0px))]"
       )}
     >
-      {secondary && <CtaButton {...secondary} size="page" variant="secondary" />}
-      <CtaButton {...primary} size="page" variant="primary" />
+      {above && <CtaButton {...above} size="page" variant="outline" />}
+      <div className="flex gap-2">
+        {secondary && <CtaButton {...secondary} size="page" variant="secondary" />}
+        <CtaButton {...primary} size="page" variant="primary" />
+      </div>
     </div>,
     document.body
   );
