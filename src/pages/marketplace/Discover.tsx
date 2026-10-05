@@ -1,6 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
+import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
+import { useIsDark } from "../../hooks/useIsDark";
+import { initials } from "../../components/professionals/typeColour";
 import { useApp } from "../../context/AppContext";
 import {
   bookClass,
@@ -11,8 +14,7 @@ import {
   type MarketplaceClass,
   type MarketplaceVenue,
 } from "../../services/marketplace";
-import { Search, MapPin, Users, Clock, Store, Dumbbell, Check } from "lucide-react";
-import clsx from "clsx";
+import { CalendarDays, Search, Store, Dumbbell, Check } from "lucide-react";
 
 // Marketplace discovery: real classes, real venues, real bookings.
 //
@@ -27,6 +29,13 @@ import clsx from "clsx";
 // yet, so there is no date check and no listing check here — writing one would
 // be a second copy of a rule the database owns.
 //
+// MO1.4 – MO1.4.3 (R14, existing data only): one header (Marketplace's);
+// Classes / Businesses / Gyms as segmented tabs; FO3 sub-tabs for price and,
+// on Businesses, the type; class cards with a date block, a price tag and an
+// inline Book (the class page needs a backend, B24); empty states in the
+// Foundations block. No distances (venues have no coordinates, B25), no
+// logos, covers or ratings (B26, B27).
+//
 // GYMS ARE EMPTY AND THAT IS A STATE, NOT A BUG. The gyms table has no rows
 // until real partnerships exist, so the section says so plainly. Filling it
 // with placeholders is exactly what this screen is replacing.
@@ -37,6 +46,25 @@ const priceCeilings = [
   { label: "Under $15", value: 15 },
   { label: "Under $30", value: 30 },
 ];
+
+type Tab = "classes" | "businesses" | "gyms";
+const TABS: { key: Tab; label: string }[] = [
+  { key: "classes", label: "Classes" },
+  { key: "businesses", label: "Businesses" },
+  { key: "gyms", label: "Gyms" },
+];
+
+/** MO1.4.1's sub-tabs, keyed by the business_type enum. */
+const BUSINESS_TYPES: { key: string; label: string }[] = [
+  { key: "clothing_store", label: "Clothing" },
+  { key: "equipment_seller", label: "Equipment" },
+  { key: "supplement_store", label: "Supplements" },
+  { key: "meal_prep_service", label: "Meal prep" },
+  { key: "wellness_service", label: "Wellness" },
+];
+const OTHER_TYPES: Record<string, string> = { gym: "Gym", store: "Store" };
+const typeLabel = (t: string) =>
+  BUSINESS_TYPES.find((x) => x.key === t)?.label ?? OTHER_TYPES[t] ?? t.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 
 const dateLabel = (iso: string) =>
   new Date(`${iso}T00:00:00`).toLocaleDateString("en-US", {
@@ -58,6 +86,9 @@ export default function Discover() {
   const [query, setQuery] = useState("");
   const [classType, setClassType] = useState<string | null>(null);
   const [maxPrice, setMaxPrice] = useState<number | null>(null);
+  const [tab, setTab] = useState<Tab>("classes");
+  const [businessType, setBusinessType] = useState<string | null>(null);
+  const dark = useIsDark();
 
   // One loader for all three reads, so a refresh after a booking cannot leave
   // the list and the spot counts describing different moments.
@@ -128,6 +159,13 @@ export default function Discover() {
 
   const businesses = venues.filter((v) => v.kind === "business");
   const gyms = venues.filter((v) => v.kind === "gym");
+  // MO1.4.1's sub-tabs, plus any other business type actually listed (a
+  // business can be a gym, which the frame's list leaves out).
+  const businessTypes = useMemo(() => {
+    const present = [...new Set(businesses.map((b) => b.venueType))].filter((t) => !BUSINESS_TYPES.some((x) => x.key === t));
+    return [...BUSINESS_TYPES, ...present.map((t) => ({ key: t, label: typeLabel(t) }))];
+  }, [businesses]);
+  const shownBusinesses = businessType ? businesses.filter((b) => b.venueType === businessType) : businesses;
 
   const book = async (c: MarketplaceClass) => {
     if (!authUserId || busyId) return;
@@ -147,15 +185,30 @@ export default function Discover() {
     await load();
   };
 
-  return (
-    <div>
-      <div className="mb-4">
-        <p className="text-[19px] font-bold tracking-[-0.03em] text-charcoal">Explore</p>
-        <p className="mt-[3px] text-[11px] text-charcoal-tertiary">
-          Classes and places near you
-        </p>
-      </div>
+  /** MO1.4's FO3 sub-tabs: a 40 pt rail (#F4F3F9 in light) of 32 pt tabs. */
+  const subTabs = (
+    items: { key: string; label: string }[],
+    activeKey: string,
+    onChange: (k: string) => void,
+    light: { activeFill: string; activeInk: string; idleFill: string; idleInk: string },
+    label: string
+  ) => (
+    <div className="mb-3" role="group" aria-label={label}>
+      <SegmentedTabs
+        scroll
+        items={items}
+        activeKey={activeKey}
+        onChange={onChange}
+        labelSize={12}
+        tabHeight={32}
+        trackStyle={{ padding: 4, gap: 4, borderRadius: 12, ...(dark ? {} : { background: "#F4F3F9" }) }}
+        light={light}
+      />
+    </div>
+  );
 
+  return (
+    <div className="mb-6">
       {error && (
         <p className="mb-3 rounded-xl bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-status-high">
           {error}
@@ -165,224 +218,222 @@ export default function Discover() {
       {/* SIMPLE FILTERS, NO NEW INFRASTRUCTURE. A text match, the class types
           actually present, and a price ceiling — all applied in memory over a
           list the view has already bounded. */}
-      <div className="relative mb-3">
-        <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
+      <div className="relative mb-3.5">
+        <Search size={16} strokeWidth={1.75} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-charcoal-faint" />
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search classes, places or a location"
-          className="w-full rounded-2xl bg-cream-soft border border-charcoal/10 pl-9 pr-4 py-2.5 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
+          className="w-full h-[46px] rounded-[14px] bg-cream-soft border border-charcoal/10 pl-10 pr-4 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
         />
       </div>
 
-      {types.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-3">
-          <button
-            onClick={() => setClassType(null)}
-            className={clsx(
-              "tap rounded-full px-3 py-1.5 text-xs font-semibold",
-              classType === null ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
+      {/* MO1.4: the three kinds as segmented tabs, 40 in a 52 track (B21). */}
+      <SegmentedTabs
+        className="mb-2.5"
+        items={TABS}
+        activeKey={tab}
+        onChange={(k) => setTab(k as Tab)}
+        labelSize={13}
+        tabHeight={40}
+      />
+
+      {tab === "classes" && (
+        <>
+          {/* The price ceilings keep their teal (decision 15); the class
+              types, kept though not drawn (B23), sit in a second row. */}
+          {subTabs(
+            priceCeilings.map((p) => ({ key: String(p.value), label: p.label })),
+            String(maxPrice),
+            (k) => setMaxPrice(k === "null" ? null : Number(k)),
+            { activeFill: "rgb(var(--c-teal-fill))", activeInk: "rgb(var(--c-on-primary-fill))", idleFill: "transparent", idleInk: "rgb(var(--c-charcoal-soft))" },
+            "Price"
+          )}
+          {types.length > 0 &&
+            subTabs(
+              [{ key: "", label: "All types" }, ...types.map((t) => ({ key: t, label: t }))],
+              classType ?? "",
+              (k) => setClassType(k || null),
+              { activeFill: "rgb(var(--c-primary-fill))", activeInk: "rgb(var(--c-on-primary-fill))", idleFill: "transparent", idleInk: "rgb(var(--c-charcoal-soft))" },
+              "Class type"
             )}
-          >
-            All types
-          </button>
-          {types.map((t) => (
-            <button
-              key={t}
-              onClick={() => setClassType((c) => (c === t ? null : t))}
-              className={clsx(
-                "tap rounded-full px-3 py-1.5 text-xs font-semibold",
-                classType === t ? "bg-primary-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
-              )}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+
+          <div className="space-y-2.5 mt-1">
+            {filtered.map((c) => {
+              const mine = booked.has(c.classId);
+              const free = !c.priceValue;
+              return (
+                <div key={c.classId} className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-3 animate-fade-slide-up">
+                  <div className="flex gap-3">
+                    {/* MO1.4's date block: weekday and start time. */}
+                    <span className="w-[52px] shrink-0 self-start rounded-[14px] bg-primary-pale flex flex-col items-center justify-center py-2.5">
+                      <span className="text-[10.5px] font-extrabold uppercase text-primary-dark">
+                        {new Date(`${c.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" })}
+                      </span>
+                      <span className="text-[14px] font-extrabold text-charcoal tabular-nums">{c.startTime}</span>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[14px] font-bold text-charcoal truncate">{c.title}</p>
+                      <p className="text-[12px] font-semibold text-primary-dark truncate">
+                        {c.businessName}
+                        {c.classType ? ` · ${c.classType}` : ""}
+                      </p>
+                      <p className="text-[11.5px] text-charcoal-faint truncate">
+                        {dateLabel(c.date)} · {c.startTime}–{c.endTime}
+                        {c.location ? ` · ${c.location}` : ""}
+                      </p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <span className="text-[12px] font-bold rounded-full px-2.5 py-0.5 bg-teal-pale text-teal-dark dark:text-teal-deep-text">
+                          {free ? "Free" : c.price}
+                        </span>
+                        {/* STRAIGHT FROM THE VIEW. spots_remaining is computed
+                            over every booking server-side. */}
+                        <span className={`text-[11.5px] ${c.isFull ? "text-status-high font-semibold" : "text-charcoal-faint"}`}>
+                          {c.isFull ? "Full" : `${c.spotsRemaining} ${c.spotsRemaining === 1 ? "spot" : "spots"} left`}
+                        </span>
+                        {!mine && (
+                          <button
+                            type="button"
+                            onClick={() => void book(c)}
+                            disabled={busyId === c.classId || c.isFull || !authUserId}
+                            className="tap ml-auto h-8 px-4 rounded-full border border-primary-dark/50 text-[12.5px] font-bold text-primary-dark disabled:opacity-50"
+                          >
+                            {busyId === c.classId ? "…" : c.isFull ? "Full" : "Book"}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {c.notes && <p className="text-xs text-charcoal-faint mt-2 italic">{c.notes}</p>}
+                  {/* Booked: cancelling stays on the card (B24). Full is not a
+                      reason to disable a booking somebody already holds. */}
+                  {mine && (
+                    <Button
+                      size="sm"
+                      fullWidth
+                      variant="outline"
+                      className="mt-2.5"
+                      disabled={busyId === c.classId || !authUserId}
+                      onClick={() => void book(c)}
+                    >
+                      {busyId === c.classId ? (
+                        "…"
+                      ) : (
+                        <>
+                          <Check size={13} /> Booked · tap to cancel
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+              );
+            })}
+
+            {filtered.length === 0 && !loading && (
+              classes.length === 0 ? (
+                <EmptyState icon={<CalendarDays size={24} strokeWidth={1.75} />} title="No classes yet" body="Classes from gyms and studios near you will show here." />
+              ) : (
+                <Card className="text-center py-8">
+                  <p className="text-sm text-charcoal-faint">No classes match those filters.</p>
+                </Card>
+              )
+            )}
+          </div>
+        </>
       )}
 
-      <div className="flex flex-wrap gap-2 mb-6">
-        {priceCeilings.map((p) => (
-          <button
-            key={p.label}
-            onClick={() => setMaxPrice(p.value)}
-            className={clsx(
-              "tap rounded-full px-3 py-1.5 text-xs font-semibold",
-              maxPrice === p.value ? "bg-teal-fill text-on-primary-fill" : "bg-cream-soft text-charcoal-soft"
-            )}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
-
-      <p className="mb-2.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Classes</p>
-      <div className="space-y-2.5 mb-6">
-        {filtered.map((c) => {
-          const mine = booked.has(c.classId);
-          return (
-            <Card key={c.classId} className="animate-fade-slide-up">
-              <div className="flex items-start gap-3">
-                <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
-                  <Dumbbell size={18} className="text-primary-dark" />
+      {tab === "businesses" && (
+        <>
+          {subTabs(
+            [{ key: "", label: "All" }, ...businessTypes],
+            businessType ?? "",
+            (k) => setBusinessType(k || null),
+            { activeFill: "rgb(var(--c-primary-fill))", activeInk: "rgb(var(--c-on-primary-fill))", idleFill: "transparent", idleInk: "rgb(var(--c-charcoal-soft))" },
+            "Business type"
+          )}
+          <div className="space-y-2.5 mt-1">
+            {shownBusinesses.map((v) => (
+              <div key={v.venueId} className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-3 flex gap-3 animate-fade-slide-up">
+                {/* No logos yet (B26): initials in the primary tint, as the
+                    frame draws a store without one. */}
+                <span className="w-12 h-12 rounded-[14px] bg-primary-pale flex items-center justify-center shrink-0 text-[15px] font-extrabold text-primary-dark">
+                  {initials(v.name)}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-charcoal truncate">{c.title}</p>
-                  <p className="text-xs text-primary-dark font-medium truncate">
-                    {c.businessName}
-                    {c.classType ? ` · ${c.classType}` : ""}
-                  </p>
-                  <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-1">
-                    <Clock size={11} /> {dateLabel(c.date)} · {c.startTime}–{c.endTime}
-                  </p>
-                  {c.location && (
-                    <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
-                      <MapPin size={11} /> {c.location}
-                    </p>
-                  )}
-                  {/* STRAIGHT FROM THE VIEW. spots_remaining is computed over
-                      every booking server-side, so it is right even while
-                      somebody else is booking the same class. */}
-                  <p className="flex items-center gap-1 text-xs mt-0.5">
-                    <Users size={11} className="text-charcoal-faint" />
-                    <span className={c.isFull ? "text-status-high font-semibold" : "text-charcoal-faint"}>
-                      {/* Pluralised on the CAPACITY, not the remainder: the
-                          phrase is "1 of 2 places left", and keying it off the
-                          remainder produced "1 of 2 place left". */}
-                      {c.isFull
-                        ? "Full"
-                        : `${c.spotsRemaining} of ${c.maxCapacity} ${
-                            c.maxCapacity === 1 ? "place" : "places"
-                          } left`}
+                  <p className="text-[14px] font-bold text-charcoal truncate">{v.name}</p>
+                  <p className="text-[12px] font-semibold text-primary-dark truncate">{typeLabel(v.venueType)}</p>
+                  {v.location && <p className="text-[11.5px] text-charcoal-faint truncate">{v.location}</p>}
+                  {/* Kept though not drawn (B26): bio, upcoming classes, perk. */}
+                  {v.bio && <p className="text-xs text-charcoal-soft mt-1 leading-relaxed line-clamp-2">{v.bio}</p>}
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1">
+                    <span className="text-[11.5px] text-charcoal-faint">
+                      {v.upcomingClassCount > 0
+                        ? `${v.upcomingClassCount} upcoming ${v.upcomingClassCount === 1 ? "class" : "classes"}`
+                        : "No upcoming classes"}
                     </span>
-                  </p>
+                    {v.perk && (
+                      <span className="text-[10px] font-bold text-primary-dark bg-primary-pale rounded-full px-2 py-0.5 leading-snug">{v.perk}</span>
+                    )}
+                  </div>
                 </div>
-                {c.price && (
-                  <span className="text-xs font-bold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1 shrink-0">
-                    {c.price}
-                  </span>
-                )}
               </div>
+            ))}
+            {shownBusinesses.length === 0 && !loading && (
+              businesses.length === 0 ? (
+                <EmptyState icon={<Store size={24} strokeWidth={1.75} />} title="No businesses yet" body="Shops and studios near you will show here." />
+              ) : (
+                <Card className="text-center py-8">
+                  <p className="text-sm text-charcoal-faint">None of this kind yet.</p>
+                </Card>
+              )
+            )}
+          </div>
+        </>
+      )}
 
-              {c.notes && <p className="text-xs text-charcoal-faint mt-2 italic">{c.notes}</p>}
-
-              <div className="mt-2.5">
-                <Button
-                  size="sm"
-                  fullWidth
-                  variant={mine ? "outline" : "primary"}
-                  // Full is not a reason to disable a booking somebody already
-                  // holds — cancelling is exactly what they would want to do.
-                  disabled={busyId === c.classId || (!mine && c.isFull) || !authUserId}
-                  onClick={() => void book(c)}
-                >
-                  {busyId === c.classId ? (
-                    "…"
-                  ) : mine ? (
-                    <>
-                      <Check size={13} /> Booked. Tap to cancel
-                    </>
-                  ) : c.isFull ? (
-                    "Full"
-                  ) : (
-                    "Book a place"
-                  )}
-                </Button>
+      {tab === "gyms" && (
+        <div className="space-y-2.5 mt-1">
+          {gyms.map((v) => (
+            <div key={v.venueId} className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] overflow-hidden animate-fade-slide-up">
+              {/* No cover photos yet: the primary tint with the gym's initials,
+                  as MO1.4.2 draws a gym without one. */}
+              <div className="h-[100px] bg-primary-pale flex items-center justify-center">
+                <span className="w-11 h-11 rounded-[12px] bg-cream-card flex items-center justify-center text-[14px] font-extrabold text-primary-dark">
+                  {initials(v.name)}
+                </span>
               </div>
-            </Card>
-          );
-        })}
-
-        {filtered.length === 0 && !loading && (
-          <Card className="text-center py-8">
-            <p className="text-sm text-charcoal-faint">
-              {classes.length === 0
-                ? "No classes scheduled yet. Businesses add them from their own dashboard."
-                : "No classes match those filters."}
-            </p>
-          </Card>
-        )}
-      </div>
-
-      <p className="mb-2.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
-        Businesses
-      </p>
-      <div className="space-y-2.5 mb-6">
-        {businesses.map((v) => (
-          <Card key={v.venueId} className="flex items-start gap-3 animate-fade-slide-up">
-            <span className="w-11 h-11 rounded-2xl bg-teal-pale flex items-center justify-center shrink-0">
-              <Store size={18} className="text-teal-dark" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-charcoal truncate">{v.name}</p>
-              {v.location && (
-                <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
-                  <MapPin size={11} /> {v.location}
-                </p>
-              )}
-              {v.bio && <p className="text-xs text-charcoal-soft mt-1 leading-relaxed">{v.bio}</p>}
-              <p className="text-xs text-charcoal-faint mt-1">
-                {v.upcomingClassCount > 0
-                  ? `${v.upcomingClassCount} upcoming ${
-                      v.upcomingClassCount === 1 ? "class" : "classes"
-                    }`
-                  : "No upcoming classes"}
-              </p>
+              <div className="px-4 py-3">
+                <p className="text-[15px] font-bold text-charcoal truncate">{v.name}</p>
+                {v.location && <p className="text-[11.5px] text-charcoal-faint truncate">{v.location}</p>}
+                {v.bio && <p className="text-xs text-charcoal-soft mt-1 leading-relaxed line-clamp-2">{v.bio}</p>}
+                {v.perk && <p className="text-[12.5px] font-bold text-primary-dark mt-1">{v.perk}</p>}
+              </div>
             </div>
-            {v.perk && (
-              <span className="text-[10px] font-bold text-primary-dark bg-primary-pale rounded-full px-2 py-1 shrink-0 max-w-[38%] text-center leading-snug">
-                {v.perk}
-              </span>
-            )}
-          </Card>
-        ))}
-        {businesses.length === 0 && !loading && (
-          <Card className="text-center py-8">
-            <p className="text-sm text-charcoal-faint">No businesses listed yet.</p>
-          </Card>
-        )}
-      </div>
-
-      <p className="mb-2.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Gyms</p>
-      <div className="space-y-2.5">
-        {gyms.map((v) => (
-          <Card key={v.venueId} className="flex items-start gap-3 animate-fade-slide-up">
-            <span className="w-11 h-11 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0">
-              <Dumbbell size={18} className="text-primary-dark" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold text-charcoal truncate">{v.name}</p>
-              {v.location && (
-                <p className="flex items-center gap-1 text-xs text-charcoal-faint mt-0.5">
-                  <MapPin size={11} /> {v.location}
-                </p>
-              )}
-              {v.bio && <p className="text-xs text-charcoal-soft mt-1 leading-relaxed">{v.bio}</p>}
-            </div>
-            {v.perk && (
-              <span className="text-[10px] font-bold text-primary-dark bg-primary-pale rounded-full px-2 py-1 shrink-0 max-w-[38%] text-center leading-snug">
-                {v.perk}
-              </span>
-            )}
-          </Card>
-        ))}
-        {/* THE HONEST EMPTY STATE. The gyms table has no rows until real
-            partnerships exist; this says that rather than inventing three. */}
-        {gyms.length === 0 && !loading && (
-          <Card className="text-center py-8">
-            <p className="text-sm font-semibold text-charcoal">No gyms listed yet</p>
-            <p className="text-xs text-charcoal-faint mt-1 leading-relaxed max-w-xs mx-auto">
-              Gym partnerships are on the way. When one joins Centium, it'll show up here.
-            </p>
-          </Card>
-        )}
-      </div>
+          ))}
+          {/* THE HONEST EMPTY STATE. The gyms table has no rows until real
+              partnerships exist; this says that rather than inventing three. */}
+          {gyms.length === 0 && !loading && (
+            <EmptyState icon={<Dumbbell size={24} strokeWidth={1.75} />} title="No gyms yet" body="Gyms near you will show here." />
+          )}
+        </div>
+      )}
 
       {loading && (
         <Card className="text-center py-8 mt-2.5">
           <p className="text-sm text-charcoal-faint">Loading…</p>
         </Card>
       )}
+    </div>
+  );
+}
+
+/** Foundations' empty-state block (MO1.4.3): an icon tile, a title and a line. */
+function EmptyState({ icon, title, body }: { icon: ReactNode; title: string; body: string }) {
+  return (
+    <div className="flex flex-col items-center text-center gap-2.5 px-6 pt-10 pb-6">
+      <span className="w-12 h-12 rounded-2xl bg-primary-pale flex items-center justify-center text-primary-dark">{icon}</span>
+      <p className="text-[16px] font-extrabold text-charcoal">{title}</p>
+      <p className="text-[13px] text-charcoal-faint max-w-[260px] leading-relaxed">{body}</p>
     </div>
   );
 }
