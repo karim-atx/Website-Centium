@@ -922,6 +922,9 @@ export default function ClientCalendarTab() {
                 const end = Math.max(minutesOf(e.endTime), start + 20);
                 const top = (start / 60) * HOUR_PX;
                 const height = Math.max(((end - start) / 60) * HOUR_PX, 26);
+                // 30 minutes or less: one line, the time beside the title, so
+                // it isn't cut off (the block is too short for two lines).
+                const short = minutesOf(e.endTime) - start <= 30;
                 const mine = isMine(e);
                 const { tint, bar } = eventColours(e.color, dark);
                 const href = normaliseLink(e.url);
@@ -940,16 +943,23 @@ export default function ClientCalendarTab() {
                     <button
                       onClick={() => openEdit(e)}
                       disabled={!mine}
-                      className={clsx("tap w-full h-full px-2.5 py-1.5 text-left", href && "pr-9")}
+                      className={clsx(
+                        "tap w-full h-full px-2.5 text-left",
+                        short ? "flex items-center gap-1.5 py-0" : "py-1.5",
+                        href && "pr-9"
+                      )}
                     >
-                      <p className="text-xs font-semibold text-charcoal truncate flex items-center gap-1">
-                        {e.title}
+                      <p className={clsx("text-xs font-semibold text-charcoal truncate flex items-center gap-1", short && "min-w-0")}>
+                        <span className="truncate">{e.title}</span>
                         {/* The timeline block is too small for the badge and the
                             buttons; the day list above carries both. This says
                             only that the event is an invitation, or a booking. */}
                         {e.invite && <Check size={10} className="shrink-0" />}
                         {bookedById.has(e.id) && <Ticket size={10} className="shrink-0 text-gold" />}
                       </p>
+                      {short ? (
+                        <p className="text-[10px] text-charcoal-faint whitespace-nowrap shrink-0">{range12(e.startTime, e.endTime)}</p>
+                      ) : (
                       <p className="text-[10px] text-charcoal-faint truncate">
                         {range12(e.startTime, e.endTime)}
                         {e.location ? ` · ${e.location}` : ""}
@@ -958,6 +968,7 @@ export default function ClientCalendarTab() {
                             bookedById.get(e.id)!.businessActive ? "" : " (no longer on Explore)"
                           }`}
                       </p>
+                      )}
                     </button>
                     {href && (
                       <a

@@ -4,6 +4,7 @@ import { Button } from "../../components/ui/Button";
 import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { useIsDark } from "../../hooks/useIsDark";
 import { initials } from "../../components/professionals/typeColour";
+import { fmt12, range12 } from "../../components/calendar/calendarTime";
 import { useApp } from "../../context/AppContext";
 import {
   bookClass,
@@ -270,7 +271,8 @@ export default function Discover() {
                       <span className="text-[10.5px] font-extrabold uppercase text-primary-dark">
                         {new Date(`${c.date}T00:00:00`).toLocaleDateString("en-US", { weekday: "short" })}
                       </span>
-                      <span className="text-[14px] font-extrabold text-charcoal tabular-nums">{c.startTime}</span>
+                      <span className="text-[14px] font-extrabold text-charcoal tabular-nums leading-tight">{fmt12(c.startTime).split(" ")[0]}</span>
+                      <span className="text-[9.5px] font-bold text-charcoal-faint leading-none">{fmt12(c.startTime).split(" ")[1]}</span>
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-[14px] font-bold text-charcoal truncate">{c.title}</p>
@@ -279,7 +281,7 @@ export default function Discover() {
                         {c.classType ? ` · ${c.classType}` : ""}
                       </p>
                       <p className="text-[11.5px] text-charcoal-faint truncate">
-                        {dateLabel(c.date)} · {c.startTime}–{c.endTime}
+                        {dateLabel(c.date)} · {range12(c.startTime, c.endTime)}
                         {c.location ? ` · ${c.location}` : ""}
                       </p>
                       <div className="flex items-center gap-2 mt-2">
