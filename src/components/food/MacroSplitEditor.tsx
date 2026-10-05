@@ -1,5 +1,6 @@
 import React from "react";
 import type { MacroSplit } from "../../types";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // QA 13.0: "adjusting the macro rebalancing should always adopt a scientific
 // based approach and not just blindly rebalance to 100%." min/max per macro
@@ -16,6 +17,18 @@ const macroMeta = [
   { key: "carbsPct" as const, label: "Carbs", color: "#AEA1DC", ink: "#8175C2", tint: "#F0EDF9", kcalPerG: 4, min: 30, max: 65 },
   { key: "fatPct" as const, label: "Fat", color: "#A2C8C2", ink: "#6F9993", tint: "#EAF4F2", kcalPerG: 9, min: 20, max: 40 },
 ];
+
+// Mobile v5.1 R3, dark mode (no light islands): the value squares' dark
+// shades, by macro. The lavender tint is primary.tint dark (#303141) and the
+// sage one secondary.tint dark (#293339); each ink is its light ink lifted
+// toward white until it reads at 4.5:1 on its square (liftTo,
+// src/data/folderColors.ts). The bar colours sit on the empty track as fills
+// and stay as they are.
+const SQUARE_DARK: Record<MacroMeta["key"], { ink: string; tint: string }> = {
+  proteinPct: { ink: "#A093C9", tint: "#303141" },
+  carbsPct: { ink: "#9B92CF", tint: "#303141" },
+  fatPct: { ink: "#7BA19C", tint: "#293339" },
+};
 
 type MacroMeta = (typeof macroMeta)[number];
 
@@ -42,6 +55,7 @@ interface Props {
  * ratio, then clamps both to their AMDR range so no macro can be dragged to
  * a scientifically unreasonable extreme just to make room for another. */
 export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, disabled, squares }) => {
+  const dark = useIsDark();
   const handleSlide = (key: keyof MacroSplit, rawValue: number) => {
     const m = macroMeta.find((mm) => mm.key === key)!;
     const value = clamp(rawValue, m);
@@ -67,10 +81,11 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
           const pct = split[m.key];
           const grams = Math.round((calories * (pct / 100)) / m.kcalPerG);
           const frac = ((pct - m.min) / (m.max - m.min)) * 100;
+          const ink = dark ? SQUARE_DARK[m.key].ink : m.ink;
           return (
             <div key={m.key} className="flex items-center" style={{ gap: 13 }}>
               <div className="flex-1 min-w-0">
-                <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 500, color: "#241F1B" }}>{m.label}</p>
+                <p style={{ margin: "0 0 8px", fontSize: 13, fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>{m.label}</p>
                 <input
                   type="range"
                   min={m.min}
@@ -82,16 +97,16 @@ export const MacroSplitEditor: React.FC<Props> = ({ split, calories, onChange, d
                   className="w-full block h-[4px] rounded-full appearance-none"
                   style={{
                     accentColor: m.color,
-                    backgroundImage: `linear-gradient(to right, ${m.color} ${frac}%, #F5F5F6 ${frac}%)`,
+                    backgroundImage: `linear-gradient(to right, ${m.color} ${frac}%, rgb(var(--c-cream-soft)) ${frac}%)`,
                   }}
                 />
               </div>
               <div
                 className="flex flex-col items-center justify-center flex-none"
-                style={{ width: 50, height: 36, borderRadius: 9, background: m.tint }}
+                style={{ width: 50, height: 36, borderRadius: 9, background: dark ? SQUARE_DARK[m.key].tint : m.tint }}
               >
-                <span style={{ fontSize: 12.5, fontWeight: 800, color: m.ink, lineHeight: 1.15 }}>{grams}g</span>
-                <span style={{ fontSize: 9.5, color: m.ink, opacity: 0.6, lineHeight: 1.15 }}>{pct}%</span>
+                <span style={{ fontSize: 12.5, fontWeight: 800, color: ink, lineHeight: 1.15 }}>{grams}g</span>
+                <span style={{ fontSize: 9.5, color: ink, opacity: 0.6, lineHeight: 1.15 }}>{pct}%</span>
               </div>
             </div>
           );

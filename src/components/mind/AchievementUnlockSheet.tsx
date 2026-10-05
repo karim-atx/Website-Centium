@@ -56,7 +56,7 @@ export const AchievementUnlockSheet: React.FC = () => {
       {!reducedMotion && <Confetti key={burst} onDone={() => undefined} />}
       <BottomSheet open onClose={dismissUnlock} hideHeader>
         <div className="flex flex-col items-center text-center py-5">
-          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-team-gold-ink/[0.72]">
+          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-team-gold-ink/[0.72] dark:text-team-gold-ink">
             Achievement unlocked
           </p>
 

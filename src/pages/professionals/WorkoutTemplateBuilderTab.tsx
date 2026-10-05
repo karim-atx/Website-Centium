@@ -16,7 +16,8 @@ import { Plus, Trash2, ChevronDown, ChevronUp, FolderPlus, FolderTree, MoreVerti
 import { PopupMenu } from "../../components/ui/PopupMenu";
 import { ColorPopover, ColorSwatches, FolderHeader, InsertionLine, Placeholder } from "../../components/folders/FolderParts";
 import { folderColorOptions, withPlaceholder } from "../../components/folders/folderList";
-import { folderFamily } from "../../data/folderColors";
+import { folderFamily, themedFamily } from "../../data/folderColors";
+import { useIsDark } from "../../hooks/useIsDark";
 import { moveId } from "../../services/routines/order";
 import { MAX_DEPTH_NOTE, canAddSubfolder, canMoveFolder } from "../../services/routines/folderDepth";
 import { useRoutineDrag, type DragItem, type DropTarget } from "../workout/useRoutineDrag";
@@ -57,6 +58,8 @@ export default function WorkoutTemplateBuilderTab() {
     reorderWorkoutTemplateFolders,
     moveWorkoutTemplateFolder,
   } = useApp();
+  // Mobile v5.1 R3: folder headers take the family's shades for the current mode.
+  const dark = useIsDark();
   const [createOpen, setCreateOpen] = useState(false);
   const [createFolderId, setCreateFolderId] = useState<string | null>(null);
   const [editingTemplate, setEditingTemplate] = useState<WorkoutTemplate | null>(null);
@@ -481,7 +484,7 @@ export default function WorkoutTemplateBuilderTab() {
   const renderFolder = (folder: WorkoutTemplateFolder, depth: number, index: number, hidden: boolean): React.ReactNode => {
     const templates = templatesIn(folder.id);
     const collapsed = collapsedFolders.has(folder.id);
-    const family = folderFamily(folder, workoutTemplateFolders.indexOf(folder));
+    const family = themedFamily(folderFamily(folder, workoutTemplateFolders.indexOf(folder)), dark);
     const item: DragItem = { kind: "folder", id: folder.id, parentId: folder.parentId ?? null, index };
     return (
       <div
@@ -693,7 +696,7 @@ export default function WorkoutTemplateBuilderTab() {
           >
             <FolderHeader
               folder={dragFolder}
-              family={folderFamily(dragFolder, workoutTemplateFolders.indexOf(dragFolder))}
+              family={themedFamily(folderFamily(dragFolder, workoutTemplateFolders.indexOf(dragFolder)), dark)}
               count={templatesIn(dragFolder.id).length}
               noun={["template", "templates"]}
               collapsed={collapsedFolders.has(dragFolder.id)}

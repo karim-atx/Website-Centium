@@ -151,16 +151,16 @@ export default function Mind() {
               className="relative overflow-hidden rounded-[22px] px-[17px] py-4 mb-[13px]"
               style={{ background: "var(--gradient-teal-hero)" }}
             >
-              <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66]">Longest streak</p>
+              <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66] dark:text-white">Longest streak</p>
               <div className="flex items-end justify-between gap-3.5 mt-[9px]">
                 <div className="flex items-center gap-2.5">
                   <Flame size={26} style={{ color: "#FFB35C" }} fill="currentColor" fillOpacity={0.35} />
                   <div>
                     <p className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">{leadStreak.days}</p>
-                    <p className="mt-[3px] text-[10px] text-white/[0.72]">days · {leadStreak.label.replace(/\s*streak$/i, "").toLowerCase()}</p>
+                    <p className="mt-[3px] text-[10px] text-white/[0.72] dark:text-white">days · {leadStreak.label.replace(/\s*streak$/i, "").toLowerCase()}</p>
                   </div>
                 </div>
-                <span className="text-[9.5px] font-bold text-white bg-white/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">
+                <span className="text-[9.5px] font-bold text-white bg-white/20 dark:bg-black/20 rounded-full px-[9px] py-1 whitespace-nowrap shrink-0">
                   {leadRemaining === null ? "Tracked automatically" : leadRemaining > 0 ? `${leadRemaining} to goal` : "Goal reached"}
                 </span>
               </div>
@@ -175,7 +175,7 @@ export default function Mind() {
           )}
 
           <div className="flex items-center justify-between mb-[9px]">
-            <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Streaks</p>
+            <p className="text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">Streaks</p>
             <button
               onClick={() => setAddStreakOpen(true)}
               className="tap flex items-center gap-1 text-xs font-semibold text-primary"
@@ -253,15 +253,15 @@ export default function Mind() {
               Meditation reuse the small ones. Real data throughout — the
               manifest's "7 of 10" is this mock's example count, not a
               fixed target. */}
-          <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">Practice</p>
+          <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">Practice</p>
           <button
             onClick={() => setTab("habits")}
             className="tap w-full h-[150px] box-border rounded-[15px] px-4 py-3.5 flex flex-col text-left mb-[9px]"
             style={{ background: "rgba(174,161,220,.16)" }}
           >
             <div className="flex items-center justify-between gap-3">
-              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-primary-deep-text/[0.68]">Habits</p>
-              <span className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap text-primary-deep-text bg-team-lavender/30">
+              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-primary-deep-text/[0.68] dark:text-primary-deep-text">Habits</p>
+              <span className="text-[9.5px] font-bold rounded-full px-2 py-[3px] whitespace-nowrap text-primary-deep-text bg-team-lavender/30 dark:text-charcoal">
                 {doneHabits} of {habits.length} today
               </span>
             </div>
@@ -274,13 +274,13 @@ export default function Mind() {
               className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left"
               style={{ background: "rgba(217,164,65,.14)" }}
             >
-              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-gold-ink/[0.82]">Journal</p>
+              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-gold-ink/[0.82] dark:text-team-gold-ink">Journal</p>
               <div className="flex-1 flex items-center justify-center min-h-0">
                 <span className="flex flex-col items-center gap-[7px]">
                   <BookOpen size={30} className="text-team-gold-deep" />
                   <span className="flex flex-col items-center leading-none">
                     <span className="text-[20px] font-extrabold tracking-[-0.04em] text-charcoal tabular-nums">{journalDays}</span>
-                    <span className="mt-1 text-[8.5px] font-bold text-team-gold-ink/[0.82]">day streak</span>
+                    <span className="mt-1 text-[8.5px] font-bold text-team-gold-ink/[0.82] dark:text-team-gold-ink">day streak</span>
                   </span>
                 </span>
               </div>
@@ -291,7 +291,7 @@ export default function Mind() {
               className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col text-left"
               style={{ background: "rgba(162,200,194,.18)" }}
             >
-              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-teal-ink/[0.72]">Meditation</p>
+              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-teal-ink/[0.72] dark:text-team-teal-ink">Meditation</p>
               {/* Real minutes from meditation_sessions (my_meditation_summary),
                   saved by MeditationSheet when a session ends. */}
               <div className="flex-1 flex items-center justify-center min-h-0">
@@ -311,7 +311,7 @@ export default function Mind() {
               className="tap flex-1 min-w-0 h-[114px] box-border rounded-[15px] px-3 py-[11px] flex flex-col justify-between text-left"
               style={{ background: "rgba(217,164,65,.15)" }}
             >
-              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-gold-ink/[0.78]">Achievements</p>
+              <p className="text-[9px] font-bold tracking-[.16em] uppercase text-team-gold-ink/[0.78] dark:text-team-gold-ink">Achievements</p>
               <div>
                 <Trophy size={17} className="text-team-gold-deep mb-1.5" />
                 {/* NOTHING IS SHOWN UNTIL SOMETHING HAS BEEN READ. A count of
@@ -319,7 +319,7 @@ export default function Mind() {
                     earned, and a tier before my_points_summary() answers would
                     be a guess at one. */}
                 {achievements === null || pointsSummary === null ? (
-                  <p className="text-[10px] leading-[1.35] text-team-gold-ink/[0.72]">Loading…</p>
+                  <p className="text-[10px] leading-[1.35] text-team-gold-ink/[0.72] dark:text-team-gold-ink">Loading…</p>
                 ) : (
                   <p className="text-[10px] leading-[1.35] text-team-gold-ink tabular-nums">
                     {achievementCounts.earned} of {achievementCounts.total} ·{" "}

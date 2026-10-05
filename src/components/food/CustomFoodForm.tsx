@@ -21,7 +21,7 @@ export const CustomFoodForm: React.FC<{
   const form = useCustomFoodForm({ initialName, onSaved });
   return (
     <>
-      <BottomSheet light open={open} onClose={onClose} onBack={onBack} title={title} size="tall" footer={form.footer} footerRule>
+      <BottomSheet open={open} onClose={onClose} onBack={onBack} title={title} size="tall" footer={form.footer} footerRule>
         {intro}
         {form.body}
       </BottomSheet>

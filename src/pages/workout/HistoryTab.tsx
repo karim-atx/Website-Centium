@@ -7,7 +7,8 @@ import { PopupMenu } from "../../components/ui/PopupMenu";
 import { SwipeActions } from "../../components/ui/SwipeActions";
 import { ConfirmCard } from "../../components/ui/ConfirmCard";
 import { Toast } from "../../components/ui/Toast";
-import { headInk, headInkSoft, routineFamily, PURPLE, type FolderFamily } from "../../data/folderColors";
+import { headInk, headInkSoft, liftTo, routineFamily, themedFamily, PURPLE, type FolderFamily } from "../../data/folderColors";
+import { useIsDark } from "../../hooks/useIsDark";
 import {
   byNewest,
   comparisonPhrase,
@@ -35,6 +36,15 @@ const shortDate = (iso: string) =>
 
 type ToastState = { message: string; undo?: () => void; icon?: React.ReactNode; commit?: () => Promise<string | undefined> };
 
+// Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the period
+// chip's lavender border takes #AEA1DC at 30% on the dark card (derived), its
+// calendar icon primary.deep dark and its chevron text.tertiary dark.
+const CHIP = {
+  border: ["#E0D5FC", "#48465E"],
+  icon: ["#8F68F6", "#B7ABDE"],
+  chevron: ["#A9A29A", "#918DA0"],
+} as const;
+
 export default function HistoryTab() {
   const { workoutSessions, routines, routineFolders, today, moveWorkoutSession, removeWorkoutSession } = useApp();
   const [period, setPeriod] = useState<HistoryPeriod>("month");
@@ -47,6 +57,9 @@ export default function HistoryTab() {
   const [deleting, setDeleting] = useState<WorkoutSession | null>(null);
   const [toast, setToast] = useState<ToastState | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const dark = useIsDark();
+
+  const chipColor = (k: keyof typeof CHIP) => CHIP[k][dark ? 1 : 0];
 
   const range = periodRange(period, today, custom);
   const listed = useMemo(
@@ -115,19 +128,19 @@ export default function HistoryTab() {
         <p className="section-label !border-b-0 !pb-0">Summary</p>
         <button
           onClick={(e) => setMenuAnchor(e.currentTarget)}
-          className="tap flex items-center bg-white"
-          style={{ height: 32, borderRadius: 999, border: "1px solid #E0D5FC", padding: "0 13px 0 13px", gap: 7 }}
+          className="tap flex items-center bg-cream-card"
+          style={{ height: 32, borderRadius: 999, border: `1px solid ${chipColor("border")}`, padding: "0 13px 0 13px", gap: 7 }}
           aria-haspopup="menu"
         >
-          <Calendar size={13} style={{ color: "#8F68F6" }} />
-          <span style={{ fontSize: 12.5, fontWeight: 500, color: "#241F1B", whiteSpace: "nowrap" }}>
+          <Calendar size={13} style={{ color: chipColor("icon") }} />
+          <span style={{ fontSize: 12.5, fontWeight: 500, color: "rgb(var(--c-charcoal))", whiteSpace: "nowrap" }}>
             {(period === "custom" || period === "day") && custom
               ? custom.from === custom.to
                 ? shortDate(custom.from)
                 : `${shortDate(custom.from)} – ${shortDate(custom.to)}`
               : PERIOD_LABEL[period]}
           </span>
-          <ChevronDown size={14} style={{ color: "#A9A29A" }} />
+          <ChevronDown size={14} style={{ color: chipColor("chevron") }} />
         </button>
       </div>
 
@@ -160,16 +173,16 @@ export default function HistoryTab() {
         }
         bottom={
           <div className="flex items-center justify-between" style={{ fontSize: 12.5, lineHeight: "16px" }}>
-            <span className="flex items-center" style={{ gap: 6, color: "#463A80", fontWeight: 500 }}>
+            <span className="flex items-center" style={{ gap: 6, color: "var(--hero-label)", fontWeight: 500 }}>
               <CalendarDays size={12} />
               <span>
-                <b style={{ color: "#2E2560", fontWeight: 800 }}>{summary.workouts}</b> {summary.workouts === 1 ? "workout" : "workouts"}
+                <b style={{ color: "var(--hero-value)", fontWeight: 800 }}>{summary.workouts}</b> {summary.workouts === 1 ? "workout" : "workouts"}
               </span>
             </span>
-            <span className="flex items-center" style={{ gap: 6, color: "#463A80", fontWeight: 500 }}>
+            <span className="flex items-center" style={{ gap: 6, color: "var(--hero-label)", fontWeight: 500 }}>
               <Dumbbell size={12} />
               <span>
-                <b style={{ color: "#2E2560", fontWeight: 800 }}>{summary.sets.toLocaleString()}</b> {summary.sets === 1 ? "set" : "sets"}
+                <b style={{ color: "var(--hero-value)", fontWeight: 800 }}>{summary.sets.toLocaleString()}</b> {summary.sets === 1 ? "set" : "sets"}
               </span>
             </span>
           </div>
@@ -308,8 +321,12 @@ const SessionCard: React.FC<{
   onToggle: () => void;
   onChangeDate: () => void;
   onDelete: () => void;
-}> = ({ session, family, expanded, onToggle, onChangeDate, onDelete }) => {
+}> = ({ session, family: baseFamily, expanded, onToggle, onChangeDate, onDelete }) => {
   const [showAll, setShowAll] = useState(false);
+  // Mobile v5.1 R3: the folder's row tint and header shade for the current
+  // mode (dark: hue tints on the dark card; headInk then picks white).
+  const dark = useIsDark();
+  const family = themedFamily(baseFamily, dark);
   const d = new Date(`${session.date}T00:00:00`);
   const exercises = session.exercises;
   const shown = showAll ? exercises : exercises.slice(0, LIST_LIMIT);
@@ -341,33 +358,34 @@ const SessionCard: React.FC<{
           </button>
           <button onClick={onToggle} aria-expanded={expanded} className="tap flex-1 min-w-0 flex items-center text-left" style={{ padding: "0 14px 0 15px", gap: 10 }}>
             <span className="flex-1 min-w-0">
-              <span className="block truncate" style={{ fontSize: 14, lineHeight: "18px", fontWeight: 600, color: "#241F1B" }}>
+              <span className="block truncate" style={{ fontSize: 14, lineHeight: "18px", fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
                 {session.routineName}
               </span>
-              <span className="block truncate" style={{ marginTop: 3, fontSize: 11.5, lineHeight: "15px", color: "#8C8378" }}>
+              <span className="block truncate" style={{ marginTop: 3, fontSize: 11.5, lineHeight: "15px", color: "rgb(var(--c-charcoal-muted))" }}>
                 {session.totalVolumeKg.toLocaleString()} kg · {formatCompactDuration(session.durationSec)} · {exercises.length} ex
               </span>
             </span>
             {expanded ? (
-              <ChevronUp size={16} className="flex-none" style={{ color: "#8C8378" }} />
+              <ChevronUp size={16} className="flex-none" style={{ color: "rgb(var(--c-charcoal-muted))" }} />
             ) : (
-              <ChevronDown size={16} className="flex-none" style={{ color: "#8C8378" }} />
+              <ChevronDown size={16} className="flex-none" style={{ color: "rgb(var(--c-charcoal-muted))" }} />
             )}
           </button>
         </div>
 
         {expanded && (
-          <div style={{ borderTop: "1px solid rgba(36,31,27,0.07)", padding: "5px 24px 11px 14px" }}>
+          <div style={{ borderTop: "1px solid rgb(var(--c-charcoal) / 0.07)", padding: "5px 24px 11px 14px" }}>
             {shown.map((ex) => {
               const top = topSet(ex);
               const done = ex.sets.filter((s) => s.completed).length;
               return (
                 <div key={ex.exerciseId} className="flex items-center" style={{ padding: "7px 0", gap: 8 }}>
-                  <span aria-hidden className="flex-none rounded-full" style={{ width: 6, height: 6, background: family.bar }} />
-                  <span className="flex-1 min-w-0 truncate" style={{ fontSize: 13, lineHeight: "19px", fontWeight: 500, color: "#241F1B" }}>
+                  {/* Dark: the dot lifted to 3:1 on the dark row (only Black's bar is under it). */}
+                  <span aria-hidden className="flex-none rounded-full" style={{ width: 6, height: 6, background: dark ? liftTo(family.bar, family.row, 3) : family.bar }} />
+                  <span className="flex-1 min-w-0 truncate" style={{ fontSize: 13, lineHeight: "19px", fontWeight: 500, color: "rgb(var(--c-charcoal))" }}>
                     {ex.name}
                   </span>
-                  <span className="flex-none" style={{ fontSize: 12, lineHeight: "19px", color: "#5B5349", whiteSpace: "nowrap" }}>
+                  <span className="flex-none" style={{ fontSize: 12, lineHeight: "19px", color: "rgb(var(--c-charcoal-soft))", whiteSpace: "nowrap" }}>
                     {top ? `${top.weightKg} kg × ${top.reps}` : done > 0 ? `${done} ${done === 1 ? "set" : "sets"}` : ""}
                   </span>
                 </div>
@@ -377,7 +395,7 @@ const SessionCard: React.FC<{
               <button
                 onClick={() => setShowAll(true)}
                 className="tap flex items-center"
-                style={{ padding: "7px 0 0 2px", gap: 12, fontSize: 12, lineHeight: "16px", fontWeight: 600, color: family.tile }}
+                style={{ padding: "7px 0 0 2px", gap: 12, fontSize: 12, lineHeight: "16px", fontWeight: 600, color: dark ? liftTo(family.tile, family.row) /* text: 4.5:1 on the dark row */ : family.tile }}
               >
                 <Plus size={12} strokeWidth={2.4} /> {more} more {more === 1 ? "exercise" : "exercises"}
               </button>

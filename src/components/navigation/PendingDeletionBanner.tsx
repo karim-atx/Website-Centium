@@ -56,7 +56,7 @@ export const PendingDeletionBanner: React.FC = () => {
         <button
           onClick={handleCancel}
           disabled={busy}
-          className="tap shrink-0 rounded-xl bg-white text-charcoal text-[11.5px] font-semibold px-3 py-1.5 shadow-soft disabled:opacity-50"
+          className="tap shrink-0 rounded-xl bg-cream-card text-charcoal text-[11.5px] font-semibold px-3 py-1.5 shadow-soft disabled:opacity-50"
         >
           {busy ? "Cancelling…" : "Cancel deletion"}
         </button>

@@ -1,6 +1,5 @@
 import React, { useEffect } from "react";
 import { createPortal } from "react-dom";
-import clsx from "clsx";
 import { X, ChevronLeft } from "lucide-react";
 
 interface BottomSheetProps {
@@ -44,13 +43,6 @@ interface BottomSheetProps {
   handle?: boolean;
   /** WO18: an icon left of the title, the pair centred. */
   titleIcon?: React.ReactNode;
-  /**
-   * Keeps the sheet in its light-mode colours under dark mode, for sheets
-   * whose content is drawn with literal light-mode hex (#241F1B text, white
-   * cards). Its content becomes a `.theme-light` island, so any token colour
-   * inside resolves to its light value too. A `tone` sheet is always light.
-   */
-  light?: boolean;
 }
 
 /**
@@ -66,9 +58,9 @@ interface BottomSheetProps {
  * status area, safe-area aware, above the keyboard (--kb-inset), and the
  * 26px header controls sit on 44px hit areas.
  *
- * Dark mode (only designed in light; README open question 4) swaps the chrome
- * to the --sheet-* dark set so token-coloured content stays readable. Sheets
- * drawn with literal light hex pass `light` to stay light instead.
+ * Dark mode swaps the chrome to the --sheet-* dark set (v5.1: sheet.header and
+ * the body are the dark card #1C1F28). Mobile v5.1 R3: every sheet follows the
+ * theme; there are no light islands, so a `tone` passes its dark shades too.
  */
 export const BottomSheet: React.FC<BottomSheetProps> = ({
   open,
@@ -84,7 +76,6 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   handle,
   titleIcon,
   footerRule,
-  light,
 }) => {
   // The handover's light chrome, and its dark-mode counterpart, come from the
   // --sheet-* variables in index.css.
@@ -92,9 +83,6 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
   const border = tone?.border ?? "var(--sheet-border)";
   const titleColor = tone?.title ?? "var(--sheet-title)";
   const body = tone?.body ?? "var(--sheet-body)";
-  // A light island re-sets the text colour too: plain text inherits body's
-  // colour, which is already resolved to the dark theme's light grey.
-  const island = light || tone ? "theme-light text-charcoal" : undefined;
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
@@ -133,7 +121,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
       />
       {hideHeader ? (
         <div
-          className={clsx("relative w-full max-w-[430px] bg-cream rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up", island)}
+          className="relative w-full max-w-[430px] bg-cream rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up"
           style={{ maxHeight }}
         >
           <div
@@ -150,7 +138,7 @@ export const BottomSheet: React.FC<BottomSheetProps> = ({
         </div>
       ) : (
         <div
-          className={clsx("relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up", island)}
+          className="relative w-full max-w-[430px] rounded-t-4xl shadow-lift flex flex-col overflow-hidden animate-sheet-up"
           style={{ maxHeight, background: band, border: `1px solid ${border}`, borderBottom: "none" }}
         >
           {handle && (

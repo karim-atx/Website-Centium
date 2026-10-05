@@ -29,7 +29,7 @@ const KINDS: { value: BlockKind; label: string; blurb: string }[] = [
 const labelStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
-  color: "#5B5349",
+  color: "rgb(var(--c-charcoal-soft))",
   marginBottom: 6,
   display: "block",
 };
@@ -37,11 +37,11 @@ const labelStyle: React.CSSProperties = {
 const inputStyle: React.CSSProperties = {
   width: "100%",
   borderRadius: 10,
-  background: "#FFFFFF",
-  border: "1px solid rgba(36,31,27,0.1)",
+  background: "rgb(var(--c-cream-card))",
+  border: "1px solid rgb(var(--c-charcoal) / 0.1)",
   padding: "9px 11px",
   fontSize: 14,
-  color: "#241F1B",
+  color: "rgb(var(--c-charcoal))",
 };
 
 const digits = (raw: string): number | undefined => {
@@ -107,7 +107,7 @@ export const BlockSettingsSheet: React.FC<{
   const intervalSeconds = draft.intervalSeconds;
 
   return (
-    <BottomSheet light open={open} onClose={onClose} title={creating ? "Group as" : "Block"}>
+    <BottomSheet open={open} onClose={onClose} title={creating ? "Group as" : "Block"}>
       <div className="flex flex-col animate-fade-slide-up" style={{ gap: 16 }}>
         <div>
           <span style={labelStyle}>Kind</span>
@@ -124,7 +124,7 @@ export const BlockSettingsSheet: React.FC<{
               </button>
             ))}
           </div>
-          <p style={{ margin: "7px 2px 0", fontSize: 11, color: "#8C8378" }}>
+          <p style={{ margin: "7px 2px 0", fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>
             {KINDS.find((k) => k.value === draft.kind)?.blurb}
           </p>
         </div>
@@ -182,7 +182,7 @@ export const BlockSettingsSheet: React.FC<{
             className="placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
             style={inputStyle}
           />
-          <span style={{ fontSize: 11, color: "#8C8378", marginTop: 6, display: "block" }}>
+          <span style={{ fontSize: 11, color: "rgb(var(--c-charcoal-muted))", marginTop: 6, display: "block" }}>
             Shown instead of “{blockHeading({ ...draft, label: undefined })}”.
           </span>
         </label>

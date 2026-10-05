@@ -5,6 +5,23 @@ import { PopupMenu } from "../../components/ui/PopupMenu";
 import { NutrientSections, type NutrientFilter } from "../../components/food/NutrientSections";
 import { useApp } from "../../context/AppContext";
 import { sumNutrientMaps, targetsFromGoal } from "../../services/nutrition";
+import { useIsDark } from "../../hooks/useIsDark";
+
+/**
+ * Mobile v5.1 R3, dark mode (no light islands). Inks and surfaces with an
+ * exact-match token are written as the token; the lavender accents are
+ * [light, dark]: the filter's active ink and the banner label (#5F5093) are
+ * primary.deeper dark, the banner (#F3F3FD) primary.tint.2 dark, the "Show
+ * all" link (#6D50D3) tabs.inactive.text dark (6.49:1 on the banner) and the
+ * dots primary.accent dark.
+ */
+const SUMMARY_COLORS = {
+  lavInk: ["#5F5093", "#C8BFE9"],
+  banner: ["#F3F3FD", "#2B2C3A"],
+  link: ["#6D50D3", "#B7ABDE"],
+  dot: ["#6D50D3", "#9A8CD6"],
+} as const;
+const summaryColor = (key: keyof typeof SUMMARY_COLORS, dark: boolean): string => SUMMARY_COLORS[key][dark ? 1 : 0];
 
 const filterOptions: { value: NutrientFilter; label: string }[] = [
   { value: "all", label: "All nutrients" },
@@ -25,6 +42,7 @@ const formatDiaryDate = (iso: string) => {
 export default function NutrientSummaryPage() {
   const { foodLog, selectedDate, nutritionGoal, metricValues, language, t } = useApp();
   const navigate = useNavigate();
+  const dark = useIsDark();
   const [filter, setFilter] = useState<NutrientFilter>("all");
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterButton, setFilterButton] = useState<HTMLButtonElement | null>(null);
@@ -68,20 +86,20 @@ export default function NutrientSummaryPage() {
             onClick={() => navigate(-1)}
             aria-label={t("Back")}
             className="tap flex-none flex items-center justify-center rounded-full"
-            style={{ width: 32, height: 32, marginLeft: -6, color: "#5B5349", background: "none", padding: 0 }}
+            style={{ width: 32, height: 32, marginLeft: -6, color: "rgb(var(--c-charcoal-soft))", background: "none", padding: 0 }}
           >
             <BackIcon size={18} strokeWidth={2} style={{ display: "block" }} />
           </button>
           <div className="min-w-0">
             <h1
               className="whitespace-nowrap"
-              style={{ margin: 0, fontSize: 24, fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.022em", color: "#241F1B" }}
+              style={{ margin: 0, fontSize: 24, fontWeight: 700, lineHeight: 1.15, letterSpacing: "-0.022em", color: "rgb(var(--c-charcoal))" }}
             >
               Nutrient Summary
             </h1>
             <p
               className="whitespace-nowrap"
-              style={{ margin: "5px 0 0", fontSize: 13, fontWeight: 500, lineHeight: 1.3, color: "#8C8378" }}
+              style={{ margin: "5px 0 0", fontSize: 13, fontWeight: 500, lineHeight: 1.3, color: "rgb(var(--c-charcoal-muted))" }}
             >
               {formatDiaryDate(selectedDate)}
             </p>
@@ -99,9 +117,9 @@ export default function NutrientSummaryPage() {
             height: 36,
             borderRadius: 11,
             padding: 0,
-            background: loggedOnly ? "rgba(174,161,220,0.22)" : "#FFFFFF",
+            background: loggedOnly ? "rgba(174,161,220,0.22)" : "rgb(var(--c-cream-card))",
             border: `1px solid ${loggedOnly ? "#A092E0" : "rgba(174,161,220,0.34)"}`,
-            color: loggedOnly ? "#5F5093" : "#5B5349",
+            color: loggedOnly ? summaryColor("lavInk", dark) : "rgb(var(--c-charcoal-soft))",
           }}
         >
           <svg
@@ -122,7 +140,7 @@ export default function NutrientSummaryPage() {
           {loggedOnly && (
             <span
               className="absolute rounded-full"
-              style={{ top: -3, right: -3, width: 9, height: 9, background: "#6D50D3", border: "1.5px solid #FFFFFF" }}
+              style={{ top: -3, right: -3, width: 9, height: 9, background: summaryColor("dot", dark), border: "1.5px solid rgb(var(--c-cream))" }}
             />
           )}
         </button>
@@ -142,15 +160,15 @@ export default function NutrientSummaryPage() {
       {loggedOnly && (
         <div
           className="flex items-center"
-          style={{ gap: 7, background: "#F3F3FD", borderRadius: 11, padding: "8px 11px", marginBottom: 12 }}
+          style={{ gap: 7, background: summaryColor("banner", dark), borderRadius: 11, padding: "8px 11px", marginBottom: 12 }}
         >
-          <span className="flex-none rounded-full" style={{ width: 6, height: 6, background: "#6D50D3" }} />
-          <span style={{ fontSize: 10.5, fontWeight: 700, color: "#5F5093" }}>Logged only</span>
+          <span className="flex-none rounded-full" style={{ width: 6, height: 6, background: summaryColor("dot", dark) }} />
+          <span style={{ fontSize: 10.5, fontWeight: 700, color: summaryColor("lavInk", dark) }}>Logged only</span>
           <span className="flex-1 min-w-0" />
           <button
             onClick={() => setFilter("all")}
             className="tap"
-            style={{ fontSize: 10.5, fontWeight: 700, color: "#6D50D3", background: "none", padding: 0 }}
+            style={{ fontSize: 10.5, fontWeight: 700, color: summaryColor("link", dark), background: "none", padding: 0 }}
           >
             Show all
           </button>
@@ -169,7 +187,7 @@ export default function NutrientSummaryPage() {
         filter={filter}
       />
 
-      <p style={{ margin: "16px 2px 0", fontSize: 9.5, lineHeight: 1.55, color: "#8C8378" }}>
+      <p style={{ margin: "16px 2px 0", fontSize: 9.5, lineHeight: 1.55, color: "rgb(var(--c-charcoal-muted))" }}>
         % Daily Value based on FDA reference values for adults. Calorie and macro targets come from your Goals.
       </p>
     </div>

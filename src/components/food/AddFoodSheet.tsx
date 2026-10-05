@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { BottomSheet } from "../ui/BottomSheet";
-import { sheetChipStyle, sheetGreyStyle, sheetLabelStyle } from "../ui/sheetChip";
+import { sheetChipStyle, sheetGreyStyleFor, sheetLabelStyleFor } from "../ui/sheetChip";
 import { Button } from "../ui/Button";
 import { Search, Mic, ScanBarcode, Camera, Plus, Carrot, Apple, Clock, Star, Check, UtensilsCrossed, SlidersHorizontal } from "lucide-react";
 import { logoTone } from "./logoTones";
@@ -29,6 +29,14 @@ import { BarcodeScanner } from "./BarcodeScanner";
 import { OffProductCard } from "./OffProductCard";
 import { offAsFood, resolveBarcode, type OffProduct } from "../../services/barcode/lookup";
 import { mealForCurrentTime } from "../../utils/mealForTime";
+import { useIsDark } from "../../hooks/useIsDark";
+import { FOOD_DARK } from "./foodDark";
+
+// Mobile v5.1 R3, dark mode (no light islands): a picked row's #F7F5FB is
+// primary.tint.2 dark, and the empty pick circle's #D1CAEB ring is
+// primary.accent dark (5.56:1 on the card; a shape needs 3:1).
+const PICKED_ROW_DARK = "#2B2C3A";
+const PICK_RING_DARK = "#9A8CD6";
 
 // V4: preset serving units offered as tap targets — only the quantity number
 // is typed. The relevant subset differs a little by food category (a plate
@@ -95,6 +103,9 @@ export const AddFoodSheet: React.FC<{
     selectedDate,
     nutritionGoal,
   } = useApp();
+  const dark = useIsDark();
+  const sheetGreyStyle = sheetGreyStyleFor(dark);
+  const sheetLabelStyle = sheetLabelStyleFor(dark);
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState<string | null>(null);
   const [selectedFood, setSelectedFood] = useState<FoodSearchResult | null>(null);
@@ -556,7 +567,6 @@ export const AddFoodSheet: React.FC<{
 
     return (
       <BottomSheet
-        light
         open={open}
         onClose={resetAndClose}
         title={advancedOpen ? "Nutrient details" : "Add Food"}
@@ -574,7 +584,7 @@ export const AddFoodSheet: React.FC<{
       >
         {advancedOpen ? (
           <div className="animate-fade-slide-up flex flex-col gap-2.5">
-            <p style={{ fontSize: 13, color: "#5B5349", margin: "0 2px 2px" }}>
+            <p style={{ fontSize: 13, color: "rgb(var(--c-charcoal-soft))", margin: "0 2px 2px" }}>
               {selectedFood.name} ·{" "}
               {multiplierDisplay === 1 ? selectedFood.servingLabel : `${multiplierDisplay} × ${selectedFood.servingLabel}`}
             </p>
@@ -591,7 +601,7 @@ export const AddFoodSheet: React.FC<{
               />
             )}
 
-            <p style={{ fontSize: 10.5, lineHeight: 1.5, color: "#8C8378", margin: "6px 2px 0" }}>
+            <p style={{ fontSize: 10.5, lineHeight: 1.5, color: "rgb(var(--c-charcoal-muted))", margin: "6px 2px 0" }}>
               % of the FDA Daily Value for adults, from this food alone. Calorie and macro percentages use your
               Goals.
             </p>
@@ -604,18 +614,18 @@ export const AddFoodSheet: React.FC<{
             <div className="flex items-center" style={{ gap: 13, marginBottom: 16 }}>
               <span
                 className="flex items-center justify-center shrink-0"
-                style={{ width: 46, height: 46, borderRadius: 14, background: "#EEEBFB", color: "#6B4BE0" }}
+                style={{ width: 46, height: 46, borderRadius: 14, background: dark ? FOOD_DARK.iconTile : "#EEEBFB", color: dark ? FOOD_DARK.lavInk : "#6B4BE0" }}
               >
                 <FoodIcon category={selectedFood.category} size={20} />
               </span>
               <div className="min-w-0">
-                <p style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em", color: "#241F1B" }}>
+                <p style={{ margin: 0, fontSize: 18, fontWeight: 800, letterSpacing: "-0.01em", color: "rgb(var(--c-charcoal))" }}>
                   {selectedFood.name}
                 </p>
                 {/* The verified/estimate note isn't in the handoff's header
                     spec; kept (restyled) because it tells the user whether the
                     figures are sourced or approximate. */}
-                <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "#8C8378" }}>
+                <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "rgb(var(--c-charcoal-muted))" }}>
                   {adjusting
                     ? `${unit === "serving" ? (quantity === 1 ? selectedFood.servingLabel : `${quantity} × ${selectedFood.servingLabel}`) : `${quantity} ${unit}`} · selected`
                     : `${selectedFood.servingLabel}${selectedFood.isVerified ? " · USDA verified" : " · estimate"}`}
@@ -627,7 +637,7 @@ export const AddFoodSheet: React.FC<{
               className="flex items-center"
               style={{ ...sheetGreyStyle, gap: 12, marginBottom: 10 }}
             >
-              <span style={{ flex: "none", fontSize: 14.5, fontWeight: 500, color: "#575863" }}>Quantity</span>
+              <span style={{ flex: "none", fontSize: 14.5, fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>Quantity</span>
               <input
                 value={quantityDraft}
                 onChange={(e) => {
@@ -639,7 +649,7 @@ export const AddFoodSheet: React.FC<{
                 onBlur={() => setQuantityDraft(String(quantity))}
                 inputMode="decimal"
                 className="min-w-0 text-center focus:outline-none"
-                style={{ flex: 1, background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "#241F1B" }}
+                style={{ flex: 1, background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}
               />
             </div>
 
@@ -682,18 +692,18 @@ export const AddFoodSheet: React.FC<{
 
             <div className="grid grid-cols-4" style={{ ...sheetGreyStyle, padding: "13px 0", marginBottom: 16 }}>
               {[
-                { value: `${foodTotalCal}`, color: "#241F1B", caption: "kcal" },
-                { value: `${Math.round(selectedFood.protein * multiplier)}g`, color: "#7D6BB5", caption: "protein" },
-                { value: `${Math.round(selectedFood.carbs * multiplier)}g`, color: "#8175C2", caption: "carbs" },
-                { value: `${Math.round(selectedFood.fat * multiplier)}g`, color: "#4274D7", caption: "fat" },
+                { value: `${foodTotalCal}`, color: "rgb(var(--c-charcoal))", caption: "kcal" },
+                { value: `${Math.round(selectedFood.protein * multiplier)}g`, color: dark ? FOOD_DARK.protein : "#7D6BB5", caption: "protein" },
+                { value: `${Math.round(selectedFood.carbs * multiplier)}g`, color: dark ? FOOD_DARK.carbs : "#8175C2", caption: "carbs" },
+                { value: `${Math.round(selectedFood.fat * multiplier)}g`, color: dark ? FOOD_DARK.fat : "#4274D7", caption: "fat" },
               ].map((cell, i) => (
                 <div
                   key={cell.caption}
                   className="text-center"
-                  style={i > 0 ? { borderLeft: "1px solid #E2E3E7" } : undefined}
+                  style={i > 0 ? { borderLeft: `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` } : undefined}
                 >
                   <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: cell.color }}>{cell.value}</p>
-                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "#8C8378" }}>{cell.caption}</p>
+                  <p style={{ margin: "2px 0 0", fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{cell.caption}</p>
                 </div>
               ))}
             </div>
@@ -730,7 +740,7 @@ export const AddFoodSheet: React.FC<{
                 aria-label="Nutrient details"
                 title="Nutrient details"
                 className="tap shrink-0 flex items-center justify-center"
-                style={{ width: 60, height: 52, borderRadius: 14, background: "#FFFFFF", border: "1px solid #E4E4E9", color: "#241F1B" }}
+                style={{ width: 60, height: 52, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))" }}
               >
                 <SlidersHorizontal size={20} strokeWidth={1.9} />
               </button>
@@ -796,7 +806,6 @@ export const AddFoodSheet: React.FC<{
     return (
       <>
       <BottomSheet
-        light
         open={open && !scanOpen}
         onClose={resetAndClose}
         title="Barcode"
@@ -811,9 +820,9 @@ export const AddFoodSheet: React.FC<{
       >
         <div className="flex flex-col animate-fade-slide-up" style={{ gap: 14 }}>
           {barcode && (
-            <div className="flex items-center justify-between" style={{ background: "#F4F4F6", borderRadius: 12, padding: "11px 14px" }}>
-              <span style={{ fontSize: 13, color: "#575863" }}>Barcode</span>
-              <span style={{ fontSize: 13, fontWeight: 600, color: "#241F1B", fontVariantNumeric: "tabular-nums" }}>{barcode}</span>
+            <div className="flex items-center justify-between" style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "11px 14px" }}>
+              <span style={{ fontSize: 13, color: dark ? FOOD_DARK.label : "#575863" }}>Barcode</span>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "rgb(var(--c-charcoal))", fontVariantNumeric: "tabular-nums" }}>{barcode}</span>
             </div>
           )}
 
@@ -885,7 +894,7 @@ export const AddFoodSheet: React.FC<{
               <button
                 onClick={scanAgain}
                 className="tap flex-1"
-                style={{ height: 44, borderRadius: 14, background: "#FFFFFF", border: "1px solid #E4E4E9", color: "#241F1B", fontSize: 13.5, fontWeight: 600 }}
+                style={{ height: 44, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: 13.5, fontWeight: 600 }}
               >
                 Scan again
               </button>
@@ -893,7 +902,7 @@ export const AddFoodSheet: React.FC<{
                 <button
                   onClick={enterManually}
                   className="tap flex-1"
-                  style={{ height: 44, borderRadius: 14, background: "#FFFFFF", border: "1px solid #E4E4E9", color: "#241F1B", fontSize: 13.5, fontWeight: 600 }}
+                  style={{ height: 44, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: "rgb(var(--c-charcoal))", fontSize: 13.5, fontWeight: 600 }}
                 >
                   Enter it myself
                 </button>
@@ -933,12 +942,12 @@ export const AddFoodSheet: React.FC<{
     const on = !!r.food && picked.has(r.food.id);
     // A custom food keeps the logo colour it was saved with, so it can be
     // told apart in the list at a glance.
-    const tone = r.food?.source === "custom" ? logoTone(r.food.logoTone) : null;
+    const tone = r.food?.source === "custom" ? logoTone(r.food.logoTone, dark) : null;
     return (
       <div
         key={r.key}
         className="flex items-center shrink-0"
-        style={{ margin: "0 -11px", padding: "10px 13px", gap: 12, borderRadius: 14, background: on ? "#F7F5FB" : undefined }}
+        style={{ margin: "0 -11px", padding: "10px 13px", gap: 12, borderRadius: 14, background: on ? (dark ? PICKED_ROW_DARK : "#F7F5FB") : undefined }}
       >
         <button
           onClick={() => r.food && togglePick(r.food)}
@@ -948,23 +957,23 @@ export const AddFoodSheet: React.FC<{
           className="tap flex items-center justify-center shrink-0"
           style={
             multi
-              ? { width: 34, height: 34, borderRadius: 17, background: on ? "rgb(var(--c-primary-fill))" : "#FFFFFF", border: on ? "none" : "1.5px solid #D1CAEB", color: on ? "rgb(var(--c-on-primary-fill))" : "#FFFFFF" }
-              : { width: 36, height: 36, borderRadius: 12, background: tone ? tone.bg : "#F0EDF9", color: tone ? tone.fg : "#7D6BB5" }
+              ? { width: 34, height: 34, borderRadius: 17, background: on ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-card))", border: on ? "none" : `1.5px solid ${dark ? PICK_RING_DARK : "#D1CAEB"}`, color: on ? "rgb(var(--c-on-primary-fill))" : "#FFFFFF" }
+              : { width: 36, height: 36, borderRadius: 12, background: tone ? tone.bg : dark ? FOOD_DARK.iconTile : "#F0EDF9", color: tone ? tone.fg : dark ? FOOD_DARK.lavInk : "#7D6BB5" }
           }
         >
           {multi ? on && <Check size={17} strokeWidth={2.6} /> : <FoodIcon category={r.food?.category ?? "homemade"} size={16} />}
         </button>
         <button onClick={r.open} disabled={!r.food} className="tap flex-1 min-w-0 flex items-center justify-between text-left" style={{ gap: 10 }}>
           <span className="min-w-0">
-            <span className="flex items-center gap-1.5 truncate" style={{ fontSize: 14, fontWeight: 600, color: "#241F1B" }}>
+            <span className="flex items-center gap-1.5 truncate" style={{ fontSize: 14, fontWeight: 600, color: "rgb(var(--c-charcoal))" }}>
               {r.name}
               {r.star && <Star size={10} className="text-gold fill-gold shrink-0" />}
             </span>
-            <span className="block truncate" style={{ fontSize: 11, color: "#8C8378" }}>
+            <span className="block truncate" style={{ fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>
               {r.sub}
             </span>
           </span>
-          <span className="shrink-0" style={{ fontSize: 12, fontWeight: 600, color: "#5B5349" }}>
+          <span className="shrink-0" style={{ fontSize: 12, fontWeight: 600, color: "rgb(var(--c-charcoal-soft))" }}>
             {r.kcal} kcal
           </span>
         </button>
@@ -976,7 +985,6 @@ export const AddFoodSheet: React.FC<{
   return (
     <>
       <BottomSheet
-        light
         open={open}
         onClose={resetAndClose}
         title="Add Food"
@@ -984,7 +992,7 @@ export const AddFoodSheet: React.FC<{
         footer={
           multi ? (
             <div>
-              <p style={{ margin: "0 0 8px", fontSize: 11, color: "#8C8378" }}>{picked.size} selected</p>
+              <p style={{ margin: "0 0 8px", fontSize: 11, color: "rgb(var(--c-charcoal-muted))" }}>{picked.size} selected</p>
               {multiError && (
                 <p className="text-xs font-semibold text-status-high" style={{ margin: "0 0 8px" }}>
                   {multiError}
@@ -1005,7 +1013,7 @@ export const AddFoodSheet: React.FC<{
                     setMultiError(null);
                   }}
                   className="tap"
-                  style={{ padding: "0 10px", height: 44, color: "#8C8378", fontSize: 14, fontWeight: 500 }}
+                  style={{ padding: "0 10px", height: 44, color: "rgb(var(--c-charcoal-muted))", fontSize: 14, fontWeight: 500 }}
                 >
                   Cancel
                 </button>
@@ -1035,7 +1043,7 @@ export const AddFoodSheet: React.FC<{
               scrolls, in its own region (master handover, CentiumFrame
               lavSheet browse view). The block bleeds to the panel's edges,
               so it carries the panel's top radius itself. */}
-          <div className="bg-white" style={{ margin: "-20px -20px 0", padding: "12px 20px 4px", borderRadius: "22px 22px 0 0" }}>
+          <div className="bg-cream-card" style={{ margin: "-20px -20px 0", padding: "12px 20px 4px", borderRadius: "22px 22px 0 0" }}>
           <div className="relative mb-4">
             <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-charcoal-faint" />
             <input
@@ -1050,9 +1058,14 @@ export const AddFoodSheet: React.FC<{
               Scan, Barcode, Custom, each a gradient with a white glyph and
               label. AI Scan has no vision model behind it: tapping it says so
               rather than inventing a result. */}
+          {/* Decision 7: white labels on these four gradients reached only
+              1.8-3.3:1. Each gradient keeps its two stops and their relation,
+              with both channels scaled down by one factor until white reads at
+              4.5:1 at the lighter stop (AI Voice x0.615, AI Scan x0.68, Barcode
+              x0.635, Custom x0.835). Used in light and dark alike. */}
           <div className="grid grid-cols-4 mb-4" style={{ gap: 9 }}>
             {[
-              { label: "AI Voice", icon: <Mic size={17} />, bg: "linear-gradient(150deg,#A2C8C2,#6F9993)", onClick: () => setVoiceOpen(true) },
+              { label: "AI Voice", icon: <Mic size={17} />, bg: "linear-gradient(150deg,#647B77,#445E5A)", onClick: () => setVoiceOpen(true) },
               {
                 label: "AI Scan",
                 icon: (
@@ -1061,10 +1074,10 @@ export const AddFoodSheet: React.FC<{
                     <Plus size={9} strokeWidth={3} className="absolute" style={{ top: -5, right: -6 }} />
                   </span>
                 ),
-                bg: "linear-gradient(150deg,#8FB5AF,#4F7F78)",
+                bg: "linear-gradient(150deg,#617B77,#365652)",
                 onClick: () => setScanNotice(true),
               },
-              { label: "Barcode", icon: <ScanBarcode size={17} />, bg: "linear-gradient(150deg,#C0B4E8,#8F7FC9)", onClick: openBarcode },
+              { label: "Barcode", icon: <ScanBarcode size={17} />, bg: "linear-gradient(150deg,#7A7293,#5B5180)", onClick: openBarcode },
               {
                 label: "Custom",
                 icon: (
@@ -1073,7 +1086,7 @@ export const AddFoodSheet: React.FC<{
                     <Apple size={15} />
                   </span>
                 ),
-                bg: "linear-gradient(150deg,#9184CE,#5F5093)",
+                bg: "linear-gradient(150deg,#796EAC,#4F437B)",
                 onClick: () => setCustomMode(true),
               },
             ].map(({ label, icon, bg, onClick }) => (
@@ -1132,9 +1145,10 @@ export const AddFoodSheet: React.FC<{
                     borderRadius: 8,
                     padding: "7px 13px",
                     fontSize: 12,
-                    border: `1px solid ${active ? "#A299DE" : "#E7E7EC"}`,
-                    background: active ? "#A299DE" : "#FFFFFF",
-                    color: active ? "#FFFFFF" : "#241F1B",
+                    // Decision 7: the active chip is primary-fill and its ink (#A299DE: 2.58:1 with white).
+                    border: `1px solid ${active ? "rgb(var(--c-primary-fill))" : dark ? FOOD_DARK.outline : "#E7E7EC"}`,
+                    background: active ? "rgb(var(--c-primary-fill))" : "rgb(var(--c-cream-card))",
+                    color: active ? "rgb(var(--c-on-primary-fill))" : "rgb(var(--c-charcoal))",
                     fontWeight: active ? 700 : 600,
                     flex: "none",
                   }}

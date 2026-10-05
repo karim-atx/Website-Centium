@@ -22,7 +22,6 @@ export const PrepCreateSheet: React.FC<{
   const form = usePrepForm({ kind, active: open, editMeal, editRecipe, clientId, onDone: () => (onBack ?? onClose)() });
   return (
     <BottomSheet
-      light
       open={open}
       onClose={() => {
         form.leaveForm();

@@ -7,6 +7,8 @@ import { logoTone } from "./logoTones";
 import { foodCategoryIcon } from "../../utils/icons";
 import { deleteCustomFood, type FoodSearchResult } from "../../services/food";
 import { useApp } from "../../context/AppContext";
+import { useIsDark } from "../../hooks/useIsDark";
+import { FOOD_DARK } from "./foodDark";
 
 /** FO3.2: Custom Foods is Dark Lavender. */
 const CUSTOM_FOOD_ACCENT = "#7D67D9";
@@ -29,6 +31,7 @@ export const CustomFoodSheet: React.FC<{
   onDeleted: (id: string) => void;
 }> = ({ food, startEditing = false, onClose, onSaved, onDeleted }) => {
   const { syncCustomFood, forgetCustomFood } = useApp();
+  const dark = useIsDark();
   const [editing, setEditing] = useState(startEditing);
   const [shown, setShown] = useState(food);
   const [confirm, setConfirm] = useState<null | "delete" | "discard-back" | "discard-close">(null);
@@ -58,7 +61,7 @@ export const CustomFoodSheet: React.FC<{
   });
 
   if (!shown) return null;
-  const tone = logoTone(shown.logoTone) ?? { bg: "#EFECF9", fg: CUSTOM_FOOD_ACCENT };
+  const tone = logoTone(shown.logoTone, dark) ?? (dark ? { bg: FOOD_DARK.iconTile, fg: FOOD_DARK.lavInk } : { bg: "#EFECF9", fg: CUSTOM_FOOD_ACCENT });
   const Icon = foodCategoryIcon[shown.category] ?? UtensilsCrossed;
 
   const leaveEditing = () => (form.dirty ? setConfirm("discard-back") : setEditing(false));
@@ -81,7 +84,6 @@ export const CustomFoodSheet: React.FC<{
   return (
     <>
       <BottomSheet
-        light
         open
         onClose={close}
         onBack={editing ? leaveEditing : undefined}
@@ -117,10 +119,10 @@ export const CustomFoodSheet: React.FC<{
                 <Icon size={20} />
               </span>
               <div className="min-w-0">
-                <p className="truncate" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "#241F1B" }}>
+                <p className="truncate" style={{ margin: 0, fontSize: 17, fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>
                   {shown.name}
                 </p>
-                <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "#8C8378" }}>{shown.servingLabel}</p>
+                <p style={{ margin: "2px 0 0", fontSize: 12.5, color: "rgb(var(--c-charcoal-muted))" }}>{shown.servingLabel}</p>
               </div>
             </div>
             <div className="grid grid-cols-4" style={{ gap: 7, marginTop: 16 }}>
@@ -130,19 +132,19 @@ export const CustomFoodSheet: React.FC<{
                 [`${Math.round(shown.carbs)}g`, "Carbs"],
                 [`${Math.round(shown.fat)}g`, "Fat"],
               ].map(([v, l]) => (
-                <div key={l} className="text-center" style={{ background: "#F4F4F6", borderRadius: 12, padding: "10px 4px" }}>
-                  <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "#241F1B" }}>{v}</p>
-                  <p style={{ margin: "1px 0 0", fontSize: 10.5, color: "#8C8378" }}>{l}</p>
+                <div key={l} className="text-center" style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "10px 4px" }}>
+                  <p style={{ margin: 0, fontSize: 15, fontWeight: 800, color: "rgb(var(--c-charcoal))" }}>{v}</p>
+                  <p style={{ margin: "1px 0 0", fontSize: 10.5, color: "rgb(var(--c-charcoal-muted))" }}>{l}</p>
                 </div>
               ))}
             </div>
             {shown.barcode && (
               <div
                 className="flex items-center justify-between"
-                style={{ marginTop: 10, background: "#F4F4F6", borderRadius: 12, padding: "13px 14px", fontSize: 13.5 }}
+                style={{ marginTop: 10, background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 12, padding: "13px 14px", fontSize: 13.5 }}
               >
-                <span style={{ color: "#575863" }}>Barcode</span>
-                <span style={{ color: "#241F1B", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{shown.barcode}</span>
+                <span style={{ color: dark ? FOOD_DARK.label : "#575863" }}>Barcode</span>
+                <span style={{ color: "rgb(var(--c-charcoal))", fontWeight: 600, fontVariantNumeric: "tabular-nums" }}>{shown.barcode}</span>
               </div>
             )}
             {deleteError && (

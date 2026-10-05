@@ -656,7 +656,7 @@ export default function ClientCalendarTab() {
 
       {view === "month" && (
         <>
-          <div className="rounded-[15px] bg-white dark:bg-[#221C2E] border border-team-nav-accent/[0.16] dark:border-team-nav-accent/[0.28] px-3.5 py-[13px] mb-[13px]">
+          <div className="rounded-[15px] bg-white dark:bg-[#1C1F28] border border-team-nav-accent/[0.16] dark:border-team-nav-accent/[0.28] px-3.5 py-[13px] mb-[13px]">
             <div className="flex items-center justify-between mb-[11px]">
               <button onClick={() => goMonth(-1)} className="tap w-[26px] h-[26px] rounded-full bg-team-lavender/[0.18] flex items-center justify-center text-primary-deep-text">
                 <ChevronLeft size={13} />
@@ -671,7 +671,7 @@ export default function ClientCalendarTab() {
 
             <div className="grid grid-cols-7 gap-[2px] mb-1">
               {"SMTWTFS".split("").map((d, i) => (
-                <div key={i} className="text-center text-[8.5px] font-bold tracking-[.1em] text-charcoal/[0.42]">
+                <div key={i} className="text-center text-[8.5px] font-bold tracking-[.1em] text-charcoal/[0.42] dark:text-charcoal/[0.55]">
                   {d}
                 </div>
               ))}
@@ -706,7 +706,7 @@ export default function ClientCalendarTab() {
               event's own colour. Month view no longer jumps to Day on tap
               (the view pills above still reach the full hour timeline);
               selecting a date now just updates this list in place. */}
-          <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">{selectedDateLabel}</p>
+          <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">{selectedDateLabel}</p>
           {selectedEvents.length === 0 ? (
             <p className="text-[11.5px] text-charcoal-faint">No events</p>
           ) : (

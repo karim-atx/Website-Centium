@@ -1,6 +1,7 @@
 import React from "react";
 import type { CyclePhase } from "../../services/cycle/types";
 import { PHASE_COLOR, PHASE_LABEL } from "../../services/cycle/guidance";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // The ring of cycle days, coloured by phase, with the selected day at the
 // bottom.
@@ -49,6 +50,7 @@ export const CycleRing: React.FC<{
   // The selected day is rotated to the bottom, so the whole ring turns as the
   // scrubber moves rather than a marker sliding around a fixed ring.
   const rotation = -(selectedDay - 1) * step;
+  const dark = useIsDark();
 
   return (
     <svg
@@ -81,8 +83,20 @@ export const CycleRing: React.FC<{
         })}
       </g>
 
-      {/* The marker stays at the bottom; the ring turns under it. */}
-      <circle cx={SIZE / 2} cy={SIZE / 2 + RADIUS} r={4.5} fill="#241F1B" opacity={0.85} />
+      {/* The marker stays at the bottom; the ring turns under it. It straddles
+          the gap before the selected segment, so half of it sits on the page.
+          Mobile v5.1 R3, dark mode: the charcoal token (light ink on the dark
+          page) with a page-coloured outline that keeps it apart from the
+          segment colour it also overlaps. */}
+      <circle
+        cx={SIZE / 2}
+        cy={SIZE / 2 + RADIUS}
+        r={4.5}
+        fill="rgb(var(--c-charcoal))"
+        stroke={dark ? "rgb(var(--c-cream))" : undefined}
+        strokeWidth={dark ? 1.5 : undefined}
+        opacity={0.85}
+      />
 
       <text
         x={SIZE / 2}

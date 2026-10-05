@@ -64,7 +64,7 @@ export const HabitPages: React.FC<{ habits: HabitItem[] }> = ({ habits }) => {
       </div>
       {pages.length > 1 && (
         <div className="flex items-center justify-between gap-2.5 pt-1 pb-px">
-          <span className="text-[8.5px] font-semibold whitespace-nowrap text-primary-deep-text/[0.68]">For more habits, swipe.</span>
+          <span className="text-[8.5px] font-semibold whitespace-nowrap text-primary-deep-text/[0.68] dark:text-primary-deep-text">For more habits, swipe.</span>
           <span className="flex gap-1" aria-hidden>
             {pages.map((_, i) => (
               <span

@@ -14,6 +14,8 @@ import {
   type VolumeMode,
 } from "../../services/workout/metrics";
 import { HeroCard } from "../../components/ui/HeroCard";
+import { useIsDark } from "../../hooks/useIsDark";
+import { liftTo, tintOn } from "../../data/folderColors";
 import { TrendChart, type TrendGeometry } from "../../components/charts/TrendChart";
 import { todayLocal } from "../../utils/date";
 import { BottomSheet } from "../../components/ui/BottomSheet";
@@ -54,6 +56,39 @@ const balanceColors: Record<string, string> = {
   olympic: "#6B8FB5",
 };
 
+/**
+ * Mobile v5.1 R3, dark mode (no light islands), as [light, dark]. The teal
+ * ink and tiles take secondary.deeper / secondary.tint dark (the kg unit and
+ * sparkline secondary.deep dark); the purple link and this week's bar
+ * primary.deep / primary.accent dark, the other weeks' bars the lavender
+ * #AEA1DC at 38% on the card (derived); the empty balance track the v5.1 dark
+ * empty track; the card border the dark hairline. The change colours are
+ * lifted to 4.5:1 on the dark teal tile, the hero's accent to 4.5:1 on the
+ * dark hero band (derived with liftTo).
+ */
+const COLORS = {
+  teal: ["#3B7570", "#A3C7C0"],
+  tealTile: ["#F2F7F6", "#293339"],
+  tealUnit: ["#86B3AD", "#7FB3A9"],
+  spark: ["#6F9993", "#7FB3A9"],
+  purple: ["#8F68F6", "#B7ABDE"],
+  barNow: ["#8F68F6", "#9A8CD6"],
+  bar: ["#E6DEFD", tintOn("#AEA1DC", 0.38)],
+  emptyTrack: ["#F2F2F2", "#262932"],
+  cardBorder: ["#EEEDED", "rgba(238,239,242,0.08)"],
+  up: ["#8A5878", liftTo("#8A5878", "#293339")],
+  down: ["#3C6B65", liftTo("#3C6B65", "#293339")],
+  heroAccent: ["#5B3FE4", liftTo("#5B3FE4", "#303141")],
+} as const;
+const metricColor = (key: keyof typeof COLORS, dark: boolean): string => COLORS[key][dark ? 1 : 0];
+
+/** The dominant-group chip: chipColors in light; in dark the hue at 20% on the card, its text lifted to 4.5:1. */
+const themedChip = (hex: string, dark: boolean): { background: string; color: string } => {
+  if (!dark) return chipColors(hex);
+  const background = tintOn(hex, 0.2);
+  return { background, color: liftTo(hex, background) };
+};
+
 export default function MetricsTab() {
   const {
     workoutSessions,
@@ -75,6 +110,8 @@ export default function MetricsTab() {
   const [balanceOpen, setBalanceOpen] = useState(false);
   const [volumeMode, setVolumeMode] = useState<VolumeMode>("workout");
   const [heroPick, setHeroPick] = useState<number | null>(null);
+  const dark = useIsDark();
+  const c = (key: keyof typeof COLORS) => metricColor(key, dark);
 
   /**
    * Completed sets per primary muscle group, across every logged session.
@@ -232,7 +269,7 @@ export default function MetricsTab() {
   const frequency = useMemo(() => trainingFrequency(workoutSessions, today), [workoutSessions, today]);
   const freqMax = Math.max(3, ...frequency.weeks);
   const dominant = topGroup && dominantShare > 0.45 ? topGroup[0] : null;
-  const chip = dominant ? chipColors(balanceColors[dominant] ?? "#B8AFC8") : null;
+  const chip = dominant ? themedChip(balanceColors[dominant] ?? "#B8AFC8", dark) : null;
   const groupLabel = (g: string) => g.charAt(0).toUpperCase() + g.slice(1).replace(/_/g, " ");
 
   return (
@@ -269,8 +306,9 @@ export default function MetricsTab() {
                       borderRadius: 7,
                       fontSize: 11,
                       fontWeight: 700,
-                      background: volumeMode === m ? "#FFFFFF" : "transparent",
-                      color: volumeMode === m ? "#463A80" : "#FFFFFF",
+                      // Dark: the selected segment is the dark card, not a white pill.
+                      background: volumeMode === m ? (dark ? "rgb(var(--c-cream-card))" : "#FFFFFF") : "transparent",
+                      color: volumeMode === m ? (dark ? "rgb(var(--c-charcoal))" : "#463A80") : "#FFFFFF",
                     }}
                   >
                     {m === "workout" ? "By workout" : "By week"}
@@ -319,12 +357,12 @@ export default function MetricsTab() {
         title="One-rep maxes"
         right={
           lifts.length === 0 ? (
-            <span style={{ color: "#8C8378", fontSize: 11 }}>None yet</span>
+            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11 }}>None yet</span>
           ) : (
             <button
               onClick={() => setOneRmOpen(true)}
               className="tap flex items-center"
-              style={{ color: "#3B7570", fontSize: 12.5, fontWeight: 600, gap: 3 }}
+              style={{ color: c("teal"), fontSize: 12.5, fontWeight: 600, gap: 3 }}
             >
               All {lifts.length} <ChevronRight size={13} />
             </button>
@@ -338,14 +376,14 @@ export default function MetricsTab() {
                 key={lift.key}
                 onClick={() => setLiftDetail(lift)}
                 className="tap text-left min-w-0"
-                style={{ background: "#F2F7F6", borderRadius: 10, padding: "8px 9px", minHeight: 55 }}
+                style={{ background: c("tealTile"), borderRadius: 10, padding: "8px 9px", minHeight: 55 }}
               >
-                <span className="block truncate" style={{ color: "#3B7570", fontSize: 11, fontWeight: 500 }}>
+                <span className="block truncate" style={{ color: c("teal"), fontSize: 11, fontWeight: 500 }}>
                   {lift.name}
                 </span>
-                <span className="block" style={{ color: "#3B7570", fontSize: 15, fontWeight: 800, marginTop: 2 }}>
+                <span className="block" style={{ color: c("teal"), fontSize: 15, fontWeight: 800, marginTop: 2 }}>
                   {kgWhole(lift.oneRm)}
-                  <span style={{ color: "#86B3AD", fontSize: 10, fontWeight: 600, marginLeft: 2 }}>kg</span>
+                  <span style={{ color: c("tealUnit"), fontSize: 10, fontWeight: 600, marginLeft: 2 }}>kg</span>
                 </span>
               </button>
             ))}
@@ -358,7 +396,7 @@ export default function MetricsTab() {
         title="Balance"
         right={
           totalSets === 0 ? (
-            <span style={{ color: "#8C8378", fontSize: 11 }}>No sets yet</span>
+            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11 }}>No sets yet</span>
           ) : chip ? (
             <span
               style={{ ...chip, borderRadius: 6, padding: "2px 7px", fontSize: 11.5, fontWeight: 600 }}
@@ -368,7 +406,7 @@ export default function MetricsTab() {
           ) : null
         }
       >
-        <div className="flex overflow-hidden" style={{ height: 10, borderRadius: 5, gap: 2, marginTop: 12, background: totalSets === 0 ? "#F2F2F2" : undefined }}>
+        <div className="flex overflow-hidden" style={{ height: 10, borderRadius: 5, gap: 2, marginTop: 12, background: totalSets === 0 ? c("emptyTrack") : undefined }}>
           {sortedGroups.map(([group, count]) => (
             <div key={group} style={{ width: `${(count / totalSets) * 100}%`, background: balanceColors[group] ?? "#B8AFC8" }} />
           ))}
@@ -378,21 +416,21 @@ export default function MetricsTab() {
             <div className="grid grid-cols-4" style={{ marginTop: 10, gap: 6 }}>
               {sortedGroups.slice(0, 4).map(([group, count]) => (
                 <div key={group} className="min-w-0">
-                  <span className="flex items-center truncate" style={{ gap: 4, color: "#8C8378", fontSize: 10.5 }}>
+                  <span className="flex items-center truncate" style={{ gap: 4, color: "rgb(var(--c-charcoal-muted))", fontSize: 10.5 }}>
                     <span className="flex-none" style={{ width: 6, height: 6, borderRadius: 3, background: balanceColors[group] ?? "#B8AFC8" }} />
                     {groupLabel(group)}
                   </span>
-                  <span className="block" style={{ color: "#241F1B", fontSize: 13, fontWeight: 800, marginTop: 2 }}>
+                  <span className="block" style={{ color: "rgb(var(--c-charcoal))", fontSize: 13, fontWeight: 800, marginTop: 2 }}>
                     {Math.round((count / totalSets) * 100)}%
                   </span>
                 </div>
               ))}
             </div>
-            <div className="flex justify-end" style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(36,31,27,0.07)" }}>
+            <div className="flex justify-end" style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgb(var(--c-charcoal) / 0.07)" }}>
               <button
                 onClick={() => setBalanceOpen(true)}
                 className="tap flex items-center"
-                style={{ color: "#8F68F6", fontSize: 12, fontWeight: 700, gap: 3 }}
+                style={{ color: c("purple"), fontSize: 12, fontWeight: 700, gap: 3 }}
               >
                 Full breakdown <ChevronRight size={13} />
               </button>
@@ -406,11 +444,11 @@ export default function MetricsTab() {
         title="Training frequency"
         right={
           workoutSessions.length === 0 ? (
-            <span style={{ color: "#8C8378", fontSize: 11 }}>No sessions yet</span>
+            <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11 }}>No sessions yet</span>
           ) : (
-            <span style={{ color: "#241F1B", fontSize: 20, fontWeight: 800 }}>
+            <span style={{ color: "rgb(var(--c-charcoal))", fontSize: 20, fontWeight: 800 }}>
               {frequency.perWeek}
-              <span style={{ color: "#8C8378", fontSize: 11, fontWeight: 500, marginLeft: 3 }}>/ week</span>
+              <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11, fontWeight: 500, marginLeft: 3 }}>/ week</span>
             </span>
           )
         }
@@ -423,14 +461,14 @@ export default function MetricsTab() {
               style={{
                 height: count ? Math.max(4, Math.round((count / freqMax) * 33)) : 2,
                 borderRadius: count ? 4 : 1,
-                background: i === 7 && count ? "#8F68F6" : "#E6DEFD",
+                background: i === 7 && count ? c("barNow") : c("bar"),
               }}
             />
           ))}
         </div>
         <div className="flex justify-between" style={{ marginTop: 6, fontSize: 9.5 }}>
-          <span style={{ color: "#8C8378" }}>8 wks ago</span>
-          <span style={{ color: "#8F68F6", fontWeight: 700 }}>
+          <span style={{ color: "rgb(var(--c-charcoal-muted))" }}>8 wks ago</span>
+          <span style={{ color: c("purple"), fontWeight: 700 }}>
             This week{workoutSessions.length ? ` · ${frequency.weeks[7]}` : ""}
           </span>
         </div>
@@ -452,7 +490,7 @@ export default function MetricsTab() {
             <button
               onClick={() => setAddMeasurementsOpen(true)}
               className="tap flex items-center"
-              style={{ color: "#3B7570", fontSize: 12.5, fontWeight: 700, gap: 4 }}
+              style={{ color: c("teal"), fontSize: 12.5, fontWeight: 700, gap: 4 }}
             >
               <Plus size={13} /> Add
             </button>
@@ -480,24 +518,24 @@ export default function MetricsTab() {
                     onClick={() => setHistoryType(site.type)}
                     aria-label={`${site.label} history`}
                     className="tap text-left min-w-0"
-                    style={{ background: "#F2F7F6", borderRadius: 10, padding: "9px 10px" }}
+                    style={{ background: c("tealTile"), borderRadius: 10, padding: "9px 10px" }}
                   >
                     <span className="flex items-start justify-between" style={{ gap: 4 }}>
-                      <span style={{ color: "#241F1B", fontSize: 16, fontWeight: 800, whiteSpace: "nowrap" }}>
+                      <span style={{ color: "rgb(var(--c-charcoal))", fontSize: 16, fontWeight: 800, whiteSpace: "nowrap" }}>
                         {latest.value}
-                        <span style={{ color: "#8C8378", fontSize: 10, fontWeight: 500, marginLeft: 2 }}>{unit}</span>
+                        <span style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 10, fontWeight: 500, marginLeft: 2 }}>{unit}</span>
                       </span>
                       {/* The trend, where there is one to draw. Two points is
                           the minimum that says anything. */}
                       {readings.length >= 2 && (
-                        <Sparkline values={[...readings].reverse().map((r) => r.value)} color="#6F9993" width={34} height={12} />
+                        <Sparkline values={[...readings].reverse().map((r) => r.value)} color={c("spark")} width={34} height={12} />
                       )}
                     </span>
-                    <span className="block truncate" style={{ color: "#8C8378", fontSize: 10.5, marginTop: 3 }}>
+                    <span className="block truncate" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 10.5, marginTop: 3 }}>
                       {site.label}
                     </span>
                     {change != null && change !== 0 && (
-                      <span className="block" style={{ color: change > 0 ? "#8A5878" : "#3C6B65", fontSize: 10.5, fontWeight: 700 }}>
+                      <span className="block" style={{ color: change > 0 ? c("up") : c("down"), fontSize: 10.5, fontWeight: 700 }}>
                         {change > 0 ? "+" : "−"}
                         {Math.abs(change)} {unit}
                       </span>
@@ -588,7 +626,7 @@ export default function MetricsTab() {
         }}
       />
 
-      <BottomSheet light open={balanceOpen} onClose={() => setBalanceOpen(false)} title="Training balance">
+      <BottomSheet open={balanceOpen} onClose={() => setBalanceOpen(false)} title="Training balance">
         <div className="space-y-2.5 animate-fade-slide-up">
           <p className="text-xs text-charcoal-faint mb-1">Completed sets by primary muscle group, all time.</p>
           {sortedGroups.map(([group, count]) => (
@@ -625,27 +663,31 @@ const shortDay = (day: string) =>
 
 /** One figure in the hero's band: "—" when the point has none. */
 function HeroFigure({ value, unit, label, accent }: { value: React.ReactNode; unit?: string; label: string; accent?: boolean }) {
-  const ink = accent ? "#5B3FE4" : "#2E2560";
+  const dark = useIsDark();
+  const accentInk = metricColor("heroAccent", dark);
+  // The band's own inks (HeroCard sets them for the current mode).
+  const ink = accent ? accentInk : "var(--hero-value)";
   return (
     <div className="min-w-0">
       <p style={{ color: ink, fontSize: 17, fontWeight: 800, whiteSpace: "nowrap", fontVariantNumeric: "tabular-nums" }}>
         {value ?? "–"}
         {value != null && unit && <span style={{ fontSize: 11, fontWeight: 600, marginLeft: 2 }}>{unit}</span>}
       </p>
-      <p style={{ color: accent ? "#5B3FE4" : "#463A80", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", marginTop: 2 }}>
+      <p style={{ color: accent ? accentInk : "var(--hero-label)", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.08em", marginTop: 2 }}>
         {label.toUpperCase()}
       </p>
     </div>
   );
 }
 
-/** A WO4.1 card: white, 1px #EEEDED border, radius 16, padding 14; icon, title and a right slot. */
+/** A WO4.1 card: white, 1px #EEEDED border, radius 16, padding 14; icon, title and a right slot. The dark card in dark mode. */
 function MetricCard({ icon, title, right, children }: { icon: string; title: string; right?: React.ReactNode; children?: React.ReactNode }) {
+  const dark = useIsDark();
   return (
-    <section style={{ background: "#FFFFFF", border: "1px solid #EEEDED", borderRadius: 16, padding: 14 }}>
+    <section style={{ background: "rgb(var(--c-cream-card))", border: `1px solid ${metricColor("cardBorder", dark)}`, borderRadius: 16, padding: 14 }}>
       <div className="flex items-center" style={{ gap: 10 }}>
         <img src={icon} alt="" width={30} height={30} style={{ borderRadius: 8 }} />
-        <h3 className="flex-1 min-w-0 truncate" style={{ color: "#241F1B", fontSize: 14, fontWeight: 700 }}>
+        <h3 className="flex-1 min-w-0 truncate" style={{ color: "rgb(var(--c-charcoal))", fontSize: 14, fontWeight: 700 }}>
           {title}
         </h3>
         {right}

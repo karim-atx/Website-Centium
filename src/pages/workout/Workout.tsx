@@ -17,6 +17,8 @@ const tabLabels: Record<Tab, string> = {
 
 // Master handover, CentiumTabFrame `tabsWorkout`: the segmented bar with the
 // frame's own flex-weights (1 / 0.94 / 0.96 / 0.95) and idle label ink.
+// idleInk is the light label only; dark mode takes SegmentedTabs' dark
+// default, tabs.inactive.text #B7ABDE (Mobile v5.1 R3).
 const tabWeights: Record<Tab, number> = { routines: 1, database: 0.94, history: 0.96, metrics: 0.95 };
 const workoutTabs: SegmentedTabItem[] = (["routines", "database", "history", "metrics"] as Tab[]).map((t) => ({
   key: t,

@@ -1,10 +1,13 @@
 import React from "react";
+import { useIsDark } from "../../hooks/useIsDark";
 import { Flame } from "lucide-react";
 
 // Apple Fitness-style "ring closing" visual, but as a minimalistic flame
 // whose outline fills gradually (light yellow -> dark orange, like a real
 // flame) as calories burned climbs toward the goal — inspired, not copied.
 export const CaloriesRing: React.FC<{ progress: number; size?: number }> = ({ progress, size = 120 }) => {
+  // Mobile v5.1 R3, dark mode: the empty track is surface.raised #262932.
+  const dark = useIsDark();
   const clamped = Math.max(0, Math.min(1, progress));
   const radius = (size - 12) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -20,7 +23,7 @@ export const CaloriesRing: React.FC<{ progress: number; size?: number }> = ({ pr
             <stop offset="100%" stopColor="#C2410C" />
           </linearGradient>
         </defs>
-        <circle cx={size / 2} cy={size / 2} r={radius} stroke="#F4EDE4" strokeWidth={9} fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={radius} stroke={dark ? "#262932" : "#F4EDE4"} strokeWidth={9} fill="none" />
         <circle
           cx={size / 2}
           cy={size / 2}

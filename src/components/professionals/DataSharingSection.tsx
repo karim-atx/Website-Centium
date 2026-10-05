@@ -392,7 +392,7 @@ export const DataSharingSection: React.FC<{
               <button
                 onClick={() => void declineAll(pro.professionalId)}
                 disabled={saving === pro.professionalId}
-                className="tap mt-2.5 rounded-xl bg-white text-charcoal text-[11px] font-semibold px-3 py-1.5 shadow-soft disabled:opacity-50"
+                className="tap mt-2.5 rounded-xl bg-cream-card text-charcoal text-[11px] font-semibold px-3 py-1.5 shadow-soft disabled:opacity-50"
               >
                 {saving === pro.professionalId
                   ? "Saving…"

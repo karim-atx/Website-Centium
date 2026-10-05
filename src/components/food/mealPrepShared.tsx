@@ -1,6 +1,8 @@
 import type React from "react";
 import type { Food, MealType, ServingUnit } from "../../types";
 import { servingMultiplier, mealLabels } from "../../services/nutrition";
+import { useIsDark } from "../../hooks/useIsDark";
+import { FOOD_DARK } from "./foodDark";
 
 // Shared building blocks for mobile handoff item 10 (Food > Meal Prep
 // redesign): the Custom Meals + Recipes widget cards on MealPrepPanel, and
@@ -51,10 +53,12 @@ export function divideTotals(t: MacroTotals, by: number): MacroTotals {
   return { kcal: t.kcal / n, p: t.p / n, c: t.c / n, f: t.f / n };
 }
 
-// Literal handoff colors (README 613-774 + CentiumMealPrep.dc.html).
-export const PREP_CHARCOAL = "#241F1B";
-export const PREP_SOFT = "#5B5349";
-export const PREP_FAINT = "#8C8378";
+// Literal handoff colors (README 613-774 + CentiumMealPrep.dc.html), as the
+// tokens whose light values they are (#241F1B / #5B5349 / #8C8378), so they
+// follow dark mode (Mobile v5.1 R3, no light islands).
+export const PREP_CHARCOAL = "rgb(var(--c-charcoal))";
+export const PREP_SOFT = "rgb(var(--c-charcoal-soft))";
+export const PREP_FAINT = "rgb(var(--c-charcoal-muted))";
 
 /**
  * The grey 4-column macro strip on the Detail and Create screens (00-
@@ -64,17 +68,18 @@ export const PREP_FAINT = "#8C8378";
  * from CentiumMealPrep.dc.html's `macroStrip`.
  */
 export const MacroStrip: React.FC<{ t: MacroTotals; note?: string }> = ({ t, note }) => {
+  const dark = useIsDark();
   const rows: [string, string, string][] = [
     [String(Math.round(t.kcal)), "kcal", PREP_CHARCOAL],
-    [`${Math.round(t.p * 10) / 10}g`, "protein", "#7D6BB5"],
-    [`${Math.round(t.c)}g`, "carbs", "#8175C2"],
-    [`${Math.round(t.f * 10) / 10}g`, "fat", "#4274D7"],
+    [`${Math.round(t.p * 10) / 10}g`, "protein", dark ? FOOD_DARK.protein : "#7D6BB5"],
+    [`${Math.round(t.c)}g`, "carbs", dark ? FOOD_DARK.carbs : "#8175C2"],
+    [`${Math.round(t.f * 10) / 10}g`, "fat", dark ? FOOD_DARK.fat : "#4274D7"],
   ];
   return (
     <div>
-      <div className="grid grid-cols-4" style={{ background: "#F4F4F6", borderRadius: 16, padding: "13px 0" }}>
+      <div className="grid grid-cols-4" style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", borderRadius: 16, padding: "13px 0" }}>
         {rows.map((r, k) => (
-          <div key={k} style={{ textAlign: "center", borderLeft: k === 0 ? "none" : "1px solid #E2E3E7" }}>
+          <div key={k} style={{ textAlign: "center", borderLeft: k === 0 ? "none" : `1px solid ${dark ? FOOD_DARK.rule : "#E2E3E7"}` }}>
             <p style={{ margin: 0, fontSize: 15.5, fontWeight: 800, color: r[2] }}>{r[0]}</p>
             <p style={{ margin: "2px 0 0", fontSize: 11, color: PREP_FAINT }}>{r[1]}</p>
           </div>

@@ -76,7 +76,7 @@ export const AchievementDetailSheet: React.FC<{
         </div>
 
         {/* ---- the rungs --------------------------------------------------- */}
-        <p className="mb-[7px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">
+        <p className="mb-[7px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">
           {badge.rungs.length > 1 ? "Levels" : "Level"}
         </p>
         <div className="rounded-[15px] overflow-hidden divide-y divide-charcoal/[0.05] bg-cream-card">

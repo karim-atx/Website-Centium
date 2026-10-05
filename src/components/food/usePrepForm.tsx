@@ -14,13 +14,16 @@ import {
   capsLabelStyle,
   type PrepItem,
 } from "./mealPrepShared";
+import { PREP_ON_PRIMARY, FOOD_DARK } from "./foodDark";
 import type { PrepKind } from "./MealPrepFlowSheet";
+import { useIsDark } from "../../hooks/useIsDark";
 
 const servingUnitOptions: ServingUnit[] = ["serving", "g", "ml", "cup", "tbsp", "tsp"];
 
-// Grey sheet container (00-FOUNDATIONS §0.3).
-const containerStyle: React.CSSProperties = { background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" };
-const fieldStyle: React.CSSProperties = {
+// Grey sheet container (00-FOUNDATIONS §0.3). Dark mode: FOOD_DARK.box.
+const containerStyleLight: React.CSSProperties = { background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" };
+const containerStyleDark: React.CSSProperties = { ...containerStyleLight, background: FOOD_DARK.box };
+const fieldStyleLight: React.CSSProperties = {
   background: "#F4F4F6",
   border: "none",
   borderRadius: 14,
@@ -29,6 +32,7 @@ const fieldStyle: React.CSSProperties = {
   color: PREP_CHARCOAL,
   width: "100%",
 };
+const fieldStyleDark: React.CSSProperties = { ...fieldStyleLight, background: FOOD_DARK.box };
 const labelClass = "block text-[12px] font-semibold text-charcoal-soft mb-1.5";
 
 const toFood = (r: FoodSearchResult): Food => ({
@@ -83,6 +87,9 @@ export interface PrepFormOptions {
  */
 export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDone, onDeleteRequest }: PrepFormOptions) {
   const open = active;
+  const dark = useIsDark();
+  const containerStyle = dark ? containerStyleDark : containerStyleLight;
+  const fieldStyle = dark ? fieldStyleDark : fieldStyleLight;
   const isR = kind === "recipes";
   const editing = isR ? editRecipe ?? null : editMeal ?? null;
   const {
@@ -312,8 +319,8 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
                     key={`${r.source}-${r.id}`}
                     onClick={() => addFood(toFood(r), r.source === "catalog" ? "catalog" : "custom")}
                     disabled={added}
-                    className="tap w-full flex items-center justify-between gap-2.5 rounded-[12px] bg-white text-left disabled:opacity-40"
-                    style={{ border: "1px solid rgba(36,31,27,0.1)", padding: "11px 12px" }}
+                    className="tap w-full flex items-center justify-between gap-2.5 rounded-[12px] bg-cream-card text-left disabled:opacity-40"
+                    style={{ border: "1px solid rgb(var(--c-charcoal) / 0.1)", padding: "11px 12px" }}
                   >
                     <span className="min-w-0">
                       <span className="block text-[13.5px] font-semibold truncate" style={{ color: PREP_CHARCOAL }}>
@@ -351,13 +358,13 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
                 value={foodDraft.name}
                 onChange={(e) => setFoodDraft((d) => ({ ...d, name: e.target.value }))}
                 placeholder="Food name"
-                className="w-full rounded-[10px] bg-white px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
+                className="w-full rounded-[10px] bg-cream-card px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
               />
               <input
                 value={foodDraft.serving}
                 onChange={(e) => setFoodDraft((d) => ({ ...d, serving: e.target.value }))}
                 placeholder="Serving size"
-                className="w-full rounded-[10px] bg-white px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
+                className="w-full rounded-[10px] bg-cream-card px-3 py-2 text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
               />
               <div className="grid grid-cols-4 gap-1.5">
                 {(["calories", "protein", "carbs", "fat"] as const).map((k) => (
@@ -369,15 +376,16 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
                     }
                     placeholder={k === "calories" ? "kcal" : k}
                     inputMode="decimal"
-                    className="w-full rounded-[10px] bg-white px-2 py-2 text-xs text-charcoal placeholder:text-charcoal-faint focus:outline-none"
+                    className="w-full rounded-[10px] bg-cream-card px-2 py-2 text-xs text-charcoal placeholder:text-charcoal-faint focus:outline-none"
                   />
                 ))}
               </div>
               <button
                 onClick={() => void saveFood()}
                 disabled={!foodDraft.name.trim() || !foodDraft.calories}
-                className="tap h-10 rounded-[12px] text-[13px] font-bold text-white disabled:opacity-40"
-                style={{ background: "#A198DF" }}
+                className="tap h-10 rounded-[12px] text-[13px] font-bold text-on-primary-fill disabled:opacity-40"
+                // Decision 7: primary-fill (#A198DF carried white at 2.60:1).
+                style={{ background: "rgb(var(--c-primary-fill))" }}
               >
                 Add to {isR ? "recipe" : "meal"}
               </button>
@@ -425,7 +433,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
             ) : (
               <div className="mt-2.5 flex flex-col gap-1.5">
                 {items.map((it, i) => (
-                  <div key={`${it.food.id}-${i}`} className="bg-white rounded-[10px]" style={{ padding: "9px 10px" }}>
+                  <div key={`${it.food.id}-${i}`} className="bg-cream-card rounded-[10px]" style={{ padding: "9px 10px" }}>
                     <div className="flex items-center gap-2">
                       <span className="flex-1 min-w-0 text-[13px] font-semibold truncate" style={{ color: PREP_CHARCOAL }}>
                         {it.food.name}
@@ -446,7 +454,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
                         inputMode="decimal"
                         aria-label={`${it.food.name} quantity`}
                         className="w-14 shrink-0 text-center focus:outline-none"
-                        style={{ background: "#F4F4F6", border: "none", borderRadius: 8, padding: "6px 8px", fontSize: 13.5, fontWeight: 700, color: PREP_CHARCOAL }}
+                        style={{ background: dark ? FOOD_DARK.box : "#F4F4F6", border: "none", borderRadius: 8, padding: "6px 8px", fontSize: 13.5, fontWeight: 700, color: PREP_CHARCOAL }}
                       />
                       <div className="flex gap-1.5 scroll-row no-scrollbar min-w-0">
                         {servingUnitOptions.map((u) => (
@@ -467,7 +475,7 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
                         onChange={(e) => patchItem(i, { note: e.target.value })}
                         placeholder="Note, e.g. 400g dry"
                         className="w-full mt-1.5 rounded-[8px] px-2.5 py-1.5 text-xs text-charcoal placeholder:text-charcoal-faint focus:outline-none"
-                        style={{ background: "#F4F4F6" }}
+                        style={{ background: dark ? FOOD_DARK.box : "#F4F4F6" }}
                       />
                     )}
                   </div>
@@ -504,16 +512,16 @@ export function usePrepForm({ kind, active, editMeal, editRecipe, clientId, onDo
                 aria-label={isR ? "Delete recipe" : "Delete meal"}
                 title={isR ? "Delete recipe" : "Delete meal"}
                 className="tap shrink-0 flex items-center justify-center"
-                style={{ width: 60, height: 52, borderRadius: 14, background: "#FCEDEC", border: "1px solid #F2CFCC" }}
+                style={{ width: 60, height: 52, borderRadius: 14, background: dark ? FOOD_DARK.dangerBg : "#FCEDEC", border: `1px solid ${dark ? FOOD_DARK.dangerBorder : "#F2CFCC"}` }}
               >
-                <Trash2 size={19} style={{ color: "#B4372C" }} />
+                <Trash2 size={19} style={{ color: dark ? FOOD_DARK.danger : "#B4372C" }} />
               </button>
             )}
             <button
               onClick={() => void save()}
               disabled={!title.trim() || items.length === 0 || saving}
               className="tap flex-1 disabled:opacity-40 disabled:pointer-events-none"
-              style={{ height: 52, borderRadius: 14, border: "none", background: PREP_PRIMARY[kind], color: "#FFFFFF", fontSize: 15.5, fontWeight: 700 }}
+              style={{ height: 52, borderRadius: 14, border: "none", background: PREP_PRIMARY[kind], color: PREP_ON_PRIMARY[kind], fontSize: 15.5, fontWeight: 700 }}
             >
               {saving ? "Saving…" : editing ? "Save changes" : "Save"}
             </button>

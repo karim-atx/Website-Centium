@@ -20,11 +20,14 @@ import {
   prepMealLabel,
   type PrepItem,
 } from "./mealPrepShared";
+import { PREP_ON_PRIMARY, FOOD_DARK } from "./foodDark";
+import { useIsDark } from "../../hooks/useIsDark";
 
 export type PrepKind = "meals" | "recipes";
 
-// Grey sheet container (00-FOUNDATIONS §0.3).
+// Grey sheet container (00-FOUNDATIONS §0.3); dark mode: FOOD_DARK.box.
 const GREY_CONTAINER: React.CSSProperties = { background: "#F4F4F6", borderRadius: 16, padding: "13px 14px" };
+const GREY_CONTAINER_DARK: React.CSSProperties = { ...GREY_CONTAINER, background: FOOD_DARK.box };
 
 type Screen = "detail" | "advanced" | "edit";
 
@@ -45,9 +48,12 @@ export const MealPrepFlowSheet: React.FC<{
   onClose: () => void;
 }> = ({ kind, itemId, startEditing = false, onClose }) => {
   const { customMeals, recipes, selectedDate, logCustomMeal, logRecipe, removeCustomMeal, removeRecipe } = useApp();
+  const dark = useIsDark();
   const isR = kind === "recipes";
-  // Item 11: the flow's own primaries are solid (#79A8A1 / #A198DF).
-  const accentCta = PREP_PRIMARY[kind];
+  // Item 11: the flow's own primaries are solid (#79A8A1 / #A198DF). As the
+  // outline Edit button's ink in dark mode, the teal #4F7F78 (3.64:1 on the
+  // card) is FOOD_DARK.tealInk; dark primary-fill is already the light lavender.
+  const accentCta = dark && !isR ? FOOD_DARK.tealInk : PREP_PRIMARY[kind];
 
   const [screen, setScreen] = useState<Screen>(startEditing ? "edit" : "detail");
   const [qty, setQty] = useState("1");
@@ -132,7 +138,6 @@ export const MealPrepFlowSheet: React.FC<{
   return (
     <>
       <BottomSheet
-        light
         open
         onClose={close}
         onBack={screen === "edit" ? leaveEdit : screen === "advanced" ? () => setScreen("detail") : undefined}
@@ -142,7 +147,7 @@ export const MealPrepFlowSheet: React.FC<{
             <button
               onClick={() => setScreen("edit")}
               className="tap w-full inline-flex items-center justify-center"
-              style={{ height: 48, gap: 8, borderRadius: 14, background: "#FFFFFF", border: `1.5px solid ${accentCta}`, color: accentCta, fontSize: 15, fontWeight: 700 }}
+              style={{ height: 48, gap: 8, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1.5px solid ${accentCta}`, color: accentCta, fontSize: 15, fontWeight: 700 }}
             >
               <Pencil size={15} /> Edit
             </button>
@@ -198,14 +203,14 @@ export const MealPrepFlowSheet: React.FC<{
   );
 };
 
-const prepPillStyle = (on: boolean, accent: string): React.CSSProperties => ({
+const prepPillStyle = (on: boolean, accent: string, ink: string): React.CSSProperties => ({
   borderRadius: 8,
   padding: "8px 14px",
   fontSize: 13,
   fontWeight: on ? 700 : 500,
-  border: `1px solid ${on ? accent : "#E5E6EB"}`,
-  background: on ? accent : "#FAFAFB",
-  color: on ? "#FFFFFF" : PREP_CHARCOAL,
+  border: `1px solid ${on ? accent : "rgb(var(--c-border-option))"}`,
+  background: on ? accent : "rgb(var(--c-surface-raised))",
+  color: on ? ink : PREP_CHARCOAL,
   cursor: "pointer",
   whiteSpace: "nowrap",
   flex: "none",
@@ -225,6 +230,8 @@ const DetailScreen: React.FC<{
   logging: boolean;
   logError: string | null;
 }> = ({ kind, item, total, per, qty, setQty, meal, setMeal, onAdvanced, onLog, logging, logError }) => {
+  const dark = useIsDark();
+  const GREY = dark ? GREY_CONTAINER_DARK : GREY_CONTAINER;
   const isR = kind === "recipes";
   const accent = PREP_PRIMARY[kind];
   const q = Number(qty) > 0 ? Number(qty) : 1;
@@ -244,7 +251,7 @@ const DetailScreen: React.FC<{
 
       <MacroStrip t={shown} note={isR ? `Per serving × ${q}. Totals ÷ ${recipe!.servings} servings.` : `Whole meal × ${q}.`} />
 
-      <div style={GREY_CONTAINER}>
+      <div style={GREY}>
         <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
           {isR ? "Ingredients" : "Foods"}
         </p>
@@ -253,7 +260,7 @@ const DetailScreen: React.FC<{
             const rItem = x as PrepItem;
             const kcal = sumItems([rItem]).kcal;
             return (
-              <div key={i} className="flex items-center gap-2 bg-white rounded-[10px] px-2.5 py-2">
+              <div key={i} className="flex items-center gap-2 bg-cream-card rounded-[10px] px-2.5 py-2">
                 <span className="flex-1 min-w-0">
                   <span className="block text-[12.5px] font-semibold truncate" style={{ color: PREP_CHARCOAL }}>
                     {rItem.food.name}
@@ -277,7 +284,7 @@ const DetailScreen: React.FC<{
       </div>
 
       {isR && recipe!.steps && (
-        <div style={GREY_CONTAINER}>
+        <div style={GREY}>
           <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
             Steps
           </p>
@@ -287,8 +294,8 @@ const DetailScreen: React.FC<{
         </div>
       )}
 
-      <div className="flex items-center gap-3" style={GREY_CONTAINER}>
-        <span className="flex-none" style={{ fontSize: 14.5, fontWeight: 500, color: "#575863" }}>
+      <div className="flex items-center gap-3" style={GREY}>
+        <span className="flex-none" style={{ fontSize: 14.5, fontWeight: 500, color: dark ? FOOD_DARK.label : "#575863" }}>
           {isR ? "Servings" : "Quantity"}
         </span>
         <input
@@ -296,11 +303,11 @@ const DetailScreen: React.FC<{
           inputMode="decimal"
           onChange={(e) => setQty(e.target.value.replace(/[^\d.]/g, "").replace(/(?<=\..*)\./g, ""))}
           className="flex-1 min-w-0 text-center outline-none"
-          style={{ background: "#FFFFFF", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: PREP_CHARCOAL }}
+          style={{ background: "rgb(var(--c-cream-card))", border: "none", borderRadius: 10, padding: "10px 12px", fontSize: 15, fontWeight: 700, color: PREP_CHARCOAL }}
         />
       </div>
 
-      <div style={GREY_CONTAINER}>
+      <div style={GREY}>
         <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: "0.12em", textTransform: "uppercase", color: PREP_FAINT }}>
           Meal
         </p>
@@ -310,7 +317,7 @@ const DetailScreen: React.FC<{
               key={m}
               onClick={() => setMeal(m)}
               className="tap transition-colors"
-              style={{ ...prepPillStyle(meal === m, accent), flex: 1, minWidth: 0, padding: "8px 4px" }}
+              style={{ ...prepPillStyle(meal === m, accent, PREP_ON_PRIMARY[kind]), flex: 1, minWidth: 0, padding: "8px 4px" }}
             >
               {prepMealLabel(m)}
             </button>
@@ -324,8 +331,8 @@ const DetailScreen: React.FC<{
         <button
           onClick={onLog}
           disabled={logging}
-          className="tap flex-1 h-[52px] rounded-[14px] text-[15.5px] font-bold text-white disabled:opacity-40"
-          style={{ background: PREP_PRIMARY[kind] }}
+          className="tap flex-1 h-[52px] rounded-[14px] text-[15.5px] font-bold disabled:opacity-40"
+          style={{ background: PREP_PRIMARY[kind], color: PREP_ON_PRIMARY[kind] }}
         >
           {logging ? "Logging…" : "Add to Diary"}
         </button>
@@ -334,7 +341,7 @@ const DetailScreen: React.FC<{
           aria-label="Nutrient details"
           title="Nutrient details"
           className="tap flex-none flex items-center justify-center"
-          style={{ width: 60, height: 52, borderRadius: 14, background: "#FFFFFF", border: "1px solid #E4E4E9", color: PREP_CHARCOAL }}
+          style={{ width: 60, height: 52, borderRadius: 14, background: "rgb(var(--c-cream-card))", border: `1px solid ${dark ? FOOD_DARK.outline : "#E4E4E9"}`, color: PREP_CHARCOAL }}
         >
           <SlidersHorizontal size={20} strokeWidth={1.9} />
         </button>

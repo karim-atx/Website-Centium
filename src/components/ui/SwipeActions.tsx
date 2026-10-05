@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useIsDark } from "../../hooks/useIsDark";
 
 export interface SwipeAction {
   key: string;
@@ -22,6 +23,11 @@ const OPEN_EVENT = "swipe-actions:open";
  * inside its own radius, with a small gap before the tiles. Swiping back,
  * tapping elsewhere or scrolling closes it; one open item at a time; a swipe
  * short of halfway snaps back. Used by WO3.1 and WO16 (`shrink`).
+ *
+ * Mobile v5.1 R3, dark mode (no light islands): delete is danger.tint
+ * #3C2A30 with danger #FF6B5E (4.8:1); the other tiles keep their
+ * translucent lavender tint and take primary.deep #B7ABDE for the icon
+ * (#7D67D9 measured 2.7:1 on the tint over the dark card, #B7ABDE 5.6:1).
  */
 export const SwipeActions: React.FC<{
   actions: SwipeAction[];
@@ -36,6 +42,7 @@ export const SwipeActions: React.FC<{
   shrink?: boolean;
   children: React.ReactNode;
 }> = ({ actions, radius = 16, disabled, shrink, children }) => {
+  const dark = useIsDark();
   const id = useRef(Math.random().toString(36).slice(2));
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [rowH, setRowH] = useState(TILE_MAX);
@@ -131,8 +138,8 @@ export const SwipeActions: React.FC<{
               width: tile,
               height: tile,
               borderRadius: 14,
-              background: a.destructive ? "#FCEDEC" : "rgba(174,161,220,0.18)",
-              color: a.destructive ? "#B4372C" : "#7D67D9",
+              background: a.destructive ? (dark ? "#3C2A30" : "#FCEDEC") : "rgba(174,161,220,0.18)",
+              color: a.destructive ? (dark ? "#FF6B5E" : "#B4372C") : dark ? "#B7ABDE" : "#7D67D9",
             }}
           >
             {a.icon}

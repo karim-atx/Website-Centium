@@ -160,7 +160,7 @@ export default function HabitsTab() {
           it — at which point it is the user's, and stops being offered. */}
       {suggestions.length > 0 && (
         <div className="mb-3">
-          <p className="mb-[7px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">
+          <p className="mb-[7px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">
             Suggestions
           </p>
           <div className="flex flex-wrap gap-2">

@@ -2,7 +2,8 @@ import React, { useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import clsx from "clsx";
 import { ChevronDown, ChevronRight, Folder, GripVertical, MoreVertical } from "lucide-react";
-import { headInk, headInkSoft, type FolderFamily } from "../../data/folderColors";
+import { DARK_SURFACE, headInk, headInkSoft, liftTo, themedFamily, type FolderFamily } from "../../data/folderColors";
+import { useIsDark } from "../../hooks/useIsDark";
 import { folderColorOptions, swatchName } from "./folderList";
 
 // The folder pieces the Routines tab built (WO1.1), shared so the coach's
@@ -55,11 +56,12 @@ export const InsertionLine: React.FC<{ listRef: React.RefObject<HTMLDivElement |
       ref={ref}
       aria-hidden
       className="fixed pointer-events-none"
-      style={{ display: "none", zIndex: 56, height: 3, borderRadius: 2, background: "#7D6BB5", boxShadow: "0 0 0 1.5px #FFFFFF" }}
+      style={{ display: "none", zIndex: 56, height: 3, borderRadius: 2, background: "#7D6BB5", boxShadow: "0 0 0 1.5px rgb(var(--c-cream))" }}
     >
+      {/* The ring and the dot's centre are the page behind the list (white in light, the dark page in dark). */}
       <span
         className="absolute rounded-full"
-        style={{ left: -5, top: -3.5, width: 10, height: 10, border: "2.5px solid #7D6BB5", background: "#FFFFFF" }}
+        style={{ left: -5, top: -3.5, width: 10, height: 10, border: "2.5px solid #7D6BB5", background: "rgb(var(--c-cream))" }}
       />
     </div>,
     document.body
@@ -173,7 +175,7 @@ export const FolderHeader: React.FC<{
   colorEditor?: React.ReactNode;
 }> = ({
   folder,
-  family,
+  family: baseFamily,
   count,
   noun = ["routine", "routines"],
   collapsed,
@@ -189,6 +191,11 @@ export const FolderHeader: React.FC<{
   colorEditor,
 }) => {
   const gripProps = grip;
+  // Mobile v5.1 R3: the header shade for the current mode (dark: the hue at
+  // 42% on the dark card). themedFamily only reads `play`, so a family the
+  // caller already themed comes back unchanged.
+  const dark = useIsDark();
+  const family = themedFamily(baseFamily, dark);
   // Near-black on the light headers, white on the dark one (headInk), so
   // the name, count, chevron, ⋮ and grip all reach 4.5:1 on every colour.
   const ink = headInk(family);
@@ -205,11 +212,13 @@ export const FolderHeader: React.FC<{
         padding: "0 14px",
         WebkitTouchCallout: "none",
         // An item dragged over this folder: dropping adds it to the end.
-        boxShadow: highlighted ? `0 0 0 2px #FFFFFF inset, 0 0 0 2px ${family.tile}` : undefined,
+        // Dark: the tile shade lifted to 3:1 on the dark page (Black's #1C1917
+        // would vanish there).
+        boxShadow: highlighted ? `0 0 0 2px rgb(var(--c-cream)) inset, 0 0 0 2px ${dark ? liftTo(family.tile, DARK_SURFACE.page, 3) : family.tile}` : undefined,
       }}
     >
       {renaming ? (
-        <RenameField value={renameDraft ?? ""} onChange={(v) => onRenameDraft?.(v)} onCommit={() => onRenameCommit?.()} tone="light" ink={ink} />
+        <RenameField value={renameDraft ?? ""} onChange={(v) => onRenameDraft?.(v)} onCommit={() => onRenameCommit?.()} tone={ink === "#FFFFFF" ? "light" : "dark"} ink={ink} />
       ) : (
         <>
           <button onClick={onToggle} className="tap flex items-center gap-[13px] flex-1 text-left min-w-0 self-stretch">

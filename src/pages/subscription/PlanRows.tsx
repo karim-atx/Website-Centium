@@ -52,7 +52,9 @@ export const BillingToggle: React.FC<{
           <span
             className={clsx(
               "text-[10px] font-bold rounded-full px-1.5 py-0.5",
-              period === "yearly" ? "bg-white/20 text-white" : "bg-teal-fill text-on-primary-fill"
+              // Decision 7: on the selected pill the badge inverts (white on primary-fill
+              // read 3.15:1 through white/20).
+              period === "yearly" ? "bg-on-primary-fill text-primary-fill" : "bg-teal-fill text-on-primary-fill"
             )}
           >
             −{bestSaving}%

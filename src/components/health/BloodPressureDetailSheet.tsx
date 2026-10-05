@@ -25,6 +25,20 @@ import {
   SEVERE_READING_MESSAGE,
 } from "../../services/blood-pressure/guidance";
 import { AlertTriangle, Pencil, Plus } from "lucide-react";
+import { useIsDark } from "../../hooks/useIsDark";
+
+/**
+ * Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the severe
+ * alert's ink and icon are danger #FF6B5E (5.7:1 on its 8% red tint over the
+ * dark card); the systolic series is danger too, and the diastolic #4A3DA0
+ * (2:1 on the card) is lifted toward white to #887FC0 (4.5:1).
+ */
+const BP_DETAIL_COLORS = {
+  alertInk: ["#7E1B15", "#FF6B5E"],
+  alertIcon: ["#A4231C", "#FF6B5E"],
+  systolic: ["#A4231C", "#FF6B5E"],
+  diastolic: ["#4A3DA0", "#887FC0"],
+} as const;
 
 // The expanded blood-pressure view.
 //
@@ -97,6 +111,8 @@ export const BloodPressureDetailSheet: React.FC<{
   onEdit: (reading: BloodPressureReading) => void;
 }> = ({ open, onClose, onAdd, onEdit }) => {
   const { bloodPressure } = useApp();
+  const dark = useIsDark();
+  const bp = (key: keyof typeof BP_DETAIL_COLORS) => BP_DETAIL_COLORS[key][dark ? 1 : 0];
   const checkFlags = useCheckFlags();
   // Task Y: during a pregnancy its own levels replace the general bands here.
   const pregnancyFlags = usePregnancyFlags();
@@ -136,8 +152,8 @@ export const BloodPressureDetailSheet: React.FC<{
             className="flex gap-2.5 rounded-2xl px-3.5 py-3 mb-4"
             style={{ background: "rgba(164,35,28,0.08)" }}
           >
-            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: "#A4231C" }} />
-            <p className="text-[12px] leading-[1.5] font-semibold" style={{ color: "#7E1B15" }}>
+            <AlertTriangle size={16} className="shrink-0 mt-0.5" style={{ color: bp("alertIcon") }} />
+            <p className="text-[12px] leading-[1.5] font-semibold" style={{ color: bp("alertInk") }}>
               {SEVERE_READING_MESSAGE}
             </p>
           </div>
@@ -191,14 +207,14 @@ export const BloodPressureDetailSheet: React.FC<{
                     <polyline
                       points={points.map((r, i) => `${x(i)},${y(r.systolic)}`).join(" ")}
                       fill="none"
-                      stroke="#A4231C"
+                      stroke={bp("systolic")}
                       strokeWidth={0.9}
                       vectorEffect="non-scaling-stroke"
                     />
                     <polyline
                       points={points.map((r, i) => `${x(i)},${y(r.diastolic)}`).join(" ")}
                       fill="none"
-                      stroke="#4A3DA0"
+                      stroke={bp("diastolic")}
                       strokeWidth={0.9}
                       vectorEffect="non-scaling-stroke"
                     />
@@ -206,18 +222,18 @@ export const BloodPressureDetailSheet: React.FC<{
                 )}
                 {points.map((r, i) => (
                   <g key={r.id}>
-                    <circle cx={x(i)} cy={y(r.systolic)} r={1.4} fill="#A4231C" vectorEffect="non-scaling-stroke" />
-                    <circle cx={x(i)} cy={y(r.diastolic)} r={1.4} fill="#4A3DA0" vectorEffect="non-scaling-stroke" />
+                    <circle cx={x(i)} cy={y(r.systolic)} r={1.4} fill={bp("systolic")} vectorEffect="non-scaling-stroke" />
+                    <circle cx={x(i)} cy={y(r.diastolic)} r={1.4} fill={bp("diastolic")} vectorEffect="non-scaling-stroke" />
                   </g>
                 ))}
               </svg>
             </div>
             <div className="flex flex-wrap items-center gap-x-3.5 gap-y-1 mb-4">
               <span className="flex items-center gap-1.5 text-[10.5px] text-charcoal-soft">
-                <span className="w-2.5 h-[2px] rounded-full" style={{ background: "#A4231C" }} /> Systolic
+                <span className="w-2.5 h-[2px] rounded-full" style={{ background: bp("systolic") }} /> Systolic
               </span>
               <span className="flex items-center gap-1.5 text-[10.5px] text-charcoal-soft">
-                <span className="w-2.5 h-[2px] rounded-full" style={{ background: "#4A3DA0" }} /> Diastolic
+                <span className="w-2.5 h-[2px] rounded-full" style={{ background: bp("diastolic") }} /> Diastolic
               </span>
               {!inPregnancy && <span className="text-[10px] text-charcoal-faint">Bands follow the systolic thresholds</span>}
             </div>

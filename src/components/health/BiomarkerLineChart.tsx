@@ -1,4 +1,11 @@
 import React from "react";
+import { useIsDark } from "../../hooks/useIsDark";
+
+// Mobile v5.1 R3, dark mode (no light islands): the chart grid and axis text
+// as [light, dark], the dark values the v5.1 chart rules (grid
+// rgba(238,239,242,0.08), axis text #B8B3C7).
+const GRID = ["#EDEDEF", "rgba(238,239,242,0.08)"] as const;
+const AXIS = ["#9C9284", "#B8B3C7"] as const;
 
 // V8 (QA 8.0): "shows you a graph of the history of that selected biomarker
 // with the X axis representing the date and the Y axis representing the
@@ -14,6 +21,9 @@ export const BiomarkerLineChart: React.FC<{
   width?: number;
   height?: number;
 }> = ({ history, unit, color, width = 280, height = 140 }) => {
+  const dark = useIsDark();
+  const grid = GRID[dark ? 1 : 0];
+  const axis = AXIS[dark ? 1 : 0];
   if (history.length < 2) return null;
 
   const padding = { top: 12, right: 10, bottom: 22, left: 38 };
@@ -34,10 +44,10 @@ export const BiomarkerLineChart: React.FC<{
     <svg width={width} height={height} viewBox={`0 0 ${width} ${height}`} className="overflow-visible">
       {[min, (min + max) / 2, max].map((v, i) => (
         <g key={i}>
-          <text x={0} y={y(v) + 3} fontSize={9} fill="#9C9284">
+          <text x={0} y={y(v) + 3} fontSize={9} fill={axis}>
             {v.toFixed(1)}{unit}
           </text>
-          <line x1={padding.left} x2={width - padding.right} y1={y(v)} y2={y(v)} stroke="#EDEDEF" strokeWidth={1} />
+          <line x1={padding.left} x2={width - padding.right} y1={y(v)} y2={y(v)} stroke={grid} strokeWidth={1} />
         </g>
       ))}
 
@@ -53,10 +63,10 @@ export const BiomarkerLineChart: React.FC<{
         <circle key={i} cx={x(i)} cy={y(h.value)} r={2.5} fill={color} />
       ))}
 
-      <text x={x(0)} y={height - 4} fontSize={9} fill="#9C9284" textAnchor="start">
+      <text x={x(0)} y={height - 4} fontSize={9} fill={axis} textAnchor="start">
         {shortDate(history[0].date)}
       </text>
-      <text x={x(history.length - 1)} y={height - 4} fontSize={9} fill="#9C9284" textAnchor="end">
+      <text x={x(history.length - 1)} y={height - 4} fontSize={9} fill={axis} textAnchor="end">
         {shortDate(history[history.length - 1].date)}
       </text>
     </svg>

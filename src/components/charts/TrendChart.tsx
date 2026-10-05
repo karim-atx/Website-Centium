@@ -1,5 +1,7 @@
 import React, { useEffect, useId, useRef, useState } from "react";
 import { trendTicks } from "../../utils/chartTicks";
+import { useIsDark } from "../../hooks/useIsDark";
+import { DARK_SURFACE, liftTo } from "../../data/folderColors";
 
 export interface TrendPoint {
   /** Milliseconds; points are placed along x by time. */
@@ -40,14 +42,20 @@ const WO16_GEOMETRY: TrendGeometry = {
 };
 
 /**
- * "light": on white, everything in the one `color` (WO16).
+ * "light": on the sheet's surface, everything in the one `color` (WO16).
  * "card": white on the History-purple hero card (02 "Hero card"; WO19, WO4.1),
- * measured from the WO19 frame.
+ * measured from the WO19 frame; the same in both modes.
+ *
+ * Mobile v5.1 R3, dark mode (no light islands): "light" on the dark card takes
+ * the v5.1 dark chart values (axis text #B8B3C7, grid rgba(238,239,242,0.08)),
+ * the hollow dots' centre is the dark card, and `color` is lifted toward white
+ * until it reads at 4.5:1 on the card (the scrubber label is text in it).
  */
 type Tone = "light" | "card";
 
 const TONES = {
   light: { axis: "#A79E93", grid: "rgba(36,31,27,0.07)", fillTop: 0.18, lineW: 1.5 },
+  lightDark: { axis: "#B8B3C7", grid: "rgba(238,239,242,0.08)", fillTop: 0.18, lineW: 1.5 },
   card: { axis: "rgba(255,255,255,0.75)", grid: "rgba(255,255,255,0.1)", fillTop: 0.22, lineW: 2 },
 } as const;
 
@@ -92,7 +100,7 @@ export const TrendChart: React.FC<{
   onSelect?: (index: number) => void;
 }> = ({
   points,
-  color,
+  color: givenColor,
   unit,
   formatDate,
   ariaLabel,
@@ -118,9 +126,14 @@ export const TrendChart: React.FC<{
     setOwnPick(i);
     onSelect?.(i);
   };
+  const dark = useIsDark();
   const g = geometry;
-  const t = TONES[tone];
+  const lightDark = tone === "light" && dark;
+  const t = TONES[lightDark ? "lightDark" : tone];
+  const color = lightDark ? liftTo(givenColor, DARK_SURFACE.card) : givenColor;
   const ink = tone === "card" ? "#FFFFFF" : color;
+  // The hollow dots' centre: the surface the chart sits on.
+  const dotFill = lightDark ? DARK_SURFACE.card : "#FFFFFF";
 
   useEffect(() => {
     const el = box.current;
@@ -241,11 +254,11 @@ export const TrendChart: React.FC<{
             return i === sel ? (
               <g key={i}>
                 <circle cx={cx} cy={cy} r={6} fill={color} fillOpacity={0.2} />
-                <circle cx={cx} cy={cy} r={4} fill="#FFFFFF" />
+                <circle cx={cx} cy={cy} r={4} fill={dotFill} />
                 <circle cx={cx} cy={cy} r={3} fill={color} />
               </g>
             ) : (
-              <circle key={i} cx={cx} cy={cy} r={3} fill="#FFFFFF" stroke={color} strokeWidth={1.5} />
+              <circle key={i} cx={cx} cy={cy} r={3} fill={dotFill} stroke={color} strokeWidth={1.5} />
             );
           })}
 

@@ -20,6 +20,7 @@ import {
   type MeasurementGroup,
   type MeasurementType,
 } from "../../services/measurements/sites";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // Recording one set of tape measurements.
 //
@@ -40,6 +41,20 @@ const HOURS = Array.from({ length: 12 }, (_, i) => i + 1);
 const MINUTES = Array.from({ length: 12 }, (_, i) => i * 5);
 const MERIDIEMS: Meridiem[] = ["AM", "PM"];
 
+/**
+ * Mobile v5.1 R3, dark mode (no light islands), as [light, dark]: the purple
+ * "Measured" ink and icon take primary.deep dark (#8F68F6 is 4.29:1 on the
+ * dark card), the group label and its rule primary.tint dark, the field
+ * borders option-border dark and the TIME label text.tertiary dark.
+ */
+const COLORS = {
+  purple: ["#8F68F6", "#B7ABDE"],
+  groupTint: ["#E4DDFD", "#303141"],
+  whenBorder: ["#E0DFE0", "rgba(238,239,242,0.10)"],
+  fieldBorder: ["#E6E6E7", "rgba(238,239,242,0.10)"],
+  timeLabel: ["#9A94B3", "#918DA0"],
+} as const;
+
 export const AddMeasurementsSheet: React.FC<{
   open: boolean;
   onClose: () => void;
@@ -52,6 +67,8 @@ export const AddMeasurementsSheet: React.FC<{
   const [raw, setRaw] = useState<Partial<Record<MeasurementType, string>>>({});
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const dark = useIsDark();
+  const c = (key: keyof typeof COLORS) => COLORS[key][dark ? 1 : 0];
 
   // SEEDED ONCE, AND REMOUNTED PER OPENING. The caller keys this on the
   // sheet being open, so a fresh component arrives each time rather than an
@@ -108,11 +125,11 @@ export const AddMeasurementsSheet: React.FC<{
   const now = new Date();
 
   return (
-    <BottomSheet light open={open} onClose={onClose} title="Add measurements">
+    <BottomSheet open={open} onClose={onClose} title="Add measurements">
       <div className="animate-fade-slide-up">
         {/* WO4.1: "Measured" centred, bold and purple; the field opens the
             calendar popup with a wheel time picker (no future). */}
-        <p className="text-center" style={{ color: "#8F68F6", fontSize: 13, fontWeight: 700 }}>
+        <p className="text-center" style={{ color: c("purple"), fontSize: 13, fontWeight: 700 }}>
           Measured
         </p>
         <button
@@ -127,14 +144,14 @@ export const AddMeasurementsSheet: React.FC<{
             height: 46,
             padding: "0 16px",
             borderRadius: 23,
-            background: "#F5F5F6",
-            border: "1px solid #E0DFE0",
-            color: "#241F1B",
+            background: "rgb(var(--c-cream-soft))",
+            border: `1px solid ${c("whenBorder")}`,
+            color: "rgb(var(--c-charcoal))",
             fontSize: 14,
           }}
         >
           {formatMeasured(when)}
-          <CalendarDays size={16} style={{ color: "#8F68F6" }} />
+          <CalendarDays size={16} style={{ color: c("purple") }} />
         </button>
 
         {GROUP_ORDER.map((group) => (
@@ -144,22 +161,22 @@ export const AddMeasurementsSheet: React.FC<{
             <div className="flex items-end">
               <span
                 style={{
-                  background: "#E4DDFD",
+                  background: c("groupTint"),
                   borderRadius: "10px 10px 0 0",
                   padding: "4px 11px 3px",
-                  color: "#241F1B",
+                  color: "rgb(var(--c-charcoal))",
                   fontSize: 12,
                   fontWeight: 800,
                 }}
               >
                 {GROUP_LABEL[group]}
               </span>
-              <span className="flex-1" style={{ height: 2, background: "#E4DDFD" }} />
+              <span className="flex-1" style={{ height: 2, background: c("groupTint") }} />
             </div>
             <div className="grid grid-cols-2" style={{ gap: "10px 8px", marginTop: 10 }}>
               {MEASUREMENT_SITES.filter((s) => s.group === group).map((site) => (
                 <label key={site.type} className="block">
-                  <span className="block" style={{ color: "#8C8378", fontSize: 11, marginBottom: 5 }}>
+                  <span className="block" style={{ color: "rgb(var(--c-charcoal-muted))", fontSize: 11, marginBottom: 5 }}>
                     {site.label}
                   </span>
                   <span className="relative block">
@@ -174,9 +191,9 @@ export const AddMeasurementsSheet: React.FC<{
                         height: 39,
                         padding: "0 30px 0 12px",
                         borderRadius: 10,
-                        background: "#F5F5F6",
-                        border: "1px solid #E6E6E7",
-                        color: "#241F1B",
+                        background: "rgb(var(--c-cream-soft))",
+                        border: `1px solid ${c("fieldBorder")}`,
+                        color: "rgb(var(--c-charcoal))",
                         fontSize: 14,
                       }}
                     />
@@ -185,7 +202,7 @@ export const AddMeasurementsSheet: React.FC<{
                         number means is only ever what the label says. */}
                     <span
                       className="absolute pointer-events-none"
-                      style={{ right: 10, top: "50%", transform: "translateY(-50%)", color: "#8C8378", fontSize: 10.5 }}
+                      style={{ right: 10, top: "50%", transform: "translateY(-50%)", color: "rgb(var(--c-charcoal-muted))", fontSize: 10.5 }}
                     >
                       {site.unit}
                     </span>
@@ -229,10 +246,10 @@ export const AddMeasurementsSheet: React.FC<{
         {(day: string) => {
           const later = laterThanNow(day, draftTime, now);
           return (
-            <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgba(36,31,27,0.07)" }}>
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: "1px solid rgb(var(--c-charcoal) / 0.07)" }}>
               <p
                 className="text-center"
-                style={{ color: "#9A94B3", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.12em", marginBottom: 4 }}
+                style={{ color: c("timeLabel"), fontSize: 9.5, fontWeight: 700, letterSpacing: "0.12em", marginBottom: 4 }}
               >
                 TIME
               </p>

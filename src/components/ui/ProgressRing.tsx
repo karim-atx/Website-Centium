@@ -1,4 +1,5 @@
 import React from "react";
+import { useIsDark } from "../../hooks/useIsDark";
 
 interface ProgressRingProps {
   progress: number; // 0-1
@@ -14,9 +15,12 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   size = 96,
   strokeWidth = 10,
   color = "#7D6BB5",
-  trackColor = "#EDEDEF",
+  // Mobile v5.1 R3, dark mode: the default track is surface.raised #262932.
+  trackColor,
   children,
 }) => {
+  const dark = useIsDark();
+  const track = trackColor ?? (dark ? "#262932" : "#EDEDEF");
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
   const clamped = Math.max(0, Math.min(1, progress));
@@ -25,7 +29,7 @@ export const ProgressRing: React.FC<ProgressRingProps> = ({
   return (
     <div className="relative inline-flex items-center justify-center" style={{ width: size, height: size }}>
       <svg width={size} height={size} className="-rotate-90">
-        <circle cx={size / 2} cy={size / 2} r={radius} stroke={trackColor} strokeWidth={strokeWidth} fill="none" />
+        <circle cx={size / 2} cy={size / 2} r={radius} stroke={track} strokeWidth={strokeWidth} fill="none" />
         <circle
           cx={size / 2}
           cy={size / 2}

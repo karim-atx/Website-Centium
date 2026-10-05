@@ -1,4 +1,5 @@
 import React from "react";
+import { useIsDark } from "../../hooks/useIsDark";
 
 // The progress ring, in weeks.
 //
@@ -19,6 +20,10 @@ const WEEKS = 40;
 
 const RING_COLOR = "#B8735A";
 const RING_TRACK = "#E7D9D2";
+// Mobile v5.1 R3, dark mode: the empty weeks are the v5.1 empty track
+// rgba(238,239,242,0.10) (the ring sits on the page). RING_COLOR reads 5:1 on
+// the dark page and stays.
+const RING_TRACK_DARK = "rgba(238,239,242,0.10)";
 
 function pointAt(angleDeg: number, radius: number) {
   const rad = ((angleDeg + 90) * Math.PI) / 180;
@@ -39,6 +44,7 @@ export const PregnancyRing: React.FC<{
   subline?: string | null;
   footline?: string | null;
 }> = ({ week, headline, subline, footline }) => {
+  const dark = useIsDark();
   const step = 360 / WEEKS;
   const filled = Math.max(0, Math.min(WEEKS, week));
 
@@ -58,7 +64,7 @@ export const PregnancyRing: React.FC<{
           <path
             key={i}
             d={arcPath(from, to, RADIUS)}
-            stroke={done ? RING_COLOR : RING_TRACK}
+            stroke={done ? RING_COLOR : dark ? RING_TRACK_DARK : RING_TRACK}
             strokeWidth={i === filled - 1 ? STROKE + 5 : STROKE}
             strokeLinecap="butt"
             fill="none"

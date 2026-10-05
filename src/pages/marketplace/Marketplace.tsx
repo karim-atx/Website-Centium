@@ -9,6 +9,7 @@ import { rewardForUser, type EarnedReward } from "../../services/rewards";
 import { tierProgress, tierReached } from "../../services/achievements";
 import { marketplaceCategoryIcon } from "../../utils/icons";
 import BusinessDashboard from "./BusinessDashboard";
+import { useIsDark } from "../../hooks/useIsDark";
 import ProfessionalExplore from "./ProfessionalExplore";
 
 // Iteration 6 "Team" §5 Explore: each "More categories" tile gets its own
@@ -122,10 +123,10 @@ export default function Marketplace() {
         style={{ background: "var(--gradient-teal-hero)" }}
       >
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66]">
+          <p className="text-[9px] font-bold tracking-[.2em] uppercase text-white/[0.66] dark:text-white">
             {pointsSummary.tierName} tier
           </p>
-          <span className="text-[9.5px] font-bold text-white bg-white/20 rounded-full px-[9px] py-1 whitespace-nowrap">
+          <span className="text-[9.5px] font-bold text-white bg-white/20 dark:bg-black/20 rounded-full px-[9px] py-1 whitespace-nowrap">
             {pointsSummary.nextTierName && pointsSummary.pointsToNextTier !== null
               ? `${pointsSummary.pointsToNextTier.toLocaleString()} to ${pointsSummary.nextTierName}`
               : "Highest tier"}
@@ -135,7 +136,7 @@ export default function Marketplace() {
           <span className="text-[30px] font-extrabold leading-none tracking-[-0.04em] text-white tabular-nums">
             {pointsSummary.balance.toLocaleString()}
           </span>
-          <span className="text-[11px] font-semibold text-white/[0.74]">pts</span>
+          <span className="text-[11px] font-semibold text-white/[0.74] dark:text-white">pts</span>
         </p>
         <div className="my-[11px]">
           <div className="h-[5px] rounded-full bg-white/[0.26] overflow-hidden">
@@ -154,7 +155,7 @@ export default function Marketplace() {
             sums by source; "other" only appears if a source outside these two
             ever credits anything, so it is never a zero row nobody can
             explain. */}
-        <div className="flex items-center gap-3 flex-wrap text-[9.5px] font-semibold text-white/[0.74]">
+        <div className="flex items-center gap-3 flex-wrap text-[9.5px] font-semibold text-white/[0.74] dark:text-white">
           <span>{pointsSummary.achievementPoints.toLocaleString()} from achievements</span>
           <span className="w-1 h-1 rounded-full bg-white/40" />
           <span>{pointsSummary.referralPoints.toLocaleString()} from referrals</span>
@@ -188,7 +189,7 @@ export default function Marketplace() {
             next membership at partner gyms", and named a discount, a partner
             and a transaction that did not exist. Points are real and a tier is
             real; a reward to spend them on is not, yet. */}
-        <p className="mt-[11px] text-[10px] leading-[1.4] text-white/[0.66]">
+        <p className="mt-[11px] text-[10px] leading-[1.4] text-white/[0.66] dark:text-white">
           Points count toward your tier. Rewards for your points are coming soon.
         </p>
       </div>
@@ -214,7 +215,7 @@ export default function Marketplace() {
           category each with their own selectable button" — every category
           is its own directly-tappable button again, no picker sheet
           in between. */}
-      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42]">More categories</p>
+      <p className="mb-[9px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">More categories</p>
       <div className="grid grid-cols-2 gap-[7px] mb-[13px]">
         {marketplaceCategories
           .filter((c) => c.id !== "gyms" && c.id !== "classes")
@@ -251,8 +252,11 @@ export default function Marketplace() {
  * MO8.1 · the earned-reward row under the tier card: a light teal card
  * (rgba(162,200,194,.18)), a teal gift tile, the reason on one line and the
  * real offer below it (frame colours: #241F1B title, #4F7F78 detail).
+ * Mobile v5.1 R3, dark mode: the title is the charcoal token and the detail
+ * secondary.deeper #A3C7C0 (7:1 on the teal row over the dark page).
  */
 function RewardRow({ reward }: { reward: EarnedReward }) {
+  const dark = useIsDark();
   return (
     <div
       className="flex items-center mb-[13px]"
@@ -265,10 +269,10 @@ function RewardRow({ reward }: { reward: EarnedReward }) {
         <Gift size={15} className="text-white" />
       </span>
       <span className="min-w-0">
-        <span className="block" style={{ fontSize: 12.5, fontWeight: 700, color: "#241F1B" }}>
+        <span className="block" style={{ fontSize: 12.5, fontWeight: 700, color: "rgb(var(--c-charcoal))" }}>
           {reward.title}
         </span>
-        <span className="block" style={{ fontSize: 10.5, color: "#4F7F78", marginTop: 1 }}>
+        <span className="block" style={{ fontSize: 10.5, color: dark ? "#A3C7C0" : "#4F7F78", marginTop: 1 }}>
           {reward.detail}
         </span>
       </span>

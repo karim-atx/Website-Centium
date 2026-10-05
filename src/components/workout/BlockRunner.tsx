@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from "react";
 import { Play, Pause, RotateCcw, Plus, Minus, Volume2, VolumeX } from "lucide-react";
 import type { BlockKind, BlockResult, WorkoutBlock } from "../../types";
+import { liftTo, tintOn, DARK_SURFACE } from "../../data/folderColors";
+import { useIsDark } from "../../hooks/useIsDark";
 import { blockHeading, formatClock } from "../../services/workout/prescription";
 import { blockRunHint } from "../../services/workout/results";
 import {
@@ -30,13 +32,47 @@ import {
 // when it does not fire, which is what makes these timers survive the screen
 // locking and the app being backgrounded.
 
+type BlockRail = { rail: string; tint: string; ink: string };
+
 /** Matches the rails BlockCard uses, so a block looks like itself everywhere. */
-const RAIL: Record<BlockKind, { rail: string; tint: string; ink: string }> = {
+const RAIL: Record<BlockKind, BlockRail> = {
   superset: { rail: "#7D6BB5", tint: "rgba(125,107,181,0.08)", ink: "#5F5093" },
   amrap: { rail: "#4F8F8A", tint: "rgba(79,143,138,0.09)", ink: "#3C6B65" },
   emom: { rail: "#3F6E93", tint: "rgba(63,110,147,0.08)", ink: "#3F6E93" },
   for_time: { rail: "#8A5878", tint: "rgba(138,88,120,0.08)", ink: "#8A5878" },
 };
+
+/**
+ * Mobile v5.1 R3, dark mode (no light islands): derived exactly as BlockCard's
+ * DARK_RAIL is (tint = the rail hue at 16% on the dark card, rail lifted to
+ * 3:1 on the card, ink lifted to 4.5:1 on the tint), so the two match.
+ */
+const DARK_RAIL = Object.fromEntries(
+  (Object.entries(RAIL) as [BlockKind, BlockRail][]).map(([k, r]) => {
+    const tint = tintOn(r.rail, 0.16);
+    return [k, { rail: liftTo(r.rail, DARK_SURFACE.card, 3), tint, ink: liftTo(r.rail, tint) }];
+  })
+) as Record<BlockKind, BlockRail>;
+const blockRails = (dark: boolean): Record<BlockKind, BlockRail> => (dark ? DARK_RAIL : RAIL);
+
+/**
+ * Mobile v5.1 R3 (no light islands): `ink` is the kind's text
+ * colour for the mode; `fill` is the ground of the white-glyph buttons
+ * (+ and Finish), which stays the light ink in both modes because the dark
+ * ink is lifted toward white and would no longer carry white (the light inks
+ * hold white at 5.4:1 or more). In light mode the two are the same value.
+ *
+ * The rest, as [light, dark]: the over-time clock (danger), the disabled
+ * Finish button's ground (raised) and ink, and the muted beep icon (both the
+ * board's disabled text, #8A8698: 4.7:1 on the card, 4.1:1 on the disabled
+ * ground, where it marks a control that cannot be used).
+ */
+const RUNNER_COLORS = {
+  danger: ["#B0402F", "#FF6B5E"],
+  disabledBg: ["#E6E2DC", "#262932"],
+  disabledInk: ["#A79F94", "#8A8698"],
+} as const;
+const runnerColor = (key: keyof typeof RUNNER_COLORS, dark: boolean): string => RUNNER_COLORS[key][dark ? 1 : 0];
 
 /** Re-renders once a second while something is running. See the header. */
 function useTick(active: boolean): number {
@@ -108,7 +144,9 @@ export const BlockRunner: React.FC<{
   onWatch: (watch: Stopwatch) => void;
   children: React.ReactNode;
 }> = ({ block, ordinal, result, onResult, onStarted, watch, onWatch, children }) => {
-  const colors = RAIL[block.kind];
+  const dark = useIsDark();
+  const colors = blockRails(dark)[block.kind];
+  const fill = blockRails(false)[block.kind].ink;
   const heading = blockHeading(block, ordinal);
 
   return (
@@ -123,7 +161,7 @@ export const BlockRunner: React.FC<{
     >
       <div style={{ padding: "10px 12px 8px" }}>
         <p style={{ margin: 0, fontSize: 12.5, fontWeight: 800, color: colors.ink }}>{heading}</p>
-        <p style={{ margin: "1px 0 0", fontSize: 10.5, color: "#8C8378" }}>{blockRunHint(block)}</p>
+        <p style={{ margin: "1px 0 0", fontSize: 10.5, color: "rgb(var(--c-charcoal-muted))" }}>{blockRunHint(block)}</p>
       </div>
 
       {block.kind !== "superset" && (
@@ -136,11 +174,13 @@ export const BlockRunner: React.FC<{
             watch={watch}
             onWatch={onWatch}
             ink={colors.ink}
+            fill={fill}
+            dark={dark}
           />
         </div>
       )}
 
-      <div style={{ background: "#FFFFFF", margin: "0 6px 6px", borderRadius: 12, padding: "10px 10px 2px" }}>
+      <div style={{ background: "rgb(var(--c-cream-card))", margin: "0 6px 6px", borderRadius: 12, padding: "10px 10px 2px" }}>
         {children}
       </div>
     </section>
@@ -156,7 +196,9 @@ const ScoreBoard: React.FC<{
   watch: Stopwatch | undefined;
   onWatch: (watch: Stopwatch) => void;
   ink: string;
-}> = ({ block, result, onResult, onStarted, watch: held, onWatch, ink }) => {
+  fill: string;
+  dark: boolean;
+}> = ({ block, result, onResult, onStarted, watch: held, onWatch, ink, fill, dark }) => {
   // Timestamps, not a count: the value after the logger was minimised and
   // reopened is read off the wall clock, like the session's main clock.
   const watch = held ?? stoppedStopwatch();
@@ -181,9 +223,9 @@ const ScoreBoard: React.FC<{
     const over = cap > 0 && capReached(watch, cap, now);
     return (
       <Panel>
-        <Clock value={formatClock(left)} ink={over ? "#B0402F" : ink} label={over ? "Time" : cap ? "Remaining" : "Elapsed"} />
+        <Clock value={formatClock(left)} ink={over ? runnerColor("danger", dark) : ink} label={over ? "Time" : cap ? "Remaining" : "Elapsed"} />
         <Transport running={isRunning(watch)} onToggle={start} onReset={reset} />
-        <Counter label="Rounds" value={rounds} onChange={bump} ink={ink} />
+        <Counter label="Rounds" value={rounds} onChange={bump} ink={ink} fill={fill} />
         <NumberBox
           label="Extra reps"
           value={result?.extraReps}
@@ -211,6 +253,8 @@ const ScoreBoard: React.FC<{
         rounds={rounds}
         onBump={bump}
         ink={ink}
+        fill={fill}
+        dark={dark}
       />
     );
   }
@@ -225,11 +269,11 @@ const ScoreBoard: React.FC<{
     <Panel>
       <Clock
         value={formatClock(finished ? result!.timeSeconds! : hitCap ? cap : elapsed)}
-        ink={hitCap ? "#B0402F" : ink}
+        ink={hitCap ? runnerColor("danger", dark) : ink}
         label={finished ? (result!.capped ? "Capped" : "Finished") : hitCap ? "At the cap" : "Elapsed"}
       />
       {!finished && <Transport running={isRunning(watch)} onToggle={start} onReset={reset} />}
-      {block.rounds ? <Counter label="Rounds" value={rounds} onChange={bump} ink={ink} /> : null}
+      {block.rounds ? <Counter label="Rounds" value={rounds} onChange={bump} ink={ink} fill={fill} /> : null}
       {/* ROUNDS PLUS REPS IS THE SCORE OF A CAPPED PIECE, and the clock is
           not — it reads the cap, the same value for everyone it stopped. The
           field appears only once the cap has actually been recorded, because
@@ -271,8 +315,8 @@ const ScoreBoard: React.FC<{
           style={{
             borderRadius: 999,
             padding: "6px 14px",
-            background: elapsed <= 0 ? "#E6E2DC" : ink,
-            color: elapsed <= 0 ? "#A79F94" : "#FFFFFF",
+            background: elapsed <= 0 ? runnerColor("disabledBg", dark) : fill,
+            color: elapsed <= 0 ? runnerColor("disabledInk", dark) : "#FFFFFF",
           }}
         >
           {hitCap ? "Record cap" : "Finish"}
@@ -295,7 +339,9 @@ const EmomPanel: React.FC<{
   rounds: number;
   onBump: (by: number) => void;
   ink: string;
-}> = ({ pos, planned, running, onToggle, onReset, beep, sound, onSound, rounds, onBump, ink }) => {
+  fill: string;
+  dark: boolean;
+}> = ({ pos, planned, running, onToggle, onReset, beep, sound, onSound, rounds, onBump, ink, fill, dark }) => {
   // The top of each interval, announced once. Keyed on the round number rather
   // than on the remaining seconds, so a phone waking mid-interval does not
   // fire a beep for a round that started while it was asleep.
@@ -311,7 +357,7 @@ const EmomPanel: React.FC<{
     <Panel>
       <Clock
         value={formatClock(pos.remaining)}
-        ink={pos.done ? "#8C8378" : ink}
+        ink={pos.done ? "rgb(var(--c-charcoal-muted))" : ink}
         label={pos.done ? "Done" : `Round ${pos.round}${planned ? ` of ${planned}` : ""}`}
       />
       <Transport running={running} onToggle={onToggle} onReset={onReset} />
@@ -320,11 +366,11 @@ const EmomPanel: React.FC<{
         aria-pressed={sound}
         aria-label={sound ? "Mute the interval beep" : "Unmute the interval beep"}
         className="tap w-7 h-7 rounded-full flex items-center justify-center"
-        style={{ background: "#FFFFFF", color: sound ? ink : "#A79F94" }}
+        style={{ background: "rgb(var(--c-cream-card))", color: sound ? ink : runnerColor("disabledInk", dark) }}
       >
         {sound ? <Volume2 size={13} /> : <VolumeX size={13} />}
       </button>
-      <Counter label="Held" value={rounds} onChange={onBump} ink={ink} />
+      <Counter label="Held" value={rounds} onChange={onBump} ink={ink} fill={fill} />
       {/* MISSING A ROUND IS A THING THAT HAPPENS, and an EMOM where you cannot
           say so records a workout nobody did. It is the same counter read the
           other way: rounds held out of rounds planned. */}
@@ -340,7 +386,7 @@ const EmomPanel: React.FC<{
 const Panel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div
     className="flex flex-wrap items-center"
-    style={{ gap: 10, background: "#FFFFFF", borderRadius: 12, padding: "9px 11px" }}
+    style={{ gap: 10, background: "rgb(var(--c-cream-card))", borderRadius: 12, padding: "9px 11px" }}
   >
     {children}
   </div>
@@ -354,7 +400,7 @@ const Clock: React.FC<{ value: string; ink: string; label: string }> = ({ value,
     >
       {value}
     </p>
-    <p style={{ margin: 0, fontSize: 9.5, fontWeight: 600, color: "#8C8378", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+    <p style={{ margin: 0, fontSize: 9.5, fontWeight: 600, color: "rgb(var(--c-charcoal-muted))", textTransform: "uppercase", letterSpacing: "0.08em" }}>
       {label}
     </p>
   </div>
@@ -383,11 +429,12 @@ const Transport: React.FC<{ running: boolean; onToggle: () => void; onReset: () 
   </span>
 );
 
-const Counter: React.FC<{ label: string; value: number; onChange: (by: number) => void; ink: string }> = ({
+const Counter: React.FC<{ label: string; value: number; onChange: (by: number) => void; ink: string; fill: string }> = ({
   label,
   value,
   onChange,
   ink,
+  fill,
 }) => (
   <span className="flex items-center" style={{ gap: 6 }}>
     <button
@@ -402,13 +449,13 @@ const Counter: React.FC<{ label: string; value: number; onChange: (by: number) =
       <span className="tabular-nums" style={{ display: "block", fontSize: 19, fontWeight: 800, color: ink }}>
         {value}
       </span>
-      <span style={{ display: "block", fontSize: 9, color: "#8C8378" }}>{label}</span>
+      <span style={{ display: "block", fontSize: 9, color: "rgb(var(--c-charcoal-muted))" }}>{label}</span>
     </span>
     <button
       onClick={() => onChange(1)}
       aria-label={`One more ${label.toLowerCase()}`}
       className="tap w-8 h-8 rounded-full flex items-center justify-center text-white"
-      style={{ background: ink }}
+      style={{ background: fill }}
     >
       <Plus size={14} />
     </button>
@@ -422,7 +469,7 @@ const NumberBox: React.FC<{
   placeholder?: string;
 }> = ({ label, value, onChange, placeholder }) => (
   <label className="block" style={{ width: 84 }}>
-    <span style={{ display: "block", fontSize: 9, color: "#8C8378", marginBottom: 3 }}>{label}</span>
+    <span style={{ display: "block", fontSize: 9, color: "rgb(var(--c-charcoal-muted))", marginBottom: 3 }}>{label}</span>
     <input
       value={value == null ? "" : String(value)}
       onChange={(e) => {
@@ -435,12 +482,12 @@ const NumberBox: React.FC<{
       className="w-full placeholder:text-charcoal-faint focus:outline-none focus:ring-2 focus:ring-primary/20"
       style={{
         borderRadius: 9,
-        background: "#FFFFFF",
-        border: "1px solid rgba(36,31,27,0.1)",
+        background: "rgb(var(--c-cream-card))",
+        border: "1px solid rgb(var(--c-charcoal) / 0.1)",
         padding: "6px 9px",
         fontSize: 14,
         textAlign: "center",
-        color: "#241F1B",
+        color: "rgb(var(--c-charcoal))",
       }}
     />
   </label>

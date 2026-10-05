@@ -347,7 +347,7 @@ export const WidgetBoard: React.FC<{ onWaterClick?: () => void }> = ({
           mechanic, recoloured to the fixed nav-accent lavender (not the
           theme-reactive `primary`) and the literal "Today" copy. */}
       <div className="flex items-center justify-between mb-[9px]">
-        <p className="text-[9px] font-bold tracking-[.2em] uppercase text-primary-deep-text/60">Today</p>
+        <p className="text-[9px] font-bold tracking-[.2em] uppercase text-primary-deep-text/60 dark:text-primary-deep-text/[0.72]">Today</p>
         <button
           onClick={() => setEditMode((v) => !v)}
           className="tap flex items-center gap-[5px] text-[10.5px] font-bold text-team-nav-accent"

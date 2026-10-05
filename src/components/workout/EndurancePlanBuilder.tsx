@@ -1,5 +1,6 @@
 import React from "react";
-import { sheetChipStyle } from "../ui/sheetChip";
+import { sheetChipStyle, sheetGreyStyleFor } from "../ui/sheetChip";
+import { useIsDark } from "../../hooks/useIsDark";
 import type {
   EnduranceMode,
   EndurancePlan,
@@ -26,7 +27,7 @@ import { clockToSeconds, emptyStep, secondsToClock } from "../../services/workou
 const labelStyle: React.CSSProperties = {
   fontSize: 12,
   fontWeight: 600,
-  color: "#5B5349",
+  color: "rgb(var(--c-charcoal-soft))",
   marginBottom: 6,
   display: "block",
 };
@@ -34,18 +35,25 @@ const labelStyle: React.CSSProperties = {
 const numberInputStyle: React.CSSProperties = {
   width: "100%",
   borderRadius: 10,
-  background: "#FFFFFF",
-  border: "1px solid rgba(36,31,27,0.1)",
+  background: "rgb(var(--c-cream-card))",
+  border: "1px solid rgb(var(--c-charcoal) / 0.1)",
   padding: "9px 11px",
   fontSize: 14,
-  color: "#241F1B",
+  color: "rgb(var(--c-charcoal))",
   textAlign: "center",
 };
 
-const cardStyle: React.CSSProperties = {
-  background: "#F2F3F5",
-  borderRadius: 14,
-  padding: "12px 14px",
+// The grey section card is the sheets' grey container (#F2F3F5, radius 14,
+// 12px 14px); Mobile v5.1 R3 (no light islands) takes it from sheetChip so
+// dark mode gets that container's dark value (surface.soft, #242730).
+const cardStyle = sheetGreyStyleFor;
+
+// The white Work / Recovery boxes inside the main set card.
+const innerBoxStyle: React.CSSProperties = {
+  background: "rgb(var(--c-cream-card))",
+  borderRadius: 12,
+  padding: "10px 12px",
+  border: "1px solid rgb(var(--c-charcoal) / 0.07)",
 };
 
 /** Digits only, and empty means "not set yet" rather than zero. */
@@ -232,7 +240,7 @@ const StepEditor: React.FC<{
               value={paceLo.seconds}
               onChange={(v) => setTarget({ ...target, min_sec_per_km: clockToSeconds(paceLo.minutes, v ?? 0) })}
             />
-            <span style={{ paddingBottom: 10, color: "#8C8378" }}>–</span>
+            <span style={{ paddingBottom: 10, color: "rgb(var(--c-charcoal-muted))" }}>–</span>
             <NumberField
               label="Min"
               ariaLabel={`${idPrefix} pace slow minutes`}
@@ -277,7 +285,7 @@ const OptionalStep: React.FC<{
   onChange: (step: EnduranceStep | null) => void;
   idPrefix: string;
 }> = ({ title, step, onChange, idPrefix }) => (
-  <div style={cardStyle}>
+  <div style={cardStyle(useIsDark())}>
     <div className="flex items-center justify-between" style={{ marginBottom: step ? 10 : 0 }}>
       <span style={{ ...labelStyle, marginBottom: 0 }}>{title}</span>
       <button
@@ -297,6 +305,7 @@ export const EndurancePlanBuilder: React.FC<{
   onChange: (plan: EndurancePlan) => void;
 }> = ({ plan, onChange }) => {
   const main = plan.main;
+  const dark = useIsDark();
 
   return (
     <div className="flex flex-col" style={{ gap: 12 }}>
@@ -307,7 +316,7 @@ export const EndurancePlanBuilder: React.FC<{
         idPrefix="Warm-up"
       />
 
-      <div style={cardStyle}>
+      <div style={cardStyle(dark)}>
         <span style={labelStyle}>Main set</span>
         <Segmented
           ariaLabel="Main set type"
@@ -352,14 +361,7 @@ export const EndurancePlanBuilder: React.FC<{
                 />
                 <div style={{ flex: 2 }} />
               </div>
-              <div
-                style={{
-                  background: "#FFFFFF",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  border: "1px solid rgba(36,31,27,0.07)",
-                }}
-              >
+              <div style={innerBoxStyle}>
                 <span style={labelStyle}>Work</span>
                 <StepEditor
                   step={main.work}
@@ -367,14 +369,7 @@ export const EndurancePlanBuilder: React.FC<{
                   idPrefix="Work"
                 />
               </div>
-              <div
-                style={{
-                  background: "#FFFFFF",
-                  borderRadius: 12,
-                  padding: "10px 12px",
-                  border: "1px solid rgba(36,31,27,0.07)",
-                }}
-              >
+              <div style={innerBoxStyle}>
                 <span style={labelStyle}>Recovery</span>
                 <StepEditor
                   step={main.recovery}
