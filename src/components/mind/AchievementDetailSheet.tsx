@@ -1,9 +1,11 @@
 import React from "react";
-import { BottomSheet } from "../ui/BottomSheet";
+import { CentredPopup } from "../ui/CentredPopup";
+import { useIsDark } from "../../hooks/useIsDark";
 import { Check, Lock } from "lucide-react";
 import { LEVEL_LABEL, type Badge } from "../../services/achievements";
 
-// One badge, every rung of it.
+// One badge, every rung of it. Mobile v5.1 MO1.1.3.1: a centred popup over
+// the page (tap outside or Escape closes), not a bottom sheet.
 //
 // THE GRID SHOWS THE RUNG BEING CHASED; THIS SHOWS THE WHOLE LADDER, which is
 // the only place the shape of a group is visible. A one-off is a ladder with
@@ -30,31 +32,35 @@ export const AchievementDetailSheet: React.FC<{
   /** "130 more to reach Silver", or null once the ladder is finished. */
   nextLabel: string | null;
 }> = ({ open, onClose, badge, nextLabel }) => {
+  const dark = useIsDark();
   if (!badge) return null;
 
   const current = badge.rungs[0].currentValue;
   const earned = badge.earned !== null;
 
   return (
-    <BottomSheet open={open} onClose={onClose} title={badge.display.title}>
-      <div className="pb-2">
+    <CentredPopup
+      open={open}
+      onClose={onClose}
+      title={badge.display.title}
+      icon={
+        <span
+          className="text-[26px] leading-none"
+          style={{ filter: earned ? "none" : "grayscale(1)", opacity: earned ? 1 : 0.45 }}
+        >
+          {badge.display.icon}
+        </span>
+      }
+      body={badge.display.description}
+    >
+      <div>
         <div className="flex flex-col items-center text-center pb-4">
-          <span
-            className="text-[46px] leading-none mb-2"
-            style={{ filter: earned ? "none" : "grayscale(1)", opacity: earned ? 1 : 0.45 }}
-          >
-            {badge.display.icon}
-          </span>
-          <p className="text-[15px] font-bold text-charcoal">{badge.display.title}</p>
-          <p className="mt-1 text-[12.5px] leading-relaxed text-charcoal-soft px-4">
-            {badge.display.description}
-          </p>
 
           {/* WHAT IS LEFT, IN THE UNITS THE BADGE IS MEASURED IN. The gap to
               the next TIER is a different number and lives on the tier card;
               this one is about this ladder. */}
           {nextLabel && (
-            <p className="mt-2.5 text-[11px] font-bold text-team-gold-ink">{nextLabel}</p>
+            <p className="text-[12px] font-bold text-team-gold-ink">{nextLabel}</p>
           )}
 
           {badge.next && (
@@ -79,7 +85,7 @@ export const AchievementDetailSheet: React.FC<{
         <p className="mb-[7px] text-[9px] font-bold tracking-[.2em] uppercase text-charcoal/[0.42] dark:text-charcoal/[0.55]">
           {badge.rungs.length > 1 ? "Levels" : "Level"}
         </p>
-        <div className="rounded-[15px] overflow-hidden divide-y divide-charcoal/[0.05] bg-cream-card">
+        <div className="rounded-[14px] overflow-hidden divide-y divide-charcoal/[0.05] bg-cream-soft">
           {badge.rungs.map((r) => {
             const done = r.earnedAt !== null;
             return (
@@ -119,7 +125,9 @@ export const AchievementDetailSheet: React.FC<{
                 {r.points > 0 && (
                   <span
                     className="text-[10px] font-extrabold shrink-0 tabular-nums"
-                    style={{ color: done ? "rgb(var(--c-gold-dark))" : "rgba(36,31,27,.35)" }}
+                    // Dark: a locked rung's points were the light ink at 35%, unreadable
+                    // on the dark card; they take the muted text colour instead.
+                    style={{ color: done ? "rgb(var(--c-gold-dark))" : dark ? "rgb(var(--c-charcoal-muted))" : "rgba(36,31,27,.35)" }}
                   >
                     +{r.points.toLocaleString()}
                   </span>
@@ -135,6 +143,6 @@ export const AchievementDetailSheet: React.FC<{
           </p>
         )}
       </div>
-    </BottomSheet>
+    </CentredPopup>
   );
 };
