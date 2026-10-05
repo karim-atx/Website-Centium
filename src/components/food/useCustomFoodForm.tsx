@@ -461,8 +461,8 @@ export function useCustomFoodForm({ initialName, editing, onSaved, onDeleteReque
                 onClick={() => setScanOpen(true)}
                 aria-label="Scan barcode"
                 className="tap flex items-center justify-center"
-                // Decision 7: primary-fill and its ink (#A092E0: 2.73:1 with white).
-                style={{ flex: "none", width: 44, height: 40, borderRadius: 10, background: "rgb(var(--c-primary-fill))", border: "none" }}
+                // The board's #A092E0 in light, primary-fill in dark.
+                style={{ flex: "none", width: 44, height: 40, borderRadius: 10, background: "rgb(var(--c-fill-chip))", border: "none" }}
               >
                 <ScanLine size={17} style={{ color: "rgb(var(--c-on-primary-fill))" }} />
               </button>

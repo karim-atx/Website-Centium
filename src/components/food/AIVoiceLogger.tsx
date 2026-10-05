@@ -817,7 +817,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
 
             <button
               onClick={() => void requestMicAndStart()}
-              // Decision 7: teal-fill and its ink (white on #A2C8C2 was 1.81:1).
+              // teal-fill: the board's teal with white in light mode; dark uses its own ink.
               className="tap relative w-24 h-24 rounded-full bg-teal-fill flex items-center justify-center shadow-lift mb-6"
             >
               <Mic size={32} className="text-on-primary-fill" />
@@ -944,7 +944,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
               </div>
             </div>
 
-            <p className="section-label mb-2">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
               We found: select what to add
             </p>
             <div className="space-y-2 mb-4">
