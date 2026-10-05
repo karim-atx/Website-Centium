@@ -50,6 +50,27 @@
   --c-primary-pale: 240 237 249;
   --c-primary-dark: 125 107 181;
   --c-primary-deep-text: 95 80 147;
+
+  /* MOBILE v5.1 HANDOVER (R1). Added alongside the tokens above; nothing
+     existing reads them yet.
+
+     --c-primary-fill IS THE GROUND OF A FILLED BUTTON WITH WHITE INK. The
+     handover's primary.fill #9A8CD6 carries white at 2.96:1, so this is the
+     closest brand shade that clears 4.5:1: #7D6BB5 (primary.deep), 4.52:1.
+     #7D67D9 (primary.accent) is closer in hue but measures 4.36:1. Each
+     accent theme below gets its own passing shade, and dark mode keeps
+     today's convention: the lighter primary with near-black ink (6.6-8.3:1). */
+  --c-primary-fill: 125 107 181;
+  --c-on-primary-fill: 255 255 255;
+  /* primary.accent #7D67D9: row and tile glyphs (Settings rows, popup icon). */
+  --c-primary-accent: 125 103 217;
+  /* border.row: the inset divider between Settings rows. */
+  --border-row: rgba(174, 161, 220, 0.15);
+  /* shadow.sheet and backdrop.dim (Foundations 2.3): sheets and centred popups. */
+  --shadow-sheet: 0 10px 40px rgba(36, 31, 27, 0.18);
+  --backdrop-dim: rgba(36, 31, 27, 0.4);
+  /* motion.base (Foundations 2.6). */
+  --ease-base: cubic-bezier(0.22, 1, 0.36, 1);
   /* The white-text hero cards (affiliation, linked professional): the theme's
      primary -> primary-dark, each with all three channels scaled down by one
      factor, so the hue holds while white reaches AA. primary itself carries
@@ -340,6 +361,11 @@
      accent-aware, since primary-deep-text has no per-accent value. */
   --c-primary-dark: 195 179 251;
   --c-primary-deep-text: 195 179 251;
+  /* Mobile v5.1 (R1): see :root. Dark fills keep near-black ink. */
+  --c-primary-fill: var(--c-primary);
+  --c-on-primary-fill: 13 11 26;
+  --c-primary-accent: 154 140 214;
+  --border-row: rgba(238, 239, 242, 0.08);
 
   /* The sent bubble keeps today's primary as its ground -- indirection rather
      than a repeated literal, so it cannot drift from the token it mirrors.
@@ -423,6 +449,8 @@
 [data-accent="ocean"] .theme-light {
   --c-primary: 76 143 209;
   --c-bubble-sent: 55 104 153;
+  --c-primary-fill: 55 104 153;
+  --c-primary-accent: 30 74 110;
   --c-primary-light: 116 175 227;
   --c-primary-pale: 220 234 248;
   --c-primary-dark: 30 74 110;
@@ -432,6 +460,8 @@
 .dark[data-accent="ocean"] {
   --c-primary: 116 175 227;
   --c-bubble-sent: var(--c-primary);
+  --c-primary-fill: var(--c-primary);
+  --c-primary-accent: var(--c-primary);
   --c-primary-light: 150 197 237;
   --c-primary-pale: 26 41 57;
   --c-primary-dark: 209 230 247;
@@ -441,6 +471,8 @@
 [data-accent="sunset"] .theme-light {
   --c-primary: 233 116 82;
   --c-bubble-sent: 158 79 56;
+  --c-primary-fill: 158 79 56;
+  --c-primary-accent: 165 66 36;
   --c-primary-light: 242 164 136;
   --c-primary-pale: 252 230 221;
   --c-primary-dark: 165 66 36;
@@ -450,6 +482,8 @@
 .dark[data-accent="sunset"] {
   --c-primary: 240 140 108;
   --c-bubble-sent: var(--c-primary);
+  --c-primary-fill: var(--c-primary);
+  --c-primary-accent: var(--c-primary);
   --c-primary-light: 247 178 152;
   --c-primary-pale: 57 37 30;
   --c-primary-dark: 250 199 176;
@@ -459,6 +493,8 @@
 [data-accent="berry"] .theme-light {
   --c-primary: 156 79 124;
   --c-bubble-sent: 151 77 120;
+  --c-primary-fill: 156 79 124;
+  --c-primary-accent: 107 48 84;
   --c-primary-light: 184 118 156;
   --c-primary-pale: 241 224 235;
   --c-primary-dark: 107 48 84;
@@ -468,6 +504,8 @@
 .dark[data-accent="berry"] {
   --c-primary: 200 128 172;
   --c-bubble-sent: var(--c-primary);
+  --c-primary-fill: var(--c-primary);
+  --c-primary-accent: var(--c-primary);
   --c-primary-light: 216 158 194;
   --c-primary-pale: 46 30 40;
   --c-primary-dark: 240 214 231;

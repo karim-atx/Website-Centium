@@ -35,7 +35,14 @@ export default {
           dark: "rgb(var(--c-primary-dark) / <alpha-value>)",
           // Text/glyph colour when sitting on a `primary-pale` wash.
           "deep-text": "rgb(var(--c-primary-deep-text) / <alpha-value>)",
+          // Mobile v5.1 (R1): the ground of a filled button with white ink,
+          // 4.5:1 or better in every theme; and the row/tile glyph colour.
+          fill: "rgb(var(--c-primary-fill) / <alpha-value>)",
+          accent: "rgb(var(--c-primary-accent) / <alpha-value>)",
         },
+        // The ink on a primary-fill button: white in light mode, near-black in
+        // dark mode, where the fill is the lighter primary. See index.css.
+        "on-primary-fill": "rgb(var(--c-on-primary-fill) / <alpha-value>)",
         // The white-text hero cards' light-mode gradient. See index.css.
         hero: {
           from: "rgb(var(--c-hero-from) / <alpha-value>)",
@@ -171,6 +178,11 @@ export default {
         "fade-in": {
           "0%": { opacity: 0 },
           "100%": { opacity: 1 },
+        },
+        // motion.base for centred popups (Foundations 2.6): scale 0.96 to 1 + fade.
+        "popup-in": {
+          "0%": { opacity: 0, transform: "scale(0.96)" },
+          "100%": { opacity: 1, transform: "scale(1)" },
         },
         "pop": {
           "0%": { transform: "scale(0.9)", opacity: 0 },
@@ -407,6 +419,7 @@ export default {
       animation: {
         "fade-slide-up": "fade-slide-up 0.45s cubic-bezier(0.22,1,0.36,1) both",
         "fade-in": "fade-in 0.3s ease both",
+        "popup-in": "popup-in 0.25s cubic-bezier(0.22,1,0.36,1) both",
         "pop": "pop 0.4s cubic-bezier(0.22,1,0.36,1) both",
         "sheet-up": "sheet-up 0.35s cubic-bezier(0.22,1,0.36,1) both",
         "drop-down": "drop-down 0.28s cubic-bezier(0.22,1,0.36,1) both",
