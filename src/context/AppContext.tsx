@@ -5257,8 +5257,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   // this branch is never reached by one.
   //
   // A male profile gets no row created for it, and can still switch the
-  // tracker on from Settings — sex decides the DEFAULT, never the
-  // availability.
+  // tracker on from the profile (Cycle tracking moved there from Settings in
+  // batch C) — sex decides the DEFAULT, never the availability.
   //
   // NO ZONE IS WRITTEN HERE ANY MORE (task T): the profile holds it, below.
   const seededCycleFor = useRef<string | null>(null);

@@ -10,7 +10,6 @@ import { DeleteAccountSheet } from "../../components/profile/DeleteAccountSheet"
 import { TimezoneSetting } from "../../components/settings/TimezoneSetting";
 import { ForumBlocksSetting } from "../../components/forum/ForumBlocksSetting";
 import { useApp } from "../../context/AppContext";
-import { TRACKER_OFF_KEEPS_DATA } from "../../services/cycle/guidance";
 import { pushSupported } from "../../services/push";
 import { detectPlatform } from "../../components/health/IntegrationsCard";
 import { APP_LANGUAGES } from "../../i18n/languages";
@@ -33,7 +32,6 @@ import {
   FileText,
   ShieldCheck,
   KeyRound,
-  Droplet,
   Apple,
   Smartphone,
   Watch,
@@ -64,26 +62,12 @@ export default function Settings() {
     language,
     t,
     user,
-    cycleSettings,
-    cycleSettingsLoaded,
-    cycleOffered,
-    setCycleTracking,
   } = useApp();
   const navigate = useNavigate();
 
-  // MO11: the one switch every profile can reach for the cycle and pregnancy
-  // section. On means shown here: offered (by sex or opt-in) and tracking.
-  // It moves to Profile in R15 (C6); until then it stays here, unchanged.
-  const cycleOn = cycleOffered && !!cycleSettings?.trackerEnabled;
-  const [cycleBusy, setCycleBusy] = useState(false);
-  const [cycleError, setCycleError] = useState<string | null>(null);
-  const toggleCycle = async (on: boolean) => {
-    setCycleBusy(true);
-    setCycleError(null);
-    const r = await setCycleTracking(on);
-    setCycleBusy(false);
-    if (!r.ok) setCycleError(r.message ?? "Couldn't save that. Try again.");
-  };
+  // Cycle tracking moved to the profile in R15 (C6): Safety & content for a
+  // customer, Health tracking on a professional's Profile, and the Business
+  // Profile for a business (components/profile/CycleTrackingRow).
 
   // The cycle tracker's Settings tab links to /app/settings#timezone.
   //
@@ -185,26 +169,6 @@ export default function Settings() {
           <p className="text-[12px] font-semibold text-charcoal-soft mb-2.5">{t("Color theme")}</p>
           <ColorThemePicker />
         </div>
-      </SettingsSection>
-
-      {/* Handover 2026-09-29 MO11: cycle tracking for every profile. Shown by
-          default to a female or other profile; any profile can switch it on
-          here, and that opt-in is saved to the account. Off is the user's own
-          choice and always wins. Nothing is deleted either way. */}
-      <SettingsSection label={t("Health tracking")}>
-        <SettingsRow
-          icon={Droplet}
-          title={t("Cycle tracking")}
-          subtitle={cycleOn ? TRACKER_OFF_KEEPS_DATA : "Switch it on to start tracking."}
-          toggle={{
-            checked: cycleOn,
-            onChange: (on) => void toggleCycle(on),
-            disabled: cycleBusy || !cycleSettingsLoaded,
-          }}
-        />
-        {cycleError && (
-          <p className="mt-1 text-xs font-semibold text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{cycleError}</p>
-        )}
       </SettingsSection>
 
       <SettingsSection label={t("Permissions")}>

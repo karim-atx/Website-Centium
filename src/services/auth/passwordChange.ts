@@ -4,7 +4,7 @@ import { AuthError } from "@supabase/supabase-js";
 import { describeAuthError, isAuthRateLimited } from "./index";
 import { passwordChangeOutcome, type ChangeOutcome } from "./passwordChangeLogic";
 
-// Task J: Change password, from Settings → Security.
+// Task J: Change password, from Settings → Data & account.
 //
 // NO PASSWORD IS EVER LOGGED OR PUT IN A MESSAGE. Errors are mapped from
 // GoTrue's codes, never by echoing a request, and nothing here calls

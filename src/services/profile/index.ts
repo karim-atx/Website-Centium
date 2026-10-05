@@ -304,6 +304,25 @@ export async function updatePlantSpecies(
   return { ok: true };
 }
 
+/**
+ * The phone number on profiles (MO1.5.4 Credentials, batch C). It was typed
+ * into the old sheet and kept only on the device; the column was always
+ * there, hydrated by fetchProfile and in the profiles UPDATE grant. Empty
+ * clears it.
+ */
+export async function updatePhone(userId: string, phone: string): Promise<{ ok: boolean; message?: string }> {
+  const value = phone.trim();
+  const { error } = await supabase
+    .from("profiles")
+    .update({ phone: value === "" ? null : value })
+    .eq("id", userId);
+  if (error) {
+    console.error("[profile] Could not save the phone number:", error.message);
+    return { ok: false, message: "Couldn't save your phone number. Try again." };
+  }
+  return { ok: true };
+}
+
 export async function updateBodyMetric(
   userId: string,
   field: "weight_kg" | "height_cm",

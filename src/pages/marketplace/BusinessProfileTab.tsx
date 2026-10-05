@@ -5,6 +5,7 @@ import { BusinessPrototypeNotice } from "../../components/marketplace/BusinessPr
 import { Card } from "../../components/ui/Card";
 import { BottomSheet } from "../../components/ui/BottomSheet";
 import { useApp } from "../../context/AppContext";
+import { CycleTrackingRow } from "../../components/profile/CycleTrackingRow";
 import { AVATAR_ACCEPT, removeAvatar, uploadAvatar } from "../../services/avatar";
 import {
   fetchMyBusinessProfile,
@@ -333,6 +334,14 @@ export default function BusinessProfileTab() {
           )}
         </Card>
       )}
+
+      {/* Cycle tracking, moved here from Settings in batch C (C6) with
+          exactly the rule it had there: every account type sees it, and this
+          is the only profile a business account reaches. */}
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Health tracking</p>
+      <Card className="mb-6">
+        <CycleTrackingRow />
+      </Card>
 
       <button
         onClick={handleSignOut}

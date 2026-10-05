@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
+import clsx from "clsx";
 import { Link, useNavigate } from "react-router-dom";
 import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
@@ -26,30 +27,31 @@ import {
   MIN_AGE,
   MAX_AGE,
 } from "../../utils/date";
-import { PERSON_ICON } from "../../utils/icons";
 import {
-  Target,
+  ChevronDown,
   ChevronRight,
   LogOut,
   Camera,
   Image,
   Trash2,
-  Activity,
   Crown,
   BadgeCheck,
-  Mail,
-  Phone,
   FileText,
   Award,
-  AtSign,
-  XIcon,
+  Flag,
+  Gauge,
   HeartHandshake,
+  KeyRound,
+  Plus,
 } from "lucide-react";
 import { Toggle } from "../../components/ui/Toggle";
 import { TrackerQuestion } from "../../components/cycle/TrackerQuestion";
 import { DobPromptCard } from "../../components/profile/DobPromptCard";
 import { HealthChecksSetting } from "../../components/health-checks/HealthChecksSetting";
-import { ForumNicknameCard } from "../../components/forum/ForumNicknameCard";
+import { CredentialsPopup } from "../../components/profile/CredentialsPopup";
+import { ProfessionalCodeCard } from "../../components/profile/ProfessionalCodeCard";
+import { CycleTrackingRow } from "../../components/profile/CycleTrackingRow";
+import { initials } from "../../components/professionals/typeColour";
 
 const accountTypeLabel: Record<string, string> = {
   customer: "Customer",
@@ -250,6 +252,17 @@ export default function Profile() {
   // and the default-on grants went.
   const [connectedProfessionals, setConnectedProfessionals] = useState<LinkedProfessional[]>([]);
   const [sharingFor, setSharingFor] = useState<LinkedProfessional | null>(null);
+  // "Connect with a professional code" reveals the code box (C7).
+  const [connectOpen, setConnectOpen] = useState(false);
+  // Safety & content starts collapsed (C5).
+  const [safetyOpen, setSafetyOpen] = useState(false);
+
+  // After a code connects: the list again, and the box closes.
+  const reloadProfessionals = async () => {
+    const result = await fetchLinkedProfessionals();
+    if (result.status === "ok") setConnectedProfessionals(result.professionals);
+    setConnectOpen(false);
+  };
 
   useEffect(() => {
     if (hidesClientFields || !authUserId) {
@@ -266,73 +279,135 @@ export default function Profile() {
     };
   }, [hidesClientFields, authUserId]);
 
-  // V4 (QA 4.0) trimmed to Goals + Help; V5 (QA 5.0) removes Help too —
-  // Settings (reachable from More) already covers everything it pointed to.
-  const sections = hidesClientFields
-    ? []
-    : [
-        { icon: Target, label: "Goals", onClick: () => setGoalsOpen(true) },
-        { icon: Activity, label: "Activity Level", onClick: () => setActivityLevelOpen(true) },
-      ];
+  // MO1.5 / MO1.5.1 (R15, batch C). A centred hero (avatar, name, account
+  // chip, Credentials) between two tiles that keep tap-to-edit (weight and
+  // sex on the left, height and age on the right); then Memberships, the
+  // professionals card, Training plan as two tiles, Safety & content
+  // collapsed, and Sign Out as a text link. Colours are today's (C12).
+  const tile = (
+    top: { value: React.ReactNode; unit: string; onClick: () => void; label: string },
+    bottom: { value: React.ReactNode; unit: string; onClick: () => void; label: string }
+  ) => (
+    <div className="rounded-2xl bg-cream-card border border-charcoal/[0.08] flex flex-col overflow-hidden min-w-0">
+      {[top, bottom].map((part, i) => (
+        <button
+          key={part.unit}
+          type="button"
+          onClick={part.onClick}
+          aria-label={part.label}
+          className={clsx(
+            "tap flex-1 flex flex-col items-center justify-center px-1 py-3",
+            i === 1 && "border-t border-charcoal/[0.08] mx-3"
+          )}
+        >
+          <span className="text-[20px] font-bold leading-tight text-charcoal tabular-nums capitalize">{part.value}</span>
+          <span className="text-[11px] text-charcoal-faint">{part.unit}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  const sectionLabel = (text: string, id?: string) => (
+    <p id={id} className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
+      {text}
+    </p>
+  );
 
   return (
     <div>
       <PageHeader title="My Profile" showBack />
 
-      <div className="flex items-center gap-4 mb-2 animate-fade-slide-up">
-        <button
-          onClick={() => setAvatarSheetOpen(true)}
-          aria-label="Change profile picture"
-          className="tap relative w-16 h-16 rounded-full bg-teal-pale flex items-center justify-center text-2xl font-bold text-charcoal-soft dark:text-teal-deep-text overflow-hidden shrink-0"
-        >
-          {user.avatarUrl ? (
-            <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" />
-          ) : (
-            user.firstName.charAt(0)
+      <div
+        className={clsx(
+          "mb-6 animate-fade-slide-up",
+          hidesClientFields
+            ? "flex flex-col items-center"
+            : "grid grid-cols-[minmax(0,1fr)_minmax(0,1.55fr)_minmax(0,1fr)] gap-2.5 items-stretch"
+        )}
+      >
+        {!hidesClientFields &&
+          tile(
+            {
+              value: user.weightKg,
+              unit: "kg",
+              onClick: () => openMetricEditor("weightKg"),
+              label: `Weight, ${user.weightKg} kg. Edit`,
+            },
+            {
+              value: user.sex,
+              unit: "sex",
+              onClick: () => {
+                setSexError(null);
+                setSexOpen(true);
+              },
+              label: `Sex, ${user.sex}. Edit`,
+            }
           )}
-        </button>
-        <div>
-          <h2 className="font-display text-xl font-semibold text-charcoal flex items-center gap-1.5">
-            {user.firstName}
+
+        <div className="flex flex-col items-center text-center min-w-0">
+          <button
+            onClick={() => setAvatarSheetOpen(true)}
+            aria-label="Change profile picture"
+            className="tap relative w-[84px] h-[84px] rounded-full bg-teal-pale flex items-center justify-center text-[34px] font-bold text-charcoal-soft dark:text-teal-deep-text overflow-hidden shrink-0"
+          >
+            {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-full h-full object-cover" /> : user.firstName.charAt(0)}
+          </button>
+          <h2 className="mt-2.5 font-display text-[20px] font-bold leading-tight text-charcoal flex items-center justify-center gap-1.5 max-w-full">
+            {/* Wraps rather than truncating: the centre column is narrow. */}
+            <span className="min-w-0 line-clamp-2 [overflow-wrap:anywhere]">{user.firstName}</span>
             {premiumPlan && <Crown size={15} className="text-gold fill-gold shrink-0" aria-label="Centium Premium" />}
-            {/* QA 11.0: "Similar to the logo that appears... if the client has
-                a subscription, have another minimalistic logo that indicates
-                they are an ambassador."
-                THE PREDICATE USED TO BE referralNextMonthDiscountPct > 0 — the
-                referrer-side reward, set the first time anyone redeemed this
-                user's code. One successful referral is not an ambassador, and
-                that number only ever goes up, so nothing could take the badge
-                back. Ambassador is a granted status now, held in
-                ambassador_grants with a reason and a revocation, and read
-                through is_ambassador(). */}
-            {isAmbassador && (
-              <Award size={15} className="text-primary-dark shrink-0" aria-label="Centium Ambassador" />
-            )}
+            {/* QA 11.0 ambassador badge: a granted status (ambassador_grants,
+                read through is_ambassador()), not "one referral". */}
+            {isAmbassador && <Award size={15} className="text-primary-dark shrink-0" aria-label="Centium Ambassador" />}
           </h2>
-          <span className="inline-block text-[10px] font-bold text-charcoal-soft bg-cream-soft rounded-full px-2 py-0.5 mt-1">
+          <span className="inline-block text-[11px] font-bold text-charcoal-soft bg-cream-soft rounded-full px-2.5 py-0.5 mt-1.5 max-w-full truncate">
             {accountTypeLabel[user.accountType]}
             {user.customerSubtype ? ` · ${user.customerSubtype}` : ""}
             {user.professionalSubtype ? ` · ${user.professionalSubtype}` : ""}
           </span>
+          {/* QA 12.0: Credentials shows everything relevant, including the
+              social accounts. Customers only, as before: a professional's
+              socials live on their public listing. */}
+          {user.accountType === "customer" && (
+            <button
+              type="button"
+              onClick={() => setCredentialsOpen(true)}
+              className="tap mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-primary-pale px-3.5 py-1.5 text-[13px] font-semibold text-primary-deep-text"
+            >
+              <KeyRound size={14} aria-hidden />
+              Credentials
+            </button>
+          )}
         </div>
+
+        {!hidesClientFields &&
+          tile(
+            {
+              value: user.heightCm,
+              unit: "cm",
+              onClick: () => openMetricEditor("heightCm"),
+              label: `Height, ${user.heightCm} cm. Edit`,
+            },
+            {
+              // No date of birth on file (an older account): a dash, not the
+              // default age the local profile falls back to.
+              value: user.dateOfBirth ? user.age : "–",
+              unit: "years",
+              onClick: openDobEditor,
+              label: user.dateOfBirth ? `Age, ${user.age}. Date of birth` : "Add your date of birth",
+            }
+          )}
       </div>
 
-      {/* QA 12.0: "Reorganize the profile tab, The bio should be first
-          followed by rating/reviews then certification. then credentials." */}
+      {/* QA 12.0: "The bio should be first followed by rating/reviews then
+          certification." */}
       {user.accountType === "professional" && <ProfessionalBioCard />}
-
-      {/* V7 (QA 7.0): the ratings and reviews clients left, with the average
-          and the professional's public reply under each. */}
+      {/* V7 (QA 7.0): the ratings and reviews clients left. */}
       {user.accountType === "professional" && <ReviewsAboutMeCard className="mb-6 animate-fade-slide-up" />}
-
-      {/* My CV: licences, experience, education and the rest, shown on the
-          public profile. */}
+      {/* My CV: licences, experience, education and the rest. */}
       {user.accountType === "professional" && (
         <Card padded={false} className="mb-3 animate-fade-slide-up">
-          <button
-            onClick={() => navigate("/app/profile/cv")}
-            className="tap w-full flex items-center justify-between px-4 py-3.5"
-          >
+          <button onClick={() => navigate("/app/profile/cv")} className="tap w-full flex items-center justify-between px-4 py-3.5">
             <div className="flex items-center gap-3">
               <FileText size={17} className="text-charcoal-soft" />
               <span className="text-sm font-medium text-charcoal">My CV</span>
@@ -341,15 +416,10 @@ export default function Profile() {
           </button>
         </Card>
       )}
-
-      {/* V8 (QA 8.0): "move the certification button from More into My
-          Profile tab instead" — was previously reachable only from More. */}
+      {/* V8 (QA 8.0): certification lives in My Profile. */}
       {user.accountType === "professional" && (
         <Card padded={false} className="mb-6 animate-fade-slide-up">
-          <button
-            onClick={() => setCertOpen(true)}
-            className="tap w-full flex items-center justify-between px-4 py-3.5"
-          >
+          <button onClick={() => setCertOpen(true)} className="tap w-full flex items-center justify-between px-4 py-3.5">
             <div className="flex items-center gap-3">
               <BadgeCheck size={17} className="text-charcoal-soft" />
               <span className="text-sm font-medium text-charcoal">Certification</span>
@@ -359,75 +429,7 @@ export default function Profile() {
         </Card>
       )}
 
-      {/* NO "CREDENTIALS" ROW FOR PROFESSIONALS. It edited a phone number
-          and socials that lived only on this device, under a line promising
-          they showed on the Explore listing; they never did. The real website
-          and socials are edited in More › Your public listing (stored on
-          professional_profiles), and the CV's Links section carries anything
-          else a professional wants clients to find. */}
-
-      {!hidesClientFields && (
-        /* Decision 4: four tiles on one row at every width (360-430), so
-            "years" never wraps onto a row of its own. Compact padding and
-            16px values keep "Female" inside a tile even at 130% text. */
-        <div className="grid grid-cols-4 gap-1.5 mb-6 mt-4">
-          {(
-            [
-              { field: "weightKg" as const, value: user.weightKg, unit: "kg" },
-              { field: "heightCm" as const, value: user.heightCm, unit: "cm" },
-            ]
-          ).map((f) => (
-            <Card
-              key={f.field}
-              interactive
-              onClick={() => openMetricEditor(f.field)}
-              padded={false}
-              className="text-center animate-fade-slide-up min-w-0"
-              style={{ padding: "14px 2px" }}
-            >
-              <p className="text-base font-bold text-charcoal tabular-nums">{f.value}</p>
-              <p className="text-[11px] text-charcoal-faint">{f.unit}</p>
-            </Card>
-          ))}
-
-          {/* SEX, EDITABLE AT LAST. It was set once at onboarding and had no
-              editor anywhere, while the BMR constant behind every calorie
-              target read it. */}
-          <Card
-            key="sex"
-            interactive
-            onClick={() => {
-              setSexError(null);
-              setSexOpen(true);
-            }}
-            padded={false}
-            className="text-center animate-fade-slide-up min-w-0"
-            style={{ padding: "14px 2px" }}
-          >
-            <p className="text-base font-bold text-charcoal capitalize">{user.sex}</p>
-            <p className="text-[11px] text-charcoal-faint">sex</p>
-          </Card>
-
-          {/* Age keeps its place in the row but is no longer typed into — it
-              is derived from date of birth, so editing the number directly
-              would be editing a calculation. Tapping opens the date editor,
-              which is also too wide to sit inside a third-of-a-row card. */}
-          <Card
-            interactive
-            onClick={openDobEditor}
-            padded={false}
-            className="text-center animate-fade-slide-up min-w-0"
-            style={{ padding: "14px 2px" }}
-          >
-            {/* No date of birth on file (an older account): a dash, not the
-                default age the local profile falls back to. */}
-            <p className="text-base font-bold text-charcoal tabular-nums">{user.dateOfBirth ? user.age : "–"}</p>
-            <p className="text-[11px] text-charcoal-faint">years</p>
-          </Card>
-        </div>
-      )}
-
-      {/* Task R: right under the sex card, because switching to female or
+      {/* Task R: right under the sex tile, because switching to female or
           other is when a tracker somebody never chose to switch off is found
           off. Also on Health, where the Cycle card would be. */}
       <TrackerQuestion className="mb-6" />
@@ -436,221 +438,201 @@ export default function Profile() {
       <DobPromptCard className="mb-6" />
 
       {/* Business memberships: invitations to answer, memberships to leave,
-          and the box for redeeming a code handed over at a desk. Sits with
-          the other relationship surfaces on this page rather than inventing a
-          notification centre for one kind of invitation. */}
+          and the code box. Customers only. */}
       {user.accountType === "customer" && <MembershipsCard />}
 
-      {/* The forum nickname: "You can change it later in Profile" (forum
-          design, screen 4). Adult members only. */}
-      <ForumNicknameCard className="mb-6 animate-fade-slide-up" />
-
-      {/* QA 12.0: "Reorder the widgets under the profile picture and name
-          to have the weight, height and age first then credentials which
-          when pressed shows you all relevant info including social media
-          you can link like Instagram and X." */}
+      {/* MO1.5 "Professionals" / MO1.5.1 "Connected professionals": the real
+          relationships, each opening its own data-sharing controls, and the
+          code box to connect another (C7, C9). Customers only. */}
       {user.accountType === "customer" && (
-        <Card padded={false} className="mb-6 animate-fade-slide-up">
-          <button
-            onClick={() => setCredentialsOpen(true)}
-            className="tap w-full flex items-center justify-between px-4 py-3.5"
-          >
-            <div className="flex items-center gap-3">
-              <Mail size={17} className="text-charcoal-soft" />
-              <span className="text-sm font-medium text-charcoal">Credentials</span>
+        <section className="mb-6 animate-fade-slide-up">
+          {sectionLabel(connectedProfessionals.length > 0 ? "Connected professionals" : "Professionals")}
+          {connectedProfessionals.length === 0 ? (
+            <Card>
+              <ProfessionalCodeCard onConnected={() => void reloadProfessionals()} />
+            </Card>
+          ) : (
+            <div className="space-y-2.5">
+              {connectedProfessionals.map((p) => (
+                <button
+                  key={p.professionalId}
+                  type="button"
+                  onClick={() => setSharingFor(p)}
+                  className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
+                >
+                  <span className="w-11 h-11 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden text-[14px] font-bold text-primary-dark">
+                    {p.avatarUrl ? <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(p.name)}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[15px] font-semibold text-charcoal truncate">{p.name}</span>
+                    <span className="block text-xs text-charcoal-faint">Manage data sharing</span>
+                  </span>
+                  <ChevronRight size={16} className="text-charcoal-tertiary shrink-0 rtl:-scale-x-100" aria-hidden />
+                </button>
+              ))}
+              {connectOpen ? (
+                <Card>
+                  <ProfessionalCodeCard onConnected={() => void reloadProfessionals()} />
+                </Card>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setConnectOpen(true)}
+                  className="tap w-full flex items-center gap-3 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3.5 py-3 text-start"
+                >
+                  <span className="w-10 h-10 rounded-2xl bg-primary-pale flex items-center justify-center shrink-0" aria-hidden>
+                    <Plus size={18} className="text-primary-dark" />
+                  </span>
+                  <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">Connect with a professional code</span>
+                  <ChevronRight size={16} className="text-charcoal-tertiary shrink-0 rtl:-scale-x-100" aria-hidden />
+                </button>
+              )}
             </div>
-            <ChevronRight size={16} className="text-charcoal-faint" />
-          </button>
-        </Card>
+          )}
+        </section>
       )}
 
-      {connectedProfessionals.length > 0 && (
-        <div className="mb-6 animate-fade-slide-up">
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-            Connected professionals
-          </p>
-          <div className="flex gap-2.5 scroll-row no-scrollbar pb-1">
-            {connectedProfessionals.map((p) => (
-              // Opens that professional's own data-sharing controls. Used to
-              // navigate to the mock directory's detail page, which no longer
-              // carries these toggles.
+      {/* MO1.5 "Training plan" (C4): Goals and Activity Level as two tiles,
+          opening the same sheets as before. Customers only. */}
+      {!hidesClientFields && (
+        <section className="mb-6 animate-fade-slide-up">
+          {sectionLabel("Training plan")}
+          <div className="grid grid-cols-2 gap-2.5">
+            {[
+              { icon: Flag, label: "Goals", onClick: () => setGoalsOpen(true) },
+              { icon: Gauge, label: "Activity Level", onClick: () => setActivityLevelOpen(true) },
+            ].map((s) => (
               <button
-                key={p.professionalId}
-                onClick={() => setSharingFor(p)}
-                className="tap shrink-0 flex items-center gap-2.5 bg-cream-card rounded-2xl pl-2.5 pr-4 py-2.5 shadow-soft"
+                key={s.label}
+                type="button"
+                onClick={s.onClick}
+                className="tap flex items-center gap-2 rounded-2xl border border-charcoal/[0.08] bg-cream-card px-3 py-3.5 text-start min-w-0"
               >
-                <span className="w-9 h-9 rounded-full bg-primary-pale flex items-center justify-center shrink-0 overflow-hidden">
-                  {p.avatarUrl ? (
-                    <img src={p.avatarUrl} alt="" className="w-full h-full object-cover" />
-                  ) : (
-                    <PERSON_ICON size={16} className="text-primary-dark" />
-                  )}
+                <span className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center shrink-0" aria-hidden>
+                  <s.icon size={16} className="text-charcoal-soft" />
                 </span>
-                <div className="text-left">
-                  <p className="text-xs font-semibold text-charcoal whitespace-nowrap">{p.name}</p>
-                  <p className="text-[10px] text-charcoal-faint whitespace-nowrap">Manage data sharing</p>
-                </div>
+                <span className="flex-1 min-w-0 text-sm font-semibold leading-tight text-charcoal">{s.label}</span>
+                <ChevronRight size={15} className="text-charcoal-tertiary shrink-0 rtl:-scale-x-100" aria-hidden />
               </button>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      {sections.length > 0 && (
-      <>
-      {/* V8 (QA 8.0): "Have a common title fir Goals and Activity level" */}
-      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-        Goals & Activity
-      </p>
-      <Card padded={false} className="divide-y divide-charcoal/[0.04] animate-fade-slide-up">
-        {sections.map((s) => (
-          <button
-            key={s.label}
-            onClick={s.onClick}
-            className="tap w-full flex items-center justify-between px-4 py-3.5"
-          >
-            <div className="flex items-center gap-3">
-              <s.icon size={17} className="text-charcoal-soft" />
-              <span className="text-sm font-medium text-charcoal">{s.label}</span>
-            </div>
-            <ChevronRight size={16} className="text-charcoal-faint" />
-          </button>
-        ))}
-      </Card>
-      </>
-      )}
-
-      {/* QA 12.0: "Have a section called Safety & content, whereby it
-          offers a togglable ED-sensitive mode... Avoid calling it a 'ED
-          toggle' rather something like Recovery-sensitive experience...
-          Do not make the user explain why they selected it... A
-          Description would look like: [...]. the Confirmation after
-          enabling: [...]. Pause option: [...]." Copy below is used as
-          given.
-          QA 13.0: "make Safety & content a title like goals and activity" —
-          the label now sits outside the card as an eyebrow, matching the
-          "Goals & Activity" pattern above, instead of being the card's
-          first line. */}
+      {/* QA 12.0 Safety & content (Recovery-sensitive experience, copy as
+          given), now collapsible and collapsed by default (C5), holding one
+          Recovery card with Cycle tracking (moved from Settings, C6), then
+          Advanced health monitoring. Customers only. */}
       {user.accountType === "customer" && (
-        <>
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
-            Safety & content
-          </p>
-          <Card className="mb-6 animate-fade-slide-up">
-          <div className="flex items-center justify-between gap-3 mb-2">
-            <span className="flex items-center gap-2.5 text-sm font-bold text-charcoal">
-              <HeartHandshake size={16} className="text-primary-dark shrink-0" />
-              Recovery-sensitive experience
-            </span>
-            <Toggle
-              checked={recoverySensitive}
-              onChange={(v) => {
-                setRecoverySensitive(v);
-                if (v) {
-                  setJustToggledRecovery(true);
-                  setRecoverySensitiveIntroSeen(false);
-                  window.setTimeout(() => setJustToggledRecovery(false), 6000);
-                }
-              }}
-              label="Recovery-sensitive experience"
+        <section className="mb-6">
+          <button
+            type="button"
+            onClick={() => setSafetyOpen((o) => !o)}
+            aria-expanded={safetyOpen}
+            aria-controls="safety-content"
+            className="tap w-full flex items-center justify-between gap-3 mb-2.5 text-start"
+          >
+            <span className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Safety & content</span>
+            <ChevronDown
+              size={16}
+              aria-hidden
+              className={clsx("text-charcoal-tertiary transition-transform", safetyOpen && "rotate-180")}
             />
-          </div>
-          {/* QA 13.0: "Have it where when the toggle is on it shows the
-              text under." */}
-          {recoverySensitive && (
-            <p className="text-xs text-charcoal-faint leading-relaxed">
-              Personalize food tracking to reduce number-focused and potentially triggering content. You
-              control what is shown, and you can change this at any time.
-            </p>
+          </button>
+          {safetyOpen && (
+            <div id="safety-content" className="animate-fade-slide-up">
+              <Card className="mb-3">
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className="flex items-center gap-3 min-w-0">
+                    <span className="w-9 h-9 rounded-2xl bg-cream-soft flex items-center justify-center shrink-0" aria-hidden>
+                      <HeartHandshake size={16} className="text-primary-dark" />
+                    </span>
+                    <span className="text-sm font-bold text-charcoal">Recovery-sensitive experience</span>
+                  </span>
+                  <Toggle
+                    checked={recoverySensitive}
+                    onChange={(v) => {
+                      setRecoverySensitive(v);
+                      if (v) {
+                        setJustToggledRecovery(true);
+                        setRecoverySensitiveIntroSeen(false);
+                        window.setTimeout(() => setJustToggledRecovery(false), 6000);
+                      }
+                    }}
+                    label="Recovery-sensitive experience"
+                  />
+                </div>
+                {/* QA 13.0: when the toggle is on it shows the text under. */}
+                {recoverySensitive && (
+                  <p className="text-xs text-charcoal-faint leading-relaxed">
+                    Personalize food tracking to reduce number-focused and potentially triggering content. You control
+                    what is shown, and you can change this at any time.
+                  </p>
+                )}
+                {justToggledRecovery && (
+                  <p className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-xl px-3.5 py-2.5 mt-3 leading-relaxed">
+                    Your experience has been updated: calorie totals, weight-related content, deficit language, and streaks
+                    are hidden. Meal logging can focus on meals, notes, feelings, and hunger/fullness instead.
+                  </p>
+                )}
+                {/* Task X: what is true, said instead of a pause that paused
+                    nothing: where the setting lives, and who sees it. */}
+                <p className="text-[11px] text-charcoal-faint mt-2 leading-relaxed">
+                  Saved to your account, so it's the same on every device you sign in on. Professionals you work with are
+                  never told whether it's on.
+                </p>
+                <p className="text-[11px] text-charcoal-faint leading-relaxed mt-3 pt-3 border-t border-charcoal/[0.06]">
+                  This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a{" "}
+                  <button onClick={() => navigate("/app/professionals")} className="tap text-primary-dark font-semibold underline">
+                    professional
+                  </button>
+                  .
+                </p>
+                <div className="mt-3.5 pt-3.5 border-t border-charcoal/[0.06]">
+                  <CycleTrackingRow />
+                </div>
+              </Card>
+              <HealthChecksSetting />
+            </div>
           )}
-          {justToggledRecovery && (
-            <p className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-xl px-3.5 py-2.5 mt-3 leading-relaxed">
-              Your experience has been updated: calorie totals, weight-related content, deficit language,
-              and streaks are hidden. Meal logging can focus on meals, notes, feelings, and hunger/fullness
-              instead.
-            </p>
-          )}
-          {/* Task X: "Pause reminders" is gone. It paused nothing: no meal
-              or tracking reminder is ever sent, so the button promised a
-              break from something that was not happening. What is true now
-              is said instead: where the setting lives, and who sees it. */}
-          <p className="text-[11px] text-charcoal-faint mt-2 leading-relaxed">
-            Saved to your account, so it's the same on every device you sign in on. Professionals you
-            work with are never told whether it's on.
-          </p>
-          <p className="text-[11px] text-charcoal-faint leading-relaxed mt-3 pt-3 border-t border-charcoal/[0.06]">
-            This isn't clinical care. If tracking feels unhelpful right now, consider discussing it with a{" "}
-            <button onClick={() => navigate("/app/professionals")} className="tap text-primary-dark font-semibold underline">
-              professional
-            </button>
-            .
-          </p>
-          </Card>
-          <HealthChecksSetting />
-        </>
+        </section>
       )}
 
+      {/* Cycle tracking for a professional: same switch, same rule as it had
+          in Settings (every account type), in its own section here (C6). */}
+      {user.accountType === "professional" && (
+        <section className="mb-6">
+          {sectionLabel("Health tracking")}
+          <Card>
+            <CycleTrackingRow />
+          </Card>
+        </section>
+      )}
+
+      {/* Sign Out as a text link (MO1.5), still tap-twice to confirm. */}
       <button
         onClick={handleSignOut}
-        className="tap w-full flex items-center justify-center gap-2 rounded-2xl border border-teal/30 text-teal-dark text-sm font-semibold py-3.5 mt-5"
+        className="tap mx-auto mt-2 flex items-center justify-center gap-2 px-4 py-2.5 text-[15px] font-semibold text-teal-dark"
       >
-        <LogOut size={15} />
+        <LogOut size={16} aria-hidden />
         {confirmSignOut ? "Tap again to confirm sign out" : "Sign Out"}
       </button>
 
       <GoalsEditSheet open={goalsOpen} onClose={() => setGoalsOpen(false)} />
       <ActivityLevelSheet open={activityLevelOpen} onClose={() => setActivityLevelOpen(false)} />
       {user.accountType === "professional" && (
-        <CertificationSheet
-          key={certOpen ? "cert-open" : "cert-closed"}
-          open={certOpen}
-          onClose={() => setCertOpen(false)}
-        />
+        <CertificationSheet key={certOpen ? "cert-open" : "cert-closed"} open={certOpen} onClose={() => setCertOpen(false)} />
       )}
 
-      <BottomSheet open={credentialsOpen} onClose={() => setCredentialsOpen(false)} title="Credentials">
-        <div className="space-y-2.5 animate-fade-slide-up">
-          <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
-            <Mail size={15} className="text-charcoal-faint shrink-0" />
-            <input
-              value={user.email}
-              readOnly
-              className="flex-1 bg-transparent text-sm text-charcoal-faint focus:outline-none"
-            />
-          </div>
-          <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
-            <Phone size={15} className="text-charcoal-faint shrink-0" />
-            <input
-              value={user.phone ?? ""}
-              onChange={(e) => updateProfile({ phone: e.target.value })}
-              placeholder="Phone number"
-              className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
-            />
-          </div>
-          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide pt-2">Social</p>
-          <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
-            <AtSign size={15} className="text-charcoal-faint shrink-0" />
-            <input
-              value={user.instagramHandle ?? ""}
-              onChange={(e) => updateProfile({ instagramHandle: e.target.value })}
-              placeholder="Instagram"
-              className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
-            />
-          </div>
-          <div className="flex items-center gap-2.5 bg-cream-soft rounded-xl px-3.5 py-2.5">
-            <XIcon size={15} className="text-charcoal-faint shrink-0" />
-            <input
-              value={user.xHandle ?? ""}
-              onChange={(e) => updateProfile({ xHandle: e.target.value })}
-              placeholder="X (Twitter)"
-              className="flex-1 bg-transparent text-sm text-charcoal placeholder:text-charcoal-faint focus:outline-none"
-            />
-          </div>
-          <p className="text-[11px] text-charcoal-faint pt-1">
-            Whichever of these you fill in shows on your profile.
-          </p>
-        </div>
-      </BottomSheet>
+      {/* Keyed on open, so every opening starts from what is saved: tapping
+          outside discards the edits (C10). */}
+      {user.accountType === "customer" && (
+        <CredentialsPopup
+          key={credentialsOpen ? "cred-open" : "cred-closed"}
+          open={credentialsOpen}
+          onClose={() => setCredentialsOpen(false)}
+        />
+      )}
 
       <input
         ref={cameraInputRef}
@@ -816,7 +798,7 @@ export default function Profile() {
       <BottomSheet
         open={!!sharingFor}
         onClose={() => setSharingFor(null)}
-        title={sharingFor?.name ?? "Data sharing"}
+        title="Data sharing"
       >
         {sharingFor && <DataSharingSection professionalId={sharingFor.professionalId} />}
       </BottomSheet>
