@@ -15,14 +15,19 @@ export interface SegmentedTabItem {
  *  `0 6px`, `min-width: 0`; active `#A79AD5` with `#FFFFFF` 12.5px/700; idle
  *  `#F5F4FE` with `#6D50D3` (Food) — Workout's frame (CentiumTabFrame
  *  `tabsWorkout`) sets its idle label in `#5B5349`, hence `idleInk`.
- *  Labels only, no icons. */
+ *  Labels only, no icons.
+ *
+ *  `size="compact"` is the mobile v5.1 handover's detail-page height
+ *  (Foundations 2.5: 38 pt tabs "on gym and class pages", so a 50 pt track).
+ *  The default stays 44, so every existing tab bar is unchanged. */
 export const SegmentedTabs: React.FC<{
   items: SegmentedTabItem[];
   activeKey: string;
   onChange: (key: string) => void;
   className?: string;
   idleInk?: string;
-}> = ({ items, activeKey, onChange, className, idleInk = "#6D50D3" }) => (
+  size?: "default" | "compact";
+}> = ({ items, activeKey, onChange, className, idleInk = "#6D50D3", size = "default" }) => (
   <div
     className={`flex items-center ${className ?? ""}`}
     style={{ background: "#F3F3FD", borderRadius: 16, padding: 6, gap: 5 }}
@@ -40,7 +45,7 @@ export const SegmentedTabs: React.FC<{
           style={{
             flex: item.weight ?? 1,
             minWidth: 0,
-            height: 44,
+            height: size === "compact" ? 38 : 44,
             padding: "0 6px",
             borderRadius: 12,
             background: active ? "#A79AD5" : "#F5F4FE",
