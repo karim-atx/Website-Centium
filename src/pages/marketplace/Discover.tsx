@@ -216,7 +216,7 @@ export default function Discover() {
         ))}
       </div>
 
-      <p className="section-label mb-2.5">Classes</p>
+      <p className="mb-2.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Classes</p>
       <div className="space-y-2.5 mb-6">
         {filtered.map((c) => {
           const mine = booked.has(c.classId);
@@ -304,7 +304,7 @@ export default function Discover() {
         )}
       </div>
 
-      <p className="section-label mb-2.5">
+      <p className="mb-2.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
         Businesses
       </p>
       <div className="space-y-2.5 mb-6">
@@ -343,7 +343,7 @@ export default function Discover() {
         )}
       </div>
 
-      <p className="section-label mb-2.5">Gyms</p>
+      <p className="mb-2.5 text-xs font-semibold text-charcoal-faint uppercase tracking-wide">Gyms</p>
       <div className="space-y-2.5">
         {gyms.map((v) => (
           <Card key={v.venueId} className="flex items-start gap-3 animate-fade-slide-up">

@@ -46,7 +46,7 @@ export const ReadyStep: React.FC<{
 
       {isCustomer && (
         <div className="w-full bg-cream-card rounded-3xl shadow-soft p-5 mb-10 text-left">
-          <p className="section-label mb-3">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
             Your starting point
           </p>
           <div className="flex flex-wrap gap-2">
@@ -64,7 +64,7 @@ export const ReadyStep: React.FC<{
 
       {isProfessional && (
         <div className="w-full bg-cream-card rounded-3xl shadow-soft p-5 mb-10 text-left">
-          <p className="section-label mb-3">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
             Your profile
           </p>
           <div className="flex flex-wrap gap-2">
@@ -82,7 +82,7 @@ export const ReadyStep: React.FC<{
 
       {isBusiness && (
         <div className="w-full bg-cream-card rounded-3xl shadow-soft p-5 mb-10 text-left">
-          <p className="section-label mb-3">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
             Your business
           </p>
           <div className="flex flex-wrap gap-2">

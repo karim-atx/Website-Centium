@@ -267,7 +267,7 @@ export const BloodPressureDetailSheet: React.FC<{
             {/* --- how many in each category ------------------------------ */}
             {!inPregnancy && (
             <>
-            <p className="section-label mb-2">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
               Readings by category
             </p>
             <div className="space-y-1.5 mb-5">
@@ -296,7 +296,7 @@ export const BloodPressureDetailSheet: React.FC<{
             )}
 
             {/* --- the readings themselves -------------------------------- */}
-            <p className="section-label mb-2">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
               All readings
             </p>
             <div className="space-y-1.5 mb-4">

@@ -161,7 +161,7 @@ export default function BusinessMembersTab() {
 
       {liveCodes.length > 0 && (
         <>
-          <p className="section-label mb-2.5">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">
             Codes waiting to be used
           </p>
           <div className="space-y-2.5 mb-6">
@@ -193,7 +193,7 @@ export default function BusinessMembersTab() {
         </>
       )}
 
-      <p className="section-label mb-2.5">Members</p>
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2.5">Members</p>
       <div className="space-y-2.5">
         {members.map((m) => (
           <Card key={m.id} className="flex items-center gap-3 animate-fade-slide-up">

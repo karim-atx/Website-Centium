@@ -90,7 +90,7 @@ export const ProfessionalBioCard: React.FC = () => {
 
   return (
     <Card className="mb-6 mt-4 animate-fade-slide-up">
-      <p className="section-label mb-2">Bio</p>
+      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">Bio</p>
       <textarea
         value={draft}
         disabled={loading}

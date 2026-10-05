@@ -81,7 +81,7 @@ export default function BusinessDashboard() {
         )}
       </Card>
 
-      <p className="section-label mb-2.5">
+      <p className="section-label text-charcoal-faint mb-2.5">
         Your listing
       </p>
       <Card className="mb-6">

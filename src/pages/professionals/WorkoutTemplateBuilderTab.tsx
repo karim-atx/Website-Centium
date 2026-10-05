@@ -278,7 +278,7 @@ export default function WorkoutTemplateBuilderTab() {
                     </div>
                   )}
                   <div>
-                    <p className="section-label mb-1.5">
+                    <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">
                       Exercises
                     </p>
                     {/* V10 (QA 10.0): "It should show the full details, not
@@ -317,7 +317,7 @@ export default function WorkoutTemplateBuilderTab() {
                     <p className="text-xs text-charcoal-faint">Not assigned to anyone yet.</p>
                   ) : (
                     <div>
-                      <p className="section-label mb-1.5">
+                      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">
                         Client activity
                       </p>
                       {/* WHAT THEY ACTUALLY LOGGED, or an honest silence.

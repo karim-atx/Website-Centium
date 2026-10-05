@@ -68,7 +68,7 @@ export const SubtypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }
               className="w-full rounded-2xl bg-cream-card border border-charcoal/10 px-4 py-3.5 text-charcoal placeholder:text-charcoal-faint focus:outline-none focus:border-primary/50 focus:ring-2 focus:ring-primary/10"
             />
           </label>
-          <p id="business-type-label" className="section-label mt-4 mb-2">
+          <p id="business-type-label" className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mt-4 mb-2">
             Business type
           </p>
           <div className="grid grid-cols-2 gap-2" role="group" aria-labelledby="business-type-label">
@@ -95,7 +95,7 @@ export const SubtypeStep: React.FC<Props> = ({ draft, setDraft, onNext, onBack }
         </div>
       ) : (
         <div>
-          <p id="specialty-label" className="section-label mb-2">
+          <p id="specialty-label" className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
             My specialty
           </p>
           <div className="space-y-2" role="group" aria-labelledby="specialty-label">

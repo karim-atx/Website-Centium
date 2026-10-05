@@ -372,7 +372,7 @@ export const MetricDetailSheet: React.FC<{
 
                   {night?.stages && (
                     <>
-                      <p className="section-label mb-2">
+                      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
                         Total time asleep by stage
                       </p>
                       <div className="grid grid-cols-4 gap-2 mb-4">
@@ -392,7 +392,7 @@ export const MetricDetailSheet: React.FC<{
                         })}
                       </div>
 
-                      <p className="section-label mb-2">
+                      <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
                         Sleep stages
                       </p>
                     </>

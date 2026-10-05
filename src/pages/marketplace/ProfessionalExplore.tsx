@@ -136,7 +136,7 @@ export default function ProfessionalExplore() {
           which is why it appeared to work. */}
       {!affiliated && (
         <Card className="mb-6 animate-fade-slide-up">
-          <p className="section-label mb-2">
+          <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-2">
             Not affiliated with a business
           </p>
           <p className="text-[11px] text-charcoal-faint">

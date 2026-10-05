@@ -296,7 +296,7 @@ export const NearbyView: React.FC<{
             </p>
           )}
 
-          <h2 className="section-label mt-1">
+          <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft mt-1">
             Nearest first{nearby.length > 0 ? ` · ${nearby.length}` : ""}
           </h2>
           {nearby.length === 0 && !searching && (
@@ -310,7 +310,7 @@ export const NearbyView: React.FC<{
             ))}
             {notOnMap.length > 0 && (
               <>
-                <h2 className="section-label pt-2">Not on the map nearby</h2>
+                <h2 className="text-xs font-bold uppercase tracking-wide text-charcoal-soft pt-2">Not on the map nearby</h2>
                 <p className="text-xs text-charcoal-faint -mt-2">
                   They haven't shared an area, or theirs is outside what you're looking at.
                 </p>

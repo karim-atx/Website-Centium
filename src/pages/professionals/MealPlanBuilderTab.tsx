@@ -173,7 +173,7 @@ export default function MealPlanBuilderTab() {
           )}
 
           <Card className="mb-5">
-            <p className="section-label mb-3">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
               {client?.name}'s weight goal
             </p>
             <div className="grid grid-cols-3 gap-2 mb-4">
@@ -257,8 +257,8 @@ export default function MealPlanBuilderTab() {
 
           {client && client.lastWeightKg !== undefined && (
             <Card className="mb-5">
-              <div className="flex items-center justify-between mb-2 pb-[7.5px] border-b-[1.5px] border-primary">
-                <p className="section-label !border-b-0 !pb-0">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
                   {client.name}'s weight trend
                 </p>
               </div>
@@ -280,8 +280,8 @@ export default function MealPlanBuilderTab() {
               UI" — same shared nutritionGoal the client's own Goals & Macros
               tab reads from. */}
           <Card className="mb-5">
-            <div className="flex items-center justify-between mb-3 pb-[7.5px] border-b-[1.5px] border-primary">
-              <p className="section-label !border-b-0 !pb-0">TDEE estimate</p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">TDEE estimate</p>
               <Sparkles size={14} className="text-primary" />
             </div>
             {clientTdee !== null ? (
@@ -300,7 +300,7 @@ export default function MealPlanBuilderTab() {
           </Card>
 
           <Card className="mb-5">
-            <p className="section-label mb-3">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
               Daily calorie target
             </p>
             <div className="flex items-center gap-2">
@@ -338,7 +338,7 @@ export default function MealPlanBuilderTab() {
           </Card>
 
           <Card className="mb-6">
-            <p className="section-label mb-3">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-3">
               Macro distribution
             </p>
             <MacroSplitEditor
@@ -354,8 +354,8 @@ export default function MealPlanBuilderTab() {
               now lives in `clientCustomMeals[clientId]`, so switching the
               client chip above shows a different list, and creating one
               here only ever reaches this one client. */}
-          <div className="flex items-center justify-between mb-2.5 pb-[7.5px] border-b-[1.5px] border-primary">
-            <p className="section-label !border-b-0 !pb-0">
+          <div className="flex items-center justify-between mb-2.5">
+            <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">
               {client?.name}'s custom meal plans
             </p>
             <button

@@ -161,8 +161,8 @@ export default function BusinessAnalyticsTab() {
 
       {section === "insights" && (
         <>
-          <div className="flex items-center justify-between mb-2.5 pb-[7.5px] border-b-[1.5px] border-primary">
-            <p className="section-label !border-b-0 !pb-0">Business performance</p>
+          <div className="flex items-center justify-between mb-2.5">
+            <p className="section-label text-charcoal-faint">Business performance</p>
             <button
               onClick={() =>
                 downloadCsv(
@@ -193,7 +193,7 @@ export default function BusinessAnalyticsTab() {
 
           {/* QA 13.0: "Each card should be clickable and open a filtered
               list with recommended actions." */}
-          <p className="section-label mb-2.5">Needs attention</p>
+          <p className="section-label text-charcoal-faint mb-2.5">Needs attention</p>
           <Card padded={false} className="mb-6 divide-y divide-charcoal/[0.04]">
             {insightActions.map((i) => (
               <button
@@ -207,7 +207,7 @@ export default function BusinessAnalyticsTab() {
             ))}
           </Card>
 
-          <p className="section-label mb-2.5">Marketplace listing performance</p>
+          <p className="section-label text-charcoal-faint mb-2.5">Marketplace listing performance</p>
           <div className="grid grid-cols-2 gap-2.5 mb-4">
             {[
               { icon: Eye, label: "Listing views (30d)", value: (businessListing.membersReached * 6 + 128).toLocaleString() },
@@ -249,7 +249,7 @@ export default function BusinessAnalyticsTab() {
           {/* QA 13.0: "Averages can mislead... include a distribution
               chart that immediately identifies how many people may need
               extra support." */}
-          <p className="section-label mb-2.5">Adherence distribution</p>
+          <p className="section-label text-charcoal-faint mb-2.5">Adherence distribution</p>
           <Card className="mb-6">
             <div className="space-y-2.5">
               {adherenceBuckets.map((b) => (

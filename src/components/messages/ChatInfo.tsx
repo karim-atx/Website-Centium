@@ -208,7 +208,7 @@ export const ChatInfo: React.FC<{
         >
           <ChevronLeft size={20} />
         </button>
-        <h1 className="text-[22px] leading-tight font-extrabold text-charcoal">Chat info</h1>
+        <h1 className="text-xl font-extrabold text-charcoal">Chat info</h1>
       </div>
 
       <div className="flex flex-col items-center gap-1.5">
