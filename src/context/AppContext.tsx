@@ -1065,7 +1065,7 @@ interface AppState {
    * server always answers zeros, never "nothing", when there is no session.
    */
   meditationSummary: MeditationSummary | null;
-  /** Re-reads it, after MeditationSheet saves a session. */
+  /** Re-reads it, after the BreathingRunner saves a session. */
   refreshMeditationSummary: () => Promise<void>;
   /**
    * Task T: profiles.timezone and whether it was picked by hand, or null

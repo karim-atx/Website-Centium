@@ -1298,7 +1298,7 @@ export const HomeWidget: React.FC<{
     // ---------------------------------------------------------- Meditation
     //
     // Real figures from meditation_sessions (my_meditation_summary), saved by
-    // MeditationSheet when a breathing session ends. Still no goal and no
+    // the Meditation page's BreathingRunner when a breathing session ends. Still no goal and no
     // percentage: nobody has set a meditation target. See MeditationFigures.
     case "meditation": {
       const onClick = () => navigate("/app/mind");

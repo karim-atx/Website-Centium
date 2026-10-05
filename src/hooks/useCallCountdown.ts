@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
  *
  * WALL-CLOCK DELTA, NOT TICK ACCUMULATION, and this is the one decision in the
  * file that matters. Two timers in this codebase get it wrong in the same way:
- * MeditationSheet adds 100 to a counter every 100ms, WorkoutSessionSheet adds 1
+ * BreathingRunner adds 100 to a counter every 100ms, WorkoutSessionSheet adds 1
  * every second. Both count TICKS and call the result TIME. Browsers clamp
  * background-tab timers to a second or more and throttle harder the longer a
  * tab stays hidden, so both silently undercount — a call would run past its cap

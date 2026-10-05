@@ -4,11 +4,11 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { useApp } from "../../context/AppContext";
 import { StreakEditSheet } from "../../components/mind/StreakEditSheet";
 import { AddStreakSheet } from "../../components/mind/AddStreakSheet";
-import { MeditationSheet } from "../../components/mind/MeditationSheet";
 import { LotusGlyph } from "../../components/dashboard/LotusGlyph";
 import HabitsTab from "./HabitsTab";
 import JournalTab from "./JournalTab";
 import AchievementsTab from "./AchievementsTab";
+import MeditationPage from "./MeditationPage";
 import { earnedCount } from "../../services/achievements";
 import { formatMeditationTime, isEmptySummary } from "../../services/meditation/logic";
 import { habitBestStreak } from "../../services/habits/streak";
@@ -31,19 +31,21 @@ import type { HabitItem, Streak } from "../../types";
 import clsx from "clsx";
 import { journalStreak as journalStreakFrom } from "../../services/journal/streak";
 
-type Section = "habits" | "journal" | "achievements";
-const SECTIONS: readonly Section[] = ["habits", "journal", "achievements"];
+type Section = "habits" | "journal" | "achievements" | "meditation";
+const SECTIONS: readonly Section[] = ["habits", "journal", "achievements", "meditation"];
 
-// The sub-page header, for the three sections that have one.
+// The sub-page header, for each section.
 const SECTION_TITLE: Record<Section, string> = {
   habits: "Habits",
   journal: "Journal",
   achievements: "Achievements",
+  meditation: "Meditation",
 };
 const SECTION_SUBTITLE: Record<Section, string> = {
   habits: "Track your daily habits",
   journal: "Your thoughts, logged",
   achievements: "What you've earned so far",
+  meditation: "Breathing, stretching & yoga",
 };
 
 const AUTO_ICON: Record<NonNullable<Streak["category"]>, typeof Flame> = {
@@ -83,9 +85,9 @@ function DoneRing({ done, total }: { done: number; total: number }) {
   );
 }
 
-// Mind, mobile v5.1 MO1.1. The hub is /app/mind; Habits, Journal and
-// Achievements are sub-routes (/app/mind/<section>), so they can be linked to
-// and the browser's back button leaves them (A7).
+// Mind, mobile v5.1 MO1.1. The hub is /app/mind; Habits, Journal,
+// Achievements and Meditation are sub-routes (/app/mind/<section>), so they
+// can be linked to and the browser's back button leaves them (A7).
 //
 // WHAT THE DESIGN DROPS, AND WHERE IT WENT (decisions A1, A2, A8):
 // - Manual streaks stay, in "Your streaks" below the habits, with Add streak,
@@ -114,7 +116,6 @@ export default function Mind() {
   const section = SECTIONS.find((s) => s === sectionParam) ?? null;
   const [editingStreak, setEditingStreak] = useState<Streak | null>(null);
   const [addStreakOpen, setAddStreakOpen] = useState(false);
-  const [meditationOpen, setMeditationOpen] = useState(false);
   const [autoOpen, setAutoOpen] = useState(false);
   // §7.2: which user-added streak just incremented, so its row can fire
   // the one-shot celebration burst — never on the four auto-derived
@@ -189,6 +190,7 @@ export default function Mind() {
         {section === "habits" && <HabitsTab />}
         {section === "journal" && <JournalTab />}
         {section === "achievements" && <AchievementsTab />}
+        {section === "meditation" && <MeditationPage />}
       </div>
     );
   }
@@ -228,7 +230,7 @@ export default function Mind() {
             }
           />
           <Tile
-            onClick={() => setMeditationOpen(true)}
+            onClick={() => navigate("/app/mind/meditation")}
             fill="rgba(162,200,194,.18)"
             well="rgba(162,200,194,.3)"
             icon={<LotusGlyph size={30} stroke="rgb(var(--c-teal-dark))" />}
@@ -393,7 +395,6 @@ export default function Mind() {
 
       <StreakEditSheet open={!!editingStreak} onClose={() => setEditingStreak(null)} streak={editingStreak} />
       <AddStreakSheet open={addStreakOpen} onClose={() => setAddStreakOpen(false)} />
-      <MeditationSheet open={meditationOpen} onClose={() => setMeditationOpen(false)} />
     </div>
   );
 }
