@@ -20,7 +20,8 @@ import { pushUnavailableReason } from "./platform";
 // permission plus this account's push_subscriptions row for this browser:
 // on asks the browser (Notification.requestPermission) and registers the
 // device; off removes the row, so nothing is sent here any more. While it is
-// off every row below is dimmed and disabled (BR-12). This used to be the
+// off the device rows below are dimmed and disabled (BR-12); Messages stays
+// live, because switching it on asks for permission itself. This used to be the
 // Push notifications row's "Allow / Re-check" pill on Settings.
 //
 // THE ROWS ARE THE ONES WITH DATA, under the board's group names. Messages is
@@ -149,6 +150,14 @@ export default function NotificationsPage() {
       return;
     }
     updateNotificationPrefs({ professionalMessages: saved.enabled });
+    // Turning it on from a tap is the moment to ask this device for
+    // permission; without a subscription here nothing can arrive on it. As the
+    // old Notifications sheet did, unchanged; the lead card then reflects it.
+    if (saved.enabled && pushSupported() && Notification.permission !== "granted") {
+      const r = await enablePush(authUserId);
+      if (r.status !== "ok") setNote(`${r.message} You'll still see new messages in the app.`);
+      setRegistered(await isThisDeviceRegistered());
+    }
     setSaving(false);
   };
 
@@ -184,7 +193,9 @@ export default function NotificationsPage() {
                 icon={r.icon}
                 title={r.label}
                 subtitle={r.desc}
-                dimmed={dimmed}
+                // Never dimmed: it is the account's setting, saved on the
+                // server for every device, and switching it on is what asks
+                // this device for permission (above).
                 toggle={{
                   checked: messages ?? true,
                   disabled: messages === null || saving,
