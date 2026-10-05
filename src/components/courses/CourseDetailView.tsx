@@ -296,7 +296,7 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
               <div className="flex-1 min-w-0 rounded-2xl p-3 flex flex-col gap-1.5" style={{ background: fv("rules-bg"), border: `2px solid ${fv("accent")}` }}>
                 <span className="text-sm font-extrabold">Full course · {price}</span>
                 <span className="text-xs leading-[1.5] [overflow-wrap:anywhere]" style={{ color: fv("rules-ink") }}>
-                  Plus quizzes, downloadable plans, questions to {authorName} and a certificate of completion
+                  Adds quizzes, PDFs and a certificate
                 </span>
               </div>
             </div>
@@ -318,14 +318,15 @@ export function CourseDetailView({ courseId, userId }: { courseId: string; userI
         ) : (
           <>
             <PrimaryButton onClick={() => void start("paid")} busy={busy === "paid"}>
-              Get the full course · {price}
+              Get the full course
             </PrimaryButton>
+            {/* MO1.3.5: a centred text link, no longer an outlined button. */}
             <button
               type="button"
               onClick={() => void start("free")}
               disabled={!!busy}
-              className="tap h-[50px] rounded-2xl text-[15px] font-bold disabled:opacity-60"
-              style={{ border: `1px solid ${fv("border")}`, background: fv("card"), color: fv("text") }}
+              className="tap self-center h-11 px-3 text-[13px] font-bold disabled:opacity-60"
+              style={{ color: fv("link") }}
             >
               {busy === "free" ? "Starting…" : enrolment ? "Continue watching free" : "Start watching free"}
             </button>
