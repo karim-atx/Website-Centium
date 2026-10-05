@@ -60,6 +60,16 @@ function WheelColumnView({ column }: { column: WheelColumn<string | number> }) {
     setTop(el.scrollTop);
   }, [index]);
 
+  // A wheel closed mid-settle must not report afterwards: its element is gone,
+  // scrollTop reads 0, and the first option would be chosen (seen on the
+  // calendar's Starts wheel, which then dragged Ends to 2 AM).
+  useEffect(
+    () => () => {
+      if (settle.current) window.clearTimeout(settle.current);
+    },
+    []
+  );
+
   const onScroll = () => {
     const el = ref.current;
     if (!el) return;
