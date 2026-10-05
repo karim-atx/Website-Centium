@@ -183,3 +183,18 @@ export function describeReviewError(error: { code?: string; message?: string }, 
       return "Couldn't save your review. Try again.";
   }
 }
+
+/**
+ * The star breakdown for MO1.2.1.1's summary card (B9), counted from the rows
+ * the reader already has. Redacted reviews are left out, as the aggregate
+ * leaves them out; withdrawn ones never reach a reader. Index 0 is one star.
+ */
+export function ratingDistribution(rows: { rating: number; redactedAt: string | null }[]): number[] {
+  const out = [0, 0, 0, 0, 0];
+  for (const r of rows) {
+    if (r.redactedAt) continue;
+    const i = Math.round(r.rating) - 1;
+    if (i >= 0 && i < 5) out[i] += 1;
+  }
+  return out;
+}

@@ -62,7 +62,9 @@ export const MyReviewCard: React.FC<{
   onOpen: () => void;
   onWithdraw: () => Promise<string | null>;
   className?: string;
-}> = ({ firstName, review, status, onOpen, onWithdraw, className = "" }) => {
+  /** MO1.2.1 puts "My review" above the card as a section label. */
+  hideLabel?: boolean;
+}> = ({ firstName, review, status, onOpen, onWithdraw, className = "", hideLabel }) => {
   // The time is read once per mount, not on every render.
   const [now] = useState(() => Date.now());
   const [armed, arm] = useArmed();
@@ -82,8 +84,8 @@ export const MyReviewCard: React.FC<{
 
   return (
     <Card className={className}>
-      <div className="flex items-center justify-between gap-2 mb-1.5">
-        <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">My Review</p>
+      <div className={`flex items-center gap-2 ${hideLabel ? (review ? "justify-end mb-1.5" : "hidden") : "justify-between mb-1.5"}`}>
+        {!hideLabel && <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide">My Review</p>}
         {(!review || editable) && (
           <Button size="sm" variant="outline" onClick={onOpen}>
             <Pencil size={13} /> {review ? "Edit" : "Rate & Review"}
@@ -91,7 +93,17 @@ export const MyReviewCard: React.FC<{
         )}
       </div>
       {!review ? (
-        <p className="text-sm text-charcoal-faint">You haven't reviewed {firstName} yet</p>
+        hideLabel ? (
+          // MO1.2.1: the prompt and the outline button on one row.
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[13px] text-charcoal-faint">You haven't reviewed {firstName} yet</p>
+            <Button size="sm" variant="outline" onClick={onOpen} className="shrink-0">
+              <Pencil size={13} /> Rate &amp; Review
+            </Button>
+          </div>
+        ) : (
+          <p className="text-sm text-charcoal-faint">You haven't reviewed {firstName} yet</p>
+        )
       ) : withdrawn ? (
         <>
           <ReviewItem review={{ ...review, reply: null }} showName={false} starSize={14} />
@@ -188,7 +200,7 @@ function ReviewForm({ onClose, firstName, existing, onSave, onWithdraw }: FormPr
             aria-label={`${i + 1} star${i === 0 ? "" : "s"}`}
             className="tap"
           >
-            <Star size={30} className={i < rating ? "fill-gold text-gold" : "text-charcoal/15"} />
+            <Star size={34} strokeWidth={1.5} className={i < rating ? "fill-gold text-gold" : "text-charcoal/15"} />
           </button>
         ))}
       </div>

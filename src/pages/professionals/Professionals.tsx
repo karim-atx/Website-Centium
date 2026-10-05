@@ -3,6 +3,7 @@ import { PageHeader } from "../../components/ui/PageHeader";
 import { Card } from "../../components/ui/Card";
 import { DataSharingSummary } from "../../components/professionals/DataSharingSummary";
 import { Chip } from "../../components/ui/Chip";
+import { SegmentedTabs } from "../../components/ui/SegmentedTabs";
 import { fetchPublicDirectory, type DirectoryListing } from "../../services/directory";
 import { useApp } from "../../context/AppContext";
 import { fetchLinkedProfessionals } from "../../services/consent";
@@ -46,6 +47,14 @@ type Subtype = Enums<"professional_subtype">;
 
 // The chip labels, shared with the card (SUBTYPE_LABELS).
 const subtypeLabels: Record<Subtype, string> = SUBTYPE_LABELS;
+
+/** The old toggle's and chips' light colours, kept on the segmented controls (decision 15). */
+const CONTROL_LIGHT = {
+  activeFill: "rgb(var(--c-primary-fill))",
+  activeInk: "rgb(var(--c-on-primary-fill))",
+  idleFill: "rgb(var(--c-cream-card))",
+  idleInk: "rgb(var(--c-charcoal-soft))",
+};
 
 export default function Professionals() {
   const { user, authUserId, theme } = useApp();
@@ -164,28 +173,19 @@ export default function Professionals() {
         title="Professionals"
         subtitle="Trainers, dietitians, physiotherapists & doctors"
         showBack
-        right={
-          <div role="group" aria-label="Show as" className="flex rounded-full border border-charcoal/10 bg-cream-card p-0.5 shrink-0">
-            {(
-              [
-                { v: "list", label: "List", Icon: List },
-                { v: "map", label: "Map", Icon: MapIcon },
-              ] as const
-            ).map(({ v, label, Icon }) => (
-              <button
-                key={v}
-                type="button"
-                aria-pressed={view === v}
-                onClick={() => setView(v)}
-                className={`tap flex items-center gap-1 h-9 px-3 rounded-full text-[13px] font-bold ${
-                  view === v ? "bg-primary-fill text-on-primary-fill" : "text-charcoal-soft"
-                }`}
-              >
-                <Icon size={14} aria-hidden /> {label}
-              </button>
-            ))}
-          </div>
-        }
+      />
+
+      {/* MO1.2: List / Map as full-width segmented tabs under the header. */}
+      <SegmentedTabs
+        className="mb-5"
+        items={[
+          { key: "list", label: "List", icon: <List size={17} strokeWidth={1.75} aria-hidden /> },
+          { key: "map", label: "Map", icon: <MapIcon size={17} strokeWidth={1.75} aria-hidden /> },
+        ]}
+        activeKey={view}
+        onChange={(k) => setView(k as "list" | "map")}
+        labelSize={15}
+        light={CONTROL_LIGHT}
       />
 
       {/* Real data-sharing controls. These hang off the client's actual
@@ -236,16 +236,18 @@ export default function Professionals() {
           above — two cards that looked alike where one was true. The real one
           covers this case. */}
 
-      <div className="flex gap-2 scroll-row no-scrollbar pb-1 mb-5">
-        <Chip active={type === null} onClick={() => setType(null)}>
-          All
-        </Chip>
-        {(Object.keys(subtypeLabels) as Subtype[]).map((t) => (
-          <Chip key={t} active={type === t} onClick={() => setType(t)}>
-            {subtypeLabels[t]}
-          </Chip>
-        ))}
-      </div>
+      {/* MO1.2: the categories in a tinted rail that runs off the right edge. */}
+      <SegmentedTabs
+        className="mb-4 -mr-4"
+        scroll
+        items={[{ key: "all", label: "All" }, ...(Object.keys(subtypeLabels) as Subtype[]).map((t) => ({ key: t, label: subtypeLabels[t] }))]}
+        activeKey={type ?? "all"}
+        onChange={(k) => setType(k === "all" ? null : (k as Subtype))}
+        labelSize={12}
+        tabHeight={32}
+        trackStyle={{ padding: 4, borderRadius: "16px 0 0 16px", paddingRight: 16 }}
+        light={CONTROL_LIGHT}
+      />
 
       {view === "map" && (
         <NearbyView authUserId={authUserId} dark={theme === "dark"} subtype={type} directory={listings ?? []} />

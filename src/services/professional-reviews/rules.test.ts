@@ -1,6 +1,7 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
 import {
+  ratingDistribution,
   EDIT_WINDOW_OVER,
   asReviewStatus,
   bodyLength,
@@ -75,4 +76,16 @@ test("refusals read as sentences", () => {
   assert.match(describeReviewError({ code: "ATX72" }, "edit"), /withdrawn/);
   assert.match(describeReviewError({ code: "22023", message: "a reply cannot be empty" }, "reply"), /Write a reply/);
   assert.match(describeReviewError({ code: "XX000" }, "withdraw"), /Couldn't withdraw/);
+});
+
+test("the star breakdown counts unredacted rows by rating", () => {
+  const rows = [
+    { rating: 5, redactedAt: null },
+    { rating: 5, redactedAt: null },
+    { rating: 4, redactedAt: null },
+    { rating: 1, redactedAt: "2026-10-01T00:00:00Z" },
+    { rating: 3, redactedAt: null },
+  ];
+  assert.deepEqual(ratingDistribution(rows), [0, 0, 1, 1, 2]);
+  assert.deepEqual(ratingDistribution([]), [0, 0, 0, 0, 0]);
 });

@@ -2,8 +2,10 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
-import { BottomSheet } from "../../components/ui/BottomSheet";
-import { MessageProfessionalButton } from "../../components/messages/MessageProfessionalButton";
+import { PinnedCta } from "../../components/ui/PinnedCta";
+import { useOpenThread } from "../../components/messages/useOpenThread";
+import { goldPill, initials, typeColours } from "../../components/professionals/typeColour";
+import { useIsDark } from "../../hooks/useIsDark";
 import { fetchListing, type DirectoryListing } from "../../services/directory";
 import { fetchClientSince, isActiveClientOf, professionalRole } from "../../services/connected-professional";
 import { fetchPublicCv, type PublicCv } from "../../services/professional-cv";
@@ -17,19 +19,15 @@ import {
 import type { ProfessionalType } from "../../types";
 import { useApp } from "../../context/AppContext";
 import { useProfessionalReviews } from "../../hooks/useProfessionalReviews";
-import { ReviewItem } from "../../components/professionals/ReviewItem";
-import { RatingBadge } from "../../components/professionals/RatingBadge";
-import { MyReviewCard, ReviewFormSheet, ReviewReportForm } from "../../components/professionals/ReviewForms";
-import { reportReview } from "../../services/professional-reviews";
-import { reviewCountLabel } from "../../services/professional-reviews/rules";
-import { ChevronLeft, Lock } from "lucide-react";
-import { professionalTypeIcon } from "../../utils/icons";
-import { UserCheck } from "lucide-react";
+import { MyReviewCard, ReviewFormSheet } from "../../components/professionals/ReviewForms";
+import { ratingLabel, reviewCountLabel } from "../../services/professional-reviews/rules";
+import { ChevronLeft, Handshake, Lock, MessageCircle, Star, Wallet } from "lucide-react";
 
-// professional_subtype has five values; professionalTypeIcon has four. A real
-// listing can hold 'other', and indexing the map with it yields undefined —
-// which React renders as "Element type is invalid" and blanks the whole page.
-const iconFor = (t: string) => (t in professionalTypeIcon ? professionalTypeIcon[t as ProfessionalType] : UserCheck);
+// MO1.2.1 / MO1.2.1.4 (R11): a centred hero in the professional's type
+// colours, the price and client-since pills, the gold reviews pill (which
+// opens the reviews page, MO1.2.1.1), section labels, and a pinned row:
+// Message for a connected client, Message and "Request to hire" otherwise.
+// The reviews sheet that lived here is now that page.
 
 // V8 (QA 8.0): "pressing on the grey review text would open to all the
 // reviews written by the clients."
@@ -244,16 +242,14 @@ export default function ProfessionalDetail() {
   // never an account; both are gone.
   const isConnected: boolean = activeClient === true;
   const [reviewOpen, setReviewOpen] = useState(false);
-  const [allReviewsOpen, setAllReviewsOpen] = useState(false);
-  /** The review being reported; the reviews sheet shows the form in its place. */
-  const [reportingId, setReportingId] = useState<string | null>(null);
+  const dark = useIsDark();
+  const { open: openThread, busy: threadBusy, error: threadError } = useOpenThread(realProfessionalId ?? "");
 
   // REAL ROWS, read as this caller. Signed out nothing is read — review text
   // has no anon grant — and the sheet asks them to sign in instead.
   const {
     mine: myReview,
     myStatus,
-    others: otherReviews,
     error: reviewError,
     canReview,
     signedOut,
@@ -284,11 +280,6 @@ export default function ProfessionalDetail() {
     return message;
   };
 
-  const closeAllReviews = () => {
-    setAllReviewsOpen(false);
-    setReportingId(null);
-  };
-
   // V7 (QA 7.0): "Your rating should influence the professional's overall
   // rating based on the total rating by all people."
   // IT DOES NOW, WITHOUT ARITHMETIC HERE. The old code blended the local
@@ -297,6 +288,9 @@ export default function ProfessionalDetail() {
   // row including this user's, so the number below IS the blend — and
   // re-adding the own review on top would double-count it.
   const aggregateCount = professional?.reviews ?? 0;
+
+  const t = typeColours(listing?.subtype ?? null, dark);
+  const gold = goldPill(dark);
 
   if (!professional) {
     return (
@@ -309,78 +303,101 @@ export default function ProfessionalDetail() {
     );
   }
 
+  const first = professional.name.split(" ")[0];
+  const rating = ratingLabel(listing?.averageRating ?? null, aggregateCount);
+  /** MO1.2.1's section label: 10.5/700 uppercase in the type colour. */
+  const sectionLabel = (text: string) => (
+    <p className="text-[10.5px] font-bold uppercase tracking-[0.12em] px-1 mb-2" style={{ color: t.main }}>
+      {text}
+    </p>
+  );
+  const pill = "inline-flex items-center gap-1.5 h-7 px-3 rounded-full text-[11px] font-semibold";
+  // The pinned row waits for the connection check, so a client is never
+  // shown "Request to hire" for a professional they already work with.
+  const showPinned = isReal && activeClient !== null;
+
   return (
-    <div>
+    <div className={showPinned ? "pb-[172px]" : ""}>
       <button
         onClick={() => navigate(-1)}
-        className="tap w-9 h-9 -ml-2 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft mb-3"
+        aria-label="Back"
+        className="tap w-9 h-9 -ml-2 rounded-full flex items-center justify-center text-charcoal-soft hover:bg-cream-soft mb-1"
       >
         <ChevronLeft size={20} />
       </button>
 
-      <div className="flex items-center gap-4 mb-5 animate-fade-slide-up">
-        <span className="w-16 h-16 rounded-full bg-primary-pale flex items-center justify-center shrink-0">
-          {(() => {
-            const Icon = iconFor(professional.type);
-            return <Icon size={28} className="text-primary-dark" />;
-          })()}
+      {/* MO1.2.1: the centred hero, in the professional's type colours (B3). */}
+      <div className="flex flex-col items-center text-center gap-1.5 mb-6 animate-fade-slide-up">
+        <span
+          className="w-20 h-20 rounded-full flex items-center justify-center overflow-hidden text-[26px] font-bold mb-1.5"
+          style={{ background: t.pill, color: t.deep }}
+        >
+          {listing?.avatarUrl ? <img src={listing.avatarUrl} alt="" className="w-full h-full object-cover" /> : initials(professional.name)}
         </span>
-        <div className="min-w-0">
-          <h1 className="flex items-center gap-1.5 font-display text-2xl font-semibold text-charcoal">
-            <span className="min-w-0 break-words">{professional.name}</span>
-            {professional.verified && <VerifiedCheck size={18} />}
-          </h1>
-          {professional.headline && (
-            <p className="text-[13px] font-semibold text-primary-deep-text break-words">{professional.headline}</p>
-          )}
-          <p className="text-[12.5px] text-charcoal-soft">
-            {[professionalRole({ specialty: professional.specialty, subtype: listing?.subtype ?? null }), professional.location]
-              .filter(Boolean)
-              .join(" · ")}
+        <h1 className="flex items-center justify-center gap-1.5 text-[22px] font-bold leading-tight" style={{ color: t.deep }}>
+          <span className="min-w-0 break-words">{professional.name}</span>
+          {professional.verified && <VerifiedCheck size={18} />}
+        </h1>
+        {professional.headline && (
+          <p className="text-[15px] font-bold break-words" style={{ color: t.main }}>
+            {professional.headline}
           </p>
+        )}
+        <p className="text-[14px] font-medium text-charcoal-soft">
+          {[professionalRole({ specialty: professional.specialty, subtype: listing?.subtype ?? null }), professional.location]
+            .filter(Boolean)
+            .join(" · ")}
+        </p>
+        <div className="flex flex-wrap justify-center gap-1.5 mt-1.5">
+          {isConnected && clientSince && (
+            <span className={pill} style={{ background: t.pill, color: t.deep }}>
+              <Handshake size={12} strokeWidth={1.75} aria-hidden />
+              Client since {new Date(clientSince).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
+            </span>
+          )}
+          {/* New on the profile (MO1.2.1); none when no rate is set (B5). */}
+          {listing?.monthlyRate != null && (
+            <span className={pill} style={{ background: t.pill, color: t.deep }}>
+              <Wallet size={12} strokeWidth={1.75} aria-hidden />${listing.monthlyRate}/mo
+            </span>
+          )}
         </div>
-      </div>
-
-      <div className="flex items-center gap-4 mb-6 animate-fade-slide-up">
-        {/* REAL LISTINGS HAVE REAL RATINGS NOW. This used to be hidden for
-            them entirely, because there was no review schema behind a real
-            account and a 0.0 would have looked like a verdict. There is one
-            now — so the number shows when somebody has actually left one, and
-            stays hidden when nobody has, which is still not a verdict. */}
-        {/* The average only from three reviews; "New" below that. */}
-        <RatingBadge average={listing?.averageRating ?? null} count={aggregateCount} withCount={false} />
-        {aggregateCount > 0 && (
-          <button onClick={() => setAllReviewsOpen(true)} className="tap min-h-[44px] text-xs text-charcoal-faint underline">
-            {reviewCountLabel(aggregateCount)}
-          </button>
-        )}
-        {isConnected && clientSince && (
-          <span className="text-xs font-semibold text-primary-dark bg-primary-pale rounded-full px-2.5 py-1">
-            Client since {new Date(clientSince).toLocaleDateString(undefined, { month: "long", year: "numeric" })}
-          </span>
-        )}
+        {/* The gold reviews pill opens the reviews page (B7, B9). "New" until
+            three reviews count toward an average. */}
+        <button
+          type="button"
+          onClick={() => navigate(`/app/professionals/${professional.id}/reviews`)}
+          className="tap mt-1 inline-flex items-center gap-1.5 h-8 px-3.5 rounded-full text-[12px] font-bold"
+          style={{ background: gold.bg, border: `1px solid ${gold.border}`, color: gold.ink }}
+        >
+          <Star size={13} aria-hidden style={{ fill: gold.star, color: gold.star }} />
+          {rating.kind === "average"
+            ? `${rating.value} · ${reviewCountLabel(rating.count)}`
+            : aggregateCount > 0
+              ? `New · ${reviewCountLabel(aggregateCount)}`
+              : "New · no reviews yet"}
+        </button>
       </div>
 
       {/* About IS the existing bio; the CV follows it. */}
       {professional.bio && (
-        <Card className="mb-3.5 animate-fade-slide-up">
-          <p className="text-xs font-bold text-charcoal-soft uppercase tracking-[0.06em] mb-2">About</p>
-          <p className="text-sm text-charcoal-soft leading-relaxed whitespace-pre-line">{professional.bio}</p>
-        </Card>
+        <section className="mb-5 animate-fade-slide-up" aria-label="About">
+          {sectionLabel("About")}
+          <div className="rounded-[20px] bg-cream-card border border-charcoal/[0.08] p-4">
+            <p className="text-[13px] text-charcoal-soft leading-relaxed whitespace-pre-line">{professional.bio}</p>
+          </div>
+        </section>
       )}
 
       {publicCv && (
-        <div className="mb-6">
-          <CvView cv={publicCv} skills={professional.skills} />
+        <div className="mb-5">
+          <CvView cv={publicCv} skills={professional.skills} accent={{ label: t.main, pillBg: t.pill, pillInk: t.deep }} />
         </div>
       )}
 
       {/* V5 (QA 5.0): rating/reviewing is restricted to professionals you've
           actually hired — for anyone else, this section doesn't appear.
-          V6 (QA 6.0): merged into a single box — the same card displays
-          "My Review" and swaps its content between the empty prompt and
-          the submitted review, instead of a separate rate-box + reviews list. */}
-      {/* GATED ON THE DATABASE'S ANSWER, not on the connection check beside
+          GATED ON THE DATABASE'S ANSWER, not on the connection check beside
           it. can_review_professional admits anyone with a professional_clients
           row and deliberately does NOT filter disconnected_at, so somebody who
           has since left this professional can still review the work they did
@@ -388,14 +405,18 @@ export default function ProfessionalDetail() {
           for an existing review regardless, so a past client can still edit or
           remove what they wrote. */}
       {(canReview === true || myReview) && (
-        <MyReviewCard
-          className="mb-6 animate-fade-slide-up"
-          firstName={professional.name.split(" ")[0]}
-          review={myReview}
-          status={myStatus}
-          onOpen={() => setReviewOpen(true)}
-          onWithdraw={withdrawMyReview}
-        />
+        <section className="mb-5 animate-fade-slide-up" aria-label="My review">
+          {sectionLabel("My review")}
+          <MyReviewCard
+            className="!rounded-[20px]"
+            hideLabel
+            firstName={first}
+            review={myReview}
+            status={myStatus}
+            onOpen={() => setReviewOpen(true)}
+            onWithdraw={withdrawMyReview}
+          />
+        </section>
       )}
 
       {/* Why the review card is absent, said once rather than left as silence.
@@ -403,225 +424,111 @@ export default function ProfessionalDetail() {
           while the check is in flight, and telling somebody they can't review
           before asking would be a guess. */}
       {isReal && !signedOut && canReview === false && !myReview && (
-        <Card className="mb-6 animate-fade-slide-up">
+        <Card className="mb-5 animate-fade-slide-up">
           <p className="text-xs font-semibold text-charcoal-faint uppercase tracking-wide mb-1.5">Reviews</p>
-          <p className="text-sm text-charcoal-faint">
-            You can only review a professional you've worked with.
-          </p>
+          <p className="text-sm text-charcoal-faint">You can only review a professional you've worked with.</p>
         </Card>
       )}
 
       {reviewError && (
-        <p className="mb-6 rounded-xl bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-status-high">
-          {reviewError}
+        <p className="mb-5 rounded-xl bg-cream-soft px-3.5 py-2.5 text-xs font-semibold text-status-high">{reviewError}</p>
+      )}
+
+      {isConnected && (
+        // The data-sharing toggles live on the Professionals page
+        // (DataSharingSection), where real consent hangs off real relationships.
+        <p className="flex items-center gap-1.5 px-1 text-[11.5px] text-charcoal-faint mb-5">
+          <Lock size={12} strokeWidth={1.75} className="shrink-0" /> Manage what your professionals can see under Professionals › Data
+          sharing.
         </p>
       )}
 
-      {isConnected ? (
+      {isReal && activeClient === false && (
         <>
-          {/* The data-sharing toggles that used to live here have moved to
-              the Professionals page (DataSharingSection). They were keyed by
-              this page's mock directory id ("pr1"), which is not a real
-              account and can never hold a grant — so nothing set here was
-              ever written, or ever visible to a professional. Real consent
-              hangs off real relationships. */}
-          <p className="flex items-center gap-1.5 text-xs text-charcoal-faint mb-6">
-            <Lock size={12} /> Manage what your professionals can see under Professionals › Data
-            sharing.
-          </p>
-
-          {/* Only for a real account. This branch is also reachable for a
-              seeded mockProfessionals entry, whose id ("pr1") is not a uuid
-              and could never hold a thread — offering Message there would
-              fail on the RPC rather than at the button. */}
-          {isReal && (
-            <MessageProfessionalButton
-              professionalId={professional.id}
-              firstName={professional.name.split(" ")[0]}
-            />
-          )}
-          {/* NO "REMOVE PROFESSIONAL" BUTTON HERE. It only ever applied to
-              the seeded mockProfessionals entries, and it worked by adding an
-              id to a local "dismissed" list — which ended the relationship in
-              this browser's opinion and nowhere else. Both the entries and the
-              list are gone. Ending a real relationship is a write
-              (disconnect_client_relationship) and belongs on a path that makes
-              it, not on a profile page that would only appear to. */}
-        </>
-      ) : (
-        isReal ? (
-          <>
-          {/* ASKING DIRECTLY, THE OTHER REAL ROUTE ONTO A ROSTER. The card
-              below still explains client codes, which the professional starts;
-              this one is the request the CLIENT can start. Both are real and
-              both end in a professional_clients row — by redeem_client_code
-              and accept_client_request respectively — so neither replaces the
-              other and they sit together.
-
-              THREE STATES, AND ALL THREE ARE FACTS RATHER THAN GUESSES. The
-              row is read on mount from pending_client_requests, which RLS
-              scopes to this caller. There is no cancel, because the client has
-              no UPDATE or DELETE grant on that table — offering one would be a
-              button that cannot work. */}
-          {hireState === "pending" ? (
-            <div className="rounded-2xl bg-primary-pale border border-primary/20 px-4 py-3.5 text-center mb-2.5">
+          {/* THE REQUEST'S OTHER TWO STATES, said in words above the pinned
+              row. Both are facts, read on mount from pending_client_requests,
+              which RLS scopes to this caller. There is no cancel, because the
+              client has no UPDATE or DELETE grant on that table. */}
+          {hireState === "pending" && (
+            <div className="rounded-2xl bg-primary-pale border border-primary/20 px-4 py-3.5 text-center mb-3">
               <p className="text-sm font-semibold text-primary-dark">Request sent</p>
               <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
-                Waiting for {professional.name.split(" ")[0]} to respond. You'll see them in your
-                professionals once they accept.
+                Waiting for {first} to respond. You'll see them in your professionals once they accept.
               </p>
-            </div>
-          ) : hireState === "cooling_down" ? (
-            /* DELIBERATELY VAGUE, AND THE VAGUENESS IS THE POINT. The
-               mechanism is a rejection plus a 24-hour cooldown, and saying
-               either out loud would tell someone they were turned down and
-               invite them to count the hours. Neither helps them. This says
-               the professional is not taking people on, which is true, and
-               leaves the door open without naming a date. */
-            <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center mb-2.5">
-              <p className="text-sm font-semibold text-charcoal">Not taking new clients</p>
-              <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
-                {professional.name.split(" ")[0]} isn't accepting new clients at the moment. You can
-                still message them, or ask for a client code.
-              </p>
-            </div>
-          ) : (
-            <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center mb-2.5">
-              <p className="text-sm font-semibold text-charcoal">
-                Ask {professional.name.split(" ")[0]} to take you on
-              </p>
-              <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
-                They'll see your request and can accept it from their dashboard.
-              </p>
-              {requestError && (
-                <p className="text-[11.5px] text-status-high mt-2">{requestError}</p>
-              )}
-              <Button
-                fullWidth
-                className="mt-3.5"
-                disabled={sending || !authUserId}
-                onClick={() => void requestHire()}
-              >
-                {sending ? "Sending…" : "Request to hire"}
-              </Button>
             </div>
           )}
-          {/* No Hire on a real listing. Hiring here is local-only state -- a
-             real relationship can still only come from a redeemed client
-             code -- so the button would take a payment method, say "Hired",
-             and connect nothing. A button that silently does nothing is the
-             same lie as a figure that was never measured; say what actually
-             works instead. */}
-          <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center">
-            <p className="text-sm font-semibold text-charcoal">Ask them for a client code</p>
-            <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
-              {professional.name.split(" ")[0]} can generate a code for you. Redeem it from your
-              profile to connect and start sharing data.
+          {hireState === "cooling_down" && (
+            /* DELIBERATELY VAGUE: the mechanism is a rejection plus a 24-hour
+               cooldown, and saying either would tell someone they were turned
+               down and invite them to count the hours. */
+            <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center mb-3">
+              <p className="text-sm font-semibold text-charcoal">Not taking new clients</p>
+              <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
+                {first} isn't accepting new clients at the moment. You can still message them, or ask for a client code.
+              </p>
+            </div>
+          )}
+          {requestError && <p className="text-[11.5px] text-status-high mb-3 px-1">{requestError}</p>}
+          {/* MO1.2.1.4: the client-code route stays as a secondary card, in
+              the type's pill colour. */}
+          <div className="rounded-[18px] px-4 py-4" style={{ background: t.pill }}>
+            <p className="text-[13.5px] font-bold" style={{ color: t.deep }}>
+              Ask {first} for a client code
             </p>
-            {/* THE PRE-HIRE ENTRY POINT, and the reason it belongs here.
-                start_message_thread requires no relationship precisely so a
-                client can ask a question before committing money, and this
-                card is that moment — someone reading a listing, deciding.
-                Until now the card said "ask them for a code" and offered no
-                way to ask them anything. */}
-            <MessageProfessionalButton
-              professionalId={professional.id}
-              firstName={professional.name.split(" ")[0]}
-              className="mt-3.5"
-            />
+            <p className="text-[12px] text-charcoal-soft mt-1 leading-relaxed">
+              {first} can generate a code for you. Redeem it from your profile to connect and start sharing data.
+            </p>
           </div>
-          </>
-        ) : (
-        // A SEEDED SAMPLE, AND IT SAYS SO. There is no account behind a
-        // mockProfessionals entry, so every action this page could offer is a
-        // dead end: Message has no thread to open ("pr1" is not a uuid), and
-        // the Hire button that used to sit here took a payment method, said
-        // "Hired", and connected nothing. A note is the honest thing to put in
-        // the space a call-to-action cannot fill.
-        <div className="rounded-2xl bg-cream-soft border border-charcoal/10 px-4 py-3.5 text-center">
-          <p className="text-sm font-semibold text-charcoal">Sample listing</p>
-          <p className="text-[11.5px] text-charcoal-soft mt-1 leading-relaxed">
-            There's no real account behind this profile, so it can't be hired or
-            messaged. Browse professionals to find one you can work with.
-          </p>
-        </div>
-        )
+        </>
       )}
+
+      {threadError && (
+        <p className="mt-3 text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{threadError}</p>
+      )}
+
+      {/* MO1.2.1 / MO1.2.1.4's pinned row (B6). Connected: Message only (the
+          frame's own rule). Not connected: Message and "Request to hire" —
+          the frame's Hire, which needs offers and payments (decision 4) — in
+          its sent and cooldown states when there is one. */}
+      {showPinned &&
+        (isConnected ? (
+          <PinnedCta
+            primary={{
+              label: `Message ${first}`,
+              icon: <MessageCircle size={15} />,
+              loading: threadBusy,
+              onClick: () => void openThread(),
+              style: { background: t.main, color: t.onMain },
+            }}
+          />
+        ) : (
+          <PinnedCta
+            secondary={{
+              label: "Message",
+              icon: <MessageCircle size={15} />,
+              loading: threadBusy,
+              onClick: () => void openThread(),
+              style: { background: t.pill, color: t.deep },
+            }}
+            primary={{
+              label: hireState === "pending" ? "Request sent" : hireState === "cooling_down" ? "Not taking clients" : "Request to hire",
+              icon: <Handshake size={15} />,
+              loading: sending,
+              disabled: hireState !== "none" || !authUserId,
+              onClick: () => void requestHire(),
+              style: { background: t.main, color: t.onMain },
+            }}
+          />
+        ))}
 
       <ReviewFormSheet
         open={reviewOpen}
         onClose={() => setReviewOpen(false)}
-        firstName={professional.name.split(" ")[0]}
+        firstName={first}
         existing={myReview}
         onSave={submitReview}
         onWithdraw={withdrawMyReview}
       />
-
-      <BottomSheet
-        open={allReviewsOpen}
-        onClose={closeAllReviews}
-        onBack={reportingId ? () => setReportingId(null) : undefined}
-        title={reportingId ? "Report this review" : `${aggregateCount} ${aggregateCount === 1 ? "Review" : "Reviews"}`}
-      >
-        {reportingId ? (
-          <ReviewReportForm
-            onSend={async (reason, detail) => {
-              const r = await reportReview(reportingId, reason, detail);
-              return r.ok ? null : r.message;
-            }}
-          />
-        ) : signedOut ? (
-          // The count is public; the words are for members. A prompt, not
-          // the read's refusal dressed up as "Couldn't load reviews".
-          <Card className="text-center py-8 animate-fade-slide-up">
-            <p className="text-sm font-semibold text-charcoal">Sign in to read reviews</p>
-            <p className="text-xs text-charcoal-faint mt-1 leading-relaxed">
-              Reviews are from {professional.name.split(" ")[0]}'s clients, and members can read them.
-            </p>
-            <Button size="sm" className="mt-3" onClick={() => navigate("/app/onboarding")}>
-              Sign in
-            </Button>
-          </Card>
-        ) : (
-          <div className="space-y-3 animate-fade-slide-up">
-            {myReview && myStatus !== "withdrawn" && (
-              <Card className="!bg-primary-pale">
-                <p className="text-sm font-semibold text-charcoal mb-1.5">You</p>
-                <ReviewItem
-                  review={myReview}
-                  showName={false}
-                  starSize={12}
-                  replyLabel={`Reply from ${professional.name.split(" ")[0]}`}
-                />
-              </Card>
-            )}
-            {otherReviews.map((r) => (
-              <Card key={r.id}>
-                <ReviewItem
-                  review={r}
-                  starSize={12}
-                  replyLabel={`Reply from ${professional.name.split(" ")[0]}`}
-                  actions={
-                    <button
-                      type="button"
-                      onClick={() => setReportingId(r.id)}
-                      className="tap min-h-[44px] text-xs font-semibold text-charcoal-faint"
-                    >
-                      Report
-                    </button>
-                  }
-                />
-              </Card>
-            ))}
-            {reviewError && <p className="text-xs font-semibold text-status-high text-center">{reviewError}</p>}
-            {!reviewError && aggregateCount === 0 && otherReviews.length === 0 && (
-              <Card className="text-center py-8">
-                <p className="text-sm text-charcoal-faint">No reviews yet.</p>
-              </Card>
-            )}
-          </div>
-        )}
-      </BottomSheet>
     </div>
   );
 }
