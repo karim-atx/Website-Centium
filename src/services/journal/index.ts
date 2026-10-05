@@ -196,16 +196,20 @@ export async function createJournalEntry(entry: {
 
 export async function updateJournalEntryRemote(
   id: string,
-  patch: { title: string; body: string }
+  patch: { title: string; body: string; folderId?: string }
 ): Promise<WriteResult> {
   const invalid = validateEntry(patch.title, patch.body);
   if (invalid) return { ok: false, message: invalid };
 
   // The DATE IS NOT TOUCHED. Editing what you wrote does not move the day you
-  // wrote it, and entry_date is what the list groups by.
+  // wrote it, and entry_date is what the list groups by. The folder can move
+  // (MO1.1.2.3's folder picker); folder_id is in the column grant, and the
+  // update policy checks the new folder is the caller's own.
+  const row: { title: string; body: string; folder_id?: string } = { title: patch.title.trim(), body: patch.body.trim() };
+  if (patch.folderId) row.folder_id = patch.folderId;
   const { error } = await supabase
     .from("journal_entries")
-    .update({ title: patch.title.trim(), body: patch.body.trim() })
+    .update(row)
     .eq("id", id);
 
   if (error) {
@@ -219,6 +223,36 @@ export async function deleteJournalEntryRemote(id: string): Promise<WriteResult>
   const { error } = await supabase.from("journal_entries").delete().eq("id", id);
   if (error) {
     console.error("[journal] Could not remove the entry:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  return { ok: true };
+}
+/** Rename and/or reorder one folder. Only (name, position) are granted. */
+export async function updateJournalFolderRemote(
+  id: string,
+  patch: { name?: string; position?: number }
+): Promise<WriteResult> {
+  const row: { name?: string; position?: number } = {};
+  if (patch.name !== undefined) {
+    const invalid = validateFolderName(patch.name);
+    if (invalid) return { ok: false, message: invalid };
+    row.name = patch.name.trim();
+  }
+  if (patch.position !== undefined) row.position = patch.position;
+
+  const { error } = await supabase.from("journal_folders").update(row).eq("id", id);
+  if (error) {
+    console.error("[journal] Could not update the folder:", error.message);
+    return { ok: false, message: describe(error) };
+  }
+  return { ok: true };
+}
+
+/** Deletes the folder AND its entries: journal_entries.folder_id cascades. */
+export async function deleteJournalFolderRemote(id: string): Promise<WriteResult> {
+  const { error } = await supabase.from("journal_folders").delete().eq("id", id);
+  if (error) {
+    console.error("[journal] Could not remove the folder:", error.message);
     return { ok: false, message: describe(error) };
   }
   return { ok: true };

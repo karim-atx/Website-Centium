@@ -140,9 +140,11 @@ import {
   createJournalEntry,
   createJournalFolder,
   deleteJournalEntryRemote,
+  deleteJournalFolderRemote,
   getJournalEntries,
   getJournalFolders,
   updateJournalEntryRemote,
+  updateJournalFolderRemote,
 } from "../services/journal";
 import {
   getAchievements,
@@ -909,9 +911,15 @@ interface AppState {
   journalError: string | null;
   journalEntries: JournalEntry[];
   addJournalEntry: (folderId: string, title: string, text: string) => void;
-  updateJournalEntry: (id: string, patch: Partial<Pick<JournalEntry, "title" | "text">>) => void;
+  updateJournalEntry: (id: string, patch: Partial<Pick<JournalEntry, "title" | "text" | "folderId">>) => void;
   removeJournalEntry: (id: string) => void;
   addJournalFolder: (name: string) => void;
+  /** MO1.1.2.1 folder options. */
+  renameJournalFolder: (id: string, name: string) => void;
+  /** Moves the folder one place left (-1) or right (+1) in the tab order. */
+  moveJournalFolder: (id: string, step: -1 | 1) => void;
+  /** Deletes the folder and, by the schema's cascade, every entry in it. */
+  removeJournalFolder: (id: string) => void;
 
   bloodMarkers: BloodMarker[];
   /** Panels carrying an uploaded report, newest first. Empty when none do. */
@@ -5749,19 +5757,20 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     });
   };
 
-  const updateJournalEntry = (id: string, patch: Partial<Pick<JournalEntry, "title" | "text">>) => {
+  const updateJournalEntry = (id: string, patch: Partial<Pick<JournalEntry, "title" | "text" | "folderId">>) => {
     const existing = journalEntries.find((e) => e.id === id);
     if (!existing) return;
     const title = patch.title ?? existing.title;
     const text = patch.text ?? existing.text;
-    void updateJournalEntryRemote(id, { title, body: text }).then((result) => {
+    const folderId = patch.folderId ?? existing.folderId;
+    void updateJournalEntryRemote(id, { title, body: text, folderId }).then((result) => {
       if (!result.ok) {
         setJournalError(result.message);
         return;
       }
       setJournalError(null);
       setJournalEntries((prev) =>
-        prev.map((e) => (e.id === id ? { ...e, title: title.trim(), text: text.trim() } : e))
+        prev.map((e) => (e.id === id ? { ...e, title: title.trim(), text: text.trim(), folderId } : e))
       );
     });
   };
@@ -5786,6 +5795,47 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       }
       setJournalError(null);
       setJournalFolders((prev) => [...prev, { id: result.value.id, name: result.value.name }]);
+    });
+  };
+
+  const renameJournalFolder = (id: string, name: string) => {
+    void updateJournalFolderRemote(id, { name }).then((result) => {
+      if (!result.ok) {
+        setJournalError(result.message);
+        return;
+      }
+      setJournalError(null);
+      setJournalFolders((prev) => prev.map((f) => (f.id === id ? { ...f, name: name.trim() } : f)));
+    });
+  };
+
+  // EVERY FOLDER'S POSITION IS REWRITTEN, not just the two that swap. New
+  // folders take `position = count`, so after a delete two folders can share
+  // a position, and swapping only their values would leave the order between
+  // them up to the database. Writing 0..n-1 makes the stored order exactly
+  // the order on screen. Folders are few, so this is a handful of updates.
+  const moveJournalFolder = (id: string, step: -1 | 1) => {
+    const from = journalFolders.findIndex((f) => f.id === id);
+    const to = from + step;
+    if (from < 0 || to < 0 || to >= journalFolders.length) return;
+    const next = [...journalFolders];
+    [next[from], next[to]] = [next[to], next[from]];
+    setJournalFolders(next);
+    void Promise.all(next.map((f, position) => updateJournalFolderRemote(f.id, { position }))).then((results) => {
+      const failed = results.find((r) => !r.ok);
+      setJournalError(failed && !failed.ok ? failed.message : null);
+    });
+  };
+
+  const removeJournalFolder = (id: string) => {
+    void deleteJournalFolderRemote(id).then((result) => {
+      if (!result.ok) {
+        setJournalError(result.message);
+        return;
+      }
+      setJournalError(null);
+      setJournalFolders((prev) => prev.filter((f) => f.id !== id));
+      setJournalEntries((prev) => prev.filter((e) => e.folderId !== id));
     });
   };
 
@@ -6350,6 +6400,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       updateJournalEntry,
       removeJournalEntry,
       addJournalFolder,
+      renameJournalFolder,
+      moveJournalFolder,
+      removeJournalFolder,
       bloodMarkers,
       labReports,
       recordBiomarkers,
