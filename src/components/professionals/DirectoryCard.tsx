@@ -26,11 +26,13 @@ const typeLabel = (s: DirectoryListing["subtype"]): string =>
  * The rating is professional_rating_summary's, through the directory view:
  * an average once three reviews count towards it, "New" before that.
  */
-export const DirectoryCard: React.FC<{ listing: DirectoryListing; distance?: string | null; className?: string }> = ({
-  listing: p,
-  distance,
-  className = "",
-}) => {
+export const DirectoryCard: React.FC<{
+  listing: DirectoryListing;
+  distance?: string | null;
+  className?: string;
+  /** MO1.2.2's floating map card leaves the bio out. */
+  hideBio?: boolean;
+}> = ({ listing: p, distance, className = "", hideBio }) => {
   const navigate = useNavigate();
   const t = typeColours(p.subtype, useIsDark());
   const pill = "inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[11px] font-semibold max-w-full";
@@ -84,7 +86,7 @@ export const DirectoryCard: React.FC<{ listing: DirectoryListing; distance?: str
         </div>
       )}
 
-      {p.bio && <p className="text-[13px] text-charcoal-soft leading-relaxed mt-3 break-words">{p.bio}</p>}
+      {p.bio && !hideBio && <p className="text-[13px] text-charcoal-soft leading-relaxed mt-3 break-words">{p.bio}</p>}
 
       <button
         type="button"

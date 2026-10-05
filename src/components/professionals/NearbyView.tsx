@@ -6,6 +6,7 @@ import { Button } from "../ui/Button";
 import { BottomSheet } from "../ui/BottomSheet";
 import { AreaPicker } from "./AreaPicker";
 import { DirectoryCard } from "./DirectoryCard";
+import { initials, typeColours } from "./typeColour";
 import { SUBTYPE_SINGULAR } from "./subtypeLabels";
 import type { MapPin as Pin } from "./NearbyMap";
 import type { DirectoryListing } from "../../services/directory";
@@ -56,6 +57,12 @@ const MAX_PAGES = 4;
  * centre) to each professional's approximate area (~1 km), and the list is
  * sorted nearest first. The server's distance bands are not shown.
  *
+ * MO1.2.2 (R12): a 560-tall map with avatar pins and a recentre button, and a
+ * floating card over its foot that swipes between the professionals nearest
+ * first; tapping a count pin loads its members into the card (B20). Below the
+ * map, kept (B17): "Change area", the nearest-first list (also the map's
+ * accessible alternative) and "Not on the map nearby".
+ *
  * SEARCHES are kept well inside the database's 60-an-hour limit: one on
  * opening, then one only when the visible area moves to a different coarse
  * cell or a larger radius (debounced), and never twice for the same cell.
@@ -76,7 +83,11 @@ export const NearbyView: React.FC<{
   const [searching, setSearching] = useState(false);
   /** A search stopped at MAX_PAGES: the order past what loaded may be off. */
   const [truncated, setTruncated] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
+  /** The card strip's members when a count pin was tapped; null = everyone nearby. */
+  const [cardSet, setCardSet] = useState<string[] | null>(null);
+  /** Which card the strip is showing. */
+  const [active, setActive] = useState(0);
+  const strip = useRef<HTMLDivElement | null>(null);
   /** The largest radius already searched around each coarse point. */
   const searched = useRef<Map<string, number>>(new Map());
   const timer = useRef<number | undefined>(undefined);
@@ -208,15 +219,48 @@ export const NearbyView: React.FC<{
   const placeOf = (p: NearbyProfessional) => (p.areaLabel ? ` · near ${p.areaLabel}` : "");
 
   const groups = useMemo(() => groupByPoint(nearby.map((n) => ({ ...n.p, lat: n.p.lat, lng: n.p.lng }))), [nearby]);
+  const keyOf = (lat: number, lng: number) => `${lat.toFixed(2)},${lng.toFixed(2)}`;
+  const cards = cardSet ? nearby.filter((n) => cardSet.includes(n.p.profileId)) : nearby;
+  const current = cards[Math.min(active, cards.length - 1)]?.p;
+  const currentKey = current ? groups.find((g) => g.items.some((i) => i.profileId === current.profileId)) : undefined;
   const pins: Pin[] = groups.map((g) => {
     const first = g.items[0];
     const label =
       g.items.length === 1
         ? `${first.name}, ${first.subtype ? SUBTYPE_SINGULAR[first.subtype] : "professional"}, ${distanceOf(first)}`
         : `${g.items.length} professionals${first.areaLabel ? ` near ${first.areaLabel}` : " here"}, ${distanceOf(first)}`;
-    return { key: `${g.lat.toFixed(2)},${g.lng.toFixed(2)}`, lat: g.lat, lng: g.lng, count: g.items.length, label };
+    const t = typeColours(first.subtype, dark);
+    return {
+      key: keyOf(g.lat, g.lng),
+      lat: g.lat,
+      lng: g.lng,
+      count: g.items.length,
+      label,
+      face: { avatarUrl: first.avatarUrl, initials: initials(first.name), ring: t.main, fill: t.pill, ink: t.deep },
+      selected: currentKey === g,
+    };
   });
-  const selectedItems = selected ? groups.find((g) => `${g.lat.toFixed(2)},${g.lng.toFixed(2)}` === selected)?.items ?? [] : [];
+
+  /** Brings card `i` into view, without animating when `instant`. */
+  const showCard = (i: number, instant = false) => {
+    setActive(i);
+    const el = strip.current;
+    if (el) el.scrollTo({ left: i * el.clientWidth, behavior: instant ? "auto" : "smooth" });
+  };
+  // A pin: one professional moves the strip to them among everyone nearby;
+  // several load just them, first one showing.
+  const onSelectPin = (key: string) => {
+    const g = groups.find((x) => keyOf(x.lat, x.lng) === key);
+    if (!g) return;
+    if (g.items.length > 1) {
+      setCardSet(g.items.map((i) => i.profileId));
+      window.setTimeout(() => showCard(0, true), 0);
+      return;
+    }
+    setCardSet(null);
+    const i = nearby.findIndex((n) => n.p.profileId === g.items[0].profileId);
+    window.setTimeout(() => showCard(Math.max(0, i)), 0);
+  };
 
   if (!authUserId) {
     return (
@@ -273,21 +317,55 @@ export const NearbyView: React.FC<{
               Change area
             </button>
           </div>
-          <Suspense
-            fallback={<div className="h-[320px] rounded-2xl bg-cream-soft flex items-center justify-center text-sm text-charcoal-faint">Loading map…</div>}
-          >
-            <NearbyMap
-              center={origin.coords}
-              zoom={origin.source === "device" ? 12 : 12}
-              dark={dark}
-              pins={pins}
-              me={origin.coords}
-              onSelectPin={setSelected}
-              onViewChange={onViewChange}
-              className="h-[320px] rounded-2xl overflow-hidden border border-charcoal/10"
-              ariaLabel="Map of professionals near you. Use the list below for the same results."
-            />
-          </Suspense>
+          <div className="relative">
+            <Suspense
+              fallback={<div className="h-[560px] rounded-[20px] bg-cream-soft flex items-center justify-center text-sm text-charcoal-faint">Loading map…</div>}
+            >
+              <NearbyMap
+                center={origin.coords}
+                zoom={origin.source === "device" ? 12 : 12}
+                dark={dark}
+                pins={pins}
+                me={origin.coords}
+                onSelectPin={onSelectPin}
+                onViewChange={onViewChange}
+                onRecentre={() => void locateMe()}
+                className="h-[560px] rounded-[20px] overflow-hidden border border-charcoal/10"
+                ariaLabel="Map of professionals near you. Use the list below for the same results."
+              />
+            </Suspense>
+            {/* THE FLOATING CARD (MO1.2.2): swipe for the next nearest; it is a
+                scroll-snap strip, so a keyboard or a mouse wheel moves it too. */}
+            {cards.length > 0 && (
+              // Sits above the tile credit line, which must stay visible.
+              <div className="absolute inset-x-2 bottom-[30px] z-[3]">
+                {cards.length > 1 && (
+                  <p className="text-center text-[11px] font-semibold text-charcoal-soft mb-1" aria-live="polite">
+                    <span className="inline-block rounded-full bg-cream-card/90 px-2 py-0.5 shadow-sm">
+                      {Math.min(active, cards.length - 1) + 1} of {cards.length}
+                      {cardSet ? " here" : " nearby"}
+                    </span>
+                  </p>
+                )}
+                <div
+                  ref={strip}
+                  onScroll={(e) => {
+                    const el = e.currentTarget;
+                    const i = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+                    if (i !== active) setActive(i);
+                  }}
+                  className="flex overflow-x-auto no-scrollbar snap-x snap-mandatory py-2 -my-2"
+                  aria-label="Professionals on the map, nearest first"
+                >
+                  {cards.map(({ p }) => (
+                    <div key={p.profileId} className="w-full shrink-0 snap-center px-1">
+                      <DirectoryCard listing={p} distance={`${distanceOf(p)}${placeOf(p)}`} hideBio className="shadow-[0_6px_20px_rgba(36,31,27,0.14)]" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
           {searchError && <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3 py-2">{searchError}</p>}
           {searching && <p className="text-xs text-charcoal-faint" role="status">Searching this area…</p>}
           {truncated && (
@@ -329,17 +407,6 @@ export const NearbyView: React.FC<{
         </div>
       </BottomSheet>
 
-      <BottomSheet
-        open={selectedItems.length > 0}
-        onClose={() => setSelected(null)}
-        title={selectedItems.length > 1 ? `${selectedItems.length} professionals here` : selectedItems[0]?.name ?? ""}
-      >
-        <div className="space-y-3 animate-fade-slide-up">
-          {selectedItems.map((p) => (
-            <DirectoryCard key={p.profileId} listing={p} distance={`${distanceOf(p)}${placeOf(p)}`} />
-          ))}
-        </div>
-      </BottomSheet>
     </div>
   );
 };
