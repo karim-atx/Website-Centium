@@ -9,9 +9,10 @@ import { UnreadBadge } from "../messages/UnreadBadge";
 import { PlanLine } from "./PlanLine";
 import { currentDayStreak, dayStreakLabel } from "../../services/streaks/dayStreak";
 import { forumAccess } from "../../services/forum/rules";
+import { ThemedMark } from "../ui/ThemedMark";
 
 export const Sidebar: React.FC = () => {
-  const { user, t, today, foodLog, waterByDate, workoutLog, journalEntries } = useApp();
+  const { user, t, today, foodLog, waterByDate, workoutLog, journalEntries, colorTheme } = useApp();
   const unread = useUnread();
   const isBusiness = user.accountType === "business";
   // The SAME walk the Home board runs, not a second opinion about it — see
@@ -40,7 +41,11 @@ export const Sidebar: React.FC = () => {
       {/* Design refinement §3c "Placements": the redrawn-SVG mark is
           replaced with the real brand asset wherever it appears. */}
       <div className="flex items-center gap-2.5 px-2 mb-8">
-        <img src="/centium-mark.png" alt="" className="w-[30px] h-[30px] object-contain" />
+        {colorTheme === "centium" ? (
+          <img src="/centium-mark.png" alt="" className="w-[30px] h-[30px] object-contain" />
+        ) : (
+          <ThemedMark width={30} height={30} />
+        )}
         <span className="font-display text-xl font-bold text-charcoal tracking-tight">
           Centium
         </span>

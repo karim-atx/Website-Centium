@@ -164,8 +164,8 @@ export default function Settings() {
           toggle={{ checked: theme === "dark", onChange: toggleTheme, label: "Dark mode" }}
         />
         {/* The board puts the colour theme under the Dark Mode row, in the
-            text column. Today's four themes until R20 (C17). */}
-        <div className="ps-[50px] pb-2">
+            text column: padding 4 0 14 50 (MO1.8), the five R20 themes. */}
+        <div className="ps-[50px] pt-1 pb-[14px]">
           <p className="text-[12px] font-semibold text-charcoal-faint mb-2.5">{t("Color theme")}</p>
           <ColorThemePicker />
         </div>

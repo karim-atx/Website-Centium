@@ -6,6 +6,7 @@ import { useIsDark } from "../../hooks/useIsDark";
 import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { LEVEL_LABEL } from "../../services/achievements";
 import { colourSet, levelHex } from "./achievementStyle";
+import { ThemedC } from "../ui/ThemedMark";
 
 // The unlock moment, mobile v5.1 MO1.1.3.2: a pill at the top of whatever
 // page earned it. It replaces the bottom sheet with its confetti and "Nice".
@@ -65,6 +66,7 @@ type Unlocked = ReturnType<typeof useApp>["unlockQueue"][number];
 const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achievement, onDone }) => {
   const navigate = useNavigate();
   const dark = useIsDark();
+  const { colorTheme } = useApp();
   const reduced = useReducedMotion();
   const [phase, setPhase] = useState<Phase>("dot");
   const [shown, setShown] = useState(false); // reduced motion: faded in
@@ -186,7 +188,11 @@ const Pill: React.FC<{ achievement: Unlocked; onDone: () => void }> = ({ achieve
               className="absolute inset-0 rounded-full flex items-center justify-center bg-cream-card"
               style={{ backfaceVisibility: "hidden", opacity: showLogo ? 1 : 0, transition: "opacity 300ms ease" }}
             >
-              <img src="/centium-logo-c.png" alt="" className="w-6 h-auto" />
+              {colorTheme === "centium" ? (
+                <img src="/centium-logo-c.png" alt="" className="w-6 h-auto" />
+              ) : (
+                <ThemedC width={24} height={(24 * 701) / 648} />
+              )}
             </span>
             <span
               className="absolute inset-0 rounded-full flex items-center justify-center text-[22px] leading-none"

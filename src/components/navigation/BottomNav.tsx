@@ -5,6 +5,7 @@ import { primaryNavItems, professionalPrimaryNavItems, businessPrimaryNavItems }
 import { useApp } from "../../context/AppContext";
 import { useUnread } from "../../context/UnreadContext";
 import { UnreadDot } from "../messages/UnreadBadge";
+import { ThemedNavMark, TintedGlyph } from "../ui/ThemedMark";
 
 const gridColsForCount: Record<number, string> = {
   2: "grid-cols-2",
@@ -63,8 +64,10 @@ const HealthTabGlyph: React.FC<{ active: boolean }> = ({ active }) => (
 
 export const BottomNav: React.FC = () => {
   const location = useLocation();
-  const { user, t, theme } = useApp();
+  const { user, t, theme, colorTheme } = useApp();
   const dark = theme === "dark";
+  // Centium keeps its own PNGs; the other themes tint the same artwork (D10).
+  const branded = colorTheme === "centium";
   const unread = useUnread();
   const isProfessional = user.accountType === "professional";
   const isBusiness = user.accountType === "business";
@@ -175,15 +178,21 @@ export const BottomNav: React.FC = () => {
                       : "shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.28)] dark:shadow-[0_0_0_1px_rgb(var(--c-team-nav-accent)/0.42)]"
                   )}
                 >
-                  <img
-                    src={dark ? "/centium-mark-dark.png" : "/centium-mark-trimmed.png"}
-                    alt={t(item.label)}
-                    className={clsx("w-[54px] h-[54px] object-cover rounded-full", active ? "opacity-100" : "opacity-90")}
-                  />
+                  {branded ? (
+                    <img
+                      src={dark ? "/centium-mark-dark.png" : "/centium-mark-trimmed.png"}
+                      alt={t(item.label)}
+                      className={clsx("w-[54px] h-[54px] object-cover rounded-full", active ? "opacity-100" : "opacity-90")}
+                    />
+                  ) : (
+                    <ThemedNavMark label={t(item.label)} className={active ? "opacity-100" : "opacity-90"} />
+                  )}
                 </span>
               ) : (
                 <span className="flex flex-col items-center justify-center gap-[3px]">
-                  {glyph ? (
+                  {glyph && active && !branded ? (
+                    <TintedGlyph src={glyph.active} colour="rgb(var(--c-team-nav-accent))" className="w-6 h-6" />
+                  ) : glyph ? (
                     <img
                       src={active ? glyph.active : dark ? glyph.idleDark : glyph.idle}
                       alt=""

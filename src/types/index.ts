@@ -1478,10 +1478,12 @@ export interface JournalEntry {
   createdAt: string; // ISO timestamp
 }
 
-// V3: appearance — accent color theme, alongside light/dark.
+// V3: appearance — accent color theme, alongside light/dark. R20 (batch D):
+// the five Foundations 2.1 theme pairs; saved values from before are mapped by
+// normalizeColorTheme (src/theme/colorThemes.ts).
 // Future Supabase migration: device_presentation_settings (per-platform,
-// stays local, never synced).
-export type ColorTheme = "centium" | "ocean" | "sunset" | "berry";
+// stays local, never synced; its color_theme enum needs the new values).
+export type ColorTheme = "centium" | "sky" | "rose" | "gold" | "coral";
 
 // V3: custom (user-added) foods, kept separate from the curated mock database.
 export interface CustomFood extends Food {

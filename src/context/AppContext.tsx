@@ -288,6 +288,7 @@ import {
   updateWorkoutSession as updateWorkoutSessionRemote,
 } from "../services/workout/log";
 import { todayLocal } from "../utils/date";
+import { normalizeColorTheme } from "../theme/colorThemes";
 
 // How much history the diary loads from Supabase in one read. Chosen so the
 // auto-streaks (which walk backwards through every dated entry) and
@@ -2858,7 +2859,13 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [waterByDate, setWaterByDate] = usePersistentState<Record<string, number>>("waterByDate", {});
   const water = waterByDate[selectedDate] ?? 0;
 
-  const [colorTheme, setColorThemeState] = usePersistentState<ColorTheme>("colorTheme", "centium");
+  const [savedColorTheme, setColorThemeState] = usePersistentState<ColorTheme>("colorTheme", "centium");
+  // A value saved before R20 (ocean, sunset, berry) is read as its new theme
+  // and written back once (D2).
+  const colorTheme = normalizeColorTheme(savedColorTheme);
+  useEffect(() => {
+    if (savedColorTheme !== colorTheme) setColorThemeState(colorTheme);
+  }, [savedColorTheme, colorTheme, setColorThemeState]);
   useEffect(() => {
     document.documentElement.setAttribute("data-accent", colorTheme);
   }, [colorTheme]);
@@ -5940,7 +5947,18 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     return written;
   };
 
-  const setColorTheme = (t: ColorTheme) => setColorThemeState(t);
+  // The theme swap fades over 300 ms (Foundations 2.6 motion.fade, "theme
+  // swap"); none with Reduce motion, in-app or the system's.
+  const setColorTheme = (t: ColorTheme) => {
+    const reduced =
+      accessibility.reduceMotion || (typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches);
+    if (!reduced && t !== colorTheme) {
+      const root = document.documentElement;
+      root.classList.add("theme-fade");
+      window.setTimeout(() => root.classList.remove("theme-fade"), 320);
+    }
+    setColorThemeState(t);
+  };
 
   // Written to custom_foods on create, not on first use. A food defined once
   // and logged next week is exactly the case worth persisting -- deferring the
