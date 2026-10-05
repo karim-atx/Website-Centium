@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 
 const COLORS = ["#AEA1DC", "#A2C8C2", "#D9A441", "#C0392B", "#4C8FD1", "#7D6BB5"];
 
@@ -6,16 +7,15 @@ const COLORS = ["#AEA1DC", "#A2C8C2", "#D9A441", "#C0392B", "#4C8FD1", "#7D6BB5"
 // confetti flies through the page as a celebration." A lightweight
 // CSS-only burst — no animation library needed for a one-shot effect.
 //
-// prefers-reduced-motion IS HONOURED HERE, not at each call site. Forty
+// REDUCED MOTION IS HONOURED HERE (the in-app switch or the OS setting,
+// useReducedMotion), not at each call site. Forty
 // elements falling across the viewport is exactly what that setting is asking
 // not to see, and putting the check inside means every caller — the PR
 // celebration, the achievement unlock, anything later — gets it without having
 // to remember. The caller is still told the burst is over, so a sheet waiting
 // on onDone does not hang waiting for an animation that never ran.
 export const Confetti: React.FC<{ onDone: () => void }> = ({ onDone }) => {
-  const reducedMotion =
-    typeof window !== "undefined" &&
-    (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
+  const reducedMotion = useReducedMotion();
 
   React.useEffect(() => {
     if (reducedMotion) onDone();
@@ -78,8 +78,7 @@ export const PrBurst: React.FC<{ rect: { left: number; top: number; width: numbe
   rect,
   onDone,
 }) => {
-  const reducedMotion =
-    typeof window !== "undefined" && (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
+  const reducedMotion = useReducedMotion();
 
   React.useEffect(() => {
     const id = window.setTimeout(onDone, reducedMotion ? 0 : 1300);

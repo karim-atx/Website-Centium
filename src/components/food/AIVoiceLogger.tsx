@@ -16,6 +16,7 @@ import { NutrientDetailSections } from "./NutrientSections";
 import { CustomFoodForm } from "./CustomFoodForm";
 import { sheetChipStyle, sheetGreyStyleFor, sheetLabelStyleFor } from "../ui/sheetChip";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 import { FOOD_DARK } from "./foodDark";
 import {
   AUDIO_BITS_PER_SECOND,
@@ -158,6 +159,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     noteFeatureMilestone,
   } = useApp();
   const dark = useIsDark();
+  const reducedMotion = useReducedMotion();
   const sheetGreyStyle = sheetGreyStyleFor(dark);
   const sheetLabelStyle = sheetLabelStyleFor(dark);
 
@@ -316,8 +318,8 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
     const canvas = waveCanvasRef.current;
     if (!wrap || !canvas || !streamRef.current) return;
 
-    // Reduced motion: lower (x0.34) and slower (1.7 x the step).
-    const reducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+    // Reduced motion (the in-app switch or the OS setting): lower (x0.34)
+    // and slower (1.7 x the step).
     const amplitudeScale = reducedMotion ? 0.34 : 1;
     const stepMs = reducedMotion ? WAVE_STEP_MS * 1.7 : WAVE_STEP_MS;
 
@@ -406,7 +408,7 @@ export const AIVoiceLogger: React.FC<{ open: boolean; onClose: () => void }> = (
       teardownWave();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stage]);
+  }, [stage, reducedMotion]);
 
   /**
    * Every catalog food on the review, matches AND alternatives, as one sorted

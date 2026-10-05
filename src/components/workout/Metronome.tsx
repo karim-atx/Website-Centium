@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import { Minus, Plus } from "lucide-react";
 import clsx from "clsx";
 import { useIsDark } from "../../hooks/useIsDark";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 
 // Design refinement §6.6: a real metronome mark, drawn at lucide's stroke
 // weight so it sits with the rest of the set — replaces the generic timer
@@ -79,8 +80,8 @@ export const Metronome: React.FC = () => {
   const stepInk = dark ? "#B8B3C7" : "#8A8594";
   const ctxRef = useRef<AudioContext | null>(null);
   const intervalRef = useRef<number | null>(null);
-  const reducedMotion =
-    typeof window !== "undefined" && (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false);
+  // The in-app Reduce motion switch or the OS setting.
+  const reducedMotion = useReducedMotion();
 
   const tick = () => {
     const ctx = ctxRef.current;

@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import { ChevronDown, ChevronRight, ChevronUp, Pause, PersonStanding, Play, SkipForward } from "lucide-react";
+import { useReducedMotion } from "../../hooks/useReducedMotion";
 import clsx from "clsx";
 import { PinnedCta } from "../ui/PinnedCta";
 
@@ -31,20 +32,6 @@ export interface Pose {
 const RING_R = 52;
 const RING_C = 2 * Math.PI * RING_R;
 
-function usePrefersReducedMotion(): boolean {
-  const [reduced, setReduced] = useState(
-    () => window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false
-  );
-  useEffect(() => {
-    const q = window.matchMedia?.("(prefers-reduced-motion: reduce)");
-    if (!q) return;
-    const on = (e: MediaQueryListEvent) => setReduced(e.matches);
-    q.addEventListener("change", on);
-    return () => q.removeEventListener("change", on);
-  }, []);
-  return reduced;
-}
-
 function Figure({ pose, size, animate }: { pose: Pose; size: number; animate: boolean }) {
   if (pose.image) {
     return (
@@ -64,7 +51,7 @@ function Figure({ pose, size, animate }: { pose: Pose; size: number; animate: bo
 }
 
 export const PoseSequence: React.FC<{ poses: Pose[] }> = ({ poses }) => {
-  const reduced = usePrefersReducedMotion();
+  const reduced = useReducedMotion();
   const [idx, setIdx] = useState(0);
   const [leftMs, setLeftMs] = useState(poses[0].seconds * 1000);
   const [running, setRunning] = useState(false);
