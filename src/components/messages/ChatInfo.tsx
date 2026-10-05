@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
-import { BellOff, ChevronLeft, Pin, PinOff, Search, Users } from "lucide-react";
+import { Archive, ArchiveRestore, Ban, BellOff, ChevronLeft, Flag, Pin, PinOff, Search, Users } from "lucide-react";
 import { BottomSheet } from "../ui/BottomSheet";
+import { SegmentedTabs } from "../ui/SegmentedTabs";
 import { Toggle } from "../ui/Toggle";
 import { PERSON_ICON } from "../../utils/icons";
 import { InlineImage } from "./InlineImage";
@@ -68,6 +69,8 @@ export const ChatInfo: React.FC<{
   onJumpTo: (messageId: string) => void;
   /** Opens search inside this chat. */
   onSearch: () => void;
+  /** Whether "Online" shows under the name (MO1.2.1.3.1); the thread already knows. */
+  online?: boolean;
   /** A group's members and controls (phase 2B); null for a direct chat. */
   group?: null | {
     name: string;
@@ -77,7 +80,7 @@ export const ChatInfo: React.FC<{
     onChanged: () => void;
     onReport: (() => void) | null;
   };
-}> = ({ thread, authUserId, settings, onSettingsChanged, onBack, safety, onOpenPhoto, onOpenFile, onJumpTo, onSearch, group }) => {
+}> = ({ thread, authUserId, settings, onSettingsChanged, onBack, safety, onOpenPhoto, onOpenFile, onJumpTo, onSearch, online, group }) => {
   const s = settings ?? NO_SETTINGS;
   const { professionalClients } = useApp();
   const displayName = group ? group.name : thread.participantName;
@@ -194,8 +197,14 @@ export const ChatInfo: React.FC<{
       : "Mute";
 
   const tile =
-    "tap min-h-[64px] rounded-[14px] border border-charcoal/10 bg-cream-card text-[12.5px] font-bold text-primary-deep-text flex flex-col items-center justify-center gap-1 px-2 disabled:opacity-50";
-  const row = "tap w-full min-h-[52px] text-left text-sm font-semibold border-b border-charcoal/[0.06] last:border-b-0";
+    "tap min-h-[64px] rounded-[14px] border border-charcoal/10 bg-cream-card text-[11.5px] font-bold text-primary-deep-text flex flex-col items-center justify-center gap-1 px-1.5 text-center disabled:opacity-50";
+  // MO1.2.1.3.1's section labels: 10.5/700 uppercase in the label purple.
+  const label = "text-[10.5px] font-bold uppercase tracking-[0.12em] text-primary-dark px-1 -mb-1.5";
+  // Block and Report as the frame's tinted danger card.
+  const dangerCard =
+    "tap w-full min-h-[46px] rounded-[14px] bg-status-high-bg text-status-high text-[13.5px] font-bold flex items-center justify-center gap-2 px-4";
+  const archive = () =>
+    void save({ archived_at: s.archivedAt ? null : new Date().toISOString() }).then((ok) => ok && !s.archivedAt && onBack());
 
   return (
     <div className="flex flex-col gap-3.5 pb-6">
@@ -208,7 +217,7 @@ export const ChatInfo: React.FC<{
         >
           <ChevronLeft size={20} />
         </button>
-        <h1 className="text-xl font-extrabold text-charcoal">Chat info</h1>
+        <h1 className="text-[22px] font-extrabold text-charcoal">Chat info</h1>
       </div>
 
       <div className="flex flex-col items-center gap-1.5">
@@ -227,10 +236,15 @@ export const ChatInfo: React.FC<{
           )}
         </span>
         )}
-        <p className="text-lg font-extrabold text-charcoal text-center">{displayName}</p>
+        <p className="text-lg font-bold text-charcoal text-center">{displayName}</p>
+        {online && !group && (
+          <p className="-mt-1 text-[12.5px] font-semibold" style={{ color: "#2E7D57" }}>
+            Online
+          </p>
+        )}
       </div>
 
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-4 gap-2">
         <button type="button" onClick={onSearch} className={tile}>
           <Search size={16} aria-hidden />
           Search chat
@@ -246,35 +260,37 @@ export const ChatInfo: React.FC<{
           className={tile}
         >
           {s.pinnedAt ? <PinOff size={16} aria-hidden /> : <Pin size={16} aria-hidden />}
-          {s.pinnedAt ? "Unpin chat" : "Pin chat"}
+          {s.pinnedAt ? "Unpin" : "Pin"}
+        </button>
+        <button type="button" disabled={busy} onClick={archive} className={tile}>
+          {s.archivedAt ? <ArchiveRestore size={16} aria-hidden /> : <Archive size={16} aria-hidden />}
+          {s.archivedAt ? "Unarchive" : "Archive"}
         </button>
       </div>
 
       {error && <p className="text-xs text-status-high bg-status-high-bg rounded-xl px-3.5 py-2.5">{error}</p>}
 
-      <section className="rounded-2xl bg-cream-card border border-charcoal/[0.08] p-3 flex flex-col gap-3">
-        <div className="flex gap-1.5 flex-wrap" role="group" aria-label="Shared in this chat">
-          {TABS.map((t) => (
-            <button
-              key={t.value}
-              type="button"
-              aria-pressed={tab === t.value}
-              onClick={() => {
-                if (t.value === tab) return;
-                setItems(null);
-                setStarred(null);
-                setTab(t.value);
-              }}
-              className={`tap h-[34px] rounded-full px-3 text-[13px] ${
-                tab === t.value
-                  ? "bg-primary-fill text-on-primary-fill font-bold"
-                  : "border border-charcoal/10 bg-cream-card text-charcoal font-semibold"
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
+      <p className={label}>Shared in this chat</p>
+      <section className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] p-3 flex flex-col gap-3" aria-label="Shared in this chat">
+        {/* MO1.2.1.3.1: the four kinds as segmented tabs inside the card.
+            Light keeps the pills' colours (decision 15). */}
+        <SegmentedTabs
+          size="compact"
+          items={TABS.map((t) => ({ key: t.value, label: t.label }))}
+          activeKey={tab}
+          onChange={(k) => {
+            if (k === tab) return;
+            setItems(null);
+            setStarred(null);
+            setTab(k as typeof tab);
+          }}
+          light={{
+            activeFill: "rgb(var(--c-primary-fill))",
+            activeInk: "rgb(var(--c-on-primary-fill))",
+            idleFill: "rgb(var(--c-cream-card))",
+            idleInk: "rgb(var(--c-charcoal))",
+          }}
+        />
 
         {tab === "media" && items && items.length > 0 && (
           <div className="grid grid-cols-3 gap-1">
@@ -375,7 +391,8 @@ export const ChatInfo: React.FC<{
         />
       )}
 
-      <section className="rounded-2xl bg-cream-card border border-charcoal/[0.08] px-3.5 py-1 flex flex-col">
+      <p className={label}>Privacy</p>
+      <section className="rounded-[18px] bg-cream-card border border-charcoal/[0.08] px-4 py-1 flex flex-col" aria-label="Privacy">
         {/* Never in a group: the database does not share presence there. */}
         {!group && (
         <div className="flex items-center justify-between gap-3 min-h-[56px] border-b border-charcoal/[0.06]">
@@ -394,7 +411,7 @@ export const ChatInfo: React.FC<{
           />
         </div>
         )}
-        <div className="flex items-center justify-between gap-3 min-h-[56px] border-b border-charcoal/[0.06]">
+        <div className="flex items-center justify-between gap-3 min-h-[56px]">
           <div className="flex flex-col gap-0.5">
             <span className="text-sm font-semibold text-charcoal">Read receipts</span>
             <span className="text-xs text-charcoal-soft">If off, you won't see theirs either. Applies to all your chats.</span>
@@ -407,34 +424,22 @@ export const ChatInfo: React.FC<{
             label="Read receipts"
           />
         </div>
-        <button
-          type="button"
-          disabled={busy}
-          onClick={() => void save({ archived_at: s.archivedAt ? null : new Date().toISOString() }).then((ok) => ok && !s.archivedAt && onBack())}
-          className={`${row} text-charcoal`}
-        >
-          {s.archivedAt ? "Unarchive chat" : "Archive chat"}
-        </button>
-        {safety && (
-          <button
-            type="button"
-            onClick={safety.iBlocked ? safety.onUnblock : safety.onBlock}
-            className={`${row} text-status-high`}
-          >
-            {safety.iBlocked ? `Unblock ${thread.participantName}` : `Block ${thread.participantName}`}
-          </button>
-        )}
-        {safety?.onReport && (
-          <button type="button" onClick={safety.onReport} className={`${row} text-status-high`}>
-            Report
-          </button>
-        )}
-        {group?.onReport && (
-          <button type="button" onClick={group.onReport} className={`${row} text-status-high`}>
-            Report
-          </button>
-        )}
       </section>
+
+      {/* Block as the frame's tinted card; Report (not drawn, kept) beside
+          it in the same style. */}
+      {safety && (
+        <button type="button" onClick={safety.iBlocked ? safety.onUnblock : safety.onBlock} className={dangerCard}>
+          <Ban size={15} strokeWidth={1.75} aria-hidden />
+          {safety.iBlocked ? `Unblock ${thread.participantName}` : `Block ${thread.participantName}`}
+        </button>
+      )}
+      {(safety?.onReport ?? group?.onReport) && (
+        <button type="button" onClick={(safety?.onReport ?? group?.onReport)!} className={dangerCard}>
+          <Flag size={15} strokeWidth={1.75} aria-hidden />
+          Report
+        </button>
+      )}
 
       <BottomSheet open={muteOpen} onClose={() => setMuteOpen(false)} title="Mute notifications">
         <div className="flex flex-col animate-fade-slide-up">
