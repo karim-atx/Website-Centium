@@ -8,6 +8,11 @@ export interface SwipeAction {
   onClick: () => void;
   /** Delete: #FCEDEC fill + #B4372C icon, and always the far-right tile. */
   destructive?: boolean;
+  /**
+   * LIGHT-mode tile colours, for a row whose old action buttons keep their
+   * colours on the new tiles (decision 15). Dark mode is unaffected.
+   */
+  light?: { fill: string; ink: string };
 }
 
 const TILE_MAX = 56;
@@ -121,7 +126,15 @@ export const SwipeActions: React.FC<{
       <div
         aria-hidden={offset === 0}
         className="absolute inset-y-0 right-0 flex items-center justify-end"
-        style={{ gap: TILE_GAP, width: openWidth }}
+        // Hidden while fully closed: a tile behind a row whose corner radius
+        // is near the tile's inset otherwise shows as a sliver at the curve.
+        // Hiding waits for the row's .22s slide back.
+        style={{
+          gap: TILE_GAP,
+          width: openWidth,
+          visibility: offset === 0 && !dragging ? "hidden" : "visible",
+          transition: offset === 0 && !dragging ? "visibility 0s linear .22s" : "none",
+        }}
       >
         {ordered.map((a) => (
           <button
@@ -138,8 +151,8 @@ export const SwipeActions: React.FC<{
               width: tile,
               height: tile,
               borderRadius: 14,
-              background: a.destructive ? (dark ? "#3C2A30" : "#FCEDEC") : "rgba(174,161,220,0.18)",
-              color: a.destructive ? (dark ? "#FF6B5E" : "#B4372C") : dark ? "#B7ABDE" : "#7D67D9",
+              background: !dark && a.light ? a.light.fill : a.destructive ? (dark ? "#3C2A30" : "#FCEDEC") : "rgba(174,161,220,0.18)",
+              color: !dark && a.light ? a.light.ink : a.destructive ? (dark ? "#FF6B5E" : "#B4372C") : dark ? "#B7ABDE" : "#7D67D9",
             }}
           >
             {a.icon}

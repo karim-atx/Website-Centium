@@ -78,6 +78,27 @@ export const CtaButton: React.FC<CtaButtonProps> = ({
   </button>
 );
 
+type IconCtaProps = { icon: React.ReactNode; label: string; onClick: () => void; onAnchor?: (el: HTMLButtonElement | null) => void };
+
+/** The pinned row's icon-only secondary button, 89 wide. */
+const IconCta: React.FC<IconCtaProps> = ({ icon, label, onClick, onAnchor }) => (
+  <button
+    ref={onAnchor}
+    type="button"
+    aria-label={label}
+    title={label}
+    onClick={onClick}
+    className={clsx(
+      "tap flex-none w-[89px] inline-flex items-center justify-center",
+      "transition-[filter] duration-150 ease-out active:brightness-[0.92]",
+      sizeClasses.page,
+      variantClasses.secondary
+    )}
+  >
+    {icon}
+  </button>
+);
+
 /**
  * A page's pinned CTA, or a pinned CTA row: fixed 16 pt in from the app
  * column's edges, 96 pt above the bottom (clear of the navbar), with the
@@ -91,12 +112,16 @@ export const CtaButton: React.FC<CtaButtonProps> = ({
  *
  * The page underneath must leave room for it: 172 pt of bottom padding,
  * per Foundations 2.3, so the last row scrolls fully clear.
+ *
+ * `trailing` (MO1.1.2 Journal): an 89 pt icon-only secondary button AFTER
+ * the primary, e.g. FolderCog. `onAnchor` hands over its element for a menu.
  */
 export const PinnedCta: React.FC<{
   primary: Omit<CtaButtonProps, "size" | "variant">;
   secondary?: Omit<CtaButtonProps, "size" | "variant">;
   above?: Omit<CtaButtonProps, "size" | "variant">;
-}> = ({ primary, secondary, above }) =>
+  trailing?: IconCtaProps;
+}> = ({ primary, secondary, above, trailing }) =>
   createPortal(
     <div
       className={clsx(
@@ -111,6 +136,7 @@ export const PinnedCta: React.FC<{
       <div className="flex gap-2">
         {secondary && <CtaButton {...secondary} size="page" variant="secondary" />}
         <CtaButton {...primary} size="page" variant="primary" />
+        {trailing && <IconCta {...trailing} />}
       </div>
     </div>,
     document.body
