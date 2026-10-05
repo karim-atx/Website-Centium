@@ -149,7 +149,7 @@ export const SettingsRow: React.FC<RowProps> = ({
           size={16}
           strokeWidth={1.75}
           aria-hidden
-          className="shrink-0 text-charcoal-tertiary rtl:-scale-x-100"
+          className="shrink-0 text-charcoal-faint rtl:-scale-x-100"
         />
       </button>
     );

@@ -467,7 +467,7 @@ export default function Profile() {
                     <span className="block text-[15px] font-semibold text-charcoal truncate">{p.name}</span>
                     <span className="block text-xs text-charcoal-faint">Manage data sharing</span>
                   </span>
-                  <ChevronRight size={16} className="text-charcoal-tertiary shrink-0 rtl:-scale-x-100" aria-hidden />
+                  <ChevronRight size={16} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
                 </button>
               ))}
               {connectOpen ? (
@@ -484,7 +484,7 @@ export default function Profile() {
                     <Plus size={18} className="text-primary-dark" />
                   </span>
                   <span className="flex-1 min-w-0 text-[15px] font-semibold text-charcoal">Connect with a professional code</span>
-                  <ChevronRight size={16} className="text-charcoal-tertiary shrink-0 rtl:-scale-x-100" aria-hidden />
+                  <ChevronRight size={16} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
                 </button>
               )}
             </div>
@@ -512,7 +512,7 @@ export default function Profile() {
                   <s.icon size={16} className="text-charcoal-soft" />
                 </span>
                 <span className="flex-1 min-w-0 text-sm font-semibold leading-tight text-charcoal">{s.label}</span>
-                <ChevronRight size={15} className="text-charcoal-tertiary shrink-0 rtl:-scale-x-100" aria-hidden />
+                <ChevronRight size={15} className="text-charcoal-faint shrink-0 rtl:-scale-x-100" aria-hidden />
               </button>
             ))}
           </div>
@@ -536,7 +536,7 @@ export default function Profile() {
             <ChevronDown
               size={16}
               aria-hidden
-              className={clsx("text-charcoal-tertiary transition-transform", safetyOpen && "rotate-180")}
+              className={clsx("text-charcoal-faint transition-transform", safetyOpen && "rotate-180")}
             />
           </button>
           {safetyOpen && (

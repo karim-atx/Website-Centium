@@ -166,7 +166,7 @@ export default function Settings() {
         {/* The board puts the colour theme under the Dark Mode row, in the
             text column. Today's four themes until R20 (C17). */}
         <div className="ps-[50px] pb-2">
-          <p className="text-[12px] font-semibold text-charcoal-soft mb-2.5">{t("Color theme")}</p>
+          <p className="text-[12px] font-semibold text-charcoal-faint mb-2.5">{t("Color theme")}</p>
           <ColorThemePicker />
         </div>
       </SettingsSection>
